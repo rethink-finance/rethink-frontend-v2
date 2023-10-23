@@ -1,0 +1,29 @@
+{
+  "version": "0.1.0",
+  "configurations": [
+    {
+      "name": "Nuxt.js: debug server-side",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev"
+    },
+    {
+      "name": "Nuxt.js: debug client-side",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000"
+    },
+    {
+      "name": "Nuxt.js: debug full stack",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "serverReadyAction": {
+        "pattern": "started server on .+, url: (https?://.+)",
+        "uriFormat": "%s",
+        "action": "debugWithChrome"
+      }
+    }
+  ],
+  "resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"]
+}

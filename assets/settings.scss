@@ -1,0 +1,6 @@
+$custom-font-family: "Inter", "Josefin+Sans", "Lato", "Roboto", sans-serif;
+
+@use "vuetify/settings" with (
+  ///@dev: customise the vuetify sass vars here: e.g.
+  $body-font-family: $custom-font-family
+);
