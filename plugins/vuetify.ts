@@ -6,15 +6,15 @@ import { md3 } from "vuetify/blueprints";
 const customDarkTheme: ThemeDefinition = {
   dark: false,
   colors: {
-    background: "#FFFFFF",
+    background: "#111C35",
     surface: "#FFFFFF",
-    primary: "#6200EE",
-    "primary-darken-1": "#3700B3",
-    secondary: "#03DAC6",
+    primary: "#205FFF",
+    "primary-darken-1": "#101A2F",
+    secondary: "#AEC5FF",
     "secondary-darken-1": "#018786",
-    error: "#B00020",
+    error: "#DE3838",
     info: "#2196F3",
-    success: "#4CAF50",
+    success: "#38DE38",
     warning: "#FB8C00",
   },
 };

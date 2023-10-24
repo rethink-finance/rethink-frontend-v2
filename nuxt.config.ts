@@ -12,6 +12,8 @@ export default defineNuxtConfig({
     transpile: ["vuetify"],
   },
 
+  css: ["vuetify/styles", "~/assets/scss/app.scss"],
+
   modules: [
     (_options, nuxt) => {
       nuxt.hooks.hook("vite:extendConfig", (config) => {
@@ -19,7 +21,7 @@ export default defineNuxtConfig({
         config.plugins.push(
           vuetify({
             autoImport: true,
-            styles: { configFile: "/assets/settings.scss" },
+            styles: { configFile: "/assets/scss/vuetify.scss" },
           })
         );
       });
@@ -43,6 +45,11 @@ export default defineNuxtConfig({
     ],
     "nuxt-icon",
   ],
+
+  sourcemap: {
+    server: false,
+    client: false,
+  },
 
   vite: {
     srr: { noExternal: ["vuetify"] },
