@@ -1,6 +1,6 @@
 <template>
   <v-img
-    src="https://cdn.vuetifyjs.com/images/parallax/material.jpg"
+    src="~/assets/images/rethink finance_ logo.png"
     contain
     :width="100"
     aspect-ratio="16/9"

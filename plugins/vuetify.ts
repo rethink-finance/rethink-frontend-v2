@@ -1,13 +1,13 @@
 import "@mdi/font/css/materialdesignicons.css";
 import "vuetify/styles";
 import { createVuetify, ThemeDefinition } from "vuetify";
-import { md3 } from "vuetify/blueprints";
+import { md2 } from "vuetify/blueprints";
 
 const customDarkTheme: ThemeDefinition = {
   dark: false,
   colors: {
     background: "#111C35",
-    surface: "#FFFFFF",
+    surface: "#060816",
     primary: "#205FFF",
     "primary-darken-1": "#101A2F",
     secondary: "#AEC5FF",
@@ -23,7 +23,7 @@ export default defineNuxtPlugin((app) => {
   const vuetify = createVuetify({
     // ... your configuration goes here
     ssr: true,
-    blueprint: md3,
+    blueprint: md2,
     defaults: {
       global: {
         ripple: false,
