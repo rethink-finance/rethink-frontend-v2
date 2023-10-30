@@ -1,6 +1,6 @@
 <template>
   <v-img
-    src="~/assets/images/rethink finance_ logo.png"
+    src="~/assets/images/logo.svg"
     contain
     :width="100"
     aspect-ratio="16/9"

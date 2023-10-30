@@ -19,7 +19,7 @@
 
           <nuxt-link :to="'/'">
             <Logo />
-            <v-tooltip color="primary" activator="parent" location="bottom"
+            <v-tooltip activator="parent" location="bottom"
               >Go to homepage</v-tooltip
             >
           </nuxt-link>
@@ -30,7 +30,8 @@
           >
             <nuxt-link :to="'/'" class="mx-1">
               <v-btn
-                :active="true"
+                :active="false"
+                color="white"
                 variant="plain"
                 style="
                   text-transform: Capitalize;
@@ -48,6 +49,7 @@
             <nuxt-link :to="'/create'" class="mx-1">
               <v-btn
                 variant="plain"
+                color="white"
                 style="
                   text-transform: Capitalize;
                   font-size: 16px;
@@ -64,6 +66,7 @@
             <nuxt-link :to="'/governance'" class="mx-1">
               <v-btn
                 variant="plain"
+                color="white"
                 style="
                   text-transform: Capitalize;
                   font-size: 16px;
@@ -92,6 +95,7 @@
                   font-weight: 300;
                 "
                 variant="plain"
+                color="white"
               >
                 Documentation
                 <v-tooltip activator="parent" location="bottom"
@@ -127,7 +131,7 @@
       <v-col class="" cols="12">
         <v-main
           class="d-flex align-center justify-center"
-          style="min-height: 300px"
+          style="min-height: calc(100vh - 90px)"
         >
           <slot />
         </v-main>
