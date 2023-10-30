@@ -12,12 +12,11 @@
             :class="`hidden-md-and-up ${$vuetify.rtl ? 'ml-4' : 'mr-4'}`"
             icon
             small
-            @click.stop="openNavDrawer"
           >
             <v-icon>mdi-menu</v-icon>
           </v-btn>
 
-          <nuxt-link :to="'/'">
+          <nuxt-link :to="'/'" class="d-flex">
             <Logo />
             <v-tooltip activator="parent" location="bottom"
               >Go to homepage</v-tooltip
@@ -122,15 +121,10 @@
         </v-toolbar>
       </v-row>
     </v-app-bar>
-    <v-row justify="center" no-gutters>
-      <!-- <v-navigation-drawer>
-        <v-list>
-          <v-list-item title="Drawer left"></v-list-item>
-        </v-list>
-      </v-navigation-drawer> -->
+    <v-row justify="center" align="start" no-gutters>
       <v-col class="" cols="12">
         <v-main
-          class="d-flex align-center justify-center"
+          class="d-flex align-start justify-center"
           style="min-height: calc(100vh - 90px)"
         >
           <slot />

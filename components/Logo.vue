@@ -1,17 +1,8 @@
 <template>
-  <v-img
-    src="~/assets/images/logo.svg"
-    contain
-    :width="100"
+  <img
+    src="/logo.svg"
+    :width="'92px'"
     aspect-ratio="16/9"
-  >
-    <template v-slot:placeholder>
-      <div class="d-flex align-center justify-center fill-height">
-        <v-progress-circular
-          color="grey-lighten-4"
-          indeterminate
-        ></v-progress-circular>
-      </div>
-    </template>
-  </v-img>
+    style="align-self: center"
+  />
 </template>

@@ -1,4 +1,5 @@
 <template>
+  <!-- <v-toolbar-title color="primary">Rethink Fund DAOs</v-toolbar-title> -->
   <Table :data="data" :columns="columns" />
 </template>
 
@@ -47,7 +48,7 @@ const data = ref([
   {
     id: 1,
     "fund-name": "SOON",
-    aum: "Jan 21",
+    aum: "$222,222,222",
     inception: "9:00am PDT",
     comulative: "39.44%",
     monthly: "88.09%",

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="width: 100%; padding-inline: 200px" class="mt-8">
     <table
       class="rethink-table"
       :style="{ ...defaultStyle, background: bgColor, ...style }"
@@ -16,37 +16,49 @@
         </div>
       </caption>
       <thead v-if="showHeader">
-        <tr :style="{ height }">
+        <tr
+          :style="{ height }"
+          v-for="headerGroup in table.getHeaderGroups()"
+          :key="headerGroup.id"
+        >
           <th
-            v-for="column in table.columns"
-            :key="column.id"
+            v-for="header in headerGroup.headers"
+            :key="header.id"
             :style="tableHeadDefaultStyle"
-            @click="toggleSorting(column)"
-            :colspan="column.colSpan"
+            @click="toggleSorting(header)"
+            :colspan="header.colSpan"
           >
             <div class="table-header-cell">
-              <span class="table-header-text">{{
-                column.columnDef.header
+              <FlexRender
+                :render="header.column.columnDef.header"
+                :props="header.getContext()"
+              />
+              <!-- <span class="table-header-text">{{
+                header.columnDef.header
               }}</span>
               <i
-                v-if="isSortable && column.getIsSorted()"
+                v-if="isSortable && header.getIsSorted()"
                 :class="{
-                  'icon-arrow-down': column.getIsSorted() === 'desc',
-                  'icon-arrow-up': column.getIsSorted() === 'asc',
+                  'icon-arrow-down': header.getIsSorted() === 'desc',
+                  'icon-arrow-up': header.getIsSorted() === 'asc',
                 }"
-              ></i>
+              ></i> -->
             </div>
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in table.rows" :key="row.id" :style="{ height }">
+        <tr
+          v-for="row in table.getRowModel().rows"
+          :key="row.id"
+          :style="{ height }"
+        >
           <td
-            v-for="cell in row.cells"
+            class="px-3 py-4 text-sm whitespace-nowrap"
+            v-for="cell in row.getVisibleCells()"
             :key="cell.id"
             :style="{
               ...tableDataDefaultStyle,
-              borderBottom: shouldShowBottomBorder(row),
             }"
             :data-cell="cell.column.columnDef.header"
           >
@@ -63,27 +75,27 @@
       </tfoot>
     </table>
     <div class="rethink-pagination-container" :style="{ marginTop: '16px' }">
-      <div class="rethink-pagination-actions">
-        <button
+      <div class="rethink-pagination-actions d-flex" style="gap: 20px">
+        <v-btn
           v-if="btnType === 'small'"
           :disabled="!table.canPreviousPage"
           @click="gotoPage(0)"
         >
           First Page
-        </button>
-        <button :disabled="!table.canPreviousPage" @click="previousPage">
+        </v-btn>
+        <v-btn :disabled="!table.canPreviousPage" @click="previousPage">
           Previous Page
-        </button>
-        <button :disabled="!table.canNextPage" @click="nextPage">
+        </v-btn>
+        <v-btn :disabled="!table.canNextPage" @click="nextPage">
           Next Page
-        </button>
-        <button
+        </v-btn>
+        <v-btn
           v-if="btnType === 'tiny'"
           :disabled="!table.canNextPage"
           @click="gotoPage(table.pageCount - 1)"
         >
           Last Page
-        </button>
+        </v-btn>
       </div>
     </div>
   </div>
@@ -140,34 +152,11 @@ const tableDataDefaultStyle = ref({
   paddingInline: "1rem",
   background: "transparent",
 });
-const table = useVueTable(
-  {
-    columns: props.columns,
-    data: props.data,
-    // plugins: [useFlexLayout, useBlockLayout],
-  },
-  {
-    getRowProps() {
-      return { style: { height: props.height } };
-    },
-    getCellProps(cell) {
-      return {
-        style: {
-          ...tableDataDefaultStyle.value,
-          borderBottom:
-            cell.row.index + 1 !== table.rows.length ? "1px solid #F2F2F2" : "",
-        },
-        "data-cell": cell.column.columnDef.header,
-      };
-    },
-    getColumnProps(column) {
-      return {
-        style: tableHeadDefaultStyle.value,
-        onClick: column.toggleSort,
-      };
-    },
-  }
-);
+const table = useVueTable({
+  columns: props.columns ?? [],
+  data: props.data ?? [],
+  getCoreRowModel: getCoreRowModel(),
+});
 
 const captionStyle = computed(() => {
   return {
@@ -184,9 +173,9 @@ const captionStyle = computed(() => {
   };
 });
 
-const shouldShowBottomBorder = (row) => {
-  return row.index + 1 !== table.rows.length ? "1px solid #F2F2F2" : "";
-};
+// const shouldShowBottomBorder = (row) => {
+//   return row.index + 1 !== table.rows.length ? "1px solid #F2F2F2" : "";
+// };
 
 const toggleSorting = (column) => {
   column.toggleSort();
