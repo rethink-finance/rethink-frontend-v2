@@ -1,6 +1,6 @@
 <template>
   <v-toolbar color="transparent" class="">
-    <v-avatar size="50" rounded="0" class="me-2">
+    <v-avatar size="50" rounded="0" class="me-2" style="border-radius: 4px">
       <img
         cover
         :src="

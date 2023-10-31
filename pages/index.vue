@@ -72,7 +72,7 @@ const data = ref([
     "fund-name": {
       title: "THL",
       subtitle: "Tetronode Treasury",
-      avatar: "https://api.lorem.space/image/finance?w=60&h=60",
+      avatar: "https://api.lorem.space/image/ai?w=60&h=60",
     },
     aum: "$222,222,222",
     inception: "YYYY Nov DD",
@@ -86,7 +86,7 @@ const data = ref([
     "fund-name": {
       title: "1FUND",
       subtitle: "1FUND DAO",
-      avatar: "https://api.lorem.space/image/finance?w=60&h=60",
+      avatar: "https://api.lorem.space/image/game?w=60&h=60",
     },
     aum: "$222,222,222",
     inception: "YYYY Nov DD",
@@ -100,7 +100,7 @@ const data = ref([
     "fund-name": {
       title: "AF",
       subtitle: "Awesome Fund",
-      avatar: "https://api.lorem.space/image/finance?w=60&h=60",
+      avatar: "https://api.lorem.space/image/dashboard?w=60&h=60",
     },
     aum: "$222,222,222",
     inception: "YYYY Nov DD",
