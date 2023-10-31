@@ -1,6 +1,15 @@
 <template>
-  <v-toolbar-title color="primary">Rethink Fund DAOs</v-toolbar-title>
-  <Table :data="data" :columns="columns" caption />
+  <div class="d-flex" style="width: 100%; flex-direction: column">
+    <v-toolbar
+      flat
+      color="transparent"
+      style="width: 100%; padding-inline: 200px"
+      class="mt-10 mb-4"
+    >
+      <h3 style="color: #205fff">Rethink Fund DAOs</h3>
+    </v-toolbar>
+    <Table :data="data" :columns="columns" :showControls="false" />
+  </div>
 </template>
 
 <script setup lang="jsx">

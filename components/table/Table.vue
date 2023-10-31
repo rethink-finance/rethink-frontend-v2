@@ -1,10 +1,10 @@
 <template>
-  <div style="width: 100%; padding-inline: 200px" class="mt-8">
+  <div style="width: 100%; padding-inline: 200px">
     <table
       class="rethink-table"
       :style="{ ...defaultStyle, background: bgColor, ...style }"
     >
-      <caption :style="captionStyle">
+      <caption :style="captionStyle" v-if="showControls">
         <div class="table-navbar-content">
           <slot name="table-navbar-content"></slot>
           <input
@@ -68,20 +68,24 @@
     <div class="rethink-pagination-container" :style="{ marginTop: '16px' }">
       <div class="rethink-pagination-actions d-flex" style="gap: 20px">
         <v-btn
-          v-if="btnType === 'small'"
+          variant="text"
           :disabled="!table.canPreviousPage"
           @click="gotoPage(0)"
         >
           First Page
         </v-btn>
-        <v-btn :disabled="!table.canPreviousPage" @click="previousPage">
+        <v-btn
+          variant="text"
+          :disabled="!table.canPreviousPage"
+          @click="previousPage"
+        >
           Previous Page
         </v-btn>
-        <v-btn :disabled="!table.canNextPage" @click="nextPage">
+        <v-btn variant="text" :disabled="!table.canNextPage" @click="nextPage">
           Next Page
         </v-btn>
         <v-btn
-          v-if="btnType === 'tiny'"
+          variant="text"
           :disabled="!table.canNextPage"
           @click="gotoPage(table.getPageCount() - 1)"
         >

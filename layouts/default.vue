@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <v-app-bar color="background" flat>
+    <v-app-bar color="background" elevation="2">
       <v-row ref="toolbar" align="center" justify="center">
         <v-toolbar
           color="transparent"
