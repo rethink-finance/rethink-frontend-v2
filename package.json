@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@mdi/font": "^7.3.67",
+    "@tanstack/vue-table": "^8.10.7",
     "apexcharts": "^3.44.0",
     "vue3-apexcharts": "^1.4.4"
   }

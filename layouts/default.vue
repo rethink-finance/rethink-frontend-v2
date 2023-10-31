@@ -19,8 +19,8 @@
           <nuxt-link :to="'/'" class="d-flex">
             <Logo />
             <v-tooltip activator="parent" location="bottom"
-              >Go to homepage</v-tooltip
-            >
+              >Go to homepage
+            </v-tooltip>
           </nuxt-link>
           <v-card
             color="transparent"
@@ -29,8 +29,14 @@
           >
             <nuxt-link :to="'/'" class="mx-1">
               <v-btn
-                :active="false"
-                color="white"
+                :active="
+                  route.path === '/' || route.path.startsWith('/details')
+                "
+                :color="
+                  route.path === '/' || route.path.startsWith('/details')
+                    ? 'primary'
+                    : 'white'
+                "
                 variant="plain"
                 style="
                   text-transform: Capitalize;
@@ -48,13 +54,14 @@
             <nuxt-link :to="'/create'" class="mx-1">
               <v-btn
                 variant="plain"
-                color="white"
+                :color="route?.path === '/create' ? 'primary' : 'white'"
                 style="
                   text-transform: Capitalize;
                   font-size: 16px;
                   font-weight: 300;
                 "
                 class="nav-link"
+                :active="route?.path === '/create'"
               >
                 Create
                 <v-tooltip activator="parent" location="bottom"
@@ -65,7 +72,8 @@
             <nuxt-link :to="'/governance'" class="mx-1">
               <v-btn
                 variant="plain"
-                color="white"
+                :active="route?.path === '/governance'"
+                :color="route?.path === '/governance' ? 'primary' : 'white'"
                 style="
                   text-transform: Capitalize;
                   font-size: 16px;
@@ -210,6 +218,17 @@
     </v-row>
   </v-app>
 </template>
+
+<script setup>
+const router = useRouter();
+const route = useRoute();
+
+const currentRoute = ref(route?.path);
+
+onMounted(async () => {
+  currentRoute.value = route.path;
+});
+</script>
 
 <style scoped>
 .v-btn--active {
