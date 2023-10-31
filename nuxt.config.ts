@@ -63,5 +63,9 @@ export default defineNuxtConfig({
     },
   },
 
-  plugins: ["~/plugins/vuex.ts", "~/plugins/vuetify.ts"],
+  plugins: [
+    "~/plugins/apexCharts.ts",
+    "~/plugins/vuex.ts",
+    "~/plugins/vuetify.ts",
+  ],
 });
