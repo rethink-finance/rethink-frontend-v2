@@ -5,20 +5,20 @@
 
 <script setup lang="jsx">
 import { ref, h } from "vue";
+import FundNameCell from "../components/table/components/FundNameCell";
 
 const columns = ref([
   {
     accessorKey: "fund-name",
     header: "Fund Name",
-    cell: (info) => info.getValue().title,
-    // cell: (info) => {
-    //   const data = info.getValue();
-    //   return h(<FundNameCell />, {
-    //     image: info.getValue().avatar,
-    //     title: info.getValue().title,
-    //     subtitle: info.getValue().subtitle,
-    //   });
-    // },
+    cell: (info) => {
+      const data = info.getValue();
+      return h(<FundNameCell />, {
+        image: info.getValue().avatar,
+        title: info.getValue().title,
+        subtitle: info.getValue().subtitle,
+      });
+    },
   },
   {
     accessorKey: "aum",

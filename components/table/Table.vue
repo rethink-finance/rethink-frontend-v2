@@ -143,13 +143,11 @@ const defaultStyle = ref({
 const tableHeadDefaultStyle = ref({
   padding: ".1rem",
   paddingInline: "2rem",
-  // background: "transparent",
   borderBottom: "3px solid #111C35",
 });
 const tableDataDefaultStyle = ref({
   padding: ".1rem",
   paddingInline: "3rem",
-  // background: "transparent",
 });
 const table = useVueTable({
   columns: props.columns ?? [],
@@ -263,6 +261,15 @@ tr:not(th tr) {
 tbody tr {
   outline: 3px solid #111c35;
   border-bottom: 2px solid #213566;
+  cursor: pointer;
+}
+
+tbody tr:hover {
+  background: linear-gradient(
+    0deg,
+    rgba(246, 249, 255, 0.08),
+    rgba(246, 249, 255, 0.08)
+  );
 }
 
 .rethink-table .table-header-cell {
@@ -278,14 +285,6 @@ tbody tr {
   font-weight: 700;
   margin: 0;
   text-transform: uppercase;
-}
-
-.rethink-table i.icon-arrow-down {
-  /* Define styles for the down arrow icon */
-}
-
-.rethink-table i.icon-arrow-up {
-  /* Define styles for the up arrow icon */
 }
 
 .rethink-table tbody td {
