@@ -63,8 +63,5 @@ export default defineNuxtConfig({
     },
   },
 
-  plugins: [
-    "/c:/workspace/dapp/dao/rethink/rethink-app/plugins/vuex.ts",
-    "/c:/workspace/dapp/dao/rethink/rethink-app/plugins/vuetify.ts",
-  ],
+  plugins: ["~/plugins/vuex.ts", "~/plugins/vuetify.ts"],
 });

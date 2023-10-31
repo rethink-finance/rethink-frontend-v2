@@ -32,9 +32,10 @@ const getters = {
   getUserFundUsdValue(state) {
     return state.userFundUsdValue[state.selectedFundAddress];
   },
-  getUserFundUsdValue(state) {
-    return state.userBalance[state.selectedFundAddress];
-  },
+  /// @dev: next key is a name duplicate, are they the same/different?
+  // getUserFundUsdValue(state) {
+  //   return state.userBalance[state.selectedFundAddress];
+  // },
 };
 
 const actions = {
