@@ -54,7 +54,7 @@
           :style="{ height }"
         >
           <td
-            class="px-3 py-4 text-sm whitespace-nowrap"
+            class="px-8 py-4 text-sm whitespace-nowrap"
             v-for="cell in row.getVisibleCells()"
             :key="cell.id"
             :style="{
@@ -138,19 +138,18 @@ const filtering = ref("");
 const defaultStyle = ref({
   padding: "1rem",
   borderCollapse: "collapse",
-  background: "white",
   width: "100%",
 });
 const tableHeadDefaultStyle = ref({
   padding: ".1rem",
-  paddingInline: "1rem",
-  background: "transparent",
-  borderBottom: "1px solid #F2F2F2",
+  paddingInline: "2rem",
+  // background: "transparent",
+  borderBottom: "3px solid #111C35",
 });
 const tableDataDefaultStyle = ref({
   padding: ".1rem",
-  paddingInline: "1rem",
-  background: "transparent",
+  paddingInline: "3rem",
+  // background: "transparent",
 });
 const table = useVueTable({
   columns: props.columns ?? [],
@@ -210,7 +209,7 @@ watch([() => props.data, () => props.columns], () => {
 .rethink-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: transparent;
 }
 
 .rethink-table caption {
@@ -238,10 +237,30 @@ watch([() => props.data, () => props.columns], () => {
   border-bottom: 1px solid #f2f2f2;
 }
 
-.rethink-table th {
-  padding: 0.1rem;
+th {
   padding-inline: 1rem;
-  background: transparent;
+  background: #0c0d1229;
+  /* background: transparent; */
+}
+
+th,
+td,
+caption {
+  padding: 1rem;
+  text-align: start;
+}
+
+tr:not(th tr) {
+  background: #21356629;
+  background: linear-gradient(
+    0deg,
+    rgba(246, 249, 255, 0.04),
+    rgba(246, 249, 255, 0.04)
+  );
+  margin-block: "2px";
+}
+tbody tr {
+  border-bottom: 3px solid #111c35;
 }
 
 .rethink-table .table-header-cell {

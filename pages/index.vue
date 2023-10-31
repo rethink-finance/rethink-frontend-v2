@@ -1,16 +1,24 @@
 <template>
-  <!-- <v-toolbar-title color="primary">Rethink Fund DAOs</v-toolbar-title> -->
-  <Table :data="data" :columns="columns" />
+  <v-toolbar-title color="primary">Rethink Fund DAOs</v-toolbar-title>
+  <Table :data="data" :columns="columns" caption />
 </template>
 
-<script setup>
-import { ref } from "vue";
+<script setup lang="jsx">
+import { ref, h } from "vue";
 
 const columns = ref([
   {
     accessorKey: "fund-name",
     header: "Fund Name",
-    cell: (info) => info.getValue(),
+    cell: (info) => info.getValue().title,
+    // cell: (info) => {
+    //   const data = info.getValue();
+    //   return h(<FundNameCell />, {
+    //     image: info.getValue().avatar,
+    //     title: info.getValue().title,
+    //     subtitle: info.getValue().subtitle,
+    //   });
+    // },
   },
   {
     accessorKey: "aum",
@@ -47,7 +55,11 @@ const columns = ref([
 const data = ref([
   {
     id: 1,
-    "fund-name": "SOON",
+    "fund-name": {
+      title: "SOON",
+      subtitle: "Soonami Treasury",
+      avatar: "https://api.lorem.space/image/finance?w=60&h=60",
+    },
     aum: "$222,222,222",
     inception: "9:00am PDT",
     comulative: "39.44%",
@@ -57,7 +69,11 @@ const data = ref([
   },
   {
     id: 2,
-    "fund-name": "THL",
+    "fund-name": {
+      title: "THL",
+      subtitle: "Tetronode Treasury",
+      avatar: "https://api.lorem.space/image/finance?w=60&h=60",
+    },
     aum: "$222,222,222",
     inception: "YYYY Nov DD",
     comulative: "39.44%",
@@ -67,7 +83,11 @@ const data = ref([
   },
   {
     id: 3,
-    "fund-name": "1FUND",
+    "fund-name": {
+      title: "1FUND",
+      subtitle: "1FUND DAO",
+      avatar: "https://api.lorem.space/image/finance?w=60&h=60",
+    },
     aum: "$222,222,222",
     inception: "YYYY Nov DD",
     comulative: "39.44%",
@@ -77,7 +97,11 @@ const data = ref([
   },
   {
     id: 4,
-    "fund-name": "AF",
+    "fund-name": {
+      title: "AF",
+      subtitle: "Awesome Fund",
+      avatar: "https://api.lorem.space/image/finance?w=60&h=60",
+    },
     aum: "$222,222,222",
     inception: "YYYY Nov DD",
     comulative: "-39.44%",
