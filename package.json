@@ -25,6 +25,10 @@
     "@mdi/font": "^7.3.67",
     "@tanstack/vue-table": "^8.10.7",
     "apexcharts": "^3.44.0",
-    "vue3-apexcharts": "^1.4.4"
+    "ethers": "^6.8.0",
+    "vue3-apexcharts": "^1.4.4",
+    "vuex": "^4.1.0",
+    "web3": "^4.2.1",
+    "web3modal": "^1.9.12"
   }
 }

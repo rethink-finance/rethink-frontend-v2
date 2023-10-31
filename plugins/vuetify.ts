@@ -19,7 +19,7 @@ const customDarkTheme: ThemeDefinition = {
   },
 };
 
-export default defineNuxtPlugin((app) => {
+export default defineNuxtPlugin((nuxtApp) => {
   const vuetify = createVuetify({
     // ... your configuration goes here
     ssr: true,
@@ -36,5 +36,5 @@ export default defineNuxtPlugin((app) => {
       },
     },
   });
-  app.vueApp.use(vuetify);
+  nuxtApp.vueApp.use(vuetify);
 });

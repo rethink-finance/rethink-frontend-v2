@@ -12,7 +12,11 @@ export default defineNuxtConfig({
     transpile: ["vuetify"],
   },
 
-  css: ["vuetify/styles", "~/assets/scss/app.scss"],
+  css: [
+    "vuetify/styles",
+    "~/assets/scss/app.scss",
+    // "~/assets/global.css"  ///@notice: uncomment to have the style from the migrated components
+  ],
 
   modules: [
     (_options, nuxt) => {
@@ -59,5 +63,8 @@ export default defineNuxtConfig({
     },
   },
 
-  plugins: ["~/plugins/vuetify.ts"],
+  plugins: [
+    "/c:/workspace/dapp/dao/rethink/rethink-app/plugins/vuex.ts",
+    "/c:/workspace/dapp/dao/rethink/rethink-app/plugins/vuetify.ts",
+  ],
 });
