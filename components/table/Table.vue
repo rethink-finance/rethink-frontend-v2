@@ -33,16 +33,6 @@
                 :render="header.column.columnDef.header"
                 :props="header.getContext()"
               />
-              <!-- <span class="table-header-text">{{
-                header.columnDef.header
-              }}</span>
-              <i
-                v-if="isSortable && header.getIsSorted()"
-                :class="{
-                  'icon-arrow-down': header.getIsSorted() === 'desc',
-                  'icon-arrow-up': header.getIsSorted() === 'asc',
-                }"
-              ></i> -->
             </div>
           </th>
         </tr>
@@ -93,7 +83,7 @@
         <v-btn
           v-if="btnType === 'tiny'"
           :disabled="!table.canNextPage"
-          @click="gotoPage(table.pageCount - 1)"
+          @click="gotoPage(table.getPageCount() - 1)"
         >
           Last Page
         </v-btn>
@@ -184,7 +174,7 @@ const filterTable = (value) => {
 };
 
 const gotoPage = (pageIndex) => {
-  table.gotoPage(pageIndex);
+  table.setPageIndex(pageIndex);
 };
 
 const previousPage = () => {
@@ -196,7 +186,7 @@ const nextPage = () => {
 };
 
 onMounted(() => {
-  table.gotoPage(0);
+  table.setPageIndex(0);
 });
 
 watch([() => props.data, () => props.columns], () => {

@@ -1,11 +1,12 @@
 <template>
   <v-toolbar color="transparent" class="">
-    <v-avatar size="50" rounded="0" class="me-2" style="border-radius: 4px">
+    <v-avatar size="50" rounded="0" class="me-2">
       <img
         cover
         :src="
           props.image || 'https://api.lorem.space/image/finance?w=150&h=150'
         "
+        style="border-radius: 24px"
       />
     </v-avatar>
     <v-card
