@@ -259,8 +259,10 @@ tr:not(th tr) {
   );
   margin-block: "2px";
 }
+
 tbody tr {
-  border-bottom: 3px solid #111c35;
+  outline: 3px solid #111c35;
+  border-bottom: 2px solid #213566;
 }
 
 .rethink-table .table-header-cell {
