@@ -52,6 +52,7 @@
           v-for="row in table.getRowModel().rows"
           :key="row.id"
           :style="{ height }"
+          @click.stop="$router.push(`/details/${row.original.id}`)"
         >
           <td
             class="px-8 py-4 text-sm whitespace-nowrap"

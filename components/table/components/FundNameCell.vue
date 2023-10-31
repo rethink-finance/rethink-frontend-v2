@@ -1,5 +1,5 @@
 <template>
-  <v-toolbar color="transparent" class="" density="60">
+  <v-toolbar color="transparent" class="">
     <v-avatar size="50" rounded="0" class="me-2">
       <img
         cover
@@ -32,7 +32,7 @@ const props = defineProps({
 <style scoped>
 .title-wrapper {
   justify-content: center;
-  align-items: start;
+  align-items: flex-start;
   display: flex;
   flex-direction: column;
   gap: 4px;
