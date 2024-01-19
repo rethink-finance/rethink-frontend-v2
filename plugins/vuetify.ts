@@ -1,6 +1,7 @@
+// import "@/assets/scss/vuetify.scss";
+// import "@/assets/scss/_variables.scss";
 import "@mdi/font/css/materialdesignicons.css";
-import "@/assets/scss/vuetify.scss";
-import { createVuetify, ThemeDefinition } from "vuetify";
+import { createVuetify, type ThemeDefinition } from "vuetify";
 import { md2 } from "vuetify/blueprints";
 
 const customDarkTheme: ThemeDefinition = {
@@ -8,9 +9,9 @@ const customDarkTheme: ThemeDefinition = {
   colors: {
     background: "#111C35",
     surface: "#060816",
-    primary: "#205FFF",
+    primary: "#1F5FFF",
     "primary-darken-1": "#101A2F",
-    secondary: "#AEC5FF",
+    secondary: "#D2DFFF",
     "secondary-darken-1": "#018786",
     error: "#DE3838",
     info: "#2196F3",

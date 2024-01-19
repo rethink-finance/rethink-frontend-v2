@@ -4,7 +4,7 @@
       <v-row ref="toolbar" align="center" justify="center">
         <v-toolbar
           color="transparent"
-          style="letter-spacing: normal; padding: 0px 116px"
+          style="letter-spacing: normal; padding: 0 116px"
           no-gutters
           flat
         >
@@ -211,7 +211,7 @@
               size="20px"
               class="me-1"
             />
-            {{ new Date().getFullYear() }} Rethink.finance. All rights reserved
+            {{ currentYear }} Rethink.finance. All rights reserved
           </v-col>
         </v-footer>
       </v-col>
@@ -224,6 +224,7 @@ const router = useRouter();
 const route = useRoute();
 
 const currentRoute = ref(route?.path);
+const currentYear = new Date().getFullYear();
 
 onMounted(async () => {
   currentRoute.value = route.path;

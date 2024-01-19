@@ -1,7 +1,10 @@
-$custom-font-family: "Inter", "Josefin+Sans", "Lato", "Roboto", sans-serif;
+$body-font-family: EudoxusSans, sans-serif;
 
-@use "vuetify/settings" with (
-  ///@dev: customise the vuetify sass vars here: e.g.
-  $body-font-family: $custom-font-family,
-  $tooltip-background-color: rgb(var(--v-theme-surface))
+@use "vuetify/styles" with (
+  $body-font-family: $body-font-family,
 );
+
+button.v-btn--variant-outlined {
+  border: 2px solid currentColor;
+  font-weight: bold;
+}

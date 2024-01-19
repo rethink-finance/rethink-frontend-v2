@@ -1,55 +1,76 @@
 <template>
-  <v-card
-    color="transparent"
-    width="70%"
-    class="mt-8 justify-center text-center align-items-center"
-  >
-    <div>
-      <h1>{{ route.params.id }}</h1>
-      <ClientOnly>
-        <!-- @dev: if not loading. review https://github.com/apexcharts/vue3-apexcharts/issues/9 -->
-        <!-- @dev: if not loading. review https://github.com/apexcharts/vue3-apexcharts/issues/63 -->
-        <!-- @dev: The issue maybe the generateData function is not available during
-        hydration of on the client side. moving to computed with get/set and
-        moving the generateData function inside of the const series = computed(
-        get()) ... may resolve the issue -->
-
-        <apexchart
-          v-if="isMounted"
-          ref="apexchart"
-          type="area"
-          width="500"
-          height="400"
-          :options="chartOptions"
-          :series="chartSeries"
-        ></apexchart>
-      </ClientOnly>
-    </div>
+  <v-card width="70%" class="mt-8">
+    <Fund :fund="fund" />
   </v-card>
 </template>
 
-<script setup>
-const isMounted = ref(false);
-const apexchart = ref(null);
-const route = useRoute();
-const chartOptions = ref({
-  chart: {
-    id: "vuechart-example",
-  },
-  xaxis: {
-    categories: ["24 Jul", "07 Aug", "21 Aug", "04 Sep", "18 Sep", "02 Oct"],
-  },
-});
+<script lang="ts" setup>
+// const isMounted = ref(false);
 
-const chartSeries = ref({
-  name: "Share Price",
-  data: [30, 40, 45, 50, 49, 60],
-});
+import type IFund from "~/types/fund";
+import { PositionType } from "~/types/enums/position_type";
+
+const route = useRoute();
+console.log("Fetch fund: " + route.params.id);
+
+// This data will be fetched from some API.
+const fundData: IFund = {
+  id: 1,
+  title: "SOON",
+  subtitle: "Soonami Treasury",
+  avatar_url: "https://api.lorem.space/image/finance?w=60&h=60",
+  chain: "avalanche",
+  description:
+    "1FundDAO is a decentralized finance education company that has been teaching crypto since January 2018, and DeFi since 2020. Our fund uses providing liquidity in Uniswap V3. This is a way for LPs who do not have time to manage their portfolios to have exposure to LP's fully managed and based on the strategies and principles of 1FundDAO. This vault is only accessible to 1DAO members. To learn more, visit 1DAO.io",
+  inception_date: "2022 Dec 10",
+  aum_value: 223541227, // "$223,541,227"
+  cumulative_return_percent: 0.3944,
+  monthly_return_percent: -0.0809,
+  sharpe_ratio: 1.65,
+  address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
+  governor_address: "0luk4c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
+  safe_address: "0xbyebyed5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
+  user_fund_balance: "2135",
+  user_fund_usd_value: "$2135",
+  position_types: [
+    {
+      type: PositionType.NAVLiquid,
+      value: 123,
+    },
+    {
+      type: PositionType.NAVComposable,
+      value: 78,
+    },
+    {
+      type: PositionType.NAVNft,
+      value: 287,
+    },
+    {
+      type: PositionType.NAVIlliquid,
+      value: 36,
+    },
+  ],
+};
+
+const fund = ref(fundData);
+// const chartOptions = ref({
+//   chart: {
+//     id: "vuechart-example",
+//   },
+//   xaxis: {
+//     categories: ["24 Jul", "07 Aug", "21 Aug", "04 Sep", "18 Sep", "02 Oct"],
+//   },
+// });
+
+// const chartSeries = ref({
+//   name: "Share Price",
+//   data: [30, 40, 45, 50, 49, 60],
+// });
 
 onMounted(() => {
   if (process.client) {
-    isMounted.value = true;
-    if (apexchart.value) apexchart.value.updateOptions(chartOptions);
+    // isMounted.value = true;
+    // if (apexchart.value) apexchart.value.updateOptions(chartOptions);
   }
 });
 </script>

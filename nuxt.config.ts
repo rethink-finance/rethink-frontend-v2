@@ -2,30 +2,26 @@ import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  devtools: { enabled: true },
-
+  devtools: { enabled: false },
   typescript: {
-    shim: false,
+    typeCheck: true,
+    strict: true,
   },
-
   build: {
     transpile: ["vuetify"],
   },
-
   css: [
-    "vuetify/styles",
+    // "vuetify/styles",
     "~/assets/scss/app.scss",
     // "~/assets/global.css"  ///@notice: uncomment to have the style from the migrated components
   ],
-
   modules: [
     (_options, nuxt) => {
-      nuxt.hooks.hook("vite:extendConfig", (config) => {
-        // @ts-expect-error
+      nuxt.hooks.hook("vite:extendConfig", (config: any) => {
         config.plugins.push(
           vuetify({
             autoImport: true,
-          })
+          }),
         );
       });
     },
@@ -47,25 +43,26 @@ export default defineNuxtConfig({
       },
     ],
     "nuxt-icon",
+    "@pinia/nuxt",
   ],
-
   sourcemap: {
     server: false,
     client: false,
   },
-
   vite: {
-    srr: { noExternal: ["vuetify"] },
+    ssr: { noExternal: ["vuetify"] },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          additionalData: "@import \"@/assets/scss/vuetify.scss\"; @import \"@/assets/scss/_variables.scss\";",
+        },
+      },
+    },
     vue: {
       template: {
         transformAssetUrls,
       },
     },
   },
-
-  plugins: [
-    "~/plugins/apexcharts.client.ts",
-    "~/plugins/vuex.ts",
-    "~/plugins/vuetify.ts",
-  ],
+  plugins: ["plugins/apexcharts.client.ts", "plugins/vuetify.ts"],
 });

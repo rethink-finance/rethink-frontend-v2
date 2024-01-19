@@ -1,154 +1,300 @@
 <template>
-
-<div class="section-small">
-
-  <div class="d-flex justify-content-between flex-wrap">
-
-    <!-- Fund data -->
-    <div class="div-flex justify-content-center flex-wrap">
-      <button @click="toggleFund" style="background: inherit !important; border: 0 !important;"><FundDataItem class="data-item" title="Fund" :data="formatAddress" :divider="true" :info="formatAddressInfo" /></button>
-      <button @click="toggleGovernor" style="background: inherit !important; border: 0 !important;"><FundDataItem class="data-item" title="Governance" :data="formatGovernanceAddress" :divider="true" :info="formatAddressInfo"/></button>
-      <button @click="toggleSafe" style="background: inherit !important; border: 0 !important;"><FundDataItem class="data-item" title="Safe" :data="formatSafeAddress" :divider="true" :info="formatAddressInfo"/></button>
-      
-      <div class="data-item" >
-        <div class="data-item" @mouseover="toggleFund">
-          <router-link to="/fund" class="btn btn-success">
-            View Fund
-          </router-link>
+  <div class="fund pa-6">
+    <div class="mb-12">
+      <div class="fund__header">
+        <div>
+          <div class="fund__header__details">
+            <v-avatar size="3.5rem" rounded="0" class="me-3">
+              <img
+                :src="fund.avatar_url"
+                class="fund__header__avatar_img bg-cover"
+                alt="fund cover image"
+              >
+            </v-avatar>
+            <div class="fund__header__details__title_wrapper pa-1">
+              <div class="fund__header__details__title">
+                {{ fund.title }}
+              </div>
+              <div class="fund__header__details__subtitle">
+                {{ fund.subtitle }}
+              </div>
+            </div>
+          </div>
+          <div class="fund__header__description">
+            <p class="text-secondary">
+              {{ fund.description }}
+            </p>
+          </div>
         </div>
-      </div>
-
-      <div class="data-item" >
-        <div class="data-item" @mouseover="toggleFund">
-          <router-link to="/update-nav" class="btn btn-success">
-            Update Fund NAV
-          </router-link>
+        <div class="fund__header__action_buttons">
+          <v-btn
+            class="mb-4 d-flex justify-space-between text-secondary"
+            variant="outlined"
+            size="large"
+          >
+            DeBank - AUM
+            <template #append>
+              <v-icon icon="mdi-link" size="large" />
+            </template>
+            <v-tooltip activator="parent" location="bottom">
+              Copy Fund address to clipboard ({{ formatAddress }})
+            </v-tooltip>
+          </v-btn>
+          <v-btn
+            class="mb-4 d-flex justify-space-between text-secondary"
+            variant="outlined"
+            size="large"
+          >
+            Tally - Governance
+            <template #append>
+              <v-icon icon="mdi-link" size="large" />
+            </template>
+            <v-tooltip activator="parent" location="bottom">
+              Copy Governance address to clipboard ({{ formatGovernanceAddress }})
+            </v-tooltip>
+          </v-btn>
+          <v-btn
+            class="mb-3 d-flex justify-space-between text-secondary"
+            variant="outlined"
+            size="large"
+          >
+            Safe - Custody
+            <template #append>
+              <v-icon icon="mdi-link" size="large" />
+            </template>
+            <v-tooltip activator="parent" location="bottom">
+              Copy Safe address to clipboard ({{ formatSafeAddress }})
+            </v-tooltip>
+          </v-btn>
         </div>
       </div>
     </div>
 
-    <!-- Action button -->
-    <div>
-      
-      <span></span>
+    <div class="mb-12">
+      <div class="fund__section_subtitle">
+        Fund Insights
+      </div>
+      <div class="fund__insights">
+        <div class="fund__insights__item">
+          <div class="fund__insights__item__title">
+            <Icon
+              v-if="fund?.chain"
+              :name="chainIconName"
+              size="0.75rem"
+              class="mr-2"
+              color="white"
+            />
+            {{ capitalizeFirst(fund.chain) }}
+          </div>
+          <div class="fund__insights__item__subtitle">
+            Chain
+          </div>
+        </div>
+        <div class="fund__insights__item">
+          <div class="fund__insights__item__title">
+            {{ fund.inception_date }}
+          </div>
+          <div class="fund__insights__item__subtitle">
+            Inception Date
+          </div>
+        </div>
+        <div class="fund__insights__item">
+          <div
+            class="fund__insights__item__title"
+            :class="valueSignClass(fund.cumulative_return_percent)"
+          >
+            {{ formatPercent(fund.cumulative_return_percent) }}
+          </div>
+          <div class="fund__insights__item__subtitle">
+            Cumulative Return
+          </div>
+        </div>
+        <div class="fund__insights__item">
+          <div
+            class="fund__insights__item__title"
+            :class="valueSignClass(fund.monthly_return_percent)"
+          >
+            {{ formatPercent(fund.monthly_return_percent) }}
+          </div>
+          <div class="fund__insights__item__subtitle">
+            Monthly Return
+          </div>
+        </div>
+        <div class="fund__insights__item">
+          <div class="fund__insights__item__title">
+            {{ fund.sharpe_ratio }}
+          </div>
+          <div class="fund__insights__item__subtitle">
+            Sharpe Ratio
+          </div>
+        </div>
+        <div class="fund__insights__item">
+          <div class="fund__insights__item__title">
+            Types Graph
+          </div>
+          <div class="fund__insights__item__subtitle">
+            Position Types
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-  
-</div>
-  
 </template>
 
-<script>
-/*
-
-TODO: needs to set the selected fund when clicked in fund.js
-*/
-
-import { mapGetters } from "vuex";
-import FundDataItem from './FundDataItem.vue';
+<script lang="ts">
+import type { PropType } from "vue";
+import type IFund from "~/types/fund";
+import { chainToIconName } from "~/composables/utils";
 
 export default {
   name: "Fund",
-  props: ["fund"],
+  props: {
+    fund: {
+      type: Object as PropType<IFund>,
+      default: () => {},
+    },
+  },
   data() {
-    return {}
+    return {};
   },
-
-  components: { 
-    FundDataItem
-  },
-
-  created() {
-    this.$store.dispatch("dai/fetchUserBalance");
-    this.$store.dispatch("usdc/fetchUserBalance");
-  },
-
   computed: {
-    ...mapGetters("accounts", ["getWeb3"]),
-
-    formatAddress () {
-      return this.fund.address.substring(0, 6) + '...' + this.fund.address.substring(38, 42)
-    }, 
-
-    formatGovernanceAddress () {
-      return this.fund.governor.substring(0, 6) + '...' + this.fund.governor.substring(38, 42)
-    }, 
-
-    formatSafeAddress () {
-      return this.fund.safe.substring(0, 6) + '...' + this.fund.safe.substring(38, 42)
-    }, 
-
-    formatAddressInfo () {
-      return "Fund Address (copy to clipboard when selecting fund)"
-    }, 
+    formatAddress() {
+      return truncateAddress(this.fund?.address);
+    },
+    formatGovernanceAddress() {
+      return truncateAddress(this.fund?.governor_address);
+    },
+    formatSafeAddress() {
+      return truncateAddress(this.fund?.safe_address);
+    },
+    chainIconName() {
+      return `cryptocurrency-color:${chainToIconName(this.fund?.chain)}`;
+    },
   },
-
   methods: {
     async toggleFund() {
-      this.$store.state.fund["selectedFundAddress"] = this.fund.address;
-      this.$store.commit("fund/setSelectedFundAddress", this.fund.address);
-      this.copyFundAddr();
+      // this.$store.state.fund.selectedFundAddress = this.fund.address;
+      // this.$store.commit("fund/setSelectedFundAddress", this.fund.address);
+      await this.copyFundAddr();
     },
     async toggleSafe() {
-      this.copySafeAddr()
+      await this.copySafeAddr();
     },
     async toggleGovernor() {
-      this.copyGovernorAddr()
+      await this.copyGovernorAddr();
     },
     async copyFundAddr() {
       try {
         await navigator.clipboard.writeText(this.fund.address);
-        let msg = "Copied Fund Address (" + this.fund.address + ") to clipboard";
-        this.$toast.success(msg);
-      } catch($e) {return;}
+        // const msg = "Copied Fund Address (" + this.fund.address + ") to clipboard";
+        // this.$toast.success(msg);
+      } catch ($e) {}
     },
     async copyGovernorAddr() {
       try {
-        await navigator.clipboard.writeText(this.fund.governor);
-        let msg = "Copied Governor Address (" + this.fund.governor + ") to clipboard";
-        this.$toast.success(msg);
-      } catch($e) {return;}
+        await navigator.clipboard.writeText(this.fund?.governor_address);
+        // const msg = "Copied Governor Address (" + this.fund.governor + ") to clipboard";
+        // this.$toast.success(msg);
+      } catch ($e) {}
     },
     async copySafeAddr() {
       try {
-        await navigator.clipboard.writeText(this.fund.safe);
-        let msg = "Copied Safe Address (" + this.fund.safe + ") to clipboard";
-        this.$toast.success(msg);
-      } catch($e) {return;}
-    }
-  }
-}
+        await navigator.clipboard.writeText(this.fund?.safe_address);
+        // const msg = "Copied Safe Address (" + this.fund.safe + ") to clipboard";
+        // this.$toast.success(msg);
+      } catch ($e) {}
+    },
+    valueSignClass(value: any) {
+      if (value == 0) {
+        return "";
+      } else if (value > 0) {
+        return "text-success";
+      } else if (value < 0) {
+        return "text-error";
+      }
+    },
+  },
+};
 </script>
 
-<style>
-.data-item {
-  margin-right: 5px;
-}
+<style lang="scss">
+.fund {
+  &__section_subtitle {
+    color: $color-primary;
+    font-weight: 500;
+    font-size: 0.875rem;
+    letter-spacing: 0.025rem;
+    margin-bottom: 0.75rem;
+  }
+  &__header {
+    display: flex;
+    gap: 2.5rem;
 
-.div-flex {
-  display: flex;
-}
+    &__avatar_img {
+      border-radius: 0.25rem;
+    }
+    &__details {
+      display: flex;
+      margin-bottom: 1.5rem;
+      &__title_wrapper {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      &__title {
+        font-size: 1.5rem;
+        color: $title-color;
+        line-height: 1;
+      }
+      &__subtitle {
+        font-size: 1rem;
+        font-weight: bold;
+        color: $subtitle-color;
+        line-height: 1;
+      }
+    }
+    &__action_buttons {
+      display: flex;
+      flex-direction: column;
+      button {
+        text-transform: none;
+      }
+    }
+  }
+  &__insights {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1rem;
+    border: 1px solid #293246;
+    background: rgba(246, 249, 255, 0.04);
+    box-shadow: 4px 4px 16px 0 rgba(31, 95, 255, 0.16);
 
-.fa-chevron-down, .fa-chevron-up {
-  margin-left: 10px;
-}
+    &__item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
 
-.show-form {
-  margin-top: 24px;
-}
-
-.section-small {
-  margin-top: 16px;
+      &__title {
+        display: flex;
+        font-size: 1rem;
+        line-height: 1;
+        font-weight: 700;
+        color: $title-color;
+      }
+      &__subtitle {
+        font-size: 0.875rem;
+        line-height: 1;
+        color: #F6F9FF8F;
+      }
+    }
+  }
 }
 
 /* Mobile screens */
 @media screen and (max-width: 600px) {
-  .data-item {
-    margin-right: 0px;
-  }
 
-  .div-flex {
-    display: block;
-  }
 }
 </style>

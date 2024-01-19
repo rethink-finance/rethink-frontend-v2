@@ -1,19 +1,9 @@
 <template>
   <v-toolbar color="transparent" class="">
     <v-avatar size="50" rounded="0" class="me-2">
-      <img
-        cover
-        :src="
-          props.image || 'https://api.lorem.space/image/finance?w=150&h=150'
-        "
-        style="border-radius: 24px"
-      />
+      <img cover :src="props.image" style="border-radius: 24px" />
     </v-avatar>
-    <v-card
-      color="transparent"
-      class="d-flex pa-1 transparent align-items-center"
-      flat
-    >
+    <v-card color="transparent" class="d-flex pa-1 transparent align-items-center" flat>
       <div class="title-wrapper">
         <h4>{{ title }}</h4>
         <h5>{{ subtitle }}</h5>
@@ -24,9 +14,12 @@
 
 <script setup lang="ts">
 const props = defineProps({
-  image: String,
-  title: String,
-  subtitle: String,
+  image: {
+    type: String,
+    default: "https://api.lorem.space/image/finance?w=150&h=150",
+  },
+  title: { type: String, default: "" },
+  subtitle: { type: String, default: "" },
 });
 </script>
 
