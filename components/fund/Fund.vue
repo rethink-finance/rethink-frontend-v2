@@ -130,7 +130,9 @@
         </div>
         <div class="fund__insights__item">
           <div class="fund__insights__item__title">
-            Types Graph
+            <FundPositionTypesBar
+              :position-types="fund.position_types"
+            />
           </div>
           <div class="fund__insights__item__subtitle">
             Position Types
@@ -144,7 +146,6 @@
 <script lang="ts">
 import type { PropType } from "vue";
 import type IFund from "~/types/fund";
-import { chainToIconName } from "~/composables/utils";
 
 export default {
   name: "Fund",
@@ -204,20 +205,19 @@ export default {
         // this.$toast.success(msg);
       } catch ($e) {}
     },
-    valueSignClass(value: any) {
-      if (value == 0) {
-        return "";
-      } else if (value > 0) {
+    valueSignClass(value: number) {
+      if (value > 0) {
         return "text-success";
       } else if (value < 0) {
         return "text-error";
       }
+      return "";
     },
   },
 };
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 .fund {
   &__section_subtitle {
     color: $color-primary;
@@ -280,6 +280,8 @@ export default {
       &__title {
         display: flex;
         font-size: 1rem;
+        width: 100%;
+        height: 1rem;
         line-height: 1;
         font-weight: 700;
         color: $title-color;

@@ -1,4 +1,4 @@
-<template>
+srec<template>
   <v-card width="70%" class="mt-8">
     <Fund :fund="fund" />
   </v-card>
