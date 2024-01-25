@@ -70,8 +70,8 @@
       </div>
     </div>
 
-    <div class="mb-12">
-      <div class="fund__section_subtitle">
+    <div class="fund__section">
+      <div class="fund__section__subtitle">
         Fund Insights
       </div>
       <FundInsights :fund="fund" />
@@ -147,12 +147,17 @@ export default {
 
 <style lang="scss" scoped>
 .fund {
-  &__section_subtitle {
-    color: $color-primary;
-    font-weight: 500;
-    font-size: 0.875rem;
-    letter-spacing: 0.025rem;
-    margin-bottom: 0.75rem;
+  &__section {
+    &:not(:last-of-type) {
+      margin-bottom: 2rem;
+    }
+    &__subtitle {
+      color: $color-primary;
+      font-weight: 500;
+      font-size: 0.875rem;
+      letter-spacing: 0.025rem;
+      margin-bottom: 0.75rem;
+    }
   }
   &__header {
     display: flex;
@@ -186,38 +191,6 @@ export default {
       flex-direction: column;
       button {
         text-transform: none;
-      }
-    }
-  }
-  &__insights {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 1rem;
-    border: 1px solid #293246;
-    background: rgba(246, 249, 255, 0.04);
-    box-shadow: 4px 4px 16px 0 rgba(31, 95, 255, 0.16);
-
-    &__item {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.75rem;
-
-      &__title {
-        display: flex;
-        font-size: 1rem;
-        width: 100%;
-        height: 1rem;
-        line-height: 1;
-        font-weight: 700;
-        color: $title-color;
-      }
-      &__subtitle {
-        font-size: 0.875rem;
-        line-height: 1;
-        color: #F6F9FF8F;
       }
     }
   }
