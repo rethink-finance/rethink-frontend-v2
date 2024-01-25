@@ -74,71 +74,7 @@
       <div class="fund__section_subtitle">
         Fund Insights
       </div>
-      <div class="fund__insights">
-        <div class="fund__insights__item">
-          <div class="fund__insights__item__title">
-            <Icon
-              v-if="fund?.chain"
-              :name="chainIconName"
-              size="0.75rem"
-              class="mr-2"
-              color="white"
-            />
-            {{ capitalizeFirst(fund.chain) }}
-          </div>
-          <div class="fund__insights__item__subtitle">
-            Chain
-          </div>
-        </div>
-        <div class="fund__insights__item">
-          <div class="fund__insights__item__title">
-            {{ fund.inception_date }}
-          </div>
-          <div class="fund__insights__item__subtitle">
-            Inception Date
-          </div>
-        </div>
-        <div class="fund__insights__item">
-          <div
-            class="fund__insights__item__title"
-            :class="valueSignClass(fund.cumulative_return_percent)"
-          >
-            {{ formatPercent(fund.cumulative_return_percent) }}
-          </div>
-          <div class="fund__insights__item__subtitle">
-            Cumulative Return
-          </div>
-        </div>
-        <div class="fund__insights__item">
-          <div
-            class="fund__insights__item__title"
-            :class="valueSignClass(fund.monthly_return_percent)"
-          >
-            {{ formatPercent(fund.monthly_return_percent) }}
-          </div>
-          <div class="fund__insights__item__subtitle">
-            Monthly Return
-          </div>
-        </div>
-        <div class="fund__insights__item">
-          <div class="fund__insights__item__title">
-            {{ fund.sharpe_ratio }}
-          </div>
-          <div class="fund__insights__item__subtitle">
-            Sharpe Ratio
-          </div>
-        </div>
-        <div class="fund__insights__item">
-          <div class="fund__insights__item__title">
-            <FundPositionTypesBar
-              :position-types="fund.position_types"
-            />
-          </div>
-          <div class="fund__insights__item__subtitle">
-            Position Types
-          </div>
-        </div>
-      </div>
+      <FundInsights :fund="fund" />
     </div>
   </div>
 </template>
@@ -204,14 +140,6 @@ export default {
         // const msg = "Copied Safe Address (" + this.fund.safe + ") to clipboard";
         // this.$toast.success(msg);
       } catch ($e) {}
-    },
-    valueSignClass(value: number) {
-      if (value > 0) {
-        return "text-success";
-      } else if (value < 0) {
-        return "text-error";
-      }
-      return "";
     },
   },
 };
@@ -293,10 +221,5 @@ export default {
       }
     }
   }
-}
-
-/* Mobile screens */
-@media screen and (max-width: 600px) {
-
 }
 </style>
