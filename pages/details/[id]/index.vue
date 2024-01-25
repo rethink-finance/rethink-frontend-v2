@@ -1,7 +1,19 @@
-srec<template>
-  <v-card width="70%" class="mt-8">
-    <Fund :fund="fund" />
-  </v-card>
+<template>
+  <div style="width: 70%" class="mt-8">
+    <div class="main_card">
+      <FundInfo :fund="fund" />
+    </div>
+    <div>
+      <div class="main_card settlement_grid">
+        <div>
+          <FundSettlement :fund="fund" />
+        </div>
+        <div>
+          Current cycle
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -32,6 +44,7 @@ const fundData: IFund = {
   safe_address: "0xbyebyed5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
   user_fund_balance: "2135",
   user_fund_usd_value: "$2135",
+  next_settlement: "5 Days",
   position_types: [
     {
       type: PositionType.NAVLiquid,
@@ -74,3 +87,13 @@ onMounted(() => {
   }
 });
 </script>
+
+<style lang="scss" scoped>
+.settlement_grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+
+  /* TODO mobile 1 col, display flex */
+}
+</style>

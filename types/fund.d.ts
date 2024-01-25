@@ -17,5 +17,6 @@ export default interface IFund {
   sharpe_ratio: number;
   user_fund_balance: string;
   user_fund_usd_value: string;
+  next_settlement: string;
   position_types: IPositionType[]
 }

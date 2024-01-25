@@ -1,0 +1,59 @@
+/* Typography */
+@font-face {
+  font-family: 'EudoxusSans';
+  src: url('../fonts/EudoxusSans-Bold.ttf') format('truetype');
+  font-weight: bold;
+}
+
+@font-face {
+  font-family: 'EudoxusSans';
+  src: url('../fonts/EudoxusSans-ExtraBold.ttf') format('truetype');
+  font-weight: 800; /* ExtraBold is often 800 weight */
+}
+
+@font-face {
+  font-family: 'EudoxusSans';
+  src: url('../fonts/EudoxusSans-ExtraLight.ttf') format('truetype');
+  font-weight: 200; /* ExtraLight is often 200 weight */
+}
+
+@font-face {
+  font-family: 'EudoxusSans';
+  src: url('../fonts/EudoxusSans-Light.ttf') format('truetype');
+  font-weight: 300; /* Light is often 300 weight */
+}
+
+@font-face {
+  font-family: 'EudoxusSans';
+  src: url('../fonts/EudoxusSans-Medium.ttf') format('truetype');
+  font-weight: 500; /* Medium is often 500 weight */
+}
+
+@font-face {
+  font-family: 'EudoxusSans';
+  src: url('../fonts/EudoxusSans-Regular.ttf') format('truetype');
+  font-weight: normal; /* Regular is normal weight */
+}
+
+html, body {
+  font-family: EudoxusSans, sans-serif;
+}
+
+div.section_title,
+div.section_subtitle {
+  font-weight: 500;
+  line-height: 1;
+  margin-bottom: 0.75rem;
+}
+div.section_title {
+  color: var($color-white, #FFF);
+  font-size: 1.3125rem;
+  letter-spacing: -0.01313rem;
+}
+
+div.section_subtitle {
+  color: $color-primary;
+  font-size: 0.875rem;
+  letter-spacing: 0.025rem;
+}
+

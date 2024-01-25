@@ -1,1 +1,33 @@
 $tooltip-background-color: rgb(var(--v-theme-surface));
+
+/* Links */
+a {
+  color: $color-white;
+
+  &:visited,
+  &:hover,
+  &:active {
+    color: $color-white;
+  }
+}
+
+
+/* Components */
+.main_card {
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 0 16px 0 $color-moonlight;
+  border-radius: 0.25rem;
+  background: rgba(12, 13, 18, 0.16) !important;
+}
+
+.card_box {
+  display: flex;
+  gap: 0.5rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  border-radius: 0.25rem;
+  border: 1px solid rgba(246, 249, 255, 0.08);
+}
+

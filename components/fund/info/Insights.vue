@@ -1,7 +1,7 @@
 <template>
-  <div class="fund__insights">
-    <div class="fund__insights__item">
-      <div class="fund__insights__item__title">
+  <div class="fund_insights">
+    <div class="fund_insights__item">
+      <div class="fund_insights__item__title">
         <Icon
           v-if="fund?.chain"
           :name="chainIconName"
@@ -11,55 +11,55 @@
         />
         {{ capitalizeFirst(fund.chain) }}
       </div>
-      <div class="fund__insights__item__subtitle">
+      <div class="fund_insights__item__subtitle">
         Chain
       </div>
     </div>
-    <div class="fund__insights__item">
-      <div class="fund__insights__item__title">
+    <div class="fund_insights__item">
+      <div class="fund_insights__item__title">
         {{ fund.inception_date }}
       </div>
-      <div class="fund__insights__item__subtitle">
+      <div class="fund_insights__item__subtitle">
         Inception Date
       </div>
     </div>
-    <div class="fund__insights__item">
+    <div class="fund_insights__item">
       <div
-        class="fund__insights__item__title"
+        class="fund_insights__item__title"
         :class="valueSignClass(fund.cumulative_return_percent)"
       >
         {{ formatPercent(fund.cumulative_return_percent) }}
       </div>
-      <div class="fund__insights__item__subtitle">
+      <div class="fund_insights__item__subtitle">
         Cumulative Return
       </div>
     </div>
-    <div class="fund__insights__item">
+    <div class="fund_insights__item">
       <div
-        class="fund__insights__item__title"
+        class="fund_insights__item__title"
         :class="valueSignClass(fund.monthly_return_percent)"
       >
         {{ formatPercent(fund.monthly_return_percent) }}
       </div>
-      <div class="fund__insights__item__subtitle">
+      <div class="fund_insights__item__subtitle">
         Monthly Return
       </div>
     </div>
-    <div class="fund__insights__item">
-      <div class="fund__insights__item__title">
+    <div class="fund_insights__item">
+      <div class="fund_insights__item__title">
         {{ fund.sharpe_ratio }}
       </div>
-      <div class="fund__insights__item__subtitle">
+      <div class="fund_insights__item__subtitle">
         Sharpe Ratio
       </div>
     </div>
-    <div class="fund__insights__item">
-      <div class="fund__insights__item__title">
+    <div class="fund_insights__item">
+      <div class="fund_insights__item__title">
         <FundPositionTypesBar
           :position-types="fund.position_types"
         />
       </div>
-      <div class="fund__insights__item__subtitle">
+      <div class="fund_insights__item__subtitle">
         Position Types
       </div>
     </div>
@@ -100,7 +100,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.fund__insights {
+.fund_insights {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -108,7 +108,7 @@ export default {
   padding: 1rem;
   border: 1px solid #293246;
   background: rgba(246, 249, 255, 0.04);
-  box-shadow: 4px 4px 16px 0 rgba(31, 95, 255, 0.16);
+  box-shadow: 4px 4px 16px 0 $color-moonlight;
 
   &__item {
     display: flex;
@@ -123,7 +123,7 @@ export default {
       height: 1rem;
       line-height: 1;
       font-weight: 700;
-      color: $title-color;
+      color: $color-title;
     }
     &__subtitle {
       font-size: 0.875rem;

@@ -1,14 +1,13 @@
-// import "@/assets/scss/vuetify.scss";
-// import "@/assets/scss/_variables.scss";
 import "@mdi/font/css/materialdesignicons.css";
 import { createVuetify, type ThemeDefinition } from "vuetify";
 import { md2 } from "vuetify/blueprints";
 
+// TODO use colors from _variables.scss, convert to var(--color-primary)
 const customDarkTheme: ThemeDefinition = {
   dark: false,
   colors: {
     background: "#111C35",
-    surface: "#060816",
+    surface: "#10192f",
     primary: "#1F5FFF",
     "primary-darken-1": "#101A2F",
     secondary: "#D2DFFF",

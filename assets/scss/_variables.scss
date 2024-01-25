@@ -1,9 +1,24 @@
+$color-white: #FFFFFF;
+$color-black: #333333;
+
+/* Vuetify colors */
 // Currently also defined in the plugins/vuetify.ts
+$color-background: #111C35;
+$color-surface: #10192f;
 $color-primary: #1F5FFF;
 $color-secondary: #D2DFFF;
+$color-error: #DE3838;
+$color-info: #2196F3;
+$color-success: #38DE38;
+$color-warning: #FB8C00;
 
-$title-color: #FFFFFF;
-$subtitle-color: #5C6374;
+/* Typography colors */
+$color-title: $color-white;
+$color-subtitle: #5C6374;
+
+/* Utility colors */
+$color-moonlight: rgba(31, 95, 255, 0.16);
+
 
 // Position Type Colors
 $color-position-type-liquid: #DE6A38;

@@ -11,9 +11,10 @@ export default defineNuxtConfig({
     transpile: ["vuetify"],
   },
   css: [
-    // "vuetify/styles",
+    "~/assets/scss/_typography.scss",
+    "vuetify/styles",
+    "~/assets/scss/vuetify_overrides.scss",
     "~/assets/scss/app.scss",
-    // "~/assets/global.css"  ///@notice: uncomment to have the style from the migrated components
   ],
   modules: [
     (_options, nuxt) => {
@@ -54,7 +55,7 @@ export default defineNuxtConfig({
     css: {
       preprocessorOptions: {
         scss: {
-          additionalData: "@import \"@/assets/scss/vuetify.scss\"; @import \"@/assets/scss/_variables.scss\";",
+          additionalData: "@import \"@/assets/scss/_variables.scss\";",
         },
       },
     },
