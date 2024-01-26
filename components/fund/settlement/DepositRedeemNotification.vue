@@ -20,7 +20,8 @@
   gap: 1.5rem;
 
   border-radius: 0.25rem;
-  border: 1px solid rgba(246, 249, 255, 0.08);
-  background: rgba(246, 249, 255, 0.04);
+  border: 1px solid $color-gray-transparent;
+  background: $color-light-gray-transparent;
+  color: $color-light-subtitle;
 }
 </style>

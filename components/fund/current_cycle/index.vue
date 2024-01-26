@@ -17,6 +17,13 @@
         </v-btn>
       </div>
     </div>
+    <div class="fund_settlement__pending_requests">
+      <FundCurrentCyclePendingRequest
+        v-for="pendingRequest in fund.cycle_pending_requests"
+        :key="pendingRequest.id"
+        :pending-request="pendingRequest"
+      />
+    </div>
   </div>
 </template>
 
@@ -44,6 +51,12 @@ export default {
 .fund_settlement {
   &__buttons {
     display: flex;
+    gap: 1rem;
+  }
+
+  &__pending_requests {
+    display: flex;
+    flex-direction: column;
     gap: 1rem;
   }
 }

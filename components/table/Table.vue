@@ -4,29 +4,29 @@
       class="rethink-table"
       :style="{ ...defaultStyle, background: bgColor, ...style }"
     >
-      <caption :style="captionStyle" v-if="showControls">
+      <caption v-if="showControls" :style="captionStyle">
         <div class="table-navbar-content">
-          <slot name="table-navbar-content"></slot>
+          <slot name="table-navbar-content" />
           <input
             v-if="isFilterable"
             v-model="filtering"
-            @input="filterTable"
             placeholder="Search by name..."
-          />
+            @input="filterTable"
+          >
         </div>
       </caption>
       <thead v-if="showHeader">
         <tr
-          :style="{ height }"
           v-for="headerGroup in table.getHeaderGroups()"
           :key="headerGroup.id"
+          :style="{ height }"
         >
           <th
             v-for="header in headerGroup.headers"
             :key="header.id"
             :style="tableHeadDefaultStyle"
-            @click="toggleSorting(header)"
             :colspan="header.colSpan"
+            @click="toggleSorting(header)"
           >
             <div class="table-header-cell">
               <FlexRender
@@ -45,9 +45,9 @@
           @click="$router.push(`/details/${row.original.id}`)"
         >
           <td
-            class="px-8 py-4 text-sm whitespace-nowrap"
             v-for="cell in row.getVisibleCells()"
             :key="cell.id"
+            class="px-8 py-4 text-sm whitespace-nowrap"
             :style="{
               ...tableDataDefaultStyle,
             }"
@@ -157,10 +157,10 @@ const captionStyle = computed(() => {
       props.captionSide === "top" || props.captionSide === "block-start"
         ? "-bottom"
         : props.captionSide === "inline-end"
-        ? "-inline-end"
-        : props.captionSide === "bottom" || props.captionSide === "block-end"
-        ? "-top"
-        : "-inline-start"
+          ? "-inline-end"
+          : props.captionSide === "bottom" || props.captionSide === "block-end"
+            ? "-top"
+            : "-inline-start"
     }`]: props.captionSpacing,
   };
 });
@@ -198,7 +198,7 @@ watch([() => props.data, () => props.columns], () => {
 });
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .rethink-table {
   width: 100%;
   border-collapse: collapse;
@@ -247,8 +247,8 @@ tr:not(th tr) {
   background: #21356629;
   background: linear-gradient(
     0deg,
-    rgba(246, 249, 255, 0.04),
-    rgba(246, 249, 255, 0.04)
+    $color-light-gray-transparent,
+    $color-light-gray-transparent
   );
   margin-block: "2px";
 }
@@ -262,8 +262,8 @@ tbody tr {
 tbody tr:hover {
   background: linear-gradient(
     0deg,
-    rgba(246, 249, 255, 0.08),
-    rgba(246, 249, 255, 0.08)
+    $color-gray-transparent,
+    $color-gray-transparent
   );
 }
 

@@ -107,7 +107,7 @@ export default {
   align-items: flex-start;
   padding: 1rem;
   border: 1px solid #293246;
-  background: rgba(246, 249, 255, 0.04);
+  background: $color-light-gray-transparent;
   box-shadow: 4px 4px 16px 0 $color-moonlight;
 
   &__item {
@@ -128,7 +128,7 @@ export default {
     &__subtitle {
       font-size: 0.875rem;
       line-height: 1;
-      color: #F6F9FF8F;
+      color: $color-light-subtitle;
     }
   }
 }

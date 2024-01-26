@@ -65,11 +65,13 @@ const fundData: IFund = {
   ],
   cycle_pending_requests: [
     {
+      id: "1",
       token: "SOON",
       available_tokens: 3570,
       pending_tokens: 128,
     },
     {
+      id: "2",
       token: "USDC",
       available_tokens: 1284,
       pending_tokens: 988,

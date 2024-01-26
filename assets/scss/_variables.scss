@@ -15,12 +15,17 @@ $color-warning: #FB8C00;
 /* Typography */
 $color-title: $color-white;
 $color-subtitle: #45557F;
-$text-lg: 1.3125rem;
+$color-light-subtitle: rgba(246, 249, 255, 0.76);
+
+$text-lg: 1.25rem;
 $text-md: 1rem;
-$text-sm: 0.825rem;
+$text-sm: 0.8125rem;
 
 /* Utility colors */
 $color-moonlight: rgba(31, 95, 255, 0.16);
+$color-light-moonlight: #343d50;
+$color-gray-transparent: rgba(246, 249, 255, 0.08);
+$color-light-gray-transparent: rgba(246, 249, 255, 0.04);
 
 
 // Position Type Colors
