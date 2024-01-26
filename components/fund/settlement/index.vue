@@ -1,6 +1,6 @@
 <template>
   <div class="fund_settlement">
-    <div class="fund_settlement__header">
+    <div class="card_header">
       <div>
         <div class="section_title">
           {{ fund.next_settlement }}
@@ -32,7 +32,7 @@
     </div>
     <div>
       <div class="card_box">
-        <DepositRedeemNotification />
+        <FundSettlementDepositRedeemNotification />
       </div>
     </div>
   </div>
@@ -41,11 +41,9 @@
 <script lang="ts">
 import type { PropType } from "vue";
 import type IFund from "~/types/fund";
-import DepositRedeemNotification from "~/components/fund/settlement/DepositRedeemNotification.vue";
 
 export default {
   name: "Settlement",
-  components: { DepositRedeemNotification },
   props: {
     fund: {
       type: Object as PropType<IFund>,
@@ -70,14 +68,10 @@ export default {
 
 <style lang="scss" scoped>
 .fund_settlement {
-  &__header {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-  }
   &__buttons {
     display: flex;
     gap: 1rem;
+    margin: auto 0;
   }
 }
 </style>

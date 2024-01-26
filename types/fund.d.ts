@@ -1,4 +1,5 @@
 import type IPositionType from '~/types/position_type';
+import type ICyclePendingRequest from '~/types/cycle_pending_request';
 
 export default interface IFund {
   id: number;
@@ -18,5 +19,6 @@ export default interface IFund {
   user_fund_balance: string;
   user_fund_usd_value: string;
   next_settlement: string;
-  position_types: IPositionType[]
+  position_types: IPositionType[],
+  cycle_pending_requests: ICyclePendingRequest[],
 }

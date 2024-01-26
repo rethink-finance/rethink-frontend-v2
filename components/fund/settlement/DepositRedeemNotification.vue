@@ -15,6 +15,7 @@
 <style lang="scss" scoped>
 .deposit_redeem_notification {
   display: flex;
+  margin: 1.75rem 0;
   padding: 1rem;
   gap: 1.5rem;
 

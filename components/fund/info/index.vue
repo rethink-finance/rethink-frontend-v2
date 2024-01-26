@@ -69,9 +69,6 @@
     </div>
 
     <div class="fund_info__section">
-      <div class="section_subtitle">
-        Fund Insights
-      </div>
       <FundInfoInsights :fund="fund" />
     </div>
   </div>
@@ -107,23 +104,17 @@ export default {
     },
   },
   methods: {
-    async toggleFund() {
+    toggleFund() {
       // this.$store.state.fund.selectedFundAddress = this.fund.address;
       // this.$store.commit("fund/setSelectedFundAddress", this.fund.address);
-      await this.copyFundAddr();
-    },
-    async toggleSafe() {
-      await this.copySafeAddr();
-    },
-    async toggleGovernor() {
-      await this.copyGovernorAddr();
+      this.copyFundAddr();
     },
     async copyFundAddr() {
       try {
         await navigator.clipboard.writeText(this.fund.address);
         // const msg = "Copied Fund Address (" + this.fund.address + ") to clipboard";
         // this.$toast.success(msg);
-      } catch ($e) {}
+      } catch ($e) {console.error($e);}
     },
     async copyGovernorAddr() {
       try {
@@ -145,14 +136,10 @@ export default {
 
 <style lang="scss" scoped>
 .fund_info {
-  &__section {
-    &:not(:last-of-type) {
-      margin-bottom: 2rem;
-    }
-  }
   &__header {
     display: flex;
     gap: 2.5rem;
+    margin-bottom: 2rem;
 
     &__avatar_img {
       border-radius: 0.25rem;

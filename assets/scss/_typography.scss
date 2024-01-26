@@ -43,17 +43,17 @@ div.section_title,
 div.section_subtitle {
   font-weight: 500;
   line-height: 1;
-  margin-bottom: 0.75rem;
 }
 div.section_title {
-  color: var($color-white, #FFF);
-  font-size: 1.3125rem;
+  color: $color-white;
+  font-size: $text-lg;
   letter-spacing: -0.01313rem;
+  margin-bottom: 0.5rem;
 }
 
 div.section_subtitle {
-  color: $color-primary;
-  font-size: 0.875rem;
+  color: $color-subtitle;
+  font-size: $text-sm;
   letter-spacing: 0.025rem;
 }
 

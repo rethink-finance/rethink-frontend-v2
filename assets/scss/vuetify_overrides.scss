@@ -4,15 +4,19 @@ button.v-btn--variant-outlined {
   font-weight: bold;
 }
 
-.v-btn {
-  &--size-default {
-    height: 2rem;
-    font-size: 0.875rem;
-    font-style: normal;
-    font-weight: 700;
-    line-height: 150%;
-    letter-spacing: 0.0525rem;
-    padding-right: 1.5rem;
-    padding-left: 1.5rem;
+:root {
+  /* Duplicated .v-btn to increase specificity, do not remove. */
+  .v-btn.v-btn {
+    text-transform: none;
+
+    &--size-default {
+      height: 2.5rem;
+      font-size: $text-sm;
+      font-style: normal;
+      font-weight: 700;
+      letter-spacing: 0.0525rem;
+      padding-right: 1.5rem;
+      padding-left: 1.5rem;
+    }
   }
 }

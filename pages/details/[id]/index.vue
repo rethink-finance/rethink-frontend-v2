@@ -9,7 +9,7 @@
           <FundSettlement :fund="fund" />
         </div>
         <div>
-          Current cycle
+          <FundCurrentCycle :fund="fund" />
         </div>
       </div>
     </div>
@@ -61,6 +61,18 @@ const fundData: IFund = {
     {
       type: PositionType.NAVIlliquid,
       value: 36,
+    },
+  ],
+  cycle_pending_requests: [
+    {
+      token: "SOON",
+      available_tokens: 3570,
+      pending_tokens: 128,
+    },
+    {
+      token: "USDC",
+      available_tokens: 1284,
+      pending_tokens: 988,
     },
   ],
 };
