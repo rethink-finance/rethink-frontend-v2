@@ -65,7 +65,7 @@ export default {
   margin: auto;
 
   &__item {
-    height: 0.625rem;
+    height: $text-sm;
 
     &:first-of-type {
       border-top-left-radius: 0.25rem;

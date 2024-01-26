@@ -8,10 +8,11 @@ button.v-btn--variant-outlined {
   /* Duplicated .v-btn to increase specificity, do not remove. */
   .v-btn.v-btn {
     text-transform: none;
+    font-size: $text-sm;
 
     &--size-default {
       height: 2.5rem;
-      font-size: $text-sm;
+      line-height: 1;
       font-style: normal;
       font-weight: 700;
       letter-spacing: 0.0525rem;

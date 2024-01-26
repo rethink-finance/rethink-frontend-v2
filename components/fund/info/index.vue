@@ -33,7 +33,7 @@
         >
           DeBank - AUM
           <template #append>
-            <v-icon icon="mdi-link" size="large" />
+            <v-icon icon="mdi-link" size="1.5rem" />
           </template>
           <v-tooltip activator="parent" location="bottom">
             Copy Fund address to clipboard ({{ formatAddress }})
@@ -46,7 +46,7 @@
         >
           Tally - Governance
           <template #append>
-            <v-icon icon="mdi-link" size="large" />
+            <v-icon icon="mdi-link" size="1.5rem" />
           </template>
           <v-tooltip activator="parent" location="bottom">
             Copy Governance address to clipboard ({{ formatGovernanceAddress }})
@@ -59,7 +59,7 @@
         >
           Safe - Custody
           <template #append>
-            <v-icon icon="mdi-link" size="large" />
+            <v-icon icon="mdi-link" size="1.5rem" />
           </template>
           <v-tooltip activator="parent" location="bottom">
             Copy Safe address to clipboard ({{ formatSafeAddress }})
