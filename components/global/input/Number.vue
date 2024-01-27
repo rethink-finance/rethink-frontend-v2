@@ -1,16 +1,17 @@
 <template>
   <v-text-field
-    v-model.number="internalValue"
+    v-model="internalValueAsString"
     class="custom-text-field"
     type="number"
     min="0"
+    hide-spin-buttons
   />
 </template>
 
 <script lang="ts" setup>
 const props = defineProps({
   modelValue: {
-    type: Number,
+    type: [Number, String],
     default: 0,
   },
 });
@@ -18,23 +19,33 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 // Always store as a string
-const internalValue = ref(props.modelValue);
+const internalValue = ref(props.modelValue.toString());
 
-watch(internalValue, (newValue) => {
-  if (newValue == null || isNaN(newValue) || newValue < 0) {
-    internalValue.value = 0;
-  } else {
-    emit("update:modelValue", newValue);
-  }
+// Computed property to convert internalValue to a string for display
+const internalValueAsString = computed({
+  get: () => internalValue.value,
+  set: (newValue) => {
+    if (newValue === "") {
+      // Handle empty input by converting it to 0
+      internalValue.value = "0";
+    } else {
+      // Convert the string input to a number
+      const parsedValue = parseFloat(newValue);
+      if (!isNaN(parsedValue)) {
+        internalValue.value = parsedValue.toString();
+      }
+    }
+    emit("update:modelValue", internalValue.value);
+  },
 });
 
-watch(() => props.modelValue, (newValue) => {
-  if (newValue == null || isNaN(newValue) || newValue < 0) {
-    internalValue.value = 0;
-  } else {
-    internalValue.value = newValue;
-  }
-});
+// Watch for changes in the props and update internalValue
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    internalValue.value = newValue.toString();
+  },
+);
 </script>
 
 <style lang="scss" scoped>
