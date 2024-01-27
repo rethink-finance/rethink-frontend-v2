@@ -77,6 +77,17 @@ const fundData: IFund = {
       pending_tokens: 988,
     },
   ],
+  fund_token: {
+    name: "SOON",
+    address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
+    balance: 100,
+  },
+  denomination_token: {
+    name: "USDC",
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    balance: 120,
+  },
+  fund_to_denomination_exchange_rate: 1.15,
 };
 
 const fund = ref(fundData);

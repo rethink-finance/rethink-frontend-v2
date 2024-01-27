@@ -23,7 +23,6 @@
 </template>
 
 <script lang="ts">
-import type { PropType } from "vue";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 
 export default {
@@ -57,10 +56,10 @@ export default {
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
-    color: $color-light-moonlight;
+    color: $color-moonlight-light;
 
     :hover {
-      color: lighten($color-light-moonlight, 10%);
+      color: lighten($color-moonlight-light, 10%);
     }
   }
   &__header {
@@ -74,7 +73,7 @@ export default {
     padding: 0.5rem 1.5rem 0.5rem 1rem;
 
     &--bg-light {
-      background: $color-light-gray-transparent;
+      background: $color-gray-light-transparent;
     }
   }
 }

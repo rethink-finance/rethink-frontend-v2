@@ -20,4 +20,29 @@ button.v-btn--variant-outlined {
       padding-left: 1.5rem;
     }
   }
+
+  $input-height: 2.5rem;
+  input {
+    min-height: $input-height;
+    height: $input-height;
+    font-size: $text-sm;
+    line-height: 1;
+    padding: 0.75rem;
+  }
+  .v-input {
+    min-height: $input-height;
+    height: $input-height;
+    font-size: $text-sm;
+    line-height: 1;
+
+    .v-field {
+      border-radius: 0;
+    }
+    .v-field__overlay {
+      background: none;
+    }
+    .v-field__outline {
+      display: none;
+    }
+  }
 }

@@ -21,7 +21,7 @@
 
   border-radius: 0.25rem;
   border: 1px solid $color-gray-transparent;
-  background: $color-light-gray-transparent;
+  background: $color-gray-light-transparent;
   color: $color-light-subtitle;
 }
 </style>

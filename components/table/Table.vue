@@ -247,8 +247,8 @@ tr:not(th tr) {
   background: #21356629;
   background: linear-gradient(
     0deg,
-    $color-light-gray-transparent,
-    $color-light-gray-transparent
+    $color-gray-light-transparent,
+    $color-gray-light-transparent
   );
   margin-block: "2px";
 }

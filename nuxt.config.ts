@@ -11,8 +11,8 @@ export default defineNuxtConfig({
     transpile: ["vuetify"],
   },
   css: [
-    "~/assets/scss/_typography.scss",
     "vuetify/styles",
+    "~/assets/scss/_typography.scss",
     "~/assets/scss/vuetify_overrides.scss",
     "~/assets/scss/app.scss",
   ],

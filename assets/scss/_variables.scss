@@ -22,14 +22,38 @@ $text-md: 1rem;
 $text-sm: 0.8125rem;
 
 /* Utility colors */
+$color-navy-gray: #141c2e;
+$color-navy-gray-dark: #0f172a;
 $color-moonlight: rgba(31, 95, 255, 0.16);
-$color-light-moonlight: #343d50;
+$color-moonlight-light: #343d50;
 $color-gray-transparent: rgba(246, 249, 255, 0.08);
-$color-light-gray-transparent: rgba(246, 249, 255, 0.04);
-
+$color-gray-light-transparent: rgba(246, 249, 255, 0.04);
 
 // Position Type Colors
 $color-position-type-liquid: #DE6A38;
 $color-position-type-composable: #38DE8E;
 $color-position-type-nft: #741FFF;
 $color-position-type-illiquid: #FFD700;
+
+
+// Define a variable for border properties
+$default-border-properties: (
+  "border": 1px solid $color-gray-transparent
+);
+
+// Define a mixin to apply border properties based on position
+@mixin borderGray($position: null, $border-radius: true) {
+  @each $property, $value in $default-border-properties {
+    #{$property}: $value;
+  }
+
+  // Apply border radius if enabled
+  @if $border-radius {
+    border-radius: 0.25rem;
+  }
+
+  // Apply specific border position if provided
+  @if $position {
+    #{$position}: 1px solid $color-gray-transparent;
+  }
+}

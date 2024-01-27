@@ -107,7 +107,7 @@ export default {
   align-items: flex-start;
   padding: 1rem;
   border: 1px solid #293246;
-  background: $color-light-gray-transparent;
+  background: $color-gray-light-transparent;
   box-shadow: 4px 4px 16px 0 $color-moonlight;
 
   &__item {

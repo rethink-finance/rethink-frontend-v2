@@ -21,4 +21,7 @@ export default interface IFund {
   next_settlement: string;
   position_types: IPositionType[],
   cycle_pending_requests: ICyclePendingRequest[],
+  fund_token: IToken,
+  denomination_token: IToken,
+  fund_to_denomination_exchange_rate: number
 }

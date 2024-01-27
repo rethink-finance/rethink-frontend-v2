@@ -29,11 +29,15 @@ a {
 }
 
 .card_box {
+  @include borderGray;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
-  border-radius: 0.25rem;
-  border: 1px solid $color-gray-transparent;
+  padding: 1rem 0.75rem;
+
+  &--no-padding {
+    padding: 0;
+  }
 }
 
