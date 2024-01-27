@@ -110,8 +110,6 @@ export default {
       return `1 ${this.token0.name} = ${this.exchangeRate.toFixed(2)} ${this.token1.name}`;
     },
     calculatedToken1Value() {
-      console.log("this.tokenValue");
-      console.log(this.tokenValue);
       return (this.tokenValue * this.exchangeRate).toFixed(4).replace(/\.?0*$/, "");
     },
     buttonText() {
