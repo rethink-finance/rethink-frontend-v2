@@ -16,6 +16,7 @@ export default {
     return {
       chartItems: [] as number[],
       chartDates: [] as Date[],
+      chartTimes: [] as string[],
     };
   },
   computed: {
@@ -42,8 +43,15 @@ export default {
         dataLabels: {
           enabled: false,
         },
+        context: {
+          // Store additional context data here.
+          times: this.chartTimes,
+        },
         markers: {
           size: 0,
+          colors: ["transparent"],
+          strokeColors: "var(--color-primary)",
+          strokeWidth: 2,
         },
         grid: {
           show: false,
@@ -53,8 +61,6 @@ export default {
             right: -26,
           },
         },
-        plotOptions: {
-        },
         fill: {
           type: "gradient",
           gradient: {
@@ -63,7 +69,7 @@ export default {
             opacityFrom: 0.25,
             opacityTo: 0.1,
             type: "vertical",
-            stops: [3, 100],
+            stops: [20, 100],
           },
           colors: ["var(--color-primary)"],
         },
@@ -115,12 +121,23 @@ export default {
             },
           },
         },
+        tooltip: {
+          theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
+          custom: function({ series, seriesIndex, dataPointIndex, w }: any) {
+            return "<div class='custom_tooltip'>" +
+              "<div class='tooltip_row'><div class='label'>Date:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
+              "<div class='tooltip_row'><div class='label'>Time:</div>" + w.config.context.times[dataPointIndex] + "</div>" +
+              "<div class='tooltip_row'><div class='label'>Price:</div>" + series[seriesIndex][dataPointIndex] + "</div>" +
+              "</div>"
+          },
+        },
       }
     },
   },
   mounted() {
     this.chartItems = this.getRandomData();
     this.chartDates = this.getRandomDates();
+    this.chartTimes = this.getRandomTimes();
   },
   methods: {
     getRandomDates() {
@@ -136,6 +153,20 @@ export default {
         new Date("2023-09-17"),
         new Date("2023-10-29"),
       ];
+    },
+    getRandomTimes() {
+      return [
+        "09:30:00",
+        "10:15:45",
+        "12:00:00",
+        "14:30:15",
+        "15:45:30",
+        "17:20:10",
+        "19:05:25",
+        "21:15:55",
+        "22:40:30",
+        "23:59:59",
+      ]
     },
     getRandomData() {
       // TODO replace with real data and remove this function.
@@ -157,5 +188,33 @@ export default {
   min-height: 400px;
   width: 100%;
   min-width: 100%;
+
+  ::v-deep(.custom_tooltip) {
+    display: flex;
+    padding: 0.75rem;
+    flex-direction: column;
+    justify-content: center;
+    opacity: 1;
+    gap: 0.5rem;
+    line-height: 1;
+    font-size: $text-sm;
+    font-weight: 500;
+
+    @include borderGray("border", true, #AEC5FF);
+    border-width: 2px;
+    //border: 1px solid var(--Guide-highlight, #AEC5FF);
+
+    background: #242e45;
+    /* Blue 1 */
+    //box-shadow: 4px 46px 16px 0 rgba(31, 95, 255, 0.16);
+
+    .tooltip_row {
+      display: flex;
+      flex-direction: row;
+    }
+    .label {
+      padding-right: 0.5rem;
+    }
+  }
 }
 </style>

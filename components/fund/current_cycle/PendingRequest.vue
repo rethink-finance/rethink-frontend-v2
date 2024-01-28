@@ -1,5 +1,5 @@
 <template>
-  <div class="pending_request card_box">
+  <div class="pending_request card_box card_box--no-padding">
     <div class="pending_request__header">
       <div class="pending_request__pending_tokens">
         Pending Request

@@ -36,10 +36,6 @@ $color-position-type-nft: #741FFF;
 $color-position-type-illiquid: #FFD700;
 
 
-// Define a variable for border properties
-$default-border-properties: (
-  "border": 1px solid $color-gray-transparent
-);
 
 
 /**
@@ -53,18 +49,16 @@ plugins like Apexcharts with "var(--color-something)" to prevent redefining colo
 }
 
 // Define a mixin to apply border properties based on position
-@mixin borderGray($position: null, $border-radius: true) {
-  @each $property, $value in $default-border-properties {
-    #{$property}: $value;
-  }
-
+// Define a variable for border properties
+$default-border-properties: (
+  "border": 1px solid $color-gray-transparent
+);
+@mixin borderGray($position: "border", $border-radius: true, $border-color: $color-gray-transparent) {
   // Apply border radius if enabled
   @if $border-radius {
     border-radius: 0.25rem;
   }
 
-  // Apply specific border position if provided
-  @if $position {
-    #{$position}: 1px solid $color-gray-transparent;
-  }
+  // Apply specific border position.
+  #{$position}: 1px solid $border-color;
 }
