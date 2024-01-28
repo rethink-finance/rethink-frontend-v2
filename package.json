@@ -40,7 +40,7 @@
     "@nuxt/typescript-runtime": "^3.0.2",
     "@tanstack/vue-table": "^8.10.7",
     "@typechain/ethers-v6": "^0.5.1",
-    "apexcharts": "^3.44.0",
+    "apexcharts": "^3.45.2",
     "ethers": "^6.10.0",
     "pinia": "^2.1.7",
     "vue3-apexcharts": "^1.4.4",

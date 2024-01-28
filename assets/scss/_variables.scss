@@ -41,6 +41,17 @@ $default-border-properties: (
   "border": 1px solid $color-gray-transparent
 );
 
+
+/**
+Define the needed colors as CSS variables, as they can be used in certain
+plugins like Apexcharts with "var(--color-something)" to prevent redefining colors.
+ */
+:root {
+  --color-primary: #{$color-primary};
+  --color-light-subtitle: #{$color-light-subtitle};
+  --color-gray-light-transparent: #{$color-gray-light-transparent};
+}
+
 // Define a mixin to apply border properties based on position
 @mixin borderGray($position: null, $border-radius: true) {
   @each $property, $value in $default-border-properties {

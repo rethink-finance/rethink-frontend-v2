@@ -110,6 +110,7 @@ export default {
       return `1 ${this.token0.name} = ${this.exchangeRate.toFixed(2)} ${this.token1.name}`;
     },
     calculatedToken1Value() {
+      // Round to 4 decimals and cut trailing zeros.
       return (this.tokenValue * this.exchangeRate).toFixed(4).replace(/\.?0*$/, "");
     },
     buttonText() {

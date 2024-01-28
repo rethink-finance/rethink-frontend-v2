@@ -3,22 +3,21 @@
     <div class="main_card">
       <FundInfo :fund="fund" />
     </div>
-    <div>
-      <div class="main_card settlement_grid">
-        <div>
-          <FundSettlement :fund="fund" />
-        </div>
-        <div>
-          <FundCurrentCycle :fund="fund" />
-        </div>
+    <div class="main_card settlement_grid">
+      <div>
+        <FundSettlement :fund="fund" />
       </div>
+      <div>
+        <FundCurrentCycle :fund="fund" />
+      </div>
+    </div>
+    <div class="main_card">
+      <FundChart :fund-id="fund.id" />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-// const isMounted = ref(false);
-
 import type IFund from "~/types/fund";
 import { PositionType } from "~/types/enums/position_type";
 
@@ -91,26 +90,6 @@ const fundData: IFund = {
 };
 
 const fund = ref(fundData);
-// const chartOptions = ref({
-//   chart: {
-//     id: "vuechart-example",
-//   },
-//   xaxis: {
-//     categories: ["24 Jul", "07 Aug", "21 Aug", "04 Sep", "18 Sep", "02 Oct"],
-//   },
-// });
-
-// const chartSeries = ref({
-//   name: "Share Price",
-//   data: [30, 40, 45, 50, 49, 60],
-// });
-
-onMounted(() => {
-  if (process.client) {
-    // isMounted.value = true;
-    // if (apexchart.value) apexchart.value.updateOptions(chartOptions);
-  }
-});
 </script>
 
 <style lang="scss" scoped>
