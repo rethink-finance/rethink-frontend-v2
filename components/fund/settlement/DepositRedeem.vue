@@ -66,6 +66,7 @@
 
 <script lang="ts">
 import type IToken from "~/types/token";
+import { trimTrailingZeros } from "~/composables/utils";
 
 export default {
   name: "DepositRedeem",
@@ -111,7 +112,7 @@ export default {
     },
     calculatedToken1Value() {
       // Round to 4 decimals and cut trailing zeros.
-      return (this.tokenValue * this.exchangeRate).toFixed(4).replace(/\.?0*$/, "");
+      return trimTrailingZeros((this.tokenValue * this.exchangeRate).toFixed(4));
     },
     buttonText() {
       if (this.action === "deposit") {

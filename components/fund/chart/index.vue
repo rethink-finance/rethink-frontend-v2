@@ -1,5 +1,11 @@
 <template>
   <div class="chart">
+    <div class="chart__toolbar">
+      <div>
+        <FundChartTypeSelector selected="sharePrice" @change="updateChart" />
+      </div>
+      <FundChartTimelineSelector selected="3M" @change="updateChart" />
+    </div>
     <ClientOnly>
       <apexchart
         height="400"
@@ -11,6 +17,9 @@
   </div>
 </template>
 <script lang="ts">
+import numeral from "numeral";
+import { trimTrailingZeros } from "~/composables/utils";
+
 export default {
   data() {
     return {
@@ -125,9 +134,12 @@ export default {
           theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
           custom: function({ series, seriesIndex, dataPointIndex, w }: any) {
             return "<div class='custom_tooltip'>" +
-              "<div class='tooltip_row'><div class='label'>Date:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
-              "<div class='tooltip_row'><div class='label'>Time:</div>" + w.config.context.times[dataPointIndex] + "</div>" +
-              "<div class='tooltip_row'><div class='label'>Price:</div>" + series[seriesIndex][dataPointIndex] + "</div>" +
+              "<div class='tooltip_row'>" +
+              "<div class='label'>Date:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
+              "<div class='tooltip_row'>" +
+              "<div class='label'>Time:</div>" + w.config.context.times[dataPointIndex] + "</div>" +
+              "<div class='tooltip_row'>" +
+              "<div class='label'>Price:</div>" + trimTrailingZeros(numeral(series[seriesIndex][dataPointIndex]).format("$0,0.00")) + "</div>" +
               "</div>"
           },
         },
@@ -135,11 +147,15 @@ export default {
     },
   },
   mounted() {
-    this.chartItems = this.getRandomData();
-    this.chartDates = this.getRandomDates();
-    this.chartTimes = this.getRandomTimes();
+    this.updateChart();
   },
   methods: {
+    updateChart(value?: string) {
+      console.log("changed value: " + value)
+      this.chartItems = this.getRandomData();
+      this.chartDates = this.getRandomDates();
+      this.chartTimes = this.getRandomTimes();
+    },
     getRandomDates() {
       return [
         new Date("2023-01-01"),
@@ -189,6 +205,13 @@ export default {
   width: 100%;
   min-width: 100%;
 
+  &__toolbar {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
   ::v-deep(.custom_tooltip) {
     display: flex;
     padding: 0.75rem;
@@ -202,10 +225,8 @@ export default {
 
     @include borderGray("border", true, #AEC5FF);
     border-width: 2px;
-    //border: 1px solid var(--Guide-highlight, #AEC5FF);
 
     background: #242e45;
-    /* Blue 1 */
     //box-shadow: 4px 46px 16px 0 rgba(31, 95, 255, 0.16);
 
     .tooltip_row {

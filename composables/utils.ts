@@ -67,3 +67,7 @@ export const formatPercent = (value: number, includeSign: boolean = true): strin
 
   return formattedPercentage;
 }
+
+export const trimTrailingZeros = (value: string) => {
+  return value.replace(/\.?0*$/, "");
+}

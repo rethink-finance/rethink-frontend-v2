@@ -1,9 +1,20 @@
 $color-white: #FFFFFF;
 $color-black: #333333;
 
+/* Utility colors */
+$color-dark: #111C35;
+$color-navy-gray: #141c2e;
+$color-navy-gray-light: #151e33;
+$color-hover: #1a2338;
+$color-navy-gray-dark: #0f172a;
+$color-moonlight: rgba(31, 95, 255, 0.16);
+$color-moonlight-light: #343d50;
+$color-gray-transparent: rgba(246, 249, 255, 0.08);
+$color-gray-light-transparent: rgba(246, 249, 255, 0.04);
+
 /* Vuetify colors */
 // Currently also defined in the plugins/vuetify.ts
-$color-background: #111C35;
+$color-background: $color-dark;
 $color-surface: #10192f;
 $color-primary: #1F5FFF;
 $color-secondary: #D2DFFF;
@@ -20,14 +31,6 @@ $color-light-subtitle: rgba(246, 249, 255, 0.76);
 $text-lg: 1.25rem;
 $text-md: 1rem;
 $text-sm: 0.8125rem;
-
-/* Utility colors */
-$color-navy-gray: #141c2e;
-$color-navy-gray-dark: #0f172a;
-$color-moonlight: rgba(31, 95, 255, 0.16);
-$color-moonlight-light: #343d50;
-$color-gray-transparent: rgba(246, 249, 255, 0.08);
-$color-gray-light-transparent: rgba(246, 249, 255, 0.04);
 
 // Position Type Colors
 $color-position-type-liquid: #DE6A38;

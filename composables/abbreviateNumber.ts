@@ -1,3 +1,5 @@
+import { trimTrailingZeros } from "~/composables/utils";
+
 /**
  * Example usage:
  * console.log(formatNumber(1000)); // Outputs: "1K"
@@ -24,5 +26,5 @@ export const abbreviateNumber = (value: any) => {
   }
 
   // Round to 1 decimal and cut trailing zeros.
-  return roundedValue.toFixed(1).replace(/\.?0*$/, "") + abbreviation;
+  return trimTrailingZeros(roundedValue.toFixed(1)) + abbreviation;
 }
