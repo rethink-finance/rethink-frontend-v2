@@ -63,9 +63,11 @@ a {
     &.v-expansion-panel-title {
       padding: 1.5rem;
       background: $color-surface;
-    }
-    .v-expansion-panel-title__icon {
-      color: $color-primary;
+      &.v-expansion-panel-title--active {
+        .v-expansion-panel-title__icon {
+          color: $color-primary;
+        }
+      }
     }
   }
   &__subtitle {

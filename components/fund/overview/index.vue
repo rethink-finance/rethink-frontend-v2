@@ -1,8 +1,8 @@
 <template>
   <div class="overview">
-    <v-expansion-panels class="mb-6" variant="accordion">
+    <v-expansion-panels variant="accordion">
       <v-expansion-panel class="main_expansion_panel" eager>
-        <v-expansion-panel-title class="main_expansion_panel__title section_title main_card">
+        <v-expansion-panel-title class="main_expansion_panel__title section_title main_card" static>
           Overview
         </v-expansion-panel-title>
         <v-expansion-panel-text class="main_expansion_panel__body">
@@ -20,10 +20,9 @@
               Deposits
             </div>
             <div>
-              <FundOverviewBasics :fund="fund" />
+              <FundOverviewDeposits :fund="fund" />
             </div>
           </div>
-
         </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
