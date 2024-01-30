@@ -18,7 +18,11 @@ a {
   margin-bottom: 1rem;
   box-shadow: 0 0 16px 0 $color-moonlight;
   border-radius: 0.25rem;
-  background: rgba(12, 13, 18, 0.16) !important;
+  background: $color-surface;
+
+  &--no-padding {
+    padding: 0;
+  }
 }
 
 .card_header {
@@ -41,3 +45,39 @@ a {
   }
 }
 
+.main_expansion_panel {
+  background: transparent;
+
+ .v-expansion-panel {
+   gap: 0.125rem;
+ }
+  &__title {
+    font-weight: 700;
+    padding: 1.5rem;
+    margin-bottom: 0;
+
+    &.v-expansion-panel-title {
+      padding: 1.5rem;
+      background: $color-surface;
+    }
+    .v-expansion-panel-title__icon {
+      color: $color-primary;
+    }
+  }
+  &__subtitle {
+    color: $color-subtitle;
+    font-size: $text-md;
+    font-weight: 700;
+  }
+  &__body {
+    margin-bottom: 0;
+
+    .v-expansion-panel-text__wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      background: $color-surface;
+      padding: 0;
+    }
+  }
+}

@@ -40,19 +40,19 @@ html, body {
   color: $color-light-subtitle;
 }
 
-div.section_title,
-div.section_subtitle {
+.section_title,
+.section_subtitle {
   font-weight: 500;
   line-height: 1;
 }
-div.section_title {
+.section_title {
   color: $color-white;
   font-size: $text-lg;
   letter-spacing: -0.01313rem;
   margin-bottom: 0.5rem;
 }
 
-div.section_subtitle {
+.section_subtitle {
   color: $color-subtitle;
   font-size: $text-sm;
   letter-spacing: 0.025rem;

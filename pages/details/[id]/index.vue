@@ -14,6 +14,9 @@
     <div class="main_card">
       <FundChart :fund-id="fund.id" />
     </div>
+    <div class="">
+      <FundOverview :fund="fund" />
+    </div>
   </div>
 </template>
 

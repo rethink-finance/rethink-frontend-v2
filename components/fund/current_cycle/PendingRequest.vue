@@ -40,6 +40,7 @@ export default {
 .pending_request {
   display: flex;
   color: $color-light-subtitle;
+  font-size: $text-md-sm;
 
   &__available_token {
     color: $color-white;
@@ -65,12 +66,13 @@ export default {
   &__header {
     position: relative;
     width: 100%;
+    min-height: 2rem;
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     border-bottom: 1px solid $color-gray-transparent;
     line-height: 1;
-    padding: 0.5rem 1.5rem 0.5rem 1rem;
+    padding: 0.5rem 2rem 0.5rem 1rem;
 
     &--bg-light {
       background: $color-gray-light-transparent;

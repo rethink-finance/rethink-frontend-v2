@@ -55,7 +55,7 @@
     </div>
     <div class="fund_insights__item">
       <div class="fund_insights__item__title">
-        <FundPositionTypesBar
+        <FundInfoPositionTypesBar
           :position-types="fund.position_types"
         />
       </div>
@@ -126,7 +126,7 @@ export default {
       color: $color-title;
     }
     &__subtitle {
-      font-size: 0.875rem;
+      font-size: $text-md-sm;
       line-height: 1;
       color: $color-light-subtitle;
     }

@@ -5,6 +5,7 @@ button.v-btn--variant-outlined {
 }
 
 :root {
+  /* BUTTONS */
   /* Duplicated .v-btn to increase specificity, do not remove. */
   .v-btn.v-btn {
     text-transform: none;
@@ -21,6 +22,7 @@ button.v-btn--variant-outlined {
     }
   }
 
+  /* INPUTS */
   $input-height: 2.5rem;
   input {
     min-height: $input-height;
@@ -44,5 +46,9 @@ button.v-btn--variant-outlined {
     .v-field__outline {
       display: none;
     }
+  }
+  /* EXPANSION PANELS */
+  .v-expansion-panel-title--active > .v-expansion-panel-title__overlay{
+    background-color: initial;
   }
 }

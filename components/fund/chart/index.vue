@@ -6,14 +6,16 @@
       </div>
       <FundChartTimelineSelector selected="3M" @change="updateChart" />
     </div>
-    <ClientOnly>
-      <apexchart
-        height="400"
-        width="100%"
-        :options="options"
-        :series="series"
-      />
-    </ClientOnly>
+    <div class="chart__chart_wrapper">
+      <ClientOnly>
+        <apexchart
+          height="400"
+          width="100%"
+          :options="options"
+          :series="series"
+        />
+      </ClientOnly>
+    </div>
   </div>
 </template>
 <script lang="ts">
@@ -151,7 +153,8 @@ export default {
   },
   methods: {
     updateChart(value?: string) {
-      console.log("changed value: " + value)
+      // TODO fetch data from API or fetch all together and just change here.
+      console.log("updateChart: " + value)
       this.chartItems = this.getRandomData();
       this.chartDates = this.getRandomDates();
       this.chartTimes = this.getRandomTimes();
@@ -200,8 +203,6 @@ export default {
 
 <style lang="scss" scoped>
 .chart {
-  height: 400px;
-  min-height: 400px;
   width: 100%;
   min-width: 100%;
 
@@ -211,7 +212,10 @@ export default {
     justify-content: space-between;
     margin-bottom: 1rem;
   }
-
+  &__chart_wrapper {
+    height: 400px;
+    min-height: 400px;
+  }
   ::v-deep(.custom_tooltip) {
     display: flex;
     padding: 0.75rem;
@@ -220,13 +224,11 @@ export default {
     opacity: 1;
     gap: 0.5rem;
     line-height: 1;
+    background: #242e45;
     font-size: $text-sm;
     font-weight: 500;
-
     @include borderGray("border", true, #AEC5FF);
     border-width: 2px;
-
-    background: #242e45;
     //box-shadow: 4px 46px 16px 0 rgba(31, 95, 255, 0.16);
 
     .tooltip_row {
