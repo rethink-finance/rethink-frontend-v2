@@ -48,7 +48,7 @@ export default defineComponent({
   &__subtitle {
     font-weight: 500;
     color: $color-subtitle;
-    font-size: $text-md-sm;
+    font-size: $text-sm;
   }
 }
 </style>

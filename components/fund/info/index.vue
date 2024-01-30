@@ -2,30 +2,30 @@
   <div class="fund_info">
     <div class="fund_info__header">
       <div>
-        <div class="fund_info__header__details">
-          <v-avatar size="3.5rem" rounded="0" class="me-3">
+        <div class="fund_info__details">
+          <v-avatar size="3.5rem" rounded="0">
             <img
               :src="fund.avatar_url"
-              class="fund_info__header__avatar_img bg-cover"
+              class="fund_info__avatar_img bg-cover"
               alt="fund cover image"
             >
           </v-avatar>
-          <div class="fund_info__header__details__title_wrapper pa-1">
-            <div class="fund_info__header__details__title">
+          <div class="fund_info__title_wrapper">
+            <div class="fund_info__title">
               {{ fund.title }}
             </div>
-            <div class="fund_info__header__details__subtitle">
+            <div class="fund_info__subtitle">
               {{ fund.subtitle }}
             </div>
           </div>
         </div>
-        <div class="fund_info__header__description">
+        <div class="fund_info__description">
           <p class="text-secondary">
             {{ fund.description }}
           </p>
         </div>
       </div>
-      <div class="fund_info__header__buttons">
+      <div class="fund_info__buttons">
         <v-btn
           class="mb-4 d-flex justify-space-between text-secondary"
           variant="outlined"
@@ -141,35 +141,36 @@ export default {
     gap: 2.5rem;
     margin-bottom: 2rem;
 
-    &__avatar_img {
-      border-radius: 0.25rem;
-    }
-    &__details {
-      display: flex;
-      margin-bottom: 1.5rem;
-      &__title_wrapper {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-      }
-      &__title {
-        font-size: 1.5rem;
-        color: $color-title;
-        line-height: 1;
-      }
-      &__subtitle {
-        font-size: 1rem;
-        font-weight: bold;
-        color: $color-subtitle;
-        line-height: 1;
-      }
-    }
-    &__buttons {
-      display: flex;
-      flex-direction: column;
-      button {
-        text-transform: none;
-      }
+  }
+  &__avatar_img {
+    border-radius: 0.25rem;
+  }
+  &__details {
+    display: flex;
+    margin-bottom: 1.5rem;
+  }
+  &__title_wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    margin-left: 1rem;
+  }
+  &__title {
+    font-size: 1.5rem;
+    color: $color-title;
+    line-height: 1;
+  }
+  &__subtitle {
+    font-size: 1rem;
+    font-weight: bold;
+    color: $color-subtitle;
+    line-height: 1;
+  }
+  &__buttons {
+    display: flex;
+    flex-direction: column;
+    button {
+      text-transform: none;
     }
   }
 }

@@ -114,10 +114,11 @@ export default {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.75rem;
+    gap: 0.5rem;
 
     &__title {
       display: flex;
+      align-items: center;
       font-size: 1rem;
       width: 100%;
       height: 1rem;
@@ -126,7 +127,7 @@ export default {
       color: $color-title;
     }
     &__subtitle {
-      font-size: $text-md-sm;
+      font-size: $text-sm;
       line-height: 1;
       color: $color-light-subtitle;
     }

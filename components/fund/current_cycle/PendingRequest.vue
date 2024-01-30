@@ -40,7 +40,7 @@ export default {
 .pending_request {
   display: flex;
   color: $color-light-subtitle;
-  font-size: $text-md-sm;
+  font-size: $text-sm;
 
   &__available_token {
     color: $color-white;
