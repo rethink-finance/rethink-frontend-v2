@@ -20,7 +20,7 @@
   gap: 1.5rem;
   font-size: $text-sm;
 
-  border-radius: 0.25rem;
+  border-radius: $default-border-radius;
   border: 1px solid $color-gray-transparent;
   background: $color-gray-light-transparent;
   color: $color-light-subtitle;

@@ -48,9 +48,13 @@ a {
 .main_expansion_panel {
   background: transparent;
 
- .v-expansion-panel {
-   gap: 0.125rem;
- }
+  /* Duplicated class name to override vuetify */
+  &.v-expansion-panel.v-expansion-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    border-radius: $default-border-radius;
+  }
   &__title {
     font-weight: 700;
     padding: 1.5rem;
@@ -68,6 +72,7 @@ a {
     color: $color-subtitle;
     font-size: $text-md;
     font-weight: 700;
+    margin-bottom: 1.5rem;
   }
   &__body {
     margin-bottom: 0;
@@ -75,7 +80,7 @@ a {
     .v-expansion-panel-text__wrapper {
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 0.125rem;
       background: $color-surface;
       padding: 0;
     }

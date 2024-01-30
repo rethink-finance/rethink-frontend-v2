@@ -1,3 +1,4 @@
+
 $color-white: #FFFFFF;
 $color-black: #333333;
 
@@ -41,7 +42,6 @@ $color-position-type-illiquid: #FFD700;
 
 
 
-
 /**
 Define the needed colors as CSS variables, as they can be used in certain
 plugins like Apexcharts with "var(--color-something)" to prevent redefining colors.
@@ -51,6 +51,7 @@ plugins like Apexcharts with "var(--color-something)" to prevent redefining colo
   --color-light-subtitle: #{$color-light-subtitle};
   --color-gray-light-transparent: #{$color-gray-light-transparent};
 }
+$default-border-radius: 0.25rem;
 
 // Define a mixin to apply border properties based on position
 // Define a variable for border properties
@@ -60,7 +61,7 @@ $default-border-properties: (
 @mixin borderGray($position: "border", $border-radius: true, $border-color: $color-gray-transparent) {
   // Apply border radius if enabled
   @if $border-radius {
-    border-radius: 0.25rem;
+    border-radius: $default-border-radius;
   }
 
   // Apply specific border position.

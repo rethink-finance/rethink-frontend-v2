@@ -1,8 +1,9 @@
 <template>
   <div class="basics_grid">
-    <UiDataRowCard title="1FND" subtitle="Token Symbol" />
-    <UiDataRowCard title="USDC" subtitle="Denomination Asset" />
-    <UiDataRowCard title="USDC" subtitle="Denomination Asset" />
+    <UiDataRowCard :title="fund.fund_token.name" subtitle="Token Symbol" />
+    <UiDataRowCard :title="fund.denomination_token.name" subtitle="Denomination Asset" />
+    <UiDataRowCard :title="fund.governor_address" subtitle="Custody Contract" />
+    <UiDataRowCard :title="fund.fund_token.address" subtitle="Token Contract" />
   </div>
 </template>
 
