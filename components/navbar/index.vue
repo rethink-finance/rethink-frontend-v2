@@ -81,7 +81,7 @@ onMounted(async () => {
 const routes = [
   {
     to: "/",
-    matchPrefix: "/discover",
+    matchPrefix: "/details",
     exactMatch: false,
     title: "Discover",
     text: "Find the most favorable opportunities",
