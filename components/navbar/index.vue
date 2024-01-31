@@ -65,7 +65,7 @@
     </v-row>
   </v-app-bar>
 
-  <NavbarMenuList v-model:is-open="menuOpen" :routes="computedRoutes" />
+  <NavbarMenuList v-model="menuOpen" :routes="computedRoutes" />
 </template>
 
 <script setup>

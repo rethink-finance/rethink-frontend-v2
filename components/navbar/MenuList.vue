@@ -54,18 +54,18 @@ const props = defineProps({
     type: Array as PropType<RouteItem[]>,
     default: () => [],
   },
-  isOpen: {
+  modelValue: {
     type: Boolean,
     default: false,
   },
 });
-const emit = defineEmits(["update:isOpen"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const isMenuOpen = computed({
-  get: () => props?.isOpen ?? false,
+  get: () => props?.modelValue ?? false,
   set: (value) => {
     // Emit an event to update isOpen in the parent
-    emit("update:isOpen", value);
+    emit("update:modelValue", value);
   },
 });
 </script>

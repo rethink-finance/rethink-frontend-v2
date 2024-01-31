@@ -6,7 +6,7 @@
       <v-col class="" cols="12">
         <v-main
           class="d-flex align-start justify-center"
-          style="min-height: calc(100vh - 90px)"
+          style="min-height: calc(100vh - 190px)"
         >
           <slot />
         </v-main>
