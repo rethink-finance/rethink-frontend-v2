@@ -76,6 +76,8 @@ a {
       &.v-expansion-panel-title--active {
         .v-expansion-panel-title__icon {
           color: $color-primary;
+          align-items: center;
+          height: auto;
         }
       }
     }

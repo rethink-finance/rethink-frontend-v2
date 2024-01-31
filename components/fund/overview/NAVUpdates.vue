@@ -7,12 +7,23 @@
       :grow-column1="true"
       :title2="navUpdate.value"
       :grow-column2="true"
-      title3="Show Details"
     >
       <template #body>
-        <div class="details__body">
-          {{ stringifyDetails(navUpdate.details) }}
+        <div class="details__title">
+          **NAV Liquid**
         </div>
+        <div class="details__body">
+          {{ stringifyDetails(navUpdate.details.nav_liquid) }}
+        </div>
+        <div class="details__title">
+          **NAV Illiquid**
+        </div>
+        <div class="details__body">
+          {{ stringifyDetails(navUpdate.details.nav_illiquid) }}
+        </div>
+      </template>
+      <template #actionText="{ expanded }">
+        {{ expanded ? "Close" : "Check" }} Details
       </template>
     </UiDataRowCard>
   </div>
@@ -39,9 +50,17 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .details {
+  &__title {
+    color: $color-primary;
+    font-weight: 700;
+  }
   &__body {
     font-family: monospace;
     white-space: pre;
+    font-size: $text-sm;
+    &:not(:last-of-type) {
+      margin-bottom: 1.5rem;
+    }
   }
 }
 </style>

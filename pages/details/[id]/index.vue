@@ -27,17 +27,30 @@ import { PositionType } from "~/types/enums/position_type";
 const route = useRoute();
 console.log("Fetch fund: " + route.params.id);
 
-const jsonString = `{
-  "tokenPair": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-  "aggregatorAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-  "functionSignatureWithEncodedInputs": null,
-  "assetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-  "nonAssetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-  "isReturnArray": "false",
-  "returnLength": "4",
-  "returnIndex": "1",
-  "pastNAVUpdateIndex": "0"
-}`;
+const NAVDetailsJSON = {
+  nav_liquid: `{
+    "tokenPair": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+    "aggregatorAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+    "functionSignatureWithEncodedInputs": null,
+    "assetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+    "nonAssetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+    "isReturnArray": "false",
+    "returnLength": "4",
+    "returnIndex": "1",
+    "pastNAVUpdateIndex": "0"
+  }`,
+  nav_illiquid: `{
+    "tokenPair": "0xNewTokenPairForIlliquid",
+    "aggregatorAddress": "0xNewAggregatorAddressForIlliquid",
+    "functionSignatureWithEncodedInputs": "NewFunctionSignatureForIlliquid",
+    "assetTokenAddress": "0xNewAssetTokenAddressForIlliquid",
+    "nonAssetTokenAddress": "0xNewNonAssetTokenAddressForIlliquid",
+    "isReturnArray": "true",
+    "returnLength": "6",
+    "returnIndex": "2",
+    "pastNAVUpdateIndex": "1"
+  }`,
+};
 
 // This data will be fetched from some API.
 const fundData: IFund = {
@@ -131,12 +144,12 @@ const fundData: IFund = {
     {
       date: "12/12/2023",
       value: "$333,212,321.12",
-      details: jsonString,
+      details: NAVDetailsJSON,
     },
     {
       date: "11/12/2023",
       value: "$323,519,111.11",
-      details: jsonString,
+      details: NAVDetailsJSON,
     },
   ],
 };
