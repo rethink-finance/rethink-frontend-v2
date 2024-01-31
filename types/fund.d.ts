@@ -24,4 +24,8 @@ export default interface IFund {
   fund_token: IToken,
   denomination_token: IToken,
   fund_to_denomination_exchange_rate: number
+  deposit_addresses: string[],
+  management_addresses: string[],
+  planned_settlement_cycle: string,
+  min_liquid_asset_share: string,
 }

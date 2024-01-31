@@ -1,9 +1,17 @@
 <template>
   <div class="basics_grid">
     <UiDataRowCard
-      :title="depositsTitle"
-      :body="depositsBody"
-      subtitle="Whitelist"
+      :title="fund.planned_settlement_cycle"
+      subtitle="Planned Settlement Cycle"
+    />
+    <UiDataRowCard
+      :title="fund.min_liquid_asset_share"
+      subtitle="Min. Liquid Asset Share "
+    />
+    <UiDataRowCard
+      :title="managementTitle"
+      :body="managementBody"
+      subtitle="Management"
     />
   </div>
 </template>
@@ -13,7 +21,7 @@ import { defineComponent, type PropType } from "vue"
 import type IFund from "~/types/fund";
 
 export default defineComponent({
-  name: "Deposits",
+  name: "Management",
   props: {
     fund: {
       type: Object as PropType<IFund>,
@@ -21,16 +29,16 @@ export default defineComponent({
     },
   },
   computed: {
-    depositsTitle() {
-      const addressCount = this.fund?.deposit_addresses?.length ?? 0;
+    managementTitle() {
+      const addressCount = this.fund?.management_addresses?.length ?? 0;
       if (addressCount === 1) {
         return `${addressCount} Address`
       }
       return `${addressCount} Addresses`
     },
-    depositsBody() {
-      if (this.fund?.deposit_addresses?.length) {
-        return this.fund.deposit_addresses.join("\n");
+    managementBody() {
+      if (this.fund?.management_addresses?.length) {
+        return this.fund.management_addresses.join("\n");
       }
       return "There are currently no addresses."
     },

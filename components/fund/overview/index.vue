@@ -23,6 +23,15 @@
               <FundOverviewDeposits :fund="fund" />
             </div>
           </div>
+
+          <div class="main_card">
+            <div class="main_expansion_panel__subtitle">
+              Management
+            </div>
+            <div>
+              <FundOverviewManagement :fund="fund" />
+            </div>
+          </div>
         </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>

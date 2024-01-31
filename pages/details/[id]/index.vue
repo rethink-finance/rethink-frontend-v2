@@ -90,6 +90,20 @@ const fundData: IFund = {
     balance: 120,
   },
   fund_to_denomination_exchange_rate: 1.15,
+  deposit_addresses: [
+    "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
+    "0xaacc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
+    "0xddcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
+    "0xggcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
+  ],
+  management_addresses: [
+    "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
+    "0xaacc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
+    "0xddcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
+    "0xggcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
+  ],
+  planned_settlement_cycle: "14 Days",
+  min_liquid_asset_share: "50%",
 };
 
 const fund = ref(fundData);
