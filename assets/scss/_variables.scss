@@ -1,4 +1,4 @@
-
+$navbar-height: 5rem;
 $color-white: #FFFFFF;
 $color-black: #333333;
 
@@ -40,6 +40,13 @@ $color-position-type-composable: #38DE8E;
 $color-position-type-nft: #741FFF;
 $color-position-type-illiquid: #FFD700;
 
+// Breakpoints
+$screen-xs: 360px; // Extra small screen / phone
+$screen-sm: 480px; // Mobile
+$screen-md: 768px; // Tablet
+$screen-lg: 960px; // Desktop (small)
+$screen-xl: 1200px; // Desktop (large)
+
 
 
 /**
@@ -48,6 +55,7 @@ plugins like Apexcharts with "var(--color-something)" to prevent redefining colo
  */
 :root {
   --color-primary: #{$color-primary};
+  --color-subtitle: #{$color-subtitle};
   --color-light-subtitle: #{$color-light-subtitle};
   --color-gray-light-transparent: #{$color-gray-light-transparent};
 }

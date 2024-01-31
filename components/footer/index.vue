@@ -76,6 +76,7 @@ const currentYear = new Date().getFullYear();
 
     a {
       min-width: 1rem;
+      padding: 0 !important;
 
       svg {
         width: 1.25rem;
