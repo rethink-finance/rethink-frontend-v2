@@ -2,8 +2,13 @@
   <nav class="navbar navbar-expand-xl navbar-dark primary-color">
     <div class="container-fluid">
       <router-link to="/" style="text-decoration: none">
-        <a class="navbar-brand primary-color" href="/">
-          <img src="@/assets/logo.svg" alt="" width="30" height="24" />
+        <a class="navbar-brand primary-color" href="/public">
+          <img
+            src="@/assets/logo.svg"
+            alt=""
+            width="30"
+            height="32"
+          >
           Rethink Finance
         </a>
       </router-link>
@@ -131,25 +136,39 @@
 
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
               <li>
-                <button class="dropdown-item" @click="switchToPolygon">Polygon PoS Chain</button>
+                <button class="dropdown-item" @click="switchToPolygon">
+                  Polygon PoS Chain
+                </button>
               </li>
               <li>
-                <button class="dropdown-item" @click="switchToKovan">Kovan Testnet</button>
+                <button class="dropdown-item" @click="switchToKovan">
+                  Kovan Testnet
+                </button>
               </li>
               <li>
-                <button class="dropdown-item" @click="switchToMumbai">Mumbai Testnet</button>
+                <button class="dropdown-item" @click="switchToMumbai">
+                  Mumbai Testnet
+                </button>
               </li>
               <li>
-                <button class="dropdown-item" @click="switchToFuji">Fuji Testnet</button>
+                <button class="dropdown-item" @click="switchToFuji">
+                  Fuji Testnet
+                </button>
               </li>
               <li>
-                <button class="dropdown-item" @click="switchToCantoTestnet">Canto Testnet</button>
+                <button class="dropdown-item" @click="switchToCantoTestnet">
+                  Canto Testnet
+                </button>
               </li>
               <li>
-                <button class="dropdown-item" @click="switchToArbitrumGoerli">Arbitrum Goerli Testnet</button>
+                <button class="dropdown-item" @click="switchToArbitrumGoerli">
+                  Arbitrum Goerli Testnet
+                </button>
               </li>
               <li>
-                <button class="dropdown-item" @click="switchToGoerli">Goerli Testnet</button>
+                <button class="dropdown-item" @click="switchToGoerli">
+                  Goerli Testnet
+                </button>
               </li>
             </ul>
           </div>
@@ -186,8 +205,15 @@
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 id="complianceModalLabel" class="modal-title">Information and Compliance</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+              <h5 id="complianceModalLabel" class="modal-title">
+                Information and Compliance
+              </h5>
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              />
             </div>
 
             <ComplianceModalBody />
@@ -201,7 +227,9 @@
               >
                 I confirm all of the above
               </button>
-              <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                Close
+              </button>
             </div>
           </div>
         </div>

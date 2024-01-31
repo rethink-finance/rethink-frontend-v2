@@ -18,8 +18,10 @@
 
           <nuxt-link :to="'/'" class="d-flex">
             <Logo />
-            <v-tooltip activator="parent" location="bottom"
-              >Go to homepage
+            <v-tooltip
+              activator="parent"
+              location="bottom"
+            >Go to homepage
             </v-tooltip>
           </nuxt-link>
           <v-card
@@ -46,9 +48,10 @@
                 class="nav-link"
               >
                 Discover
-                <v-tooltip activator="parent" location="bottom"
-                  >Discover the funds and new opportunities</v-tooltip
-                >
+                <v-tooltip
+                  activator="parent"
+                  location="bottom"
+                >Discover the funds and new opportunities</v-tooltip>
               </v-btn>
             </nuxt-link>
             <nuxt-link :to="'/create'" class="mx-1">
@@ -64,9 +67,10 @@
                 :active="route?.path === '/create'"
               >
                 Create
-                <v-tooltip activator="parent" location="bottom"
-                  >Create a fund and share it to your community</v-tooltip
-                >
+                <v-tooltip
+                  activator="parent"
+                  location="bottom"
+                >Create a fund and share it to your community</v-tooltip>
               </v-btn>
             </nuxt-link>
             <nuxt-link :to="'/governance'" class="mx-1">
@@ -82,9 +86,10 @@
                 class="nav-link"
               >
                 Governance
-                <v-tooltip activator="parent" location="bottom"
-                  >Govern the funds and allowances</v-tooltip
-                >
+                <v-tooltip
+                  activator="parent"
+                  location="bottom"
+                >Govern the funds and allowances</v-tooltip>
               </v-btn>
             </nuxt-link>
           </v-card>
@@ -105,9 +110,10 @@
                 color="white"
               >
                 Documentation
-                <v-tooltip activator="parent" location="bottom"
-                  >Read the protocol's docs</v-tooltip
-                >
+                <v-tooltip
+                  activator="parent"
+                  location="bottom"
+                >Read the protocol's docs</v-tooltip>
               </v-btn>
             </a>
             <v-btn
@@ -121,14 +127,17 @@
               class="ms-3"
             >
               Connect Wallet
-              <v-tooltip activator="parent" location="bottom"
-                >Connect the app to your web3 wallet</v-tooltip
-              >
+              <v-tooltip
+                activator="parent"
+                location="bottom"
+              >Connect the app to your web3 wallet</v-tooltip>
             </v-btn>
           </v-card>
         </v-toolbar>
       </v-row>
     </v-app-bar>
+
+
     <v-row justify="center" align="start" no-gutters>
       <v-col class="" cols="12">
         <v-main
@@ -139,92 +148,16 @@
         </v-main>
       </v-col>
       <v-col class="" cols="12">
-        <v-footer color="transparent" class="px-16">
-          <v-col
-            class="text-start ps-16"
-            style="padding-start: 116px"
-            cols="12"
-            sm="12"
-            md="6"
-          >
-            <a href="https://#" class="mx-1" target="_blank">
-              <v-btn icon variant="plain">
-                <Icon
-                  name="ri:twitter-x-line"
-                  color="white"
-                  size="20px"
-                  class="mr-3"
-                />
-              </v-btn>
-            </a>
-            <a href="https://#" class="mx-1" target="_blank">
-              <v-btn icon variant="plain">
-                <Icon
-                  name="ic:baseline-discord"
-                  color="white"
-                  size="26px"
-                  class="mr-3"
-                />
-              </v-btn>
-            </a>
-            <a href="https://#" class="mx-1" target="_blank">
-              <v-btn icon variant="plain">
-                <Icon
-                  name="mdi:youtube"
-                  color="white"
-                  size="26px"
-                  class="mr-3"
-                />
-              </v-btn>
-            </a>
-            <a href="https://#" class="mx-1" target="_blank">
-              <v-btn icon variant="plain">
-                <Icon
-                  name="ph:medium-logo-fill"
-                  color="white"
-                  size="26px"
-                  class="mr-3"
-                />
-              </v-btn>
-            </a>
-            <a href="https://#" class="mx-1" target="_blank">
-              <v-btn icon variant="plain">
-                <Icon
-                  name="uil:github"
-                  color="white"
-                  size="24px"
-                  class="mr-3"
-                />
-              </v-btn>
-            </a>
-          </v-col>
-          <v-col
-            class="d-flex justify-end align-center text-end pe-16"
-            style="padding-end: 116px"
-            cols="12"
-            sm="12"
-            md="6"
-          >
-            <Icon
-              name="ic:baseline-copyright"
-              color="white"
-              size="20px"
-              class="me-1"
-            />
-            {{ currentYear }} Rethink.finance. All rights reserved
-          </v-col>
-        </v-footer>
+        <Footer />
       </v-col>
     </v-row>
   </v-app>
 </template>
 
 <script setup>
-const router = useRouter();
 const route = useRoute();
 
 const currentRoute = ref(route?.path);
-const currentYear = new Date().getFullYear();
 
 onMounted(async () => {
   currentRoute.value = route.path;
