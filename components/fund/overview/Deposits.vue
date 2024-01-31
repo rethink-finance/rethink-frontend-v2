@@ -1,5 +1,5 @@
 <template>
-  <div class="basics_grid">
+  <div class="main_card__grid">
     <UiDataRowCard
       :title="depositsTitle"
       :body="depositsBody"
@@ -9,7 +9,6 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from "vue"
 import type IFund from "~/types/fund";
 
 export default defineComponent({
@@ -39,10 +38,5 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-.basics_grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem; // Grid column gap
-  align-items: start;
-}
+
 </style>

@@ -23,6 +23,16 @@ a {
   &--no-padding {
     padding: 0;
   }
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem; // Grid column gap
+    align-items: start;
+
+    &--full-width {
+      grid-template-columns: 1fr;
+    }
+  }
 }
 
 .card_header {

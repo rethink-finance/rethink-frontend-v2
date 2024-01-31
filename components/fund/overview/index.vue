@@ -32,6 +32,24 @@
               <FundOverviewManagement :fund="fund" />
             </div>
           </div>
+
+          <div class="main_card">
+            <div class="main_expansion_panel__subtitle">
+              Fees
+            </div>
+            <div>
+              <FundOverviewFees :fund="fund" />
+            </div>
+          </div>
+
+          <div class="main_card">
+            <div class="main_expansion_panel__subtitle">
+              Governance
+            </div>
+            <div>
+              <FundOverviewGovernance :fund="fund" />
+            </div>
+          </div>
         </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>

@@ -89,6 +89,11 @@ const fundData: IFund = {
     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     balance: 120,
   },
+  governor_token: {
+    name: "USDC",
+    address: "0xH2Z3BZ91c6301b36c1d19D4a2e9b0cE3606eB05",
+    balance: 120,
+  },
   fund_to_denomination_exchange_rate: 1.15,
   deposit_addresses: [
     "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
@@ -104,6 +109,12 @@ const fundData: IFund = {
   ],
   planned_settlement_cycle: "14 Days",
   min_liquid_asset_share: "50%",
+  // Governance
+  voting_delay: "400",
+  voting_period: "5600",
+  proposal_threshold: "10.000 1FND",
+  quorom: "10%",
+  late_quorom: "4000",
 };
 
 const fund = ref(fundData);

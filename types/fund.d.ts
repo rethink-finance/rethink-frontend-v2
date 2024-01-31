@@ -9,6 +9,7 @@ export default interface IFund {
   chain: string;
   avatar_url: string;
   description: string;
+  // @dev better combine all governor data into one object "governor": {...}
   governor_address: string;
   safe_address: string;
   inception_date: string;
@@ -23,9 +24,18 @@ export default interface IFund {
   cycle_pending_requests: ICyclePendingRequest[],
   fund_token: IToken,
   denomination_token: IToken,
+  governor_token: IToken;
   fund_to_denomination_exchange_rate: number
+
+  // Overview fields
   deposit_addresses: string[],
   management_addresses: string[],
   planned_settlement_cycle: string,
   min_liquid_asset_share: string,
+  // Governance
+  voting_delay: string,
+  voting_period: string,
+  proposal_threshold: string,
+  quorom: string,
+  late_quorom: string,
 }

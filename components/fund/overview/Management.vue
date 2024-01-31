@@ -1,5 +1,5 @@
 <template>
-  <div class="basics_grid">
+  <div class="main_card__grid">
     <UiDataRowCard
       :title="fund.planned_settlement_cycle"
       subtitle="Planned Settlement Cycle"
@@ -47,10 +47,5 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-.basics_grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem; // Grid column gap
-  align-items: start;
-}
+
 </style>
