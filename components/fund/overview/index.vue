@@ -50,6 +50,15 @@
               <FundOverviewGovernance :fund="fund" />
             </div>
           </div>
+
+          <div class="main_card">
+            <div class="main_expansion_panel__subtitle">
+              NAV Updates
+            </div>
+            <div>
+              <FundOverviewNAVUpdates :fund="fund" />
+            </div>
+          </div>
         </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>

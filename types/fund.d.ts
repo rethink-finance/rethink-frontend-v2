@@ -1,5 +1,6 @@
 import type IPositionType from '~/types/position_type';
 import type ICyclePendingRequest from '~/types/cycle_pending_request';
+import type INAVUpdate from '~/types/nav_update';
 
 export default interface IFund {
   id: number;
@@ -38,4 +39,6 @@ export default interface IFund {
   proposal_threshold: string,
   quorom: string,
   late_quorom: string,
+  // NAV Updates
+  nav_updates: INAVUpdate[],
 }

@@ -27,6 +27,18 @@ import { PositionType } from "~/types/enums/position_type";
 const route = useRoute();
 console.log("Fetch fund: " + route.params.id);
 
+const jsonString = `{
+  "tokenPair": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+  "aggregatorAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+  "functionSignatureWithEncodedInputs": null,
+  "assetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+  "nonAssetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+  "isReturnArray": "false",
+  "returnLength": "4",
+  "returnIndex": "1",
+  "pastNAVUpdateIndex": "0"
+}`;
+
 // This data will be fetched from some API.
 const fundData: IFund = {
   id: 1,
@@ -115,6 +127,18 @@ const fundData: IFund = {
   proposal_threshold: "10.000 1FND",
   quorom: "10%",
   late_quorom: "4000",
+  nav_updates: [
+    {
+      date: "12/12/2023",
+      value: "$333,212,321.12",
+      details: jsonString,
+    },
+    {
+      date: "11/12/2023",
+      value: "$323,519,111.11",
+      details: jsonString,
+    },
+  ],
 };
 
 const fund = ref(fundData);

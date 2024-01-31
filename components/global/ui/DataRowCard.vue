@@ -16,7 +16,7 @@
             <div class="data_row__title">
               {{ title }}
             </div>
-            <div class="data_row__subtitle">
+            <div v-if="subtitle" class="data_row__subtitle">
               {{ subtitle }}
             </div>
           </div>
@@ -24,15 +24,15 @@
             <div class="data_row__title">
               {{ title2 }}
             </div>
-            <div class="data_row__subtitle">
+            <div v-if="subtitle2" class="data_row__subtitle">
               {{ subtitle2 }}
             </div>
           </div>
-          <div v-if="subtitle3" class="data_row__column" :class="{'data_row__column--grow': growColumn3}">
+          <div v-if="title3" class="data_row__column" :class="{'data_row__column--grow': growColumn3}">
             <div class="data_row__title">
               {{ title3 }}
             </div>
-            <div class="data_row__subtitle">
+            <div v-if="subtitle3" class="data_row__subtitle">
               {{ subtitle3 }}
             </div>
           </div>
@@ -41,8 +41,10 @@
           <v-icon :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
         </template>
       </v-expansion-panel-title>
-      <v-expansion-panel-text v-if="body" class="data_row__body">
-        {{ body }}
+      <v-expansion-panel-text v-if="hasBody" class="data_row__body">
+        <slot name="body">
+          {{ body }}
+        </slot>
       </v-expansion-panel-text>
     </v-expansion-panel>
   </v-expansion-panels>
@@ -60,8 +62,8 @@ import { defineComponent } from "vue"
  *   structured manner, with support for additional columns in the title header.
  *
  * Props:
- *   - title (required): The main title for the card.
- *   - subtitle (required): The subtitle or additional information for the card.
+ *   - title: The main title for the card.
+ *   - subtitle: The subtitle or additional information for the card.
  *   - growColumn1: If true the column 1 width will take available space (flex-grow: 1).
  *   - body: The content body of the card.
  *   - title2: An additional column for the title header.
@@ -95,9 +97,11 @@ export default defineComponent({
   props: {
     title: {
       type: String,
+      default: "",
     },
     subtitle: {
       type: String,
+      default: "",
     },
     growColumn1: {
       type: Boolean,
@@ -133,8 +137,12 @@ export default defineComponent({
     },
   },
   computed: {
+    hasBody(): boolean {
+      // Check if either body prop or body slot content is present
+      return !(!this.body && !this.$slots.body);
+    },
     isReadOnly(): boolean {
-      return !this.body;
+      return !this.hasBody;
     },
   },
 })
@@ -157,7 +165,7 @@ export default defineComponent({
     background: $color-navy-gray-light;
   }
   &__header {
-    display: inline-flex;
+    display: flex;
     flex-direction: row;
     justify-content: flex-start;
     gap: 2.5rem;
@@ -172,6 +180,7 @@ export default defineComponent({
   &__body {
     word-wrap: break-word;
     max-width: 100%;
+    width: 100%;
   }
   ::v-deep(.v-expansion-panel-text__wrapper) {
     padding: 0.625rem 1rem;
