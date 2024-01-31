@@ -24,7 +24,7 @@
         </template>
       </v-expansion-panel-title>
       <v-expansion-panel-text v-if="body" class="data_row__body">
-        test
+        {{ body }}
       </v-expansion-panel-text>
     </v-expansion-panel>
   </v-expansion-panels>
@@ -86,7 +86,11 @@ export default defineComponent({
     padding: 0.625rem 1rem;
     line-height: 1;
   }
-  .v-expansion-panel-text {
+  &__body {
+    word-wrap: break-word;
+    max-width: 100%;
+  }
+  ::v-deep(.v-expansion-panel-text__wrapper) {
     padding: 0.625rem 1rem;
   }
 

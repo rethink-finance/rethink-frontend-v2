@@ -1,6 +1,10 @@
 <template>
   <div class="basics_grid">
-    <UiDataRowCard :title="fund.fund_token.name" subtitle="Token Symbol" body="test" />
+    <UiDataRowCard
+      :title="fund.fund_token.name"
+      subtitle="Token Symbol"
+      body="some super long text asd asd asd asd asd lorem ipsum test best rest fest 555"
+    />
     <UiDataRowCard :title="fund.denomination_token.name" subtitle="Denomination Asset" />
     <UiDataRowCard :title="fund.governor_address" subtitle="Custody Contract" />
     <UiDataRowCard :title="fund.fund_token.address" subtitle="Token Contract" />
