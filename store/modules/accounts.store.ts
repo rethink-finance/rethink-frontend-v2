@@ -1,16 +1,13 @@
 import type { WalletState, Account } from "@web3-onboard/core/dist/types";
-import { ethers } from "ethers";
+import { BrowserProvider, ethers } from "ethers";
 import { useFundStore } from "~/store/modules/fund.store";
 
 interface IState {
-  // activeAccount: string;
   activeBalance: number | bigint;
   chainId?: string;
   chainName: string;
-  web3?: any;
   web3Onboard?: any;
   isConnected: boolean;
-  ethersProvider: any; // Specify the type if known
   supportedChains: string[];
   lastSelectedTradePair: string | null;
   lastSelectedTradeMaturity: string | null;
@@ -23,10 +20,8 @@ export const useAccountsStore = defineStore("accounts", {
     activeBalance: 0,
     chainId: undefined,
     chainName: "",
-    web3: undefined,
     web3Onboard: undefined,
     isConnected: false,
-    ethersProvider: undefined,
     supportedChains: [
       "Kovan Testnet",
       "Polygon PoS Chain",
@@ -55,12 +50,18 @@ export const useAccountsStore = defineStore("accounts", {
     activeAccount(): Account {
       return this.web3Onboard?.connectedWallet?.accounts[0];
     },
+    ethersProvider(): BrowserProvider | undefined{
+      if (this.connectedWallet?.provider) {
+        return new ethers.BrowserProvider(this.connectedWallet?.provider, "any");
+      }
+      return undefined
+    },
     getActiveBalanceWei(state): number | bigint {
       return state.activeBalance;
     },
-    getActiveBalanceEth(state): string {
-      return state?.web3?.utils.fromWei(this.activeBalance, "ether");
-    },
+    // getActiveBalanceEth(state): string {
+    //   return state?.web3?.utils.fromWei(this.activeBalance, "ether");
+    // },
     isCurrentChainSupported(state): boolean {
       return state.supportedChains.includes(state.chainName);
     },
@@ -71,21 +72,16 @@ export const useAccountsStore = defineStore("accounts", {
       await this.web3Onboard?.connectWallet();
       this.isConnected = true;
 
-      // TODO Would be better to just save the whole account as an object.
-      const connectedWallet = this.web3Onboard.connectedWallet;
-      const activeAccount = connectedWallet.accounts[0];
-      this.activeBalance = activeAccount.balance;
 
       const activeChain = this.web3Onboard.connectedChain;
       this.chainId = activeChain.id;
       this.chainName = activeChain.namespace;
 
-      if (connectedWallet?.provider) {
-        this.setEthersProvider(connectedWallet?.provider);
-
-        if (!this.activeBalance) {
-          this.fetchActiveBalance();
-        }
+      if (this.ethersProvider) {
+        // Is this a cleaner Alternative?
+        // const activeAccount = this.connectedWallet.accounts[0];
+        // this.activeBalance = activeAccount.balance;
+        await this.fetchActiveBalance();
       }
     },
     async disconnectWallet() {
@@ -98,9 +94,7 @@ export const useAccountsStore = defineStore("accounts", {
       this.activeBalance = 0;
     },
     async fetchActiveBalance() {
-      const balance = await this.ethersProvider.getBalance(this.activeAccount.address);
-      console.log("balance: " + balance)
-
+      const balance = await this.ethersProvider?.getBalance(this.activeAccount.address);
       this.activeBalance = balance ?? 0;
     },
     setChainData(chainId: string) {
@@ -135,10 +129,6 @@ export const useAccountsStore = defineStore("accounts", {
           this.chainName = "";
           break;
       }
-    },
-    setEthersProvider(ethersProvider: any) {
-      this.ethersProvider = ethersProvider;
-      this.web3 = new ethers.BrowserProvider(ethersProvider, "any");
     },
   },
 });
