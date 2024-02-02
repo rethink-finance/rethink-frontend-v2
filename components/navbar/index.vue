@@ -78,23 +78,8 @@
 </template>
 
 <script setup>
-import { useOnboard } from "@web3-onboard/vue";
-import { ethers } from "ethers";
 import { useAccountsStore } from "~/store/modules/accounts.store";
 const accountsStore = useAccountsStore();
-// const $Web3 = useWeb3()
-// // const runtimeConfig = useRuntimeConfig()
-//
-// const walletAddress = "0x0320DE3378dCDE180758ad2D41C0e1C6dCbB441D"
-//
-// const mainnetHost = "https://mainnet.infura.io/v3/8d5b91c0d65e4079a2eabb0b38054959";
-//
-// const provider = new $Web3.providers.HttpProvider(mainnetHost)
-// const web3 = new $Web3($Web3.givenProvider ?? provider)
-// // const web3 = new $Web3(provider)
-//
-// const balance = await web3.eth.getBalance(walletAddress)
-// console.log(balance);
 
 const route = useRoute();
 
@@ -157,7 +142,6 @@ const computedRoutes = computed(() => {
     };
   });
 });
-
 
 const activeAccount = computed(() => truncateAddress(accountsStore.activeAccount?.address));
 const connectingWallet = computed(() => accountsStore.connectingWallet);

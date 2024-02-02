@@ -1,5 +1,4 @@
-import type { WalletState } from "@web3-onboard/core/dist/types";
-import type { Account } from "bnc-sdk";
+import type { WalletState, Account } from "@web3-onboard/core/dist/types";
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/modules/fund.store";
 
@@ -17,9 +16,6 @@ interface IState {
   lastSelectedTradeMaturity: string | null;
   lastSelectedTradeType: string | null;
   lastSelectedTradeSide: string | null;
-}
-interface IGetters {
-    activeAccount: Account
 }
 
 export const useAccountsStore = defineStore("accounts", {
@@ -59,13 +55,13 @@ export const useAccountsStore = defineStore("accounts", {
     activeAccount(): Account {
       return this.web3Onboard?.connectedWallet?.accounts[0];
     },
-    getActiveBalanceWei(state) {
+    getActiveBalanceWei(state): number | bigint {
       return state.activeBalance;
     },
-    getActiveBalanceEth(state) {
+    getActiveBalanceEth(state): string {
       return state?.web3?.utils.fromWei(this.activeBalance, "ether");
     },
-    isCurrentChainSupported(state) {
+    isCurrentChainSupported(state): boolean {
       return state.supportedChains.includes(state.chainName);
     },
   },
