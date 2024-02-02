@@ -2,6 +2,14 @@ import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  app: {
+    head: {
+      title: "Rethink",
+      link: [
+        { rel: "icon", type: "image/png", href: "/favicon.png" },
+      ],
+    },
+  },
   devtools: { enabled: false },
   typescript: {
     typeCheck: true,
@@ -16,6 +24,11 @@ export default defineNuxtConfig({
     "~/assets/scss/vuetify_overrides.scss",
     "~/assets/scss/app.scss",
   ],
+  runtimeConfig: {
+    public: {
+      INFURA_KEY: process.env.INFURA_KEY,
+    },
+  },
   modules: [
     (_options, nuxt) => {
       nuxt.hooks.hook("vite:extendConfig", (config: any) => {
@@ -59,7 +72,6 @@ export default defineNuxtConfig({
               "@import \"@/assets/scss/_mixins.scss\";",
         },
       },
-
     },
     vue: {
       template: {

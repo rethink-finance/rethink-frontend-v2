@@ -10,6 +10,12 @@ Make sure to install the dependencies:
 npm install
 ```
 
+## Local Environment
+Add `INFURA_KEY` to .env in the project root.
+```bash
+INFURA_KEY="<YOUR_INFURA_KEY>"
+```
+
 ## Development Server
 
 Start the development server on `http://localhost:3000`:
@@ -33,3 +39,14 @@ npm run preview
 ```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+
+
+
+### Dev Notes
+1) Problems using `web3-onboard`, fixed by upgrading package `rxjs`:
+```js
+import { init } from "@web3-onboard/vue"
+
+// Upgrade package to:
+//   "rxjs": "^7.8.1"
+```

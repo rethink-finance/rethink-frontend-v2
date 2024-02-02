@@ -44,16 +44,25 @@
         <v-spacer class="hidden-sm-and-down" />
 
         <div class="mx-3">
-          <v-btn
-            class="nav-link px-4 py-3"
-            variant="outlined"
-            color="primary"
-          >
-            Connect Wallet
-            <v-tooltip activator="parent" location="bottom">
-              Connect the app to your web3 wallet.
-            </v-tooltip>
-          </v-btn>
+          <ClientOnly>
+            <v-btn
+              class="nav-link px-4 py-3"
+              variant="outlined"
+              color="primary"
+              :disabled="connectingWallet"
+              :loading="connectingWallet"
+              @click="onClickConnect"
+            >
+              {{
+                connectedWallet
+                  ? activeAccount
+                  : 'Connect'
+              }}
+              <v-tooltip activator="parent" location="bottom">
+                Connect the app to your web3 wallet.
+              </v-tooltip>
+            </v-btn>
+          </ClientOnly>
         </div>
 
         <v-btn class="fill-height hidden-md-and-up" @click="menuOpen = !menuOpen">
@@ -69,14 +78,28 @@
 </template>
 
 <script setup>
+import { useOnboard } from "@web3-onboard/vue";
+import { ethers } from "ethers";
+import { useAccountsStore } from "~/store/modules/accounts.store";
+const accountsStore = useAccountsStore();
+// const $Web3 = useWeb3()
+// // const runtimeConfig = useRuntimeConfig()
+//
+// const walletAddress = "0x0320DE3378dCDE180758ad2D41C0e1C6dCbB441D"
+//
+// const mainnetHost = "https://mainnet.infura.io/v3/8d5b91c0d65e4079a2eabb0b38054959";
+//
+// const provider = new $Web3.providers.HttpProvider(mainnetHost)
+// const web3 = new $Web3($Web3.givenProvider ?? provider)
+// // const web3 = new $Web3(provider)
+//
+// const balance = await web3.eth.getBalance(walletAddress)
+// console.log(balance);
+
 const route = useRoute();
 
 const currentRoute = ref(route?.path);
 const menuOpen = ref(false);
-
-onMounted(async () => {
-  currentRoute.value = route.path;
-});
 
 const routes = [
   {
@@ -111,7 +134,7 @@ const routes = [
 ]
 
 const isPathActive = (path, exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);
-const getPathColor = (path, isActive = false, color = "var(--color-subtitle)") => (isActive ? "primary" : color);
+const getPathColor = (isActive = false, color = "var(--color-subtitle)") => (isActive ? "primary" : color);
 
 const computedRoutes = computed(() => {
   return routes.map((routeItem) => {
@@ -129,11 +152,30 @@ const computedRoutes = computed(() => {
     return {
       ...routeItem,
       isActive,
-      pathColor: getPathColor(routeItem.to, isActive, routeItem.color),
+      pathColor: getPathColor(isActive, routeItem.color),
       target: routeItem.isExternal ? "_blank" : "",
     };
   });
 });
+
+
+const activeAccount = computed(() => truncateAddress(accountsStore.activeAccount?.address));
+const connectingWallet = computed(() => accountsStore.connectingWallet);
+const connectedWallet = computed(() => accountsStore.connectedWallet);
+
+onMounted(() => {
+  currentRoute.value = route.path;
+});
+
+const onClickConnect = () => {
+  const { provider, label } = connectedWallet.value || {}
+
+  if (provider && label) {
+    accountsStore.disconnectWallet()
+  } else {
+    accountsStore.connectWallet()
+  }
+}
 </script>
 
 <style scoped lang="scss">
