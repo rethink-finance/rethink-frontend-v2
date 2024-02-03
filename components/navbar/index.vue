@@ -59,7 +59,11 @@
                   : 'Connect'
               }}
               <v-tooltip activator="parent" location="bottom">
-                Connect the app to your web3 wallet.
+                {{
+                  connectedWallet
+                    ? "Disconnect your wallet."
+                    : "Connect the app to your web3 wallet."
+                }}
               </v-tooltip>
             </v-btn>
           </ClientOnly>

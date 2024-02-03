@@ -43,6 +43,7 @@ init({
     // ],
   },
   connect: {
+    // TODO handle auto-connect callback logics to setup store data, add watcher or something.
     autoConnectLastWallet: true,
   },
 })
