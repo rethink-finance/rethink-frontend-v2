@@ -67,7 +67,6 @@
 </template>
 
 <script lang="ts">
-import type { PropType } from "vue";
 import type IFund from "~/types/fund";
 
 export default {

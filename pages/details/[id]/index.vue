@@ -3,7 +3,7 @@
     <div class="main_card">
       <FundInfo :fund="fund" />
     </div>
-    <div class="main_card settlement_grid">
+    <div class="main_card main_grid">
       <FundSettlement :fund="fund" />
       <FundCurrentCycle :fund="fund" />
     </div>
@@ -148,6 +148,12 @@ const fundData: IFund = {
       details: NAVDetailsJSON,
     },
   ],
+  // My Positions (user's)
+  net_deposits: "$544,452,56",
+  current_value: "$1,544,452.56",
+  total_return: "10%",
+  delegating_address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
+  voting_power: "10",
 };
 
 const fund = ref(fundData);
@@ -155,20 +161,12 @@ const fund = ref(fundData);
 
 <style lang="scss" scoped>
 .fund_details {
-  width: 90%;
+  width: 100%;
+  padding: 0 1rem;
 
   @include sm {
     width: 70%;
-  }
-}
-.settlement_grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-
-  @include sm {
-    gap: 1.5rem;
-    grid-template-columns: 1fr 1fr;
+    padding: 0;
   }
 }
 </style>

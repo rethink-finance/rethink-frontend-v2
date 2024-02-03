@@ -1,5 +1,5 @@
 <template>
-  <div class="main_card__grid main_card__grid--full-width">
+  <div class="main_grid main_grid--full-width">
     <UiDataRowCard
       title="2%"
       subtitle="Management Fee"

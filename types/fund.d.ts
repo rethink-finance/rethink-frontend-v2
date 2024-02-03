@@ -21,24 +21,29 @@ export default interface IFund {
   user_fund_balance: string;
   user_fund_usd_value: string;
   next_settlement: string;
-  position_types: IPositionType[],
-  cycle_pending_requests: ICyclePendingRequest[],
-  fund_token: IToken,
-  denomination_token: IToken,
+  position_types: IPositionType[];
+  cycle_pending_requests: ICyclePendingRequest[];
+  fund_token: IToken;
+  denomination_token: IToken;
   governor_token: IToken;
   fund_to_denomination_exchange_rate: number
-
+  // My Fund Positions
+  net_deposits: string;
+  current_value: string;
+  total_return: string;
+  delegating_address: string;
+  voting_power: string;
   // Overview fields
-  deposit_addresses: string[],
-  management_addresses: string[],
-  planned_settlement_cycle: string,
-  min_liquid_asset_share: string,
+  deposit_addresses: string[];
+  management_addresses: string[];
+  planned_settlement_cycle: string;
+  min_liquid_asset_share: string;
   // Governance
-  voting_delay: string,
-  voting_period: string,
-  proposal_threshold: string,
-  quorom: string,
-  late_quorom: string,
+  voting_delay: string;
+  voting_period: string;
+  proposal_threshold: string;
+  quorom: string;
+  late_quorom: string;
   // NAV Updates
-  nav_updates: INAVUpdate[],
+  nav_updates: INAVUpdate[];
 }

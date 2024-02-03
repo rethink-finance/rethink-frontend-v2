@@ -1,5 +1,5 @@
 <template>
-  <div class="main_card__grid">
+  <div class="main_grid">
     <UiDataRowCard
       :title="depositsTitle"
       :body="depositsBody"

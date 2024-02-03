@@ -1,5 +1,9 @@
 $tooltip-background-color: rgb(var(--v-theme-surface));
 
+body, html {
+  overflow-x: hidden;
+}
+
 /* Links */
 a {
   color: $color-white;
@@ -13,30 +17,33 @@ a {
 
 
 /* Components */
+.main_grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: start;
+
+  @include sm {
+    gap: 1.5rem;
+    grid-template-columns: 1fr 1fr;
+  }
+  &--full-width {
+    grid-template-columns: 1fr;
+  }
+}
 .main_card {
-  padding: 1.5rem;
+  padding: 1rem;
   margin-bottom: 1rem;
   box-shadow: 0 0 16px 0 $color-moonlight;
   border-radius: 0.25rem;
   background: $color-surface;
 
+  @include sm {
+    padding: 1.5rem;
+  }
+
   &--no-padding {
     padding: 0;
-  }
-  &__grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2rem;
-    align-items: start;
-
-    &--full-width {
-      grid-template-columns: 1fr;
-    }
-
-    @include sm {
-      gap: 1.5rem;
-      grid-template-columns: 1fr 1fr;
-    }
   }
 }
 

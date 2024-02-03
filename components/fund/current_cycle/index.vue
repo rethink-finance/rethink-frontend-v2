@@ -28,7 +28,6 @@
 </template>
 
 <script lang="ts">
-import type { PropType } from "vue";
 import type IFund from "~/types/fund";
 
 export default {
@@ -49,11 +48,12 @@ export default {
 
 <style lang="scss" scoped>
 .fund_settlement {
+  width: 100%;
+
   &__buttons {
     display: flex;
     gap: 1rem;
   }
-
   &__pending_requests {
     display: flex;
     flex-direction: column;

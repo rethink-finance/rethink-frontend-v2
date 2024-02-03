@@ -25,51 +25,29 @@
       </div>
     </div>
     <div class="fund_description__buttons">
-      <v-btn
-        class="mb-4 d-flex justify-space-between text-secondary"
-        variant="outlined"
+      <UiCopyButton
+        class="mb-4"
+        title="DeBank - AUM"
+        :tooltip-text="`Copy Fund address to clipboard (${ formatAddress })`"
         size="large"
-      >
-        DeBank - AUM
-        <template #append>
-          <v-icon icon="mdi-link" size="1.5rem" />
-        </template>
-        <v-tooltip activator="parent" location="bottom">
-          Copy Fund address to clipboard ({{ formatAddress }})
-        </v-tooltip>
-      </v-btn>
-      <v-btn
-        class="mb-4 d-flex justify-space-between text-secondary"
-        variant="outlined"
+      />
+      <UiCopyButton
+        class="mb-4"
+        title="Tally - Governance"
+        :tooltip-text="`Copy Governance address to clipboard (${ formatGovernanceAddress })`"
         size="large"
-      >
-        Tally - Governance
-        <template #append>
-          <v-icon icon="mdi-link" size="1.5rem" />
-        </template>
-        <v-tooltip activator="parent" location="bottom">
-          Copy Governance address to clipboard ({{ formatGovernanceAddress }})
-        </v-tooltip>
-      </v-btn>
-      <v-btn
-        class="mb-3 d-flex justify-space-between text-secondary"
-        variant="outlined"
+      />
+      <UiCopyButton
+        class="mb-4"
+        title="Safe - Custody"
+        :tooltip-text="`Copy Safe address to clipboard (${ formatSafeAddress })`"
         size="large"
-      >
-        Safe - Custody
-        <template #append>
-          <v-icon icon="mdi-link" size="1.5rem" />
-        </template>
-        <v-tooltip activator="parent" location="bottom">
-          Copy Safe address to clipboard ({{ formatSafeAddress }})
-        </v-tooltip>
-      </v-btn>
+      />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import type { PropType } from "vue";
 import type IFund from "~/types/fund";
 
 export default {
@@ -127,8 +105,12 @@ export default {
 .fund_description {
   display: flex;
   gap: 2.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
+  flex-direction: column;
 
+  @include sm {
+    flex-direction: row;
+  }
   &__avatar_img {
     border-radius: 0.25rem;
   }

@@ -1,5 +1,5 @@
 <template>
-  <div class="main_card__grid">
+  <div class="main_grid">
     <UiDataRowCard :title="fund.fund_token.name" subtitle="Token Symbol" />
     <UiDataRowCard :title="fund.denomination_token.name" subtitle="Denomination Asset" />
     <UiDataRowCard :title="fund.governor_address" subtitle="Custody Contract" />

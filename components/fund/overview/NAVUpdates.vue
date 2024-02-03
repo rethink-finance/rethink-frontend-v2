@@ -1,5 +1,5 @@
 <template>
-  <div class="details main_card__grid main_card__grid--full-width">
+  <div class="details main_grid main_grid--full-width">
     <UiDataRowCard
       v-for="(navUpdate, index) in fund.nav_updates"
       :key="index"

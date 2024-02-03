@@ -1,5 +1,5 @@
 <template>
-  <div class="main_card__grid">
+  <div class="main_grid">
     <UiDataRowCard
       :title="fund.planned_settlement_cycle"
       subtitle="Planned Settlement Cycle"

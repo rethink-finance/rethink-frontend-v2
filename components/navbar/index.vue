@@ -4,7 +4,12 @@
     color="background"
     elevation="2"
   >
-    <v-row ref="toolbar" align="center" justify="center">
+    <v-row
+      ref="toolbar"
+      align="center"
+      justify="center"
+      no-gutters
+    >
       <v-toolbar
         class="navbar__toolbar"
         color="transparent"
@@ -43,7 +48,7 @@
 
         <v-spacer class="hidden-sm-and-down" />
 
-        <div class="mx-3">
+        <div>
           <ClientOnly>
             <v-btn
               class="connect_wallet_btn nav-link px-4 py-3"
@@ -74,7 +79,7 @@
           </ClientOnly>
         </div>
 
-        <v-btn class="fill-height hidden-md-and-up" @click="menuOpen = !menuOpen">
+        <v-btn class="menu_btn fill-height hidden-md-and-up" @click="menuOpen = !menuOpen">
           <v-icon size="1.5rem">
             mdi-menu
           </v-icon>
@@ -180,6 +185,10 @@ const onClickConnect = () => {
     height: $navbar-height !important;
     width: 100%;
     justify-content: space-between;
+
+    .v-btn.menu_btn {
+      margin-right: 0;
+    }
   }
 
   &__toolbar {
@@ -187,7 +196,11 @@ const onClickConnect = () => {
     gap: 2rem;
     display: flex;
     flex-direction: row;
-    padding: 0 2rem;
+    padding: 0 0 0 1rem;
+
+    @include sm {
+      padding: 0 2rem;
+    }
 
     @include lg {
       padding: 0 7.25rem;

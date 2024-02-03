@@ -1,4 +1,4 @@
-import GovernableFund from "../../assets/contracts/GovernableFund.json";
+import GovernableFund from "@/assets/contracts/GovernableFund.json";
 import { useAccountsStore } from "~/store/modules/accounts.store";
 import type IFund from "~/types/fund";
 
@@ -35,19 +35,19 @@ export const useFundStore = defineStore({
     getApy(state: IState): string {
       return state.apy?.[state.selectedFundAddress];
     },
-    getSelectedFundAddress(state: IState) {
+    getSelectedFundAddress(state: IState): string {
       return state.selectedFundAddress;
     },
-    geFundAbi(state: IState) {
+    geFundAbi(state: IState): any {
       return state.abi?.[state.selectedFundAddress];
     },
-    getFundAddress(state: IState) {
+    getFundAddress(state: IState): string {
       return state.address?.[state.selectedFundAddress];
     },
-    getFundContract(state: IState) {
+    getFundContract(state: IState): any {
       return state.contract?.[state.selectedFundAddress];
     },
-    getUserFundUsdValue(state: IState) {
+    getUserFundUsdValue(state: IState): string {
       return state.userFundUsdValue?.[state.selectedFundAddress];
     },
   },
@@ -57,9 +57,8 @@ export const useFundStore = defineStore({
       // let chainIdDec = parseInt(rootState.accounts.chainId);
       const address = this.selectedFundAddress;
 
-      const contract = new web3.eth.Contract(GovernableFund.abi, address);
-      this.setContract(contract);
-      this.setAbi(GovernableFund.abi);
+      this.contract = new web3.eth.Contract(GovernableFund.abi, address);
+      this.abi = GovernableFund.abi;
     },
     fetchUserBalance() {
       if (!this.contract) {
@@ -72,14 +71,14 @@ export const useFundStore = defineStore({
       const web3 = this.web3;
       const balance = web3.utils.fromWei(balanceWei, "ether");
 
-      this.setUserFundBalance(balance);
+      // this.userFundBalance = balance;
     },
     fetchUserFundUsdValue() {
       if (!this.contract) {
         this.fetchContract();
       }
 
-      // let activeAccount = rootState.accounts.activeAccount;
+      // let activeAccount = this.accountsStore.activeAccount;
 
       let balanceWei = "0";
       try {
@@ -92,40 +91,7 @@ export const useFundStore = defineStore({
       }
 
       const web3 = this.web3;
-      const value = web3.utils.fromWei(balanceWei, "ether");
-
-      this.setUserFundUsdValue(value);
-    },
-    storeAbi() {
-      this.setAbi(GovernableFund.abi);
-    },
-    storeAddress() {
-      // let chainIdDec = parseInt(rootState.accounts.chainId);
-
-      this.setAddress(this.selectedFundAddress);
-    },
-
-    // Mutation
-    setAbi(abi: any) {
-      this.abi[this.selectedFundAddress] = abi;
-    },
-    setAddress(address: string) {
-      this.address[this.selectedFundAddress] = address;
-    },
-    setContract(_contract: any) {
-      this.contract[this.selectedFundAddress] = _contract;
-    },
-    setFundData(fundAddr: string, fundData: IFund) {
-      this.fund[fundAddr] = fundData;
-    },
-    setUserFundBalance(balance: string) {
-      this.userBalance[this.selectedFundAddress] = balance;
-    },
-    setUserFundUsdValue(value: string) {
-      this.userFundUsdValue[this.selectedFundAddress] = value;
-    },
-    setSelectedFundAddress(address: string) {
-      this.selectedFundAddress = address;
+      this.userFundUsdValue = web3.utils.fromWei(balanceWei, "ether");
     },
   },
 });
