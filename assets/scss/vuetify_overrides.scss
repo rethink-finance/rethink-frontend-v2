@@ -53,7 +53,11 @@ button.v-btn--variant-outlined {
     }
   }
   /* EXPANSION PANELS */
-  .v-expansion-panel-title--active > .v-expansion-panel-title__overlay{
-    background-color: initial;
+  .v-expansion-panels {
+    z-index: 0;
+
+    .v-expansion-panel-title--active > .v-expansion-panel-title__overlay{
+      background-color: initial;
+    }
   }
 }

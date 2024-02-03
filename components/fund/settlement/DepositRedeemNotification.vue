@@ -1,7 +1,7 @@
 <template>
   <div class="deposit_redeem_notification">
     <div>
-      <Icon name="ExclamationMarkCircleIcon" size="1.5rem" />
+      <Icon name="IconExclamationMarkCircle" size="1.5rem" />
     </div>
 
     <p>

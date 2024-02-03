@@ -5,12 +5,12 @@
     </div>
 
     <div class="d-flex flex-column">
-      <div class="main_card main_grid order-2 order-sm-1">
+      <div class="main_card main_grid order-1 order-sm-0">
         <FundSettlement :fund="fund" />
         <FundCurrentCycle :fund="fund" />
       </div>
 
-      <div class="main_card order-1 order-sm-2">
+      <div class="main_card">
         <FundChart :fund-id="fund.id" />
       </div>
     </div>

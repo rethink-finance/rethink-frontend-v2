@@ -3,7 +3,7 @@ import { init } from "@web3-onboard/vue"
 import safeModule from "@web3-onboard/gnosis"
 import walletConnectModule from "@web3-onboard/walletconnect"
 import injectedModule from "@web3-onboard/injected-wallets"
-import logoSVG from "@/assets/images/logo.svg";
+import logoSVG from "@/assets/images/logo_mobile.svg";
 
 export default defineNuxtPlugin(nuxtApp => {
   const runtimeConfig = useRuntimeConfig()

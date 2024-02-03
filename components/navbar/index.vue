@@ -196,7 +196,7 @@ const onClickConnect = () => {
     gap: 2rem;
     display: flex;
     flex-direction: row;
-    padding: 0 0 0 1rem;
+    padding: 0 0 0 1.5rem;
 
     @include sm {
       padding: 0 2rem;

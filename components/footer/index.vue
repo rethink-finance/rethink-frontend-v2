@@ -1,7 +1,7 @@
 <template>
-  <v-footer color="transparent" class="footer px-16">
+  <v-footer color="transparent" class="footer">
     <v-col
-      class="footer__buttons ps-16"
+      class="footer__buttons order-1 order-sm-0"
       cols="12"
       sm="12"
       md="6"
@@ -45,7 +45,7 @@
     </v-col>
 
     <v-col
-      class="d-flex justify-end align-center pe-16"
+      class="footer__copyright d-flex align-center"
       cols="12"
       sm="12"
       md="6"
@@ -68,11 +68,31 @@ const currentYear = new Date().getFullYear();
 <style scoped lang="scss">
 .footer {
   font-size: $text-sm;
+  flex-direction: column;
 
+  @include sm {
+    flex-direction: row;
+    padding: 0 4rem;
+  }
+  &__copyright {
+    justify-content: center;
+
+    @include sm {
+      justify-content: flex-end;
+      padding-right: 4rem;
+    }
+  }
   &__buttons {
     display: flex;
     flex-direction: row;
     gap: 1.5rem;
+    width: 100%;
+    justify-content: space-between;
+
+    @include sm {
+      justify-content: flex-start;
+      padding-left: 4rem;
+    }
 
     a {
       min-width: 1rem;

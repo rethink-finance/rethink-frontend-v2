@@ -112,10 +112,15 @@ export default {
   }
 
   &__option {
-    padding: 0.5rem 1rem;
+    padding: 0.75rem 1rem;
     cursor: pointer;
     color: white;
     background: $color-dark;
+    align-content: center;
+
+    @include sm {
+      padding: 0.5rem 1rem;
+    }
 
     &.option-active {
       background-color: $color-navy-gray-light;

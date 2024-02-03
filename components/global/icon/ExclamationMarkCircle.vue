@@ -12,7 +12,7 @@
 
 <script lang="ts">
 export default defineComponent({
-  name: "ExclamationMarkCircleIcon",
+  name: "IconExclamationMarkCircle",
 })
 </script>
 
