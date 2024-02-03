@@ -11,9 +11,10 @@ npm install
 ```
 
 ## Local Environment
-Add `INFURA_KEY` to .env in the project root.
+Add the following environment variables to .env in the project root.
 ```bash
 INFURA_KEY="<YOUR_INFURA_KEY>"
+WALLET_CONNECT_PROJECT_ID="<YOUR_WALLET_CONNECT_PROJECT_ID>"
 ```
 
 ## Development Server

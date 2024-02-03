@@ -27,6 +27,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       INFURA_KEY: process.env.INFURA_KEY,
+      WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
     },
   },
   modules: [
@@ -79,5 +80,10 @@ export default defineNuxtConfig({
       },
     },
   },
-  plugins: ["plugins/apexcharts.client.ts", "plugins/vuetify.ts", "plugins/numeral.ts"],
+  plugins: [
+    "plugins/apexcharts.client.ts",
+    "plugins/vuetify.ts",
+    "plugins/numeral.ts",
+    "plugins/web3-onboard.ts",
+  ],
 });

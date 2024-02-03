@@ -46,13 +46,18 @@
         <div class="mx-3">
           <ClientOnly>
             <v-btn
-              class="nav-link px-4 py-3"
+              class="connect_wallet_btn nav-link px-4 py-3"
+              :class="{'connect_wallet_btn--connected': connectedWallet}"
               variant="outlined"
-              color="primary"
               :disabled="connectingWallet"
               :loading="connectingWallet"
               @click="onClickConnect"
             >
+              <img
+                v-if="connectedWallet?.icon"
+                :src="connectedWalletIcon"
+                class="connect_wallet_btn__icon"
+              >
               {{
                 connectedWallet
                   ? activeAccount
@@ -150,6 +155,9 @@ const computedRoutes = computed(() => {
 const activeAccount = computed(() => truncateAddress(accountsStore.activeAccount?.address));
 const connectingWallet = computed(() => accountsStore.connectingWallet);
 const connectedWallet = computed(() => accountsStore.connectedWallet);
+const connectedWalletIcon = computed(() =>
+  `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(accountsStore.connectedWallet?.icon)))}`,
+);
 
 onMounted(() => {
   currentRoute.value = route.path;
@@ -203,6 +211,21 @@ const onClickConnect = () => {
 
     &:not(:hover) {
       opacity: 0.85;
+    }
+  }
+
+  .connect_wallet_btn {
+    color: $color-primary;
+
+    &__icon {
+      width: 1.5rem;
+      height: 1.5rem;
+      margin-right: 0.5rem;
+    }
+
+    &--connected {
+      color: $color-light-subtitle;
+      border-color: $color-gray-transparent;
     }
   }
 }
