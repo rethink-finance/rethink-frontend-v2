@@ -86,7 +86,7 @@ export default {
     async copyGovernorAddr() {
       try {
         await navigator.clipboard.writeText(this.fund?.governor_address);
-        // const msg = "Copied Governor Address (" + th|is.fund.governor + ") to clipboard";
+        // const msg = "Copied Governor Address (" + this.fund.governor + ") to clipboard";
         // this.$toast.success(msg);
       } catch ($e) {}
     },

@@ -15,14 +15,14 @@
 <style lang="scss" scoped>
 .deposit_redeem_notification {
   display: flex;
-  margin: 1.5rem 0;
   padding: 1rem;
   gap: 1.5rem;
   font-size: $text-sm;
-
-  border-radius: $default-border-radius;
-  border: 1px solid $color-gray-transparent;
-  background: $color-gray-light-transparent;
   color: $color-light-subtitle;
+  background: $color-gray-light-transparent;
+  @include sm {
+    @include borderGray();
+    margin: 1.5rem 0;
+  }
 }
 </style>

@@ -21,7 +21,6 @@ export default defineNuxtConfig({
   },
   css: [
     "vuetify/styles",
-    "~/assets/scss/_typography.scss",
     "~/assets/scss/vuetify_overrides.scss",
     "~/assets/scss/app.scss",
   ],
@@ -71,7 +70,8 @@ export default defineNuxtConfig({
       preprocessorOptions: {
         scss: {
           additionalData: "@import \"@/assets/scss/_variables.scss\";" +
-              "@import \"@/assets/scss/_mixins.scss\";",
+              "@import \"@/assets/scss/_mixins.scss\";" +
+              "@import \"@/assets/scss/_typography.scss\";",
         },
       },
     },

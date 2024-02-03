@@ -25,7 +25,7 @@ export default {
       default: "3M",
       rules: [
         (value: string) => {
-          if (!timelineOptions.includes(value)) {
+          if (!timelineOptions?.includes(value)) {
             return `Selected value is not supported: ${value}`
           }
 

@@ -38,7 +38,7 @@ export default {
       default: "sharePrice",
       rules: [
         (value: string) => {
-          if (!Object.keys(typeOptions).includes(value)) {
+          if (!Object.keys(typeOptions)?.includes(value)) {
             return `Selected value is not supported: ${value}`
           }
 

@@ -38,6 +38,11 @@
 html, body {
   font-family: EudoxusSans, sans-serif;
   color: $color-light-subtitle;
+  font-size: 14px;
+
+  @include sm {
+    font-size: 16px;
+  }
 }
 
 .section_title,

@@ -64,7 +64,7 @@ export const useAccountsStore = defineStore("accounts", {
     //   return state?.web3?.utils.fromWei(this.activeBalance, "ether");
     // },
     isCurrentChainSupported(state): boolean {
-      return state.supportedChains.includes(state.chainName);
+      return state.supportedChains?.includes(state.chainName);
     },
   },
   actions: {

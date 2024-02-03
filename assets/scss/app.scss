@@ -34,11 +34,11 @@ a {
 .main_card {
   padding: 1rem;
   margin-bottom: 1rem;
-  box-shadow: 0 0 16px 0 $color-moonlight;
   border-radius: 0.25rem;
   background: $color-surface;
 
   @include sm {
+    box-shadow: 0 0 16px 0 $color-moonlight;
     padding: 1.5rem;
   }
 

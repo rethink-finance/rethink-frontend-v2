@@ -3,13 +3,16 @@
     <div class="main_card">
       <FundInfo :fund="fund" />
     </div>
-    <div class="main_card main_grid">
-      <FundSettlement :fund="fund" />
-      <FundCurrentCycle :fund="fund" />
-    </div>
 
-    <div class="main_card">
-      <FundChart :fund-id="fund.id" />
+    <div class="d-flex flex-column">
+      <div class="main_card main_grid order-2 order-sm-1">
+        <FundSettlement :fund="fund" />
+        <FundCurrentCycle :fund="fund" />
+      </div>
+
+      <div class="main_card order-1 order-sm-2">
+        <FundChart :fund-id="fund.id" />
+      </div>
     </div>
 
     <FundOverview :fund="fund" />
@@ -151,7 +154,7 @@ const fundData: IFund = {
   // My Positions (user's)
   net_deposits: "$544,452,56",
   current_value: "$1,544,452.56",
-  total_return: "10%",
+  total_return: 0.11,
   delegating_address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
   voting_power: "10",
 };
@@ -169,4 +172,10 @@ const fund = ref(fundData);
     padding: 0;
   }
 }
+
+.fund_settlement_cycle_chart_wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
 </style>

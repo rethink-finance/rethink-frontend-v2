@@ -2,7 +2,7 @@
   <div class="fund_info_governance">
     <UiDataBar title="Governance">
       <div class="data_bar__item">
-        <div class="data_bar__item__title">
+        <div class="data_bar__title">
           <Icon
             name="mdi:circle"
             color="white"
@@ -11,15 +11,15 @@
           />
           {{ truncateAddress(fund.delegating_address) }}
         </div>
-        <div class="data_bar__item__subtitle">
+        <div class="data_bar__subtitle">
           Delegating To
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__item__title">
+        <div class="data_bar__title">
           {{ fund.voting_power }} {{ fund.fund_token.name }}
         </div>
-        <div class="data_bar__item__subtitle">
+        <div class="data_bar__subtitle">
           Voting Power
         </div>
       </div>

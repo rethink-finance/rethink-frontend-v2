@@ -106,5 +106,13 @@ export default {
     flex-direction: column;
     gap: 1.5rem;
   }
+
+  .card_header {
+    flex-direction: column;
+    gap: 1.5rem;
+    @include sm {
+      flex-direction: row;
+    }
+  }
 }
 </style>

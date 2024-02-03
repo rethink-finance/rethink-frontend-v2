@@ -30,7 +30,7 @@ export default interface IFund {
   // My Fund Positions
   net_deposits: string;
   current_value: string;
-  total_return: string;
+  total_return: number;
   delegating_address: string;
   voting_power: string;
   // Overview fields

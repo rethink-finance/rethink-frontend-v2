@@ -3,9 +3,9 @@
     <div v-if="title" class="data_bar__title">
       {{ title }}
     </div>
-    <template class="data_bar__body">
-      <slot name="default" />
-    </template>
+    <div class="data_bar__body">
+      <slot />
+    </div>
   </div>
 </template>
 
@@ -31,15 +31,19 @@ export default defineComponent({
     margin-bottom: 0.75rem;
   }
   &__body {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    border: 1px solid #293246;
-    background: $color-gray-light-transparent;
-    box-shadow: 4px 4px 16px 0 $color-moonlight;
-    @include sm {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-areas: "left center right";
+    gap: 1.5rem;
+
+    @include lg {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      border: 1px solid #293246;
+      background: $color-gray-light-transparent;
+      padding: 1rem;
+      box-shadow: 4px 4px 16px 0 $color-moonlight;
       flex-direction: row;
     }
   }
@@ -47,24 +51,42 @@ export default defineComponent({
     .data_bar__item {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
       gap: 0.5rem;
-
-      &__title {
-        display: flex;
+      // Mobile there are 3 columns, align:
+      // 1st column: left
+      // 2nd column: center
+      // 3rd column: right
+      &:nth-of-type(3n) {
+        align-items: flex-end;
+      }
+      &:nth-of-type(3n-1) {
         align-items: center;
-        font-size: 1rem;
+      }
+      &:nth-of-type(3n-2) {
+        align-items: flex-start;
+      }
+      @include lg {
+        &:nth-of-type(n){
+          align-items: flex-start;
+        }
+      }
+    }
+    .data_bar__title {
+      display: flex;
+      align-items: center;
+      font-size: 1rem;
+      height: 1rem;
+      line-height: 1;
+      font-weight: 700;
+      color: $color-title;
+      @include lg {
         width: 100%;
-        height: 1rem;
-        line-height: 1;
-        font-weight: 700;
-        color: $color-title;
       }
-      &__subtitle {
-        font-size: $text-sm;
-        line-height: 1;
-        color: $color-light-subtitle;
-      }
+    }
+    .data_bar__subtitle {
+      font-size: $text-sm;
+      line-height: 1;
+      color: $color-light-subtitle;
     }
   }
 }
