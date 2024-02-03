@@ -1,4 +1,5 @@
 import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -79,6 +80,9 @@ export default defineNuxtConfig({
         transformAssetUrls,
       },
     },
+    plugins: [
+      nodePolyfills(),
+    ],
   },
   plugins: [
     "plugins/apexcharts.client.ts",
