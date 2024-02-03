@@ -1,5 +1,5 @@
 import { defineNuxtPlugin } from "#app"
-import { init, useOnboard } from "@web3-onboard/vue"
+import { init } from "@web3-onboard/vue"
 import safeModule from "@web3-onboard/gnosis"
 import walletConnectModule from "@web3-onboard/walletconnect"
 import injectedModule from "@web3-onboard/injected-wallets"
@@ -11,7 +11,7 @@ export default defineNuxtPlugin(nuxtApp => {
 
   // Wallets
   const safe = safeModule({
-    whitelistedDomains: [RegExp("rethink.finance")],
+    whitelistedDomains: [/rethink.finance/],
   })
   const walletConnect = walletConnectModule({
     /**

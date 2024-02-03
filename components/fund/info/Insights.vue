@@ -71,7 +71,7 @@ import type { PropType } from "vue";
 import type IFund from "~/types/fund";
 
 export default {
-  name: "FundInsights",
+  name: "FundInfoInsights",
   props: {
     fund: {
       type: Object as PropType<IFund>,
