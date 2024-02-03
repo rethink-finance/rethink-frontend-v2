@@ -7,7 +7,6 @@ interface IState {
   chainId?: string;
   chainName: string;
   web3Onboard?: any;
-  isConnected: boolean;
   supportedChains: string[];
   lastSelectedTradePair: string | null;
   lastSelectedTradeMaturity: string | null;
@@ -21,7 +20,6 @@ export const useAccountsStore = defineStore("accounts", {
     chainId: undefined,
     chainName: "",
     web3Onboard: undefined,
-    isConnected: false,
     supportedChains: [
       "Kovan Testnet",
       "Polygon PoS Chain",
@@ -47,6 +45,9 @@ export const useAccountsStore = defineStore("accounts", {
     connectedWallet(): WalletState {
       return this.web3Onboard?.connectedWallet;
     },
+    isConnected(): boolean {
+      return !!this.connectedWallet;
+    },
     activeAccount(): Account {
       return this.web3Onboard?.connectedWallet?.accounts[0];
     },
@@ -70,8 +71,6 @@ export const useAccountsStore = defineStore("accounts", {
     async connectWallet() {
       // Connect to the web3-onboard.
       await this.web3Onboard?.connectWallet();
-      this.isConnected = true;
-
 
       const activeChain = this.web3Onboard.connectedChain;
       this.chainId = activeChain.id;
@@ -89,8 +88,7 @@ export const useAccountsStore = defineStore("accounts", {
       if (provider && label) {
         await this.web3Onboard?.disconnectWallet({ label })
       }
-      this.isConnected = false;
-      // this.activeAccount = "";
+
       this.activeBalance = 0;
     },
     async fetchActiveBalance() {

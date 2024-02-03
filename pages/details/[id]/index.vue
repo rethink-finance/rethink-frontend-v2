@@ -1,22 +1,18 @@
 <template>
-  <div style="width: 70%" class="mt-8">
+  <div class="fund_details mt-8">
     <div class="main_card">
       <FundInfo :fund="fund" />
     </div>
     <div class="main_card settlement_grid">
-      <div>
-        <FundSettlement :fund="fund" />
-      </div>
-      <div>
-        <FundCurrentCycle :fund="fund" />
-      </div>
+      <FundSettlement :fund="fund" />
+      <FundCurrentCycle :fund="fund" />
     </div>
+
     <div class="main_card">
       <FundChart :fund-id="fund.id" />
     </div>
-    <div class="">
-      <FundOverview :fund="fund" />
-    </div>
+
+    <FundOverview :fund="fund" />
   </div>
 </template>
 
@@ -158,11 +154,21 @@ const fund = ref(fundData);
 </script>
 
 <style lang="scss" scoped>
+.fund_details {
+  width: 90%;
+
+  @include sm {
+    width: 70%;
+  }
+}
 .settlement_grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 2rem;
 
-  /* TODO mobile 1 col, display flex */
+  @include sm {
+    gap: 1.5rem;
+    grid-template-columns: 1fr 1fr;
+  }
 }
 </style>

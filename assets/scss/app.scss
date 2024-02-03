@@ -25,12 +25,17 @@ a {
   }
   &__grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem; // Grid column gap
+    grid-template-columns: 1fr;
+    gap: 2rem;
     align-items: start;
 
     &--full-width {
       grid-template-columns: 1fr;
+    }
+
+    @include sm {
+      gap: 1.5rem;
+      grid-template-columns: 1fr 1fr;
     }
   }
 }
