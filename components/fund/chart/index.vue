@@ -19,9 +19,6 @@
   </div>
 </template>
 <script lang="ts">
-import numeral from "numeral";
-import { trimTrailingZeros } from "~/composables/utils";
-
 export default {
   data() {
     return {
@@ -141,7 +138,7 @@ export default {
               "<div class='tooltip_row'>" +
               "<div class='label'>Time:</div>" + w.config.context.times[dataPointIndex] + "</div>" +
               "<div class='tooltip_row'>" +
-              "<div class='label'>Price:</div>" + trimTrailingZeros(numeral(series[seriesIndex][dataPointIndex]).format("$0,0.00")) + "</div>" +
+              "<div class='label'>Price:</div>" + formatUSDValue(series[seriesIndex][dataPointIndex]) + "</div>" +
               "</div>"
           },
         },

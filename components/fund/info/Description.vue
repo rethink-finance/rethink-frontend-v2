@@ -71,9 +71,6 @@ export default {
     formatSafeAddress() {
       return truncateAddress(this.fund?.safe_address);
     },
-    chainIconName() {
-      return `cryptocurrency-color:${chainToIconName(this.fund?.chain)}`;
-    },
   },
   methods: {
     async copyFundAddr() {

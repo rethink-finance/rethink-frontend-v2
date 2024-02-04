@@ -5,7 +5,7 @@
         <div class="data_bar__title">
           <Icon
             v-if="fund?.chain"
-            :name="chainIconName"
+            :name="chainIconName(fund?.chain)"
             size="0.75rem"
             class="mr-2"
             color="white"
@@ -82,11 +82,6 @@ export default {
   },
   data() {
     return {};
-  },
-  computed: {
-    chainIconName() {
-      return `cryptocurrency-color:${chainToIconName(this.fund?.chain)}`;
-    },
   },
   methods: { numberColorClass },
 };

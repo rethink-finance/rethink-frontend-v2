@@ -32,7 +32,7 @@ const typeOptions: Record<string, string> = {
 };
 
 export default {
-  name: "TimelineSelector",
+  name: "TypeSelector",
   props: {
     selected: {
       type: String,

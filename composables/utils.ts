@@ -1,4 +1,5 @@
 import { ethers } from "ethers"
+import numeral from "numeral";
 
 export const variableType = (value: any) =>
   Object.prototype.toString.call(value).slice(8, -1) // accurately returns the parameter type [Array | Object | Number | Boolean | ...]
@@ -22,30 +23,7 @@ export const toPascalCase = (str: string) =>
     .join("")
 
 export const capitalizeFirst = (str: string): string =>
-  str.charAt(0).toUpperCase() + str.slice(1);
-
-
-const chainToIconMap: Record<string, string> = {
-  ethereum: "eth",
-  bitcoin: "btc",
-  binance: "bnb",
-  cardano: "ada",
-  solana: "sol",
-  ripple: "xrp",
-  polkadot: "dot",
-  avalanche: "avax",
-  dogecoin: "doge",
-  litecoin: "ltc",
-  // Add more if needed.
-};
-
-export const chainToIconName = (chain: string): string => {
-  /**
-    * Icons are available here:
-    * https://icones.js.org/collection/cryptocurrency-color
-  **/
-  return chainToIconMap[chain];
-}
+  str?.charAt(0).toUpperCase() + str?.slice(1);
 
 
 /**
@@ -70,4 +48,8 @@ export const formatPercent = (value: number, includeSign: boolean = true): strin
 
 export const trimTrailingZeros = (value: string) => {
   return value.replace(/\.?0*$/, "");
+}
+
+export const formatUSDValue = (value: string | number) => {
+  return trimTrailingZeros(numeral(value).format("$0,0.00"))
 }

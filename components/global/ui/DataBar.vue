@@ -40,7 +40,7 @@ export default defineComponent({
       align-items: center;
       display: flex;
       justify-content: space-between;
-      border: 1px solid #293246;
+      border: 1px solid $color-border-dark;
       background: $color-gray-light-transparent;
       padding: 1rem;
       box-shadow: 4px 4px 16px 0 $color-moonlight;

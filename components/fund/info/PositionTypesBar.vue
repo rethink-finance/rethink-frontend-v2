@@ -48,7 +48,7 @@ export default {
 
         return {
           width: formatPercent(width, false),
-          style: { width: width * 100 + "px" },
+          style: { width: width * 100 + "%" },
           class: `bg_${this.positionTypeToClass[positionType.type]}`,
           ...positionType,
         }
@@ -62,7 +62,7 @@ export default {
 .position_types_bar {
   display: flex;
   flex-grow: 1;
-  margin: auto;
+  width: 100%;
 
   &__item {
     height: $text-sm;

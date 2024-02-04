@@ -1,15 +1,18 @@
 <template>
-  <v-toolbar color="transparent" class="">
-    <v-avatar size="50" rounded="0" class="me-2">
-      <img cover :src="props.image" style="border-radius: 24px" />
+  <div class="fund_name">
+    <v-avatar size="2rem" rounded="0" class="fund_name__avatar">
+      <img
+        cover
+        :src="props.image"
+      >
     </v-avatar>
-    <v-card color="transparent" class="d-flex pa-1 transparent align-items-center" flat>
+    <div class="d-flex align-items-center">
       <div class="title-wrapper">
         <h4>{{ title }}</h4>
         <h5>{{ subtitle }}</h5>
       </div>
-    </v-card>
-  </v-toolbar>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -23,31 +26,43 @@ const props = defineProps({
 });
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+.fund_name {
+  display: flex;
+  flex-direction: row;
+
+  &__avatar {
+    border-radius: 0.25rem;
+    margin-right: 0.75rem;
+    img {
+      width: 2rem;
+      height: 2rem;
+    }
+  }
+}
 .title-wrapper {
   justify-content: center;
   align-items: flex-start;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.25rem;
 }
 
 h4 {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-style: normal;
   font-weight: 700;
-  line-height: 150%; /* 21px */
-  letter-spacing: 0.84px;
+  letter-spacing: 0.0525rem;
+  line-height: 1; /* 1.3125rem */
   text-transform: uppercase;
 }
 
 h5 {
-  /* font-family: Eudoxus Sans; */
-  color: #afb6c8;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-style: normal;
-  font-weight: 700;
-  line-height: 150%; /* 21px */
-  letter-spacing: 0.84px;
+  font-weight: 500;
+  line-height: 1; /* 1.3125rem */
+  letter-spacing: 0.02625rem;
+  color: $color-light-subtitle;
 }
 </style>

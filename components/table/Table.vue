@@ -19,16 +19,20 @@
         <tr
           v-for="headerGroup in table.getHeaderGroups()"
           :key="headerGroup.id"
-          :style="{ height }"
+          :style="{ height: headerHeight }"
         >
           <th
             v-for="header in headerGroup.headers"
             :key="header.id"
-            :style="tableHeadDefaultStyle"
+            :style="{
+              ...tableHeadDefaultStyle,
+            }"
             :colspan="header.colSpan"
             @click="toggleSorting(header)"
           >
-            <div class="table-header-cell">
+            <div
+              class="table-header-cell"
+            >
               <FlexRender
                 :render="header.column.columnDef.header"
                 :props="header.getContext()"
@@ -41,22 +45,27 @@
         <tr
           v-for="row in table.getRowModel().rows"
           :key="row.id"
-          :style="{ height }"
+          :style="{ height: rowHeight }"
           @click="$router.push(`/details/${row.original.id}`)"
         >
           <td
             v-for="cell in row.getVisibleCells()"
             :key="cell.id"
-            class="px-8 py-4 text-sm whitespace-nowrap"
             :style="{
               ...tableDataDefaultStyle,
             }"
             :data-cell="cell.column.columnDef.header"
           >
-            <FlexRender
-              :render="cell.column.columnDef.cell"
-              :props="cell.getContext()"
-            />
+            <div
+              class="td-cell"
+              :class="getCellClass(cell)"
+              :style="getColumnWidth(cell.column.columnDef)"
+            >
+              <FlexRender
+                :render="cell.column.columnDef.cell"
+                :props="cell.getContext()"
+              />
+            </div>
             <!-- {{ cell.column.columnDef.cell(row.original) }} -->
           </td>
         </tr>
@@ -117,9 +126,13 @@ const props = defineProps({
     type: String,
     default: "transparent",
   },
-  height: {
+  headerHeight: {
     type: String,
-    default: "66px",
+    default: "2.5rem",
+  },
+  rowHeight: {
+    type: String,
+    default: "3.5rem",
   },
   style: Object,
   className: String,
@@ -127,27 +140,35 @@ const props = defineProps({
     type: String,
     default: "2rem",
   },
+  getCellClass: {
+    type: Function,
+    default: () => {},
+  },
 });
 
 const filtering = ref("");
 const defaultStyle = ref({
-  padding: "1rem",
+  // padding: "1rem",
   borderCollapse: "collapse",
   width: "100%",
 });
 const tableHeadDefaultStyle = ref({
-  padding: ".1rem",
-  paddingInline: "2rem",
+  // padding: ".1rem",
+  // paddingInline: "2rem",
   borderBottom: "3px solid #111C35",
 });
 const tableDataDefaultStyle = ref({
-  padding: ".1rem",
-  paddingInline: "3rem",
+  // padding: ".1rem",
+  // paddingInline: "3rem",
 });
 const table = useVueTable({
   columns: props.columns ?? [],
   data: props.data ?? [],
   getCoreRowModel: getCoreRowModel(),
+  defaultColumn: {
+    minSize: 60,
+    size: 70,
+  },
 });
 
 const captionStyle = computed(() => {
@@ -169,6 +190,24 @@ const captionStyle = computed(() => {
 //   return row.index + 1 !== table.rows.length ? "1px solid #F2F2F2" : "";
 // };
 
+const getColumnWidth = (column) => {
+  const styles = {};
+  if (column.size) {
+    styles.width = column.size;
+    if (column.size !== "auto") {
+      styles.width += "px";
+    }
+    styles.width = "100%"
+  }
+  if (column.minSize) {
+    styles["min-width"] = column.minSize + "px";
+  }
+  if (column.maxSize) {
+    styles["max-width"] = column.maxSize + "px";
+  }
+
+  return styles
+};
 const toggleSorting = (column) => {
   column.toggleSort();
 };
@@ -203,31 +242,66 @@ watch([() => props.data, () => props.columns], () => {
   width: 100%;
   border-collapse: collapse;
   background: transparent;
-}
+  font-size: $text-sm;
+  caption {
+    caption-side: top;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+  .table-navbar-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  input[type="text"] {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    padding: 5px;
+    width: 100%;
+  }
+  thead {
+   border-bottom: 1px solid #f2f2f2;
+    height: 2.5rem;
+    th {
+      background: $color-surface;
+      color: $color-light-subtitle;
+      font-weight: 500;
+      letter-spacing: 0.02625rem;
 
-.rethink-table caption {
-  caption-side: top;
-  padding-top: 2rem;
-  padding-bottom: 2rem;
-}
+      &:not(:first-child) .table-header-cell {
+        justify-content: flex-end;
+      }
+      .table-header-cell {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+        text-align: start;
+      }
+    }
+  }
+  tbody {
+    tr {
+      outline: 2px solid #111c35;
+      border-bottom: 2px solid #213566;
+      cursor: pointer;
+      color: $color-white;
 
-.rethink-table .table-navbar-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.rethink-table input[type="text"] {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid #ccc;
-  padding: 5px;
-  width: 100%;
-}
-
-.rethink-table thead {
-  background: transparent;
-  border-bottom: 1px solid #f2f2f2;
+      // First column is aligned left, others right.
+      :not(:first-child) .td-cell {
+        text-align: right;
+        justify-content: flex-end;
+      }
+      .td-cell {
+        width: 100%;
+        overflow: hidden;
+        @include ellipsis;
+      }
+      &:hover {
+        background: $color-gray-transparent;
+      }
+    }
+  }
 }
 
 th {
@@ -239,42 +313,15 @@ th {
 th,
 td,
 caption {
-  padding: 1rem;
+  //padding: 1rem;
   text-align: start;
 }
 
 tr:not(th tr) {
-  background: #21356629;
-  background: linear-gradient(
-    0deg,
-    $color-gray-light-transparent,
-    $color-gray-light-transparent
-  );
-  margin-block: "2px";
+  background: $color-table-row;
 }
 
-tbody tr {
-  outline: 3px solid #111c35;
-  border-bottom: 2px solid #213566;
-  cursor: pointer;
-}
 
-tbody tr:hover {
-  background: linear-gradient(
-    0deg,
-    $color-gray-transparent,
-    $color-gray-transparent
-  );
-}
-
-.rethink-table .table-header-cell {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  justify-content: space-between;
-  text-align: start;
-  padding-inline-end: 1rem;
-}
 
 .rethink-table .table-header-text {
   font-weight: 700;
