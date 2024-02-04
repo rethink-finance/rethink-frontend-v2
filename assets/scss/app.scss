@@ -7,6 +7,7 @@ body, html {
 /* Links */
 a {
   color: $color-white;
+  text-decoration: none;
 
   &:visited,
   &:hover,

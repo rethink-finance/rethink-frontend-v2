@@ -3,8 +3,7 @@
     <v-col
       class="footer__buttons order-1 order-sm-0"
       cols="12"
-      sm="12"
-      md="6"
+      md="4"
     >
       <v-btn href="https://#" target="_blank" variant="plain">
         <Icon
@@ -43,12 +42,22 @@
         />
       </v-btn>
     </v-col>
-
+    <v-col
+      class="footer__terms_of_service"
+      cols="12"
+      md="4"
+    >
+      <nuxt-link
+        to="https://docs.rethink.finance/rethink.finance/links/terms-of-service"
+        class="d-flex"
+      >
+        Terms of Services & Privacy
+      </nuxt-link>
+    </v-col>
     <v-col
       class="footer__copyright d-flex align-center"
       cols="12"
-      sm="12"
-      md="6"
+      md="4"
     >
       <Icon
         name="ic:baseline-copyright"
@@ -69,16 +78,29 @@ const currentYear = new Date().getFullYear();
 .footer {
   font-size: $text-sm;
   flex-direction: column;
+  margin-top: 2rem;
 
   @include sm {
     flex-direction: row;
     padding: 0 4rem;
   }
+
+  &__terms_of_service {
+    display: flex;
+    justify-content: flex-start;
+    font-weight: 700;
+
+    @include sm {
+      align-items: center;
+      justify-content: center;
+    }
+  }
   &__copyright {
-    justify-content: center;
+    padding-top: 0;
 
     @include sm {
       justify-content: flex-end;
+      padding-top: 0.75rem;
       padding-right: 4rem;
     }
   }
