@@ -5,7 +5,7 @@ import walletConnectModule from "@web3-onboard/walletconnect"
 import injectedModule from "@web3-onboard/injected-wallets"
 import logoSVG from "@/assets/images/logo_mobile.svg";
 
-export default defineNuxtPlugin(nuxtApp => {
+export default defineNuxtPlugin(() => {
   const runtimeConfig = useRuntimeConfig()
   const injected = injectedModule();
 

@@ -9,6 +9,7 @@
           {{ selectedTypeValue }}
         </div>
       </div>
+      <Icon name="IconDropdownArrow" size="2rem" :class="{'active': menuOpen}" />
     </div>
     <div v-if="menuOpen" class="price_type_selector__options">
       <div
@@ -84,7 +85,11 @@ export default {
   position: relative;
 
   &__select_button {
-    padding: 0.5rem 1rem;
+    display: flex;
+    flex-direction: row;
+    padding: 0.5rem 0.75rem 0.5rem 1rem;
+    justify-content: space-between;
+    align-items: center;
 
     &:hover {
       background: $color-hover;

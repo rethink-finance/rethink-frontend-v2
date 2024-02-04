@@ -4,7 +4,7 @@
       <div>
         <div class="timeline_selector__selected">
           {{ selectedTimeline }}
-          <Icon name="IconDropdownArrow" size="2rem" />
+          <Icon name="IconDropdownArrow" size="2rem" :class="{'active': menuOpen}" />
         </div>
       </div>
     </div>
@@ -75,7 +75,7 @@ export default {
 
   &__select_button {
     height: 100%;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.5rem 0.5rem 1rem;
     font-weight: bold;
     justify-content: center;
     display: flex;
