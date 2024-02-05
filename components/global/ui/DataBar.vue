@@ -29,6 +29,7 @@ export default defineComponent({
     color: $color-subtitle;
     line-height: 1;
     margin-bottom: 0.75rem;
+    display: flex;
   }
   &__body {
     display: grid;
@@ -58,9 +59,19 @@ export default defineComponent({
       // 3rd column: right
       &:nth-of-type(3n) {
         align-items: flex-end;
+        .data_bar__subtitle,
+        .data_bar__title {
+          justify-content: end;
+          text-align: end;
+        }
       }
       &:nth-of-type(3n-1) {
         align-items: center;
+        .data_bar__subtitle,
+        .data_bar__title {
+          justify-content: center;
+          text-align: center;
+        }
       }
       &:nth-of-type(3n-2) {
         align-items: flex-start;
@@ -73,6 +84,7 @@ export default defineComponent({
     }
     .data_bar__title {
       display: flex;
+      width: 100%;
       align-items: center;
       font-size: 1rem;
       height: 1rem;

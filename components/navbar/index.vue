@@ -91,7 +91,7 @@
   <NavbarMenuList v-model="menuOpen" :routes="computedRoutes" />
 </template>
 
-<script setup>
+<script lang="ts" setup>
 import { useAccountsStore } from "~/store/modules/accounts.store";
 const accountsStore = useAccountsStore();
 
@@ -99,8 +99,18 @@ const route = useRoute();
 
 const currentRoute = ref(route?.path);
 const menuOpen = ref(false);
-
-const routes = [
+interface IRoute {
+  to: string;
+  title: string;
+  text: string;
+  exactMatch: boolean;
+  matchPrefix?: string;
+  disabled?: boolean;
+  isExternal?: boolean;
+  icon?: string;
+  color?: string;
+}
+const routes : IRoute[] = [
   {
     to: "/",
     matchPrefix: "/details",
@@ -124,6 +134,7 @@ const routes = [
   },
   {
     isExternal: true,
+    exactMatch: true,
     to: "https://docs.rethink.finance",
     title: "Docs",
     text: "Delve into the details of the protocol",
@@ -132,7 +143,7 @@ const routes = [
   },
 ]
 
-const isPathActive = (path, exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);
+const isPathActive = (path: string = "", exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);
 const getPathColor = (isActive = false, color = "var(--color-subtitle)") => (isActive ? "primary" : color);
 
 const computedRoutes = computed(() => {

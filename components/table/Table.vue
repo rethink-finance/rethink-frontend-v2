@@ -1,10 +1,10 @@
 <template>
-  <div style="width: 100%; padding-inline: 200px">
+  <div class="table_wrapper">
     <table
       class="rethink-table"
-      :style="{ ...defaultStyle, background: bgColor, ...style }"
+      :style="{ background: bgColor, ...customStyle }"
     >
-      <caption v-if="showControls" :style="captionStyle">
+      <caption v-if="showControls" class="table-caption">
         <div class="table-navbar-content">
           <slot name="table-navbar-content" />
           <input
@@ -28,15 +28,17 @@
               ...tableHeadDefaultStyle,
             }"
             :colspan="header.colSpan"
-            @click="toggleSorting(header)"
+            :class="{sortable: header.column.getCanSort()}"
+            @click="toggleSorting(header.column)"
           >
-            <div
-              class="table-header-cell"
-            >
+            <div class="th_cell">
               <FlexRender
                 :render="header.column.columnDef.header"
                 :props="header.getContext()"
               />
+              <div v-if="header.column.getCanSort()">
+                <TableSortArrows :sort="header.column.getIsSorted()" />
+              </div>
             </div>
           </th>
         </tr>
@@ -51,9 +53,6 @@
           <td
             v-for="cell in row.getVisibleCells()"
             :key="cell.id"
-            :style="{
-              ...tableDataDefaultStyle,
-            }"
             :data-cell="cell.column.columnDef.header"
           >
             <div
@@ -74,46 +73,61 @@
         <!-- pagination logic here -->
       </tfoot>
     </table>
-    <div class="rethink-pagination-container" :style="{ marginTop: '16px' }">
-      <div class="rethink-pagination-actions d-flex" style="gap: 20px">
-        <v-btn
-          variant="text"
-          :disabled="!table.canPreviousPage"
-          @click="gotoPage(0)"
-        >
-          First Page
-        </v-btn>
-        <v-btn
-          variant="text"
-          :disabled="!table.canPreviousPage"
-          @click="previousPage"
-        >
-          Previous Page
-        </v-btn>
-        <v-btn variant="text" :disabled="!table.canNextPage" @click="nextPage">
-          Next Page
-        </v-btn>
-        <v-btn
-          variant="text"
-          :disabled="!table.canNextPage"
-          @click="gotoPage(table.getPageCount() - 1)"
-        >
-          Last Page
-        </v-btn>
-      </div>
-    </div>
+    <!--    <div v-if="showPagination" class="rethink-pagination-container" :style="{ marginTop: '16px' }">-->
+    <!--      <div class="rethink-pagination-actions d-flex" style="gap: 20px">-->
+    <!--        <v-btn-->
+    <!--          variant="text"-->
+    <!--          :disabled="!table.canPreviousPage"-->
+    <!--          @click="gotoPage(0)"-->
+    <!--        >-->
+    <!--          First Page-->
+    <!--        </v-btn>-->
+    <!--        <v-btn-->
+    <!--          variant="text"-->
+    <!--          :disabled="!table.canPreviousPage"-->
+    <!--          @click="previousPage"-->
+    <!--        >-->
+    <!--          Previous Page-->
+    <!--        </v-btn>-->
+    <!--        <v-btn variant="text" :disabled="!table.canNextPage" @click="nextPage">-->
+    <!--          Next Page-->
+    <!--        </v-btn>-->
+    <!--        <v-btn-->
+    <!--          variant="text"-->
+    <!--          :disabled="!table.canNextPage"-->
+    <!--          @click="gotoPage(table.getPageCount() - 1)"-->
+    <!--        >-->
+    <!--          Last Page-->
+    <!--        </v-btn>-->
+    <!--      </div>-->
+    <!--    </div>-->
   </div>
 </template>
 
-<script setup>
+<script lang="ts" setup>
 import { ref, onMounted, watch } from "vue";
-import { useVueTable, FlexRender, getCoreRowModel } from "@tanstack/vue-table";
+import {
+  useVueTable,
+  FlexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+} from "@tanstack/vue-table";
+import SortArrow from "~/components/global/icon/SortArrowUp.vue";
 
 const props = defineProps({
-  captionSide: String,
+  captionSide: {
+    type: String,
+    default: "",
+  },
   showControls: Boolean,
-  columns: Array,
-  data: Array,
+  columns: {
+    type: Array as () => any[],
+    default: () => [],
+  },
+  data: {
+    type: Array as () => any[],
+    default: () => [],
+  },
   isPaginated: Boolean,
   isSortable: Boolean,
   isFilterable: Boolean,
@@ -121,7 +135,14 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
-  btnType: String,
+  showPagination: {
+    type: Boolean,
+    default: false,
+  },
+  btnType: {
+    type: String,
+    default: "",
+  },
   bgColor: {
     type: String,
     default: "transparent",
@@ -134,11 +155,17 @@ const props = defineProps({
     type: String,
     default: "3.5rem",
   },
-  style: Object,
-  className: String,
+  customStyle: {
+    type: Object,
+    default: () => {},
+  },
   captionSpacing: {
     type: String,
     default: "2rem",
+  },
+  onSortingChange: {
+    type: Function,
+    default: () => {console.log("onsorting")},
   },
   getCellClass: {
     type: Function,
@@ -147,51 +174,28 @@ const props = defineProps({
 });
 
 const filtering = ref("");
-const defaultStyle = ref({
-  // padding: "1rem",
-  borderCollapse: "collapse",
-  width: "100%",
-});
 const tableHeadDefaultStyle = ref({
-  // padding: ".1rem",
-  // paddingInline: "2rem",
   borderBottom: "3px solid #111C35",
 });
-const tableDataDefaultStyle = ref({
-  // padding: ".1rem",
-  // paddingInline: "3rem",
-});
+
 const table = useVueTable({
   columns: props.columns ?? [],
   data: props.data ?? [],
   getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
   defaultColumn: {
     minSize: 60,
     size: 70,
+    maxSize: 250,
   },
-});
-
-const captionStyle = computed(() => {
-  return {
-    captionSide: props.captionSide,
-    [`padding${
-      props.captionSide === "top" || props.captionSide === "block-start"
-        ? "-bottom"
-        : props.captionSide === "inline-end"
-          ? "-inline-end"
-          : props.captionSide === "bottom" || props.captionSide === "block-end"
-            ? "-top"
-            : "-inline-start"
-    }`]: props.captionSpacing,
-  };
 });
 
 // const shouldShowBottomBorder = (row) => {
 //   return row.index + 1 !== table.rows.length ? "1px solid #F2F2F2" : "";
 // };
 
-const getColumnWidth = (column) => {
-  const styles = {};
+const getColumnWidth = (column: any) => {
+  const styles: Record<string, string> = {};
   if (column.size) {
     styles.width = column.size;
     if (column.size !== "auto") {
@@ -208,41 +212,52 @@ const getColumnWidth = (column) => {
 
   return styles
 };
-const toggleSorting = (column) => {
-  column.toggleSort();
-};
 
-const filterTable = (value) => {
+const toggleSorting = (column: any) => {
+  if (column.getCanSort()) {
+    column.toggleSorting(undefined, column.getCanMultiSort())
+  }
+};
+const filterTable = (value: any) => {
   filtering.value = value;
 };
 
-const gotoPage = (pageIndex) => {
-  table.setPageIndex(pageIndex);
-};
-
-const previousPage = () => {
-  table.previousPage();
-};
-
-const nextPage = () => {
-  table.nextPage();
-};
+// const gotoPage = (pageIndex: any) => {
+//   table.setPageIndex(pageIndex);
+// };
+//
+// const previousPage = () => {
+//   table.previousPage();
+// };
+//
+// const nextPage = () => {
+//   table.nextPage();
+// };
 
 onMounted(() => {
   table.setPageIndex(0);
 });
 
 watch([() => props.data, () => props.columns], () => {
-  table.refresh();
+  console.log("refersh table");
+  // table.refresh();
 });
 </script>
 
 <style lang="scss" scoped>
+.table_wrapper {
+  overflow: auto;
+  @include sm {
+    overflow: visible;
+  }
+}
 .rethink-table {
   width: 100%;
   border-collapse: collapse;
   background: transparent;
   font-size: $text-sm;
+  font-weight: 500;
+
   caption {
     caption-side: top;
     padding-top: 2rem;
@@ -269,14 +284,23 @@ watch([() => props.data, () => props.columns], () => {
       font-weight: 500;
       letter-spacing: 0.02625rem;
 
-      &:not(:first-child) .table-header-cell {
+      &.sortable:hover {
+        cursor: pointer;
+      }
+      &:not(:first-child) .th_cell {
         justify-content: flex-end;
       }
-      .table-header-cell {
+      .th_cell {
         display: flex;
         gap: 5px;
         align-items: center;
         text-align: start;
+
+        .sort {
+          margin-left: 0.125rem;
+          position: relative;
+          top: 2px;
+        }
       }
     }
   }

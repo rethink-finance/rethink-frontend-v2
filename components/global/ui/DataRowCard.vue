@@ -171,11 +171,11 @@ export default defineComponent({
     justify-content: flex-start;
     gap: 2.5rem;
     overflow: hidden;
-    width: 100%;
+    flex-grow: 1;
   }
   &__action_text{
-    min-width: 115px;
     margin: auto;
+    text-align: right;
   }
   .v-expansion-panel-title {
     overflow: hidden;

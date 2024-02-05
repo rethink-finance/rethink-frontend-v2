@@ -5,11 +5,6 @@ button.v-btn--variant-outlined {
 }
 
 :root {
-  main {
-    padding-top: $navbar-height;
-    min-height: calc(100vh - $navbar-height);
-  }
-
   /* BUTTONS */
   /* Duplicated .v-btn to increase specificity, do not remove. */
   .v-btn.v-btn {

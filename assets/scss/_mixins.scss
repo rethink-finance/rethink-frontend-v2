@@ -64,6 +64,11 @@
     @content;
   }
 }
+@mixin xxl {
+  @media screen and (min-width: $screen-xxl) {
+    @content;
+  }
+}
 // In case we need a custom breakpoint
 @mixin breakpoint($size) {
   @media screen and (min-width: $size) {

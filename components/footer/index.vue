@@ -78,7 +78,6 @@ const currentYear = new Date().getFullYear();
 .footer {
   font-size: $text-sm;
   flex-direction: column;
-  margin-top: 2rem;
 
   @include sm {
     flex-direction: row;

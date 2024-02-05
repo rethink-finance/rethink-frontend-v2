@@ -1,13 +1,6 @@
 <template>
   <div class="discover">
-    <v-toolbar
-      flat
-      color="transparent"
-      style="width: 100%; padding-inline: 200px"
-      class="mt-10 mb-4"
-    >
-      <h3 style="color: #205fff">Rethink Fund DAOs</h3>
-    </v-toolbar>
+      <h3 class="main_title">Rethink Fund DAOs</h3>
     <Table :data="funds" :columns="columns" :get-cell-class="getCellClass" :showControls="false" />
   </div>
 </template>
@@ -15,18 +8,18 @@
 <script setup lang="jsx">
 import { ref, h } from "vue";
 import FundNameCell from "../components/table/components/FundNameCell";
-import {useFundStore} from "~/store/modules/fund.store";
+import { useFundStore } from "~/store/modules/fund.store";
 
 const columns = ref([
   {
     accessorKey: "name",
     header: "Fund Name",
-    size: 250,
-    minSize: 250,
-    maxSize: 300,
-    cell: (info) => {
-      const fund = info.row.original;
-
+    size: 130,
+    minSize: 130,
+    maxSize: 230,
+    enableSorting: false,
+    cell: ({ row }) => {
+      const fund = row.original;
       return h(<FundNameCell />, {
         image: fund?.avatar_url,
         title: fund?.title,
@@ -48,7 +41,7 @@ const columns = ref([
   {
     accessorKey: "aum_value",
     header: "AUM",
-    cell: (info) => info.getValue(),
+    cell: (info) => formatUSDValue(info.getValue()),
   },
   {
     accessorKey: "inception_date",
@@ -59,17 +52,19 @@ const columns = ref([
     accessorKey: "cumulative_return_percent",
     header: "Cumulative",
     size: 100,
+    maxSize: 130,
     cell: (info) => formatPercent(info.getValue()),
   },
   {
     accessorKey: "monthly_return_percent",
     header: "Monthly",
+    maxSize: 100,
     cell: (info) => formatPercent(info.getValue()),
   },
   {
     accessorKey: "sharpe_ratio",
     header: "Sharpe Ratio",
-    minSize: 100,
+    minSize: 115,
     cell: (info) => info.getValue(),
   },
   {
@@ -98,3 +93,9 @@ function getCellClass(cell) {
 const fundStore = useFundStore();
 const funds = computed(() => fundStore.funds);
 </script>
+
+<style lang="scss">
+.discover {
+  width: 100%;
+}
+</style>

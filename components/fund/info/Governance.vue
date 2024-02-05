@@ -25,7 +25,7 @@
       </div>
       <div class="data_bar__item">
         <UiCopyButton
-          class="fund_info_governance__copy_button"
+          class="fund_info_governance__manage_button"
           title="Manage"
           :tooltip-text="`Copy Delegating address to clipboard (${ truncateAddress(fund.delegating_address) })`"
         />
@@ -50,8 +50,14 @@ export default {
 
 <style lang="scss" scoped>
 .fund_info_governance {
-  &__copy_button {
+  &__manage_button {
     height: 2rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    @include lg {
+      padding-left: 1.25rem !important;
+      padding-right: 1.25rem !important;
+    }
   }
 }
 </style>

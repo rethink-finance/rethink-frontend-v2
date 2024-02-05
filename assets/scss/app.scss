@@ -16,8 +16,15 @@ a {
   }
 }
 
-
 /* Components */
+.main_title {
+  color: $color-primary;
+  font-size: $text-md;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  line-height: 150%;
+}
+
 .main_grid {
   display: grid;
   grid-template-columns: 1fr;

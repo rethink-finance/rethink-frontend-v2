@@ -1,5 +1,5 @@
 <template>
-  <div class="fund_details mt-8">
+  <div class="fund_details">
     <div class="main_card">
       <FundInfo :fund="fund" />
     </div>
@@ -33,17 +33,5 @@ fundStore.fetchFund(route.params.id as string);
 <style lang="scss" scoped>
 .fund_details {
   width: 100%;
-  padding: 0 1rem;
-
-  @include sm {
-    width: 70%;
-    padding: 0;
-  }
 }
-
-.fund_settlement_cycle_chart_wrapper {
-  display: flex;
-  flex-direction: column;
-}
-
 </style>

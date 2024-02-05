@@ -6,11 +6,9 @@
         :src="props.image"
       >
     </v-avatar>
-    <div class="d-flex align-items-center">
-      <div class="title-wrapper">
-        <h4>{{ title }}</h4>
-        <h5>{{ subtitle }}</h5>
-      </div>
+    <div class="title-wrapper d-flex align-items-center">
+      <h4>{{ title }}</h4>
+      <h5>{{ subtitle }}</h5>
     </div>
   </div>
 </template>
@@ -46,23 +44,30 @@ const props = defineProps({
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex-grow: 1; /* Allow the title wrapper to fill available space */
+  min-width: 0; /* Prevents flex items from growing past their content size */
+
+  h4, h5 {
+    @include ellipsis;
+    width: 100%;
+  }
+  h4 {
+    font-size: 0.875rem;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: 0.0525rem;
+    line-height: 1; /* 1.3125rem */
+    text-transform: uppercase;
+  }
+
+  h5 {
+    font-size: 0.875rem;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 1; /* 1.3125rem */
+    letter-spacing: 0.02625rem;
+    color: $color-light-subtitle;
+  }
 }
 
-h4 {
-  font-size: 0.875rem;
-  font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0.0525rem;
-  line-height: 1; /* 1.3125rem */
-  text-transform: uppercase;
-}
-
-h5 {
-  font-size: 0.875rem;
-  font-style: normal;
-  font-weight: 500;
-  line-height: 1; /* 1.3125rem */
-  letter-spacing: 0.02625rem;
-  color: $color-light-subtitle;
-}
 </style>
