@@ -1,6 +1,6 @@
 import type { WalletState, Account } from "@web3-onboard/core/dist/types";
 import { BrowserProvider, ethers } from "ethers";
-import { useFundStore } from "~/store/modules/fund.store";
+import { useFundStore } from "~/store/fund.store";
 
 interface IState {
   activeBalance: number | bigint;

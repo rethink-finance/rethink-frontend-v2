@@ -8,7 +8,7 @@
 <script setup lang="jsx">
 import { ref, h } from "vue";
 import FundNameCell from "../components/table/components/FundNameCell";
-import { useFundStore } from "~/store/modules/fund.store";
+import { useFundStore } from "~/store/fund.store";
 
 const columns = ref([
   {

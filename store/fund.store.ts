@@ -1,4 +1,4 @@
-import { useAccountsStore } from "~/store/modules/accounts.store";
+import { useAccountsStore } from "~/store/accounts.store";
 import type IFund from "~/types/fund";
 import { PositionType } from "~/types/enums/position_type";
 

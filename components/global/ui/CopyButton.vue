@@ -3,6 +3,7 @@
     class="d-flex justify-space-between text-secondary"
     variant="outlined"
     :size="size"
+    @click="copyToClipboard"
   >
     {{ title }}
     <template #append>
@@ -15,6 +16,8 @@
 </template>
 
 <script lang="ts">
+import { useToastStore } from "~/store/toast.store";
+
 export default {
   name: "CopyButton",
   props: {
@@ -29,6 +32,17 @@ export default {
     size: {
       type: String,
       default: "default",
+    },
+  },
+  setup() {
+    const toastStore = useToastStore();
+    return {
+      toastStore,
+    }
+  },
+  methods: {
+    copyToClipboard() {
+      this.toastStore.addToast("Copied to clipboard.");
     },
   },
 }

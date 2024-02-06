@@ -13,7 +13,7 @@
 
 <script lang="ts">
 import type IFund from "~/types/fund";
-import { useAccountsStore } from "~/store/modules/accounts.store";
+import { useAccountsStore } from "~/store/accounts.store";
 
 export default {
   name: "Info",

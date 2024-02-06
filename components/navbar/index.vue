@@ -92,7 +92,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useAccountsStore } from "~/store/modules/accounts.store";
+import { useAccountsStore } from "~/store/accounts.store";
 const accountsStore = useAccountsStore();
 
 const route = useRoute();

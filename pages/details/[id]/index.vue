@@ -20,7 +20,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useFundStore } from "~/store/modules/fund.store";
+import { useFundStore } from "~/store/fund.store";
 
 const route = useRoute();
 const fundStore = useFundStore();
