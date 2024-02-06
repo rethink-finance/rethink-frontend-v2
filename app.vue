@@ -9,7 +9,9 @@ onMounted(() => {
 
 <template>
   <NuxtLayout>
-    <UiToast />
+    <ClientOnly>
+      <UiToast />
+    </ClientOnly>
 
     <NuxtPage />
   </NuxtLayout>

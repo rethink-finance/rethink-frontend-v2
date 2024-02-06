@@ -2,7 +2,7 @@
   <v-snackbar
     v-for="toast in toasts"
     :key="toast.id"
-    v-model="show"
+    :model-value="true"
     :timeout="toast.duration"
     :class="[backgroundClass(toast.level), 'text'+textColorClass(toast.level)]"
     multi-line
@@ -46,7 +46,6 @@ const textColorClass = (level) => {
   // Set text color to white for levels other than info
   return level && level !== "info" ? "-white" : "";
 };
-const show = ref(true);
 </script>
 
 <style lang="scss" scoped>

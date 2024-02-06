@@ -25,6 +25,10 @@ export default {
       type: String,
       default: "",
     },
+    value: {
+      type: String,
+      default: "",
+    },
     tooltipText: {
       type: String,
       default: "",
@@ -41,8 +45,13 @@ export default {
     }
   },
   methods: {
-    copyToClipboard() {
-      this.toastStore.addToast("Copied to clipboard.");
+    async copyToClipboard() {
+      try {
+        await navigator.clipboard.writeText(this.value);
+        // const msg = "Copied Fund Address (" + this.fund.address + ") to clipboard";
+        // this.$toast.success(msg);
+        this.toastStore.addToast(`Copied to clipboard: ${this.value}.`);
+      } catch ($e) {console.error($e);}
     },
   },
 }

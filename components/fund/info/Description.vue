@@ -28,18 +28,21 @@
       <UiCopyButton
         class="mb-4"
         title="DeBank - AUM"
+        :value="fund.address"
         :tooltip-text="`Copy Fund address to clipboard (${ formatAddress })`"
         size="large"
       />
       <UiCopyButton
         class="mb-4"
         title="Tally - Governance"
+        :value="fund.governor_address"
         :tooltip-text="`Copy Governance address to clipboard (${ formatGovernanceAddress })`"
         size="large"
       />
       <UiCopyButton
         class="mb-4"
         title="Safe - Custody"
+        :value="fund.safe_address"
         :tooltip-text="`Copy Safe address to clipboard (${ formatSafeAddress })`"
         size="large"
       />
