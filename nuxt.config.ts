@@ -86,7 +86,6 @@ export default defineNuxtConfig({
   },
   plugins: [
     "plugins/apexcharts.client.ts",
-    "plugins/vuetify.ts",
     "plugins/numeral.ts",
     "plugins/web3-onboard.ts",
   ],

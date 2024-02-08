@@ -1,0 +1,24 @@
+@use "sass:map";
+
+@use 'vuetify/settings' with (
+  $button-border-radius: 22,
+  $button-height: 50,
+
+
+// Adjusting 'small' and 'large' sizes individually for height only
+$button-sizes: map.merge($button-sizes, (
+  'small': (
+    'height': 2rem
+    // The rest of the 'small' map remains unchanged
+  )
+)),
+
+$button-sizes: map.merge($button-sizes, (
+        'large': (
+                'height': 2.5rem,
+          // The rest of the 'large' map remains unchanged
+        )
+  )),
+
+
+);

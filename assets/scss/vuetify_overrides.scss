@@ -1,5 +1,4 @@
 /* Vuetify overrides */
-
 :root {
   /* BUTTONS */
   /* Duplicated .v-btn to increase specificity, do not remove. */
@@ -7,12 +6,38 @@
     text-transform: none;
     font-size: $text-sm;
 
+    &__overlay {
+      opacity: 0 !important;
+    }
+    &:hover {
+      .v-btn__overlay {
+        opacity: 0 !important;
+      }
+    }
+
+    /* Default */
+    &--variant-elevated {
+      border: 2px solid $color-primary;
+      &.v-btn--disabled {
+        background: $color-primary-darker !important;
+        opacity: 1;
+        border-color: transparent;
+        color: $color-disabled !important;
+        i {
+          color: $color-disabled !important;
+        }
+
+        .v-btn__overlay {
+          opacity: 0;
+        }
+      }
+      &:hover {
+        background: $color-primary-dark !important;
+      }
+    }
     &--variant-outlined {
       border-width: 2px;
       font-weight: bold;
-    }
-    &__overlay {
-      opacity: 0 !important;
     }
     &--size-default {
       line-height: 1;

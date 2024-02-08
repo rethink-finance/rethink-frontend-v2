@@ -8,7 +8,7 @@
       </div>
       <div class="fund_settlement__buttons">
         <v-btn
-          class="bg-primary text-secondary"
+          @click="claimTokens"
         >
           Claim
           <v-tooltip activator="parent" location="bottom">
@@ -29,6 +29,7 @@
 
 <script lang="ts">
 import type IFund from "~/types/fund";
+import { useToastStore } from "~/store/toast.store";
 
 export default {
   name: "CurrentCycle",
@@ -38,9 +39,15 @@ export default {
       default: () => {},
     },
   },
+  setup() {
+    const toastStore = useToastStore();
+    return {
+      toastStore,
+    }
+  },
   methods: {
     claimTokens() {
-      return 1
+      this.toastStore.addToast("Claim");
     },
   },
 };

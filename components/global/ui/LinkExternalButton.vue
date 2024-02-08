@@ -1,8 +1,7 @@
 <template>
   <v-btn
     target="_blank"
-    class="d-flex justify-space-between text-secondary"
-    variant="outlined"
+    class="d-flex justify-space-between"
     :to="to"
     :size="size"
     :density="density"
@@ -10,7 +9,7 @@
   >
     {{ title }}
     <template #append>
-      <v-icon icon="mdi-link" size="1.5rem" />
+      <v-icon icon="mdi-link" color="white" size="1.5rem" />
     </template>
     <v-tooltip v-if="showTooltip && to" activator="parent" location="bottom">
       {{ to }}

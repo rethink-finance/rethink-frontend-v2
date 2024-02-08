@@ -16,7 +16,6 @@
     "@nuxt/typescript-build": "^3.0.2",
     "@nuxtjs/eslint-config-typescript": "^12.1.0",
     "@nuxtjs/google-fonts": "^3.0.2",
-    "@nuxtjs/vuetify": "^1.12.3",
     "@pinia/nuxt": "^0.5.1",
     "@types/numeral": "^2.0.5",
     "@vue/eslint-config-prettier": "^8.0.0",
@@ -32,7 +31,7 @@
     "typescript": "^5.3.3",
     "vite-plugin-node-polyfills": "^0.19.0",
     "vite-plugin-vuetify": "^1.0.2",
-    "vue": "^3.3.6",
+    "vue": "^3.4.15",
     "vue-router": "^4.2.5",
     "vue-tsc": "^1.8.27",
     "vuetify": "^3.4.10"

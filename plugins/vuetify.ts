@@ -24,6 +24,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     // ... your configuration goes here
     ssr: true,
     blueprint: md2,
+    aliases: {
+
+    },
     defaults: {
       global: {
         ripple: false,
