@@ -149,11 +149,11 @@ const props = defineProps({
   },
   headerHeight: {
     type: String,
-    default: "2.5rem",
+    default: "3.5rem",
   },
   rowHeight: {
     type: String,
-    default: "3.5rem",
+    default: "4.5rem",
   },
   customStyle: {
     type: Object,
@@ -277,7 +277,6 @@ watch([() => props.data, () => props.columns], () => {
   }
   thead {
    border-bottom: 1px solid #f2f2f2;
-    height: 2.5rem;
     th {
       background: $color-surface;
       color: $color-light-subtitle;
@@ -316,10 +315,15 @@ watch([() => props.data, () => props.columns], () => {
         text-align: right;
         justify-content: flex-end;
       }
-      .td-cell {
-        width: 100%;
-        overflow: hidden;
-        @include ellipsis;
+
+      td {
+        padding-inline: 1rem;
+
+        .td-cell {
+          width: 100%;
+          overflow: hidden;
+          @include ellipsis;
+        }
       }
       &:hover {
         background: $color-gray-transparent;
@@ -331,7 +335,6 @@ watch([() => props.data, () => props.columns], () => {
 th {
   padding-inline: 1rem;
   background: #0c0d1229;
-  /* background: transparent; */
 }
 
 th,
@@ -346,19 +349,6 @@ tr:not(th tr) {
 }
 
 
-
-.rethink-table .table-header-text {
-  font-weight: 700;
-  margin: 0;
-  text-transform: uppercase;
-}
-
-.rethink-table tbody td {
-  padding: 0.1rem;
-  padding-inline: 1rem;
-  background: transparent;
-}
-
 .rethink-table .rethink-pagination-container {
   margin-top: 16px;
 }
@@ -366,9 +356,5 @@ tr:not(th tr) {
 .rethink-table .rethink-pagination-actions {
   display: flex;
   gap: 10px;
-}
-
-.rethink-table button {
-  /* Define styles for the pagination buttons */
 }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="discover">
       <h3 class="main_title">Rethink Fund DAOs</h3>
-    <Table :data="funds" :columns="columns" :get-cell-class="getCellClass" :showControls="false" />
+      <Table :data="funds" :columns="columns" :get-cell-class="getCellClass" :showControls="false" />
   </div>
 </template>
 
@@ -14,9 +14,9 @@ const columns = ref([
   {
     accessorKey: "name",
     header: "Fund Name",
-    size: 130,
-    minSize: 130,
-    maxSize: 230,
+    size: 110,
+    minSize: 110,
+    maxSize: 110,
     enableSorting: false,
     cell: ({ row }) => {
       const fund = row.original;
