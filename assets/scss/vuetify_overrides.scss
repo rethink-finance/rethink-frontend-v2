@@ -1,8 +1,4 @@
 /* Vuetify overrides */
-button.v-btn--variant-outlined {
-  border: 2px solid currentColor;
-  font-weight: bold;
-}
 
 :root {
   /* BUTTONS */
@@ -11,14 +7,29 @@ button.v-btn--variant-outlined {
     text-transform: none;
     font-size: $text-sm;
 
+    &--variant-outlined {
+      border: 2px solid currentColor;
+      font-weight: bold;
+    }
+    &__overlay {
+      opacity: 0 !important;
+    }
     &--size-default {
-      height: 2.5rem;
       line-height: 1;
       font-style: normal;
       font-weight: 700;
       letter-spacing: 0.0525rem;
       padding-right: 1.5rem;
       padding-left: 1.5rem;
+    }
+    &--density-compact {
+      height: 1.5rem;
+    }
+    &--density-comfortable {
+      height: 2rem;
+    }
+    &--density-default {
+      height: 2.5rem;
     }
   }
 

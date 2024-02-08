@@ -25,20 +25,10 @@
       </div>
     </div>
     <div class="fund_description__buttons">
-      <UiCopyButton
-        title="DeBank - AUM"
-        :value="fund.address"
-        :tooltip-text="`Copy Fund address to clipboard (${ formatAddress })`"
-      />
-      <UiCopyButton
-        title="Tally - Governance"
-        :value="fund.governor_address"
-        :tooltip-text="`Copy Governance address to clipboard (${ formatGovernanceAddress })`"
-      />
-      <UiCopyButton
-        title="Safe - Custody"
-        :value="fund.safe_address"
-        :tooltip-text="`Copy Safe address to clipboard (${ formatSafeAddress })`"
+      <UiLinkExternalButton
+        v-for="buttonLink in buttonLinks"
+        :title="buttonLink.title"
+        :to="buttonLink.to"
       />
     </div>
   </div>
@@ -59,6 +49,22 @@ export default {
     return {};
   },
   computed: {
+    buttonLinks() {
+      return [
+        {
+          title: "DeBank - AUM",
+          to: "#",
+        },
+        {
+          title: "Tally - Governance",
+          to: "#",
+        },
+        {
+          title: "Safe - Custody",
+          to: "#",
+        },
+      ]
+    },
     formatAddress() {
       return truncateAddress(this.fund?.address);
     },

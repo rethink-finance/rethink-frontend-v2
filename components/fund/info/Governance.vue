@@ -24,10 +24,10 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <UiCopyButton
+        <UiLinkExternalButton
           class="fund_info_governance__manage_button"
           title="Manage"
-          :tooltip-text="`Copy Delegating address to clipboard (${ truncateAddress(fund.delegating_address) })`"
+          to="#"
         />
       </div>
     </UiDataBar>
