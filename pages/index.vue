@@ -7,8 +7,11 @@
 
 <script setup lang="jsx">
 import { ref, h } from "vue";
-import FundNameCell from "../components/table/components/FundNameCell";
 import { useFundStore } from "~/store/fund.store";
+// It is important not to remove the following two imports or they
+// will not be visible in the production build.
+import FundNameCell from "../components/table/components/FundNameCell";
+import PositionTypesBar from "~/components/fund/info/PositionTypesBar";
 
 const columns = ref([
   {
@@ -74,7 +77,7 @@ const columns = ref([
     minSize: 128,
     maxSize: 158,
     cell: (info) => {
-      return h(<FundInfoPositionTypesBar />, {
+      return h(<PositionTypesBar />, {
         'position-types': info.getValue(),
       });
     },
