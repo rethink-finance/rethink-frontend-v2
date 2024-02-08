@@ -11,8 +11,8 @@
       </div>
       <div class="fund_settlement__buttons">
         <v-btn
-          :class="actionButtonValue === 'deposit' ? 'button-active' : 'text-secondary'"
-          :variant="actionButtonValue === 'deposit' ? 'flat' : 'outlined'"
+          :class="getDepositRedeemButtonClass('deposit')"
+          variant="outlined"
           @click="toggleActionButton('deposit')"
         >
           Deposit
@@ -21,8 +21,8 @@
           </v-tooltip>
         </v-btn>
         <v-btn
-          :class="actionButtonValue === 'redeem' ? 'button-active' : 'text-secondary'"
-          :variant="actionButtonValue === 'redeem' ? 'flat' : 'outlined'"
+          :class="getDepositRedeemButtonClass('redeem')"
+          variant="outlined"
           @click="toggleActionButton('redeem')"
         >
           Redeem
@@ -33,9 +33,9 @@
       </div>
     </div>
     <div class="fund_settlement__card_boxes">
-      <div v-if="actionButtonValue" class="card_box">
+      <div v-if="selectedActionButtonValue" class="card_box">
         <FundSettlementDepositRedeem
-          :action="actionButtonValue"
+          :action="selectedActionButtonValue"
           :token0="getToken0"
           :token1="getToken1"
         />
@@ -61,18 +61,18 @@ export default {
   },
   data() {
     return {
-      actionButtonValue: "",
+      selectedActionButtonValue: "",
     };
   },
   computed: {
     getToken0(): IToken {
-      if (this.actionButtonValue === "deposit") {
+      if (this.selectedActionButtonValue === "deposit") {
         return this.fund.fund_token;
       }
       return this.fund.denomination_token;
     },
     getToken1(): IToken {
-      if (this.actionButtonValue === "deposit") {
+      if (this.selectedActionButtonValue === "deposit") {
         return this.fund.denomination_token;
       }
       return this.fund.fund_token;
@@ -80,11 +80,24 @@ export default {
   },
   methods: {
     toggleActionButton(value: string) {
-      if (this.actionButtonValue === value) {
-        this.actionButtonValue = "";
+      if (this.selectedActionButtonValue === value) {
+        this.selectedActionButtonValue = "";
       } else {
-        this.actionButtonValue = value;
+        this.selectedActionButtonValue = value;
       }
+    },
+    getDepositRedeemButtonClass(buttonType: string) {
+      if (!this.selectedActionButtonValue) return "";
+      if (buttonType === "deposit") {
+        if (this.selectedActionButtonValue === "deposit") {
+          return "button-active"
+        }
+      } else if (buttonType === "redeem") {
+        if (this.selectedActionButtonValue === "redeem") {
+          return "button-active"
+        }
+      }
+      return "button-inactive"
     },
   },
 };
@@ -97,9 +110,14 @@ export default {
     gap: 1rem;
     margin: auto 0;
   }
-  button.button-active {
-    background-color: $color-white !important;
-    color: $color-primary !important;
+  button {
+    color: $color-secondary !important;
+    &.button-active {
+      color: $color-primary !important;
+    }
+    &.button-inactive {
+      color: $color-inactive !important;
+    }
   }
   &__card_boxes {
     display: flex;
