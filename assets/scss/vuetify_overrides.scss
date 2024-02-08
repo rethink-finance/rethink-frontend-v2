@@ -8,7 +8,7 @@
     font-size: $text-sm;
 
     &--variant-outlined {
-      border: 2px solid currentColor;
+      border-width: 2px;
       font-weight: bold;
     }
     &__overlay {

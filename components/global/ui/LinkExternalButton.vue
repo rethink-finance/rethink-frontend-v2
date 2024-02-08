@@ -19,6 +19,7 @@
 </template>
 
 <script lang="ts">
+type Density = "compact" | "comfortable" | "default";
 
 export default {
   name: "LinkExternalButton",
@@ -36,8 +37,8 @@ export default {
       default: "default",
     },
     density: {
-      type: String,
-      default: "default", // "compact" | "comfortable" | "default"
+      type: String as PropType<Density>,
+      default: "default",
     },
     showTooltip: {
       type: Boolean,
