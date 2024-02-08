@@ -79,6 +79,11 @@ export default defineComponent({
       @include lg {
         &:nth-of-type(n){
           align-items: flex-start;
+          .data_bar__subtitle,
+          .data_bar__title {
+            justify-content: flex-start;
+            text-align: start;
+          }
         }
       }
     }
