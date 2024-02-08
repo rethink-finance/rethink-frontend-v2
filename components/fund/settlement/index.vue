@@ -87,17 +87,12 @@ export default {
       }
     },
     getDepositRedeemButtonClass(buttonType: string) {
+      // Check if this.selectedActionButtonValue is falsy and return "" if so
       if (!this.selectedActionButtonValue) return "";
-      if (buttonType === "deposit") {
-        if (this.selectedActionButtonValue === "deposit") {
-          return "button-active"
-        }
-      } else if (buttonType === "redeem") {
-        if (this.selectedActionButtonValue === "redeem") {
-          return "button-active"
-        }
-      }
-      return "button-inactive"
+
+      // Return "button-active" if buttonType matches this.selectedActionButtonValue,
+      // otherwise return "button-inactive"
+      return buttonType === this.selectedActionButtonValue ? "button-active" : "button-inactive";
     },
   },
 };
