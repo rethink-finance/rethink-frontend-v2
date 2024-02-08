@@ -1,7 +1,7 @@
 <template>
   <div class="overview">
-    <v-expansion-panels variant="accordion">
-      <v-expansion-panel class="main_expansion_panel" eager>
+    <v-expansion-panels v-model="openPanel" variant="accordion">
+      <v-expansion-panel class="main_expansion_panel" value="overview" eager>
         <v-expansion-panel-title class="main_expansion_panel__title section_title main_card" static>
           Overview
         </v-expansion-panel-title>
@@ -61,22 +61,38 @@
           </div>
         </v-expansion-panel-text>
       </v-expansion-panel>
+      <v-expansion-panel
+        v-if="isOverviewPanelOpen"
+        class="main_expansion_panel"
+        value="collapse"
+        eager
+      >
+        <v-expansion-panel-title
+          class="main_expansion_panel__title section_title main_card"
+          static
+        >
+          Collapse
+          <template #actions="">
+            <v-icon color="primary" icon="mdi-chevron-up" />
+          </template>
+        </v-expansion-panel-title>
+      </v-expansion-panel>
     </v-expansion-panels>
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import type IFund from "~/types/fund";
 
-export default {
-  name: "Overview",
-  props: {
-    fund: {
-      type: Object as PropType<IFund>,
-      default: () => {},
-    },
+defineProps({
+  fund: {
+    type: Object as PropType<IFund>,
+    default: () => ({}),
   },
-};
+});
+
+const openPanel = ref<string | undefined>(undefined);
+const isOverviewPanelOpen = computed(() => openPanel.value === "overview");
 </script>
 
 <style lang="scss" scoped>
