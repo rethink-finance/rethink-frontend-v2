@@ -1,4 +1,5 @@
 $navbar-height: 5rem;
+$default-transition-time: 0.28s;
 $color-white: #FFFFFF;
 $color-black: #333333;
 
@@ -21,9 +22,10 @@ $color-gray-light-transparent: rgba(246, 249, 255, 0.04);
 $color-background: $color-dark;
 $color-surface: #10192f;
 $color-primary: #1F5FFF;
-$color-primary-dark: #1540ad;
+$color-primary-dark: #1a50d6;
 $color-primary-darker: #1c3165;
 $color-secondary: #D2DFFF;
+$color-secondary-dark: #8e97ad;
 $color-error: #DE3838;
 $color-info: #2196F3;
 $color-success: #38DE38;

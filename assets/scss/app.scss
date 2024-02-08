@@ -3,9 +3,6 @@ $tooltip-background-color: rgb(var(--v-theme-surface));
 body, html {
   overflow-x: hidden;
 }
-*, *::before, *::after {
-  box-sizing: border-box !important;
-}
 
 /* Links */
 a {

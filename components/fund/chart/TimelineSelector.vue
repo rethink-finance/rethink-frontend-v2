@@ -120,10 +120,10 @@ export default {
     justify-content: flex-start;
     align-content: center;
     background: $color-dark;
+    font-weight: 500 !important;
     @include borderGray("border");
 
     @include sm {
-      padding: 0.5rem 1rem;
       width: 2.5rem;
       height: 2.5rem !important;
       padding: 0.5rem;
@@ -131,6 +131,7 @@ export default {
     }
 
     &.button-active {
+      font-weight: bold !important;
       background-color: $color-navy-gray-light;
       color: $color-primary !important;
     }

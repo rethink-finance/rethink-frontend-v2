@@ -17,6 +17,7 @@
 
     /* Default */
     &--variant-elevated {
+      // I think it looks better without the border.
       border: 2px solid $color-primary;
       &.v-btn--disabled {
         background: $color-primary-darker !important;
@@ -38,6 +39,11 @@
     &--variant-outlined {
       border-width: 2px;
       font-weight: bold;
+      transition: border-color $default-transition-time ease;
+
+      &:hover {
+        border-color: $color-secondary-dark !important;
+      }
     }
     &--size-default {
       line-height: 1;
