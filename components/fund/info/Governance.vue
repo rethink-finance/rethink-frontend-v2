@@ -51,7 +51,7 @@ export default {
 <style lang="scss" scoped>
 .fund_info_governance {
   &__manage_button {
-    height: 2rem !important;
+    //height: 2rem !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
     @include lg {

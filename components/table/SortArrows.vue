@@ -4,13 +4,13 @@
       class="sort__arrow"
       :class="{'sort__arrow--active': isArrowActive('asc')}"
       name="IconSortArrowUp"
-      size="0.75rem"
+      size="1rem"
     />
     <Icon
       class="sort__arrow"
       :class="{'sort__arrow--active': isArrowActive('desc')}"
       name="IconSortArrowDown"
-      size="0.75rem"
+      size="1rem"
     />
   </div>
 </template>

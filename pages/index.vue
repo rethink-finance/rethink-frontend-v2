@@ -17,9 +17,9 @@ const columns = ref([
   {
     accessorKey: "name",
     header: "Fund Name",
-    size: 110,
-    minSize: 110,
-    maxSize: 110,
+    size: 130,
+    minSize: 130,
+    maxSize: 230,
     enableSorting: false,
     cell: ({ row }) => {
       const fund = row.original;
@@ -87,9 +87,11 @@ const columns = ref([
 function getCellClass(cell) {
   if (["monthly_return_percent", "cumulative_return_percent"].includes(cell.column.id)) {
     return numberColorClass(cell.getValue());
-  } else if ('sharpe_ratio' === cell.column.id) {
-    return numberColorClass(cell.getValue(), 1);
   }
+  // Uncomment if we want to color Sharpe ratio also.
+  // else if ('sharpe_ratio' === cell.column.id) {
+  //   return numberColorClass(cell.getValue(), 1);
+  // }
   return '';
 }
 

@@ -32,8 +32,12 @@ export default {
 
 <style lang="scss" scoped>
 .fund_info {
-  &__user_data {
-    margin-top: 3rem;
+  gap: 4.5rem;
+  display: flex;
+  flex-direction: column;
+
+  @include sm {
+    gap: 3rem;
   }
 }
 </style>

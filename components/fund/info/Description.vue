@@ -26,25 +26,19 @@
     </div>
     <div class="fund_description__buttons">
       <UiCopyButton
-        class="mb-4"
         title="DeBank - AUM"
         :value="fund.address"
         :tooltip-text="`Copy Fund address to clipboard (${ formatAddress })`"
-        size="large"
       />
       <UiCopyButton
-        class="mb-4"
         title="Tally - Governance"
         :value="fund.governor_address"
         :tooltip-text="`Copy Governance address to clipboard (${ formatGovernanceAddress })`"
-        size="large"
       />
       <UiCopyButton
-        class="mb-4"
         title="Safe - Custody"
         :value="fund.safe_address"
         :tooltip-text="`Copy Safe address to clipboard (${ formatSafeAddress })`"
-        size="large"
       />
     </div>
   </div>
@@ -105,7 +99,6 @@ export default {
 .fund_description {
   display: flex;
   gap: 2.5rem;
-  margin-bottom: 3rem;
   flex-direction: column;
 
   @include sm {
@@ -138,6 +131,9 @@ export default {
   &__buttons {
     display: flex;
     flex-direction: column;
+    gap: 1.5rem;
+    //justify-content: space-around;
+
     button {
       text-transform: none;
     }

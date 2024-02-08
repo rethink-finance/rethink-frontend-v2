@@ -278,6 +278,7 @@ watch([() => props.data, () => props.columns], () => {
   thead {
    border-bottom: 1px solid #f2f2f2;
     th {
+      padding-inline: 1rem;
       background: $color-surface;
       color: $color-light-subtitle;
       font-weight: 500;
@@ -332,10 +333,6 @@ watch([() => props.data, () => props.columns], () => {
   }
 }
 
-th {
-  padding-inline: 1rem;
-  background: #0c0d1229;
-}
 
 th,
 td,
