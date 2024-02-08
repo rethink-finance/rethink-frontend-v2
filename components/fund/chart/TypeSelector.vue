@@ -122,9 +122,11 @@ export default {
     color: white;
     background: $color-dark;
     align-content: center;
+    height: 3rem;
 
     @include sm {
       padding: 0.5rem 1rem;
+      height: 2.5rem;
     }
 
     &.option-active {

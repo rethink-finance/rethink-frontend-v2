@@ -115,7 +115,7 @@ export default {
     cursor: pointer;
     font-size: $text-md !important;
     min-width: 2.5rem !important;
-    height: 2.5rem !important;
+    height: 3rem !important;
     color: white !important;
     justify-content: flex-start;
     align-content: center;
