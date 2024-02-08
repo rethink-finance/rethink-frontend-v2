@@ -252,6 +252,7 @@ watch([() => props.data, () => props.columns], () => {
   }
 }
 .rethink-table {
+  $cell-padding-inlinee: 1rem;
   width: 100%;
   border-collapse: collapse;
   background: transparent;
@@ -278,7 +279,7 @@ watch([() => props.data, () => props.columns], () => {
   thead {
    border-bottom: 1px solid #f2f2f2;
     th {
-      padding-inline: 1rem;
+      padding-inline: $cell-padding-inlinee;
       background: $color-surface;
       color: $color-light-subtitle;
       font-weight: 500;
@@ -318,7 +319,7 @@ watch([() => props.data, () => props.columns], () => {
       }
 
       td {
-        padding-inline: 1rem;
+        padding-inline: $cell-padding-inlinee;
 
         .td-cell {
           width: 100%;
