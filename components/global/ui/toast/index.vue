@@ -11,11 +11,14 @@
 
     <template #actions>
       <v-btn
-        variant="text"
         :class="['btn-close'+textColorClass(toast.level)]"
+        icon
         @click="toastStore.closeToast(toast.id)"
       >
-        Close
+        <Icon
+          name="IconClose"
+          size="1.5rem"
+        />
       </v-btn>
     </template>
   </v-snackbar>
@@ -57,16 +60,13 @@ const textColorClass = (level) => {
   }
 }
 
-.toast {
-  width: max-content;
-  max-width: 440px;
-}
+:deep(.v-overlay__content.v-snackbar__wrapper) {
+  background: $color-toast !important;
+  border: 1px solid $color-secondary;
 
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.5s ease;
-}
-
-.fade-enter, .fade-leave-to {
-  opacity: 0;
+  .v-snackbar__content {
+    font-weight: 500;
+    line-height: 150%;
+  }
 }
 </style>
