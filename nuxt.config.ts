@@ -13,9 +13,9 @@ export default defineNuxtConfig({
     },
     baseURL: '/rethink-frontend-v2/',
   },
-  generate: {
-    nojekyll: true,
-  },
+//  generate: {
+//    nojekyll: true,
+ // },
   devtools: { enabled: false },
   typescript: {
     typeCheck: true,
