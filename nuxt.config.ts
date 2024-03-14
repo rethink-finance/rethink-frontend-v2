@@ -3,6 +3,7 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  ssr: false,
   app: {
     head: {
       title: "Rethink",
@@ -29,6 +30,11 @@ export default defineNuxtConfig({
       INFURA_KEY: process.env.INFURA_KEY,
       WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
     },
+  },
+  routeRules: {
+ //  '/': {prerender: false},
+ //  '/create': {prerender: false},   
+ //  '/governance': {prerender: false},
   },
   modules: [
     (_options, nuxt) => {
@@ -89,4 +95,9 @@ export default defineNuxtConfig({
     "plugins/numeral.ts",
     "plugins/web3-onboard.ts",
   ],
+  nitro: {
+    prerender: {
+      failOnError: false,
+    }
+  }
 });

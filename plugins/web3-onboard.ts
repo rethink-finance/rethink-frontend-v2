@@ -17,7 +17,7 @@ export default defineNuxtPlugin(() => {
     /**
          * Project ID associated with [WalletConnect account](https://cloud.walletconnect.com)
          */
-    projectId: runtimeConfig.public.WALLET_CONNECT_PROJECT_ID || "",
+    projectId: runtimeConfig.public.WALLET_CONNECT_PROJECT_ID || "1",
     /**
          * Chains required to be supported by all wallets connecting to your DApp
          */
