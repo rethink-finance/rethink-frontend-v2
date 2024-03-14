@@ -1,0 +1,1 @@
+import{_ as e,c,o as t}from"./entry.CPKXvrE-.js";const o={},n={class:"d-flex",style:{width:"100%","flex-direction":"column"}};function s(r,_){return t(),c("div",n," Create ")}const d=e(o,[["render",s]]);export{d as default};
