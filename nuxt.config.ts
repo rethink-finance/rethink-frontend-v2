@@ -11,6 +11,10 @@ export default defineNuxtConfig({
         { rel: "icon", type: "image/png", href: "/favicon.png" },
       ],
     },
+    baseURL: '/rethink-frontend-v2/',
+  },
+  generate: {
+    nojekyll: true,
   },
   devtools: { enabled: false },
   typescript: {
