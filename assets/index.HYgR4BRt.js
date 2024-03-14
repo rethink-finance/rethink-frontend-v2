@@ -1,0 +1,1 @@
+import{_ as e,c,o as n}from"./entry.5hxCBpbv.js";const o={},t={class:"d-flex",style:{width:"100%","flex-direction":"column"}};function s(r,_){return n(),c("div",t," Governance ")}const d=e(o,[["render",s]]);export{d as default};

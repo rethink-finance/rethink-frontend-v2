@@ -1,1 +1,0 @@
-import{dz as o,dA as t,dB as m,dC as u,dD as d,dE as g}from"./entry.CPKXvrE-.js";function c(){for(var r=[],e=0;e<arguments.length;e++)r[e]=arguments[e];var n=o(r),s=t(r,1/0),a=r;return a.length?a.length===1?u(a[0]):d(s)(g(a,n)):m}export{c as m};
