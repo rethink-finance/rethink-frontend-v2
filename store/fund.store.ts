@@ -1,9 +1,13 @@
+import { ethers } from "ethers";
+import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import { useAccountsStore } from "~/store/accounts.store";
-import type IFund from "~/types/fund";
 import { PositionType } from "~/types/enums/position_type";
-
+import type IFund from "~/types/fund";
+import type IFundChainSettings from "~/types/fund_chain_settings";
+import type IToken from "~/types/token";
 interface IState {
   fund: IFund;
+  funds: IFund[];
   abi: Record<string, any>;
   address: Record<string, any>;
   apy: Record<string, any>;
@@ -11,12 +15,55 @@ interface IState {
   userBalance: Record<string, any>;
   userFundUsdValue: Record<string, any>;
   selectedFundAddress: string;
+  chainFundsSettings: IFundChainSettings[];
 }
+
+const defaultFund: IFund = {
+  id: 0,
+  address: "N/A",
+  title: "N/A",
+  subtitle: "Lorem Ipsum",
+  chain: "N/A",
+  avatar_url: "https://api.lorem.space/image/ai?w=60&h=60",
+  description: "N/A",
+  governor_address: "N/A",
+  safe_address: "N/A",
+  inception_date: "N/A",
+  aum_value: 0,
+  cumulative_return_percent: 0,
+  monthly_return_percent: 0,
+  sharpe_ratio: 0,
+  user_fund_balance: "N/A",
+  user_fund_usd_value: "N/A",
+  next_settlement: "N/A",
+  position_types: [],
+  cycle_pending_requests: [],
+  fund_token: {} as IToken,
+  denomination_token: {} as IToken,
+  governor_token: {} as IToken,
+  fund_to_denomination_exchange_rate: 0,
+  net_deposits: "N/A",
+  current_value: "N/A",
+  total_return: 0,
+  delegating_address: "N/A",
+  voting_power: "N/A",
+  deposit_addresses: [],
+  management_addresses: [],
+  planned_settlement_cycle: "N/A",
+  min_liquid_asset_share: "N/A",
+  voting_delay: "N/A",
+  voting_period: "N/A",
+  proposal_threshold: "N/A",
+  quorom: "N/A",
+  late_quorom: "N/A",
+  nav_updates: [],
+};
 
 export const useFundStore = defineStore({
   id: "fund",
   state: (): IState => ({
-    fund: {} as IFund,
+    fund: defaultFund as IFund,
+    funds: [] as IFund[],
     abi: {},
     address: {},
     apy: {},
@@ -24,6 +71,7 @@ export const useFundStore = defineStore({
     userBalance: {},
     userFundUsdValue: {},
     selectedFundAddress: "N/A",
+    chainFundsSettings: [] as IFundChainSettings[],
   }),
   getters: {
     accountsStore(): any {
@@ -50,9 +98,11 @@ export const useFundStore = defineStore({
     getUserFundUsdValue(state: IState): string {
       return state.userFundUsdValue?.[state.selectedFundAddress];
     },
-    funds(): IFund[] {
-      return Object.values(this.demoFunds)
+    getFunds(): IFund[] {
+      // return Object.values(this.demoFunds);
+      return Object.values(this.funds);
     },
+
     demoFunds(): Record<string, IFund> {
       // Remove this method.
       const NAVDetailsJSON = {
@@ -84,7 +134,7 @@ export const useFundStore = defineStore({
         "1": {
           id: 1,
           title: "SOON",
-          subtitle: "Soonami Treasury",
+          subtitle: "Soonami Treasury Test",
           avatar_url: "https://api.lorem.space/image/ai?w=60&h=60",
           chain: "avalanche",
           description:
@@ -495,11 +545,95 @@ export const useFundStore = defineStore({
         },
       };
     },
+
+    getChainedFunds(state): IFund[] {
+      return state.funds;
+    },
   },
   actions: {
-    fetchFund(fundId: string) {
-      this.fund = this.demoFunds[fundId];
-      return this.fund;
+    // fetchFund(fundId: string) {
+    //   this.fund = this.demoFunds[fundId];
+    //   return this.fund;
+    // },
+    fetchFund(fundAddress: string) {
+      const fund = this.funds.find(f => f.address === fundAddress);
+      if (fund) {
+        this.fund = fund;
+      } else {
+        console.error(`Fund not found with address: ${fundAddress}`);
+      }
+    },
+    async fetchChainFundSettings() {
+      const runtimeConfig = useRuntimeConfig();
+      const provider = new ethers.JsonRpcProvider(runtimeConfig.public.INFURA_KEY || "");
+      const contract = new ethers.Contract("0x4C342E583A7Aa2840e07B4a3afB71533FBE37726", GovernableFundFactory.abi, provider);
+
+      const fundData: IFundChainSettings[] = [];
+      const settingsNames: (keyof IFundChainSettings)[] = [
+        "depositFee",
+        "withdrawFee",
+        "performanceFee",
+        "managementFee",
+        "performaceHurdleRateBps",
+        "baseToken",
+        "safe",
+        "isExternalGovTokenInUse",
+        "isWhitelistedDeposits",
+        "allowedDepositAddrs",
+        "allowedManagers",
+        "governanceToken",
+        "fundAddress",
+        "governor",
+        "fundName",
+        "fundSymbol",
+      ];
+      const fundsLength = await contract.registeredFundsLength();
+      const fundsInfo = await contract.registeredFundsData(0, fundsLength);
+      for (let i = 0; i < fundsInfo[0].length; i++) {
+        const fundSettings: Partial<IFundChainSettings> = { address: fundsInfo[0][i] };
+        for (let j = 0; j < fundsInfo[1][i].length; j++) {
+          const key = settingsNames[j];
+          let value = fundsInfo[1][i][j];
+          if (typeof value === "bigint") {
+            value = value.toString();
+          }
+          fundSettings[key] = value;
+        }
+        fundData.push(fundSettings as IFundChainSettings);
+      }
+
+      this.chainFundsSettings = fundData;
+    },
+    async fetchFunds() {
+      await this.fetchChainFundSettings();
+      const mockFunds = this.demoFunds;
+      this.funds = this.chainFundsSettings.map((chainFund,i )=> {
+        return {
+          ...this.fund,
+          ...mockFunds[(i % 4) + 1],
+          address: chainFund.fundAddress || "N/A",
+          title: chainFund.fundName || "N/A",
+          safe_address: chainFund.safe || "N/A",
+          governor_address: chainFund.governor || "N/A",
+          fund_token: {
+            name: chainFund.fundSymbol || "N/A",
+            address: chainFund.baseToken || "N/A",
+            balance: 0,
+          },
+          denomination_token: {
+            name: "USDC",
+            address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            balance: 0,
+          },
+          governor_token: {
+            name: "USDC",
+            address: chainFund.governanceToken || "N/A",
+            balance: 0,
+          },
+
+        }
+      } );
+      return this.funds;
     },
   },
 });

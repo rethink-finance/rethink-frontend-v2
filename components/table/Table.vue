@@ -48,7 +48,7 @@
           v-for="row in table.getRowModel().rows"
           :key="row.id"
           :style="{ height: rowHeight }"
-          @click="$router.push(`/details/${row.original.id}`)"
+          @click="$router.push(`/details/${row.original.fundSymbol}-${row.original.address}`)"
         >
           <td
             v-for="cell in row.getVisibleCells()"
@@ -105,14 +105,13 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, watch } from "vue";
 import {
-  useVueTable,
   FlexRender,
   getCoreRowModel,
   getSortedRowModel,
+  useVueTable,
 } from "@tanstack/vue-table";
-import SortArrow from "~/components/global/icon/SortArrowUp.vue";
+import { onMounted, ref, watch } from "vue";
 
 const props = defineProps({
   captionSide: {

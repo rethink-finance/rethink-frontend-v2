@@ -1,6 +1,6 @@
-import type IPositionType from '~/types/position_type';
 import type ICyclePendingRequest from '~/types/cycle_pending_request';
 import type INAVUpdate from '~/types/nav_update';
+import type IPositionType from '~/types/position_type';
 
 export default interface IFund {
   id: number;
