@@ -1,19 +1,31 @@
-import { ethers } from "ethers";
+import { BaseContract, ethers } from "ethers";
+import { defineStore } from "pinia";
+import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import { useAccountsStore } from "~/store/accounts.store";
 import { PositionType } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundChainSettings from "~/types/fund_chain_settings";
 import type IToken from "~/types/token";
+
+export interface FundContract extends BaseContract {
+  requestDeposit: (amount: ethers.BigNumberish, options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
+  totalWithrawalBalance: (options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
+  revokeDepositWithrawal: (isDeposit: boolean, options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
+  deposit: (options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
+  approve: (spender: string, amount: ethers.BigNumberish, options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
+}
+
 interface IState {
   fund: IFund;
   funds: IFund[];
   abi: Record<string, any>;
   address: Record<string, any>;
   apy: Record<string, any>;
-  contract: Record<string, any>;
+  fundContract: any; // Assigning Contract, ethers.Contract or BaseContract causes error
   userBalance: Record<string, any>;
-  userFundUsdValue: Record<string, any>;
+  userFundBalance: string;
+  userFundUsdValue: string
   selectedFundAddress: string;
   chainFundsSettings: IFundChainSettings[];
 }
@@ -62,14 +74,15 @@ const defaultFund: IFund = {
 export const useFundStore = defineStore({
   id: "fund",
   state: (): IState => ({
-    fund: defaultFund as IFund,
+    fund: defaultFund,
     funds: [] as IFund[],
     abi: {},
     address: {},
     apy: {},
-    contract: {},
+    fundContract: {},
     userBalance: {},
-    userFundUsdValue: {},
+    userFundBalance: "",
+    userFundUsdValue: "",
     selectedFundAddress: "N/A",
     chainFundsSettings: [] as IFundChainSettings[],
   }),
@@ -77,9 +90,9 @@ export const useFundStore = defineStore({
     accountsStore(): any {
       return useAccountsStore();
     },
-    web3(): any {
-      return this.accountsStore.web3;
-    },
+    // web3(): any {
+    //   return this.accountsStore.web3;
+    // },
     getApy(state: IState): string {
       return state.apy?.[state.selectedFundAddress];
     },
@@ -93,13 +106,13 @@ export const useFundStore = defineStore({
       return state.address?.[state.selectedFundAddress];
     },
     getFundContract(state: IState): any {
-      return state.contract?.[state.selectedFundAddress];
+      // return state.fundContract?.[state.selectedFundAddress];
+      return state.fundContract;
     },
-    getUserFundUsdValue(state: IState): string {
-      return state.userFundUsdValue?.[state.selectedFundAddress];
-    },
+    // getUserFundUsdValue(state: IState): string {
+    //   return state.userFundUsdValue?.[state.selectedFundAddress];
+    // },
     getFunds(): IFund[] {
-      // return Object.values(this.demoFunds);
       return Object.values(this.funds);
     },
 
@@ -551,14 +564,12 @@ export const useFundStore = defineStore({
     },
   },
   actions: {
-    // fetchFund(fundId: string) {
-    //   this.fund = this.demoFunds[fundId];
-    //   return this.fund;
-    // },
     fetchFund(fundAddress: string) {
       const fund = this.funds.find(f => f.address === fundAddress);
       if (fund) {
         this.fund = fund;
+        this.selectedFundAddress = fundAddress;
+        console.log("Selected Fund Address set to: ", this.selectedFundAddress);
       } else {
         console.error(`Fund not found with address: ${fundAddress}`);
       }
@@ -566,7 +577,7 @@ export const useFundStore = defineStore({
     async fetchChainFundSettings() {
       const runtimeConfig = useRuntimeConfig();
       const provider = new ethers.JsonRpcProvider(runtimeConfig.public.INFURA_KEY || "");
-      const contract = new ethers.Contract("0x4C342E583A7Aa2840e07B4a3afB71533FBE37726", GovernableFundFactory.abi, provider);
+      const fundContract = new ethers.Contract("0x4C342E583A7Aa2840e07B4a3afB71533FBE37726", GovernableFundFactory.abi, provider);
 
       const fundData: IFundChainSettings[] = [];
       const settingsNames: (keyof IFundChainSettings)[] = [
@@ -587,8 +598,8 @@ export const useFundStore = defineStore({
         "fundName",
         "fundSymbol",
       ];
-      const fundsLength = await contract.registeredFundsLength();
-      const fundsInfo = await contract.registeredFundsData(0, fundsLength);
+      const fundsLength = await fundContract.registeredFundsLength();
+      const fundsInfo = await fundContract.registeredFundsData(0, fundsLength);
       for (let i = 0; i < fundsInfo[0].length; i++) {
         const fundSettings: Partial<IFundChainSettings> = { address: fundsInfo[0][i] };
         for (let j = 0; j < fundsInfo[1][i].length; j++) {
@@ -634,6 +645,52 @@ export const useFundStore = defineStore({
         }
       } );
       return this.funds;
+    },
+    async fetchContract(): Promise<FundContract | void> {
+      const accountsStore = useAccountsStore();
+      const address = this.selectedFundAddress;
+      const signer = await accountsStore.ethersProvider?.getSigner();
+      if (!signer) return console.error("Signer not found");
+      this.fundContract = new ethers.Contract(address, GovernableFund.abi) as unknown as FundContract;
+    },
+    async fetchUserBalance() {
+      if (!this.fundContract) {
+        this.fetchContract();
+        if (!this.fundContract) return console.error("Contract not found");
+      }
+      const accountsStore = useAccountsStore();
+      const activeAccount = accountsStore.activeAccount;
+      if (!activeAccount) return console.error("Active account not found");
+
+      const balanceWei = await this.fundContract.balanceOf(activeAccount);
+      const balance = ethers.formatEther(balanceWei);
+
+      this.userFundBalance = balance;
+    },
+    async fetchUserFundUsdValue() {
+      if (!this.fundContract) {
+        await this.fetchContract();
+        await this.fetchUserBalance();
+        if (!this.fundContract) return console.error("Contract not found");
+      }
+
+      const accountsStore = useAccountsStore();
+      const activeAccount = accountsStore.activeAccount;
+      if (!activeAccount) return console.error("Active account not found");
+
+      let balanceWei = "0";
+      try {
+        balanceWei = await this.fundContract.valueOf(this.userBalance[this.selectedFundAddress]).toString();
+      } catch (e) {
+        console.log("The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error.");
+      }
+
+      const value = ethers.formatEther(balanceWei);
+      this.userFundUsdValue = value;
+    },
+    fetchFundBalance() {
+      // mock data
+      return "10000"
     },
   },
 });

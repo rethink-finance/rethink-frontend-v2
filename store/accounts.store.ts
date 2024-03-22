@@ -1,4 +1,4 @@
-import type { WalletState, Account } from "@web3-onboard/core/dist/types";
+import type { Account, WalletState } from "@web3-onboard/core/dist/types";
 import { BrowserProvider, ethers } from "ethers";
 import { useFundStore } from "~/store/fund.store";
 
@@ -66,16 +66,25 @@ export const useAccountsStore = defineStore("accounts", {
     isCurrentChainSupported(state): boolean {
       return state.supportedChains?.includes(state.chainName);
     },
+    getChainId(state): string {
+      return state.chainId ?? "";
+    },
   },
   actions: {
     async connectWallet() {
       // Connect to the web3-onboard.
       await this.web3Onboard?.connectWallet();
-
+      console.log("Wallet Object:", this.web3Onboard);
       const activeChain = this.web3Onboard.connectedChain;
       this.chainId = activeChain.id;
-      this.chainName = activeChain.namespace;
-
+      if(!this.chainId){
+        console.log("Chain ID not found");
+        return;
+      }
+      this.setChainData(this.chainId);
+      // this.chainName = activeChain.namespace; // todo doesn't see the correct chain name // returns evm
+      console.log("Connected to chain:", this.chainName);
+      console.log("Chain ID:", this.chainId);
       if (this.ethersProvider) {
         // Is this a cleaner Alternative?
         // const activeAccount = this.connectedWallet.accounts[0];
@@ -128,6 +137,25 @@ export const useAccountsStore = defineStore("accounts", {
           break;
       }
     },
+    async setAlreadyConnectedWallet() {
+      console.log("Wallet Object:", this.web3Onboard);
+      const activeChain = this.web3Onboard.connectedChain;
+      this.chainId = activeChain.id;
+      if(!this.chainId){
+        console.log("Chain ID not found");
+        return;
+      }
+      this.setChainData(this.chainId);
+      // this.chainName = activeChain.namespace; // todo doesn't see the correct chain name // returns evm
+      console.log("Connected to chain:", this.chainName);
+      console.log("Chain ID:", this.chainId);
+      if (this.ethersProvider) {
+        // Is this a cleaner Alternative?
+        // const activeAccount = this.connectedWallet.accounts[0];
+        // this.activeBalance = activeAccount.balance;
+        await this.fetchActiveBalance();
+      }
+    },
   },
 });
 
@@ -140,3 +168,4 @@ type MyStoreContext = {
 };
 
 export type { MyStoreContext };
+
