@@ -18,7 +18,7 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fund.inception_date }}
+          {{ fund.inceptionDate }}
         </div>
         <div class="data_bar__subtitle">
           Inception Date
@@ -27,9 +27,9 @@
       <div class="data_bar__item">
         <div
           class="data_bar__title"
-          :class="numberColorClass(fund.cumulative_return_percent)"
+          :class="numberColorClass(fund.cumulativeReturnPercent)"
         >
-          {{ formatPercent(fund.cumulative_return_percent) }}
+          {{ formatPercent(fund.cumulativeReturnPercent) }}
         </div>
         <div class="data_bar__subtitle">
           Cumulative
@@ -38,9 +38,9 @@
       <div class="data_bar__item">
         <div
           class="data_bar__title"
-          :class="numberColorClass(fund.monthly_return_percent)"
+          :class="numberColorClass(fund.monthlyReturnPercent)"
         >
-          {{ formatPercent(fund.monthly_return_percent) }}
+          {{ formatPercent(fund.monthlyReturnPercent) }}
         </div>
         <div class="data_bar__subtitle">
           Monthly Return
@@ -48,7 +48,7 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fund.sharpe_ratio }}
+          {{ fund.sharpeRatio }}
         </div>
         <div class="data_bar__subtitle">
           Sharpe Ratio
@@ -57,7 +57,7 @@
       <div class="data_bar__item">
         <div class="data_bar__title">
           <FundInfoPositionTypesBar
-            :position-types="fund.position_types"
+            :position-types="fund.positionTypes"
           />
         </div>
         <div class="data_bar__subtitle">

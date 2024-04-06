@@ -3,7 +3,7 @@
     <div class="card_header">
       <div>
         <div class="section_title">
-          {{ fund.next_settlement }}
+          {{ fund.nextSettlement }}
         </div>
         <div class="section_subtitle">
           Next Settlement
@@ -67,15 +67,15 @@ export default {
   computed: {
     getToken0(): IToken {
       if (this.selectedActionButtonValue === "deposit") {
-        return this.fund.fund_token;
+        return this.fund.fundToken;
       }
-      return this.fund.denomination_token;
+      return this.fund.denominationToken;
     },
     getToken1(): IToken {
       if (this.selectedActionButtonValue === "deposit") {
-        return this.fund.denomination_token;
+        return this.fund.denominationToken;
       }
-      return this.fund.fund_token;
+      return this.fund.fundToken;
     },
   },
   methods: {

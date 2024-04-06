@@ -19,7 +19,7 @@
     </div>
     <div class="fund_settlement__pending_requests">
       <FundCurrentCyclePendingRequest
-        v-for="pendingRequest in fund.cycle_pending_requests"
+        v-for="pendingRequest in fund.cyclePendingRequests"
         :key="pendingRequest.id"
         :pending-request="pendingRequest"
       />

@@ -1,9 +1,11 @@
-export default interface IFundChainSettings {
+export default interface IFundSettings {
+  [key: string]: any;
   address: string;
   depositFee?: string;
   withdrawFee?: string;
   performanceFee?: string;
   managementFee?: string;
+  // TODO Here we have a typo, we should fix this in the original interface: IGovernableFundStorage
   performaceHurdleRateBps?: string;
   baseToken?: string;
   safe?: string;

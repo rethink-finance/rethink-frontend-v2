@@ -9,7 +9,7 @@
             size="0.75rem"
             class="mr-2"
           />
-          {{ truncateAddress(fund.delegating_address) }}
+          {{ truncateAddress(fund.delegatingAddress) }}
         </div>
         <div class="data_bar__subtitle">
           Delegating To
@@ -17,7 +17,7 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fund.voting_power }} {{ fund.fund_token.name }}
+          {{ fund.votingPower }} {{ fund.fundToken.name }}
         </div>
         <div class="data_bar__subtitle">
           Voting Power

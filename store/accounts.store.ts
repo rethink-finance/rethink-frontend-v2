@@ -76,8 +76,8 @@ export const useAccountsStore = defineStore("accounts", {
       await this.web3Onboard?.connectWallet();
       console.log("Wallet Object:", this.web3Onboard);
       const activeChain = this.web3Onboard.connectedChain;
-      this.chainId = activeChain.id;
-      if(!this.chainId){
+      this.chainId = activeChain?.id;
+      if (!this.chainId){
         console.log("Chain ID not found");
         return;
       }
@@ -136,17 +136,18 @@ export const useAccountsStore = defineStore("accounts", {
           this.chainName = "";
           break;
       }
+      console.log("setChainData: ", chainId, this.chainName);
     },
     async setAlreadyConnectedWallet() {
       console.log("Wallet Object:", this.web3Onboard);
       const activeChain = this.web3Onboard.connectedChain;
-      this.chainId = activeChain.id;
-      if(!this.chainId){
+      this.chainId = activeChain?.id;
+      if (!this.chainId) {
         console.log("Chain ID not found");
         return;
       }
       this.setChainData(this.chainId);
-      // this.chainName = activeChain.namespace; // todo doesn't see the correct chain name // returns evm
+
       console.log("Connected to chain:", this.chainName);
       console.log("Chain ID:", this.chainId);
       if (this.ethersProvider) {

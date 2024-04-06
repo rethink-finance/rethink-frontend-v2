@@ -408,7 +408,7 @@ export default {
     };
 
     const fethFundContract = async () => {
-      const fundAddress = fundStore.getSelectedFundAddress;
+      const fundAddress = fundStore.selectedFundAddress;
       const signer = await accountsStore.ethersProvider?.getSigner();
       const fundContract = new ethers.Contract(fundAddress, GovernableFund.abi) as unknown as FundContract;
       return [fundContract, signer];

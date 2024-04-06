@@ -1,12 +1,12 @@
 <template>
   <div class="main_grid">
-    <UiDataRowCard :title="fund.governor_address" subtitle="Governance Contract" />
-    <UiDataRowCard :title="fund.governor_token?.address" subtitle="Governance Token" />
-    <UiDataRowCard :title="fund.voting_delay" subtitle="Voting Delay (in seconds)" />
-    <UiDataRowCard :title="fund.voting_period" subtitle="Voting Period (in seconds)" />
-    <UiDataRowCard :title="fund.proposal_threshold" subtitle="Proposal Threshold" />
+    <UiDataRowCard :title="fund.governorAddress" subtitle="Governance Contract" />
+    <UiDataRowCard :title="fund.governorToken?.address" subtitle="Governance Token" />
+    <UiDataRowCard :title="fund.votingDelay" subtitle="Voting Delay (in seconds)" />
+    <UiDataRowCard :title="fund.votingPeriod" subtitle="Voting Period (in seconds)" />
+    <UiDataRowCard :title="fund.proposalThreshold" subtitle="Proposal Threshold" />
     <UiDataRowCard :title="fund.quorom" subtitle="Quorum" />
-    <UiDataRowCard :title="fund.late_quorom" subtitle="Late Quorum (in seconds)" />
+    <UiDataRowCard :title="fund.lateQuorom" subtitle="Late Quorum (in seconds)" />
   </div>
 </template>
 

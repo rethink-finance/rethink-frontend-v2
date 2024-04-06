@@ -1,7 +1,7 @@
 <template>
   <div class="discover">
     <h3 class="main_title">Rethink Fund DAOs</h3>
-    <div v-if="loading">
+    <div v-if="loadingFunds">
       Loading...
     </div>
     <div v-else="loading">
@@ -29,7 +29,7 @@ const columns = ref([
     cell: ({ row }) => {
       const fund = row.original;
       return h(<FundNameCell />, {
-        image: fund?.avatar_url,
+        image: fund?.avatarUrl,
         title: fund?.title,
         subtitle: fund?.subtitle,
       });
@@ -47,36 +47,36 @@ const columns = ref([
     },
   },
   {
-    accessorKey: "aum_value",
+    accessorKey: "aumValue",
     header: "AUM",
     cell: (info) => formatUSDValue(info.getValue()),
   },
   {
-    accessorKey: "inception_date",
+    accessorKey: "inceptionDate",
     header: "Inception",
     cell: (info) => info.getValue(),
   },
   {
-    accessorKey: "cumulative_return_percent",
+    accessorKey: "cumulativeReturnPercent",
     header: "Cumulative",
     size: 100,
     maxSize: 130,
     cell: (info) => formatPercent(info.getValue()),
   },
   {
-    accessorKey: "monthly_return_percent",
+    accessorKey: "monthlyReturnPercent",
     header: "Monthly",
     maxSize: 100,
     cell: (info) => formatPercent(info.getValue()),
   },
   {
-    accessorKey: "sharpe_ratio",
+    accessorKey: "sharpeRatio",
     header: "Sharpe Ratio",
     minSize: 115,
     cell: (info) => info.getValue(),
   },
   {
-    accessorKey: "position_types",
+    accessorKey: "positionTypes",
     header: "Position Types",
     size: "auto",
     minSize: 128,
@@ -90,22 +90,26 @@ const columns = ref([
 ]);
 
 
-const loading = ref(true);
-const funds = computed(() => fundStore.getChainedFunds);
+const loadingFunds = ref(true);
+const funds = computed(() => fundStore.funds);
 const fundStore = useFundStore();
 
 onMounted(async () => {
-  loading.value = true;
-  await fundStore.fetchFunds(); 
-  loading.value = false;
+  loadingFunds.value = true;
+  try {
+    await fundStore.fetchFunds();
+  } catch (e) {
+    console.error("fetchFunds -> ", e);
+   }
+  loadingFunds.value = false;
 });
 
 function getCellClass(cell) {
-  if (["monthly_return_percent", "cumulative_return_percent"].includes(cell.column.id)) {
+  if (["monthlyReturnPercent", "cumulativeReturnPercent"].includes(cell.column.id)) {
     return numberColorClass(cell.getValue());
   }
   // Uncomment if we want to color Sharpe ratio also.
-  // else if ('sharpe_ratio' === cell.column.id) {
+  // else if ('sharpeRatio' === cell.column.id) {
   //   return numberColorClass(cell.getValue(), 1);
   // }
   return "";

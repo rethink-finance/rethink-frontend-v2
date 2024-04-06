@@ -1,11 +1,11 @@
 <template>
   <div class="main_grid">
     <UiDataRowCard
-      :title="fund.planned_settlement_cycle"
+      :title="fund.plannedSettlementCycle"
       subtitle="Planned Settlement Cycle"
     />
     <UiDataRowCard
-      :title="fund.min_liquid_asset_share"
+      :title="fund.minLiquidAssetShare"
       subtitle="Min. Liquid Asset Share "
     />
     <UiDataRowCard
@@ -30,15 +30,15 @@ export default defineComponent({
   },
   computed: {
     managementTitle() {
-      const addressCount = this.fund?.management_addresses?.length ?? 0;
+      const addressCount = this.fund?.managementAddresses?.length ?? 0;
       if (addressCount === 1) {
         return `${addressCount} Address`
       }
       return `${addressCount} Addresses`
     },
     managementBody() {
-      if (this.fund?.management_addresses?.length) {
-        return this.fund.management_addresses.join("\n");
+      if (this.fund?.managementAddresses?.length) {
+        return this.fund.managementAddresses.join("\n");
       }
       return "There are currently no addresses."
     },

@@ -33,13 +33,19 @@ const route = useRoute();
 const fundStore = useFundStore();
 const loading = ref(true);
 const fundAddress = (route.params.id as string).split("-")[1];
+console.log("fundAddress: ", fundAddress);
 
 onMounted(async () => {
   loading.value = true;
   if (fundAddress) {
-    await fundStore.fetchFunds();
     console.log("Fetching fund: " + fundAddress);
-    await fundStore.fetchFund(fundAddress);
+    try {
+      await fundStore.fetchFunds();
+      await fundStore.getFund(fundAddress);
+    } catch (e) {
+      console.error("Failed fetching fund -> ", e)
+    }
+
     loading.value = false;
   } else {
     console.error("No fund address provided in the route.");
@@ -48,7 +54,7 @@ onMounted(async () => {
 const fund = computed(() => fundStore.fund);
 // const fund = computed(() => fundStore.fund);
 // console.log("Fetch fund: " + route.params.id);
-// fundStore.fetchFund(route.params.id as string);
+// fundStore.getFund(route.params.id as string);
 
 </script>
 

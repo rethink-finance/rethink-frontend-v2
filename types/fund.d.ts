@@ -8,42 +8,46 @@ export default interface IFund {
   title: string;
   subtitle: string;
   chain: string;
-  avatar_url: string;
+  avatarUrl: string;
   description: string;
   // @dev better combine all governor data into one object "governor": {...}
-  governor_address: string;
-  safe_address: string;
-  inception_date: string;
-  aum_value: number;
-  cumulative_return_percent: number;
-  monthly_return_percent: number;
-  sharpe_ratio: number;
-  user_fund_balance: string;
-  user_fund_usd_value: string;
-  next_settlement: string;
-  position_types: IPositionType[];
-  cycle_pending_requests: ICyclePendingRequest[];
-  fund_token: IToken;
-  denomination_token: IToken;
-  governor_token: IToken;
-  fund_to_denomination_exchange_rate: number
+  governorAddress: string;
+  safeAddress: string;
+  inceptionDate: string;
+  aumValue: number;
+  cumulativeReturnPercent: number;
+  monthlyReturnPercent: number;
+  sharpeRatio: number;
+  userFundBalance: string;
+  userFundUsdValue: string;
+  nextSettlement: string;
+  positionTypes: IPositionType[];
+  cyclePendingRequests: ICyclePendingRequest[];
+  fundToken: IToken;
+  denominationToken: IToken;
+  governorToken: IToken;
+  fundToDenominationExchangeRate: number
+
   // My Fund Positions
-  net_deposits: string;
-  current_value: string;
-  total_return: number;
-  delegating_address: string;
-  voting_power: string;
+  netDeposits: string;
+  currentValue: string;
+  totalReturn: number;
+  delegatingAddress: string;
+  votingPower: string;
+
   // Overview fields
-  deposit_addresses: string[];
-  management_addresses: string[];
-  planned_settlement_cycle: string;
-  min_liquid_asset_share: string;
+  depositAddresses: string[];
+  managementAddresses: string[];
+  plannedSettlementCycle: string;
+  minLiquidAssetShare: string;
+
   // Governance
-  voting_delay: string;
-  voting_period: string;
-  proposal_threshold: string;
+  votingDelay: string;
+  votingPeriod: string;
+  proposalThreshold: string;
   quorom: string;
-  late_quorom: string;
+  lateQuorom: string;
+
   // NAV Updates
-  nav_updates: INAVUpdate[];
+  navUpdates: INAVUpdate[];
 }

@@ -153,7 +153,7 @@ export default defineComponent({
       loading.value = true;
 
       const signer = accountsStore.ethersProvider?.getSigner();
-      const fundContract = fundStore.getFundContract; // Make sure this is an ethers Contract instance
+      const fundContract = fundStore.fundContract; // Make sure this is an ethers Contract instance
 
       try {
         const transaction = await fundContract.connect(signer).deposit({
@@ -210,7 +210,7 @@ export default defineComponent({
       }
 
       const signer = accountsStore.ethersProvider?.getSigner();
-      const fundContract = fundStore.getFundContract; // Make sure this is an ethers Contract instance
+      const fundContract = fundStore.fundContract; // Make sure this is an ethers Contract instance
 
       try {
         const tokensWei = ethers.parseUnits(depositValue.value || "0", unit);
@@ -247,7 +247,7 @@ export default defineComponent({
       loading.value = true;
 
       const signer = accountsStore.ethersProvider?.getSigner();
-      const fundContract = fundStore.getFundContract; // Make sure this is an ethers Contract instance
+      const fundContract = fundStore.fundContract; // Make sure this is an ethers Contract instance
 
       try {
         const transaction = await fundContract.connect(signer).revokeDepositWithdrawal(1);

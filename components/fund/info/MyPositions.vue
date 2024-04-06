@@ -3,7 +3,7 @@
     <UiDataBar title="My Positions">
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fund.net_deposits }}
+          {{ fund.netDeposits }}
         </div>
         <div class="data_bar__subtitle">
           Net Deposits
@@ -11,15 +11,15 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fund.current_value }}
+          {{ fund.currentValue }}
         </div>
         <div class="data_bar__subtitle">
           Current Value
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="numberColorClass(fund.total_return)">
-          {{ formatPercent(fund.total_return) }}
+        <div class="data_bar__title" :class="numberColorClass(fund.totalReturn)">
+          {{ formatPercent(fund.totalReturn) }}
         </div>
         <div class="data_bar__subtitle">
           Total Return
