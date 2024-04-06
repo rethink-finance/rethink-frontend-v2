@@ -48,7 +48,7 @@
           v-for="row in table.getRowModel().rows"
           :key="row.id"
           :style="{ height: rowHeight }"
-          @click="$router.push(`/details/${row.original.fundSymbol}-${row.original.address}`)"
+          @click="$router.push(`/details/${row.original.fundToken.symbol}-${row.original.address}`)"
         >
           <td
             v-for="cell in row.getVisibleCells()"
@@ -246,9 +246,6 @@ watch([() => props.data, () => props.columns], () => {
 <style lang="scss" scoped>
 .table_wrapper {
   overflow: auto;
-  @include sm {
-    overflow: visible;
-  }
 }
 .rethink-table {
   $cell-padding-inlinee: 1rem;

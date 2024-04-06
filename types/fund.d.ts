@@ -3,7 +3,6 @@ import type INAVUpdate from '~/types/nav_update';
 import type IPositionType from '~/types/position_type';
 
 export default interface IFund {
-  id: number;
   address: string;
   title: string;
   subtitle: string;
@@ -11,8 +10,9 @@ export default interface IFund {
   avatarUrl: string;
   description: string;
   // @dev better combine all governor data into one object "governor": {...}
-  governorAddress: string;
-  safeAddress: string;
+  governorAddress: string;  // governor
+  safeAddress: string;  // safe
+
   inceptionDate: string;
   aumValue: number;
   cumulativeReturnPercent: number;

@@ -15,7 +15,7 @@
         </div>
 
         <div class="main_card">
-          <FundChart :fund-id="fund.id" />
+          <FundChart />
         </div>
       </div>
 
@@ -35,13 +35,14 @@ const loading = ref(true);
 const fundAddress = (route.params.id as string).split("-")[1];
 console.log("fundAddress: ", fundAddress);
 
-onMounted(async () => {
-  loading.value = true;
+onMounted(  async () => {
   if (fundAddress) {
-    console.log("Fetching fund: " + fundAddress);
+    loading.value = true;
+
     try {
+      // TODO only if not found the fund
       await fundStore.fetchFunds();
-      await fundStore.getFund(fundAddress);
+      fundStore.getFund(fundAddress);
     } catch (e) {
       console.error("Failed fetching fund -> ", e)
     }
@@ -52,10 +53,6 @@ onMounted(async () => {
   }
 });
 const fund = computed(() => fundStore.fund);
-// const fund = computed(() => fundStore.fund);
-// console.log("Fetch fund: " + route.params.id);
-// fundStore.getFund(route.params.id as string);
-
 </script>
 
 <style lang="scss" scoped>

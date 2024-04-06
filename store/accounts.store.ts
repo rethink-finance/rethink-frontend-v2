@@ -1,6 +1,7 @@
 import type { Account, WalletState } from "@web3-onboard/core/dist/types";
 import { BrowserProvider, ethers } from "ethers";
 import { useFundStore } from "~/store/fund.store";
+import { useWeb3Store } from "~/store/web3.store";
 
 interface IState {
   activeBalance: number | bigint;
@@ -38,6 +39,9 @@ export const useAccountsStore = defineStore("accounts", {
   getters: {
     fundStore() {
       return useFundStore();
+    },
+    web3Store() {
+      return useWeb3Store();
     },
     connectingWallet(): boolean {
       return this.web3Onboard?.connectingWallet ?? false;

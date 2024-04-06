@@ -17,7 +17,7 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fund.votingPower }} {{ fund.fundToken.name }}
+          {{ fund.votingPower }} {{ fund.fundToken.symbol }}
         </div>
         <div class="data_bar__subtitle">
           Voting Power

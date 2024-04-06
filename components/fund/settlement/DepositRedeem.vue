@@ -6,14 +6,14 @@
         <span>
           <Icon name="IconQuestionCircle" size="1rem" />
           <v-tooltip v-if="token0" activator="parent" location="right">
-            {{ token0.name }} ({{ token0.address }}).
+            {{ token0.symbol }} ({{ token0.address }}).
           </v-tooltip>
         </span>
       </div>
 
       <div class="request_deposit__token_data">
         <div class="request_deposit__token_col">
-          {{ token0.name }}
+          {{ token0.symbol }}
         </div>
         <div class="request_deposit__token_col pa-0 request_deposit__token_col--dark text-end">
           <InputNumber
@@ -23,7 +23,7 @@
         </div>
       </div>
       <div class="request_deposit__balance">
-        Balance: {{ token0.balance }} {{ token0.name }}
+        Balance: {{ token0.balance }} {{ token0.symbol }}
       </div>
     </div>
 
@@ -33,14 +33,14 @@
         <span>
           <Icon name="IconQuestionCircle" size="1rem" />
           <v-tooltip v-if="token1" activator="parent" location="right">
-            {{ token1.name }} ({{ token1.address }}).
+            {{ token1.symbol }} ({{ token1.address }}).
           </v-tooltip>
         </span>
       </div>
 
       <div class="request_deposit__token_data">
         <div class="request_deposit__token_col">
-          {{ token1.name }}
+          {{ token1.symbol }}
         </div>
         <div class="request_deposit__token_col text-end">
           ≈ {{ calculatedToken1Value }}
@@ -48,7 +48,7 @@
       </div>
       <div class="request_deposit__balance">
         <div>
-          Balance: {{ token1.balance }} {{ token1.name }}
+          Balance: {{ token1.balance }} {{ token1.symbol }}
         </div>
         <div>
           Last NAV Update Value: {{ exchangeRateText }}
@@ -199,7 +199,7 @@ export default {
 
     const exchangeRateText = computed(() => {
       // Make sure to handle potential reactivity or null checks as needed
-      return `1 ${props.token0.name} = ${exchangeRate.value.toFixed(2)} ${props.token1.name}`;
+      return `1 ${props.token0.symbol} = ${exchangeRate.value.toFixed(2)} ${props.token1.symbol}`;
     });
 
     const calculatedToken1Value = computed(() => {
@@ -456,7 +456,7 @@ export default {
   //   },
   //   exchangeRateText() {
   //     // TODO @dev edit this if needed & format.
-  //     return `1 ${this.token0.name} = ${this.exchangeRate.toFixed(2)} ${this.token1.name}`;
+  //     return `1 ${this.token0.symbol} = ${this.exchangeRate.toFixed(2)} ${this.token1.symbol}`;
   //   },
   //   calculatedToken1Value() {
   //     // Round to 4 decimals and cut trailing zeros.

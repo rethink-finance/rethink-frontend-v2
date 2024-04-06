@@ -4,14 +4,13 @@
     <div v-if="loadingFunds">
       Loading...
     </div>
-    <div v-else="loading">
+    <div v-else>
       <Table :data="funds" :columns="columns" :get-cell-class="getCellClass" :showControls="false" />
     </div>
   </div>
 </template>
 
 <script setup lang="jsx">
-import { h, ref } from "vue";
 import { useFundStore } from "~/store/fund.store";
 // It is important not to remove the following two imports or they
 // will not be visible in the production build.
@@ -82,8 +81,8 @@ const columns = ref([
     minSize: 128,
     maxSize: 158,
     cell: (info) => {
-      return h(<PositionTypesBar />, {
-        "position-types": info.getValue(),
+      return h(PositionTypesBar, {
+        "position-types": info.getValue() ?? [],
       });
     },
   },

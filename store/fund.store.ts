@@ -10,6 +10,9 @@ import type IToken from "~/types/token";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import addressesJson from "~/assets/contracts/addresses.json";
+import type INAVUpdate from "~/types/nav_update";
+import type ICyclePendingRequest from "~/types/cycle_pending_request";
+import type IPositionType from "~/types/position_type";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -37,7 +40,6 @@ interface IState {
 }
 
 const defaultFund: IFund = {
-  id: 0,
   address: "N/A",
   title: "N/A",
   subtitle: "N/A",
@@ -80,7 +82,7 @@ const defaultFund: IFund = {
 export const useFundStore = defineStore({
   id: "fund",
   state: (): IState => ({
-    fund: defaultFund,
+    fund: {} as IFund,
     abi: {},
     address: {},
     apy: {},
@@ -112,32 +114,84 @@ export const useFundStore = defineStore({
     },
     funds(): IFund[] {
       return Object.values(this.fundsSettings).map(
-        (chainFund,i )=> {
+        (chainFund)=> {
           return {
-            ...this.fund,
-            // TODO This line is temporary, remove later, just to fill data now.
-            ...this.demoFunds[1],
-            address: chainFund.fundAddress || "N/A",
+            address: chainFund.fundAddress || "",
             title: chainFund.fundName || "N/A",
-            safeAddress: chainFund.safe || "N/A",
-            governorAddress: chainFund.governor || "N/A",
+            subtitle: chainFund.fundName || "N/A",
+            description: chainFund.fundName || "N/A",
+            safeAddress: chainFund.safe || "",
+            governorAddress: chainFund.governor || "",
+            avatarUrl: "https://api.lorem.space/image/ai?w=60&h=60",
             fundToken: {
-              name: chainFund.fundSymbol || "N/A",
+              symbol: chainFund.fundSymbol || "N/A",
               address: chainFund.baseToken || "N/A",
               balance: 0,
             },
             denominationToken: {
-              name: "USDC",
-              address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+              symbol: "USDC",
+              address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
               balance: 0,
             },
             governorToken: {
-              name: "USDC",
+              symbol: "TODO", // TODO get governanceToken?
               address: chainFund.governanceToken || "N/A",
               balance: 0,
             },
+            chain: "",
+            inceptionDate: "",
+            aumValue: 0,
+            cumulativeReturnPercent: 0,
+            monthlyReturnPercent: 0,
+            sharpeRatio: 0,
+            userFundBalance: "",
+            userFundUsdValue: "",
+            nextSettlement: "",
+            // TODO remove these position types, replace with []
+            positionTypes: [
+              {
+                type: PositionType.NAVLiquid,
+                value: 123,
+              },
+              {
+                type: PositionType.NAVComposable,
+                value: 78,
+              },
+              {
+                type: PositionType.NAVNft,
+                value: 287,
+              },
+              {
+                type: PositionType.NAVIlliquid,
+                value: 36,
+              },
+            ] as IPositionType[],
+            cyclePendingRequests: [] as ICyclePendingRequest[],
+            fundToDenominationExchangeRate: 0,
 
-          }
+            // My Fund Positions
+            netDeposits: "",
+            currentValue: "",
+            totalReturn: 0,
+            delegatingAddress: "",
+            votingPower: "",
+
+            // Overview fields
+            depositAddresses: [],
+            managementAddresses: [],
+            plannedSettlementCycle: "",
+            minLiquidAssetShare: "",
+
+            // Governance
+            votingDelay: "",
+            votingPeriod: "",
+            proposalThreshold: "",
+            quorom: "",
+            lateQuorom: "",
+
+            // NAV Updates
+            navUpdates: [] as INAVUpdate[],
+          } as IFund
         },
       );
     },
@@ -170,7 +224,6 @@ export const useFundStore = defineStore({
 
       return {
         "1": {
-          id: 1,
           title: "TFD3",
           subtitle: "Soonami Treasury Test",
           avatarUrl: "https://api.lorem.space/image/ai?w=60&h=60",
@@ -221,17 +274,17 @@ export const useFundStore = defineStore({
             },
           ],
           fundToken: {
-            name: "tfd3",
+            symbol: "tfd3",
             address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
             balance: 100,
           },
           denominationToken: {
-            name: "USDC",
+            symbol: "USDC",
             address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
             balance: 120,
           },
           governorToken: {
-            name: "USDC",
+            symbol: "USDC",
             address: "0xH2Z3BZ91c6301b36c1d19D4a2e9b0cE3606eB05",
             balance: 120,
           },
@@ -276,7 +329,6 @@ export const useFundStore = defineStore({
           votingPower: "10",
         },
         "2": {
-          id: 2,
           title: "THL",
           subtitle: "Tetronode Treasury",
           avatarUrl: "https://api.lorem.space/image/finance?w=60&h=60",
@@ -323,17 +375,17 @@ export const useFundStore = defineStore({
             },
           ],
           fundToken: {
-            name: "SOON",
+            symbol: "SOON",
             address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
             balance: 100,
           },
           denominationToken: {
-            name: "USDC",
+            symbol: "USDC",
             address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
             balance: 120,
           },
           governorToken: {
-            name: "USDC",
+            symbol: "USDC",
             address: "0xH2Z3BZ91c6301b36c1d19D4a2e9b0cE3606eB05",
             balance: 120,
           },
@@ -378,7 +430,6 @@ export const useFundStore = defineStore({
           votingPower: "10",
         },
         "3": {
-          id: 3,
           title: "1FUND",
           subtitle: "1FUND DAO",
           avatarUrl: "https://api.lorem.space/image/game?w=60&h=60",
@@ -421,17 +472,17 @@ export const useFundStore = defineStore({
             },
           ],
           fundToken: {
-            name: "SOON",
+            symbol: "SOON",
             address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
             balance: 100,
           },
           denominationToken: {
-            name: "USDC",
+            symbol: "USDC",
             address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
             balance: 120,
           },
           governorToken: {
-            name: "USDC",
+            symbol: "USDC",
             address: "0xH2Z3BZ91c6301b36c1d19D4a2e9b0cE3606eB05",
             balance: 120,
           },
@@ -476,7 +527,6 @@ export const useFundStore = defineStore({
           votingPower: "10",
         },
         "4": {
-          id: 4,
           title: "AF",
           subtitle: "Awesome Fund",
           avatarUrl: "https://api.lorem.space/image/dashboard?w=60&h=60",
@@ -527,17 +577,17 @@ export const useFundStore = defineStore({
             },
           ],
           fundToken: {
-            name: "SOON",
+            symbol: "SOON",
             address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
             balance: 100,
           },
           denominationToken: {
-            name: "USDC",
+            symbol: "USDC",
             address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
             balance: 120,
           },
           governorToken: {
-            name: "USDC",
+            symbol: "USDC",
             address: "0xH2Z3BZ91c6301b36c1d19D4a2e9b0cE3606eB05",
             balance: 120,
           },
@@ -593,7 +643,7 @@ export const useFundStore = defineStore({
       // TODO then use:
       // const fund = this.fundsSettings[fundAddress];
       if (fund) {
-        this.fund = fund;
+        this.fund = { ...this.fund, ...fund };
         this.selectedFundAddress = fundAddress;
         console.log("Selected Fund Address set to: ", this.selectedFundAddress);
       } else {
@@ -605,15 +655,11 @@ export const useFundStore = defineStore({
        * This function fetches all funds data from the GovernableFundFactory.
        */
       console.log("fetchFundSettings");
-      // const contractAddress = addresses[ContractName][this.web3Store.chainId];
-      // const fundContract = new this.web3.eth.Contract(GovernableFundFactory.abi, contractAddress)
       const fundContract = this.fundContract;
       const fundsLength = await fundContract.methods.registeredFundsLength().call();
-      console.log("fundsLength: ", fundsLength);
 
       const fundsInfo = await fundContract.methods.registeredFundsData(0, fundsLength).call();
       const fundAddresses: string[] = fundsInfo[0];
-      console.log("3 fundsInfo: ", fundsInfo);
 
       for (let i = 0; i < fundAddresses.length; i++) {
         const fundAddress: string = fundAddresses[i] as string;
@@ -629,19 +675,17 @@ export const useFundStore = defineStore({
           // since fundSettings is typed as Partial<IFundSettings> and initialized accordingly.
           fundSettings[detailKey] = typeof value === "bigint" ? value.toString() : value;
         });
-
-        this.fundsSettings[fundAddress] = fundSettings as IFundSettings;
+        if (!this.fundsSettings[fundAddress]) {
+          this.fundsSettings[fundAddress] = fundSettings as IFundSettings;
+        }
       }
-      console.log("fundsSettings: ", this.fundsSettings);
     },
     async fetchFunds() {
-      console.log("fetchFunds");
       try {
         await this.fetchFundSettings();
       } catch(e) {
         console.error(e);
       }
-      return this.funds;
     },
     async fetchUserBalance() {
       if (!this.fundContract) {
@@ -653,9 +697,7 @@ export const useFundStore = defineStore({
       if (!activeAccount) return console.error("Active account not found");
 
       const balanceWei = await this.fundContract.balanceOf(activeAccount);
-      const balance = ethers.formatEther(balanceWei);
-
-      this.userFundBalance = balance;
+      this.userFundBalance = ethers.formatEther(balanceWei);
     },
     async fetchUserFundUsdValue() {
       if (!this.fundContract) {
