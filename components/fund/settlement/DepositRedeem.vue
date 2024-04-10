@@ -56,29 +56,10 @@
       </div>
     </div>
     <div class="buttons_container">
-      <div>
-        <div class="request_deposit__button">
-          <v-btn class="bg-primary text-secondary" @click="cancelDeposit">
-            Cancel {{ buttonText }}
-          </v-btn>
-        </div>
-        <div class="request_deposit__button">
-          <v-btn class="bg-primary text-secondary" @click="approveAllowance">
-            Approve {{ buttonText }}
-          </v-btn>
-        </div>
-      </div>
-      <div>
-        <div class="request_deposit__button">
-          <v-btn class="bg-primary text-secondary" @click="requestDeposit">
-            Request {{ buttonText }}
-          </v-btn>
-        </div>
-        <div class="request_deposit__button">
-          <v-btn class="bg-primary text-secondary" @click="depositIntoFund">
-            {{ buttonText }}
-          </v-btn>
-        </div>
+      <div class="request_deposit__button">
+        <v-btn class="bg-primary text-secondary" @click="approveAllowance">
+          Request {{ buttonText }}
+        </v-btn>
       </div>
     </div>
   </div>
@@ -122,7 +103,6 @@ export default {
     const daiStore = useDaiStore();
     const usdcStore = useUsdcStore();
 
-    const depositValue = ref<string | null>(null);
     const loading = ref<boolean>(false);
     const selectedToken = ref<string>("DAI");
 
@@ -141,22 +121,22 @@ export default {
 
     const isDepositValueNotValid = computed(() => {
       // too many digits
-      if (String(depositValue.value).length > 14) {
+      if (String(tokenValue.value).length > 14) {
         return { status: true, message: "Please reduce the number of digits." };
       }
 
       // negative number
-      if (Number(depositValue.value) < 0) {
+      if (Number(tokenValue.value) < 0) {
         return { status: true, message: "Deposit value must not be negative!" };
       }
 
       // not a number
-      if (isNaN(Number(depositValue.value))) {
+      if (isNaN(Number(tokenValue.value))) {
         return { status: true, message: "Please enter a number." };
       }
 
       // deposit value bigger than balance
-      if (Number(depositValue.value) > Number(getUserStablecoinBalance.value)) {
+      if (Number(tokenValue.value) > Number(getUserStablecoinBalance.value)) {
         return { status: true, message: `Your ${selectedToken.value} balance is too low.` };
       }
 
@@ -165,9 +145,9 @@ export default {
 
     const isEnoughAllowance = computed(() => {
       if (selectedToken.value === "DAI") {
-        return Number(depositValue.value) <= Number(daiStore.getFundDaiAllowance);
+        return Number(tokenValue.value) <= Number(daiStore.getFundDaiAllowance);
       } else if (selectedToken.value === "USDC") {
-        return Number(depositValue.value) <= Number(usdcStore.getFundUsdcAllowance);
+        return Number(tokenValue.value) <= Number(usdcStore.getFundUsdcAllowance);
       }
 
       return false;
@@ -238,7 +218,7 @@ export default {
       // console.log("Stablecoin contract: " + await stablecoinContract.getAddress());
 
       try {
-        const tokensWei = ethers.parseUnits(depositValue.value || "0", unit);
+        const tokensWei = ethers.parseUnits(tokenValue.value.toString() || "0", unit);
         // const transaction = await (stablecoinContract.connect(signer) as ContractMethod).approve(fundStore.getFundAddress, tokensWei);
         // const transaction = await (stablecoinContract.connect(signer) as ContractMethod).approve(address,uint256)(fundStore.getFundAddress, tokensWei);
         // const approveFunction = stablecoinContract.connect(signer).getFunction("approve(address,uint256)");
@@ -318,7 +298,7 @@ export default {
         //     usdcStore.fetchFundAllowance();
         //   }
 
-        //   depositValue.value = null;
+        //   tokenValue.value = null;
         // } else {
         //   // Use your toast notification system to display the error message
         //   // app.config.globalProperties.$toast.error("The transaction has failed. Please contact the Rethink Finance support.");
@@ -344,7 +324,7 @@ export default {
       const [ fundContract, signer ] = await fethFundContract() as [FundContract, ethers.JsonRpcSigner];
       if(!fundContract) return console.error("No fund contract found");
       try {
-        const tokensWei = ethers.parseUnits(depositValue.value || "0", unit);
+        const tokensWei = ethers.parseUnits(tokenValue.value.toString() || "0", unit);
         console.log("Request deposit: " + tokensWei);
         const transaction = await (fundContract.connect(signer as ethers.JsonRpcSigner) as FundContract).requestDeposit(tokensWei);
         console.log("TX: " + transaction);
@@ -360,7 +340,7 @@ export default {
         // if (receipt.status) {
         //   // Use your toast notification system to display the success message
         //   // app.config.globalProperties.$toast.success("Your deposit request was successful.");
-        //   depositValue.value = null;
+        //   tokenValue.value = null;
         // } else {
         //   // Use your toast notification system to display the error message
         //   // app.config.globalProperties.$toast.error("Your deposit request has failed. Please contact the Rethink Finance support.");
@@ -393,7 +373,7 @@ export default {
         // if (receipt.status) {
         //   // Use your toast notification system to display the success message
         //   // app.config.globalProperties.$toast.success("Your deposit request was successful.");
-        //   depositValue.value = null;
+        //   tokenValue.value = null;
         // } else {
         //   // Use your toast notification system to display the error message
         //   // app.config.globalProperties.$toast.error("Your deposit request has failed. Please contact the Rethink Finance support.");
@@ -415,7 +395,6 @@ export default {
     };
 
     return {
-      depositValue,
       loading,
       selectedToken,
       isDepositValueNotValid,
@@ -487,7 +466,7 @@ export default {
   //   //   const fundContract = fundStore.getFundContract; // Make sure this is an ethers Contract instance
 
   //   //   try {
-  //   //     const tokensWei = ethers.parseUnits(depositValue.value || "0", unit);
+  //   //     const tokensWei = ethers.parseUnits(tokenValue.value.toString() || "0", unit);
   //   //     const transaction = await fundContract.connect(signer).requestDeposit(tokensWei, {
   //   //       // Gas settings can be adjusted as needed
   //   //     });
@@ -503,7 +482,7 @@ export default {
   //   //     if (receipt.status) {
   //   //       // Use your toast notification system to display the success message
   //   //       // app.config.globalProperties.$toast.success("Your deposit request was successful.");
-  //   //       depositValue.value = null;
+  //   //       tokenValue.value = null;
   //   //     } else {
   //   //       // Use your toast notification system to display the error message
   //   //       // app.config.globalProperties.$toast.error("Your deposit request has failed. Please contact the Rethink Finance support.");

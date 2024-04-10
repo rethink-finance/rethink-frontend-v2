@@ -8,6 +8,7 @@ export default interface IFundSettings {
   // TODO Here we have a typo, we should fix this in the original interface: IGovernableFundStorage
   performaceHurdleRateBps?: string;
   baseToken?: string;
+  baseSymbol?: string;  // This base token symbol is fetched separately from the baseToken field (ERC20 ABI).
   safe?: string;
   isExternalGovTokenInUse?: boolean;
   isWhitelistedDeposits?: boolean;

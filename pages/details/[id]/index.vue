@@ -33,7 +33,6 @@ const route = useRoute();
 const fundStore = useFundStore();
 const loading = ref(true);
 const fundAddress = (route.params.id as string).split("-")[1];
-console.log("fundAddress: ", fundAddress);
 
 onMounted(  async () => {
   if (fundAddress) {
