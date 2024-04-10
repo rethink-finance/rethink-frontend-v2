@@ -7,7 +7,7 @@ export default interface IFund {
   title: string;
   subtitle: string;
   chain: string;
-  avatarUrl: string;
+  photoUrl: string;
   description: string;
   // @dev better combine all governor data into one object "governor": {...}
   governorAddress: string;  // governor

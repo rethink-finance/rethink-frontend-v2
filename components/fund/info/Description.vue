@@ -4,7 +4,7 @@
       <div class="fund_description__details">
         <v-avatar size="3.5rem" rounded="0">
           <img
-            :src="fund.avatarUrl"
+            :src="fund.photoUrl"
             class="fund_description__avatar_img bg-cover"
             alt="fund cover image"
           >

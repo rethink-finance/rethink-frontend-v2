@@ -59,7 +59,7 @@ const defaultFund: IFund = {
   title: "N/A",
   subtitle: "N/A",
   chain: "N/A",
-  avatarUrl: "https://api.lorem.space/image/ai?w=60&h=60",
+  photoUrl: "https://api.lorem.space/image/ai?w=60&h=60",
   description: "N/A",
   governorAddress: "0x0",
   safeAddress: "0x0",
@@ -176,7 +176,7 @@ export const useFundStore = defineStore({
         if (metaDataJson) {
           const metaData: IFundMetadata = JSON.parse(metaDataJson);
           this.fund.description = metaData.description;
-          this.fund.avatarUrl = metaData.photoUrl;
+          this.fund.photoUrl = metaData.photoUrl;
         }
       } else {
         console.error(`Fund not found with address: ${fundAddress}`);
@@ -228,7 +228,7 @@ export const useFundStore = defineStore({
             description: fundSettings.fundName || "N/A",
             safeAddress: fundSettings.safe || "",
             governorAddress: fundSettings.governor || "",
-            avatarUrl: "https://api.lorem.space/image/ai?w=60&h=60",
+            photoUrl: "https://api.lorem.space/image/ai?w=60&h=60",
             fundToken: {
               symbol: fundSettings.fundSymbol || "N/A",
               address: fundSettings.fundAddress || "N/A",

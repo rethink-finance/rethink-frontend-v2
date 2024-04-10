@@ -28,7 +28,7 @@ const columns = ref([
     cell: ({ row }) => {
       const fund = row.original;
       return h(<FundNameCell />, {
-        image: fund?.avatarUrl,
+        image: fund?.photoUrl,
         title: fund?.title,
         subtitle: fund?.subtitle,
       });
