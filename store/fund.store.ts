@@ -178,6 +178,8 @@ export const useFundStore = defineStore({
           this.fund.description = metaData.description;
           this.fund.photoUrl = metaData.photoUrl;
         }
+
+        this.fetchUserBalance();
       } else {
         console.error(`Fund not found with address: ${fundAddress}`);
       }
@@ -309,13 +311,12 @@ export const useFundStore = defineStore({
         throw new Error("Fund denomination token is not available.")
       }
       const accountsStore = useAccountsStore();
-      const activeAccount = accountsStore.activeAccount;
+      const activeAccount = accountsStore.activeAccount.address;
       if (!activeAccount) return console.error("Active account not found");
 
       const ERC20Contract = new this.web3.eth.Contract(ERC20, this.fund.denominationToken.address);
       const balanceWei = await ERC20Contract.methods.balanceOf(activeAccount).call();
-      // const balanceWei = await this.fundFactoryContract.balanceOf(activeAccount);
-      this.userFundBalance = ethers.formatEther(balanceWei);
+      this.userFundBalance = (Math.floor(Number(ethers.formatEther(balanceWei)) * 1000) / 1000).toFixed(3);
       console.log(`user balance of ${this.fund?.denominationToken?.symbol} is ${this.userFundBalance}`);
     },
     async fetchUserFundUsdValue() {

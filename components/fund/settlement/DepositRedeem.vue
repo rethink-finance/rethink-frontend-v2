@@ -48,7 +48,7 @@
       </div>
       <div class="request_deposit__balance">
         <div>
-          Balance: {{ token1.balance }} {{ token1.symbol }}
+          Balance: {{ userFundBaseTokenBalance }} {{ token1.symbol }}
         </div>
         <div>
           Last NAV Update Value: {{ exchangeRateText }}
@@ -108,7 +108,7 @@ export default {
 
     // Fetch balances and allowances when the component is mounted
     onMounted(() => {
-      daiStore.fetchUserBalance();
+      // daiStore.fetchUserBalance();
       daiStore.fetchFundAllowance();
       usdcStore.fetchUserBalance();
       usdcStore.fetchFundAllowance();
@@ -136,7 +136,7 @@ export default {
       }
 
       // deposit value bigger than balance
-      if (Number(tokenValue.value) > Number(getUserStablecoinBalance.value)) {
+      if (Number(tokenValue.value) > Number(userFundBaseTokenBalance.value)) {
         return { status: true, message: `Your ${selectedToken.value} balance is too low.` };
       }
 
@@ -163,14 +163,10 @@ export default {
       return null;
     });
 
-    const getUserStablecoinBalance = computed(() => {
-      if (selectedToken.value === "DAI") {
-        return daiStore.getUserDaiBalance;
-      } else if (selectedToken.value === "USDC") {
-        return usdcStore.getUserUsdcBalance;
-      }
-
-      return null;
+    const userFundBaseTokenBalance = computed(() => {
+      console.log("ZEZEZEEZEZE");
+      console.log(fundStore.userFundBalance);
+      return fundStore.userFundBalance;
     });
     const exchangeRate = computed(() => {
       // Assuming token0 and token1 are reactive references or props
@@ -256,10 +252,6 @@ export default {
       } finally {
         loading.value = false;
       }
-    };
-
-    const changeStablecoin = (token: string) => {
-      selectedToken.value = token;
     };
 
     // deposit
@@ -400,14 +392,13 @@ export default {
       isDepositValueNotValid,
       isEnoughAllowance,
       getStablecoinContract,
-      getUserStablecoinBalance,
+      userFundBaseTokenBalance,
       rules,
       tokenValue,
       exchangeRateText,
       calculatedToken1Value,
       buttonText,
       approveAllowance,
-      changeStablecoin,
       depositIntoFund,
       requestDeposit,
       cancelDeposit,
