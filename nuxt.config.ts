@@ -3,6 +3,8 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  // TODO set to true in production.
+  ssr: false,
   app: {
     head: {
       title: "Rethink",

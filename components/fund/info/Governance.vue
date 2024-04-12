@@ -3,12 +3,6 @@
     <UiDataBar title="Governance">
       <div class="data_bar__item">
         <div class="data_bar__title">
-          <Icon
-            name="mdi:circle"
-            color="white"
-            size="0.75rem"
-            class="mr-2"
-          />
           {{ truncateAddress(fund.delegatingAddress) }}
         </div>
         <div class="data_bar__subtitle">

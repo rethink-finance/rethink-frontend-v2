@@ -56,11 +56,20 @@
       </div>
     </div>
     <div class="buttons_container">
-      <div class="request_deposit__button">
-        <v-btn class="bg-primary text-secondary" @click="approveAllowance">
-          Request {{ buttonText }}
-        </v-btn>
-      </div>
+      <template v-if="accountsStore.isConnected">
+        <div class="request_deposit__button">
+          <v-btn class="bg-primary text-secondary" @click="approveAllowance">
+            Request {{ buttonText }}
+          </v-btn>
+        </div>
+      </template>
+      <template v-else>
+        <div class="request_deposit__button">
+          <v-btn class="bg-primary text-secondary" @click="accountsStore.connectWallet()">
+            Connect Wallet
+          </v-btn>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -164,8 +173,6 @@ export default {
     });
 
     const userFundBaseTokenBalance = computed(() => {
-      console.log("ZEZEZEEZEZE");
-      console.log(fundStore.userFundBalance);
       return fundStore.userFundBalance;
     });
     const exchangeRate = computed(() => {
@@ -211,7 +218,6 @@ export default {
       // didn't do the same for the stable contracts.
       const stablecoinContract = getStablecoinContract.value;
       if(!stablecoinContract) return "No stablecoin contract found";
-      // console.log("Stablecoin contract: " + await stablecoinContract.getAddress());
 
       try {
         const tokensWei = ethers.parseUnits(tokenValue.value.toString() || "0", unit);
@@ -402,6 +408,7 @@ export default {
       depositIntoFund,
       requestDeposit,
       cancelDeposit,
+      accountsStore,
     };
   },
 

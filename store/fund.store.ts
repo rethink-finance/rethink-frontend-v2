@@ -1,6 +1,5 @@
 import { BaseContract, ethers } from "ethers";
 import { defineStore } from "pinia";
-import { Contract } from "web3-eth-contract";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import { useAccountsStore } from "~/store/accounts.store";
@@ -15,7 +14,6 @@ import type INAVUpdate from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IPositionType from "~/types/position_type";
 import ERC20 from "~/assets/contracts/ERC20.json";
-import type IFundMetadata from "~/types/fund_metadata";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -145,49 +143,213 @@ export const useFundStore = defineStore({
     },
     // @ts-expect-error: we should extend the return type as Contract<GovernableFund> but
     fundContract(): Contract {
-      const contractAddress = this.selectedFundAddress;
-      return new this.web3.eth.Contract(GovernableFund.abi, contractAddress)
+      return new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress)
     },
   },
   actions: {
+    batchFetchFundSettings() {
+      /** @dev: I tried many, many things to make this BatchRequest work with web3 4.x, this is the closest I came.
+       * https://docs.web3js.org/guides/web3_upgrade_guide/x/#web3-batchrequest
+       *       const batch = new this.web3.BatchRequest();
+       *       // Define the request for getFundSettings
+       *       const con = new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress);
+       *       const getFundSettingsRequest: any = {
+       *         jsonrpc: "2.0",
+       *         id: 1,
+       *         method: "eth_call",
+       *         params: [{
+       *           to: this.selectedFundAddress,
+       *           data: con.methods.getFundSettings().encodeABI(),
+       *         }, "latest"],
+       *       };
+       *
+       *       // Add the request to the batch and capture the promise
+       *       const getFundSettingsPromise = batch.add(getFundSettingsRequest);
+       *
+       *       // Execute the batch
+       *       const rep = batch.execute();
+       *       console.log("rep: ", rep);
+       *
+       *       // Handle the promise
+       *       getFundSettingsPromise.then((response: any) => {
+       *         console.log(response);
+       *       }).catch((error: any) => {
+       *         console.error("Error fetching getFundSettings:", error);
+       *       });
+       */
+      console.error("not implemented");
+    },
+    parseFundSettings(fundData: any) {
+      const fundSettings: Partial<IFundSettings> = {};
+
+      // Directly iterate over the fund details object's entries.
+      Object.entries(fundData).forEach(([key, value]) => {
+        // Assume that every key in details corresponds to a valid key in IFundSettings.
+        const detailKey = key as keyof IFundSettings;
+
+        // Convert bigint values to strings, otherwise assign the value directly.
+        // This approach skips checking if detailKey is explicitly part of fundSettings
+        // since fundSettings is typed as Partial<IFundSettings> and initialized accordingly.
+        fundSettings[detailKey] = typeof value === "bigint" ? value.toString() : value;
+      });
+
+      return fundSettings;
+    },
+    async fetchFundSettings() {
+      /**
+       * Fetch multiple fund data:
+       * - getFundSettings
+       * - getFundStartTime
+       * - fundMetadata
+       *
+       * @dev: would be better to separate fundSettings from (startTime & metadata), as sometimes we already
+       *   have the fund settings from the discovery page.
+       */
+      // Fetch inception date
+      const settingsPromise = this.fundContract.methods.getFundSettings().call();
+      const startTimePromise = this.fundContract.methods.getFundStartTime().call();
+      const metadataPromise = this.fundContract.methods.fundMetadata().call();
+
+      try {
+        // Await all promises and destructure their resolved values
+        const [settingsData, fundStartTime, metaDataJson] = await Promise.all([
+          settingsPromise,
+          startTimePromise,
+          metadataPromise,
+        ]);
+
+        // Process the fund settings with a method assumed to be available in the current scope
+        const fundSettings: Partial<IFundSettings> = this.parseFundSettings(settingsData);
+        // Fetch Denomination/Base token symbol.
+        // @dev: would be better to just have this available in the FundSettings data.
+        const ERC20Contract = new this.web3.eth.Contract(ERC20, settingsData?.baseToken ?? "");
+        const baseSymbol = await ERC20Contract.methods.symbol().call();
+
+        const fund: IFund = {
+          address: fundSettings.fundAddress || "",
+          title: fundSettings.fundName || "N/A",
+          subtitle: fundSettings.fundName || "N/A",
+          description: "N/A",
+          safeAddress: fundSettings.safe || "",
+          governorAddress: fundSettings.governor || "",
+          // @dev: Default photo, we can replace it with some gray fund photo.
+          photoUrl: "https://api.lorem.space/image/ai?w=60&h=60",
+          inceptionDate: fundStartTime ? formatDate(new Date(Number(fundStartTime) * 1000)) : "",
+          fundToken: {
+            symbol: fundSettings.fundSymbol,
+            address: fundSettings.fundAddress,
+            balance: 0,
+          },
+          denominationToken: {
+            symbol: baseSymbol ?? "",
+            address: fundSettings.baseToken,
+            balance: 0,
+          },
+          governorToken: {
+            symbol: "TODO", // TODO get governanceToken, same as getting baseToken symbol?
+            address: fundSettings.governanceToken || "N/A",
+            balance: 0,
+          },
+          chain: "",
+          aumValue: 0,
+          cumulativeReturnPercent: 0,
+          monthlyReturnPercent: 0,
+          sharpeRatio: 0,
+          userFundBalance: "",
+          userFundUsdValue: "",
+          nextSettlement: "",
+          // TODO remove these position types, replace with []
+          positionTypes: [
+            {
+              type: PositionType.NAVLiquid,
+              value: 123,
+            },
+            {
+              type: PositionType.NAVComposable,
+              value: 78,
+            },
+            {
+              type: PositionType.NAVNft,
+              value: 287,
+            },
+            {
+              type: PositionType.NAVIlliquid,
+              value: 36,
+            },
+          ] as IPositionType[],
+          cyclePendingRequests: [] as ICyclePendingRequest[],
+          fundToDenominationExchangeRate: 0,
+
+          // My Fund Positions
+          netDeposits: "",
+          currentValue: "",
+          totalReturn: 0,
+          delegatingAddress: "",
+          votingPower: "",
+
+          // Overview fields
+          depositAddresses: [],
+          managementAddresses: [],
+          plannedSettlementCycle: "",
+          minLiquidAssetShare: "",
+
+          // Governance
+          votingDelay: "",
+          votingPeriod: "",
+          proposalThreshold: "",
+          quorom: "",
+          lateQuorom: "",
+
+          // NAV Updates
+          navUpdates: [] as INAVUpdate[],
+        } as IFund;
+
+        // Process metadata if available
+        if (metaDataJson) {
+          const metaData = JSON.parse(metaDataJson);
+          fund.description = metaData.description;
+          fund.photoUrl = metaData.photoUrl;
+        }
+
+        return fund;
+      } catch (error) {
+        console.error("Error in promises:", error);
+        return {} as IFund; // Return an empty or default object in case of error
+      }
+    },
+    async fetchFund(): Promise<IFund> {
+      console.log("fetchFund")
+      const fund: IFund = await this.fetchFundSettings();
+      console.log(fund);
+
+      return fund;
+    },
     async getFund(fundAddress: string) {
       /**
        * This function finds and returns fund in the funds array.
        */
-      const fund = this.funds.find(f => f.address === fundAddress);
-      // TODO then use:
-      // const fund = this.fundsSettings[fundAddress];
-      if (fund) {
-        // TODO replace with this.fund = fund;
-        this.fund = { ...this.fund, ...fund };
-        this.selectedFundAddress = fundAddress;
-        console.log("fund contract: ", this.fundContract);
+      this.selectedFundAddress = fundAddress;
+      // this.fund = {} as IFund;
 
-        const fundSettings = await this.fundContract.methods.getFundSettings().call();
-        console.log("fetched fundSettings: ", fundSettings)
+      // TODO Check if fund already exists in the fetched funds.
+      //   If yes, only fetch metadata & inception date, do not fetch fundSettings again, as we have it already.
+      // let fund = this.funds.find(f => f.address === fundAddress);
+      try {
+        // TODO only fetch fund if not found the fund
+        this.fund = await this.fetchFund() as IFund;
+        console.log(this.fund)
+        await this.fetchUserBalance();
+      } catch (e) {
+        console.error(`Failed fetching fund ${fundAddress} -> `, e)
+      }
 
-        // Fetch inception date
-        const fundStartTime = await this.fundContract.methods.getFundStartTime().call();
-        const fundStartDate = new Date(Number(fundStartTime) * 1000);
-        this.fund.inceptionDate = formatDate(fundStartDate);
-
-        // Fetch metadata.
-        const metaDataJson = await this.fundContract.methods.fundMetadata().call();
-        if (metaDataJson) {
-          const metaData: IFundMetadata = JSON.parse(metaDataJson);
-          this.fund.description = metaData.description;
-          this.fund.photoUrl = metaData.photoUrl;
-        }
-
-        this.fetchUserBalance();
-      } else {
+      if (!this.fund) {
         console.error(`Fund not found with address: ${fundAddress}`);
       }
     },
     async fetchFunds() {
       /**
        * This function fetches all funds data from the GovernableFundFactory.
-       * TODO: rename to fetch registered funds.
        */
       console.log("fetchFunds");
       const fundFactoryContract = this.fundFactoryContract;
@@ -201,23 +363,7 @@ export const useFundStore = defineStore({
 
       for (let i = 0; i < fundAddresses.length; i++) {
         const fundAddress: string = fundAddresses[i] as string;
-        const fundSettings: Partial<IFundSettings> = { address: fundAddress };
-
-        // Fetch Denomination/Base token symbol.
-        // @dev: would be better to just have this available in the FundSettings data.
-        const ERC20Contract = new this.web3.eth.Contract(ERC20, fundsInfo[1][i].baseToken);
-        fundSettings.baseSymbol = await ERC20Contract.methods.symbol().call();
-
-        // Directly iterate over the details object's entries.
-        Object.entries(fundsInfo[1][i]).forEach(([key, value]) => {
-          // Assume that every key in details corresponds to a valid key in IFundSettings.
-          const detailKey = key as keyof IFundSettings;
-
-          // Convert bigint values to strings, otherwise assign the value directly.
-          // This approach skips checking if detailKey is explicitly part of fundSettings
-          // since fundSettings is typed as Partial<IFundSettings> and initialized accordingly.
-          fundSettings[detailKey] = typeof value === "bigint" ? value.toString() : value;
-        });
+        const fundSettings: Partial<IFundSettings> = this.parseFundSettings(fundsInfo[1][i])
         if (!this.fundsSettings[fundAddress]) {
           this.fundsSettings[fundAddress] = fundSettings as IFundSettings;
         }
@@ -305,7 +451,7 @@ export const useFundStore = defineStore({
     },
     async fetchUserBalance() {
       /**
-       * Fetch connected user's wallet balance of the provided token address.
+       * Fetch connected user's wallet balance of the base/denomination token.
        */
       if (!this.fund?.denominationToken?.address) {
         throw new Error("Fund denomination token is not available.")

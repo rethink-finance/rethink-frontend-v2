@@ -20,28 +20,33 @@
       </div>
 
       <FundOverview :fund="fund" />
-    </div></div>
+    </div>
+  </div>
 
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted } from "vue";
-import { useRoute } from "vue-router";
 import { useFundStore } from "~/store/fund.store";
+import type IFund from "~/types/fund";
 
 const route = useRoute();
 const fundStore = useFundStore();
 const loading = ref(true);
 const fundAddress = (route.params.id as string).split("-")[1];
 
+onUnmounted(  () => {
+  fundStore.fund = { } as IFund;
+  fundStore.selectedFundAddress = "";
+})
+
 onMounted(  async () => {
+
   if (fundAddress) {
     loading.value = true;
 
+    // This means that a lot of its data was already fetched.
     try {
-      // TODO only if not found the fund
-      await fundStore.fetchFunds();
-      fundStore.getFund(fundAddress);
+      await fundStore.getFund(fundAddress);
     } catch (e) {
       console.error("Failed fetching fund -> ", e)
     }
