@@ -195,7 +195,7 @@ export const useFundStore = defineStore({
 
       return fundSettings;
     },
-    async fetchFundSettings() {
+    async fetchFundData() {
       /**
        * Fetch multiple fund data:
        * - getFundSettings
@@ -317,26 +317,18 @@ export const useFundStore = defineStore({
         return {} as IFund; // Return an empty or default object in case of error
       }
     },
-    async fetchFund(): Promise<IFund> {
-      console.log("fetchFund")
-      const fund: IFund = await this.fetchFundSettings();
-      console.log(fund);
-
-      return fund;
-    },
     async getFund(fundAddress: string) {
       /**
        * This function finds and returns fund in the funds array.
        */
       this.selectedFundAddress = fundAddress;
-      // this.fund = {} as IFund;
 
       // TODO Check if fund already exists in the fetched funds.
       //   If yes, only fetch metadata & inception date, do not fetch fundSettings again, as we have it already.
       // let fund = this.funds.find(f => f.address === fundAddress);
       try {
         // TODO only fetch fund if not found the fund
-        this.fund = await this.fetchFund() as IFund;
+        this.fund = await this.fetchFundData() as IFund;
         console.log(this.fund)
         await this.fetchUserBalance();
       } catch (e) {
