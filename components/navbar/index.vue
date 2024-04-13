@@ -171,9 +171,10 @@ const computedRoutes = computed(() => {
 const activeAccount = computed(() => truncateAddress(accountsStore.activeAccount?.address));
 const connectingWallet = computed(() => accountsStore.connectingWallet);
 const connectedWallet = computed(() => accountsStore.connectedWallet);
-const connectedWalletIcon = computed(() =>
-  `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(accountsStore.connectedWallet?.icon)))}`,
-);
+const connectedWalletIcon = computed(() => {
+  if (!accountsStore?.connectedWallet) return "";
+  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(accountsStore.connectedWallet?.icon)))}`
+});
 
 onMounted(() => {
   currentRoute.value = route.path;

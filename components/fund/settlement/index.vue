@@ -92,6 +92,7 @@ export default {
 
 <style lang="scss" scoped>
 .fund_settlement {
+  overflow: auto;
   &__buttons {
     display: flex;
     gap: 1rem;

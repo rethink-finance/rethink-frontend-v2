@@ -59,7 +59,7 @@
     <div class="buttons_container">
       <template v-if="accountsStore.isConnected">
         <div class="request_deposit__button">
-          <v-btn class="bg-primary text-secondary" :disabled="!isTokenValueValid" @click="approveAllowance">
+          <v-btn class="bg-primary text-secondary" :disabled="!isTokenValueValid">
             Request {{ buttonText }}
           </v-btn>
         </div>
@@ -77,14 +77,8 @@
 
 <script lang="ts">
 import { ethers } from "ethers";
-import { computed, onMounted, ref } from "vue";
-import GovernableFund from "~/assets/contracts/GovernableFund.json";
-import { trimTrailingZeros } from "~/composables/utils";
 import { useAccountsStore } from "~/store/accounts.store";
-import type { FundContract } from "~/store/fund.store";
 import { useFundStore } from "~/store/fund.store";
-import { useDaiStore } from "~/store/tokens/dai.store";
-import { useUsdcStore } from "~/store/tokens/usdc.store";
 import type IToken from "~/types/token";
 
 export default {
@@ -110,8 +104,6 @@ export default {
   setup(props) {
     const accountsStore = useAccountsStore();
     const fundStore = useFundStore();
-    const daiStore = useDaiStore();
-    const usdcStore = useUsdcStore();
 
     const loading = ref<boolean>(false);
     const selectedToken = ref<string>("DAI");
@@ -132,35 +124,11 @@ export default {
       return rules.every(rule => rule(tokenValue.value));
     });
 
-    const isEnoughAllowance = computed(() => {
-      if (selectedToken.value === "DAI") {
-        return Number(tokenValue.value) <= Number(daiStore.getFundDaiAllowance);
-      } else if (selectedToken.value === "USDC") {
-        return Number(tokenValue.value) <= Number(usdcStore.getFundUsdcAllowance);
-      }
-
-      return false;
-    });
-
-    const getStablecoinContract = computed(() => {
-      if (selectedToken.value === "DAI") {
-        return daiStore.getDaiContract;
-      } else if (selectedToken.value === "USDC") {
-        return usdcStore.getUsdcContract;
-      }
-
-      return null;
-    });
-
     const userBaseTokenBalance = computed(() => {
       return fundStore.userBaseTokenBalance;
     });
     const userBaseTokenBalanceFormatted = computed(() => {
       return "#TODO";
-    });
-    const exchangeRate = computed(() => {
-      // Assuming token0 and token1 are reactive references or props
-      return 1
     });
 
     const exchangeRateText = computed(() => {
@@ -182,209 +150,11 @@ export default {
       return props.action === "deposit" ? "Deposit" : "Redeem";
     });
 
-    // deposit approval
-    const approveAllowance = async () => {
-      loading.value = true;
-
-      let unit = "ether"; // DAI - 18 decimals
-
-      if (selectedToken.value === "USDT") {
-        unit = "kwei"; // USDT (Tether) - 4 decimals
-      }
-
-      if (selectedToken.value === "USDC") {
-        unit = "mwei"; // USDC - 6 decimals
-      }
-
-      const signer = await accountsStore.ethersProvider?.getSigner();
-      if (!signer) return "No signer found";
-
-      // todo something wrong when getting contracts from store, couldn't find the solution yet
-      // it causes to functions fail with the error: "Cannot access private method"
-      // so I'm using the contract directly here, didn't find a better solution yet
-      // didn't do the same for the stable contracts.
-      const stablecoinContract = getStablecoinContract.value;
-      if(!stablecoinContract) return "No stablecoin contract found";
-
-      try {
-        const tokensWei = ethers.parseUnits(tokenValue.value.toString() || "0", unit);
-        // const transaction = await (stablecoinContract.connect(signer) as ContractMethod).approve(fundStore.getFundAddress, tokensWei);
-        // const transaction = await (stablecoinContract.connect(signer) as ContractMethod).approve(address,uint256)(fundStore.getFundAddress, tokensWei);
-        // const approveFunction = stablecoinContract.connect(signer).getFunction("approve(address,uint256)");
-        // const transaction = await approveFunction(fundStore.getFundAddress, tokensWei);
-        const transaction = await (stablecoinContract.connect(signer) as FundContract).approve(fundStore.getFundAddress,tokensWei);
-
-
-        console.log("TX: " + transaction);
-        // console.log("tx hash: " + transaction.hash);
-        // Use your toast notification system to display the message
-        // For example, using Vue 3's globalProperties
-        // app.config.globalProperties.$toast.info("The transaction has been submitted. Please wait for it to be confirmed.");
-
-        // const receipt = await transaction.wait();
-        // console.log(receipt);
-
-        // if (receipt.status) {
-        //   // Use your toast notification system to display the success message
-        //   // app.config.globalProperties.$toast.success("The approval was successful. You can make the deposit now.");
-
-        //   // Refresh allowance values
-        //   if (selectedToken.value === "DAI") {
-        //     daiStore.fetchFundAllowance();
-        //   } else if (selectedToken.value === "USDC") {
-        //     usdcStore.fetchFundAllowance();
-        //   }
-        // } else {
-        //   // Use your toast notification system to display the error message
-        //   // app.config.globalProperties.$toast.error("The transaction has failed. Please contact the Rethink Finance support.");
-        // }
-      } catch (error) {
-        console.error(error);
-        // Use your toast notification system to display the error message
-        // app.config.globalProperties.$toast.error("There has been an error. Please contact the Rethink Finance support.");
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    // deposit
-    const depositIntoFund = async () => {
-      loading.value = true;
-
-      // const signer = accountsStore.ethersProvider?.getSigner();
-      // const fundContract = fundStore.getFundContract;
-      const [ fundContract, signer ] = await fethFundContract() as [FundContract, ethers.JsonRpcSigner];
-      try {
-        const transaction = await (fundContract.connect(signer)as FundContract).deposit();
-        console.log("TX: " + transaction);
-        // console.log("tx hash: " + transaction.hash);
-        // Use your toast notification system to display the message
-        // For example, using Vue 3's globalProperties
-        // app.config.globalProperties.$toast.info("The transaction has been submitted. Please wait for it to be confirmed.");
-
-        // const receipt = await transaction.wait();
-        // console.log(receipt);
-
-        // if (receipt.status) {
-        //   // Use your toast notification system to display the success message
-        //   // app.config.globalProperties.$toast.success("Your deposit was successful.");
-
-        //   // Refresh fund and user balances
-        //   fundStore.fetchFundBalance();
-        //   fundStore.fetchUserBalance();
-        //   fundStore.fetchUserFundUsdValue();
-
-        //   // Refresh token balances and allowances
-        //   if (selectedToken.value === "DAI") {
-        //     daiStore.fetchUserBalance();
-        //     daiStore.fetchFundAllowance();
-        //   } else if (selectedToken.value === "USDC") {
-        //     usdcStore.fetchUserBalance();
-        //     usdcStore.fetchFundAllowance();
-        //   }
-
-        //   tokenValue.value = null;
-        // } else {
-        //   // Use your toast notification system to display the error message
-        //   // app.config.globalProperties.$toast.error("The transaction has failed. Please contact the Rethink Finance support.");
-        // }
-      } catch (error) {
-        console.error(error);
-        // Use your toast notification system to display the error message
-        // app.config.globalProperties.$toast.error("There has been an error. Please contact the Rethink Finance support.");
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    const requestDeposit = async () => {
-      console.log("Request deposit");
-      loading.value = true;
-
-      let unit = "ether"; // DAI
-      if (selectedToken.value === "USDC") {
-        unit = "mwei"; // USDC
-      }
-
-      const [ fundContract, signer ] = await fethFundContract() as [FundContract, ethers.JsonRpcSigner];
-      if(!fundContract) return console.error("No fund contract found");
-      try {
-        const tokensWei = ethers.parseUnits(tokenValue.value.toString() || "0", unit);
-        console.log("Request deposit: " + tokensWei);
-        const transaction = await (fundContract.connect(signer as ethers.JsonRpcSigner) as FundContract).requestDeposit(tokensWei);
-        console.log("TX: " + transaction);
-        console.log("tx hash: " + transaction.data);
-
-        // Use your toast notification system to display the message
-        // For example, using Vue 3's globalProperties
-        // app.config.globalProperties.$toast.info("The transaction has been submitted. Please wait for it to be confirmed.");
-
-        const receipt = await transaction;
-        console.log(receipt);
-
-        // if (receipt.status) {
-        //   // Use your toast notification system to display the success message
-        //   // app.config.globalProperties.$toast.success("Your deposit request was successful.");
-        //   tokenValue.value = null;
-        // } else {
-        //   // Use your toast notification system to display the error message
-        //   // app.config.globalProperties.$toast.error("Your deposit request has failed. Please contact the Rethink Finance support.");
-        // }
-      } catch (error) {
-        console.error("ERROR in request deposit",error);
-        // Use your toast notification system to display the error message
-        // app.config.globalProperties.$toast.error("There has been an error. Please contact the Rethink Finance support.");
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    const cancelDeposit = async () => {
-      loading.value = true;
-
-      const [ fundContract, signer ] = await fethFundContract() as [FundContract, ethers.JsonRpcSigner];
-
-      try {
-        const transaction = await (fundContract.connect(signer) as FundContract).revokeDepositWithrawal(true);
-        console.log("TX: " + transaction);
-        // console.log("tx hash: " + transaction.hash);
-        // Use your toast notification system to display the message
-        // For example, using Vue 3's globalProperties
-        // app.config.globalProperties.$toast.info("The transaction has been submitted. Please wait for it to be confirmed.");
-
-        // const receipt = await transaction.wait();
-        // console.log(receipt);
-
-        // if (receipt.status) {
-        //   // Use your toast notification system to display the success message
-        //   // app.config.globalProperties.$toast.success("Your deposit request was successful.");
-        //   tokenValue.value = null;
-        // } else {
-        //   // Use your toast notification system to display the error message
-        //   // app.config.globalProperties.$toast.error("Your deposit request has failed. Please contact the Rethink Finance support.");
-        // }
-      } catch (error) {
-        console.error(error);
-        // Use your toast notification system to display the error message
-        // app.config.globalProperties.$toast.error("There has been an error. Please contact the Rethink Finance support.");
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    const fethFundContract = async () => {
-      const fundAddress = fundStore.selectedFundAddress;
-      const signer = await accountsStore.ethersProvider?.getSigner();
-      const fundContract = new ethers.Contract(fundAddress, GovernableFund.abi) as unknown as FundContract;
-      return [fundContract, signer];
-    };
 
     return {
       loading,
       selectedToken,
       isTokenValueValid,
-      isEnoughAllowance,
-      getStablecoinContract,
       userBaseTokenBalance,
       userBaseTokenBalanceFormatted,
       rules,
@@ -392,10 +162,6 @@ export default {
       exchangeRateText,
       calculatedToken1Value,
       buttonText,
-      approveAllowance,
-      depositIntoFund,
-      requestDeposit,
-      cancelDeposit,
       accountsStore,
     };
   },

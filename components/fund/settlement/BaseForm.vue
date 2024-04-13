@@ -100,7 +100,6 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue"]);
 
-
 const tokenValue = computed({
   get: () => props?.modelValue ?? "0",
   set: (value: string) => {

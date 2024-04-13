@@ -1,9 +1,9 @@
-import { defineStore } from "pinia";
 import { Web3 } from "web3";
 
 interface IState {
   web3?: Web3;
   network: string,
+  rpcURL: string,
   chainId: string,
 }
 
@@ -12,16 +12,13 @@ export const useWeb3Store = defineStore({
   state: (): IState => ({
     web3: undefined,
     network: "polygon-mainnet",
+    rpcURL: "https://polygon-rpc.com/",
     chainId: "",
   }),
   actions: {
     async init(): Promise<void> {
-      const runtimeConfig = useRuntimeConfig();
-      // TODO change to other RPC, not infura
-      const projectId = runtimeConfig.public.INFURA_PROJECT_ID || "";
-      const rpcURL = `https://${this.network}.infura.io/v3/${projectId}`;
-      this.web3 = new Web3(rpcURL);
-      console.log(`init web3 on ${rpcURL}`);
+      this.web3 = new Web3(this.rpcURL);
+      console.log(`init web3 on ${this.rpcURL}`);
 
       try {
         const chainId = await this.web3.eth.getChainId();
