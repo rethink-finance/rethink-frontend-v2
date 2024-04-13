@@ -1,6 +1,9 @@
 <template>
-  <div v-if="loading">
-    Loading...
+  <div v-if="loading" class="w-100">
+    <!-- TODO Create better skeletons in the future. -->
+    <v-skeleton-loader type="card" />
+    <v-skeleton-loader type="card" />
+    <v-skeleton-loader type="card" />
   </div>
   <div v-else>
     <div class="fund_details">

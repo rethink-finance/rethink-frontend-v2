@@ -2,7 +2,7 @@
   <div class="discover">
     <h3 class="main_title">Rethink Fund DAOs</h3>
     <div v-if="loadingFunds">
-      Loading...
+      <v-skeleton-loader type="table" />
     </div>
     <div v-else>
       <Table :data="funds" :columns="columns" :get-cell-class="getCellClass" :showControls="false" />
