@@ -1,3 +1,4 @@
+import { defineStore } from "pinia";
 import type { Account, WalletState } from "@web3-onboard/core/dist/types";
 import { Web3 } from "web3";
 import { useWeb3Store } from "~/store/web3.store";

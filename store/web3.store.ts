@@ -1,3 +1,4 @@
+import { defineStore } from "pinia";
 import { Web3 } from "web3";
 
 interface IState {

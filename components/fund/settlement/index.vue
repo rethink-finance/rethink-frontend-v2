@@ -71,7 +71,6 @@ export default {
   },
   methods: {
     toggleActionButton(value: string) {
-      console.log("Deposit/Redeem Button clicked!");
       if (this.selectedActionButtonValue === value) {
         this.selectedActionButtonValue = "";
       } else {

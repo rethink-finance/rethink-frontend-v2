@@ -1,4 +1,5 @@
 import { BaseContract, ethers } from "ethers";
+import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
