@@ -23,32 +23,30 @@ import type IPositionType from '~/types/position_type';
  * withdrawFee: 150n
  */
 export default interface IFund {
+  chain: string;  // TODO figure where to get this from
   address: string;
   title: string;
   subtitle: string;
-  chain: string;
-  photoUrl: string;
-  description: string;
-  // @dev better combine all governor data into one object "governor": {...}
+
+  // Governor address or delegateToAddress
   governorAddress: string;  // governor
   safeAddress: string;  // safe
 
   inceptionDate: string;
-  aumValue: number;
-  cumulativeReturnPercent: number;
-  monthlyReturnPercent: number;
-  sharpeRatio: number;
-  userBaseTokenBalance: bigint; // in wei
-  userFundUsdValue: string;
-  nextSettlement: string;
-  positionTypes: IPositionType[];
-  cyclePendingRequests: ICyclePendingRequest[];
   fundToken: IToken;
   baseToken: IToken;
   governanceToken: IToken;
-  fundToBaseExchangeRate: number
+  aumValue: number;  // TODO
+  cumulativeReturnPercent: number; // TODO
+  monthlyReturnPercent: number; // TODO
+  sharpeRatio: number; // TODO
+  positionTypes: IPositionType[]; // TODO
+  cyclePendingRequests: ICyclePendingRequest[]; // TODO
+  fundToBaseExchangeRate: number // TODO
 
   // Metadata
+  photoUrl: string;
+  description: string;
   plannedSettlementPeriod: string;
   minLiquidAssetShare: string;
 

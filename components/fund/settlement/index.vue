@@ -3,7 +3,7 @@
     <div class="card_header">
       <div>
         <div class="section_title">
-          {{ fund.nextSettlement }}
+          {{ fund.plannedSettlementPeriod }}
         </div>
         <div class="section_subtitle">
           Next Settlement
@@ -34,12 +34,8 @@
     </div>
     <div class="fund_settlement__card_boxes">
       <div v-if="selectedActionButtonValue" class="card_box">
-        <FundSettlementDeposit />
-        <!--        <FundSettlementDepositRedeem-->
-        <!--          :action="selectedActionButtonValue"-->
-        <!--          :token0="getToken0"-->
-        <!--          :token1="getToken1"-->
-        <!--        />-->
+        <FundSettlementDeposit v-if="isSelectedDepositButton" />
+        <!--        <FundSettlementRedeem v-if="isSelectedRedeemButton" />-->
       </div>
       <div class="card_box card_box--no-padding">
         <FundSettlementDepositRedeemNotification />
@@ -66,21 +62,11 @@ export default {
     };
   },
   computed: {
-    getToken0(): IToken {
-      if (this.selectedActionButtonValue === "deposit") {
-        // On Deposit, base/denomination token will be deposited.
-        return this.fund.baseToken;
-      }
-      // On Withdrawal, fund token will be withdrawn.
-      return this.fund.fundToken;
+    isSelectedDepositButton() {
+      return this.selectedActionButtonValue === "deposit";
     },
-    getToken1(): IToken {
-      if (this.selectedActionButtonValue === "deposit") {
-        // On Deposit, fund token will be received.
-        return this.fund.fundToken;
-      }
-      // On Withdrawal, base/denomination token will be withdrawn.
-      return this.fund.baseToken;
+    isSelectedRedeemButton() {
+      return this.selectedActionButtonValue === "redeem";
     },
   },
   methods: {

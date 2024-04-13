@@ -65,8 +65,9 @@ interface IState {
   userBaseTokenBalance: bigint;
   userFundTokenBalance: bigint;
   userGovernanceTokenBalance: bigint;
+  userFundAllowance: bigint;
 
-  userFundUsdValue: string
+  userFundTokenUsdValue: string
   selectedFundAddress: string;
   fundsSettings: Record<string, IFundSettings>;
 }
@@ -83,7 +84,8 @@ export const useFundStore = defineStore({
     userBaseTokenBalance: BigInt("0"),
     userFundTokenBalance: BigInt("0"),
     userGovernanceTokenBalance: BigInt("0"),
-    userFundUsdValue: "",
+    userFundAllowance: BigInt("0"),
+    userFundTokenUsdValue: "",
     selectedFundAddress: "N/A",
     fundsSettings: {} as Record<string, IFundSettings>,
   }),
@@ -246,8 +248,7 @@ export const useFundStore = defineStore({
           monthlyReturnPercent: 0,
           sharpeRatio: 0,
           userBaseTokenBalance: BigInt("0"),
-          userFundUsdValue: "",
-          nextSettlement: "",
+          userFundTokenUsdValue: "",
           // TODO remove these position types, replace with []
           positionTypes: [
             {
@@ -383,8 +384,7 @@ export const useFundStore = defineStore({
             monthlyReturnPercent: 0,
             sharpeRatio: 0,
             userBaseTokenBalance: BigInt("0"),
-            userFundUsdValue: "",
-            nextSettlement: "",
+            userFundTokenUsdValue: "",
             // TODO remove these position types, replace with []
             positionTypes: [
               {
@@ -455,12 +455,12 @@ export const useFundStore = defineStore({
       }
       const activeAccountAddress = this.accountsStore.activeAccount?.address
       if (!activeAccountAddress) return console.error("Active account not found");
-      console.log(this.web3.utils.ethUnitMap)
-      const allowanceWei = await this.fundBaseTokenContract.methods.allowance(activeAccountAddress, this.selectedFundAddress).call();
-      const allowance = ethers.formatUnits(allowanceWei, this.fund.baseToken.decimals);
 
-      // this.userBaseTokenBalance = (Math.floor(Number(ethers.formatEther(allowanceWei)) * 1000) / 1000).toFixed(3);
-      console.log(`user allowance of ${this.fund?.baseToken?.symbol} is ${allowance}`);
+      this.userFundAllowance = await this.fundBaseTokenContract.methods.allowance(
+        activeAccountAddress, this.selectedFundAddress,
+      ).call();
+
+      console.log(`user allowance of ${this.fund?.baseToken?.symbol} is ${this.userFundAllowance}`);
     },
     async fetchUserFundUsdValue() {
       const activeAccount = this.accountsStore.activeAccount;
@@ -475,7 +475,7 @@ export const useFundStore = defineStore({
       console.log("balanceWei user fund usd value:", balanceWei);
 
       const value = ethers.formatEther(balanceWei);
-      this.userFundUsdValue = value;
+      this.userFundTokenUsdValue = value;
     },
     fetchFundBalance() {
       // mock data
