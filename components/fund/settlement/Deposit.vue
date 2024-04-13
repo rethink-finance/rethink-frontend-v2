@@ -117,31 +117,42 @@ const requestDeposit = async () => {
   //   maxPriorityFeePerGas: undefined,
   //   maxFeePerGas: undefined,
   // })
-  await fundStore.fundContract.methods.requestDeposit(
-    tokensWei,
-  ).send({
-    from: accountsStore.activeAccount.address,
-  }).on("transactionHash", (hash: string) => {
-    console.log("tx hash: " + hash);
-    toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+  try {
+    await fundStore.fundContract.methods.requestDeposit(
+      tokensWei,
+    ).send({
+      from: accountsStore.activeAccount.address,
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
 
-  }).on("receipt", (receipt: any) => {
-    console.log("receipt :", receipt);
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt :", receipt);
 
-    if (receipt.status) {
-      toastStore.successToast("Your deposit request was successful.");
-      tokenValue.value = "0";
+      if (receipt.status) {
+        toastStore.successToast("Your deposit request was successful.");
+        tokenValue.value = "0";
+      } else {
+        toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
+      }
+
+      loading.value = false;
+    }).on("error", (error: any) => {
+      console.error(error);
+      loading.value = false;
+      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    });
+  } catch (error: any) {
+    // Check Metamask errors:
+    // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
+    if (error?.code === 4001) {
+      toastStore.addToast("Deposit request transaction was rejected.")
     } else {
-      toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
+      toastStore.addToast("Oops, something went wrong with your transaction.")
+      console.error(error);
     }
-
     loading.value = false;
-
-  }).on("error", (error: any) => {
-    console.error(error);
-    loading.value = false;
-    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-  });
+  }
 };
 
 const deposit = () => {

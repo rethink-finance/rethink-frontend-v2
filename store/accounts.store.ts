@@ -49,40 +49,11 @@ export const useAccountsStore = defineStore("accounts", {
     },
   },
   actions: {
-    setActiveChain(): void {
-      const activeChain = this.web3Onboard?.connectedChain;
-      this.chainId = activeChain?.id;
-    },
-    async connectWallet() {
-      // Connect to the web3-onboard.
-      await this.web3Onboard?.connectWallet();
-      console.log("Wallet Object:", this.web3Onboard);
-      this.setActiveChain();
-
-      if (!this.chainId){
-        console.log("Chain ID not found");
-        return;
-      }
-      this.setChainData(this.chainId);
-      console.log("Connected to chain:", this.chainName);
-      console.log("Chain ID:", this.chainId);
-    },
-    async disconnectWallet() {
-      const { provider, label } = this.web3Onboard?.connectedWallet || {}
-      if (provider && label) {
-        await this.web3Onboard?.disconnectWallet({ label })
+    setActiveChain(chainId?: string): void {
+      if (!chainId) {
+        chainId = this.web3Onboard?.connectedChain?.id;
       }
 
-      // Reset to default provider in web3Store.
-      this.web3Store.init();
-
-      // this.activeBalance = 0;
-    },
-    // async fetchActiveBalance() {
-    //   const balance = await this.ethersProvider?.getBalance(this.activeAccount.address);
-    //   this.activeBalance = balance ?? 0;
-    // },
-    setChainData(chainId: string) {
       this.chainId = chainId;
 
       switch (chainId) {
@@ -114,7 +85,27 @@ export const useAccountsStore = defineStore("accounts", {
           this.chainName = "";
           break;
       }
-      console.log("setChainData: ", chainId, this.chainName);
+      console.log("setActiveChain: ", this.chainId, this.chainName);
+    },
+    async connectWallet() {
+      // Connect to the web3-onboard.
+      await this.web3Onboard?.connectWallet();
+      console.log("Wallet Object:", this.web3Onboard);
+      this.setActiveChain();
+      if (this.connectedWallet) {
+        this.web3Store.web3 = new Web3(this.connectedWallet.provider);
+      }
+    },
+    async disconnectWallet() {
+      const { provider, label } = this.web3Onboard?.connectedWallet || {}
+      if (provider && label) {
+        await this.web3Onboard?.disconnectWallet({ label })
+      }
+
+      // Reset to default provider in web3Store.
+      this.web3Store.init();
+
+      // this.activeBalance = 0;
     },
     setAlreadyConnectedWallet() {
       console.log("Already connected Wallet Object:", this.web3Onboard);
@@ -124,18 +115,9 @@ export const useAccountsStore = defineStore("accounts", {
         console.log("Chain ID not found");
         return;
       }
-      this.setChainData(this.chainId);
-
-      console.log("Connected to chain:", this.chainName);
-      console.log("Chain ID:", this.chainId);
       if (this.connectedWallet) {
         this.web3Store.web3 = new Web3(this.connectedWallet.provider);
       }
-      // if (this.ethersProvider) {
-      //   // const activeAccount = this.connectedWallet.accounts[0];
-      //   // this.activeBalance = activeAccount.balance;
-      //   await this.fetchActiveBalance();
-      // }
     },
   },
 });
