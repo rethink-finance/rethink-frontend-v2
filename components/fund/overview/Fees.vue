@@ -9,7 +9,7 @@
       title3="5%"
       subtitle3="Hurdle Rate"
     />
-    <UiDataRowCard :title="fund.governorToken?.address" subtitle="Governance Token" />
+    <UiDataRowCard :title="fund.governanceToken?.address" subtitle="Governance Token" />
   </div>
 </template>
 

@@ -86,7 +86,6 @@ export const useAccountsStore = defineStore("accounts", {
         return;
       }
       this.setChainData(this.chainId);
-      // this.chainName = activeChain.namespace; // todo doesn't see the correct chain name // returns evm
       console.log("Connected to chain:", this.chainName);
       console.log("Chain ID:", this.chainId);
       if (this.ethersProvider) {

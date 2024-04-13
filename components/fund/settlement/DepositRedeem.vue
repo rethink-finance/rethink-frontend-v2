@@ -18,12 +18,13 @@
         <div class="request_deposit__token_col pa-0 request_deposit__token_col--dark text-end">
           <InputNumber
             v-model="tokenValue"
+            :rules="rules"
             class="request_deposit__input_amount"
           />
         </div>
       </div>
       <div class="request_deposit__balance">
-        Balance: {{ token0.balance }} {{ token0.symbol }}
+        Balance: {{ token0 }} {{ token0.symbol }}
       </div>
     </div>
 
@@ -47,8 +48,8 @@
         </div>
       </div>
       <div class="request_deposit__balance">
-        <div>
-          Balance: {{ userFundBaseTokenBalance }} {{ token1.symbol }}
+        <div v-if="accountsStore.isConnected">
+          Balance: {{ userBaseTokenBalanceFormatted }} {{ token1.symbol }}
         </div>
         <div>
           Last NAV Update Value: {{ exchangeRateText }}
@@ -58,7 +59,7 @@
     <div class="buttons_container">
       <template v-if="accountsStore.isConnected">
         <div class="request_deposit__button">
-          <v-btn class="bg-primary text-secondary" @click="approveAllowance">
+          <v-btn class="bg-primary text-secondary" :disabled="!isTokenValueValid" @click="approveAllowance">
             Request {{ buttonText }}
           </v-btn>
         </div>
@@ -114,42 +115,21 @@ export default {
 
     const loading = ref<boolean>(false);
     const selectedToken = ref<string>("DAI");
-
-    // Fetch balances and allowances when the component is mounted
-    onMounted(() => {
-      // daiStore.fetchUserBalance();
-      daiStore.fetchFundAllowance();
-      usdcStore.fetchUserBalance();
-      usdcStore.fetchFundAllowance();
-    });
-
     const tokenValue = ref(0);
+
     const rules = [
-      (value: number) => value <= 0 ? "Value must be positive." : true,
+      // TODO Add rule for max decimals
+      (value: number) => {
+        const valueWei = ethers.parseUnits(value.toString(), props.token0.decimals);
+        if (valueWei <= 0) return "Value must be positive."
+        if (userBaseTokenBalance.value < valueWei) return "Your " + props.token0.symbol + " balance is too low."
+        return true;
+      },
     ];
 
-    const isDepositValueNotValid = computed(() => {
-      // too many digits
-      if (String(tokenValue.value).length > 14) {
-        return { status: true, message: "Please reduce the number of digits." };
-      }
-
-      // negative number
-      if (Number(tokenValue.value) < 0) {
-        return { status: true, message: "Deposit value must not be negative!" };
-      }
-
-      // not a number
-      if (isNaN(Number(tokenValue.value))) {
-        return { status: true, message: "Please enter a number." };
-      }
-
-      // deposit value bigger than balance
-      if (Number(tokenValue.value) > Number(userFundBaseTokenBalance.value)) {
-        return { status: true, message: `Your ${selectedToken.value} balance is too low.` };
-      }
-
-      return { status: false, message: "Valid deposit value" };
+    const isTokenValueValid = computed(() => {
+      // Check each rule and return true if all rules are valid, or false if any rule fails
+      return rules.every(rule => rule(tokenValue.value));
     });
 
     const isEnoughAllowance = computed(() => {
@@ -172,22 +152,29 @@ export default {
       return null;
     });
 
-    const userFundBaseTokenBalance = computed(() => {
-      return fundStore.userFundBalance;
+    const userBaseTokenBalance = computed(() => {
+      return fundStore.userBaseTokenBalance;
+    });
+    const userBaseTokenBalanceFormatted = computed(() => {
+      return "#TODO";
     });
     const exchangeRate = computed(() => {
       // Assuming token0 and token1 are reactive references or props
-      return props.token0.balance / props.token1.balance;
+      return 1
     });
 
     const exchangeRateText = computed(() => {
       // Make sure to handle potential reactivity or null checks as needed
-      return `1 ${props.token0.symbol} = ${exchangeRate.value.toFixed(2)} ${props.token1.symbol}`;
+      // TODO to fix
+      return "#TODO ";
+      // return `1 ${props.token0.symbol} = ${exchangeRate.value.toFixed(2)} ${props.token1.symbol}`;
     });
 
     const calculatedToken1Value = computed(() => {
       // Continue to use your trimTrailingZeros utility function as needed
-      return trimTrailingZeros((tokenValue.value * exchangeRate.value).toFixed(4));
+      // TODO to fix
+      return "#TODO";
+      // return trimTrailingZeros((tokenValue.value * exchangeRate.value).toFixed(4));
     });
 
     const buttonText = computed(() => {
@@ -395,10 +382,11 @@ export default {
     return {
       loading,
       selectedToken,
-      isDepositValueNotValid,
+      isTokenValueValid,
       isEnoughAllowance,
       getStablecoinContract,
-      userFundBaseTokenBalance,
+      userBaseTokenBalance,
+      userBaseTokenBalanceFormatted,
       rules,
       tokenValue,
       exchangeRateText,

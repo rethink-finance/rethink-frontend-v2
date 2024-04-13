@@ -1,7 +1,7 @@
 <template>
   <div class="main_grid">
     <UiDataRowCard :title="fund.governorAddress" subtitle="Governance Contract" />
-    <UiDataRowCard :title="fund.governorToken?.address" subtitle="Governance Token" />
+    <UiDataRowCard :title="fund.governanceToken?.address" subtitle="Governance Token" />
     <UiDataRowCard :title="fund.votingDelay" subtitle="Voting Delay (in seconds)" />
     <UiDataRowCard :title="fund.votingPeriod" subtitle="Voting Period (in seconds)" />
     <UiDataRowCard :title="fund.proposalThreshold" subtitle="Proposal Threshold" />

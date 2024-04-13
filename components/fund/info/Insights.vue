@@ -29,7 +29,7 @@
           class="data_bar__title"
           :class="numberColorClass(fund.cumulativeReturnPercent)"
         >
-          {{ formatPercent(fund.cumulativeReturnPercent) }}
+          {{ fund.cumulativeReturnPercent ? formatPercent(fund.cumulativeReturnPercent) : "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           Cumulative
@@ -40,7 +40,7 @@
           class="data_bar__title"
           :class="numberColorClass(fund.monthlyReturnPercent)"
         >
-          {{ formatPercent(fund.monthlyReturnPercent) }}
+          {{ fund.monthlyReturnPercent ? formatPercent(fund.monthlyReturnPercent) : "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           Monthly Return
@@ -48,7 +48,7 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fund.sharpeRatio }}
+          {{ fund.sharpeRatio ? fund.sharpeRatio : "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           Sharpe Ratio

@@ -1,12 +1,12 @@
 import { BaseContract, ethers } from "ethers";
 import { defineStore } from "pinia";
+import { Web3 } from "web3";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import { useAccountsStore } from "~/store/accounts.store";
 import { PositionType } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
-import type IToken from "~/types/token";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import addressesJson from "~/assets/contracts/addresses.json";
@@ -14,6 +14,7 @@ import type INAVUpdate from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IPositionType from "~/types/position_type";
 import ERC20 from "~/assets/contracts/ERC20.json";
+import type IToken from "~/types/token";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -52,45 +53,6 @@ const NAVDetailsJSON = {
         "pastNAVUpdateIndex": "1"
       }`,
 };
-const defaultFund: IFund = {
-  address: "N/A",
-  title: "N/A",
-  subtitle: "N/A",
-  chain: "N/A",
-  photoUrl: "https://api.lorem.space/image/ai?w=60&h=60",
-  description: "N/A",
-  governorAddress: "0x0",
-  safeAddress: "0x0",
-  inceptionDate: "N/A",
-  aumValue: 0,
-  cumulativeReturnPercent: 0,
-  monthlyReturnPercent: 0,
-  sharpeRatio: 0,
-  userFundBalance: "N/A",
-  userFundUsdValue: "N/A",
-  nextSettlement: "N/A",
-  positionTypes: [],
-  cyclePendingRequests: [],
-  fundToken: {} as IToken,
-  denominationToken: {} as IToken,
-  governorToken: {} as IToken,
-  fundToDenominationExchangeRate: 0,
-  netDeposits: "N/A",
-  currentValue: "N/A",
-  totalReturn: 0,
-  delegatingAddress: "0x0",
-  votingPower: "N/A",
-  depositAddresses: [],
-  managementAddresses: [],
-  plannedSettlementCycle: "N/A",
-  minLiquidAssetShare: "N/A",
-  votingDelay: "N/A",
-  votingPeriod: "N/A",
-  proposalThreshold: "N/A",
-  quorom: "N/A",
-  lateQuorom: "N/A",
-  navUpdates: [],
-};
 
 
 interface IState {
@@ -99,8 +61,11 @@ interface IState {
   abi: Record<string, any>;
   address: Record<string, any>;
   apy: Record<string, any>;
-  userBalance: Record<string, any>;
-  userFundBalance: string;
+
+  userBaseTokenBalance: bigint;
+  userFundTokenBalance: bigint;
+  userGovernanceTokenBalance: bigint;
+
   userFundUsdValue: string
   selectedFundAddress: string;
   fundsSettings: Record<string, IFundSettings>;
@@ -115,8 +80,9 @@ export const useFundStore = defineStore({
     abi: {},
     address: {},
     apy: {},
-    userBalance: {},
-    userFundBalance: "",
+    userBaseTokenBalance: BigInt("0"),
+    userFundTokenBalance: BigInt("0"),
+    userGovernanceTokenBalance: BigInt("0"),
     userFundUsdValue: "",
     selectedFundAddress: "N/A",
     fundsSettings: {} as Record<string, IFundSettings>,
@@ -128,12 +94,15 @@ export const useFundStore = defineStore({
     web3Store(): any {
       return useWeb3Store();
     },
-    web3(): any {
+    web3(): Web3 {
       return this.web3Store.web3;
     },
     getFundAddress(state: IState): string {
       return state.address?.[state.selectedFundAddress];
     },
+    /**
+     * Contracts
+     */
     // @ts-expect-error: we should extend the return type as Contract<GovernableFundFactory> but
     // for now we don't have types for each contract made, should be done using typechain or some
     // other type generator from abi.
@@ -144,6 +113,10 @@ export const useFundStore = defineStore({
     // @ts-expect-error: we should extend the return type as Contract<GovernableFund> but
     fundContract(): Contract {
       return new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress)
+    },
+    // @ts-expect-error: we should extend the return type ...
+    fundBaseTokenContract(): Contract {
+      return new this.web3.eth.Contract(ERC20, this.fund.baseToken.address)
     },
   },
   actions: {
@@ -220,10 +193,27 @@ export const useFundStore = defineStore({
 
         // Process the fund settings with a method assumed to be available in the current scope
         const fundSettings: Partial<IFundSettings> = this.parseFundSettings(settingsData);
-        // Fetch Denomination/Base token symbol.
+        // Fetch Base/Base token symbol.
         // @dev: would be better to just have this available in the FundSettings data.
-        const ERC20Contract = new this.web3.eth.Contract(ERC20, settingsData?.baseToken ?? "");
-        const baseSymbol = await ERC20Contract.methods.symbol().call();
+        const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, settingsData?.baseToken);
+        const fundTokenContract = new this.web3.eth.Contract(ERC20, settingsData?.fundAddress);
+        const governanceTokenContract = new this.web3.eth.Contract(ERC20, settingsData?.governanceToken);
+
+        // Fetch all token symbols and decimals.
+        // @dev: maybe there are more things to be fetched here.
+        const [
+          baseTokenSymbol,
+          baseTokenDecimals,
+          governanceTokenSymbol,
+          governanceTokenDecimals,
+          fundTokenDecimals,
+        ]= await Promise.all([
+          fundBaseTokenContract.methods.symbol().call(),
+          fundBaseTokenContract.methods.decimals().call(),
+          governanceTokenContract.methods.symbol().call(),
+          governanceTokenContract.methods.decimals().call(),
+          fundTokenContract.methods.decimals().call(),
+        ]);
 
         const fund: IFund = {
           address: fundSettings.fundAddress || "",
@@ -238,24 +228,24 @@ export const useFundStore = defineStore({
           fundToken: {
             symbol: fundSettings.fundSymbol,
             address: fundSettings.fundAddress,
-            balance: 0,
-          },
-          denominationToken: {
-            symbol: baseSymbol ?? "",
+            decimals: fundTokenDecimals ?? 18,
+          } as IToken,
+          baseToken: {
+            symbol: baseTokenSymbol ?? "",
             address: fundSettings.baseToken,
-            balance: 0,
-          },
-          governorToken: {
-            symbol: "TODO", // TODO get governanceToken, same as getting baseToken symbol?
-            address: fundSettings.governanceToken || "N/A",
-            balance: 0,
-          },
+            decimals: baseTokenDecimals ?? 18,
+          } as IToken,
+          governanceToken: {
+            symbol: governanceTokenSymbol ?? "",
+            address: fundSettings.governanceToken,
+            decimals: governanceTokenDecimals ?? 18,
+          } as IToken,
           chain: "",
           aumValue: 0,
           cumulativeReturnPercent: 0,
           monthlyReturnPercent: 0,
           sharpeRatio: 0,
-          userFundBalance: "",
+          userBaseTokenBalance: BigInt("0"),
           userFundUsdValue: "",
           nextSettlement: "",
           // TODO remove these position types, replace with []
@@ -278,19 +268,17 @@ export const useFundStore = defineStore({
             },
           ] as IPositionType[],
           cyclePendingRequests: [] as ICyclePendingRequest[],
-          fundToDenominationExchangeRate: 0,
+          fundToBaseExchangeRate: 0,
 
           // My Fund Positions
           netDeposits: "",
           currentValue: "",
           totalReturn: 0,
-          delegatingAddress: "",
-          votingPower: "",
 
           // Overview fields
           depositAddresses: [],
           managementAddresses: [],
-          plannedSettlementCycle: "",
+          plannedSettlementPeriod: "",
           minLiquidAssetShare: "",
 
           // Governance
@@ -307,8 +295,11 @@ export const useFundStore = defineStore({
         // Process metadata if available
         if (metaDataJson) {
           const metaData = JSON.parse(metaDataJson);
+          console.log("fund metaData: ", metaData);
           fund.description = metaData.description;
           fund.photoUrl = metaData.photoUrl;
+          fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
+          fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
         }
 
         return fund;
@@ -325,12 +316,12 @@ export const useFundStore = defineStore({
 
       // TODO Check if fund already exists in the fetched funds.
       //   If yes, only fetch metadata & inception date, do not fetch fundSettings again, as we have it already.
-      // let fund = this.funds.find(f => f.address === fundAddress);
+      // let fund = this.funds.find(f => f.fundAddress === fundAddress);
       try {
         // TODO only fetch fund if not found the fund
         this.fund = await this.fetchFundData() as IFund;
         console.log(this.fund)
-        await this.fetchUserBalance();
+        await this.fetchUserBaseTokenBalance();
       } catch (e) {
         console.error(`Failed fetching fund ${fundAddress} -> `, e)
       }
@@ -360,6 +351,7 @@ export const useFundStore = defineStore({
           this.fundsSettings[fundAddress] = fundSettings as IFundSettings;
         }
 
+        // TODO fix this data to be such as in the fetchFundData, reuse it.
         this.funds.push(
           {
             address: fundSettings.fundAddress || "",
@@ -372,17 +364,17 @@ export const useFundStore = defineStore({
             fundToken: {
               symbol: fundSettings.fundSymbol || "N/A",
               address: fundSettings.fundAddress || "N/A",
-              balance: 0,
+              decimals: 18,
             },
-            denominationToken: {
-              symbol: fundSettings.baseSymbol,
+            baseToken: {
+              symbol: "fundSettings.baseSymbol",
               address: fundSettings.baseToken,
-              balance: 0,
+              decimals: 18,
             },
-            governorToken: {
+            governanceToken: {
               symbol: "TODO", // TODO get governanceToken, same as getting baseToken symbol?
               address: fundSettings.governanceToken || "N/A",
-              balance: 0,
+              decimals: 18,
             },
             chain: "",
             inceptionDate: "",
@@ -390,7 +382,7 @@ export const useFundStore = defineStore({
             cumulativeReturnPercent: 0,
             monthlyReturnPercent: 0,
             sharpeRatio: 0,
-            userFundBalance: "",
+            userBaseTokenBalance: BigInt("0"),
             userFundUsdValue: "",
             nextSettlement: "",
             // TODO remove these position types, replace with []
@@ -413,19 +405,17 @@ export const useFundStore = defineStore({
               },
             ] as IPositionType[],
             cyclePendingRequests: [] as ICyclePendingRequest[],
-            fundToDenominationExchangeRate: 0,
+            fundToBaseExchangeRate: 0,
 
             // My Fund Positions
             netDeposits: "",
             currentValue: "",
             totalReturn: 0,
-            delegatingAddress: "",
-            votingPower: "",
 
             // Overview fields
             depositAddresses: [],
             managementAddresses: [],
-            plannedSettlementCycle: "",
+            plannedSettlementPeriod: "",
             minLiquidAssetShare: "",
 
             // Governance
@@ -441,36 +431,44 @@ export const useFundStore = defineStore({
         )
       }
     },
-    async fetchUserBalance() {
+    async fetchUserBaseTokenBalance() {
       /**
        * Fetch connected user's wallet balance of the base/denomination token.
        */
-      if (!this.fund?.denominationToken?.address) {
+      if (!this.fund?.baseToken?.address) {
         throw new Error("Fund denomination token is not available.")
       }
-      const accountsStore = useAccountsStore();
-      const activeAccount = accountsStore.activeAccount.address;
-      if (!activeAccount) return console.error("Active account not found");
+      const activeAccountAddress = this.accountsStore.activeAccount.address;
+      if (!activeAccountAddress) return console.error("Active account not found");
 
-      const ERC20Contract = new this.web3.eth.Contract(ERC20, this.fund.denominationToken.address);
-      const balanceWei = await ERC20Contract.methods.balanceOf(activeAccount).call();
-      this.userFundBalance = (Math.floor(Number(ethers.formatEther(balanceWei)) * 1000) / 1000).toFixed(3);
-      console.log(`user balance of ${this.fund?.denominationToken?.symbol} is ${this.userFundBalance}`);
+      this.userBaseTokenBalance = await this.fundBaseTokenContract.methods.balanceOf(activeAccountAddress).call();
+
+      console.log(`user balance of ${this.fund?.baseToken?.symbol} is ${this.userBaseTokenBalance}`);
+    },
+    async fetchUserFundAllowance() {
+      /**
+       * Fetch connected user's fund allowance.
+       * Amount of tokens the fund is allowed to act with (transfer/deposit/withdraw...).
+       */
+      if (!this.fund?.baseToken?.address) {
+        throw new Error("Fund denomination token is not available.")
+      }
+      const activeAccountAddress = this.accountsStore.activeAccount?.address
+      if (!activeAccountAddress) return console.error("Active account not found");
+      console.log(this.web3.utils.ethUnitMap)
+      const allowanceWei = await this.fundBaseTokenContract.methods.allowance(activeAccountAddress, this.selectedFundAddress).call();
+      const allowance = ethers.formatUnits(allowanceWei, this.fund.baseToken.decimals);
+
+      // this.userBaseTokenBalance = (Math.floor(Number(ethers.formatEther(allowanceWei)) * 1000) / 1000).toFixed(3);
+      console.log(`user allowance of ${this.fund?.baseToken?.symbol} is ${allowance}`);
     },
     async fetchUserFundUsdValue() {
-      if (!this.fundContract) {
-        // await this.fetchContract();
-        await this.fetchUserBalance();
-        if (!this.fundContract) return console.error("Contract not found");
-      }
-
-      const accountsStore = useAccountsStore();
-      const activeAccount = accountsStore.activeAccount;
+      const activeAccount = this.accountsStore.activeAccount;
       if (!activeAccount) return console.error("Active account not found");
 
       let balanceWei = "0";
       try {
-        balanceWei = await this.fundContract.valueOf(this.userBalance[this.selectedFundAddress]).toString();
+        balanceWei = await this.fundContract.valueOf(this.userFundTokenBalance).toString();
       } catch (e) {
         console.log("The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error.");
       }

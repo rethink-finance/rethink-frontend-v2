@@ -53,7 +53,7 @@ export const useUsdcStore = defineStore("usdc", {
         throw new Error(`ERROR in ${ContractName} store fetchContract method: `,error);
       }
     },
-    async fetchFundAllowance() {
+    async fetchUserFundAllowance() {
       try {
         if (!this.contract) {
           await this.fetchContract();
