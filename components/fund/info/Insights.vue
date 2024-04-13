@@ -10,7 +10,7 @@
             class="mr-2"
             color="white"
           />
-          {{ capitalizeFirst(fund.chain) }}
+          {{ capitalizeFirst(fund.chain) || "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           Chain
@@ -48,7 +48,7 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fund.sharpeRatio ? fund.sharpeRatio : "N/A" }}
+          {{ fund.sharpeRatio ||  "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           Sharpe Ratio
