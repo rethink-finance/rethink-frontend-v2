@@ -168,7 +168,7 @@ const routes : IRoute[] = [
 ]
 const selectedChainId = ref("");
 const networks = [
-  { chainId: "0x89", name: "Polygon" },
+  { chainId: "0x89", name: "Polygon PoS Chain" },
   { chainId: "0x2a", name: "Kovan Testnet" },
   { chainId: "0x13881", name: "Mumbai Testnet" },
   { chainId: "0xa869", name: "Fuji Testnet" },

@@ -62,7 +62,7 @@ export const useAccountsStore = defineStore("accounts", {
           this.chainName = "Kovan";
           break;
         case "0x89":
-          this.chainName = "Polygon";
+          this.chainName = "Polygon PoS Chain";
           break;
         case "0xa868":
           this.chainName = "Localhost";
