@@ -66,8 +66,8 @@ interface IState {
   userFundTokenBalance: bigint;
   userGovernanceTokenBalance: bigint;
   userFundAllowance: bigint;
+  userFundShareValue: bigint
 
-  userFundTokenUsdValue: string
   selectedFundAddress: string;
   fundsSettings: Record<string, IFundSettings>;
 }
@@ -85,8 +85,8 @@ export const useFundStore = defineStore({
     userFundTokenBalance: BigInt("0"),
     userGovernanceTokenBalance: BigInt("0"),
     userFundAllowance: BigInt("0"),
-    userFundTokenUsdValue: "",
-    selectedFundAddress: "N/A",
+    userFundShareValue: BigInt("0"),
+    selectedFundAddress: "",
     fundsSettings: {} as Record<string, IFundSettings>,
   }),
   getters: {
@@ -170,6 +170,14 @@ export const useFundStore = defineStore({
 
       return fundSettings;
     },
+    fetchUserBalances() {
+      return Promise.all([
+        this.fetchUserBaseTokenBalance(),
+        this.fetchUserFundTokenBalance(),
+        this.fetchUserFundShareValue(),
+        this.fetchUserFundAllowance(),
+      ]);
+    },
     async fetchFundData() {
       /**
        * Fetch multiple fund data:
@@ -209,7 +217,7 @@ export const useFundStore = defineStore({
           governanceTokenSymbol,
           governanceTokenDecimals,
           fundTokenDecimals,
-        ]= await Promise.all([
+        ] = await Promise.all([
           fundBaseTokenContract.methods.symbol().call(),
           fundBaseTokenContract.methods.decimals().call(),
           governanceTokenContract.methods.symbol().call(),
@@ -247,8 +255,6 @@ export const useFundStore = defineStore({
           cumulativeReturnPercent: 0,
           monthlyReturnPercent: 0,
           sharpeRatio: 0,
-          userBaseTokenBalance: BigInt("0"),
-          userFundTokenUsdValue: "",
           // TODO remove these position types, replace with []
           positionTypes: [
             {
@@ -322,7 +328,7 @@ export const useFundStore = defineStore({
         // TODO only fetch fund if not found the fund
         this.fund = await this.fetchFundData() as IFund;
         console.log(this.fund)
-        await this.fetchUserBaseTokenBalance();
+        await this.fetchUserBalances();
       } catch (e) {
         console.error(`Failed fetching fund ${fundAddress} -> `, e)
       }
@@ -383,8 +389,6 @@ export const useFundStore = defineStore({
             cumulativeReturnPercent: 0,
             monthlyReturnPercent: 0,
             sharpeRatio: 0,
-            userBaseTokenBalance: BigInt("0"),
-            userFundTokenUsdValue: "",
             // TODO remove these position types, replace with []
             positionTypes: [
               {
@@ -436,14 +440,30 @@ export const useFundStore = defineStore({
        * Fetch connected user's wallet balance of the base/denomination token.
        */
       if (!this.fund?.baseToken?.address) {
-        throw new Error("Fund denomination token is not available.")
+        throw new Error("Fund denomination token address is not available.")
       }
       const activeAccountAddress = this.accountsStore.activeAccount.address;
-      if (!activeAccountAddress) return console.error("Active account not found");
+      if (!activeAccountAddress) throw new Error("Active account not found");
 
       this.userBaseTokenBalance = await this.fundBaseTokenContract.methods.balanceOf(activeAccountAddress).call();
 
-      console.log(`user balance of ${this.fund?.baseToken?.symbol} is ${this.userBaseTokenBalance}`);
+      console.log(`user base token balance of ${this.fund?.baseToken?.symbol} is ${this.userBaseTokenBalance}`);
+      return this.userBaseTokenBalance;
+    },
+    async fetchUserFundTokenBalance() {
+      /**
+       * Fetch connected user's wallet balance of the fund token.
+       */
+      if (!this.fund?.fundToken?.address) {
+        throw new Error("Fund token address is not available.")
+      }
+      const activeAccountAddress = this.accountsStore.activeAccount.address;
+      if (!activeAccountAddress) throw new Error("Active account not found");
+
+      this.userFundTokenBalance = await this.fundContract.methods.balanceOf(activeAccountAddress).call();
+
+      console.log(`user fund token balance of ${this.fund?.fundToken?.symbol} is ${this.userFundTokenBalance}`);
+      return this.userFundTokenBalance;
     },
     async fetchUserFundAllowance() {
       /**
@@ -460,26 +480,28 @@ export const useFundStore = defineStore({
         activeAccountAddress, this.selectedFundAddress,
       ).call();
 
-      console.log(`user allowance of ${this.fund?.baseToken?.symbol} is ${this.userFundAllowance}`);
+      console.log(`user fund allowance of ${this.fund?.baseToken?.symbol} is ${this.userFundAllowance}`);
+      return this.userFundAllowance;
     },
-    async fetchUserFundUsdValue() {
-      const activeAccount = this.accountsStore.activeAccount;
-      if (!activeAccount) return console.error("Active account not found");
+    async fetchUserFundShareValue() {
+      /**
+       * Fetch user's fund share value (denominated in base token).
+       */
+      const activeAccountAddress = this.accountsStore.activeAccount.address;
+      if (!activeAccountAddress) return console.error("Active account not found");
 
-      let balanceWei = "0";
+      let balanceWei = BigInt("0");
       try {
-        balanceWei = await this.fundContract.valueOf(this.userFundTokenBalance).toString();
+        balanceWei = await this.fundContract.methods.valueOf(activeAccountAddress).call();
       } catch (e) {
-        console.log("The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error.");
+        console.error(
+          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
+        );
       }
-      console.log("balanceWei user fund usd value:", balanceWei);
+      console.log("balanceWei user fund share value:", balanceWei);
 
-      const value = ethers.formatEther(balanceWei);
-      this.userFundTokenUsdValue = value;
-    },
-    fetchFundBalance() {
-      // mock data
-      return "10000"
+      this.userFundShareValue = balanceWei;
+      return this.userFundShareValue;
     },
   },
 });

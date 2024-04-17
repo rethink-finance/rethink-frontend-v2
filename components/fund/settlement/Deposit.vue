@@ -95,6 +95,52 @@ const errorMessages = computed<string []>(() => {
 });
 
 
+const deposit = async () => {
+  if (!accountsStore.activeAccount?.address) {
+    toastStore.errorToast("Connect your wallet to deposit tokens to the fund.")
+    return;
+  }
+  console.log("DEPOSIT");
+  loading.value = true;
+
+  const tokensWei = ethers.parseUnits(tokenValue.value, fund.baseToken.decimals)
+  console.log("Deposit tokensWei: ", tokensWei, "from : ", accountsStore.activeAccount.address);
+
+  try {
+    await fundStore.fundContract.methods.deposit().send({
+      from: accountsStore.activeAccount.address,
+      maxPriorityFeePerGas: null,
+      maxFeePerGas: null,
+    }).on("transactionHash", function(hash: string){
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+
+    }).on("receipt", function(receipt: any){
+      console.log("receipt: ", receipt);
+
+      if (receipt.status) {
+        toastStore.successToast("Your deposit was successfull.");
+
+        // Refresh user balances & allowance.
+        fundStore.fetchUserBalances();
+
+        tokenValue.value = "0";
+      } else {
+        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
+      }
+
+      loading.value = false;
+    }).on("error", function(error: any){
+      console.error("deposit error: ", error);
+      loading.value = false;
+      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    });
+  } catch (error: any) {
+    console.error(error);
+  }
+}
+
+
 const requestDeposit = async () => {
   if (!accountsStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to request deposit.")
@@ -106,22 +152,13 @@ const requestDeposit = async () => {
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.baseToken.decimals)
   console.log("Request deposit tokensWei: ", tokensWei, "from : ", accountsStore.activeAccount.address);
 
-  // make a deposit request
-  // const fundStorefundContract = new fundStore.web3.eth.Contract(GovernableFund.abi, fundStore.selectedFundAddress)
-  // console.log(fundStorefundContract.methods);
-
-  // const rec = fundStore.fundContract.methods.requestDeposit(
-  //   tokensWei,
-  // ).send({
-  //   from: accountsStore.activeAccount.address,
-  //   maxPriorityFeePerGas: undefined,
-  //   maxFeePerGas: undefined,
-  // })
   try {
-    await fundStore.fundContract.methods.requestDeposit(
+    const resp = await fundStore.fundContract.methods.requestDeposit(
       tokensWei,
     ).send({
       from: accountsStore.activeAccount.address,
+      maxPriorityFeePerGas: null,
+      maxFeePerGas: null,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
@@ -142,6 +179,7 @@ const requestDeposit = async () => {
       loading.value = false;
       toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     });
+    console.log("resp: ", resp);
   } catch (error: any) {
     // Check Metamask errors:
     // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
@@ -153,10 +191,6 @@ const requestDeposit = async () => {
     }
     loading.value = false;
   }
-};
-
-const deposit = () => {
-  console.log("DEPOSIT");
 };
 
 </script>
