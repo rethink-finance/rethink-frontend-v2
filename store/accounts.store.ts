@@ -83,10 +83,12 @@ export const useAccountsStore = defineStore("accounts", {
           this.chainName = "Goerli";
           break;
         default:
+          console.error("Unknown chain: ", chainId);
           this.chainName = "";
+          this.chainId = "";
           break;
       }
-      console.log("setActiveChain: ", this.chainId, this.chainName);
+      console.log("setActiveChain id: ", this.chainId, " name: ", this.chainName);
     },
     async connectWallet() {
       // Connect to the web3-onboard.
