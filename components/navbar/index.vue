@@ -168,14 +168,14 @@ const routes : IRoute[] = [
 ]
 const selectedChainId = ref("");
 const networks = [
-  { chainId: "0x5", name: "Goerli Testnet" },
   { chainId: "0x89", name: "Polygon" },
   { chainId: "0x2a", name: "Kovan Testnet" },
   { chainId: "0x13881", name: "Mumbai Testnet" },
   { chainId: "0xa869", name: "Fuji Testnet" },
   { chainId: "0x1e15", name: "Canto Testnet" },
+  // { chainId: "0xa4b1", name: "Arbitrum One" },
   { chainId: "0x66eed", name: "Arbitrum Goerli Testnet" },
-  { chainId: "0xa4b1", name: "Arbitrum One" },  // Assuming an example chainId for Arbitrum One
+  { chainId: "0x5", name: "Goerli Testnet" },
 ];
 watch(() => accountsStore.chainId, (newVal, oldVal) => {
   console.log(`Chain ID changed from ${oldVal} to ${newVal}`);

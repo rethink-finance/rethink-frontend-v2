@@ -80,7 +80,7 @@ export const useAccountsStore = defineStore("accounts", {
           this.chainName = "Arbitrum Goerli";
           break;
         case "0x5":
-          this.chainName = "Goerli";
+          this.chainName = "Goerli Testnet";
           break;
         default:
           console.error("Unknown chain: ", chainId);
