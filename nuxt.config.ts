@@ -7,12 +7,17 @@ export default defineNuxtConfig({
   ssr: false,
   app: {
     head: {
-      title: "Rethink",
+      title: "Rethink Finance | Run Funds On-Chain",
       link: [
         { rel: "icon", type: "image/png", href: "/favicon.png" },
       ],
     },
+    //baseURL: '/rethink-frontend-v2/',
+    buildAssetsDir: 'assets',
   },
+//  generate: {
+//    nojekyll: true,
+ // },
   devtools: { enabled: false },
   typescript: {
     typeCheck: true,
@@ -32,6 +37,11 @@ export default defineNuxtConfig({
       INFURA_KEY: process.env.INFURA_KEY,
       WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
     },
+  },
+  routeRules: {
+ //  '/': {prerender: false},
+ //  '/create': {prerender: false},   
+ //  '/governance': {prerender: false},
   },
   modules: [
     (_options, nuxt) => {
@@ -92,4 +102,9 @@ export default defineNuxtConfig({
     "plugins/numeral.ts",
     "plugins/web3-onboard.ts",
   ],
+  nitro: {
+    prerender: {
+      failOnError: false,
+    }
+  }
 });
