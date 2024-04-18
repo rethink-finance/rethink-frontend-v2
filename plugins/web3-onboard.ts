@@ -1,10 +1,9 @@
 import { defineNuxtPlugin } from "#app"
-// eslint-disable-next-line import/order
-import logoSVG from "@/assets/images/logo_mobile.svg"
 import safeModule from "@web3-onboard/gnosis"
 import injectedModule from "@web3-onboard/injected-wallets"
 import { init } from "@web3-onboard/vue"
 import walletConnectModule from "@web3-onboard/walletconnect"
+import logoSVG from "@/assets/images/logo_mobile.svg"
 
 export default defineNuxtPlugin(() => {
   const runtimeConfig = useRuntimeConfig()
@@ -68,18 +67,6 @@ export default defineNuxtPlugin(() => {
         label: "Fuji",
         rpcUrl: "https://api.avax-test.network/ext/bc/C/rpc",
       },
-      // {
-      //   id: "0x1e15",
-      //   token: "Canto Testnet",
-      //   label: "Base",
-      //   rpcUrl: "",
-      // },
-      // {
-      //   id: "0x66eed",
-      //   token: "Arbitrum Goerli",
-      //   label: "Base",
-      //   rpcUrl: "",
-      // },
       {
         id: "0x2105",
         token: "ETH",
