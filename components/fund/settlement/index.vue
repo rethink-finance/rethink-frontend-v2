@@ -46,7 +46,7 @@
 
 <script lang="ts">
 import type IFund from "~/types/fund";
-import type IToken from "~/types/token";
+
 
 export default {
   name: "Settlement",
