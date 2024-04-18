@@ -1,5 +1,5 @@
 export default interface IToken {
-  name: string;
+  symbol: string;
   address: string;
-  balance: number,
+  decimals: number,
 }

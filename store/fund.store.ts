@@ -1,505 +1,507 @@
+import { BaseContract, ethers } from "ethers";
+import { defineStore } from "pinia";
+import { Web3 } from "web3";
+import GovernableFund from "~/assets/contracts/GovernableFund.json";
+import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import { useAccountsStore } from "~/store/accounts.store";
-import type IFund from "~/types/fund";
 import { PositionType } from "~/types/enums/position_type";
+import type IFund from "~/types/fund";
+import type IFundSettings from "~/types/fund_settings";
+import { useWeb3Store } from "~/store/web3.store";
+import type IAddresses from "~/types/addresses";
+import addressesJson from "~/assets/contracts/addresses.json";
+import type INAVUpdate from "~/types/nav_update";
+import type ICyclePendingRequest from "~/types/cycle_pending_request";
+import type IPositionType from "~/types/position_type";
+import ERC20 from "~/assets/contracts/ERC20.json";
+import type IToken from "~/types/token";
+
+// Since the direct import won't infer the custom type, we cast it here.:
+const addresses: IAddresses = addressesJson as IAddresses;
+
+const GovernableFundFactoryContractName = "GovernableFundFactoryBeaconProxy";
+
+export interface FundContract extends BaseContract {
+  requestDeposit: (amount: ethers.BigNumberish, options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
+  totalWithrawalBalance: (options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
+  revokeDepositWithrawal: (isDeposit: boolean, options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
+  deposit: (options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
+  approve: (spender: string, amount: ethers.BigNumberish, options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
+}
+
+const NAVDetailsJSON = {
+  nav_liquid: `{
+        "tokenPair": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+        "aggregatorAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+        "functionSignatureWithEncodedInputs": null,
+        "assetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+        "nonAssetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
+        "isReturnArray": "false",
+        "returnLength": "4",
+        "returnIndex": "1",
+        "pastNAVUpdateIndex": "0"
+      }`,
+  nav_illiquid: `{
+        "tokenPair": "0xNewTokenPairForIlliquid",
+        "aggregatorAddress": "0xNewAggregatorAddressForIlliquid",
+        "functionSignatureWithEncodedInputs": "NewFunctionSignatureForIlliquid",
+        "assetTokenAddress": "0xNewAssetTokenAddressForIlliquid",
+        "nonAssetTokenAddress": "0xNewNonAssetTokenAddressForIlliquid",
+        "isReturnArray": "true",
+        "returnLength": "6",
+        "returnIndex": "2",
+        "pastNAVUpdateIndex": "1"
+      }`,
+};
+
 
 interface IState {
   fund: IFund;
+  funds: IFund[];
   abi: Record<string, any>;
   address: Record<string, any>;
   apy: Record<string, any>;
-  contract: Record<string, any>;
-  userBalance: Record<string, any>;
-  userFundUsdValue: Record<string, any>;
+
+  userBaseTokenBalance: bigint;
+  userFundTokenBalance: bigint;
+  userGovernanceTokenBalance: bigint;
+  userFundAllowance: bigint;
+  userFundShareValue: bigint
+
   selectedFundAddress: string;
+  fundsSettings: Record<string, IFundSettings>;
 }
+
 
 export const useFundStore = defineStore({
   id: "fund",
   state: (): IState => ({
     fund: {} as IFund,
+    funds: [] as IFund[],
     abi: {},
     address: {},
     apy: {},
-    contract: {},
-    userBalance: {},
-    userFundUsdValue: {},
-    selectedFundAddress: "N/A",
+    userBaseTokenBalance: BigInt("0"),
+    userFundTokenBalance: BigInt("0"),
+    userGovernanceTokenBalance: BigInt("0"),
+    userFundAllowance: BigInt("0"),
+    userFundShareValue: BigInt("0"),
+    selectedFundAddress: "",
+    fundsSettings: {} as Record<string, IFundSettings>,
   }),
   getters: {
     accountsStore(): any {
       return useAccountsStore();
     },
-    web3(): any {
-      return this.accountsStore.web3;
+    web3Store(): any {
+      return useWeb3Store();
     },
-    getApy(state: IState): string {
-      return state.apy?.[state.selectedFundAddress];
-    },
-    getSelectedFundAddress(state: IState): string {
-      return state.selectedFundAddress;
-    },
-    geFundAbi(state: IState): any {
-      return state.abi?.[state.selectedFundAddress];
+    web3(): Web3 {
+      return this.web3Store.web3;
     },
     getFundAddress(state: IState): string {
       return state.address?.[state.selectedFundAddress];
     },
-    getFundContract(state: IState): any {
-      return state.contract?.[state.selectedFundAddress];
+    /**
+     * Contracts
+     */
+    // @ts-expect-error: we should extend the return type as Contract<GovernableFundFactory> but
+    // for now we don't have types for each contract made, should be done using typechain or some
+    // other type generator from abi.
+    fundFactoryContract(): Contract {
+      const contractAddress = addresses[GovernableFundFactoryContractName][this.web3Store.chainId];
+      return new this.web3.eth.Contract(GovernableFundFactory.abi, contractAddress)
     },
-    getUserFundUsdValue(state: IState): string {
-      return state.userFundUsdValue?.[state.selectedFundAddress];
+    // @ts-expect-error: we should extend the return type as Contract<GovernableFund> but
+    fundContract(): Contract {
+      return new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress)
     },
-    funds(): IFund[] {
-      return Object.values(this.demoFunds)
-    },
-    demoFunds(): Record<string, IFund> {
-      // Remove this method.
-      const NAVDetailsJSON = {
-        nav_liquid: `{
-          "tokenPair": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-          "aggregatorAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-          "functionSignatureWithEncodedInputs": null,
-          "assetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-          "nonAssetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-          "isReturnArray": "false",
-          "returnLength": "4",
-          "returnIndex": "1",
-          "pastNAVUpdateIndex": "0"
-        }`,
-        nav_illiquid: `{
-          "tokenPair": "0xNewTokenPairForIlliquid",
-          "aggregatorAddress": "0xNewAggregatorAddressForIlliquid",
-          "functionSignatureWithEncodedInputs": "NewFunctionSignatureForIlliquid",
-          "assetTokenAddress": "0xNewAssetTokenAddressForIlliquid",
-          "nonAssetTokenAddress": "0xNewNonAssetTokenAddressForIlliquid",
-          "isReturnArray": "true",
-          "returnLength": "6",
-          "returnIndex": "2",
-          "pastNAVUpdateIndex": "1"
-        }`,
-      };
-
-      return {
-        "1": {
-          id: 1,
-          title: "SOON",
-          subtitle: "Soonami Treasury",
-          avatar_url: "https://api.lorem.space/image/ai?w=60&h=60",
-          chain: "avalanche",
-          description:
-            "1FundDAO is a decentralized finance education company that has been teaching crypto since January 2018, and DeFi since 2020. Our fund uses providing liquidity in Uniswap V3. This is a way for LPs who do not have time to manage their portfolios to have exposure to LP's fully managed and based on the strategies and principles of 1FundDAO. This vault is only accessible to 1DAO members. To learn more, visit 1DAO.io",
-          inception_date: "2021 Feb 16",
-          aum_value: 223541227, // "$223,541,227"
-          cumulative_return_percent: -0.1983,
-          monthly_return_percent: -0.1609,
-          sharpe_ratio: 0.85,
-          address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          governor_address: "0xluk4c4d5e6f7g8h9i0dj1k2l3m45o6p7q8r9s0t",
-          safe_address: "0xbyebyed5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
-          user_fund_balance: "2135",
-          user_fund_usd_value: "$2135",
-          next_settlement: "5 Days",
-          position_types: [
-            {
-              type: PositionType.NAVLiquid,
-              value: 123,
-            },
-            {
-              type: PositionType.NAVComposable,
-              value: 78,
-            },
-            {
-              type: PositionType.NAVNft,
-              value: 287,
-            },
-            {
-              type: PositionType.NAVIlliquid,
-              value: 36,
-            },
-          ],
-          cycle_pending_requests: [
-            {
-              id: "1",
-              token: "SOON",
-              available_tokens: 3570,
-              pending_tokens: 128,
-            },
-            {
-              id: "2",
-              token: "USDC",
-              available_tokens: 1284,
-              pending_tokens: 988,
-            },
-          ],
-          fund_token: {
-            name: "SOON",
-            address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
-            balance: 100,
-          },
-          denomination_token: {
-            name: "USDC",
-            address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            balance: 120,
-          },
-          governor_token: {
-            name: "USDC",
-            address: "0xH2Z3BZ91c6301b36c1d19D4a2e9b0cE3606eB05",
-            balance: 120,
-          },
-          fund_to_denomination_exchange_rate: 1.15,
-          deposit_addresses: [
-            "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xaacc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xddcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xggcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          ],
-          management_addresses: [
-            "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xaacc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xddcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xggcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          ],
-          planned_settlement_cycle: "14 Days",
-          min_liquid_asset_share: "50%",
-          // Governance
-          voting_delay: "400",
-          voting_period: "5600",
-          proposal_threshold: "10.000 1FND",
-          quorom: "10%",
-          late_quorom: "4000",
-          nav_updates: [
-            {
-              date: "12/12/2023",
-              value: "$333,212,321.12",
-              details: NAVDetailsJSON,
-            },
-            {
-              date: "11/12/2023",
-              value: "$323,519,111.11",
-              details: NAVDetailsJSON,
-            },
-          ],
-          // My Positions (user's)
-          net_deposits: "$544,452,56",
-          current_value: "$1,544,452.56",
-          total_return: 0.11,
-          delegating_address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          voting_power: "10",
-        },
-        "2": {
-          id: 2,
-          title: "THL",
-          subtitle: "Tetronode Treasury",
-          avatar_url: "https://api.lorem.space/image/finance?w=60&h=60",
-          chain: "solana",
-          description:
-            "1FundDAO is a decentralized finance education company that has been teaching crypto since January 2018, and DeFi since 2020. Our fund uses providing liquidity in Uniswap V3. This is a way for LPs who do not have time to manage their portfolios to have exposure to LP's fully managed and based on the strategies and principles of 1FundDAO. This vault is only accessible to 1DAO members. To learn more, visit 1DAO.io",
-          inception_date: "2024 Jan 04",
-          aum_value: 223541227, // "$223,541,227"
-          cumulative_return_percent: 0.3944,
-          monthly_return_percent: -0.0809,
-          sharpe_ratio: 1.65,
-          address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          governor_address: "0xluk4c4d5e6f7g8h9i0dj1k2l3m45o6p7q8r9s0t",
-          safe_address: "0xbyebyed5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
-          user_fund_balance: "2135",
-          user_fund_usd_value: "$2135",
-          next_settlement: "5 Days",
-          position_types: [
-            {
-              type: PositionType.NAVLiquid,
-              value: 47,
-            },
-            {
-              type: PositionType.NAVComposable,
-              value: 23,
-            },
-            {
-              type: PositionType.NAVIlliquid,
-              value: 51,
-            },
-          ],
-          cycle_pending_requests: [
-            {
-              id: "1",
-              token: "SOON",
-              available_tokens: 3570,
-              pending_tokens: 128,
-            },
-            {
-              id: "2",
-              token: "USDC",
-              available_tokens: 1284,
-              pending_tokens: 988,
-            },
-          ],
-          fund_token: {
-            name: "SOON",
-            address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
-            balance: 100,
-          },
-          denomination_token: {
-            name: "USDC",
-            address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            balance: 120,
-          },
-          governor_token: {
-            name: "USDC",
-            address: "0xH2Z3BZ91c6301b36c1d19D4a2e9b0cE3606eB05",
-            balance: 120,
-          },
-          fund_to_denomination_exchange_rate: 1.15,
-          deposit_addresses: [
-            "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xaacc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xddcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xggcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          ],
-          management_addresses: [
-            "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xaacc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xddcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xggcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          ],
-          planned_settlement_cycle: "14 Days",
-          min_liquid_asset_share: "50%",
-          // Governance
-          voting_delay: "400",
-          voting_period: "5600",
-          proposal_threshold: "10.000 1FND",
-          quorom: "10%",
-          late_quorom: "4000",
-          nav_updates: [
-            {
-              date: "12/12/2023",
-              value: "$333,212,321.12",
-              details: NAVDetailsJSON,
-            },
-            {
-              date: "11/12/2023",
-              value: "$323,519,111.11",
-              details: NAVDetailsJSON,
-            },
-          ],
-          // My Positions (user's)
-          net_deposits: "$544,452,56",
-          current_value: "$1,544,452.56",
-          total_return: 0.11,
-          delegating_address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          voting_power: "10",
-        },
-        "3": {
-          id: 3,
-          title: "1FUND",
-          subtitle: "1FUND DAO",
-          avatar_url: "https://api.lorem.space/image/game?w=60&h=60",
-          chain: "ethereum",
-          description:
-            "1FundDAO is a decentralized finance education company that has been teaching crypto since January 2018, and DeFi since 2020. Our fund uses providing liquidity in Uniswap V3. This is a way for LPs who do not have time to manage their portfolios to have exposure to LP's fully managed and based on the strategies and principles of 1FundDAO. This vault is only accessible to 1DAO members. To learn more, visit 1DAO.io",
-          inception_date: "2022 Dec 10",
-          aum_value: 223541227, // "$223,541,227"
-          cumulative_return_percent: 0.1255,
-          monthly_return_percent: 0.1204,
-          sharpe_ratio: 1.65,
-          address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          governor_address: "0xluk4c4d5e6f7g8h9i0dj1k2l3m45o6p7q8r9s0t",
-          safe_address: "0xbyebyed5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
-          user_fund_balance: "2135",
-          user_fund_usd_value: "$2135",
-          next_settlement: "5 Days",
-          position_types: [
-            {
-              type: PositionType.NAVLiquid,
-              value: 551,
-            },
-            {
-              type: PositionType.NAVIlliquid,
-              value: 852,
-            },
-          ],
-          cycle_pending_requests: [
-            {
-              id: "1",
-              token: "SOON",
-              available_tokens: 3570,
-              pending_tokens: 128,
-            },
-            {
-              id: "2",
-              token: "USDC",
-              available_tokens: 1284,
-              pending_tokens: 988,
-            },
-          ],
-          fund_token: {
-            name: "SOON",
-            address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
-            balance: 100,
-          },
-          denomination_token: {
-            name: "USDC",
-            address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            balance: 120,
-          },
-          governor_token: {
-            name: "USDC",
-            address: "0xH2Z3BZ91c6301b36c1d19D4a2e9b0cE3606eB05",
-            balance: 120,
-          },
-          fund_to_denomination_exchange_rate: 1.15,
-          deposit_addresses: [
-            "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xaacc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xddcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xggcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          ],
-          management_addresses: [
-            "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xaacc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xddcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xggcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          ],
-          planned_settlement_cycle: "14 Days",
-          min_liquid_asset_share: "50%",
-          // Governance
-          voting_delay: "400",
-          voting_period: "5600",
-          proposal_threshold: "10.000 1FND",
-          quorom: "10%",
-          late_quorom: "4000",
-          nav_updates: [
-            {
-              date: "12/12/2023",
-              value: "$333,212,321.12",
-              details: NAVDetailsJSON,
-            },
-            {
-              date: "11/12/2023",
-              value: "$323,519,111.11",
-              details: NAVDetailsJSON,
-            },
-          ],
-          // My Positions (user's)
-          net_deposits: "$544,452,56",
-          current_value: "$1,544,452.56",
-          total_return: 0.11,
-          delegating_address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          voting_power: "10",
-        },
-        "4": {
-          id: 4,
-          title: "AF",
-          subtitle: "Awesome Fund",
-          avatar_url: "https://api.lorem.space/image/dashboard?w=60&h=60",
-          chain: "dogecoin",
-          description:
-            "1FundDAO is a decentralized finance education company that has been teaching crypto since January 2018, and DeFi since 2020. Our fund uses providing liquidity in Uniswap V3. This is a way for LPs who do not have time to manage their portfolios to have exposure to LP's fully managed and based on the strategies and principles of 1FundDAO. This vault is only accessible to 1DAO members. To learn more, visit 1DAO.io",
-          inception_date: "2021 Feb 16",
-          aum_value: 223541227, // "$223,541,227"
-          cumulative_return_percent: -0.1983,
-          monthly_return_percent: -0.1609,
-          sharpe_ratio: 0.85,
-          address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          governor_address: "0xluk4c4d5e6f7g8h9i0dj1k2l3m45o6p7q8r9s0t",
-          safe_address: "0xbyebyed5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
-          user_fund_balance: "2135",
-          user_fund_usd_value: "$2135",
-          next_settlement: "5 Days",
-          position_types: [
-            {
-              type: PositionType.NAVLiquid,
-              value: 123,
-            },
-            {
-              type: PositionType.NAVComposable,
-              value: 78,
-            },
-            {
-              type: PositionType.NAVNft,
-              value: 287,
-            },
-            {
-              type: PositionType.NAVIlliquid,
-              value: 36,
-            },
-          ],
-          cycle_pending_requests: [
-            {
-              id: "1",
-              token: "SOON",
-              available_tokens: 3570,
-              pending_tokens: 128,
-            },
-            {
-              id: "2",
-              token: "USDC",
-              available_tokens: 1284,
-              pending_tokens: 988,
-            },
-          ],
-          fund_token: {
-            name: "SOON",
-            address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
-            balance: 100,
-          },
-          denomination_token: {
-            name: "USDC",
-            address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-            balance: 120,
-          },
-          governor_token: {
-            name: "USDC",
-            address: "0xH2Z3BZ91c6301b36c1d19D4a2e9b0cE3606eB05",
-            balance: 120,
-          },
-          fund_to_denomination_exchange_rate: 1.15,
-          deposit_addresses: [
-            "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xaacc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xddcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xggcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          ],
-          management_addresses: [
-            "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xaacc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xddcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-            "0xggcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          ],
-          planned_settlement_cycle: "14 Days",
-          min_liquid_asset_share: "50%",
-          // Governance
-          voting_delay: "400",
-          voting_period: "5600",
-          proposal_threshold: "10.000 1FND",
-          quorom: "10%",
-          late_quorom: "4000",
-          nav_updates: [
-            {
-              date: "12/12/2023",
-              value: "$333,212,321.12",
-              details: NAVDetailsJSON,
-            },
-            {
-              date: "11/12/2023",
-              value: "$323,519,111.11",
-              details: NAVDetailsJSON,
-            },
-          ],
-          // My Positions (user's)
-          net_deposits: "$544,452,56",
-          current_value: "$1,544,452.56",
-          total_return: 0.11,
-          delegating_address: "0xbbcc3c4d5e6f7g8h9i0j1k2l3m4n5o67q8r9s0t",
-          voting_power: "10",
-        },
-      };
+    // @ts-expect-error: we should extend the return type ...
+    fundBaseTokenContract(): Contract {
+      return new this.web3.eth.Contract(ERC20, this.fund.baseToken.address)
     },
   },
   actions: {
-    fetchFund(fundId: string) {
-      this.fund = this.demoFunds[fundId];
-      return this.fund;
+    batchFetchFundSettings() {
+      /** @dev: I tried many, many things to make this BatchRequest work with web3 4.x, this is the closest I came.
+       * https://docs.web3js.org/guides/web3_upgrade_guide/x/#web3-batchrequest
+       *       const batch = new this.web3.BatchRequest();
+       *       // Define the request for getFundSettings
+       *       const con = new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress);
+       *       const getFundSettingsRequest: any = {
+       *         jsonrpc: "2.0",
+       *         id: 1,
+       *         method: "eth_call",
+       *         params: [{
+       *           to: this.selectedFundAddress,
+       *           data: con.methods.getFundSettings().encodeABI(),
+       *         }, "latest"],
+       *       };
+       *
+       *       // Add the request to the batch and capture the promise
+       *       const getFundSettingsPromise = batch.add(getFundSettingsRequest);
+       *
+       *       // Execute the batch
+       *       const rep = batch.execute();
+       *       console.log("rep: ", rep);
+       *
+       *       // Handle the promise
+       *       getFundSettingsPromise.then((response: any) => {
+       *         console.log(response);
+       *       }).catch((error: any) => {
+       *         console.error("Error fetching getFundSettings:", error);
+       *       });
+       */
+      console.error("not implemented");
+    },
+    parseFundSettings(fundData: any) {
+      const fundSettings: Partial<IFundSettings> = {};
+
+      // Directly iterate over the fund details object's entries.
+      Object.entries(fundData).forEach(([key, value]) => {
+        // Assume that every key in details corresponds to a valid key in IFundSettings.
+        const detailKey = key as keyof IFundSettings;
+
+        // Convert bigint values to strings, otherwise assign the value directly.
+        // This approach skips checking if detailKey is explicitly part of fundSettings
+        // since fundSettings is typed as Partial<IFundSettings> and initialized accordingly.
+        fundSettings[detailKey] = typeof value === "bigint" ? value.toString() : value;
+      });
+
+      return fundSettings;
+    },
+    fetchUserBalances() {
+      return Promise.all([
+        this.fetchUserBaseTokenBalance(),
+        this.fetchUserFundTokenBalance(),
+        this.fetchUserFundShareValue(),
+        this.fetchUserFundAllowance(),
+      ]);
+    },
+    async fetchFundData() {
+      /**
+       * Fetch multiple fund data:
+       * - getFundSettings
+       * - getFundStartTime
+       * - fundMetadata
+       *
+       * @dev: would be better to separate fundSettings from (startTime & metadata), as sometimes we already
+       *   have the fund settings from the discovery page.
+       */
+      // Fetch inception date
+      const settingsPromise = this.fundContract.methods.getFundSettings().call();
+      const startTimePromise = this.fundContract.methods.getFundStartTime().call();
+      const metadataPromise = this.fundContract.methods.fundMetadata().call();
+
+      try {
+        // Await all promises and destructure their resolved values
+        const [settingsData, fundStartTime, metaDataJson] = await Promise.all([
+          settingsPromise,
+          startTimePromise,
+          metadataPromise,
+        ]);
+
+        // Process the fund settings with a method assumed to be available in the current scope
+        const fundSettings: Partial<IFundSettings> = this.parseFundSettings(settingsData);
+        // Fetch Base/Base token symbol.
+        // @dev: would be better to just have this available in the FundSettings data.
+        const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, settingsData?.baseToken);
+        const fundTokenContract = new this.web3.eth.Contract(ERC20, settingsData?.fundAddress);
+        const governanceTokenContract = new this.web3.eth.Contract(ERC20, settingsData?.governanceToken);
+
+        // Fetch all token symbols and decimals.
+        // @dev: maybe there are more things to be fetched here.
+        const [
+          baseTokenSymbol,
+          baseTokenDecimals,
+          governanceTokenSymbol,
+          governanceTokenDecimals,
+          fundTokenDecimals,
+        ] = await Promise.all([
+          fundBaseTokenContract.methods.symbol().call(),
+          fundBaseTokenContract.methods.decimals().call(),
+          governanceTokenContract.methods.symbol().call(),
+          governanceTokenContract.methods.decimals().call(),
+          fundTokenContract.methods.decimals().call(),
+        ]);
+
+        const fund: IFund = {
+          address: fundSettings.fundAddress || "",
+          title: fundSettings.fundName || "N/A",
+          subtitle: fundSettings.fundName || "N/A",
+          description: "N/A",
+          safeAddress: fundSettings.safe || "",
+          governorAddress: fundSettings.governor || "",
+          // @dev: Default photo, we can replace it with some gray fund photo.
+          photoUrl: "https://api.lorem.space/image/ai?w=60&h=60",
+          inceptionDate: fundStartTime ? formatDate(new Date(Number(fundStartTime) * 1000)) : "",
+          fundToken: {
+            symbol: fundSettings.fundSymbol,
+            address: fundSettings.fundAddress,
+            decimals: fundTokenDecimals ?? 18,
+          } as IToken,
+          baseToken: {
+            symbol: baseTokenSymbol ?? "",
+            address: fundSettings.baseToken,
+            decimals: baseTokenDecimals ?? 18,
+          } as IToken,
+          governanceToken: {
+            symbol: governanceTokenSymbol ?? "",
+            address: fundSettings.governanceToken,
+            decimals: governanceTokenDecimals ?? 18,
+          } as IToken,
+          chain: "",
+          aumValue: 0,
+          cumulativeReturnPercent: 0,
+          monthlyReturnPercent: 0,
+          sharpeRatio: 0,
+          // TODO remove these position types, replace with []
+          positionTypes: [
+            {
+              type: PositionType.NAVLiquid,
+              value: 123,
+            },
+            {
+              type: PositionType.NAVComposable,
+              value: 78,
+            },
+            {
+              type: PositionType.NAVNft,
+              value: 287,
+            },
+            {
+              type: PositionType.NAVIlliquid,
+              value: 36,
+            },
+          ] as IPositionType[],
+          cyclePendingRequests: [] as ICyclePendingRequest[],
+          fundToBaseExchangeRate: 0,
+
+          // My Fund Positions
+          netDeposits: "",
+          currentValue: "",
+          totalReturn: 0,
+
+          // Overview fields
+          depositAddresses: [],
+          managementAddresses: [],
+          plannedSettlementPeriod: "",
+          minLiquidAssetShare: "",
+
+          // Governance
+          votingDelay: "",
+          votingPeriod: "",
+          proposalThreshold: "",
+          quorom: "",
+          lateQuorom: "",
+
+          // NAV Updates
+          navUpdates: [] as INAVUpdate[],
+        } as IFund;
+
+        // Process metadata if available
+        if (metaDataJson) {
+          const metaData = JSON.parse(metaDataJson);
+          console.log("fund metaData: ", metaData);
+          fund.description = metaData.description;
+          fund.photoUrl = metaData.photoUrl;
+          fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
+          fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
+        }
+
+        return fund;
+      } catch (error) {
+        console.error("Error in promises:", error);
+        return {} as IFund; // Return an empty or default object in case of error
+      }
+    },
+    async getFund(fundAddress: string) {
+      /**
+       * This function finds and returns fund in the funds array.
+       */
+      this.selectedFundAddress = fundAddress;
+
+      // TODO Check if fund already exists in the fetched funds.
+      //   If yes, only fetch metadata & inception date, do not fetch fundSettings again, as we have it already.
+      // let fund = this.funds.find(f => f.fundAddress === fundAddress);
+      try {
+        // TODO only fetch fund if not found the fund
+        this.fund = await this.fetchFundData() as IFund;
+        console.log(this.fund)
+        await this.fetchUserBalances();
+      } catch (e) {
+        console.error(`Failed fetching fund ${fundAddress} -> `, e)
+      }
+
+      if (!this.fund) {
+        console.error(`Fund not found with address: ${fundAddress}`);
+      }
+    },
+    async fetchFunds() {
+      /**
+       * This function fetches all funds data from the GovernableFundFactory.
+       */
+      console.log("fetchFunds");
+      const fundFactoryContract = this.fundFactoryContract;
+      const fundsLength = await fundFactoryContract.methods.registeredFundsLength().call();
+
+      const fundsInfo = await fundFactoryContract.methods.registeredFundsData(0, fundsLength).call();
+      const fundAddresses: string[] = fundsInfo[0];
+
+      // Reset funds as we will populate them with new data.
+      this.funds = [];
+
+      for (let i = 0; i < fundAddresses.length; i++) {
+        const fundAddress: string = fundAddresses[i] as string;
+        const fundSettings: Partial<IFundSettings> = this.parseFundSettings(fundsInfo[1][i])
+        if (!this.fundsSettings[fundAddress]) {
+          this.fundsSettings[fundAddress] = fundSettings as IFundSettings;
+        }
+
+        // TODO fix this data to be such as in the fetchFundData, reuse it.
+        this.funds.push(
+          {
+            address: fundSettings.fundAddress || "",
+            title: fundSettings.fundName || "N/A",
+            subtitle: fundSettings.fundName || "N/A",
+            description: fundSettings.fundName || "N/A",
+            safeAddress: fundSettings.safe || "",
+            governorAddress: fundSettings.governor || "",
+            photoUrl: "https://api.lorem.space/image/ai?w=60&h=60",
+            fundToken: {
+              symbol: fundSettings.fundSymbol || "N/A",
+              address: fundSettings.fundAddress || "N/A",
+              decimals: 18,
+            },
+            baseToken: {
+              symbol: "fundSettings.baseSymbol",
+              address: fundSettings.baseToken,
+              decimals: 18,
+            },
+            governanceToken: {
+              symbol: "TODO", // TODO get governanceToken, same as getting baseToken symbol?
+              address: fundSettings.governanceToken || "N/A",
+              decimals: 18,
+            },
+            chain: "",
+            inceptionDate: "",
+            aumValue: 0,
+            cumulativeReturnPercent: 0,
+            monthlyReturnPercent: 0,
+            sharpeRatio: 0,
+            // TODO remove these position types, replace with []
+            positionTypes: [
+              {
+                type: PositionType.NAVLiquid,
+                value: 123,
+              },
+              {
+                type: PositionType.NAVComposable,
+                value: 78,
+              },
+              {
+                type: PositionType.NAVNft,
+                value: 287,
+              },
+              {
+                type: PositionType.NAVIlliquid,
+                value: 36,
+              },
+            ] as IPositionType[],
+            cyclePendingRequests: [] as ICyclePendingRequest[],
+            fundToBaseExchangeRate: 0,
+
+            // My Fund Positions
+            netDeposits: "",
+            currentValue: "",
+            totalReturn: 0,
+
+            // Overview fields
+            depositAddresses: [],
+            managementAddresses: [],
+            plannedSettlementPeriod: "",
+            minLiquidAssetShare: "",
+
+            // Governance
+            votingDelay: "",
+            votingPeriod: "",
+            proposalThreshold: "",
+            quorom: "",
+            lateQuorom: "",
+
+            // NAV Updates
+            navUpdates: [] as INAVUpdate[],
+          } as IFund,
+        )
+      }
+    },
+    async fetchUserBaseTokenBalance() {
+      /**
+       * Fetch connected user's wallet balance of the base/denomination token.
+       */
+      if (!this.fund?.baseToken?.address) {
+        throw new Error("Fund denomination token address is not available.")
+      }
+      const activeAccountAddress = this.accountsStore.activeAccount.address;
+      if (!activeAccountAddress) throw new Error("Active account not found");
+
+      this.userBaseTokenBalance = await this.fundBaseTokenContract.methods.balanceOf(activeAccountAddress).call();
+
+      console.log(`user base token balance of ${this.fund?.baseToken?.symbol} is ${this.userBaseTokenBalance}`);
+      return this.userBaseTokenBalance;
+    },
+    async fetchUserFundTokenBalance() {
+      /**
+       * Fetch connected user's wallet balance of the fund token.
+       */
+      if (!this.fund?.fundToken?.address) {
+        throw new Error("Fund token address is not available.")
+      }
+      const activeAccountAddress = this.accountsStore.activeAccount.address;
+      if (!activeAccountAddress) throw new Error("Active account not found");
+
+      this.userFundTokenBalance = await this.fundContract.methods.balanceOf(activeAccountAddress).call();
+
+      console.log(`user fund token balance of ${this.fund?.fundToken?.symbol} is ${this.userFundTokenBalance}`);
+      return this.userFundTokenBalance;
+    },
+    async fetchUserFundAllowance() {
+      /**
+       * Fetch connected user's fund allowance.
+       * Amount of tokens the fund is allowed to act with (transfer/deposit/withdraw...).
+       */
+      if (!this.fund?.baseToken?.address) {
+        throw new Error("Fund denomination token is not available.")
+      }
+      const activeAccountAddress = this.accountsStore.activeAccount?.address
+      if (!activeAccountAddress) return console.error("Active account not found");
+
+      this.userFundAllowance = await this.fundBaseTokenContract.methods.allowance(
+        activeAccountAddress, this.selectedFundAddress,
+      ).call();
+
+      console.log(`user fund allowance of ${this.fund?.baseToken?.symbol} is ${this.userFundAllowance}`);
+      return this.userFundAllowance;
+    },
+    async fetchUserFundShareValue() {
+      /**
+       * Fetch user's fund share value (denominated in base token).
+       */
+      const activeAccountAddress = this.accountsStore.activeAccount.address;
+      if (!activeAccountAddress) return console.error("Active account not found");
+
+      let balanceWei = BigInt("0");
+      try {
+        balanceWei = await this.fundContract.methods.valueOf(activeAccountAddress).call();
+      } catch (e) {
+        console.error(
+          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
+        );
+      }
+      console.log("balanceWei user fund share value:", balanceWei);
+
+      this.userFundShareValue = balanceWei;
+      return this.userFundShareValue;
     },
   },
 });

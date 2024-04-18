@@ -6,11 +6,18 @@
 
     <p>
       The deposit and redeem requests are settled within the planned Settlement Cycle
-      of <span class="text-primary">14 days</span>.
-      You can learn more about how settlements work <a href="#">here</a>.
+      of <span class="text-primary">{{ fund.plannedSettlementPeriod }}</span>.
+      You can learn more about how settlements work
+      <a href="https://docs.rethink.finance/rethink.finance" target="_blank">here</a>.
     </p>
   </div>
 </template>
+
+<script setup lang="ts">
+import { useFundStore } from "~/store/fund.store";
+
+const { fund } = toRefs(useFundStore());
+</script>
 
 <style lang="scss" scoped>
 .deposit_redeem_notification {

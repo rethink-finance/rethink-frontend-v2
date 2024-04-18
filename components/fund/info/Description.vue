@@ -4,7 +4,7 @@
       <div class="fund_description__details">
         <v-avatar size="3.5rem" rounded="0">
           <img
-            :src="fund.avatar_url"
+            :src="fund.photoUrl"
             class="fund_description__avatar_img bg-cover"
             alt="fund cover image"
           >
@@ -69,10 +69,10 @@ export default {
       return truncateAddress(this.fund?.address);
     },
     formatGovernanceAddress() {
-      return truncateAddress(this.fund?.governor_address);
+      return truncateAddress(this.fund?.governorAddress);
     },
     formatSafeAddress() {
-      return truncateAddress(this.fund?.safe_address);
+      return truncateAddress(this.fund?.safeAddress);
     },
   },
   methods: {
@@ -85,14 +85,14 @@ export default {
     },
     async copyGovernorAddr() {
       try {
-        await navigator.clipboard.writeText(this.fund?.governor_address);
+        await navigator.clipboard.writeText(this.fund?.governorAddress);
         // const msg = "Copied Governor Address (" + this.fund.governor + ") to clipboard";
         // this.$toast.success(msg);
       } catch ($e) {}
     },
     async copySafeAddr() {
       try {
-        await navigator.clipboard.writeText(this.fund?.safe_address);
+        await navigator.clipboard.writeText(this.fund?.safeAddress);
         // const msg = "Copied Safe Address (" + this.fund.safe + ") to clipboard";
         // this.$toast.success(msg);
       } catch ($e) {}
@@ -106,6 +106,7 @@ export default {
   display: flex;
   gap: 2.5rem;
   flex-direction: column;
+  justify-content: space-between;
 
   @include sm {
     flex-direction: row;

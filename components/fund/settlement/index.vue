@@ -3,7 +3,7 @@
     <div class="card_header">
       <div>
         <div class="section_title">
-          {{ fund.next_settlement }}
+          {{ fund.plannedSettlementPeriod }}
         </div>
         <div class="section_subtitle">
           Next Settlement
@@ -34,11 +34,8 @@
     </div>
     <div class="fund_settlement__card_boxes">
       <div v-if="selectedActionButtonValue" class="card_box">
-        <FundSettlementDepositRedeem
-          :action="selectedActionButtonValue"
-          :token0="getToken0"
-          :token1="getToken1"
-        />
+        <FundSettlementDeposit v-if="isSelectedDepositButton" />
+        <!--        <FundSettlementRedeem v-if="isSelectedRedeemButton" />-->
       </div>
       <div class="card_box card_box--no-padding">
         <FundSettlementDepositRedeemNotification />
@@ -65,17 +62,11 @@ export default {
     };
   },
   computed: {
-    getToken0(): IToken {
-      if (this.selectedActionButtonValue === "deposit") {
-        return this.fund.fund_token;
-      }
-      return this.fund.denomination_token;
+    isSelectedDepositButton() {
+      return this.selectedActionButtonValue === "deposit";
     },
-    getToken1(): IToken {
-      if (this.selectedActionButtonValue === "deposit") {
-        return this.fund.denomination_token;
-      }
-      return this.fund.fund_token;
+    isSelectedRedeemButton() {
+      return this.selectedActionButtonValue === "redeem";
     },
   },
   methods: {
@@ -100,6 +91,7 @@ export default {
 
 <style lang="scss" scoped>
 .fund_settlement {
+  overflow: auto;
   &__buttons {
     display: flex;
     gap: 1rem;

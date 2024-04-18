@@ -36,9 +36,9 @@ watch(() => toastStore.toasts, (newToasts) => {
 const backgroundClass = (level) => {
   // Define your mapping of levels to background classes
   const levelClasses = {
-    success: "bg-success",
-    warning: "bg-warning ",
-    error: "bg-danger",
+    success: "toast-bg-success",
+    warning: "toast-bg-warning ",
+    error: "toast-bg-danger",
   };
 
   // Return the corresponding class for the given level
@@ -52,12 +52,25 @@ const textColorClass = (level) => {
 </script>
 
 <style lang="scss" scoped>
-.bg-success,
-.bg-warning,
-.bg-danger {
-  .toast-body {
-    font-weight: bold;
+.toast-bg-success,
+.toast-bg-warning,
+.toast-bg-danger {
+  :deep(.v-snackbar__content) {
+    font-weight: bold !important;
   }
+}
+
+.toast-bg-success :deep(.v-overlay__content.v-snackbar__wrapper) {
+  background: $color-success !important;
+  color: $color-success-text !important;
+}
+.toast-bg-danger :deep(.v-overlay__content.v-snackbar__wrapper) {
+  background: $color-error !important;
+  color: $color-error-text !important;
+}
+.toast-bg-warning :deep(.v-overlay__content.v-snackbar__wrapper) {
+  background: $color-warning !important;
+  color: $color-warning-text !important;
 }
 
 :deep(.v-overlay__content.v-snackbar__wrapper) {

@@ -1,17 +1,21 @@
 <template>
   <div class="discover">
-      <h3 class="main_title">Rethink Fund DAOs</h3>
+    <h3 class="main_title">Rethink Fund DAOs</h3>
+    <div v-if="loadingFunds">
+      <v-skeleton-loader type="table" />
+    </div>
+    <div v-else>
       <Table :data="funds" :columns="columns" :get-cell-class="getCellClass" :showControls="false" />
+    </div>
   </div>
 </template>
 
 <script setup lang="jsx">
-import { ref, h } from "vue";
 import { useFundStore } from "~/store/fund.store";
 // It is important not to remove the following two imports or they
 // will not be visible in the production build.
-import FundNameCell from "../components/table/components/FundNameCell";
 import PositionTypesBar from "~/components/fund/info/PositionTypesBar";
+import FundNameCell from "../components/table/components/FundNameCell";
 
 const columns = ref([
   {
@@ -24,7 +28,7 @@ const columns = ref([
     cell: ({ row }) => {
       const fund = row.original;
       return h(<FundNameCell />, {
-        image: fund?.avatar_url,
+        image: fund?.photoUrl,
         title: fund?.title,
         subtitle: fund?.subtitle,
       });
@@ -36,67 +40,82 @@ const columns = ref([
     size: 62,
     maxWidth: 62,
     cell: (info) => {
-      return h(<Icon class="mr-2" size="1.5rem" color="white"/>, {
+      return h(<Icon class="mr-2" size="1.5rem" color="white" />, {
         name: chainIconName(info.getValue()),
       });
     },
   },
   {
-    accessorKey: "aum_value",
+    accessorKey: "aumValue",
     header: "AUM",
     cell: (info) => formatUSDValue(info.getValue()),
   },
   {
-    accessorKey: "inception_date",
+    accessorKey: "inceptionDate",
     header: "Inception",
     cell: (info) => info.getValue(),
   },
   {
-    accessorKey: "cumulative_return_percent",
+    accessorKey: "cumulativeReturnPercent",
     header: "Cumulative",
     size: 100,
     maxSize: 130,
     cell: (info) => formatPercent(info.getValue()),
   },
   {
-    accessorKey: "monthly_return_percent",
+    accessorKey: "monthlyReturnPercent",
     header: "Monthly",
     maxSize: 100,
     cell: (info) => formatPercent(info.getValue()),
   },
   {
-    accessorKey: "sharpe_ratio",
+    accessorKey: "sharpeRatio",
     header: "Sharpe Ratio",
     minSize: 115,
     cell: (info) => info.getValue(),
   },
   {
-    accessorKey: "position_types",
+    accessorKey: "positionTypes",
     header: "Position Types",
     size: "auto",
     minSize: 128,
     maxSize: 158,
     cell: (info) => {
-      return h(<PositionTypesBar />, {
-        'position-types': info.getValue(),
+      return h(PositionTypesBar, {
+        "position-types": info.getValue() ?? [],
       });
     },
   },
 ]);
 
+
+const loadingFunds = ref(true);
+const funds = computed(() => fundStore.funds);
+const fundStore = useFundStore();
+
+onMounted(async () => {
+  loadingFunds.value = true;
+  try {
+    await fundStore.fetchFunds();
+  } catch (e) {
+    console.error("fetchFunds -> ", e);
+   }
+  loadingFunds.value = false;
+});
+
 function getCellClass(cell) {
-  if (["monthly_return_percent", "cumulative_return_percent"].includes(cell.column.id)) {
+  if (["monthlyReturnPercent", "cumulativeReturnPercent"].includes(cell.column.id)) {
     return numberColorClass(cell.getValue());
   }
   // Uncomment if we want to color Sharpe ratio also.
-  // else if ('sharpe_ratio' === cell.column.id) {
+  // else if ('sharpeRatio' === cell.column.id) {
   //   return numberColorClass(cell.getValue(), 1);
   // }
-  return '';
+  return "";
 }
 
-const fundStore = useFundStore();
-const funds = computed(() => fundStore.funds);
+// const fundStore = useFundStore();
+// const funds = computed(() => fundStore.funds);
 </script>
 
 <style lang="scss">

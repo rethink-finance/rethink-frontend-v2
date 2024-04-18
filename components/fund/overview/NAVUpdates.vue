@@ -1,7 +1,7 @@
 <template>
   <div class="details main_grid main_grid--full-width">
     <UiDataRowCard
-      v-for="(navUpdate, index) in fund.nav_updates"
+      v-for="(navUpdate, index) in fund.navUpdates"
       :key="index"
       :title="navUpdate.date"
       :grow-column1="true"

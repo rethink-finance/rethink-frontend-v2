@@ -3,13 +3,7 @@
     <UiDataBar title="Governance">
       <div class="data_bar__item">
         <div class="data_bar__title">
-          <Icon
-            name="mdi:circle"
-            color="white"
-            size="0.75rem"
-            class="mr-2"
-          />
-          {{ truncateAddress(fund.delegating_address) }}
+          {{ truncateAddress(fund.governorAddress) }}
         </div>
         <div class="data_bar__subtitle">
           Delegating To
@@ -17,7 +11,7 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fund.voting_power }} {{ fund.fund_token.name }}
+          {{ userGovernanceTokenBalanceFormatted }} {{ fund.governanceToken.symbol }}
         </div>
         <div class="data_bar__subtitle">
           Voting Power
@@ -36,6 +30,7 @@
 
 <script lang="ts">
 import type IFund from "~/types/fund";
+import { useFundStore } from "~/store/fund.store";
 
 export default {
   name: "FundInfoGovernance",
@@ -43,6 +38,15 @@ export default {
     fund: {
       type: Object as PropType<IFund>,
       default: () => {},
+    },
+  },
+  setup() {
+    const fundStore = useFundStore();
+    return { fundStore }
+  },
+  computed: {
+    userGovernanceTokenBalanceFormatted() {
+      return formatTokenValue(this.fundStore.userGovernanceTokenBalance, this.fund.governanceToken.decimals);
     },
   },
 };

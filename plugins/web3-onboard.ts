@@ -1,9 +1,10 @@
 import { defineNuxtPlugin } from "#app"
-import { init } from "@web3-onboard/vue"
+// eslint-disable-next-line import/order
+import logoSVG from "@/assets/images/logo_mobile.svg"
 import safeModule from "@web3-onboard/gnosis"
-import walletConnectModule from "@web3-onboard/walletconnect"
 import injectedModule from "@web3-onboard/injected-wallets"
-import logoSVG from "@/assets/images/logo_mobile.svg";
+import { init } from "@web3-onboard/vue"
+import walletConnectModule from "@web3-onboard/walletconnect"
 
 export default defineNuxtPlugin(() => {
   const runtimeConfig = useRuntimeConfig()
@@ -37,6 +38,54 @@ export default defineNuxtPlugin(() => {
   init({
     wallets: [injected, safe, walletConnect],
     chains: [
+      {
+        id: "0x2a",
+        token: "KVT",
+        label: "Kovan",
+        rpcUrl: "https://kovan.infura.io/v3/<YOUR_INFURA_PROJECT_ID>",
+      },
+      {
+        id: "0x89",
+        token: "MATIC",
+        label: "Polygon",
+        rpcUrl: "https://polygon-rpc.com/",
+      },
+      // {
+      //   id: "0xa868",
+      //   token: "Localhost",
+      //   label: "Base",
+      //   rpcUrl: "",
+      // },
+      {
+        id: "0x13881",
+        token: "MATIC",
+        label: "Mumbai",
+        rpcUrl: "https://matic-mumbai.chainstacklabs.com/",
+      },
+      {
+        id: "0xa869",
+        token: "AVAX",
+        label: "Fuji",
+        rpcUrl: "https://api.avax-test.network/ext/bc/C/rpc",
+      },
+      // {
+      //   id: "0x1e15",
+      //   token: "Canto Testnet",
+      //   label: "Base",
+      //   rpcUrl: "",
+      // },
+      // {
+      //   id: "0x66eed",
+      //   token: "Arbitrum Goerli",
+      //   label: "Base",
+      //   rpcUrl: "",
+      // },
+      {
+        id: "0x2105",
+        token: "ETH",
+        label: "Base",
+        rpcUrl: "https://mainnet.base.org",
+      },
       {
         id: 42161,
         token: "ARB-ETH",

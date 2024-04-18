@@ -3,10 +3,11 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  // TODO set to true in production.
   ssr: false,
   app: {
     head: {
-      title: "Rethink",
+      title: "Rethink Finance | Run Funds On-Chain",
       link: [
         { rel: "icon", type: "image/png", href: "/favicon.png" },
       ],
@@ -32,6 +33,7 @@ export default defineNuxtConfig({
   ],
   runtimeConfig: {
     public: {
+      INFURA_PROJECT_ID: process.env.INFURA_PROJECT_ID,
       INFURA_KEY: process.env.INFURA_KEY,
       WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
     },

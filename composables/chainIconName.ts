@@ -12,11 +12,12 @@ const chainToIconMap: Record<string, string> = {
   // Add more if needed.
 };
 
-export const chainIconName = (chain: string): string => {
+export const chainIconName = (chain?: string): string => {
   /**
    * Icons are available here:
    * https://icones.js.org/collection/cryptocurrency-color
    **/
+  if (!chain) return "";
   const iconName = chainToIconMap[chain];
   return iconName ? `cryptocurrency-color:${iconName}` : "";
 }

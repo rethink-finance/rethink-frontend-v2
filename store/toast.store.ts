@@ -37,6 +37,9 @@ export const useToastStore = defineStore({
       this.addToast(message, "warning", duration);
     },
     errorToast(message: string, duration?: number) {
+      if (!duration) {
+        duration = 6000;
+      }
       this.addToast(message, "error", duration);
     },
     closeToast(id: number): void {

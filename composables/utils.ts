@@ -22,8 +22,10 @@ export const toPascalCase = (str: string) =>
       .concat(word.slice(1)))
     .join("")
 
-export const capitalizeFirst = (str: string): string =>
-  str?.charAt(0).toUpperCase() + str?.slice(1);
+export const capitalizeFirst = (str?: string): string => {
+  if (!str) return "";
+  return str?.charAt(0).toUpperCase() + str?.slice(1);
+}
 
 
 /**
