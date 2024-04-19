@@ -8,25 +8,38 @@
   >
     <template #buttons>
       <template v-if="accountsStore.isConnected">
-        <div class="request_deposit__button">
-          <div class="request_deposit__button_group">
-            <v-btn
+        <div class="deposit__button">
+          <div class="deposit__button_group">
+            <v-tooltip
               v-for="button in buttons"
-              class="bg-primary text-secondary"
-              :disabled="button.disabled"
-              @click="button.onClick"
+              :disabled="!button.tooltipText"
+              bottom
             >
-              <template #prepend>
-                <v-progress-circular
-                  v-if="button.loading"
-                  class="d-flex"
-                  size="20"
-                  width="3"
-                  indeterminate
-                />
+              <template #default>
+                {{ button.tooltipText }}
               </template>
-              {{ button.name }}
-            </v-btn>
+              <template #activator="{ props }">
+                <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
+                <span v-bind="props">
+                  <v-btn
+                    class="bg-primary text-secondary"
+                    :disabled="button.disabled"
+                    @click="button.onClick"
+                  >
+                    <template #prepend>
+                      <v-progress-circular
+                        v-if="button.loading"
+                        class="d-flex"
+                        size="20"
+                        width="3"
+                        indeterminate
+                      />
+                    </template>
+                    {{ button.name }}
+                  </v-btn>
+                </span>
+              </template>
+            </v-tooltip>
 
           </div>
           <div v-if="errorMessages && tokenValueChanged" class="text-red mt-4 text-center">
@@ -37,11 +50,9 @@
         </div>
       </template>
       <template v-else>
-        <div class="request_deposit__button">
-          <v-btn class="bg-primary text-secondary" @click="accountsStore.connectWallet()">
-            Connect Wallet
-          </v-btn>
-        </div>
+        <v-btn class="bg-primary text-secondary" @click="accountsStore.connectWallet()">
+          Connect Wallet
+        </v-btn>
       </template>
     </template>
   </FundSettlementBaseForm>
@@ -98,7 +109,15 @@ const isAnythingLoading = computed(() => {
   return (loadingRequestDeposit.value || loadingApproveAllowance.value || loadingDeposit.value || loadingCancelDeposit.value);
 });
 
+const isEnoughAllowance = computed(() => {
+  const valueWei = ethers.parseUnits(tokenValue.value, fund.baseToken.decimals);
+  return valueWei <= fundStore.userFundAllowance;
+});
 const isDepositDisabled = computed(() => {
+  // Disable deposit button if any of rules is false.
+  return errorMessages.value.length > 0 || isAnythingLoading.value || !isEnoughAllowance.value;
+});
+const isRequestDepositDisabled = computed(() => {
   // Disable deposit button if any of rules is false.
   return errorMessages.value.length > 0 || isAnythingLoading.value;
 });
@@ -295,32 +314,36 @@ const buttons = ref([
   {
     name: "Request Deposit",
     onClick: requestDeposit,
-    disabled: isDepositDisabled,
+    disabled: isRequestDepositDisabled,
     loading: loadingRequestDeposit,
+    tooltipText: undefined,
   },
   {
     name: "Approve",
     onClick: approveAllowance,
-    disabled: isDepositDisabled,
+    disabled: isRequestDepositDisabled,
     loading: loadingApproveAllowance,
+    tooltipText: undefined,
   },
   {
     name: "Cancel Deposit",
     onClick: cancelDeposit,
     disabled: isAnythingLoading,
     loading: loadingCancelDeposit,
+    tooltipText: undefined,
   },
   {
     name: "Deposit",
     onClick: deposit,
     disabled: isDepositDisabled,
     loading: loadingDeposit,
+    tooltipText: computed(() => !isEnoughAllowance.value ? "Not enough allowance." : undefined),
   },
 ]);
 </script>
 
 <style lang="scss" scoped>
-.request_deposit__button_group {
+.deposit__button_group {
   gap: 1rem;
   display: flex;
   justify-content: space-around;
