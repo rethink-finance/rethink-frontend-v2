@@ -1,6 +1,6 @@
 <template>
   <div class="discover">
-    <h3 class="main_title">Rethink Fund DAOs</h3>
+    <h3 class="main_title">Rethink Finance | Run Funds On-Chain</h3>
     <div v-if="loadingFunds">
       <v-skeleton-loader type="table" />
     </div>
