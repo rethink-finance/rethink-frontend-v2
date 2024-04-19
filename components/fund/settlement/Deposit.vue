@@ -7,48 +7,46 @@
     :token1-user-balance="fundStore.userFundTokenBalance"
   >
     <template #buttons>
-      <template v-if="accountsStore.isConnected">
-        <div class="deposit__button">
-          <div class="deposit__button_group">
-            <v-tooltip
-              v-for="button in buttons"
-              :disabled="!button.tooltipText"
-              bottom
-            >
-              <template #default>
-                {{ button.tooltipText }}
-              </template>
-              <template #activator="{ props }">
-                <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
-                <span v-bind="props">
-                  <v-btn
-                    class="bg-primary text-secondary"
-                    :disabled="button.disabled"
-                    @click="button.onClick"
-                  >
-                    <template #prepend>
-                      <v-progress-circular
-                        v-if="button.loading"
-                        class="d-flex"
-                        size="20"
-                        width="3"
-                        indeterminate
-                      />
-                    </template>
-                    {{ button.name }}
-                  </v-btn>
-                </span>
-              </template>
-            </v-tooltip>
+      <div v-if="accountsStore.isConnected">
+        <div class="deposit_button_group">
+          <v-tooltip
+            v-for="button in buttons"
+            :disabled="!button.tooltipText"
+            bottom
+          >
+            <template #default>
+              {{ button.tooltipText }}
+            </template>
+            <template #activator="{ props }">
+              <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
+              <span v-bind="props">
+                <v-btn
+                  class="bg-primary text-secondary"
+                  :disabled="button.disabled"
+                  @click="button.onClick"
+                >
+                  <template #prepend>
+                    <v-progress-circular
+                      v-if="button.loading"
+                      class="d-flex"
+                      size="20"
+                      width="3"
+                      indeterminate
+                    />
+                  </template>
+                  {{ button.name }}
+                </v-btn>
+              </span>
+            </template>
+          </v-tooltip>
 
-          </div>
-          <div v-if="errorMessages && tokenValueChanged" class="text-red mt-4 text-center">
-            <div v-for="error in visibleErrorMessages">
-              {{ error.message }}
-            </div>
+        </div>
+        <div v-if="errorMessages && tokenValueChanged" class="text-red mt-4 text-center">
+          <div v-for="error in visibleErrorMessages">
+            {{ error.message }}
           </div>
         </div>
-      </template>
+      </div>
       <template v-else>
         <v-btn class="bg-primary text-secondary" @click="accountsStore.connectWallet()">
           Connect Wallet
@@ -343,7 +341,7 @@ const buttons = ref([
 </script>
 
 <style lang="scss" scoped>
-.deposit__button_group {
+.deposit_button_group {
   gap: 1rem;
   display: flex;
   justify-content: space-around;
