@@ -10,7 +10,8 @@
       <div v-if="accountsStore.isConnected">
         <div class="deposit_button_group">
           <v-tooltip
-            v-for="button in buttons"
+            v-for="(button, index) in buttons"
+            :key="index"
             :disabled="!button.tooltipText"
             bottom
           >
@@ -41,8 +42,8 @@
           </v-tooltip>
 
         </div>
-        <div v-if="errorMessages && tokenValueChanged" class="text-red mt-4 text-center">
-          <div v-for="error in visibleErrorMessages">
+        <div v-if="visibleErrorMessages && tokenValueChanged" class="text-red mt-4 text-center">
+          <div v-for="(error, index) in visibleErrorMessages" :key="index">
             {{ error.message }}
           </div>
         </div>
@@ -67,7 +68,7 @@ import { useToastStore } from "~/store/toast.store";
 const toastStore = useToastStore();
 const accountsStore = useAccountsStore();
 const fundStore = useFundStore();
-const tokenValue = ref("0");
+const tokenValue = ref("0.0");
 const tokenValueChanged = ref(false);
 const fund: IFund = fundStore.fund;
 
@@ -89,7 +90,7 @@ const rules = [
     const valueWei = ethers.parseUnits(value, fund.baseToken.decimals);
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
 
-    console.log("check wei: ", valueWei, fundStore.userBaseTokenBalance);
+    console.log("[REDEEM] check user base token balance wei: ", valueWei, fundStore.userBaseTokenBalance);
     if (fundStore.userBaseTokenBalance < valueWei) {
       const userBaseTokenBalanceFormatted = formatTokenValue(fundStore.userBaseTokenBalance, fund.baseToken.decimals);
       return {
@@ -132,7 +133,7 @@ const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
   if (error?.code === 4001) {
-    toastStore.addToast("Deposit request transaction was rejected.")
+    toastStore.addToast("Transaction was rejected.")
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
@@ -168,7 +169,7 @@ const requestDeposit = async () => {
 
       if (receipt.status) {
         toastStore.successToast("Your deposit request was successful.");
-        tokenValue.value = "0";
+        tokenValue.value = "0.0";
       } else {
         toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
       }
@@ -252,12 +253,11 @@ const deposit = async () => {
       console.log("receipt: ", receipt);
 
       if (receipt.status) {
-        toastStore.successToast("Your deposit was successfull.");
+        toastStore.successToast("Your deposit was successful.");
 
         // Refresh user balances & allowance.
         fundStore.fetchUserBalances();
-
-        tokenValue.value = "0";
+        tokenValue.value = "0.0";
       } else {
         toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
       }
@@ -295,7 +295,7 @@ const cancelDeposit = async () => {
 
       if (receipt.status) {
         toastStore.successToast("Your deposit request was successfull.");
-        tokenValue.value = "0";
+        tokenValue.value = "0.0";
       } else {
         toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
       }

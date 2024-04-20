@@ -35,10 +35,10 @@
     <div class="fund_settlement__card_boxes">
       <div v-if="selectedActionButtonValue" class="card_box">
         <FundSettlementDeposit v-if="isSelectedDepositButton" />
-        <!--        <FundSettlementRedeem v-if="isSelectedRedeemButton" />-->
+        <FundSettlementRedeem v-if="isSelectedRedeemButton" />
       </div>
       <div class="card_box card_box--no-padding">
-        <FundSettlementDepositRedeemNotification />
+        <FundSettlementNotification />
       </div>
     </div>
   </div>
