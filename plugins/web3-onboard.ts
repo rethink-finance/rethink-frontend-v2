@@ -37,12 +37,12 @@ export default defineNuxtPlugin(() => {
   init({
     wallets: [injected, safe, walletConnect],
     chains: [
-      {
-        id: "0x2a",
-        token: "KVT",
-        label: "Kovan",
-        rpcUrl: "https://kovan.infura.io/v3/<YOUR_INFURA_PROJECT_ID>",
-      },
+      // {
+      //   id: "0x2a",
+      //   token: "KVT",
+      //   label: "Kovan",
+      //   rpcUrl: "https://kovan.infura.io/v3/<YOUR_INFURA_PROJECT_ID>",
+      // },
       {
         id: "0x89",
         token: "MATIC",
@@ -55,35 +55,29 @@ export default defineNuxtPlugin(() => {
       //   label: "Base",
       //   rpcUrl: "",
       // },
-      {
-        id: "0x13881",
-        token: "MATIC",
-        label: "Mumbai",
-        rpcUrl: "https://matic-mumbai.chainstacklabs.com/",
-      },
-      {
-        id: "0xa869",
-        token: "AVAX",
-        label: "Fuji",
-        rpcUrl: "https://api.avax-test.network/ext/bc/C/rpc",
-      },
-      {
-        id: "0x2105",
-        token: "ETH",
-        label: "Base",
-        rpcUrl: "https://mainnet.base.org",
-      },
+      // {
+      //   id: "0x13881",
+      //   token: "MATIC",
+      //   label: "Mumbai",
+      //   rpcUrl: "https://matic-mumbai.chainstacklabs.com/",
+      // },
+      // {
+      //   id: "0xa869",
+      //   token: "AVAX",
+      //   label: "Fuji",
+      //   rpcUrl: "https://api.avax-test.network/ext/bc/C/rpc",
+      // },
+      // {
+      //   id: "0x2105",
+      //   token: "ETH",
+      //   label: "Base",
+      //   rpcUrl: "https://mainnet.base.org",
+      // },
       {
         id: 42161,
         token: "ARB-ETH",
         label: "Arbitrum One",
         rpcUrl: "https://rpc.ankr.com/arbitrum",
-      },
-      {
-        id: "0xa4ba",
-        token: "ARB",
-        label: "Arbitrum Nova",
-        rpcUrl: "https://nova.arbitrum.io/rpc",
       },
     ],
     theme: "dark",

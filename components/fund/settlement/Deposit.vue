@@ -7,41 +7,51 @@
     :token1-user-balance="fundStore.userFundTokenBalance"
   >
     <template #buttons>
-      <template v-if="accountsStore.isConnected">
-        <div class="request_deposit__button">
-          <div class="request_deposit__button_group">
-            <v-btn
-              v-for="button in buttons"
-              class="bg-primary text-secondary"
-              :disabled="button.disabled"
-              @click="button.onClick"
-            >
-              <template #prepend>
-                <v-progress-circular
-                  v-if="button.loading"
-                  class="d-flex"
-                  size="20"
-                  width="3"
-                  indeterminate
-                />
-              </template>
-              {{ button.name }}
-            </v-btn>
+      <div v-if="accountsStore.isConnected">
+        <div class="deposit_button_group">
+          <v-tooltip
+            v-for="(button, index) in buttons"
+            :key="index"
+            :disabled="!button.tooltipText"
+            bottom
+          >
+            <template #default>
+              {{ button.tooltipText }}
+            </template>
+            <template #activator="{ props }">
+              <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
+              <span v-bind="props">
+                <v-btn
+                  class="bg-primary text-secondary"
+                  :disabled="button.disabled"
+                  @click="button.onClick"
+                >
+                  <template #prepend>
+                    <v-progress-circular
+                      v-if="button.loading"
+                      class="d-flex"
+                      size="20"
+                      width="3"
+                      indeterminate
+                    />
+                  </template>
+                  {{ button.name }}
+                </v-btn>
+              </span>
+            </template>
+          </v-tooltip>
 
-          </div>
-          <div v-if="errorMessages && tokenValueChanged" class="text-red mt-4 text-center">
-            <div v-for="error in visibleErrorMessages">
-              {{ error.message }}
-            </div>
+        </div>
+        <div v-if="visibleErrorMessages && tokenValueChanged" class="text-red mt-4 text-center">
+          <div v-for="(error, index) in visibleErrorMessages" :key="index">
+            {{ error.message }}
           </div>
         </div>
-      </template>
+      </div>
       <template v-else>
-        <div class="request_deposit__button">
-          <v-btn class="bg-primary text-secondary" @click="accountsStore.connectWallet()">
-            Connect Wallet
-          </v-btn>
-        </div>
+        <v-btn class="bg-primary text-secondary" @click="accountsStore.connectWallet()">
+          Connect Wallet
+        </v-btn>
       </template>
     </template>
   </FundSettlementBaseForm>
@@ -58,7 +68,7 @@ import { useToastStore } from "~/store/toast.store";
 const toastStore = useToastStore();
 const accountsStore = useAccountsStore();
 const fundStore = useFundStore();
-const tokenValue = ref("0");
+const tokenValue = ref("0.0");
 const tokenValueChanged = ref(false);
 const fund: IFund = fundStore.fund;
 
@@ -80,7 +90,7 @@ const rules = [
     const valueWei = ethers.parseUnits(value, fund.baseToken.decimals);
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
 
-    console.log("check wei: ", valueWei, fundStore.userBaseTokenBalance);
+    console.log("[REDEEM] check user base token balance wei: ", valueWei, fundStore.userBaseTokenBalance);
     if (fundStore.userBaseTokenBalance < valueWei) {
       const userBaseTokenBalanceFormatted = formatTokenValue(fundStore.userBaseTokenBalance, fund.baseToken.decimals);
       return {
@@ -98,7 +108,15 @@ const isAnythingLoading = computed(() => {
   return (loadingRequestDeposit.value || loadingApproveAllowance.value || loadingDeposit.value || loadingCancelDeposit.value);
 });
 
+const isEnoughAllowance = computed(() => {
+  const valueWei = ethers.parseUnits(tokenValue.value, fund.baseToken.decimals);
+  return valueWei <= fundStore.userFundAllowance;
+});
 const isDepositDisabled = computed(() => {
+  // Disable deposit button if any of rules is false.
+  return errorMessages.value.length > 0 || isAnythingLoading.value || !isEnoughAllowance.value;
+});
+const isRequestDepositDisabled = computed(() => {
   // Disable deposit button if any of rules is false.
   return errorMessages.value.length > 0 || isAnythingLoading.value;
 });
@@ -115,7 +133,7 @@ const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
   if (error?.code === 4001) {
-    toastStore.addToast("Deposit request transaction was rejected.")
+    toastStore.addToast("Transaction was rejected.")
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
@@ -151,7 +169,7 @@ const requestDeposit = async () => {
 
       if (receipt.status) {
         toastStore.successToast("Your deposit request was successful.");
-        tokenValue.value = "0";
+        tokenValue.value = "0.0";
       } else {
         toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
       }
@@ -235,12 +253,11 @@ const deposit = async () => {
       console.log("receipt: ", receipt);
 
       if (receipt.status) {
-        toastStore.successToast("Your deposit was successfull.");
+        toastStore.successToast("Your deposit was successful.");
 
         // Refresh user balances & allowance.
         fundStore.fetchUserBalances();
-
-        tokenValue.value = "0";
+        tokenValue.value = "0.0";
       } else {
         toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
       }
@@ -278,7 +295,7 @@ const cancelDeposit = async () => {
 
       if (receipt.status) {
         toastStore.successToast("Your deposit request was successfull.");
-        tokenValue.value = "0";
+        tokenValue.value = "0.0";
       } else {
         toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
       }
@@ -295,32 +312,36 @@ const buttons = ref([
   {
     name: "Request Deposit",
     onClick: requestDeposit,
-    disabled: isDepositDisabled,
+    disabled: isRequestDepositDisabled,
     loading: loadingRequestDeposit,
+    tooltipText: undefined,
   },
   {
     name: "Approve",
     onClick: approveAllowance,
-    disabled: isDepositDisabled,
+    disabled: isRequestDepositDisabled,
     loading: loadingApproveAllowance,
+    tooltipText: undefined,
   },
   {
     name: "Cancel Deposit",
     onClick: cancelDeposit,
     disabled: isAnythingLoading,
     loading: loadingCancelDeposit,
+    tooltipText: undefined,
   },
   {
     name: "Deposit",
     onClick: deposit,
     disabled: isDepositDisabled,
     loading: loadingDeposit,
+    tooltipText: computed(() => !isEnoughAllowance.value ? "Not enough allowance." : undefined),
   },
 ]);
 </script>
 
 <style lang="scss" scoped>
-.request_deposit__button_group {
+.deposit_button_group {
   gap: 1rem;
   display: flex;
   justify-content: space-around;

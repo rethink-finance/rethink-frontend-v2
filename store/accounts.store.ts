@@ -7,7 +7,6 @@ interface IState {
   chainId?: string;
   chainName: string;
   web3Onboard?: any;
-  supportedChains: string[];
 }
 
 export const useAccountsStore = defineStore("accounts", {
@@ -15,16 +14,6 @@ export const useAccountsStore = defineStore("accounts", {
     chainId: undefined,
     chainName: "",
     web3Onboard: undefined as any | undefined,
-    supportedChains: [
-      "Kovan Testnet",
-      "Polygon PoS Chain",
-      "Local Testnet",
-      "Avalanche Fuji Testnet",
-      "Polygon Mumbai Testnet",
-      "Canto Testnet",
-      "Arbitrum Goerli",
-      "Goerli",
-    ],
   }),
   getters: {
     web3Store() {
@@ -41,9 +30,6 @@ export const useAccountsStore = defineStore("accounts", {
     },
     activeAccount(): Account | undefined {
       return this.web3Onboard?.connectedWallet?.accounts[0];
-    },
-    isCurrentChainSupported(state): boolean {
-      return state.supportedChains?.includes(state.chainName);
     },
     getChainId(state): string {
       return state.chainId ?? "";

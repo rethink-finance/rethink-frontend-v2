@@ -127,10 +127,12 @@ const token1UserBalanceFormatted = computed(() => {
 
 const exchangeRate = computed(() => {
   // TODO exchange rate should come from last NAV update
-  return 1;
+  return 0;
 });
 
 const exchangeRateText = computed(() => {
+  if (!exchangeRate.value) return "--"
+
   // Make sure to handle potential reactivity or null checks as needed
   return `1 ${props.token0.symbol} = ${exchangeRate.value.toFixed(2)} ${props.token1.symbol}`;
 });
