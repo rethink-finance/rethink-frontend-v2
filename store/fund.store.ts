@@ -168,7 +168,7 @@ export const useFundStore = defineStore({
         fundSettings[detailKey] = typeof value === "bigint" ? value.toString() : value;
       });
 
-      return fundSettings;
+      return fundSettings as IFundSettings;
     },
     fetchUserBalances() {
       return Promise.all([
@@ -189,25 +189,35 @@ export const useFundStore = defineStore({
        *   have the fund settings from the discovery page.
        */
       // Fetch inception date
-      const settingsPromise = this.fundContract.methods.getFundSettings().call();
-      const startTimePromise = this.fundContract.methods.getFundStartTime().call();
-      const metadataPromise = this.fundContract.methods.fundMetadata().call();
+      const settingsData = await this.fundContract.methods.getFundSettings().call();
+      // Process the fund settings with a method assumed to be available in the current scope
+      const fundSettings: IFundSettings = this.parseFundSettings(settingsData);
+
+      return await this.fetchFundMetadata(fundSettings);
+    },
+    async fetchFundMetadata(fundSettings: IFundSettings) {
+      /**
+       * Fetch multiple fund metadata such as:
+       * - getFundStartTime
+       * - fundMetadata
+       */
+      // Fetch inception date
+      const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
+      const startTimePromise: Promise<string> = fundContract.methods.getFundStartTime().call();
+      const metadataPromise: Promise<string> = fundContract.methods.fundMetadata().call();
 
       try {
         // Await all promises and destructure their resolved values
-        const [settingsData, fundStartTime, metaDataJson] = await Promise.all([
-          settingsPromise,
+        const [fundStartTime, metaDataJson] = await Promise.all([
           startTimePromise,
           metadataPromise,
         ]);
 
-        // Process the fund settings with a method assumed to be available in the current scope
-        const fundSettings: Partial<IFundSettings> = this.parseFundSettings(settingsData);
         // Fetch Base/Base token symbol.
         // @dev: would be better to just have this available in the FundSettings data.
-        const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, settingsData?.baseToken);
-        const fundTokenContract = new this.web3.eth.Contract(ERC20, settingsData?.fundAddress);
-        const governanceTokenContract = new this.web3.eth.Contract(ERC20, settingsData?.governanceToken);
+        const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
+        const fundTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.fundAddress);
+        const governanceTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.governanceToken);
 
         // Fetch all token symbols and decimals.
         // @dev: maybe there are more things to be fetched here.
@@ -218,11 +228,11 @@ export const useFundStore = defineStore({
           governanceTokenDecimals,
           fundTokenDecimals,
         ] = await Promise.all([
-          fundBaseTokenContract.methods.symbol().call(),
-          fundBaseTokenContract.methods.decimals().call(),
-          governanceTokenContract.methods.symbol().call(),
-          governanceTokenContract.methods.decimals().call(),
-          fundTokenContract.methods.decimals().call(),
+          fundBaseTokenContract.methods.symbol().call() as Promise<string>,
+          fundBaseTokenContract.methods.decimals().call() as Promise<number>,
+          governanceTokenContract.methods.symbol().call() as Promise<string>,
+          governanceTokenContract.methods.decimals().call() as Promise<number>,
+          fundTokenContract.methods.decimals().call() as Promise<number>,
         ]);
 
         const fund: IFund = {
@@ -311,7 +321,7 @@ export const useFundStore = defineStore({
 
         return fund;
       } catch (error) {
-        console.error("Error in promises:", error);
+        console.error("Error in promises: ", error, "fund: ", fundSettings);
         return {} as IFund; // Return an empty or default object in case of error
       }
     },
@@ -351,88 +361,23 @@ export const useFundStore = defineStore({
       // Reset funds as we will populate them with new data.
       this.funds = [];
 
+      const promises = [];
       for (let i = 0; i < fundAddresses.length; i++) {
         const fundAddress: string = fundAddresses[i] as string;
-        const fundSettings: Partial<IFundSettings> = this.parseFundSettings(fundsInfo[1][i])
+        const fundSettings: IFundSettings = this.parseFundSettings(fundsInfo[1][i])
         if (!this.fundsSettings[fundAddress]) {
-          this.fundsSettings[fundAddress] = fundSettings as IFundSettings;
+          this.fundsSettings[fundAddress] = fundSettings;
         }
+        promises.push(this.fetchFundMetadata(fundSettings))
+      }
 
-        // TODO fix this data to be such as in the fetchFundData, reuse it.
-        this.funds.push(
-          {
-            address: fundSettings.fundAddress || "",
-            title: fundSettings.fundName || "N/A",
-            subtitle: fundSettings.fundName || "N/A",
-            description: fundSettings.fundName || "N/A",
-            safeAddress: fundSettings.safe || "",
-            governorAddress: fundSettings.governor || "",
-            photoUrl: "https://api.lorem.space/image/ai?w=60&h=60",
-            fundToken: {
-              symbol: fundSettings.fundSymbol || "N/A",
-              address: fundSettings.fundAddress || "N/A",
-              decimals: 18,
-            },
-            baseToken: {
-              symbol: "fundSettings.baseSymbol",
-              address: fundSettings.baseToken,
-              decimals: 18,
-            },
-            governanceToken: {
-              symbol: "TODO", // TODO get governanceToken, same as getting baseToken symbol?
-              address: fundSettings.governanceToken || "N/A",
-              decimals: 18,
-            },
-            chain: "",
-            inceptionDate: "",
-            aumValue: 0,
-            cumulativeReturnPercent: 0,
-            monthlyReturnPercent: 0,
-            sharpeRatio: 0,
-            // TODO remove these position types, replace with []
-            positionTypes: [
-              {
-                type: PositionType.NAVLiquid,
-                value: 123,
-              },
-              {
-                type: PositionType.NAVComposable,
-                value: 78,
-              },
-              {
-                type: PositionType.NAVNft,
-                value: 287,
-              },
-              {
-                type: PositionType.NAVIlliquid,
-                value: 36,
-              },
-            ] as IPositionType[],
-            cyclePendingRequests: [] as ICyclePendingRequest[],
-            fundToBaseExchangeRate: 0,
-
-            // My Fund Positions
-            netDeposits: "",
-            currentValue: "",
-            totalReturn: 0,
-
-            // Overview fields
-            depositAddresses: [],
-            managementAddresses: [],
-            plannedSettlementPeriod: "",
-            minLiquidAssetShare: "",
-
-            // Governance
-            votingDelay: "",
-            votingPeriod: "",
-            proposalThreshold: "",
-            quorom: "",
-            lateQuorom: "",
-
-            // NAV Updates
-            navUpdates: [] as INAVUpdate[],
-          } as IFund,
-        )
+      try {
+        const fundsMetadata = await Promise.all(promises);
+        console.log("All fund metadata:", fundsMetadata);
+        // Using the spread operator to append each element
+        this.funds.push(...fundsMetadata);
+      } catch (error) {
+        console.error("Error fetching fund metadata:", error);
       }
     },
     async fetchUserBaseTokenBalance() {
