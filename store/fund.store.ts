@@ -236,6 +236,9 @@ export const useFundStore = defineStore({
         ]);
 
         const fund: IFund = {
+          chainName: this.accountsStore.chainName,
+          chainNativeToken: this.accountsStore.chainNativeToken,
+          chainIcon: this.accountsStore.chainIcon,
           address: fundSettings.fundAddress || "",
           title: fundSettings.fundName || "N/A",
           subtitle: fundSettings.fundName || "N/A",
@@ -260,7 +263,6 @@ export const useFundStore = defineStore({
             address: fundSettings.governanceToken,
             decimals: governanceTokenDecimals ?? 18,
           } as IToken,
-          chain: "",
           aumValue: 0,
           cumulativeReturnPercent: 0,
           monthlyReturnPercent: 0,

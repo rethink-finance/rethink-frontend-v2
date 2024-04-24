@@ -3,6 +3,7 @@
     target="_blank"
     class="d-flex justify-space-between text-secondary"
     :to="to"
+    :href="href"
     :size="size"
     :variant="variant"
     :density="density"
@@ -12,8 +13,8 @@
     <template #append>
       <v-icon icon="mdi-link" size="1.5rem" />
     </template>
-    <v-tooltip v-if="showTooltip && to" activator="parent" location="bottom">
-      {{ to }}
+    <v-tooltip v-if="showTooltip && tooltipText" activator="parent" location="bottom">
+      {{ tooltipText }}
     </v-tooltip>
   </v-btn>
 </template>
@@ -33,6 +34,10 @@ export default {
       type: String,
       default: "",
     },
+    href: {
+      type: String,
+      default: "",
+    },
     size: {
       type: String,
       default: "default",
@@ -48,6 +53,12 @@ export default {
     showTooltip: {
       type: Boolean,
       default: true,
+    },
+  },
+  computed: {
+    tooltipText() {
+      if (this.to) return this.to;
+      if (this.href) return this.href;
     },
   },
 }

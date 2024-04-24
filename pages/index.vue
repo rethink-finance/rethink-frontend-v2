@@ -35,13 +35,13 @@ const columns = ref([
     },
   },
   {
-    accessorKey: "chain",
+    accessorKey: "chainIcon",
     header: "Chain",
     size: 62,
     maxWidth: 62,
     cell: (info) => {
       return h(<Icon class="mr-2" size="1.5rem" color="white" />, {
-        name: chainIconName(info.getValue()),
+        name: info.getValue(),
       });
     },
   },

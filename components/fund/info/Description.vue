@@ -28,7 +28,7 @@
       <UiLinkExternalButton
         v-for="buttonLink in buttonLinks"
         :title="buttonLink.title"
-        :to="buttonLink.to"
+        :href="buttonLink.href"
       />
     </div>
   </div>
@@ -53,26 +53,29 @@ export default {
       return [
         {
           title: "DeBank - AUM",
-          to: "#",
+          href: "#",
         },
         {
           title: "Tally - Governance",
-          to: "#",
+          href: this.governanceUrl,
         },
         {
           title: "Safe - Custody",
-          to: "#",
+          hre: this.custodyUrl,
         },
       ]
     },
-    formatAddress() {
-      return truncateAddress(this.fund?.address);
+    governanceUrl(): string {
+      /** Example:
+       * https://www.tally.xyz/gov/tfd3-0xface6562d7e39ea73b67404a6454fbbbefeca553
+       * **/
+      return `https://www.tally.xyz/gov/${this.fund.fundToken.symbol}-${this.fund.governorAddress}`;
     },
-    formatGovernanceAddress() {
-      return truncateAddress(this.fund?.governorAddress);
-    },
-    formatSafeAddress() {
-      return truncateAddress(this.fund?.safeAddress);
+    custodyUrl(): string {
+      /** Example:
+       * https://app.safe.global/balances?safe=matic:0x54b491bb5e59CD974dDc9b5a52478f54c07Aee78
+       * **/
+      return `https://app.safe.global/balances?safe=${this.fund.chainNativeToken}:${this.fund.safeAddress}`;
     },
   },
   methods: {

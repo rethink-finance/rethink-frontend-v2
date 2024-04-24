@@ -1,5 +1,7 @@
 const chainToIconMap: Record<string, string> = {
   ethereum: "eth",
+  polygon: "matic",
+  arbitrum1: "arb1",
   bitcoin: "btc",
   binance: "bnb",
   cardano: "ada",

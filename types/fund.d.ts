@@ -23,7 +23,12 @@ import type IPositionType from '~/types/position_type';
  * withdrawFee: 150n
  */
 export default interface IFund {
-  chain: string;  // TODO figure where to get this from
+  // chain and chainNativeToken are populated from the current network
+  // the user has selected when fetching funds.
+  chainName: string;
+  chainNativeToken: string;
+  chainIcon: string;
+
   address: string;
   title: string;
   subtitle: string;

@@ -74,8 +74,8 @@ export default defineNuxtPlugin(() => {
       //   rpcUrl: "https://mainnet.base.org",
       // },
       {
-        id: 42161,
-        token: "ARB-ETH",
+        id: "0x66eed",
+        token: "ARB1",
         label: "Arbitrum One",
         rpcUrl: "https://rpc.ankr.com/arbitrum",
       },
