@@ -61,7 +61,7 @@ export default {
         },
         {
           title: "Safe - Custody",
-          hre: this.custodyUrl,
+          href: this.custodyUrl,
         },
       ]
     },
