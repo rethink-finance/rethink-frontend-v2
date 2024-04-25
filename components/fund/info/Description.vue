@@ -53,7 +53,7 @@ export default {
       return [
         {
           title: "DeBank - AUM",
-          href: "#",
+          href: this.deBankUrl,
         },
         {
           title: "Tally - Governance",
@@ -64,6 +64,12 @@ export default {
           href: this.custodyUrl,
         },
       ]
+    },
+    deBankUrl(): string {
+      /** Example:
+       * https://debank.com/profile/0x54b491bb5e59CD974dDc9b5a52478f54c07Aee78
+       * **/
+      return `https://debank.com/profile/${this.fund.safeAddress}`;
     },
     governanceUrl(): string {
       /** Example:
