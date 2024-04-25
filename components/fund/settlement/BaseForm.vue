@@ -4,7 +4,7 @@
       <div class="request_deposit__token_header">
         Token
         <span>
-          <Icon name="IconQuestionCircle" size="1rem" />
+          <Icon icon="octicon:question-16" width="1rem" />
           <v-tooltip v-if="token0" activator="parent" location="right">
             {{ token0.symbol }} ({{ token0.address }}).
           </v-tooltip>
@@ -32,7 +32,7 @@
       <div class="request_deposit__token_header">
         Token
         <span>
-          <Icon name="IconQuestionCircle" size="1rem" />
+          <Icon icon="octicon:question-16" width="1rem" />
           <v-tooltip v-if="token1" activator="parent" location="right">
             {{ token1.symbol }} ({{ token1.address }}).
           </v-tooltip>

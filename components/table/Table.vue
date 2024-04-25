@@ -37,7 +37,7 @@
                 :props="header.getContext()"
               />
               <div v-if="header.column.getCanSort()">
-                <TableSortArrows :sort="header.column.getIsSorted()" />
+                <IconSortArrows :sort="header.column.getIsSorted()" />
               </div>
             </div>
           </th>

@@ -40,8 +40,8 @@ const columns = ref([
     size: 62,
     maxWidth: 62,
     cell: (info) => {
-      return h(<Icon class="mr-2" size="1.5rem" color="white" />, {
-        name: info.getValue(),
+      return h(<Icon class="mr-2" width="1.5rem" />, {
+        icon: info.getValue(),
       });
     },
   },

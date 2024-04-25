@@ -3,14 +3,14 @@
     <Icon
       class="sort__arrow"
       :class="{'sort__arrow--active': isArrowActive('asc')}"
-      name="IconSortArrowUp"
-      size="1rem"
+      icon="octicon:chevron-up-16"
+      width="1rem"
     />
     <Icon
       class="sort__arrow"
       :class="{'sort__arrow--active': isArrowActive('desc')}"
-      name="IconSortArrowDown"
-      size="1rem"
+      icon="octicon:chevron-down-16"
+      width="1rem"
     />
   </div>
 </template>

@@ -37,7 +37,7 @@
             >
               {{ route.title }}
               <template #append>
-                <Icon v-if="route.icon" :name="route.icon" size="0.875rem" />
+                <Icon v-if="route.icon" :name="route.icon" width="0.875rem" />
               </template>
               <v-tooltip v-if="route.text" activator="parent" location="bottom">
                 {{ route.text }}

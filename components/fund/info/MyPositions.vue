@@ -19,10 +19,12 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title" :class="numberColorClass(fund.totalReturn)">
-          {{ fund.totalReturn ? formatPercent(fund.totalReturn) : "N/A" }}
+          <!--          {{ fund.totalReturn ? formatPercent(fund.totalReturn) : "N/A" }}-->
+          {{ userFundAllowanceFormatted }}
         </div>
         <div class="data_bar__subtitle">
-          Total Return
+          <!--          Total Return-->
+          Allowance
         </div>
       </div>
     </UiDataBar>
@@ -32,6 +34,7 @@
 <script lang="ts">
 import type IFund from "~/types/fund";
 import { numberColorClass } from "~/composables/numberColorClass";
+import { useFundStore } from "~/store/fund.store";
 
 export default {
   name: "FundInfoMyPositions",
@@ -39,6 +42,16 @@ export default {
     fund: {
       type: Object as PropType<IFund>,
       default: () => {},
+    },
+  },
+  setup() {
+    const fundStore = useFundStore();
+    return { fundStore };
+  },
+  computed: {
+    userFundAllowanceFormatted() {
+      const fundBaseToken = this.fundStore.fund.baseToken;
+      return `${formatTokenValue(this.fundStore.userFundAllowance, fundBaseToken.decimals)} ${fundBaseToken.symbol}`;
     },
   },
   methods: { numberColorClass },
