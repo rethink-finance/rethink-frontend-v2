@@ -132,9 +132,13 @@ const token1UserBalanceFormatted = computed(() => {
 
 const exchangeRateText = computed(() => {
   if (!props.exchangeRate) return "--"
-
+  let exchangeRate: string | number = props.exchangeRate;
+  if (exchangeRate > 1) {
+    // If the number is bigger than 1, clip it to two decimals.
+    exchangeRate = exchangeRate.toFixed(2);
+  }
   // Make sure to handle potential reactivity or null checks as needed
-  return `1 ${props.token0.symbol} = ${props.exchangeRate.toFixed(2)} ${props.token1.symbol}`;
+  return `1 ${props.token0.symbol} = ${exchangeRate} ${props.token1.symbol}`;
 });
 
 const calculatedToken1Value = computed(() => {
