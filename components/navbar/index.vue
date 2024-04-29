@@ -116,6 +116,7 @@
 <script lang="ts" setup>
 import { useAccountsStore } from "~/store/accounts.store";
 import { useToastStore } from "~/store/toast.store";
+const router = useRouter();
 const accountsStore = useAccountsStore();
 const toastStore = useToastStore();
 
@@ -183,6 +184,10 @@ const switchNetwork = async (chainId: string) => {
         chainId,
       }],
     });
+
+    // TODO handle more gracefully instead of full reload
+    accountsStore.setActiveChain(chainId);
+    return router.go(0);
   } catch (error: any) {
     selectedChainId.value = "";
 

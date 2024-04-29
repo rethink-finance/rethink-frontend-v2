@@ -76,8 +76,8 @@ export default defineNuxtPlugin(() => {
       {
         id: "0x66eed",
         token: "ARB1",
-        label: "Arbitrum One",
-        rpcUrl: "https://rpc.ankr.com/arbitrum",
+        label: "Arbitrum One Goerli Testnet",
+        rpcUrl: "https://arbitrum-goerli.public.blastapi.io",
       },
     ],
     theme: "dark",

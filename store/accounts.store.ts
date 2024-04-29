@@ -88,8 +88,10 @@ export const useAccountsStore = defineStore("accounts", {
   },
   actions: {
     setActiveChain(chainId?: string): void {
+      console.log("setActiveChainId: ", chainId);
       if (!chainId) {
         chainId = this.web3Onboard?.connectedChain?.id;
+        console.log("2setActiveChainId: ", chainId);
       }
 
       this.chainId = chainId;

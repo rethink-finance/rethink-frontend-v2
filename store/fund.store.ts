@@ -3,23 +3,25 @@ import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
+import RethinkReader from "~/assets/contracts/RethinkReader.json";
+import ERC20 from "~/assets/contracts/ERC20.json";
+import addressesJson from "~/assets/contracts/addresses.json";
 import { useAccountsStore } from "~/store/accounts.store";
 import { PositionType } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
-import addressesJson from "~/assets/contracts/addresses.json";
 import type INAVUpdate from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IPositionType from "~/types/position_type";
-import ERC20 from "~/assets/contracts/ERC20.json";
 import type IToken from "~/types/token";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
 
 const GovernableFundFactoryContractName = "GovernableFundFactoryBeaconProxy";
+const RethinkReaderContractName = "RethinkReader";
 
 export interface FundContract extends BaseContract {
   requestDeposit: (amount: ethers.BigNumberish, options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
@@ -120,7 +122,12 @@ export const useFundStore = defineStore({
       const contractAddress = addresses[GovernableFundFactoryContractName][this.web3Store.chainId];
       return new this.web3.eth.Contract(GovernableFundFactory.abi, contractAddress)
     },
-    // @ts-expect-error: we should extend the return type as Contract<GovernableFund> but
+    // @ts-expect-error: we should extend the return type as Contract<...>
+    rethinkReaderContract(): Contract {
+      const contractAddress = addresses[RethinkReaderContractName][this.web3Store.chainId];
+      return new this.web3.eth.Contract(RethinkReader.abi, contractAddress)
+    },
+    // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
     fundContract(): Contract {
       return new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress)
     },
@@ -201,7 +208,10 @@ export const useFundStore = defineStore({
       // Process the fund settings with a method assumed to be available in the current scope
       const fundSettings: IFundSettings = this.parseFundSettings(settingsData);
 
-      return await this.fetchFundMetadata(fundSettings);
+      const fund = await this.fetchFundMetadata(fundSettings);
+      const navData = await this.fetchFundNAVData(fundSettings.fundAddress);
+      console.log("NAV data: ", navData);
+      return fund;
     },
     async fetchFundMetadata(fundSettings: IFundSettings) {
       /**
@@ -348,6 +358,39 @@ export const useFundStore = defineStore({
       } catch (error) {
         console.error("Error in promises: ", error, "fund: ", fundSettings);
         return {} as IFund; // Return an empty or default object in case of error
+      }
+    },
+    async fetchFundNAVData(fundAddress: string) {
+      /**
+       * Fetch fund NAV data.
+       */
+      try {
+        const data = await this.rethinkReaderContract.methods.getNAVDataForFund(fundAddress).call();
+        console.log("fund NAV: ", data)
+
+        return {
+          positionTypes: [
+            {
+              type: PositionType.NAVLiquid,
+              value: 123,
+            },
+            {
+              type: PositionType.NAVComposable,
+              value: 78,
+            },
+            {
+              type: PositionType.NAVNft,
+              value: 287,
+            },
+            {
+              type: PositionType.NAVIlliquid,
+              value: 36,
+            },
+          ] as IPositionType[],
+        }
+      } catch (error) {
+        console.error("Error calling getNAVDataForFund: ", error, "fund: ", fundAddress);
+        return {}; // Return an empty or default object in case of error
       }
     },
     async getFund(fundAddress: string) {
