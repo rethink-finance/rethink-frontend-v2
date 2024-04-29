@@ -52,7 +52,7 @@
           Balance: {{ token1UserBalanceFormatted }} {{ token1.symbol }}
         </div>
         <div>
-          Last NAV Update Value: {{ exchangeRateText }}
+          Based on Last NAV Update: {{ exchangeRateText }}
         </div>
       </div>
     </div>
@@ -92,6 +92,10 @@ const props = defineProps({
     type: [Number, BigInt] as PropType<number | bigint>,
     default: BigInt("0"),
   },
+  exchangeRate: {
+    type: Number,
+    default: 0,
+  },
   rules: {
     type: Array as PropType<RulesArray>,
     default: () => [],
@@ -125,21 +129,17 @@ const token1UserBalanceFormatted = computed(() => {
   return formatTokenValue(props.token1UserBalance, props.token0.decimals);
 });
 
-const exchangeRate = computed(() => {
-  // TODO exchange rate should come from last NAV update
-  return 0;
-});
 
 const exchangeRateText = computed(() => {
-  if (!exchangeRate.value) return "--"
+  if (!props.exchangeRate) return "--"
 
   // Make sure to handle potential reactivity or null checks as needed
-  return `1 ${props.token0.symbol} = ${exchangeRate.value.toFixed(2)} ${props.token1.symbol}`;
+  return `1 ${props.token0.symbol} = ${props.exchangeRate.toFixed(2)} ${props.token1.symbol}`;
 });
 
 const calculatedToken1Value = computed(() => {
   // Continue to use your trimTrailingZeros utility function as needed
-  return trimTrailingZeros((Number(tokenValue.value) * exchangeRate.value).toFixed(4));
+  return trimTrailingZeros((Number(tokenValue.value) * props.exchangeRate).toFixed(4));
 });
 </script>
 

@@ -47,11 +47,11 @@ const columns = ref([
     },
   },
   {
-    accessorKey: "aumWei",
+    accessorKey: "totalNAVWei",
     header: "AUM",
     cell: ({row}) => {
       const fund = row.original;
-      const aum = Number(formatTokenValue(fund.aumWei, fund.baseToken.decimals));
+      const aum = Number(formatTokenValue(fund.totalNAVWei, fund.baseToken.decimals));
       return formatNumberShort(aum) + " " + fund.baseToken.symbol;
     }
   },

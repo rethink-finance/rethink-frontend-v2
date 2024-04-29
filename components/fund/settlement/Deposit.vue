@@ -1,10 +1,11 @@
 <template>
   <FundSettlementBaseForm
     v-model="tokenValue"
-    :token0="fundStore.fund.baseToken"
-    :token1="fundStore.fund.fundToken"
+    :token0="fund.baseToken"
+    :token1="fund.fundToken"
     :token0-user-balance="fundStore.userBaseTokenBalance"
     :token1-user-balance="fundStore.userFundTokenBalance"
+    :exchange-rate="fundStore.baseToFundTokenExchangeRate"
   >
     <template #buttons>
       <div v-if="accountsStore.isConnected">

@@ -61,6 +61,5 @@ export const formatNumberShort = (number?: number) => {
   // Convert to uppercase.
   // Remove trailing ".00";
   if (number == undefined) return "N/A";
-  console.log(number);
   return numeral(number).format("0.00a").toUpperCase().replace(/\.00(?=[KMBT])/g, "");
 }

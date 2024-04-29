@@ -102,6 +102,14 @@ export const useFundStore = defineStore({
     getFundAddress(state: IState): string {
       return state.address?.[state.selectedFundAddress];
     },
+    baseToFundTokenExchangeRate(state: IState): number {
+      if (!state.fund.fundTokenTotalSupply) return 0;
+      return Number(state.fund.totalNAVWei / state.fund.fundTokenTotalSupply);
+    },
+    fundToBaseTokenExchangeRate(state: IState): number {
+      if (!state.fund.totalNAVWei) return 0;
+      return 1 / this.baseToFundTokenExchangeRate;
+    },
     /**
      * Contracts
      */
@@ -238,8 +246,8 @@ export const useFundStore = defineStore({
           governanceTokenContract.methods.symbol().call() as Promise<string>,
           governanceTokenContract.methods.decimals().call() as Promise<number>,
           fundTokenContract.methods.decimals().call() as Promise<number>,
-          fundTokenContract.methods.totalSupply().call() as Promise<number>,
-          fundContract.methods.totalNAV().call() as Promise<number>,
+          fundTokenContract.methods.totalSupply().call() as Promise<bigint>,
+          fundContract.methods.totalNAV().call() as Promise<bigint>,
         ]);
         console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
         console.log("fundTotalNAV: ", fundTotalNAV)
@@ -272,7 +280,8 @@ export const useFundStore = defineStore({
             address: fundSettings.governanceToken,
             decimals: governanceTokenDecimals ?? 18,
           } as IToken,
-          aumWei: fundTotalNAV,
+          totalNAVWei: fundTotalNAV,
+          fundTokenTotalSupply,
           cumulativeReturnPercent: 0,
           monthlyReturnPercent: 0,
           sharpeRatio: 0,
