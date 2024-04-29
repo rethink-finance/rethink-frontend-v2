@@ -17,6 +17,7 @@ import { useFundStore } from "~/store/fund.store";
 import PositionTypesBar from "~/components/fund/info/PositionTypesBar";
 import FundNameCell from "../components/table/components/FundNameCell";
 
+
 const columns = ref([
   {
     accessorKey: "name",
@@ -46,9 +47,13 @@ const columns = ref([
     },
   },
   {
-    accessorKey: "aumValue",
+    accessorKey: "aumWei",
     header: "AUM",
-    cell: (info) => formatUSDValue(info.getValue()),
+    cell: ({row}) => {
+      const fund = row.original;
+      const aum = Number(formatTokenValue(fund.aumWei, fund.baseToken.decimals));
+      return formatNumberShort(aum) + " " + fund.baseToken.symbol;
+    }
   },
   {
     accessorKey: "inceptionDate",
@@ -72,7 +77,7 @@ const columns = ref([
     accessorKey: "sharpeRatio",
     header: "Sharpe Ratio",
     minSize: 115,
-    cell: (info) => info.getValue(),
+    cell: (info) => info.getValue() || "N/A",
   },
   {
     accessorKey: "positionTypes",

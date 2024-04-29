@@ -11,14 +11,15 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fund.currentValue || "N/A" }}
+          {{ userCurrentValueFormatted }}
         </div>
         <div class="data_bar__subtitle">
           Current Value
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="numberColorClass(fund.totalReturn)">
+        <div class="data_bar__title">
+          <!--        <div class="data_bar__title" :class="numberColorClass(fund.totalReturn)">-->
           <!--          {{ fund.totalReturn ? formatPercent(fund.totalReturn) : "N/A" }}-->
           {{ userFundAllowanceFormatted }}
         </div>
@@ -49,9 +50,14 @@ export default {
     return { fundStore };
   },
   computed: {
+    fundBaseToken() {
+      return this.fundStore.fund.baseToken;
+    },
     userFundAllowanceFormatted() {
-      const fundBaseToken = this.fundStore.fund.baseToken;
-      return `${formatTokenValue(this.fundStore.userFundAllowance, fundBaseToken.decimals)} ${fundBaseToken.symbol}`;
+      return `${formatTokenValue(this.fundStore.userFundAllowance, this.fundBaseToken.decimals)} ${this.fundBaseToken.symbol}`;
+    },
+    userCurrentValueFormatted() {
+      return `${formatTokenValue(this.fundStore.userFundShareValue, this.fundBaseToken.decimals)} ${this.fundBaseToken.symbol}`;
     },
   },
   methods: { numberColorClass },

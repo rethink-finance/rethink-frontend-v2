@@ -213,11 +213,14 @@ export const useFundStore = defineStore({
           metadataPromise,
         ]);
 
-        // Fetch Base/Base token symbol.
         // @dev: would be better to just have this available in the FundSettings data.
+        // Fetch base, fund and governance ERC20 token symbol and decimals.
         const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
         const fundTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.fundAddress);
         const governanceTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.governanceToken);
+
+        // GovernableFund contract to get totalNAV.
+        const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
 
         // Fetch all token symbols and decimals.
         // @dev: maybe there are more things to be fetched here.
@@ -227,13 +230,19 @@ export const useFundStore = defineStore({
           governanceTokenSymbol,
           governanceTokenDecimals,
           fundTokenDecimals,
+          fundTokenTotalSupply,
+          fundTotalNAV,
         ] = await Promise.all([
           fundBaseTokenContract.methods.symbol().call() as Promise<string>,
           fundBaseTokenContract.methods.decimals().call() as Promise<number>,
           governanceTokenContract.methods.symbol().call() as Promise<string>,
           governanceTokenContract.methods.decimals().call() as Promise<number>,
           fundTokenContract.methods.decimals().call() as Promise<number>,
+          fundTokenContract.methods.totalSupply().call() as Promise<number>,
+          fundContract.methods.totalNAV().call() as Promise<number>,
         ]);
+        console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
+        console.log("fundTotalNAV: ", fundTotalNAV)
 
         const fund: IFund = {
           chainName: this.accountsStore.chainName,
@@ -263,7 +272,7 @@ export const useFundStore = defineStore({
             address: fundSettings.governanceToken,
             decimals: governanceTokenDecimals ?? 18,
           } as IToken,
-          aumValue: 0,
+          aumWei: fundTotalNAV,
           cumulativeReturnPercent: 0,
           monthlyReturnPercent: 0,
           sharpeRatio: 0,
@@ -287,12 +296,9 @@ export const useFundStore = defineStore({
             },
           ] as IPositionType[],
           cyclePendingRequests: [] as ICyclePendingRequest[],
-          fundToBaseExchangeRate: 0,
 
           // My Fund Positions
           netDeposits: "",
-          currentValue: "",
-          totalReturn: 0,
 
           // Overview fields
           depositAddresses: [],
@@ -306,6 +312,14 @@ export const useFundStore = defineStore({
           proposalThreshold: "",
           quorom: "",
           lateQuorom: "",
+
+          // Fees
+          performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
+          managementFee: fundSettings.managementFee,
+          depositFee: fundSettings.depositFee,
+          performanceFee: fundSettings.performanceFee,
+          withdrawFee: fundSettings.withdrawFee,
+          feeCollectors: fundSettings.feeCollectors,
 
           // NAV Updates
           navUpdates: [] as INAVUpdate[],
