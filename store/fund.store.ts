@@ -7,7 +7,7 @@ import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import { useAccountsStore } from "~/store/accounts.store";
-import { PositionType, PositionTypes } from "~/types/enums/position_type";
+import { PositionType, PositionTypes, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3.store";
@@ -396,19 +396,19 @@ export const useFundStore = defineStore({
             totalNAVWei: dataNAVs.totalNav[index],
             positionTypeCounts: [
               {
-                type: PositionType.Liquid,
+                type: PositionTypesMap[PositionType.Liquid],
                 count: Number(dataNAVs.liquidLen[index] || 0),
               },
               {
-                type: PositionType.Composable,
+                type: PositionTypesMap[PositionType.Composable],
                 count: Number(dataNAVs.composableLen[index] || 0),
               },
               {
-                type: PositionType.NFT,
+                type: PositionTypesMap[PositionType.NFT],
                 count: Number(dataNAVs.nftLen[index] || 0),
               },
               {
-                type: PositionType.Illiquid,
+                type: PositionTypesMap[PositionType.Illiquid],
                 count: Number(dataNAVs.illiquidLen[index] || 0),
               },
             ] as IPositionTypeCount[],
