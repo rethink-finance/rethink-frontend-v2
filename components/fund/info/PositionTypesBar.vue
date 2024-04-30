@@ -1,16 +1,15 @@
 <template>
   <div class="position_types_bar">
-    <template v-if="totalCountSum > 0">
-
+    <template v-if="totalCountSum > 0 && calculatedPositionTypes?.length">
       <div
-        v-for="positionType in calculatedPositionTypes"
-        :key="positionType.type.key"
+        v-for="(positionType, index) in calculatedPositionTypes"
+        :key="index"
         class="position_types_bar__item"
         :class="positionType.class"
         :style="positionType.style"
       >
-        <v-tooltip activator="parent" location="bottom">
-          {{ positionType.type.name }} of {{ positionType.width }}
+        <v-tooltip v-if="positionType?.type?.name" activator="parent" location="bottom">
+          {{ positionType?.type?.name }} of {{ positionType.width }}
         </v-tooltip>
       </div>
     </template>
@@ -41,11 +40,10 @@ export default {
       console.log("GET CALC POS TYPES");
       return this.positionTypeCounts.map((positionType) => {
         const width = positionType.count / this.totalCountSum;
-        console.log(positionType);
         return {
           width: formatPercent(width, false),
           style: { width: width * 100 + "%" },
-          class: `bg_nav_${positionType.type.key}`,
+          class: `bg_nav_${positionType.type?.key || ""}`,
           ...positionType,
         }
       })

@@ -133,7 +133,7 @@ export const useFundStore = defineStore({
     },
     // @ts-expect-error: we should extend the return type ...
     fundBaseTokenContract(): Contract {
-      return new this.web3.eth.Contract(ERC20, this.fund.baseToken.address)
+      return new this.web3.eth.Contract(ERC20, this.fund?.baseToken?.address)
     },
   },
   actions: {
@@ -475,7 +475,6 @@ export const useFundStore = defineStore({
 
         // Merge funds metadata with NAV data.
         const funds = fundsMetadata.map(fund => {
-          console.log(fundsNAVMetadata[fund.address])
           return {
             ...fund,
             ...(fundsNAVMetadata[fund.address] || {}),
