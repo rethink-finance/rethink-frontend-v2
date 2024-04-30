@@ -1,55 +1,49 @@
 <template>
   <div class="position_types_bar">
-    <div
-      v-for="positionType in calculatedPositionTypes"
-      :key="positionType.type"
-      class="position_types_bar__item"
-      :class="positionType.class"
-      :style="positionType.style"
-    >
-      <v-tooltip activator="parent" location="bottom">
-        {{ positionType.type }} of {{ positionType.width }}
-      </v-tooltip>
+    <template v-if="totalCountSum > 0 && calculatedPositionTypes?.length">
+      <div
+        v-for="(positionType, index) in calculatedPositionTypes"
+        :key="index"
+        class="position_types_bar__item"
+        :class="positionType.class"
+        :style="positionType.style"
+      >
+        <v-tooltip v-if="positionType?.type?.name" activator="parent" location="bottom">
+          {{ positionType?.type?.name }} of {{ positionType.width }}
+        </v-tooltip>
+      </div>
+    </template>
+    <div v-else class="d-flex flex-grow-1 justify-end">
+      N/A
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import type IPositionType from "~/types/position_type";
-import { PositionType } from "~/types/enums/position_type";
+import type IPositionTypeCount from "~/types/position_type";
 
 export default {
   name: "PositionTypesBar",
   props: {
-    positionTypes: {
-      type: Array as () => IPositionType[],
+    positionTypeCounts: {
+      type: Array as () => IPositionTypeCount[],
       default: () => [],
     },
   },
-  data() {
-    return {
-      positionTypeToClass: {
-        [PositionType.NAVLiquid]: "nav_liquid",
-        [PositionType.NAVComposable]: "nav_composable",
-        [PositionType.NAVNft]: "nav_nft",
-        [PositionType.NAVIlliquid]: "nav_illiquid",
-      },
-    };
-  },
   computed: {
-    totalValueSum() {
-      return this.positionTypes.reduce((sum, current) => {
-        return sum + current.value;
+    totalCountSum() {
+      return this.positionTypeCounts.reduce((sum, current) => {
+        return sum + current.count;
       }, 0);
     },
     calculatedPositionTypes() {
-      return this.positionTypes.map((positionType) => {
-        const width = positionType.value / this.totalValueSum;
-
+      console.log("GET CALC POS TYPES");
+      return this.positionTypeCounts.map((positionType) => {
+        const width = positionType.count / this.totalCountSum;
         return {
           width: formatPercent(width, false),
           style: { width: width * 100 + "%" },
-          class: `bg_${this.positionTypeToClass[positionType.type]}`,
+          class: `bg_nav_${positionType.type?.key || ""}`,
           ...positionType,
         }
       })

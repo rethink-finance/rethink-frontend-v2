@@ -80,14 +80,14 @@ const columns = ref([
     cell: (info) => info.getValue() || "N/A",
   },
   {
-    accessorKey: "positionTypes",
+    accessorKey: "positionTypeCounts",
     header: "Position Types",
     size: "auto",
     minSize: 128,
     maxSize: 158,
     cell: (info) => {
       return h(PositionTypesBar, {
-        "position-types": info.getValue() ?? [],
+        "position-type-counts": info.getValue() ?? [],
       });
     },
   },

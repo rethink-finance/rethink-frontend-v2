@@ -8,12 +8,12 @@ import { ethers } from "ethers";
  */
 export const formatDate = (date: Date) => {
   if (!date) return "";
-  const day = date.getDate().toString().padStart(2, "0"); // Day of the month with leading zero
+  const day = date.getDate().toString(); // Day of the month.
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const month = monthNames[date.getMonth()]; // Abbreviated month name
   const year = date.getFullYear().toString().slice(-2); // Last two digits of the year
 
-  return `${day} ${month} ${year}`;
+  return `${day}. ${month} ${year}`;
 }
 
 /**

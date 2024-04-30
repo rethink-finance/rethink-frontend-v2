@@ -1,6 +1,9 @@
-import type { PositionType } from '~/types/enums/position_type';
+export interface IPositionType {
+  name: string,
+  key: string,
+}
 
-export default interface IPositionType {
-  type: PositionType;
-  value: number;
+export default interface IPositionTypeCount {
+  type: IPositionTypeRecord;
+  count: number;
 }

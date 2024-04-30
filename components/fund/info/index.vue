@@ -1,5 +1,5 @@
 <template>
-  <div class="fund_info">
+  <div v-if="fund?.address" class="fund_info">
     <FundInfoDescription :fund="fund" />
 
     <FundInfoInsights :fund="fund" />

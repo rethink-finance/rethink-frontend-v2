@@ -5,7 +5,7 @@
     <v-skeleton-loader type="card" />
     <v-skeleton-loader type="card" />
   </div>
-  <div v-else>
+  <div v-else-if="fund?.address">
     <div class="fund_details">
       <div class="main_card">
         <FundInfo :fund="fund" />
@@ -25,6 +25,14 @@
 
       <FundOverview :fund="fund" />
     </div>
+  </div>
+  <div v-else class="d-flex flex-column h-100 align-center">
+    <h2 class="mb-2">
+      Fund not found
+    </h2>
+    <p>
+      Make sure you are on the right network.
+    </p>
   </div>
 
 </template>
