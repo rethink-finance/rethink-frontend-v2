@@ -2,18 +2,69 @@ import { defineStore } from "pinia";
 import type { Account, WalletState } from "@web3-onboard/core/dist/types";
 import { Web3 } from "web3";
 import { useWeb3Store } from "~/store/web3.store";
+import type INetwork from "~/types/network";
 
 interface IState {
   chainId?: string;
   chainName: string;
+  chainIcon: string;
+  chainNativeToken: string;
   web3Onboard?: any;
+  networks: Record<string, INetwork>;
 }
+
 
 export const useAccountsStore = defineStore("accounts", {
   state: (): IState => ({
     chainId: undefined,
     chainName: "",
+    chainIcon: "",
+    chainNativeToken: "",
     web3Onboard: undefined as any | undefined,
+    networks: {
+      // "0x2a": {
+      //   chainId: "0x2a",
+      //   chainName: "Kovan Testnet",
+      //   chainNativeToken: "eth",
+      //   chainIcon: "kovan",
+      // },
+      "0x89": {
+        chainId: "0x89",
+        chainName: "Polygon",
+        chainNativeToken: "matic",
+        chainIcon: "cryptocurrency-color:matic",
+      },
+      // "0x13881": {
+      //   chainId: "0x13881",
+      //   chainName: "Mumbai",
+      //   chainNativeToken: "matic",  // Mumbai is the testnet for Polygon, so it uses the same token type as Polygon's mainnet.
+      //   chainIcon: "mumbai",
+      // },
+      // "0xa869": {
+      //   chainId: "0xa869",
+      //   chainName: "Fuji",
+      //   chainNativeToken: "avax",  // Fuji is the testnet for Avalanche.
+      //   chainIcon: "fuji",
+      // },
+      // "0x1e15": {
+      //   chainId: "0x1e15",
+      //   chainName: "Canto Testnet",
+      //   chainNativeToken: "canto", // Assuming Canto uses its own native token, typically denoted by the network name.
+      //   chainIcon: "canto",
+      // },
+      "0x66eed": {
+        chainId: "0x66eed",
+        chainName: "Arbitrum One",
+        chainNativeToken: "arb1",  // Arbitrum One uses Ethereum's ETH as it is a Layer 2 solution leveraging Ethereum's security.
+        chainIcon: "arbitrum1",
+      },
+      // "0x5": {
+      //   chainId: "0x5",
+      //   chainName: "Goerli Testnet",
+      //   chainNativeToken: "eth",  // Goerli is another Ethereum testnet, so it uses ETH.
+      //   chainIcon: "goerli",
+      // },
+    },
   }),
   getters: {
     web3Store() {
@@ -37,43 +88,18 @@ export const useAccountsStore = defineStore("accounts", {
   },
   actions: {
     setActiveChain(chainId?: string): void {
+      console.log("setActiveChainId: ", chainId);
       if (!chainId) {
         chainId = this.web3Onboard?.connectedChain?.id;
+        console.log("2setActiveChainId: ", chainId);
       }
 
       this.chainId = chainId;
+      const chain: any = this.networks[chainId || ""];
+      this.chainName = chain?.chainName ?? "";
+      this.chainNativeToken = chain?.chainNativeToken ?? "";
+      this.chainIcon = chain?.chainIcon ?? "";
 
-      switch (chainId) {
-        case "0x2a":
-          this.chainName = "Kovan";
-          break;
-        case "0x89":
-          this.chainName = "Polygon PoS Chain";
-          break;
-        case "0xa868":
-          this.chainName = "Localhost";
-          break;
-        case "0x13881":
-          this.chainName = "Mumbai";
-          break;
-        case "0xa869":
-          this.chainName = "Fuji";
-          break;
-        case "0x1e15":
-          this.chainName = "Canto Testnet";
-          break;
-        case "0x66eed":
-          this.chainName = "Arbitrum Goerli";
-          break;
-        case "0x5":
-          this.chainName = "Goerli Testnet";
-          break;
-        default:
-          console.error("Unknown chain: ", chainId);
-          this.chainName = "";
-          this.chainId = "";
-          break;
-      }
       console.log("setActiveChain id: ", this.chainId, " name: ", this.chainName);
     },
     async connectWallet() {

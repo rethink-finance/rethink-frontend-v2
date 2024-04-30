@@ -3,23 +3,25 @@ import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
+import RethinkReader from "~/assets/contracts/RethinkReader.json";
+import ERC20 from "~/assets/contracts/ERC20.json";
+import addressesJson from "~/assets/contracts/addresses.json";
 import { useAccountsStore } from "~/store/accounts.store";
 import { PositionType } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
-import addressesJson from "~/assets/contracts/addresses.json";
 import type INAVUpdate from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IPositionType from "~/types/position_type";
-import ERC20 from "~/assets/contracts/ERC20.json";
 import type IToken from "~/types/token";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
 
 const GovernableFundFactoryContractName = "GovernableFundFactoryBeaconProxy";
+const RethinkReaderContractName = "RethinkReader";
 
 export interface FundContract extends BaseContract {
   requestDeposit: (amount: ethers.BigNumberish, options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
@@ -102,6 +104,14 @@ export const useFundStore = defineStore({
     getFundAddress(state: IState): string {
       return state.address?.[state.selectedFundAddress];
     },
+    baseToFundTokenExchangeRate(state: IState): number {
+      if (!state.fund.fundTokenTotalSupply) return 0;
+      return Number(state.fund.totalNAVWei / state.fund.fundTokenTotalSupply);
+    },
+    fundToBaseTokenExchangeRate(state: IState): number {
+      if (!state.fund.totalNAVWei) return 0;
+      return 1 / this.baseToFundTokenExchangeRate;
+    },
     /**
      * Contracts
      */
@@ -112,7 +122,12 @@ export const useFundStore = defineStore({
       const contractAddress = addresses[GovernableFundFactoryContractName][this.web3Store.chainId];
       return new this.web3.eth.Contract(GovernableFundFactory.abi, contractAddress)
     },
-    // @ts-expect-error: we should extend the return type as Contract<GovernableFund> but
+    // @ts-expect-error: we should extend the return type as Contract<...>
+    rethinkReaderContract(): Contract {
+      const contractAddress = addresses[RethinkReaderContractName][this.web3Store.chainId];
+      return new this.web3.eth.Contract(RethinkReader.abi, contractAddress)
+    },
+    // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
     fundContract(): Contract {
       return new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress)
     },
@@ -193,7 +208,10 @@ export const useFundStore = defineStore({
       // Process the fund settings with a method assumed to be available in the current scope
       const fundSettings: IFundSettings = this.parseFundSettings(settingsData);
 
-      return await this.fetchFundMetadata(fundSettings);
+      const fund = await this.fetchFundMetadata(fundSettings);
+      const navData = await this.fetchFundNAVData(fundSettings.fundAddress);
+      console.log("NAV data: ", navData);
+      return fund;
     },
     async fetchFundMetadata(fundSettings: IFundSettings) {
       /**
@@ -213,11 +231,14 @@ export const useFundStore = defineStore({
           metadataPromise,
         ]);
 
-        // Fetch Base/Base token symbol.
         // @dev: would be better to just have this available in the FundSettings data.
+        // Fetch base, fund and governance ERC20 token symbol and decimals.
         const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
         const fundTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.fundAddress);
         const governanceTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.governanceToken);
+
+        // GovernableFund contract to get totalNAV.
+        const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
 
         // Fetch all token symbols and decimals.
         // @dev: maybe there are more things to be fetched here.
@@ -227,15 +248,24 @@ export const useFundStore = defineStore({
           governanceTokenSymbol,
           governanceTokenDecimals,
           fundTokenDecimals,
+          fundTokenTotalSupply,
+          fundTotalNAV,
         ] = await Promise.all([
           fundBaseTokenContract.methods.symbol().call() as Promise<string>,
           fundBaseTokenContract.methods.decimals().call() as Promise<number>,
           governanceTokenContract.methods.symbol().call() as Promise<string>,
           governanceTokenContract.methods.decimals().call() as Promise<number>,
           fundTokenContract.methods.decimals().call() as Promise<number>,
+          fundTokenContract.methods.totalSupply().call() as Promise<bigint>,
+          fundContract.methods.totalNAV().call() as Promise<bigint>,
         ]);
+        console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
+        console.log("fundTotalNAV: ", fundTotalNAV)
 
         const fund: IFund = {
+          chainName: this.accountsStore.chainName,
+          chainNativeToken: this.accountsStore.chainNativeToken,
+          chainIcon: this.accountsStore.chainIcon,
           address: fundSettings.fundAddress || "",
           title: fundSettings.fundName || "N/A",
           subtitle: fundSettings.fundName || "N/A",
@@ -260,8 +290,8 @@ export const useFundStore = defineStore({
             address: fundSettings.governanceToken,
             decimals: governanceTokenDecimals ?? 18,
           } as IToken,
-          chain: "",
-          aumValue: 0,
+          totalNAVWei: fundTotalNAV,
+          fundTokenTotalSupply,
           cumulativeReturnPercent: 0,
           monthlyReturnPercent: 0,
           sharpeRatio: 0,
@@ -285,12 +315,9 @@ export const useFundStore = defineStore({
             },
           ] as IPositionType[],
           cyclePendingRequests: [] as ICyclePendingRequest[],
-          fundToBaseExchangeRate: 0,
 
           // My Fund Positions
           netDeposits: "",
-          currentValue: "",
-          totalReturn: 0,
 
           // Overview fields
           depositAddresses: [],
@@ -304,6 +331,14 @@ export const useFundStore = defineStore({
           proposalThreshold: "",
           quorom: "",
           lateQuorom: "",
+
+          // Fees
+          performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
+          managementFee: fundSettings.managementFee,
+          depositFee: fundSettings.depositFee,
+          performanceFee: fundSettings.performanceFee,
+          withdrawFee: fundSettings.withdrawFee,
+          feeCollectors: fundSettings.feeCollectors,
 
           // NAV Updates
           navUpdates: [] as INAVUpdate[],
@@ -323,6 +358,39 @@ export const useFundStore = defineStore({
       } catch (error) {
         console.error("Error in promises: ", error, "fund: ", fundSettings);
         return {} as IFund; // Return an empty or default object in case of error
+      }
+    },
+    async fetchFundNAVData(fundAddress: string) {
+      /**
+       * Fetch fund NAV data.
+       */
+      try {
+        const data = await this.rethinkReaderContract.methods.getNAVDataForFund(fundAddress).call();
+        console.log("fund NAV: ", data)
+
+        return {
+          positionTypes: [
+            {
+              type: PositionType.NAVLiquid,
+              value: 123,
+            },
+            {
+              type: PositionType.NAVComposable,
+              value: 78,
+            },
+            {
+              type: PositionType.NAVNft,
+              value: 287,
+            },
+            {
+              type: PositionType.NAVIlliquid,
+              value: 36,
+            },
+          ] as IPositionType[],
+        }
+      } catch (error) {
+        console.error("Error calling getNAVDataForFund: ", error, "fund: ", fundAddress);
+        return {}; // Return an empty or default object in case of error
       }
     },
     async getFund(fundAddress: string) {

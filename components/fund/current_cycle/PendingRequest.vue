@@ -8,7 +8,7 @@
         </div>
       </div>
       <div class="pending_request__icon_more">
-        <Icon name="material-symbols:more-vert" size="1.5rem" />
+        <Icon name="material-symbols:more-vert" width="1.5rem" />
       </div>
     </div>
     <div class="pending_request__header pending_request__header--bg-light">

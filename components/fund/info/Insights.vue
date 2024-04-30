@@ -4,13 +4,10 @@
       <div class="data_bar__item">
         <div class="data_bar__title">
           <Icon
-            v-if="fund?.chain"
-            :name="chainIconName(fund?.chain)"
-            size="0.75rem"
+            :icon="fund.chainIcon"
             class="mr-2"
-            color="white"
           />
-          {{ capitalizeFirst(fund.chain) || "N/A" }}
+          {{ capitalizeFirst(fund.chainName) || "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           Chain

@@ -5,6 +5,7 @@
     :token1="fundStore.fund.baseToken"
     :token0-user-balance="fundStore.userFundTokenBalance"
     :token1-user-balance="fundStore.userBaseTokenBalance"
+    :exchange-rate="fundStore.fundToBaseTokenExchangeRate"
   >
     <template #buttons>
       <div v-if="accountsStore.isConnected">

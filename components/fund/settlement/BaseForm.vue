@@ -4,7 +4,7 @@
       <div class="request_deposit__token_header">
         Token
         <span>
-          <Icon name="IconQuestionCircle" size="1rem" />
+          <Icon icon="octicon:question-16" width="1rem" />
           <v-tooltip v-if="token0" activator="parent" location="right">
             {{ token0.symbol }} ({{ token0.address }}).
           </v-tooltip>
@@ -32,7 +32,7 @@
       <div class="request_deposit__token_header">
         Token
         <span>
-          <Icon name="IconQuestionCircle" size="1rem" />
+          <Icon icon="octicon:question-16" width="1rem" />
           <v-tooltip v-if="token1" activator="parent" location="right">
             {{ token1.symbol }} ({{ token1.address }}).
           </v-tooltip>
@@ -52,7 +52,7 @@
           Balance: {{ token1UserBalanceFormatted }} {{ token1.symbol }}
         </div>
         <div>
-          Last NAV Update Value: {{ exchangeRateText }}
+          Based on Last NAV Update: {{ exchangeRateText }}
         </div>
       </div>
     </div>
@@ -92,6 +92,10 @@ const props = defineProps({
     type: [Number, BigInt] as PropType<number | bigint>,
     default: BigInt("0"),
   },
+  exchangeRate: {
+    type: Number,
+    default: 0,
+  },
   rules: {
     type: Array as PropType<RulesArray>,
     default: () => [],
@@ -125,21 +129,21 @@ const token1UserBalanceFormatted = computed(() => {
   return formatTokenValue(props.token1UserBalance, props.token0.decimals);
 });
 
-const exchangeRate = computed(() => {
-  // TODO exchange rate should come from last NAV update
-  return 0;
-});
 
 const exchangeRateText = computed(() => {
-  if (!exchangeRate.value) return "--"
-
+  if (!props.exchangeRate) return "--"
+  let exchangeRate: string | number = props.exchangeRate;
+  if (exchangeRate > 1) {
+    // If the number is bigger than 1, clip it to two decimals.
+    exchangeRate = exchangeRate.toFixed(2);
+  }
   // Make sure to handle potential reactivity or null checks as needed
-  return `1 ${props.token0.symbol} = ${exchangeRate.value.toFixed(2)} ${props.token1.symbol}`;
+  return `1 ${props.token0.symbol} = ${exchangeRate} ${props.token1.symbol}`;
 });
 
 const calculatedToken1Value = computed(() => {
   // Continue to use your trimTrailingZeros utility function as needed
-  return trimTrailingZeros((Number(tokenValue.value) * exchangeRate.value).toFixed(4));
+  return trimTrailingZeros((Number(tokenValue.value) * props.exchangeRate).toFixed(4));
 });
 </script>
 

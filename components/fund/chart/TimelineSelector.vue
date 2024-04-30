@@ -4,7 +4,7 @@
       <div>
         <div class="timeline_selector__selected">
           {{ selectedTimeline }}
-          <Icon name="IconDropdownArrow" size="2rem" :class="{'active': menuOpen}" />
+          <IconDropdown :active="menuOpen" />
         </div>
       </div>
     </div>

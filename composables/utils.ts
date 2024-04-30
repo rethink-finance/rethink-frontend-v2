@@ -41,7 +41,7 @@ export const formatPercent = (value: number, includeSign: boolean = true): strin
   const percentage = value * 100;
   let formattedPercentage = percentage.toFixed(2) + "%";
 
-  if (includeSign && percentage >= 0) {
+  if (includeSign && percentage > 0) {
     formattedPercentage = "+" + formattedPercentage;
   }
 
@@ -54,4 +54,12 @@ export const trimTrailingZeros = (value: string) => {
 
 export const formatUSDValue = (value: string | number) => {
   return trimTrailingZeros(numeral(value).format("$0,0.00"))
+}
+
+export const formatNumberShort = (number?: number) => {
+  // Formats into abbreviations with 2 decimal points, for example: 1.5K, 5.32M
+  // Convert to uppercase.
+  // Remove trailing ".00";
+  if (number == undefined) return "N/A";
+  return numeral(number).format("0.00a").toUpperCase().replace(/\.00(?=[KMBT])/g, "");
 }

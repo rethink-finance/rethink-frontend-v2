@@ -37,7 +37,7 @@
             >
               {{ route.title }}
               <template #append>
-                <Icon v-if="route.icon" :name="route.icon" size="0.875rem" />
+                <Icon v-if="route.icon" :name="route.icon" width="0.875rem" />
               </template>
               <v-tooltip v-if="route.text" activator="parent" location="bottom">
                 {{ route.text }}
@@ -58,7 +58,7 @@
               :bg-color="selectedChainId ? '' : 'error'"
               label="Network"
               :items="networks"
-              item-title="name"
+              item-title="chainName"
               item-value="chainId"
             >
               <template #item="{ props, item }">
@@ -116,6 +116,7 @@
 <script lang="ts" setup>
 import { useAccountsStore } from "~/store/accounts.store";
 import { useToastStore } from "~/store/toast.store";
+const router = useRouter();
 const accountsStore = useAccountsStore();
 const toastStore = useToastStore();
 
@@ -167,16 +168,8 @@ const routes : IRoute[] = [
   },
 ]
 const selectedChainId = ref("");
-const networks = [
-  { chainId: "0x89", name: "Polygon PoS Chain" },
-  // { chainId: "0x2a", name: "Kovan Testnet" },
-  // { chainId: "0x13881", name: "Mumbai Testnet" },
-  // { chainId: "0xa869", name: "Fuji Testnet" },
-  // { chainId: "0x1e15", name: "Canto Testnet" },
-  { chainId: "0xa4b1", name: "Arbitrum One" },
-  // { chainId: "0x66eed", name: "Arbitrum Goerli Testnet" },
-  // { chainId: "0x5", name: "Goerli Testnet" },
-];
+const networks = Object.values(accountsStore.networks);
+
 watch(() => accountsStore.chainId, (newVal, oldVal) => {
   console.log(`Chain ID changed from ${oldVal} to ${newVal}`);
   // Perform additional actions when chainId changes
@@ -191,6 +184,10 @@ const switchNetwork = async (chainId: string) => {
         chainId,
       }],
     });
+
+    // TODO handle more gracefully instead of full reload
+    accountsStore.setActiveChain(chainId);
+    return router.go(0);
   } catch (error: any) {
     selectedChainId.value = "";
 

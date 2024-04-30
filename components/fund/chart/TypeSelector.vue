@@ -9,7 +9,7 @@
           {{ selectedTypeValue }}
         </div>
       </div>
-      <Icon name="IconDropdownArrow" size="2rem" :class="{'active': menuOpen}" />
+      <IconDropdown :active="menuOpen" />
     </div>
     <div v-if="menuOpen" class="price_type_selector__options">
       <div

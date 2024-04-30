@@ -9,35 +9,35 @@
         <Icon
           name="ri:twitter-x-line"
           color="white"
-          size="1rem"
+          width="1rem"
         />
       </v-btn>
       <v-btn href="https://#" target="_blank" variant="plain">
         <Icon
           name="ic:baseline-discord"
           color="white"
-          size="1rem"
+          width="1rem"
         />
       </v-btn>
       <v-btn href="https://#" target="_blank" variant="plain">
         <Icon
           name="mdi:youtube"
           color="white"
-          size="1rem"
+          width="1rem"
         />
       </v-btn>
       <v-btn href="https://#" target="_blank" variant="plain">
         <Icon
           name="ph:medium-logo-fill"
           color="white"
-          size="1rem"
+          width="1rem"
         />
       </v-btn>
       <v-btn href="https://#" target="_blank" variant="plain">
         <Icon
           name="uil:github"
           color="white"
-          size="1rem"
+          width="1rem"
           class="mr-3"
         />
       </v-btn>
@@ -62,7 +62,7 @@
       <Icon
         name="ic:baseline-copyright"
         color="white"
-        size="1rem"
+        width="1rem"
         class="me-1"
       />
       {{ currentYear }} Rethink.finance. All rights reserved

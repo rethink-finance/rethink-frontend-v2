@@ -12,12 +12,12 @@ export default defineNuxtConfig({
         { rel: "icon", type: "image/png", href: "/favicon.png" },
       ],
     },
-    //baseURL: '/rethink-frontend-v2/',
-    buildAssetsDir: 'assets',
+    // baseURL: '/rethink-frontend-v2/',
+    buildAssetsDir: "assets",
   },
-//  generate: {
-//    nojekyll: true,
- // },
+  //  generate: {
+  //    nojekyll: true,
+  // },
   devtools: { enabled: false },
   typescript: {
     typeCheck: true,
@@ -39,9 +39,9 @@ export default defineNuxtConfig({
     },
   },
   routeRules: {
- //  '/': {prerender: false},
- //  '/create': {prerender: false},   
- //  '/governance': {prerender: false},
+    //  '/': {prerender: false},
+    //  '/create': {prerender: false},
+    //  '/governance': {prerender: false},
   },
   modules: [
     (_options, nuxt) => {
@@ -70,7 +70,6 @@ export default defineNuxtConfig({
         },
       },
     ],
-    "nuxt-icon",
     "@pinia/nuxt",
   ],
   sourcemap: {
@@ -98,6 +97,7 @@ export default defineNuxtConfig({
     ],
   },
   plugins: [
+    "plugins/iconify.ts",
     "plugins/apexcharts.client.ts",
     "plugins/numeral.ts",
     "plugins/web3-onboard.ts",
@@ -105,6 +105,6 @@ export default defineNuxtConfig({
   nitro: {
     prerender: {
       failOnError: false,
-    }
-  }
+    },
+  },
 });

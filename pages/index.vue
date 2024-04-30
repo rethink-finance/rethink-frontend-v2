@@ -17,6 +17,7 @@ import { useFundStore } from "~/store/fund.store";
 import PositionTypesBar from "~/components/fund/info/PositionTypesBar";
 import FundNameCell from "../components/table/components/FundNameCell";
 
+
 const columns = ref([
   {
     accessorKey: "name",
@@ -35,20 +36,24 @@ const columns = ref([
     },
   },
   {
-    accessorKey: "chain",
+    accessorKey: "chainIcon",
     header: "Chain",
     size: 62,
     maxWidth: 62,
     cell: (info) => {
-      return h(<Icon class="mr-2" size="1.5rem" color="white" />, {
-        name: chainIconName(info.getValue()),
+      return h(<Icon class="mr-2" width="1.5rem" />, {
+        icon: info.getValue(),
       });
     },
   },
   {
-    accessorKey: "aumValue",
+    accessorKey: "totalNAVWei",
     header: "AUM",
-    cell: (info) => formatUSDValue(info.getValue()),
+    cell: ({row}) => {
+      const fund = row.original;
+      const aum = Number(formatTokenValue(fund.totalNAVWei, fund.baseToken.decimals));
+      return formatNumberShort(aum) + " " + fund.baseToken.symbol;
+    }
   },
   {
     accessorKey: "inceptionDate",
@@ -72,7 +77,7 @@ const columns = ref([
     accessorKey: "sharpeRatio",
     header: "Sharpe Ratio",
     minSize: 115,
-    cell: (info) => info.getValue(),
+    cell: (info) => info.getValue() || "N/A",
   },
   {
     accessorKey: "positionTypes",

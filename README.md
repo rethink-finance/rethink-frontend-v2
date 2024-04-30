@@ -65,14 +65,7 @@ import { init } from "@web3-onboard/vue"
 3) There are many contract variable typos:
    - totalWithrawalBalance
    - revokeDepositWithrawal
-   - performaceHurdleRateBps  
-4) Sometimes warning shows in console after switching views.
-  It was connected with fetching and updating `fundStore.fund` variable and also with `<Icon>`
-    ```txt
-    index.vue:59 [Vue warn]: Slot "default" invoked outside of the render function: 
-    this will not track dependencies used in the slot. Invoke the slot function 
-    inside the render function instead
-    ```
+   - performaceHurdleRateBps
 
 
 ### TODO Create Contract TYPES (TypeScript)

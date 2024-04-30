@@ -16,8 +16,8 @@
         @click="toastStore.closeToast(toast.id)"
       >
         <Icon
-          name="IconClose"
-          size="1.5rem"
+          icon="octicon:x-16"
+          width="1.5rem"
         />
       </v-btn>
     </template>
