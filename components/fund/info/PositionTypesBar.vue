@@ -14,9 +14,9 @@
         </v-tooltip>
       </div>
     </template>
-    <template v-else>
+    <div v-else class="d-flex flex-grow-1 justify-end">
       N/A
-    </template>
+    </div>
   </div>
 </template>
 

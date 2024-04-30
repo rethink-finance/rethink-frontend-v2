@@ -357,10 +357,11 @@ export const useFundStore = defineStore({
           const positionTypeData = dataNAV[positionTypeKey];
           // Get the last array for each NAV position type. The last array represents
           // the latest NAV update for each position type (liquid, nft, composable, illiquid).
-          const lastNAVUpdate = positionTypeData[positionTypeData.length - 1];
+          const lastIndex = positionTypeData?.length || 0;
+          const lastNAVUpdate = positionTypeData[lastIndex - 1];
           positionTypeCounts.push({
             type: positionType,
-            count: lastNAVUpdate.length,
+            count: lastNAVUpdate?.length || 0,
           })
         }
 
