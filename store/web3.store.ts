@@ -17,14 +17,14 @@ export const useWeb3Store = defineStore({
       "0x89": {
         chainId: "0x89",
         chainName: "Polygon",
-        chainNativeToken: "matic",
+        chainShort: "matic",
         chainIcon: "cryptocurrency-color:matic",
         rpcURL: "https://polygon-rpc.com/",
       },
       "0xa4b1": {
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
-        chainNativeToken: "eth",
+        chainShort: "eth",
         chainIcon: "arbitrum1",
         rpcURL: "https://arbitrum.llamarpc.com/",
       },

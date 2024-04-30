@@ -1,6 +1,7 @@
 import type ICyclePendingRequest from '~/types/cycle_pending_request';
 import type INAVUpdate from '~/types/nav_update';
-import type IPositionType from '~/types/position_type';
+import type IPositionTypeCount from "~/types/position_type";
+import type IToken from "~/types/token";
 
 /**
  * Example API response data of getFundSettings:
@@ -23,10 +24,10 @@ import type IPositionType from '~/types/position_type';
  * safe: "0x41d528de21DaEF1B1FEAF66566977e35eE375fd0"
  */
 export default interface IFund {
-  // chain and chainNativeToken are populated from the current network
+  // chain data is populated from the current network
   // the user has selected when fetching funds.
   chainName: string;
-  chainNativeToken: string;
+  chainShort: string;
   chainIcon: string;
 
   address: string;
@@ -46,8 +47,8 @@ export default interface IFund {
   cumulativeReturnPercent: number; // TODO
   monthlyReturnPercent: number; // TODO
   sharpeRatio: number; // TODO
-  positionTypes: IPositionType[]; // TODO
   cyclePendingRequests: ICyclePendingRequest[]; // TODO
+  positionTypeCounts: IPositionTypeCount[];
 
   // Metadata
   photoUrl: string;

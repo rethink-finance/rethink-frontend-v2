@@ -7,7 +7,7 @@ interface IState {
   chainId?: string;
   chainName: string;
   chainIcon: string;
-  chainNativeToken: string;
+  chainShort: string;
   web3Onboard?: any;
 }
 
@@ -17,7 +17,7 @@ export const useAccountsStore = defineStore("accounts", {
     chainId: undefined,
     chainName: "",
     chainIcon: "",
-    chainNativeToken: "",
+    chainShort: "",
     web3Onboard: undefined as any | undefined,
   }),
   getters: {
@@ -45,7 +45,7 @@ export const useAccountsStore = defineStore("accounts", {
       this.chainId = undefined;
       this.chainName = "";
       this.chainIcon = "";
-      this.chainNativeToken = "";
+      this.chainShort = "";
       this.web3Store.init();
     },
     setActiveChain(chainId: string): void {
@@ -53,7 +53,7 @@ export const useAccountsStore = defineStore("accounts", {
       this.chainId = chainId;
       const chain: any = this.web3Store.networksMap[chainId];
       this.chainName = chain?.chainName ?? "";
-      this.chainNativeToken = chain?.chainNativeToken ?? "";
+      this.chainShort = chain?.chainShort ?? "";
       this.chainIcon = chain?.chainIcon ?? "";
 
       if (this.connectedWallet) {

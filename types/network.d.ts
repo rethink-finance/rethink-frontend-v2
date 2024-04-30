@@ -1,7 +1,7 @@
 export default interface INetwork {
   chainId:  string,
   chainName: string,
-  chainNativeToken: string,
+  chainShort: string,
   chainIcon: string,
   rpcURL: string,
 }

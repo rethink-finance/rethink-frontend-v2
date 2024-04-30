@@ -81,7 +81,7 @@ export default {
       /** Example:
        * https://app.safe.global/balances?safe=matic:0x54b491bb5e59CD974dDc9b5a52478f54c07Aee78
        * **/
-      return `https://app.safe.global/balances?safe=${this.fund.chainNativeToken}:${this.fund.safeAddress}`;
+      return `https://app.safe.global/balances?safe=${this.fund.chainShort}:${this.fund.safeAddress}`;
     },
   },
   methods: {

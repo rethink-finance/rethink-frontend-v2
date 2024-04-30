@@ -7,7 +7,7 @@ import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import { useAccountsStore } from "~/store/accounts.store";
-import { PositionType } from "~/types/enums/position_type";
+import { PositionType, PositionTypes } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3.store";
@@ -16,6 +16,7 @@ import type INAVUpdate from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IPositionType from "~/types/position_type";
 import type IToken from "~/types/token";
+import type IPositionTypeCount from "~/types/position_type";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -182,6 +183,7 @@ export const useFundStore = defineStore({
         // since fundSettings is typed as Partial<IFundSettings> and initialized accordingly.
         fundSettings[detailKey] = typeof value === "bigint" ? value.toString() : value;
       });
+      console.log("fundSettings: ", fundSettings);
 
       return fundSettings as IFundSettings;
     },
@@ -209,8 +211,7 @@ export const useFundStore = defineStore({
       const fundSettings: IFundSettings = this.parseFundSettings(settingsData);
 
       const fund = await this.fetchFundMetadata(fundSettings);
-      const navData = await this.fetchFundNAVData(fundSettings.fundAddress);
-      console.log("NAV data: ", navData);
+      fund.positionTypeCounts = await this.fetchFundNAVData(fundSettings.fundAddress);
       return fund;
     },
     async fetchFundMetadata(fundSettings: IFundSettings) {
@@ -264,7 +265,7 @@ export const useFundStore = defineStore({
 
         const fund: IFund = {
           chainName: this.accountsStore.chainName,
-          chainNativeToken: this.accountsStore.chainNativeToken,
+          chainShort: this.accountsStore.chainShort,
           chainIcon: this.accountsStore.chainIcon,
           address: fundSettings.fundAddress || "",
           title: fundSettings.fundName || "N/A",
@@ -295,25 +296,7 @@ export const useFundStore = defineStore({
           cumulativeReturnPercent: 0,
           monthlyReturnPercent: 0,
           sharpeRatio: 0,
-          // TODO remove these position types, replace with []
-          positionTypes: [
-            {
-              type: PositionType.NAVLiquid,
-              value: 123,
-            },
-            {
-              type: PositionType.NAVComposable,
-              value: 78,
-            },
-            {
-              type: PositionType.NAVNft,
-              value: 287,
-            },
-            {
-              type: PositionType.NAVIlliquid,
-              value: 36,
-            },
-          ] as IPositionType[],
+          positionTypeCounts: [] as IPositionTypeCount[],
           cyclePendingRequests: [] as ICyclePendingRequest[],
 
           // My Fund Positions
@@ -360,37 +343,32 @@ export const useFundStore = defineStore({
         return {} as IFund; // Return an empty or default object in case of error
       }
     },
-    async fetchFundNAVData(fundAddress: string) {
+    async fetchFundNAVData(fundAddress: string): Promise<IPositionTypeCount[]> {
       /**
        * Fetch fund NAV data.
        */
       try {
-        const data = await this.rethinkReaderContract.methods.getNAVDataForFund(fundAddress).call();
-        console.log("fund NAV: ", data)
+        const dataNAV = await this.rethinkReaderContract.methods.getNAVDataForFund(fundAddress).call();
+        console.log("fund NAV: ", dataNAV)
 
-        return {
-          positionTypes: [
-            {
-              type: PositionType.NAVLiquid,
-              value: 123,
-            },
-            {
-              type: PositionType.NAVComposable,
-              value: 78,
-            },
-            {
-              type: PositionType.NAVNft,
-              value: 287,
-            },
-            {
-              type: PositionType.NAVIlliquid,
-              value: 36,
-            },
-          ] as IPositionType[],
+        const positionTypeCounts = [];
+
+        for (const [positionTypeKey, positionType] of PositionTypes) {
+          const positionTypeData = dataNAV[positionTypeKey];
+          // Get the last array for each NAV position type. The last array represents
+          // the latest NAV update for each position type (liquid, nft, composable, illiquid).
+          const lastNAVUpdate = positionTypeData[positionTypeData.length - 1];
+          positionTypeCounts.push({
+            type: positionType,
+            count: lastNAVUpdate.length,
+          })
         }
+
+        return positionTypeCounts;
       } catch (error) {
         console.error("Error calling getNAVDataForFund: ", error, "fund: ", fundAddress);
-        return {}; // Return an empty or default object in case of error
+        // Return an empty or default object in case of error
+        return [] as IPositionTypeCount[];
       }
     },
     async getFund(fundAddress: string) {
@@ -401,7 +379,7 @@ export const useFundStore = defineStore({
 
       // TODO Check if fund already exists in the fetched funds.
       //   If yes, only fetch metadata & inception date, do not fetch fundSettings again, as we have it already.
-      // let fund = this.funds.find(f => f.fundAddress === fundAddress);
+      //   let fund = this.funds.find(f => f.fundAddress === fundAddress);
       try {
         // TODO only fetch fund if not found the fund
         this.fund = await this.fetchFundData() as IFund;
@@ -441,7 +419,7 @@ export const useFundStore = defineStore({
 
       try {
         const fundsMetadata = await Promise.all(promises);
-        console.log("All fund metadata:", fundsMetadata);
+        console.log("All funds metadata:", fundsMetadata);
         // Using the spread operator to append each element
         this.funds.push(...fundsMetadata);
       } catch (error) {

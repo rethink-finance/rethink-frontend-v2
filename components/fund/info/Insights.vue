@@ -54,7 +54,7 @@
       <div class="data_bar__item">
         <div class="data_bar__title">
           <FundInfoPositionTypesBar
-            :position-types="fund?.positionTypes ?? []"
+            :position-type-counts="fund?.positionTypeCounts ?? []"
           />
         </div>
         <div class="data_bar__subtitle">
