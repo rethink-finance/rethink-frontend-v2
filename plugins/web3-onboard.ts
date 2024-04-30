@@ -37,47 +37,17 @@ export default defineNuxtPlugin(() => {
   init({
     wallets: [injected, safe, walletConnect],
     chains: [
-      // {
-      //   id: "0x2a",
-      //   token: "KVT",
-      //   label: "Kovan",
-      //   rpcUrl: "https://kovan.infura.io/v3/<YOUR_INFURA_PROJECT_ID>",
-      // },
       {
         id: "0x89",
         token: "MATIC",
         label: "Polygon",
         rpcUrl: "https://polygon-rpc.com/",
       },
-      // {
-      //   id: "0xa868",
-      //   token: "Localhost",
-      //   label: "Base",
-      //   rpcUrl: "",
-      // },
-      // {
-      //   id: "0x13881",
-      //   token: "MATIC",
-      //   label: "Mumbai",
-      //   rpcUrl: "https://matic-mumbai.chainstacklabs.com/",
-      // },
-      // {
-      //   id: "0xa869",
-      //   token: "AVAX",
-      //   label: "Fuji",
-      //   rpcUrl: "https://api.avax-test.network/ext/bc/C/rpc",
-      // },
-      // {
-      //   id: "0x2105",
-      //   token: "ETH",
-      //   label: "Base",
-      //   rpcUrl: "https://mainnet.base.org",
-      // },
       {
-        id: "0x66eed",
+        id: "0xa4b1",
         token: "ARB1",
         label: "Arbitrum One Goerli Testnet",
-        rpcUrl: "https://arbitrum-goerli.public.blastapi.io",
+        rpcUrl: "https://arbitrum.llamarpc.com",
       },
     ],
     theme: "dark",

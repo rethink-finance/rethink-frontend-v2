@@ -115,9 +115,12 @@
 
 <script lang="ts" setup>
 import { useAccountsStore } from "~/store/accounts.store";
+import { useWeb3Store } from "~/store/web3.store";
 import { useToastStore } from "~/store/toast.store";
+import type INetwork from "~/types/network";
 const router = useRouter();
 const accountsStore = useAccountsStore();
+const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 
 const route = useRoute();
@@ -168,7 +171,7 @@ const routes : IRoute[] = [
   },
 ]
 const selectedChainId = ref("");
-const networks = Object.values(accountsStore.networks);
+const networks: INetwork[] = web3Store.networks;
 
 watch(() => accountsStore.chainId, (newVal, oldVal) => {
   console.log(`Chain ID changed from ${oldVal} to ${newVal}`);
@@ -185,7 +188,7 @@ const switchNetwork = async (chainId: string) => {
       }],
     });
 
-    // TODO handle more gracefully instead of full reload
+    // TODO handle more gracefully instead of full reload, do a watcher on every page and update data
     accountsStore.setActiveChain(chainId);
     return router.go(0);
   } catch (error: any) {

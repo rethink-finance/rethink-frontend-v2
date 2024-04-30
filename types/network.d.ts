@@ -3,4 +3,5 @@ export default interface INetwork {
   chainName: string,
   chainNativeToken: string,
   chainIcon: string,
+  rpcURL: string,
 }
