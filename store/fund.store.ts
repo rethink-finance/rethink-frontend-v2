@@ -14,7 +14,6 @@ import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type INAVUpdate from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
-import type IPositionType from "~/types/position_type";
 import type IToken from "~/types/token";
 import type IPositionTypeCount from "~/types/position_type";
 
@@ -372,6 +371,56 @@ export const useFundStore = defineStore({
         return [] as IPositionTypeCount[];
       }
     },
+    async fetchFundsNAVMetadata(fundAddresses: string[]): Promise<Record<string, Partial<IFund>>> {
+      /**
+       * Fetch NAV data for each fund in fundAddresses and return partial fund with:
+       * - inceptionDate
+       * - totalNAVWei
+       * - positionTypeCounts
+       * - TODO: totalDepositBal (can get if needed)
+       */
+      const fundsNAVMetadata: Record<string, Partial<IFund>> = {};
+      try {
+        // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
+        //  not used in the contract code, so I have set it to 0. Change this part in the future
+        //  if the contract changes.
+        const dataNAVs: Record<string, any[]> = await this.rethinkReaderContract.methods.getFundNavMetaData(
+          fundAddresses, 0,
+        ).call();
+
+        // @dev NOTE: there is also: totalDepositBal for each fund if we need it.
+        fundAddresses.forEach((address, index) => {
+          const fundStartTime = dataNAVs.startTime[index];
+          fundsNAVMetadata[address] = {
+            inceptionDate: fundStartTime ? formatDate(new Date(Number(fundStartTime) * 1000)) : "",
+            totalNAVWei: dataNAVs.totalNav[index],
+            positionTypeCounts: [
+              {
+                type: PositionType.Liquid,
+                count: Number(dataNAVs.liquidLen[index] || 0),
+              },
+              {
+                type: PositionType.Composable,
+                count: Number(dataNAVs.composableLen[index] || 0),
+              },
+              {
+                type: PositionType.NFT,
+                count: Number(dataNAVs.nftLen[index] || 0),
+              },
+              {
+                type: PositionType.Illiquid,
+                count: Number(dataNAVs.illiquidLen[index] || 0),
+              },
+            ] as IPositionTypeCount[],
+          };
+        })
+        return fundsNAVMetadata;
+      } catch (error) {
+        console.error("Error calling getFundNavMetaData: ", error, "fund: ", fundAddresses);
+        // Return an empty or default object in case of error
+        return {} as Record<string, Partial<IFund>>;
+      }
+    },
     async getFund(fundAddress: string) {
       /**
        * This function finds and returns fund in the funds array.
@@ -419,10 +468,23 @@ export const useFundStore = defineStore({
       }
 
       try {
-        const fundsMetadata = await Promise.all(promises);
-        console.log("All funds metadata:", fundsMetadata);
+        const [fundsMetadata, fundsNAVMetadata] = await Promise.all([
+          Promise.all(promises),
+          this.fetchFundsNAVMetadata(fundAddresses),
+        ]);
+
+        // Merge funds metadata with NAV data.
+        const funds = fundsMetadata.map(fund => {
+          console.log(fundsNAVMetadata[fund.address])
+          return {
+            ...fund,
+            ...(fundsNAVMetadata[fund.address] || {}),
+          } as IFund
+        })
+        console.log("All funds: ", funds);
+
         // Using the spread operator to append each element
-        this.funds.push(...fundsMetadata);
+        this.funds.push(...funds);
       } catch (error) {
         console.error("Error fetching fund metadata:", error);
       }
