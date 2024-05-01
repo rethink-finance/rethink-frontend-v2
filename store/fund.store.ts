@@ -6,7 +6,7 @@ import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import { useAccountStore } from "~/store/account.store";
-import { PositionType, PositionTypes, PositionTypesMap } from "~/types/enums/position_type";
+import { PositionTypes } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3.store";
@@ -51,13 +51,12 @@ const NAVDetailsJSON = {
 
 
 interface IState {
-  fund: IFund;
+  fund?: IFund;
   userBaseTokenBalance: bigint;
   userFundTokenBalance: bigint;
   userGovernanceTokenBalance: bigint;
   userFundAllowance: bigint;
   userFundShareValue: bigint
-
   selectedFundAddress: string;
 }
 
@@ -65,7 +64,7 @@ interface IState {
 export const useFundStore = defineStore({
   id: "fund",
   state: (): IState => ({
-    fund: {} as IFund,
+    fund: undefined,
     userBaseTokenBalance: BigInt("0"),
     userFundTokenBalance: BigInt("0"),
     userGovernanceTokenBalance: BigInt("0"),
@@ -84,11 +83,11 @@ export const useFundStore = defineStore({
       return this.web3Store.web3;
     },
     baseToFundTokenExchangeRate(state: IState): number {
-      if (!state.fund.fundTokenTotalSupply) return 0;
+      if (!state.fund?.fundTokenTotalSupply) return 0;
       return Number(state.fund.totalNAVWei / state.fund.fundTokenTotalSupply);
     },
     fundToBaseTokenExchangeRate(state: IState): number {
-      if (!state.fund.totalNAVWei) return 0;
+      if (!state.fund?.totalNAVWei) return 0;
       return 1 / this.baseToFundTokenExchangeRate;
     },
     /**
@@ -121,21 +120,18 @@ export const useFundStore = defineStore({
      */
     async getFund(fundAddress: string) {
       this.selectedFundAddress = fundAddress;
+      this.fund = undefined;
 
-      // TODO Check if fund already exists in the fetched fundsStore.funds.
-      //   If yes, only fetch metadata & inception date, do not fetch fundSettings again, as we have it already.
-      //   let fund = fundsStore.funds.find(f => f.fundAddress === fundAddress);
       try {
-        // TODO only fetch fund if not found the fund
         this.fund = await this.fetchFundData() as IFund;
         console.log(this.fund)
-        await this.fetchUserBalances();
       } catch (e) {
         console.error(`Failed fetching fund ${fundAddress} -> `, e)
       }
-
-      if (!this.fund) {
-        console.error(`Fund not found with address: ${fundAddress}`);
+      try {
+        await this.fetchUserBalances();
+      } catch (e) {
+        console.error(`Failed fetching user fundBalances fund ${fundAddress} -> `, e)
       }
     },
     /**

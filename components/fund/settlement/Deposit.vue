@@ -1,5 +1,6 @@
 <template>
   <FundSettlementBaseForm
+    v-if="fund"
     v-model="tokenValue"
     :token0="fund.baseToken"
     :token1="fund.fundToken"
@@ -63,7 +64,6 @@ import { ethers } from "ethers";
 import { computed, ref } from "vue";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
-import type IFund from "~/types/fund";
 import { useToastStore } from "~/store/toast.store";
 
 const toastStore = useToastStore();
@@ -71,7 +71,7 @@ const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const tokenValue = ref("0.0");
 const tokenValueChanged = ref(false);
-const fund: IFund = fundStore.fund;
+const fund = computed(() => fundStore.fund);
 
 const loadingRequestDeposit = ref(false);
 const loadingApproveAllowance = ref(false);
@@ -88,14 +88,15 @@ interface IError {
 }
 const rules = [
   (value: string): boolean | IError => {
-    const valueWei = ethers.parseUnits(value, fund.baseToken.decimals);
+    if (!fund.value) return { message: "Fund data is missing.", display: true }
+    const valueWei = ethers.parseUnits(value, fund.value?.baseToken.decimals);
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
 
     console.log("[REDEEM] check user base token balance wei: ", valueWei, fundStore.userBaseTokenBalance);
     if (fundStore.userBaseTokenBalance < valueWei) {
-      const userBaseTokenBalanceFormatted = formatTokenValue(fundStore.userBaseTokenBalance, fund.baseToken.decimals);
+      const userBaseTokenBalanceFormatted = formatTokenValue(fundStore.userBaseTokenBalance, fund.value.baseToken.decimals);
       return {
-        message: `Your ${fund.baseToken.symbol} balance is too low: ${userBaseTokenBalanceFormatted}.`,
+        message: `Your ${fund.value.baseToken.symbol} balance is too low: ${userBaseTokenBalanceFormatted}.`,
         display: true,
       }
     }
@@ -110,7 +111,8 @@ const isAnythingLoading = computed(() => {
 });
 
 const isEnoughAllowance = computed(() => {
-  const valueWei = ethers.parseUnits(tokenValue.value, fund.baseToken.decimals);
+  if (!fund.value) return false;
+  const valueWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals);
   return valueWei <= fundStore.userFundAllowance;
 });
 const isDepositDisabled = computed(() => {
@@ -150,10 +152,14 @@ const requestDeposit = async () => {
     toastStore.errorToast("Connect your wallet to request deposit.")
     return;
   }
+  if (!fund.value) {
+    toastStore.errorToast("Fund data is missing.")
+    return;
+  }
   console.log("REQUEST DEPOSIT");
   loadingRequestDeposit.value = true;
 
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.baseToken.decimals)
+  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals)
   console.log("Request deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   try {
@@ -191,16 +197,20 @@ const approveAllowance = async () => {
     toastStore.errorToast("Connect your wallet to approve allowance.")
     return;
   }
+  if (!fund.value) {
+    toastStore.errorToast("Fund data is missing.")
+    return;
+  }
   console.log("APPROVE ALLOWANCE");
   loadingApproveAllowance.value = true;
 
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.baseToken.decimals)
+  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals)
   console.log("Approve allowance tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
   const allowanceValue = tokensWei;
 
   try {
     // call the approve method
-    await fundStore.fundBaseTokenContract.methods.approve(fund.address, tokensWei).send({
+    await fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
@@ -235,10 +245,14 @@ const deposit = async () => {
     toastStore.errorToast("Connect your wallet to deposit tokens to the fund.")
     return;
   }
+  if (!fund.value) {
+    toastStore.errorToast("Fund data is missing.")
+    return;
+  }
   console.log("DEPOSIT");
   loadingDeposit.value = true;
 
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.baseToken.decimals)
+  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals)
   console.log("Deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   try {

@@ -1,8 +1,9 @@
 <template>
   <FundSettlementBaseForm
+    v-if="fund"
     v-model="tokenValue"
-    :token0="fundStore.fund.fundToken"
-    :token1="fundStore.fund.baseToken"
+    :token0="fund.fundToken"
+    :token1="fund.baseToken"
     :token0-user-balance="fundStore.userFundTokenBalance"
     :token1-user-balance="fundStore.userBaseTokenBalance"
     :exchange-rate="fundStore.fundToBaseTokenExchangeRate"
@@ -63,7 +64,6 @@ import { ethers } from "ethers";
 import { computed, ref } from "vue";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
-import type IFund from "~/types/fund";
 import { useToastStore } from "~/store/toast.store";
 
 const toastStore = useToastStore();
@@ -71,7 +71,7 @@ const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const tokenValue = ref("0.0");
 const tokenValueChanged = ref(false);
-const fund: IFund = fundStore.fund;
+const fund = computed(() => fundStore.fund);
 
 const loadingRequestRedeem = ref(false);
 const loadingCancelRedeem = ref(false);
@@ -87,14 +87,15 @@ interface IError {
 }
 const rules = [
   (value: string): boolean | IError => {
-    const valueWei = ethers.parseUnits(value, fund.fundToken.decimals);
+    if (!fund.value) return { message: "Fund data is missing.", display: true }
+    const valueWei = ethers.parseUnits(value, fund.value?.baseToken.decimals);
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
 
     console.log("[REDEEM] check user fund token balance wei: ", valueWei, fundStore.userFundTokenBalance);
     if (fundStore.userFundTokenBalance < valueWei) {
-      const userFundTokenBalanceFormatted = formatTokenValue(fundStore.userFundTokenBalance, fund.fundToken.decimals);
+      const userFundTokenBalanceFormatted = formatTokenValue(fundStore.userFundTokenBalance, fund.value.fundToken.decimals);
       return {
-        message: `Your ${fund.fundToken.symbol} balance is too low: ${userFundTokenBalanceFormatted}.`,
+        message: `Your ${fund.value.fundToken.symbol} balance is too low: ${userFundTokenBalanceFormatted}.`,
         display: true,
       }
     }
@@ -141,10 +142,14 @@ const requestRedeem = async () => {
     toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
     return;
   }
+  if (!fund.value) {
+    toastStore.errorToast("Fund data is missing.")
+    return;
+  }
   console.log("[REQUEST REDEEM]");
   loadingRequestRedeem.value = true;
 
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.fundToken.decimals)
+  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.fundToken.decimals)
   console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   try {
@@ -182,10 +187,14 @@ const redeem = async () => {
     toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
     return;
   }
+  if (!fund.value) {
+    toastStore.errorToast("Fund data is missing.")
+    return;
+  }
   console.log("[REDEEM]");
   loadingRedeem.value = true;
 
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.fundToken.decimals)
+  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.fundToken.decimals)
   console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   try {
@@ -227,8 +236,12 @@ const cancelRedeem = async () => {
     toastStore.errorToast("Connect your wallet to cancel an ongoing redeem.")
     return;
   }
+  if (!fund.value) {
+    toastStore.errorToast("Fund data is missing.")
+    return;
+  }
   loadingCancelRedeem.value = true;
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.fundToken.decimals)
+  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.fundToken.decimals)
   console.log("[CANCEL REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   try {

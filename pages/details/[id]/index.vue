@@ -30,8 +30,9 @@
     <h2 class="mb-2">
       Fund not found
     </h2>
-    <p>
-      Make sure you are on the right network.
+    <p class="text-center">
+      Are you sure you are on the right network? <br>
+      Try switching to a different network.
     </p>
   </div>
 
@@ -39,10 +40,12 @@
 
 <script lang="ts" setup>
 import { useFundStore } from "~/store/fund.store";
+import { useWeb3Store } from "~/store/web3.store";
 import type IFund from "~/types/fund";
 
-const route = useRoute();
 const fundStore = useFundStore();
+const web3Store = useWeb3Store();
+const route = useRoute();
 const loading = ref(true);
 const fundAddress = (route.params.id as string).split("-")[1];
 
@@ -51,22 +54,28 @@ onUnmounted(  () => {
   fundStore.selectedFundAddress = "";
 })
 
-onMounted(  async () => {
-
-  if (fundAddress) {
-    loading.value = true;
-
-    // This means that a lot of its data was already fetched.
-    try {
-      await fundStore.getFund(fundAddress);
-    } catch (e) {
-      console.error("Failed fetching fund -> ", e)
-    }
-
-    loading.value = false;
-  } else {
+const fetchFund = async () => {
+  if (!fundAddress) {
     console.error("No fund address provided in the route.");
+    return;
   }
+  loading.value = true;
+
+  try {
+    await fundStore.getFund(fundAddress);
+  } catch (e) {
+    console.error("Failed fetching fund -> ", e)
+  }
+
+  loading.value = false;
+}
+
+watch(() => web3Store.chainId, () => {
+  fetchFund();
+});
+
+onMounted(  () => {
+  fetchFund();
 });
 const fund = computed(() => fundStore.fund);
 </script>

@@ -3,7 +3,7 @@
     <UiDataBar title="My Positions">
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fund.netDeposits || "N/A" }}
+          {{ fund?.netDeposits || "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           Net Deposits
@@ -51,12 +51,14 @@ export default {
   },
   computed: {
     fundBaseToken() {
-      return this.fundStore.fund.baseToken;
+      return this.fundStore.fund?.baseToken;
     },
     userFundAllowanceFormatted() {
+      if (!this.fundBaseToken) return "N/A";
       return `${formatTokenValue(this.fundStore.userFundAllowance, this.fundBaseToken.decimals)} ${this.fundBaseToken.symbol}`;
     },
     userCurrentValueFormatted() {
+      if (!this.fundBaseToken) return "N/A";
       return `${formatTokenValue(this.fundStore.userFundShareValue, this.fundBaseToken.decimals)} ${this.fundBaseToken.symbol}`;
     },
   },

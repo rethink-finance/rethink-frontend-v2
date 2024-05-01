@@ -111,7 +111,7 @@ const fetchFunds = async () => {
 onMounted(async () => fetchFunds());
 
 
-watch(() => web3Store.chainId, (newVal, oldVal) => {
+watch(() => web3Store.chainId, () => {
   fetchFunds();
 });
 
