@@ -33,7 +33,7 @@ export const useAccountStore = defineStore("accounts", {
     },
   },
   actions: {
-    async switchNetwork(chainId: string): Promise<void> {
+    async setActiveChain(chainId: string): Promise<void> {
       // If the user is currently on a different
       // network, ask him to switch it.
       console.log("CURRENT NETWORK: ", this.connectedWalletChainId)
@@ -50,7 +50,7 @@ export const useAccountStore = defineStore("accounts", {
       if (this.connectedWallet) {
         web3Provider = new Web3(this.connectedWallet.provider);
       }
-      this.web3Store.setActiveChain(chainId, web3Provider);
+      this.web3Store.init(chainId, web3Provider);
     },
     async connectWallet() {
       // Connect to the web3-onboard.
@@ -64,12 +64,12 @@ export const useAccountStore = defineStore("accounts", {
       }
 
       // Reset to default provider in web3Store.
-      this.web3Store.resetState();
+      this.web3Store.init();
     },
-    setAlreadyConnectedWallet() {
+    async setAlreadyConnectedWallet() {
       console.log("Already connected Wallet:", this.web3Onboard);
       const chainId = this.web3Onboard?.connectedChain?.id || "";
-      this.switchNetwork(chainId);
+      await this.setActiveChain(chainId);
     },
   },
 });

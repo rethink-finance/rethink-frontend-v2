@@ -25,7 +25,7 @@ export const useWeb3Store = defineStore({
         chainName: "Polygon",
         chainShort: "matic",
         chainIcon: "cryptocurrency-color:matic",
-        rpcUrl: "wss://polygon-bor-rpc.publicnode.com",
+        rpcUrl: "https://polygon-mainnet.rpcfast.com?api_key=xbhWBI1Wkguk8SNMu1bvvLurPGLXmgwYeC4S6g2H7WdwFigZSmPWVZRxrskEQwIf",
       },
       "0xa4b1": {
         chainId: "0xa4b1",
@@ -40,40 +40,37 @@ export const useWeb3Store = defineStore({
     networks(): INetwork[] {
       return Object.values(this.networksMap);
     },
+    lastUsedChainId(): string {
+      // Check if there exists last used chainId in the local storage.
+      // It also needs to be a valid chainId.
+      const chainId = localStorage.getItem("lastUsedChainId");
+      if (chainId && chainId in this.networksMap) {
+        return chainId;
+      }
+
+      // Otherwise, return the default chainId.
+      return this.networks[0]?.chainId || "";
+    },
   },
   actions: {
-    init(chainId?: string): void {
-      if (!chainId) chainId = this.networks[0].chainId;
-      this.chainId = chainId;
+    init(chainId?: string, web3Provider?: any): void {
+      if (!chainId) chainId = this.lastUsedChainId;
 
-      const network: INetwork = this.networksMap[this.chainId];
-
-      this.web3 = new Web3(network.rpcUrl);
-      console.log(`init web3 chain: ${this.chainId} on ${network.rpcUrl}`);
-      console.log("----------------\n")
-    },
-    resetState() {
-      this.chainId = "";
-      this.chainName = "";
-      this.chainIcon = "";
-      this.chainShort = "";
-      this.init();
-    },
-    setActiveChain(chainId: string, web3Provider?: any): void {
-      console.log("setActiveChainId: ", chainId);
-      this.chainId = chainId;
-      const chain: any = this.networksMap[chainId];
-      this.chainName = chain?.chainName ?? "";
-      this.chainShort = chain?.chainShort ?? "";
-      this.chainIcon = chain?.chainIcon ?? "";
+      const network: INetwork = this.networksMap[chainId];
+      this.chainName = network.chainName ?? "";
+      this.chainShort = network.chainShort ?? "";
+      this.chainIcon = network.chainIcon ?? "";
 
       if (web3Provider) {
         this.web3 = web3Provider;
       } else {
-        this.init(chainId);
+        this.web3 = new Web3(network.rpcUrl);
       }
-
-      console.log("setActiveChain id: ", this.chainId, " name: ", this.chainName);
+      // Lastly set chainId, as we sometimes use watcher on chainId to reload other pages.
+      this.chainId = chainId;
+      localStorage.setItem("lastUsedChainId", chainId.toString());
+      console.log(`init web3 chain: ${this.chainId} on ${network.rpcUrl}`);
+      console.log("----------------\n")
     },
   },
 });

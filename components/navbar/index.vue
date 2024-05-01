@@ -174,11 +174,13 @@ const switchNetwork = async (chainId: string) => {
   console.log(chainId);
   isSwitchingNetworks.value = true;
   try {
-    // TODO if connected wallet do that, otherwise just switch it.
-
-    // TODO handle more gracefully instead of full reload, do a watcher on every page and update data
-    await accountStore.switchNetwork(chainId);
-    return router.go(0);
+    if (accountStore.connectedWallet) {
+      // Ask the connected user to switch network.
+      await accountStore.setActiveChain(chainId);
+    } else {
+      // Switch active chain.
+      web3Store.init(chainId);
+    }
   } catch (error: any) {
     // Revert the selected value to the previously selected chain.
     selectedChainId.value = web3Store.chainId;
@@ -260,9 +262,6 @@ const onClickConnect = async () => {
   } else {
     await accountStore.connectWallet()
   }
-
-  // Reload page to reload all the data.
-  return router.go(0);
 }
 </script>
 

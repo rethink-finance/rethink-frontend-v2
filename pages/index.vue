@@ -16,7 +16,12 @@ import { useFundsStore } from "~/store/funds.store";
 // will not be visible in the production build.
 import PositionTypesBar from "~/components/fund/info/PositionTypesBar";
 import FundNameCell from "../components/table/components/FundNameCell";
+import { useWeb3Store } from "~/store/web3.store";
 
+const loadingFunds = ref(true);
+const funds = computed(() => fundsStore.funds);
+const fundsStore = useFundsStore();
+const web3Store = useWeb3Store();
 
 const columns = ref([
   {
@@ -94,18 +99,20 @@ const columns = ref([
 ]);
 
 
-const loadingFunds = ref(true);
-const funds = computed(() => fundsStore.funds);
-const fundsStore = useFundsStore();
-
-onMounted(async () => {
+const fetchFunds = async () => {
   loadingFunds.value = true;
   try {
     await fundsStore.fetchFunds();
   } catch (e) {
     console.error("fetchFunds -> ", e);
-   }
+  }
   loadingFunds.value = false;
+}
+onMounted(async () => fetchFunds());
+
+
+watch(() => web3Store.chainId, (newVal, oldVal) => {
+  fetchFunds();
 });
 
 function getCellClass(cell) {
