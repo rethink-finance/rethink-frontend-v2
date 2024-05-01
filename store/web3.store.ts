@@ -47,7 +47,6 @@ export const useWeb3Store = defineStore({
         // Check if there exists last used chainId in the local storage.
         // It also needs to be a valid chainId.
         const lastUsedChainId = localStorage.getItem("lastUsedChainId");
-        console.log("LAST USED CHAIN ID: ", chainId);
         if (lastUsedChainId && lastUsedChainId in this.networksMap) {
           chainId = lastUsedChainId;
         } else {
@@ -55,7 +54,6 @@ export const useWeb3Store = defineStore({
           chainId = this.networks[0]?.chainId || "";
         }
       }
-      console.log("222LAST USED CHAIN ID: ", chainId);
 
       const network: INetwork = this.networksMap[chainId];
       this.chainName = network.chainName ?? "";

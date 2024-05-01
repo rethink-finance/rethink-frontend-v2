@@ -24,11 +24,9 @@ export const useToastStore = defineStore({
         // If found, close the existing toast
         this.closeToast(existingToast.id);
       }
-      console.log("toast");
-      console.log(duration);
+
       const id = Date.now();
       this.toasts.push({ id, message, level, duration });
-      console.log(this.toasts)
     },
     successToast(message: string, duration?: number) {
       this.addToast(message, "success", duration);

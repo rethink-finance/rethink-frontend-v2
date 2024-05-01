@@ -171,7 +171,6 @@ watch(() => web3Store.chainId, (newVal, oldVal) => {
   selectedChainId.value = newVal || "";
 });
 const switchNetwork = async (chainId: string) => {
-  console.log(chainId);
   isSwitchingNetworks.value = true;
   try {
     if (accountStore.connectedWallet) {

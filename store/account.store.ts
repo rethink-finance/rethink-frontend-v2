@@ -36,7 +36,6 @@ export const useAccountStore = defineStore("accounts", {
     async setActiveChain(chainId: string): Promise<void> {
       // If the user is currently on a different
       // network, ask him to switch it.
-      console.log("CURRENT NETWORK: ", this.connectedWalletChainId)
       if (chainId !== this.connectedWalletChainId) {
         await this.connectedWallet?.provider?.request({
           method: "wallet_switchEthereumChain",

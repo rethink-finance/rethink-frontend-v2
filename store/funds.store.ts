@@ -302,7 +302,6 @@ export const useFundsStore = defineStore({
 
       const fundsInfo = await fundFactoryContract.methods.registeredFundsData(0, fundsLength).call();
       const fundAddresses: string[] = fundsInfo[0];
-      console.log(fundsInfo)
 
       // Reset funds as we will populate them with new data.
       this.funds = [];

@@ -238,7 +238,7 @@ onMounted(() => {
 });
 
 watch([() => props.data, () => props.columns], () => {
-  console.log("refersh table");
+  console.log("refresh table");
   // table.refresh();
 });
 </script>
