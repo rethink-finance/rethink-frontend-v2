@@ -16,6 +16,7 @@ import type INAVUpdate from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IToken from "~/types/token";
 import type IPositionTypeCount from "~/types/position_type";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -272,8 +273,7 @@ export const useFundStore = defineStore({
           description: "N/A",
           safeAddress: fundSettings.safe || "",
           governorAddress: fundSettings.governor || "",
-          // @dev: Default photo, we can replace it with some gray fund photo.
-          photoUrl: "https://api.lorem.space/image/ai?w=60&h=60",
+          photoUrl: defaultAvatar,
           inceptionDate: fundStartTime ? formatDate(new Date(Number(fundStartTime) * 1000)) : "",
           fundToken: {
             symbol: fundSettings.fundSymbol,
@@ -331,7 +331,7 @@ export const useFundStore = defineStore({
           const metaData = JSON.parse(metaDataJson);
           console.log("fund metaData: ", metaData);
           fund.description = metaData.description;
-          fund.photoUrl = metaData.photoUrl;
+          fund.photoUrl = metaData.photoUrl || defaultAvatar;
           fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
           fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
         }

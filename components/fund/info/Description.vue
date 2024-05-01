@@ -5,7 +5,7 @@
         <v-avatar size="3.5rem" rounded="0">
           <img
             :src="fund.photoUrl"
-            class="fund_description__avatar_img bg-cover"
+            class="fund_description__avatar_img"
             alt="fund cover image"
           >
         </v-avatar>
@@ -122,6 +122,9 @@ export default {
   }
   &__avatar_img {
     border-radius: 0.25rem;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
   }
   &__details {
     display: flex;
