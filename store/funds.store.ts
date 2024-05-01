@@ -95,7 +95,7 @@ export const useFundsStore = defineStore({
      * More data can be fetched from fundSettings later if needed, or added to the reader contract.
      * - TODO: totalDepositBal (is also present if needed)
      */
-    async fetchFundsMetadata(fundAddresses: string[]): Promise<IFund[]> {
+    async fetchFundsMetadata(fundAddresses: string[], fundsInfo: any): Promise<IFund[]> {
       const funds: IFund[] = [];
 
       try {
@@ -121,7 +121,11 @@ export const useFundsStore = defineStore({
             governorAddress: "",
             photoUrl: defaultAvatar,
             inceptionDate: fundStartTime ? formatDate(new Date(Number(fundStartTime) * 1000)) : "",
-            fundToken: {} as IToken,
+            fundToken: {
+              symbol: fundsInfo[address].fundSymbol,
+              address,
+              decimals: -1,
+            } as IToken,
             baseToken: {
               address: "",  // Not important here.
               symbol: dataNAVs.fundBaseTokenSymbol[index],
@@ -205,14 +209,15 @@ export const useFundsStore = defineStore({
       const fundFactoryContract = this.fundFactoryContract;
       const fundsLength = await fundFactoryContract.methods.registeredFundsLength().call();
 
-      const fundsInfo = await fundFactoryContract.methods.registeredFundsData(0, fundsLength).call();
-      const fundAddresses: string[] = fundsInfo[0];
+      const fundsInfoArrays = await fundFactoryContract.methods.registeredFundsData(0, fundsLength).call();
+      const fundAddresses: string[] = fundsInfoArrays[0];
+      const fundsInfo = Object.fromEntries(fundAddresses.map((address, index) => [address, fundsInfoArrays[1][index]]));
 
       // Reset funds as we will populate them with new data.
       this.funds = [];
 
       try {
-        const funds = await this.fetchFundsMetadata(fundAddresses);
+        const funds = await this.fetchFundsMetadata(fundAddresses, fundsInfo);
         console.log("All funds: ", funds);
 
         // Using the spread operator to append each element
