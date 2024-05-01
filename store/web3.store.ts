@@ -40,21 +40,22 @@ export const useWeb3Store = defineStore({
     networks(): INetwork[] {
       return Object.values(this.networksMap);
     },
-    lastUsedChainId(): string {
-      // Check if there exists last used chainId in the local storage.
-      // It also needs to be a valid chainId.
-      const chainId = localStorage.getItem("lastUsedChainId");
-      if (chainId && chainId in this.networksMap) {
-        return chainId;
-      }
-
-      // Otherwise, return the default chainId.
-      return this.networks[0]?.chainId || "";
-    },
   },
   actions: {
     init(chainId?: string, web3Provider?: any): void {
-      if (!chainId) chainId = this.lastUsedChainId;
+      if (!chainId) {
+        // Check if there exists last used chainId in the local storage.
+        // It also needs to be a valid chainId.
+        const lastUsedChainId = localStorage.getItem("lastUsedChainId");
+        console.log("LAST USED CHAIN ID: ", chainId);
+        if (lastUsedChainId && lastUsedChainId in this.networksMap) {
+          chainId = lastUsedChainId;
+        } else {
+          // Otherwise, return the default chainId.
+          chainId = this.networks[0]?.chainId || "";
+        }
+      }
+      console.log("222LAST USED CHAIN ID: ", chainId);
 
       const network: INetwork = this.networksMap[chainId];
       this.chainName = network.chainName ?? "";

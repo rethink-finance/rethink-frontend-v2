@@ -55,7 +55,7 @@ export const useAccountStore = defineStore("accounts", {
     async connectWallet() {
       // Connect to the web3-onboard.
       await this.web3Onboard?.connectWallet();
-      this.setAlreadyConnectedWallet();
+      await this.setAlreadyConnectedWallet();
     },
     async disconnectWallet() {
       const { provider, label } = this.web3Onboard?.connectedWallet || {}
@@ -67,7 +67,7 @@ export const useAccountStore = defineStore("accounts", {
       this.web3Store.init();
     },
     async setAlreadyConnectedWallet() {
-      console.log("Already connected Wallet:", this.web3Onboard);
+      console.log("Set already connected Wallet:", this.web3Onboard);
       const chainId = this.web3Onboard?.connectedChain?.id || "";
       await this.setActiveChain(chainId);
     },
