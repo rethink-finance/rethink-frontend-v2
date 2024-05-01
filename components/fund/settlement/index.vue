@@ -3,7 +3,7 @@
     <div class="card_header">
       <div>
         <div class="section_title">
-          {{ fund.plannedSettlementPeriod }}
+          {{ fund?.plannedSettlementPeriod || "N/A" }}
         </div>
         <div class="section_subtitle">
           Next Settlement

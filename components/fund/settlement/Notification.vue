@@ -6,7 +6,7 @@
 
     <p>
       The deposit and redeem requests are settled within the planned Settlement Cycle
-      of <span class="text-primary">{{ fund.plannedSettlementPeriod }}</span>.
+      of <span class="text-primary">{{ fund?.plannedSettlementPeriod || "N/A" }}</span>.
       You can learn more about how settlements work
       <a href="https://docs.rethink.finance/rethink.finance" target="_blank">here</a>.
     </p>
