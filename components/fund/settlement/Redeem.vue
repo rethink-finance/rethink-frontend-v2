@@ -8,7 +8,7 @@
     :exchange-rate="fundStore.fundToBaseTokenExchangeRate"
   >
     <template #buttons>
-      <div v-if="accountsStore.isConnected">
+      <div v-if="accountStore.isConnected">
         <div class="deposit_button_group">
           <v-tooltip
             v-for="(button, index) in buttons"
@@ -50,7 +50,7 @@
         </div>
       </div>
       <template v-else>
-        <v-btn class="bg-primary text-secondary" @click="accountsStore.connectWallet()">
+        <v-btn class="bg-primary text-secondary" @click="accountStore.connectWallet()">
           Connect Wallet
         </v-btn>
       </template>
@@ -61,13 +61,13 @@
 <script setup lang="ts">
 import { ethers } from "ethers";
 import { computed, ref } from "vue";
-import { useAccountsStore } from "~/store/accounts.store";
+import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import type IFund from "~/types/fund";
 import { useToastStore } from "~/store/toast.store";
 
 const toastStore = useToastStore();
-const accountsStore = useAccountsStore();
+const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const tokenValue = ref("0.0");
 const tokenValueChanged = ref(false);
@@ -137,7 +137,7 @@ const handleError = (error: any) => {
 
 
 const requestRedeem = async () => {
-  if (!accountsStore.activeAccount?.address) {
+  if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
     return;
   }
@@ -145,11 +145,11 @@ const requestRedeem = async () => {
   loadingRequestRedeem.value = true;
 
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.fundToken.decimals)
-  console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountsStore.activeAccount.address);
+  console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   try {
     await fundStore.fundContract.methods.requestWithdraw(tokensWei).send({
-      from: accountsStore.activeAccount.address,
+      from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
     }).on("transactionHash", (hash: string) => {
@@ -178,7 +178,7 @@ const requestRedeem = async () => {
 }
 
 const redeem = async () => {
-  if (!accountsStore.activeAccount?.address) {
+  if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
     return;
   }
@@ -186,11 +186,11 @@ const redeem = async () => {
   loadingRedeem.value = true;
 
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.fundToken.decimals)
-  console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountsStore.activeAccount.address);
+  console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   try {
     await fundStore.fundContract.methods.withdraw().send({
-      from: accountsStore.activeAccount.address,
+      from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
     }).on("transactionHash", (hash: string) => {
@@ -223,17 +223,17 @@ const redeem = async () => {
 
 
 const cancelRedeem = async () => {
-  if (!accountsStore.activeAccount?.address) {
+  if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to cancel an ongoing redeem.")
     return;
   }
   loadingCancelRedeem.value = true;
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.fundToken.decimals)
-  console.log("[CANCEL REDEEM] tokensWei: ", tokensWei, "from : ", accountsStore.activeAccount.address);
+  console.log("[CANCEL REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   try {
     await fundStore.fundContract.methods.revokeDepositWithrawal().send({
-      from: accountsStore.activeAccount.address,
+      from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
     }).on("transactionHash", (hash: string) => {

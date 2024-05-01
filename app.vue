@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import { useOnboard } from "@web3-onboard/vue";
-import { useAccountsStore } from "~/store/accounts.store";
+import { useAccountStore } from "~/store/account.store";
 
 onMounted(() => {
-  useAccountsStore().web3Onboard = useOnboard();
-  if (useOnboard().alreadyConnectedWallets) useAccountsStore().setAlreadyConnectedWallet();
+  useAccountStore().web3Onboard = useOnboard();
+  if (useOnboard().alreadyConnectedWallets) useAccountStore().setAlreadyConnectedWallet();
 });
 </script>
 

@@ -51,7 +51,7 @@
         <ClientOnly>
           <div class="d-flex">
             <v-select
-              v-if="accountsStore.isConnected"
+              v-if="accountStore.isConnected"
               v-model="selectedChainId"
               class="select_network"
               density="compact"
@@ -104,7 +104,7 @@
   </v-app-bar>
 
   <v-alert
-    v-if="accountsStore.isConnected && !selectedChainId"
+    v-if="accountStore.isConnected && !selectedChainId"
     color="error"
     title="Unsupported Network"
     class="unsupported_network_alert"
@@ -114,12 +114,12 @@
 </template>
 
 <script lang="ts" setup>
-import { useAccountsStore } from "~/store/accounts.store";
+import { useAccountStore } from "~/store/account.store";
 import { useWeb3Store } from "~/store/web3.store";
 import { useToastStore } from "~/store/toast.store";
 import type INetwork from "~/types/network";
 const router = useRouter();
-const accountsStore = useAccountsStore();
+const accountStore = useAccountStore();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 
@@ -173,7 +173,7 @@ const routes : IRoute[] = [
 const selectedChainId = ref("");
 const networks: INetwork[] = web3Store.networks;
 
-watch(() => accountsStore.chainId, (newVal, oldVal) => {
+watch(() => web3Store.chainId, (newVal, oldVal) => {
   console.log(`Chain ID changed from ${oldVal} to ${newVal}`);
   // Perform additional actions when chainId changes
   selectedChainId.value = newVal || "";
@@ -181,7 +181,8 @@ watch(() => accountsStore.chainId, (newVal, oldVal) => {
 const switchNetwork = async (chainId: string) => {
   console.log(chainId);
   try {
-    await accountsStore.connectedWallet?.provider?.request({
+    // TODO if connected wallet do that, otherwise just switch it.
+    await accountStore.connectedWallet?.provider?.request({
       method: "wallet_switchEthereumChain",
       params: [{
         chainId,
@@ -189,7 +190,7 @@ const switchNetwork = async (chainId: string) => {
     });
 
     // TODO handle more gracefully instead of full reload, do a watcher on every page and update data
-    accountsStore.setActiveChain(chainId);
+    accountStore.setActiveChain(chainId);
     return router.go(0);
   } catch (error: any) {
     selectedChainId.value = "";
@@ -199,7 +200,7 @@ const switchNetwork = async (chainId: string) => {
       try {
         // Add the network if it is not yet added.
         // TODO: finish this for better UX, get network RPC mapping
-        // await accountsStore.connectedWallet?.provider.request({
+        // await accountStore.connectedWallet?.provider.request({
         //   method: 'wallet_addEthereumChain',
         //   params: [{
         //     chainId: chainId,
@@ -250,12 +251,12 @@ const computedRoutes = computed(() => {
   });
 });
 
-const activeAccount = computed(() => truncateAddress(accountsStore.activeAccount?.address));
-const connectingWallet = computed(() => accountsStore.connectingWallet);
-const connectedWallet = computed(() => accountsStore.connectedWallet);
+const activeAccount = computed(() => truncateAddress(accountStore.activeAccount?.address));
+const connectingWallet = computed(() => accountStore.connectingWallet);
+const connectedWallet = computed(() => accountStore.connectedWallet);
 const connectedWalletIcon = computed(() => {
-  if (!accountsStore?.connectedWallet) return "";
-  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(accountsStore.connectedWallet?.icon)))}`
+  if (!accountStore?.connectedWallet) return "";
+  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(accountStore.connectedWallet?.icon)))}`
 });
 
 onMounted(() => {
@@ -266,9 +267,9 @@ const onClickConnect = () => {
   const { provider, label } = connectedWallet.value || {}
 
   if (provider && label) {
-    accountsStore.disconnectWallet()
+    accountStore.disconnectWallet()
   } else {
-    accountsStore.connectWallet()
+    accountStore.connectWallet()
   }
 }
 </script>

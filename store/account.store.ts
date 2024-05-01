@@ -4,20 +4,12 @@ import { Web3 } from "web3";
 import { useWeb3Store } from "~/store/web3.store";
 
 interface IState {
-  chainId?: string;
-  chainName: string;
-  chainIcon: string;
-  chainShort: string;
   web3Onboard?: any;
 }
 
 
-export const useAccountsStore = defineStore("accounts", {
+export const useAccountStore = defineStore("accounts", {
   state: (): IState => ({
-    chainId: undefined,
-    chainName: "",
-    chainIcon: "",
-    chainShort: "",
     web3Onboard: undefined as any | undefined,
   }),
   getters: {
@@ -36,34 +28,14 @@ export const useAccountsStore = defineStore("accounts", {
     activeAccount(): Account | undefined {
       return this.web3Onboard?.connectedWallet?.accounts[0];
     },
-    getChainId(state): string {
-      return state.chainId ?? "";
-    },
   },
   actions: {
-    resetState() {
-      this.chainId = undefined;
-      this.chainName = "";
-      this.chainIcon = "";
-      this.chainShort = "";
-      this.web3Store.init();
-    },
     setActiveChain(chainId: string): void {
-      console.log("setActiveChainId: ", chainId);
-      this.chainId = chainId;
-      const chain: any = this.web3Store.networksMap[chainId];
-      this.chainName = chain?.chainName ?? "";
-      this.chainShort = chain?.chainShort ?? "";
-      this.chainIcon = chain?.chainIcon ?? "";
-
+      let web3Provider;
       if (this.connectedWallet) {
-        this.web3Store.web3 = new Web3(this.connectedWallet.provider);
-        this.web3Store.chainId = chainId;
-      } else {
-        this.web3Store.init(chainId);
+        web3Provider = new Web3(this.connectedWallet.provider);
       }
-
-      console.log("setActiveChain id: ", this.chainId, " name: ", this.chainName);
+      this.web3Store.setActiveChain(chainId, web3Provider);
     },
     async connectWallet() {
       // Connect to the web3-onboard.
@@ -77,7 +49,7 @@ export const useAccountsStore = defineStore("accounts", {
       }
 
       // Reset to default provider in web3Store.
-      this.resetState();
+      this.web3Store.resetState();
     },
     setAlreadyConnectedWallet() {
       console.log("Already connected Wallet:", this.web3Onboard);

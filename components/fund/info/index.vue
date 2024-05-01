@@ -13,7 +13,7 @@
 
 <script lang="ts">
 import type IFund from "~/types/fund";
-import { useAccountsStore } from "~/store/accounts.store";
+import { useAccountStore } from "~/store/account.store";
 
 export default {
   name: "Info",
@@ -24,7 +24,7 @@ export default {
     },
   },
   setup() {
-    const { isConnected } = storeToRefs(useAccountsStore());
+    const { isConnected } = storeToRefs(useAccountStore());
     return { isConnected }
   },
 };

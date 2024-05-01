@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="jsx">
-import { useFundStore } from "~/store/fund.store";
+import { useFundsStore } from "~/store/funds.store";
 // It is important not to remove the following two imports or they
 // will not be visible in the production build.
 import PositionTypesBar from "~/components/fund/info/PositionTypesBar";
@@ -95,13 +95,13 @@ const columns = ref([
 
 
 const loadingFunds = ref(true);
-const funds = computed(() => fundStore.funds);
-const fundStore = useFundStore();
+const funds = computed(() => fundsStore.funds);
+const fundsStore = useFundsStore();
 
 onMounted(async () => {
   loadingFunds.value = true;
   try {
-    await fundStore.fetchFunds();
+    await fundsStore.fetchFunds();
   } catch (e) {
     console.error("fetchFunds -> ", e);
    }
@@ -118,9 +118,6 @@ function getCellClass(cell) {
   // }
   return "";
 }
-
-// const fundStore = useFundStore();
-// const funds = computed(() => fundStore.funds);
 </script>
 
 <style lang="scss">

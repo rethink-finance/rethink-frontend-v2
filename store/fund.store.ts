@@ -1,4 +1,3 @@
-import { BaseContract, ethers } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
@@ -6,7 +5,7 @@ import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import addressesJson from "~/assets/contracts/addresses.json";
-import { useAccountsStore } from "~/store/accounts.store";
+import { useAccountStore } from "~/store/account.store";
 import { PositionType, PositionTypes, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
@@ -24,13 +23,6 @@ const addresses: IAddresses = addressesJson as IAddresses;
 const GovernableFundFactoryContractName = "GovernableFundFactoryBeaconProxy";
 const RethinkReaderContractName = "RethinkReader";
 
-export interface FundContract extends BaseContract {
-  requestDeposit: (amount: ethers.BigNumberish, options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
-  totalWithrawalBalance: (options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
-  revokeDepositWithrawal: (isDeposit: boolean, options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
-  deposit: (options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
-  approve: (spender: string, amount: ethers.BigNumberish, options?: ethers.TransactionRequest) => Promise<ethers.ContractTransaction>;
-}
 
 const NAVDetailsJSON = {
   nav_liquid: `{
@@ -60,11 +52,6 @@ const NAVDetailsJSON = {
 
 interface IState {
   fund: IFund;
-  funds: IFund[];
-  abi: Record<string, any>;
-  address: Record<string, any>;
-  apy: Record<string, any>;
-
   userBaseTokenBalance: bigint;
   userFundTokenBalance: bigint;
   userGovernanceTokenBalance: bigint;
@@ -72,7 +59,6 @@ interface IState {
   userFundShareValue: bigint
 
   selectedFundAddress: string;
-  fundsSettings: Record<string, IFundSettings>;
 }
 
 
@@ -80,30 +66,22 @@ export const useFundStore = defineStore({
   id: "fund",
   state: (): IState => ({
     fund: {} as IFund,
-    funds: [] as IFund[],
-    abi: {},
-    address: {},
-    apy: {},
     userBaseTokenBalance: BigInt("0"),
     userFundTokenBalance: BigInt("0"),
     userGovernanceTokenBalance: BigInt("0"),
     userFundAllowance: BigInt("0"),
     userFundShareValue: BigInt("0"),
     selectedFundAddress: "",
-    fundsSettings: {} as Record<string, IFundSettings>,
   }),
   getters: {
-    accountsStore(): any {
-      return useAccountsStore();
+    accountStore(): any {
+      return useAccountStore();
     },
     web3Store(): any {
       return useWeb3Store();
     },
     web3(): Web3 {
       return this.web3Store.web3;
-    },
-    getFundAddress(state: IState): string {
-      return state.address?.[state.selectedFundAddress];
     },
     baseToFundTokenExchangeRate(state: IState): number {
       if (!state.fund.fundTokenTotalSupply) return 0;
@@ -138,37 +116,46 @@ export const useFundStore = defineStore({
     },
   },
   actions: {
-    batchFetchFundSettings() {
-      /** @dev: I tried many, many things to make this BatchRequest work with web3 4.x, this is the closest I came.
-       * https://docs.web3js.org/guides/web3_upgrade_guide/x/#web3-batchrequest
-       *       const batch = new this.web3.BatchRequest();
-       *       // Define the request for getFundSettings
-       *       const con = new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress);
-       *       const getFundSettingsRequest: any = {
-       *         jsonrpc: "2.0",
-       *         id: 1,
-       *         method: "eth_call",
-       *         params: [{
-       *           to: this.selectedFundAddress,
-       *           data: con.methods.getFundSettings().encodeABI(),
-       *         }, "latest"],
-       *       };
-       *
-       *       // Add the request to the batch and capture the promise
-       *       const getFundSettingsPromise = batch.add(getFundSettingsRequest);
-       *
-       *       // Execute the batch
-       *       const rep = batch.execute();
-       *       console.log("rep: ", rep);
-       *
-       *       // Handle the promise
-       *       getFundSettingsPromise.then((response: any) => {
-       *         console.log(response);
-       *       }).catch((error: any) => {
-       *         console.error("Error fetching getFundSettings:", error);
-       *       });
-       */
-      console.error("not implemented");
+    /**
+     * Fetches all needed fund data..
+     */
+    async getFund(fundAddress: string) {
+      this.selectedFundAddress = fundAddress;
+
+      // TODO Check if fund already exists in the fetched fundsStore.funds.
+      //   If yes, only fetch metadata & inception date, do not fetch fundSettings again, as we have it already.
+      //   let fund = fundsStore.funds.find(f => f.fundAddress === fundAddress);
+      try {
+        // TODO only fetch fund if not found the fund
+        this.fund = await this.fetchFundData() as IFund;
+        console.log(this.fund)
+        await this.fetchUserBalances();
+      } catch (e) {
+        console.error(`Failed fetching fund ${fundAddress} -> `, e)
+      }
+
+      if (!this.fund) {
+        console.error(`Fund not found with address: ${fundAddress}`);
+      }
+    },
+    /**
+     * Fetches multiple fund data:
+     * - getFundSettings
+     * - getFundStartTime
+     * - fundMetadata
+     *
+     * @dev: would be better to separate fundSettings from (startTime & metadata), as sometimes we already
+     *   have the fund settings from the discovery page.
+     */
+    async fetchFundData() {
+      // Fetch inception date
+      const settingsData = await this.fundContract.methods.getFundSettings().call();
+      // Process the fund settings with a method assumed to be available in the current scope
+      const fundSettings: IFundSettings = this.parseFundSettings(settingsData);
+
+      const fund = await this.fetchFundMetadata(fundSettings);
+      fund.positionTypeCounts = await this.fetchFundNAVData(fundSettings.fundAddress);
+      return fund;
     },
     parseFundSettings(fundData: any) {
       const fundSettings: Partial<IFundSettings> = {};
@@ -183,11 +170,12 @@ export const useFundStore = defineStore({
         // since fundSettings is typed as Partial<IFundSettings> and initialized accordingly.
         fundSettings[detailKey] = typeof value === "bigint" ? value.toString() : value;
       });
-      console.log("fundSettings: ", fundSettings);
 
       return fundSettings as IFundSettings;
     },
     fetchUserBalances() {
+      if (!this.accountStore.activeAccount?.address) return;
+
       return Promise.all([
         this.fetchUserBaseTokenBalance(),
         this.fetchUserFundTokenBalance(),
@@ -195,43 +183,18 @@ export const useFundStore = defineStore({
         this.fetchUserFundAllowance(),
       ]);
     },
-    async fetchFundData() {
-      /**
-       * Fetch multiple fund data:
-       * - getFundSettings
-       * - getFundStartTime
-       * - fundMetadata
-       *
-       * @dev: would be better to separate fundSettings from (startTime & metadata), as sometimes we already
-       *   have the fund settings from the discovery page.
-       */
-      // Fetch inception date
-      const settingsData = await this.fundContract.methods.getFundSettings().call();
-      // Process the fund settings with a method assumed to be available in the current scope
-      const fundSettings: IFundSettings = this.parseFundSettings(settingsData);
-
-      const fund = await this.fetchFundMetadata(fundSettings);
-      fund.positionTypeCounts = await this.fetchFundNAVData(fundSettings.fundAddress);
-      return fund;
-    },
+    /**
+     * Fetches multiple fund metadata such as:
+     * - getFundStartTime
+     * - fundMetadata
+     */
     async fetchFundMetadata(fundSettings: IFundSettings) {
-      /**
-       * Fetch multiple fund metadata such as:
-       * - getFundStartTime
-       * - fundMetadata
-       */
       // Fetch inception date
       const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
       const startTimePromise: Promise<string> = fundContract.methods.getFundStartTime().call();
       const metadataPromise: Promise<string> = fundContract.methods.fundMetadata().call();
 
       try {
-        // Await all promises and destructure their resolved values
-        const [fundStartTime, metaDataJson] = await Promise.all([
-          startTimePromise,
-          metadataPromise,
-        ]);
-
         // @dev: would be better to just have this available in the FundSettings data.
         // Fetch base, fund and governance ERC20 token symbol and decimals.
         const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
@@ -244,6 +207,8 @@ export const useFundStore = defineStore({
         // Fetch all token symbols and decimals.
         // @dev: maybe there are more things to be fetched here.
         const [
+          fundStartTime,
+          metaDataJson,
           baseTokenSymbol,
           baseTokenDecimals,
           governanceTokenSymbol,
@@ -252,6 +217,8 @@ export const useFundStore = defineStore({
           fundTokenTotalSupply,
           fundTotalNAV,
         ] = await Promise.all([
+          startTimePromise,
+          metadataPromise,
           fundBaseTokenContract.methods.symbol().call() as Promise<string>,
           fundBaseTokenContract.methods.decimals().call() as Promise<number>,
           governanceTokenContract.methods.symbol().call() as Promise<string>,
@@ -264,9 +231,9 @@ export const useFundStore = defineStore({
         console.log("fundTotalNAV: ", fundTotalNAV)
 
         const fund: IFund = {
-          chainName: this.accountsStore.chainName,
-          chainShort: this.accountsStore.chainShort,
-          chainIcon: this.accountsStore.chainIcon,
+          chainName: this.accountStore.chainName,
+          chainShort: this.accountStore.chainShort,
+          chainIcon: this.accountStore.chainIcon,
           address: fundSettings.fundAddress || "",
           title: fundSettings.fundName || "N/A",
           subtitle: fundSettings.fundName || "N/A",
@@ -371,131 +338,14 @@ export const useFundStore = defineStore({
         return [] as IPositionTypeCount[];
       }
     },
-    async fetchFundsNAVMetadata(fundAddresses: string[]): Promise<Record<string, Partial<IFund>>> {
-      /**
-       * Fetch NAV data for each fund in fundAddresses and return partial fund with:
-       * - inceptionDate
-       * - totalNAVWei
-       * - positionTypeCounts
-       * - TODO: totalDepositBal (can get if needed)
-       */
-      const fundsNAVMetadata: Record<string, Partial<IFund>> = {};
-      try {
-        // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
-        //  not used in the contract code, so I have set it to 0. Change this part in the future
-        //  if the contract changes.
-        const dataNAVs: Record<string, any[]> = await this.rethinkReaderContract.methods.getFundNavMetaData(
-          fundAddresses, 0,
-        ).call();
-
-        // @dev NOTE: there is also: totalDepositBal for each fund if we need it.
-        fundAddresses.forEach((address, index) => {
-          const fundStartTime = dataNAVs.startTime[index];
-          fundsNAVMetadata[address] = {
-            inceptionDate: fundStartTime ? formatDate(new Date(Number(fundStartTime) * 1000)) : "",
-            totalNAVWei: dataNAVs.totalNav[index],
-            positionTypeCounts: [
-              {
-                type: PositionTypesMap[PositionType.Liquid],
-                count: Number(dataNAVs.liquidLen[index] || 0),
-              },
-              {
-                type: PositionTypesMap[PositionType.Composable],
-                count: Number(dataNAVs.composableLen[index] || 0),
-              },
-              {
-                type: PositionTypesMap[PositionType.NFT],
-                count: Number(dataNAVs.nftLen[index] || 0),
-              },
-              {
-                type: PositionTypesMap[PositionType.Illiquid],
-                count: Number(dataNAVs.illiquidLen[index] || 0),
-              },
-            ] as IPositionTypeCount[],
-          };
-        })
-        return fundsNAVMetadata;
-      } catch (error) {
-        console.error("Error calling getFundNavMetaData: ", error, "fund: ", fundAddresses);
-        // Return an empty or default object in case of error
-        return {} as Record<string, Partial<IFund>>;
-      }
-    },
-    async getFund(fundAddress: string) {
-      /**
-       * This function finds and returns fund in the funds array.
-       */
-      this.selectedFundAddress = fundAddress;
-
-      // TODO Check if fund already exists in the fetched funds.
-      //   If yes, only fetch metadata & inception date, do not fetch fundSettings again, as we have it already.
-      //   let fund = this.funds.find(f => f.fundAddress === fundAddress);
-      try {
-        // TODO only fetch fund if not found the fund
-        this.fund = await this.fetchFundData() as IFund;
-        console.log(this.fund)
-        await this.fetchUserBalances();
-      } catch (e) {
-        console.error(`Failed fetching fund ${fundAddress} -> `, e)
-      }
-
-      if (!this.fund) {
-        console.error(`Fund not found with address: ${fundAddress}`);
-      }
-    },
-    async fetchFunds() {
-      /**
-       * This function fetches all funds data from the GovernableFundFactory.
-       */
-      console.log("fetchFunds");
-      const fundFactoryContract = this.fundFactoryContract;
-      const fundsLength = await fundFactoryContract.methods.registeredFundsLength().call();
-
-      const fundsInfo = await fundFactoryContract.methods.registeredFundsData(0, fundsLength).call();
-      const fundAddresses: string[] = fundsInfo[0];
-
-      // Reset funds as we will populate them with new data.
-      this.funds = [];
-
-      const promises = [];
-      for (let i = 0; i < fundAddresses.length; i++) {
-        const fundAddress: string = fundAddresses[i] as string;
-        const fundSettings: IFundSettings = this.parseFundSettings(fundsInfo[1][i])
-        if (!this.fundsSettings[fundAddress]) {
-          this.fundsSettings[fundAddress] = fundSettings;
-        }
-        promises.push(this.fetchFundMetadata(fundSettings))
-      }
-
-      try {
-        const [fundsMetadata, fundsNAVMetadata] = await Promise.all([
-          Promise.all(promises),
-          this.fetchFundsNAVMetadata(fundAddresses),
-        ]);
-
-        // Merge funds metadata with NAV data.
-        const funds = fundsMetadata.map(fund => {
-          return {
-            ...fund,
-            ...(fundsNAVMetadata[fund.address] || {}),
-          } as IFund
-        })
-        console.log("All funds: ", funds);
-
-        // Using the spread operator to append each element
-        this.funds.push(...funds);
-      } catch (error) {
-        console.error("Error fetching fund metadata:", error);
-      }
-    },
+    /**
+     * Fetches connected user's wallet balance of the base/denomination token.
+     */
     async fetchUserBaseTokenBalance() {
-      /**
-       * Fetch connected user's wallet balance of the base/denomination token.
-       */
       if (!this.fund?.baseToken?.address) {
         throw new Error("Fund denomination token address is not available.")
       }
-      const activeAccountAddress = this.accountsStore.activeAccount.address;
+      const activeAccountAddress = this.accountStore.activeAccount.address;
       if (!activeAccountAddress) throw new Error("Active account not found");
 
       this.userBaseTokenBalance = await this.fundBaseTokenContract.methods.balanceOf(activeAccountAddress).call();
@@ -510,7 +360,7 @@ export const useFundStore = defineStore({
       if (!this.fund?.fundToken?.address) {
         throw new Error("Fund token address is not available.")
       }
-      const activeAccountAddress = this.accountsStore.activeAccount.address;
+      const activeAccountAddress = this.accountStore.activeAccount.address;
       if (!activeAccountAddress) throw new Error("Active account not found");
 
       this.userFundTokenBalance = await this.fundContract.methods.balanceOf(activeAccountAddress).call();
@@ -518,15 +368,15 @@ export const useFundStore = defineStore({
       console.log(`user fund token balance of ${this.fund?.fundToken?.symbol} is ${this.userFundTokenBalance}`);
       return this.userFundTokenBalance;
     },
+    /**
+     * Fetch connected user's fund allowance.
+     * Amount of tokens the fund is allowed to act with (transfer/deposit/withdraw...).
+     */
     async fetchUserFundAllowance() {
-      /**
-       * Fetch connected user's fund allowance.
-       * Amount of tokens the fund is allowed to act with (transfer/deposit/withdraw...).
-       */
       if (!this.fund?.baseToken?.address) {
         throw new Error("Fund denomination token is not available.")
       }
-      const activeAccountAddress = this.accountsStore.activeAccount?.address
+      const activeAccountAddress = this.accountStore.activeAccount?.address
       if (!activeAccountAddress) return console.error("Active account not found");
 
       this.userFundAllowance = await this.fundBaseTokenContract.methods.allowance(
@@ -540,7 +390,7 @@ export const useFundStore = defineStore({
       /**
        * Fetch user's fund share value (denominated in base token).
        */
-      const activeAccountAddress = this.accountsStore.activeAccount.address;
+      const activeAccountAddress = this.accountStore.activeAccount.address;
       if (!activeAccountAddress) return console.error("Active account not found");
 
       let balanceWei = BigInt("0");

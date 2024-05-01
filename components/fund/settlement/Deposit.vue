@@ -8,7 +8,7 @@
     :exchange-rate="fundStore.baseToFundTokenExchangeRate"
   >
     <template #buttons>
-      <div v-if="accountsStore.isConnected">
+      <div v-if="accountStore.isConnected">
         <div class="deposit_button_group">
           <v-tooltip
             v-for="(button, index) in buttons"
@@ -50,7 +50,7 @@
         </div>
       </div>
       <template v-else>
-        <v-btn class="bg-primary text-secondary" @click="accountsStore.connectWallet()">
+        <v-btn class="bg-primary text-secondary" @click="accountStore.connectWallet()">
           Connect Wallet
         </v-btn>
       </template>
@@ -61,13 +61,13 @@
 <script setup lang="ts">
 import { ethers } from "ethers";
 import { computed, ref } from "vue";
-import { useAccountsStore } from "~/store/accounts.store";
+import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import type IFund from "~/types/fund";
 import { useToastStore } from "~/store/toast.store";
 
 const toastStore = useToastStore();
-const accountsStore = useAccountsStore();
+const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const tokenValue = ref("0.0");
 const tokenValueChanged = ref(false);
@@ -146,7 +146,7 @@ const handleError = (error: any) => {
 }
 
 const requestDeposit = async () => {
-  if (!accountsStore.activeAccount?.address) {
+  if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to request deposit.")
     return;
   }
@@ -154,13 +154,13 @@ const requestDeposit = async () => {
   loadingRequestDeposit.value = true;
 
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.baseToken.decimals)
-  console.log("Request deposit tokensWei: ", tokensWei, "from : ", accountsStore.activeAccount.address);
+  console.log("Request deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   try {
     const resp = await fundStore.fundContract.methods.requestDeposit(
       tokensWei,
     ).send({
-      from: accountsStore.activeAccount.address,
+      from: accountStore.activeAccount.address,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
@@ -187,7 +187,7 @@ const requestDeposit = async () => {
 
 
 const approveAllowance = async () => {
-  if (!accountsStore.activeAccount?.address) {
+  if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to approve allowance.")
     return;
   }
@@ -195,13 +195,13 @@ const approveAllowance = async () => {
   loadingApproveAllowance.value = true;
 
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.baseToken.decimals)
-  console.log("Approve allowance tokensWei: ", tokensWei, "from : ", accountsStore.activeAccount.address);
+  console.log("Approve allowance tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
   const allowanceValue = tokensWei;
 
   try {
     // call the approve method
     await fundStore.fundBaseTokenContract.methods.approve(fund.address, tokensWei).send({
-      from: accountsStore.activeAccount.address,
+      from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
     }).on("transactionHash", (hash: string) => {
@@ -231,7 +231,7 @@ const approveAllowance = async () => {
 
 
 const deposit = async () => {
-  if (!accountsStore.activeAccount?.address) {
+  if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to deposit tokens to the fund.")
     return;
   }
@@ -239,11 +239,11 @@ const deposit = async () => {
   loadingDeposit.value = true;
 
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.baseToken.decimals)
-  console.log("Deposit tokensWei: ", tokensWei, "from : ", accountsStore.activeAccount.address);
+  console.log("Deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   try {
     await fundStore.fundContract.methods.deposit().send({
-      from: accountsStore.activeAccount.address,
+      from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
     }).on("transactionHash", (hash: string) => {
@@ -274,7 +274,7 @@ const deposit = async () => {
 
 
 const cancelDeposit = async () => {
-  if (!accountsStore.activeAccount?.address) {
+  if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to cancel the deposit.")
     return;
   }
@@ -285,7 +285,7 @@ const cancelDeposit = async () => {
     await fundStore.fundContract.methods.revokeDepositWithrawal(
       1,
     ).send({
-      from: accountsStore.activeAccount.address,
+      from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
     }).on("transactionHash", (hash: string) => {
