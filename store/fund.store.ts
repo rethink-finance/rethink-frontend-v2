@@ -76,6 +76,9 @@ export const useFundStore = defineStore({
     accountStore(): any {
       return useAccountStore();
     },
+    activeAccountAddress(): string | undefined {
+      return this.accountStore.activeAccount?.address;
+    },
     web3Store(): any {
       return useWeb3Store();
     },
@@ -227,9 +230,9 @@ export const useFundStore = defineStore({
         console.log("fundTotalNAV: ", fundTotalNAV)
 
         const fund: IFund = {
-          chainName: this.accountStore.chainName,
-          chainShort: this.accountStore.chainShort,
-          chainIcon: this.accountStore.chainIcon,
+          chainName: this.web3Store.chainName,
+          chainShort: this.web3Store.chainShort,
+          chainIcon: this.web3Store.chainIcon,
           address: fundSettings.fundAddress || "",
           title: fundSettings.fundName || "N/A",
           subtitle: fundSettings.fundName || "N/A",
@@ -341,10 +344,9 @@ export const useFundStore = defineStore({
       if (!this.fund?.baseToken?.address) {
         throw new Error("Fund denomination token address is not available.")
       }
-      const activeAccountAddress = this.accountStore.activeAccount.address;
-      if (!activeAccountAddress) throw new Error("Active account not found");
+      if (!this.activeAccountAddress) throw new Error("Active account not found");
 
-      this.userBaseTokenBalance = await this.fundBaseTokenContract.methods.balanceOf(activeAccountAddress).call();
+      this.userBaseTokenBalance = await this.fundBaseTokenContract.methods.balanceOf(this.activeAccountAddress).call();
 
       console.log(`user base token balance of ${this.fund?.baseToken?.symbol} is ${this.userBaseTokenBalance}`);
       return this.userBaseTokenBalance;
@@ -356,10 +358,9 @@ export const useFundStore = defineStore({
       if (!this.fund?.fundToken?.address) {
         throw new Error("Fund token address is not available.")
       }
-      const activeAccountAddress = this.accountStore.activeAccount.address;
-      if (!activeAccountAddress) throw new Error("Active account not found");
+      if (!this.activeAccountAddress) throw new Error("Active account not found");
 
-      this.userFundTokenBalance = await this.fundContract.methods.balanceOf(activeAccountAddress).call();
+      this.userFundTokenBalance = await this.fundContract.methods.balanceOf(this.activeAccountAddress).call();
 
       console.log(`user fund token balance of ${this.fund?.fundToken?.symbol} is ${this.userFundTokenBalance}`);
       return this.userFundTokenBalance;
@@ -372,11 +373,10 @@ export const useFundStore = defineStore({
       if (!this.fund?.baseToken?.address) {
         throw new Error("Fund denomination token is not available.")
       }
-      const activeAccountAddress = this.accountStore.activeAccount?.address
-      if (!activeAccountAddress) return console.error("Active account not found");
+      if (!this.activeAccountAddress) return console.error("Active account not found");
 
       this.userFundAllowance = await this.fundBaseTokenContract.methods.allowance(
-        activeAccountAddress, this.selectedFundAddress,
+        this.activeAccountAddress, this.selectedFundAddress,
       ).call();
 
       console.log(`user fund allowance of ${this.fund?.baseToken?.symbol} is ${this.userFundAllowance}`);
@@ -386,12 +386,11 @@ export const useFundStore = defineStore({
       /**
        * Fetch user's fund share value (denominated in base token).
        */
-      const activeAccountAddress = this.accountStore.activeAccount.address;
-      if (!activeAccountAddress) return console.error("Active account not found");
+      if (!this.activeAccountAddress) return console.error("Active account not found");
 
       let balanceWei = BigInt("0");
       try {
-        balanceWei = await this.fundContract.methods.valueOf(activeAccountAddress).call();
+        balanceWei = await this.fundContract.methods.valueOf(this.activeAccountAddress).call();
       } catch (e) {
         console.error(
           "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,

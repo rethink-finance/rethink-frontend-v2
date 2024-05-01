@@ -46,9 +46,6 @@ export const useFundsStore = defineStore({
     },
   }),
   getters: {
-    accountStore(): any {
-      return useAccountStore();
-    },
     fundStore(): any {
       return useFundStore();
     },
@@ -136,7 +133,6 @@ export const useFundsStore = defineStore({
     async fetchFundMetadata(fundSettings: IFundSettings) {
       // Fetch inception date
       const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
-      const metadataPromise: Promise<string> = fundContract.methods.fundMetadata().call();
 
       try {
         // @dev: would be better to just have this available in the FundSettings data.
@@ -156,7 +152,7 @@ export const useFundsStore = defineStore({
           fundTokenDecimals,
           fundTokenTotalSupply,
         ] = await Promise.all([
-          metadataPromise,
+          fundContract.methods.fundMetadata().call() as Promise<string>,
           this.getTokenInfo<string>(fundBaseTokenContract, "symbol" , fundSettings.baseToken),
           this.getTokenInfo<number>(fundBaseTokenContract, "decimals", fundSettings.baseToken),
           this.getTokenInfo<string>(governanceTokenContract, "symbol" , fundSettings.governanceToken),
@@ -167,9 +163,9 @@ export const useFundsStore = defineStore({
         console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
 
         const fund: IFund = {
-          chainName: this.accountStore.chainName,
-          chainShort: this.accountStore.chainShort,
-          chainIcon: this.accountStore.chainIcon,
+          chainName: this.web3Store.chainName,
+          chainShort: this.web3Store.chainShort,
+          chainIcon: this.web3Store.chainIcon,
           address: fundSettings.fundAddress || "",
           title: fundSettings.fundName || "N/A",
           subtitle: fundSettings.fundName || "N/A",
