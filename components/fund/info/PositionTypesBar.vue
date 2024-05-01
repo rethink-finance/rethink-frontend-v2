@@ -38,7 +38,9 @@ export default {
     },
     calculatedPositionTypes() {
       console.log("GET CALC POS TYPES");
-      return this.positionTypeCounts.map((positionType) => {
+      return this.positionTypeCounts.filter(
+        positionType => positionType.count > 0,
+      ).map((positionType) => {
         const width = positionType.count / this.totalCountSum;
         return {
           width: formatPercent(width, false),

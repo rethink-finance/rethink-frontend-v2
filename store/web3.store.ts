@@ -19,14 +19,14 @@ export const useWeb3Store = defineStore({
         chainName: "Polygon",
         chainShort: "matic",
         chainIcon: "cryptocurrency-color:matic",
-        rpcURL: "https://polygon-rpc.com/",
+        rpcUrl: "wss://polygon-bor-rpc.publicnode.com",
       },
       "0xa4b1": {
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
         chainShort: "eth",
         chainIcon: "arbitrum1",
-        rpcURL: "https://arbitrum.llamarpc.com/",
+        rpcUrl: "https://arbitrum.llamarpc.com/",
       },
     },
   }),
@@ -42,8 +42,8 @@ export const useWeb3Store = defineStore({
 
       const network: INetwork = this.networksMap[this.chainId];
 
-      this.web3 = new Web3(network.rpcURL);
-      console.log(`init web3 chain: ${this.chainId} on ${network.rpcURL}`);
+      this.web3 = new Web3(network.rpcUrl);
+      console.log(`init web3 chain: ${this.chainId} on ${network.rpcUrl}`);
       console.log("----------------\n")
     },
   },

@@ -14,7 +14,7 @@
       <div class="d-flex flex-column">
         <div class="main_card main_grid order-1 order-sm-0">
           <FundSettlement :fund="fund" />
-          <!-- TODO currenct cycle is work in progress -->
+          <!-- TODO current cycle is work in progress -->
           <!--          <FundCurrentCycle :fund="fund" />-->
         </div>
 
