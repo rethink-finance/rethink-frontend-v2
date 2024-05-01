@@ -2,9 +2,9 @@
   <div class="chart">
     <div class="chart__toolbar">
       <div>
-        <FundChartTypeSelector selected="sharePrice" @change="updateChart" />
+        <FundChartTypeSelector selected="aum" @change="updateChart" />
       </div>
-      <FundChartTimelineSelector selected="3M" @change="updateChart" />
+      <!--      <FundChartTimelineSelector selected="3M" @change="updateChart" />-->
     </div>
     <div class="chart__chart_wrapper">
       <ClientOnly>
@@ -19,7 +19,16 @@
   </div>
 </template>
 <script lang="ts">
+import type { PropType } from "vue";
+import type IFund from "~/types/fund";
+
 export default {
+  props: {
+    fund: {
+      type: Object as PropType<IFund>,
+      default: () => ({}),
+    },
+  },
   data() {
     return {
       chartItems: [] as number[],

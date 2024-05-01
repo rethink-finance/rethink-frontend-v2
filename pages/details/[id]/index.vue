@@ -19,7 +19,7 @@
         </div>
 
         <div class="main_card">
-          <FundChart />
+          <FundChart :fund="fund" />
         </div>
       </div>
 

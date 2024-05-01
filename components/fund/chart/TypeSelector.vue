@@ -1,6 +1,10 @@
 <template>
   <div class="price_type_selector">
-    <div class="price_type_selector__select_button" @click="toggleMenuOpen">
+    <div
+      class="price_type_selector__select_button"
+      :class="{'price_type_selector__select_button--hover': hasMultipleTypeOptions}"
+      @click="toggleMenuOpen"
+    >
       <div>
         <div class="price_type_selector__price">
           $1,612.72
@@ -9,9 +13,15 @@
           {{ selectedTypeValue }}
         </div>
       </div>
-      <IconDropdown :active="menuOpen" />
+      <IconDropdown
+        v-if="hasMultipleTypeOptions"
+        :active="menuOpen"
+      />
     </div>
-    <div v-if="menuOpen" class="price_type_selector__options">
+    <div
+      v-if="menuOpen"
+      class="price_type_selector__options"
+    >
       <div
         v-for="(optionValue, optionKey) in typeOptions"
         :key="optionKey"
@@ -27,8 +37,9 @@
 
 <script lang="ts">
 const typeOptions: Record<string, string> = {
-  "sharePrice": "Share Price",
   "aum": "AUM",
+  // TODO add other type options when needed.
+  // "sharePrice": "Share Price",
 };
 
 export default {
@@ -36,7 +47,7 @@ export default {
   props: {
     selected: {
       type: String,
-      default: "sharePrice",
+      default: "aum",
       rules: [
         (value: string) => {
           if (!Object.keys(typeOptions)?.includes(value)) {
@@ -60,6 +71,9 @@ export default {
     selectedTypeValue() {
       return this.typeOptions[this.selectedType];
     },
+    hasMultipleTypeOptions() {
+      return Object.keys(typeOptions).length > 1
+    },
   },
   methods: {
     selectType(option: string) {
@@ -68,6 +82,7 @@ export default {
       this.menuOpen = false;
     },
     toggleMenuOpen() {
+      if (!this.hasMultipleTypeOptions) return;
       this.menuOpen = !this.menuOpen;
     },
   },
@@ -91,7 +106,7 @@ export default {
     justify-content: space-between;
     align-items: center;
 
-    &:hover {
+    &--hover:hover {
       background: $color-hover;
       cursor: pointer;
     }
