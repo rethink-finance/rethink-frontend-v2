@@ -257,6 +257,7 @@ export const useFundsStore = defineStore({
         const dataNAVs: Record<string, any[]> = await this.rethinkReaderContract.methods.getFundNavMetaData(
           fundAddresses, 0,
         ).call();
+        console.log("DATANAVS: ", dataNAVs);
 
         // @dev NOTE: there is also: totalDepositBal for each fund if we need it.
         fundAddresses.forEach((address, index) => {
