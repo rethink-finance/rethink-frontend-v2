@@ -1,14 +1,10 @@
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
-import ERC20 from "~/assets/contracts/ERC20.json";
 import addressesJson from "~/assets/contracts/addresses.json";
-import { useAccountStore } from "~/store/account.store";
 import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
-import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type INAVUpdate from "~/types/nav_update";
@@ -26,7 +22,6 @@ const RethinkReaderContractName = "RethinkReader";
 
 interface IState {
   funds: IFund[];
-  cachedTokens: any,
 }
 
 
@@ -34,16 +29,6 @@ export const useFundsStore = defineStore({
   id: "funds",
   state: (): IState => ({
     funds: [] as IFund[],
-    cachedTokens: {
-      "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063": {
-        symbol: "DAI",
-        decimals: 18,
-      },
-      "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": {
-        symbol: "USDC",
-        decimals: 6,
-      },
-    },
   }),
   getters: {
     fundStore(): any {
@@ -72,27 +57,6 @@ export const useFundsStore = defineStore({
     },
   },
   actions: {
-    /**
-     * Fetches specified information (e.g., 'symbol', 'decimals') about a token from a smart contract.
-     * If the information is cached, it returns the cached value to avoid unnecessary blockchain calls.
-     * Otherwise, it fetches the information using the specified contract method, caches it, and returns it.
-     *
-     * @param {Object} tokenContract - The web3 contract instance of the token.
-     * @param {string} tokenAddress - The address of the token contract.
-     * @param {string} infoType - The type of information to fetch from the token contract ('symbol' or 'decimals').
-     * @returns {Promise<string|number>} - A promise that resolves with the token information (either a string for the symbol or a number for the decimals).
-     */
-    async getTokenInfo<T>(tokenContract: any, infoType: string, tokenAddress?: string): Promise<T | undefined> {
-      if (!tokenAddress) return undefined;
-
-      if (this.cachedTokens[tokenAddress] && this.cachedTokens[tokenAddress][infoType]) {
-        return this.cachedTokens[tokenAddress][infoType];
-      }
-      const value = await tokenContract.methods[infoType]().call();
-      this.cachedTokens[tokenAddress] = this.cachedTokens[tokenAddress] || {};
-      this.cachedTokens[tokenAddress][infoType] = value;
-      return value;
-    },
     batchFetchFundSettings() {
       /** @dev: I tried many, many things to make this BatchRequest work with web3 4.x, this is the closest I came.
        * https://docs.web3js.org/guides/web3_upgrade_guide/x/#web3-batchrequest
@@ -126,130 +90,14 @@ export const useFundsStore = defineStore({
       console.error("not implemented");
     },
     /**
-     * Fetches multiple fund metadata such as:
-     * - getFundStartTime
-     * - fundMetadata
+     * Fetch funds and their metadata and NAV data.
+     * This will return funds with just enough data to populate the discover table.
+     * More data can be fetched from fundSettings later if needed, or added to the reader contract.
+     * - TODO: totalDepositBal (is also present if needed)
      */
-    async fetchFundMetadata(fundSettings: IFundSettings) {
-      // Fetch inception date
-      const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
+    async fetchFundsMetadata(fundAddresses: string[]): Promise<IFund[]> {
+      const funds: IFund[] = [];
 
-      try {
-        // @dev: would be better to just have this available in the FundSettings data.
-        // Fetch base, fund and governance ERC20 token symbol and decimals.
-        const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
-        const fundTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.fundAddress);
-        const governanceTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.governanceToken);
-
-        // Fetch all token symbols and decimals.
-        // @dev: maybe there are more things to be fetched here.
-        const [
-          metaDataJson,
-          baseTokenSymbol,
-          baseTokenDecimals,
-          governanceTokenSymbol,
-          governanceTokenDecimals,
-          fundTokenDecimals,
-          fundTokenTotalSupply,
-        ] = await Promise.all([
-          fundContract.methods.fundMetadata().call() as Promise<string>,
-          this.getTokenInfo<string>(fundBaseTokenContract, "symbol" , fundSettings.baseToken),
-          this.getTokenInfo<number>(fundBaseTokenContract, "decimals", fundSettings.baseToken),
-          this.getTokenInfo<string>(governanceTokenContract, "symbol" , fundSettings.governanceToken),
-          this.getTokenInfo<number>(governanceTokenContract, "decimals", fundSettings.governanceToken),
-          this.getTokenInfo<number>(fundTokenContract, "decimals", fundSettings.fundAddress),
-          fundTokenContract.methods.totalSupply().call() as Promise<bigint>,
-        ]);
-        console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
-
-        const fund: IFund = {
-          chainName: this.web3Store.chainName,
-          chainShort: this.web3Store.chainShort,
-          chainIcon: this.web3Store.chainIcon,
-          address: fundSettings.fundAddress || "",
-          title: fundSettings.fundName || "N/A",
-          subtitle: fundSettings.fundName || "N/A",
-          description: "N/A",
-          safeAddress: fundSettings.safe || "",
-          governorAddress: fundSettings.governor || "",
-          photoUrl: defaultAvatar,
-          inceptionDate: "",
-          fundToken: {
-            symbol: fundSettings.fundSymbol,
-            address: fundSettings.fundAddress,
-            decimals: fundTokenDecimals ?? 18,
-          } as IToken,
-          baseToken: {
-            symbol: baseTokenSymbol ?? "",
-            address: fundSettings.baseToken,
-            decimals: baseTokenDecimals ?? 18,
-          } as IToken,
-          governanceToken: {
-            symbol: governanceTokenSymbol ?? "",
-            address: fundSettings.governanceToken,
-            decimals: governanceTokenDecimals ?? 18,
-          } as IToken,
-          totalNAVWei: BigInt("0"),
-          fundTokenTotalSupply,
-          cumulativeReturnPercent: 0,
-          monthlyReturnPercent: 0,
-          sharpeRatio: 0,
-          positionTypeCounts: [] as IPositionTypeCount[],
-          cyclePendingRequests: [] as ICyclePendingRequest[],
-
-          // My Fund Positions
-          netDeposits: "",
-
-          // Overview fields
-          depositAddresses: [],
-          managementAddresses: [],
-          plannedSettlementPeriod: "",
-          minLiquidAssetShare: "",
-
-          // Governance
-          votingDelay: "",
-          votingPeriod: "",
-          proposalThreshold: "",
-          quorom: "",
-          lateQuorom: "",
-
-          // Fees
-          performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
-          managementFee: fundSettings.managementFee,
-          depositFee: fundSettings.depositFee,
-          performanceFee: fundSettings.performanceFee,
-          withdrawFee: fundSettings.withdrawFee,
-          feeCollectors: fundSettings.feeCollectors,
-
-          // NAV Updates
-          navUpdates: [] as INAVUpdate[],
-        } as IFund;
-
-        // Process metadata if available
-        if (metaDataJson) {
-          const metaData = JSON.parse(metaDataJson);
-          console.log("fund metaData: ", metaData);
-          fund.description = metaData.description;
-          fund.photoUrl = metaData.photoUrl || defaultAvatar;
-          fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
-          fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
-        }
-
-        return fund;
-      } catch (error) {
-        console.error("Error in promises: ", error, "fund: ", fundSettings);
-        return {} as IFund; // Return an empty or default object in case of error
-      }
-    },
-    async fetchFundsNAVMetadata(fundAddresses: string[]): Promise<Record<string, Partial<IFund>>> {
-      /**
-       * Fetch NAV data for each fund in fundAddresses and return partial fund with:
-       * - inceptionDate
-       * - totalNAVWei
-       * - positionTypeCounts
-       * - TODO: totalDepositBal (can get if needed)
-       */
-      const fundsNAVMetadata: Record<string, Partial<IFund>> = {};
       try {
         // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
         //  not used in the contract code, so I have set it to 0. Change this part in the future
@@ -257,14 +105,34 @@ export const useFundsStore = defineStore({
         const dataNAVs: Record<string, any[]> = await this.rethinkReaderContract.methods.getFundNavMetaData(
           fundAddresses, 0,
         ).call();
-        console.log("DATANAVS: ", dataNAVs);
 
         // @dev NOTE: there is also: totalDepositBal for each fund if we need it.
         fundAddresses.forEach((address, index) => {
           const fundStartTime = dataNAVs.startTime[index];
-          fundsNAVMetadata[address] = {
+          const fund: IFund = {
+            chainName: this.web3Store.chainName,
+            chainShort: this.web3Store.chainShort,
+            chainIcon: this.web3Store.chainIcon,
+            address,
+            title: dataNAVs.fundName[index] || "N/A",
+            subtitle: dataNAVs.fundName[index] || "N/A",
+            description: "N/A",
+            safeAddress: "",
+            governorAddress: "",
+            photoUrl: defaultAvatar,
             inceptionDate: fundStartTime ? formatDate(new Date(Number(fundStartTime) * 1000)) : "",
+            fundToken: {} as IToken,
+            baseToken: {
+              address: "",  // Not important here.
+              symbol: dataNAVs.fundBaseTokenSymbol[index],
+              decimals: dataNAVs.fundBaseTokenDecimals[index],
+            },
+            governanceToken: {} as IToken,  // Not important here, for now.
             totalNAVWei: dataNAVs.totalNav[index],
+            fundTokenTotalSupply: BigInt("0"),
+            cumulativeReturnPercent: 0,
+            monthlyReturnPercent: 0,
+            sharpeRatio: 0,
             positionTypeCounts: [
               {
                 type: PositionTypesMap[PositionType.Liquid],
@@ -283,13 +151,50 @@ export const useFundsStore = defineStore({
                 count: Number(dataNAVs.illiquidLen[index] || 0),
               },
             ] as IPositionTypeCount[],
+            cyclePendingRequests: [] as ICyclePendingRequest[],
+
+            // My Fund Positions
+            netDeposits: "",
+            // Overview fields
+            depositAddresses: [],
+            managementAddresses: [],
+            plannedSettlementPeriod: "",
+            minLiquidAssetShare: "",
+
+            // Governance
+            votingDelay: "",
+            votingPeriod: "",
+            proposalThreshold: "",
+            quorom: "",
+            lateQuorom: "",
+
+            // Fees
+            performaceHurdleRateBps: "",
+            managementFee: "",
+            depositFee: "",
+            performanceFee: "",
+            withdrawFee: "",
+            feeCollectors: [],
+
+            // NAV Updates
+            navUpdates: [] as INAVUpdate[],
           };
+
+          const metaDataJson = dataNAVs.fundMetadata[index];
+          // Process metadata if available
+          if (metaDataJson) {
+            const metaData = JSON.parse(metaDataJson);
+            fund.description = metaData.description;
+            fund.photoUrl = metaData.photoUrl || defaultAvatar;
+            fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
+            fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
+          }
+          funds.push(fund);
         })
-        return fundsNAVMetadata;
+        return funds;
       } catch (error) {
-        console.error("Error calling getFundNavMetaData: ", error, "fund: ", fundAddresses);
-        // Return an empty or default object in case of error
-        return {} as Record<string, Partial<IFund>>;
+        console.error("Error calling getFundNavMetaData: ", error, " addresses: ", fundAddresses);
+        return funds;
       }
     },
     /**
@@ -306,25 +211,8 @@ export const useFundsStore = defineStore({
       // Reset funds as we will populate them with new data.
       this.funds = [];
 
-      const promises = [];
-      for (let i = 0; i < fundAddresses.length; i++) {
-        const fundSettings: IFundSettings = this.fundStore.parseFundSettings(fundsInfo[1][i])
-        promises.push(this.fetchFundMetadata(fundSettings))
-      }
-
       try {
-        const [fundsMetadata, fundsNAVMetadata] = await Promise.all([
-          Promise.all(promises),
-          this.fetchFundsNAVMetadata(fundAddresses),
-        ]);
-
-        // Merge funds metadata with NAV data.
-        const funds = fundsMetadata.map(fund => {
-          return {
-            ...fund,
-            ...(fundsNAVMetadata[fund.address] || {}),
-          } as IFund
-        })
+        const funds = await this.fetchFundsMetadata(fundAddresses);
         console.log("All funds: ", funds);
 
         // Using the spread operator to append each element

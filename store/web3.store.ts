@@ -9,6 +9,7 @@ interface IState {
   chainIcon: string;
   chainShort: string;
   networksMap: Record<string, INetwork>;
+  cachedTokens: Record<string, any>;
 }
 
 export const useWeb3Store = defineStore({
@@ -35,6 +36,16 @@ export const useWeb3Store = defineStore({
         rpcUrl: "https://arbitrum.llamarpc.com/",
       },
     },
+    cachedTokens: {
+      "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063": {
+        symbol: "DAI",
+        decimals: 18,
+      },
+      "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": {
+        symbol: "USDC",
+        decimals: 6,
+      },
+    },
   }),
   getters: {
     networks(): INetwork[] {
@@ -42,6 +53,27 @@ export const useWeb3Store = defineStore({
     },
   },
   actions: {
+    /**
+     * Fetches specified information (e.g., 'symbol', 'decimals') about a token from a smart contract.
+     * If the information is cached, it returns the cached value to avoid unnecessary blockchain calls.
+     * Otherwise, it fetches the information using the specified contract method, caches it, and returns it.
+     *
+     * @param {Object} tokenContract - The web3 contract instance of the token.
+     * @param {string} tokenAddress - The address of the token contract.
+     * @param {string} infoType - The type of information to fetch from the token contract ('symbol' or 'decimals').
+     * @returns {Promise<string|number>} - A promise that resolves with the token information (either a string for the symbol or a number for the decimals).
+     */
+    async getTokenInfo<T>(tokenContract: any, infoType: string, tokenAddress?: string): Promise<T | undefined> {
+      if (!tokenAddress) return undefined;
+
+      if (this.cachedTokens[tokenAddress] && this.cachedTokens[tokenAddress][infoType]) {
+        return this.cachedTokens[tokenAddress][infoType];
+      }
+      const value = await tokenContract.methods[infoType]().call();
+      this.cachedTokens[tokenAddress] = this.cachedTokens[tokenAddress] || {};
+      this.cachedTokens[tokenAddress][infoType] = value;
+      return value;
+    },
     init(chainId?: string, web3Provider?: any): void {
       if (!chainId) {
         // Check if there exists last used chainId in the local storage.
