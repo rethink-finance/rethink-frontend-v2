@@ -151,7 +151,6 @@ const requestRedeem = async () => {
 
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.fundToken.decimals)
   console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
-
   try {
     await fundStore.fundContract.methods.requestWithdraw(tokensWei).send({
       from: accountStore.activeAccount.address,
@@ -207,7 +206,7 @@ const redeem = async () => {
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
 
     }).on("receipt", (receipt: any) => {
-      console.log(receipt);
+      console.log("receipt: ", receipt);
 
       if (receipt.status) {
         toastStore.successToast(
@@ -241,8 +240,7 @@ const cancelRedeem = async () => {
     return;
   }
   loadingCancelRedeem.value = true;
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.fundToken.decimals)
-  console.log("[CANCEL REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
+  console.log("[CANCEL REDEEM] from : ", accountStore.activeAccount.address);
 
   try {
     await fundStore.fundContract.methods.revokeDepositWithrawal().send({
@@ -254,7 +252,7 @@ const cancelRedeem = async () => {
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
 
     }).on("receipt", (receipt: any) => {
-      console.log(receipt);
+      console.log("receipt: ", receipt);
 
       if (receipt.status) {
         toastStore.successToast(
@@ -288,7 +286,7 @@ const buttons = ref([
     name: "Cancel Redeem",
     onClick: cancelRedeem,
     disabled: isAnythingLoading,
-    loading: loadingRedeem,
+    loading: loadingCancelRedeem,
     tooltipText: undefined,
   },
   {

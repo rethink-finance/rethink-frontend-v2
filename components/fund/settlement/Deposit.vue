@@ -147,6 +147,10 @@ const handleError = (error: any) => {
   loadingCancelDeposit.value = false;
 }
 
+/**
+ * Sending a transaction and listening to the events.
+ * https://docs.web3js.org/guides/wallet/transactions#sending-a-transaction-and-listening-to-the-events
+ */
 const requestDeposit = async () => {
   if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to request deposit.")
@@ -163,12 +167,14 @@ const requestDeposit = async () => {
   console.log("Request deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   try {
-    const resp = await fundStore.fundContract.methods.requestDeposit(
+    await fundStore.fundContract.methods.requestDeposit(
       tokensWei,
     ).send({
       from: accountStore.activeAccount.address,
+      maxPriorityFeePerGas: null,
+      maxFeePerGas: null,
     }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
+      console.log("tx hash: ", hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
 
     }).on("receipt", (receipt: any) => {
@@ -185,7 +191,6 @@ const requestDeposit = async () => {
     }).on("error", (error: any) => {
       handleError(error);
     });
-    console.log("resp: ", resp);
   } catch (error: any) {
     handleError(error);
   }
@@ -219,10 +224,10 @@ const approveAllowance = async () => {
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
 
     }).on("receipt", (receipt: any) => {
-      console.log(receipt);
+      console.log("receipt :", receipt);
 
       if (receipt.status) {
-        toastStore.successToast("The approval was successfull. You can make the deposit now.");
+        toastStore.successToast("The approval was successful. You can make the deposit now.");
 
         // refresh values
         // needs to be updated this way because Polygon RPC nodes are slow with updating state
@@ -309,7 +314,7 @@ const cancelDeposit = async () => {
       console.log("receipt: ", receipt);
 
       if (receipt.status) {
-        toastStore.successToast("Your deposit request was successfull.");
+        toastStore.successToast("Your deposit request was successful.");
         tokenValue.value = "0.0";
       } else {
         toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
