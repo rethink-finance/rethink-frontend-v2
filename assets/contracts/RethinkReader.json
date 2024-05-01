@@ -67,6 +67,26 @@
               "internalType": "uint256[]",
               "name": "composableLen",
               "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "fundBaseTokenDecimals",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "string[]",
+              "name": "fundMetadata",
+              "type": "string[]"
+            },
+            {
+              "internalType": "string[]",
+              "name": "fundName",
+              "type": "string[]"
+            },
+            {
+              "internalType": "string[]",
+              "name": "fundBaseTokenSymbol",
+              "type": "string[]"
             }
           ],
           "internalType": "struct RethinkReader.FundMetaData",
