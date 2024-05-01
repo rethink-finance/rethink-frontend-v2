@@ -22,6 +22,9 @@ export const useAccountStore = defineStore("accounts", {
     connectedWallet(): WalletState | undefined {
       return this.web3Onboard?.connectedWallet || undefined;
     },
+    connectedWalletChainId(): string | undefined {
+      return this.connectedWallet?.chains[0]?.id;
+    },
     isConnected(): boolean {
       return !!this.connectedWallet;
     },
@@ -30,7 +33,19 @@ export const useAccountStore = defineStore("accounts", {
     },
   },
   actions: {
-    setActiveChain(chainId: string): void {
+    async switchNetwork(chainId: string): Promise<void> {
+      // If the user is currently on a different
+      // network, ask him to switch it.
+      console.log("CURRENT NETWORK: ", this.connectedWalletChainId)
+      if (chainId !== this.connectedWalletChainId) {
+        await this.connectedWallet?.provider?.request({
+          method: "wallet_switchEthereumChain",
+          params: [{
+            chainId,
+          }],
+        });
+      }
+
       let web3Provider;
       if (this.connectedWallet) {
         web3Provider = new Web3(this.connectedWallet.provider);
@@ -54,7 +69,7 @@ export const useAccountStore = defineStore("accounts", {
     setAlreadyConnectedWallet() {
       console.log("Already connected Wallet:", this.web3Onboard);
       const chainId = this.web3Onboard?.connectedChain?.id || "";
-      this.setActiveChain(chainId);
+      this.switchNetwork(chainId);
     },
   },
 });

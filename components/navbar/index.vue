@@ -51,13 +51,13 @@
         <ClientOnly>
           <div class="d-flex">
             <v-select
-              v-if="accountStore.isConnected"
               v-model="selectedChainId"
               class="select_network"
               density="compact"
               :bg-color="selectedChainId ? '' : 'error'"
               label="Network"
               :items="networks"
+              :loading="isSwitchingNetworks"
               item-title="chainName"
               item-value="chainId"
             >
@@ -118,6 +118,7 @@ import { useAccountStore } from "~/store/account.store";
 import { useWeb3Store } from "~/store/web3.store";
 import { useToastStore } from "~/store/toast.store";
 import type INetwork from "~/types/network";
+import type IRoute from "~/types/route";
 const router = useRouter();
 const accountStore = useAccountStore();
 const web3Store = useWeb3Store();
@@ -127,17 +128,7 @@ const route = useRoute();
 
 const currentRoute = ref(route?.path);
 const menuOpen = ref(false);
-interface IRoute {
-  to: string;
-  title: string;
-  text: string;
-  exactMatch: boolean;
-  matchPrefix?: string;
-  disabled?: boolean;
-  isExternal?: boolean;
-  icon?: string;
-  color?: string;
-}
+
 const routes : IRoute[] = [
   {
     to: "/",
@@ -170,8 +161,9 @@ const routes : IRoute[] = [
     color: "var(--color-light-subtitle)",
   },
 ]
-const selectedChainId = ref("");
+const selectedChainId = ref(web3Store.chainId);
 const networks: INetwork[] = web3Store.networks;
+const isSwitchingNetworks = ref(false);
 
 watch(() => web3Store.chainId, (newVal, oldVal) => {
   console.log(`Chain ID changed from ${oldVal} to ${newVal}`);
@@ -180,20 +172,16 @@ watch(() => web3Store.chainId, (newVal, oldVal) => {
 });
 const switchNetwork = async (chainId: string) => {
   console.log(chainId);
+  isSwitchingNetworks.value = true;
   try {
     // TODO if connected wallet do that, otherwise just switch it.
-    await accountStore.connectedWallet?.provider?.request({
-      method: "wallet_switchEthereumChain",
-      params: [{
-        chainId,
-      }],
-    });
 
     // TODO handle more gracefully instead of full reload, do a watcher on every page and update data
-    accountStore.setActiveChain(chainId);
+    await accountStore.switchNetwork(chainId);
     return router.go(0);
   } catch (error: any) {
-    selectedChainId.value = "";
+    // Revert the selected value to the previously selected chain.
+    selectedChainId.value = web3Store.chainId;
 
     // This error code indicates that the chain has not been added to MetaMask
     if (error.code === 4902) {
@@ -225,12 +213,13 @@ const switchNetwork = async (chainId: string) => {
       toastStore.errorToast("Oops, something went wrong switching networks.")
     }
   }
+  isSwitchingNetworks.value = false;
 }
 const isPathActive = (path: string = "", exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);
 const getPathColor = (isActive = false, color = "var(--color-subtitle)") => (isActive ? "primary" : color);
 
 const computedRoutes = computed(() => {
-  return routes.map((routeItem) => {
+  return routes.map((routeItem: IRoute) => {
     let isActive;
     if (routeItem.exactMatch) {
       isActive = isPathActive(routeItem.to, true)
@@ -263,14 +252,17 @@ onMounted(() => {
   currentRoute.value = route.path;
 });
 
-const onClickConnect = () => {
+const onClickConnect = async () => {
   const { provider, label } = connectedWallet.value || {}
 
   if (provider && label) {
-    accountStore.disconnectWallet()
+    await accountStore.disconnectWallet()
   } else {
-    accountStore.connectWallet()
+    await accountStore.connectWallet()
   }
+
+  // Reload page to reload all the data.
+  return router.go(0);
 }
 </script>
 

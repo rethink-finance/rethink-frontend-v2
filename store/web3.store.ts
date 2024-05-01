@@ -15,7 +15,7 @@ export const useWeb3Store = defineStore({
   id: "web3store",
   state: (): IState => ({
     web3: undefined,
-    chainId: "0x89",
+    chainId: "",
     chainName: "",
     chainIcon: "",
     chainShort: "",
