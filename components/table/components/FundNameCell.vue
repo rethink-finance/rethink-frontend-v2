@@ -17,7 +17,7 @@
 const props = defineProps({
   image: {
     type: String,
-    default: "https://api.lorem.space/image/finance?w=150&h=150",
+    default: "",
   },
   title: { type: String, default: "" },
   subtitle: { type: String, default: "" },

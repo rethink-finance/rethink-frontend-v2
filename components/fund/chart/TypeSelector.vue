@@ -7,7 +7,7 @@
     >
       <div>
         <div class="price_type_selector__price">
-          $1,612.72
+          {{ value }}
         </div>
         <div class="price_type_selector__selected">
           {{ selectedTypeValue }}
@@ -45,6 +45,10 @@ const typeOptions: Record<string, string> = {
 export default {
   name: "TypeSelector",
   props: {
+    value: {
+      type: String,
+      default: "N/A",
+    },
     selected: {
       type: String,
       default: "aum",
@@ -91,7 +95,6 @@ export default {
 
 <style lang="scss" scoped>
 .price_type_selector {
-  width: 10rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -112,7 +115,7 @@ export default {
     }
   }
   &__price {
-    font-size: $text-lg;
+    font-size: $text-md;
   }
   &__selected {
     font-size: $text-sm;

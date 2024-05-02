@@ -3,7 +3,7 @@
     <UiDataRowCard
       :title="managementFee"
       subtitle="Management Fee"
-      title2="#TODO"
+      :title2="managementFeeAddress"
       subtitle2="Distributed to"
       :grow-column2="true"
       :title3="hurdleRate"
@@ -29,9 +29,12 @@ export default defineComponent({
     managementFee() {
       return `${this.fund.managementFee}%`;
     },
+    managementFeeAddress() {
+      return this.fund.managementFeeAddress || "N/A";
+    },
     hurdleRate() {
       if (!this.fund.performaceHurdleRateBps) return "N/A";
-      return `${this.fund.performaceHurdleRateBps}BPS`;
+      return `${this.fund.performaceHurdleRateBps} BPS`;
     },
   },
 })

@@ -27,39 +27,36 @@ export const capitalizeFirst = (str?: string): string => {
   return str?.charAt(0).toUpperCase() + str?.slice(1);
 }
 
+// Recursive function to clean complex nested data from numeric indices
+const ignoreKeys: Set<string> = new Set(["__length__"]);
 
-/**
- * Converts a decimal number to a percentage string.
- * Optionally includes a "+" or "-" sign based on the number's positivity or negativity,
- * and the percentage value is formatted to two decimal places.
- *
- * @param {number} value - The decimal number to be converted to a percentage string.
- * @param {boolean} includeSign - Optional. If true, includes '+' or '-' sign with the percentage. Defaults to true.
- * @returns {string} A string representing the converted percentage with two decimal places.
- */
-export const formatPercent = (value: number, includeSign: boolean = true): string => {
-  const percentage = value * 100;
-  let formattedPercentage = percentage.toFixed(2) + "%";
-
-  if (includeSign && percentage > 0) {
-    formattedPercentage = "+" + formattedPercentage;
+export const cleanComplexWeb3Data = (data: any): any =>  {
+  if (Array.isArray(data)) {
+    // Recursively clean each item in the array
+    return data.map(item => cleanComplexWeb3Data(item));
+  } else if (typeof data === "object" && data !== null) {
+    // Prepare an object to accumulate the cleaned data
+    const cleanedData: { [key: string]: any } = {};
+    Object.keys(data).forEach(key => {
+      // Check if the key is not numeric
+      if (!ignoreKeys.has(key) && isNaN(Number(key))) {
+        // Recursively clean and assign if key is not numeric and not ignored
+        cleanedData[key] = cleanComplexWeb3Data(data[key]);
+      }
+    });
+    return cleanedData;
   }
-
-  return formattedPercentage;
+  // Return primitive types unchanged
+  return data;
 }
 
-export const trimTrailingZeros = (value: string) => {
-  return value.replace(/\.?0*$/, "");
-}
-
-export const formatUSDValue = (value: string | number) => {
-  return trimTrailingZeros(numeral(value).format("$0,0.00"))
-}
-
-export const formatNumberShort = (number?: number) => {
-  // Formats into abbreviations with 2 decimal points, for example: 1.5K, 5.32M
-  // Convert to uppercase.
-  // Remove trailing ".00";
-  if (number == undefined) return "N/A";
-  return numeral(number).format("0.00a").toUpperCase().replace(/\.00(?=[KMBT])/g, "");
+export const formatJson = (data: any) => {
+  return JSON.stringify(data, (_, value) => {
+    if (typeof value === "bigint") {
+      // Convert BigInt to string
+      return value.toString();
+    }
+    // Return the value unchanged if not a BigInt
+    return value;
+  }, 2);
 }

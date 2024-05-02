@@ -66,9 +66,12 @@ export const useWeb3Store = defineStore({
     async getTokenInfo<T>(tokenContract: any, infoType: string, tokenAddress?: string): Promise<T | undefined> {
       if (!tokenAddress) return undefined;
 
+      // Check if the cached value already exists.
       if (this.cachedTokens[tokenAddress] && this.cachedTokens[tokenAddress][infoType]) {
         return this.cachedTokens[tokenAddress][infoType];
       }
+
+      // It does not exist, fetch it from the contract method.
       const value = await tokenContract.methods[infoType]().call();
       this.cachedTokens[tokenAddress] = this.cachedTokens[tokenAddress] || {};
       this.cachedTokens[tokenAddress][infoType] = value;

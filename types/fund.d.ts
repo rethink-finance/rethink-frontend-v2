@@ -32,7 +32,6 @@ export default interface IFund {
 
   address: string;
   title: string;
-  subtitle: string;
 
   // Governor address or delegateToAddress
   governorAddress: string;  // governor
@@ -73,9 +72,18 @@ export default interface IFund {
   // Fees - fees collector
   performaceHurdleRateBps: string;
   managementFee: string;
+  managementFeeAddress: string;
   depositFee: string;
   performanceFee: string;
   withdrawFee: string;
+  /**
+   * [
+   *   DepositFee,
+   *   WithdrawFee,
+   *   ManagementFee,
+   *   PerformanceFee
+   * ]
+   */
   feeCollectors: string[];
 
   // NAV Updates
