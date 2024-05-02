@@ -33,8 +33,6 @@ export default defineNuxtConfig({
   ],
   runtimeConfig: {
     public: {
-      INFURA_PROJECT_ID: process.env.INFURA_PROJECT_ID,
-      INFURA_KEY: process.env.INFURA_KEY,
       WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
     },
   },
