@@ -242,6 +242,7 @@ export const useFundStore = defineStore({
 
         console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
         console.log("fundTotalNAV: ", fundTotalNAV)
+        console.log("fundSettings: ", fundSettings)
 
         const fund: IFund = {
           chainName: this.web3Store.chainName,
@@ -281,8 +282,8 @@ export const useFundStore = defineStore({
           netDeposits: "",
 
           // Overview fields
-          depositAddresses: [],
-          managementAddresses: [],
+          depositAddresses: fundSettings.allowedDepositAddrs,
+          managementAddresses: fundSettings.allowedManagers,
           plannedSettlementPeriod: "",
           minLiquidAssetShare: "",
 
@@ -296,6 +297,7 @@ export const useFundStore = defineStore({
           // Fees
           performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
           managementFee: fundSettings.managementFee,
+          managementFeeAddress: fundSettings.feeCollectors[2],
           depositFee: fundSettings.depositFee,
           performanceFee: fundSettings.performanceFee,
           withdrawFee: fundSettings.withdrawFee,

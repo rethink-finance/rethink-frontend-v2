@@ -72,9 +72,18 @@ export default interface IFund {
   // Fees - fees collector
   performaceHurdleRateBps: string;
   managementFee: string;
+  managementFeeAddress: string;
   depositFee: string;
   performanceFee: string;
   withdrawFee: string;
+  /**
+   * [
+   *   DepositFee,
+   *   WithdrawFee,
+   *   ManagementFee,
+   *   PerformanceFee
+   * ]
+   */
   feeCollectors: string[];
 
   // NAV Updates

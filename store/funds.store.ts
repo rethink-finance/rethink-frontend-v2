@@ -174,6 +174,7 @@ export const useFundsStore = defineStore({
             // Fees
             performaceHurdleRateBps: "",
             managementFee: "",
+            managementFeeAddress: "",
             depositFee: "",
             performanceFee: "",
             withdrawFee: "",
