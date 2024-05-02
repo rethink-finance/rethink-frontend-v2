@@ -85,11 +85,11 @@ const props = defineProps({
     },
   },
   token0UserBalance: {
-    type: [Number, BigInt] as PropType<number | bigint>,
+    type: BigInt as unknown as PropType<bigint>,
     default: BigInt("0"),
   },
   token1UserBalance: {
-    type: [Number, BigInt] as PropType<number | bigint>,
+    type: BigInt as unknown as PropType<bigint>,
     default: BigInt("0"),
   },
   exchangeRate: {

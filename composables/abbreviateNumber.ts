@@ -1,4 +1,4 @@
-import { trimTrailingZeros } from "~/composables/utils";
+import { trimTrailingZeros } from "~/composables/formatters";
 
 /**
  * Example usage:

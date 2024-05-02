@@ -6,7 +6,7 @@ import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import { useAccountStore } from "~/store/account.store";
-import { PositionTypes } from "~/types/enums/position_type";
+import { PositionType, PositionTypeKeys, PositionTypes } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3.store";
@@ -93,6 +93,11 @@ export const useFundStore = defineStore({
       if (!state.fund?.totalNAVWei) return 0;
       return 1 / this.baseToFundTokenExchangeRate;
     },
+    fundTotalNAVFormattedShort(state: IState): string {
+      if (!state.fund?.totalNAVWei) return "N/A";
+      const totalNAV = Number(formatTokenValue(state.fund.totalNAVWei, state.fund.baseToken.decimals, false));
+      return formatNumberShort(totalNAV) + " " + state.fund.baseToken.symbol;
+    },
     /**
      * Contracts
      */
@@ -153,7 +158,15 @@ export const useFundStore = defineStore({
       const fundSettings: IFundSettings = this.parseFundSettings(settingsData);
 
       const fund = await this.fetchFundMetadata(fundSettings);
-      fund.positionTypeCounts = await this.fetchFundNAVData(fundSettings.fundAddress);
+
+      try {
+        const dataNAV = await this.rethinkReaderContract.methods.getNAVDataForFund(fundSettings.fundAddress).call();
+        console.log("fund NAV: ", dataNAV)
+        fund.positionTypeCounts = this.parseFundPositionTypeCounts(dataNAV);
+        fund.navUpdates = this.parseFundNAVUpdates(dataNAV);
+      } catch (error) {
+        console.error("Error calling getNAVDataForFund: ", error, "fund: ", fundSettings.fundAddress);
+      }
       return fund;
     },
     parseFundSettings(fundData: any) {
@@ -218,14 +231,15 @@ export const useFundStore = defineStore({
         ] = await Promise.all([
           startTimePromise,
           metadataPromise,
-          fundBaseTokenContract.methods.symbol().call() as Promise<string>,
-          fundBaseTokenContract.methods.decimals().call() as Promise<number>,
-          governanceTokenContract.methods.symbol().call() as Promise<string>,
-          governanceTokenContract.methods.decimals().call() as Promise<number>,
-          fundTokenContract.methods.decimals().call() as Promise<number>,
-          fundTokenContract.methods.totalSupply().call() as Promise<bigint>,
+          this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken) as Promise<string>,
+          this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken) as Promise<number>,
+          this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken) as Promise<string>,
+          this.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
+          this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
+          fundTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
           fundContract.methods.totalNAV().call() as Promise<bigint>,
         ]);
+
         console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
         console.log("fundTotalNAV: ", fundTotalNAV)
 
@@ -235,7 +249,6 @@ export const useFundStore = defineStore({
           chainIcon: this.web3Store.chainIcon,
           address: fundSettings.fundAddress || "",
           title: fundSettings.fundName || "N/A",
-          subtitle: fundSettings.fundName || "N/A",
           description: "N/A",
           safeAddress: fundSettings.safe || "",
           governorAddress: fundSettings.governor || "",
@@ -308,34 +321,59 @@ export const useFundStore = defineStore({
         return {} as IFund; // Return an empty or default object in case of error
       }
     },
-    async fetchFundNAVData(fundAddress: string): Promise<IPositionTypeCount[]> {
-      /**
-       * Fetch fund NAV data.
-       */
-      try {
-        const dataNAV = await this.rethinkReaderContract.methods.getNAVDataForFund(fundAddress).call();
-        console.log("fund NAV: ", dataNAV)
+    parseFundPositionTypeCounts(dataNAV: any): IPositionTypeCount[] {
+      const positionTypeCounts = [];
 
-        const positionTypeCounts = [];
-
-        for (const [positionTypeKey, positionType] of PositionTypes) {
-          const positionTypeData = dataNAV[positionTypeKey];
-          // Get the last array for each NAV position type. The last array represents
-          // the latest NAV update for each position type (liquid, nft, composable, illiquid).
-          const lastIndex = positionTypeData?.length || 0;
-          const lastNAVUpdate = positionTypeData[lastIndex - 1];
-          positionTypeCounts.push({
-            type: positionType,
-            count: lastNAVUpdate?.length || 0,
-          })
-        }
-
-        return positionTypeCounts;
-      } catch (error) {
-        console.error("Error calling getNAVDataForFund: ", error, "fund: ", fundAddress);
-        // Return an empty or default object in case of error
-        return [] as IPositionTypeCount[];
+      for (const [positionTypeKey, positionType] of PositionTypes) {
+        const positionTypeData = dataNAV[positionTypeKey];
+        // Get the last array for each NAV position type. The last array represents
+        // the latest NAV update for each position type (liquid, nft, composable, illiquid).
+        const lastIndex = positionTypeData?.length || 0;
+        const lastNAVUpdate = positionTypeData[lastIndex - 1];
+        positionTypeCounts.push({
+          type: positionType,
+          count: lastNAVUpdate?.length || 0,
+        })
       }
+
+      return positionTypeCounts;
+    },
+    parseFundNAVUpdates(dataNAV: any): INAVUpdate[] {
+      const navUpdates = [] as INAVUpdate[];
+      // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable).
+      const navUpdatesLen = dataNAV[PositionType.Liquid].length;
+
+      for (let i= 0; i < navUpdatesLen; i++) {
+        let totalNAV = BigInt("0");
+        const details = {
+          [PositionType.Liquid]: BigInt("0"),
+          [PositionType.Illiquid]: BigInt("0"),
+          [PositionType.Composable]: BigInt("0"),
+          [PositionType.NFT]: BigInt("0"),
+        } as Record<PositionType, bigint>;
+
+        PositionTypeKeys.forEach((positionType: PositionType) => {
+          // Check if the key exists in the object to avoid errors
+          if (dataNAV[positionType][i]) {
+            details[positionType] = dataNAV[positionType][i].reduce((sum: bigint, value: bigint) => sum + value, BigInt("0"));
+            // Sum the array values and add to total
+            totalNAV += details[positionType];
+          }
+          return totalNAV;
+        });
+
+        navUpdates.push(
+          {
+            // TODO in the future, change indices to dates, when they are available.
+            date: i.toString(),
+            totalNAV,
+            details,
+          },
+        )
+      }
+      console.log(navUpdates);
+
+      return navUpdates;
     },
     /**
      * Fetches connected user's wallet balance of the base/denomination token.

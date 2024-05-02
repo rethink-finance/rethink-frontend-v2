@@ -32,7 +32,6 @@ export default interface IFund {
 
   address: string;
   title: string;
-  subtitle: string;
 
   // Governor address or delegateToAddress
   governorAddress: string;  // governor

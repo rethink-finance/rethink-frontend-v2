@@ -115,7 +115,6 @@ export const useFundsStore = defineStore({
             chainIcon: this.web3Store.chainIcon,
             address,
             title: dataNAVs.fundName[index] || "N/A",
-            subtitle: dataNAVs.fundName[index] || "N/A",
             description: "N/A",
             safeAddress: "",
             governorAddress: "",

@@ -1,8 +1,12 @@
+import { PositionType } from "~/types/enums/position_type";
+
 export default interface INAVUpdate {
   date: string;
-  value: string;
+  totalNAV: bigint;
   details: {
-      nav_liquid: string;
-      nav_illiquid: string;
+    [PositionType.Liquid]: bigint;
+    [PositionType.Illiquid]: bigint;
+    [PositionType.Composable]: bigint;
+    [PositionType.NFT]: bigint;
   };
 }

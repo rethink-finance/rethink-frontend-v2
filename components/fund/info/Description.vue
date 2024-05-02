@@ -11,10 +11,10 @@
         </v-avatar>
         <div class="fund_description__title_wrapper">
           <div class="fund_description__title">
-            {{ fund.title }}
+            {{ fund.fundToken.symbol }}
           </div>
           <div class="fund_description__subtitle">
-            {{ fund.subtitle }}
+            {{ fund.title }}
           </div>
         </div>
       </div>

@@ -35,8 +35,8 @@ const columns = ref([
       const fund = row.original;
       return h(<FundNameCell />, {
         image: fund?.photoUrl,
-        title: fund?.title,
-        subtitle: fund?.subtitle,
+        title: fund?.fundToken?.symbol,
+        subtitle: fund?.title,
       });
     },
   },
@@ -56,7 +56,7 @@ const columns = ref([
     header: "AUM",
     cell: ({row}) => {
       const fund = row.original;
-      const aum = Number(formatTokenValue(fund.totalNAVWei, fund.baseToken.decimals));
+      const aum = Number(formatTokenValue(fund.totalNAVWei, fund.baseToken.decimals, false));
       return formatNumberShort(aum) + " " + fund.baseToken.symbol;
     }
   },

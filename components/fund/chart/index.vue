@@ -2,18 +2,28 @@
   <div class="chart">
     <div class="chart__toolbar">
       <div>
-        <FundChartTypeSelector selected="aum" @change="updateChart" />
+        <FundChartTypeSelector
+          selected="aum"
+          :value="fundTotalNAVFormattedShort"
+          @change="updateChart"
+        />
       </div>
       <!--      <FundChartTimelineSelector selected="3M" @change="updateChart" />-->
     </div>
     <div class="chart__chart_wrapper">
       <ClientOnly>
         <apexchart
+          v-if="chartItems.length > 0"
           height="400"
           width="100%"
           :options="options"
           :series="series"
         />
+        <div v-else class="w-100 d-flex justify-center align-center h-100">
+          <h3>
+            No NAV data available yet.
+          </h3>
+        </div>
       </ClientOnly>
     </div>
   </div>
@@ -21,6 +31,8 @@
 <script lang="ts">
 import type { PropType } from "vue";
 import type IFund from "~/types/fund";
+import type INAVUpdate from "~/types/nav_update";
+import { useFundStore } from "~/store/fund.store";
 
 export default {
   props: {
@@ -29,19 +41,24 @@ export default {
       default: () => ({}),
     },
   },
-  data() {
-    return {
-      chartItems: [] as number[],
-      chartDates: [] as Date[],
-      chartTimes: [] as string[],
-    };
+  setup() {
+    const { fundTotalNAVFormattedShort } = toRefs(useFundStore());
+    return { fundTotalNAVFormattedShort }
   },
   computed: {
     series() {
-      return [{
-        name: "NAV",
-        data: this.chartItems,
-      }];
+      return [
+        {
+          name: "NAV",
+          data: this.chartItems,
+        },
+      ];
+    },
+    chartItems(): bigint[] {
+      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => navUpdate.totalNAV);
+    },
+    chartDates() {
+      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => navUpdate.date);
     },
     options() {
       return {
@@ -62,7 +79,7 @@ export default {
         },
         context: {
           // Store additional context data here.
-          times: this.chartTimes,
+          navUpdates: this.fund?.navUpdates || [],
         },
         markers: {
           size: 0,
@@ -133,74 +150,38 @@ export default {
             style: {
               colors: "var(--color-light-subtitle)",
             },
-            formatter: function(val: Date) {
-              return formatDate(val);
+            // TODO when NAV update dates are available
+            // formatter: (val: Date) => {
+            //   return formatDate(val);
+            // },
+            formatter: (val: string) => {
+              return Number(val) + 1;
             },
           },
         },
         tooltip: {
           theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
-          custom: function({ series, seriesIndex, dataPointIndex, w }: any) {
+          custom: ({ series, seriesIndex, dataPointIndex, w }: any) => {
+            console.log("series: ", series);
+            console.log("seriesIndex: ", seriesIndex);
             return "<div class='custom_tooltip'>" +
               "<div class='tooltip_row'>" +
-              "<div class='label'>Date:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
+              "<div class='label'>Index:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
               "<div class='tooltip_row'>" +
-              "<div class='label'>Time:</div>" + w.config.context.times[dataPointIndex] + "</div>" +
-              "<div class='tooltip_row'>" +
-              "<div class='label'>Price:</div>" + formatUSDValue(series[seriesIndex][dataPointIndex]) + "</div>" +
+              "<div class='label'>AUM:</div>" + this.formatWei(this.chartItems[dataPointIndex]) + "</div>" +
               "</div>"
           },
         },
       }
     },
   },
-  mounted() {
-    this.updateChart();
-  },
   methods: {
+    formatWei(value: bigint) {
+      console.log("value: ", value)
+      return formatTokenValue(value, this.fund.baseToken.decimals) + " " + this.fund.baseToken.symbol;
+    },
     updateChart(value?: string) {
-      // TODO fetch data from API or fetch all together and just change here.
       console.log("updateChart: " + value)
-      this.chartItems = this.getRandomData();
-      this.chartDates = this.getRandomDates();
-      this.chartTimes = this.getRandomTimes();
-    },
-    getRandomDates() {
-      return [
-        new Date("2023-01-01"),
-        new Date("2023-02-15"),
-        new Date("2023-03-30"),
-        new Date("2023-04-12"),
-        new Date("2023-05-25"),
-        new Date("2023-06-08"),
-        new Date("2023-07-20"),
-        new Date("2023-08-04"),
-        new Date("2023-09-17"),
-        new Date("2023-10-29"),
-      ];
-    },
-    getRandomTimes() {
-      return [
-        "09:30:00",
-        "10:15:45",
-        "12:00:00",
-        "14:30:15",
-        "15:45:30",
-        "17:20:10",
-        "19:05:25",
-        "21:15:55",
-        "22:40:30",
-        "23:59:59",
-      ]
-    },
-    getRandomData() {
-      // TODO replace with real data and remove this function.
-      // generate array of random numbers
-      const minNumber = 800000;
-      const maxNumber = 2000000;
-      return Array.from({ length: 10 }, () =>
-        Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber,
-      );
     },
   },
 };
