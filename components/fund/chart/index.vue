@@ -161,9 +161,9 @@ export default {
         },
         tooltip: {
           theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
-          custom: ({ series, seriesIndex, dataPointIndex, w }: any) => {
-            console.log("series: ", series);
-            console.log("seriesIndex: ", seriesIndex);
+          // TODO when multiple series use:
+          // custom: ({ series, seriesIndex, dataPointIndex, w }: any) => {
+          custom: ({ dataPointIndex, w }: any) => {
             return "<div class='custom_tooltip'>" +
               "<div class='tooltip_row'>" +
               "<div class='label'>Index:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +

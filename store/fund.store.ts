@@ -24,32 +24,6 @@ const GovernableFundFactoryContractName = "GovernableFundFactoryBeaconProxy";
 const RethinkReaderContractName = "RethinkReader";
 
 
-const NAVDetailsJSON = {
-  nav_liquid: `{
-        "tokenPair": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-        "aggregatorAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-        "functionSignatureWithEncodedInputs": null,
-        "assetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-        "nonAssetTokenAddress": "0xE3dc7cF9E64d81719F7C0B191425AB8369a9C75B",
-        "isReturnArray": "false",
-        "returnLength": "4",
-        "returnIndex": "1",
-        "pastNAVUpdateIndex": "0"
-      }`,
-  nav_illiquid: `{
-        "tokenPair": "0xNewTokenPairForIlliquid",
-        "aggregatorAddress": "0xNewAggregatorAddressForIlliquid",
-        "functionSignatureWithEncodedInputs": "NewFunctionSignatureForIlliquid",
-        "assetTokenAddress": "0xNewAssetTokenAddressForIlliquid",
-        "nonAssetTokenAddress": "0xNewNonAssetTokenAddressForIlliquid",
-        "isReturnArray": "true",
-        "returnLength": "6",
-        "returnIndex": "2",
-        "pastNAVUpdateIndex": "1"
-      }`,
-};
-
-
 interface IState {
   fund?: IFund;
   userBaseTokenBalance: bigint;
@@ -163,7 +137,7 @@ export const useFundStore = defineStore({
         const dataNAV = await this.rethinkReaderContract.methods.getNAVDataForFund(fundSettings.fundAddress).call();
         console.log("fund NAV: ", dataNAV)
         fund.positionTypeCounts = this.parseFundPositionTypeCounts(dataNAV);
-        fund.navUpdates = this.parseFundNAVUpdates(dataNAV);
+        fund.navUpdates = await this.parseFundNAVUpdates(dataNAV);
       } catch (error) {
         console.error("Error calling getNAVDataForFund: ", error, "fund: ", fundSettings.fundAddress);
       }
@@ -174,7 +148,7 @@ export const useFundStore = defineStore({
 
       // Directly iterate over the fund details object's entries.
       Object.entries(fundData).forEach(([key, value]) => {
-        // Assume that every key in details corresponds to a valid key in IFundSettings.
+        // Assume that every key in quantity corresponds to a valid key in IFundSettings.
         const detailKey = key as keyof IFundSettings;
 
         // Convert bigint values to strings, otherwise assign the value directly.
@@ -201,20 +175,16 @@ export const useFundStore = defineStore({
      * - fundMetadata
      */
     async fetchFundMetadata(fundSettings: IFundSettings) {
-      // Fetch inception date
+      // @dev: would be better to just have this available in the FundSettings data.
+      // Fetch base, fund and governance ERC20 token symbol and decimals.
+      const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
+      const fundTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.fundAddress);
+      const governanceTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.governanceToken);
+
+      // GovernableFund contract to get totalNAV.
       const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
-      const startTimePromise: Promise<string> = fundContract.methods.getFundStartTime().call();
-      const metadataPromise: Promise<string> = fundContract.methods.fundMetadata().call();
 
       try {
-        // @dev: would be better to just have this available in the FundSettings data.
-        // Fetch base, fund and governance ERC20 token symbol and decimals.
-        const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
-        const fundTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.fundAddress);
-        const governanceTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.governanceToken);
-
-        // GovernableFund contract to get totalNAV.
-        const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
 
         // Fetch all token symbols and decimals.
         // @dev: maybe there are more things to be fetched here.
@@ -229,8 +199,8 @@ export const useFundStore = defineStore({
           fundTokenTotalSupply,
           fundTotalNAV,
         ] = await Promise.all([
-          startTimePromise,
-          metadataPromise,
+          fundContract.methods.getFundStartTime().call() as Promise<string>,
+          fundContract.methods.fundMetadata().call() as Promise<string>,
           this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken) as Promise<string>,
           this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken) as Promise<number>,
           this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken) as Promise<string>,
@@ -310,7 +280,7 @@ export const useFundStore = defineStore({
         // Process metadata if available
         if (metaDataJson) {
           const metaData = JSON.parse(metaDataJson);
-          console.log("fund metaData: ", metaData);
+          console.log("metaData: ", metaData);
           fund.description = metaData.description;
           fund.photoUrl = metaData.photoUrl || defaultAvatar;
           fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
@@ -340,14 +310,14 @@ export const useFundStore = defineStore({
 
       return positionTypeCounts;
     },
-    parseFundNAVUpdates(dataNAV: any): INAVUpdate[] {
+    async parseFundNAVUpdates(dataNAV: any): Promise<INAVUpdate[]> {
       const navUpdates = [] as INAVUpdate[];
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable).
       const navUpdatesLen = dataNAV[PositionType.Liquid].length;
 
       for (let i= 0; i < navUpdatesLen; i++) {
         let totalNAV = BigInt("0");
-        const details = {
+        const quantity = {
           [PositionType.Liquid]: BigInt("0"),
           [PositionType.Illiquid]: BigInt("0"),
           [PositionType.Composable]: BigInt("0"),
@@ -357,9 +327,9 @@ export const useFundStore = defineStore({
         PositionTypeKeys.forEach((positionType: PositionType) => {
           // Check if the key exists in the object to avoid errors
           if (dataNAV[positionType][i]) {
-            details[positionType] = dataNAV[positionType][i].reduce((sum: bigint, value: bigint) => sum + value, BigInt("0"));
+            quantity[positionType] = dataNAV[positionType][i].reduce((sum: bigint, value: bigint) => sum + value, BigInt("0"));
             // Sum the array values and add to total
-            totalNAV += details[positionType];
+            totalNAV += quantity[positionType];
           }
           return totalNAV;
         });
@@ -369,12 +339,33 @@ export const useFundStore = defineStore({
             // TODO in the future, change indices to dates, when they are available.
             date: i.toString(),
             totalNAV,
-            details,
+            quantity,
+            json: {} as Record<PositionType, string>,
           },
         )
       }
-      console.log(navUpdates);
 
+      // Fetch NAV JSON entries for each NAV update.
+      const promises: Promise<any>[] = Array.from(
+        { length: navUpdatesLen },
+        (_, index) => this.fundContract.methods.getNavEntry(index).call(),
+      );
+      // Each NAV update has more entries.
+      const navEntries = await Promise.allSettled(promises);
+
+      // Process results
+      navEntries.forEach((navEntryResult, index) => {
+        if (navEntryResult.status === "fulfilled") {
+          const navEntry: Record<string, any> = navEntryResult.value[0];
+          PositionTypeKeys.forEach((positionType: PositionType) => {
+            navUpdates[index].json[positionType] = navEntry?.[positionType]?.length ? formatJson(cleanComplexWeb3Data(navEntry[positionType])) : "";
+          })
+        } else {
+          console.error(`Failed to fetch entry ${index}:`, navEntryResult.reason);
+        }
+      });
+
+      console.log(navUpdates);
       return navUpdates;
     },
     /**
@@ -391,10 +382,10 @@ export const useFundStore = defineStore({
       console.log(`user base token balance of ${this.fund?.baseToken?.symbol} is ${this.userBaseTokenBalance}`);
       return this.userBaseTokenBalance;
     },
+    /**
+     * Fetch connected user's wallet balance of the fund token.
+     */
     async fetchUserFundTokenBalance() {
-      /**
-       * Fetch connected user's wallet balance of the fund token.
-       */
       if (!this.fund?.fundToken?.address) {
         throw new Error("Fund token address is not available.")
       }
@@ -422,10 +413,10 @@ export const useFundStore = defineStore({
       console.log(`user fund allowance of ${this.fund?.baseToken?.symbol} is ${this.userFundAllowance}`);
       return this.userFundAllowance;
     },
+    /**
+     * Fetch user's fund share value (denominated in base token).
+     */
     async fetchUserFundShareValue() {
-      /**
-       * Fetch user's fund share value (denominated in base token).
-       */
       if (!this.activeAccountAddress) return console.error("Active account not found");
 
       let balanceWei = BigInt("0");

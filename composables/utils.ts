@@ -27,3 +27,36 @@ export const capitalizeFirst = (str?: string): string => {
   return str?.charAt(0).toUpperCase() + str?.slice(1);
 }
 
+// Recursive function to clean complex nested data from numeric indices
+const ignoreKeys: Set<string> = new Set(["__length__"]);
+
+export const cleanComplexWeb3Data = (data: any): any =>  {
+  if (Array.isArray(data)) {
+    // Recursively clean each item in the array
+    return data.map(item => cleanComplexWeb3Data(item));
+  } else if (typeof data === "object" && data !== null) {
+    // Prepare an object to accumulate the cleaned data
+    const cleanedData: { [key: string]: any } = {};
+    Object.keys(data).forEach(key => {
+      // Check if the key is not numeric
+      if (!ignoreKeys.has(key) && isNaN(Number(key))) {
+        // Recursively clean and assign if key is not numeric and not ignored
+        cleanedData[key] = cleanComplexWeb3Data(data[key]);
+      }
+    });
+    return cleanedData;
+  }
+  // Return primitive types unchanged
+  return data;
+}
+
+export const formatJson = (data: any) => {
+  return JSON.stringify(data, (_, value) => {
+    if (typeof value === "bigint") {
+      // Convert BigInt to string
+      return value.toString();
+    }
+    // Return the value unchanged if not a BigInt
+    return value;
+  }, 2);
+}
