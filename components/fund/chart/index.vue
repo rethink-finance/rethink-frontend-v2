@@ -177,7 +177,6 @@ export default {
   },
   methods: {
     formatWei(value: bigint) {
-      console.log("value: ", value)
       return formatTokenValue(value, this.fund.baseToken.decimals) + " " + this.fund.baseToken.symbol;
     },
     updateChart(value?: string) {
