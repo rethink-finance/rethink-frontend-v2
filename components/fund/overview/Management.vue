@@ -1,11 +1,11 @@
 <template>
   <div class="main_grid">
     <UiDataRowCard
-      :title="fund.plannedSettlementPeriod"
+      :title="fund.plannedSettlementPeriod || 'N/A'"
       subtitle="Planned Settlement Cycle"
     />
     <UiDataRowCard
-      :title="fund.minLiquidAssetShare"
+      :title="fund.minLiquidAssetShare || 'N/A'"
       subtitle="Min. Liquid Asset Share "
     />
     <UiDataRowCard

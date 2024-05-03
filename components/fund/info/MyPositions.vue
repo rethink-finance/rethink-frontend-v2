@@ -55,11 +55,13 @@ export default {
     },
     userFundAllowanceFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      return `${formatTokenValue(this.fundStore.userFundAllowance, this.fundBaseToken.decimals)} ${this.fundBaseToken.symbol}`;
+      const value = Number(formatTokenValue(this.fundStore.userFundAllowance, this.fundBaseToken.decimals, false));
+      return formatNumberShort(value) + " " + this.fund.baseToken.symbol;
     },
     userCurrentValueFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      return `${formatTokenValue(this.fundStore.userFundShareValue, this.fundBaseToken.decimals)} ${this.fundBaseToken.symbol}`;
+      const value = Number(formatTokenValue(this.fundStore.userFundShareValue, this.fundBaseToken.decimals, false));
+      return formatNumberShort(value) + " " + this.fund.baseToken.symbol;
     },
   },
   methods: { numberColorClass },

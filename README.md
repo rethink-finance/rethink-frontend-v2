@@ -25,8 +25,6 @@ npm install
 Create the `.env` file in the project root.\
 Add the following environment variables to `.env`.
 ```bash
-INFURA_PROJECT_ID="<YOUR_INFURA_PROJECT_ID>"
-INFURA_KEY="<YOUR_INFURA_KEY>"
 WALLET_CONNECT_PROJECT_ID="<YOUR_WALLET_CONNECT_PROJECT_ID>"
 ```
 
