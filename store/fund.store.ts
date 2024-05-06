@@ -3,6 +3,7 @@ import { Web3 } from "web3";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
+import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import { useAccountStore } from "~/store/account.store";
@@ -180,9 +181,23 @@ export const useFundStore = defineStore({
       const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
       const fundTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.fundAddress);
       const governanceTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.governanceToken);
+      const rethinkFundGovernorContract = new this.web3.eth.Contract(
+        RethinkFundGovernor.abi,
+        fundSettings.governor,
+      );
 
       // GovernableFund contract to get totalNAV.
       const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
+      const latestBlock = await this.web3.eth.getBlockNumber();
+      console.log("latest: ", latestBlock);
+      try {
+
+        const bb = await rethinkFundGovernorContract.methods.quorum(56657501n ).call();
+        console.log("bb: ", bb);
+      } catch (e: any) {
+        console.log("faileddddd")
+        console.error(e)
+      }
 
       try {
 
@@ -198,6 +213,11 @@ export const useFundStore = defineStore({
           fundTokenDecimals,
           fundTokenTotalSupply,
           fundTotalNAV,
+          fundVotingDelay,
+          fundVotingPeriod,
+          fundProposalThreshold,
+          fundLateQuorum,
+          // quorum,
         ] = await Promise.all([
           fundContract.methods.getFundStartTime().call() as Promise<string>,
           fundContract.methods.fundMetadata().call() as Promise<string>,
@@ -208,6 +228,11 @@ export const useFundStore = defineStore({
           this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
           fundTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
           fundContract.methods.totalNAV().call() as Promise<bigint>,
+          rethinkFundGovernorContract.methods.votingDelay().call() as Promise<number>,
+          rethinkFundGovernorContract.methods.votingPeriod().call() as Promise<number>,
+          rethinkFundGovernorContract.methods.proposalThreshold().call() as Promise<number>,
+          rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call() as Promise<number>,
+          // rethinkFundGovernorContract.methods.quorum(latestBlock).call() as Promise<bigint>,
         ]);
 
         console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
@@ -258,11 +283,11 @@ export const useFundStore = defineStore({
           minLiquidAssetShare: "",
 
           // Governance
-          votingDelay: "",
-          votingPeriod: "",
-          proposalThreshold: "",
+          votingDelay: `${fundVotingDelay} second${fundVotingDelay !== 1 ? "s" : ""}`,
+          votingPeriod: `${fundVotingPeriod} second${fundVotingPeriod !== 1 ? "s" : ""}`,
+          proposalThreshold: `${fundProposalThreshold} vote${fundProposalThreshold !== 1 ? "s" : ""}`,
           quorom: "",
-          lateQuorom: "",
+          lateQuorom: `${fundLateQuorum} vote${fundLateQuorum !== 1 ? "s" : ""}`,
 
           // Fees
           performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
@@ -361,7 +386,7 @@ export const useFundStore = defineStore({
             navUpdates[index].json[positionType] = navEntry?.[positionType]?.length ? formatJson(cleanComplexWeb3Data(navEntry[positionType])) : "";
           })
         } else {
-          console.error(`Failed to fetch entry ${index}:`, navEntryResult.reason);
+          console.error(`Failed to fetch NAV entry ${index}:`, navEntryResult.reason);
         }
       });
 
