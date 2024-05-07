@@ -168,8 +168,8 @@ export const useFundsStore = defineStore({
             votingDelay: "",
             votingPeriod: "",
             proposalThreshold: "",
-            quorom: "",
-            lateQuorom: "",
+            quorum: "",
+            lateQuorum: "",
 
             // Fees
             performaceHurdleRateBps: "",

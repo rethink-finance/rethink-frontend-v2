@@ -17,6 +17,7 @@ import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IToken from "~/types/token";
 import type IPositionTypeCount from "~/types/position_type";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
+import { pluralizeWord } from "~/composables/utils";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -201,8 +202,24 @@ export const useFundStore = defineStore({
 
       try {
 
-        // Fetch all token symbols and decimals.
-        // @dev: maybe there are more things to be fetched here.
+        // Fetch all token symbols, decimals and values.
+        const results = await Promise.allSettled([
+          fundContract.methods.getFundStartTime().call(),
+          fundContract.methods.fundMetadata().call() as Promise<string>,
+          this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken) as Promise<string>,
+          this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken) as Promise<number>,
+          this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken) as Promise<string>,
+          this.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
+          this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
+          fundTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
+          fundContract.methods.totalNAV().call() as Promise<bigint>,
+          rethinkFundGovernorContract.methods.votingDelay().call() as Promise<number>,
+          rethinkFundGovernorContract.methods.votingPeriod().call() as Promise<number>,
+          rethinkFundGovernorContract.methods.proposalThreshold().call() as Promise<number>,
+          rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call() as Promise<number>,
+          rethinkFundGovernorContract.methods.quorum(latestBlock).call() as Promise<bigint>,
+        ]);
+
         const [
           fundStartTime,
           metaDataJson,
@@ -217,23 +234,14 @@ export const useFundStore = defineStore({
           fundVotingPeriod,
           fundProposalThreshold,
           fundLateQuorum,
-          // quorum,
-        ] = await Promise.all([
-          fundContract.methods.getFundStartTime().call() as Promise<string>,
-          fundContract.methods.fundMetadata().call() as Promise<string>,
-          this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken) as Promise<string>,
-          this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken) as Promise<number>,
-          this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken) as Promise<string>,
-          this.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
-          this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
-          fundTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
-          fundContract.methods.totalNAV().call() as Promise<bigint>,
-          rethinkFundGovernorContract.methods.votingDelay().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.votingPeriod().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.proposalThreshold().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call() as Promise<number>,
-          // rethinkFundGovernorContract.methods.quorum(latestBlock).call() as Promise<bigint>,
-        ]);
+          quorum,
+        ]: any[] = results.map(result => {
+          if (result.status === "fulfilled") {
+            return result.value
+          }
+          console.error("Failed fetching fund data value for: ", result)
+          return undefined
+        });
 
         console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
         console.log("fundTotalNAV: ", fundTotalNAV)
@@ -265,7 +273,7 @@ export const useFundStore = defineStore({
             address: fundSettings.governanceToken,
             decimals: governanceTokenDecimals ?? 18,
           } as IToken,
-          totalNAVWei: fundTotalNAV,
+          totalNAVWei: fundTotalNAV || BigInt("0"),
           fundTokenTotalSupply,
           cumulativeReturnPercent: 0,
           monthlyReturnPercent: 0,
@@ -283,11 +291,11 @@ export const useFundStore = defineStore({
           minLiquidAssetShare: "",
 
           // Governance
-          votingDelay: `${fundVotingDelay} second${fundVotingDelay !== 1 ? "s" : ""}`,
-          votingPeriod: `${fundVotingPeriod} second${fundVotingPeriod !== 1 ? "s" : ""}`,
-          proposalThreshold: `${fundProposalThreshold} vote${fundProposalThreshold !== 1 ? "s" : ""}`,
-          quorom: "",
-          lateQuorom: `${fundLateQuorum} vote${fundLateQuorum !== 1 ? "s" : ""}`,
+          votingDelay: pluralizeWord("second", fundVotingDelay),
+          votingPeriod: pluralizeWord("second", fundVotingPeriod),
+          proposalThreshold: pluralizeWord("second", fundProposalThreshold),
+          quorum: formatPercent(quorum, false, "N/A"),
+          lateQuorum: pluralizeWord("second", fundLateQuorum),
 
           // Fees
           performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,

@@ -24,11 +24,15 @@ export const formatDate = (date: Date) => {
  *
  * @param {number} value - The decimal number to be converted to a percentage string.
  * @param {boolean} includeSign - Optional. If true, includes '+' or '-' sign with the percentage. Defaults to true.
+ * @param defaultValue - Optional. Default return value if the passed value is null or undefined.
  * @returns {string} A string representing the converted percentage with two decimal places.
  */
-export const formatPercent = (value: number, includeSign: boolean = true): string => {
+export const formatPercent = (value?: number | bigint, includeSign: boolean = true, defaultValue: any = undefined): string => {
+  if (value === undefined || value === null) return defaultValue;
+  value = Number(value);
+
   const percentage = value * 100;
-  let formattedPercentage = percentage.toFixed(2) + "%";
+  let formattedPercentage = trimTrailingZeros(percentage.toFixed(2)) + "%";
 
   if (includeSign && percentage > 0) {
     formattedPercentage = "+" + formattedPercentage;
