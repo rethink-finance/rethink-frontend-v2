@@ -291,9 +291,12 @@ export const useFundStore = defineStore({
           minLiquidAssetShare: "",
 
           // Governance
+          // TODO need to fetch the CLOCK_MODE to know if it is in seconds or blocks
+          //  The unit this duration is expressed in depends on the clock (see EIP-6372) this contract uses.
+          //  Machine-readable description of the clock as specified in EIP-6372.
           votingDelay: pluralizeWord("second", fundVotingDelay),
           votingPeriod: pluralizeWord("second", fundVotingPeriod),
-          proposalThreshold: pluralizeWord("second", fundProposalThreshold),
+          proposalThreshold: fundProposalThreshold ? `${commify(fundProposalThreshold)} ${governanceTokenSymbol || "votes"}` : "N/A",
           quorum: formatPercent(quorum, false, "N/A"),
           lateQuorum: pluralizeWord("second", fundLateQuorum),
 

@@ -53,7 +53,9 @@ export const formatNumberShort = (number?: number) => {
   return numeral(number).format("0.00a").toUpperCase().replace(/\.00(?=[KMBT])/g, "");
 }
 
-export const commify = (value: string) => {
+export const commify = (value: string | number | bigint) => {
+  value = value.toString();
+
   const match = value.match(/^(-?)([0-9]*)(\.?)([0-9]*)$/);
   if (!match || (!match[2] && !match[4])) {
     throw new Error(`bad formatted number: ${ JSON.stringify(value) }`);
@@ -61,7 +63,7 @@ export const commify = (value: string) => {
 
   const neg = match[1];
   const whole = BigInt(match[2] || 0).toLocaleString("en-us");
-  let frac = "0";
+  let frac = "";
 
   if (match[4]) {
     const fracMatch = match[4].match(/^(.*?)0*$/);
@@ -79,7 +81,11 @@ export const commify = (value: string) => {
     }
   }
 
-  return `${ neg }${ whole }.${ frac }`;
+  let commifiedValue = `${ neg }${ whole }`;
+  if (frac) {
+    commifiedValue += `.${ frac }`
+  }
+  return commifiedValue;
 }
 
 /**
