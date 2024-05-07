@@ -303,7 +303,7 @@ const onClickConnect = async () => {
   .nav-link {
     height: 100%;
     text-transform: Capitalize;
-    font-size: 16px;
+    font-size: 1rem;
     font-weight: 700;
     padding: 0.5rem;
 

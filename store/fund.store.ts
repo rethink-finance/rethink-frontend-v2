@@ -190,15 +190,6 @@ export const useFundStore = defineStore({
       // GovernableFund contract to get totalNAV.
       const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
       const latestBlock = await this.web3.eth.getBlockNumber();
-      console.log("latest: ", latestBlock);
-      try {
-
-        const bb = await rethinkFundGovernorContract.methods.quorum(56657501n ).call();
-        console.log("bb: ", bb);
-      } catch (e: any) {
-        console.log("faileddddd")
-        console.error(e)
-      }
 
       try {
 
@@ -244,7 +235,6 @@ export const useFundStore = defineStore({
         });
 
         console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
-        console.log("fundTotalNAV: ", fundTotalNAV)
         console.log("fundSettings: ", fundSettings)
 
         const fund: IFund = {
@@ -296,7 +286,7 @@ export const useFundStore = defineStore({
           //  Machine-readable description of the clock as specified in EIP-6372.
           votingDelay: pluralizeWord("second", fundVotingDelay),
           votingPeriod: pluralizeWord("second", fundVotingPeriod),
-          proposalThreshold: fundProposalThreshold ? `${commify(fundProposalThreshold)} ${governanceTokenSymbol || "votes"}` : "N/A",
+          proposalThreshold: (!fundProposalThreshold && fundProposalThreshold !== 0n) ? "N/A" : `${commify(fundProposalThreshold)} ${governanceTokenSymbol || "votes"}`,
           quorum: formatPercent(quorum, false, "N/A"),
           lateQuorum: pluralizeWord("second", fundLateQuorum),
 
@@ -316,7 +306,6 @@ export const useFundStore = defineStore({
         // Process metadata if available
         if (metaDataJson) {
           const metaData = JSON.parse(metaDataJson);
-          console.log("metaData: ", metaData);
           fund.description = metaData.description;
           fund.photoUrl = metaData.photoUrl || defaultAvatar;
           fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
