@@ -3,6 +3,7 @@ import { Web3 } from "web3";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
+import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import { useAccountStore } from "~/store/account.store";
@@ -16,6 +17,7 @@ import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IToken from "~/types/token";
 import type IPositionTypeCount from "~/types/position_type";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
+import { pluralizeWord } from "~/composables/utils";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -180,14 +182,44 @@ export const useFundStore = defineStore({
       const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
       const fundTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.fundAddress);
       const governanceTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.governanceToken);
+      const rethinkFundGovernorContract = new this.web3.eth.Contract(
+        RethinkFundGovernor.abi,
+        fundSettings.governor,
+      );
 
       // GovernableFund contract to get totalNAV.
       const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
+      const latestBlock = await this.web3.eth.getBlockNumber();
+      console.log("latest: ", latestBlock);
+      try {
+
+        const bb = await rethinkFundGovernorContract.methods.quorum(56657501n ).call();
+        console.log("bb: ", bb);
+      } catch (e: any) {
+        console.log("faileddddd")
+        console.error(e)
+      }
 
       try {
 
-        // Fetch all token symbols and decimals.
-        // @dev: maybe there are more things to be fetched here.
+        // Fetch all token symbols, decimals and values.
+        const results = await Promise.allSettled([
+          fundContract.methods.getFundStartTime().call(),
+          fundContract.methods.fundMetadata().call() as Promise<string>,
+          this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken) as Promise<string>,
+          this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken) as Promise<number>,
+          this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken) as Promise<string>,
+          this.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
+          this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
+          fundTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
+          fundContract.methods.totalNAV().call() as Promise<bigint>,
+          rethinkFundGovernorContract.methods.votingDelay().call() as Promise<number>,
+          rethinkFundGovernorContract.methods.votingPeriod().call() as Promise<number>,
+          rethinkFundGovernorContract.methods.proposalThreshold().call() as Promise<number>,
+          rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call() as Promise<number>,
+          rethinkFundGovernorContract.methods.quorum(latestBlock).call() as Promise<bigint>,
+        ]);
+
         const [
           fundStartTime,
           metaDataJson,
@@ -198,17 +230,18 @@ export const useFundStore = defineStore({
           fundTokenDecimals,
           fundTokenTotalSupply,
           fundTotalNAV,
-        ] = await Promise.all([
-          fundContract.methods.getFundStartTime().call() as Promise<string>,
-          fundContract.methods.fundMetadata().call() as Promise<string>,
-          this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken) as Promise<string>,
-          this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken) as Promise<number>,
-          this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken) as Promise<string>,
-          this.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
-          this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
-          fundTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
-          fundContract.methods.totalNAV().call() as Promise<bigint>,
-        ]);
+          fundVotingDelay,
+          fundVotingPeriod,
+          fundProposalThreshold,
+          fundLateQuorum,
+          quorum,
+        ]: any[] = results.map(result => {
+          if (result.status === "fulfilled") {
+            return result.value
+          }
+          console.error("Failed fetching fund data value for: ", result)
+          return undefined
+        });
 
         console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
         console.log("fundTotalNAV: ", fundTotalNAV)
@@ -240,7 +273,7 @@ export const useFundStore = defineStore({
             address: fundSettings.governanceToken,
             decimals: governanceTokenDecimals ?? 18,
           } as IToken,
-          totalNAVWei: fundTotalNAV,
+          totalNAVWei: fundTotalNAV || BigInt("0"),
           fundTokenTotalSupply,
           cumulativeReturnPercent: 0,
           monthlyReturnPercent: 0,
@@ -258,11 +291,14 @@ export const useFundStore = defineStore({
           minLiquidAssetShare: "",
 
           // Governance
-          votingDelay: "",
-          votingPeriod: "",
-          proposalThreshold: "",
-          quorom: "",
-          lateQuorom: "",
+          // TODO need to fetch the CLOCK_MODE to know if it is in seconds or blocks
+          //  The unit this duration is expressed in depends on the clock (see EIP-6372) this contract uses.
+          //  Machine-readable description of the clock as specified in EIP-6372.
+          votingDelay: pluralizeWord("second", fundVotingDelay),
+          votingPeriod: pluralizeWord("second", fundVotingPeriod),
+          proposalThreshold: fundProposalThreshold ? `${commify(fundProposalThreshold)} ${governanceTokenSymbol || "votes"}` : "N/A",
+          quorum: formatPercent(quorum, false, "N/A"),
+          lateQuorum: pluralizeWord("second", fundLateQuorum),
 
           // Fees
           performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
@@ -361,7 +397,7 @@ export const useFundStore = defineStore({
             navUpdates[index].json[positionType] = navEntry?.[positionType]?.length ? formatJson(cleanComplexWeb3Data(navEntry[positionType])) : "";
           })
         } else {
-          console.error(`Failed to fetch entry ${index}:`, navEntryResult.reason);
+          console.error(`Failed to fetch NAV entry ${index}:`, navEntryResult.reason);
         }
       });
 

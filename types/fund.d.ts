@@ -66,8 +66,8 @@ export default interface IFund {
   votingDelay: string;
   votingPeriod: string;
   proposalThreshold: string;
-  quorom: string;
-  lateQuorom: string;
+  quorum: string;
+  lateQuorum: string;
 
   // Fees - fees collector
   performaceHurdleRateBps: string;

@@ -60,3 +60,12 @@ export const formatJson = (data: any) => {
     return value;
   }, 2);
 }
+
+export const pluralizeWord = (word: string, count?: number | bigint) => {
+  if (count === undefined || count === null) return "N/A";
+
+  let pluralized = `${count} ${word}`
+  if (count !== 1) pluralized += "s"
+
+  return pluralized;
+}

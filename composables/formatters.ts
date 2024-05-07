@@ -24,11 +24,15 @@ export const formatDate = (date: Date) => {
  *
  * @param {number} value - The decimal number to be converted to a percentage string.
  * @param {boolean} includeSign - Optional. If true, includes '+' or '-' sign with the percentage. Defaults to true.
+ * @param defaultValue - Optional. Default return value if the passed value is null or undefined.
  * @returns {string} A string representing the converted percentage with two decimal places.
  */
-export const formatPercent = (value: number, includeSign: boolean = true): string => {
+export const formatPercent = (value?: number | bigint, includeSign: boolean = true, defaultValue: any = undefined): string => {
+  if (value === undefined || value === null) return defaultValue;
+  value = Number(value);
+
   const percentage = value * 100;
-  let formattedPercentage = percentage.toFixed(2) + "%";
+  let formattedPercentage = trimTrailingZeros(percentage.toFixed(2)) + "%";
 
   if (includeSign && percentage > 0) {
     formattedPercentage = "+" + formattedPercentage;
@@ -49,7 +53,9 @@ export const formatNumberShort = (number?: number) => {
   return numeral(number).format("0.00a").toUpperCase().replace(/\.00(?=[KMBT])/g, "");
 }
 
-export const commify = (value: string) => {
+export const commify = (value: string | number | bigint) => {
+  value = value.toString();
+
   const match = value.match(/^(-?)([0-9]*)(\.?)([0-9]*)$/);
   if (!match || (!match[2] && !match[4])) {
     throw new Error(`bad formatted number: ${ JSON.stringify(value) }`);
@@ -57,7 +63,7 @@ export const commify = (value: string) => {
 
   const neg = match[1];
   const whole = BigInt(match[2] || 0).toLocaleString("en-us");
-  let frac = "0";
+  let frac = "";
 
   if (match[4]) {
     const fracMatch = match[4].match(/^(.*?)0*$/);
@@ -75,7 +81,11 @@ export const commify = (value: string) => {
     }
   }
 
-  return `${ neg }${ whole }.${ frac }`;
+  let commifiedValue = `${ neg }${ whole }`;
+  if (frac) {
+    commifiedValue += `.${ frac }`
+  }
+  return commifiedValue;
 }
 
 /**
