@@ -5,37 +5,23 @@
       cols="12"
       md="4"
     >
-      <v-btn href="https://#" target="_blank" variant="plain">
+      <v-btn href="https://twitter.com/RethinkProtocol" target="_blank" variant="plain">
         <Icon
-          name="ri:twitter-x-line"
+          icon="ri:twitter-x-line"
           color="white"
           width="1rem"
         />
       </v-btn>
-      <v-btn href="https://#" target="_blank" variant="plain">
+      <v-btn href="https://discord.gg/A7NukjjrRg" target="_blank" variant="plain">
         <Icon
-          name="ic:baseline-discord"
+          icon="ic:baseline-discord"
           color="white"
           width="1rem"
         />
       </v-btn>
-      <v-btn href="https://#" target="_blank" variant="plain">
+      <v-btn href="https://github.com/rethink-finance" target="_blank" variant="plain">
         <Icon
-          name="mdi:youtube"
-          color="white"
-          width="1rem"
-        />
-      </v-btn>
-      <v-btn href="https://#" target="_blank" variant="plain">
-        <Icon
-          name="ph:medium-logo-fill"
-          color="white"
-          width="1rem"
-        />
-      </v-btn>
-      <v-btn href="https://#" target="_blank" variant="plain">
-        <Icon
-          name="uil:github"
+          icon="uil:github"
           color="white"
           width="1rem"
           class="mr-3"
