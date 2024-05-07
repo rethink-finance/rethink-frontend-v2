@@ -101,6 +101,53 @@
     {
       "inputs": [
         {
+          "internalType": "address[]",
+          "name": "funds",
+          "type": "address[]"
+        }
+      ],
+      "name": "bulkGetNavData",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256[][]",
+              "name": "illiquid",
+              "type": "uint256[][]"
+            },
+            {
+              "internalType": "uint256[][]",
+              "name": "liquid",
+              "type": "uint256[][]"
+            },
+            {
+              "internalType": "int256[][]",
+              "name": "nft",
+              "type": "int256[][]"
+            },
+            {
+              "internalType": "int256[][]",
+              "name": "composable",
+              "type": "int256[][]"
+            },
+            {
+              "internalType": "bytes[]",
+              "name": "encodedNavUpdate",
+              "type": "bytes[]"
+            }
+          ],
+          "internalType": "struct RethinkReader.FundNavData[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
           "internalType": "address",
           "name": "fund",
           "type": "address"
@@ -129,6 +176,11 @@
               "internalType": "int256[][]",
               "name": "composable",
               "type": "int256[][]"
+            },
+            {
+              "internalType": "bytes[]",
+              "name": "encodedNavUpdate",
+              "type": "bytes[]"
             }
           ],
           "internalType": "struct RethinkReader.FundNavData",
