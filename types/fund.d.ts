@@ -28,7 +28,6 @@ export default interface IFund {
   // the user has selected when fetching funds.
   chainName: string;
   chainShort: string;
-  chainIcon: string;
 
   address: string;
   title: string;
@@ -70,12 +69,20 @@ export default interface IFund {
   lateQuorum: string;
 
   // Fees - fees collector
-  performaceHurdleRateBps: string;
+  // Fees are in BPS
+  // 0
+  depositFee: string;
+  depositFeeAddress: string;
+  // 1
+  withdrawFee: string;
+  withdrawFeeAddress: string;
+  // 2
   managementFee: string;
   managementFeeAddress: string;
-  depositFee: string;
+  // 3
   performanceFee: string;
-  withdrawFee: string;
+  performanceFeeAddress: string;
+  performaceHurdleRateBps: string;
   /**
    * [
    *   DepositFee,

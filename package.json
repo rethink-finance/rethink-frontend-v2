@@ -51,6 +51,7 @@
     "@web3-onboard/vue": "^2.7.12",
     "@web3-onboard/walletconnect": "^2.5.3",
     "apexcharts": "^3.47.0",
+    "esbuild": "^0.20.2",
     "ethers": "^6.10.0",
     "h3": "^1.10.0",
     "nitropack": "^2.8.1",

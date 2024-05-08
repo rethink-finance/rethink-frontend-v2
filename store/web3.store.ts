@@ -6,7 +6,6 @@ interface IState {
   web3?: Web3;
   chainId: string,
   chainName: string;
-  chainIcon: string;
   chainShort: string;
   networksMap: Record<string, INetwork>;
   cachedTokens: Record<string, any>;
@@ -18,22 +17,19 @@ export const useWeb3Store = defineStore({
     web3: undefined,
     chainId: "",
     chainName: "",
-    chainIcon: "",
     chainShort: "",
     networksMap: {
       "0x89": {
         chainId: "0x89",
         chainName: "Polygon",
         chainShort: "matic",
-        chainIcon: "cryptocurrency-color:matic",
         rpcUrl: "https://polygon-mainnet.rpcfast.com?api_key=xbhWBI1Wkguk8SNMu1bvvLurPGLXmgwYeC4S6g2H7WdwFigZSmPWVZRxrskEQwIf",
       },
       "0xa4b1": {
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
-        chainShort: "eth",
-        chainIcon: "arbitrum1",
-        rpcUrl: "https://arbitrum.llamarpc.com/",
+        chainShort: "arb1",
+        rpcUrl: "https://arbitrum.drpc.org",
       },
     },
     cachedTokens: {
@@ -50,6 +46,16 @@ export const useWeb3Store = defineStore({
   getters: {
     networks(): INetwork[] {
       return Object.values(this.networksMap);
+    },
+    currentRPC(): string {
+      const currentProvider: any = this.web3?.provider;
+      console.log("provider: ", currentProvider);
+
+      // Check if the provider has a 'host' attribute (HTTP Provider)
+      if (currentProvider?.clientUrl) {
+        return currentProvider.clientUrl;
+      }
+      return "";
     },
   },
   actions: {
@@ -93,13 +99,15 @@ export const useWeb3Store = defineStore({
       const network: INetwork = this.networksMap[chainId];
       this.chainName = network.chainName ?? "";
       this.chainShort = network.chainShort ?? "";
-      this.chainIcon = network.chainIcon ?? "";
 
       if (web3Provider) {
         this.web3 = web3Provider;
       } else {
         this.web3 = new Web3(network.rpcUrl);
       }
+
+      console.log("BLOCK: ");
+
       // Lastly set chainId, as we sometimes use watcher on chainId to reload other pages.
       this.chainId = chainId;
       localStorage.setItem("lastUsedChainId", chainId.toString());

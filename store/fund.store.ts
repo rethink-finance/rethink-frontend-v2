@@ -32,6 +32,7 @@ interface IState {
   userFundTokenBalance: bigint;
   userGovernanceTokenBalance: bigint;
   userFundAllowance: bigint;
+  userFundDelegateAddress: string;
   userFundShareValue: bigint
   selectedFundAddress: string;
 }
@@ -46,6 +47,7 @@ export const useFundStore = defineStore({
     userGovernanceTokenBalance: BigInt("0"),
     userFundAllowance: BigInt("0"),
     userFundShareValue: BigInt("0"),
+    userFundDelegateAddress: "",
     selectedFundAddress: "",
   }),
   getters: {
@@ -127,7 +129,7 @@ export const useFundStore = defineStore({
      * @dev: would be better to separate fundSettings from (startTime & metadata), as sometimes we already
      *   have the fund settings from the discovery page.
      */
-    async fetchFundData() {
+    async fetchFundData(): Promise<IFund> {
       // Fetch inception date
       const settingsData = await this.fundContract.methods.getFundSettings().call();
       // Process the fund settings with a method assumed to be available in the current scope
@@ -167,6 +169,7 @@ export const useFundStore = defineStore({
       return Promise.all([
         this.fetchUserBaseTokenBalance(),
         this.fetchUserFundTokenBalance(),
+        this.fetchUserFundDelegateAddress(),
         this.fetchUserFundShareValue(),
         this.fetchUserFundAllowance(),
       ]);
@@ -176,7 +179,7 @@ export const useFundStore = defineStore({
      * - getFundStartTime
      * - fundMetadata
      */
-    async fetchFundMetadata(fundSettings: IFundSettings) {
+    async fetchFundMetadata(fundSettings: IFundSettings): Promise<IFund> {
       // @dev: would be better to just have this available in the FundSettings data.
       // Fetch base, fund and governance ERC20 token symbol and decimals.
       const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
@@ -192,7 +195,6 @@ export const useFundStore = defineStore({
       const latestBlock = await this.web3.eth.getBlockNumber();
 
       try {
-
         // Fetch all token symbols, decimals and values.
         const results = await Promise.allSettled([
           fundContract.methods.getFundStartTime().call(),
@@ -240,7 +242,6 @@ export const useFundStore = defineStore({
         const fund: IFund = {
           chainName: this.web3Store.chainName,
           chainShort: this.web3Store.chainShort,
-          chainIcon: this.web3Store.chainIcon,
           address: fundSettings.fundAddress || "",
           title: fundSettings.fundName || "N/A",
           description: "N/A",
@@ -291,12 +292,15 @@ export const useFundStore = defineStore({
           lateQuorum: pluralizeWord("second", fundLateQuorum),
 
           // Fees
-          performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
-          managementFee: fundSettings.managementFee,
+          depositFee: fundSettings.depositFee.toString(),
+          depositFeeAddress: fundSettings.feeCollectors[0],
+          withdrawFee: fundSettings.withdrawFee.toString(),
+          withdrawFeeAddress: fundSettings.feeCollectors[1],
+          managementFee: fundSettings.managementFee.toString(),
           managementFeeAddress: fundSettings.feeCollectors[2],
-          depositFee: fundSettings.depositFee,
-          performanceFee: fundSettings.performanceFee,
-          withdrawFee: fundSettings.withdrawFee,
+          performanceFee: fundSettings.performanceFee.toString(),
+          performanceFeeAddress: fundSettings.feeCollectors[3],
+          performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
           feeCollectors: fundSettings.feeCollectors,
 
           // NAV Updates
@@ -397,6 +401,8 @@ export const useFundStore = defineStore({
      * Fetches connected user's wallet balance of the base/denomination token.
      */
     async fetchUserBaseTokenBalance() {
+      this.userBaseTokenBalance = BigInt("0");
+
       if (!this.fund?.baseToken?.address) {
         throw new Error("Fund denomination token address is not available.")
       }
@@ -411,6 +417,8 @@ export const useFundStore = defineStore({
      * Fetch connected user's wallet balance of the fund token.
      */
     async fetchUserFundTokenBalance() {
+      this.userFundTokenBalance = BigInt("0");
+
       if (!this.fund?.fundToken?.address) {
         throw new Error("Fund token address is not available.")
       }
@@ -422,10 +430,27 @@ export const useFundStore = defineStore({
       return this.userFundTokenBalance;
     },
     /**
+     * Fetch connected user's wallet fund delegate address.
+     */
+    async fetchUserFundDelegateAddress() {
+      this.userFundDelegateAddress = "";
+      if (!this.fund?.fundToken?.address) {
+        throw new Error("Fund token address is not available.")
+      }
+      if (!this.activeAccountAddress) throw new Error("Active account not found");
+
+      this.userFundDelegateAddress = await this.fundContract.methods.delegates(this.activeAccountAddress).call();
+
+      console.log("user fund delegates: ", this.userFundDelegateAddress);
+      return this.userFundDelegateAddress;
+    },
+    /**
      * Fetch connected user's fund allowance.
      * Amount of tokens the fund is allowed to act with (transfer/deposit/withdraw...).
      */
     async fetchUserFundAllowance() {
+      this.userFundAllowance = BigInt("0");
+
       if (!this.fund?.baseToken?.address) {
         throw new Error("Fund denomination token is not available.")
       }
@@ -442,6 +467,8 @@ export const useFundStore = defineStore({
      * Fetch user's fund share value (denominated in base token).
      */
     async fetchUserFundShareValue() {
+      this.userFundShareValue = BigInt("0");
+
       if (!this.activeAccountAddress) return console.error("Active account not found");
 
       let balanceWei = BigInt("0");

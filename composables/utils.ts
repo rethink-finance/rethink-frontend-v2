@@ -1,5 +1,4 @@
 import { ethers } from "ethers"
-import numeral from "numeral";
 
 export const variableType = (value: any) =>
   Object.prototype.toString.call(value).slice(8, -1) // accurately returns the parameter type [Array | Object | Number | Boolean | ...]
@@ -68,4 +67,22 @@ export const pluralizeWord = (word: string, count?: number | bigint) => {
   if (count !== 1) pluralized += "s"
 
   return pluralized;
+}
+
+const chainIconMap: Record<string, Record<string, string>> = {
+  matic: {
+    name: "cryptocurrency-color:matic",
+    size: "1.5rem",
+  },
+  arb1: {
+    name: "token-branded:arbitrum",
+    size: "2rem",
+  },
+};
+
+export const getChainIcon = (chainShort: string) => {
+  return chainIconMap[chainShort] ?? {
+    name: "ph:circle-fill", // default circle fill gray
+    size: "1.5rem",
+  };
 }
