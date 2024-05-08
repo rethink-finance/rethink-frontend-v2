@@ -55,7 +55,7 @@ export default {
       /** Example:
        * https://www.tally.xyz/gov/tfd3-0xface6562d7e39ea73b67404a6454fbbbefeca553
        * **/
-      return `https://www.tally.xyz/gov/${this.fund.fundToken.symbol}-${this.fund.governorAddress}/delegate`;
+      return `https://www.tally.xyz/gov/${this.fund.fundToken.symbol}-${this.fund.governorAddress}/my-voting-power`;
     },
   },
 };
