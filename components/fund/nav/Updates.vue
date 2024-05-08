@@ -10,35 +10,40 @@
         :grow-column1="true"
         :title2="formatNAV(navUpdate.totalNAV)"
         :grow-column2="true"
+        no-body-padding
       >
         <template #body>
-          <div class="details__title">
-            NAV Liquid
-          </div>
-          <div class="details__body">
-            {{ navUpdate.json?.liquid || "N/A" }}
-          </div>
-          <div class="details__title">
-            NAV Illiquid
-          </div>
-          <div class="details__body">
-            {{ navUpdate.json?.illiquid || "N/A" }}
-          </div>
-          <div class="details__title">
-            NAV Composable
-          </div>
-          <div class="details__body">
-            {{ navUpdate.json?.composable || "N/A" }}
-          </div>
-          <div class="details__title">
-            NAV NFT
-          </div>
-          <div class="details__body">
-            {{ navUpdate.json?.nft || "N/A" }}
-          </div>
+          <!-- TODO create entries, use Table.vue for this also
+              check: https://vuetifyjs.com/en/components/data-tables/basics/
+          -->
+          <v-data-table
+            :expanded="expanded"
+            :headers="headers"
+            :items="navUpdate.entries"
+            show-expand
+          >
+            <template #[`item.index`]="{ index }">
+              <strong>{{ index + 1 }}</strong>
+            </template>
+            <template #[`item.positionType`]="{ value }">
+              <UiPositionTypeBadge :value="value" />
+            </template>
+            <template #expanded-row="{ columns, item }">
+              <tr>
+                <td :colspan="columns.length">
+                  <div class="details__body">
+                    {{ item.detailsJson }}
+                  </div>
+                </td>
+              </tr>
+            </template>
+            <template #bottom>
+              <!-- Leave this slot empty to hide pagination controls -->
+            </template>
+          </v-data-table>
         </template>
         <template #actionText="{ expanded }">
-          {{ expanded ? "Close" : "Check" }} Details
+          {{ expanded ? "Close" : "See" }} Methods
         </template>
       </UiDataRowCard>
     </template>
@@ -51,6 +56,7 @@
 
 <script lang="ts">
 import type IFund from "~/types/fund";
+import { PositionTypesMap } from "~/types/enums/position_type";
 
 export default defineComponent({
   name: "NAVUpdates",
@@ -60,10 +66,22 @@ export default defineComponent({
       default: () => {},
     },
   },
-  methods: {
-    stringifyDetails(detailsJSON: string) {
-      return JSON.stringify(JSON.parse(detailsJSON), null, 2)
+  data: () => ({
+    expanded: [],
+    headers: [
+      { title: "#", key: "index", sortable: false },
+      { title: "Position Name", key: "positionName", sortable: false },
+      { title: "Valuation Source", key: "valuationSource", sortable: false },
+      { title: "Position Type", key: "positionType", sortable: false },
+      { key: "details", sortable: false },
+    ],
+  }),
+  computed: {
+    PositionTypesMap() {
+      return PositionTypesMap
     },
+  },
+  methods: {
     formatNAV(value: bigint) {
       return formatTokenValue(value, this.fund.baseToken.decimals) + " " + this.fund.baseToken.symbol;
     },

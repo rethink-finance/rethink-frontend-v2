@@ -44,7 +44,7 @@
           <v-icon :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
         </template>
       </v-expansion-panel-title>
-      <v-expansion-panel-text v-if="hasBody" class="data_row__body">
+      <v-expansion-panel-text v-if="hasBody" class="data_row__body" :class="{'data_row__body--no-padding': noBodyPadding}">
         <slot name="body">
           {{ body }}
         </slot>
@@ -67,6 +67,7 @@
  *   - subtitle: The subtitle or additional information for the card.
  *   - growColumn1: If true the column 1 width will take available space (flex-grow: 1).
  *   - body: The content body of the card.
+ *   - noBodyPadding: If True remove body padding.
  *   - title2: An additional column for the title header.
  *   - subtitle2: An additional column for the subtitle header.
  *   - growColumn2: If true the column 2 width will take available space (flex-grow: 1).
@@ -132,6 +133,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    noBodyPadding: {
+      type: Boolean,
+      default: false,
+    },
     body: {
       type: String,
       default: "",
@@ -187,6 +192,10 @@ export default defineComponent({
     word-wrap: break-word;
     max-width: 100%;
     width: 100%;
+
+    &--no-padding :deep(.v-expansion-panel-text__wrapper) {
+      padding: 0 !important;
+    }
   }
   ::v-deep(.v-expansion-panel-text__wrapper) {
     padding: 0.625rem 1rem;
