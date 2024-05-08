@@ -3,7 +3,10 @@
     <UiDataBar title="Governance">
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ truncateAddress(fund.governorAddress) }}
+          <v-tooltip activator="parent" location="bottom">
+            {{ fundStore.userFundDelegateAddress }}
+          </v-tooltip>
+          {{ truncateAddress(fundStore.userFundDelegateAddress) }}
         </div>
         <div class="data_bar__subtitle">
           Delegating To
