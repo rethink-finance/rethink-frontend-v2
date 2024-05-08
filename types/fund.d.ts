@@ -28,7 +28,6 @@ export default interface IFund {
   // the user has selected when fetching funds.
   chainName: string;
   chainShort: string;
-  chainIcon: string;
 
   address: string;
   title: string;

@@ -112,7 +112,6 @@ export const useFundsStore = defineStore({
           const fund: IFund = {
             chainName: this.web3Store.chainName,
             chainShort: this.web3Store.chainShort,
-            chainIcon: this.web3Store.chainIcon,
             address,
             title: dataNAVs.fundName[index] || "N/A",
             description: "N/A",

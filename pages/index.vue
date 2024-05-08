@@ -47,13 +47,16 @@ const columns = ref([
     },
   },
   {
-    accessorKey: "chainIcon",
+    accessorKey: "chainShort",
     header: "Chain",
     size: 62,
     maxWidth: 62,
     cell: (info) => {
-      return h(<Icon class="mr-2" width="1.5rem" />, {
-        icon: info.getValue(),
+      const icon = getChainIcon(info.getValue());
+      return h(<Icon class="mr-2" />, {
+        icon: icon.name,
+        width: icon.size,
+        height: icon.size,
       });
     },
   },

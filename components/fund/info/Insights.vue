@@ -4,7 +4,9 @@
       <div class="data_bar__item">
         <div class="data_bar__title">
           <Icon
-            :icon="fund.chainIcon"
+            :icon="fundChainIcon.name"
+            :width="fundChainIcon.size"
+            :height="fundChainIcon.size"
             class="mr-2"
           />
           {{ capitalizeFirst(fund.chainName) || "N/A" }}
@@ -79,6 +81,11 @@ export default {
   },
   data() {
     return {};
+  },
+  computed: {
+    fundChainIcon() {
+      return getChainIcon(this.fund?.chainShort)
+    },
   },
   methods: { numberColorClass },
 };
