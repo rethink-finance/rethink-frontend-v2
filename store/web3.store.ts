@@ -31,9 +31,9 @@ export const useWeb3Store = defineStore({
       "0xa4b1": {
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
-        chainShort: "eth",
+        chainShort: "arb1",
         chainIcon: "arbitrum1",
-        rpcUrl: "https://arbitrum.llamarpc.com/",
+        rpcUrl: "https://arbitrum.drpc.org",
       },
     },
     cachedTokens: {
@@ -50,6 +50,16 @@ export const useWeb3Store = defineStore({
   getters: {
     networks(): INetwork[] {
       return Object.values(this.networksMap);
+    },
+    currentRPC(): string {
+      const currentProvider: any = this.web3?.provider;
+      console.log("provider: ", currentProvider);
+
+      // Check if the provider has a 'host' attribute (HTTP Provider)
+      if (currentProvider?.clientUrl) {
+        return currentProvider.clientUrl;
+      }
+      return "";
     },
   },
   actions: {
@@ -100,6 +110,9 @@ export const useWeb3Store = defineStore({
       } else {
         this.web3 = new Web3(network.rpcUrl);
       }
+
+      console.log("BLOCK: ");
+
       // Lastly set chainId, as we sometimes use watcher on chainId to reload other pages.
       this.chainId = chainId;
       localStorage.setItem("lastUsedChainId", chainId.toString());

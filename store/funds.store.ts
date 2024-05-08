@@ -206,6 +206,9 @@ export const useFundsStore = defineStore({
      */
     async fetchFunds() {
       console.log("fetchFunds");
+      // Reset funds as we will populate them with new data.
+      this.funds = [];
+
       const fundFactoryContract = this.fundFactoryContract;
       const fundsLength = await fundFactoryContract.methods.registeredFundsLength().call();
 
@@ -213,18 +216,11 @@ export const useFundsStore = defineStore({
       const fundAddresses: string[] = fundsInfoArrays[0];
       const fundsInfo = Object.fromEntries(fundAddresses.map((address, index) => [address, fundsInfoArrays[1][index]]));
 
-      // Reset funds as we will populate them with new data.
-      this.funds = [];
+      const funds = await this.fetchFundsMetadata(fundAddresses, fundsInfo);
+      console.log("All funds: ", funds);
 
-      try {
-        const funds = await this.fetchFundsMetadata(fundAddresses, fundsInfo);
-        console.log("All funds: ", funds);
-
-        // Using the spread operator to append each element
-        this.funds.push(...funds);
-      } catch (error) {
-        console.error("Error fetching fund metadata:", error);
-      }
+      // Using the spread operator to append each element
+      this.funds.push(...funds);
     },
   },
 });

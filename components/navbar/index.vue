@@ -170,6 +170,11 @@ watch(() => web3Store.chainId, (newVal, oldVal) => {
   // Perform additional actions when chainId changes
   selectedChainId.value = newVal || "";
 });
+
+const checkConnection = async () => {
+  return await web3Store?.web3?.eth.getBlockNumber();
+}
+
 const switchNetwork = async (chainId: string) => {
   isSwitchingNetworks.value = true;
   try {
@@ -180,6 +185,14 @@ const switchNetwork = async (chainId: string) => {
       // Switch active chain.
       web3Store.init(chainId);
     }
+
+    // Test connection, outer catch block will except exception.
+    try {
+      await checkConnection();
+    } catch (e: any) {
+      toastStore.errorToast("Looks like there are RPC connection problems.")
+    }
+
   } catch (error: any) {
     // Revert the selected value to the previously selected chain.
     selectedChainId.value = web3Store.chainId;
