@@ -70,12 +70,19 @@ export default interface IFund {
   lateQuorum: string;
 
   // Fees - fees collector
-  performaceHurdleRateBps: string;
+  // 0
+  depositFee: string;
+  depositFeeAddress: string;
+  // 1
+  withdrawFee: string;
+  withdrawFeeAddress: string;
+  // 2
   managementFee: string;
   managementFeeAddress: string;
-  depositFee: string;
+  // 3
   performanceFee: string;
-  withdrawFee: string;
+  performanceFeeAddress: string;
+  performaceHurdleRateBps: string;
   /**
    * [
    *   DepositFee,

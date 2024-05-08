@@ -129,7 +129,7 @@ export const useFundStore = defineStore({
      * @dev: would be better to separate fundSettings from (startTime & metadata), as sometimes we already
      *   have the fund settings from the discovery page.
      */
-    async fetchFundData() {
+    async fetchFundData(): Promise<IFund> {
       // Fetch inception date
       const settingsData = await this.fundContract.methods.getFundSettings().call();
       // Process the fund settings with a method assumed to be available in the current scope
@@ -179,7 +179,7 @@ export const useFundStore = defineStore({
      * - getFundStartTime
      * - fundMetadata
      */
-    async fetchFundMetadata(fundSettings: IFundSettings) {
+    async fetchFundMetadata(fundSettings: IFundSettings): Promise<IFund> {
       // @dev: would be better to just have this available in the FundSettings data.
       // Fetch base, fund and governance ERC20 token symbol and decimals.
       const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
@@ -293,12 +293,15 @@ export const useFundStore = defineStore({
           lateQuorum: pluralizeWord("second", fundLateQuorum),
 
           // Fees
-          performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
-          managementFee: fundSettings.managementFee,
+          depositFee: fundSettings.depositFee.toString(),
+          depositFeeAddress: fundSettings.feeCollectors[0],
+          withdrawFee: fundSettings.withdrawFee.toString(),
+          withdrawFeeAddress: fundSettings.feeCollectors[1],
+          managementFee: fundSettings.managementFee.toString(),
           managementFeeAddress: fundSettings.feeCollectors[2],
-          depositFee: fundSettings.depositFee,
-          performanceFee: fundSettings.performanceFee,
-          withdrawFee: fundSettings.withdrawFee,
+          performanceFee: fundSettings.performanceFee.toString(),
+          performanceFeeAddress: fundSettings.feeCollectors[3],
+          performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
           feeCollectors: fundSettings.feeCollectors,
 
           // NAV Updates

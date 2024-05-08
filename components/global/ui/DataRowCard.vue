@@ -159,7 +159,7 @@ export default defineComponent({
       display: none !important;
     }
     button.v-expansion-panel-title:hover {
-      cursor: default;
+      cursor: text;
     }
   }
   &__panel {
@@ -205,7 +205,7 @@ export default defineComponent({
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    min-width: 6rem;
+    min-width: 7rem;
     max-width: 100%;
     margin-top: auto;
     margin-bottom: auto;

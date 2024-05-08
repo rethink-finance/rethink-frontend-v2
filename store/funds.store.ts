@@ -172,12 +172,15 @@ export const useFundsStore = defineStore({
             lateQuorum: "",
 
             // Fees
-            performaceHurdleRateBps: "",
+            depositFee: "",
+            depositFeeAddress: "",
+            withdrawFee: "",
+            withdrawFeeAddress: "",
             managementFee: "",
             managementFeeAddress: "",
-            depositFee: "",
             performanceFee: "",
-            withdrawFee: "",
+            performanceFeeAddress: "",
+            performaceHurdleRateBps: "",
             feeCollectors: [],
 
             // NAV Updates

@@ -1,20 +1,36 @@
 <template>
   <div class="main_grid main_grid--full-width">
     <UiDataRowCard
-      :title="managementFee"
+      :title="formatFee(fund?.managementFee)"
       subtitle="Management Fee"
-      :title2="managementFeeAddress"
+      :title2="fund?.managementFeeAddress || 'N/A'"
+      subtitle2="Distributed to"
+    />
+    <UiDataRowCard
+      :title="formatFee(fund?.performanceFee)"
+      subtitle="Performance Fee"
+      :title2="fund?.performanceFeeAddress || 'N/A'"
       subtitle2="Distributed to"
       :grow-column2="true"
-      :title3="hurdleRate"
+      :title3="performanceHurdleRate"
       subtitle3="Hurdle Rate"
     />
-    <UiDataRowCard :title="fund.governanceToken?.address" subtitle="Governance Token" />
+    <UiDataRowCard
+      :title="formatFee(fund?.depositFee)"
+      subtitle="Deposit Fee"
+      :title2="fund?.depositFeeAddress || 'N/A'"
+      subtitle2="Distributed to"
+    />
+    <UiDataRowCard
+      :title="formatFee(fund?.withdrawFee)"
+      subtitle="Exit Fee"
+      :title2="fund?.withdrawFeeAddress || 'N/A'"
+      subtitle2="Distributed to"
+    />
   </div>
 </template>
 
 <script lang="ts">
-
 import type IFund from "~/types/fund";
 
 export default defineComponent({
@@ -26,15 +42,15 @@ export default defineComponent({
     },
   },
   computed: {
-    managementFee() {
-      return `${this.fund.managementFee}%`;
-    },
-    managementFeeAddress() {
-      return this.fund.managementFeeAddress || "N/A";
-    },
-    hurdleRate() {
+    performanceHurdleRate() {
       if (!this.fund.performaceHurdleRateBps) return "N/A";
       return `${this.fund.performaceHurdleRateBps} BPS`;
+    },
+  },
+  methods: {
+    formatFee(fee?: any) {
+      if (fee === undefined || fee === null) return "N/A";
+      return `${fee}%`;
     },
   },
 })
