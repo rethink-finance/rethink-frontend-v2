@@ -12,7 +12,7 @@
       :title2="fund?.performanceFeeAddress || 'N/A'"
       subtitle2="Distributed to"
       :grow-column2="true"
-      :title3="performanceHurdleRate"
+      :title3="formatFee(fund.performaceHurdleRateBps)"
       subtitle3="Hurdle Rate"
     />
     <UiDataRowCard
@@ -39,12 +39,6 @@ export default defineComponent({
     fund: {
       type: Object as PropType<IFund>,
       default: () => {},
-    },
-  },
-  computed: {
-    performanceHurdleRate() {
-      if (!this.fund.performaceHurdleRateBps) return "N/A";
-      return `${this.fund.performaceHurdleRateBps} BPS`;
     },
   },
   methods: {
