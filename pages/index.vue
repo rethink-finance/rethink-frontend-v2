@@ -4,6 +4,12 @@
     <div v-if="loadingFunds">
       <v-skeleton-loader type="table" />
     </div>
+    <div v-else-if="fetchFundsError" class="w-100 d-flex justify-center flex-column">
+      <h3>Oops, something went wrong while getting funds data</h3>
+      <span>
+        Maybe the current RPC (<a :href="web3Store.currentRPC">{{ web3Store.currentRPC }}</a>) is down?
+      </span>
+    </div>
     <div v-else>
       <Table :data="funds" :columns="columns" :get-cell-class="getCellClass" :showControls="false" />
     </div>
@@ -41,13 +47,16 @@ const columns = ref([
     },
   },
   {
-    accessorKey: "chainIcon",
+    accessorKey: "chainShort",
     header: "Chain",
     size: 62,
     maxWidth: 62,
     cell: (info) => {
-      return h(<Icon class="mr-2" width="1.5rem" />, {
-        icon: info.getValue(),
+      const icon = getChainIcon(info.getValue());
+      return h(<Icon class="mr-2" />, {
+        icon: icon.name,
+        width: icon.size,
+        height: icon.size,
       });
     },
   },
@@ -98,13 +107,17 @@ const columns = ref([
   },
 ]);
 
+const fetchFundsError = ref(false);
 
 const fetchFunds = async () => {
   loadingFunds.value = true;
+  fetchFundsError.value = false;
+
   try {
     await fundsStore.fetchFunds();
   } catch (e) {
     console.error("fetchFunds -> ", e);
+    fetchFundsError.value = true;
   }
   loadingFunds.value = false;
 }
