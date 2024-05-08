@@ -69,6 +69,7 @@ export default interface IFund {
   lateQuorum: string;
 
   // Fees - fees collector
+  // Fees are in BPS
   // 0
   depositFee: string;
   depositFeeAddress: string;

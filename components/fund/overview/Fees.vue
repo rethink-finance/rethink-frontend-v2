@@ -48,9 +48,10 @@ export default defineComponent({
     },
   },
   methods: {
-    formatFee(fee?: any) {
-      if (fee === undefined || fee === null) return "N/A";
-      return `${fee}%`;
+    formatFee(feeBps?: any) {
+      if (feeBps === undefined || feeBps === null) return "N/A";
+      const feePercent = (Number(feeBps) / 100).toString();
+      return `${feePercent}%`;
     },
   },
 })
