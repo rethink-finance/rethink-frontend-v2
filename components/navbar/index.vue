@@ -115,8 +115,8 @@
 
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account.store";
-import { useWeb3Store } from "~/store/web3.store";
 import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
 import type INetwork from "~/types/network";
 import type IRoute from "~/types/route";
 const router = useRouter();
