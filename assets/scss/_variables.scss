@@ -24,6 +24,7 @@ $color-moonlight-light: #343d50;
 $color-disabled: #646465;
 $color-gray-transparent: rgba(246, 249, 255, 0.08);
 $color-gray-light-transparent: rgba(246, 249, 255, 0.04);
+$color-divider: #1a2234;
 
 /* Vuetify colors */
 // Currently also defined in the plugins/vuetify.ts
@@ -90,6 +91,7 @@ plugins like Apexcharts with "var(--color-something)" to prevent redefining colo
 :root {
   --color-primary: #{$color-primary};
   --color-subtitle: #{$color-subtitle};
+  --color-divider: #{$color-divider};
   --color-light-subtitle: #{$color-light-subtitle};
   --color-gray-light-transparent: #{$color-gray-light-transparent};
 }

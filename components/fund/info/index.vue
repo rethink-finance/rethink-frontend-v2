@@ -12,8 +12,8 @@
 </template>
 
 <script lang="ts">
-import type IFund from "~/types/fund";
 import { useAccountStore } from "~/store/account.store";
+import type IFund from "~/types/fund";
 
 export default {
   name: "Info",
