@@ -43,7 +43,7 @@
           </v-data-table>
         </template>
         <template #actionText="{ expanded }">
-          {{ expanded ? "Close" : "See" }} Methods
+          {{ expanded ? "Close" : "See" }} Details
         </template>
       </UiDataRowCard>
     </template>
@@ -56,7 +56,6 @@
 
 <script lang="ts">
 import type IFund from "~/types/fund";
-import { PositionTypesMap } from "~/types/enums/position_type";
 
 export default defineComponent({
   name: "NAVUpdates",
@@ -76,11 +75,6 @@ export default defineComponent({
       { key: "details", sortable: false },
     ],
   }),
-  computed: {
-    PositionTypesMap() {
-      return PositionTypesMap
-    },
-  },
   methods: {
     formatNAV(value: bigint) {
       return formatTokenValue(value, this.fund.baseToken.decimals) + " " + this.fund.baseToken.symbol;
@@ -91,10 +85,6 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .details {
-  &__title {
-    color: $color-primary;
-    font-weight: 700;
-  }
   &__body {
     font-family: monospace;
     white-space: pre;
