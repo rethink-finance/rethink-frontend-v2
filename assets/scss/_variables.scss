@@ -9,7 +9,7 @@ $color-black: #333333;
   The colors were changing in the design all the time and
   a lot of them are super similar and redundant.
  */
-$color-dark: #111C35;
+$color-dark: #0D1528;
 $color-navy-gray: #141c2e;
 $color-navy-gray-light: #151e33;
 $color-table-row: #162039;
@@ -43,11 +43,14 @@ $color-success-text: white;
 $color-warning: #ffd33d;
 $color-warning-text: #836900;
 $color-inactive: #4e5972;
+$color-card-background: rgba(246, 249, 255, 0.02);
+$color-background-button: rgba(246, 249, 255, 0.06);
 
 /* Typography */
 $color-title: $color-white;
 $color-subtitle: #45557F;
 $color-light-subtitle: rgba(246, 249, 255, 0.76);
+$color-text-irrelevant: #BFC4CF;
 
 $text-lg: 1.25rem;
 $text-md: 1rem;

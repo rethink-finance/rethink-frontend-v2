@@ -6,7 +6,7 @@ import { md2 } from "vuetify/blueprints";
 const customDarkTheme: ThemeDefinition = {
   dark: false,
   colors: {
-    background: "#111C35",
+    background: "#0D1528",
     surface: "#10192f",
     primary: "#1F5FFF",
     "primary-darken-1": "#101A2F",

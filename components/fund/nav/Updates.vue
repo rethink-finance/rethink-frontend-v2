@@ -29,13 +29,16 @@
               <UiPositionTypeBadge :value="value" />
             </template>
             <template #expanded-row="{ columns, item }">
-              <tr>
-                <td :colspan="columns.length">
-                  <div class="details__body">
-                    {{ item.detailsJson }}
-                  </div>
-                </td>
-              </tr>
+                <tr>
+                  <td :colspan="columns.length">
+                    <div class="details__body">
+                      <div class="details__json">
+                        {{ item.detailsJson }}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              
             </template>
             <template #bottom>
               <!-- Leave this slot empty to hide pagination controls -->
@@ -43,7 +46,7 @@
           </v-data-table>
         </template>
         <template #actionText="{ expanded }">
-          {{ expanded ? "Close" : "See" }} Details
+          {{ expanded ? "See Methods" : "Details" }}
         </template>
       </UiDataRowCard>
     </template>
@@ -86,12 +89,20 @@ export default defineComponent({
 <style lang="scss" scoped>
 .details {
   &__body {
+    @include borderGray;
     font-family: monospace;
     white-space: pre;
     font-size: $text-sm;
+    padding: 1rem 7.1rem;
+    background-color: $color-card-background;
     &:not(:last-of-type) {
       margin-bottom: 1.5rem;
     }
+  }
+  &__json{
+    background-color: $color-card-background;
+    padding: 1.5rem;
+    color: $color-primary;
   }
 }
 </style>
