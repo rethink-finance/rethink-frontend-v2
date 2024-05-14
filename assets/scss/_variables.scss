@@ -4,24 +4,32 @@ $color-white: #FFFFFF;
 $color-black: #333333;
 
 /* Utility colors */
-$color-dark: #111C35;
+/*
+  TODO THIS PALLETE NEEDS REFACTOR
+  The colors were changing in the design all the time and
+  a lot of them are super similar and redundant.
+ */
+$color-dark: #0D1528;
 $color-navy-gray: #141c2e;
 $color-navy-gray-light: #151e33;
 $color-table-row: #162039;
 $color-hover: #1a2338;
 $color-navy-gray-dark: #0f172a;
+$color-badge-navy: #171e30;
 $color-border-dark: #242c40;
+$color-border-light: #252c3d;
 $color-moonlight: rgba(31, 95, 255, 0.16);
 $color-toast: #242e45;
 $color-moonlight-light: #343d50;
 $color-disabled: #646465;
 $color-gray-transparent: rgba(246, 249, 255, 0.08);
 $color-gray-light-transparent: rgba(246, 249, 255, 0.04);
+$color-divider: #1a2234;
 
 /* Vuetify colors */
 // Currently also defined in the plugins/vuetify.ts
 $color-background: $color-dark;
-$color-surface: #10192f;
+$color-surface: #121a2c;
 $color-primary: #1F5FFF;
 $color-primary-dark: #1a50d6;
 $color-primary-darker: #1c3165;
@@ -35,22 +43,39 @@ $color-success-text: white;
 $color-warning: #ffd33d;
 $color-warning-text: #836900;
 $color-inactive: #4e5972;
+$color-card-background: rgba(246, 249, 255, 0.02);
+$color-background-button: rgba(246, 249, 255, 0.06);
 
 /* Typography */
 $color-title: $color-white;
 $color-subtitle: #45557F;
 $color-light-subtitle: rgba(246, 249, 255, 0.76);
+$color-text-irrelevant: #BFC4CF;
 
 $text-lg: 1.25rem;
 $text-md: 1rem;
 $text-sm: 0.875rem;
-$text-xs: 0.75rem;
+$text-xs: 0.8125rem;
 
 // Position Type Colors
 $color-position-type-liquid: #DE6A38;
 $color-position-type-composable: #38DE8E;
 $color-position-type-nft: #741FFF;
 $color-position-type-illiquid: #FFD700;
+
+// Use these variables to generate CSS rules
+$position-types: (
+  "liquid": $color-position-type-liquid,
+  "composable": $color-position-type-composable,
+  "nft": $color-position-type-nft,
+  "illiquid": $color-position-type-illiquid
+);
+
+@each $type, $color in $position-types {
+  .position_type_#{$type} {
+    color: $color;
+  }
+}
 
 // Breakpoints
 $screen-xs: 360px; // Extra small screen / phone
@@ -69,6 +94,7 @@ plugins like Apexcharts with "var(--color-something)" to prevent redefining colo
 :root {
   --color-primary: #{$color-primary};
   --color-subtitle: #{$color-subtitle};
+  --color-divider: #{$color-divider};
   --color-light-subtitle: #{$color-light-subtitle};
   --color-gray-light-transparent: #{$color-gray-light-transparent};
 }

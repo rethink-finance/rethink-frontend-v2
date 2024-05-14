@@ -50,6 +50,14 @@ npm run preview
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
 
 
+## Development
+### Icons
+We are using [Iconify](https://iconify.design/docs/), and you can browse [icons here](https://icon-sets.iconify.design/?keyword=oc).
+
+Usage example:
+```vue
+<Icon icon="octicon:question-16" width="1rem" />
+```
 
 ### Dev Notes
 1) Problems using `web3-onboard`, fixed by upgrading package `rxjs`:

@@ -1,4 +1,6 @@
 import { ethers } from "ethers"
+import type { PositionType } from "~/types/enums/position_type";
+import { PositionTypesMap } from "~/types/enums/position_type";
 
 export const variableType = (value: any) =>
   Object.prototype.toString.call(value).slice(8, -1) // accurately returns the parameter type [Array | Object | Number | Boolean | ...]
@@ -30,6 +32,7 @@ export const capitalizeFirst = (str?: string): string => {
 const ignoreKeys: Set<string> = new Set(["__length__"]);
 
 export const cleanComplexWeb3Data = (data: any): any =>  {
+  console.log(data);
   if (Array.isArray(data)) {
     // Recursively clean each item in the array
     return data.map(item => cleanComplexWeb3Data(item));
@@ -85,4 +88,9 @@ export const getChainIcon = (chainShort: string) => {
     name: "ph:circle-fill", // default circle fill gray
     size: "1.5rem",
   };
+}
+
+
+export const getPositionType = (positionType: PositionType) => {
+  return PositionTypesMap[positionType];
 }

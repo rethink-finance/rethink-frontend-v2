@@ -13,11 +13,12 @@ import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type INAVUpdate from "~/types/nav_update";
+import type { INAVUpdateEntry } from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IToken from "~/types/token";
 import type IPositionTypeCount from "~/types/position_type";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
-import { pluralizeWord } from "~/composables/utils";
+import { formatJson, pluralizeWord } from "~/composables/utils";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -369,7 +370,7 @@ export const useFundStore = defineStore({
             date: i.toString(),
             totalNAV,
             quantity,
-            json: {} as Record<PositionType, string>,
+            entries: [],
           },
         )
       }
@@ -379,18 +380,31 @@ export const useFundStore = defineStore({
         { length: navUpdatesLen },
         (_, index) => this.fundContract.methods.getNavEntry(index).call(),
       );
-      // Each NAV update has more entries.
-      const navEntries = await Promise.allSettled(promises);
 
+      // Each NAV update has more entries.
+      // Parse and store them to the NAV update entries.
+      const navUpdatePromises = await Promise.allSettled(promises);
       // Process results
-      navEntries.forEach((navEntryResult, index) => {
-        if (navEntryResult.status === "fulfilled") {
-          const navEntry: Record<string, any> = navEntryResult.value[0];
+      navUpdatePromises.forEach((navUpdateResult, index) => {
+        if (navUpdateResult.status === "fulfilled") {
+          const navUpdateData: Record<string, any> = navUpdateResult.value[0];
+
           PositionTypeKeys.forEach((positionType: PositionType) => {
-            navUpdates[index].json[positionType] = navEntry?.[positionType]?.length ? formatJson(cleanComplexWeb3Data(navEntry[positionType])) : "";
+            navUpdates[index].entries.push(
+              ...navUpdateData[positionType].map(
+                (navEntryData: Record<string, any>) => (
+                  {
+                    positionType,
+                    positionName: "TODO",
+                    valuationSource: "TODO",
+                    detailsJson: formatJson(cleanComplexWeb3Data(navEntryData)),
+                  } as INAVUpdateEntry
+                ),
+              ),
+            )
           })
         } else {
-          console.error(`Failed to fetch NAV entry ${index}:`, navEntryResult.reason);
+          console.error(`Failed to fetch NAV entry ${index}:`, navUpdateResult.reason);
         }
       });
 
