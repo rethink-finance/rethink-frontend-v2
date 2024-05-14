@@ -19,7 +19,7 @@
         <template #actions="{detailsExpanded}">
           <div class="details__button" :class="{'details__button--expanded': detailsExpanded}">
             <span :class="detailsExpanded ? 'details__button--text-expanded' : ''">
-              See Methods
+              Details
             </span>
             <v-icon
               class="details__button_icon"
