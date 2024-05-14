@@ -186,7 +186,7 @@ export default defineComponent({
   }
   .v-expansion-panel-title {
     overflow: hidden;
-    padding: 0.625rem 1rem;
+    padding: 0.75rem 1rem;
     line-height: 1;
     font-size: 1rem;
   }
