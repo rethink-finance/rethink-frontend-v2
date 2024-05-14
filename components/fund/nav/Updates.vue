@@ -100,17 +100,17 @@ export default defineComponent({
 <style lang="scss" scoped>
 .details {
   &__body {
-    @include borderGray;
     font-family: monospace;
     white-space: pre;
     font-size: $text-sm;
     padding: 1rem 7.1rem;
-    background-color: $color-card-background;
+    background-color: $color-badge-navy;
     &:not(:last-of-type) {
       margin-bottom: 1.5rem;
     }
   }
   &__json{
+    @include borderGray;
     background-color: $color-card-background;
     padding: 1.5rem;
     color: $color-primary;
