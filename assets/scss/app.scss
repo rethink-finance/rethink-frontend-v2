@@ -138,8 +138,13 @@ a {
     color: $color-text-irrelevant;
     font-weight: 500;
   }
-  tbody td {
-    color: $color-white;
-    font-weight: 500;
+  tbody {
+    td {
+      color: $color-white;
+      font-weight: 500;
+    }
+    tr {
+      background-color: $color-badge-navy;
+    }
   }
 }

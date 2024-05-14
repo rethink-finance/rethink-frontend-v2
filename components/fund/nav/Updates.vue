@@ -50,7 +50,7 @@
         <template #actions="{detailsExpanded}">
           <div class="details__button" :class="{'details__button--expanded': detailsExpanded}">
             <span :class="detailsExpanded ? 'details__button--text-expanded' : ''">
-              Details
+              See Methods
             </span>
             <v-icon
               class="details__button_icon"
@@ -118,7 +118,7 @@ export default defineComponent({
   &__no_data {
     text-align: center;
     padding: 1.5rem;
-    background: $color-surface;
+    background: $color-badge-navy;
   }
   &__button {
     @include borderGray;
