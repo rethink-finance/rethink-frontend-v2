@@ -13,10 +13,8 @@
         no-body-padding
       >
         <template #body>
-          <!-- TODO create entries, use Table.vue for this also
-              check: https://vuetifyjs.com/en/components/data-tables/basics/
-          -->
           <v-data-table
+            v-if="navUpdate.entries.length"
             :expanded="expanded"
             :headers="headers"
             :items="navUpdate.entries"
@@ -30,7 +28,7 @@
             </template>
             <template #expanded-row="{ columns, item }">
               <tr>
-                <td :colspan="columns.length">
+                <td :colspan="columns.length" class="pa-0">
                   <div class="details__body">
                     <div class="details__json">
                       {{ item.detailsJson }}
@@ -43,9 +41,12 @@
               <!-- Leave this slot empty to hide pagination controls -->
             </template>
           </v-data-table>
+          <div v-else class="text-center pa-6">
+            No NAV details available.
+          </div>
         </template>
-        <template #actionText="{ expanded }">
-          {{ expanded ? "Close" : "See" }} Details
+        <template #actionText>
+          Details
         </template>
       </UiDataRowCard>
     </template>
