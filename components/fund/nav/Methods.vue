@@ -1,39 +1,6 @@
 <template>
   <div class="details main_grid main_grid--full-width main_grid--no-gap">
-    <template v-if="fund.navUpdates?.length > 0">
-
-      <!-- TODO fix title when NAV update timestamps become available -->
-      <UiDataRowCard
-        v-for="(navUpdate, index) in fund.navUpdates"
-        :key="index"
-        :title="'#' + (Number(navUpdate.date) + 1)"
-        :grow-column1="true"
-        :title2="formatNAV(navUpdate.totalNAV)"
-        :grow-column2="true"
-        no-body-padding
-        bg-transparent
-      >
-        <template #body>
-          <FundNavMethodsTable :methods="navUpdate.entries" />
-        </template>
-        <template #actions="{detailsExpanded}">
-          <div class="details__button" :class="{'details__button--expanded': detailsExpanded}">
-            <span :class="detailsExpanded ? 'details__button--text-expanded' : ''">
-              See Methods
-            </span>
-            <v-icon
-              class="details__button_icon"
-              :color="expanded ? 'primary' : ''"
-              :icon="detailsExpanded ? 'mdi-menu-up' : 'mdi-menu-down'"
-            />
-          </div>
-        </template>
-      </UiDataRowCard>
-    </template>
-
-    <template v-else>
-      There are currently no NAV updates.
-    </template>
+    <FundNavMethodsTable :methods="fund.navMethods" />
   </div>
 </template>
 

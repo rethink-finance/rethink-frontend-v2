@@ -11,6 +11,7 @@ import type INAVUpdate from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IToken from "~/types/token";
 import type IPositionTypeCount from "~/types/position_type";
+import type INAVMethod from "~/types/nav_method";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { useFundStore } from "~/store/fund.store";
 
@@ -184,6 +185,7 @@ export const useFundsStore = defineStore({
 
             // NAV Updates
             navUpdates: [] as INAVUpdate[],
+            navMethods: [] as INAVMethod[],
           };
 
           const metaDataJson = dataNAVs.fundMetadata[index];

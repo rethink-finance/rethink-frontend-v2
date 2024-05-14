@@ -13,7 +13,7 @@ import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type INAVUpdate from "~/types/nav_update";
-import type { INAVUpdateEntry } from "~/types/nav_update";
+import type INAVMethod from "~/types/nav_method";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IToken from "~/types/token";
 import type IPositionTypeCount from "~/types/position_type";
@@ -306,6 +306,7 @@ export const useFundStore = defineStore({
 
           // NAV Updates
           navUpdates: [] as INAVUpdate[],
+          navMethods: [] as INAVMethod[],
         } as IFund;
 
         // Process metadata if available
@@ -398,7 +399,7 @@ export const useFundStore = defineStore({
                     positionName: "TODO",
                     valuationSource: "TODO",
                     detailsJson: formatJson(cleanComplexWeb3Data(navEntryData)),
-                  } as INAVUpdateEntry
+                  } as INAVMethod
                 ),
               ),
             )
