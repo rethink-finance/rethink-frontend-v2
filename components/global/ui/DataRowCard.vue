@@ -38,11 +38,11 @@
           </div>
         </div>
         <template #actions="{ expanded }">
-          <div class="detail-button" :class="expanded ? 'detail-button__expanded' : ''">
-            <span class="data_row__action_text" :class="expanded ? 'detail-button__text-expanded' : ''">
+          <div class="details_button" :class="expanded ? 'details_button--expanded' : ''">
+            <span :class="expanded ? 'details_button--text-expanded' : ''">
               <slot name="actionText" :expanded="expanded" />
             </span>
-            <v-icon class="detail-button__icon" :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-menu-up' : 'mdi-menu-down'" />
+            <v-icon class="details_button__icon" :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-menu-up' : 'mdi-menu-down'" />
           </div>
         </template>
       </v-expansion-panel-title>
@@ -231,24 +231,23 @@ export default defineComponent({
     max-width: 100%;
   }
 }
-.detail-button{
+.details_button {
   @include borderGray;
-  padding: .93rem 1rem;
-  font-size: .8rem;
+  padding: 0.5rem 1rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  font-size: $text-xs;
   font-weight: 500;
-  margin-top: .75rem;
-  margin-bottom: .75rem;
   color: $color-text-irrelevant;
 
-  &__icon{
-    margin-left: .5rem;
+  &__icon {
+    margin-left: 0.5rem;
   }
-
-  &__text-expanded{
+  &--text_expanded{
     font-weight: 700;
     color: $color-white;
   }
-
   &__expanded{
     background-color: $color-background-button;
   }

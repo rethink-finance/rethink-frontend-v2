@@ -45,7 +45,7 @@
           </v-data-table>
         </template>
         <template #actionText="{ expanded }">
-          {{ expanded ? "See Methods" : "Details" }}
+          {{ expanded ? "Close" : "See" }} Details
         </template>
       </UiDataRowCard>
     </template>
