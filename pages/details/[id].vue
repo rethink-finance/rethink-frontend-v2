@@ -6,32 +6,24 @@
     <v-skeleton-loader type="card" />
   </div>
   <div v-else-if="fund?.address" class="w-100">
-    <!-- TODO this is where the fund header comes -->
     <div class="details_nav_container">
       <div class="details_nav">
-
         <div class="overlay-container" />
-
         <nuxt-link
           v-for="navRoute in computedRoutes"
           :to="navRoute.to"
         >
-
           <v-btn
             class="nav-link"
             variant="plain"
             :active="navRoute.isActive"
             :color="navRoute.pathColor"
           >
-
             <div :class="{ 'title-box': navRoute.isActive }">
               {{ navRoute.title }}
             </div>
-
           </v-btn>
-
         </nuxt-link>
-
       </div>
     </div>
     <NuxtPage :fund="fund" />
@@ -175,7 +167,7 @@ const computedRoutes = computed(() => {
   }
 }
 
-.title-box{
+.title-box {
   position: relative;
   border-bottom: 2px solid;
   border-color: var(--color-primary);

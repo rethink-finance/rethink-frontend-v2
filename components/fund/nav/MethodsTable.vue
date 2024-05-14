@@ -81,26 +81,5 @@ export default defineComponent({
     padding: 1.5rem;
     background: $color-badge-navy;
   }
-  &__button {
-    @include borderGray;
-    padding: 0.5rem 1rem;
-    height: 2.5rem;
-    display: flex;
-    align-items: center;
-    font-size: $text-xs;
-    font-weight: 500;
-    color: $color-text-irrelevant;
-
-    &--text_expanded{
-      font-weight: 700;
-      color: $color-white;
-    }
-    &__expanded{
-      background-color: $color-background-button;
-    }
-  }
-  &__button_icon {
-    margin-left: 0.5rem;
-  }
 }
 </style>

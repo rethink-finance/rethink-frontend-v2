@@ -23,7 +23,7 @@
             </span>
             <v-icon
               class="details__button_icon"
-              :color="expanded ? 'primary' : ''"
+              :color="detailsExpanded ? 'primary' : ''"
               :icon="detailsExpanded ? 'mdi-menu-up' : 'mdi-menu-down'"
             />
           </div>
@@ -50,13 +50,6 @@ export default defineComponent({
   },
   data: () => ({
     expanded: [],
-    headers: [
-      { title: "#", key: "index", sortable: false },
-      { title: "Position Name", key: "positionName", sortable: false },
-      { title: "Valuation Source", key: "valuationSource", sortable: false },
-      { title: "Position Type", key: "positionType", sortable: false },
-      { key: "details", sortable: false },
-    ],
   }),
   methods: {
     formatNAV(value: bigint) {
@@ -68,27 +61,6 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .details {
-  &__body {
-    font-family: monospace;
-    white-space: pre;
-    font-size: $text-sm;
-    padding: 1rem 7.1rem;
-    background-color: $color-badge-navy;
-    &:not(:last-of-type) {
-      margin-bottom: 1.5rem;
-    }
-  }
-  &__json{
-    @include borderGray;
-    background-color: $color-card-background;
-    padding: 1.5rem;
-    color: $color-primary;
-  }
-  &__no_data {
-    text-align: center;
-    padding: 1.5rem;
-    background: $color-badge-navy;
-  }
   &__button {
     @include borderGray;
     padding: 0.5rem 1rem;
