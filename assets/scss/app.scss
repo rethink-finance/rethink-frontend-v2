@@ -54,21 +54,11 @@ a {
   &--no-padding {
     padding: 0;
   }
-}
 
-.main_card_normal {
-  padding: 1rem;
-  margin-bottom: 2.5rem;
-  border-radius: 0.25rem;
-  background-color: $color-card-background;
-
-  @include sm {
-    margin-bottom: 1rem;
-    padding: 1.5rem;
-  }
-
-  &--no-padding {
-    padding: 0;
+  &--plain {
+    @include sm {
+      box-shadow: none;
+    }
   }
 }
 

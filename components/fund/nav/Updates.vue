@@ -29,16 +29,15 @@
               <UiPositionTypeBadge :value="value" />
             </template>
             <template #expanded-row="{ columns, item }">
-                <tr>
-                  <td :colspan="columns.length">
-                    <div class="details__body">
-                      <div class="details__json">
-                        {{ item.detailsJson }}
-                      </div>
+              <tr>
+                <td :colspan="columns.length">
+                  <div class="details__body">
+                    <div class="details__json">
+                      {{ item.detailsJson }}
                     </div>
-                  </td>
-                </tr>
-              
+                  </div>
+                </td>
+              </tr>
             </template>
             <template #bottom>
               <!-- Leave this slot empty to hide pagination controls -->
