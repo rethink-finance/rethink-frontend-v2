@@ -11,6 +11,7 @@
         :title2="formatNAV(navUpdate.totalNAV)"
         :grow-column2="true"
         no-body-padding
+        bg-transparent
       >
         <template #body>
           <v-data-table
@@ -42,7 +43,7 @@
               <!-- Leave this slot empty to hide pagination controls -->
             </template>
           </v-data-table>
-          <div v-else class="text-center pa-6">
+          <div v-else class="details__no_data">
             No NAV details available.
           </div>
         </template>
@@ -110,7 +111,11 @@ export default defineComponent({
     padding: 1.5rem;
     color: $color-primary;
   }
-
+  &__no_data {
+    text-align: center;
+    padding: 1.5rem;
+    background: $color-surface;
+  }
   &__button {
     @include borderGray;
     padding: 0.5rem 1rem;

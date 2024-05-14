@@ -8,6 +8,7 @@
     <v-expansion-panel
       class="data_row__panel card_box card_box--no-padding"
       eager
+      :class="{'data_row__panel--transparent': bgTransparent }"
       :readonly="isReadOnly"
     >
       <v-expansion-panel-title :hide-actions="isReadOnly" static>
@@ -72,6 +73,7 @@
  *   - growColumn1: If true the column 1 width will take available space (flex-grow: 1).
  *   - body: The content body of the card.
  *   - noBodyPadding: If True remove body padding.
+ *   - bgTransparent: If true, the panel background will be transparent.
  *   - title2: An additional column for the title header.
  *   - subtitle2: An additional column for the subtitle header.
  *   - growColumn2: If true the column 2 width will take available space (flex-grow: 1).
@@ -141,6 +143,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    bgTransparent: {
+      type: Boolean,
+      default: false,
+    },
     body: {
       type: String,
       default: "",
@@ -173,6 +179,10 @@ export default defineComponent({
   }
   &__panel {
     background: $color-navy-gray-light;
+
+    &--transparent {
+      background: transparent;
+    }
   }
   &__header {
     display: flex;
