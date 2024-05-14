@@ -1,5 +1,5 @@
 <template>
-  <div class="details main_grid main_grid--full-width main_grid--no-gap">
+  <div class="details main_grid main_grid--full-width">
     <template v-if="fund.navUpdates?.length > 0">
 
       <!-- TODO fix title when NAV update timestamps become available -->
