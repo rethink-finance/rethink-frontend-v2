@@ -127,3 +127,17 @@ a {
     }
   }
 }
+
+
+/* TABLES */
+// TODO: move to another Table component and all Tables should extend it along with classes.
+.main_table {
+  thead th {
+    color: $color-text-irrelevant;
+    font-weight: 500;
+  }
+  tbody td {
+    color: $color-white;
+    font-weight: 500;
+  }
+}

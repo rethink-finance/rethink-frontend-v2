@@ -18,6 +18,7 @@
             :expanded="expanded"
             :headers="headers"
             :items="navUpdate.entries"
+            class="main_table"
             show-expand
           >
             <template #[`item.index`]="{ index }">
