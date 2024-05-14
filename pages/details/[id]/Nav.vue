@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="main_card--plain">
+    <div class="main_card">
       <div class="main_expansion_panel__subtitle">
         NAV Updates
       </div>
