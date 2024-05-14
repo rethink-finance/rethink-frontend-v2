@@ -47,12 +47,16 @@
             No NAV details available.
           </div>
         </template>
-        <template #actions>
-          <div class="details__button" :class="{'details__button--expanded': expanded}">
-            <span :class="expanded ? 'details__button--text-expanded' : ''">
+        <template #actions="{detailsExpanded}">
+          <div class="details__button" :class="{'details__button--expanded': detailsExpanded}">
+            <span :class="detailsExpanded ? 'details__button--text-expanded' : ''">
               Details
             </span>
-            <v-icon class="details__button_icon" :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-menu-up' : 'mdi-menu-down'" />
+            <v-icon
+              class="details__button_icon"
+              :color="expanded ? 'primary' : ''"
+              :icon="detailsExpanded ? 'mdi-menu-up' : 'mdi-menu-down'"
+            />
           </div>
         </template>
       </UiDataRowCard>

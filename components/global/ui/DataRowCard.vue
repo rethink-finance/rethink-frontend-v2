@@ -40,7 +40,7 @@
         </div>
 
         <template #actions="{ expanded }">
-          <slot name="actions">
+          <slot name="actions" :details-expanded="expanded">
             <span class="data_row__action_text" :class="expanded ? 'text-primary' : ''">
               <slot name="actionText" :expanded="expanded" />
             </span>
