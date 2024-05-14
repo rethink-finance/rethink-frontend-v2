@@ -1,5 +1,6 @@
 import type ICyclePendingRequest from '~/types/cycle_pending_request';
-import type INAVUpdate from '~/types/nav_update';
+import type INAVUpdate from "~/types/nav_update";
+import type INAVMethod from "~/types/nav_method";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 
@@ -95,4 +96,5 @@ export default interface IFund {
 
   // NAV Updates
   navUpdates: INAVUpdate[];
+  navMethods: INAVMethod[];
 }

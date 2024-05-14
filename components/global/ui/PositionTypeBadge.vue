@@ -5,17 +5,18 @@
 </template>
 
 <script setup lang="ts">
+
 import type { PositionType } from "~/types/enums/position_type";
 
 const props = defineProps({
   value: {
-    type: Object as PropType<PositionType>,
+    type: String,
     default: undefined,
   },
 });
 
-const positionType = computed(() => props.value ? getPositionType(props.value) : undefined);
-const positionTypeClass = computed(() => `position_type_${props.value || "unknown"}`);
+const positionType = computed(() => props.value ? getPositionType(props.value as PositionType) : undefined);
+const positionTypeClass = computed(() => `position_type_${props.value as PositionType || "unknown"}`);
 </script>
 
 <style scoped lang="scss">
