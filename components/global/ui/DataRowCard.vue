@@ -37,15 +37,17 @@
             </div>
           </div>
         </div>
+
         <template #actions="{ expanded }">
-          <div class="details_button" :class="expanded ? 'details_button--expanded' : ''">
-            <span :class="expanded ? 'details_button--text-expanded' : ''">
+          <slot name="actions">
+            <span class="data_row__action_text" :class="expanded ? 'text-primary' : ''">
               <slot name="actionText" :expanded="expanded" />
             </span>
-            <v-icon class="details_button__icon" :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-menu-up' : 'mdi-menu-down'" />
-          </div>
+            <v-icon :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
+          </slot>
         </template>
       </v-expansion-panel-title>
+
       <v-expansion-panel-text v-if="hasBody" class="data_row__body" :class="{'data_row__body--no-padding': noBodyPadding}">
         <slot name="body">
           {{ body }}
@@ -170,7 +172,7 @@ export default defineComponent({
     }
   }
   &__panel {
-    background: transparent;
+    background: $color-navy-gray-light;
   }
   &__header {
     display: flex;
@@ -186,7 +188,8 @@ export default defineComponent({
   }
   .v-expansion-panel-title {
     overflow: hidden;
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 1rem;
+    height: 3.5rem;
     line-height: 1;
     font-size: 1rem;
   }
@@ -229,27 +232,6 @@ export default defineComponent({
   &__title, &__subtitle {
     @include ellipsis;
     max-width: 100%;
-  }
-}
-.details_button {
-  @include borderGray;
-  padding: 0.5rem 1rem;
-  height: 2.5rem;
-  display: flex;
-  align-items: center;
-  font-size: $text-xs;
-  font-weight: 500;
-  color: $color-text-irrelevant;
-
-  &__icon {
-    margin-left: 0.5rem;
-  }
-  &--text_expanded{
-    font-weight: 700;
-    color: $color-white;
-  }
-  &__expanded{
-    background-color: $color-background-button;
   }
 }
 </style>

@@ -10,30 +10,30 @@
     <div class="details_nav_container">
       <div class="details_nav">
 
-        <div class="overlay-container"></div>
+        <div class="overlay-container" />
 
         <nuxt-link
-            v-for="navRoute in computedRoutes"
-            :to="navRoute.to"
+          v-for="navRoute in computedRoutes"
+          :to="navRoute.to"
+        >
+
+          <v-btn
+            class="nav-link"
+            variant="plain"
+            :active="navRoute.isActive"
+            :color="navRoute.pathColor"
           >
-            
-              <v-btn
-              class="nav-link"
-              variant="plain"
-              :active="navRoute.isActive"
-              :color="navRoute.pathColor"
-              >
 
-                <div :class="{ 'title-box': navRoute.isActive }">
-                  {{ navRoute.title }}
-                </div>
+            <div :class="{ 'title-box': navRoute.isActive }">
+              {{ navRoute.title }}
+            </div>
 
-              </v-btn>
-           
-          </nuxt-link>
-        
+          </v-btn>
+
+        </nuxt-link>
+
       </div>
-  </div>
+    </div>
     <NuxtPage :fund="fund" />
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
@@ -59,7 +59,6 @@ const web3Store = useWeb3Store();
 const route = useRoute();
 const loading = ref(true);
 const fundAddress = (route.params.id as string).split("-")[1];
-const currentRoute = ref(route?.path);
 
 onUnmounted(  () => {
   fundStore.fund = { } as IFund;
@@ -96,26 +95,26 @@ const routes : IRoute[] = [
     to: `/details/${route.params.id}`,
     exactMatch: true,
     title: "Fund Details",
-    text:''
+    text: "",
   },
-  {
-    to: `/details/${route.params.id}/governance`,
-    exactMatch: true,
-    title: "Governance",
-    text:''
-  },
+  // {
+  //   to: `/details/${route.params.id}/governance`,
+  //   exactMatch: true,
+  //   title: "Governance",
+  //   text:"",
+  // },
   {
     to: `/details/${route.params.id}/nav`,
     exactMatch: true,
     title: "NAV",
-    text:''
+    text:"",
   },
-  {
-    to: `/details/${route.params.id}/permissions`,
-    exactMatch: true,
-    title: "Permissions",
-    text:''
-  },
+  // {
+  //   to: `/details/${route.params.id}/permissions`,
+  //   exactMatch: true,
+  //   title: "Permissions",
+  //   text:"",
+  // },
 ]
 
 const isPathActive = (path: string = "", exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);
@@ -183,7 +182,7 @@ const computedRoutes = computed(() => {
   padding-bottom: 1rem;
 }
 
-.overlay-container{
+.overlay-container {
   position: absolute;
   bottom: 0;
   background-color: var(--color-divider);

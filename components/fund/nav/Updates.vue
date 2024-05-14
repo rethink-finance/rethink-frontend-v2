@@ -1,5 +1,5 @@
 <template>
-  <div class="details main_grid main_grid--full-width">
+  <div class="details main_grid main_grid--full-width main_grid--no-gap">
     <template v-if="fund.navUpdates?.length > 0">
 
       <!-- TODO fix title when NAV update timestamps become available -->
@@ -46,8 +46,13 @@
             No NAV details available.
           </div>
         </template>
-        <template #actionText>
-          Details
+        <template #actions>
+          <div class="details__button" :class="{'details__button--expanded': expanded}">
+            <span :class="expanded ? 'details__button--text-expanded' : ''">
+              Details
+            </span>
+            <v-icon class="details__button_icon" :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-menu-up' : 'mdi-menu-down'" />
+          </div>
         </template>
       </UiDataRowCard>
     </template>
@@ -104,6 +109,28 @@ export default defineComponent({
     background-color: $color-card-background;
     padding: 1.5rem;
     color: $color-primary;
+  }
+
+  &__button {
+    @include borderGray;
+    padding: 0.5rem 1rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    font-size: $text-xs;
+    font-weight: 500;
+    color: $color-text-irrelevant;
+
+    &--text_expanded{
+      font-weight: 700;
+      color: $color-white;
+    }
+    &__expanded{
+      background-color: $color-background-button;
+    }
+  }
+  &__button_icon {
+    margin-left: 0.5rem;
   }
 }
 </style>

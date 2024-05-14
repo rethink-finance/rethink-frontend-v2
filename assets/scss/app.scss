@@ -28,12 +28,15 @@ a {
 .main_grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0rem;
+  gap: 2rem;
   align-items: start;
 
   @include sm {
-    gap: 0rem;
+    gap: 1.5rem;
     grid-template-columns: 1fr 1fr;
+  }
+  &--no-gap {
+    gap: 0;
   }
   &--full-width {
     grid-template-columns: 1fr;
