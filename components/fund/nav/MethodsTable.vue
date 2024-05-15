@@ -10,9 +10,19 @@
     <template #[`item.index`]="{ index }">
       <strong>{{ index + 1 }}</strong>
     </template>
+
+    <template #[`item.positionName`]="{ value }">
+      {{ value ?? "N/A" }}
+    </template>
+
+    <template #[`item.valuationSource`]="{ value }">
+      {{ value ?? "N/A" }}
+    </template>
+
     <template #[`item.positionType`]="{ value }">
       <UiPositionTypeBadge :value="value" />
     </template>
+
     <template #expanded-row="{ columns, item }">
       <tr>
         <td :colspan="columns.length" class="pa-0">

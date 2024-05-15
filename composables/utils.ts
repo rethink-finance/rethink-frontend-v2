@@ -31,6 +31,18 @@ export const capitalizeFirst = (str?: string): string => {
 // Recursive function to clean complex nested data from numeric indices
 const ignoreKeys: Set<string> = new Set(["__length__"]);
 
+/**
+ * Recursively cleans complex Web3 data by processing arrays and objects.
+ * - For arrays, it applies the cleaning function to each element.
+ * - For objects, it creates a new object excluding keys that are numeric or in the `ignoreKeys` set.
+ * - Primitive values (non-objects and non-arrays) are returned unchanged.
+ *
+ * It is basically done to clean the WEB3 data that comes with numeric indexes and also with the key properties
+ * after the data is ABI decoded. Numeric indexes are removed.
+ *
+ * @param {any} data - The data to be cleaned. It can be of any type.
+ * @returns {any} - The cleaned data, with arrays and objects recursively processed.
+ */
 export const cleanComplexWeb3Data = (data: any): any =>  {
   if (Array.isArray(data)) {
     // Recursively clean each item in the array

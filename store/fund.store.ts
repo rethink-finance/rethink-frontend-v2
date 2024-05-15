@@ -396,14 +396,21 @@ export const useFundStore = defineStore({
           PositionTypeKeys.forEach((positionType: PositionType) => {
             navUpdates[index].entries.push(
               ...navUpdateData[positionType].map(
-                (navEntryData: Record<string, any>) => (
-                  {
+                (navEntryData: Record<string, any>) => {
+                  let description;
+                  try {
+                    description = JSON.parse(navEntryData.description ?? "{}");
+                  } catch (error) {
+                    // Handle the error or rethrow it
+                    console.error("Failed to parse NAV entry JSON description string: ", error);
+                  }
+                  return {
                     positionType,
-                    positionName: "TODO",
-                    valuationSource: "TODO",
+                    positionName: description?.positionName,
+                    valuationSource: description?.valuationSource,
                     detailsJson: formatJson(cleanComplexWeb3Data(navEntryData)),
                   } as INAVMethod
-                ),
+                },
               ),
             )
           })
