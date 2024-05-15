@@ -16,12 +16,12 @@
       </v-avatar>
       <div class="fund-name__title">
         <p>
-          {{ fund.fundToken.symbol }}
+          {{ fund?.fundToken.symbol }}
         </p>
       </div>
       <div class="fund-name__subtitle">
         <p>
-          {{ fund.title }}
+          {{ fund?.title }}
         </p>
       </div>
     </div>
@@ -101,7 +101,7 @@ watch(() => web3Store.chainId, () => {
 onMounted(  () => {
   fetchFund();
 });
-const fund = computed(() => fundStore.fund);
+const fund = computed(() => fundStore.fund as IFund);
 
 const routes : IRoute[] = [
   {
