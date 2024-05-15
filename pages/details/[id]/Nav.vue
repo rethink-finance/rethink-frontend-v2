@@ -2,6 +2,14 @@
   <div>
     <div class="main_card">
       <div class="main_expansion_panel__subtitle">
+        NAV Methods
+      </div>
+      <div>
+        <FundNavMethods :fund="fund" />
+      </div>
+    </div>
+    <div class="main_card">
+      <div class="main_expansion_panel__subtitle">
         NAV Updates
       </div>
       <div>

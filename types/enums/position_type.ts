@@ -8,19 +8,19 @@ export enum PositionType {
 }
 export const PositionTypesMap: Record<string, IPositionType> = {
   [PositionType.Liquid]: {
-    name: "NAV Liquid",
+    name: "Liquid",
     key: PositionType.Liquid,
   },
   [PositionType.Composable]: {
-    name: "NAV DeFi",
+    name: "DeFi",
     key: PositionType.Composable,
   },
   [PositionType.NFT]: {
-    name: "NAV NFT",
+    name: "NFT",
     key: PositionType.NFT,
   },
   [PositionType.Illiquid]: {
-    name: "NAV Illiquid",
+    name: "Illiquid",
     key: PositionType.Illiquid,
   },
 };

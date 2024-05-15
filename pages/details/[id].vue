@@ -27,29 +27,24 @@
     </div>
     <div class="details_nav_container">
       <div class="details_nav">
-
-        <div class="overlay-container"></div>
-
+        <div class="overlay-container" />
         <nuxt-link
-            v-for="navRoute in computedRoutes"
-            :to="navRoute.to"
+          v-for="navRoute in computedRoutes"
+          :key="navRoute.to"
+          :to="navRoute.to"
+        >
+          <v-btn
+            class="nav-link"
+            variant="plain"
+            :active="navRoute.isActive"
+            :color="navRoute.pathColor"
           >
-            
-              <v-btn
-              class="nav-link"
-              variant="plain"
-              :active="navRoute.isActive"
-              :color="navRoute.pathColor"
-              >
 
-                <div :class="{ 'title-box': navRoute.isActive }">
-                  {{ navRoute.title }}
-                </div>
-
-              </v-btn>
-           
-          </nuxt-link>
-        
+            <div :class="{ 'title-box': navRoute.isActive }">
+              {{ navRoute.title }}
+            </div>
+          </v-btn>
+        </nuxt-link>
       </div>
     </div>
     <NuxtPage :fund="fund" />
@@ -77,7 +72,6 @@ const web3Store = useWeb3Store();
 const route = useRoute();
 const loading = ref(true);
 const fundAddress = (route.params.id as string).split("-")[1];
-const currentRoute = ref(route?.path);
 
 onUnmounted(  () => {
   fundStore.fund = { } as IFund;
@@ -114,26 +108,26 @@ const routes : IRoute[] = [
     to: `/details/${route.params.id}`,
     exactMatch: true,
     title: "Fund Details",
-    text:''
+    text: "",
   },
-  {
-    to: `/details/${route.params.id}/governance`,
-    exactMatch: true,
-    title: "Governance",
-    text:''
-  },
+  // {
+  //   to: `/details/${route.params.id}/governance`,
+  //   exactMatch: true,
+  //   title: "Governance",
+  //   text:"",
+  // },
   {
     to: `/details/${route.params.id}/nav`,
     exactMatch: true,
     title: "NAV",
-    text:''
+    text:"",
   },
-  {
-    to: `/details/${route.params.id}/permissions`,
-    exactMatch: true,
-    title: "Permissions",
-    text:''
-  },
+  // {
+  //   to: `/details/${route.params.id}/permissions`,
+  //   exactMatch: true,
+  //   title: "Permissions",
+  //   text:"",
+  // },
 ]
 
 const isPathActive = (path: string = "", exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);
@@ -171,6 +165,7 @@ const computedRoutes = computed(() => {
   position: relative;
   margin-bottom: 2rem;
   padding-top: 1rem;
+  padding-left: 1.5rem;
   padding-right: 1.5rem;
   width: 100%;
 }
@@ -179,10 +174,10 @@ const computedRoutes = computed(() => {
   display: flex;
   flex-direction: row;
   justify-content: center;
-  margin:0rem 0rem ;
+  margin: 0 ;
 
   @include sm{
-    margin:0rem 5.5rem ;
+    margin:0 5.5rem ;
   }
 }
 
@@ -205,7 +200,7 @@ const computedRoutes = computed(() => {
   padding-bottom: 1rem;
 }
 
-.overlay-container{
+.overlay-container {
   position: absolute;
   bottom: 0;
   background-color: var(--color-divider);
@@ -213,37 +208,34 @@ const computedRoutes = computed(() => {
   height: 2px;
 }
 
-.fund-name{
+.fund-name {
   background-color: $color-gray-light-transparent;
   border-radius: $default-border-radius;
   padding: .5rem .62rem;
-  margin: 0rem 0rem ;
+  margin: 0 ;
   display: flex;
   flex-direction: row;
   gap: 0.5rem;
   align-items: center;
 
-  @include sm{
-    margin: 0rem 5.5rem ;
+  @include sm {
+    margin: 0 5.5rem ;
     padding: 1rem 1.5rem;
   }
-
   &__avatar_img {
     border-radius: 0.25rem;
     height: 100%;
     width: 100%;
     object-fit: cover;
   }
-
   &__title{
     font-weight: 700;
     font-size: $text-md;
   }
-
   &__subtitle{
     font-weight: 500;
     font-size: $text-sm;
-    color: $color-subtitle-irrelevant;
+    color: $color-text-irrelevant;
   }
 }
 </style>

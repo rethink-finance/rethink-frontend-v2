@@ -35,6 +35,9 @@ a {
     gap: 1.5rem;
     grid-template-columns: 1fr 1fr;
   }
+  &--no-gap {
+    gap: 0;
+  }
   &--full-width {
     grid-template-columns: 1fr;
   }
@@ -47,12 +50,17 @@ a {
 
   @include sm {
     margin-bottom: 1rem;
-    box-shadow: 0 0 16px 0 $color-moonlight;
     padding: 1.5rem;
   }
 
   &--no-padding {
     padding: 0;
+  }
+
+  &--plain {
+    @include sm {
+      box-shadow: none;
+    }
   }
 }
 
@@ -104,7 +112,7 @@ a {
     }
   }
   &__subtitle {
-    color: $color-subtitle;
+    color: $color-white;
     font-size: $text-md;
     font-weight: 700;
     margin-bottom: 1.5rem;
@@ -118,6 +126,28 @@ a {
       gap: 0.125rem;
       background: $color-surface;
       padding: 0;
+    }
+  }
+}
+
+
+/* TABLES */
+// TODO: move to another Table component and all Tables should extend it along with classes.
+.main_table {
+  thead {
+    background-color: #111828;
+    th {
+      color: $color-text-irrelevant;
+      font-weight: 500;
+    }
+  }
+  tbody {
+    td {
+      color: $color-white;
+      font-weight: 500;
+    }
+    tr {
+      background-color: $color-badge-navy;
     }
   }
 }
