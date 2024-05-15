@@ -6,7 +6,25 @@
     <v-skeleton-loader type="card" />
   </div>
   <div v-else-if="fund?.address" class="w-100">
-    <!-- TODO this is where the fund header comes -->
+    <div class="fund-name">
+      <v-avatar size="1.5rem" rounded="">
+        <img
+          :src="fund.photoUrl"
+          class="fund-name__avatar_img"
+          alt="fund cover image"
+        >
+      </v-avatar>
+      <div class="fund-name__title">
+        <p>
+          {{ fund.fundToken.symbol }}
+        </p>
+      </div>
+      <div class="fund-name__subtitle">
+        <p>
+          {{ fund.title }}
+        </p>
+      </div>
+    </div>
     <div class="details_nav_container">
       <div class="details_nav">
 
@@ -33,7 +51,7 @@
           </nuxt-link>
         
       </div>
-  </div>
+    </div>
     <NuxtPage :fund="fund" />
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
@@ -153,15 +171,19 @@ const computedRoutes = computed(() => {
   position: relative;
   margin-bottom: 2rem;
   padding-top: 1rem;
-  padding-left: 1.5rem;
   padding-right: 1.5rem;
-  width: 83%;
+  width: 100%;
 }
 
 .details_nav_container{
   display: flex;
   flex-direction: row;
   justify-content: center;
+  margin:0rem 0rem ;
+
+  @include sm{
+    margin:0rem 5.5rem ;
+  }
 }
 
 .nav-link {
@@ -187,8 +209,41 @@ const computedRoutes = computed(() => {
   position: absolute;
   bottom: 0;
   background-color: var(--color-divider);
-  width: 83%;
+  width: 100%;
   height: 2px;
-  margin-left: 1.5rem;
+}
+
+.fund-name{
+  background-color: $color-gray-light-transparent;
+  border-radius: $default-border-radius;
+  padding: .5rem .62rem;
+  margin: 0rem 0rem ;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: center;
+
+  @include sm{
+    margin: 0rem 5.5rem ;
+    padding: 1rem 1.5rem;
+  }
+
+  &__avatar_img {
+    border-radius: 0.25rem;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  &__title{
+    font-weight: 700;
+    font-size: $text-md;
+  }
+
+  &__subtitle{
+    font-weight: 500;
+    font-size: $text-sm;
+    color: $color-subtitle-irrelevant;
+  }
 }
 </style>
