@@ -345,6 +345,7 @@ export const useFundStore = defineStore({
       const navUpdates = [] as INAVUpdate[];
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable).
       const navUpdatesLen = dataNAV[PositionType.Liquid].length;
+      console.log("DATA NAV: ", dataNAV)
 
       for (let i= 0; i < navUpdatesLen; i++) {
         let totalNAV = BigInt("0");
