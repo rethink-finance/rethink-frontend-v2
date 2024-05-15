@@ -135,7 +135,7 @@ a {
 // TODO: move to another Table component and all Tables should extend it along with classes.
 .main_table {
   thead {
-    background-color: #111828;
+    background-color: $color-dark;
     th {
       color: $color-text-irrelevant;
       font-weight: 500;
@@ -147,7 +147,7 @@ a {
       font-weight: 500;
     }
     tr {
-      background-color: $color-badge-navy;
+      //background-color: $color-badge-navy;
     }
   }
 }

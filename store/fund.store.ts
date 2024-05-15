@@ -385,6 +385,8 @@ export const useFundStore = defineStore({
       // Each NAV update has more entries.
       // Parse and store them to the NAV update entries.
       const navUpdatePromises = await Promise.allSettled(promises);
+      console.log("navUpdatePromises: ", navUpdatePromises);
+
       // Process results
       navUpdatePromises.forEach((navUpdateResult, index) => {
         if (navUpdateResult.status === "fulfilled") {
@@ -409,7 +411,6 @@ export const useFundStore = defineStore({
         }
       });
 
-      console.log(navUpdates);
       return navUpdates;
     },
     /**
