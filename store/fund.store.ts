@@ -77,6 +77,9 @@ export const useFundStore = defineStore({
       const totalNAV = Number(formatTokenValue(state.fund.totalNAVWei, state.fund.baseToken.decimals, false));
       return formatNumberShort(totalNAV) + " " + state.fund.baseToken.symbol;
     },
+    selectedFundSlug(state: IState): string {
+      return (state.fund?.fundToken.symbol || "") + "-" + (state.fund?.address || "");
+    },
     /**
      * Contracts
      */

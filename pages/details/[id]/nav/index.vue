@@ -38,12 +38,16 @@
           </div>
         </div>
         <div>
-          <v-btn
-            class="text-secondary"
-            variant="outlined"
+          <nuxt-link
+            :to="`/details/${selectedFundSlug}/nav/manage`"
           >
-            Manage Methods
-          </v-btn>
+            <v-btn
+              class="text-secondary"
+              variant="outlined"
+            >
+              Manage Methods
+            </v-btn>
+          </nuxt-link>
         </div>
       </div>
       <div>
@@ -66,7 +70,7 @@ import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
 
 const fund = useAttrs().fund as IFund;
-const { fundTotalNAVFormattedShort } = toRefs(useFundStore());
+const { fundTotalNAVFormattedShort, selectedFundSlug } = toRefs(useFundStore());
 
 const fundLastNAVUpdateDate = computed(() => {
   if (!fund?.navUpdates.length) return "N/A";

@@ -24,9 +24,14 @@
             </div>
           </v-btn>
         </nuxt-link>
+
+      </div>
+
+      <div>
+        <UiBreadcrumbs :items="breadcrumbItems" />
       </div>
     </div>
-    <NuxtPage :fund="fund" />
+    <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
     <h2 class="mb-2">
@@ -45,6 +50,8 @@ import { useFundStore } from "~/store/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
+import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import { trimTrailingSlash } from "~/composables/utils";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
@@ -55,7 +62,13 @@ const fundAddress = (route.params.id as string).split("-")[1];
 onUnmounted(  () => {
   fundStore.fund = { } as IFund;
   fundStore.selectedFundAddress = "";
+  setBreadcrumbItems([]);
 })
+
+const breadcrumbItems = ref<BreadcrumbItem[]>([]);
+const setBreadcrumbItems = (items: BreadcrumbItem[]) => {
+  breadcrumbItems.value = items;
+};
 
 const fetchFund = async () => {
   if (!fundAddress) {
@@ -76,15 +89,27 @@ const fetchFund = async () => {
 watch(() => web3Store.chainId, () => {
   fetchFund();
 });
+// Watch for route changes to reset the breadcrumbs
+watch(() => route.path, (newPath) => {
+  const pathRoot = `/details/${route.params.id}`;
+  console.log(newPath)
+  if (trimTrailingSlash(newPath) === pathRoot || newPath === `${pathRoot}/nav`) {
+    setBreadcrumbItems([]);
+  }
+});
+
 
 onMounted(  () => {
   fetchFund();
+  setBreadcrumbItems([]);
 });
+
 const fund = computed(() => fundStore.fund);
+const fundDetailsRoute = computed(() => `/details/${route.params.id}`);
 
 const routes : IRoute[] = [
   {
-    to: `/details/${route.params.id}`,
+    to: fundDetailsRoute.value,
     exactMatch: true,
     title: "Fund Details",
     text: "",
@@ -96,8 +121,9 @@ const routes : IRoute[] = [
   //   text:"",
   // },
   {
-    to: `/details/${route.params.id}/nav`,
-    exactMatch: true,
+    to: `${fundDetailsRoute.value}/nav`,
+    exactMatch: false,
+    matchPrefix:  `${fundDetailsRoute.value}/nav`,
     title: "NAV",
     text:"",
   },
@@ -140,19 +166,20 @@ const computedRoutes = computed(() => {
 .fund_details {
   width: 100%;
 }
-.details_nav{
+.details_nav {
   position: relative;
-  margin-bottom: 2rem;
-  padding-top: 1rem;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
+  margin-bottom: 1rem;
   width: 83%;
 }
 
-.details_nav_container{
+.details_nav_container {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: center;
+  padding-top: 1rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .nav-link {
