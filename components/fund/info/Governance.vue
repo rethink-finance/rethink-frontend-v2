@@ -3,10 +3,16 @@
     <UiDataBar title="Governance">
       <div class="data_bar__item">
         <div class="data_bar__title">
-          <v-tooltip activator="parent" location="bottom">
-            {{ fundStore.userFundDelegateAddress }}
-          </v-tooltip>
-          {{ truncateAddress(fundStore.userFundDelegateAddress) }}
+          <template v-if="isZeroAddress(fundStore.userFundDelegateAddress)">
+            N/A
+          </template>
+          <template v-else>
+            <v-tooltip activator="parent" location="bottom">
+              {{ fundStore.userFundDelegateAddress }}
+            </v-tooltip>
+            {{ truncateAddress(fundStore.userFundDelegateAddress) }}
+          </template>
+
         </div>
         <div class="data_bar__subtitle">
           Delegating To
@@ -34,6 +40,7 @@
 <script lang="ts">
 import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
+import { isZeroAddress } from "~/composables/addressUtils";
 
 export default {
   name: "FundInfoGovernance",
@@ -58,6 +65,7 @@ export default {
       return `https://www.tally.xyz/gov/${this.fund.fundToken.symbol}-${this.fund.governorAddress}/my-voting-power`;
     },
   },
+  methods: { isZeroAddress },
 };
 </script>
 

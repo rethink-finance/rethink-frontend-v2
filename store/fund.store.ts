@@ -345,6 +345,7 @@ export const useFundStore = defineStore({
       const navUpdates = [] as INAVUpdate[];
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable).
       const navUpdatesLen = dataNAV[PositionType.Liquid].length;
+      const fundNavUpdateTimes = await this.fundContract.methods.getNavUpdateTime(0, navUpdatesLen).call();
 
       for (let i= 0; i < navUpdatesLen; i++) {
         let totalNAV = BigInt("0");
@@ -367,8 +368,8 @@ export const useFundStore = defineStore({
 
         navUpdates.push(
           {
-            // TODO in the future, change indices to dates, when they are available.
-            date: i.toString(),
+            // If the datetime of the NAV update is available format it, otherwise just use the index (e.g. #2).
+            date: fundNavUpdateTimes[i] ? formatDate(new Date(Number(fundNavUpdateTimes[i]) * 1000)) : `#${(i+1).toString()}}`,
             totalNAV,
             quantity,
             entries: [],

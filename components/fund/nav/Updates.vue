@@ -2,11 +2,10 @@
   <div class="details main_grid main_grid--full-width">
     <template v-if="fund.navUpdates?.length > 0">
 
-      <!-- TODO fix title when NAV update timestamps become available -->
       <UiDataRowCard
         v-for="(navUpdate, index) in fund.navUpdates"
         :key="index"
-        :title="'#' + (Number(navUpdate.date) + 1)"
+        :title="navUpdate.date"
         :grow-column1="true"
         :title2="formatNAV(navUpdate.totalNAV)"
         :grow-column2="true"
