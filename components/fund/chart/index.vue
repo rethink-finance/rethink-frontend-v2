@@ -92,7 +92,9 @@ export default {
           padding: {
             // This removes the right padding. Without removing it, we have a lot of
             // space on the right of the chart.
-            right: -26,
+            // TODO if you use here -26 it extends the chart until the end of the div, but the last label
+            //   is not entirely visible.
+            right: 0,
           },
         },
         fill: {
@@ -150,13 +152,6 @@ export default {
             style: {
               colors: "var(--color-light-subtitle)",
             },
-            // TODO when NAV update dates are available
-            // formatter: (val: Date) => {
-            //   return formatDate(val);
-            // },
-            formatter: (val: string) => {
-              return Number(val) + 1;
-            },
           },
         },
         tooltip: {
@@ -166,7 +161,7 @@ export default {
           custom: ({ dataPointIndex, w }: any) => {
             return "<div class='custom_tooltip'>" +
               "<div class='tooltip_row'>" +
-              "<div class='label'>Index:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
+              "<div class='label'>Date:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
               "<div class='tooltip_row'>" +
               "<div class='label'>AUM:</div>" + this.formatWei(this.chartItems[dataPointIndex]) + "</div>" +
               "</div>"

@@ -104,7 +104,9 @@ export const commify = (value: string | number | bigint) => {
 
 export const formatTokenValue = (value: bigint, decimals: number, shouldCommify = true): string => {
   try {
+    if (Number(value) === 0) return "0";
     const formattedValue = ethers.formatUnits(value, decimals);
+
     return trimTrailingZeros(
       shouldCommify ? commify(formattedValue) : formattedValue,
     );

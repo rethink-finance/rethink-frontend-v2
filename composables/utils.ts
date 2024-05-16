@@ -32,7 +32,6 @@ export const capitalizeFirst = (str?: string): string => {
 const ignoreKeys: Set<string> = new Set(["__length__"]);
 
 export const cleanComplexWeb3Data = (data: any): any =>  {
-  console.log(data);
   if (Array.isArray(data)) {
     // Recursively clean each item in the array
     return data.map(item => cleanComplexWeb3Data(item));
