@@ -3,7 +3,7 @@
     <v-expansion-panels v-model="openPanel" variant="accordion">
       <v-expansion-panel class="main_expansion_panel" value="overview" eager>
         <v-expansion-panel-title class="main_expansion_panel__title section_title main_card" static>
-          Overview
+          Fund Setting
         </v-expansion-panel-title>
         <v-expansion-panel-text class="main_expansion_panel__body">
           <div class="main_card">
@@ -17,24 +17,6 @@
 
           <div class="main_card">
             <div class="main_expansion_panel__subtitle">
-              Deposits
-            </div>
-            <div>
-              <FundOverviewDeposits :fund="fund" />
-            </div>
-          </div>
-
-          <div class="main_card">
-            <div class="main_expansion_panel__subtitle">
-              Management
-            </div>
-            <div>
-              <FundOverviewManagement :fund="fund" />
-            </div>
-          </div>
-
-          <div class="main_card">
-            <div class="main_expansion_panel__subtitle">
               Fees
             </div>
             <div>
@@ -42,14 +24,6 @@
             </div>
           </div>
 
-          <div class="main_card">
-            <div class="main_expansion_panel__subtitle">
-              Governance
-            </div>
-            <div>
-              <FundOverviewGovernance :fund="fund" />
-            </div>
-          </div>
         </v-expansion-panel-text>
       </v-expansion-panel>
       <v-expansion-panel

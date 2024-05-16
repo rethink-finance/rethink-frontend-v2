@@ -1,36 +1,22 @@
 <template>
   <div class="fund_description">
-    <div>
-      <div class="fund_description__details">
-        <v-avatar size="3.5rem" rounded="0">
-          <img
-            :src="fund.photoUrl"
-            class="fund_description__avatar_img"
-            alt="fund cover image"
-          >
-        </v-avatar>
-        <div class="fund_description__title_wrapper">
-          <div class="fund_description__title">
-            {{ fund.fundToken.symbol }}
-          </div>
-          <div class="fund_description__subtitle">
-            {{ fund.title }}
-          </div>
+    <div class="fund_description__header">
+      <div>
+        <div class="fund_description__info">
+          Information
         </div>
       </div>
-      <div class="fund_description__description">
-        <p class="text-secondary">
-          {{ fund.description }}
-        </p>
+      <div class="fund_description__buttons">
+        <UiLinkExternalButton
+          v-for="buttonLink in buttonLinks"
+          :title="buttonLink.title"
+          :href="buttonLink.href"
+        />
       </div>
     </div>
-    <div class="fund_description__buttons">
-      <UiLinkExternalButton
-        v-for="buttonLink in buttonLinks"
-        :title="buttonLink.title"
-        :href="buttonLink.href"
-      />
-    </div>
+    <p class="text-secondary">
+      {{ fund.description }}
+    </p>
   </div>
 </template>
 
@@ -54,10 +40,6 @@ export default {
         {
           title: "DeBank - AUM",
           href: this.deBankUrl,
-        },
-        {
-          title: "Tally - Governance",
-          href: this.governanceUrl,
         },
         {
           title: "Safe - Custody",
@@ -113,13 +95,10 @@ export default {
 <style lang="scss" scoped>
 .fund_description {
   display: flex;
-  gap: 2.5rem;
+  gap: 1.5rem;
   flex-direction: column;
   justify-content: space-between;
 
-  @include sm {
-    flex-direction: row;
-  }
   &__avatar_img {
     border-radius: 0.25rem;
     height: 100%;
@@ -151,10 +130,36 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    //justify-content: space-around;
+
+    @include sm{
+      flex-direction: row;
+    }
 
     button {
       text-transform: none;
+    }
+  }
+
+  &__info{
+    font-size: 1rem;
+    font-weight: bold;
+    color: $color-white;
+    margin-bottom: 1.5rem;
+
+    @include sm{
+      margin-bottom: 0
+    }
+  }
+
+  &__header{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: none;
+
+    @include sm{
+      flex-direction: row;
+      align-items: center;
     }
   }
 }
