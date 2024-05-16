@@ -6,7 +6,7 @@
           {{ fundTotalNAVFormattedShort }}
         </div>
         <div class="nav__header_subtitle">
-          Last updated on N/A
+          Last updated on <strong>{{ fundLastNAVUpdateDate }}</strong>
         </div>
       </div>
       <div>
@@ -47,6 +47,10 @@ import { useFundStore } from "~/store/fund.store";
 const fund = useAttrs().fund as IFund;
 const { fundTotalNAVFormattedShort } = toRefs(useFundStore());
 
+const fundLastNAVUpdateDate = computed(() => {
+  if (!fund?.navUpdates.length) return "N/A";
+  return fund.navUpdates[fund.navUpdates.length - 1]?.date ?? "N/A";
+})
 </script>
 
 <style scoped lang="scss">
