@@ -165,7 +165,6 @@ const computedRoutes = computed(() => {
   position: relative;
   margin-bottom: 2rem;
   padding-top: 1rem;
-  padding-left: 1.5rem;
   padding-right: 1.5rem;
   width: 100%;
 }
@@ -200,7 +199,7 @@ const computedRoutes = computed(() => {
   padding-bottom: 1rem;
 }
 
-.overlay-container {
+.overlay-container{
   position: absolute;
   bottom: 0;
   background-color: var(--color-divider);
@@ -208,7 +207,7 @@ const computedRoutes = computed(() => {
   height: 2px;
 }
 
-.fund-name {
+.fund-name{
   background-color: $color-gray-light-transparent;
   border-radius: $default-border-radius;
   padding: .5rem .62rem;
@@ -218,20 +217,23 @@ const computedRoutes = computed(() => {
   gap: 0.5rem;
   align-items: center;
 
-  @include sm {
+  @include sm{
     margin: 0 5.5rem ;
     padding: 1rem 1.5rem;
   }
+
   &__avatar_img {
     border-radius: 0.25rem;
     height: 100%;
     width: 100%;
     object-fit: cover;
   }
+
   &__title{
     font-weight: 700;
     font-size: $text-md;
   }
+
   &__subtitle{
     font-weight: 500;
     font-size: $text-sm;
