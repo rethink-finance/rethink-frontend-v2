@@ -21,9 +21,30 @@
         </v-btn>
       </div>
     </div>
+
     <div class="main_card">
-      <div class="main_expansion_panel__subtitle">
-        NAV Methods
+      <div class="nav__methods_header">
+        <div>
+          <div class="main_expansion_panel__subtitle mb-4">
+            NAV Methods
+          </div>
+          <div>
+            <a
+              class="nav__learn_more_link"
+              href="https://docs.rethink.finance/rethink.finance/protocol/nav-calculator-contract"
+            >
+              Learn more about NAV methods ->
+            </a>
+          </div>
+        </div>
+        <div>
+          <v-btn
+            class="text-secondary"
+            variant="outlined"
+          >
+            Manage Methods
+          </v-btn>
+        </div>
       </div>
       <div>
         <FundNavMethods :fund="fund" />
@@ -55,10 +76,11 @@ const fundLastNAVUpdateDate = computed(() => {
 
 <style scoped lang="scss">
 .nav {
+  &__methods_header,
   &__header {
     display: flex;
     justify-content: space-between;
-    align-content: center;
+    align-items: center;
     margin-bottom: 2.5rem;
   }
   &__header_title {
@@ -69,6 +91,10 @@ const fundLastNAVUpdateDate = computed(() => {
   }
   &__header_subtitle {
     color: $color-text-irrelevant;
+  }
+  &__learn_more_link {
+    font-weight: 500;
+    color: $color-primary;
   }
 }
 </style>
