@@ -20,4 +20,5 @@ export default interface INAVMethod {
   positionName: string,
   valuationSource: string,
   detailsJson: string,
+  deleted?: boolean,
 }

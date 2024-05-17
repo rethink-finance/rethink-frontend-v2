@@ -4,6 +4,7 @@
     :expanded="expanded"
     :headers="headers"
     :items="methods"
+    :cell-props="methodProps"
     class="main_table nav_entries"
     show-expand
     expand-on-click
@@ -25,13 +26,22 @@
     </template>
 
     <template #[`item.data-table-expand`]="{ internalItem, isExpanded }">
-      <UiDetailsButton :active="isExpanded(internalItem)" />
+      <UiDetailsButton text="Details" :active="isExpanded(internalItem)" />
     </template>
 
-    <template #[`item.delete`]>
-      <v-btn variant="plain">
-        <v-icon icon="mdi-delete" color="error" />
-      </v-btn>
+    <template #[`item.delete`]="{ item }">
+      <UiDetailsButton small @click.stop="toggleDeleteMethod(item)">
+        <v-icon
+          v-if="item.deleted"
+          icon="mdi-arrow-u-left-top"
+          color="secondary"
+        />
+        <v-icon
+          v-else
+          icon="mdi-delete"
+          color="error"
+        />
+      </UiDetailsButton>
     </template>
 
     <template #expanded-row="{ columns, item }">
@@ -92,6 +102,16 @@ export default defineComponent({
       return headers;
     },
   },
+  methods: {
+    toggleDeleteMethod(method: INAVMethod) {
+      method.deleted = !method.deleted;
+    },
+    methodProps(method: any) {
+      if (method.item.deleted) {
+        return { class: "tr_delete_method" }
+      }
+    },
+  },
 })
 </script>
 
@@ -118,5 +138,9 @@ export default defineComponent({
     padding: 1.5rem;
     background: $color-badge-navy;
   }
+  :deep(.tr_delete_method) {
+    color: $color-disabled;
+  }
 }
+
 </style>

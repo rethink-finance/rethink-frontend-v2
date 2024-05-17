@@ -16,7 +16,7 @@
           <FundNavMethodsTable :methods="navUpdate.entries" />
         </template>
         <template #actions="{detailsExpanded}">
-          <UiDetailsButton :active="detailsExpanded" />
+          <UiDetailsButton text="Details" :active="detailsExpanded" />
         </template>
       </UiDataRowCard>
     </template>

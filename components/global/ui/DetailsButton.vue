@@ -1,13 +1,21 @@
 <template>
-  <div class="details_button" :class="{'details_button--expanded': active}">
-    <span :class="active ? 'details_button--text-expanded' : ''">
-      Details
+  <div
+    class="details_button"
+    :class="{
+      'details_button--expanded': active,
+      'details_button--small': small,
+    }"
+  >
+    <span v-if="text" :class="active ? 'details_button--text-expanded' : ''">
+      {{ text }}
     </span>
-    <v-icon
-      class="details_button__icon"
-      :color="active ? 'primary' : ''"
-      :icon="active ? 'mdi-menu-up' : 'mdi-menu-down'"
-    />
+    <slot>
+      <v-icon
+        class="details_button__icon"
+        :color="active ? 'primary' : ''"
+        :icon="active ? 'mdi-menu-up' : 'mdi-menu-down'"
+      />
+    </slot>
   </div>
 </template>
 
@@ -17,7 +25,15 @@ import { defineComponent } from "vue"
 export default defineComponent({
   name: "DetailsButton",
   props: {
+    text: {
+      type: String,
+      default: undefined,
+    },
     active: {
+      type: Boolean,
+      default: false,
+    },
+    small: {
       type: Boolean,
       default: false,
     },
@@ -45,6 +61,9 @@ export default defineComponent({
   &--text_expanded{
     font-weight: 700;
     color: $color-white;
+  }
+  &--small {
+    padding: 0.5rem;
   }
   &__expanded{
     background-color: $color-background-button;
