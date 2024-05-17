@@ -189,7 +189,6 @@ const computedRoutes = computed(() => {
   position: relative;
   margin-bottom: 1rem;
   padding-top: 1rem;
-  padding-right: 1.5rem;
   width: 100%;
 }
 
@@ -198,12 +197,14 @@ const computedRoutes = computed(() => {
   flex-direction: column;
   justify-content: center;
   padding-top: 1rem;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
   margin-bottom: 1rem;
 
-  @include sm{
+  @include sm {
     margin: 0 5.5rem ;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 }
 
@@ -219,14 +220,14 @@ const computedRoutes = computed(() => {
   }
 }
 
-.title-box{
+.title-box {
   position: relative;
   border-bottom: 2px solid;
   border-color: var(--color-primary);
   padding-bottom: 1rem;
 }
 
-.overlay-container{
+.overlay-container {
   position: absolute;
   bottom: 0;
   background-color: var(--color-divider);
