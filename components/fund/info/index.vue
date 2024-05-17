@@ -6,7 +6,6 @@
 
     <div v-if="isConnected" class="fund_info__user_data main_grid">
       <FundInfoMyPositions :fund="fund" />
-      <FundInfoGovernance :fund="fund" />
     </div>
   </div>
 </template>
