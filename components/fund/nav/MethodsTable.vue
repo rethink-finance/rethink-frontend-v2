@@ -6,6 +6,7 @@
     :items="methods"
     class="main_table nav_entries"
     show-expand
+    expand-on-click
   >
     <template #[`item.index`]="{ index }">
       <strong>{{ index + 1 }}</strong>
@@ -23,6 +24,16 @@
       <UiPositionTypeBadge :value="value" />
     </template>
 
+    <template #[`item.data-table-expand`]="{ internalItem, isExpanded }">
+      <UiDetailsButton :active="isExpanded(internalItem)" />
+    </template>
+
+    <template #[`item.delete`]>
+      <v-btn variant="plain">
+        <v-icon icon="mdi-delete" color="error" />
+      </v-btn>
+    </template>
+
     <template #expanded-row="{ columns, item }">
       <tr>
         <td :colspan="columns.length" class="pa-0">
@@ -34,6 +45,7 @@
         </td>
       </tr>
     </template>
+
     <template #bottom>
       <!-- Leave this slot empty to hide pagination controls -->
     </template>
@@ -54,17 +66,32 @@ export default defineComponent({
       type: Array as () => INAVMethod[],
       default: () => [],
     },
+    deletable: {
+      type: Boolean,
+      default: false,
+    },
   },
   data: () => ({
     expanded: [],
-    headers: [
-      { title: "#", key: "index", sortable: false },
-      { title: "Position Name", key: "positionName", sortable: false },
-      { title: "Valuation Source", key: "valuationSource", sortable: false },
-      { title: "Position Type", key: "positionType", sortable: false },
-      { key: "details", sortable: false },
-    ],
   }),
+  computed: {
+    headers() {
+      // Check:
+      // https://vuetifyjs.com/en/api/v-data-table/#props-header-props
+      const headers: any[] = [
+        { title: "#", key: "index", sortable: false },
+        { title: "Position Name", key: "positionName", sortable: false },
+        { title: "Valuation Source", key: "valuationSource", sortable: false },
+        { title: "Position Type", key: "positionType", sortable: false },
+        { key: "data-table-expand", sortable: false, align: "center" },
+      ];
+      if (this.deletable) {
+        headers.push({ key: "delete", sortable: false, align: "center", width: "40px" })
+      }
+
+      return headers;
+    },
+  },
 })
 </script>
 

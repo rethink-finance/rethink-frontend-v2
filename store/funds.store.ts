@@ -185,7 +185,6 @@ export const useFundsStore = defineStore({
 
             // NAV Updates
             navUpdates: [] as INAVUpdate[],
-            navMethods: [] as INAVMethod[],
           };
 
           const metaDataJson = dataNAVs.fundMetadata[index];

@@ -46,6 +46,7 @@ module.exports = {
     "prefer-const": "error",
     "semi": "off",
     "vue/attribute-hyphenation": "error",
+    "vue/no-v-model-argument": "off",
     "vue/component-name-in-template-casing": "error",
     "vue/html-closing-bracket-newline": "error",
     "vue/html-closing-bracket-spacing": "error",

@@ -1,22 +1,27 @@
 <template>
-  <UiHeader>
-    <div>
-      <div class="nav__header_title">
-        Manage NAV Methods
+  <div>
+    <UiHeader>
+      <div>
+        <div class="main_header__title">
+          Manage NAV Methods
+        </div>
       </div>
+      <div>
+        <v-btn
+          class="text-secondary"
+          variant="outlined"
+        >
+          Simulate NAV
+        </v-btn>
+        <v-btn class="bg-primary text-secondary ms-6">
+          Create NAV Proposal
+        </v-btn>
+      </div>
+    </UiHeader>
+    <div class="main_card">
+      <FundNavMethodsTable :methods="fundLastNAVUpdateEntries" deletable />
     </div>
-    <div>
-      <v-btn
-        class="text-secondary"
-        variant="outlined"
-      >
-        Simulate NAV
-      </v-btn>
-      <v-btn class="bg-primary text-secondary ms-6">
-        Create NAV Proposal
-      </v-btn>
-    </div>
-  </UiHeader>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -27,8 +32,9 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 
 // const fund = useAttrs().fund as IFund;
+// console.log(fund);
 
-const { selectedFundSlug } = toRefs(useFundStore());
+const { selectedFundSlug, fundLastNAVUpdateEntries } = toRefs(useFundStore());
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {

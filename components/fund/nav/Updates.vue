@@ -16,16 +16,7 @@
           <FundNavMethodsTable :methods="navUpdate.entries" />
         </template>
         <template #actions="{detailsExpanded}">
-          <div class="details__button" :class="{'details__button--expanded': detailsExpanded}">
-            <span :class="detailsExpanded ? 'details__button--text-expanded' : ''">
-              Details
-            </span>
-            <v-icon
-              class="details__button_icon"
-              :color="detailsExpanded ? 'primary' : ''"
-              :icon="detailsExpanded ? 'mdi-menu-up' : 'mdi-menu-down'"
-            />
-          </div>
+          <UiDetailsButton :active="detailsExpanded" />
         </template>
       </UiDataRowCard>
     </template>
@@ -47,9 +38,6 @@ export default defineComponent({
       default: () => {},
     },
   },
-  data: () => ({
-    expanded: [],
-  }),
   methods: {
     formatNAV(value: bigint) {
       return formatTokenValue(value, this.fund.baseToken.decimals) + " " + this.fund.baseToken.symbol;
@@ -59,27 +47,5 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-.details {
-  &__button {
-    @include borderGray;
-    padding: 0.5rem 1rem;
-    height: 2.5rem;
-    display: flex;
-    align-items: center;
-    font-size: $text-xs;
-    font-weight: 500;
-    color: $color-text-irrelevant;
 
-    &--text_expanded{
-      font-weight: 700;
-      color: $color-white;
-    }
-    &__expanded{
-      background-color: $color-background-button;
-    }
-  }
-  &__button_icon {
-    margin-left: 0.5rem;
-  }
-}
 </style>

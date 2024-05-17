@@ -2,10 +2,10 @@
   <div class="nav">
     <UiHeader>
       <div>
-        <div class="nav__header_title">
+        <div class="main_header__title">
           {{ fundTotalNAVFormattedShort }}
         </div>
-        <div class="nav__header_subtitle">
+        <div class="main_header__subtitle">
           Last updated on <strong>{{ fundLastNAVUpdateDate }}</strong>
         </div>
       </div>
@@ -23,7 +23,7 @@
     </UiHeader>
 
     <div class="main_card">
-      <UiHeader class="nav__methods_header">
+      <UiHeader>
         <div>
           <div class="main_expansion_panel__subtitle mb-4">
             NAV Methods
@@ -51,7 +51,7 @@
         </div>
       </UiHeader>
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
-        <FundNavMethodsTable :methods="fundLastNAVUpdate?.entries || []" />
+        <FundNavMethodsTable :methods="fundLastNAVUpdateEntries" />
       </div>
     </div>
     <div class="main_card">
@@ -70,12 +70,7 @@ import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
 
 const fund = useAttrs().fund as IFund;
-const { fundTotalNAVFormattedShort, selectedFundSlug } = toRefs(useFundStore());
-
-const fundLastNAVUpdate = computed(() => {
-  if (!fund?.navUpdates.length) return undefined;
-  return fund.navUpdates[fund.navUpdates.length - 1];
-})
+const { fundTotalNAVFormattedShort, selectedFundSlug, fundLastNAVUpdate, fundLastNAVUpdateEntries } = toRefs(useFundStore());
 
 const fundLastNAVUpdateDate = computed(() => {
   if (!fundLastNAVUpdate.value) return "N/A";
@@ -85,22 +80,6 @@ const fundLastNAVUpdateDate = computed(() => {
 
 <style scoped lang="scss">
 .nav {
-  &__methods_header,
-  &__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2.5rem;
-  }
-  &__header_title {
-    font-size: $text-xl;
-    color: $color-title;
-    font-weight: 500;
-    letter-spacing: $letter-spacing-lg;
-  }
-  &__header_subtitle {
-    color: $color-text-irrelevant;
-  }
   &__learn_more_link {
     font-weight: 500;
     color: $color-primary;

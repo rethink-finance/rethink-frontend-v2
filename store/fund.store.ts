@@ -80,6 +80,13 @@ export const useFundStore = defineStore({
     selectedFundSlug(state: IState): string {
       return (state.fund?.fundToken.symbol || "") + "-" + (state.fund?.address || "");
     },
+    fundLastNAVUpdate(state: IState): INAVUpdate | undefined {
+      if (!state.fund?.navUpdates.length) return undefined;
+      return state.fund.navUpdates[state.fund.navUpdates.length - 1];
+    },
+    fundLastNAVUpdateEntries(): INAVMethod[] {
+      return this.fundLastNAVUpdate?.entries || [];
+    },
     /**
      * Contracts
      */
@@ -309,7 +316,6 @@ export const useFundStore = defineStore({
 
           // NAV Updates
           navUpdates: [] as INAVUpdate[],
-          navMethods: [] as INAVMethod[],
         } as IFund;
 
         // Process metadata if available
