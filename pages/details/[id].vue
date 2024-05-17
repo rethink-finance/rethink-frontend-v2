@@ -202,9 +202,8 @@ const computedRoutes = computed(() => {
   margin-bottom: 1rem;
 
   @include sm {
-    margin: 0 5.5rem ;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
@@ -239,14 +238,12 @@ const computedRoutes = computed(() => {
   background-color: $color-gray-light-transparent;
   border-radius: $default-border-radius;
   padding: .5rem .62rem;
-  margin: 0 ;
   display: flex;
   flex-direction: row;
   gap: 0.5rem;
   align-items: center;
 
   @include sm{
-    margin: 0 5.5rem ;
     padding: 1rem 1.5rem;
   }
 

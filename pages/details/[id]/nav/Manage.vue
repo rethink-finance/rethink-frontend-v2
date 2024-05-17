@@ -1,9 +1,22 @@
 <template>
-  <div class="nav">
-    <div class="nav__header">
-      MANAGE NAV methods section
+  <UiHeader>
+    <div>
+      <div class="nav__header_title">
+        Manage NAV Methods
+      </div>
     </div>
-  </div>
+    <div>
+      <v-btn
+        class="text-secondary"
+        variant="outlined"
+      >
+        Simulate NAV
+      </v-btn>
+      <v-btn class="bg-primary text-secondary ms-6">
+        Create NAV Proposal
+      </v-btn>
+    </div>
+  </UiHeader>
 </template>
 
 <script setup lang="ts">

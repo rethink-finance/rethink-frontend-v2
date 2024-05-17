@@ -1,6 +1,6 @@
 <template>
   <div class="nav">
-    <div class="nav__header">
+    <UiHeader>
       <div>
         <div class="nav__header_title">
           {{ fundTotalNAVFormattedShort }}
@@ -20,10 +20,10 @@
           Update NAV
         </v-btn>
       </div>
-    </div>
+    </UiHeader>
 
     <div class="main_card">
-      <div class="nav__methods_header">
+      <UiHeader class="nav__methods_header">
         <div>
           <div class="main_expansion_panel__subtitle mb-4">
             NAV Methods
@@ -49,7 +49,7 @@
             </v-btn>
           </nuxt-link>
         </div>
-      </div>
+      </UiHeader>
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
         <FundNavMethodsTable :methods="fundLastNAVUpdate?.entries || []" />
       </div>
