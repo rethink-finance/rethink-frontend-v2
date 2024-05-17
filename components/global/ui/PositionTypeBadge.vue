@@ -13,10 +13,18 @@ const props = defineProps({
     type: String,
     default: undefined,
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const positionType = computed(() => props.value ? getPositionType(props.value as PositionType) : undefined);
-const positionTypeClass = computed(() => `position_type_${props.value as PositionType || "unknown"}`);
+const positionTypeClass = computed(() => {
+  const baseClass = `position_type_${props.value as PositionType || "unknown"}`;
+  return props.disabled ? `${baseClass} position_type--disabled` : baseClass;
+},
+);
 </script>
 
 <style scoped lang="scss">
@@ -31,5 +39,9 @@ const positionTypeClass = computed(() => `position_type_${props.value as Positio
 
   @include borderGray;
   background: $color-badge-navy;
+
+  &--disabled {
+    opacity: 0.65;
+  }
 }
 </style>

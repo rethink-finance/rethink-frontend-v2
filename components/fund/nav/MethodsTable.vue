@@ -10,7 +10,7 @@
     expand-on-click
   >
     <template #[`item.index`]="{ index }">
-      <strong>{{ index + 1 }}</strong>
+      <strong class="td_index">{{ index + 1 }}</strong>
     </template>
 
     <template #[`item.positionName`]="{ value }">
@@ -21,8 +21,8 @@
       {{ value ?? "N/A" }}
     </template>
 
-    <template #[`item.positionType`]="{ value }">
-      <UiPositionTypeBadge :value="value" />
+    <template #[`item.positionType`]="{ value, item }">
+      <UiPositionTypeBadge :value="value" :disabled="item.deleted" />
     </template>
 
     <template #[`item.data-table-expand`]="{ internalItem, isExpanded }">
@@ -140,6 +140,10 @@ export default defineComponent({
   }
   :deep(.tr_delete_method) {
     color: $color-disabled;
+
+    .td_index {
+      color: $color-error;
+    }
   }
 }
 
