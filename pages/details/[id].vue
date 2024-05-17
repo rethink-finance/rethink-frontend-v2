@@ -161,22 +161,26 @@ const computedRoutes = computed(() => {
 .fund_details {
   width: 100%;
 }
-.details_nav{
+.details_nav {
   position: relative;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   padding-top: 1rem;
-  padding-right: 1.5rem;
   width: 100%;
 }
 
-.details_nav_container{
+.details_nav_container {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: center;
-  margin: 0 ;
+  padding-top: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  margin-bottom: 1rem;
 
-  @include sm{
-    margin:0 5.5rem ;
+  @include sm {
+    margin: 0 5.5rem ;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 }
 
