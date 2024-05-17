@@ -3,6 +3,7 @@
     class="details_button"
     :class="{
       'details_button--expanded': active,
+      'details_button--disabled': disabled,
       'details_button--small': small,
     }"
   >
@@ -37,6 +38,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    disabled: {
+      type: Boolean,
+      default: false,
+    },
   },
 })
 </script>
@@ -58,6 +63,9 @@ export default defineComponent({
     cursor: pointer;
     background: $color-gray-light-transparent;
   }
+  &__icon {
+    margin-left: 0.5rem;
+  }
   &--text_expanded{
     font-weight: 700;
     color: $color-white;
@@ -65,11 +73,11 @@ export default defineComponent({
   &--small {
     padding: 0.5rem;
   }
-  &__expanded{
-    background-color: $color-background-button;
+  &--disabled {
+    opacity: 0.65;
   }
-  &__icon {
-    margin-left: 0.5rem;
+  &--expanded {
+    background-color: $color-background-button;
   }
 }
 </style>

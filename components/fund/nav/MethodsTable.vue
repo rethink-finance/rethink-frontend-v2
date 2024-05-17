@@ -25,8 +25,8 @@
       <UiPositionTypeBadge :value="value" :disabled="item.deleted" />
     </template>
 
-    <template #[`item.data-table-expand`]="{ internalItem, isExpanded }">
-      <UiDetailsButton text="Details" :active="isExpanded(internalItem)" />
+    <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded }">
+      <UiDetailsButton text="Details" :active="isExpanded(internalItem)" :disabled="item.deleted" />
     </template>
 
     <template #[`item.delete`]="{ item }">
