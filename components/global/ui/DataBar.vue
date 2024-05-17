@@ -44,8 +44,8 @@ export default defineComponent({
       border: 1px solid $color-border-dark;
       background: $color-gray-light-transparent;
       padding: 1rem;
-      box-shadow: 4px 4px 16px 0 $color-moonlight;
       flex-direction: row;
+      border-radius: $default-border-radius;
     }
   }
   ::v-deep(*) {
