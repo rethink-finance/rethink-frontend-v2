@@ -50,8 +50,8 @@
           </nuxt-link>
         </div>
       </div>
-      <div>
-        <FundNavMethods :fund="fund" />
+      <div class="methods main_grid main_grid--full-width main_grid--no-gap">
+        <FundNavMethodsTable :methods="fundLastNAVUpdate?.entries || []" />
       </div>
     </div>
     <div class="main_card">
@@ -72,9 +72,14 @@ import { useFundStore } from "~/store/fund.store";
 const fund = useAttrs().fund as IFund;
 const { fundTotalNAVFormattedShort, selectedFundSlug } = toRefs(useFundStore());
 
+const fundLastNAVUpdate = computed(() => {
+  if (!fund?.navUpdates.length) return undefined;
+  return fund.navUpdates[fund.navUpdates.length - 1];
+})
+
 const fundLastNAVUpdateDate = computed(() => {
-  if (!fund?.navUpdates.length) return "N/A";
-  return fund.navUpdates[fund.navUpdates.length - 1]?.date ?? "N/A";
+  if (!fundLastNAVUpdate.value) return "N/A";
+  return fundLastNAVUpdate.value.date ?? "N/A";
 })
 </script>
 
