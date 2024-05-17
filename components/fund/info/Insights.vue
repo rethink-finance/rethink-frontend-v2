@@ -17,6 +17,14 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
+          {{ fundStore.fundTotalNAVFormattedShort ?? "N/A"}}
+        </div>
+        <div class="data_bar__subtitle">
+          AUM
+        </div>
+      </div>
+      <div class="data_bar__item">
+        <div class="data_bar__title">
           {{ fund.inceptionDate }}
         </div>
         <div class="data_bar__subtitle">
@@ -68,8 +76,9 @@
 </template>
 
 <script lang="ts">
-import type IFund from "~/types/fund";
 import { numberColorClass } from "~/composables/numberColorClass";
+import { useFundStore } from "~/store/fund.store";
+import type IFund from "~/types/fund";
 
 export default {
   name: "FundInfoInsights",
@@ -78,6 +87,10 @@ export default {
       type: Object as PropType<IFund>,
       default: () => {},
     },
+  },
+  setup() {
+    const fundStore = useFundStore();
+    return { fundStore }
   },
   data() {
     return {};

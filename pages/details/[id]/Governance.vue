@@ -1,6 +1,13 @@
 <template>
   <div>
-    Fund Governance page is coming soon for <strong>{{ fund.title }}</strong>.
+    <div class="main_card">
+      <div class="main_expansion_panel__subtitle">
+        Governance Settings
+      </div>
+      <div>
+        <FundOverviewGovernance :fund="fund" />
+      </div>
+    </div>
   </div>
 </template>
 

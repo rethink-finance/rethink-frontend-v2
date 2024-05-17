@@ -110,12 +110,12 @@ const routes : IRoute[] = [
     title: "Fund Details",
     text: "",
   },
-  // {
-  //   to: `/details/${route.params.id}/governance`,
-  //   exactMatch: true,
-  //   title: "Governance",
-  //   text:"",
-  // },
+  {
+    to: `/details/${route.params.id}/governance`,
+    exactMatch: true,
+    title: "Governance",
+    text:"",
+  },
   {
     to: `/details/${route.params.id}/nav`,
     exactMatch: true,
