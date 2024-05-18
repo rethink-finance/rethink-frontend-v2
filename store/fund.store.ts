@@ -36,6 +36,7 @@ interface IState {
   userFundDelegateAddress: string;
   userFundShareValue: bigint
   selectedFundAddress: string;
+  fundManagedNAVMethods: INAVMethod[],
 }
 
 
@@ -50,6 +51,7 @@ export const useFundStore = defineStore({
     userFundShareValue: BigInt("0"),
     userFundDelegateAddress: "",
     selectedFundAddress: "",
+    fundManagedNAVMethods: [],
   }),
   getters: {
     accountStore(): any {
@@ -118,9 +120,15 @@ export const useFundStore = defineStore({
     async getFund(fundAddress: string) {
       this.selectedFundAddress = fundAddress;
       this.fund = undefined;
+      this.fundManagedNAVMethods = [];
 
       try {
         this.fund = await this.fetchFundData() as IFund;
+
+        // Set fund NAV methods to be edited.
+        // Create a deep copy of the array to prevent changing the original by reference.
+        // TODO first check if they already exist in the localStorage as draft?
+        this.fundManagedNAVMethods = JSON.parse(JSON.stringify(this.fundLastNAVUpdateEntries));
         console.log(this.fund)
       } catch (e) {
         console.error(`Failed fetching fund ${fundAddress} -> `, e)

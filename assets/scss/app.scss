@@ -129,6 +129,18 @@ a {
     }
   }
 }
+/* FORM */
+/* Append the asterisk to labels with the class 'required-label' */
+.label_required::after {
+  content: ' *';
+  color: $color-primary;
+  font-weight: bold;
+  font-size: 1.5rem;
+  line-height: 0.1rem;
+  right: 0;
+  margin-left: 0.1em;
+}
+
 
 
 /* TABLES */

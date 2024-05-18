@@ -54,6 +54,7 @@
         <FundNavMethodsTable :methods="fundLastNAVUpdateEntries" />
       </div>
     </div>
+
     <div class="main_card">
       <div class="main_expansion_panel__subtitle">
         NAV Updates

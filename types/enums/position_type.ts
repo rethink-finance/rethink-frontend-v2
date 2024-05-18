@@ -67,13 +67,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       },
       {
         label: "Position Token",
-        key: "position_token",
-        type: "text",
-        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
-      },
-      {
-        label: "Non Asset Token",
-        key: "nonAssetTokenAddress",
+        key: "assetTokenAddress",
         type: "text",
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
@@ -93,7 +87,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       },
       {
         label: "Position Token",
-        key: "position_token",
+        key: "assetTokenAddress",
         type: "text",
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
@@ -128,7 +122,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       },
       {
         label: "Position Token",
-        key: "position_token",
+        key: "assetTokenAddress",
         type: "text",
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
@@ -142,7 +136,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       },
       {
         label: "Position Token",
-        key: "position_token",
+        key: "assetTokenAddress",
         type: "text",
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },

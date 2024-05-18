@@ -1,4 +1,5 @@
 import { PositionType } from "~/types/enums/position_type";
+import { ValuationType } from "~/types/enums/valuation_type";
 
 
 /**
@@ -16,9 +17,11 @@ import { PositionType } from "~/types/enums/position_type";
   *     }
  */
 export default interface INAVMethod {
-  positionType: PositionType,
   positionName: string,
   valuationSource: string,
+  positionType: PositionType,
+  details: Record<string, any>[],
   detailsJson: string,
+  valuationType?: ValuationType,
   deleted?: boolean,
 }

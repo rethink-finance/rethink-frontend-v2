@@ -47,7 +47,7 @@
           Save Draft
         </v-btn>
       </UiHeader>
-      <FundNavMethodsTable :methods="fundLastNAVUpdateEntries" deletable />
+      <FundNavMethodsTable :methods="fundManagedNAVMethods" deletable />
     </div>
   </div>
 </template>
@@ -55,14 +55,11 @@
 <script setup lang="ts">
 // import type IFund from "~/types/fund";
 
-import { useFundStore } from "~/store/fund.store";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import { useFundStore } from "~/store/fund.store";
 const emit = defineEmits(["updateBreadcrumbs"]);
 
-// const fund = useAttrs().fund as IFund;
-// console.log(fund);
-
-const { selectedFundSlug, fundLastNAVUpdateEntries } = toRefs(useFundStore());
+const { selectedFundSlug, fundManagedNAVMethods } = toRefs(useFundStore());
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
