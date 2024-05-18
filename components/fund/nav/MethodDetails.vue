@@ -16,7 +16,6 @@
         :type="field.type"
         :min="field.min"
         :rules="rules"
-        hide-details
         required
       />
     </template>
@@ -71,12 +70,18 @@ const methodDetails = computed({
 const fields = computed(() =>
   PositionTypeValuationTypeFieldsMap[props.positionType][props.valuationType] || [],
 );
+const areAllFieldsValid = computed(() =>
+  fields.value.every((field: any) => {
+    const value = methodDetails.value[field.key];
+    return rules.every((rule: any) => rule(value) === true);
+  }),
+);
 
 /**
  * Form fields validation
  **/
 const rules = [
-  (value: any) => !!value || "Required.",
+  formRules.required,
 ];
 
 // Check the validity of each field.
@@ -84,12 +89,7 @@ const rules = [
 // each field differently, we have to set the "required" property in the field definition.
 watch(
   methodDetails, () => {
-    const isValid = fields.value.every((field: any) => {
-      const value = methodDetails.value[field.key];
-      return rules.every((rule: any) => rule(value) === true);
-    });
-    console.log("is child valid: ", isValid);
-    emit("validate", isValid);
+    emit("validate", areAllFieldsValid.value);
   },
   { deep: true },
 );

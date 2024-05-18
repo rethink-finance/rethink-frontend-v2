@@ -93,14 +93,14 @@
             v-model="method.details[0]"
             :position-type="method.positionType"
             :valuation-type="method.valuationType"
-            @validate="updateChildValid"
+            @validate="updateDetailsValid"
           />
         </v-row>
 
         <v-row class="mt-4">
           <v-col class="text-end">
             <v-btn
-              :disabled="!formIsValid || !childIsValid"
+              :disabled="!formIsValid || !detailsAreValid"
               @click="addMethod"
             >
               Add Method
@@ -137,7 +137,7 @@ const valuationTypes = computed(() =>
 
 const form = ref(null);
 const formIsValid = ref(false);
-const childIsValid = ref(false);
+const detailsAreValid = ref(false);
 
 const method = ref<INAVMethod>({
   positionName: "",
@@ -164,19 +164,24 @@ watch(() => method.value.valuationType, () => {
 
 /**
  * Handle form validation.
+ * Both method fields & method details fields (MethodDetails.vue) have to be valid.
  **/
 const rules = [
-  (value: any) => !!value || "Required.",
+  formRules.required,
 ];
-const updateChildValid = (isValid: any) => {
-  childIsValid.value = isValid;
-  console.log(isValid);
+const updateDetailsValid = (isValid: boolean) => {
+  detailsAreValid.value = isValid;
 };
 
 const addMethod = () => {
   console.log(method.value);
+  if (!formIsValid || !detailsAreValid)  {
+    return toastStore.warningToast(
+      "Some form fields are not valid.",
+    );
+  }
 
-  // Jsonify method details:
+  // JSONIFY method details:
   // - NFT (composable) can have more than 1 method, so take all methods in details.
   // - All other Position Types can only have 1 method, so take the first one (there should only be one).
   const details = method.value.positionType === PositionType.NFT ? method.value.details : method.value.details[0];
