@@ -1,0 +1,136 @@
+<template>
+  <v-col
+    v-for="field in fields"
+    :key="field.key"
+    class="method_details"
+    cols="12"
+    :lg="field.cols || 6"
+  >
+    <v-label>
+      {{ field.label }}
+    </v-label>
+    <template v-if="['text', 'number'].includes(field.type)">
+      <v-text-field
+        v-model="methodDetails[field.key]"
+        :placeholder="field.placeholder"
+        :type="field.type"
+        :min="field.min"
+        hide-details
+        required
+      />
+    </template>
+    <template v-else-if="field.type === 'textarea'">
+      <v-textarea
+        v-model="methodDetails[field.key]"
+        :placeholder="field.placeholder"
+        hide-details
+        required
+      />
+    </template>
+    <template v-else-if="field.type === 'checkbox'">
+      <v-checkbox
+        v-model="methodDetails[field.key]"
+      />
+    </template>
+  </v-col>
+</template>
+
+<script setup lang="ts">
+import {
+  PositionType,
+  PositionTypeValuationTypeFieldsMap,
+} from "~/types/enums/position_type";
+import { ValuationType } from "~/types/enums/valuation_type";
+const emit = defineEmits(["update:modelValue"]);
+
+const props = defineProps({
+  modelValue: {
+    type: Object as PropType<Record<string, any>>,
+    default: () => ({}),
+  },
+  positionType: {
+    type: String as PropType<PositionType>,
+    default: () => PositionType.Liquid,
+  },
+  valuationType: {
+    type: String as PropType<ValuationType>,
+    default: () => ValuationType.DEXPair,
+  },
+});
+
+const methodDetails = computed({
+  get: () => props?.modelValue,
+  set: (value: Record<string, any>) => {
+    console.log(value);
+    emit("update:modelValue", value);
+  },
+});
+
+const fields = computed(() =>
+  PositionTypeValuationTypeFieldsMap[props.positionType][props.valuationType] || [],
+);
+
+
+// const valueRules = [
+//   (value: string) => {
+//     // TODO check if valid address 0x0123...123
+//     const valueWei = Number(value);
+//     if (valueWei <= 0) return "Value must be positive."
+//     return true;
+//   },
+// ];
+
+</script>
+
+<style lang="scss" scoped>
+.buttons_container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  margin-top: 0.5rem;
+}
+.request_deposit {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  font-size: $text-sm;
+  line-height: 1;
+
+  &__token {
+    font-weight: 500;
+    width: 100%;
+  }
+  &__token_header {
+    display: flex;
+    flex-direction: row;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    color: $color-light-subtitle
+  }
+  &__token_data {
+    @include borderGray;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-bottom: 0.5rem;
+    color: $color-white;
+  }
+  &__token_col {
+    padding: 0.75rem;
+    height: 2.5rem;
+    background: $color-navy-gray;
+
+    &:first-of-type {
+      @include borderGray("border-right", false);
+    }
+    &--dark {
+      background: $color-navy-gray-dark;
+    }
+  }
+  &__balance {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+</style>

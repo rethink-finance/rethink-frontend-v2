@@ -38,7 +38,9 @@
           cols="12"
           sm="6"
         >
-          <v-label> Position Type </v-label>
+          <v-label>
+            Position Type
+          </v-label>
           <div>
             <v-btn-toggle v-model="method.positionType" group>
               <v-btn
@@ -78,6 +80,14 @@
           <strong>Method Details</strong>
         </v-col>
       </v-row>
+      <v-row>
+        <!-- TODO for composable do if statement and display all method.details rows -->
+        <FundNavMethodDetails
+          v-model="method.details[0]"
+          :position-type="method.positionType"
+          :valuation-type="method.valuationType"
+        />
+      </v-row>
     </v-container>
 
     <div class="buttons_container">
@@ -87,8 +97,11 @@
 </template>
 
 <script setup lang="ts">
-
-import { PositionType, PositionTypes, PositionTypeToValuationTypesMap } from "~/types/enums/position_type";
+import {
+  PositionType,
+  PositionTypes,
+  PositionTypeToValuationTypesMap,
+} from "~/types/enums/position_type";
 import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 
 // const emit = defineEmits(["methodCreated"]);
@@ -102,18 +115,31 @@ interface IMethod {
   valuationSource: string,
   positionType: PositionType,
   valuationType: ValuationType,
+  details: Record<string, any>[]
 }
 const method = ref<IMethod>({
   positionName: "",
   valuationSource: "",
   positionType: PositionType.Liquid,
   valuationType: ValuationType.DEXPair,
+  details: [
+    {},
+  ],
 });
 
 watch(() => method.value.positionType, (newPositionType) => {
+  // Dynamically set valuation type based on the selected position type.
   method.value.valuationType = PositionTypeToValuationTypesMap[newPositionType][0];
+  // Reset method details when valuationType change
+  method.value.details = [{}];
 });
-
+watch(() => method.value.valuationType, () => {
+  // Reset method details when valuationType change
+  method.value.details = [{}];
+});
+watch(() => method.value.details[0], (newVal) => {
+  console.log("Details updated:", newVal);
+});
 
 // const valueRules = [
 //   (value: string) => {

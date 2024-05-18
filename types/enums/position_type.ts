@@ -1,6 +1,5 @@
 import type { IPositionType } from "~/types/position_type";
-import type IValuationType from "~/types/valuation_type";
-import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
+import { ValuationType } from "~/types/enums/valuation_type";
 
 export enum PositionType {
   Liquid = "liquid",
@@ -27,6 +26,13 @@ export const PositionTypesMap: Record<PositionType, IPositionType> = {
   },
 };
 
+export const PositionTypes = Object.values(PositionTypesMap);
+export const PositionTypeKeys = Object.values(PositionType);
+
+
+/**
+ * Position Type Maps (Dynamic Form Data)
+ **/
 export const PositionTypeToValuationTypesMap: Record<PositionType, ValuationType[]> = {
   [PositionType.Liquid]: [
     ValuationType.DEXPair,
@@ -44,5 +50,129 @@ export const PositionTypeToValuationTypesMap: Record<PositionType, ValuationType
   [PositionType.Composable]: [],
 }
 
-export const PositionTypes = Object.values(PositionTypesMap);
-export const PositionTypeKeys = Object.values(PositionType);
+type PositionTypeValuationTypeFieldsMapType = {
+  [key in PositionType]: {
+    [key in ValuationType]?: any[];
+  };
+};
+
+export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFieldsMapType = {
+  [PositionType.Liquid]: {
+    [ValuationType.DEXPair]: [
+      {
+        label: "Token pair",
+        key: "token_pair",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+      {
+        label: "Position Token",
+        key: "position_token",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+      {
+        label: "Non Asset Token",
+        key: "nonAssetTokenAddress",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+    ],
+    [ValuationType.Aggregator]: [
+      {
+        label: "Aggregator Address",
+        key: "aggregator_address",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+      {
+        label: "Encoded Function Input Data",
+        key: "encoded_function_input_data",
+        type: "textarea",
+        cols: 12,
+      },
+      {
+        label: "Position Token",
+        key: "position_token",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+      {
+        label: "Is Return Array?",
+        key: "is_return_array",
+        type: "checkbox",
+      },
+      {
+        label: "Return Length",
+        key: "return_length",
+        type: "number",
+        min: 0,
+        placeholder: "E.g. 4",
+      },
+      {
+        label: "Return Index",
+        key: "return_index",
+        type: "number",
+        min: 0,
+        placeholder: "E.g. 1",
+      },
+    ],
+  },
+  [PositionType.NFT]: {
+    [ValuationType.ERC721]: [
+      {
+        label: "Token pair",
+        key: "token_pair",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+      {
+        label: "Position Token",
+        key: "position_token",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+    ],
+    [ValuationType.ERC1155]: [
+      {
+        label: "Token pair",
+        key: "token_pair",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+      {
+        label: "Position Token",
+        key: "position_token",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+    ],
+  },
+  [PositionType.Illiquid]: {
+    [ValuationType.ERC20]: [
+      {
+        label: "Token pair",
+        key: "token_pair",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+    ],
+    [ValuationType.ERC721]: [
+      {
+        label: "Token pair",
+        key: "token_pair",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+    ],
+    [ValuationType.ERC1155]: [
+      {
+        label: "Token pair",
+        key: "token_pair",
+        type: "text",
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+    ],
+  },
+  [PositionType.Composable]: {},
+};
