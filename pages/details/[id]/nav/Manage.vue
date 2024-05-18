@@ -53,8 +53,6 @@
 </template>
 
 <script setup lang="ts">
-// import type IFund from "~/types/fund";
-
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useFundStore } from "~/store/fund.store";
 const emit = defineEmits(["updateBreadcrumbs"]);

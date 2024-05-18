@@ -52,7 +52,7 @@ export const PositionTypeToValuationTypesMap: Record<PositionType, ValuationType
 
 type PositionTypeValuationTypeFieldsMapType = {
   [key in PositionType]: {
-    [key in ValuationType]?: any[];
+    [key in ValuationType | "undefined"]?: any[];
   };
 };
 
@@ -68,7 +68,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
     [ValuationType.DEXPair]: [
       {
         label: "Token pair",
-        key: "token_pair",
+        key: "tokenPair",
         type: "text",
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
@@ -82,13 +82,13 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
     [ValuationType.Aggregator]: [
       {
         label: "Aggregator Address",
-        key: "aggregator_address",
+        key: "aggregatorAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
       {
         label: "Encoded Function Input Data",
-        key: "encoded_function_input_data",
+        key: "functionSignatureWithEncodedInputs",
         type: InputType.Textarea,
         cols: 12,
       },
@@ -100,21 +100,89 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       },
       {
         label: "Is Return Array?",
-        key: "is_return_array",
+        key: "isReturnArray",
         type: InputType.Checkbox,
       },
       {
         label: "Return Length",
-        key: "return_length",
+        key: "returnLength",
         type: InputType.Number,
         min: 0,
         placeholder: "E.g. 4",
       },
       {
         label: "Return Index",
-        key: "return_index",
+        key: "returnIndex",
         type: InputType.Number,
         min: 0,
+        placeholder: "E.g. 1",
+      },
+    ],
+  },
+  [PositionType.Illiquid]: {
+    [ValuationType.ERC20]: [
+      {
+        label: "Price Per Token (in the base asset)",
+        key: "pricePerToken",
+        type: InputType.Number,
+        placeholder: "E.g. 10",
+      },
+      {
+        label: "Token Address",
+        key: "tokenAddress",
+        type: InputType.Text,
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+      {
+        label: "Comma-separated list of TX hashes",
+        key: "otcTxHashes",
+        type: InputType.Textarea,
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984,\n0xbb4570f3dd5aG2nf1512uDF915BDcdF34202h17g",
+      },
+    ],
+    [ValuationType.ERC721]: [
+      {
+        label: "Price Per Token (in the base asset)",
+        key: "pricePerToken", // TODO correct this key
+        type: InputType.Number,
+        placeholder: "E.g. 10",
+      },
+      {
+        label: "Token Address",
+        key: "tokenAddress",
+        type: InputType.Text,
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+      {
+        label: "Comma-separated list of TX hashes",
+        key: "otcTxHashes",
+        type: InputType.Textarea,
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984,\n0xbb4570f3dd5aG2nf1512uDF915BDcdF34202h17g",
+      },
+    ],
+    [ValuationType.ERC1155]: [
+      {
+        label: "Price Per Token (in the base asset)",
+        key: "pricePerToken",
+        type: InputType.Number,
+        placeholder: "E.g. 10",
+      },
+      {
+        label: "Token Address",
+        key: "tokenAddress",
+        type: InputType.Text,
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+      {
+        label: "Comma-separated list of TX hashes",
+        key: "otcTxHashes",
+        type: InputType.Textarea,
+        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984,\n0xbb4570f3dd5aG2nf1512uDF915BDcdF34202h17g",
+      },
+      {
+        label: "NFT Index",
+        key: "nftIndex",
+        type: InputType.Number,
         placeholder: "E.g. 1",
       },
     ],
@@ -122,58 +190,95 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
   [PositionType.NFT]: {
     [ValuationType.ERC721]: [
       {
-        label: "Token pair",
-        key: "token_pair",
+        label: "Oracle Feed Address",
+        key: "tokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
       {
-        label: "Position Token",
-        key: "assetTokenAddress",
+        label: "NFT Address",
+        key: "tokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
     ],
     [ValuationType.ERC1155]: [
       {
-        label: "Token pair",
-        key: "token_pair",
+        label: "Oracle Feed Address",
+        key: "tokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
       {
-        label: "Position Token",
-        key: "assetTokenAddress",
+        label: "NFT Address",
+        key: "tokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      },
+      {
+        label: "NFT Index",
+        key: "nftIndex",
+        type: InputType.Number,
+        placeholder: "E.g. 1",
       },
     ],
   },
-  [PositionType.Illiquid]: {
-    [ValuationType.ERC20]: [
+  [PositionType.Composable]: {
+    undefined: [
       {
-        label: "Token pair",
-        key: "token_pair",
+        label: "Contract Address",
+        key: "remoteContractAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
-    ],
-    [ValuationType.ERC721]: [
       {
-        label: "Token pair",
-        key: "token_pair",
+        label: "Function Signature",
+        key: "functionSignatures",
         type: InputType.Text,
-        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        placeholder: "E.g. getPositionValueInUSD(address,address,uint)",
       },
-    ],
-    [ValuationType.ERC1155]: [
       {
-        label: "Token pair",
-        key: "token_pair",
+        label: "Encoded Function Input Data",
+        key: "encodedFunctionSignatureWithInputs",
+        type: InputType.Textarea,
+        cols: 12,
+      },
+      {
+        label: "Decimals Used For Return Value",
+        key: "normalizationDecimals",
+        type: InputType.Number,
+        placeholder: "E.g. 18",
+      },
+      {
+        label: "Is Return Array?",
+        key: "isReturnArray",
+        type: InputType.Checkbox,
+      },
+      {
+        label: "Return Length",
+        key: "returnArraySize",
+        type: InputType.Number,
+        min: 0,
+        placeholder: "E.g. 4",
+      },
+      {
+        label: "Return Index",
+        key: "returnIndex",
+        type: InputType.Number,
+        min: 0,
+        placeholder: "E.g. 1",
+      },
+      {
+        label: "Return Value Type",
+        key: "returnValType",
         type: InputType.Text,
-        placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        placeholder: "E.g. UINT256",
+      },
+      {
+        label: "Is Negative?",
+        key: "isNegative",
+        type: InputType.Checkbox,
       },
     ],
   },
-  [PositionType.Composable]: {},
 };

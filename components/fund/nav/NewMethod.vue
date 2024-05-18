@@ -179,6 +179,8 @@ const addMethod = () => {
     );
   }
 
+  // TODO Add mandatory fields that are required for each entry.
+
   // JSONIFY method details:
   // - NFT (composable) can have more than 1 method, so take all methods in details.
   // - All other Position Types can only have 1 method, so take the first one (there should only be one).
