@@ -6,7 +6,7 @@
     cols="12"
     :lg="field.cols || 6"
   >
-    <v-label>
+    <v-label class="label_required">
       {{ field.label }}
     </v-label>
     <template v-if="['text', 'number'].includes(field.type)">
@@ -15,6 +15,7 @@
         :placeholder="field.placeholder"
         :type="field.type"
         :min="field.min"
+        :rules="rules"
         hide-details
         required
       />
@@ -23,6 +24,7 @@
       <v-textarea
         v-model="methodDetails[field.key]"
         :placeholder="field.placeholder"
+        :rules="rules"
         hide-details
         required
       />
@@ -41,7 +43,7 @@ import {
   PositionTypeValuationTypeFieldsMap,
 } from "~/types/enums/position_type";
 import { ValuationType } from "~/types/enums/valuation_type";
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue", "validate"]);
 
 const props = defineProps({
   modelValue: {
@@ -70,15 +72,27 @@ const fields = computed(() =>
   PositionTypeValuationTypeFieldsMap[props.positionType][props.valuationType] || [],
 );
 
+/**
+ * Form fields validation
+ **/
+const rules = [
+  (value: any) => !!value || "Required.",
+];
 
-// const valueRules = [
-//   (value: string) => {
-//     // TODO check if valid address 0x0123...123
-//     const valueWei = Number(value);
-//     if (valueWei <= 0) return "Value must be positive."
-//     return true;
-//   },
-// ];
+// Check the validity of each field.
+// For now, we make all fields required. If we wanted to change the required field based for
+// each field differently, we have to set the "required" property in the field definition.
+watch(
+  methodDetails, () => {
+    const isValid = fields.value.every((field: any) => {
+      const value = methodDetails.value[field.key];
+      return rules.every((rule: any) => rule(value) === true);
+    });
+    console.log("is child valid: ", isValid);
+    emit("validate", isValid);
+  },
+  { deep: true },
+);
 
 </script>
 

@@ -17,7 +17,8 @@
             </v-label>
             <v-text-field
               v-model="method.positionName"
-              placeholder="WETH"
+              placeholder="E.g. WETH"
+              :rules="rules"
               hide-details
               required
             />
@@ -31,7 +32,8 @@
             </v-label>
             <v-text-field
               v-model="method.valuationSource"
-              placeholder="Uniswap ETH/USDC"
+              placeholder="E.g. Uniswap ETH/USDC"
+              :rules="rules"
               hide-details
               required
             />
@@ -91,13 +93,14 @@
             v-model="method.details[0]"
             :position-type="method.positionType"
             :valuation-type="method.valuationType"
+            @validate="updateChildValid"
           />
         </v-row>
 
         <v-row class="mt-4">
           <v-col class="text-end">
             <v-btn
-              :disabled="!formIsValid"
+              :disabled="!formIsValid || !childIsValid"
               @click="addMethod"
             >
               Add Method
@@ -116,11 +119,7 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import { useFundStore } from "~/store/fund.store";
-import {
-  PositionType,
-  PositionTypes,
-  PositionTypeToValuationTypesMap,
-} from "~/types/enums/position_type";
+import { PositionType, PositionTypes, PositionTypeToValuationTypesMap } from "~/types/enums/position_type";
 import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import { useToastStore } from "~/store/toast.store";
@@ -135,8 +134,10 @@ const { selectedFundSlug } = toRefs(useFundStore());
 const valuationTypes = computed(() =>
   PositionTypeToValuationTypesMap[method.value.positionType].map(type => ValuationTypesMap[type]),
 );
-const form = reactive({});
+
+const form = ref(null);
 const formIsValid = ref(false);
+const childIsValid = ref(false);
 
 const method = ref<INAVMethod>({
   positionName: "",
@@ -160,15 +161,17 @@ watch(() => method.value.valuationType, () => {
   method.value.details = [{}];
 });
 
-// TODO handle validation
-// const valueRules = [
-//   (value: string) => {
-//     // TODO check if valid address 0x0123...123
-//     const valueWei = Number(value);
-//     if (valueWei <= 0) return "Value must be positive."
-//     return true;
-//   },
-// ];
+
+/**
+ * Handle form validation.
+ **/
+const rules = [
+  (value: any) => !!value || "Required.",
+];
+const updateChildValid = (isValid: any) => {
+  childIsValid.value = isValid;
+  console.log(isValid);
+};
 
 const addMethod = () => {
   console.log(method.value);
@@ -177,8 +180,7 @@ const addMethod = () => {
   // - NFT (composable) can have more than 1 method, so take all methods in details.
   // - All other Position Types can only have 1 method, so take the first one (there should only be one).
   const details = method.value.positionType === PositionType.NFT ? method.value.details : method.value.details[0];
-  const detailsJson = formatJson(details);
-  method.value.detailsJson = detailsJson;
+  method.value.detailsJson = formatJson(details);
 
   // Add newly defined method to fund managed methods.
   fundStore.fundManagedNAVMethods.push(method.value);
@@ -187,8 +189,6 @@ const addMethod = () => {
   router.push(`/details/${selectedFundSlug.value}/nav/manage`);
   toastStore.addToast("Method added successfully.")
 }
-
-
 </script>
 
 <style lang="scss" scoped>
