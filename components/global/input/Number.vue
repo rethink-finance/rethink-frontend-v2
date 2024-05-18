@@ -1,7 +1,7 @@
 <template>
   <v-text-field
     v-model="internalValueAsString"
-    class="custom-text-field"
+    class="input_number"
     type="number"
     min="0"
     hide-spin-buttons
@@ -49,9 +49,20 @@ watch(
 </script>
 
 <style lang="scss" scoped>
-.custom-text-field {
-  ::v-deep(input) {
+.input_number {
+  :deep(input) {
+    font-size: $text-sm;
+  }
+  :deep(input) {
     text-align: right !important;
+  }
+  :deep(.v-input) {
+      font-size: $text-sm;
+      line-height: 1;
+  }
+  :deep(.v-field) {
+    border-radius: 0;
+    border: none;
   }
 }
 </style>

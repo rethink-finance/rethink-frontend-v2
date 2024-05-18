@@ -1,15 +1,73 @@
 <template>
   <div class="new_method">
-    <div class="">
-      <v-label> Position Name </v-label>
-      <v-text-field
-        v-model="tokenValue"
-        :counter="10"
-        :rules="tokenValueRules"
-        hide-details
-        required
-      />
-    </div>
+    <v-container>
+      <v-row>
+        <v-col>
+          <strong>Position Method</strong>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col
+          cols="12"
+          sm="6"
+        >
+          <v-label> Position Name </v-label>
+          <v-text-field
+            :rules="tokenValueRules"
+            placeholder="WETH"
+            hide-details
+            required
+          />
+        </v-col>
+        <v-col
+          cols="12"
+          sm="6"
+        >
+          <v-label> Valuation Source </v-label>
+          <v-text-field
+            :rules="tokenValueRules"
+            placeholder="Uniswap ETH/USDC"
+            hide-details
+            required
+          />
+        </v-col>
+      </v-row>
+
+      <v-row>
+        <v-col
+          cols="12"
+          sm="6"
+        >
+          <v-label> Position Type </v-label>
+          <div>
+            <v-btn-toggle group>
+              <v-btn v-for="positionType in PositionTypes" variant="outlined" value="center">
+                {{ positionType.name }}
+              </v-btn>
+            </v-btn-toggle>
+          </div>
+        </v-col>
+        <v-col
+          cols="12"
+          sm="6"
+        >
+          <v-label> Valuation Type </v-label>
+          <div>
+            <v-btn-toggle group>
+              <v-btn v-for="valuationType in ValuationTypes" variant="outlined" value="center">
+                {{ valuationType.name }}
+              </v-btn>
+            </v-btn-toggle>
+          </div>
+        </v-col>
+      </v-row>
+
+      <v-row class="mt-4">
+        <v-col>
+          <strong>Method Details</strong>
+        </v-col>
+      </v-row>
+    </v-container>
 
     <div class="buttons_container">
       <slot name="buttons" />
@@ -18,6 +76,9 @@
 </template>
 
 <script setup lang="ts">
+
+import { PositionTypes } from "~/types/enums/position_type";
+import { ValuationTypes } from "~/types/enums/valuation_type";
 
 const props = defineProps({
   modelValue: {

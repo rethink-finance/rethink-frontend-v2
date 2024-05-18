@@ -25,5 +25,5 @@ export const PositionTypesMap: Record<string, IPositionType> = {
   },
 };
 
-export const PositionTypes = Object.entries(PositionTypesMap);
+export const PositionTypes = Object.values(PositionTypesMap);
 export const PositionTypeKeys = Object.values(PositionType);

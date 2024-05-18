@@ -3,19 +3,18 @@ $vuetify-border-width: 1px;
 
 :root {
   /* BUTTONS */
+  .v-btn-group {
+    .v-btn.v-btn--variant-outlined {
+        border: none;
+    }
+    .v-btn:not(.v-btn--active) {
+      color: $color-disabled;
+    }
+  }
   /* Duplicated .v-btn to increase specificity, do not remove. */
   .v-btn.v-btn {
     text-transform: none;
     font-size: $text-sm;
-
-    &__overlay {
-      opacity: 0 !important;
-    }
-    &:hover {
-      .v-btn__overlay {
-        opacity: 0 !important;
-      }
-    }
 
     /* Default */
     &--variant-elevated {
@@ -71,16 +70,17 @@ $vuetify-border-width: 1px;
   input {
     min-height: $input-height;
     height: $input-height;
-    font-size: $text-sm;
+    font-size: $text-md;
     line-height: 1;
     padding: 0.75rem;
   }
   .v-input {
-    font-size: $text-sm;
+    font-size: $text-md;
     line-height: 1;
 
     .v-field {
       border-radius: 0;
+      @include borderGray;
     }
     .v-field__overlay {
       background: none;
@@ -89,6 +89,7 @@ $vuetify-border-width: 1px;
       display: none;
     }
   }
+
   /* EXPANSION PANELS */
   .v-expansion-panels {
     z-index: 0;
