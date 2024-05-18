@@ -32,7 +32,7 @@ export const useWeb3Store = defineStore({
         rpcUrl: "https://arbitrum.drpc.org",
       },
       "0xfc": {
-        chainId: "0xa4b1",
+        chainId: "0xfc",
         chainName: "Fraxtal",
         chainShort: "frax",
         rpcUrl: "https://rpc.frax.com",
