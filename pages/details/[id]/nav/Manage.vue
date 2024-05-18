@@ -19,6 +19,28 @@
       </div>
     </UiHeader>
     <div class="main_card">
+      <UiHeader>
+        <div>
+          <v-btn
+            class="text-secondary me-6"
+            variant="outlined"
+          >
+            Define New Method
+          </v-btn>
+          <v-btn
+            class="text-secondary"
+            variant="outlined"
+          >
+            Add From Library
+          </v-btn>
+        </div>
+        <v-btn
+          class="text-secondary"
+          variant="outlined"
+        >
+          Save Draft
+        </v-btn>
+      </UiHeader>
       <FundNavMethodsTable :methods="fundLastNAVUpdateEntries" deletable />
     </div>
   </div>
