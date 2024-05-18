@@ -8,6 +8,7 @@
     class="main_table nav_entries"
     show-expand
     expand-on-click
+    return-object
   >
     <template #[`item.index`]="{ index }">
       <strong class="td_index">{{ index + 1 }}</strong>
