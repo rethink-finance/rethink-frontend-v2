@@ -56,6 +56,13 @@ type PositionTypeValuationTypeFieldsMapType = {
   };
 };
 
+export enum InputType {
+  Text = "text",
+  Textarea = "textarea",
+  Checkbox = "checkbox",
+  Number = "number",
+}
+
 export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFieldsMapType = {
   [PositionType.Liquid]: {
     [ValuationType.DEXPair]: [
@@ -68,7 +75,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       {
         label: "Position Token",
         key: "assetTokenAddress",
-        type: "text",
+        type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
     ],
@@ -76,37 +83,37 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       {
         label: "Aggregator Address",
         key: "aggregator_address",
-        type: "text",
+        type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
       {
         label: "Encoded Function Input Data",
         key: "encoded_function_input_data",
-        type: "textarea",
+        type: InputType.Textarea,
         cols: 12,
       },
       {
         label: "Position Token",
         key: "assetTokenAddress",
-        type: "text",
+        type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
       {
         label: "Is Return Array?",
         key: "is_return_array",
-        type: "checkbox",
+        type: InputType.Checkbox,
       },
       {
         label: "Return Length",
         key: "return_length",
-        type: "number",
+        type: InputType.Number,
         min: 0,
         placeholder: "E.g. 4",
       },
       {
         label: "Return Index",
         key: "return_index",
-        type: "number",
+        type: InputType.Number,
         min: 0,
         placeholder: "E.g. 1",
       },
@@ -117,13 +124,13 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       {
         label: "Token pair",
         key: "token_pair",
-        type: "text",
+        type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
       {
         label: "Position Token",
         key: "assetTokenAddress",
-        type: "text",
+        type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
     ],
@@ -131,13 +138,13 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       {
         label: "Token pair",
         key: "token_pair",
-        type: "text",
+        type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
       {
         label: "Position Token",
         key: "assetTokenAddress",
-        type: "text",
+        type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
     ],
@@ -147,7 +154,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       {
         label: "Token pair",
         key: "token_pair",
-        type: "text",
+        type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
     ],
@@ -155,7 +162,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       {
         label: "Token pair",
         key: "token_pair",
-        type: "text",
+        type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
     ],
@@ -163,7 +170,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       {
         label: "Token pair",
         key: "token_pair",
-        type: "text",
+        type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
     ],

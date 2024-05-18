@@ -6,7 +6,7 @@
     cols="12"
     :lg="field.cols || 6"
   >
-    <v-label class="label_required">
+    <v-label :class="{'label_required': !isFieldCheckbox(field)}">
       {{ field.label }}
     </v-label>
     <template v-if="['text', 'number'].includes(field.type)">
@@ -29,15 +29,14 @@
       />
     </template>
     <template v-else-if="field.type === 'checkbox'">
-      <v-checkbox
-        v-model="methodDetails[field.key]"
-      />
+      <v-checkbox v-model="methodDetails[field.key]" />
     </template>
   </v-col>
 </template>
 
 <script setup lang="ts">
 import {
+  InputType,
   PositionType,
   PositionTypeValuationTypeFieldsMap,
 } from "~/types/enums/position_type";
@@ -62,7 +61,6 @@ const props = defineProps({
 const methodDetails = computed({
   get: () => props?.modelValue,
   set: (value: Record<string, any>) => {
-    console.log(value);
     emit("update:modelValue", value);
   },
 });
@@ -70,12 +68,7 @@ const methodDetails = computed({
 const fields = computed(() =>
   PositionTypeValuationTypeFieldsMap[props.positionType][props.valuationType] || [],
 );
-const areAllFieldsValid = computed(() =>
-  fields.value.every((field: any) => {
-    const value = methodDetails.value[field.key];
-    return rules.every((rule: any) => rule(value) === true);
-  }),
-);
+
 
 /**
  * Form fields validation
@@ -84,12 +77,25 @@ const rules = [
   formRules.required,
 ];
 
-// Check the validity of each field.
 // For now, we make all fields required. If we wanted to change the required field based for
 // each field differently, we have to set the "required" property in the field definition.
+const isFieldCheckbox = (field: any) => {
+  return field.type === InputType.Checkbox
+}
+const allFieldsValid = computed(() =>
+  fields.value.every((field: any) => {
+    // Checkboxes are not required. All other fields are required for now.
+    if (isFieldCheckbox(field)) return true;
+
+    const value = methodDetails.value[field.key];
+    return rules.every((rule: any) => rule(value) === true);
+  }),
+);
+
+// Check the validity of each field.
 watch(
   methodDetails, () => {
-    emit("validate", areAllFieldsValid.value);
+    emit("validate", allFieldsValid.value);
   },
   { deep: true },
 );

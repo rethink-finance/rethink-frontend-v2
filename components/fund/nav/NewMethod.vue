@@ -19,7 +19,6 @@
               v-model="method.positionName"
               placeholder="E.g. WETH"
               :rules="rules"
-              hide-details
               required
             />
           </v-col>
@@ -34,7 +33,6 @@
               v-model="method.valuationSource"
               placeholder="E.g. Uniswap ETH/USDC"
               :rules="rules"
-              hide-details
               required
             />
           </v-col>
@@ -175,7 +173,7 @@ const updateDetailsValid = (isValid: boolean) => {
 
 const addMethod = () => {
   console.log(method.value);
-  if (!formIsValid || !detailsAreValid)  {
+  if (!formIsValid.value || !detailsAreValid.value)  {
     return toastStore.warningToast(
       "Some form fields are not valid.",
     );
