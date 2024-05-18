@@ -1,7 +1,7 @@
 <template>
   <v-data-table
     v-if="methods.length"
-    :expanded="expanded"
+    v-model:expanded="expanded"
     :headers="headers"
     :items="methods"
     :cell-props="methodProps"
@@ -25,8 +25,13 @@
       <UiPositionTypeBadge :value="value" :disabled="item.deleted" />
     </template>
 
-    <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded }">
-      <UiDetailsButton text="Details" :active="isExpanded(internalItem)" :disabled="item.deleted" />
+    <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
+      <UiDetailsButton
+        text="Details"
+        :active="isExpanded(internalItem)"
+        :disabled="item.deleted"
+        @click.stop="toggleExpand(internalItem)"
+      />
     </template>
 
     <template #[`item.delete`]="{ item }">
