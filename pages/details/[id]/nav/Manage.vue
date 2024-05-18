@@ -25,7 +25,7 @@
             :to="`/details/${selectedFundSlug}/nav/newMethod`"
           >
             <v-btn
-              class="text-secondary me-6"
+              class="text-secondary me-4"
               variant="outlined"
             >
               Define New Method
@@ -39,12 +39,13 @@
           </v-btn>
         </div>
         <!--        TODO implement saving/loading drafts to local storage -->
-        <!--        <v-btn-->
-        <!--          class="text-secondary"-->
-        <!--          variant="outlined"-->
-        <!--        >-->
-        <!--          Save Draft-->
-        <!--        </v-btn>-->
+        <v-btn
+          class="text-secondary"
+          variant="outlined"
+          disabled
+        >
+          Save Draft
+        </v-btn>
       </UiHeader>
       <FundNavMethodsTable :methods="fundLastNAVUpdateEntries" deletable />
     </div>
