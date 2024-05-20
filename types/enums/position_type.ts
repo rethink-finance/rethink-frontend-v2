@@ -26,6 +26,7 @@ export const PositionTypesMap: Record<PositionType, IPositionType> = {
   },
 };
 
+
 export const PositionTypes = Object.values(PositionTypesMap);
 export const PositionTypeKeys = Object.values(PositionType);
 
@@ -122,8 +123,20 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
   [PositionType.Illiquid]: {
     [ValuationType.ERC20]: [
       {
+        label: "Base Currency Spent",
+        key: "baseCurrencySpent",
+        type: InputType.Number,
+        placeholder: "E.g. 10",
+      },
+      {
         label: "Price Per Token (in the base asset)",
         key: "pricePerToken",
+        type: InputType.Number,
+        placeholder: "E.g. 10",
+      },
+      {
+        label: "Amount Of Acquired Tokens",
+        key: "amountAquiredTokens",
         type: InputType.Number,
         placeholder: "E.g. 10",
       },
@@ -142,8 +155,20 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
     ],
     [ValuationType.ERC721]: [
       {
+        label: "Base Currency Spent",
+        key: "baseCurrencySpent",
+        type: InputType.Number,
+        placeholder: "E.g. 10",
+      },
+      {
         label: "Price Per Token (in the base asset)",
         key: "pricePerToken", // TODO correct this key
+        type: InputType.Number,
+        placeholder: "E.g. 10",
+      },
+      {
+        label: "Amount Of Acquired Tokens",
+        key: "amountAquiredTokens",
         type: InputType.Number,
         placeholder: "E.g. 10",
       },
@@ -162,8 +187,20 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
     ],
     [ValuationType.ERC1155]: [
       {
+        label: "Base Currency Spent",
+        key: "baseCurrencySpent",
+        type: InputType.Number,
+        placeholder: "E.g. 10",
+      },
+      {
         label: "Price Per Token (in the base asset)",
         key: "pricePerToken",
+        type: InputType.Number,
+        placeholder: "E.g. 10",
+      },
+      {
+        label: "Amount Of Acquired Tokens",
+        key: "amountAquiredTokens",
         type: InputType.Number,
         placeholder: "E.g. 10",
       },
@@ -278,6 +315,117 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
         label: "Is Negative?",
         key: "isNegative",
         type: InputType.Checkbox,
+      },
+    ],
+  },
+};
+
+
+/** A map of default fields for each position type & valuation type combination. **/
+export const PositionTypeValuationTypeDefaultFieldsMap: PositionTypeValuationTypeFieldsMapType = {
+  [PositionType.Liquid]: {
+    [ValuationType.DEXPair]: [
+      {
+        key: "aggregatorAddress",
+        value: "0x0000000000000000000000000000000000000000",
+      },
+      {
+        key: "functionSignatureWithEncodedInputs",
+        value: 0,
+      },
+      {
+        key: "isReturnArray",
+        value: false,
+      },
+      {
+        key: "returnLength",
+        value: 0,
+      },
+      {
+        key: "returnIndex",
+        value: 0,
+      },
+      {
+        key: "pastNAVUpdateIndex",
+        value: 0,
+      },
+    ],
+    [ValuationType.Aggregator]: [
+      {
+        key: "aggregatorAddress",
+        value: "0x0000000000000000000000000000000000000000",
+      },
+      {
+        key: "functionSignatureWithEncodedInputs",
+        value: 0,
+      },
+      {
+        key: "pastNAVUpdateIndex", // TODO check this field after Rok answers if filled in front or set default here
+        value: 0,
+      },
+    ],
+  },
+  [PositionType.Illiquid]: {
+    [ValuationType.ERC20]: [
+      {
+        key: "isNFT",
+        value: false,
+      },
+      {
+        key: "nftType",
+        value: "ERC-20",
+      },
+      {
+        key: "nftIndex",
+        value: 0,
+      },
+      {
+        key: "pastNAVUpdateIndex",
+        value: null,
+      },
+    ],
+    [ValuationType.ERC721]: [
+      {
+        key: "isNFT",
+        value: true,
+      },
+      {
+        key: "nftType",
+        value: "ERC-721",
+      },
+      {
+        key: "nftIndex",
+        value: 0,
+      },
+      {
+        key: "pastNAVUpdateIndex",
+        value: null,
+      },
+    ],
+    [ValuationType.ERC1155]: [
+      {
+        key: "isNFT",
+        value: true,
+      },
+      {
+        key: "nftType",
+        value: "ERC-1155",
+      },
+      {
+        key: "pastNAVUpdateIndex",
+        value: null,
+      },
+    ],
+  },
+  [PositionType.NFT]: {
+    [ValuationType.ERC721]: [],
+    [ValuationType.ERC1155]: [],
+  },
+  [PositionType.Composable]: {
+    undefined: [
+      {
+        key: "pastNAVUpdateIndex",
+        value: 0,
       },
     ],
   },

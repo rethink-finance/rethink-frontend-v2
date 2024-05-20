@@ -29,12 +29,13 @@
             NAV Methods
           </div>
           <div>
-            <a
+            <nuxt-link
               class="nav__learn_more_link"
               href="https://docs.rethink.finance/rethink.finance/protocol/nav-calculator-contract"
+              target="_blank"
             >
               Learn more about NAV methods ->
-            </a>
+            </nuxt-link>
           </div>
         </div>
         <div>

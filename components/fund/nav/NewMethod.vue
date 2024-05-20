@@ -49,7 +49,7 @@
             <div>
               <v-btn-toggle v-model="method.positionType" group>
                 <v-btn
-                  v-for="positionType in PositionTypes"
+                  v-for="positionType in creatablePositionTypes"
                   :key="positionType.key"
                   :value="positionType.key"
                   variant="outlined"
@@ -117,7 +117,12 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import { useFundStore } from "~/store/fund.store";
-import { PositionType, PositionTypes, PositionTypeToValuationTypesMap } from "~/types/enums/position_type";
+import {
+  PositionType,
+  PositionTypes,
+  PositionTypeToValuationTypesMap,
+  PositionTypeValuationTypeDefaultFieldsMap,
+} from "~/types/enums/position_type";
 import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import { useToastStore } from "~/store/toast.store";
@@ -129,8 +134,13 @@ const router = useRouter();
 
 const { selectedFundSlug } = toRefs(useFundStore());
 
+// Currently we don't support creating a NFT position, so we filter it here.
+const creatablePositionTypes = PositionTypes.filter(positionType => positionType.key !== PositionType.NFT)
 const valuationTypes = computed(() =>
   PositionTypeToValuationTypesMap[method.value.positionType].map(type => ValuationTypesMap[type]),
+);
+const defaultFields = computed(() =>
+  PositionTypeValuationTypeDefaultFieldsMap[method.value.positionType][method.value.valuationType || "undefined"] || [],
 );
 
 const form = ref(null);
@@ -171,6 +181,7 @@ const updateDetailsValid = (isValid: boolean) => {
   detailsAreValid.value = isValid;
 };
 
+
 const addMethod = () => {
   console.log(method.value);
   if (!formIsValid.value || !detailsAreValid.value)  {
@@ -179,13 +190,40 @@ const addMethod = () => {
     );
   }
 
-  // TODO Add mandatory fields that are required for each entry.
+  // TODO Add default fields that are required for each entry.
+  // Set method description from position name and type.
+  for (const methodDetails of method.value.details) {
+    methodDetails.description = {
+      positionName: method.value.positionName,
+      valuationSource: method.value.valuationSource,
+    }
+    // All methods have this data.
+    methodDetails.isPastNAVUpdate = false;
+    methodDetails.pastNAVUpdateIndex = false;
+    methodDetails.pastNAVUpdateEntryIndex = false;
+    methodDetails.pastNAVUpdateEntryFundAddress = fundStore.fund?.safeAddress; // TODO check is this okay?
+
+    const positionType = method.value.positionType;
+    const valuationType = method.value.valuationType;
+
+    // Set default data for each position & valuation type.
+    defaultFields.value.forEach(field => {
+      methodDetails[field.key] = field.value;
+    });
+
+    // Set other misc dynamic fields related to the current fund, specific for each position & valuation type.
+    if (positionType === PositionType.Liquid && valuationType === ValuationType.DEXPair) {
+      methodDetails.nonAssetTokenAddress = fundStore.fund?.baseToken?.address;
+    }
+  }
 
   // JSONIFY method details:
   // - NFT (composable) can have more than 1 method, so take all methods in details.
   // - All other Position Types can only have 1 method, so take the first one (there should only be one).
   const details = method.value.positionType === PositionType.NFT ? method.value.details : method.value.details[0];
   method.value.detailsJson = formatJson(details);
+  console.log("JSON: ", method.value.details[0]);
+  console.log("JSON: ", method.value.detailsJson);
 
   // Add newly defined method to fund managed methods.
   fundStore.fundManagedNAVMethods.push(method.value);

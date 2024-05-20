@@ -7,7 +7,6 @@
     </UiHeader>
     <div class="main_card">
       <FundNavNewMethod />
-
     </div>
   </div>
 </template>

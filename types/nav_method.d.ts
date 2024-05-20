@@ -16,12 +16,18 @@ import { ValuationType } from "~/types/enums/valuation_type";
   *       "pastNAVUpdateIndex": "0"
   *     }
  */
+interface INAVMethodDescription {
+  positionName: String,
+  valuationSource: String,
+}
+
 export default interface INAVMethod {
   positionName: string,
   valuationSource: string,
   positionType: PositionType,
+  description?: INAVMethodDescription,
   details: Record<string, any>[],
   detailsJson: string,
   valuationType?: ValuationType,
-  deleted?: boolean,
+  deleted?: boolean,  // THis is only used in the frontend, to mark it for deletion when managing NAV methods.
 }
