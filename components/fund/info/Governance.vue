@@ -40,7 +40,6 @@
 <script lang="ts">
 import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
-import { isZeroAddress } from "~/composables/addressUtils";
 
 export default {
   name: "FundInfoGovernance",
@@ -65,7 +64,6 @@ export default {
       return `https://www.tally.xyz/gov/${this.fund.fundToken.symbol}-${this.fund.governorAddress}/my-voting-power`;
     },
   },
-  methods: { isZeroAddress },
 };
 </script>
 
