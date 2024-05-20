@@ -51,7 +51,7 @@
     </template>
 
     <template #expanded-row="{ columns, item }">
-      <tr>
+      <tr class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
         <td :colspan="columns.length" class="pa-0">
           <div class="nav_entries__details">
             <div class="nav_entries__json">
@@ -147,6 +147,9 @@ export default defineComponent({
   :deep(.tr_delete_method) {
     color: $color-disabled;
 
+    .nav_entries__json{
+      color: $color-disabled;
+    }
     .td_index {
       color: $color-error;
     }
