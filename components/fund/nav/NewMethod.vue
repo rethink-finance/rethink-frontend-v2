@@ -222,8 +222,7 @@ const addMethod = () => {
   // - All other Position Types can only have 1 method, so take the first one (there should only be one).
   const details = method.value.positionType === PositionType.NFT ? method.value.details : method.value.details[0];
   method.value.detailsJson = formatJson(details);
-  console.log("JSON: ", method.value.details[0]);
-  console.log("JSON: ", method.value.detailsJson);
+  console.log("New Method JSON: ", method.value.detailsJson);
 
   // Add newly defined method to fund managed methods.
   fundStore.fundManagedNAVMethods.push(method.value);
