@@ -3,13 +3,13 @@
     <UiDataRowCard
       :title="formatFee(fund?.managementFee)"
       subtitle="Management Fee"
-      :title2="fund?.managementFeeAddress || 'N/A'"
+      :title2="formatAddress(fund?.managementFeeAddress)"
       subtitle2="Distributed to"
     />
     <UiDataRowCard
       :title="formatFee(fund?.performanceFee)"
       subtitle="Performance Fee"
-      :title2="fund?.performanceFeeAddress || 'N/A'"
+      :title2="formatAddress(fund?.performanceFeeAddress)"
       subtitle2="Distributed to"
       :grow-column2="true"
       :title3="formatFee(fund.performaceHurdleRateBps)"
@@ -18,13 +18,13 @@
     <UiDataRowCard
       :title="formatFee(fund?.depositFee)"
       subtitle="Deposit Fee"
-      :title2="fund?.depositFeeAddress || 'N/A'"
+      :title2="formatAddress(fund?.depositFeeAddress)"
       subtitle2="Distributed to"
     />
     <UiDataRowCard
       :title="formatFee(fund?.withdrawFee)"
       subtitle="Exit Fee"
-      :title2="fund?.withdrawFeeAddress || 'N/A'"
+      :title2="formatAddress(fund?.withdrawFeeAddress)"
       subtitle2="Distributed to"
     />
   </div>
@@ -46,6 +46,10 @@ export default defineComponent({
       if (feeBps === undefined || feeBps === null) return "N/A";
       const feePercent = (Number(feeBps) / 100).toString();
       return `${feePercent}%`;
+    },
+    formatAddress(address?: string) {
+      if (!address || isZeroAddress(address)) return "N/A"
+      return address;
     },
   },
 })
