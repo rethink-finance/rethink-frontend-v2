@@ -5,9 +5,10 @@
         Define New Method
       </div>
     </UiHeader>
+
     <div class="main_card">
       <v-form ref="form" v-model="formIsValid">
-        <v-container>
+        <v-container fluid>
           <v-row>
             <v-col>
               <strong>Position Method</strong>

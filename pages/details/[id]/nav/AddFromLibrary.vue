@@ -12,16 +12,11 @@
     </UiHeader>
 
     <div class="main_card">
-      <v-container>
-        <v-row>
-          <v-col>
-            <strong>Popular Methods</strong>
-          </v-col>
-        </v-row>
-        <v-row>
-          <FundNavMethodsTable :methods="fundManagedNAVMethods" selectable />
-        </v-row>
-      </v-container>
+      <div>
+        <strong>Popular Methods</strong>
+      </div>
+
+      <FundNavMethodsTable :methods="fundManagedNAVMethods" selectable />
     </div>
   </div>
 </template>
