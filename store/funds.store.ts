@@ -223,6 +223,18 @@ export const useFundsStore = defineStore({
 
       // Using the spread operator to append each element
       this.funds.push(...funds);
+
+      // Fetch all possible NAV methods for all funds
+      this.fetchAllNavMethods(fundAddresses);
+    },
+    /**
+     * Fetches all NAV methods
+     */
+    async fetchAllNavMethods(fundAddresses: string[]) {
+      const navUpdates = await this.fundStore.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call();
+      const methods = navUpdates.map()
+
+      console.log("all methods: ", methods);
     },
   },
 });

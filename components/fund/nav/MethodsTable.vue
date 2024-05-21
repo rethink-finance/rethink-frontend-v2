@@ -1,6 +1,7 @@
 <template>
   <v-data-table
     v-if="methods.length"
+    v-model="selected"
     v-model:expanded="expanded"
     :headers="headers"
     :items="methods"
@@ -9,6 +10,7 @@
     show-expand
     expand-on-click
     return-object
+    :show-select="selectable"
   >
     <template #[`item.index`]="{ index }">
       <strong class="td_index">{{ index + 1 }}</strong>
@@ -86,9 +88,14 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    selectable: {
+      type: Boolean,
+      default: false,
+    },
   },
   data: () => ({
     expanded: [],
+    selected: [],
   }),
   computed: {
     headers() {
@@ -104,12 +111,16 @@ export default defineComponent({
       if (this.deletable) {
         headers.push({ key: "delete", sortable: false, align: "center", width: "40px" })
       }
+      if (this.selectable) {
+        headers.push({ key: "data-table-select", sortable: false, align: "center", width: "40px" })
+      }
 
       return headers;
     },
   },
   methods: {
     toggleDeleteMethod(method: INAVMethod) {
+      // TODO: this is not the best, as we modify the provided prop, we shouldn't mutate props like that.
       method.deleted = !method.deleted;
     },
     methodProps(method: any) {

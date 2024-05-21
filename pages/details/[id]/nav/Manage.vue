@@ -31,12 +31,16 @@
               Define New Method
             </v-btn>
           </nuxt-link>
-          <v-btn
-            class="text-secondary"
-            variant="outlined"
+          <nuxt-link
+            :to="`/details/${selectedFundSlug}/nav/addFromLibrary`"
           >
-            Add From Library
-          </v-btn>
+            <v-btn
+              class="text-secondary"
+              variant="outlined"
+            >
+              Add From Library
+            </v-btn>
+          </nuxt-link>
         </div>
         <!--        TODO implement saving/loading drafts to local storage -->
         <v-btn
