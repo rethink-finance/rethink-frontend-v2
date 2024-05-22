@@ -358,6 +358,26 @@ export const useFundStore = defineStore({
 
       return positionTypeCounts;
     },
+    parseNAVUpdateEntry(navEntryData: Record<string, any>, positionType: PositionType): INAVMethod {
+      let description;
+      try {
+        description = JSON.parse(navEntryData.description ?? "{}");
+      } catch (error) {
+        // Handle the error or rethrow it
+        console.error("Failed to parse NAV entry JSON description string: ", error);
+      }
+
+      const details = cleanComplexWeb3Data(navEntryData);
+      details.description = description;
+
+      return {
+        positionType,
+        positionName: description?.positionName,
+        valuationSource: description?.valuationSource,
+        details,
+        detailsJson: formatJson(details),
+      } as INAVMethod
+    },
     async parseFundNAVUpdates(dataNAV: any): Promise<INAVUpdate[]> {
       const navUpdates = [] as INAVUpdate[];
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable).
@@ -413,21 +433,7 @@ export const useFundStore = defineStore({
           PositionTypeKeys.forEach((positionType: PositionType) => {
             navUpdates[index].entries.push(
               ...navUpdateData[positionType].map(
-                (navEntryData: Record<string, any>) => {
-                  let description;
-                  try {
-                    description = JSON.parse(navEntryData.description ?? "{}");
-                  } catch (error) {
-                    // Handle the error or rethrow it
-                    console.error("Failed to parse NAV entry JSON description string: ", error);
-                  }
-                  return {
-                    positionType,
-                    positionName: description?.positionName,
-                    valuationSource: description?.valuationSource,
-                    detailsJson: formatJson(cleanComplexWeb3Data(navEntryData)),
-                  } as INAVMethod
-                },
+                (navEntryData: Record<string, any>) => this.parseNAVUpdateEntry(navEntryData, positionType),
               ),
             )
           })

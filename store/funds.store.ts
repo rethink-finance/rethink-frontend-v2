@@ -1,9 +1,11 @@
 import { defineStore } from "pinia";
-import { Web3 } from "web3";
+import {  Web3 } from "web3";
+import type {  AbiInput } from "web3";
+import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
-import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
+import { PositionType, PositionTypeKeys, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
@@ -13,6 +15,8 @@ import type IToken from "~/types/token";
 import type IPositionTypeCount from "~/types/position_type";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { useFundStore } from "~/store/fund.store";
+import { formatJson } from "~/composables/utils";
+import type INAVMethod from "~/types/nav_method";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -231,10 +235,43 @@ export const useFundsStore = defineStore({
      * Fetches all NAV methods
      */
     async fetchAllNavMethods(fundAddresses: string[]) {
-      const navUpdates = await this.fundStore.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call();
-      const methods = navUpdates.map()
+      const allFundsNavData = await this.fundStore.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call();
+      const allMethods: any[] = [];
+      console.log("allFundsNavData: ", allFundsNavData);
+      const getNavEntryFunctionABI: AbiInput[] = GovernableFund.abi.find(
+        func => func.name === "getNavEntry" && func.type === "function",
+      )?.outputs || [];
 
-      console.log("all methods: ", methods);
+      for (const navData of allFundsNavData) {
+        if (!navData.encodedNavUpdate?.length) continue;
+        for (const encodedNavUpdate of navData.encodedNavUpdate) {
+
+          try {
+            const navEntries = this.web3.eth.abi.decodeParameters(getNavEntryFunctionABI, encodedNavUpdate)[0] as any[];
+
+            for (const navEntry of navEntries) {
+              // Ignore those that are not original NAV entries.
+              if (navEntry.isPastNAVUpdate || navEntry.pastNAVUpdateIndex !== 0n) continue;
+              console.log("navEntry: ", navEntry);
+              PositionTypeKeys.forEach((positionType: PositionType) => {
+                allMethods.push(
+                  ...navEntry[positionType].map(
+                    (navEntryData: Record<string, any>) => this.fundStore.parseNAVUpdateEntry(navEntryData, positionType),
+                  ),
+                )
+                console.log("allMethods: ", allMethods)
+              })
+
+            }
+          } catch {
+
+          }
+
+          // const decoded = this.web3.eth.abi.decodeParameters(abi, encodedNavEntry);
+          // console.log("decoded: ", decoded);
+        }
+      }
+
     },
   },
 });
