@@ -10,12 +10,7 @@
         </div>
       </div>
       <div>
-        <v-btn
-          class="text-secondary"
-          variant="outlined"
-        >
-          Simulate NAV
-        </v-btn>
+        <FundNavSimulateDialog :methods="fundLastNAVUpdateEntries"></FundNavSimulateDialog>
         <v-btn class="bg-primary text-secondary ms-6">
           Update NAV
         </v-btn>
@@ -66,8 +61,8 @@
 </template>
 
 <script setup lang="ts">
-import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
+import type IFund from "~/types/fund";
 
 const fund = useAttrs().fund as IFund;
 const { fundTotalNAVFormattedShort, selectedFundSlug, fundLastNAVUpdate, fundLastNAVUpdateEntries } = toRefs(useFundStore());
