@@ -177,110 +177,102 @@ onMounted(() => {
 });
 </script>
 
-  <style scoped lang="scss">
+<style scoped lang="scss">
+.last-update {
+  color: $color-subtitle;
+  font-weight: 500;
+  font-size: $text-sm;
+}
 
-  .last-update{
-    color: $color-subtitle;
-    font-weight: 500;
-    font-size: $text-sm;
+.header {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: .62rem;
+}
+.form-col {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: .69rem;
+}
+.sub-text {
+  display: flex;
+  flex-direction: row;
+  color: $color-subtitle;
+  font-size: $text-sm;
+  font-weight: 400;
+  align-items: center;
+  gap: .25rem;
+}
+.section {
+  margin-bottom: 3em;
+}
+.management {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  @include borderGray;
+  padding: .5rem;
+  margin: .69rem 0;
+
+  &__card {
+    width: 100%;
+    padding: .88rem .5rem;
+    border-radius: 0.25rem;
+    background: $color-badge-navy;
+    margin-bottom: .12rem;
+    font-size: $text-md;
+    font-weight: 400;
   }
-
-  .header{
+  &__card-no-margin {
+    width: 100%;
+    padding: .88rem .5rem;
+    border-radius: 0.25rem;
+    background: $color-badge-navy;
+    font-size: $text-md;
+    font-weight: 400;
+  }
+  &__info {
+    @include borderGray;
     display: flex;
     flex-direction: row;
-    align-items: baseline;
-    gap: .62rem;
+    gap: .25rem;
+    padding: .25rem;
+    background-color: $color-background-button;
+    color: $color-subtitle;
+    font-weight: 700;
+    font-size: $text-sm;
+    text-transform: uppercase;
   }
-
-  .form-col{
-    width: 100%;
+  &__row {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-    margin-bottom: .69rem;
-  }
-
-  .sub-text{
-    display: flex;
-    flex-direction: row;
-    color: $color-subtitle;
-    font-size: $text-sm;
-    font-weight: 400;
     align-items: center;
-    gap: .25rem;
   }
+}
 
-  .section{
-    margin-bottom: 2.94rem;
-  }
+.proposal {
+  margin-top: 2.25rem;
+  margin-bottom: 1.5rem;
+}
 
-  .management{
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    @include borderGray;
-    padding: .5rem;
-    margin: .69rem 0;
+.changes {
+  display: flex;
+  flex-direction: row;
+  gap: .5rem;
+  margin-top: 3.44rem;
+  font-weight: 500;
+  font-size: $text-sm;
+  margin-bottom: 3.38rem;
+}
 
-    &__card {
-      width: 100%;
-      padding: .88rem .5rem;
-      border-radius: 0.25rem;
-      background: $color-badge-navy;
-      margin-bottom: .12rem;
-      font-size: $text-md;
-      font-weight: 400;
-    }
-
-    &__card-no-margin{
-      width: 100%;
-      padding: .88rem .5rem;
-      border-radius: 0.25rem;
-      background: $color-badge-navy;
-      font-size: $text-md;
-      font-weight: 400;
-    }
-
-    &__info{
-      @include borderGray;
-      display: flex;
-      flex-direction: row;
-      gap: .25rem;
-      padding: .25rem;
-      background-color: $color-background-button;
-      color: $color-subtitle;
-      font-weight: 700;
-      font-size: $text-sm;
-      text-transform: uppercase;
-    }
-
-    &__row{
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-    }
-  }
-
-  .proposal{
-    margin-top: 2.25rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .changes{
-    display: flex;
-    flex-direction: row;
-    gap: .5rem;
-    margin-top: 3.44rem;
-    font-weight: 500;
-    font-size: $text-sm;
-    margin-bottom: 3.38rem;
-  }
-
-  .action-buttons{
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    justify-content: end;
-  }
-  </style>
+.action-buttons {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: end;
+}
+</style>
