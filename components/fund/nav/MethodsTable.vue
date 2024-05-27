@@ -11,6 +11,7 @@
     expand-on-click
     return-object
     :show-select="selectable"
+    @input="onSelectionChanged"
   >
     <template #[`item.index`]="{ index }">
       <strong class="td_index">{{ index + 1 }}</strong>
@@ -93,6 +94,7 @@ export default defineComponent({
       default: false,
     },
   },
+  emits: ["selectedChanged"],
   data: () => ({
     expanded: [],
     selected: [],
@@ -127,6 +129,10 @@ export default defineComponent({
       if (method.item.deleted) {
         return { class: "tr_delete_method" }
       }
+    },
+    onSelectionChanged() {
+      console.log("data: ", this.selected);
+      this.$emit("selectedChanged", this.selected)
     },
   },
 })

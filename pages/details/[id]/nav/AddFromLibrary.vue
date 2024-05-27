@@ -5,7 +5,10 @@
         Add From Library
       </div>
       <div>
-        <v-btn class="bg-primary text-secondary">
+        <v-btn
+          class="bg-primary text-secondary"
+          @click="addMethods"
+        >
           Add Methods
         </v-btn>
       </div>
@@ -21,7 +24,12 @@
         <v-skeleton-loader type="table-row" />
         <v-skeleton-loader type="table-row" />
       </div>
-      <FundNavMethodsTable v-else :methods="allNavMethods" selectable />
+      <FundNavMethodsTable
+        v-else
+        :methods="allNavMethods"
+        selectable
+        @selected-changed="onSelectionChanged"
+      />
     </div>
   </div>
 </template>
@@ -29,24 +37,25 @@
 <script setup lang="ts">
 // import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
+import { useToastStore } from "~/store/toast.store";
 // import {
 //   PositionType,
 // } from "~/types/enums/position_type";
 // import { ValuationType } from "~/types/enums/valuation_type";
 // import type INAVMethod from "~/types/nav_method";
-// import { useRouter } from "vue-router";
-// import { useToastStore } from "~/store/toast.store";
-// import { formatJson } from "~/composables/utils";
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useFundsStore } from "~/store/funds.store";
+import type INAVMethod from "~/types/nav_method";
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
 const fundsStore = useFundsStore();
-// const toastStore = useToastStore();
-// const router = useRouter();
+const toastStore = useToastStore();
+const router = useRouter();
 
 const loadingAllNavMethods = ref(false);
+const selectedMethods = ref<INAVMethod[]>([]);
+
 const { selectedFundSlug } = toRefs(fundStore);
 const { allNavMethods } = toRefs(fundsStore);
 
@@ -88,6 +97,21 @@ onMounted(async () => {
     loadingAllNavMethods.value = false;
   }
 });
+
+const onSelectionChanged = (data: INAVMethod[]) => {
+  selectedMethods.value = data;
+}
+const addMethods = () => {
+  // // Add newly defined method to fund managed methods.
+  // TODO prevent selecting duplicates, pass already selected methods to the table and mark them as "in use".
+  for (const method of selectedMethods.value) {
+    fundStore.fundManagedNAVMethods.push(method);
+  }
+
+  // Redirect back to Manage methods page.
+  router.push(`/details/${selectedFundSlug.value}/nav/manage`);
+  toastStore.addToast("Methods added successfully.")
+}
 </script>
 
 <style scoped lang="scss">
