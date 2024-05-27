@@ -14,10 +14,9 @@
           Simulate NAV
         </v-btn>
         <nuxt-link
-        :to="`/details/${selectedFundSlug}/nav/manage/proposal`"
+          :to="`/details/${selectedFundSlug}/nav/manage/proposal`"
         >
-          <v-btn class="bg-primary text-secondary ms-6"
-          >
+          <v-btn class="bg-primary text-secondary ms-6">
             Create NAV Proposal
           </v-btn>
         </nuxt-link>

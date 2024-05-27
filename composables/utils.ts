@@ -58,6 +58,8 @@ export const cleanComplexWeb3Data = (data: any): any =>  {
       }
     });
     return cleanedData;
+  } else if (typeof data === "bigint") {
+    return data.toString();
   }
   // Return primitive types unchanged
   return data;

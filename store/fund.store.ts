@@ -128,7 +128,10 @@ export const useFundStore = defineStore({
         // Set fund NAV methods to be edited.
         // Create a deep copy of the array to prevent changing the original by reference.
         // TODO first check if they already exist in the localStorage as draft?
+        console.warn(this.fundLastNAVUpdateEntries);
         this.fundManagedNAVMethods = JSON.parse(JSON.stringify(this.fundLastNAVUpdateEntries));
+        console.warn(" BEEEE this.fundManagedNAVMethods");
+        console.warn(this.fundManagedNAVMethods);
         console.log(this.fund)
       } catch (e) {
         console.error(`Failed fetching fund ${fundAddress} -> `, e)
@@ -255,7 +258,7 @@ export const useFundStore = defineStore({
           return undefined
         });
 
-        console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
+        // console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
         console.log("fundSettings: ", fundSettings)
 
         const fund: IFund = {
@@ -423,7 +426,7 @@ export const useFundStore = defineStore({
       // Each NAV update has more entries.
       // Parse and store them to the NAV update entries.
       const navUpdatePromises = await Promise.allSettled(promises);
-      console.log("navUpdatePromises: ", navUpdatePromises);
+      // console.log("navUpdatePromises: ", navUpdatePromises);
 
       // Process results
       navUpdatePromises.forEach((navUpdateResult, index) => {

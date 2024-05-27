@@ -15,8 +15,13 @@
       <div>
         <strong>Popular Methods</strong>
       </div>
-
-      <FundNavMethodsTable :methods="fundManagedNAVMethods" selectable />
+      <div v-if="loadingAllNavMethods" class="mt-4">
+        <v-skeleton-loader type="table-row" />
+        <v-skeleton-loader type="table-row" />
+        <v-skeleton-loader type="table-row" />
+        <v-skeleton-loader type="table-row" />
+      </div>
+      <FundNavMethodsTable v-else :methods="allNavMethods" selectable />
     </div>
   </div>
 </template>
@@ -34,25 +39,16 @@ import { useFundStore } from "~/store/fund.store";
 // import { formatJson } from "~/composables/utils";
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import { useFundsStore } from "~/store/funds.store";
 const emit = defineEmits(["updateBreadcrumbs"]);
-// const fundStore = useFundStore();
+const fundStore = useFundStore();
+const fundsStore = useFundsStore();
 // const toastStore = useToastStore();
 // const router = useRouter();
 
-
-// TODO replace fundManagedNAVMethods with fetced methods from fetchAllNavMethods
-const { fundManagedNAVMethods } = toRefs(useFundStore());
-
-// const method = ref<INAVMethod>({
-//   positionName: "",
-//   valuationSource: "",
-//   positionType: PositionType.Liquid,
-//   valuationType: ValuationType.DEXPair,
-//   details: [
-//     {},
-//   ],
-//   detailsJson: "",
-// });
+const loadingAllNavMethods = ref(false);
+const { selectedFundSlug } = toRefs(fundStore);
+const { allNavMethods } = toRefs(fundsStore);
 
 // watch(() => method.value.valuationType, () => {
 //   // Reset method details when valuationType change
@@ -61,8 +57,6 @@ const { fundManagedNAVMethods } = toRefs(useFundStore());
 
 // const fund = useAttrs().fund as IFund;
 // console.log(fund);
-
-const { selectedFundSlug } = toRefs(useFundStore());
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -82,8 +76,17 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-onMounted(() => {
+onMounted(async () => {
   emit("updateBreadcrumbs", breadcrumbItems);
+
+  if (!allNavMethods.value.length) {
+    loadingAllNavMethods.value = true;
+    const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays()
+    const fundAddresses: string[] = fundsInfoArrays[0];
+    // Fetch all possible NAV methods for all funds
+    await fundsStore.fetchAllNavMethods(fundAddresses);
+    loadingAllNavMethods.value = false;
+  }
 });
 </script>
 
