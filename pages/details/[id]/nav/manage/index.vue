@@ -13,9 +13,14 @@
         >
           Simulate NAV
         </v-btn>
-        <v-btn class="bg-primary text-secondary ms-6">
-          Create NAV Proposal
-        </v-btn>
+        <nuxt-link
+        :to="`/details/${selectedFundSlug}/nav/manage/proposal`"
+        >
+          <v-btn class="bg-primary text-secondary ms-6"
+          >
+            Create NAV Proposal
+          </v-btn>
+        </nuxt-link>
       </div>
     </UiHeader>
     <div class="main_card">
@@ -57,8 +62,8 @@
 </template>
 
 <script setup lang="ts">
-import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useFundStore } from "~/store/fund.store";
+import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 
 const { selectedFundSlug, fundManagedNAVMethods } = toRefs(useFundStore());
