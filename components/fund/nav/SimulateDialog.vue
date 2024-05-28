@@ -10,7 +10,6 @@
     v-model="isDialogOpen"
     scrim="black"
     opacity="0.5"
-    width="60rem"
   >
     <div class="main_card di-card">
       <div class="di-card__header">

@@ -26,14 +26,17 @@
     </template>
 
     <template #[`item.positionType`]="{ value, item }">
-      <UiPositionTypeBadge :value="value" :disabled="item.deleted" />
+      <UiPositionTypeBadge
+        :value="value"
+        :disabled="item.deleted || item.isAlreadyUsed"
+      />
     </template>
 
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
       <UiDetailsButton
         text="Details"
         :active="isExpanded(internalItem)"
-        :disabled="item.deleted"
+        :disabled="item.deleted || item.isAlreadyUsed"
         @click.stop="toggleExpand(internalItem)"
       />
     </template>
@@ -162,7 +165,7 @@ export default defineComponent({
         return props;
       }
       if (this.isMethodAlreadyUsed(internalItem.item?.detailsHash)) {
-        props.class =  "tr_in_use_method";
+        props.class =  "tr_method_already_used";
         return props;
       }
     },
@@ -199,6 +202,9 @@ export default defineComponent({
     text-align: center;
     padding: 1.5rem;
     background: $color-badge-navy;
+  }
+  :deep(.tr_method_already_used) {
+    color: $color-disabled;
   }
   :deep(.tr_delete_method) {
     color: $color-disabled;
