@@ -27,6 +27,7 @@
       <FundNavMethodsTable
         v-else
         :methods="allNavMethods"
+        :used-methods="fundStore.fundManagedNAVMethods"
         selectable
         @selected-changed="onSelectionChanged"
       />
@@ -54,7 +55,7 @@ const toastStore = useToastStore();
 const router = useRouter();
 
 const loadingAllNavMethods = ref(false);
-const selectedMethods = ref<INAVMethod[]>([]);
+const selectedMethodHashes = ref<string[]>([]);
 
 const { selectedFundSlug } = toRefs(fundStore);
 const { allNavMethods } = toRefs(fundsStore);
@@ -98,13 +99,15 @@ onMounted(async () => {
   }
 });
 
-const onSelectionChanged = (data: INAVMethod[]) => {
-  selectedMethods.value = data;
+const onSelectionChanged = (hashes: string[]) => {
+  selectedMethodHashes.value = hashes;
 }
 const addMethods = () => {
   // // Add newly defined method to fund managed methods.
   // TODO prevent selecting duplicates, pass already selected methods to the table and mark them as "in use".
-  for (const method of selectedMethods.value) {
+  const methods = allNavMethods.value.filter(method => selectedMethodHashes.value.includes(method.detailsHash || ""));
+
+  for (const method of methods) {
     fundStore.fundManagedNAVMethods.push(method);
   }
 

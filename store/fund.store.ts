@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import { ethers } from "ethers";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
@@ -372,13 +373,15 @@ export const useFundStore = defineStore({
 
       const details = cleanComplexWeb3Data(navEntryData);
       details.description = description;
+      const detailsJson = formatJson(details);
 
       return {
         positionType,
         positionName: description?.positionName,
         valuationSource: description?.valuationSource,
         details,
-        detailsJson: formatJson(details),
+        detailsJson,
+        detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
       } as INAVMethod
     },
     async parseFundNAVUpdates(dataNAV: any): Promise<INAVUpdate[]> {

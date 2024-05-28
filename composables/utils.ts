@@ -67,20 +67,21 @@ export const cleanComplexWeb3Data = (data: any): any =>  {
 
 export const formatJson = (data: any) => {
   /** This function also sorts JSON keys alphabetically **/
-  return JSON.stringify(data, (_, value) => {
+  const sortKeys = (value: any) => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return Object.keys(value).sort().reduce((sortedObj: any, key) => {
+        sortedObj[key] = sortKeys(value[key]);
+        return sortedObj;
+      }, {});
+    }
+    return value;
+  };
+
+  return JSON.stringify(sortKeys(data), (_, value) => {
     // Convert BigInt to string
     if (typeof value === "bigint") {
       return value.toString();
     }
-
-    // Sort object keys
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      return Object.keys(value).sort().reduce((sortedObj: any, key) => {
-        sortedObj[key] = value[key];
-        return sortedObj;
-      }, {});
-    }
-
     // Return the value unchanged if it doesn't need transformation
     return value;
   }, 2);

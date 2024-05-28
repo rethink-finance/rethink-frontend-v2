@@ -30,4 +30,7 @@ export default interface INAVMethod {
   detailsJson: string,
   valuationType?: ValuationType,
   deleted?: boolean,  // THis is only used in the frontend, to mark it for deletion when managing NAV methods.
+  // THis is only used in the frontend, as methods don't have any IDs, we hash their contents to compare them.
+  // Hash is generated from the detailsJson.
+  detailsHash?: string,
 }

@@ -125,6 +125,7 @@
 <script setup lang="ts">
 // import type IFund from "~/types/fund";
 import { useRouter } from "vue-router";
+import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import {
@@ -256,6 +257,7 @@ const addMethod = () => {
   // - All other Position Types can only have 1 method, so take the first one (there should only be one).
   const details = method.value.positionType === PositionType.NFT ? method.value.details : method.value.details[0];
   method.value.detailsJson = formatJson(details);
+  method.value.detailsHash = ethers.keccak256(ethers.toUtf8Bytes(method.value.detailsJson))
   console.log("New Method JSON: ", method.value.detailsJson);
 
   // Add newly defined method to fund managed methods.

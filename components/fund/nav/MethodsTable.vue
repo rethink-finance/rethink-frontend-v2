@@ -4,12 +4,12 @@
     v-model="selected"
     v-model:expanded="expanded"
     :headers="headers"
-    :items="methods"
+    :items="computedMethods"
     :cell-props="methodProps"
     class="main_table nav_entries"
     show-expand
     expand-on-click
-    return-object
+    item-value="detailsHash"
     :show-select="selectable"
     @input="onSelectionChanged"
   >
@@ -35,6 +35,17 @@
         :active="isExpanded(internalItem)"
         :disabled="item.deleted"
         @click.stop="toggleExpand(internalItem)"
+      />
+    </template>
+
+    <template #[`item.data-table-select`]="{ item, internalItem, isSelected, toggleSelect }">
+      <div v-if="item.isAlreadyUsed">
+        <UiTextBadge value="In Use" :disabled="item.isAlreadyUsed" />
+      </div>
+      <v-checkbox-btn
+        v-else
+        :model-value="isSelected(internalItem)"
+        @click.stop="toggleSelect(internalItem)"
       />
     </template>
 
@@ -85,6 +96,12 @@ export default defineComponent({
       type: Array as () => INAVMethod[],
       default: () => [],
     },
+    // Optional prop of methods that are already being used.
+    // If the "selectable" prop is true, these methods will be made unselectable and marked as "in-use".
+    usedMethods: {
+      type: Array as () => INAVMethod[],
+      default: () => [],
+    },
     deletable: {
       type: Boolean,
       default: false,
@@ -119,20 +136,42 @@ export default defineComponent({
 
       return headers;
     },
+    usedMethodHashes(): string[] {
+      return this.usedMethods.map(method => method.detailsHash || "");
+    },
+    computedMethods() {
+      return this.methods.map(method => ({
+        ...method,
+        isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
+      }));
+    },
   },
   methods: {
     toggleDeleteMethod(method: INAVMethod) {
       // TODO: this is not the best, as we modify the provided prop, we shouldn't mutate props like that.
       method.deleted = !method.deleted;
     },
-    methodProps(method: any) {
-      if (method.item.deleted) {
-        return { class: "tr_delete_method" }
+    methodProps(internalItem: any) {
+      const props = {
+        class: "",
+      };
+      // Parameter internalItem comes from vuetify data table.
+      // And item is an actual INAVMethod.
+      if (internalItem.item.deleted) {
+        props.class =  "tr_delete_method";
+        return props;
+      }
+      if (this.isMethodAlreadyUsed(internalItem.item?.detailsHash)) {
+        props.class =  "tr_in_use_method";
+        return props;
       }
     },
     onSelectionChanged() {
-      console.log("data: ", this.selected);
-      this.$emit("selectedChanged", this.selected)
+      // Exclude already used.
+      this.$emit("selectedChanged", this.selected.filter(detailsHash => !this.isMethodAlreadyUsed(detailsHash)))
+    },
+    isMethodAlreadyUsed(detailsHash?: string) {
+      return this.usedMethodHashes.includes(detailsHash || "")
     },
   },
 })
