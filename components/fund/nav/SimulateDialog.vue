@@ -1,56 +1,58 @@
 <template>
-    <v-btn
-        class="text-secondary"
-        variant="outlined"
-        @click="isDialogOpen = true"
-    >
-        Simulate NAV
-    </v-btn>
-    <v-dialog
-      v-model="isDialogOpen"
-      width="60rem"
-    >
+  <v-btn
+    class="text-secondary"
+    variant="outlined"
+    @click="isDialogOpen = true"
+  >
+    Simulate NAV
+  </v-btn>
+  <v-dialog
+    v-model="isDialogOpen"
+    scrim="black"
+    opacity="0.5"
+    width="60rem"
+  >
     <div class="main_card di-card">
-        <div class="di-card__header">
-            NAV Update Simulation
+      <div class="di-card__header">
+        NAV Update Simulation
+      </div>
+      <div class="di-card__subtext">
+        Simulate NAV before updating or creating a proposal
+      </div>
+      <div class="d-flex mb-5">
+        <div class="di-card__text-total">
+          Total NAV:
         </div>
-        <div class="di-card__subtext">
-            Simulate NAV before updating or creating a proposal
+        <div class="di-card__text-value">
+          $333,212,321.12
         </div>
-        <div class="d-flex mb-5">
-            <div class="di-card__text-total">
-                Total NAV: 
-            </div>
-            <div class="di-card__text-value">
-                $333,212,321.12
-            </div>
-        </div>
-        <div class="di-card__table">
-            <FundNavSimulationTable :methods="methods"></FundNavSimulationTable>
-        </div>
-        <div class="action-buttons">
-            <v-btn
-              class="text-secondary"
-              variant="plain"
-              @click="isDialogOpen = false"
-            >
-              Close
-            </v-btn>
-            <v-btn
-              class="text-secondary"
-              variant="outlined"
-            >
-              Manage Methods
-            </v-btn>
-            <v-btn
-              class="text-secondary"
-              variant="flat"
-            >
-            Update NAV
-            </v-btn>
-        </div>
+      </div>
+      <div class="di-card__table">
+        <FundNavSimulationTable :methods="methods" />
+      </div>
+      <div class="action-buttons">
+        <v-btn
+          class="text-secondary"
+          variant="plain"
+          @click="isDialogOpen = false"
+        >
+          Close
+        </v-btn>
+        <v-btn
+          class="text-secondary"
+          variant="outlined"
+        >
+          Manage Methods
+        </v-btn>
+        <v-btn
+          class="text-secondary"
+          variant="flat"
+        >
+          Update NAV
+        </v-btn>
+      </div>
     </div>
-    </v-dialog>
+  </v-dialog>
 
 </template>
 
@@ -59,19 +61,19 @@ import type INAVMethod from "~/types/nav_method";
 
 export default defineComponent({
   name: "NAVSimulateDialog",
-  data () {
-      return {
-        isDialogOpen: false,
-      }
-    },
   props: {
     methods: {
-        type: Array as () => INAVMethod[],
-        default: () => [],
-      },
+      type: Array as () => INAVMethod[],
+      default: () => [],
+    },
+  },
+  data () {
+    return {
+      isDialogOpen: false,
+    }
   },
   methods: {
-    
+
   },
 })
 </script>

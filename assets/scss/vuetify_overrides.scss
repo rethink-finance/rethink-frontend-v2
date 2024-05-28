@@ -65,18 +65,6 @@ $vuetify-border-width: 1px;
     }
   }
 
-  .v-overlay--active .v-overlay__scrim {
-    display: none;
-  }
-  .v-overlay--active {
-    background: rgba(13, 21, 40, .64)
-  }
-  @media (prefers-color-scheme: dark) {
-      .v-overlay--active {
-          background: rgba(13, 21, 40, .64)
-      }
-  }
-
   /* INPUTS */
   $input-height: 2.5rem;
   input {

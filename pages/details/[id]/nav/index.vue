@@ -10,7 +10,7 @@
         </div>
       </div>
       <div>
-        <FundNavSimulateDialog :methods="fundLastNAVUpdateEntries"></FundNavSimulateDialog>
+        <FundNavSimulateDialog :methods="fundLastNAVUpdateEntries" />
         <v-btn class="bg-primary text-secondary ms-6">
           Update NAV
         </v-btn>
