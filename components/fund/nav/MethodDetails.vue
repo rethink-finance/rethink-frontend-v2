@@ -54,7 +54,7 @@ const props = defineProps({
   },
   valuationType: {
     type: String as PropType<ValuationType>,
-    default: () => ValuationType.DEXPair,
+    default: () => "undefined",
   },
 });
 

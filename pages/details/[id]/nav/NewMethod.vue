@@ -169,7 +169,7 @@ onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
 });
 
-// Currently we don't support creating a NFT position, so we filter it here.
+// Currently we don't support creating a NFT position, so we exclude it here.
 const creatablePositionTypes = PositionTypes.filter(positionType => positionType.key !== PositionType.NFT)
 const valuationTypes = computed(() =>
   PositionTypeToValuationTypesMap[method.value.positionType].map(type => ValuationTypesMap[type]),
@@ -196,6 +196,7 @@ const method = ref<INAVMethod>({
 watch(() => method.value.positionType, (newPositionType) => {
   // Dynamically set valuation type based on the selected position type.
   method.value.valuationType = PositionTypeToValuationTypesMap[newPositionType][0];
+
   // Reset method details when valuationType change
   method.value.details = [{}];
 });
