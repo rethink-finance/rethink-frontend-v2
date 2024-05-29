@@ -7,12 +7,8 @@
         </div>
       </div>
       <div>
-        <v-btn
-          class="text-secondary"
-          variant="outlined"
-        >
-          Simulate NAV
-        </v-btn>
+        <FundNavSimulateDialog :methods="fundLastNAVUpdateEntries" />
+
         <nuxt-link
           :to="`/details/${selectedFundSlug}/nav/manage/proposal`"
         >
@@ -26,7 +22,7 @@
       <UiHeader>
         <div>
           <nuxt-link
-            :to="`/details/${selectedFundSlug}/nav/newMethod`"
+            :to="`/details/${selectedFundSlug}/nav/manage/newMethod`"
           >
             <v-btn
               class="text-secondary me-4"
@@ -36,7 +32,7 @@
             </v-btn>
           </nuxt-link>
           <nuxt-link
-            :to="`/details/${selectedFundSlug}/nav/addFromLibrary`"
+            :to="`/details/${selectedFundSlug}/nav/manage/addFromLibrary`"
           >
             <v-btn
               class="text-secondary"
@@ -55,7 +51,7 @@
           Save Draft
         </v-btn>
       </UiHeader>
-      <FundNavMethodsTable :methods="fundManagedNAVMethods" deletable />
+      <FundNavMethodsTable v-model:methods="fundManagedNAVMethods" deletable />
     </div>
   </div>
 </template>
@@ -65,7 +61,7 @@ import { useFundStore } from "~/store/fund.store";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 
-const { selectedFundSlug, fundManagedNAVMethods } = toRefs(useFundStore());
+const { selectedFundSlug, fundManagedNAVMethods, fundLastNAVUpdateEntries } = toRefs(useFundStore());
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {

@@ -88,22 +88,34 @@
             hide-details
             required
           />
-          <v-row>
-            <div class="changes">
-              <div>
-                Proposal Methods
-              </div>
-              <div>
-                •
-              </div>
-              <div class="text-success">
-                3
-              </div>
-              <div>
-                Changes
-              </div>
-            </div>
+
+          <v-row class="changes">
+            <v-expansion-panels>
+              <v-expansion-panel eager>
+                <v-expansion-panel-title static>
+                  <div class="changes__title">
+                    <div>
+                      Proposal Methods
+                    </div>
+                    <!-- TODO implement NAV Proposal changes (additions & deletions count) on proposal methods -->
+                    <!--                    <div>-->
+                    <!--                      •-->
+                    <!--                    </div>-->
+                    <!--                    <div class="text-success">-->
+                    <!--                      3-->
+                    <!--                    </div>-->
+                    <!--                    <div>-->
+                    <!--                      Changes-->
+                    <!--                    </div>-->
+                  </div>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <FundNavMethodsTable v-model:methods="fundManagedNAVMethods" deletable />
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
           </v-row>
+
           <v-row>
             <div class="action-buttons">
               <v-btn
@@ -154,7 +166,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "Create NAV Proposal",
     disabled: true,
-    to: `/details/${selectedFundSlug.value}/nav/proposal`,
+    to: `/details/${selectedFundSlug.value}/nav/manage/proposal`,
   },
 ];
 
@@ -260,13 +272,15 @@ onMounted(() => {
 }
 
 .changes {
-  display: flex;
-  flex-direction: row;
-  gap: .5rem;
-  margin-top: 3.44rem;
-  font-weight: 500;
-  font-size: $text-sm;
-  margin-bottom: 3.38rem;
+  margin: 2rem 0;
+
+  &__title {
+    display: flex;
+    flex-direction: row;
+    gap: .5rem;
+    font-weight: 500;
+    font-size: $text-sm;
+  }
 }
 
 .action-buttons {

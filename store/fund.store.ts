@@ -131,9 +131,8 @@ export const useFundStore = defineStore({
         // TODO first check if they already exist in the localStorage as draft?
         console.warn(this.fundLastNAVUpdateEntries);
         this.fundManagedNAVMethods = JSON.parse(JSON.stringify(this.fundLastNAVUpdateEntries));
-        console.warn(" BEEEE this.fundManagedNAVMethods");
-        console.warn(this.fundManagedNAVMethods);
-        console.log(this.fund)
+        console.warn("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
+        console.log("fund: ", this.fund)
       } catch (e) {
         console.error(`Failed fetching fund ${fundAddress} -> `, e)
       }

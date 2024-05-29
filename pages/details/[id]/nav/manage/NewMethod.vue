@@ -161,7 +161,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "Define New Method",
     disabled: true,
-    to: `/details/${selectedFundSlug.value}/nav/newMethod`,
+    to: `/details/${selectedFundSlug.value}/nav/manage/newMethod`,
   },
 ];
 
@@ -237,7 +237,7 @@ const addMethod = () => {
     methodDetails.isPastNAVUpdate = false;
     methodDetails.pastNAVUpdateIndex = false;
     methodDetails.pastNAVUpdateEntryIndex = false;
-    methodDetails.pastNAVUpdateEntryFundAddress = fundStore.fund?.safeAddress; // TODO check is this okay?
+    methodDetails.pastNAVUpdateEntryFundAddress = fundStore.fund?.address;
 
     const positionType = method.value.positionType;
     const valuationType = method.value.valuationType;

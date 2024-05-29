@@ -114,7 +114,7 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ["selectedChanged"],
+  emits: ["update:methods", "selectedChanged"],
   data: () => ({
     expanded: [],
     selected: [],
@@ -151,8 +151,10 @@ export default defineComponent({
   },
   methods: {
     toggleDeleteMethod(method: INAVMethod) {
-      // TODO: this is not the best, as we modify the provided prop, we shouldn't mutate props like that.
-      method.deleted = !method.deleted;
+      const updatedMethods = this.methods.map(m =>
+        m.detailsHash === method.detailsHash ? { ...m, deleted: !m.deleted } : m,
+      );
+      this.$emit("update:methods", updatedMethods);
     },
     methodProps(internalItem: any) {
       const props = {

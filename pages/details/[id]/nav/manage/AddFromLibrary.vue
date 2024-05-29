@@ -7,6 +7,7 @@
       <div>
         <v-btn
           class="bg-primary text-secondary"
+          :disabled="!selectedMethodHashes.length"
           @click="addMethods"
         >
           Add Methods
@@ -39,15 +40,9 @@
 // import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
-// import {
-//   PositionType,
-// } from "~/types/enums/position_type";
-// import { ValuationType } from "~/types/enums/valuation_type";
-// import type INAVMethod from "~/types/nav_method";
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useFundsStore } from "~/store/funds.store";
-import type INAVMethod from "~/types/nav_method";
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
 const fundsStore = useFundsStore();
@@ -59,14 +54,6 @@ const selectedMethodHashes = ref<string[]>([]);
 
 const { selectedFundSlug } = toRefs(fundStore);
 const { allNavMethods } = toRefs(fundsStore);
-
-// watch(() => method.value.valuationType, () => {
-//   // Reset method details when valuationType change
-//   method.value.details = [{}];
-// });
-
-// const fund = useAttrs().fund as IFund;
-// console.log(fund);
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -82,7 +69,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "Add From Library",
     disabled: true,
-    to: `/details/${selectedFundSlug.value}/nav/addFromLibrary`,
+    to: `/details/${selectedFundSlug.value}/nav/manage/addFromLibrary`,
   },
 ];
 
