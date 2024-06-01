@@ -95,6 +95,7 @@ const addMethods = () => {
   const methods = allNavMethods.value.filter(method => selectedMethodHashes.value.includes(method.detailsHash || ""));
 
   for (const method of methods) {
+    method.isNew = true;
     fundStore.fundManagedNAVMethods.push(method);
   }
 

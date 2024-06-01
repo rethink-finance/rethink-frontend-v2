@@ -95,6 +95,7 @@ import type INAVMethod from "~/types/nav_method";
 export default defineComponent({
   name: "NAVMethods",
   props: {
+    // TODO prevent directly modifying passed methods and use computed() get & set for it
     methods: {
       type: Array as () => INAVMethod[],
       default: () => [],
@@ -151,6 +152,7 @@ export default defineComponent({
   },
   methods: {
     toggleDeleteMethod(method: INAVMethod) {
+      // TODO If method.isNew, we can just remove it from the methods instead of toggling delete.
       const updatedMethods = this.methods.map(m =>
         m.detailsHash === method.detailsHash ? { ...m, deleted: !m.deleted } : m,
       );
@@ -163,13 +165,14 @@ export default defineComponent({
       // Parameter internalItem comes from vuetify data table.
       // And item is an actual INAVMethod.
       if (internalItem.item.deleted) {
-        props.class =  "tr_delete_method";
-        return props;
+        props.class +=  " tr_delete_method";
+      } else if (internalItem.item.isNew) {
+        props.class +=  " tr_is_new_method";
       }
       if (this.isMethodAlreadyUsed(internalItem.item?.detailsHash)) {
-        props.class =  "tr_method_already_used";
-        return props;
+        props.class +=  " tr_method_already_used";
       }
+      return props;
     },
     onSelectionChanged() {
       // Exclude already used.
@@ -207,6 +210,11 @@ export default defineComponent({
   }
   :deep(.tr_method_already_used) {
     color: $color-disabled;
+  }
+  :deep(.tr_is_new_method) {
+    .td_index {
+      color: $color-success;
+    }
   }
   :deep(.tr_delete_method) {
     color: $color-disabled;

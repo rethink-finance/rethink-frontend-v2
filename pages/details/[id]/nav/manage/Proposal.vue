@@ -29,7 +29,7 @@
             </v-row>
             <v-row>
               <v-text-field
-                v-model="method.positionName"
+                v-model="proposal.title"
                 placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
                 required
               />
@@ -48,7 +48,7 @@
                     Allow manager to keep updating NAV based on these methods
                   </div>
                   <v-switch
-                    v-model="method"
+                    v-model="proposal.allowManagerToUpdateNav"
                     color="primary"
                     hide-details
                     inset
@@ -69,7 +69,7 @@
                     Collect management fees upon NAV proposal execution
                   </div>
                   <v-switch
-                    v-model="method"
+                    v-model="proposal.collectManagementFees"
                     color="primary"
                     hide-details
                     inset
@@ -84,6 +84,7 @@
             </v-label>
           </v-row>
           <v-textarea
+            v-model="proposal.description"
             :placeholder="`Type here`"
             hide-details
             required
@@ -117,6 +118,11 @@
           </v-row>
 
           <v-row>
+            <div>
+              {{ navEntriesJson }}
+            </div>
+          </v-row>
+          <v-row>
             <div class="action-buttons">
               <v-btn
                 class="text-secondary"
@@ -127,7 +133,7 @@
               </v-btn>
               <v-btn
                 class="bg-primary text-secondary ms-6"
-                :disabled="true"
+                @click="createProposal"
               >
                 Create Proposal
               </v-btn>
@@ -140,18 +146,29 @@
 </template>
 
 <script setup lang="ts">
+import { ethers } from "ethers";
+import type { AbiFunctionFragment } from "web3";
 import { useFundStore } from "~/store/fund.store";
-import {
-  PositionType,
-} from "~/types/enums/position_type";
+import { PositionType } from "~/types/enums/position_type";
 import { ValuationType } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import { useWeb3Store } from "~/store/web3.store";
+import GovernableFund from "assets/contracts/GovernableFund.json";
+import { useToastStore } from "~/store/toast.store";
 
+const web3Store = useWeb3Store();
+const fundStore = useFundStore();
+const toastStore = useToastStore();
 const emit = defineEmits(["updateBreadcrumbs"]);
 
-const { selectedFundSlug, fundManagedNAVMethods } = toRefs(useFundStore());
-
+const { selectedFundSlug, fundManagedNAVMethods } = toRefs(fundStore);
+const proposal = ref({
+  title: "",
+  allowManagerToUpdateNav: false,
+  collectManagementFees: false,
+  description: "",
+})
 const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "NAV Methods",
@@ -181,12 +198,280 @@ const method = ref<INAVMethod>({
   details: [
     {},
   ],
-  detailsJson: "",
+  detailsJson: "[]",
 });
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
 });
+
+const navEntriesJson = computed(() => {
+  console.log(fundManagedNAVMethods);
+  return "";
+});
+
+const data = {
+  NAVNFTType: {
+    "ERC1155": 0,
+    "ERC721": 1,
+    "NONE": 2,
+  } as Record<string, number>,
+  NAVComposableUpdateReturnType: {
+    "UINT256": 0,
+    "INT256": 1,
+  } as Record<string, number>,
+  NavUpdateType: {
+    "NAVLiquidUpdateType": 0,
+    "NAVIlliquidUpdateType": 1,
+    "NAVNFTUpdateType": 2,
+    "NAVComposableUpdateType": 3,
+  } as Record<string, number>,
+  defaultNavEntryPermission: {
+    "idx": 0,
+    "value": [
+      {
+        "idx": 0,
+        "isArray": false,
+        "data": "1",
+        "internalType": "uint16",
+        "name": "role",
+      },
+      {
+        "idx": 1,
+        "isArray": false,
+        "data": null,
+        "internalType": "address",
+        "name": "targetAddress",
+      },
+      {
+        "idx": 2,
+        "isArray": false,
+        "data": null,
+        "internalType": "bytes4",
+        "name": "functionSig",
+      },
+      {
+        "idx": 3,
+        "isArray": true,
+        "data": [],
+        "internalType": "bool[]",
+        "name": "isParamScoped",
+      },
+      {
+        "idx": 4,
+        "isArray": true,
+        "data": [],
+        "internalType": "enum ParameterType[]",
+        "name": "paramType",
+      },
+      {
+        "idx": 5,
+        "isArray": true,
+        "data": [],
+        "internalType": "enum Comparison[]",
+        "name": "paramComp",
+      },
+      {
+        "idx": 6,
+        "isArray": true,
+        "data": [],
+        "internalType": "bytes[]",
+        "name": "compValue",
+      },
+      {
+        "idx": 7,
+        "isArray": false,
+        "data": "1",
+        "internalType": "enum ExecutionOptions",
+        "name": "options",
+      },
+    ],
+    "valueMethodIdx": 19,
+  },
+}
+
+const updateNavABI = GovernableFund.abi.find(
+  func => func.name === "updateNav" && func.type === "function",
+);
+const collectFeesABI = GovernableFund.abi.find(
+  func => func.name === "collectFees" && func.type === "function",
+);
+const getNavEntryFunctionABI = GovernableFund.abi.find(
+  func => func.name === "getNavEntry" && func.type === "function",
+);
+console.log("updateNavABI: ", updateNavABI);
+console.log("collectFeesABI: ", collectFeesABI);
+console.log("getNavEntryFunctionABI: ", getNavEntryFunctionABI);
+
+const prepNAVMethodLiquid = (details: Record<string, any>): any[] => {
+  return [
+    details.tokenPair || "",
+    details.aggregatorAddress || "",
+    details.functionSignatureWithEncodedInputs || "",
+    details.assetTokenAddress || "",
+    details.nonAssetTokenAddress || "",
+    details.isReturnArray || "",
+    parseInt(details.returnLength) || 0,
+    parseInt(details.returnIndex) || 0,
+    parseInt(details.pastNAVUpdateIndex) || 0,
+  ];
+}
+
+const prepNAVMethodNFT = (details: Record<string, any>): any[] => {
+  return [
+    details.oracleAddress,
+    details.nftAddress,
+    details.nftType,
+    parseInt(details.nftIndex) || 0,
+    parseInt(details.pastNAVUpdateIndex) || 0,
+  ];
+}
+const prepNAVMethodComposable = (details: Record<string, any>): any[] => {
+  return [
+    details.remoteContractAddress,
+    details.functionSignatures,
+    details.encodedFunctionSignatureWithInputs,
+    parseInt(details.normalizationDecimals) || 0,
+    details.isReturnArray,
+    parseInt(details.returnValIndex) || 0,
+    parseInt(details.returnArraySize) || 0,
+    details.returnValType,
+    parseInt(details.pastNAVUpdateIndex) || 0,
+    details.isNegative,
+  ];
+}
+const prepNAVMethodIlliquid = (details: Record<string, any>): any[] => {
+  console.log("prepNAV Illiquid: ", details);
+  const trxHashes = details.otcTxHashes?.map(
+    // Remove leading and trailing whitespace
+    (hash: string) => hash.trim(),
+  ).filter(
+    // Remove empty strings;
+    (hash: string) => hash !== "",
+  ) || [];
+
+  const baseDecimals = fundStore.fund?.baseToken.decimals;
+  if (!baseDecimals) {
+    toastStore.errorToast("Failed preparing NAV Illiquid method, base decimals are not known.")
+    throw new Error("Failed preparing NAV Illiquid method, base decimals are not known.")
+  }
+
+  console.log("details.nftType: ", details.nftType);
+  console.log("baseCurrencySpent: ", details.baseCurrencySpent);
+  return [
+    ethers.parseUnits(details.baseCurrencySpent?.toString() ?? "0", baseDecimals),
+    parseInt(details.amountAquiredTokens || "0"),
+    details.tokenAddress,
+    details.isNFT,
+    trxHashes,
+    details.nftType,
+    parseInt(details.nftIndex) || 0,
+    parseInt(details.pastNAVUpdateIndex) || 0,
+  ];
+}
+
+const createProposal = () => {
+  if (!web3Store.web3) return;
+  /*
+  let addLiquidUpdateAbiJSON = component.getFundAbi[8];
+  let addIlliquidUpdateAbiJSON = component.getFundAbi[33];
+  let addNftUpdateAbiJSON = component.getFundAbi[32];
+  let addComposableUpdateAbiJSON = component.getFundAbi[32];
+  */
+  // const dataNavUpdateEntries = [];
+  const dataPastNavUpdateEntriesAddrs: any[] = [];
+  const liquidMethods = [];
+  const illiquidMethods = [];
+  const nftMethods = [];
+  const composableMethods = [];
+
+  // const parameters = [
+  //   PositionTypeToEntryTypeMap[navUpdate.entryType],
+  //   NAVLiquidUpdate[],
+  //   NAVIlliquidUpdate[],
+  //   NAVNFTUpdate[],
+  //   NAVComposableUpdate[],
+  //   navUpdate.isPastNAVUpdate,
+  //   navUpdate.pastNAVUpdateIndex,
+  //   navUpdate.pastNAVUpdateEntryIndex,
+  //   JSON.stringify(navUpdate.description),// fundMetadata
+  // ];
+  for(const navMethod of fundManagedNAVMethods.value as INAVMethod[]) {
+    if (navMethod.positionType === PositionType.Liquid) {
+      liquidMethods.push(prepNAVMethodLiquid(navMethod.details))
+    } else if (navMethod.positionType === PositionType.Illiquid) {
+      illiquidMethods.push(prepNAVMethodIlliquid(navMethod.details))
+    } else if (navMethod.positionType === PositionType.NFT) {
+      nftMethods.push(prepNAVMethodNFT(navMethod.details))
+    } else if (navMethod.positionType === PositionType.Composable) {
+      composableMethods.push(prepNAVMethodComposable(navMethod.details))
+    }
+    console.log("navMethod: ", navMethod);
+
+    // For now composable can have more than 1 method, so we store it as array.
+    const detailsList = Array.isArray(navMethod.details) ? navMethod.details : [navMethod.details];
+
+    // TODO figure this out
+    // for (const details of navMethod.details) {
+    //   if (!details?.pastNAVUpdateEntryFundAddress) continue;
+    //   dataPastNavUpdateEntriesAddrs.push(
+    //     details.pastNAVUpdateEntryFundAddress,
+    //   );
+    // }
+  }
+  console.log("methods parsed")
+  // TODO WIP
+  const parameters = [
+    0, // PositionTypeToEntryTypeMap[navUpdate.entryType] // TODO what to use here?
+    liquidMethods,
+    illiquidMethods,
+    nftMethods,
+    composableMethods,
+    false, // navUpdate.isPastNAVUpdate,
+    0, // navUpdate.pastNAVUpdateIndex, // TODO get the last one of the NAV updates?
+    0, // navUpdate.pastNAVUpdateEntryIndex,  // TODO what is this?
+    JSON.stringify({}),// fundMetadata, navUpdate.description, TODO what to use here? or proposal.description
+  ];
+  console.log("parameters: ", parameters);
+
+  // console.log(JSON.stringify(dataNavUpdateEntries));
+  console.log(updateNavABI);
+  const processWithdraw = false;
+  const encodedDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
+    updateNavABI as AbiFunctionFragment,
+    [
+      [parameters], // dataNavUpdateEntries,
+      dataPastNavUpdateEntriesAddrs,
+      processWithdraw,
+    ]);
+  console.log("encodedDataNavUpdateEntries: ", encodedDataNavUpdateEntries)
+  //
+  // console.log(component.fund.governor);
+  // console.log(component.getSelectedFundAddress);
+  // console.log(component.getActiveAccount);
+  //
+  // const rethinkFundGovernorContract = new component.getWeb3.eth.Contract(
+  //   RethinkFundGovernorJSON.abi,
+  //   component.fund.governor,
+  // );
+  //
+  // const navUpdateIndex = await component.getFundContract.methods._navUpdateLatestIndex().call();
+
+  /*
+
+    function propose(
+      address[] memory targets,
+      uint256[] memory values,
+      bytes[] memory calldatas,
+      string memory description
+  )
+    */
+
+  // const encodedCollectFlowFeesAbiJSON = web3Store.web3.eth.abi.encodeFunctionCall(collectFeesAbiJSON, [0]);
+  // const encodedCollectManagerFeesAbiJSON = web3Store.web3.getWeb3.eth.abi.encodeFunctionCall(collectFeesAbiJSON, [2]);
+  // const encodedCollectPerformanceFeesAbiJSON = web3Store.web3.getWeb3.eth.abi.encodeFunctionCall(collectFeesAbiJSON, [3]);
+}
+
 </script>
 
 <style scoped lang="scss">

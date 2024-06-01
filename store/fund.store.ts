@@ -8,7 +8,12 @@ import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import { useAccountStore } from "~/store/account.store";
-import { PositionType, PositionTypeKeys, PositionTypes } from "~/types/enums/position_type";
+import {
+  NAVEntryTypeToPositionTypeMap,
+  PositionType,
+  PositionTypeKeys,
+  PositionTypes,
+} from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3.store";
@@ -129,7 +134,7 @@ export const useFundStore = defineStore({
         // Set fund NAV methods to be edited.
         // Create a deep copy of the array to prevent changing the original by reference.
         // TODO first check if they already exist in the localStorage as draft?
-        console.warn(this.fundLastNAVUpdateEntries);
+        console.log("fundLastNAVUpdateEntries: ", this.fundLastNAVUpdateEntries);
         this.fundManagedNAVMethods = JSON.parse(JSON.stringify(this.fundLastNAVUpdateEntries));
         console.warn("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
         console.log("fund: ", this.fund)
@@ -361,17 +366,22 @@ export const useFundStore = defineStore({
 
       return positionTypeCounts;
     },
-    parseNAVUpdateEntry(navEntryData: Record<string, any>, positionType: PositionType): INAVMethod {
+    parseNAVEntry(navEntryData: Record<string, any>): INAVMethod {
       let description;
+      const positionType = NAVEntryTypeToPositionTypeMap[navEntryData.entryType];
+
       try {
-        description = JSON.parse(navEntryData.description ?? "{}");
+        if (navEntryData.description === "") {
+          description = {};
+        } else {
+          description = JSON.parse(navEntryData.description ?? "{}");
+        }
       } catch (error) {
         // Handle the error or rethrow it
-        console.error("Failed to parse NAV entry JSON description string: ", error);
+        console.warn("Failed to parse NAV entry JSON description string: ", error);
       }
 
       const details = cleanComplexWeb3Data(navEntryData);
-      details.description = description;
       const detailsJson = formatJson(details);
 
       return {
@@ -433,15 +443,11 @@ export const useFundStore = defineStore({
       // Process results
       navUpdatePromises.forEach((navUpdateResult, index) => {
         if (navUpdateResult.status === "fulfilled") {
-          const navUpdateData: Record<string, any> = navUpdateResult.value[0];
+          const navEntries: Record<string, any>[] = navUpdateResult.value;
 
-          PositionTypeKeys.forEach((positionType: PositionType) => {
-            navUpdates[index].entries.push(
-              ...navUpdateData[positionType].map(
-                (navEntryData: Record<string, any>) => this.parseNAVUpdateEntry(navEntryData, positionType),
-              ),
-            )
-          })
+          for (const navEntry of navEntries) {
+            navUpdates[index].entries.push(this.parseNAVEntry(navEntry))
+          }
         } else {
           console.error(`Failed to fetch NAV entry ${index}:`, navUpdateResult.reason);
         }

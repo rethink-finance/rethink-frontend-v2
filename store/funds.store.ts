@@ -5,7 +5,7 @@ import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
-import { PositionType, PositionTypeKeys, PositionTypesMap } from "~/types/enums/position_type";
+import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
@@ -252,20 +252,13 @@ export const useFundsStore = defineStore({
 
           try {
             // Decode NAV entry data.
-            const navEntries = this.web3.eth.abi.decodeParameters(getNavEntryFunctionABI, encodedNavUpdate)[0] as any[];
+            const navEntries: Record<string, any>[] = this.web3.eth.abi.decodeParameters(getNavEntryFunctionABI, encodedNavUpdate)[0] as any[];
 
             for (const navEntry of navEntries) {
               // Ignore NAV methods that are not original NAV entries.
               if (navEntry.isPastNAVUpdate || navEntry.pastNAVUpdateIndex !== 0n) continue;
               console.log("navEntry: ", navEntry);
-              PositionTypeKeys.forEach((positionType: PositionType) => {
-                allMethods.push(
-                  ...navEntry[positionType].map(
-                    (navEntryData: Record<string, any>) => this.fundStore.parseNAVUpdateEntry(navEntryData, positionType),
-                  ),
-                )
-              })
-
+              allMethods.push(this.fundStore.parseNAVEntry(navEntry))
             }
           } catch (error: any) {
             console.log("error processing all NAV methods: ", error)

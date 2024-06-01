@@ -34,6 +34,18 @@ export const PositionTypeKeys = Object.values(PositionType);
 /**
  * Position Type Maps (Dynamic Form Data)
  **/
+export const NAVEntryTypeToPositionTypeMap: Record<number, PositionType> = {
+  0: PositionType.Liquid, // NAVLiquidUpdateType
+  1: PositionType.Illiquid, // NAVIlliquidUpdateType
+  2: PositionType.NFT, // NAVNFTUpdateType
+  3: PositionType.Composable, // NAVComposableUpdateType
+}
+export const PositionTypeToNAVEntryTypeMap: Record<PositionType, number> = {
+  [PositionType.Liquid]: 0, // NAVLiquidUpdateType
+  [PositionType.Illiquid]: 1, // NAVIlliquidUpdateType
+  [PositionType.NFT]: 2, // NAVNFTUpdateType
+  [PositionType.Composable]: 3, // NAVComposableUpdateType
+}
 export const PositionTypeToValuationTypesMap: Record<PositionType, ValuationType[]> = {
   [PositionType.Liquid]: [
     ValuationType.DEXPair,
