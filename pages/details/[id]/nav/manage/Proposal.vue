@@ -5,22 +5,21 @@
         <div class="main_header__title">
           Create NAV Proposal
         </div>
-        <div class="last-update">
-          <!-- TODO last updates date -->
-          Last Updates on N/A
+        <div class="main_header__subtitle">
+          Last updated on <strong>{{ fundLastNAVUpdateDate }}</strong>
         </div>
       </div>
     </UiHeader>
     <div class="main_card">
       <v-form ref="form" v-model="formIsValid">
         <v-container fluid>
-          <div class="section">
+          <div class="mb-8">
             <v-row>
-              <div class="form-col">
+              <div class="proposal_title_field">
                 <v-label class="label_required">
                   Proposal Title
                 </v-label>
-                <div class="sub-text">
+                <div class="proposal_title_field__char_limit">
                   <v-label>
                     MAX 150
                   </v-label>
@@ -64,7 +63,7 @@
                   </div>
                 </div>
               </div>
-              <div class="management__card-no-margin">
+              <div class="management__card--no-margin">
                 <div class="management__row">
                   <div>
                     Collect management fees upon NAV proposal execution
@@ -80,7 +79,7 @@
             </div>
           </v-row>
           <v-row>
-            <v-label class="label_required proposal">
+            <v-label class="label_required proposal_description">
               Proposal Description
             </v-label>
           </v-row>
@@ -91,15 +90,14 @@
             required
           />
 
-          <v-row class="changes">
+          <v-row class="nav_method_changes">
             <v-expansion-panels>
               <v-expansion-panel eager>
                 <v-expansion-panel-title static>
-                  <div class="changes__title">
+                  <div class="nav_method_changes__title">
                     <div>
                       Proposal Methods
                     </div>
-                    <!-- TODO implement NAV Proposal changes (additions & deletions count) on proposal methods -->
                     <div>
                       •
                     </div>
@@ -161,7 +159,7 @@ const fundStore = useFundStore();
 const toastStore = useToastStore();
 const emit = defineEmits(["updateBreadcrumbs"]);
 
-const { selectedFundSlug, fundManagedNAVMethods } = toRefs(fundStore);
+const { selectedFundSlug, fundManagedNAVMethods, fundLastNAVUpdate } = toRefs(fundStore);
 const proposal = ref({
   title: "",
   allowManagerToUpdateNav: false,
@@ -200,6 +198,10 @@ const newEntriesCount = computed(() => {
 const deletedEntriesCount = computed(() => {
   return fundManagedNAVMethods.value.filter(method => method.deleted).length ?? 0;
 });
+const fundLastNAVUpdateDate = computed(() => {
+  if (!fundLastNAVUpdate.value) return "N/A";
+  return fundLastNAVUpdate.value.date ?? "N/A";
+})
 
 const defaultNavEntryPermission = {
   "idx": 0,
@@ -269,9 +271,6 @@ const updateNavABI = GovernableFund.abi.find(
 );
 const collectFeesABI = GovernableFund.abi.find(
   func => func.name === "collectFees" && func.type === "function",
-);
-const getNavEntryFunctionABI = GovernableFund.abi.find(
-  func => func.name === "getNavEntry" && func.type === "function",
 );
 
 const prepNAVMethodLiquid = (details: Record<string, any>): any[] => {
@@ -486,10 +485,9 @@ const createProposal = async () => {
 </script>
 
 <style scoped lang="scss">
-.last-update {
+.main_header__subtitle {
   color: $color-subtitle;
   font-weight: 500;
-  font-size: $text-sm;
 }
 
 .header {
@@ -498,24 +496,22 @@ const createProposal = async () => {
   align-items: baseline;
   gap: .62rem;
 }
-.form-col {
+.proposal_title_field {
   width: 100%;
   display: flex;
   flex-direction: row;
   justify-content: space-between;
   margin-bottom: .69rem;
-}
-.sub-text {
-  display: flex;
-  flex-direction: row;
-  color: $color-subtitle;
-  font-size: $text-sm;
-  font-weight: 400;
-  align-items: center;
-  gap: .25rem;
-}
-.section {
-  margin-bottom: 3em;
+
+  &__char_limit {
+    display: flex;
+    flex-direction: row;
+    color: $color-subtitle;
+    font-size: $text-sm;
+    font-weight: 400;
+    align-items: center;
+    gap: .25rem;
+  }
 }
 .management {
   width: 100%;
@@ -533,14 +529,15 @@ const createProposal = async () => {
     margin-bottom: .12rem;
     font-size: $text-md;
     font-weight: 400;
-  }
-  &__card-no-margin {
-    width: 100%;
-    padding: .88rem .5rem;
-    border-radius: 0.25rem;
-    background: $color-badge-navy;
-    font-size: $text-md;
-    font-weight: 400;
+
+    &--no-margin {
+      width: 100%;
+      padding: .88rem .5rem;
+      border-radius: 0.25rem;
+      background: $color-badge-navy;
+      font-size: $text-md;
+      font-weight: 400;
+    }
   }
   &__info {
     @include borderGray;
@@ -562,12 +559,12 @@ const createProposal = async () => {
   }
 }
 
-.proposal {
+.proposal_description {
   margin-top: 2.25rem;
   margin-bottom: 1.5rem;
 }
 
-.changes {
+.nav_method_changes {
   margin: 2rem 0;
 
   &__title {
