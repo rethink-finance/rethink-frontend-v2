@@ -53,7 +53,7 @@
     </template>
 
     <template #[`item.delete`]="{ item }">
-      <UiDetailsButton small @click.stop="toggleDeleteMethod(item)">
+      <UiDetailsButton small @click.stop="deleteMethod(item)">
         <v-icon
           v-if="item.deleted"
           icon="mdi-arrow-u-left-top"
@@ -151,12 +151,24 @@ export default defineComponent({
     },
   },
   methods: {
-    toggleDeleteMethod(method: INAVMethod) {
-      // TODO If method.isNew, we can just remove it from the methods instead of toggling delete.
-      const updatedMethods = this.methods.map(m =>
-        m.detailsHash === method.detailsHash ? { ...m, deleted: !m.deleted } : m,
-      );
-      this.$emit("update:methods", updatedMethods);
+    deleteMethod(method: INAVMethod) {
+      // If method is new, we can just remove it from the methods array.
+      // If it is not new, we will mark it as deleted.
+      const methods = [...this.methods]; // Create a shallow copy of the array
+      for (let i = 0; i < methods.length; i++) {
+        const m = methods[i];
+        if (m.detailsHash === method.detailsHash) {
+          if (m.isNew) {
+            // Remove the new method from the array
+            methods.splice(i, 1);
+            // Adjust the index to account for the removed item
+            i--;
+          } else {
+            methods[i] = { ...m, deleted: !m.deleted }; // Toggle the deleted property
+          }
+        }
+      }
+      this.$emit("update:methods", methods);
     },
     methodProps(internalItem: any) {
       const props = {

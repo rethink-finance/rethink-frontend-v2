@@ -95,7 +95,7 @@ const allFieldsValid = computed(() =>
 // Check the validity of each field.
 watch(
   methodDetails, () => {
-    emit("validate", allFieldsValid.value);
+    methodDetails.value.isValid = allFieldsValid.value;
   },
   { deep: true },
 );

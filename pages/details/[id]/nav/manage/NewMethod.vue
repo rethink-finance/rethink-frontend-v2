@@ -23,7 +23,7 @@
                 Position Name
               </v-label>
               <v-text-field
-                v-model="positionName"
+                v-model="navEntry.positionName"
                 placeholder="E.g. WETH"
                 :rules="rules"
                 required
@@ -37,7 +37,7 @@
                 Valuation Source
               </v-label>
               <v-text-field
-                v-model="valuationSource"
+                v-model="navEntry.valuationSource"
                 placeholder="E.g. Uniswap ETH/USDC"
                 :rules="rules"
                 required
@@ -54,7 +54,7 @@
                 Position Type
               </v-label>
               <div>
-                <v-btn-toggle v-model="positionType" group>
+                <v-btn-toggle v-model="navEntry.positionType" group>
                   <v-btn
                     v-for="positionType in creatablePositionTypes"
                     :key="positionType.key"
@@ -73,7 +73,7 @@
             >
               <v-label> Valuation Type </v-label>
               <div>
-                <v-btn-toggle v-model="valuationType" group>
+                <v-btn-toggle v-model="navEntry.valuationType" group>
                   <v-btn
                     v-for="valuationType in valuationTypes"
                     :key="valuationType.key"
@@ -93,24 +93,82 @@
             </v-col>
           </v-row>
           <v-row>
-            <!-- TODO for composable do if statement and display all method.details rows -->
-            <template v-if="positionType === PositionType.Composable">
-              combo bitch
+            <template v-if="navEntry.positionType === PositionType.Composable">
+              <v-col>
+                <v-expansion-panels>
+                  <v-expansion-panel v-for="(method, index) in navEntry.details[navEntry.positionType]" eager>
+                    <v-expansion-panel-title static>
+                      <div class="method_details_title">
+                        <span>
+                          <strong class="me-1">{{ index + 1 }})</strong> METHOD DETAILS
+                        </span>
+                        <UiTextBadge
+                          class="method_details_status"
+                          :class="{'method_details_status--valid': method.isValid}"
+                        >
+                          <template v-if="method.isValid">
+                            Provided
+                            <Icon icon="octicon:check-circle-16" height="1.2rem" width="1.2rem" />
+                          </template>
+                          <template v-else>
+                            Incomplete
+                            <Icon icon="pajamas:error" height="1.2rem" width="1.2rem" />
+                          </template>
+                        </UiTextBadge>
+
+                        <UiDetailsButton small @click.stop="deleteMethod(index)">
+                          <v-icon
+                            icon="mdi-delete"
+                            color="error"
+                          />
+                        </UiDetailsButton>
+                      </div>
+                    </v-expansion-panel-title>
+                    <v-expansion-panel-text>
+                      <v-row>
+                        <FundNavMethodDetails
+                          v-model="navEntry.details[navEntry.positionType][index]"
+                          :position-type="navEntry.positionType"
+                          :valuation-type="navEntry.valuationType"
+                        />
+                      </v-row>
+                    </v-expansion-panel-text>
+                  </v-expansion-panel>
+                </v-expansion-panels>
+              </v-col>
             </template>
             <template v-else>
               <FundNavMethodDetails
-                v-model="navEntry.details[positionType][0]"
-                :position-type="positionType"
-                :valuation-type="valuationType"
-                @validate="updateDetailsValid(0, $event)"
+                v-model="navEntry.details[navEntry.positionType][0]"
+                :position-type="navEntry.positionType"
+                :valuation-type="navEntry.valuationType"
               />
             </template>
+          </v-row>
+          <!-- Add Position Details if the selected position type is composable. -->
+          <v-row v-if="navEntry.positionType === PositionType.Composable">
+            <v-col class="text-center">
+              <v-btn
+                class="text-secondary"
+                variant="outlined"
+                @click="addMethodDetails"
+              >
+                <template #append>
+                  <Icon
+                    icon="octicon:plus-circle-16"
+                    height="1.2rem"
+                    width="1.2rem"
+                  />
+                </template>
+                Add Method Details
+              </v-btn>
+            </v-col>
           </v-row>
 
           <v-row class="mt-4">
             <v-col class="text-end">
               <v-btn
-                :disabled="!formIsValid || !areAllMethodsValid"
+                :disabled="!formIsValid || !areAllMethodDetailsValid"
                 @click="addMethod"
               >
                 Add Method
@@ -174,33 +232,24 @@ onMounted(() => {
 // Currently we don't support creating a NFT position, so we exclude it here.
 const creatablePositionTypes = PositionTypes.filter(positionType => positionType.key !== PositionType.NFT)
 const valuationTypes = computed(() =>
-  PositionTypeToValuationTypesMap[positionType.value].map(type => ValuationTypesMap[type]),
+  PositionTypeToValuationTypesMap[navEntry.value.positionType].map(type => ValuationTypesMap[type]),
 );
 const defaultFields = computed(() =>
-  PositionTypeValuationTypeDefaultFieldsMap[positionType.value][valuationType.value || "undefined"] || [],
+  PositionTypeValuationTypeDefaultFieldsMap[navEntry.value.positionType][navEntry.value.valuationType || "undefined"] || [],
 );
-const areAllMethodsValid = computed(() =>
+const areAllMethodDetailsValid = computed(() =>
   // Return true if all methods are valid, otherwise false.
-  !methodsValid.value.some(method => !method),
+  !navEntry.value.details[navEntry.value.positionType].some((method: any) => !method.isValid),
 );
 
 const form = ref(null);
 const formIsValid = ref(false);
-// Array for validating every method's details.
-const methodsValid = ref([false]);
 
-const positionName = ref("");
-const valuationSource = ref("");
-const positionType = ref<PositionType>(PositionType.Liquid);
-const valuationType = ref<ValuationType>(ValuationType.DEXPair);
-
-// We define an array of NAV methods. In reality only PositionType.Composable can have multiple methods.
-// All other position types can have only one NAV method.
 const navEntry = ref<INAVMethod>({
-  positionName: positionName.value,
-  valuationSource: valuationSource.value,
-  positionType: positionType.value,
-  valuationType: valuationType.value,
+  positionName: "",
+  valuationSource: "",
+  positionType: PositionType.Liquid,
+  valuationType: ValuationType.DEXPair,
   details: {
     // Init as PositionType.Liquid & ValuationType.DEXPair
     liquid: [
@@ -211,37 +260,45 @@ const navEntry = ref<INAVMethod>({
     composable: [],
   },
   detailsJson: "{}",
-},
-);
+});
 
 const resetMethods = () => {
-  const tmpMethod = {
-    positionName: positionName.value,
-    valuationSource: valuationSource.value,
-    positionType: positionType.value,
-    valuationType: valuationType.value,
+  const tmpNavEntry = {
+    positionName: navEntry.value.positionName,
+    valuationSource: navEntry.value.valuationSource,
+    positionType: navEntry.value.positionType,
+    valuationType: navEntry.value.valuationType,
     details: {},
     detailsJson: "{}",
   } as INAVMethod;
   for (const positionTypeKey of PositionTypeKeys) {
-    tmpMethod.details[positionTypeKey] = [];
+    tmpNavEntry.details[positionTypeKey] = [];
   }
   // Init empty details for the selected position type (liquid, illiquid, nft, composable).
-  tmpMethod.details[positionType.value].push({});
+  tmpNavEntry.details[navEntry.value.positionType].push({});
 
-  tmpMethod.detailsJson = formatJson(tmpMethod.details);
+  tmpNavEntry.detailsJson = formatJson(tmpNavEntry.details);
 
-  navEntry.value = tmpMethod;
+  navEntry.value = tmpNavEntry;
 }
 
-watch(() => positionType.value, (newPositionType) => {
+const deleteMethod = (index: number) => {
+  console.log("remove0 method: ", index);
+  navEntry.value.details[navEntry.value.positionType].splice([index])
+}
+const addMethodDetails = () => {
+  console.log("addMethodDetails");
+  navEntry.value.details[navEntry.value.positionType].push({});
+}
+
+watch(() => navEntry.value.positionType, (newPositionType) => {
   // Dynamically set valuation type based on the selected position type.
-  valuationType.value = PositionTypeToValuationTypesMap[newPositionType][0];
+  navEntry.value.valuationType = PositionTypeToValuationTypesMap[newPositionType][0];
 
   // Reset method details when positionType changes.
   resetMethods();
 });
-watch(() => valuationType.value, () => {
+watch(() => navEntry.value.valuationType, () => {
   // Reset method details when valuationType changes.
   resetMethods();
 });
@@ -254,53 +311,48 @@ watch(() => valuationType.value, () => {
 const rules = [
   formRules.required,
 ];
-const updateDetailsValid = (index: number, isValid: boolean) => {
-  console.log("ind: ", index, " isValid: ", isValid);
-  methodsValid.value[index] = isValid;
-};
 
 
 const addMethod = () => {
   console.log(navEntry.value);
-  if (!formIsValid.value || !areAllMethodsValid.value)  {
+  // TODO remove isValid from every method details navEntry
+  // TODO check validation
+  if (!formIsValid.value || !areAllMethodDetailsValid.value)  {
     return toastStore.warningToast(
       "Some form fields are not valid.",
     );
   }
 
-  // Set default fields that are required for each entry.
-  // In most cases methods will be only one method, only if the PositionType is Composable, there can be
-  // more than 1 method, and we will create a new NAV entry for each of them, with the same position name...
-  // - NFT (composable) can have more than 1 method, so take all methods in details.
-  // - All other Position Types can only have 1 method, so take the first one (there should only be one).
-  navEntry.value.positionName = positionName.value;
-  navEntry.value.valuationSource = valuationSource.value;
-  navEntry.value.positionType = positionType.value;
-  navEntry.value.valuationType = valuationType.value;
+  const newNavEntry = JSON.parse(JSON.stringify(navEntry.value));
 
+  // Set default fields that are required for each entry.
   // All methods details have this data.
   // TODO check if we need to convert any field to number by map like entryType
-  navEntry.value.details.isPastNAVUpdate = false;
-  navEntry.value.details.pastNAVUpdateIndex = 0;
-  navEntry.value.details.pastNAVUpdateEntryIndex = 0;
-  navEntry.value.details.pastNAVUpdateEntryFundAddress = fundStore.fund?.address;
-  navEntry.value.details.entryType = PositionTypeToNAVEntryTypeMap[navEntry.value.positionType];
-  navEntry.value.details.valuationType = valuationType.value; // TODO convert also?
-  navEntry.value.details.description = {
+  newNavEntry.details.isPastNAVUpdate = false;
+  newNavEntry.details.pastNAVUpdateIndex = 0;
+  newNavEntry.details.pastNAVUpdateEntryIndex = 0;
+  newNavEntry.details.pastNAVUpdateEntryFundAddress = fundStore.fund?.address;
+  newNavEntry.details.entryType = PositionTypeToNAVEntryTypeMap[navEntry.value.positionType];
+  newNavEntry.details.valuationType = navEntry.value.valuationType; // TODO convert also?
+  newNavEntry.details.description = {
     positionName: navEntry.value.positionName,
     valuationSource: navEntry.value.valuationSource,
   };
 
   // TODO add additional check that all methods have the same pastNAVUpdateIndex
   // Iterate over all NAV entry methods.
-  for (const method of navEntry.value.details[positionType.value]) {
+  // In most cases methods will be only one method, only if the PositionType is Composable, there can be
+  // more than 1 method, and we will create a new NAV entry for each of them, with the same position name...
+  // - NFT (composable) can have more than 1 method, so take all methods in details.
+  // - All other Position Types can only have 1 method, so take the first one (there should only be one).
+  for (const method of newNavEntry.details[newNavEntry.positionType]) {
     // Set default data for each entry's method's position & valuation type.
     defaultFields.value.forEach(field => {
       method[field.key] = field.value;
     });
 
     if ("pastNAVUpdateIndex" in method) {
-      navEntry.value.details.pastNAVUpdateIndex = method.pastNAVUpdateIndex;
+      newNavEntry.details.pastNAVUpdateIndex = method.pastNAVUpdateIndex;
     }
 
     if ("otcTxHashes" in method) {
@@ -318,18 +370,25 @@ const addMethod = () => {
     }
 
     // Set other misc dynamic fields related to the current fund, specific for each position & valuation type.
-    if (positionType.value === PositionType.Liquid && valuationType.value === ValuationType.DEXPair) {
+    if (newNavEntry.positionType === PositionType.Liquid && newNavEntry.valuationType === ValuationType.DEXPair) {
       method.nonAssetTokenAddress = fundStore.fund?.baseToken?.address;
     }
 
+    // Remove unwanted properties that we don't need when submitting the proposal.
+    delete method.isValid;
+    delete method.valuationType;
   }
+
+  // Mark entry as new, so that it will be green in the table.
+  newNavEntry.isNew = true;
+
   // JSONIFY method details:
-  navEntry.value.detailsJson = formatJson(navEntry.value.details);
-  navEntry.value.detailsHash = ethers.keccak256(ethers.toUtf8Bytes(navEntry.value.detailsJson))
-  console.log("New Method JSON: ", navEntry.value.detailsJson);
+  newNavEntry.detailsJson = formatJson(newNavEntry.details);
+  newNavEntry.detailsHash = ethers.keccak256(ethers.toUtf8Bytes(newNavEntry.detailsJson))
+  console.log("New Method JSON: ", newNavEntry.detailsJson);
 
   // Add newly defined NAV entry to fund managed methods.
-  fundStore.fundManagedNAVMethods.push(navEntry.value);
+  fundStore.fundManagedNAVMethods.push(newNavEntry);
 
   // Redirect back to Manage methods page.
   router.push(`/details/${selectedFundSlug.value}/nav/manage`);
@@ -343,5 +402,29 @@ const addMethod = () => {
   flex-direction: row;
   justify-content: space-around;
   margin-top: 0.5rem;
+}
+
+:deep(.v-expansion-panel-text__wrapper) {
+  padding: 0;
+}
+:deep(.v-expansion-panel-title) {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.method_details_title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  letter-spacing: 0.02625rem;
+  font-weight: 500;
+  color: $color-text-irrelevant;
+}
+.method_details_status {
+  color: $color-warning;
+
+  &--valid {
+    color: $color-success;
+  }
 }
 </style>
