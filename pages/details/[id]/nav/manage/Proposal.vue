@@ -346,6 +346,10 @@ const prepNAVMethodComposable = (details: Record<string, any>): any[] => {
   ]);
 }
 
+const getMethodsPastNAVUpdateIndex = (methods: Record<string, any>[]) => {
+  return methods.find(method => "pastNAVUpdateIndex" in method)?.pastNAVUpdateIndex ?? 0;
+}
+
 const createProposal = async () => {
   if (!web3Store.web3) return;
 
@@ -362,14 +366,20 @@ const createProposal = async () => {
       pastNavUpdateEntryAddresses.push(navEntryDetails.pastNAVUpdateEntryFundAddress)
     }
 
+    let pastNAVUpdateIndex = 0;
+
     if (navEntry.positionType === PositionType.Liquid) {
       navEntryDetails.liquid = prepNAVMethodLiquid(navEntryDetails);
+      pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(navEntryDetails[PositionType.Liquid]);
     } else if (navEntry.positionType === PositionType.Illiquid) {
       navEntryDetails.illiquid = prepNAVMethodIlliquid(navEntryDetails);
+      pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(navEntryDetails[PositionType.Illiquid]);
     } else if (navEntry.positionType === PositionType.NFT) {
       navEntryDetails.nft = prepNAVMethodNFT(navEntryDetails);
+      pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(navEntryDetails[PositionType.NFT]);
     } else if (navEntry.positionType === PositionType.Composable) {
       navEntryDetails.composable = prepNAVMethodComposable(navEntryDetails);
+      pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(navEntryDetails[PositionType.Composable]);
     }
 
     navUpdateEntries.push(
@@ -380,7 +390,7 @@ const createProposal = async () => {
         toRaw(navEntryDetails.nft),
         toRaw(navEntryDetails.composable),
         navEntryDetails.isPastNAVUpdate,
-        parseInt(navEntryDetails.pastNAVUpdateIndex),
+        pastNAVUpdateIndex,
         parseInt(navEntryDetails.pastNAVUpdateEntryIndex),
         JSON.stringify(navEntryDetails.description),
       ],
@@ -389,9 +399,19 @@ const createProposal = async () => {
   console.log("navUpdateEntries: ", navUpdateEntries);
   console.log("pastNavUpdateEntryAddresses: ", pastNavUpdateEntryAddresses);
 
+  // console.log("data to encode: ", JSON.stringify([
+  //   navUpdateEntries,
+  //   pastNavUpdateEntryAddresses,
+  //   false,
+  // ]))
   // console.log(JSON.stringify(dataNavUpdateEntries));
   console.log(updateNavABI);
   const processWithdraw = false;
+  console.log("data to encode: ", [
+    navUpdateEntries,
+    pastNavUpdateEntryAddresses,
+    processWithdraw,
+  ])
   const encodedDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
     updateNavABI as AbiFunctionFragment,
     [
@@ -411,15 +431,13 @@ const createProposal = async () => {
   console.log("Nav update latest index: ", navUpdateLatestIndex);
 
   /*
-
-    function propose(
-      address[] memory targets,
-      uint256[] memory values,
-      bytes[] memory calldatas,
-      string memory description
+  function propose(
+    address[] memory targets,
+    uint256[] memory values,
+    bytes[] memory calldatas,
+    string memory description
   )
   */
-
   const encodedCollectFlowFeesAbiJSON = web3Store.web3.eth.abi.encodeFunctionCall(
     collectFeesABI as AbiFunctionFragment, [0],
   );
