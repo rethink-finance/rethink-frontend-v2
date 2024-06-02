@@ -304,147 +304,108 @@ console.log("collectFeesABI: ", collectFeesABI);
 console.log("getNavEntryFunctionABI: ", getNavEntryFunctionABI);
 
 const prepNAVMethodLiquid = (details: Record<string, any>): any[] => {
-  return [
-    details.tokenPair || "",
-    details.aggregatorAddress || "",
-    details.functionSignatureWithEncodedInputs || "",
-    details.assetTokenAddress || "",
-    details.nonAssetTokenAddress || "",
-    details.isReturnArray || "",
-    parseInt(details.returnLength) || 0,
-    parseInt(details.returnIndex) || 0,
-    parseInt(details.pastNAVUpdateIndex) || 0,
-  ];
+  return details.liquid.map((method: Record<string, any>) => [
+    method.tokenPair || "",
+    method.aggregatorAddress || "",
+    method.functionSignatureWithEncodedInputs || "",
+    method.assetTokenAddress || "",
+    method.nonAssetTokenAddress || "",
+    method.isReturnArray || "",
+    parseInt(method.returnLength) || 0,
+    parseInt(method.returnIndex) || 0,
+    parseInt(method.pastNAVUpdateIndex) || 0,
+  ]);
+}
+
+const prepNAVMethodIlliquid = (details: Record<string, any>): any[] => {
+  return details.illiquid.map((method: Record<string, any>) => {
+    console.log("prepNAV Illiquid: ", method);
+    const trxHashes = method.otcTxHashes?.map(
+      // Remove leading and trailing whitespace
+      (hash: string) => hash.trim(),
+    ).filter(
+      // Remove empty strings;
+      (hash: string) => hash !== "",
+    ) || [];
+
+    const baseDecimals = fundStore.fund?.baseToken.decimals;
+    if (!baseDecimals) {
+      toastStore.errorToast("Failed preparing NAV Illiquid method, base decimals are not known.")
+      throw new Error("Failed preparing NAV Illiquid method, base decimals are not known.")
+    }
+
+    return [
+      ethers.parseUnits(method.baseCurrencySpent?.toString() ?? "0", baseDecimals),
+      parseInt(method.amountAquiredTokens || "0"),
+      method.tokenAddress,
+      method.isNFT,
+      trxHashes,
+      method.nftType,
+      parseInt(method.nftIndex) || 0,
+      parseInt(method.pastNAVUpdateIndex) || 0,
+    ]
+  });
 }
 
 const prepNAVMethodNFT = (details: Record<string, any>): any[] => {
-  return [
-    details.oracleAddress,
-    details.nftAddress,
-    details.nftType,
-    parseInt(details.nftIndex) || 0,
-    parseInt(details.pastNAVUpdateIndex) || 0,
-  ];
+  return details.nft.map((method: Record<string, any>) => [
+    method.oracleAddress,
+    method.nftAddress,
+    method.nftType,
+    parseInt(method.nftIndex) || 0,
+    parseInt(method.pastNAVUpdateIndex) || 0,
+  ]);
 }
+
 const prepNAVMethodComposable = (details: Record<string, any>): any[] => {
-  return [
-    details.remoteContractAddress,
-    details.functionSignatures,
-    details.encodedFunctionSignatureWithInputs,
-    parseInt(details.normalizationDecimals) || 0,
-    details.isReturnArray,
-    parseInt(details.returnValIndex) || 0,
-    parseInt(details.returnArraySize) || 0,
-    details.returnValType,
-    parseInt(details.pastNAVUpdateIndex) || 0,
-    details.isNegative,
-  ];
-}
-const prepNAVMethodIlliquid = (details: Record<string, any>): any[] => {
-  console.log("prepNAV Illiquid: ", details);
-  const trxHashes = details.otcTxHashes?.map(
-    // Remove leading and trailing whitespace
-    (hash: string) => hash.trim(),
-  ).filter(
-    // Remove empty strings;
-    (hash: string) => hash !== "",
-  ) || [];
-
-  const baseDecimals = fundStore.fund?.baseToken.decimals;
-  if (!baseDecimals) {
-    toastStore.errorToast("Failed preparing NAV Illiquid method, base decimals are not known.")
-    throw new Error("Failed preparing NAV Illiquid method, base decimals are not known.")
-  }
-
-  console.log("details.nftType: ", details.nftType);
-  console.log("baseCurrencySpent: ", details.baseCurrencySpent);
-  return [
-    ethers.parseUnits(details.baseCurrencySpent?.toString() ?? "0", baseDecimals),
-    parseInt(details.amountAquiredTokens || "0"),
-    details.tokenAddress,
-    details.isNFT,
-    trxHashes,
-    details.nftType,
-    parseInt(details.nftIndex) || 0,
-    parseInt(details.pastNAVUpdateIndex) || 0,
-  ];
+  return details.composable.map((method: Record<string, any>) => [
+    method.remoteContractAddress,
+    method.functionSignatures,
+    method.encodedFunctionSignatureWithInputs,
+    parseInt(method.normalizationDecimals) || 0,
+    method.isReturnArray,
+    parseInt(method.returnValIndex) || 0,
+    parseInt(method.returnArraySize) || 0,
+    method.returnValType,
+    parseInt(method.pastNAVUpdateIndex) || 0,
+    method.isNegative,
+  ]);
 }
 
 const createProposal = () => {
   if (!web3Store.web3) return;
-  /*
-  let addLiquidUpdateAbiJSON = component.getFundAbi[8];
-  let addIlliquidUpdateAbiJSON = component.getFundAbi[33];
-  let addNftUpdateAbiJSON = component.getFundAbi[32];
-  let addComposableUpdateAbiJSON = component.getFundAbi[32];
-  */
-  // const dataNavUpdateEntries = [];
+
+  const navUpdateEntries = [];
   const dataPastNavUpdateEntriesAddrs: any[] = [];
-  const liquidMethods = [];
-  const illiquidMethods = [];
-  const nftMethods = [];
-  const composableMethods = [];
 
-  // const parameters = [
-  //   PositionTypeToEntryTypeMap[navUpdate.entryType],
-  //   NAVLiquidUpdate[],
-  //   NAVIlliquidUpdate[],
-  //   NAVNFTUpdate[],
-  //   NAVComposableUpdate[],
-  //   navUpdate.isPastNAVUpdate,
-  //   navUpdate.pastNAVUpdateIndex,
-  //   navUpdate.pastNAVUpdateEntryIndex,
-  //   JSON.stringify(navUpdate.description),// fundMetadata
-  // ];
-  for(const navMethod of fundManagedNAVMethods.value as INAVMethod[]) {
-    if (navMethod.positionType === PositionType.Liquid) {
-      liquidMethods.push(prepNAVMethodLiquid(navMethod.details))
-    } else if (navMethod.positionType === PositionType.Illiquid) {
-      illiquidMethods.push(prepNAVMethodIlliquid(navMethod.details))
-    } else if (navMethod.positionType === PositionType.NFT) {
-      nftMethods.push(prepNAVMethodNFT(navMethod.details))
-    } else if (navMethod.positionType === PositionType.Composable) {
-      composableMethods.push(prepNAVMethodComposable(navMethod.details))
+  for(const navEntry of fundManagedNAVMethods.value as INAVMethod[]) {
+    const navEntryDetails = JSON.parse(JSON.stringify(navEntry.details));
+
+    if (navEntry.positionType === PositionType.Liquid) {
+      navEntryDetails.liquid = prepNAVMethodLiquid(navEntryDetails);
+    } else if (navEntry.positionType === PositionType.Illiquid) {
+      navEntryDetails.illiquid = prepNAVMethodIlliquid(navEntryDetails);
+    } else if (navEntry.positionType === PositionType.NFT) {
+      navEntryDetails.nft = prepNAVMethodNFT(navEntryDetails);
+    } else if (navEntry.positionType === PositionType.Composable) {
+      navEntryDetails.composable = prepNAVMethodComposable(navEntryDetails);
     }
-    console.log("navMethod: ", navMethod);
-
-    // For now composable can have more than 1 method, so we store it as array.
-    const detailsList = Array.isArray(navMethod.details) ? navMethod.details : [navMethod.details];
-
-    // TODO figure this out
-    // for (const details of navMethod.details) {
-    //   if (!details?.pastNAVUpdateEntryFundAddress) continue;
-    //   dataPastNavUpdateEntriesAddrs.push(
-    //     details.pastNAVUpdateEntryFundAddress,
-    //   );
-    // }
+    console.log("parsed navEntry: ", navEntryDetails);
+    navUpdateEntries.push(navEntryDetails)
   }
-  console.log("methods parsed")
-  // TODO WIP
-  const parameters = [
-    0, // PositionTypeToEntryTypeMap[navUpdate.entryType] // TODO what to use here?
-    liquidMethods,
-    illiquidMethods,
-    nftMethods,
-    composableMethods,
-    false, // navUpdate.isPastNAVUpdate,
-    0, // navUpdate.pastNAVUpdateIndex, // TODO get the last one of the NAV updates?
-    0, // navUpdate.pastNAVUpdateEntryIndex,  // TODO what is this?
-    JSON.stringify({}),// fundMetadata, navUpdate.description, TODO what to use here? or proposal.description
-  ];
-  console.log("parameters: ", parameters);
+  console.log("navUpdateEntries: ", navUpdateEntries);
 
   // console.log(JSON.stringify(dataNavUpdateEntries));
-  console.log(updateNavABI);
-  const processWithdraw = false;
-  const encodedDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
-    updateNavABI as AbiFunctionFragment,
-    [
-      [parameters], // dataNavUpdateEntries,
-      dataPastNavUpdateEntriesAddrs,
-      processWithdraw,
-    ]);
-  console.log("encodedDataNavUpdateEntries: ", encodedDataNavUpdateEntries)
+  // console.log(updateNavABI);
+  // const processWithdraw = false;
+  // const encodedDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
+  //   updateNavABI as AbiFunctionFragment,
+  //   [
+  //     navUpdateEntries,
+  //     dataPastNavUpdateEntriesAddrs,
+  //     processWithdraw,
+  //   ]);
+  // console.log("encodedDataNavUpdateEntries: ", encodedDataNavUpdateEntries)
   //
   // console.log(component.fund.governor);
   // console.log(component.getSelectedFundAddress);
