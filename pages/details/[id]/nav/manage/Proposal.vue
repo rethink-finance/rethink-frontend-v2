@@ -100,15 +100,18 @@
                       Proposal Methods
                     </div>
                     <!-- TODO implement NAV Proposal changes (additions & deletions count) on proposal methods -->
-                    <!--                    <div>-->
-                    <!--                      •-->
-                    <!--                    </div>-->
-                    <!--                    <div class="text-success">-->
-                    <!--                      3-->
-                    <!--                    </div>-->
-                    <!--                    <div>-->
-                    <!--                      Changes-->
-                    <!--                    </div>-->
+                    <div>
+                      •
+                    </div>
+                    <div v-if="newEntriesCount" class="text-success">
+                      {{ newEntriesCount }} New
+                    </div>
+                    <div v-if="deletedEntriesCount" class="text-error">
+                      {{ deletedEntriesCount }} Deleted
+                    </div>
+                    <div v-if="!newEntriesCount && !deletedEntriesCount">
+                      0 Changes
+                    </div>
                   </div>
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
@@ -118,11 +121,6 @@
             </v-expansion-panels>
           </v-row>
 
-          <v-row>
-            <div>
-              {{ navEntriesJson }}
-            </div>
-          </v-row>
           <v-row>
             <div class="action-buttons">
               <v-btn
@@ -196,9 +194,11 @@ onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
 });
 
-const navEntriesJson = computed(() => {
-  console.log(fundManagedNAVMethods);
-  return "";
+const newEntriesCount = computed(() => {
+  return fundManagedNAVMethods.value.filter(method => method.isNew).length ?? 0;
+});
+const deletedEntriesCount = computed(() => {
+  return fundManagedNAVMethods.value.filter(method => method.deleted).length ?? 0;
 });
 
 const defaultNavEntryPermission = {
