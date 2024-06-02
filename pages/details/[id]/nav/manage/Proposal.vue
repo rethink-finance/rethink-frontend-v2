@@ -156,6 +156,7 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useWeb3Store } from "~/store/web3.store";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useToastStore } from "~/store/toast.store";
+import RethinkFundGovernor from "assets/contracts/RethinkFundGovernor.json";
 
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
@@ -188,18 +189,8 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 const form = ref(null);
+const loading = ref(false);
 const formIsValid = ref(false);
-
-const method = ref<INAVMethod>({
-  positionName: "",
-  valuationSource: "",
-  positionType: PositionType.Liquid,
-  valuationType: ValuationType.DEXPair,
-  details: [
-    {},
-  ],
-  detailsJson: "[]",
-});
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
@@ -210,84 +201,67 @@ const navEntriesJson = computed(() => {
   return "";
 });
 
-const data = {
-  NAVNFTType: {
-    "ERC1155": 0,
-    "ERC721": 1,
-    "NONE": 2,
-  } as Record<string, number>,
-  NAVComposableUpdateReturnType: {
-    "UINT256": 0,
-    "INT256": 1,
-  } as Record<string, number>,
-  NavUpdateType: {
-    "NAVLiquidUpdateType": 0,
-    "NAVIlliquidUpdateType": 1,
-    "NAVNFTUpdateType": 2,
-    "NAVComposableUpdateType": 3,
-  } as Record<string, number>,
-  defaultNavEntryPermission: {
-    "idx": 0,
-    "value": [
-      {
-        "idx": 0,
-        "isArray": false,
-        "data": "1",
-        "internalType": "uint16",
-        "name": "role",
-      },
-      {
-        "idx": 1,
-        "isArray": false,
-        "data": null,
-        "internalType": "address",
-        "name": "targetAddress",
-      },
-      {
-        "idx": 2,
-        "isArray": false,
-        "data": null,
-        "internalType": "bytes4",
-        "name": "functionSig",
-      },
-      {
-        "idx": 3,
-        "isArray": true,
-        "data": [],
-        "internalType": "bool[]",
-        "name": "isParamScoped",
-      },
-      {
-        "idx": 4,
-        "isArray": true,
-        "data": [],
-        "internalType": "enum ParameterType[]",
-        "name": "paramType",
-      },
-      {
-        "idx": 5,
-        "isArray": true,
-        "data": [],
-        "internalType": "enum Comparison[]",
-        "name": "paramComp",
-      },
-      {
-        "idx": 6,
-        "isArray": true,
-        "data": [],
-        "internalType": "bytes[]",
-        "name": "compValue",
-      },
-      {
-        "idx": 7,
-        "isArray": false,
-        "data": "1",
-        "internalType": "enum ExecutionOptions",
-        "name": "options",
-      },
-    ],
-    "valueMethodIdx": 19,
-  },
+const defaultNavEntryPermission = {
+  "idx": 0,
+  "value": [
+    {
+      "idx": 0,
+      "isArray": false,
+      "data": "1",
+      "internalType": "uint16",
+      "name": "role",
+    },
+    {
+      "idx": 1,
+      "isArray": false,
+      "data": null,
+      "internalType": "address",
+      "name": "targetAddress",
+    },
+    {
+      "idx": 2,
+      "isArray": false,
+      "data": null,
+      "internalType": "bytes4",
+      "name": "functionSig",
+    },
+    {
+      "idx": 3,
+      "isArray": true,
+      "data": [],
+      "internalType": "bool[]",
+      "name": "isParamScoped",
+    },
+    {
+      "idx": 4,
+      "isArray": true,
+      "data": [],
+      "internalType": "enum ParameterType[]",
+      "name": "paramType",
+    },
+    {
+      "idx": 5,
+      "isArray": true,
+      "data": [],
+      "internalType": "enum Comparison[]",
+      "name": "paramComp",
+    },
+    {
+      "idx": 6,
+      "isArray": true,
+      "data": [],
+      "internalType": "bytes[]",
+      "name": "compValue",
+    },
+    {
+      "idx": 7,
+      "isArray": false,
+      "data": "1",
+      "internalType": "enum ExecutionOptions",
+      "name": "options",
+    },
+  ],
+  "valueMethodIdx": 19,
 }
 
 const updateNavABI = GovernableFund.abi.find(
@@ -336,11 +310,11 @@ const prepNAVMethodIlliquid = (details: Record<string, any>): any[] => {
 
     return [
       ethers.parseUnits(method.baseCurrencySpent?.toString() ?? "0", baseDecimals),
-      parseInt(method.amountAquiredTokens || "0"),
+      parseInt(method.amountAquiredTokens) || 0,
       method.tokenAddress,
       method.isNFT,
       trxHashes,
-      method.nftType,
+      parseInt(method.nftType) || 0,
       parseInt(method.nftIndex) || 0,
       parseInt(method.pastNAVUpdateIndex) || 0,
     ]
@@ -372,14 +346,21 @@ const prepNAVMethodComposable = (details: Record<string, any>): any[] => {
   ]);
 }
 
-const createProposal = () => {
+const createProposal = async () => {
   if (!web3Store.web3) return;
 
   const navUpdateEntries = [];
-  const dataPastNavUpdateEntriesAddrs: any[] = [];
+  const pastNavUpdateEntryAddresses: any[] = [];
 
-  for(const navEntry of fundManagedNAVMethods.value as INAVMethod[]) {
+  for (const navEntry of fundManagedNAVMethods.value as INAVMethod[]) {
+    // Skip deleted entries in the new proposal.
+    if (navEntry.deleted) continue;
+
     const navEntryDetails = JSON.parse(JSON.stringify(navEntry.details));
+
+    if (navEntryDetails.pastNAVUpdateEntryFundAddress) {
+      pastNavUpdateEntryAddresses.push(navEntryDetails.pastNAVUpdateEntryFundAddress)
+    }
 
     if (navEntry.positionType === PositionType.Liquid) {
       navEntryDetails.liquid = prepNAVMethodLiquid(navEntryDetails);
@@ -390,33 +371,44 @@ const createProposal = () => {
     } else if (navEntry.positionType === PositionType.Composable) {
       navEntryDetails.composable = prepNAVMethodComposable(navEntryDetails);
     }
-    console.log("parsed navEntry: ", navEntryDetails);
-    navUpdateEntries.push(navEntryDetails)
+
+    navUpdateEntries.push(
+      [
+        parseInt(navEntryDetails.entryType),
+        toRaw(navEntryDetails.liquid),
+        toRaw(navEntryDetails.illiquid),
+        toRaw(navEntryDetails.nft),
+        toRaw(navEntryDetails.composable),
+        navEntryDetails.isPastNAVUpdate,
+        parseInt(navEntryDetails.pastNAVUpdateIndex),
+        parseInt(navEntryDetails.pastNAVUpdateEntryIndex),
+        JSON.stringify(navEntryDetails.description),
+      ],
+    )
   }
   console.log("navUpdateEntries: ", navUpdateEntries);
+  console.log("pastNavUpdateEntryAddresses: ", pastNavUpdateEntryAddresses);
 
   // console.log(JSON.stringify(dataNavUpdateEntries));
-  // console.log(updateNavABI);
-  // const processWithdraw = false;
-  // const encodedDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
-  //   updateNavABI as AbiFunctionFragment,
-  //   [
-  //     navUpdateEntries,
-  //     dataPastNavUpdateEntriesAddrs,
-  //     processWithdraw,
-  //   ]);
-  // console.log("encodedDataNavUpdateEntries: ", encodedDataNavUpdateEntries)
-  //
-  // console.log(component.fund.governor);
-  // console.log(component.getSelectedFundAddress);
-  // console.log(component.getActiveAccount);
-  //
-  // const rethinkFundGovernorContract = new component.getWeb3.eth.Contract(
-  //   RethinkFundGovernorJSON.abi,
-  //   component.fund.governor,
-  // );
-  //
-  // const navUpdateIndex = await component.getFundContract.methods._navUpdateLatestIndex().call();
+  console.log(updateNavABI);
+  const processWithdraw = false;
+  const encodedDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
+    updateNavABI as AbiFunctionFragment,
+    [
+      navUpdateEntries,
+      pastNavUpdateEntryAddresses,
+      processWithdraw,
+    ]);
+  console.log("encodedDataNavUpdateEntries: ", encodedDataNavUpdateEntries)
+
+  console.log(fundStore.fund?.governorAddress);
+  const rethinkFundGovernorContract = new web3Store.web3.eth.Contract(
+    RethinkFundGovernor.abi,
+    fundStore.fund?.governorAddress,
+  );
+
+  const navUpdateLatestIndex = await fundStore.fundContract.methods._navUpdateLatestIndex().call();
+  console.log("Nav update latest index: ", navUpdateLatestIndex);
 
   /*
 
@@ -426,11 +418,61 @@ const createProposal = () => {
       bytes[] memory calldatas,
       string memory description
   )
-    */
+  */
 
-  // const encodedCollectFlowFeesAbiJSON = web3Store.web3.eth.abi.encodeFunctionCall(collectFeesAbiJSON, [0]);
-  // const encodedCollectManagerFeesAbiJSON = web3Store.web3.getWeb3.eth.abi.encodeFunctionCall(collectFeesAbiJSON, [2]);
-  // const encodedCollectPerformanceFeesAbiJSON = web3Store.web3.getWeb3.eth.abi.encodeFunctionCall(collectFeesAbiJSON, [3]);
+  const encodedCollectFlowFeesAbiJSON = web3Store.web3.eth.abi.encodeFunctionCall(
+    collectFeesABI as AbiFunctionFragment, [0],
+  );
+  const encodedCollectManagerFeesAbiJSON = web3Store.web3.eth.abi.encodeFunctionCall(
+    collectFeesABI as AbiFunctionFragment, [2],
+  );
+  const encodedCollectPerformanceFeesAbiJSON = web3Store.web3.eth.abi.encodeFunctionCall(
+    collectFeesABI as AbiFunctionFragment, [3],
+  );
+
+  // Propose NAV update for fund (target: fund addr, payloadL bytes)
+  console.log("Active Account: ", fundStore.activeAccountAddress)
+  loading.value = true;
+  rethinkFundGovernorContract.methods.propose(
+    [
+      fundStore.fund?.address,
+      fundStore.fund?.address,
+      fundStore.fund?.address,
+      fundStore.fund?.address,
+    ],
+    [0,0,0,0],
+    [
+      encodedDataNavUpdateEntries,
+      encodedCollectFlowFeesAbiJSON,
+      encodedCollectManagerFeesAbiJSON,
+      encodedCollectPerformanceFeesAbiJSON,
+    ],
+    proposal.value.title,
+  ).send({
+    from: fundStore.activeAccountAddress,
+    maxPriorityFeePerGas: undefined,
+    maxFeePerGas: undefined,
+  }).on("transactionHash", (hash: string) => {
+    console.log("tx hash: " + hash);
+    toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
+  }).on("receipt", (receipt: any) => {
+    console.log("receipt: ", receipt);
+    if (receipt.status) {
+      toastStore.successToast(
+        "Register the proposal transactions was successful. " +
+        "You can now vote on the proposal in the pool governance page.",
+      );
+    } else {
+      toastStore.errorToast(
+        "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+      );
+    }
+    loading.value = false;
+  }).on("error", function(error){
+    console.error(error);
+    loading.value = false;
+    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+  });
 }
 
 </script>
