@@ -372,7 +372,7 @@ export const PositionTypeValuationTypeDefaultFieldsMap: PositionTypeValuationTyp
         value: 0,
       },
       {
-        key: "pastNAVUpdateIndex", // TODO check this field after Rok answers if filled in front or set default here
+        key: "pastNAVUpdateIndex",
         value: 0,
       },
     ],
