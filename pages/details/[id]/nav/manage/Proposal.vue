@@ -6,7 +6,8 @@
           Create NAV Proposal
         </div>
         <div class="last-update">
-          Last Updates on 22 04 24
+          <!-- TODO last updates date -->
+          Last Updates on N/A
         </div>
       </div>
     </UiHeader>
@@ -150,7 +151,6 @@ import { ethers } from "ethers";
 import type { AbiFunctionFragment } from "web3";
 import { useFundStore } from "~/store/fund.store";
 import { PositionType } from "~/types/enums/position_type";
-import { ValuationType } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useWeb3Store } from "~/store/web3.store";
@@ -293,7 +293,6 @@ const prepNAVMethodLiquid = (details: Record<string, any>): any[] => {
 
 const prepNAVMethodIlliquid = (details: Record<string, any>): any[] => {
   return details.illiquid.map((method: Record<string, any>) => {
-    console.log("prepNAV Illiquid: ", method);
     const trxHashes = method.otcTxHashes?.map(
       // Remove leading and trailing whitespace
       (hash: string) => hash.trim(),
@@ -398,30 +397,21 @@ const createProposal = async () => {
   }
   console.log("navUpdateEntries: ", navUpdateEntries);
   console.log("pastNavUpdateEntryAddresses: ", pastNavUpdateEntryAddresses);
-
-  // console.log("data to encode: ", JSON.stringify([
-  //   navUpdateEntries,
-  //   pastNavUpdateEntryAddresses,
-  //   false,
-  // ]))
-  // console.log(JSON.stringify(dataNavUpdateEntries));
-  console.log(updateNavABI);
-  const processWithdraw = false;
   console.log("data to encode: ", [
     navUpdateEntries,
     pastNavUpdateEntryAddresses,
-    processWithdraw,
+    proposal.value.collectManagementFees,
   ])
   const encodedDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
     updateNavABI as AbiFunctionFragment,
     [
       navUpdateEntries,
       pastNavUpdateEntryAddresses,
-      processWithdraw,
-    ]);
+      proposal.value.collectManagementFees,
+    ],
+  );
   console.log("encodedDataNavUpdateEntries: ", encodedDataNavUpdateEntries)
-
-  console.log(fundStore.fund?.governorAddress);
+  console.log("governor: ", fundStore.fund?.governorAddress);
   const rethinkFundGovernorContract = new web3Store.web3.eth.Contract(
     RethinkFundGovernor.abi,
     fundStore.fund?.governorAddress,
@@ -465,7 +455,10 @@ const createProposal = async () => {
       encodedCollectManagerFeesAbiJSON,
       encodedCollectPerformanceFeesAbiJSON,
     ],
-    proposal.value.title,
+    JSON.stringify({
+      title: proposal.value.title,
+      description: proposal.value.description,
+    }),
   ).send({
     from: fundStore.activeAccountAddress,
     maxPriorityFeePerGas: undefined,
