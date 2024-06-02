@@ -273,9 +273,6 @@ const collectFeesABI = GovernableFund.abi.find(
 const getNavEntryFunctionABI = GovernableFund.abi.find(
   func => func.name === "getNavEntry" && func.type === "function",
 );
-console.log("updateNavABI: ", updateNavABI);
-console.log("collectFeesABI: ", collectFeesABI);
-console.log("getNavEntryFunctionABI: ", getNavEntryFunctionABI);
 
 const prepNAVMethodLiquid = (details: Record<string, any>): any[] => {
   return details.liquid.map((method: Record<string, any>) => [
