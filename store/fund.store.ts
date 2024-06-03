@@ -432,18 +432,18 @@ export const useFundStore = defineStore({
       // Fetch NAV JSON entries for each NAV update.
       const promises: Promise<any>[] = Array.from(
         { length: navUpdatesLen },
-        (_, index) => this.fundContract.methods.getNavEntry(index).call(),
+        (_, index) => this.fundContract.methods.getNavEntry(index + 1).call(),
       );
 
       // Each NAV update has more entries.
       // Parse and store them to the NAV update entries.
       const navUpdatePromises = await Promise.allSettled(promises);
-      // console.log("navUpdatePromises: ", navUpdatePromises);
 
       // Process results
       navUpdatePromises.forEach((navUpdateResult, index) => {
         if (navUpdateResult.status === "fulfilled") {
           const navEntries: Record<string, any>[] = navUpdateResult.value;
+          console.log("navEntries: ", navEntries);
 
           for (const navEntry of navEntries) {
             navUpdates[index].entries.push(this.parseNAVEntry(navEntry))
