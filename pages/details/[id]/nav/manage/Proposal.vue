@@ -152,7 +152,7 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useWeb3Store } from "~/store/web3.store";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useToastStore } from "~/store/toast.store";
-import RethinkFundGovernor from "assets/contracts/RethinkFundGovernor.json";
+import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
@@ -203,69 +203,6 @@ const fundLastNAVUpdateDate = computed(() => {
   return fundLastNAVUpdate.value.date ?? "N/A";
 })
 
-const defaultNavEntryPermission = {
-  "idx": 0,
-  "value": [
-    {
-      "idx": 0,
-      "isArray": false,
-      "data": "1",
-      "internalType": "uint16",
-      "name": "role",
-    },
-    {
-      "idx": 1,
-      "isArray": false,
-      "data": null,
-      "internalType": "address",
-      "name": "targetAddress",
-    },
-    {
-      "idx": 2,
-      "isArray": false,
-      "data": null,
-      "internalType": "bytes4",
-      "name": "functionSig",
-    },
-    {
-      "idx": 3,
-      "isArray": true,
-      "data": [],
-      "internalType": "bool[]",
-      "name": "isParamScoped",
-    },
-    {
-      "idx": 4,
-      "isArray": true,
-      "data": [],
-      "internalType": "enum ParameterType[]",
-      "name": "paramType",
-    },
-    {
-      "idx": 5,
-      "isArray": true,
-      "data": [],
-      "internalType": "enum Comparison[]",
-      "name": "paramComp",
-    },
-    {
-      "idx": 6,
-      "isArray": true,
-      "data": [],
-      "internalType": "bytes[]",
-      "name": "compValue",
-    },
-    {
-      "idx": 7,
-      "isArray": false,
-      "data": "1",
-      "internalType": "enum ExecutionOptions",
-      "name": "options",
-    },
-  ],
-  "valueMethodIdx": 19,
-}
-
 const updateNavABI = GovernableFund.abi.find(
   func => func.name === "updateNav" && func.type === "function",
 );
@@ -273,6 +210,9 @@ const collectFeesABI = GovernableFund.abi.find(
   func => func.name === "collectFees" && func.type === "function",
 );
 
+/**
+ * Position Type Methods preparing data from actual Object to an array of values that are ready to be encoded.
+**/
 const prepNAVMethodLiquid = (details: Record<string, any>): any[] => {
   return details.liquid.map((method: Record<string, any>) => [
     method.tokenPair || "",
@@ -341,8 +281,205 @@ const prepNAVMethodComposable = (details: Record<string, any>): any[] => {
   ]);
 }
 
+const prepRoleModEntryInput = (value: any) => {
+  /*
+    - address validation
+    - bytes validation
+    - int validation
+    - enum valudation (int)
+  */
+  const dtype = value.internalType;
+
+  if (value.isArray) {
+    const retDat = []
+    for (let i = 0; i < value.data.length; i++) {
+      if (dtype.startsWith("address")) {
+        retDat.push(value.data[i]);
+      } else if (dtype.startsWith("bytes")) {
+        retDat.push(value.data[i]);
+      } else if (dtype.startsWith("int")) {
+        retDat.push(value.data[i]);
+      } else if (dtype.startsWith("uint")) {
+        retDat.push(value.data[i]);
+      } else if (dtype.startsWith("enum")) {
+        retDat.push(value.data[i]);
+      } else if (dtype.startsWith("bool")) {
+        retDat.push(value.data[i] === "true");
+      }
+    }
+    return retDat;
+
+  }
+
+  if (dtype.startsWith("address")) {
+    return value.data;
+  } else if (dtype.startsWith("bytes")) {
+    return value.data;
+  } else if (dtype.startsWith("int")) {
+    return value.data;
+  } else if (dtype.startsWith("uint")) {
+    return value.data;
+  } else if (dtype.startsWith("enum")) {
+    return value.data;
+  } else if (dtype.startsWith("bool")) {
+    return value.data === "true";
+  }
+}
+
 const getMethodsPastNAVUpdateIndex = (methods: Record<string, any>[]) => {
   return methods.find(method => "pastNAVUpdateIndex" in method)?.pastNAVUpdateIndex ?? 0;
+}
+
+/**
+ * Creating a new proposal flow:
+ * 1) createProposal()
+ *    encodes NAV update entries (encodedNavUpdateEntries)
+ * 2) generateNAVPermission(encodedNavUpdateEntries)
+ *    these encoded NAV update entires are passed to: generateNAVPermission(encodedNavUpdateEntries) which
+ *    generates a NAV permission.
+ * 3)
+ */
+const generateNAVPermission = (encodedNavUpdateEntries: string) =>  {
+  // Default NAV entry permission
+  const navEntryPermission: Record<string, any> = {
+    "idx": 0,
+    "value": [
+      {
+        "idx": 0,
+        "isArray": false,
+        "data": "1",
+        "internalType": "uint16",
+        "name": "role",
+      },
+      {
+        "idx": 1,
+        "isArray": false,
+        "data": null,
+        "internalType": "address",
+        "name": "targetAddress",
+      },
+      {
+        "idx": 2,
+        "isArray": false,
+        "data": null,
+        "internalType": "bytes4",
+        "name": "functionSig",
+      },
+      {
+        "idx": 3,
+        "isArray": true,
+        "data": [],
+        "internalType": "bool[]",
+        "name": "isParamScoped",
+      },
+      {
+        "idx": 4,
+        "isArray": true,
+        "data": [],
+        "internalType": "enum ParameterType[]",
+        "name": "paramType",
+      },
+      {
+        "idx": 5,
+        "isArray": true,
+        "data": [],
+        "internalType": "enum Comparison[]",
+        "name": "paramComp",
+      },
+      {
+        "idx": 6,
+        "isArray": true,
+        "data": [],
+        "internalType": "bytes[]",
+        "name": "compValue",
+      },
+      {
+        "idx": 7,
+        "isArray": false,
+        "data": "1",
+        "internalType": "enum ExecutionOptions",
+        "name": "options",
+      },
+    ],
+    "valueMethodIdx": 19,
+  }
+
+  // Target address is fund contract
+  navEntryPermission.value[1].data = fundStore.fund?.address;
+  // functionSig
+  navEntryPermission.value[2].data = encodedNavUpdateEntries.substring(0,10);
+  // Raw data to permission
+  const subNAVEntriesEncoded = encodedNavUpdateEntries.substring(10);
+  const n = 64;
+  const navWords = [];
+  const navIsScoped = [];
+  const navTypeNComp = [];
+  for (let sidx = 0; sidx < subNAVEntriesEncoded.length; sidx += n) {
+    navWords.push(
+      "0x" + subNAVEntriesEncoded.substring(sidx,sidx+n),
+    );
+    navIsScoped.push("true");
+    navTypeNComp.push("0");
+  }
+
+  // isParamScoped
+  navEntryPermission.value[3].data = navIsScoped;
+  // paramType
+  navEntryPermission.value[4].data = navTypeNComp;
+  // paramComp
+  navEntryPermission.value[5].data = navTypeNComp;
+  // compValue
+  navEntryPermission.value[6].data = navWords;
+
+  return [navEntryPermission];
+}
+
+const encodeRoleModEntries = async (proposalEntries: any[]): Promise<[any[], any[], any[]]> => {
+  if (!web3Store.web3) return [[], [], []];
+
+  loading.value = true;
+  const proposalRoleModMethods = ZodiacRoles.abi.filter((val) => (val.type === "function"));
+  const startAddress = "0x0000000000000000000000000000000000000001";
+  /*
+  function getModulesPaginated(
+    address start,
+    uint256 pageSize
+  )
+   */
+  const safeModules = await fundStore.fundSafeContract.methods.getModulesPaginated(startAddress, 10).call();
+  const roleModAddr = safeModules[0][1];
+  console.log("roleModAddr: ", roleModAddr);
+
+  const encodedRoleModEntries = [];
+
+  const targets = [];
+  const gasValues = [];
+
+  for(let i = 0; i < proposalEntries.length; i++) {
+    const roleModFunctionABI = proposalRoleModMethods[proposalEntries[i].valueMethodIdx];
+    const roleModFunctionData = [];
+    for (let j = 0; j< proposalEntries[i].value.length; j++) {
+      /*
+        {
+          "idx": 0,
+          "isArray": false,
+          "data": "0xe977757dA5fd73Ca3D2bA6b7B544bdF42bb2CBf6",
+          "internalType": "address",
+          "name": "module"
+        },
+      */
+      roleModFunctionData.push(prepRoleModEntryInput(proposalEntries[i].value[j]));
+    }
+    const encodedRoleModFunction = web3Store.web3.eth.abi.encodeFunctionCall(
+      roleModFunctionABI as AbiFunctionFragment,
+      roleModFunctionData,
+    );
+    encodedRoleModEntries.push(encodedRoleModFunction);
+    targets.push(roleModAddr);
+    gasValues.push(0)
+  }
+
+  return [encodedRoleModEntries, targets, gasValues]
 }
 
 const createProposal = async () => {
@@ -393,12 +530,8 @@ const createProposal = async () => {
   }
   console.log("navUpdateEntries: ", navUpdateEntries);
   console.log("pastNavUpdateEntryAddresses: ", pastNavUpdateEntryAddresses);
-  console.log("data to encode: ", [
-    navUpdateEntries,
-    pastNavUpdateEntryAddresses,
-    proposal.value.collectManagementFees,
-  ])
-  const encodedDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
+  console.log("collectManagementFees: ", proposal.value.collectManagementFees);
+  const encodedNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
     updateNavABI as AbiFunctionFragment,
     [
       navUpdateEntries,
@@ -406,15 +539,19 @@ const createProposal = async () => {
       proposal.value.collectManagementFees,
     ],
   );
-  console.log("encodedDataNavUpdateEntries: ", encodedDataNavUpdateEntries)
-  console.log("governor: ", fundStore.fund?.governorAddress);
-  const rethinkFundGovernorContract = new web3Store.web3.eth.Contract(
-    RethinkFundGovernor.abi,
-    fundStore.fund?.governorAddress,
-  );
+  console.log("encodedNavUpdateEntries: ", encodedNavUpdateEntries)
 
-  const navUpdateLatestIndex = await fundStore.fundContract.methods._navUpdateLatestIndex().call();
-  console.log("Nav update latest index: ", navUpdateLatestIndex);
+  let encodedRoleModEntries = [];
+  let roleModTargets = [];
+  let roleModGasValues = [];
+  if (proposal.value.allowManagerToUpdateNav) {
+    const navPermissionEntries = generateNAVPermission(encodedNavUpdateEntries);
+    console.log("navPermission: ", navPermissionEntries);
+    [encodedRoleModEntries, roleModTargets, roleModGasValues] = await encodeRoleModEntries(navPermissionEntries);
+    console.log("encodedRoleModEntries: ", encodedRoleModEntries);
+    console.log("roleModTargets: ", roleModTargets);
+    console.log("roleModGasValues: ", roleModGasValues);
+  }
 
   /*
   function propose(
@@ -437,19 +574,23 @@ const createProposal = async () => {
   // Propose NAV update for fund (target: fund addr, payloadL bytes)
   console.log("Active Account: ", fundStore.activeAccountAddress)
   loading.value = true;
-  rethinkFundGovernorContract.methods.propose(
+
+  // ADD encoded entries for OIV permissions
+  fundStore.fundGovernorContract.methods.propose(
     [
       fundStore.fund?.address,
       fundStore.fund?.address,
       fundStore.fund?.address,
       fundStore.fund?.address,
+      ...roleModTargets,
     ],
-    [0,0,0,0],
+    [0,0,0,0, ...roleModGasValues],
     [
-      encodedDataNavUpdateEntries,
+      encodedNavUpdateEntries,
       encodedCollectFlowFeesAbiJSON,
       encodedCollectManagerFeesAbiJSON,
       encodedCollectPerformanceFeesAbiJSON,
+      encodedRoleModEntries,
     ],
     JSON.stringify({
       title: proposal.value.title,
@@ -475,7 +616,7 @@ const createProposal = async () => {
       );
     }
     loading.value = false;
-  }).on("error", function(error){
+  }).on("error", (error: any) => {
     console.error(error);
     loading.value = false;
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");

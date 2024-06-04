@@ -60,6 +60,10 @@ Usage example:
 ```
 
 ### Dev Notes
+0) NAV update entires indices start with 1 instead of 0! **!IMPORTANT**
+   used in:
+   - getNavUpdateTime
+   - getNavEntry
 1) Problems using `web3-onboard`, fixed by upgrading package `rxjs`:
 ```js
 import { init } from "@web3-onboard/vue"

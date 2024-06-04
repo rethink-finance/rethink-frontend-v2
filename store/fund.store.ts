@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import { ethers } from "ethers";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
+import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
@@ -113,6 +114,14 @@ export const useFundStore = defineStore({
     // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
     fundContract(): Contract {
       return new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress)
+    },
+    // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
+    fundSafeContract(): Contract {
+      return new this.web3.eth.Contract(GnosisSafeL2JSON.abi, this.fund?.safeAddress)
+    },
+    // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
+    fundGovernorContract(): Contract {
+      return new this.web3.eth.Contract(RethinkFundGovernor.abi, this.fund?.governorAddress)
     },
     // @ts-expect-error: we should extend the return type ...
     fundBaseTokenContract(): Contract {
@@ -397,7 +406,7 @@ export const useFundStore = defineStore({
       const navUpdates = [] as INAVUpdate[];
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable).
       const navUpdatesLen = dataNAV[PositionType.Liquid].length;
-      const fundNavUpdateTimes = await this.fundContract.methods.getNavUpdateTime(0, navUpdatesLen).call();
+      const fundNavUpdateTimes = await this.fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call();
 
       for (let i= 0; i < navUpdatesLen; i++) {
         let totalNAV = BigInt("0");
@@ -428,7 +437,8 @@ export const useFundStore = defineStore({
           },
         )
       }
-
+      console.log("navUpdatesLen ", navUpdatesLen);
+      console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
       // Fetch NAV JSON entries for each NAV update.
       const promises: Promise<any>[] = Array.from(
         { length: navUpdatesLen },
@@ -449,7 +459,7 @@ export const useFundStore = defineStore({
             navUpdates[index].entries.push(this.parseNAVEntry(navEntry))
           }
         } else {
-          console.error(`Failed to fetch NAV entry ${index}:`, navUpdateResult.reason);
+          console.error(`Failed to fetch NAV entry ${index + 1}:`, navUpdateResult.reason);
         }
       });
 

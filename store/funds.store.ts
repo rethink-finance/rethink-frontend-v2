@@ -246,6 +246,7 @@ export const useFundsStore = defineStore({
         func => func.name === "getNavEntry" && func.type === "function",
       )?.outputs || [];
 
+      console.log("Fetch all NAV methods");
       for (const navData of allFundsNavData) {
         if (!navData.encodedNavUpdate?.length) continue;
         for (const encodedNavUpdate of navData.encodedNavUpdate) {
@@ -256,8 +257,11 @@ export const useFundsStore = defineStore({
 
             for (const navEntry of navEntries) {
               // Ignore NAV methods that are not original NAV entries.
-              if (navEntry.isPastNAVUpdate || navEntry.pastNAVUpdateIndex !== 0n) continue;
-              console.log("navEntry: ", navEntry);
+              if (navEntry.isPastNAVUpdate || navEntry.pastNAVUpdateIndex !== 0n) {
+                console.log("[SKIP] navEntry: ", navEntry);
+                continue;
+              }
+              console.log("[KEEP] navEntry: ", navEntry);
               allMethods.push(this.fundStore.parseNAVEntry(navEntry))
             }
           } catch (error: any) {
