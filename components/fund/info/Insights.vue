@@ -17,7 +17,7 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ fundStore.fundTotalNAVFormattedShort ?? "N/A"}}
+          {{ fundStore.fundTotalNAVFormattedShort ?? "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           AUM
