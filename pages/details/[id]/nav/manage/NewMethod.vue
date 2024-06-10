@@ -252,7 +252,9 @@ const form = ref(null);
 const formIsValid = ref(false);
 
 const getNewMethodDetails = (positionType: PositionType, valuationType: ValuationType) => {
-  const newDetails: Record<string, any> = {};
+  const newDetails: Record<string, any> = {
+    isValid: false,
+  };
   const fields = PositionTypeValuationTypeFieldsMap[positionType][valuationType || "undefined"] || []
 
   // let updated = false;

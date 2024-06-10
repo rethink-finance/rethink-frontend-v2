@@ -1,3 +1,3 @@
 export const formRules: Record<string, any> = {
-  required:  (value: any) => !!value || "This field is required.",
+  required:  (value: any) => value !== "" && value !== undefined && value !== null || "This field is required.",
 };

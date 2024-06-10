@@ -29,7 +29,7 @@
       />
     </template>
     <template v-else-if="field.type === 'checkbox'">
-      <v-checkbox v-model="methodDetails[field.key]"  /> {{ methodDetails[field.key] }}
+      <v-checkbox v-model="methodDetails[field.key]"  />
     </template>
   </v-col>
 </template>

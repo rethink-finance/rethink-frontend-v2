@@ -327,7 +327,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
         label: "Return Value Type",
         key: "returnValType",
         type: InputType.Text,
-        placeholder: "E.g. UINT256",
+        placeholder: "E.g. uint256",
       },
       {
         label: "Is Negative?",
