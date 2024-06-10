@@ -21,8 +21,8 @@ import { useFundsStore } from "~/store/funds.store";
 // It is important not to remove the following two imports or they
 // will not be visible in the production build.
 import PositionTypesBar from "~/components/fund/info/PositionTypesBar";
-import FundNameCell from "../components/table/components/FundNameCell";
 import { useWeb3Store } from "~/store/web3.store";
+import FundNameCell from "../components/table/components/FundNameCell";
 
 const loadingFunds = ref(true);
 const funds = computed(() => fundsStore.funds);

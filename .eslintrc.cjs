@@ -41,7 +41,7 @@ module.exports = {
     "no-return-assign": "off",
     "no-trailing-spaces": "error",
     "no-unreachable": process.env.NODE_ENV === "production" ? "warn" : "off",
-    "no-unused-vars": "off",
+    "no-unused-vars": "warn",
     "no-var": "error",
     "prefer-const": "error",
     "semi": "off",
