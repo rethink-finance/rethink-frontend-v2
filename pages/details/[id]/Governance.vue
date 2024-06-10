@@ -34,7 +34,7 @@
           </div>
         </div>
       </div>
-      <Table :data="funds" :columns="columns"  :showControls="false" />
+      <GovernanceTable :methods="methods" />
     </div>
     <div class="main_card">
       <div class="main_expansion_panel__subtitle">
@@ -47,63 +47,43 @@
   </div>
 </template>
 
-<script setup lang="jsx">
+<script setup lang="ts">
+import GovernanceTable from "~/components/fund/governance/GovernanceTable.vue";
+import type IFund from "~/types/fund";
 
-const fund = useAttrs().fund
+// Example data
+const methods = [{
+  title: "Unlock airdrop permission to 0x25dfdgfg",
+  submission: "missing",
+  approval: "50%",
+  participation: "20%",
+  tags: ["active", "failed"],
+},
+{
+  title: "Automate NAV Update execution for yhe ",
+  submission: "missing",
+  approval: "50%",
+  participation: "20%",
+  tags: ["active", "failed"],
+},
+{
+  title: "Unlock airdrop permission to 0x25dfdgfg",
+  submission: "missing",
+  approval: "50%",
+  participation: "20%",
+  tags: ["active", "failed"],
+},
+{
+  title: "Automate NAV Update execution for yhe ",
+  submission: "missing",
+  approval: "50%",
+  participation: "20%",
+  tags: ["active", "failed"],
+},
+]
+
+const fund = useAttrs().fund as IFund;
 const dropdownOptions = ["Delegated Permissions", "Direct Execution", "NAV Methods", "Fund Settings"];
-
-const columns = ref([
-  {
-    accessorKey: "index",
-    header: "#",
-    size: 130,
-    minSize: 130,
-    maxSize: 230,
-    enableSorting: true,
-    cell: (info) => info.getValue(),
-  },
-  {
-    accessorKey: "title",
-    header: "Proposal Title",
-    size: 62,
-    maxWidth: 62,
-    enableSorting: false,
-    cell: (info) => {
-      const icon = getChainIcon(info.getValue());
-      return h(<Icon class="mr-2" />, {
-        icon: icon.name,
-        width: icon.size,
-        height: icon.size,
-      });
-    },
-  },
-  {
-    accessorKey: "totalNAVWei",
-    header: "Submission",
-    cell: (info) => {
-      const icon = getChainIcon(info.getValue());
-      return h(<Icon class="mr-2" />, {
-        icon: 'mdi:timer-outline',
-        width: '10px',
-        height: "10px",
-      });
-    },
-  },
-  {
-    accessorKey: "inceptionDate",
-    header: "Approval",
-    cell: (info) => formatPercent(info.getValue()),
-  },
-  {
-    accessorKey: "cumulativeReturnPercent",
-    header: "Participation",
-    size: 100,
-    maxSize: 130,
-    cell: (info) => formatPercent(info.getValue()),
-  },
-]);
-
-
 </script>
 
 <style scoped lang="scss">
