@@ -4,7 +4,7 @@
     :key="field.key"
     class="method_details"
     cols="12"
-    :lg="field.cols || 6"
+    :md="field.cols || 6"
   >
     <v-label :class="{'label_required': !isFieldCheckbox(field)}">
       {{ field.label }}
@@ -29,7 +29,7 @@
       />
     </template>
     <template v-else-if="field.type === 'checkbox'">
-      <v-checkbox v-model="methodDetails[field.key]" />
+      <v-checkbox v-model="methodDetails[field.key]"  /> {{ methodDetails[field.key] }}
     </template>
   </v-col>
 </template>
@@ -94,8 +94,9 @@ const allFieldsValid = computed(() =>
 
 // Check the validity of each field.
 watch(
-  methodDetails, () => {
+  methodDetails, (newMethodDetails) => {
     methodDetails.value.isValid = allFieldsValid.value;
+    // methodDetails.value = newMethodDetails;
   },
   { deep: true },
 );

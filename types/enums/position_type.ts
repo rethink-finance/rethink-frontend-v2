@@ -75,6 +75,12 @@ export enum InputType {
   Checkbox = "checkbox",
   Number = "number",
 }
+export const defaultInputTypeValue: Record<InputType, any> = {
+  [InputType.Text]: "",
+  [InputType.Textarea]: "",
+  [InputType.Checkbox]: false,
+  [InputType.Number]: 0,
+}
 
 export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFieldsMapType = {
   [PositionType.Liquid]: {
@@ -82,7 +88,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       {
         label: "Token pair",
         key: "tokenPair",
-        type: "text",
+        type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       },
       {
@@ -343,7 +349,7 @@ export const PositionTypeValuationTypeDefaultFieldsMap: PositionTypeValuationTyp
       },
       {
         key: "functionSignatureWithEncodedInputs",
-        value: 0,
+        value: "0x",
       },
       {
         key: "isReturnArray",
@@ -369,7 +375,7 @@ export const PositionTypeValuationTypeDefaultFieldsMap: PositionTypeValuationTyp
       },
       {
         key: "functionSignatureWithEncodedInputs",
-        value: 0,
+        value: "0x",
       },
       {
         key: "pastNAVUpdateIndex",

@@ -217,10 +217,10 @@ const prepNAVMethodLiquid = (details: Record<string, any>): any[] => {
   return details.liquid.map((method: Record<string, any>) => [
     method.tokenPair || "",
     method.aggregatorAddress || "",
-    method.functionSignatureWithEncodedInputs || "",
+    method.functionSignatureWithEncodedInputs || "0x",
     method.assetTokenAddress || "",
     method.nonAssetTokenAddress || "",
-    method.isReturnArray || "",
+    method.isReturnArray || false,
     parseInt(method.returnLength) || 0,
     parseInt(method.returnIndex) || 0,
     parseInt(method.pastNAVUpdateIndex) || 0,
@@ -474,6 +474,7 @@ const encodeRoleModEntries = async (proposalEntries: any[]): Promise<[any[], any
       roleModFunctionABI as AbiFunctionFragment,
       roleModFunctionData,
     );
+    console.log("roleModFunctionData: ", i,  roleModFunctionData)
     encodedRoleModEntries.push(encodedRoleModFunction);
     targets.push(roleModAddr);
     gasValues.push(0)

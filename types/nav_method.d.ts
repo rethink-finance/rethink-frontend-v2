@@ -36,7 +36,7 @@ export default interface INAVMethod {
   // pastNAVUpdateIndex: number,
   details: INAVMethodDetails,
   detailsJson: string,
-  valuationType?: ValuationType,
+  valuationType: ValuationType,
   deleted?: boolean,  // THis is only used in the frontend, to mark it for deletion when managing NAV methods.
   isNew?: boolean,  // THis is only used in the frontend, to mark it as new when managing NAV methods.
   // THis is only used in the frontend, as methods don't have any IDs, we hash their contents to compare them.

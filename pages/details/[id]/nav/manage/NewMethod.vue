@@ -95,8 +95,12 @@
           <v-row>
             <template v-if="navEntry.positionType === PositionType.Composable">
               <v-col>
-                <v-expansion-panels>
-                  <v-expansion-panel v-for="(method, index) in navEntry.details[navEntry.positionType]" eager>
+                <v-expansion-panels v-model="expandedPanels">
+                  <v-expansion-panel
+                    v-for="(method, index) in navEntry.details[navEntry.positionType]"
+                    :key="index"
+                    eager
+                  >
                     <v-expansion-panel-title static>
                       <div class="method_details_title">
                         <span>
@@ -137,6 +141,7 @@
                 </v-expansion-panels>
               </v-col>
             </template>
+
             <template v-else>
               <FundNavMethodDetails
                 v-model="navEntry.details[navEntry.positionType][0]"
@@ -191,10 +196,11 @@ import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import {
+  defaultInputTypeValue, InputType,
   PositionType, PositionTypeKeys,
   PositionTypes, PositionTypeToNAVEntryTypeMap,
   PositionTypeToValuationTypesMap,
-  PositionTypeValuationTypeDefaultFieldsMap,
+  PositionTypeValuationTypeDefaultFieldsMap, PositionTypeValuationTypeFieldsMap,
 } from "~/types/enums/position_type";
 import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
@@ -205,7 +211,7 @@ const toastStore = useToastStore();
 const router = useRouter();
 
 const { selectedFundSlug } = toRefs(fundStore);
-
+const expandedPanels = ref([0]);
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -245,6 +251,17 @@ const areAllMethodDetailsValid = computed(() =>
 const form = ref(null);
 const formIsValid = ref(false);
 
+const getNewMethodDetails = (positionType: PositionType, valuationType: ValuationType) => {
+  const newDetails: Record<string, any> = {};
+  const fields = PositionTypeValuationTypeFieldsMap[positionType][valuationType || "undefined"] || []
+
+  // let updated = false;
+  fields.forEach((field: any) => {
+    newDetails[field.key] = defaultInputTypeValue[field.type as InputType];
+  });
+  return newDetails;
+}
+
 const navEntry = ref<INAVMethod>({
   positionName: "",
   valuationSource: "",
@@ -253,7 +270,7 @@ const navEntry = ref<INAVMethod>({
   details: {
     // Init as PositionType.Liquid & ValuationType.DEXPair
     liquid: [
-      {},
+      getNewMethodDetails(PositionType.Liquid, ValuationType.DEXPair),
     ],
     illiquid: [],
     nft: [],
@@ -275,7 +292,9 @@ const resetMethods = () => {
     tmpNavEntry.details[positionTypeKey] = [];
   }
   // Init empty details for the selected position type (liquid, illiquid, nft, composable).
-  tmpNavEntry.details[navEntry.value.positionType].push({});
+  tmpNavEntry.details[navEntry.value.positionType].push(
+    getNewMethodDetails(navEntry.value.positionType, navEntry.value.valuationType),
+  );
 
   tmpNavEntry.detailsJson = formatJson(tmpNavEntry.details);
 
@@ -286,9 +305,12 @@ const deleteMethod = (index: number) => {
   console.log("remove0 method: ", index);
   navEntry.value.details[navEntry.value.positionType].splice([index])
 }
+
+
 const addMethodDetails = () => {
-  console.log("addMethodDetails");
-  navEntry.value.details[navEntry.value.positionType].push({});
+  navEntry.value.details[navEntry.value.positionType].push(
+    getNewMethodDetails(navEntry.value.positionType, navEntry.value.valuationType),
+  );
 }
 
 watch(() => navEntry.value.positionType, (newPositionType) => {
