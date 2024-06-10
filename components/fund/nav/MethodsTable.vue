@@ -201,7 +201,8 @@ export default defineComponent({
 .nav_entries {
   &__details {
     font-family: monospace;
-    white-space: pre;
+    white-space: pre-wrap;
+    word-break: break-all;
     font-size: $text-sm;
     padding: 1rem 7.1rem;
     background-color: $color-badge-navy;
