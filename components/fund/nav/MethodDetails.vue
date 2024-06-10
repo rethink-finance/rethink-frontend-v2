@@ -15,7 +15,7 @@
         :placeholder="field.placeholder"
         :type="field.type"
         :min="field.min"
-        :rules="rules"
+        :rules="fieldRules(field)"
         required
       />
     </template>
@@ -23,7 +23,7 @@
       <v-textarea
         v-model="methodDetails[field.key]"
         :placeholder="field.placeholder"
-        :rules="rules"
+        :rules="fieldRules(field)"
         hide-details
         required
       />
@@ -77,6 +77,10 @@ const rules = [
   formRules.required,
 ];
 
+const fieldRules = (field: any) => {
+  // Concat default rules with field specific rules if it has it.
+  return rules.concat(field.rules || []);
+}
 // For now, we make all fields required. If we wanted to change the required field based for
 // each field differently, we have to set the "required" property in the field definition.
 const isFieldCheckbox = (field: any) => {
@@ -87,16 +91,18 @@ const allFieldsValid = computed(() =>
     // Checkboxes are not required. All other fields are required for now.
     if (isFieldCheckbox(field)) return true;
 
+    // Get field value.
     const value = methodDetails.value[field.key];
-    return rules.every((rule: any) => rule(value) === true);
+
+    // Check if the value is valid for all rules.
+    return fieldRules(field).every((rule: any) => rule(value) === true);
   }),
 );
 
 // Check the validity of each field.
 watch(
-  methodDetails, (newMethodDetails) => {
+  methodDetails, () => {
     methodDetails.value.isValid = allFieldsValid.value;
-    // methodDetails.value = newMethodDetails;
   },
   { deep: true },
 );

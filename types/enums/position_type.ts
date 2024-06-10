@@ -86,16 +86,18 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
   [PositionType.Liquid]: {
     [ValuationType.DEXPair]: [
       {
-        label: "Token pair",
+        label: "Token Pair Address",
         key: "tokenPair",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
       {
-        label: "Position Token",
+        label: "Position Token Address",
         key: "assetTokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
     ],
     [ValuationType.Aggregator]: [
@@ -104,6 +106,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
         key: "aggregatorAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
       {
         label: "Encoded Function Input Data",
@@ -116,6 +119,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
         key: "assetTokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
       {
         label: "Is Return Array?",
@@ -163,12 +167,14 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
         key: "tokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
       {
         label: "Comma-separated list of TX hashes",
         key: "otcTxHashes",
         type: InputType.Textarea,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984,\n0xbb4570f3dd5aG2nf1512uDF915BDcdF34202h17g",
+        // TODO validate multiple addresses
       },
     ],
     [ValuationType.ERC721]: [
@@ -195,12 +201,14 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
         key: "tokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
       {
         label: "Comma-separated list of TX hashes",
         key: "otcTxHashes",
         type: InputType.Textarea,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984,\n0xbb4570f3dd5aG2nf1512uDF915BDcdF34202h17g",
+        // TODO validate multiple addresses
       },
     ],
     [ValuationType.ERC1155]: [
@@ -227,12 +235,14 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
         key: "tokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
       {
         label: "Comma-separated list of TX hashes",
         key: "otcTxHashes",
         type: InputType.Textarea,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984,\n0xbb4570f3dd5aG2nf1512uDF915BDcdF34202h17g",
+        // TODO validate multiple addresses
       },
       {
         label: "NFT Index",
@@ -249,12 +259,14 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
         key: "tokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
       {
         label: "NFT Address",
         key: "tokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
     ],
     [ValuationType.ERC1155]: [
@@ -263,12 +275,14 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
         key: "tokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
       {
         label: "NFT Address",
         key: "tokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
       {
         label: "NFT Index",
@@ -285,6 +299,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
         key: "remoteContractAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        rules: [formRules.isValidAddress],
       },
       {
         label: "Function Signature",
