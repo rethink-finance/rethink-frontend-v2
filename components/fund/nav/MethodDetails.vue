@@ -31,7 +31,6 @@
     <template v-else-if="field.type === InputType.Select">
       <v-select
         v-model="methodDetails[field.key]"
-        label="Select"
         :rules="fieldRules(field)"
         :items="field.choices"
         item-title="title"
