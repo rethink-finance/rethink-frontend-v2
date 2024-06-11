@@ -275,7 +275,7 @@ const prepNAVMethodComposable = (details: Record<string, any>): any[] => {
     method.isReturnArray,
     parseInt(method.returnValIndex) || 0,
     parseInt(method.returnArraySize) || 0,
-    method.returnValType,
+    parseInt(method.returnValType) || 0,
     parseInt(method.pastNAVUpdateIndex) || 0,
     method.isNegative,
   ]);
@@ -308,7 +308,6 @@ const prepRoleModEntryInput = (value: any) => {
       }
     }
     return retDat;
-
   }
 
   if (dtype.startsWith("address")) {
@@ -457,6 +456,7 @@ const encodeRoleModEntries = async (proposalEntries: any[]): Promise<[any[], any
 
   for(let i = 0; i < proposalEntries.length; i++) {
     const roleModFunctionABI = proposalRoleModMethods[proposalEntries[i].valueMethodIdx];
+    console.log("roleModFunctionABI: ", JSON.stringify(roleModFunctionABI, null, 2))
     const roleModFunctionData = [];
     for (let j = 0; j< proposalEntries[i].value.length; j++) {
       /*
@@ -474,7 +474,7 @@ const encodeRoleModEntries = async (proposalEntries: any[]): Promise<[any[], any
       roleModFunctionABI as AbiFunctionFragment,
       roleModFunctionData,
     );
-    console.log("roleModFunctionData: ", i,  roleModFunctionData)
+    console.log("roleModFunctionData: ", i,  JSON.stringify(roleModFunctionData, null, 2))
     encodedRoleModEntries.push(encodedRoleModFunction);
     targets.push(roleModAddr);
     gasValues.push(0)
@@ -591,7 +591,7 @@ const createProposal = async () => {
       encodedCollectFlowFeesAbiJSON,
       encodedCollectManagerFeesAbiJSON,
       encodedCollectPerformanceFeesAbiJSON,
-      encodedRoleModEntries,
+      ...encodedRoleModEntries,
     ],
     JSON.stringify({
       title: proposal.value.title,
