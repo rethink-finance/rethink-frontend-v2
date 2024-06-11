@@ -9,7 +9,7 @@
     <v-label :class="{'label_required': !isFieldCheckbox(field)}">
       {{ field.label }}
     </v-label>
-    <template v-if="['text', 'number'].includes(field.type)">
+    <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
       <v-text-field
         v-model="methodDetails[field.key]"
         :placeholder="field.placeholder"
@@ -19,7 +19,7 @@
         required
       />
     </template>
-    <template v-else-if="field.type === 'textarea'">
+    <template v-else-if="field.type === InputType.Textarea">
       <v-textarea
         v-model="methodDetails[field.key]"
         :placeholder="field.placeholder"
@@ -28,7 +28,18 @@
         required
       />
     </template>
-    <template v-else-if="field.type === 'checkbox'">
+    <template v-else-if="field.type === InputType.Select">
+      <v-select
+        v-model="methodDetails[field.key]"
+        label="Select"
+        :rules="fieldRules(field)"
+        :items="field.choices"
+        item-title="title"
+        item-value="value"
+        required
+      />
+    </template>
+    <template v-else-if="field.type === InputType.Checkbox">
       <v-checkbox v-model="methodDetails[field.key]"  />
     </template>
   </v-col>

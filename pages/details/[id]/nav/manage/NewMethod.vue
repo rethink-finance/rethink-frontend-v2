@@ -372,7 +372,9 @@ const addMethod = () => {
   for (const method of newNavEntry.details[newNavEntry.positionType]) {
     // Set default data for each entry's method's position & valuation type.
     defaultFields.value.forEach(field => {
-      method[field.key] = field.value;
+      if (!(field.key in method)) {
+        method[field.key] = field.value;
+      }
     });
 
     if ("pastNAVUpdateIndex" in method) {

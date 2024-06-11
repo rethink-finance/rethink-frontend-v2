@@ -74,12 +74,16 @@ export enum InputType {
   Textarea = "textarea",
   Checkbox = "checkbox",
   Number = "number",
+  Select = "select",
 }
 export const defaultInputTypeValue: Record<InputType, any> = {
   [InputType.Text]: "",
   [InputType.Textarea]: "",
   [InputType.Checkbox]: false,
   [InputType.Number]: 0,
+  // If the default value 0 as integer won't work for all, add default values to PositionTypeValuationTypeFieldsMap
+  // wherever we will need them.
+  [InputType.Select]: 0,
 }
 
 export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFieldsMapType = {
@@ -341,8 +345,17 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       {
         label: "Return Value Type",
         key: "returnValType",
-        type: InputType.Text,
-        placeholder: "E.g. uint256",
+        type: InputType.Select,
+        choices: [
+          {
+            value: 0,
+            title: "uint256",
+          },
+          {
+            value: 1,
+            title: "int256",
+          },
+        ],
       },
       {
         label: "Is Negative?",
