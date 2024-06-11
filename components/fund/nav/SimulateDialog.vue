@@ -55,26 +55,99 @@
 
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import type INAVMethod from "~/types/nav_method";
+import addressesJson from "~/assets/contracts/addresses.json";
+import NAVCalculatorJSON from "~/assets/contracts/NAVCalculator.json";
+import type IAddresses from "~/types/addresses";
+import { useWeb3Store } from "~/store/web3.store";
+import { useFundStore } from "~/store/fund.store";
+// Since the direct import won't infer the custom type, we cast it here.:
+const addresses: IAddresses = addressesJson as IAddresses;
 
-export default defineComponent({
-  name: "NAVSimulateDialog",
-  props: {
-    methods: {
-      type: Array as () => INAVMethod[],
-      default: () => [],
-    },
-  },
-  data () {
-    return {
-      isDialogOpen: false,
-    }
-  },
-  methods: {
+const isDialogOpen = ref(false);
+const methods = ref<INAVMethod[]>([]);
+const web3Store = useWeb3Store();
+const fundStore = useFundStore();
 
-  },
-})
+const simulateLiq = async () => {
+  if (!web3Store.web3) return;
+
+  const NAVaddress = addresses.NAVCalculatorBeaconProxy[parseInt(web3Store.chainId)];
+  const NAVCalculatorContract = new web3Store.web3.eth.Contract(
+    NAVCalculatorJSON.abi,
+    NAVaddress,
+  );
+
+  // function liquidCalculationReadOnly(IGovernableFundStorage.NAVLiquidUpdate[] calldata liquid, address safe, address fund, uint256 navEntryIndex, bool isPastNAVUpdate, uint256 pastNAVUpdateIndex, uint256 pastNAVUpdateEntryIndex, address pastNAVUpdateEntryFundAddress)
+
+  this.simulatedLiqVal = await NAVCalculatorContract.methods.liquidCalculationReadOnly(
+    this.prepNAVLiquidUpdate(
+      this.entry.liquidUpdates,
+    ),// NAVLiquidUpdate[] liquid;
+    fundStore.fund?.safeAddress,
+    fundStore.fund?.address, // fund
+    0, // navEntryIndex
+    this.PastNAVUpdateMap[this.entry.isPastNAVUpdate], // isPastNAVUpdate
+    parseInt(this.entry.pastNAVUpdateIndex), // pastNAVUpdateIndex
+    parseInt(this.entry.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
+    this.entry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
+  ).call();
+  this.loading = false;
+
+  const encodedDataliquidCalculationReadOnly = web3Store.web3.eth.abi.encodeFunctionCall(NAVCalculatorJSON.abi[9],
+    [
+      this.prepNAVLiquidUpdate(
+        this.entry.liquidUpdates,
+      ),
+      fundStore.fund?.safeAddress,
+      fundStore.fund?.address, // fund
+      0,
+      this.PastNAVUpdateMap[this.entry.isPastNAVUpdate],
+      parseInt(this.entry.pastNAVUpdateIndex),
+      parseInt(this.entry.pastNAVUpdateEntryIndex),
+      this.entry.pastNAVUpdateEntryFundAddress,
+    ]);
+  console.log("encodedDataliquidCalculationReadOnly:" + encodedDataliquidCalculationReadOnly)
+}
+
+// const simulateIliq = async () => {
+//   this.loading = true;
+//   const NAVaddress = addresses.NAVCalculatorBeaconProxy[parseInt(this.getChainId)];
+//   const NAVCalculatorContract = new web3Store.web3.eth.Contract(
+//     NAVCalculatorJSON.abi,
+//     NAVaddress,
+//   );
+//
+//   // function illiquidCalculationReadOnly(IGovernableFundStorage.NAVIlliquidUpdate[] calldata illiquid, address safe, address fund, uint256 navEntryIndex, bool isPastNAVUpdate, uint256 pastNAVUpdateIndex, uint256 pastNAVUpdateEntryIndex, address pastNAVUpdateEntryFundAddress)
+//
+//   this.simulatedIliqVal = await NAVCalculatorContract.methods.illiquidCalculationReadOnly(
+//     this.prepNAVIlliquidUpdate(
+//       this.entry.illiquidUpdates,
+//     ),// NAVLiquidUpdate[] liquid;
+//     this.fund.safe,
+//     this.getSelectedFundAddress,// fund
+//     0,// navEntryIndex
+//     this.PastNAVUpdateMap[this.entry.isPastNAVUpdate],// isPastNAVUpdate
+//     parseInt(this.entry.pastNAVUpdateIndex),// pastNAVUpdateIndex
+//     parseInt(this.entry.pastNAVUpdateEntryIndex),// pastNAVUpdateEntryIndex
+//     this.entry.pastNAVUpdateEntryFundAddress,// pastNAVUpdateEntryFundAddress
+//   ).call();
+//   this.loading = false;
+//   const encodedDataIlliquidCalculationReadOnly = web3Store.web3.eth.abi.encodeFunctionCall(NAVCalculatorJSON.abi[7],
+//     [
+//       this.prepNAVIlliquidUpdate(
+//         this.entry.illiquidUpdates,
+//       ),
+//       this.fund.safe,
+//       this.getSelectedFundAddress,
+//       0,
+//       this.PastNAVUpdateMap[this.entry.isPastNAVUpdate],
+//       parseInt(this.entry.pastNAVUpdateIndex),
+//       parseInt(this.entry.pastNAVUpdateEntryIndex),
+//       this.entry.pastNAVUpdateEntryFundAddress,
+//     ]);
+// }
 </script>
 
 <style lang="scss" scoped>
