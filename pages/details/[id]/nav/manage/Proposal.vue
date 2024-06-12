@@ -557,7 +557,7 @@ const createProposal = async () => {
   let roleModGasValues = [];
   if (proposal.value.allowManagerToUpdateNav) {
     const navPermissionEntries = generateNAVPermission(encodedNavUpdateEntries);
-    console.log("navPermission: ", navPermissionEntries);
+    console.log("navPermission: ", JSON.stringify(navPermissionEntries, null, 2));
     [encodedRoleModEntries, roleModTargets, roleModGasValues] = await encodeRoleModEntries(navPermissionEntries);
     console.log("encodedRoleModEntries: ", encodedRoleModEntries);
     console.log("roleModTargets: ", roleModTargets);
