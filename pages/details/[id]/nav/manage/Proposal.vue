@@ -130,9 +130,19 @@
               </v-btn>
               <v-btn
                 class="bg-primary text-secondary ms-6"
+                :disabled="!fundStore.activeAccountAddress"
                 @click="createProposal"
               >
                 Create Proposal
+                <v-tooltip
+                  v-if="!fundStore.activeAccountAddress"
+                  :model-value="true"
+                  activator="parent"
+                  location="top"
+                  @update:model-value="true"
+                >
+                  Connect your wallet to create a proposal.
+                </v-tooltip>
               </v-btn>
             </div>
           </v-row>
@@ -215,11 +225,11 @@ const collectFeesABI = GovernableFund.abi.find(
 **/
 const prepNAVMethodLiquid = (details: Record<string, any>): any[] => {
   return details.liquid.map((method: Record<string, any>) => [
-    method.tokenPair || "",
+    method.tokenPair || "0x0000000000000000000000000000000000000000",
     method.aggregatorAddress || "",
     method.functionSignatureWithEncodedInputs || "0x",
     method.assetTokenAddress || "",
-    method.nonAssetTokenAddress || "",
+    method.nonAssetTokenAddress || "0x0000000000000000000000000000000000000000",
     method.isReturnArray || false,
     parseInt(method.returnLength) || 0,
     parseInt(method.returnIndex) || 0,
@@ -547,7 +557,7 @@ const createProposal = async () => {
   let roleModGasValues = [];
   if (proposal.value.allowManagerToUpdateNav) {
     const navPermissionEntries = generateNAVPermission(encodedNavUpdateEntries);
-    console.log("navPermission: ", navPermissionEntries);
+    console.log("navPermission: ", JSON.stringify(navPermissionEntries, null, 2));
     [encodedRoleModEntries, roleModTargets, roleModGasValues] = await encodeRoleModEntries(navPermissionEntries);
     console.log("encodedRoleModEntries: ", encodedRoleModEntries);
     console.log("roleModTargets: ", roleModTargets);

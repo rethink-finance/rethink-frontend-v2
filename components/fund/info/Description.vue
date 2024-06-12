@@ -42,6 +42,10 @@ export default {
           href: this.deBankUrl,
         },
         {
+          title: "Tally - Governance",
+          href: this.governanceUrl,
+        },
+        {
           title: "Safe - Custody",
           href: this.custodyUrl,
         },
