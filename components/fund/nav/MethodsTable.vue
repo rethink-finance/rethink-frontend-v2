@@ -204,7 +204,7 @@ export default defineComponent({
     white-space: pre-wrap;
     word-break: break-all;
     font-size: $text-sm;
-    padding: 1rem 7.1rem;
+    padding: 1rem 5rem;
     background-color: $color-badge-navy;
     &:not(:last-of-type) {
       margin-bottom: 1.5rem;

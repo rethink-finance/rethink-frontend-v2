@@ -119,7 +119,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
         cols: 12,
       },
       {
-        label: "Position Token",
+        label: "Position Token Address",
         key: "assetTokenAddress",
         type: InputType.Text,
         placeholder: "E.g. 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",

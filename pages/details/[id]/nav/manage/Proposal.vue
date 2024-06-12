@@ -215,11 +215,11 @@ const collectFeesABI = GovernableFund.abi.find(
 **/
 const prepNAVMethodLiquid = (details: Record<string, any>): any[] => {
   return details.liquid.map((method: Record<string, any>) => [
-    method.tokenPair || "",
+    method.tokenPair || "0x0000000000000000000000000000000000000000",
     method.aggregatorAddress || "",
     method.functionSignatureWithEncodedInputs || "0x",
     method.assetTokenAddress || "",
-    method.nonAssetTokenAddress || "",
+    method.nonAssetTokenAddress || "0x0000000000000000000000000000000000000000",
     method.isReturnArray || false,
     parseInt(method.returnLength) || 0,
     parseInt(method.returnIndex) || 0,
