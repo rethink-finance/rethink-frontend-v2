@@ -27,7 +27,8 @@
         </div>
       </div>
       <div class="di-card__table">
-        <FundNavSimulationTable :methods="methods" />
+        <!--        <FundNavSimulationTable :methods="methods" />-->
+        <FundNavMethodsTable v-model:methods="fundManagedNAVMethods" show-simulated-nav />
       </div>
       <div class="action-buttons">
         <v-btn
@@ -62,92 +63,98 @@ import NAVCalculatorJSON from "~/assets/contracts/NAVCalculator.json";
 import type IAddresses from "~/types/addresses";
 import { useWeb3Store } from "~/store/web3.store";
 import { useFundStore } from "~/store/fund.store";
+import { PositionType } from "~/types/enums/position_type";
+import { useToastStore } from "~/store/toast.store";
+import { useFundsStore } from "~/store/funds.store";
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
 
 const isDialogOpen = ref(false);
-const methods = ref<INAVMethod[]>([]);
 const web3Store = useWeb3Store();
+const fundsStore = useFundsStore();
 const fundStore = useFundStore();
+const toastStore = useToastStore();
+const { fundManagedNAVMethods } = toRefs(fundStore);
 
-const simulateLiq = async () => {
+onMounted(async () => {
   if (!web3Store.web3) return;
+  // TODO move this to another function
+  // TODO add loading indicators
+  // TODO only call after the modal is opened, not on created
+  const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays()
+  const fundAddresses: string[] = fundsInfoArrays[0];
+  await fundsStore.fetchAllNavMethods(fundAddresses);
 
-  const NAVaddress = addresses.NAVCalculatorBeaconProxy[parseInt(web3Store.chainId)];
+  const navAddress = addresses.NAVCalculatorBeaconProxy[web3Store.chainId];
+  console.log("navAddress ", navAddress);
   const NAVCalculatorContract = new web3Store.web3.eth.Contract(
     NAVCalculatorJSON.abi,
-    NAVaddress,
+    navAddress,
   );
 
-  // function liquidCalculationReadOnly(IGovernableFundStorage.NAVLiquidUpdate[] calldata liquid, address safe, address fund, uint256 navEntryIndex, bool isPastNAVUpdate, uint256 pastNAVUpdateIndex, uint256 pastNAVUpdateEntryIndex, address pastNAVUpdateEntryFundAddress)
+  const baseDecimals = fundStore.fund?.baseToken.decimals;
+  if (!baseDecimals) {
+    toastStore.errorToast("Failed preparing NAV Illiquid method, fund base token decimals are not known.")
+    throw new Error("Failed preparing NAV Illiquid method, base decimals are not known.")
+  }
 
-  this.simulatedLiqVal = await NAVCalculatorContract.methods.liquidCalculationReadOnly(
-    this.prepNAVLiquidUpdate(
-      this.entry.liquidUpdates,
-    ),// NAVLiquidUpdate[] liquid;
-    fundStore.fund?.safeAddress,
-    fundStore.fund?.address, // fund
-    0, // navEntryIndex
-    this.PastNAVUpdateMap[this.entry.isPastNAVUpdate], // isPastNAVUpdate
-    parseInt(this.entry.pastNAVUpdateIndex), // pastNAVUpdateIndex
-    parseInt(this.entry.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
-    this.entry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
-  ).call();
-  this.loading = false;
+  // TODO Simulate all at once as many promises instead of one by one.
+  for (const navEntry of fundManagedNAVMethods.value as INAVMethod[]) {
+    let pastNAVUpdateEntryFundAddress = navEntry.pastNAVUpdateEntryFundAddress;
+    if (!pastNAVUpdateEntryFundAddress) {
+      pastNAVUpdateEntryFundAddress = fundsStore.navMethodDetailsHashToFundAddress[navEntry.detailsHash ?? ""];
+    }
+    if (!pastNAVUpdateEntryFundAddress) {
+      // If there is no pastNAVUpdateEntryFundAddress the simulation will fail later.
+      console.error("Missing pastNAVUpdateEntryFundAddress for NAV entry ", navEntry)
+    }
 
-  const encodedDataliquidCalculationReadOnly = web3Store.web3.eth.abi.encodeFunctionCall(NAVCalculatorJSON.abi[9],
-    [
-      this.prepNAVLiquidUpdate(
-        this.entry.liquidUpdates,
-      ),
+    let parsedNavEntry = null;
+    if (navEntry.positionType === PositionType.Liquid) {
+      parsedNavEntry = prepNAVMethodLiquid(navEntry.details);
+    } else if (navEntry.positionType === PositionType.Illiquid) {
+      parsedNavEntry = prepNAVMethodIlliquid(navEntry.details, baseDecimals);
+    } else if (navEntry.positionType === PositionType.NFT) {
+      parsedNavEntry = prepNAVMethodNFT(navEntry.details);
+    } else if (navEntry.positionType === PositionType.Composable) {
+      parsedNavEntry = prepNAVMethodComposable(navEntry.details);
+    }
+
+    // TODO to get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
+    //    and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods and then we
+    //    have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
+    console.log("pastNAVUpdateEntryFundAddress: ", pastNAVUpdateEntryFundAddress);
+    console.log("json: ", JSON.stringify([
+      parsedNavEntry,// NAVLiquidUpdate[];
       fundStore.fund?.safeAddress,
       fundStore.fund?.address, // fund
-      0,
-      this.PastNAVUpdateMap[this.entry.isPastNAVUpdate],
-      parseInt(this.entry.pastNAVUpdateIndex),
-      parseInt(this.entry.pastNAVUpdateEntryIndex),
-      this.entry.pastNAVUpdateEntryFundAddress,
-    ]);
-  console.log("encodedDataliquidCalculationReadOnly:" + encodedDataliquidCalculationReadOnly)
-}
+      0, // navEntryIndex
+      navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
+      parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
+      parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
+      pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
+    ], null, 2))
 
-// const simulateIliq = async () => {
-//   this.loading = true;
-//   const NAVaddress = addresses.NAVCalculatorBeaconProxy[parseInt(this.getChainId)];
-//   const NAVCalculatorContract = new web3Store.web3.eth.Contract(
-//     NAVCalculatorJSON.abi,
-//     NAVaddress,
-//   );
-//
-//   // function illiquidCalculationReadOnly(IGovernableFundStorage.NAVIlliquidUpdate[] calldata illiquid, address safe, address fund, uint256 navEntryIndex, bool isPastNAVUpdate, uint256 pastNAVUpdateIndex, uint256 pastNAVUpdateEntryIndex, address pastNAVUpdateEntryFundAddress)
-//
-//   this.simulatedIliqVal = await NAVCalculatorContract.methods.illiquidCalculationReadOnly(
-//     this.prepNAVIlliquidUpdate(
-//       this.entry.illiquidUpdates,
-//     ),// NAVLiquidUpdate[] liquid;
-//     this.fund.safe,
-//     this.getSelectedFundAddress,// fund
-//     0,// navEntryIndex
-//     this.PastNAVUpdateMap[this.entry.isPastNAVUpdate],// isPastNAVUpdate
-//     parseInt(this.entry.pastNAVUpdateIndex),// pastNAVUpdateIndex
-//     parseInt(this.entry.pastNAVUpdateEntryIndex),// pastNAVUpdateEntryIndex
-//     this.entry.pastNAVUpdateEntryFundAddress,// pastNAVUpdateEntryFundAddress
-//   ).call();
-//   this.loading = false;
-//   const encodedDataIlliquidCalculationReadOnly = web3Store.web3.eth.abi.encodeFunctionCall(NAVCalculatorJSON.abi[7],
-//     [
-//       this.prepNAVIlliquidUpdate(
-//         this.entry.illiquidUpdates,
-//       ),
-//       this.fund.safe,
-//       this.getSelectedFundAddress,
-//       0,
-//       this.PastNAVUpdateMap[this.entry.isPastNAVUpdate],
-//       parseInt(this.entry.pastNAVUpdateIndex),
-//       parseInt(this.entry.pastNAVUpdateEntryIndex),
-//       this.entry.pastNAVUpdateEntryFundAddress,
-//     ]);
-// }
+    // TODO this code is still returning Web3ValidatorError check it out
+    try {
+      const simulatedVal: bigint = await NAVCalculatorContract.methods.liquidCalculationReadOnly(
+        parsedNavEntry,// NAVLiquidUpdate[];
+        fundStore.fund?.safeAddress,
+        fundStore.fund?.address, // fund
+        0, // navEntryIndex
+        navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
+        parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
+        parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
+        pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
+      ).call();
+      console.log("simulated value: ", simulatedVal)
+      navEntry.simulatedNav = simulatedVal ?? BigInt("0");
+    } catch (error: any) {
+      console.error("Failed simulating value for entry: ", navEntry, error)
+    }
+  }
+});
+
 </script>
 
 <style lang="scss" scoped>

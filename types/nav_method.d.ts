@@ -30,15 +30,14 @@ export default interface INAVMethod {
   positionName: string,
   valuationSource: string,
   positionType: PositionType,
-  // These 3 fields are in the details.
-  // isPastNAVUpdate: boolean,
-  // pastNAVUpdateEntryIndex: number,
-  // pastNAVUpdateIndex: number,
+
+  pastNAVUpdateEntryFundAddress?: string,
   details: INAVMethodDetails,
   detailsJson: string,
   valuationType: ValuationType,
   deleted?: boolean,  // THis is only used in the frontend, to mark it for deletion when managing NAV methods.
   isNew?: boolean,  // THis is only used in the frontend, to mark it as new when managing NAV methods.
+  simulatedNav?: bigint,  // THis is only used in the frontend, when simulating NAV methods.
   // THis is only used in the frontend, as methods don't have any IDs, we hash their contents to compare them.
   // Hash is generated from the detailsJson.
   detailsHash?: string,

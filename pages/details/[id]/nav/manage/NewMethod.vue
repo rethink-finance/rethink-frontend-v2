@@ -349,13 +349,16 @@ const addMethod = () => {
 
   const newNavEntry = JSON.parse(JSON.stringify(navEntry.value));
 
+  // Do not include the pastNAVUpdateEntryFundAddress in the details, as when we fetch entries
+  // they don't include this data and details hash would be broken if we included it.
+  newNavEntry.pastNAVUpdateEntryFundAddress = fundStore.fund?.address;
+
   // Set default fields that are required for each entry.
   // All methods details have this data.
   // TODO check if we need to convert any field to number by map like entryType
   newNavEntry.details.isPastNAVUpdate = false;
   newNavEntry.details.pastNAVUpdateIndex = 0;
   newNavEntry.details.pastNAVUpdateEntryIndex = 0;
-  newNavEntry.details.pastNAVUpdateEntryFundAddress = fundStore.fund?.address;
   newNavEntry.details.entryType = PositionTypeToNAVEntryTypeMap[navEntry.value.positionType];
   newNavEntry.details.valuationType = navEntry.value.valuationType; // TODO convert also?
   newNavEntry.details.description = {

@@ -32,6 +32,10 @@
       />
     </template>
 
+    <template #[`item.simulatedNav`]="{ value }">
+      {{ value ?? "N/A" }}
+    </template>
+
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
       <UiDetailsButton
         text="Details"
@@ -106,6 +110,10 @@ export default defineComponent({
       type: Array as () => INAVMethod[],
       default: () => [],
     },
+    showSimulatedNav: {
+      type: Boolean,
+      default: false,
+    },
     deletable: {
       type: Boolean,
       default: false,
@@ -129,8 +137,14 @@ export default defineComponent({
         { title: "Position Name", key: "positionName", sortable: false },
         { title: "Valuation Source", key: "valuationSource", sortable: false },
         { title: "Position Type", key: "positionType", sortable: false },
-        { key: "data-table-expand", sortable: false, align: "center" },
       ];
+      // Simulated NAV value.
+      if (this.showSimulatedNav) {
+        headers.push({ title: "Simulated NAV", key: "simulatedNav", sortable: false, align: "center", width: "40px" })
+      }
+
+      // Expand details button
+      headers.push({ key: "data-table-expand", sortable: false, align: "center" });
       if (this.deletable) {
         headers.push({ key: "delete", sortable: false, align: "center", width: "40px" })
       }
