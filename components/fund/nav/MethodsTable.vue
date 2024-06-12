@@ -159,6 +159,8 @@ export default defineComponent({
         const m = methods[i];
         if (m.detailsHash === method.detailsHash) {
           if (m.isNew) {
+            m.isNew = false;
+            m.deleted = false;
             // Remove the new method from the array
             methods.splice(i, 1);
             // Adjust the index to account for the removed item
