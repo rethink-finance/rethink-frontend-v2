@@ -130,9 +130,19 @@
               </v-btn>
               <v-btn
                 class="bg-primary text-secondary ms-6"
+                :disabled="!fundStore.activeAccountAddress"
                 @click="createProposal"
               >
                 Create Proposal
+                <v-tooltip
+                  v-if="!fundStore.activeAccountAddress"
+                  :model-value="true"
+                  activator="parent"
+                  location="top"
+                  @update:model-value="true"
+                >
+                  Connect your wallet to create a proposal.
+                </v-tooltip>
               </v-btn>
             </div>
           </v-row>
