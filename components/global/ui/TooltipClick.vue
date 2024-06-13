@@ -10,7 +10,16 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onBeforeUnmount, ref } from "vue";
+/**
+ * TooltipClick component definition.
+ * @component TooltipClick
+ * @description A Vue component that shows a tooltip on click.
+ *
+ * TooltipClick component props.
+ * @property {string} tooltipText - The text to display in the tooltip.
+ * @property {number} [hideAfter=1000] - Milliseconds after which tooltip hides automatically.
+ * @property {"top" | "bottom" | "left" | "right"} [location="top"] - The position of the tooltip relative to the activator.
+ */
 
 export default defineComponent({
   name: "TooltipClick",
