@@ -7,14 +7,14 @@
       </div>
       <slot name="header-right" />
     </div>
-    <div class="tools">
+    <div class="tools" v-if="hasTools">
       <slot name="tools" />
     </div>
     <slot />
   </div>
 </template>
 
-<script>
+<script lang="ts">
 export default {
   props: {
     title: {
@@ -24,6 +24,12 @@ export default {
     subtitle: {
       type: String,
       defautlt: "",
+    },
+  },
+  computed: {
+    hasTools(): boolean {
+      // Check if tools slot content is present
+      return !!this.$slots.tools;
     },
   },
 };
