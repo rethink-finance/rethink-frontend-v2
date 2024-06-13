@@ -23,6 +23,7 @@ $color-moonlight-dark: #293041;
 $color-moonlight: rgba(31, 95, 255, 0.16);
 $color-moonlight-light: #343d50;
 $color-disabled: #646465;
+
 $color-gray-transparent: rgba(246, 249, 255, 0.08);
 $color-gray-light-transparent: rgba(246, 249, 255, 0.04);
 $color-divider: #1a2234;
@@ -42,10 +43,12 @@ $color-error: #de3838;
 $color-error-text: white;
 $color-info: #2196f3;
 $color-success: #35bd48;
+$color-success-light: #38de8e;
 $color-success-text: white;
 $color-warning: #ffd33d;
 $color-warning-text: #836900;
 $color-inactive: #4e5972;
+$color-steel-blue: #77829f;
 $color-card-background: rgba(246, 249, 255, 0.02);
 $color-background-button: rgba(246, 249, 255, 0.06);
 
@@ -65,8 +68,8 @@ $letter-spacing-lg: 0.03rem;
 // Status Type Colors
 $color-status-type-active: #db38de;
 $color-status-type-executed: $color-primary;
-$color-status-type-defeated: #de3856;
-$color-status-type-to-execute: #38de8e;
+$color-status-type-defeated: $color-error;
+$color-status-type-to-execute: $color-success-light;
 $color-status-type-canceled: #de6a38;
 
 // Use these variables to generate CSS rules

@@ -3,33 +3,39 @@
     <div class="main_card">
       <div class="header">
         <div class="header__title-col">
-          <div class="header__title">
-            Governance Activity
-          </div>
-          <div class="header__sub-title">
-            7 Pending Proposals
-          </div>
+          <div class="header__title">Governance Activity</div>
+          <div class="header__sub-title">7 Pending Proposals</div>
         </div>
         <UiDropdown :options="dropdownOptions" label="Create Proposal" />
       </div>
       <div class="tools">
         <v-btn class="all_activity_btn text-secondary" variant="outlined">
           <div>All Activity</div>
-          <div class="all_activity_btn__subtext">
-            (9 Proposals)
-          </div>
+          <div class="all_activity_btn__subtext">(9 Proposals)</div>
           <Icon icon="mdi:filter-variant" width="1rem" />
         </v-btn>
         <div class="tools__success-rate">
-          <div class="tools__val">
-            50%
-          </div>
-          <div class="tools__subtext">
-            Success Rate
-          </div>
+          <div class="tools__val">50%</div>
+          <div class="tools__subtext">Success Rate</div>
         </div>
       </div>
-      <GovernanceTable :methods="methods" />
+      <GovernanceTable :items="governanceTable" />
+    </div>
+
+    <div class="main_card">
+      <div class="header">
+        <div class="header__title-col">
+          <div class="header__title">Trending Delegates</div>
+          <div class="header__sub-title">4 Delegated Wallets</div>
+        </div>
+        <UiLinkExternalButton
+          class="fund_info_governance__manage_button"
+          title="Manage Delegation"
+          :href="manageDelegateUrl"
+        />
+      </div>
+
+      <TableTrendingDelegates :items="trendingDelegates" />
     </div>
     <UiDataRowCard title="Governance Settings" class="data_row_card">
       <template #body>
@@ -41,18 +47,15 @@
 
 <script setup lang="ts">
 import GovernanceTable from "~/components/fund/governance/GovernanceTable.vue";
+import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDelegates.vue";
 import type IFund from "~/types/fund";
 import type GOVActivity from "~/types/governance_activity";
+import type ITrendingDelegates from "~/types/trending_delegates";
 
-//* submission
-// Pending
-// Missed
-// Abstained
-// Rejected
-// Approved
+const manageDelegateUrl = "https://www.google.com";
 
-// Example data
-const methods: GOVActivity[] = [
+// Example data governance activity
+const governanceTable: GOVActivity[] = [
   {
     title: "Unlock airdrop permission to 0x25dfdgfg",
     submission: "Pending",
@@ -87,6 +90,34 @@ const methods: GOVActivity[] = [
     approval: "90%",
     participation: "5%",
     tags: ["canceled", "permission"],
+  },
+];
+
+// Dummy data for trending delegates
+const trendingDelegates: ITrendingDelegates[] = [
+  {
+    delegated_members: "0x25dfdgdaddasdfg",
+    delegators: "16 Members",
+    impact: "10%",
+    voting_power: "570.000.000 SOON",
+  },
+  {
+    delegated_members: "0x25dfdgdaddasdfg",
+    delegators: "13 Members",
+    impact: "20%",
+    voting_power: "850.000.000 SOON",
+  },
+  {
+    delegated_members: "0x25dfdgdaddasdfg",
+    delegators: "8 Members",
+    impact: "8%",
+    voting_power: "440.000.000 SOON",
+  },
+  {
+    delegated_members: "0x25dfdgdaddasdfg",
+    delegators: "5 Members",
+    impact: "16%",
+    voting_power: "720.000.000 SOON",
   },
 ];
 
@@ -163,7 +194,7 @@ const dropdownOptions = [
 }
 
 .data_row_card {
-  ::v-deep .data_row__panel {
+  :deep .data_row__panel {
     background-color: rgb(var(--v-theme-surface));
     border-radius: 4px;
   }

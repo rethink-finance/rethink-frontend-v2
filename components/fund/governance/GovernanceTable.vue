@@ -1,8 +1,9 @@
 <template>
   <v-data-table
-    v-if="methods.length"
+    v-if="items.length"
     :headers="headers"
-    :items="methods"
+    :items="items"
+    hover
     @click:row="rowClick"
     class="main_table nav_entries"
   >
@@ -60,7 +61,7 @@ const icons = {
 export default defineComponent({
   name: "GovernanceTable",
   props: {
-    methods: {
+    items: {
       type: Array as () => GOVActivity[],
       default: () => [],
     },
