@@ -1,5 +1,7 @@
 import { defineStore } from "pinia";
-import { Web3 } from "web3";
+import {  Web3 } from "web3";
+import type {  AbiInput } from "web3";
+import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
@@ -11,9 +13,9 @@ import type INAVUpdate from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IToken from "~/types/token";
 import type IPositionTypeCount from "~/types/position_type";
-import type INAVMethod from "~/types/nav_method";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { useFundStore } from "~/store/fund.store";
+import type INAVMethod from "~/types/nav_method";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -23,6 +25,7 @@ const RethinkReaderContractName = "RethinkReader";
 
 interface IState {
   funds: IFund[];
+  allNavMethods: INAVMethod[],
 }
 
 
@@ -30,6 +33,7 @@ export const useFundsStore = defineStore({
   id: "funds",
   state: (): IState => ({
     funds: [] as IFund[],
+    allNavMethods: [] as INAVMethod[],
   }),
   getters: {
     fundStore(): any {
@@ -185,7 +189,6 @@ export const useFundsStore = defineStore({
 
             // NAV Updates
             navUpdates: [] as INAVUpdate[],
-            navMethods: [] as INAVMethod[],
           };
 
           const metaDataJson = dataNAVs.fundMetadata[index];
@@ -205,6 +208,12 @@ export const useFundsStore = defineStore({
         return funds;
       }
     },
+    async fetchFundsInfoArrays() {
+      const fundFactoryContract = this.fundFactoryContract;
+      const fundsLength = await fundFactoryContract.methods.registeredFundsLength().call();
+
+      return await fundFactoryContract.methods.registeredFundsData(0, fundsLength).call();
+    },
     /**
      * Fetches all funds data from the GovernableFundFactory.
      */
@@ -213,10 +222,7 @@ export const useFundsStore = defineStore({
       // Reset funds as we will populate them with new data.
       this.funds = [];
 
-      const fundFactoryContract = this.fundFactoryContract;
-      const fundsLength = await fundFactoryContract.methods.registeredFundsLength().call();
-
-      const fundsInfoArrays = await fundFactoryContract.methods.registeredFundsData(0, fundsLength).call();
+      const fundsInfoArrays = await this.fetchFundsInfoArrays();
       const fundAddresses: string[] = fundsInfoArrays[0];
       const fundsInfo = Object.fromEntries(fundAddresses.map((address, index) => [address, fundsInfoArrays[1][index]]));
 
@@ -225,6 +231,47 @@ export const useFundsStore = defineStore({
 
       // Using the spread operator to append each element
       this.funds.push(...funds);
+
+      // Fetch all possible NAV methods for all funds
+      this.fetchAllNavMethods(fundAddresses);
+    },
+    /**
+     * Fetches all NAV methods
+     */
+    async fetchAllNavMethods(fundAddresses: string[]) {
+      const allFundsNavData = await this.fundStore.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call();
+      const allMethods: INAVMethod[] = [];
+      console.log("allFundsNavData: ", allFundsNavData);
+      const getNavEntryFunctionABI: AbiInput[] = GovernableFund.abi.find(
+        func => func.name === "getNavEntry" && func.type === "function",
+      )?.outputs || [];
+
+      console.log("Fetch all NAV methods");
+      for (const navData of allFundsNavData) {
+        if (!navData.encodedNavUpdate?.length) continue;
+        for (const encodedNavUpdate of navData.encodedNavUpdate) {
+
+          try {
+            // Decode NAV entry data.
+            const navEntries: Record<string, any>[] = this.web3.eth.abi.decodeParameters(getNavEntryFunctionABI, encodedNavUpdate)[0] as any[];
+
+            for (const navEntry of navEntries) {
+              // Ignore NAV methods that are not original NAV entries.
+              if (navEntry.isPastNAVUpdate || navEntry.pastNAVUpdateIndex !== 0n) {
+                console.log("[SKIP] navEntry: ", navEntry);
+                continue;
+              }
+              console.log("[KEEP] navEntry: ", navEntry);
+              allMethods.push(this.fundStore.parseNAVEntry(navEntry))
+            }
+          } catch (error: any) {
+            console.log("error processing all NAV methods: ", error)
+          }
+        }
+        console.log("allMethods: ", allMethods)
+      }
+
+      this.allNavMethods = allMethods;
     },
   },
 });

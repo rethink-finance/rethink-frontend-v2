@@ -1,7 +1,9 @@
 <template>
-  <div class="position_type" :class="positionTypeClass">
-    {{ positionType?.name || "N/A" }}
-  </div>
+  <UiTextBadge
+    :value="positionType?.name || 'N/A'"
+    :class="positionTypeClass"
+    :disabled="disabled"
+  />
 </template>
 
 <script setup lang="ts">
@@ -13,23 +15,19 @@ const props = defineProps({
     type: String,
     default: undefined,
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const positionType = computed(() => props.value ? getPositionType(props.value as PositionType) : undefined);
-const positionTypeClass = computed(() => `position_type_${props.value as PositionType || "unknown"}`);
+const positionTypeClass = computed(() => {
+  const baseClass = `position_type_${props.value as PositionType || "unknown"}`;
+  return props.disabled ? `${baseClass} position_type--disabled` : baseClass;
+});
 </script>
 
 <style scoped lang="scss">
-.position_type {
-  display: flex;
-  padding: 0.25rem;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  width: max-content;
 
-  @include borderGray;
-  background: $color-badge-navy;
-}
 </style>

@@ -96,5 +96,4 @@ export default interface IFund {
 
   // NAV Updates
   navUpdates: INAVUpdate[];
-  navMethods: INAVMethod[];
 }

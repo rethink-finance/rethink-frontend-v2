@@ -129,13 +129,25 @@ a {
     }
   }
 }
+/* FORM */
+/* Append the asterisk to labels with the class 'required-label' */
+.label_required::after {
+  content: ' *';
+  color: $color-primary;
+  font-weight: bold;
+  font-size: 1.5rem;
+  line-height: 0.1rem;
+  right: 0;
+  margin-left: 0.1em;
+}
+
 
 
 /* TABLES */
 // TODO: move to another Table component and all Tables should extend it along with classes.
 .main_table {
   thead {
-    background-color: #111828;
+    background-color: $color-dark;
     th {
       color: $color-text-irrelevant;
       font-weight: 500;
@@ -147,7 +159,7 @@ a {
       font-weight: 500;
     }
     tr {
-      background-color: $color-badge-navy;
+      //background-color: $color-badge-navy;
     }
   }
 }

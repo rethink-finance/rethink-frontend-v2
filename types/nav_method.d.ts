@@ -1,4 +1,5 @@
 import { PositionType } from "~/types/enums/position_type";
+import { ValuationType } from "~/types/enums/valuation_type";
 
 
 /**
@@ -15,9 +16,30 @@ import { PositionType } from "~/types/enums/position_type";
   *       "pastNAVUpdateIndex": "0"
   *     }
  */
+
+
+// Each NAV update has 1 or more NAV entries.
+// NAV Method is actually parsed data from NAV Entry, the original navEntry is in the details.
+// TODO consider renaming this everywhere to NAV Entry instead of NAV Method
+export interface INAVMethodDetails {
+  [key in PositionType]: any[],
+  [key: string]: any, // This allows for arbitrary key-value pairs
+}
+
 export default interface INAVMethod {
-  positionType: PositionType,
   positionName: string,
   valuationSource: string,
+  positionType: PositionType,
+  // These 3 fields are in the details.
+  // isPastNAVUpdate: boolean,
+  // pastNAVUpdateEntryIndex: number,
+  // pastNAVUpdateIndex: number,
+  details: INAVMethodDetails,
   detailsJson: string,
+  valuationType: ValuationType,
+  deleted?: boolean,  // THis is only used in the frontend, to mark it for deletion when managing NAV methods.
+  isNew?: boolean,  // THis is only used in the frontend, to mark it as new when managing NAV methods.
+  // THis is only used in the frontend, as methods don't have any IDs, we hash their contents to compare them.
+  // Hash is generated from the detailsJson.
+  detailsHash?: string,
 }

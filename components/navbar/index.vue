@@ -119,7 +119,6 @@ import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type INetwork from "~/types/network";
 import type IRoute from "~/types/route";
-const router = useRouter();
 const accountStore = useAccountStore();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();

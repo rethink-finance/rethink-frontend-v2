@@ -30,6 +30,7 @@
 </template>
 <script lang="ts">
 import type { PropType } from "vue";
+import { ethers } from "ethers";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
 import { useFundStore } from "~/store/fund.store";
@@ -54,8 +55,11 @@ export default {
         },
       ];
     },
-    chartItems(): bigint[] {
-      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => navUpdate.totalNAV);
+    totalNAVItems(): bigint[] {
+      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => navUpdate.totalNAV)
+    },
+    chartItems(): number[] {
+      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => parseFloat(ethers.formatUnits(navUpdate.totalNAV, this.fund.baseToken.decimals)))
     },
     chartDates() {
       return this.fund.navUpdates.map((navUpdate: INAVUpdate) => navUpdate.date);
@@ -122,8 +126,9 @@ export default {
               colors: "var(--color-light-subtitle)",
             },
             offsetX: 0,
-            formatter: function(val: number) {
-              return abbreviateNumber(val);
+            formatter: (value: number) => {
+              console.log("format number: ", value);
+              return abbreviateNumber(value);
             },
           },
           axisBorder: {
@@ -163,7 +168,7 @@ export default {
               "<div class='tooltip_row'>" +
               "<div class='label'>Date:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
               "<div class='tooltip_row'>" +
-              "<div class='label'>AUM:</div>" + this.formatWei(this.chartItems[dataPointIndex]) + "</div>" +
+              "<div class='label'>AUM:</div>" + this.formatWei(this.totalNAVItems[dataPointIndex]) + "</div>" +
               "</div>"
           },
         },

@@ -39,15 +39,19 @@
             :active="navRoute.isActive"
             :color="navRoute.pathColor"
           >
-
             <div :class="{ 'title-box': navRoute.isActive }">
               {{ navRoute.title }}
             </div>
           </v-btn>
         </nuxt-link>
+
+      </div>
+
+      <div>
+        <UiBreadcrumbs :items="breadcrumbItems" />
       </div>
     </div>
-    <NuxtPage :fund="fund" />
+    <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
     <h2 class="mb-2">
@@ -66,6 +70,8 @@ import { useFundStore } from "~/store/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
+import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import { trimTrailingSlash } from "~/composables/utils";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
@@ -76,7 +82,13 @@ const fundAddress = (route.params.id as string).split("-")[1];
 onUnmounted(  () => {
   fundStore.fund = { } as IFund;
   fundStore.selectedFundAddress = "";
+  setBreadcrumbItems([]);
 })
+
+const breadcrumbItems = ref<BreadcrumbItem[]>([]);
+const setBreadcrumbItems = (items: BreadcrumbItem[]) => {
+  breadcrumbItems.value = items;
+};
 
 const fetchFund = async () => {
   if (!fundAddress) {
@@ -97,15 +109,26 @@ const fetchFund = async () => {
 watch(() => web3Store.chainId, () => {
   fetchFund();
 });
+// Watch for route changes to reset the breadcrumbs
+watch(() => route.path, (newPath) => {
+  const pathRoot = `/details/${route.params.id}`;
+  console.log(newPath)
+  if (trimTrailingSlash(newPath) === pathRoot || newPath === `${pathRoot}/nav`) {
+    setBreadcrumbItems([]);
+  }
+});
+
 
 onMounted(  () => {
   fetchFund();
+  setBreadcrumbItems([]);
 });
 const fund = computed(() => fundStore.fund as IFund);
+const fundDetailsRoute = computed(() => `/details/${route.params.id}`);
 
 const routes : IRoute[] = [
   {
-    to: `/details/${route.params.id}`,
+    to: fundDetailsRoute.value,
     exactMatch: true,
     title: "Fund Details",
     text: "",
@@ -117,8 +140,9 @@ const routes : IRoute[] = [
     text:"",
   },
   {
-    to: `/details/${route.params.id}/nav`,
-    exactMatch: true,
+    to: `${fundDetailsRoute.value}/nav`,
+    exactMatch: false,
+    matchPrefix:  `${fundDetailsRoute.value}/nav`,
     title: "NAV",
     text:"",
   },
@@ -178,9 +202,8 @@ const computedRoutes = computed(() => {
   margin-bottom: 1rem;
 
   @include sm {
-    margin: 0 5.5rem ;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
@@ -196,14 +219,14 @@ const computedRoutes = computed(() => {
   }
 }
 
-.title-box{
+.title-box {
   position: relative;
   border-bottom: 2px solid;
   border-color: var(--color-primary);
   padding-bottom: 1rem;
 }
 
-.overlay-container{
+.overlay-container {
   position: absolute;
   bottom: 0;
   background-color: var(--color-divider);
@@ -215,14 +238,12 @@ const computedRoutes = computed(() => {
   background-color: $color-gray-light-transparent;
   border-radius: $default-border-radius;
   padding: .5rem .62rem;
-  margin: 0 ;
   display: flex;
   flex-direction: row;
   gap: 0.5rem;
   align-items: center;
 
   @include sm{
-    margin: 0 5.5rem ;
     padding: 1rem 1.5rem;
   }
 

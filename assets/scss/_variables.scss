@@ -9,7 +9,7 @@ $color-black: #333333;
   The colors were changing in the design all the time and
   a lot of them are super similar and redundant.
  */
-$color-dark: #0D1528;
+$color-dark: #111828;
 $color-navy-gray: #141c2e;
 $color-navy-gray-light: #151e33;
 $color-table-row: #162039;
@@ -18,8 +18,9 @@ $color-navy-gray-dark: #0f172a;
 $color-badge-navy: #171e30;
 $color-border-dark: #242c40;
 $color-border-light: #252c3d;
-$color-moonlight: rgba(31, 95, 255, 0.16);
 $color-toast: #242e45;
+$color-moonlight-dark: #293041;
+$color-moonlight: rgba(31, 95, 255, 0.16);
 $color-moonlight-light: #343d50;
 $color-disabled: #646465;
 $color-gray-transparent: rgba(246, 249, 255, 0.08);
@@ -54,10 +55,13 @@ $color-subtitle: #45557F;
 $color-light-subtitle: rgba(246, 249, 255, 0.76);
 $color-text-irrelevant: #BFC4CF;
 
+$text-xl: 1.5rem;
 $text-lg: 1.25rem;
 $text-md: 1rem;
 $text-sm: 0.875rem;
 $text-xs: 0.8125rem;
+
+$letter-spacing-lg: 0.03rem;
 
 // Position Type Colors
 $color-position-type-liquid: #DE6A38;

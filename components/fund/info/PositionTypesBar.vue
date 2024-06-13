@@ -37,7 +37,6 @@ export default {
       }, 0);
     },
     calculatedPositionTypes() {
-      console.log("GET CALC POS TYPES");
       return this.positionTypeCounts.filter(
         positionType => positionType.count > 0,
       ).map((positionType) => {

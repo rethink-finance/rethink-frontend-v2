@@ -1,13 +1,20 @@
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import { ethers } from "ethers";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
+import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import { useAccountStore } from "~/store/account.store";
-import { PositionType, PositionTypeKeys, PositionTypes } from "~/types/enums/position_type";
+import {
+  NAVEntryTypeToPositionTypeMap,
+  PositionType,
+  PositionTypeKeys,
+  PositionTypes,
+} from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3.store";
@@ -36,6 +43,7 @@ interface IState {
   userFundDelegateAddress: string;
   userFundShareValue: bigint
   selectedFundAddress: string;
+  fundManagedNAVMethods: INAVMethod[],
 }
 
 
@@ -50,6 +58,7 @@ export const useFundStore = defineStore({
     userFundShareValue: BigInt("0"),
     userFundDelegateAddress: "",
     selectedFundAddress: "",
+    fundManagedNAVMethods: [],
   }),
   getters: {
     accountStore(): any {
@@ -77,6 +86,16 @@ export const useFundStore = defineStore({
       const totalNAV = Number(formatTokenValue(state.fund.totalNAVWei, state.fund.baseToken.decimals, false));
       return formatNumberShort(totalNAV) + " " + state.fund.baseToken.symbol;
     },
+    selectedFundSlug(state: IState): string {
+      return (state.fund?.fundToken.symbol || "") + "-" + (state.fund?.address || "");
+    },
+    fundLastNAVUpdate(state: IState): INAVUpdate | undefined {
+      if (!state.fund?.navUpdates.length) return undefined;
+      return state.fund.navUpdates[state.fund.navUpdates.length - 1];
+    },
+    fundLastNAVUpdateEntries(): INAVMethod[] {
+      return this.fundLastNAVUpdate?.entries || [];
+    },
     /**
      * Contracts
      */
@@ -96,6 +115,14 @@ export const useFundStore = defineStore({
     fundContract(): Contract {
       return new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress)
     },
+    // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
+    fundSafeContract(): Contract {
+      return new this.web3.eth.Contract(GnosisSafeL2JSON.abi, this.fund?.safeAddress)
+    },
+    // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
+    fundGovernorContract(): Contract {
+      return new this.web3.eth.Contract(RethinkFundGovernor.abi, this.fund?.governorAddress)
+    },
     // @ts-expect-error: we should extend the return type ...
     fundBaseTokenContract(): Contract {
       return new this.web3.eth.Contract(ERC20, this.fund?.baseToken?.address)
@@ -108,10 +135,18 @@ export const useFundStore = defineStore({
     async getFund(fundAddress: string) {
       this.selectedFundAddress = fundAddress;
       this.fund = undefined;
+      this.fundManagedNAVMethods = [];
 
       try {
         this.fund = await this.fetchFundData() as IFund;
-        console.log(this.fund)
+
+        // Set fund NAV methods to be edited.
+        // Create a deep copy of the array to prevent changing the original by reference.
+        // TODO first check if they already exist in the localStorage as draft?
+        console.log("fundLastNAVUpdateEntries: ", this.fundLastNAVUpdateEntries);
+        this.fundManagedNAVMethods = JSON.parse(JSON.stringify(this.fundLastNAVUpdateEntries));
+        console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
+        console.log("fund: ", this.fund)
       } catch (e) {
         console.error(`Failed fetching fund ${fundAddress} -> `, e)
       }
@@ -237,7 +272,7 @@ export const useFundStore = defineStore({
           return undefined
         });
 
-        console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
+        // console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
         console.log("fundSettings: ", fundSettings)
 
         const fund: IFund = {
@@ -306,7 +341,6 @@ export const useFundStore = defineStore({
 
           // NAV Updates
           navUpdates: [] as INAVUpdate[],
-          navMethods: [] as INAVMethod[],
         } as IFund;
 
         // Process metadata if available
@@ -327,8 +361,8 @@ export const useFundStore = defineStore({
     parseFundPositionTypeCounts(dataNAV: any): IPositionTypeCount[] {
       const positionTypeCounts = [];
 
-      for (const [positionTypeKey, positionType] of PositionTypes) {
-        const positionTypeData = dataNAV[positionTypeKey];
+      for (const positionType of PositionTypes) {
+        const positionTypeData = dataNAV[positionType.key];
         // Get the last array for each NAV position type. The last array represents
         // the latest NAV update for each position type (liquid, nft, composable, illiquid).
         const lastIndex = positionTypeData?.length || 0;
@@ -341,11 +375,38 @@ export const useFundStore = defineStore({
 
       return positionTypeCounts;
     },
+    parseNAVEntry(navEntryData: Record<string, any>): INAVMethod {
+      let description;
+      const positionType = NAVEntryTypeToPositionTypeMap[navEntryData.entryType];
+
+      try {
+        if (navEntryData.description === "") {
+          description = {};
+        } else {
+          description = JSON.parse(navEntryData.description ?? "{}");
+        }
+      } catch (error) {
+        // Handle the error or rethrow it
+        console.warn("Failed to parse NAV entry JSON description string: ", error);
+      }
+
+      const details = cleanComplexWeb3Data(navEntryData);
+      const detailsJson = formatJson(details);
+
+      return {
+        positionType,
+        positionName: description?.positionName,
+        valuationSource: description?.valuationSource,
+        details,
+        detailsJson,
+        detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
+      } as INAVMethod
+    },
     async parseFundNAVUpdates(dataNAV: any): Promise<INAVUpdate[]> {
       const navUpdates = [] as INAVUpdate[];
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable).
       const navUpdatesLen = dataNAV[PositionType.Liquid].length;
-      const fundNavUpdateTimes = await this.fundContract.methods.getNavUpdateTime(0, navUpdatesLen).call();
+      const fundNavUpdateTimes = await this.fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call();
 
       for (let i= 0; i < navUpdatesLen; i++) {
         let totalNAV = BigInt("0");
@@ -376,41 +437,32 @@ export const useFundStore = defineStore({
           },
         )
       }
-
+      console.log("navUpdatesLen ", navUpdatesLen);
+      console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
       // Fetch NAV JSON entries for each NAV update.
       const promises: Promise<any>[] = Array.from(
         { length: navUpdatesLen },
-        (_, index) => this.fundContract.methods.getNavEntry(index).call(),
+        (_, index) => this.fundContract.methods.getNavEntry(index + 1).call(),
       );
 
       // Each NAV update has more entries.
       // Parse and store them to the NAV update entries.
       const navUpdatePromises = await Promise.allSettled(promises);
+
       // Process results
       navUpdatePromises.forEach((navUpdateResult, index) => {
         if (navUpdateResult.status === "fulfilled") {
-          const navUpdateData: Record<string, any> = navUpdateResult.value[0];
+          const navEntries: Record<string, any>[] = navUpdateResult.value;
+          console.log("navEntries: ", navEntries);
 
-          PositionTypeKeys.forEach((positionType: PositionType) => {
-            navUpdates[index].entries.push(
-              ...navUpdateData[positionType].map(
-                (navEntryData: Record<string, any>) => (
-                  {
-                    positionType,
-                    positionName: "TODO",
-                    valuationSource: "TODO",
-                    detailsJson: formatJson(cleanComplexWeb3Data(navEntryData)),
-                  } as INAVMethod
-                ),
-              ),
-            )
-          })
+          for (const navEntry of navEntries) {
+            navUpdates[index].entries.push(this.parseNAVEntry(navEntry))
+          }
         } else {
-          console.error(`Failed to fetch NAV entry ${index}:`, navUpdateResult.reason);
+          console.error(`Failed to fetch NAV entry ${index + 1}:`, navUpdateResult.reason);
         }
       });
 
-      console.log(navUpdates);
       return navUpdates;
     },
     /**
