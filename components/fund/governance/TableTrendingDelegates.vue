@@ -9,14 +9,14 @@
       <div class="data-cell__content">
         <div>{{ formatHexAddress(item.delegated_members) }}</div>
 
-        <!-- <ui-tooltip-click tooltip-text="Copied" location="right">
+        <ui-tooltip-click tooltip-text="Copied" location="right">
           <Icon
             icon="clarity:copy-line"
             class="copy-icon"
             width="1rem"
             @click="copyText(item.delegated_members)"
           />
-        </ui-tooltip-click> -->
+        </ui-tooltip-click>
       </div>
     </template>
 
