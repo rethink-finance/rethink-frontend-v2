@@ -19,7 +19,7 @@
           <div class="tools__subtext">Success Rate</div>
         </div>
       </div>
-      <GovernanceTable :items="governanceTable" />
+      <TableGovernance :items="tableGovernance" />
     </div>
 
     <div class="main_card">
@@ -46,16 +46,18 @@
 </template>
 
 <script setup lang="ts">
-import GovernanceTable from "~/components/fund/governance/GovernanceTable.vue";
-import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDelegates.vue";
+// types
 import type IFund from "~/types/fund";
 import type GOVActivity from "~/types/governance_activity";
 import type ITrendingDelegates from "~/types/trending_delegates";
+// components
+import TableGovernance from "~/components/fund/governance/TableGovernance.vue";
+import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDelegates.vue";
 
+// dummy data for manage delegate button
 const manageDelegateUrl = "https://www.google.com";
-
-// Example data governance activity
-const governanceTable: GOVActivity[] = [
+// dummy data governance activity
+const tableGovernance: GOVActivity[] = [
   {
     title: "Unlock airdrop permission to 0x25dfdgfg",
     submission: "Pending",
@@ -92,7 +94,6 @@ const governanceTable: GOVActivity[] = [
     tags: ["canceled", "permission"],
   },
 ];
-
 // Dummy data for trending delegates
 const trendingDelegates: ITrendingDelegates[] = [
   {
@@ -120,14 +121,15 @@ const trendingDelegates: ITrendingDelegates[] = [
     voting_power: "720.000.000 SOON",
   },
 ];
-
-const fund = useAttrs().fund as IFund;
+// Dummy data for dropdown options
 const dropdownOptions = [
   "Delegated permissions",
   "Direct Execution",
   "NAV Methods",
   "Fund Settings",
 ];
+
+const fund = useAttrs().fund as IFund;
 </script>
 
 <style scoped lang="scss">

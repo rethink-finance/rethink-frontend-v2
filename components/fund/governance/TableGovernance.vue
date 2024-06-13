@@ -5,34 +5,34 @@
     :items="items"
     hover
     @click:row="rowClick"
-    class="main_table nav_entries"
+    class="table-governance"
   >
     <template #[`item.index`]="{ index }">
       <strong>{{ index + 1 }}</strong>
     </template>
     <template #[`item.title`]="{ item }">
-      <div class="pt-2 pb-2">
+      <div class="proposal__title">
         <div>
           {{ item.title }}
         </div>
-        <div class="d-flex align-center mt-2">
+        <div class="proposal__tags">
           <UiChip
             v-for="tag in item.tags"
             :key="tag"
             :value="tag"
-            class="me-2"
+            class="proposal__tag"
           />
         </div>
       </div>
     </template>
     <template #[`item.submission`]="{ item }">
-      <div class="d-flex align-center">
+      <div class="submission">
         <Icon
           :icon="icons[item.submission as keyof typeof icons]"
           width="1.4rem"
+          class="submission__icon"
         />
-
-        <div class="ms-1">
+        <div class="submission__text">
           {{ item.submission }}
         </div>
       </div>
@@ -41,12 +41,13 @@
       <!-- Leave this slot empty to hide pagination controls -->
     </template>
   </v-data-table>
-  <div v-else class="nav_entries__no_data">
+  <div v-else class="table-governance__no_data">
     No Governance Activity details available.
   </div>
 </template>
 
 <script lang="ts">
+// types
 import type GOVActivity from "~/types/governance_activity";
 
 // defined icons for submission
@@ -59,7 +60,7 @@ const icons = {
 };
 
 export default defineComponent({
-  name: "GovernanceTable",
+  name: "TableGovernance",
   props: {
     items: {
       type: Array as () => GOVActivity[],
@@ -93,11 +94,36 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-.nav_entries {
+.table-governance {
   &__no_data {
     text-align: center;
     padding: 1.5rem;
     background: $color-badge-navy;
+  }
+}
+
+.proposal {
+  &__title {
+    padding-block: 0.5rem;
+  }
+
+  &__tags {
+    display: flex;
+    align-items: center;
+    margin-top: 0.5rem;
+  }
+
+  &__tag {
+    margin-right: 0.5rem;
+  }
+}
+
+.submission {
+  display: flex;
+  align-items: center;
+
+  &__text {
+    margin-left: 0.5rem;
   }
 }
 </style>
