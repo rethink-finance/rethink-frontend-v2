@@ -141,6 +141,7 @@ export default defineComponent({
   }
   &__text {
     width: 40%;
+    max-width: 120px;
   }
 }
 
