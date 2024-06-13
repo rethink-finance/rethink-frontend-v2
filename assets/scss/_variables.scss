@@ -1,6 +1,6 @@
 $navbar-height: 5rem;
 $default-transition-time: 0.28s;
-$color-white: #FFFFFF;
+$color-white: #ffffff;
 $color-black: #333333;
 
 /* Utility colors */
@@ -33,14 +33,14 @@ $color-box-shadow: rgba(31, 95, 255, 0.16);
 // Currently also defined in the plugins/vuetify.ts
 $color-background: $color-dark;
 $color-surface: #121a2c;
-$color-primary: #1F5FFF;
+$color-primary: #1f5fff;
 $color-primary-dark: #1a50d6;
 $color-primary-darker: #1c3165;
-$color-secondary: #D2DFFF;
+$color-secondary: #d2dfff;
 $color-secondary-dark: #8e97ad;
-$color-error: #DE3838;
+$color-error: #de3838;
 $color-error-text: white;
-$color-info: #2196F3;
+$color-info: #2196f3;
 $color-success: #35bd48;
 $color-success-text: white;
 $color-warning: #ffd33d;
@@ -51,9 +51,9 @@ $color-background-button: rgba(246, 249, 255, 0.06);
 
 /* Typography */
 $color-title: $color-white;
-$color-subtitle: #45557F;
+$color-subtitle: #45557f;
 $color-light-subtitle: rgba(246, 249, 255, 0.76);
-$color-text-irrelevant: #BFC4CF;
+$color-text-irrelevant: #bfc4cf;
 
 $text-xl: 1.5rem;
 $text-lg: 1.25rem;
@@ -62,19 +62,40 @@ $text-sm: 0.875rem;
 $text-xs: 0.8125rem;
 
 $letter-spacing-lg: 0.03rem;
+// Status Type Colors
+$color-status-type-active: #db38de;
+$color-status-type-executed: $color-primary;
+$color-status-type-defeated: #de3856;
+$color-status-type-to-execute: #38de8e;
+$color-status-type-canceled: #de6a38;
+
+// Use these variables to generate CSS rules
+$status-types: (
+  "active": $color-status-type-active,
+  "executed": $color-status-type-executed,
+  "defeated": $color-status-type-defeated,
+  "to_execute": $color-status-type-to-execute,
+  "canceled": $color-status-type-canceled,
+);
+
+@each $type, $color in $status-types {
+  .status_type_#{$type} {
+    color: $color;
+  }
+}
 
 // Position Type Colors
-$color-position-type-liquid: #DE6A38;
-$color-position-type-composable: #38DE8E;
-$color-position-type-nft: #741FFF;
-$color-position-type-illiquid: #FFD700;
+$color-position-type-liquid: #de6a38;
+$color-position-type-composable: #38de8e;
+$color-position-type-nft: #741fff;
+$color-position-type-illiquid: #ffd700;
 
 // Use these variables to generate CSS rules
 $position-types: (
   "liquid": $color-position-type-liquid,
   "composable": $color-position-type-composable,
   "nft": $color-position-type-nft,
-  "illiquid": $color-position-type-illiquid
+  "illiquid": $color-position-type-illiquid,
 );
 
 @each $type, $color in $position-types {
@@ -90,8 +111,6 @@ $screen-md: 768px; // Tablet
 $screen-lg: 960px; // Desktop (small)
 $screen-xl: 1200px; // Desktop (large)
 $screen-xxl: 1460px; // Desktop (extra large)
-
-
 
 /**
 Define the needed colors as CSS variables, as they can be used in certain
@@ -109,9 +128,13 @@ $default-border-radius: 0.25rem;
 // Define a mixin to apply border properties based on position
 // Define a variable for border properties
 $default-border-properties: (
-  "border": 1px solid $color-gray-transparent
+  "border": 1px solid $color-gray-transparent,
 );
-@mixin borderGray($position: "border", $border-radius: true, $border-color: $color-gray-transparent) {
+@mixin borderGray(
+  $position: "border",
+  $border-radius: true,
+  $border-color: $color-gray-transparent
+) {
   // Apply border radius if enabled
   @if $border-radius {
     border-radius: $default-border-radius;
