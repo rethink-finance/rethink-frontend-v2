@@ -1,9 +1,9 @@
 <template>
   <v-data-table
     v-if="items.length"
+    class="table-trending-delegates main_table"
     :headers="headers"
     :items="items"
-    class="table-trending-delegates"
   >
     <template #[`item.delegated_members`]="{ item }">
       <div class="data-cell__title">

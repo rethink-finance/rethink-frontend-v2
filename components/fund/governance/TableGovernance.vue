@@ -1,11 +1,11 @@
 <template>
   <v-data-table
     v-if="items.length"
+    class="table-governance main_table"
     :headers="headers"
-    :items="items"
     hover
+    :items="items"
     @click:row="rowClick"
-    class="table-governance"
   >
     <template #[`item.index`]="{ index }">
       <strong>{{ index + 1 }}</strong>
@@ -95,6 +95,10 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .table-governance {
+  // add table max height
+  :deep(.v-table__wrapper) {
+    max-height: 500px;
+  }
   &__no_data {
     text-align: center;
     padding: 1.5rem;
