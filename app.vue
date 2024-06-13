@@ -8,7 +8,6 @@ onMounted(() => {
     useAccountStore().setAlreadyConnectedWallet();
 });
 </script>
-<!-- dummy commit -->
 
 <template>
   <NuxtLayout>
