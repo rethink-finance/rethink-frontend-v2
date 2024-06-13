@@ -7,7 +7,9 @@
   >
     <template #[`item.delegated_members`]="{ item }">
       <div class="data-cell__title">
-        <div>{{ formatHexAddress(item.delegated_members) }}</div>
+        <div class="data-cell__text">
+          {{ formatHexAddress(item.delegated_members) }}
+        </div>
         <ui-tooltip-click tooltip-text="Copied" location="right">
           <Icon
             icon="clarity:copy-line"
@@ -136,6 +138,9 @@ export default defineComponent({
     gap: 24px;
     align-items: center;
     padding-block: 1rem;
+  }
+  &__text {
+    width: 40%;
   }
 }
 

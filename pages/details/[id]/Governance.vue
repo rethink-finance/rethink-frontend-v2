@@ -54,7 +54,7 @@ const manageDelegateUrl = "https://www.google.com";
 // dummy data governance activity
 const tableGovernance: GOVActivity[] = [
   {
-    title: "Unlock airdrop permission to 0x25dfdgfg",
+    title: "Unlock airdrop permission to 0x1f98dgfgF984",
     submission: "Pending",
     approval: "40%",
     participation: "10%",
@@ -68,7 +68,7 @@ const tableGovernance: GOVActivity[] = [
     tags: ["executed", "nav"],
   },
   {
-    title: "Unlock airdrop permission to 0x25dfdgfg",
+    title: "Unlock airdrop permission to 0x1f98dgfgF984",
     submission: "Abstained",
     approval: "60%",
     participation: "22%",
@@ -92,25 +92,25 @@ const tableGovernance: GOVActivity[] = [
 // Dummy data for trending delegates
 const trendingDelegates: ITrendingDelegates[] = [
   {
-    delegated_members: "0x25dfdgdaddasdfg",
+    delegated_members: "0x1f98dgdaddasdfgF984",
     delegators: "16 Members",
     impact: "10%",
     voting_power: "570.000.000 SOON",
   },
   {
-    delegated_members: "0x25dfdgdaddasdfg",
+    delegated_members: "0xEd2026078669d1135991E850c88Cf71cdAEB4d00",
     delegators: "13 Members",
     impact: "20%",
     voting_power: "850.000.000 SOON",
   },
   {
-    delegated_members: "0x25dfdgdaddasdfg",
+    delegated_members: "0x1f98dgdaddasdfgF984",
     delegators: "8 Members",
     impact: "8%",
     voting_power: "440.000.000 SOON",
   },
   {
-    delegated_members: "0x25dfdgdaddasdfg",
+    delegated_members: "0xEd2026078669d1135991E850c88Cf71cdAEB4d00",
     delegators: "5 Members",
     impact: "16%",
     voting_power: "720.000.000 SOON",
@@ -165,10 +165,29 @@ const fund = useAttrs().fund as IFund;
   }
 }
 
+// overrides for expansion-panel
 .data_row_card {
-  :deep(data_row__panel) {
-    background-color: rgb(var(--v-theme-surface));
-    border-radius: 4px;
+  ::v-deep {
+    // remove outer border
+    .data_row__panel {
+      border: 0;
+      border-radius: 0.25rem !important;
+      background-color: rgb(var(--v-theme-surface));
+    }
+    // add more spacing to content inside
+    .v-expansion-panel-text__wrapper {
+      padding-bottom: 2rem;
+    }
+
+    // add borders to textfields inside panel
+    .v-expansion-panels {
+      border: 1px solid $color-gray-transparent;
+      border-radius: 0.25rem !important;
+
+      .data_row__panel {
+        padding: 0;
+      }
+    }
   }
 }
 </style>
