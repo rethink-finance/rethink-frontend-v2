@@ -8,7 +8,7 @@
     <template #[`item.delegated_members`]="{ item }">
       <div class="data-cell__title">
         <div>{{ formatHexAddress(item.delegated_members) }}</div>
-        <ui-tooltip-click tooltip-text="Copied" location="right" class="d-flex">
+        <ui-tooltip-click tooltip-text="Copied" location="right">
           <Icon
             icon="clarity:copy-line"
             class="copy-icon"
@@ -138,7 +138,9 @@ export default defineComponent({
     padding-block: 1rem;
   }
 }
+
 .copy-icon {
+  margin-bottom: -0.2rem;
   cursor: pointer;
   color: $color-steel-blue;
 
