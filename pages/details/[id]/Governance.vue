@@ -1,42 +1,37 @@
 <template>
-  <div>
-    <div class="main_card">
-      <div class="header">
-        <div class="header__title-col">
-          <div class="header__title">Governance Activity</div>
-          <div class="header__sub-title">7 Pending Proposals</div>
-        </div>
+  <div class="page-governance">
+    <UiMainCard title="Governance Activity" subtitle="7 Pending Proposals">
+      <template #header-right>
         <UiDropdown :options="dropdownOptions" label="Create Proposal" />
-      </div>
-      <div class="tools">
-        <v-btn class="all_activity_btn text-secondary" variant="outlined">
+      </template>
+      <template #tools>
+        <v-btn
+          class="tools__all-activity-btn text-secondary"
+          variant="outlined"
+        >
           <div>All Activity</div>
-          <div class="all_activity_btn__subtext">(9 Proposals)</div>
+          <div class="tools__all-activity-btn__subtext">(9 Proposals)</div>
           <Icon icon="mdi:filter-variant" width="1rem" />
         </v-btn>
         <div class="tools__success-rate">
           <div class="tools__val">50%</div>
           <div class="tools__subtext">Success Rate</div>
         </div>
-      </div>
+      </template>
       <TableGovernance :items="tableGovernance" />
-    </div>
+    </UiMainCard>
 
-    <div class="main_card">
-      <div class="header">
-        <div class="header__title-col">
-          <div class="header__title">Trending Delegates</div>
-          <div class="header__sub-title">4 Delegated Wallets</div>
-        </div>
+    <UiMainCard title="Trending Delegates" subtitle="4 Delegated Wallets">
+      <template #header-right>
         <UiLinkExternalButton
-          class="fund_info_governance__manage_button"
+          class="main-card__manage-button"
           title="Manage Delegation"
           :href="manageDelegateUrl"
         />
-      </div>
-
+      </template>
       <TableTrendingDelegates :items="trendingDelegates" />
-    </div>
+    </UiMainCard>
+
     <UiDataRowCard title="Governance Settings" class="data_row_card">
       <template #body>
         <FundOverviewGovernance :fund="fund" />
@@ -133,31 +128,6 @@ const fund = useAttrs().fund as IFund;
 </script>
 
 <style scoped lang="scss">
-.header {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  margin-bottom: 2rem;
-
-  &__title-col {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  &__title {
-    font-size: $text-md;
-    color: $color-white;
-    font-weight: 700;
-  }
-
-  &__sub-title {
-    font-size: $text-sm;
-    color: $color-text-irrelevant;
-    font-weight: 500;
-  }
-}
-
 .tools {
   display: flex;
   flex-direction: row;
@@ -182,7 +152,7 @@ const fund = useAttrs().fund as IFund;
   }
 }
 
-.all_activity_btn {
+.tools__all-activity-btn {
   @include borderGray;
   display: flex;
   flex-direction: row;
@@ -196,7 +166,7 @@ const fund = useAttrs().fund as IFund;
 }
 
 .data_row_card {
-  :deep .data_row__panel {
+  :deep(data_row__panel) {
     background-color: rgb(var(--v-theme-surface));
     border-radius: 4px;
   }
