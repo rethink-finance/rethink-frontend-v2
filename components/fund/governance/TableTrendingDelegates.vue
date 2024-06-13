@@ -3,13 +3,12 @@
     v-if="items.length"
     :headers="headers"
     :items="items"
-    class="main_table nav_entries"
+    class="table-trending-delegates"
   >
     <template #[`item.delegated_members`]="{ item }">
-      <div class="data-cell__content">
+      <div class="data-cell__title">
         <div>{{ formatHexAddress(item.delegated_members) }}</div>
-
-        <ui-tooltip-click tooltip-text="Copied" location="right">
+        <ui-tooltip-click tooltip-text="Copied" location="right" class="d-flex">
           <Icon
             icon="clarity:copy-line"
             class="copy-icon"
@@ -74,9 +73,6 @@ export default defineComponent({
     ] as const),
     _timerId: null as any as number | null,
   }),
-  // beforeDestroy() {
-  //   clearTimeout(this._timerId);
-  // },
   methods: {
     rowClick(index: any, item: any) {
       console.log("Row clicked", item);
@@ -84,17 +80,12 @@ export default defineComponent({
     copyText(text: string) {
       navigator.clipboard.writeText(text);
     },
-    // handleCopy({ mouseenter, mouseleave }, e) {
-    //   clearTimeout(this._timerId);
-    //   mouseenter(e);
-    //   this._timerId = setTimeout(() => mouseleave(e), 1000);
-    // },
   },
 });
 </script>
 
 <style lang="scss" scoped>
-.nav_entries {
+.table-trending-delegates {
   &__no_data {
     text-align: center;
     padding: 1.5rem;
@@ -116,34 +107,37 @@ export default defineComponent({
       }
     }
 
-    tbody tr {
-      td {
-        // add border between rows
-        border: 1px solid $color-gray-transparent;
-        border-left: none;
-        border-right: none;
+    tbody {
+      tr {
+        td {
+          // add border between rows
+          border: 1px solid $color-gray-transparent;
+          border-left: none;
+          border-right: none;
 
-        // first and last child border radius
-        &:first-child {
-          border-left: 1px solid $color-gray-transparent;
-          border-radius: $default-border-radius 0 0 $default-border-radius;
-        }
-        &:last-child {
-          border-right: 1px solid $color-gray-transparent;
-          border-radius: 0 $default-border-radius $default-border-radius 0;
+          // first and last child border radius
+          &:first-child {
+            border-left: 1px solid $color-gray-transparent;
+            border-radius: $default-border-radius 0 0 $default-border-radius;
+          }
+          &:last-child {
+            border-right: 1px solid $color-gray-transparent;
+            border-radius: 0 $default-border-radius $default-border-radius 0;
+          }
         }
       }
     }
   }
 }
 
-.data-cell__content {
-  display: flex;
-  gap: 24px;
-  align-items: center;
-  padding-block: 1rem;
+.data-cell {
+  &__title {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    padding-block: 1rem;
+  }
 }
-
 .copy-icon {
   cursor: pointer;
   color: $color-steel-blue;
