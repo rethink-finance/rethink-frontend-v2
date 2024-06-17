@@ -170,10 +170,6 @@ watch(() => web3Store.chainId, (newVal, oldVal) => {
   selectedChainId.value = newVal || "";
 });
 
-const checkConnection = async () => {
-  return await web3Store?.web3?.eth.getBlockNumber();
-}
-
 const switchNetwork = async (chainId: string) => {
   isSwitchingNetworks.value = true;
   try {
@@ -182,12 +178,12 @@ const switchNetwork = async (chainId: string) => {
       await accountStore.setActiveChain(chainId);
     } else {
       // Switch active chain.
-      web3Store.init(chainId);
+      await web3Store.init(chainId);
     }
 
     // Test connection, outer catch block will except exception.
     try {
-      await checkConnection();
+      await web3Store.checkConnection();
     } catch (e: any) {
       toastStore.errorToast("Looks like there are RPC connection problems.")
     }
