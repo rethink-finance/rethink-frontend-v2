@@ -54,6 +54,7 @@ const manageDelegateUrl = "https://www.google.com";
 // dummy data governance activity
 const tableGovernance: GOVActivity[] = [
   {
+    id: "75jfh475hqc",
     title: "Unlock airdrop permission to 0x1f98dgfgF984",
     submission: "Pending",
     approval: "40%",
@@ -61,6 +62,7 @@ const tableGovernance: GOVActivity[] = [
     tags: ["active", "permission"],
   },
   {
+    id: "51jfh475hqc",
     title: "Automate NAV Update execution for yhe ",
     submission: "Missed",
     approval: "50%",
@@ -68,6 +70,7 @@ const tableGovernance: GOVActivity[] = [
     tags: ["executed", "nav"],
   },
   {
+    id: "15fa475hqc",
     title: "Unlock airdrop permission to 0x1f98dgfgF984",
     submission: "Abstained",
     approval: "60%",
@@ -75,6 +78,7 @@ const tableGovernance: GOVActivity[] = [
     tags: ["defeated", "direct_execution"],
   },
   {
+    id: "75jfh475abq",
     title: "Automate NAV Update execution for yhe ",
     submission: "Rejected",
     approval: "75%",
@@ -82,6 +86,7 @@ const tableGovernance: GOVActivity[] = [
     tags: ["to_execute", "permission"],
   },
   {
+    id: "75jfh475hqd",
     title: "Automate NAV Update execution for yhe ",
     submission: "Approved",
     approval: "90%",

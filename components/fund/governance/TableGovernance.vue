@@ -86,8 +86,11 @@ export default defineComponent({
     icons: icons,
   }),
   methods: {
-    rowClick(index: any, item: GOVActivity) {
-      console.log("Row clicked", item);
+    // change route depending on row id (proposal ID)
+    rowClick(index: any, item: any) {
+      const { item: clickedItem } = item;
+
+      this.$router.push(`governance/proposal/${clickedItem.id}`);
     },
   },
 });
