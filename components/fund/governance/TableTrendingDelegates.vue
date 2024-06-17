@@ -76,9 +76,6 @@ export default defineComponent({
     _timerId: null as any as number | null,
   }),
   methods: {
-    rowClick(index: any, item: any) {
-      console.log("Row clicked", item);
-    },
     copyText(text: string) {
       navigator.clipboard.writeText(text);
     },

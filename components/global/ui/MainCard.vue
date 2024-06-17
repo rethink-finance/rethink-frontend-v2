@@ -38,9 +38,15 @@ export default {
 <style lang="scss" scoped>
 .header {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: space-between;
+  gap: 2rem;
   margin-bottom: 2rem;
+
+  @include sm {
+    flex-direction: row;
+    align-items: center;
+  }
 
   &__title-col {
     display: flex;
