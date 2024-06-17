@@ -48,7 +48,7 @@
         </div>
       </div>
 
-      <v-btn class="section-top__submit-button" @click="isDialogOpen = true">
+      <v-btn class="section-top__submit-button" @click="dialogOpen">
         Submit Vote
       </v-btn>
 
@@ -56,10 +56,20 @@
         v-model="isDialogOpen"
         scrim="black"
         opacity="0.25"
-        max-width="800"
+        max-width="500"
       >
         <div class="main_card di-card">
-          <div class="di-card__header">Vote Submission</div>
+          <div class="di-card__header-container">
+            <div class="di-card__header">Vote Submission</div>
+
+            <Icon
+              icon="material-symbols-light:close"
+              class="di-card__close-icon"
+              width="2rem"
+              @click="dialogClose"
+            />
+          </div>
+
           <div
             class="di-card__subtext"
             v-for="item in metaBottom.slice(0, 1)"
@@ -80,12 +90,8 @@
 
           <div class="di-card__title">{{ title }}</div>
 
-          <v-btn
-            class="text-secondary"
-            variant="plain"
-            @click="isDialogOpen = false"
-          >
-            Close
+          <v-btn class="di-card__submit-button" @click="submitProposal">
+            Submit Vote
           </v-btn>
         </div>
       </v-dialog>
@@ -141,6 +147,12 @@ export default defineComponent({
     },
     submitProposal() {
       alert("Submit Vote");
+    },
+    dialogOpen() {
+      this.isDialogOpen = true;
+    },
+    dialogClose() {
+      this.isDialogOpen = false;
     },
   },
 });
@@ -231,10 +243,14 @@ export default defineComponent({
 
 .di-card {
   @include borderGray;
-  width: fit-content;
   margin: 0 auto;
-
   color: white;
+
+  &__header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
 
   &__header,
   &__title {
@@ -249,6 +265,19 @@ export default defineComponent({
 
     margin-bottom: 1.5rem;
     color: $color-steel-blue;
+  }
+
+  &__title {
+    margin-bottom: 2rem;
+  }
+
+  &__close-icon {
+    cursor: pointer;
+    color: $color-steel-blue;
+  }
+
+  &__submit-button {
+    width: 100%;
   }
 }
 </style>
