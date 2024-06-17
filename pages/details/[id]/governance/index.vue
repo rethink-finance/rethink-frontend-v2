@@ -1,5 +1,11 @@
 <template>
   <div class="page-governance">
+    <UiDataRowCard title="Governance Settings" class="data_row_card">
+      <template #body>
+        <FundOverviewGovernance :fund="fund" />
+      </template>
+    </UiDataRowCard>
+
     <UiMainCard title="Governance Activity" subtitle="7 Pending Proposals">
       <template #header-right>
         <UiDropdown :options="dropdownOptions" label="Create Proposal" />
@@ -31,12 +37,6 @@
       </template>
       <TableTrendingDelegates :items="trendingDelegates" />
     </UiMainCard>
-
-    <UiDataRowCard title="Governance Settings" class="data_row_card">
-      <template #body>
-        <FundOverviewGovernance :fund="fund" />
-      </template>
-    </UiDataRowCard>
   </div>
 </template>
 
@@ -167,6 +167,8 @@ const fund = useAttrs().fund as IFund;
 
 // overrides for expansion-panel
 .data_row_card {
+  margin-bottom: 2rem;
+
   ::v-deep {
     // remove outer border
     .data_row__panel {
