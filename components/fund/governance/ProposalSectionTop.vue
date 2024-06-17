@@ -48,9 +48,47 @@
         </div>
       </div>
 
-      <v-btn class="section-top__submit-button" @click="submitProposal">
+      <v-btn class="section-top__submit-button" @click="isDialogOpen = true">
         Submit Vote
       </v-btn>
+
+      <v-dialog
+        v-model="isDialogOpen"
+        scrim="black"
+        opacity="0.25"
+        max-width="800"
+      >
+        <div class="main_card di-card">
+          <div class="di-card__header">Vote Submission</div>
+          <div
+            class="di-card__subtext"
+            v-for="item in metaBottom.slice(0, 1)"
+            :key="item.label"
+          >
+            <div class="section-top__meta-label">
+              {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
+            </div>
+            <ui-tooltip-click tooltip-text="Copied">
+              <Icon
+                icon="clarity:copy-line"
+                class="section-top__copy-icon"
+                width="0.8rem"
+                @click="copyText(item.value)"
+              />
+            </ui-tooltip-click>
+          </div>
+
+          <div class="di-card__title">{{ title }}</div>
+
+          <v-btn
+            class="text-secondary"
+            variant="plain"
+            @click="isDialogOpen = false"
+          >
+            Close
+          </v-btn>
+        </div>
+      </v-dialog>
     </div>
   </div>
 </template>
@@ -95,6 +133,7 @@ export default defineComponent({
   },
   data: () => ({
     icons,
+    isDialogOpen: false,
   }),
   methods: {
     copyText(text: string) {
@@ -187,6 +226,29 @@ export default defineComponent({
 
   &__submit-button {
     cursor: pointer;
+  }
+}
+
+.di-card {
+  @include borderGray;
+  width: fit-content;
+  margin: 0 auto;
+
+  color: white;
+
+  &__header,
+  &__title {
+    font-size: $text-lg;
+    font-weight: 700;
+  }
+
+  &__subtext {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+
+    margin-bottom: 1.5rem;
+    color: $color-steel-blue;
   }
 }
 </style>
