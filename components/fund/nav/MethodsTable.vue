@@ -32,8 +32,18 @@
       />
     </template>
 
-    <template #[`item.simulatedNav`]="{ value }">
-      {{ value ?? "N/A" }}
+    <template #[`item.simulatedNav`]="{ value, item }">
+      <div class="d-flex justify-end">
+        <div>
+          {{ value ?? "N/A" }}
+        </div>
+        <div v-if="item.pastNAVUpdateEntryFundAddress" class="ms-2 justify-center align-center d-flex">
+          <Icon icon="octicon:question-16" width="1rem" :color="simulatedNAVIconColor(item)" />
+          <v-tooltip activator="parent" location="right">
+            pastNAVUpdateEntryFundAddress: <br> <strong>{{ item.pastNAVUpdateEntryFundAddress }}</strong>
+          </v-tooltip>
+        </div>
+      </div>
     </template>
 
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
@@ -140,7 +150,7 @@ export default defineComponent({
       ];
       // Simulated NAV value.
       if (this.showSimulatedNav) {
-        headers.push({ title: "Simulated NAV", key: "simulatedNav", sortable: false, align: "center", width: "40px" })
+        headers.push({ title: "Simulated NAV", key: "simulatedNav", align: "end", sortable: false, width: "260px" })
       }
 
       // Expand details button
@@ -165,6 +175,13 @@ export default defineComponent({
     },
   },
   methods: {
+    simulatedNAVIconColor(method: INAVMethod) {
+      if (!method.foundMatchingPastNAVUpdateEntryFundAddress) {
+        return "var(--color-warning)";
+      }
+
+      return "";
+    },
     deleteMethod(method: INAVMethod) {
       // If method is new, we can just remove it from the methods array.
       // If it is not new, we will mark it as deleted.
