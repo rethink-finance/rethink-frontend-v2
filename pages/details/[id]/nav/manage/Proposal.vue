@@ -220,120 +220,6 @@ const collectFeesABI = GovernableFund.abi.find(
   func => func.name === "collectFees" && func.type === "function",
 );
 
-/**
- * Position Type Methods preparing data from actual Object to an array of values that are ready to be encoded.
-**/
-const prepNAVMethodLiquid = (details: Record<string, any>): any[] => {
-  return details.liquid.map((method: Record<string, any>) => [
-    method.tokenPair || "0x0000000000000000000000000000000000000000",
-    method.aggregatorAddress || "",
-    method.functionSignatureWithEncodedInputs || "0x",
-    method.assetTokenAddress || "",
-    method.nonAssetTokenAddress || "0x0000000000000000000000000000000000000000",
-    method.isReturnArray || false,
-    parseInt(method.returnLength) || 0,
-    parseInt(method.returnIndex) || 0,
-    parseInt(method.pastNAVUpdateIndex) || 0,
-  ]);
-}
-
-const prepNAVMethodIlliquid = (details: Record<string, any>): any[] => {
-  return details.illiquid.map((method: Record<string, any>) => {
-    const trxHashes = method.otcTxHashes?.map(
-      // Remove leading and trailing whitespace
-      (hash: string) => hash.trim(),
-    ).filter(
-      // Remove empty strings;
-      (hash: string) => hash !== "",
-    ) || [];
-
-    const baseDecimals = fundStore.fund?.baseToken.decimals;
-    if (!baseDecimals) {
-      toastStore.errorToast("Failed preparing NAV Illiquid method, base decimals are not known.")
-      throw new Error("Failed preparing NAV Illiquid method, base decimals are not known.")
-    }
-
-    return [
-      ethers.parseUnits(method.baseCurrencySpent?.toString() ?? "0", baseDecimals),
-      parseInt(method.amountAquiredTokens) || 0,
-      method.tokenAddress,
-      method.isNFT,
-      trxHashes,
-      parseInt(method.nftType) || 0,
-      parseInt(method.nftIndex) || 0,
-      parseInt(method.pastNAVUpdateIndex) || 0,
-    ]
-  });
-}
-
-const prepNAVMethodNFT = (details: Record<string, any>): any[] => {
-  return details.nft.map((method: Record<string, any>) => [
-    method.oracleAddress,
-    method.nftAddress,
-    method.nftType,
-    parseInt(method.nftIndex) || 0,
-    parseInt(method.pastNAVUpdateIndex) || 0,
-  ]);
-}
-
-const prepNAVMethodComposable = (details: Record<string, any>): any[] => {
-  return details.composable.map((method: Record<string, any>) => [
-    method.remoteContractAddress,
-    method.functionSignatures,
-    method.encodedFunctionSignatureWithInputs,
-    parseInt(method.normalizationDecimals) || 0,
-    method.isReturnArray,
-    parseInt(method.returnValIndex) || 0,
-    parseInt(method.returnArraySize) || 0,
-    parseInt(method.returnValType) || 0,
-    parseInt(method.pastNAVUpdateIndex) || 0,
-    method.isNegative,
-  ]);
-}
-
-const prepRoleModEntryInput = (value: any) => {
-  /*
-    - address validation
-    - bytes validation
-    - int validation
-    - enum valudation (int)
-  */
-  const dtype = value.internalType;
-
-  if (value.isArray) {
-    const retDat = []
-    for (let i = 0; i < value.data.length; i++) {
-      if (dtype.startsWith("address")) {
-        retDat.push(value.data[i]);
-      } else if (dtype.startsWith("bytes")) {
-        retDat.push(value.data[i]);
-      } else if (dtype.startsWith("int")) {
-        retDat.push(value.data[i]);
-      } else if (dtype.startsWith("uint")) {
-        retDat.push(value.data[i]);
-      } else if (dtype.startsWith("enum")) {
-        retDat.push(value.data[i]);
-      } else if (dtype.startsWith("bool")) {
-        retDat.push(value.data[i] === "true");
-      }
-    }
-    return retDat;
-  }
-
-  if (dtype.startsWith("address")) {
-    return value.data;
-  } else if (dtype.startsWith("bytes")) {
-    return value.data;
-  } else if (dtype.startsWith("int")) {
-    return value.data;
-  } else if (dtype.startsWith("uint")) {
-    return value.data;
-  } else if (dtype.startsWith("enum")) {
-    return value.data;
-  } else if (dtype.startsWith("bool")) {
-    return value.data === "true";
-  }
-}
 
 const getMethodsPastNAVUpdateIndex = (methods: Record<string, any>[]) => {
   return methods.find(method => "pastNAVUpdateIndex" in method)?.pastNAVUpdateIndex ?? 0;
@@ -505,25 +391,29 @@ const createProposal = async () => {
 
     const navEntryDetails = JSON.parse(JSON.stringify(navEntry.details));
 
-    if (navEntryDetails.pastNAVUpdateEntryFundAddress) {
-      pastNavUpdateEntryAddresses.push(navEntryDetails.pastNAVUpdateEntryFundAddress)
+    if (navEntry.pastNAVUpdateEntryFundAddress) {
+      pastNavUpdateEntryAddresses.push(navEntry.pastNAVUpdateEntryFundAddress)
     }
 
     let pastNAVUpdateIndex = 0;
 
+    const baseDecimals = fundStore.fund?.baseToken.decimals;
+    if (!baseDecimals) {
+      toastStore.errorToast("Failed preparing NAV Illiquid method, fund base token decimals are not known.")
+      throw new Error("Failed preparing NAV Illiquid method, base decimals are not known.")
+    }
+
     if (navEntry.positionType === PositionType.Liquid) {
       navEntryDetails.liquid = prepNAVMethodLiquid(navEntryDetails);
-      pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(navEntryDetails[PositionType.Liquid]);
     } else if (navEntry.positionType === PositionType.Illiquid) {
-      navEntryDetails.illiquid = prepNAVMethodIlliquid(navEntryDetails);
-      pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(navEntryDetails[PositionType.Illiquid]);
+      navEntryDetails.illiquid = prepNAVMethodIlliquid(navEntryDetails, baseDecimals);
     } else if (navEntry.positionType === PositionType.NFT) {
       navEntryDetails.nft = prepNAVMethodNFT(navEntryDetails);
-      pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(navEntryDetails[PositionType.NFT]);
     } else if (navEntry.positionType === PositionType.Composable) {
       navEntryDetails.composable = prepNAVMethodComposable(navEntryDetails);
-      pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(navEntryDetails[PositionType.Composable]);
     }
+
+    pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(navEntryDetails[navEntry.positionType]);
 
     navUpdateEntries.push(
       [

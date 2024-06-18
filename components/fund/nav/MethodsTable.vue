@@ -32,6 +32,20 @@
       />
     </template>
 
+    <template #[`item.simulatedNav`]="{ value, item }">
+      <div class="d-flex justify-end">
+        <div>
+          {{ value ?? "N/A" }}
+        </div>
+        <div v-if="item.pastNAVUpdateEntryFundAddress" class="ms-2 justify-center align-center d-flex">
+          <Icon icon="octicon:question-16" width="1rem" :color="simulatedNAVIconColor(item)" />
+          <v-tooltip activator="parent" location="right">
+            pastNAVUpdateEntryFundAddress: <br> <strong>{{ item.pastNAVUpdateEntryFundAddress }}</strong>
+          </v-tooltip>
+        </div>
+      </div>
+    </template>
+
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
       <UiDetailsButton
         text="Details"
@@ -106,6 +120,10 @@ export default defineComponent({
       type: Array as () => INAVMethod[],
       default: () => [],
     },
+    showSimulatedNav: {
+      type: Boolean,
+      default: false,
+    },
     deletable: {
       type: Boolean,
       default: false,
@@ -129,8 +147,14 @@ export default defineComponent({
         { title: "Position Name", key: "positionName", sortable: false },
         { title: "Valuation Source", key: "valuationSource", sortable: false },
         { title: "Position Type", key: "positionType", sortable: false },
-        { key: "data-table-expand", sortable: false, align: "center" },
       ];
+      // Simulated NAV value.
+      if (this.showSimulatedNav) {
+        headers.push({ title: "Simulated NAV", key: "simulatedNav", align: "end", sortable: false, width: "260px" })
+      }
+
+      // Expand details button
+      headers.push({ key: "data-table-expand", sortable: false, align: "center" });
       if (this.deletable) {
         headers.push({ key: "delete", sortable: false, align: "center", width: "40px" })
       }
@@ -151,6 +175,13 @@ export default defineComponent({
     },
   },
   methods: {
+    simulatedNAVIconColor(method: INAVMethod) {
+      if (!method.foundMatchingPastNAVUpdateEntryFundAddress) {
+        return "var(--color-warning)";
+      }
+
+      return "";
+    },
     deleteMethod(method: INAVMethod) {
       // If method is new, we can just remove it from the methods array.
       // If it is not new, we will mark it as deleted.

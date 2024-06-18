@@ -7,7 +7,7 @@
         </div>
       </div>
       <div>
-        <FundNavSimulateDialog :methods="fundLastNAVUpdateEntries" />
+        <FundNavSimulateDialog />
 
         <nuxt-link
           :to="`/details/${selectedFundSlug}/nav/manage/proposal`"
