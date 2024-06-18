@@ -3,4 +3,5 @@ export default interface INetwork {
   chainName: string,
   chainShort: string,
   rpcUrl: string,
+  rpcUrls?: string[],
 }

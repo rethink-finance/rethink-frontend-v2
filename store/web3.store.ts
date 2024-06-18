@@ -23,13 +23,25 @@ export const useWeb3Store = defineStore({
         chainId: "0x89",
         chainName: "Polygon",
         chainShort: "matic",
-        rpcUrl: "https://polygon-mainnet.rpcfast.com?api_key=xbhWBI1Wkguk8SNMu1bvvLurPGLXmgwYeC4S6g2H7WdwFigZSmPWVZRxrskEQwIf",
+        rpcUrl: "https://polygon.llamarpc.com",
+        rpcUrls: [
+          "https://polygon.llamarpc.com",
+          "https://polygon.drpc.org",
+          "https://polygon-pokt.nodies.app",
+          "https://polygon.rpc.blxrbdn.com",
+        ],
       },
       "0xa4b1": {
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
         chainShort: "arb1",
         rpcUrl: "https://arbitrum.drpc.org",
+        rpcUrls: [
+          "https://arbitrum.llamarpc.com",
+          "https://1rpc.io/arb",
+          "https://arb-pokt.nodies.app",
+          "https://arbitrum.drpc.org",
+        ],
       },
       "0xfc": {
         chainId: "0xfc",
@@ -89,7 +101,7 @@ export const useWeb3Store = defineStore({
       this.cachedTokens[tokenAddress][infoType] = value;
       return value;
     },
-    init(chainId?: string, web3Provider?: any): void {
+    async init(chainId?: string, web3Provider?: any): Promise<void> {
       if (!chainId) {
         // Check if there exists last used chainId in the local storage.
         // It also needs to be a valid chainId.
@@ -109,16 +121,33 @@ export const useWeb3Store = defineStore({
       if (web3Provider) {
         this.web3 = web3Provider;
       } else {
-        this.web3 = new Web3(network.rpcUrl);
+        const rpcUrls = network.rpcUrls || [network.rpcUrl];
+        for (const rpcUrl of rpcUrls) {
+          this.web3 = new Web3(rpcUrl);
+
+          try {
+            console.log("Check connection for RPC url", rpcUrl);
+            const lastBlock = await this.checkConnection();
+            if (!lastBlock || lastBlock <= 0n) {
+              continue;
+            }
+            console.log("lastBlock: ", lastBlock);
+            break;
+          } catch (e: any) {
+            console.log("Connection failed for RPC url", rpcUrl, e);
+          }
+        }
       }
 
-      console.log("BLOCK: ");
 
       // Lastly set chainId, as we sometimes use watcher on chainId to reload other pages.
       this.chainId = chainId;
       localStorage.setItem("lastUsedChainId", chainId.toString());
-      console.log(`init web3 chain: ${this.chainId} on ${network.rpcUrl}`);
+      console.log(`init web3 chain: ${this.chainId} on ${this.currentRPC}`);
       console.log("----------------\n")
+    },
+    async checkConnection() {
+      return await this.web3?.eth.getBlockNumber();
     },
   },
 });

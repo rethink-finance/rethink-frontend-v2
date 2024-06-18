@@ -49,7 +49,7 @@ export const useAccountStore = defineStore("accounts", {
       if (this.connectedWallet) {
         web3Provider = new Web3(this.connectedWallet.provider);
       }
-      this.web3Store.init(chainId, web3Provider);
+      await this.web3Store.init(chainId, web3Provider);
     },
     async connectWallet() {
       // Connect to the web3-onboard.
@@ -63,7 +63,7 @@ export const useAccountStore = defineStore("accounts", {
       }
 
       // Reset to default provider in web3Store.
-      this.web3Store.init();
+      await this.web3Store.init();
     },
     async setAlreadyConnectedWallet() {
       console.log("Set already connected Wallet:", this.web3Onboard);
