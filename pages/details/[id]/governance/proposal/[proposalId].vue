@@ -4,16 +4,22 @@
       :title="proposalDetails.title"
       :tags="proposalDetails.tags"
       :submission="proposalDetails.submission"
-      :metaBottom="metaBottom"
+      :meta-bottom="metaBottom"
     />
 
     <div class="section-bottom">
-      <div class="main_card left">Left tabs</div>
+      <div class="main_card left">
+        Left tabs
+      </div>
 
       <div class="right">
-        <div class="main_card outcome">Outcome</div>
+        <div class="main_card outcome">
+          Outcome
+        </div>
 
-        <div class="main_card roadmap">Roadmap</div>
+        <div class="main_card roadmap">
+          Roadmap
+        </div>
       </div>
     </div>
   </div>

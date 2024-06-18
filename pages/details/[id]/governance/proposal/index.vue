@@ -1,6 +1,8 @@
 <template lang="html">
   <section class="page-redirect">
-    <nuxt-link :to="url"> Redirecting to governance tab... </nuxt-link>
+    <nuxt-link :to="url">
+      Redirecting to governance tab...
+    </nuxt-link>
   </section>
 </template>
 
