@@ -13,13 +13,30 @@
       </div>
 
       <div class="right">
-        <div class="main_card outcome">
-          Outcome
-        </div>
-
-        <div class="main_card roadmap">
-          Roadmap
-        </div>
+        <UiDataRowCard title="Outcome" class="data_row_card">
+          <!-- TODO: check how to set defaut-active state for accordion/expansion card -->
+          <template #body>
+            <div class="outcome">
+              <FundGovernanceProgressInsight
+                title="Approval Rate"
+                :progress="parseInt(proposalDetails.approval)"
+                subtext="Approval"
+              />
+              <FundGovernanceProgressInsight
+                title="Participation Rate"
+                :progress="parseInt(proposalDetails.participation)"
+                subtext="Support"
+              />
+            </div>
+          </template>
+        </UiDataRowCard>
+        <UiDataRowCard title="Roadmap" class="data_row_card">
+          <template #body>
+            <div class="outcome">
+              Roadmap
+            </div>
+          </template>
+        </UiDataRowCard>
       </div>
     </div>
   </div>
@@ -44,23 +61,14 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-// defined icons for submission
-const icons = {
-  Pending: "material-symbols:timer-outline",
-  Missed: "material-symbols:priority-high",
-  Abstained: "material-symbols:question-mark",
-  Rejected: "material-symbols:close",
-  Approved: "material-symbols:done",
-};
-
 // dummy data
 const proposalDetails = {
   id: "75jfh475hqc",
   createdBy: "0x1f98dgfgF984",
   title: "Unlock airdrop permission to 0x1f98dgfgF984",
   submission: "Pending",
-  approval: "40%",
-  participation: "10%",
+  approval: "70",
+  participation: "32.123412%",
   tags: ["active", "permission"],
 };
 
@@ -79,13 +87,39 @@ const metaBottom = [
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
 });
-
-const copyText = (text: string) => {
-  navigator.clipboard.writeText(text);
-};
 </script>
 
 <style scoped lang="scss">
+// overrides for expansion-panel
+.data_row_card {
+  margin-bottom: 1rem;
+
+  :deep(.data_row__title) {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 24px;
+  }
+  // remove outer border
+  :deep(.data_row__panel) {
+    border: 0;
+    border-radius: 0.25rem !important;
+    background-color: rgb(var(--v-theme-surface));
+  }
+  // add more spacing to content inside
+  :deep(.v-expansion-panel-text__wrapper) {
+    padding-bottom: 1rem !important;
+  }
+  // add borders to text fields inside panel
+  :deep(.v-expansion-panels) {
+    border: 1px solid $color-gray-transparent;
+    border-radius: 0.25rem !important;
+
+    .data_row__panel {
+      padding: 0;
+    }
+  }
+}
+
 .proposal-detail {
   .proposal-name {
     margin-bottom: 1.5rem;
@@ -170,6 +204,7 @@ const copyText = (text: string) => {
   display: flex;
   gap: 2rem;
   justify-content: space-between;
+  align-items: flex-start;
 
   .left {
     width: 75%;
@@ -180,12 +215,14 @@ const copyText = (text: string) => {
     display: flex;
     flex-direction: column;
 
-    .outcome {
+    .roadmap {
       padding: 1rem;
     }
 
-    .roadmap {
-      padding: 1rem;
+    .outcome {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
   }
 }
