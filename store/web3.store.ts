@@ -23,10 +23,10 @@ export const useWeb3Store = defineStore({
         chainId: "0x89",
         chainName: "Polygon",
         chainShort: "matic",
-        rpcUrl: "https://polygon.llamarpc.com",
+        rpcUrl: "https://polygon.drpc.org",
         rpcUrls: [
-          "https://polygon.llamarpc.com",
           "https://polygon.drpc.org",
+          "https://polygon.llamarpc.com",
           "https://polygon-pokt.nodies.app",
           "https://polygon.rpc.blxrbdn.com",
         ],
@@ -67,7 +67,6 @@ export const useWeb3Store = defineStore({
     },
     currentRPC(): string {
       const currentProvider: any = this.web3?.provider;
-      console.log("provider: ", currentProvider);
 
       // Check if the provider has a 'host' attribute (HTTP Provider)
       if (currentProvider?.clientUrl) {
@@ -127,7 +126,12 @@ export const useWeb3Store = defineStore({
 
           try {
             console.log("Check connection for RPC url", rpcUrl);
-            await this.checkConnection();
+            const lastBlock = await this.checkConnection();
+            if (!lastBlock || lastBlock <= 0n) {
+              console.log("no last block");
+              continue;
+            }
+            console.log("lastBlock: ", lastBlock);
             break;
           } catch (e: any) {
             console.log("Connection failed for RPC url", rpcUrl, e);
@@ -135,12 +139,10 @@ export const useWeb3Store = defineStore({
         }
       }
 
-      console.log("BLOCK: ");
-
       // Lastly set chainId, as we sometimes use watcher on chainId to reload other pages.
       this.chainId = chainId;
       localStorage.setItem("lastUsedChainId", chainId.toString());
-      console.log(`init web3 chain: ${this.chainId} on ${network.rpcUrl}`);
+      console.log(`init web3 chain: ${this.chainId} on ${this.currentRPC}`);
       console.log("----------------\n")
     },
     async checkConnection() {
