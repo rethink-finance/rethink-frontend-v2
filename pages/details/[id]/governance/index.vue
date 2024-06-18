@@ -16,12 +16,18 @@
           variant="outlined"
         >
           <div>All Activity</div>
-          <div class="tools__all-activity-btn__subtext">(9 Proposals)</div>
+          <div class="tools__all-activity-btn__subtext">
+            (9 Proposals)
+          </div>
           <Icon icon="mdi:filter-variant" width="1rem" />
         </v-btn>
         <div class="tools__success-rate">
-          <div class="tools__val">50%</div>
-          <div class="tools__subtext">Success Rate</div>
+          <div class="tools__val">
+            50%
+          </div>
+          <div class="tools__subtext">
+            Success Rate
+          </div>
         </div>
       </template>
       <TableGovernance :items="tableGovernance" />
@@ -174,20 +180,18 @@ const fund = useAttrs().fund as IFund;
 .data_row_card {
   margin-bottom: 2rem;
 
-  ::v-deep {
-    // remove outer border
-    .data_row__panel {
-      border: 0;
-      border-radius: 0.25rem !important;
-      background-color: rgb(var(--v-theme-surface));
-    }
+  // remove outer border
+  :deep(.data_row__panel){
+    border: 0;
+    border-radius: 0.25rem !important;
+    background-color: rgb(var(--v-theme-surface));
+  }
     // add more spacing to content inside
-    .v-expansion-panel-text__wrapper {
+    :deep(.v-expansion-panel-text__wrapper) {
       padding-bottom: 2rem;
     }
-
-    // add borders to textfields inside panel
-    .v-expansion-panels {
+    // add borders to text fields inside panel
+   :deep(.v-expansion-panels) {
       border: 1px solid $color-gray-transparent;
       border-radius: 0.25rem !important;
 
@@ -195,6 +199,5 @@ const fund = useAttrs().fund as IFund;
         padding: 0;
       }
     }
-  }
 }
 </style>
