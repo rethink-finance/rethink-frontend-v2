@@ -127,7 +127,11 @@ export const useWeb3Store = defineStore({
 
           try {
             console.log("Check connection for RPC url", rpcUrl);
-            await this.checkConnection();
+            const lastBlock = await this.checkConnection();
+            if (!lastBlock || lastBlock <= 0n) {
+              continue;
+            }
+            console.log("lastBlock: ", lastBlock);
             break;
           } catch (e: any) {
             console.log("Connection failed for RPC url", rpcUrl, e);
@@ -135,12 +139,11 @@ export const useWeb3Store = defineStore({
         }
       }
 
-      console.log("BLOCK: ");
 
       // Lastly set chainId, as we sometimes use watcher on chainId to reload other pages.
       this.chainId = chainId;
       localStorage.setItem("lastUsedChainId", chainId.toString());
-      console.log(`init web3 chain: ${this.chainId} on ${network.rpcUrl}`);
+      console.log(`init web3 chain: ${this.chainId} on ${this.currentRPC}`);
       console.log("----------------\n")
     },
     async checkConnection() {
