@@ -29,7 +29,7 @@
               Total NAV:
             </div>
             <div class="di_card__text_value">
-              $333,212,321.12
+              {{ formattedTotalSimulatedNAV }}
             </div>
           </div>
         </v-card-title>
@@ -90,7 +90,25 @@ const web3Store = useWeb3Store();
 const fundsStore = useFundsStore();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
+const totalSimulatedNAV = ref(0n);
 const { fundManagedNAVMethods } = toRefs(fundStore);
+
+const formattedTotalSimulatedNAV = computed(() => {
+  return formatNAV(totalSimulatedNAV.value);
+});
+
+const formatNAV = (value: any) => {
+  const baseSymbol = fundStore.fund?.baseToken.symbol;
+  const baseDecimals = fundStore.fund?.baseToken.decimals;
+  if (!baseDecimals) {
+    return value;
+  }
+
+  const valueFormatted = value ? formatNumberShort(
+    Number(formatTokenValue(value, baseDecimals, false)),
+  ) : "0";
+  return valueFormatted + " " + baseSymbol;
+}
 
 onMounted(async () => {
   if (!web3Store.web3) return;
@@ -168,12 +186,10 @@ onMounted(async () => {
       const simulatedVal: bigint = await NAVCalculatorContract.methods[navCalculationMethod] (
         ...callData,
       ).call();
+      totalSimulatedNAV.value += simulatedVal;
       console.log("simulated value: ", simulatedVal)
 
-      const simulatedNavFormatted = simulatedVal ? formatNumberShort(
-        Number(formatTokenValue(simulatedVal, baseDecimals, false)),
-      ) : "0";
-      navEntry.simulatedNav = simulatedNavFormatted + " " + fundStore.fund?.baseToken.symbol;
+      navEntry.simulatedNav = formatNAV(simulatedVal);
     } catch (error: any) {
       console.error(
         "Failed simulating value for entry, check if there was some difference when " +
