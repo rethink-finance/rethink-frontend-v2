@@ -12,7 +12,7 @@
           :src="fund.photoUrl"
           class="fund-name__avatar_img"
           alt="fund cover image"
-        >
+        />
       </v-avatar>
       <div class="fund-name__title">
         <p>
@@ -44,7 +44,6 @@
             </div>
           </v-btn>
         </nuxt-link>
-
       </div>
 
       <div>
@@ -54,36 +53,35 @@
     <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
-    <h2 class="mb-2">
-      Fund not found
-    </h2>
+    <h2 class="mb-2">Fund not found</h2>
     <p class="text-center">
-      Are you sure you are on the right network? <br>
+      Are you sure you are on the right network? <br />
       Try switching to a different network.
     </p>
   </div>
-
 </template>
 
 <script lang="ts" setup>
+import { trimTrailingSlash } from "~/composables/utils";
 import { useFundStore } from "~/store/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import { trimTrailingSlash } from "~/composables/utils";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
 const route = useRoute();
 const loading = ref(true);
-const fundAddress = (route.params.id as string).split("-")[1];
+// fund address is always in the second position of the route
+// e.g. /details/TFD3-0x1234 -> 0x1234
+const [tokenSymbol, fundAddress] = route.fullPath.split("/")[2].split("-");
 
-onUnmounted(  () => {
-  fundStore.fund = { } as IFund;
+onUnmounted(() => {
+  fundStore.fund = {} as IFund;
   fundStore.selectedFundAddress = "";
   setBreadcrumbItems([]);
-})
+});
 
 const breadcrumbItems = ref<BreadcrumbItem[]>([]);
 const setBreadcrumbItems = (items: BreadcrumbItem[]) => {
@@ -100,33 +98,44 @@ const fetchFund = async () => {
   try {
     await fundStore.getFund(fundAddress);
   } catch (e) {
-    console.error("Failed fetching fund -> ", e)
+    console.error("Failed fetching fund -> ", e);
   }
 
   loading.value = false;
-}
+};
 
-watch(() => web3Store.chainId, () => {
-  fetchFund();
-});
-// Watch for route changes to reset the breadcrumbs
-watch(() => route.path, (newPath) => {
-  const pathRoot = `/details/${route.params.id}`;
-  console.log(newPath)
-  if (trimTrailingSlash(newPath) === pathRoot || newPath === `${pathRoot}/nav`) {
-    setBreadcrumbItems([]);
+// TODO: two watchers ? can we combine them?
+watch(
+  () => web3Store.chainId,
+  () => {
+    fetchFund();
   }
-});
+);
+// Watch for route changes to reset the breadcrumbs
+watch(
+  () => route.path,
+  (newPath) => {
+    const pathRoot = `/details/${tokenSymbol}-${fundAddress}`;
+    console.log(newPath);
+    if (
+      trimTrailingSlash(newPath) === pathRoot ||
+      newPath === `${pathRoot}/nav`
+    ) {
+      setBreadcrumbItems([]);
+    }
+  }
+);
 
-
-onMounted(  () => {
+onMounted(() => {
   fetchFund();
   setBreadcrumbItems([]);
 });
 const fund = computed(() => fundStore.fund as IFund);
-const fundDetailsRoute = computed(() => `/details/${route.params.id}`);
+const fundDetailsRoute = computed(
+  () => `/details/${tokenSymbol}-${fundAddress}`
+);
 
-const routes : IRoute[] = [
+const routes: IRoute[] = [
   {
     to: fundDetailsRoute.value,
     exactMatch: true,
@@ -134,37 +143,40 @@ const routes : IRoute[] = [
     text: "",
   },
   {
-    to: `/details/${route.params.id}/governance`,
+    to: `/details/${tokenSymbol}-${fundAddress}/governance`,
     exactMatch: true,
     title: "Governance",
-    text:"",
+    text: "",
   },
   {
     to: `${fundDetailsRoute.value}/nav`,
     exactMatch: false,
-    matchPrefix:  `${fundDetailsRoute.value}/nav`,
+    matchPrefix: `${fundDetailsRoute.value}/nav`,
     title: "NAV",
-    text:"",
+    text: "",
   },
   // {
-  //   to: `/details/${route.params.id}/permissions`,
+  //   to: `/details/${tokenSymbol}-${fundAddress}/permissions`,
   //   exactMatch: true,
   //   title: "Permissions",
   //   text:"",
   // },
-]
+];
 
-const isPathActive = (path: string = "", exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);
-const getPathColor = (isActive = false, color = "var(--color-subtitle)") => (isActive ? "primary" : color);
+const isPathActive = (path: string = "", exactMatch = true) =>
+  exactMatch ? route?.path === path : route?.path.startsWith(path);
+const getPathColor = (isActive = false, color = "var(--color-subtitle)") =>
+  isActive ? "primary" : color;
 
 const computedRoutes = computed(() => {
   return routes.map((routeItem: IRoute) => {
     let isActive;
     if (routeItem.exactMatch) {
-      isActive = isPathActive(routeItem.to, true)
+      isActive = isPathActive(routeItem.to, true);
     } else if (
       isPathActive(routeItem.matchPrefix, false) ||
-      isPathActive(routeItem.to, true)) {
+      isPathActive(routeItem.to, true)
+    ) {
       isActive = true;
     } else {
       isActive = false;
@@ -178,7 +190,6 @@ const computedRoutes = computed(() => {
     };
   });
 });
-
 </script>
 
 <style lang="scss" scoped>
@@ -234,16 +245,16 @@ const computedRoutes = computed(() => {
   height: 2px;
 }
 
-.fund-name{
+.fund-name {
   background-color: $color-gray-light-transparent;
   border-radius: $default-border-radius;
-  padding: .5rem .62rem;
+  padding: 0.5rem 0.62rem;
   display: flex;
   flex-direction: row;
   gap: 0.5rem;
   align-items: center;
 
-  @include sm{
+  @include sm {
     padding: 1rem 1.5rem;
   }
 
@@ -254,12 +265,12 @@ const computedRoutes = computed(() => {
     object-fit: cover;
   }
 
-  &__title{
+  &__title {
     font-weight: 700;
     font-size: $text-md;
   }
 
-  &__subtitle{
+  &__subtitle {
     font-weight: 500;
     font-size: $text-sm;
     color: $color-text-irrelevant;

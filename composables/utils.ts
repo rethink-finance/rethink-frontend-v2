@@ -1,32 +1,35 @@
-import { ethers } from "ethers"
+import { ethers } from "ethers";
 import type { PositionType } from "~/types/enums/position_type";
 import { PositionTypesMap } from "~/types/enums/position_type";
+import type { StatusType } from "~/types/enums/status_type";
+import { StatusTypesMap } from "~/types/enums/status_type";
 
 export const variableType = (value: any) =>
-  Object.prototype.toString.call(value).slice(8, -1) // accurately returns the parameter type [Array | Object | Number | Boolean | ...]
+  Object.prototype.toString.call(value).slice(8, -1); // accurately returns the parameter type [Array | Object | Number | Boolean | ...]
 
 export const isVariableOfType = (value: any, type: any) =>
-  variableType(value) === type
+  variableType(value) === type;
 
 export const formatToEther = (wei?: number) => {
-  if (wei == null) return wei
-  return parseFloat(ethers.formatEther(isVariableOfType(wei, "String") ? wei : wei.toString()))
-}
+  if (wei == null) return wei;
+  return parseFloat(
+    ethers.formatEther(isVariableOfType(wei, "String") ? wei : wei.toString())
+  );
+};
 
 export const toKebabCase = (str: string) =>
-  str.toLowerCase().split(" ").join("-")
+  str.toLowerCase().split(" ").join("-");
 
 export const toPascalCase = (str: string) =>
-  str.split(" ")
-    .map(word => word[0]
-      .toUpperCase()
-      .concat(word.slice(1)))
-    .join("")
+  str
+    .split(" ")
+    .map((word) => word[0].toUpperCase().concat(word.slice(1)))
+    .join("");
 
 export const capitalizeFirst = (str?: string): string => {
   if (!str) return "";
   return str?.charAt(0).toUpperCase() + str?.slice(1);
-}
+};
 
 // Recursive function to clean complex nested data from numeric indices
 const ignoreKeys: Set<string> = new Set(["__length__"]);
@@ -43,14 +46,14 @@ const ignoreKeys: Set<string> = new Set(["__length__"]);
  * @param {any} data - The data to be cleaned. It can be of any type.
  * @returns {any} - The cleaned data, with arrays and objects recursively processed.
  */
-export const cleanComplexWeb3Data = (data: any): any =>  {
+export const cleanComplexWeb3Data = (data: any): any => {
   if (Array.isArray(data)) {
     // Recursively clean each item in the array
-    return data.map(item => cleanComplexWeb3Data(item));
+    return data.map((item) => cleanComplexWeb3Data(item));
   } else if (typeof data === "object" && data !== null) {
     // Prepare an object to accumulate the cleaned data
     const cleanedData: { [key: string]: any } = {};
-    Object.keys(data).forEach(key => {
+    Object.keys(data).forEach((key) => {
       // Check if the key is not numeric
       if (!ignoreKeys.has(key) && isNaN(Number(key))) {
         // Recursively clean and assign if key is not numeric and not ignored
@@ -63,38 +66,44 @@ export const cleanComplexWeb3Data = (data: any): any =>  {
   }
   // Return primitive types unchanged
   return data;
-}
+};
 
 export const formatJson = (data: any) => {
   /** This function also sorts JSON keys alphabetically **/
   const sortKeys = (value: any) => {
     if (value && typeof value === "object" && !Array.isArray(value)) {
-      return Object.keys(value).sort().reduce((sortedObj: any, key) => {
-        sortedObj[key] = sortKeys(value[key]);
-        return sortedObj;
-      }, {});
+      return Object.keys(value)
+        .sort()
+        .reduce((sortedObj: any, key) => {
+          sortedObj[key] = sortKeys(value[key]);
+          return sortedObj;
+        }, {});
     }
     return value;
   };
 
-  return JSON.stringify(sortKeys(data), (_, value) => {
-    // Convert BigInt to string
-    if (typeof value === "bigint") {
-      return value.toString();
-    }
-    // Return the value unchanged if it doesn't need transformation
-    return value;
-  }, 2);
+  return JSON.stringify(
+    sortKeys(data),
+    (_, value) => {
+      // Convert BigInt to string
+      if (typeof value === "bigint") {
+        return value.toString();
+      }
+      // Return the value unchanged if it doesn't need transformation
+      return value;
+    },
+    2
+  );
 };
 
 export const pluralizeWord = (word: string, count?: number | bigint) => {
   if (count === undefined || count === null) return "N/A";
 
-  let pluralized = `${count} ${word}`
-  if (count !== 1) pluralized += "s"
+  let pluralized = `${count} ${word}`;
+  if (count !== 1) pluralized += "s";
 
   return pluralized;
-}
+};
 
 const chainIconMap: Record<string, Record<string, string>> = {
   matic: {
@@ -108,17 +117,56 @@ const chainIconMap: Record<string, Record<string, string>> = {
 };
 
 export const getChainIcon = (chainShort: string) => {
-  return chainIconMap[chainShort] ?? {
-    name: "ph:circle-fill", // default circle fill gray
-    size: "1.5rem",
-  };
-}
-
+  return (
+    chainIconMap[chainShort] ?? {
+      name: "ph:circle-fill", // default circle fill gray
+      size: "1.5rem",
+    }
+  );
+};
 
 export const getPositionType = (positionType: PositionType) => {
   return PositionTypesMap[positionType];
-}
+};
 
 export const trimTrailingSlash = (str: string) => {
   return str.endsWith("/") ? str.slice(0, -1) : str;
-}
+};
+
+export const getStatusType = (statusType: StatusType) => {
+  return StatusTypesMap[statusType];
+};
+
+/**
+ * Formats an Ethereum-like hexadecimal address for display if longer than 10 characters.
+ *
+ * @param {string} input - The input hexadecimal address to format, starting with '0x'.
+ * @returns {string} Formatted string with truncated middle characters, e.g., '0xB5d0...a054'.
+ * @throws {Error} If input is not a string or doesn't start with '0x'.
+ *
+ * @example
+ * const input1 = '0x25dfdgfg'; // Input shorter than 10 characters
+ * const input2 = '0xB5d01172e73559B07ef3CD53dE84459c6BA3a054'; // Input longer than 10 characters
+ * console.log(formatHexAddress(input1)); // Output: 0x25dfdgfg
+ * console.log(formatHexAddress(input2)); // Output: 0xB5d0...a054
+ */
+export const formatHexAddress = (input: string) => {
+  // Check if the input is a string and starts with '0x'
+  if (typeof input !== "string" || !input.startsWith("0x")) {
+    throw new Error('Input must be a hexadecimal string starting with "0x".');
+  }
+
+  // Remove '0x' prefix for processing
+  const withoutPrefix = input.substring(2);
+
+  // Check if the input length is greater than 10 characters
+  if (withoutPrefix.length > 10) {
+    // Format the string with truncation
+    const firstPart = input.substring(0, 6);
+    const lastPart = withoutPrefix.substring(withoutPrefix.length - 4); // Show last 4 characters
+    return `${firstPart}...${lastPart}`;
+  } else {
+    // If the input length is 10 characters or less, return it unchanged
+    return input;
+  }
+};

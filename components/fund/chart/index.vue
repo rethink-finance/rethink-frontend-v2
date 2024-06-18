@@ -127,7 +127,6 @@ export default {
             },
             offsetX: 0,
             formatter: (value: number) => {
-              console.log("format number: ", value);
               return abbreviateNumber(value);
             },
           },

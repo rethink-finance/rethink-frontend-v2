@@ -4,7 +4,8 @@ import { useAccountStore } from "~/store/account.store";
 
 onMounted(() => {
   useAccountStore().web3Onboard = useOnboard();
-  if (useOnboard().alreadyConnectedWallets) useAccountStore().setAlreadyConnectedWallet();
+  if (useOnboard().alreadyConnectedWallets)
+    useAccountStore().setAlreadyConnectedWallet();
 });
 </script>
 

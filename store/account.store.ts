@@ -49,7 +49,9 @@ export const useAccountStore = defineStore("accounts", {
       if (this.connectedWallet) {
         web3Provider = new Web3(this.connectedWallet.provider);
       }
-      await this.web3Store.init(chainId, web3Provider);
+      if (web3Provider && web3Provider !== this.web3Store.web3) {
+        await this.web3Store.init(chainId, web3Provider);
+      }
     },
     async connectWallet() {
       // Connect to the web3-onboard.
