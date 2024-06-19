@@ -509,7 +509,6 @@ export const useFundStore = defineStore({
 
       this.userFundDelegateAddress = await this.fundContract.methods.delegates(this.activeAccountAddress).call();
 
-      console.log("user fund delegates: ", this.userFundDelegateAddress);
       return this.userFundDelegateAddress;
     },
     /**
