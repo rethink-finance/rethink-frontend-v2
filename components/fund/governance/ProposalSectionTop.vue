@@ -66,9 +66,9 @@
             <div class="di-card__header">Vote Submission</div>
 
             <Icon
-              icon="material-symbols-light:close"
+              :icon="icons.Rejected"
               class="di-card__close-icon"
-              width="2rem"
+              width="1.5rem"
               @click="dialogClose"
             />
           </div>
@@ -106,7 +106,11 @@
               class="di-card__radio"
             >
               <template #label>
-                <Icon :icon="option.icon" width="1.4rem" />
+                <Icon
+                  :icon="option.icon"
+                  width="1.4rem"
+                  :class="classesRadioIcon(option.value)"
+                />
                 {{ option.label }}
               </template>
             </v-radio>
@@ -183,6 +187,12 @@ export default defineComponent({
     selectedRadio: "",
   }),
   methods: {
+    classesRadioIcon(value: string) {
+      return [
+        "di-card__radio",
+        { [`di-card__radio--${value}`]: value === this.selectedRadio },
+      ];
+    },
     copyText(text: string) {
       navigator.clipboard.writeText(text);
     },
@@ -389,6 +399,18 @@ export default defineComponent({
       opacity: 1;
       width: 100%;
       gap: 0.5rem;
+    }
+  }
+  // color for icons
+  &__radio {
+    &--approve {
+      color: $color-success;
+    }
+    &--reject {
+      color: $color-error;
+    }
+    &--abstain {
+      color: $color-warning;
     }
   }
 }
