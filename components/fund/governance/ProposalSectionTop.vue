@@ -32,7 +32,7 @@
             v-for="item in metaBottom"
             :key="item.label"
           >
-            <div class="section-top__meta-label">
+            <div class="meta-label">
               {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
             </div>
 
@@ -48,9 +48,12 @@
         </div>
       </div>
 
-      <v-btn class="section-top__submit-button" @click="dialogOpen">
-        Submit Vote
-      </v-btn>
+      <v-btn
+        v-if="!isButtonHidden"
+        class="section-top__submit-button"
+        @click="handleButtonClick"
+        v-text="buttonText"
+      />
 
       <v-dialog
         v-model="isDialogOpen"
@@ -75,7 +78,7 @@
             v-for="item in metaBottom.slice(0, 1)"
             :key="item.label"
           >
-            <div class="section-top__meta-label">
+            <div class="meta-label">
               {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
             </div>
             <ui-tooltip-click tooltip-text="Copied">
@@ -88,7 +91,9 @@
             </ui-tooltip-click>
           </div>
 
-          <div class="di-card__title">{{ title }}</div>
+          <h2 class="di-card__title">{{ title }}</h2>
+
+          <div class="voting-power meta-label">Voting Power: {{}}</div>
 
           <v-btn class="di-card__submit-button" @click="submitProposal">
             Submit Vote
@@ -136,6 +141,10 @@ export default defineComponent({
       type: Array as () => MetaItem[],
       default: () => [],
     },
+    votingPower: {
+      type: String,
+      default: "",
+    },
   },
   data: () => ({
     icons,
@@ -145,14 +154,44 @@ export default defineComponent({
     copyText(text: string) {
       navigator.clipboard.writeText(text);
     },
+    handleButtonClick() {
+      // if proposal is approved, execute proposal
+      if (this.isApproved) {
+        this.executeProposal();
+      }
+      // if proposal is not approved, open dialog
+      // for submission
+      else {
+        this.dialogOpen();
+      }
+    },
     submitProposal() {
       alert("Submit Vote");
+    },
+    executeProposal() {
+      alert("Execute Proposal");
     },
     dialogOpen() {
       this.isDialogOpen = true;
     },
     dialogClose() {
       this.isDialogOpen = false;
+    },
+  },
+  computed: {
+    isButtonHidden() {
+      // list all submission statuses that should hide the button
+      const hiddenBySubmission = ["Rejected"].includes(this.submission);
+      // list all tags that should hide the button
+      const hiddenByTags = ["failed"].some((tag) => this.tags.includes(tag));
+
+      return hiddenBySubmission || hiddenByTags;
+    },
+    isApproved() {
+      return this.submission === "Approved";
+    },
+    buttonText() {
+      return this.isApproved ? "Execute Proposal" : "Submit Vote";
     },
   },
 });
@@ -206,19 +245,13 @@ export default defineComponent({
     display: flex;
     align-items: center;
     gap: 0.15rem;
-    color: $color-steel-blue;
-  }
-
-  &__meta-label {
-    display: inline;
-    font-size: 13px;
-    letter-spacing: 0.03em;
   }
 
   &__copy-icon {
     cursor: pointer;
     rotate: 180deg;
     transform: scaleX(-1);
+    color: $color-steel-blue;
   }
 
   &__submission {
@@ -239,6 +272,13 @@ export default defineComponent({
   &__submit-button {
     cursor: pointer;
   }
+}
+
+.meta-label {
+  display: inline;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  color: $color-steel-blue;
 }
 
 .di-card {

@@ -5,6 +5,7 @@
       :tags="proposalDetails.tags"
       :submission="proposalDetails.submission"
       :meta-bottom="metaBottom"
+      :voting-power="proposalDetails.votingPower"
     />
 
     <div class="section-bottom">
@@ -65,7 +66,8 @@ const proposalDetails = {
   submission: "Pending",
   approval: "70",
   participation: "32.123412%",
-  tags: ["active", "permission"],
+  tags: ["active", "direct_execution"],
+  votingPower: "100",
 };
 
 const metaBottom = [
