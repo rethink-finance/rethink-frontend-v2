@@ -67,7 +67,7 @@ const proposalDetails = {
   approval: "70",
   participation: "32.123412%",
   tags: ["active", "direct_execution"],
-  votingPower: "100",
+  votingPower: "250.000 soon",
 };
 
 const metaBottom = [

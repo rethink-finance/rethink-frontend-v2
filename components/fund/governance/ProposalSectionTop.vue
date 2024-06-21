@@ -93,9 +93,30 @@
 
           <h2 class="di-card__title">{{ title }}</h2>
 
-          <div class="voting-power meta-label">Voting Power: {{}}</div>
+          <div class="di-card__voting-power meta-label meta-label--uppercase">
+            Voting Power: {{ votingPower }}
+          </div>
 
-          <v-btn class="di-card__submit-button" @click="submitProposal">
+          <v-radio-group class="di-card__radio-group" v-model="selectedRadio">
+            <v-radio
+              v-for="option in radioOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+              class="di-card__radio"
+            >
+              <template #label>
+                <Icon :icon="option.icon" width="1.4rem" />
+                {{ option.label }}
+              </template>
+            </v-radio>
+          </v-radio-group>
+
+          <v-btn
+            class="di-card__submit-button"
+            @click="submitProposal(selectedRadio)"
+            :disabled="!selectedRadio"
+          >
             Submit Vote
           </v-btn>
         </div>
@@ -105,7 +126,8 @@
 </template>
 
 <script lang="ts">
-// utils
+// toast
+import { useToastStore } from "~/store/toast.store";
 
 // defined icons for submission
 const icons = {
@@ -116,11 +138,19 @@ const icons = {
   Approved: "material-symbols:done",
 };
 
+const toastStore = useToastStore();
+
 interface MetaItem {
   label: string;
   value: string;
   format?: (value: string) => string;
 }
+
+const radioOptions: { label: string; value: string; icon: string }[] = [
+  { label: "Approve", value: "approve", icon: icons.Approved },
+  { label: "Reject", value: "reject", icon: icons.Rejected },
+  { label: "Abstain", value: "abstain", icon: icons.Abstained },
+];
 
 export default defineComponent({
   name: "ProposalSectionTop",
@@ -149,6 +179,8 @@ export default defineComponent({
   data: () => ({
     icons,
     isDialogOpen: false,
+    radioOptions,
+    selectedRadio: "",
   }),
   methods: {
     copyText(text: string) {
@@ -165,8 +197,15 @@ export default defineComponent({
         this.dialogOpen();
       }
     },
-    submitProposal() {
-      alert("Submit Vote");
+    submitProposal(selectedRadio: string) {
+      const msg = {
+        approve: "Voted to Approve",
+        reject: "Voted to Reject",
+        abstain: "Voted to Abstain",
+      } as Record<string, string>;
+
+      toastStore.successToast(msg[selectedRadio]);
+      this.dialogClose();
     },
     executeProposal() {
       alert("Execute Proposal");
@@ -277,8 +316,13 @@ export default defineComponent({
 .meta-label {
   display: inline;
   font-size: 13px;
+  font-weight: 500;
   letter-spacing: 0.03em;
   color: $color-steel-blue;
+
+  &--uppercase {
+    text-transform: uppercase;
+  }
 }
 
 .di-card {
@@ -303,12 +347,17 @@ export default defineComponent({
     align-items: center;
     gap: 0.15rem;
 
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     color: $color-steel-blue;
   }
 
   &__title {
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  &__voting-power {
+    display: block;
+    margin-bottom: 0.5rem;
   }
 
   &__close-icon {
@@ -318,6 +367,29 @@ export default defineComponent({
 
   &__submit-button {
     width: 100%;
+  }
+
+  // overrides for radio group
+  &__radio-group {
+    margin-bottom: 1.5rem;
+
+    :deep(.v-selection-control-group) {
+      gap: 1rem;
+    }
+    :deep(.v-selection-control) {
+      flex-direction: row-reverse;
+      justify-content: space-between;
+
+      padding: 0.25rem 0.5rem;
+      color: $color-text-irrelevant;
+
+      @include borderGray;
+    }
+    :deep(.v-label) {
+      opacity: 1;
+      width: 100%;
+      gap: 0.5rem;
+    }
   }
 }
 </style>
