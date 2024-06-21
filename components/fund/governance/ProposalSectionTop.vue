@@ -391,7 +391,7 @@ export default defineComponent({
       justify-content: space-between;
 
       padding: 0.25rem 0.5rem;
-      color: $color-text-irrelevant;
+      color: $color-white;
 
       @include borderGray;
     }

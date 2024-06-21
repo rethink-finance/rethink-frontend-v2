@@ -120,16 +120,18 @@ onMounted(() => {
 
 .section-bottom {
   display: flex;
+  flex-direction: column;
   gap: 2rem;
   justify-content: space-between;
   align-items: flex-start;
 
+  &--right,
   &--left {
-    width: 75%;
+    width: 100%;
   }
 
   &--right {
-    width: 25%;
+    width: 100%;
     display: flex;
     flex-direction: column;
   }
@@ -142,6 +144,19 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+  }
+
+  // Breakpoints
+  @include md {
+    flex-direction: row;
+
+    &--left {
+      width: 75%;
+    }
+
+    &--right {
+      width: 25%;
+    }
   }
 }
 </style>
