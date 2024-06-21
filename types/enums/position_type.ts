@@ -46,6 +46,12 @@ export const PositionTypeToNAVEntryTypeMap: Record<PositionType, number> = {
   [PositionType.NFT]: 2, // NAVNFTUpdateType
   [PositionType.Composable]: 3, // NAVComposableUpdateType
 }
+export const PositionTypeToNAVCalculationMethod: Record<PositionType, string> = {
+  [PositionType.Liquid]: "liquidCalculationReadOnly",
+  [PositionType.Illiquid]: "illiquidCalculationReadOnly",
+  [PositionType.NFT]: "nftCalculationReadOnly",
+  [PositionType.Composable]: "composableCalculationReadOnly",
+}
 export const PositionTypeToValuationTypesMap: Record<PositionType, ValuationType[]> = {
   [PositionType.Liquid]: [
     ValuationType.DEXPair,

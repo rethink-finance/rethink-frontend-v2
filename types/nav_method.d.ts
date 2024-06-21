@@ -30,15 +30,21 @@ export default interface INAVMethod {
   positionName: string,
   valuationSource: string,
   positionType: PositionType,
-  // These 3 fields are in the details.
-  // isPastNAVUpdate: boolean,
-  // pastNAVUpdateEntryIndex: number,
-  // pastNAVUpdateIndex: number,
+
+  // pastNAVUpdateEntryFundAddress is original if it was found in fetchAllNavMethods
+  foundMatchingPastNAVUpdateEntryFundAddress?: boolean,
+  pastNAVUpdateEntryFundAddress?: string,
+  // @dev note:
+  // It is very important to keep the same structure of the details hash always, as it is used to
+  // compare NAV methods by the hashed details value, and any additional key value pair would break it.
+  // TODO: Figure out a better way to store details, a fixed typescript structure probably.
   details: INAVMethodDetails,
+  // Details JSON are displayed in NAV method table details as raw data formatted JSON string.
   detailsJson: string,
   valuationType: ValuationType,
   deleted?: boolean,  // THis is only used in the frontend, to mark it for deletion when managing NAV methods.
   isNew?: boolean,  // THis is only used in the frontend, to mark it as new when managing NAV methods.
+  simulatedNav?: string,  // THis is only used in the frontend, when simulating NAV methods.
   // THis is only used in the frontend, as methods don't have any IDs, we hash their contents to compare them.
   // Hash is generated from the detailsJson.
   detailsHash?: string,

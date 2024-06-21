@@ -23,7 +23,6 @@ $color-moonlight-dark: #293041;
 $color-moonlight: rgba(31, 95, 255, 0.16);
 $color-moonlight-light: #343d50;
 $color-disabled: #646465;
-
 $color-gray-transparent: rgba(246, 249, 255, 0.08);
 $color-gray-light-transparent: rgba(246, 249, 255, 0.04);
 $color-divider: #1a2234;
@@ -125,6 +124,7 @@ plugins like Apexcharts with "var(--color-something)" to prevent redefining colo
   --color-divider: #{$color-divider};
   --color-light-subtitle: #{$color-light-subtitle};
   --color-gray-light-transparent: #{$color-gray-light-transparent};
+  --color-warning: #{$color-warning};
 }
 $default-border-radius: 0.25rem;
 
