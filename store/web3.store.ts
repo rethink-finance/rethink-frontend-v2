@@ -148,5 +148,25 @@ export const useWeb3Store = defineStore({
     async checkConnection() {
       return await this.web3?.eth.getBlockNumber();
     },
+    async getContractCreationBlock (contractAddress: string) {
+      if (!this.web3) return undefined;
+      try {
+        // Get the transaction hash of the contract creation
+        const transactionHash = await this.web3.eth.getTransactionFromBlock(contractAddress, 0);
+        console.log("trx hash: ", transactionHash);
+        if (transactionHash !== undefined && transactionHash !== null) return;
+        // Get the transaction receipt using the transaction hash
+        // const transactionReceipt = await this.web3.eth.getTransactionReceipt(transactionHash);
+        //
+        // // Extract the block number
+        // const blockNumber = transactionReceipt.blockNumber;
+        //
+        // console.log(`Contract was deployed in block number: ${blockNumber}`);
+        // return blockNumber
+      } catch (error) {
+        console.error(`Error fetching contract creation block number: ${error}`);
+      }
+      return undefined
+    },
   },
 });

@@ -26,12 +26,10 @@
 </template>
 
 <script setup lang="ts">
-// utils
-import { formatHexAddress } from "~/composables/utils";
-// types
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { useFundStore } from "~/store/fund.store";
+import { truncateAddress } from "~/composables/addressUtils";
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 
@@ -72,7 +70,7 @@ const metaBottom = [
   {
     label: "Created by",
     value: proposalDetails.createdBy,
-    format: formatHexAddress,
+    format: truncateAddress,
   },
 ];
 

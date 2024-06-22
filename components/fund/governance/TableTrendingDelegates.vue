@@ -8,7 +8,7 @@
     <template #[`item.delegated_members`]="{ item }">
       <div class="data-cell__title">
         <div class="data-cell__text">
-          {{ formatHexAddress(item.delegated_members) }}
+          {{ truncateAddress(item.delegated_members) }}
         </div>
         <ui-tooltip-click tooltip-text="Copied" location="right">
           <Icon
@@ -31,10 +31,8 @@
 </template>
 
 <script lang="ts">
-// types
 import type ITrendingDelegates from "~/types/trending_delegates";
-// utils
-import { formatHexAddress } from "~/composables/utils";
+import { truncateAddress } from "~/composables/addressUtils";
 
 export default defineComponent({
   name: "TableTrengingDelegates",
@@ -76,6 +74,7 @@ export default defineComponent({
     _timerId: null as any as number | null,
   }),
   methods: {
+    truncateAddress,
     copyText(text: string) {
       navigator.clipboard.writeText(text);
     },

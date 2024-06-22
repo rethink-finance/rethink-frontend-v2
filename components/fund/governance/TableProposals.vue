@@ -1,10 +1,12 @@
 <template>
   <v-data-table
-    v-if="items.length"
-    class="table-governance main_table"
+    v-if="items.length || loading"
+    class="table_governance main_table"
     :headers="headers"
     hover
     :items="items"
+    :loading="loading"
+    loading-text="Loading Activity"
     @click:row="rowClick"
   >
     <template #[`item.index`]="{ index }">
@@ -16,24 +18,26 @@
           {{ item.title }}
         </div>
         <div class="proposal__tags">
-          <UiChip
-            v-for="tag in item.tags"
-            :key="tag"
-            :value="tag"
+          <FundGovernanceProposalStateChip
+            :value="item.state"
+            class="proposal__tag"
+          />
+          <FundGovernanceProposalStateChip
+            value="Permissions"
             class="proposal__tag"
           />
         </div>
       </div>
     </template>
-    <template #[`item.submission`]="{ item }">
-      <div class="submission">
+    <template #[`item.submission_status`]="{ item }">
+      <div class="submission_status">
         <Icon
-          :icon="icons[item.submission as keyof typeof icons]"
+          :icon="icons[item.submission_status as keyof typeof icons]"
           width="1.4rem"
-          class="submission__icon"
+          class="submission_status__icon"
         />
-        <div class="submission__text">
-          {{ item.submission }}
+        <div class="submission_status__text">
+          {{ item.submission_status }}
         </div>
       </div>
     </template>
@@ -41,16 +45,16 @@
       <!-- Leave this slot empty to hide pagination controls -->
     </template>
   </v-data-table>
-  <div v-else class="table-governance__no_data">
+  <div v-else class="table_governance__no_data">
     No Governance Activity details available.
   </div>
 </template>
 
 <script lang="ts">
 // types
-import type GOVActivity from "~/types/governance_activity";
+import type IGovernanceProposal from "~/types/governance_proposal";
 
-// defined icons for submission
+// defined icons for submission_status
 const icons = {
   Pending: "material-symbols:timer-outline",
   Missed: "material-symbols:priority-high",
@@ -59,12 +63,17 @@ const icons = {
   Approved: "material-symbols:done",
 };
 
+
 export default defineComponent({
   name: "TableGovernance",
   props: {
     items: {
-      type: Array as () => GOVActivity[],
+      type: Array as () => IGovernanceProposal[],
       default: () => [],
+    },
+    loading: {
+      type: Boolean,
+      default: false,
     },
   },
   data: () => ({
@@ -74,7 +83,7 @@ export default defineComponent({
     headers: ref([
       { title: "#", key: "index", sortable: false },
       { title: "Proposal Title", key: "title", sortable: true },
-      { title: "Submission", key: "submission", sortable: true },
+      { title: "Submission", key: "submission_status", sortable: true },
       { title: "Approval", key: "approval", sortable: true, align: "center" },
       {
         title: "Participation",
@@ -83,7 +92,7 @@ export default defineComponent({
         align: "center",
       },
     ] as const),
-    icons: icons,
+    icons,
   }),
   methods: {
     // change route depending on row id (proposal ID)
@@ -97,7 +106,7 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-.table-governance {
+.table_governance {
   // add table max height
   :deep(.v-table__wrapper) {
     max-height: 500px;
@@ -125,7 +134,7 @@ export default defineComponent({
   }
 }
 
-.submission {
+.submission_status {
   display: flex;
   align-items: center;
 

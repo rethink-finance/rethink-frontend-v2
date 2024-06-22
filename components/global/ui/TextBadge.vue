@@ -1,5 +1,13 @@
 <template>
-  <div class="text_badge" :class="{'text_badge--disabled': disabled}">
+  <div
+    class="text_badge"
+    :class="{
+      'text_badge--disabled': disabled,
+      'text_badge--bold': bold,
+      'text_badge--uppercase': uppercase,
+    }"
+    :style="{ color: color }"
+  >
     <slot>
       {{ value }}
     </slot>
@@ -12,7 +20,19 @@ defineProps({
     type: String,
     default: undefined,
   },
+  color: {
+    type: String,
+    default: undefined,
+  },
   disabled: {
+    type: Boolean,
+    default: false,
+  },
+  bold: {
+    type: Boolean,
+    default: false,
+  },
+  uppercase: {
     type: Boolean,
     default: false,
   },
@@ -36,6 +56,12 @@ defineProps({
 
   &--disabled {
     opacity: 0.65;
+  }
+  &--bold {
+    font-weight: 800;
+  }
+  &--uppercase {
+    text-transform: uppercase;
   }
 }
 </style>

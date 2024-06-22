@@ -111,6 +111,12 @@ export const useFundStore = defineStore({
       const contractAddress = addresses[RethinkReaderContractName][this.web3Store.chainId];
       return new this.web3.eth.Contract(RethinkReader.abi, contractAddress)
     },
+    /**
+     * Returns a block number of the transaction that created the safe contract.
+     */
+    safeContractCreationBlock(): bigint {
+      return this.web3Store.getContractCreationBlock(this.fund?.safeAddress);
+    },
     // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
     fundContract(): Contract {
       return new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress)

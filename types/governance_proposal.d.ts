@@ -1,116 +1,5 @@
-<template>
-  <div class="page-governance">
-    <UiDataRowCard title="Governance Settings" class="data_row_card">
-      <template #body>
-        <FundOverviewGovernance :fund="fund" />
-      </template>
-    </UiDataRowCard>
-
-    <UiMainCard title="Governance Activity" subtitle="7 Pending Proposals">
-      <template #header-right>
-        <UiDropdown :options="dropdownOptions" label="Create Proposal" />
-      </template>
-      <template #tools>
-        <v-btn
-          class="tools__all-activity-btn text-secondary"
-          variant="outlined"
-        >
-          <div>All Activity</div>
-          <div class="tools__all-activity-btn__subtext">
-            (9 Proposals)
-          </div>
-          <Icon icon="mdi:filter-variant" width="1rem" />
-        </v-btn>
-        <div class="tools__success-rate">
-          <div class="tools__val">
-            50%
-          </div>
-          <div class="tools__subtext">
-            Success Rate
-          </div>
-        </div>
-      </template>
-      <FundGovernanceTableProposals :items="governanceProposals" :loading="loadingProposals" />
-    </UiMainCard>
-
-    <UiMainCard title="Trending Delegates" subtitle="4 Delegated Wallets">
-      <template #header-right>
-        <UiLinkExternalButton
-          class="main-card__manage-button"
-          title="Manage Delegation"
-          :href="manageDelegateUrl"
-        />
-      </template>
-      <TableTrendingDelegates :items="trendingDelegates" />
-    </UiMainCard>
-  </div>
-</template>
-
-<script setup lang="ts">
-// types
-import type { EventLog } from "web3";
-import type IFund from "~/types/fund";
-import type ITrendingDelegates from "~/types/trending_delegates";
-import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
-
-// components
-import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDelegates.vue";
-import { useFundStore } from "~/store/fund.store";
-import { cleanComplexWeb3Data } from "~/composables/utils";
-import type IGovernanceProposal from "~/types/governance_proposal";
-import { ProposalStateMapping } from "~/types/enums/governance_proposal";
-const fundStore = useFundStore();
-
-// dummy data for manage delegate button
-const manageDelegateUrl = "https://www.google.com";
-// dummy data governance activity
-const governanceProposals = ref<IGovernanceProposal[]>([]);
-
-// Dummy data for trending delegates
-const trendingDelegates: ITrendingDelegates[] = [
-  {
-    delegated_members: "0x1f98dgdaddasdfgF984",
-    delegators: "16 Members",
-    impact: "10%",
-    voting_power: "570.000.000 SOON",
-  },
-  {
-    delegated_members: "0xEd2026078669d1135991E850c88Cf71cdAEB4d00",
-    delegators: "13 Members",
-    impact: "20%",
-    voting_power: "850.000.000 SOON",
-  },
-  {
-    delegated_members: "0x1f98dgdaddasdfgF984",
-    delegators: "8 Members",
-    impact: "8%",
-    voting_power: "440.000.000 SOON",
-  },
-  {
-    delegated_members: "0xEd2026078669d1135991E850c88Cf71cdAEB4d00",
-    delegators: "5 Members",
-    impact: "16%",
-    voting_power: "720.000.000 SOON",
-  },
-];
-// Dummy data for dropdown options
-const dropdownOptions = [
-  "Delegated permissions",
-  "Direct Execution",
-  "NAV Methods",
-  "Fund Settings",
-];
-
-const fund = useAttrs().fund as IFund;
-
-
-const proposalCreatedEventInputs = RethinkFundGovernor.abi.find(
-  event => event.name === "ProposalCreated" && event.type === "event",
-)?.inputs ?? [];
-const loadingProposals = ref(false);
 /**
- * Example data of one decoded proposal:
- *
+  * Example Governance Proposal:
  * {
  *     "proposalId": "100928362673962953747976977800166144740308816222406020172969996550573666024331",
  *     "proposer": "0x66158bf6752FA6191E70Ab06Cfc345dE0D9A0ba5",
@@ -151,146 +40,28 @@ const loadingProposals = ref(false);
  *     "description": "{\"title\":\"01 - NAV Methods\",\"description\":\"See details bellow\"}"
  * }
  */
-const getAllProposals = async () => {
-  loadingProposals.value = true;
-  governanceProposals.value = [];
-  const latestBlock = Number(await fundStore.web3.eth.getBlockNumber());
-  console.log("latestBlock: ", latestBlock);
-  // const safeBlock = fundStore.web3Store.getContractCreationBlock(fundStore.fund?.safeAddress)
-  // console.log("safe block: ", safeBlock)
+import { ProposalState } from "~/types/enums/governance_proposal";
 
-  const chunkSize = 3000;
-  const events = [];
-  // TODO we can do batch requests for example 10x3000
-  // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
-  // We fetch from the most recent to least recent block number.
-  for (let i = latestBlock; i >= 0; i -= chunkSize) {
-    const toBlock = i;
-    const fromBlock = Math.max(i - chunkSize + 1, 0);
 
-    const chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
-      fromBlock,
-      toBlock,
-    });
-    events.push(...chunkEvents);
-    // TODO Remove this break in the future. Just for testing purposes to get at least 1 event.
-    if (chunkEvents.length) break;
-  }
-  console.log("events: ", cleanComplexWeb3Data(events));
+export default interface IGovernanceProposal {
+  proposalId: string,
+  proposer: string,
+  title: string,
+  description: string,
+  voteStart: string,
+  voteEnd: string,
 
-  for (const event of events) {
-    const proposal = decodeProposalCreatedEvent(event);
-    if (!proposal) continue;
+  targets: string[],
+  values: string[],
+  signatures: string[],
+  calldatas: string[],
 
-    console.log("proposal: ", proposal);
-    const voteStartDate = new Date(Number(proposal.voteStart) * 1000);
-    const voteEndDate = new Date(Number(proposal.voteEnd) * 1000);
+  // Called from the "state" function (IGovernorUpgradeable.ProposalState)
+  state: ProposalState,
 
-    console.log("Vote Start Date: ", voteStartDate);
-    console.log("Vote End Date: ", voteEndDate);
-
-    const proposalState = await fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
-    console.log("proposal state: ", proposalState);
-    proposal.state = ProposalStateMapping[proposalState]
-
-    governanceProposals.value.push(proposal)
-  }
-
-  loadingProposals.value = false;
+  // Frontend fields:
+  submission_status: string, // e.g. "Pending"
+  approval: string, // e.g. "40%"
+  participation: string, // e.g. "10%"
+  tags: string[], // e.g. ["active", "permission"]
 }
-
-const decodeProposalCreatedEvent = (event: EventLog) => {
-  if (!event.raw) return undefined;
-  const topics = event.raw?.topics as string[];
-
-  // Decode event data.
-  const decodedEvent = fundStore.web3.eth.abi.decodeLog(
-    proposalCreatedEventInputs ?? [],
-    event.raw?.data ?? "",
-    topics.slice(1),
-  );
-  const proposal = cleanComplexWeb3Data(decodedEvent) as IGovernanceProposal;
-
-  try {
-    const parsedDescription = JSON.parse(proposal.description);
-    proposal.title = parsedDescription.title;
-    proposal.description = parsedDescription.description;
-  } catch {
-    proposal.title = proposal.description;
-  }
-
-  return proposal
-}
-
-onMounted(() => {
-  console.log("fetch governance proposal events for fund: ", fund.address);
-  getAllProposals();
-});
-</script>
-
-<style scoped lang="scss">
-.tools {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  margin-bottom: 2rem;
-
-  &__success-rate {
-    display: flex;
-    flex-direction: column;
-    align-items: end;
-  }
-
-  &__val {
-    font-weight: 700;
-    font-size: $text-md;
-    color: $color-white;
-  }
-
-  &__subtext {
-    font-weight: 500;
-    font-size: $text-sm;
-  }
-}
-
-.tools__all-activity-btn {
-  @include borderGray;
-  display: flex;
-  flex-direction: row;
-
-  &__subtext {
-    color: $color-text-irrelevant;
-    font-size: $text-sm;
-    font-weight: 500;
-    margin: 0 0.75rem;
-  }
-}
-
-// overrides for expansion-panel
-.data_row_card {
-  margin-bottom: 2rem;
-
-  ::v-deep {
-    // remove outer border
-    .data_row__panel {
-      border: 0;
-      border-radius: 0.25rem !important;
-      background-color: rgb(var(--v-theme-surface));
-    }
-    // add more spacing to content inside
-    .v-expansion-panel-text__wrapper {
-      padding-bottom: 2rem;
-    }
-
-    // add borders to textfields inside panel
-    .v-expansion-panels {
-      border: 1px solid $color-gray-transparent;
-      border-radius: 0.25rem !important;
-
-      .data_row__panel {
-        padding: 0;
-      }
-    }
-  }
-}
-</style>

@@ -66,13 +66,13 @@ $text-xs: 0.8125rem;
 $letter-spacing-lg: 0.03rem;
 // Status Type Colors
 $color-status-type-active: #db38de;
-$color-status-type-executed: $color-primary;
+$color-status-type-executed: $color-success-light;
 $color-status-type-defeated: $color-error;
-$color-status-type-to-execute: $color-success-light;
+$color-status-type-to-execute: $color-primary;
 $color-status-type-canceled: #de6a38;
 
 // Use these variables to generate CSS rules
-$status-types: (
+$proposal-states: (
   "active": $color-status-type-active,
   "executed": $color-status-type-executed,
   "defeated": $color-status-type-defeated,
@@ -80,8 +80,8 @@ $status-types: (
   "canceled": $color-status-type-canceled,
 );
 
-@each $type, $color in $status-types {
-  .status_type_#{$type} {
+@each $state, $color in $proposal-states {
+  .proposal_state_#{$state} {
     color: $color;
   }
 }
