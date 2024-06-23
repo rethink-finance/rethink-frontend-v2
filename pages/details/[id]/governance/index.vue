@@ -189,8 +189,8 @@ const getAllProposals = async () => {
       toBlock,
     });
     events.push(...chunkEvents);
-    // TODO Remove this break in the future. Just for testing purposes to get at least 1 event.
-    if (chunkEvents.length) break;
+    // TODO Remove this break in the future. Just for testing purposes to get at least 3 event.
+    if (chunkEvents.length > 2) break;
   }
   console.log("events: ", cleanComplexWeb3Data(events));
 
@@ -201,7 +201,6 @@ const getAllProposals = async () => {
     console.log("proposal: ", proposal);
     const voteStartDate = new Date(Number(proposal.voteStart) * 1000);
     const voteEndDate = new Date(Number(proposal.voteEnd) * 1000);
-
     console.log("Vote Start Date: ", voteStartDate);
     console.log("Vote End Date: ", voteEndDate);
 
