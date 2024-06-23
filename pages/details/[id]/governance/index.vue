@@ -6,7 +6,7 @@
       </template>
     </UiDataRowCard>
 
-    <UiMainCard title="Governance Activity" subtitle="7 Pending Proposals">
+    <UiMainCard title="Governance Activity" :subtitle="pendingProposalsCountText">
       <template #header-right>
         <UiDropdown :options="dropdownOptions" label="Create Proposal" />
       </template>
@@ -17,13 +17,14 @@
         >
           <div>All Activity</div>
           <div class="tools__all-activity-btn__subtext">
-            (9 Proposals)
+            ({{ proposalsCountText }})
           </div>
           <Icon icon="mdi:filter-variant" width="1rem" />
         </v-btn>
         <div class="tools__success-rate">
           <div class="tools__val">
-            50%
+            <!-- TODO calculate success rate -->
+            N/A
           </div>
           <div class="tools__subtext">
             Success Rate
@@ -49,6 +50,7 @@
 <script setup lang="ts">
 // types
 import type { EventLog } from "web3";
+import { ethers } from "ethers";
 import type IFund from "~/types/fund";
 import type ITrendingDelegates from "~/types/trending_delegates";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
@@ -58,13 +60,27 @@ import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDe
 import { useFundStore } from "~/store/fund.store";
 import { cleanComplexWeb3Data } from "~/composables/utils";
 import type IGovernanceProposal from "~/types/governance_proposal";
-import { ProposalStateMapping } from "~/types/enums/governance_proposal";
+import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
+import { commify, trimTrailingZeros } from "~/composables/formatters";
 const fundStore = useFundStore();
 
 // dummy data for manage delegate button
 const manageDelegateUrl = "https://www.google.com";
 // dummy data governance activity
 const governanceProposals = ref<IGovernanceProposal[]>([]);
+const proposalsCountText = computed(() => {
+  if (governanceProposals.value.length === 1) {
+    return "1 Proposal";
+  }
+  return governanceProposals.value.length + " Proposals";
+});
+const pendingProposalsCountText = computed(() => {
+  const pendingProposals = governanceProposals.value.filter(proposal => proposal.state === ProposalState.Pending);
+  if (pendingProposals.length === 1) {
+    return "1 Pending Proposal";
+  }
+  return pendingProposals.length + " Pending Proposals";
+});
 
 // Dummy data for trending delegates
 const trendingDelegates: ITrendingDelegates[] = [
@@ -190,8 +206,43 @@ const getAllProposals = async () => {
     console.log("Vote End Date: ", voteEndDate);
 
     const proposalState = await fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
-    console.log("proposal state: ", proposalState);
     proposal.state = ProposalStateMapping[proposalState]
+
+    const votes = await fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
+    console.log("proposal votes: ", votes);
+
+    if (votes && fundStore.fund?.quorumNumerator && fundStore.fund?.quorumDenominator) {
+      const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
+      proposal.totalVotes = totalVotes;
+      proposal.totalVotesFormatted = formatTokenValue(totalVotes, fundStore.fund?.governanceToken.decimals);
+      proposal.forVotes = votes.forVotes;
+      proposal.abstainVotes = votes.abstainVotes;
+      proposal.againstVotes = votes.againstVotes;
+      proposal.forVotesFormatted = formatTokenValue(votes.forVotes, fundStore.fund?.governanceToken.decimals);
+      proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, fundStore.fund?.governanceToken.decimals);
+      proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, fundStore.fund?.governanceToken.decimals);
+
+      // TODO If the proposal is not active anymore we should take getPastTotalSupply(proposal.voteEnd) of when it ended
+      //   if the proposal is active we can take current total supply.
+      const totalSupply = fundStore.fund?.governanceTokenTotalSupply ?? 0n;
+      proposal.totalSupply = totalSupply;
+      proposal.totalSupplyFormatted = formatTokenValue(totalSupply, fundStore.fund?.governanceToken.decimals);
+
+      const requiredVotes = totalSupply * fundStore.fund?.quorumNumerator / fundStore.fund?.quorumDenominator;
+      console.log("requiredVotes: ", requiredVotes)
+      proposal.requiredVotes = requiredVotes;
+      proposal.requiredVotesFormatted = formatTokenValue(requiredVotes, fundStore.fund?.governanceToken.decimals);
+
+      const approval = votes.forVotes / requiredVotes;
+      proposal.approval = formatPercent(approval);
+      console.log("approvalFormatted: ", proposal.approval)
+
+      // Participation is totalVotes / totalSupply
+      const participation = totalVotes / totalSupply;
+      proposal.participation = formatPercent(participation);
+      console.log("participationFormatted: ", proposal.participation)
+    }
+    // proposal.state = ProposalStateMapping[proposalState]
 
     governanceProposals.value.push(proposal)
   }

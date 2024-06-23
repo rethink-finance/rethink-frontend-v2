@@ -7,8 +7,32 @@
     :items="items"
     :loading="loading"
     loading-text="Loading Activity"
-    @click:row="rowClick"
+    @click:row="(item: any) => $router.push(`governance/proposal/${item.proposalId}`)"
   >
+    <template #[`header.approval`]="{ column }">
+      <div class="d-flex justify-center">
+        {{ column.title }}
+        <span class="d-flex align-center ms-1">
+          <Icon icon="octicon:question-16" width="1rem" />
+        </span>
+        <v-tooltip activator="parent" location="top">
+          Calculated as: <br>
+          <strong>votes for / required quorum votes</strong><br>
+        </v-tooltip>
+      </div>
+    </template>
+    <template #[`header.participation`]="{ column }">
+      <div class="d-flex justify-center">
+        {{ column.title }}
+        <span class="d-flex align-center ms-1">
+          <Icon icon="octicon:question-16" width="1rem" />
+        </span>
+        <v-tooltip activator="parent" location="top">
+          Calculated as: <br>
+          <strong>total votes / total supply</strong>
+        </v-tooltip>
+      </div>
+    </template>
     <template #[`item.index`]="{ index }">
       <strong>{{ index + 1 }}</strong>
     </template>
@@ -29,6 +53,7 @@
         </div>
       </div>
     </template>
+    <!-- TODO display this only if wallet connected -->
     <template #[`item.submission_status`]="{ item }">
       <div class="submission_status">
         <Icon
@@ -41,6 +66,18 @@
         </div>
       </div>
     </template>
+    <template #[`item.approval`]="{ item }">
+      {{ item.approval }}
+      <v-tooltip activator="parent" location="bottom">
+        {{ item.forVotesFormatted }} of {{ item.requiredVotesFormatted }} {{ fund?.governanceToken.symbol }}
+      </v-tooltip>
+    </template>
+    <template #[`item.participation`]="{ item }">
+      {{ item.participation }}
+      <v-tooltip activator="parent" location="bottom">
+        {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }} {{ fund?.governanceToken.symbol }}
+      </v-tooltip>
+    </template>
     <template #bottom>
       <!-- Leave this slot empty to hide pagination controls -->
     </template>
@@ -50,9 +87,13 @@
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 // types
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { useFundStore } from "~/store/fund.store";
+
+const fundStore = useFundStore();
+const { fund } = toRefs(fundStore);
 
 // defined icons for submission_status
 const icons = {
@@ -63,46 +104,30 @@ const icons = {
   Approved: "material-symbols:done",
 };
 
-
-export default defineComponent({
-  name: "TableGovernance",
-  props: {
-    items: {
-      type: Array as () => IGovernanceProposal[],
-      default: () => [],
-    },
-    loading: {
-      type: Boolean,
-      default: false,
-    },
+defineProps({
+  items: {
+    type: Array as () => IGovernanceProposal[],
+    default: () => [],
   },
-  data: () => ({
-    expanded: [],
-    // bug fix for vuetify table headers property 'align'
-    // https://github.com/vuetifyjs/vuetify/issues/18901
-    headers: ref([
-      { title: "#", key: "index", sortable: false },
-      { title: "Proposal Title", key: "title", sortable: true },
-      { title: "Submission", key: "submission_status", sortable: true },
-      { title: "Approval", key: "approval", sortable: true, align: "center" },
-      {
-        title: "Participation",
-        key: "participation",
-        sortable: true,
-        align: "center",
-      },
-    ] as const),
-    icons,
-  }),
-  methods: {
-    // change route depending on row id (proposal ID)
-    rowClick(index: any, item: any) {
-      const { item: clickedItem } = item;
-
-      this.$router.push(`governance/proposal/${clickedItem.id}`);
-    },
+  loading: {
+    type: Boolean,
+    default: false,
   },
 });
+
+const headers: any[] = [
+  { title: "#", key: "index", sortable: false },
+  { title: "Proposal Title", key: "title", sortable: true },
+  { title: "Submission", key: "submission_status", sortable: true },
+  { title: "Approval", key: "approval", sortable: true, align: "center" },
+  {
+    title: "Participation",
+    key: "participation",
+    sortable: true,
+    align: "center",
+  },
+];
+
 </script>
 
 <style lang="scss" scoped>

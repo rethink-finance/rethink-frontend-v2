@@ -60,8 +60,20 @@ export default interface IGovernanceProposal {
   state: ProposalState,
 
   // Frontend fields:
+  tags: string[], // e.g. ["permission"]
   submission_status: string, // e.g. "Pending"
   approval: string, // e.g. "40%"
   participation: string, // e.g. "10%"
-  tags: string[], // e.g. ["active", "permission"]
+  requiredVotes: bigint, // e.g. 50k
+  requiredVotesFormatted: string, // e.g. 50k
+  forVotes: bigint,
+  forVotesFormatted: string, // e.g. 50k
+  abstainVotes: bigint,
+  abstainVotesFormatted: string, // e.g. 50k
+  againstVotes: bigint,
+  againstVotesFormatted: string, // e.g. 50k
+  totalVotes: bigint,
+  totalVotesFormatted: string,
+  totalSupply: bigint,
+  totalSupplyFormatted: string,
 }

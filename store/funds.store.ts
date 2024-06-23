@@ -132,14 +132,15 @@ export const useFundsStore = defineStore({
               address,
               decimals: -1,
             } as IToken,
+            fundTokenTotalSupply: BigInt("0"),
             baseToken: {
               address: "",  // Not important here.
               symbol: dataNAVs.fundBaseTokenSymbol[index],
               decimals: dataNAVs.fundBaseTokenDecimals[index],
             },
             governanceToken: {} as IToken,  // Not important here, for now.
+            governanceTokenTotalSupply: BigInt("0"),
             totalNAVWei: dataNAVs.totalNav[index],
-            fundTokenTotalSupply: BigInt("0"),
             cumulativeReturnPercent: 0,
             monthlyReturnPercent: 0,
             sharpeRatio: 0,
@@ -175,7 +176,10 @@ export const useFundsStore = defineStore({
             votingDelay: "",
             votingPeriod: "",
             proposalThreshold: "",
-            quorum: "",
+            quorum: BigInt(0),
+            quorumNumerator: BigInt(0),
+            quorumDenominator: BigInt(0),
+            quorumFormatted: "",
             lateQuorum: "",
 
             // Fees
