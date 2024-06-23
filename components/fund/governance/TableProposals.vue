@@ -70,13 +70,13 @@
       </div>
     </template>
     <template #[`item.approval`]="{ item }">
-      {{ item.approval }}
+      {{ item.approvalFormatted }}
       <v-tooltip activator="parent" location="bottom">
         {{ item.forVotesFormatted }} of {{ item.requiredVotesFormatted }} {{ fund?.governanceToken.symbol }}
       </v-tooltip>
     </template>
     <template #[`item.participation`]="{ item }">
-      {{ item.participation }}
+      {{ item.participationFormatted }}
       <v-tooltip activator="parent" location="bottom">
         {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }} {{ fund?.governanceToken.symbol }}
       </v-tooltip>

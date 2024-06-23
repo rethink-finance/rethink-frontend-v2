@@ -226,14 +226,24 @@ const getAllProposals = async () => {
         proposal.requiredVotes = requiredVotes;
         proposal.requiredVotesFormatted = formatTokenValue(requiredVotes, fundStore.fund?.governanceToken.decimals);
 
-        const approval = votes.forVotes / requiredVotes;
-        proposal.approval = formatPercent(approval);
-        console.log("approvalFormatted: ", proposal.approval)
+        let approval = Number(votes.forVotes) / Number(requiredVotes);
+        // Limit approval percentage to 100% max.
+        if (approval > 1) {
+          approval = 1;
+        }
+        proposal.approval = approval;
+        proposal.approvalFormatted = formatPercent(approval, false);
+        console.log("approvalFormatted: ", proposal.approvalFormatted, approval)
 
         // Participation is totalVotes / totalSupply
-        const participation = totalVotes / totalSupply;
-        proposal.participation = formatPercent(participation);
-        console.log("participationFormatted: ", proposal.participation)
+        let participation = Number(totalVotes) / Number(totalSupply);
+        // Limit participation percentage to 100% max.
+        if (participation > 1) {
+          participation = 1;
+        }
+        proposal.participation = participation;
+        proposal.participationFormatted = formatPercent(participation, false);
+        console.log("participationFormatted: ", proposal.participationFormatted, proposal.participation)
       }
       // proposal.state = ProposalStateMapping[proposalState]
 
