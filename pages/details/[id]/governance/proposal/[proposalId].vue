@@ -1,7 +1,9 @@
 <template>
   <div class="proposal-detail">
+    <!-- TODO better to just pass the proposalDetails as prop  -->
     <FundGovernanceProposalSectionTop
       :title="proposalDetails.title"
+      :state="proposalDetails.state"
       :tags="proposalDetails.tags"
       :submission="proposalDetails.submission"
       :meta-bottom="metaBottom"
@@ -40,12 +42,11 @@
 </template>
 
 <script setup lang="ts">
-// utils
-import { formatHexAddress } from "~/composables/utils";
-// types
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { useFundStore } from "~/store/fund.store";
+import { truncateAddress } from "~/composables/addressUtils";
+import { ProposalState } from "~/types/enums/governance_proposal";
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 
@@ -62,6 +63,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 const proposalDetails = {
   id: "75jfh475hqc",
   createdBy: "0x1f98dgfgF984",
+  state: ProposalState.Active,
   title: "Unlock airdrop permission to 0x1f98dgfgF984",
   submission: "Pending",
   approval: "70",
@@ -78,7 +80,7 @@ const metaBottom = [
   {
     label: "Created by",
     value: proposalDetails.createdBy,
-    format: formatHexAddress,
+    format: truncateAddress,
   },
 ];
 

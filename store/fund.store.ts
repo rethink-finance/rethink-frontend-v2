@@ -111,6 +111,12 @@ export const useFundStore = defineStore({
       const contractAddress = addresses[RethinkReaderContractName][this.web3Store.chainId];
       return new this.web3.eth.Contract(RethinkReader.abi, contractAddress)
     },
+    /**
+     * Returns a block number of the transaction that created the safe contract.
+     */
+    safeContractCreationBlock(): bigint {
+      return this.web3Store.getContractCreationBlock(this.fund?.safeAddress);
+    },
     // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
     fundContract(): Contract {
       return new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress)
@@ -239,6 +245,7 @@ export const useFundStore = defineStore({
           this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken) as Promise<number>,
           this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken) as Promise<string>,
           this.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
+          governanceTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
           this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
           fundTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
           fundContract.methods.totalNAV().call() as Promise<bigint>,
@@ -247,6 +254,8 @@ export const useFundStore = defineStore({
           rethinkFundGovernorContract.methods.proposalThreshold().call() as Promise<number>,
           rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call() as Promise<number>,
           rethinkFundGovernorContract.methods.quorum(latestBlock).call() as Promise<bigint>,
+          rethinkFundGovernorContract.methods.quorumNumerator().call() as Promise<bigint>,
+          rethinkFundGovernorContract.methods.quorumDenominator().call() as Promise<bigint>,
         ]);
 
         const [
@@ -256,6 +265,7 @@ export const useFundStore = defineStore({
           baseTokenDecimals,
           governanceTokenSymbol,
           governanceTokenDecimals,
+          governanceTokenTotalSupply,
           fundTokenDecimals,
           fundTokenTotalSupply,
           fundTotalNAV,
@@ -264,6 +274,8 @@ export const useFundStore = defineStore({
           fundProposalThreshold,
           fundLateQuorum,
           quorum,
+          quorumNumerator,
+          quorumDenominator,
         ]: any[] = results.map(result => {
           if (result.status === "fulfilled") {
             return result.value
@@ -274,6 +286,8 @@ export const useFundStore = defineStore({
 
         // console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
         console.log("fundSettings: ", fundSettings)
+        console.log("quorum: ", quorum)
+        console.log("governanceTokenTotalSupply: ", governanceTokenTotalSupply)
 
         const fund: IFund = {
           chainName: this.web3Store.chainName,
@@ -301,6 +315,7 @@ export const useFundStore = defineStore({
             decimals: governanceTokenDecimals ?? 18,
           } as IToken,
           totalNAVWei: fundTotalNAV || BigInt("0"),
+          governanceTokenTotalSupply,
           fundTokenTotalSupply,
           cumulativeReturnPercent: 0,
           monthlyReturnPercent: 0,
@@ -324,7 +339,14 @@ export const useFundStore = defineStore({
           votingDelay: pluralizeWord("second", fundVotingDelay),
           votingPeriod: pluralizeWord("second", fundVotingPeriod),
           proposalThreshold: (!fundProposalThreshold && fundProposalThreshold !== 0n) ? "N/A" : `${commify(fundProposalThreshold)} ${governanceTokenSymbol || "votes"}`,
-          quorum: formatPercent(quorum, false, "N/A"),
+          quorum,
+          quorumNumerator,
+          quorumDenominator,
+          quorumFormatted: formatPercent(
+            quorumDenominator ? Number(quorumNumerator) / Number(quorumDenominator) : 0,
+            false,
+            "N/A",
+          ),
           lateQuorum: pluralizeWord("second", fundLateQuorum),
 
           // Fees
@@ -509,7 +531,6 @@ export const useFundStore = defineStore({
 
       this.userFundDelegateAddress = await this.fundContract.methods.delegates(this.activeAccountAddress).call();
 
-      console.log("user fund delegates: ", this.userFundDelegateAddress);
       return this.userFundDelegateAddress;
     },
     /**

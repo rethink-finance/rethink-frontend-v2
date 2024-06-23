@@ -7,13 +7,14 @@
     <div class="section-top__meta-container">
       <div class="section-top__meta">
         <div class="section-top__meta-row">
-          <UiChip
-            v-for="tag in tags"
-            :key="tag"
-            :value="tag"
+          <FundGovernanceProposalStateChip
+            :value="state"
             class="section-top__tag"
           />
-
+          <FundGovernanceProposalStateChip
+            value="Permissions"
+            class="section-top__tag"
+          />
           <div class="section-top__submission">
             <Icon
               :icon="icons[submission as keyof typeof icons]"
@@ -28,9 +29,9 @@
 
         <div class="section-top__meta-row">
           <div
-            class="section-top__meta-item"
             v-for="item in metaBottom"
             :key="item.label"
+            class="section-top__meta-item"
           >
             <div class="meta-label">
               {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
@@ -160,6 +161,10 @@ export default defineComponent({
   name: "ProposalSectionTop",
   props: {
     title: {
+      type: String,
+      default: "",
+    },
+    state: {
       type: String,
       default: "",
     },

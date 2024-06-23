@@ -39,10 +39,11 @@ export default interface IFund {
 
   inceptionDate: string;
   fundToken: IToken;
+  fundTokenTotalSupply: bigint;
   baseToken: IToken;
   governanceToken: IToken;
+  governanceTokenTotalSupply: bigint;
   totalNAVWei: bigint;
-  fundTokenTotalSupply: bigint;
   cumulativeReturnPercent: number; // TODO
   monthlyReturnPercent: number; // TODO
   sharpeRatio: number; // TODO
@@ -63,10 +64,23 @@ export default interface IFund {
   managementAddresses: string[];
 
   // Governance
+  // https://docs.tally.xyz/user-guides/deploying-governor-daos/choose-governor-parameters#how-to-pick-the-proposal-threshold
   votingDelay: string;
   votingPeriod: string;
   proposalThreshold: string;
-  quorum: string;
+  // Quorum:
+  // https://docs.tally.xyz/user-guides/tally-contract-compatibility/openzeppelin-governor#quorum
+  // If the Governor is missing either quorumNumerator() or quorumDenominator(), Tally falls back to the
+  // quorum() function and assumes that the quorum is fixed.
+  quorum: bigint;
+  // The quorumNumerator and quorumDenominator are used to calculate the minimum number of votes required
+  // for a proposal to be considered valid.
+  // If quorumNumerator is 20 and quorumDenominator is 100, the quorum fraction is 20/100, which equals 20%.
+  // This means that 20% of the total voting power must participate
+  // (For votes, and sometimes including Abstain votes) for the proposal to be valid.
+  quorumNumerator: bigint;
+  quorumDenominator: bigint;
+  quorumFormatted: string;
   lateQuorum: string;
 
   // Fees - fees collector
