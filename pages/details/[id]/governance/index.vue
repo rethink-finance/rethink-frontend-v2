@@ -251,7 +251,7 @@ const getAllProposals = async () => {
     }
     // TODO Remove this break in the future. Just for testing purposes to get at least 4 events.
     //  in the future we have to fetch all events until the creation of governance contract
-    if (chunkEvents.length > 3) break;
+    if (governanceProposals.value.length > 3) break;
   }
 
   loadingProposals.value = false;
