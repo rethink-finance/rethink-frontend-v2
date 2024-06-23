@@ -5,7 +5,7 @@
     :headers="headers"
     hover
     :items="items"
-    :loading="loading"
+    :loading="loading && items.length === 0"
     loading-text="Loading Activity"
     @click:row="(item: any) => $router.push(`governance/proposal/${item.proposalId}`)"
   >
@@ -70,16 +70,28 @@
       </div>
     </template>
     <template #[`item.approval`]="{ item }">
-      {{ item.approval }}
+      {{ item.approvalFormatted }}
       <v-tooltip activator="parent" location="bottom">
         {{ item.forVotesFormatted }} of {{ item.requiredVotesFormatted }} {{ fund?.governanceToken.symbol }}
       </v-tooltip>
     </template>
     <template #[`item.participation`]="{ item }">
-      {{ item.participation }}
+      {{ item.participationFormatted }}
       <v-tooltip activator="parent" location="bottom">
         {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }} {{ fund?.governanceToken.symbol }}
       </v-tooltip>
+    </template>
+
+    <!-- LOADER SKELETON -->
+    <template #[`body.append`]>
+      <tr v-if="items.length && loading">
+        <td>
+          {{ items.length + 1 }}
+        </td>
+        <td v-for="header in headers.length - 1" :key="header">
+          <v-skeleton-loader type="text" class="table_governance__skeleton_loader" />
+        </td>
+      </tr>
     </template>
     <template #bottom>
       <!-- Leave this slot empty to hide pagination controls -->
@@ -92,9 +104,9 @@
 
 <script setup lang="ts">
 // types
-import type IGovernanceProposal from "~/types/governance_proposal";
-import { useFundStore } from "~/store/fund.store";
 import { useAccountStore } from "~/store/account.store";
+import { useFundStore } from "~/store/fund.store";
+import type IGovernanceProposal from "~/types/governance_proposal";
 
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
@@ -153,6 +165,10 @@ const headers = computed(() => {
     text-align: center;
     padding: 1.5rem;
     background: $color-badge-navy;
+  }
+
+  &__skeleton_loader :deep(*) {
+    margin: 0;
   }
 }
 
