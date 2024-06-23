@@ -10,6 +10,7 @@
     @click:row="(item: any) => $router.push(`governance/proposal/${item.proposalId}`)"
   >
     <template #[`header.approval`]="{ column }">
+      <!-- HEADERS -->
       <div class="d-flex justify-center">
         {{ column.title }}
         <span class="d-flex align-center ms-1">
@@ -33,6 +34,8 @@
         </v-tooltip>
       </div>
     </template>
+
+    <!-- BODY -->
     <template #[`item.index`]="{ index }">
       <strong>{{ index + 1 }}</strong>
     </template>
@@ -91,8 +94,10 @@
 // types
 import type IGovernanceProposal from "~/types/governance_proposal";
 import { useFundStore } from "~/store/fund.store";
+import { useAccountStore } from "~/store/account.store";
 
 const fundStore = useFundStore();
+const accountStore = useAccountStore();
 const { fund } = toRefs(fundStore);
 
 // defined icons for submission_status
@@ -115,19 +120,27 @@ defineProps({
   },
 });
 
-const headers: any[] = [
-  { title: "#", key: "index", sortable: false },
-  { title: "Proposal Title", key: "title", sortable: true },
-  { title: "Submission", key: "submission_status", sortable: true },
-  { title: "Approval", key: "approval", sortable: true, align: "center" },
-  {
-    title: "Participation",
-    key: "participation",
-    sortable: true,
-    align: "center",
-  },
-];
+const headers = computed(() => {
+  const headers: any[] = [
+    { title: "#", key: "index", sortable: false },
+    { title: "Proposal Title", key: "title", sortable: true },
+  ];
+  if (accountStore.isConnected) {
+    headers.push({ title: "Submission", key: "submission_status", sortable: true });
+  }
 
+  headers.push(...[
+    { title: "Approval", key: "approval", sortable: true, align: "center" },
+    {
+      title: "Participation",
+      key: "participation",
+      sortable: true,
+      align: "center",
+    },
+  ]);
+
+  return headers;
+});
 </script>
 
 <style lang="scss" scoped>
