@@ -176,7 +176,6 @@ const getAllProposals = async () => {
   // console.log("safe block: ", safeBlock)
 
   const chunkSize = 3000;
-  const events = [];
   // TODO we can do batch requests for example 10x3000
   // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
   // We fetch from the most recent to least recent block number.
@@ -188,62 +187,60 @@ const getAllProposals = async () => {
       fromBlock,
       toBlock,
     });
-    events.push(...chunkEvents);
-    // TODO Remove this break in the future. Just for testing purposes to get at least 3 event.
-    if (chunkEvents.length > 2) break;
-  }
-  console.log("events: ", cleanComplexWeb3Data(events));
 
-  for (const event of events) {
-    const proposal = decodeProposalCreatedEvent(event);
-    if (!proposal) continue;
+    for (const event of chunkEvents) {
+      const proposal = decodeProposalCreatedEvent(event);
+      if (!proposal) continue;
 
-    console.log("proposal: ", proposal);
-    const voteStartDate = new Date(Number(proposal.voteStart) * 1000);
-    const voteEndDate = new Date(Number(proposal.voteEnd) * 1000);
-    console.log("Vote Start Date: ", voteStartDate);
-    console.log("Vote End Date: ", voteEndDate);
+      console.log("proposal: ", proposal);
+      const voteStartDate = new Date(Number(proposal.voteStart) * 1000);
+      const voteEndDate = new Date(Number(proposal.voteEnd) * 1000);
+      console.log("Vote Start Date: ", voteStartDate);
+      console.log("Vote End Date: ", voteEndDate);
 
-    const proposalState = await fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
-    proposal.state = ProposalStateMapping[proposalState]
+      const proposalState = await fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
+      proposal.state = ProposalStateMapping[proposalState]
 
-    const votes = await fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
-    console.log("proposal votes: ", votes);
+      const votes = await fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
+      console.log("proposal votes: ", votes);
 
-    if (votes && fundStore.fund?.quorumNumerator && fundStore.fund?.quorumDenominator) {
-      const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
-      proposal.totalVotes = totalVotes;
-      proposal.totalVotesFormatted = formatTokenValue(totalVotes, fundStore.fund?.governanceToken.decimals);
-      proposal.forVotes = votes.forVotes;
-      proposal.abstainVotes = votes.abstainVotes;
-      proposal.againstVotes = votes.againstVotes;
-      proposal.forVotesFormatted = formatTokenValue(votes.forVotes, fundStore.fund?.governanceToken.decimals);
-      proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, fundStore.fund?.governanceToken.decimals);
-      proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, fundStore.fund?.governanceToken.decimals);
+      if (votes && fundStore.fund?.quorumNumerator && fundStore.fund?.quorumDenominator) {
+        const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
+        proposal.totalVotes = totalVotes;
+        proposal.totalVotesFormatted = formatTokenValue(totalVotes, fundStore.fund?.governanceToken.decimals);
+        proposal.forVotes = votes.forVotes;
+        proposal.abstainVotes = votes.abstainVotes;
+        proposal.againstVotes = votes.againstVotes;
+        proposal.forVotesFormatted = formatTokenValue(votes.forVotes, fundStore.fund?.governanceToken.decimals);
+        proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, fundStore.fund?.governanceToken.decimals);
+        proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, fundStore.fund?.governanceToken.decimals);
 
-      // TODO If the proposal is not active anymore we should take getPastTotalSupply(proposal.voteEnd) of when it ended
-      //   if the proposal is active we can take current total supply.
-      const totalSupply = fundStore.fund?.governanceTokenTotalSupply ?? 0n;
-      proposal.totalSupply = totalSupply;
-      proposal.totalSupplyFormatted = formatTokenValue(totalSupply, fundStore.fund?.governanceToken.decimals);
+        // TODO If the proposal is not active anymore we should take getPastTotalSupply(proposal.voteEnd) of when it ended
+        //   if the proposal is active we can take current total supply.
+        const totalSupply = fundStore.fund?.governanceTokenTotalSupply ?? 0n;
+        proposal.totalSupply = totalSupply;
+        proposal.totalSupplyFormatted = formatTokenValue(totalSupply, fundStore.fund?.governanceToken.decimals);
 
-      const requiredVotes = totalSupply * fundStore.fund?.quorumNumerator / fundStore.fund?.quorumDenominator;
-      console.log("requiredVotes: ", requiredVotes)
-      proposal.requiredVotes = requiredVotes;
-      proposal.requiredVotesFormatted = formatTokenValue(requiredVotes, fundStore.fund?.governanceToken.decimals);
+        const requiredVotes = totalSupply * fundStore.fund?.quorumNumerator / fundStore.fund?.quorumDenominator;
+        console.log("requiredVotes: ", requiredVotes)
+        proposal.requiredVotes = requiredVotes;
+        proposal.requiredVotesFormatted = formatTokenValue(requiredVotes, fundStore.fund?.governanceToken.decimals);
 
-      const approval = votes.forVotes / requiredVotes;
-      proposal.approval = formatPercent(approval);
-      console.log("approvalFormatted: ", proposal.approval)
+        const approval = votes.forVotes / requiredVotes;
+        proposal.approval = formatPercent(approval);
+        console.log("approvalFormatted: ", proposal.approval)
 
-      // Participation is totalVotes / totalSupply
-      const participation = totalVotes / totalSupply;
-      proposal.participation = formatPercent(participation);
-      console.log("participationFormatted: ", proposal.participation)
+        // Participation is totalVotes / totalSupply
+        const participation = totalVotes / totalSupply;
+        proposal.participation = formatPercent(participation);
+        console.log("participationFormatted: ", proposal.participation)
+      }
+      // proposal.state = ProposalStateMapping[proposalState]
+
+      governanceProposals.value.push(proposal)
     }
-    // proposal.state = ProposalStateMapping[proposalState]
-
-    governanceProposals.value.push(proposal)
+    // TODO Remove this break in the future. Just for testing purposes to get at least 3 event.
+    if (chunkEvents.length > 1) break;
   }
 
   loadingProposals.value = false;
