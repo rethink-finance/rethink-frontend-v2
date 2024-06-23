@@ -1,8 +1,6 @@
 import { ethers } from "ethers";
 import type { PositionType } from "~/types/enums/position_type";
 import { PositionTypesMap } from "~/types/enums/position_type";
-import type { StatusType } from "~/types/enums/status_type";
-import { StatusTypesMap } from "~/types/enums/status_type";
 
 export const variableType = (value: any) =>
   Object.prototype.toString.call(value).slice(8, -1); // accurately returns the parameter type [Array | Object | Number | Boolean | ...]
@@ -13,7 +11,7 @@ export const isVariableOfType = (value: any, type: any) =>
 export const formatToEther = (wei?: number) => {
   if (wei == null) return wei;
   return parseFloat(
-    ethers.formatEther(isVariableOfType(wei, "String") ? wei : wei.toString())
+    ethers.formatEther(isVariableOfType(wei, "String") ? wei : wei.toString()),
   );
 };
 
@@ -92,7 +90,7 @@ export const formatJson = (data: any) => {
       // Return the value unchanged if it doesn't need transformation
       return value;
     },
-    2
+    2,
   );
 };
 
@@ -131,42 +129,4 @@ export const getPositionType = (positionType: PositionType) => {
 
 export const trimTrailingSlash = (str: string) => {
   return str.endsWith("/") ? str.slice(0, -1) : str;
-};
-
-export const getStatusType = (statusType: StatusType) => {
-  return StatusTypesMap[statusType];
-};
-
-/**
- * Formats an Ethereum-like hexadecimal address for display if longer than 10 characters.
- *
- * @param {string} input - The input hexadecimal address to format, starting with '0x'.
- * @returns {string} Formatted string with truncated middle characters, e.g., '0xB5d0...a054'.
- * @throws {Error} If input is not a string or doesn't start with '0x'.
- *
- * @example
- * const input1 = '0x25dfdgfg'; // Input shorter than 10 characters
- * const input2 = '0xB5d01172e73559B07ef3CD53dE84459c6BA3a054'; // Input longer than 10 characters
- * console.log(formatHexAddress(input1)); // Output: 0x25dfdgfg
- * console.log(formatHexAddress(input2)); // Output: 0xB5d0...a054
- */
-export const formatHexAddress = (input: string) => {
-  // Check if the input is a string and starts with '0x'
-  if (typeof input !== "string" || !input.startsWith("0x")) {
-    throw new Error('Input must be a hexadecimal string starting with "0x".');
-  }
-
-  // Remove '0x' prefix for processing
-  const withoutPrefix = input.substring(2);
-
-  // Check if the input length is greater than 10 characters
-  if (withoutPrefix.length > 10) {
-    // Format the string with truncation
-    const firstPart = input.substring(0, 6);
-    const lastPart = withoutPrefix.substring(withoutPrefix.length - 4); // Show last 4 characters
-    return `${firstPart}...${lastPart}`;
-  } else {
-    // If the input length is 10 characters or less, return it unchanged
-    return input;
-  }
 };

@@ -5,7 +5,7 @@
     <UiDataRowCard :title="fund.votingDelay" subtitle="Voting Delay" />
     <UiDataRowCard :title="fund.votingPeriod" subtitle="Voting Period" />
     <UiDataRowCard :title="fund.proposalThreshold" subtitle="Proposal Threshold" />
-    <UiDataRowCard :title="fund.quorum" subtitle="Quorum" />
+    <UiDataRowCard :title="fund.quorumFormatted" subtitle="Quorum" />
     <UiDataRowCard :title="fund.lateQuorum" subtitle="Late Quorum" />
   </div>
 </template>
