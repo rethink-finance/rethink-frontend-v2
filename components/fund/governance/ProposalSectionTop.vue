@@ -1,14 +1,15 @@
 <template>
   <div class="section-top">
     <h2 class="section-top__title">
-      {{ title }}
+      {{ proposalDetails.title }}
     </h2>
 
     <div class="section-top__meta-container">
       <div class="section-top__meta">
         <div class="section-top__meta-row">
           <FundGovernanceProposalStateChip
-            :value="state"
+            v-if="proposalDetails.state"
+            :value="proposalDetails.state"
             class="section-top__tag"
           />
           <FundGovernanceProposalStateChip
@@ -17,12 +18,14 @@
           />
           <div class="section-top__submission">
             <Icon
-              :icon="icons[submission as keyof typeof icons]"
+              :icon="
+                icons[proposalDetails.submission_status as keyof typeof icons]
+              "
               width="0.9rem"
               class="section-top__submission-icon"
             />
             <div class="section-top__submission-text">
-              {{ submission }}
+              {{ proposalDetails.submission_status }}
             </div>
           </div>
         </div>
@@ -92,10 +95,10 @@
             </ui-tooltip-click>
           </div>
 
-          <h2 class="di-card__title">{{ title }}</h2>
+          <h2 class="di-card__title">{{ proposalDetails.title }}</h2>
 
           <div class="di-card__voting-power meta-label meta-label--uppercase">
-            Voting Power: {{ votingPower }}
+            Voting Power: {{ proposalDetails.requiredVotes }}
           </div>
 
           <v-radio-group class="di-card__radio-group" v-model="selectedRadio">
@@ -132,7 +135,9 @@
 
 <script lang="ts">
 // toast
+import { truncateAddress } from "~/composables/addressUtils";
 import { useToastStore } from "~/store/toast.store";
+import type IGovernanceProposal from "~/types/governance_proposal";
 
 // defined icons for submission
 const icons = {
@@ -160,29 +165,9 @@ const radioOptions: { label: string; value: string; icon: string }[] = [
 export default defineComponent({
   name: "ProposalSectionTop",
   props: {
-    title: {
-      type: String,
-      default: "",
-    },
-    state: {
-      type: String,
-      default: "",
-    },
-    tags: {
-      type: Array as () => string[],
-      default: () => [],
-    },
-    submission: {
-      type: String,
-      default: "",
-    },
-    metaBottom: {
-      type: Array as () => MetaItem[],
-      default: () => [],
-    },
-    votingPower: {
-      type: String,
-      default: "",
+    proposalDetails: {
+      type: Object as PropType<Partial<IGovernanceProposal>>,
+      default: () => ({}),
     },
   },
   data: () => ({
@@ -235,17 +220,34 @@ export default defineComponent({
   computed: {
     isButtonHidden() {
       // list all submission statuses that should hide the button
-      const hiddenBySubmission = ["Rejected"].includes(this.submission);
+      const hiddenBySubmission = ["Rejected"].includes(
+        this.proposalDetails.submission_status ?? ""
+      );
       // list all tags that should hide the button
-      const hiddenByTags = ["failed"].some((tag) => this.tags.includes(tag));
+      const hiddenByTags = ["failed"].some(
+        (tag) => this.proposalDetails?.tags?.includes(tag) ?? false
+      );
 
       return hiddenBySubmission || hiddenByTags;
     },
     isApproved() {
-      return this.submission === "Approved";
+      return this.proposalDetails.submission_status === "Approved";
     },
     buttonText() {
       return this.isApproved ? "Execute Proposal" : "Submit Vote";
+    },
+    metaBottom() {
+      return [
+        {
+          label: "Proposal ID:",
+          value: this.proposalDetails?.proposalId || "",
+        },
+        {
+          label: "Created by",
+          value: this.proposalDetails?.proposer || "",
+          format: truncateAddress,
+        },
+      ];
     },
   },
 });
