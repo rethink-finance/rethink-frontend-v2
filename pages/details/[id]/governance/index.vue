@@ -50,7 +50,6 @@
 <script setup lang="ts">
 // types
 import type { EventLog } from "web3";
-import { ethers } from "ethers";
 import type IFund from "~/types/fund";
 import type ITrendingDelegates from "~/types/trending_delegates";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
@@ -61,7 +60,6 @@ import { useFundStore } from "~/store/fund.store";
 import { cleanComplexWeb3Data } from "~/composables/utils";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
-import { commify, trimTrailingZeros } from "~/composables/formatters";
 const fundStore = useFundStore();
 
 // dummy data for manage delegate button
@@ -166,8 +164,16 @@ const loadingProposals = ref(false);
  *     "voteEnd": "1718623316",
  *     "description": "{\"title\":\"01 - NAV Methods\",\"description\":\"See details bellow\"}"
  * }
+ *
+ * TODO check first few 8 bytes of calldatas to see if the function signature matches any of ours, for example
+ * to compare them with function signatures of our ABIs
+ * TODO or just try decoding calldatas with our ABIs
  */
 const getAllProposals = async () => {
+  if (!fundStore.fund?.governanceToken.decimals) {
+    console.error("No governance token decimals found.")
+    return
+  }
   loadingProposals.value = true;
   governanceProposals.value = [];
   const latestBlock = Number(await fundStore.web3.eth.getBlockNumber());
@@ -192,11 +198,14 @@ const getAllProposals = async () => {
       const proposal = decodeProposalCreatedEvent(event);
       if (!proposal) continue;
 
-      console.log("proposal: ", proposal);
-      const voteStartDate = new Date(Number(proposal.voteStart) * 1000);
-      const voteEndDate = new Date(Number(proposal.voteEnd) * 1000);
-      console.log("Vote Start Date: ", voteStartDate);
-      console.log("Vote End Date: ", voteEndDate);
+      const block = await fundStore.web3.eth.getBlock(event.blockNumber);
+      proposal.createdTimestamp = Number(block.timestamp);
+      proposal.createdBlockNumber = event.blockNumber;
+
+      // const voteStartDate = new Date(Number(proposal.voteStart) * 1000);
+      // const voteEndDate = new Date(Number(proposal.voteEnd) * 1000);
+      // console.log("Vote Start Date: ", voteStartDate);
+      // console.log("Vote End Date: ", voteEndDate);
 
       const proposalState = await fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
       proposal.state = ProposalStateMapping[proposalState]
@@ -204,7 +213,16 @@ const getAllProposals = async () => {
       const votes = await fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
       console.log("proposal votes: ", votes);
 
-      if (votes && fundStore.fund?.quorumNumerator && fundStore.fund?.quorumDenominator) {
+      // Get the Governance Token total supply of when the proposal was created.
+      const totalSupply = await fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber);
+      proposal.totalSupply = totalSupply;
+      proposal.totalSupplyFormatted = formatTokenValue(totalSupply, fundStore.fund?.governanceToken.decimals);
+
+      const quorumWhenProposalCreated = await fundStore.fundGovernorContract.methods.quorum(proposal.createdTimestamp).call()
+      proposal.quorum = quorumWhenProposalCreated;
+      proposal.quorumFormatted = formatTokenValue(quorumWhenProposalCreated, fundStore.fund?.governanceToken.decimals);
+
+      if (votes) {
         const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
         proposal.totalVotes = totalVotes;
         proposal.totalVotesFormatted = formatTokenValue(totalVotes, fundStore.fund?.governanceToken.decimals);
@@ -215,18 +233,7 @@ const getAllProposals = async () => {
         proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, fundStore.fund?.governanceToken.decimals);
         proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, fundStore.fund?.governanceToken.decimals);
 
-        // TODO If the proposal is not active anymore we should take getPastTotalSupply(proposal.voteEnd) of when it ended
-        //   if the proposal is active we can take current total supply.
-        const totalSupply = fundStore.fund?.governanceTokenTotalSupply ?? 0n;
-        proposal.totalSupply = totalSupply;
-        proposal.totalSupplyFormatted = formatTokenValue(totalSupply, fundStore.fund?.governanceToken.decimals);
-
-        const requiredVotes = totalSupply * fundStore.fund?.quorumNumerator / fundStore.fund?.quorumDenominator;
-        console.log("requiredVotes: ", requiredVotes)
-        proposal.requiredVotes = requiredVotes;
-        proposal.requiredVotesFormatted = formatTokenValue(requiredVotes, fundStore.fund?.governanceToken.decimals);
-
-        let approval = Number(votes.forVotes) / Number(requiredVotes);
+        let approval = Number(votes.forVotes) / Number(quorumWhenProposalCreated);
         // Limit approval percentage to 100% max.
         if (approval > 1) {
           approval = 1;
@@ -245,8 +252,11 @@ const getAllProposals = async () => {
         proposal.participationFormatted = formatPercent(participation, false);
         console.log("participationFormatted: ", proposal.participationFormatted, proposal.participation)
       }
-      // proposal.state = ProposalStateMapping[proposalState]
 
+      // TODO Get user's connected wallet submission status for this proposal
+      //   proposal.submission_status = ""
+
+      console.log("proposal: ", proposal);
       governanceProposals.value.push(proposal)
     }
     // TODO Remove this break in the future. Just for testing purposes to get at least 4 events.

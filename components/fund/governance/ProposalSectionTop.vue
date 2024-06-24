@@ -85,10 +85,6 @@ export default defineComponent({
       type: String,
       default: "",
     },
-    tags: {
-      type: Array as () => string[],
-      default: () => [],
-    },
     submission: {
       type: String,
       default: "",

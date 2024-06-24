@@ -70,8 +70,6 @@ export default interface IFund {
   proposalThreshold: string;
   // Quorum:
   // https://docs.tally.xyz/user-guides/tally-contract-compatibility/openzeppelin-governor#quorum
-  // If the Governor is missing either quorumNumerator() or quorumDenominator(), Tally falls back to the
-  // quorum() function and assumes that the quorum is fixed.
   quorum: bigint;
   // The quorumNumerator and quorumDenominator are used to calculate the minimum number of votes required
   // for a proposal to be considered valid.
@@ -80,7 +78,7 @@ export default interface IFund {
   // (For votes, and sometimes including Abstain votes) for the proposal to be valid.
   quorumNumerator: bigint;
   quorumDenominator: bigint;
-  quorumFormatted: string;
+  quorumPercentage: string;
   lateQuorum: string;
 
   // Fees - fees collector

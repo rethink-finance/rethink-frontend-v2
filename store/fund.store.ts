@@ -133,6 +133,10 @@ export const useFundStore = defineStore({
     fundBaseTokenContract(): Contract {
       return new this.web3.eth.Contract(ERC20, this.fund?.baseToken?.address)
     },
+    // @ts-expect-error: we should extend the return type as Contract<...>...
+    fundGovernanceTokenContract(): Contract {
+      return new this.web3.eth.Contract(ERC20, this.fund?.governanceToken.address);
+    },
   },
   actions: {
     /**
@@ -253,7 +257,6 @@ export const useFundStore = defineStore({
           rethinkFundGovernorContract.methods.votingPeriod().call() as Promise<number>,
           rethinkFundGovernorContract.methods.proposalThreshold().call() as Promise<number>,
           rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.quorum(latestBlock).call() as Promise<bigint>,
           rethinkFundGovernorContract.methods.quorumNumerator().call() as Promise<bigint>,
           rethinkFundGovernorContract.methods.quorumDenominator().call() as Promise<bigint>,
         ]);
@@ -273,7 +276,6 @@ export const useFundStore = defineStore({
           fundVotingPeriod,
           fundProposalThreshold,
           fundLateQuorum,
-          quorum,
           quorumNumerator,
           quorumDenominator,
         ]: any[] = results.map(result => {
@@ -284,10 +286,8 @@ export const useFundStore = defineStore({
           return undefined
         });
 
-        // console.log("fundTokenTotalSupply: ", fundTokenTotalSupply)
         console.log("fundSettings: ", fundSettings)
-        console.log("quorum: ", quorum)
-        console.log("governanceTokenTotalSupply: ", governanceTokenTotalSupply)
+        const quorum: bigint = governanceTokenTotalSupply as bigint * quorumNumerator as bigint / quorumDenominator as bigint;
 
         const fund: IFund = {
           chainName: this.web3Store.chainName,
@@ -342,7 +342,7 @@ export const useFundStore = defineStore({
           quorum,
           quorumNumerator,
           quorumDenominator,
-          quorumFormatted: formatPercent(
+          quorumPercentage: formatPercent(
             quorumDenominator ? Number(quorumNumerator) / Number(quorumDenominator) : 0,
             false,
             "N/A",

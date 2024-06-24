@@ -5,8 +5,9 @@
     <UiDataRowCard :title="fund.votingDelay" subtitle="Voting Delay" />
     <UiDataRowCard :title="fund.votingPeriod" subtitle="Voting Period" />
     <UiDataRowCard :title="fund.proposalThreshold" subtitle="Proposal Threshold" />
-    <UiDataRowCard :title="fund.quorumFormatted" subtitle="Quorum" />
+    <UiDataRowCard :title="fund.quorumPercentage" subtitle="Quorum" />
     <UiDataRowCard :title="fund.lateQuorum" subtitle="Late Quorum" />
+    <UiDataRowCard :title="formatGovernanceTokenTotalSupply" subtitle="Governance Token Total Supply" />
   </div>
 </template>
 
@@ -19,6 +20,13 @@ export default defineComponent({
     fund: {
       type: Object as PropType<IFund>,
       default: () => {},
+    },
+  },
+  computed: {
+    formatGovernanceTokenTotalSupply() {
+      return formatTokenValue(
+        this.fund.governanceTokenTotalSupply,
+        this.fund.governanceToken.decimals) + " " + this.fund.governanceToken.symbol;
     },
   },
 })

@@ -4,7 +4,6 @@
     <FundGovernanceProposalSectionTop
       :title="proposalDetails.title"
       :state="proposalDetails.state"
-      :tags="proposalDetails.tags"
       :submission="proposalDetails.submission"
       :meta-bottom="metaBottom"
     />
@@ -63,7 +62,6 @@ const proposalDetails = {
   submission: "Pending",
   approval: "40%",
   participation: "10%",
-  tags: ["active", "permission"],
 };
 
 const metaBottom = [
