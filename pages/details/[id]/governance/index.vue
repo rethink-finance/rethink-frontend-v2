@@ -49,7 +49,7 @@
 
 <script setup lang="ts">
 // types
-import type { AbiInput, EventLog } from "web3";
+import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
 import type IFund from "~/types/fund";
 import type ITrendingDelegates from "~/types/trending_delegates";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
@@ -123,8 +123,9 @@ const proposalCreatedEventInputs = RethinkFundGovernor.abi.find(
   event => event.name === "ProposalCreated" && event.type === "event",
 )?.inputs ?? [];
 const loadingProposals = ref(false);
+
 /**
- * Example data of one decoded proposal:
+ * Example data of one decoded proposal, data that came from the ProposalCreated event:
  *
  * {
  *     "proposalId": "100928362673962953747976977800166144740308816222406020172969996550573666024331",
@@ -171,26 +172,26 @@ const loadingProposals = ref(false);
  * TODO or just try decoding calldatas with our ABIs
  */
 
+/**
+ * Extract all function signatures from GovernableFund ABI
+ * Iterate over all functions in GovernableFund ABI and generate a map of functionSignatureHash as key
+ * and ABI function fragment as value. This will be used when decoding proposal call datas.
+ */
 const functionSignatures: Record<string, any> = {};
 GovernableFund.abi.forEach(item => {
   if (item.type === "function") {
-    const inputs = item.inputs?.map(input => input.type).join(",");
-    const signature = `${item.name}(${inputs})`;
-    const hash: string = fundStore.web3.utils.sha3(signature)?.slice(0, 10) ?? ""; // 4-byte function signature
-    console.log("sig: ", hash, item.name);
-
-    functionSignatures[hash] = item;
+    const functionSignatureHash = fundStore.web3.eth.abi.encodeFunctionSignature(item as AbiFunctionFragment);
+    functionSignatures[functionSignatureHash] = item;
   }
 });
 
-// Extract all function signatures from GovernableFund ABI
+
 const decodeProposalCallData = (calldata: string) => {
   // Iterate over each method in ABI to find a match
   const signature = calldata.slice(0, 10);
   const encodedParameters = calldata.slice(10);
   const functionAbi = functionSignatures[signature];
   console.log("decode signature: ", signature, "functionName ", functionSignatures[signature]);
-  console.log("data: ", calldata)
 
   if (!functionAbi?.name) {
     console.warn("No existing function signature found in the GovernableFund ABI for ", signature)
@@ -199,14 +200,15 @@ const decodeProposalCallData = (calldata: string) => {
   const functionAbiInputs = functionAbi?.inputs as AbiInput[]
 
   try {
-    let decoded = fundStore.web3.eth.abi.decodeParameters(functionAbiInputs, "0x" + encodedParameters);
+    let decoded = fundStore.web3.eth.abi.decodeParameters(functionAbiInputs, encodedParameters);
     decoded = cleanComplexWeb3Data(decoded);
-    if (Object.keys(decoded).length) {
-      console.log("decoded data: ", functionAbi.name, decoded);
-      return decoded;
-    }
+    console.log("decoded data: ", functionAbi.name, decoded);
+    return {
+      functionName: functionAbi.name,
+      params: decoded,
+    };
   } catch (error: any) {
-    console.error("error while decoding: ", error);
+    console.error("error while decoding signature: ", signature, error);
   }
   console.error("FAILED decoding signature: ", signature, functionSignatures[signature]);
 
@@ -302,9 +304,11 @@ const getAllProposals = async () => {
 
       // TODO Get user's connected wallet submission status for this proposal
       //   proposal.submission_status = ""
+      proposal.calldatasDecoded = [];
       for (const calldata of proposal.calldatas) {
-        decodeProposalCallData(calldata);
+        proposal.calldatasDecoded.push(decodeProposalCallData(calldata));
       }
+
       console.log("proposal: ", proposal);
       governanceProposals.value.push(proposal)
     }

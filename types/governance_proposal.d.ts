@@ -55,6 +55,7 @@ export default interface IGovernanceProposal {
   values: string[],
   signatures: string[],
   calldatas: string[],
+  calldatasDecoded: Record<string, any> | undefined [],
 
   // Called from the "state" function (IGovernorUpgradeable.ProposalState)
   state: ProposalState,
