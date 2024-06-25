@@ -167,7 +167,7 @@ const requestDeposit = async () => {
   console.log("Request deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   const ABI = [ "function requestDeposit(uint256 amount)" ];
-  const iface = new ethers.utils.Interface(ABI);
+  const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei ]);
 
   try {
@@ -263,7 +263,7 @@ const deposit = async () => {
   console.log("Deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   const ABI = [ "function deposit()" ];
-  const iface = new ethers.utils.Interface(ABI);
+  const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("deposit");
 
   try {
@@ -307,7 +307,7 @@ const cancelDeposit = async () => {
   loadingCancelDeposit.value = true;
 
   const ABI = [ "function revokeDepositWithrawal(bool isDeposit)" ];
-  const iface = new ethers.utils.Interface(ABI);
+  const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ true ]);
 
   try {

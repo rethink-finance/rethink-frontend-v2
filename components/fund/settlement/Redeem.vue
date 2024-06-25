@@ -153,7 +153,7 @@ const requestRedeem = async () => {
   console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   const ABI = [ "function requestWithdraw(uint256 amount)" ];
-  const iface = new ethers.utils.Interface(ABI);
+  const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("requestWithdraw", [ tokensWei ]);
 
   try {
@@ -202,7 +202,7 @@ const redeem = async () => {
   console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   const ABI = [ "function withdraw()" ];
-  const iface = new ethers.utils.Interface(ABI);
+  const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("withdraw");
 
   try {
@@ -252,7 +252,7 @@ const cancelRedeem = async () => {
   console.log("[CANCEL REDEEM] from : ", accountStore.activeAccount.address);
 
   const ABI = [ "function revokeDepositWithrawal(bool isDeposit)" ];
-  const iface = new ethers.utils.Interface(ABI);
+  const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ false ]);
 
   try {
