@@ -166,10 +166,12 @@ const requestDeposit = async () => {
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals)
   console.log("Request deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
+  const ABI = [ "function requestDeposit(uint256 amount)" ];
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei ]);
+
   try {
-    await fundStore.fundContract.methods.requestDeposit(
-      tokensWei,
-    ).send({
+    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
@@ -260,8 +262,12 @@ const deposit = async () => {
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals)
   console.log("Deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
+  const ABI = [ "function deposit()" ];
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedFunctionCall = iface.encodeFunctionData("deposit");
+
   try {
-    await fundStore.fundContract.methods.deposit().send({
+    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
@@ -300,10 +306,12 @@ const cancelDeposit = async () => {
   console.log("Cancel Deposit");
   loadingCancelDeposit.value = true;
 
+  const ABI = [ "function revokeDepositWithrawal(bool isDeposit)" ];
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ true ]);
+
   try {
-    await fundStore.fundContract.methods.revokeDepositWithrawal(
-      1,
-    ).send({
+    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,

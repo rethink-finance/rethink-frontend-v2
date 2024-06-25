@@ -154,7 +154,7 @@ const requestRedeem = async () => {
 
   const ABI = [ "function requestWithdraw(uint256 amount)" ];
   const iface = new ethers.utils.Interface(ABI);
-  const encodedFunctionCall = iface.encodeFunctionData("requestWithdraw", [ tokensWei ])
+  const encodedFunctionCall = iface.encodeFunctionData("requestWithdraw", [ tokensWei ]);
 
   try {
     await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
@@ -201,8 +201,12 @@ const redeem = async () => {
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.fundToken.decimals)
   console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
+  const ABI = [ "function withdraw()" ];
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedFunctionCall = iface.encodeFunctionData("withdraw");
+
   try {
-    await fundStore.fundContract.methods.withdraw().send({
+    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
@@ -247,8 +251,12 @@ const cancelRedeem = async () => {
   loadingCancelRedeem.value = true;
   console.log("[CANCEL REDEEM] from : ", accountStore.activeAccount.address);
 
+  const ABI = [ "function revokeDepositWithrawal(bool isDeposit)" ];
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ false ]);
+
   try {
-    await fundStore.fundContract.methods.revokeDepositWithrawal().send({
+    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
