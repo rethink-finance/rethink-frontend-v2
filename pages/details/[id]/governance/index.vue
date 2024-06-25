@@ -60,14 +60,16 @@ import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 // components
 import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDelegates.vue";
 import { useFundStore } from "~/store/fund.store";
+import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
 import { cleanComplexWeb3Data } from "~/composables/utils";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import { ClockMode } from "~/types/enums/clock_mode";
-import { useToastStore } from "~/store/toast.store";
 const fundStore = useFundStore();
 const toastStore = useToastStore();
+const web3Store = useWeb3Store();
 
 // dummy data for manage delegate button
 const manageDelegateUrl = "https://www.google.com";
@@ -265,7 +267,7 @@ const getAllProposals = async () => {
   // console.log("safe block: ", safeBlock)
 
   // TODO arbitrum1 RPCs can take ranges of more blocks, like 1M, polygon cries if we use more than 3k
-  const chunkSize = 1000000;
+  const chunkSize = web3Store.currentNetwork.maxPastEventsBlocksRange ?? 3000;
   // TODO we can do batch requests for example 10x3000
   // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
   // We fetch from the most recent to least recent block number.

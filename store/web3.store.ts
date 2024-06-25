@@ -23,6 +23,7 @@ export const useWeb3Store = defineStore({
         chainId: "0x89",
         chainName: "Polygon",
         chainShort: "matic",
+        maxPastEventsBlocksRange: 3000,
         rpcUrl: "https://polygon.drpc.org",
         rpcUrls: [
           "https://polygon.drpc.org",
@@ -35,6 +36,7 @@ export const useWeb3Store = defineStore({
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
         chainShort: "arb1",
+        maxPastEventsBlocksRange: 1000000,
         rpcUrl: "https://arbitrum.drpc.org",
         rpcUrls: [
           "https://arbitrum.llamarpc.com",
@@ -47,6 +49,7 @@ export const useWeb3Store = defineStore({
         chainId: "0xfc",
         chainName: "Fraxtal",
         chainShort: "frax",
+        maxPastEventsBlocksRange: 3000,
         rpcUrl: "https://rpc.frax.com",
       },
     },
@@ -73,6 +76,9 @@ export const useWeb3Store = defineStore({
         return currentProvider.clientUrl;
       }
       return "";
+    },
+    currentNetwork(): INetwork {
+      return this.networksMap[this.chainId]
     },
   },
   actions: {

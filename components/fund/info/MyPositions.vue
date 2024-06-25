@@ -34,7 +34,7 @@
         </div>
         <div class="data_bar__subtitle">
           <!--          Total Return-->
-          Gov Token
+          Gov. Token
         </div>
       </div>
     </UiDataBar>
