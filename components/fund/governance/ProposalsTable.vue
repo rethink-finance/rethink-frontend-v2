@@ -68,7 +68,7 @@
           class="submission_status__icon"
         />
         <div class="submission_status__text">
-          {{ item.submission_status }}
+          {{ item.submission_status ?? "N/A" }}
         </div>
       </div>
     </template>

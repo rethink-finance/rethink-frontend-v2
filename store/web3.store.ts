@@ -23,7 +23,6 @@ export const useWeb3Store = defineStore({
         chainId: "0x89",
         chainName: "Polygon",
         chainShort: "matic",
-        maxPastEventsBlocksRange: 3000,
         rpcUrl: "https://polygon.drpc.org",
         rpcUrls: [
           "https://polygon.drpc.org",
@@ -36,9 +35,9 @@ export const useWeb3Store = defineStore({
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
         chainShort: "arb1",
-        maxPastEventsBlocksRange: 1000000,
-        rpcUrl: "https://arbitrum.drpc.org",
+        rpcUrl: "https://arbitrum-mainnet.infura.io",
         rpcUrls: [
+          "https://arbitrum-mainnet.infura.io",
           "https://arbitrum.llamarpc.com",
           "https://1rpc.io/arb",
           "https://arb-pokt.nodies.app",
@@ -49,7 +48,6 @@ export const useWeb3Store = defineStore({
         chainId: "0xfc",
         chainName: "Fraxtal",
         chainShort: "frax",
-        maxPastEventsBlocksRange: 3000,
         rpcUrl: "https://rpc.frax.com",
       },
     },

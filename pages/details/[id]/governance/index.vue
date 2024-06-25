@@ -89,6 +89,10 @@ const pendingProposalsCountText = computed(() => {
   return pendingProposals.length + " Pending Proposals";
 });
 
+// getAllProposals can be a super long-lasting process, so if the user changes
+// page we want to stop fetching proposals.
+const shouldFetchProposals = ref(true);
+
 // Dummy data for trending delegates
 const trendingDelegates: ITrendingDelegates[] = [
   {
@@ -267,21 +271,42 @@ const getAllProposals = async () => {
   // console.log("safe block: ", safeBlock)
 
   // TODO arbitrum1 RPCs can take ranges of more blocks, like 1M, polygon cries if we use more than 3k
-  const chunkSize = web3Store.currentNetwork.maxPastEventsBlocksRange ?? 3000;
+  // It looks like this range is arbitrary, specific to RPC, so we should try and guess it and increase exponentially
+  // until they block us, and then we decrease it.
+  let chunkSize = 1000;
+  let maxValidChunkSize = chunkSize * 2;
+
   // TODO we can do batch requests for example 10x3000
   // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
   // We fetch from the most recent to least recent block number.
   for (let i = latestBlock; i >= 0; i -= chunkSize) {
+    if (!shouldFetchProposals.value) return;
+
     const toBlock = i;
-    const fromBlock = Math.max(i - chunkSize + 1, 0);
+    let fromBlock = Math.max(i - chunkSize + 1, 0);
     const block = await fundStore.web3.eth.getBlock(toBlock);
     const toBlockTimestamp = new Date(Number(block.timestamp) * 1000)
     console.log("fetch ProposalCreated events from: ", fromBlock, " to ", toBlock, " timestamp: ", toBlockTimestamp);
 
-    const chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
-      fromBlock,
-      toBlock,
-    });
+    let chunkEvents;
+    try {
+      chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
+        fromBlock,
+        toBlock,
+      });
+      if (chunkSize * 2 <= maxValidChunkSize) {
+        chunkSize *= 2;
+        maxValidChunkSize = chunkSize;
+        console.log("new chunkSize: ", chunkSize);
+      }
+    } catch {
+      chunkSize /= 2;
+      fromBlock = Math.max(i - chunkSize + 1, 0);
+      chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
+        fromBlock,
+        toBlock,
+      });
+    }
 
     for (const event of chunkEvents) {
       console.log("event");
@@ -403,7 +428,12 @@ const decodeProposalCreatedEvent = (event: EventLog) => {
 
 onMounted(() => {
   console.log("fetch governance proposal events for fund: ", fund.address);
+  shouldFetchProposals.value = true;
   getAllProposals();
+});
+onBeforeUnmount(() => {
+  console.log("Component is being unmounted, stopping the fetch");
+  shouldFetchProposals.value = false;
 });
 </script>
 
