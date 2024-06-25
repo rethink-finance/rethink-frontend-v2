@@ -24,6 +24,8 @@ import type INAVMethod from "~/types/nav_method";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IToken from "~/types/token";
 import type IPositionTypeCount from "~/types/position_type";
+import type IClockMode from "~/types/clock_mode";
+import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { formatJson, pluralizeWord } from "~/composables/utils";
 
@@ -209,12 +211,30 @@ export const useFundStore = defineStore({
 
       return fundSettings as IFundSettings;
     },
+    parseClockMode(clockModeString: string): IClockMode {
+      // Example clockModeString:
+      //   - "mode=blocknumber&from=default"
+      //   - "mode=timestamp"
+      const params = new URLSearchParams(clockModeString);
+      const mode = params.get("mode") as ClockMode || "";
+      const from = params.get("from");
+
+      if (!(mode in ClockModeMap)) {
+        console.error("Fund clock mode is not in valid options: ", mode, clockModeString)
+      }
+
+      return {
+        mode: ClockModeMap[mode],
+        ...(from ? { from } : {}),
+      } as IClockMode;
+    },
     fetchUserBalances() {
       if (!this.accountStore.activeAccount?.address) return;
 
       return Promise.all([
         this.fetchUserBaseTokenBalance(),
         this.fetchUserFundTokenBalance(),
+        this.fetchUserGovernanceTokenBalance(),
         this.fetchUserFundDelegateAddress(),
         this.fetchUserFundShareValue(),
         this.fetchUserFundAllowance(),
@@ -238,7 +258,6 @@ export const useFundStore = defineStore({
 
       // GovernableFund contract to get totalNAV.
       const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
-      const latestBlock = await this.web3.eth.getBlockNumber();
 
       try {
         // Fetch all token symbols, decimals and values.
@@ -259,6 +278,7 @@ export const useFundStore = defineStore({
           rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call() as Promise<number>,
           rethinkFundGovernorContract.methods.quorumNumerator().call() as Promise<bigint>,
           rethinkFundGovernorContract.methods.quorumDenominator().call() as Promise<bigint>,
+          rethinkFundGovernorContract.methods.CLOCK_MODE().call() as Promise<string>,
         ]);
 
         const [
@@ -278,6 +298,7 @@ export const useFundStore = defineStore({
           fundLateQuorum,
           quorumNumerator,
           quorumDenominator,
+          clockModeString,
         ]: any[] = results.map(result => {
           if (result.status === "fulfilled") {
             return result.value
@@ -286,14 +307,17 @@ export const useFundStore = defineStore({
           return undefined
         });
 
+        const clockMode = this.parseClockMode(clockModeString);
+        console.log("clockMode: ", clockMode);
         console.log("fundSettings: ", fundSettings)
-        const quorum: bigint = governanceTokenTotalSupply as bigint * quorumNumerator as bigint / quorumDenominator as bigint;
+        const quorumVotes: bigint = governanceTokenTotalSupply as bigint * quorumNumerator as bigint / quorumDenominator as bigint;
 
         const fund: IFund = {
           chainName: this.web3Store.chainName,
           chainShort: this.web3Store.chainShort,
           address: fundSettings.fundAddress || "",
           title: fundSettings.fundName || "N/A",
+          clockMode,
           description: "N/A",
           safeAddress: fundSettings.safe || "",
           governorAddress: fundSettings.governor || "",
@@ -339,7 +363,8 @@ export const useFundStore = defineStore({
           votingDelay: pluralizeWord("second", fundVotingDelay),
           votingPeriod: pluralizeWord("second", fundVotingPeriod),
           proposalThreshold: (!fundProposalThreshold && fundProposalThreshold !== 0n) ? "N/A" : `${commify(fundProposalThreshold)} ${governanceTokenSymbol || "votes"}`,
-          quorum,
+          quorumVotes,
+          quorumVotesFormatted: formatTokenValue(quorumVotes, governanceTokenDecimals),
           quorumNumerator,
           quorumDenominator,
           quorumPercentage: formatPercent(
@@ -459,7 +484,6 @@ export const useFundStore = defineStore({
           },
         )
       }
-      console.log("navUpdatesLen ", navUpdatesLen);
       console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
       // Fetch NAV JSON entries for each NAV update.
       const promises: Promise<any>[] = Array.from(
@@ -488,7 +512,7 @@ export const useFundStore = defineStore({
       return navUpdates;
     },
     /**
-     * Fetches connected user's wallet balance of the base/denomination token.
+     * Fetches connected user's wallet balance of the fund base/denomination token.
      */
     async fetchUserBaseTokenBalance() {
       this.userBaseTokenBalance = BigInt("0");
@@ -518,6 +542,24 @@ export const useFundStore = defineStore({
 
       console.log(`user fund token balance of ${this.fund?.fundToken?.symbol} is ${this.userFundTokenBalance}`);
       return this.userFundTokenBalance;
+    },
+    /**
+     * Fetch connected user's wallet balance of the fund governance token.
+     */
+    async fetchUserGovernanceTokenBalance() {
+      this.userGovernanceTokenBalance = BigInt("0");
+
+      if (!this.fund?.governanceToken?.address) {
+        throw new Error("Governance token address is not available.")
+      }
+      if (!this.activeAccountAddress) throw new Error("Active account not found");
+
+      this.userGovernanceTokenBalance = await this.fundGovernanceTokenContract.methods.balanceOf(
+        this.activeAccountAddress,
+      ).call();
+
+      console.log(`user governance token balance is ${this.userGovernanceTokenBalance} ${this.fund?.fundToken?.symbol}`);
+      return this.userGovernanceTokenBalance;
     },
     /**
      * Fetch connected user's wallet fund delegate address.

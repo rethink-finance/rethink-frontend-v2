@@ -56,6 +56,9 @@
         </div>
       </div>
     </template>
+    <template #[`item.createdDatetime`]="{ item }">
+      {{ item.createdDatetimeFormatted }}
+    </template>
     <!-- TODO display this only if wallet connected -->
     <template #[`item.submission_status`]="{ item }">
       <div class="submission_status">
@@ -72,7 +75,7 @@
     <template #[`item.approval`]="{ item }">
       {{ item.approvalFormatted }}
       <v-tooltip activator="parent" location="bottom">
-        {{ item.forVotesFormatted }} of {{ item.quorumFormatted }} {{ fund?.governanceToken.symbol }}
+        {{ item.forVotesFormatted }} of {{ item.quorumVotesFormatted }} {{ fund?.governanceToken.symbol }}
       </v-tooltip>
     </template>
     <template #[`item.participation`]="{ item }">
@@ -136,6 +139,7 @@ const headers = computed(() => {
   const headers: any[] = [
     { title: "#", key: "index", sortable: false },
     { title: "Proposal Title", key: "title", sortable: true },
+    { title: "Created", key: "createdDatetime", sortable: true },
   ];
   if (accountStore.isConnected) {
     headers.push({ title: "Submission", key: "submission_status", sortable: true });

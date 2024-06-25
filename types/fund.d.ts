@@ -1,8 +1,8 @@
 import type ICyclePendingRequest from '~/types/cycle_pending_request';
 import type INAVUpdate from "~/types/nav_update";
-import type INAVMethod from "~/types/nav_method";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
+import type IClockMode from "~/types/clock_mode";
 
 /**
  * Example API response data of getFundSettings:
@@ -32,6 +32,8 @@ export default interface IFund {
 
   address: string;
   title: string;
+  // Fetched with: CLOCK_MODE
+  clockMode?: IClockMode;
 
   // Governor address or delegateToAddress
   governorAddress: string;  // governor
@@ -70,7 +72,8 @@ export default interface IFund {
   proposalThreshold: string;
   // Quorum:
   // https://docs.tally.xyz/user-guides/tally-contract-compatibility/openzeppelin-governor#quorum
-  quorum: bigint;
+  quorumVotes: bigint;
+  quorumVotesFormatted: string;
   // The quorumNumerator and quorumDenominator are used to calculate the minimum number of votes required
   // for a proposal to be considered valid.
   // If quorumNumerator is 20 and quorumDenominator is 100, the quorum fraction is 20/100, which equals 20%.

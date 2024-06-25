@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
-import {  Web3 } from "web3";
-import type {  AbiInput } from "web3";
+import type { AbiInput } from "web3";
+import { Web3 } from "web3";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
@@ -176,7 +176,8 @@ export const useFundsStore = defineStore({
             votingDelay: "",
             votingPeriod: "",
             proposalThreshold: "",
-            quorum: 0n,
+            quorumVotes: 0n,
+            quorumVotesFormatted: "0",
             quorumNumerator: BigInt(0),
             quorumDenominator: BigInt(0),
             quorumPercentage: "N/A",

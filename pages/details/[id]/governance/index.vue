@@ -31,7 +31,7 @@
           </div>
         </div>
       </template>
-      <FundGovernanceTableProposals :items="governanceProposals" :loading="loadingProposals" />
+      <FundGovernanceProposalsTable :items="governanceProposals" :loading="loadingProposals" />
     </UiMainCard>
 
     <UiMainCard title="Trending Delegates" subtitle="4 Delegated Wallets">
@@ -64,7 +64,10 @@ import { cleanComplexWeb3Data } from "~/composables/utils";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
 import GovernableFund from "assets/contracts/GovernableFund.json";
+import { ClockMode } from "~/types/enums/clock_mode";
+import { useToastStore } from "~/store/toast.store";
 const fundStore = useFundStore();
+const toastStore = useToastStore();
 
 // dummy data for manage delegate button
 const manageDelegateUrl = "https://www.google.com";
@@ -216,7 +219,7 @@ const decodeProposalCallData = (calldata: string) => {
   const signature = calldata.slice(0, 10);
   const encodedParameters = calldata.slice(10);
   const functionAbi = functionSignaturesMap[signature];
-  console.log("decode signature: ", signature, " ABI ", functionAbi);
+  // console.log("decode signature: ", signature, " ABI ", functionAbi);
 
   if (!functionAbi?.function?.name) {
     console.warn("No existing function signature found in the GovernableFund ABI for ", signature, functionAbi)
@@ -227,7 +230,7 @@ const decodeProposalCallData = (calldata: string) => {
   try {
     let decoded = fundStore.web3.eth.abi.decodeParameters(functionAbiInputs, encodedParameters);
     decoded = cleanComplexWeb3Data(decoded);
-    console.log("decoded data: ", functionAbi.contractName, functionAbi.function.name, decoded);
+    // console.log("decoded data: ", functionAbi.contractName, functionAbi.function.name, decoded);
     return {
       functionName: functionAbi.function.name,
       contractName: functionAbi.contractName,
@@ -245,7 +248,13 @@ const decodeProposalCallData = (calldata: string) => {
 
 const getAllProposals = async () => {
   if (!fundStore.fund?.governanceToken.decimals) {
-    console.error("No governance token decimals found.")
+    console.error("No fund governance token decimals found.")
+    toastStore.errorToast("No fund governance token decimals found.")
+    return
+  }
+  if (!fundStore.fund.clockMode?.mode) {
+    console.error("Fund clock mode is unknown.")
+    toastStore.errorToast("Fund clock mode is unknown.")
     return
   }
   loadingProposals.value = true;
@@ -255,13 +264,17 @@ const getAllProposals = async () => {
   // const safeBlock = fundStore.web3Store.getContractCreationBlock(fundStore.fund?.safeAddress)
   // console.log("safe block: ", safeBlock)
 
-  const chunkSize = 3000;
+  // TODO arbitrum1 RPCs can take ranges of more blocks, like 1M, polygon cries if we use more than 3k
+  const chunkSize = 1000000;
   // TODO we can do batch requests for example 10x3000
   // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
   // We fetch from the most recent to least recent block number.
   for (let i = latestBlock; i >= 0; i -= chunkSize) {
     const toBlock = i;
     const fromBlock = Math.max(i - chunkSize + 1, 0);
+    const block = await fundStore.web3.eth.getBlock(toBlock);
+    const toBlockTimestamp = new Date(Number(block.timestamp) * 1000)
+    console.log("fetch ProposalCreated events from: ", fromBlock, " to ", toBlock, " timestamp: ", toBlockTimestamp);
 
     const chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
       fromBlock,
@@ -276,6 +289,7 @@ const getAllProposals = async () => {
 
       const block = await fundStore.web3.eth.getBlock(event.blockNumber);
       proposal.createdTimestamp = Number(block.timestamp);
+      proposal.createdDatetimeFormatted = formatDate(new Date(Number(block.timestamp) * 1000));
       proposal.createdBlockNumber = event.blockNumber;
 
       // const voteStartDate = new Date(Number(proposal.voteStart) * 1000);
@@ -289,15 +303,31 @@ const getAllProposals = async () => {
       const votes = await fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
       console.log("proposal votes: ", votes);
 
+      console.log("get total supply");
       // Get the Governance Token total supply of when the proposal was created.
       const totalSupply = await fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber);
       proposal.totalSupply = totalSupply;
       proposal.totalSupplyFormatted = formatTokenValue(totalSupply, fundStore.fund?.governanceToken.decimals);
 
-      const quorumWhenProposalCreated = await fundStore.fundGovernorContract.methods.quorum(proposal.createdTimestamp).call()
-      proposal.quorum = quorumWhenProposalCreated;
-      proposal.quorumFormatted = formatTokenValue(quorumWhenProposalCreated, fundStore.fund?.governanceToken.decimals);
+      console.log("proposal created blockNumber ", proposal.createdBlockNumber, " timestamp ", proposal.createdTimestamp);
+      try {
+        // To get quorum in time, we have to pass the timePoint, but it depends on the clock mode.
+        // If clock mode is:
+        // - timestamp: use proposal created timestamp
+        // - blocknumber: use proposal created block number
+        const timePoint = fundStore.fund.clockMode.mode === ClockMode.BlockNumber ?
+          proposal.createdBlockNumber :
+          proposal.createdTimestamp;
 
+        const quorumWhenProposalCreated = await fundStore.fundGovernorContract.methods.quorumNumerator(timePoint).call()
+        proposal.quorumVotes = quorumWhenProposalCreated;
+        proposal.quorumVotesFormatted = formatTokenValue(quorumWhenProposalCreated, fundStore.fund?.governanceToken.decimals);
+      } catch (e: any) {
+        console.error("error fetching quorumVotes: ", e);
+        return
+      }
+
+      console.log("parse votes");
       if (votes) {
         const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
         proposal.totalVotes = totalVotes;
@@ -309,14 +339,13 @@ const getAllProposals = async () => {
         proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, fundStore.fund?.governanceToken.decimals);
         proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, fundStore.fund?.governanceToken.decimals);
 
-        let approval = Number(votes.forVotes) / Number(quorumWhenProposalCreated);
+        let approval = Number(votes.forVotes) / Number(proposal.quorumVotes);
         // Limit approval percentage to 100% max.
         if (approval > 1) {
           approval = 1;
         }
         proposal.approval = approval;
         proposal.approvalFormatted = formatPercent(approval, false);
-        console.log("approvalFormatted: ", proposal.approvalFormatted, approval)
 
         // Participation is totalVotes / totalSupply
         let participation = Number(totalVotes) / Number(totalSupply);
@@ -326,7 +355,6 @@ const getAllProposals = async () => {
         }
         proposal.participation = participation;
         proposal.participationFormatted = formatPercent(participation, false);
-        console.log("participationFormatted: ", proposal.participationFormatted, proposal.participation)
       }
 
       // TODO Get user's connected wallet submission status for this proposal

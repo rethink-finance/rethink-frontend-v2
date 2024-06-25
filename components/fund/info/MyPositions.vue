@@ -28,6 +28,15 @@
           Allowance
         </div>
       </div>
+      <div class="data_bar__item">
+        <div class="data_bar__title">
+          {{ userFundGovernanceTokenFormatted }}
+        </div>
+        <div class="data_bar__subtitle">
+          <!--          Total Return-->
+          Gov Token
+        </div>
+      </div>
     </UiDataBar>
   </div>
 </template>
@@ -53,15 +62,23 @@ export default {
     fundBaseToken() {
       return this.fundStore.fund?.baseToken;
     },
+    fundGovernanceToken() {
+      return this.fundStore.fund?.governanceToken;
+    },
     userFundAllowanceFormatted() {
       if (!this.fundBaseToken) return "N/A";
       const value = Number(formatTokenValue(this.fundStore.userFundAllowance, this.fundBaseToken.decimals, false));
-      return formatNumberShort(value) + " " + this.fund.baseToken.symbol;
+      return formatNumberShort(value) + " " + this.fundBaseToken.symbol;
+    },
+    userFundGovernanceTokenFormatted() {
+      if (!this.fundGovernanceToken) return "N/A";
+      const value = Number(formatTokenValue(this.fundStore.userGovernanceTokenBalance, this.fundGovernanceToken.decimals, false));
+      return formatNumberShort(value) + " " + this.fundGovernanceToken.symbol;
     },
     userCurrentValueFormatted() {
       if (!this.fundBaseToken) return "N/A";
       const value = Number(formatTokenValue(this.fundStore.userFundShareValue, this.fundBaseToken.decimals, false));
-      return formatNumberShort(value) + " " + this.fund.baseToken.symbol;
+      return formatNumberShort(value) + " " + this.fundBaseToken.symbol;
     },
   },
   methods: { numberColorClass },
