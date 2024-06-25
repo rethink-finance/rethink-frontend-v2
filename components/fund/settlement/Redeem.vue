@@ -151,8 +151,13 @@ const requestRedeem = async () => {
 
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.fundToken.decimals)
   console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
+
+  const ABI = [ "function requestWithdraw(uint256 amount)" ];
+  const iface = new ethers.utils.Interface(ABI);
+  const encodedFunctionCall = iface.encodeFunctionData("requestWithdraw", [ tokensWei ])
+
   try {
-    await fundStore.fundContract.methods.requestWithdraw(tokensWei).send({
+    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
