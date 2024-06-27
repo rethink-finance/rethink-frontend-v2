@@ -50,16 +50,16 @@
 <script setup lang="ts">
 // types
 import type { EventLog } from "web3";
+import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import type IFund from "~/types/fund";
 import type ITrendingDelegates from "~/types/trending_delegates";
-import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 
 // components
 import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDelegates.vue";
-import { useFundStore } from "~/store/fund.store";
 import { cleanComplexWeb3Data } from "~/composables/utils";
-import type IGovernanceProposal from "~/types/governance_proposal";
+import { useFundStore } from "~/store/fund.store";
 import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
+import type IGovernanceProposal from "~/types/governance_proposal";
 const fundStore = useFundStore();
 
 // dummy data for manage delegate button
@@ -338,20 +338,18 @@ onMounted(() => {
 .data_row_card {
   margin-bottom: 2rem;
 
-  ::v-deep {
-    // remove outer border
-    .data_row__panel {
-      border: 0;
-      border-radius: 0.25rem !important;
-      background-color: rgb(var(--v-theme-surface));
-    }
+  // remove outer border
+  :deep(.data_row__panel){
+    border: 0;
+    border-radius: 0.25rem !important;
+    background-color: rgb(var(--v-theme-surface));
+  }
     // add more spacing to content inside
-    .v-expansion-panel-text__wrapper {
+    :deep(.v-expansion-panel-text__wrapper) {
       padding-bottom: 2rem;
     }
-
-    // add borders to textfields inside panel
-    .v-expansion-panels {
+    // add borders to text fields inside panel
+   :deep(.v-expansion-panels) {
       border: 1px solid $color-gray-transparent;
       border-radius: 0.25rem !important;
 
@@ -359,6 +357,5 @@ onMounted(() => {
         padding: 0;
       }
     }
-  }
 }
 </style>

@@ -104,9 +104,9 @@
 
 <script setup lang="ts">
 // types
-import type IGovernanceProposal from "~/types/governance_proposal";
-import { useFundStore } from "~/store/fund.store";
 import { useAccountStore } from "~/store/account.store";
+import { useFundStore } from "~/store/fund.store";
+import type IGovernanceProposal from "~/types/governance_proposal";
 
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
@@ -196,5 +196,4 @@ const headers = computed(() => {
     margin-left: 0.5rem;
   }
 }
-
 </style>
