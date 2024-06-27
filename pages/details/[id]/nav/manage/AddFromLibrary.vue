@@ -85,6 +85,9 @@ onMounted(async () => {
     loadingAllNavMethods.value = false;
   }
 });
+onBeforeUnmount(() => {
+  emit("updateBreadcrumbs", []);
+});
 
 const onSelectionChanged = (hashes: string[]) => {
   selectedMethodHashes.value = hashes;

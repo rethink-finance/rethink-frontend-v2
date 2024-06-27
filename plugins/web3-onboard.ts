@@ -47,7 +47,7 @@ export default defineNuxtPlugin(() => {
         id: "0xa4b1",
         token: "ARB1",
         label: "Arbitrum One",
-        rpcUrl: "https://arbitrum.llamarpc.com",
+        rpcUrl: "https://1rpc.io/arb",
       },
       {
         id: "0xfc",

@@ -234,6 +234,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
 });
+onBeforeUnmount(() => {
+  emit("updateBreadcrumbs", []);
+});
 
 // Currently we don't support creating a NFT position, so we exclude it here.
 const creatablePositionTypes = PositionTypes.filter(positionType => positionType.key !== PositionType.NFT)

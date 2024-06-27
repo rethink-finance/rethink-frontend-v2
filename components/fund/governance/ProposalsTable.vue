@@ -7,7 +7,7 @@
     :items="items"
     :loading="loading && items.length === 0"
     loading-text="Loading Activity"
-    @click:row="(item: any) => $router.push(`governance/proposal/${item.proposalId}`)"
+    @click:row="(_: any, item: any) => $router.push(`governance/proposal/${item.item?.proposalId}`)"
   >
     <template #[`header.approval`]="{ column }">
       <!-- HEADERS -->
@@ -42,7 +42,7 @@
     <template #[`item.title`]="{ item }">
       <div class="proposal__title">
         <div>
-          {{ item.title }}
+          {{ item.title }} {{ item.proposalId }}
         </div>
         <div class="proposal__tags">
           <FundGovernanceProposalStateChip

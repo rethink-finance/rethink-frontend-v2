@@ -11,6 +11,18 @@ interface IState {
   cachedTokens: Record<string, any>;
 }
 
+const removeDuplicates = (arr: any[]) => {
+  const seen = new Set();
+  return arr.filter(item => {
+    if (seen.has(item)) {
+      return false;
+    }
+    seen.add(item);
+    return true;
+
+  });
+}
+
 export const useWeb3Store = defineStore({
   id: "web3store",
   state: (): IState => ({
@@ -35,13 +47,12 @@ export const useWeb3Store = defineStore({
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
         chainShort: "arb1",
-        rpcUrl: "https://arbitrum-mainnet.infura.io",
+        rpcUrl: "https://arb-pokt.nodies.app",
         rpcUrls: [
-          "https://arbitrum-mainnet.infura.io",
-          "https://arbitrum.llamarpc.com",
-          "https://1rpc.io/arb",
-          "https://arb-pokt.nodies.app",
-          "https://arbitrum.drpc.org",
+          "https://arbitrum.llamarpc.com",  // Max 10k blocks
+          "https://1rpc.io/arb",            // Max 1k blocks
+          "https://arb-pokt.nodies.app",    // Pruned Node / Light node, no logs...
+          "https://arbitrum.drpc.org",      // Max 10k blocks, if auth: more than 1M
         ],
       },
       "0xfc": {
@@ -124,7 +135,7 @@ export const useWeb3Store = defineStore({
       if (web3Provider) {
         this.web3 = web3Provider;
       } else {
-        const rpcUrls = network.rpcUrls || [network.rpcUrl];
+        const rpcUrls = removeDuplicates([network.rpcUrl, ...network.rpcUrls ?? []]);
         for (const rpcUrl of rpcUrls) {
           this.web3 = new Web3(rpcUrl);
 
