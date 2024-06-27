@@ -176,10 +176,10 @@ export const useFundsStore = defineStore({
             votingDelay: "",
             votingPeriod: "",
             proposalThreshold: "",
-            quorum: BigInt(0),
+            quorum: 0n,
             quorumNumerator: BigInt(0),
             quorumDenominator: BigInt(0),
-            quorumFormatted: "",
+            quorumPercentage: "N/A",
             lateQuorum: "",
 
             // Fees
