@@ -50,9 +50,9 @@
         </UiDataRowCard>
         <UiDataRowCard title="Roadmap" class="data_row_card">
           <template #body>
-            <div class="section-bottom__roadmap">
-              Roadmap
-            </div>
+            <FundGovernanceProposalRoadmap
+              :proposal-details="proposalDetails"
+            />
           </template>
         </UiDataRowCard>
       </div>
@@ -88,8 +88,8 @@ const proposalDetails: Partial<IGovernanceProposal> = {
   submission_status: "Pending",
   approval: 70,
   participation: 32.123412,
-  tags: ["direct_execution"],
-  requiredVotes: BigInt(250000),
+  // tags: ["direct_execution"],
+  quorum: BigInt(250000),
 };
 
 const proposalsVotesSubmissions: Partial<IGovernanceProposal>[] = [
@@ -97,19 +97,19 @@ const proposalsVotesSubmissions: Partial<IGovernanceProposal>[] = [
     proposalId: "75jfh475hqc",
     proposer: "0x1f98dgfgF984",
     submission_status: "Abstained",
-    requiredVotes: BigInt(2500000),
+    quorum: BigInt(2500000),
   },
   {
     proposalId: "75jfh475hqc",
     proposer: "0x1f98dgfgF984",
     submission_status: "Abstained",
-    requiredVotes: BigInt(150000),
+    quorum: BigInt(150000),
   },
   {
     proposalId: "75jfh475hqc",
     proposer: "0x1f98dgfgF984",
     submission_status: "Abstained",
-    requiredVotes: BigInt(800000),
+    quorum: BigInt(800000),
   },
 ];
 

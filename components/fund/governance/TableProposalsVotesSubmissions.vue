@@ -89,10 +89,10 @@ const headers = computed(() => {
   }
   headers.push({
     title: "Voting Power",
-    key: "requiredVotes",
+    key: "quorum",
     sortable: true,
     align: "end",
-  });
+  })
 
   return headers;
 });

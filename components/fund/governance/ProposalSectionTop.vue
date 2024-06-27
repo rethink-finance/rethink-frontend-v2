@@ -67,7 +67,9 @@
       >
         <div class="main_card di-card">
           <div class="di-card__header-container">
-            <div class="di-card__header">Vote Submission</div>
+            <div class="di-card__header">
+              Vote Submission
+            </div>
 
             <Icon
               :icon="icons.Rejected"
@@ -78,9 +80,9 @@
           </div>
 
           <div
-            class="di-card__subtext"
             v-for="item in metaBottom.slice(0, 1)"
             :key="item.label"
+            class="di-card__subtext"
           >
             <div class="meta-label">
               {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
@@ -95,13 +97,15 @@
             </ui-tooltip-click>
           </div>
 
-          <h2 class="di-card__title">{{ proposalDetails.title }}</h2>
+          <h2 class="di-card__title">
+            {{ proposalDetails.title }}
+          </h2>
 
           <div class="di-card__voting-power meta-label meta-label--uppercase">
-            Voting Power: {{ proposalDetails.requiredVotes }}
+            Voting Power: {{ proposalDetails.totalVotes }}
           </div>
 
-          <v-radio-group class="di-card__radio-group" v-model="selectedRadio">
+          <v-radio-group v-model="selectedRadio" class="di-card__radio-group">
             <v-radio
               v-for="option in radioOptions"
               :key="option.value"
@@ -122,8 +126,8 @@
 
           <v-btn
             class="di-card__submit-button"
-            @click="submitProposal(selectedRadio)"
             :disabled="!selectedRadio"
+            @click="submitProposal(selectedRadio)"
           >
             Submit Vote
           </v-btn>
@@ -136,7 +140,7 @@
 <script lang="ts">
 // toast
 import { truncateAddress } from "~/composables/addressUtils";
-import { useToastStore } from "~/store/toast.store";
+// import { useToastStore } from "~/store/toast.store";
 import type IGovernanceProposal from "~/types/governance_proposal";
 
 // defined icons for submission
@@ -148,7 +152,7 @@ const icons = {
   Approved: "material-symbols:done",
 };
 
-const toastStore = useToastStore();
+// const toastStore = useToastStore();
 
 interface MetaItem {
   label: string;
@@ -176,6 +180,40 @@ export default defineComponent({
     radioOptions,
     selectedRadio: "",
   }),
+  computed: {
+    isButtonHidden() {
+      // list all submission statuses that should hide the button
+      const hiddenBySubmission = ["Rejected"].includes(
+        this.proposalDetails.submission_status ?? "",
+      );
+      // list all tags that should hide the button
+      // const hiddenByTags = ["failed"].some(
+      //   (tag) => this.proposalDetails?.tags?.includes(tag) ?? false
+      // );
+
+      // return hiddenBySubmission || hiddenByTags;
+      return hiddenBySubmission;
+    },
+    isApproved() {
+      return this.proposalDetails.submission_status === "Approved";
+    },
+    buttonText() {
+      return this.isApproved ? "Execute Proposal" : "Submit Vote";
+    },
+    metaBottom() {
+      return [
+        {
+          label: "Proposal ID:",
+          value: this.proposalDetails?.proposalId || "",
+        },
+        {
+          label: "Created by",
+          value: this.proposalDetails?.proposer || "",
+          format: truncateAddress,
+        },
+      ];
+    },
+  },
   methods: {
     classesRadioIcon(value: string) {
       return [
@@ -204,7 +242,7 @@ export default defineComponent({
         abstain: "Voted to Abstain",
       } as Record<string, string>;
 
-      toastStore.successToast(msg[selectedRadio]);
+      // toastStore.successToast(msg[selectedRadio]);
       this.dialogClose();
     },
     executeProposal() {
@@ -215,39 +253,6 @@ export default defineComponent({
     },
     dialogClose() {
       this.isDialogOpen = false;
-    },
-  },
-  computed: {
-    isButtonHidden() {
-      // list all submission statuses that should hide the button
-      const hiddenBySubmission = ["Rejected"].includes(
-        this.proposalDetails.submission_status ?? ""
-      );
-      // list all tags that should hide the button
-      const hiddenByTags = ["failed"].some(
-        (tag) => this.proposalDetails?.tags?.includes(tag) ?? false
-      );
-
-      return hiddenBySubmission || hiddenByTags;
-    },
-    isApproved() {
-      return this.proposalDetails.submission_status === "Approved";
-    },
-    buttonText() {
-      return this.isApproved ? "Execute Proposal" : "Submit Vote";
-    },
-    metaBottom() {
-      return [
-        {
-          label: "Proposal ID:",
-          value: this.proposalDetails?.proposalId || "",
-        },
-        {
-          label: "Created by",
-          value: this.proposalDetails?.proposer || "",
-          format: truncateAddress,
-        },
-      ];
     },
   },
 });
