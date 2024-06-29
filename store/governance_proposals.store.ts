@@ -97,8 +97,10 @@ export const useGovernanceProposalsStore = defineStore({
         if (oldestBlock < currentOldestBlock) {
           currentOldestBlock = oldestBlock;
         }
+        console.log("new range setup: ", currentMostRecentBlock, currentOldestBlock)
         this.fundProposalsBlockFetchedRanges[chainId][fundAddress] = [currentMostRecentBlock, currentOldestBlock];
       } else {
+        console.log("initial range setup: ", latestBlock, oldestBlock)
         this.fundProposalsBlockFetchedRanges[chainId][fundAddress] = [latestBlock, oldestBlock];
       }
     },
@@ -121,7 +123,7 @@ export const useGovernanceProposalsStore = defineStore({
       } catch {
         proposal.title = proposal.description;
       }
-
+      console.log("event decoded");
       return proposal
     },
     decodeProposalCallData(calldata: string): Record<any, any> | undefined{

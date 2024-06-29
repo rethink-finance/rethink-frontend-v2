@@ -8,7 +8,7 @@
 
     <UiMainCard title="Governance Activity" :subtitle="pendingProposalsCountText">
       <template #header-right>
-        <UiDropdown :options="dropdownOptions" label="Create Proposal" />
+        <UiDropdown :options="dropdownOptions" label="Create Proposal" @click="startFetch" />
       </template>
       <template #tools>
         <v-btn
@@ -97,7 +97,7 @@ const pendingProposalsCountText = computed(() => {
 
 // fetchProposals can be a super long-lasting process, so if the user changes
 // page we want to stop fetching proposals.
-const shouldFetchProposals = ref(true);
+const shouldFetchProposals = ref(false);
 
 // Dummy data for trending delegates
 const trendingDelegates: ITrendingDelegates[] = [
@@ -218,11 +218,18 @@ const batchFetchProposals = async (chunkEvents: any[]) => {
     const votes = await fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
     console.log("proposal votes: ", votes);
 
-    console.log("get total supply");
+    console.log("get total supply at blockNumber: ", proposal.createdBlockNumber);
     // Get the Governance Token total supply of when the proposal was created.
-    const totalSupply = await fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber);
-    proposal.totalSupply = totalSupply;
-    proposal.totalSupplyFormatted = formatTokenValue(totalSupply, fundStore.fund?.governanceToken?.decimals);
+    let totalSupply;
+    try {
+      totalSupply = await fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber);
+      proposal.totalSupply = totalSupply;
+      proposal.totalSupplyFormatted = formatTokenValue(totalSupply, fundStore.fund?.governanceToken?.decimals);
+    } catch (error: any) {
+      // Sometimes it happens: missing trie node
+      console.error("failed fetching total supply", error);
+      proposal.totalSupplyFormatted = "N/A"
+    }
 
     console.log("proposal created blockNumber ", proposal.createdBlockNumber, " timestamp ", proposal.createdTimestamp);
     try {
@@ -239,7 +246,7 @@ const batchFetchProposals = async (chunkEvents: any[]) => {
       proposal.quorumVotesFormatted = formatTokenValue(quorumWhenProposalCreated, fundStore.fund?.governanceToken?.decimals);
     } catch (e: any) {
       console.error("error fetching quorumVotes: ", e);
-      return
+      proposal.quorumVotesFormatted = "N/A";
     }
 
     console.log("parse votes");
@@ -254,22 +261,30 @@ const batchFetchProposals = async (chunkEvents: any[]) => {
       proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, fundStore.fund?.governanceToken.decimals);
       proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, fundStore.fund?.governanceToken.decimals);
 
-      let approval = Number(votes.forVotes) / Number(proposal.quorumVotes);
-      // Limit approval percentage to 100% max.
-      if (approval > 1) {
-        approval = 1;
+      if (proposal.quorumVotes) {
+        let approval = Number(votes.forVotes) / Number(proposal.quorumVotes);
+        // Limit approval percentage to 100% max.
+        if (approval > 1) {
+          approval = 1;
+        }
+        proposal.approval = approval;
+        proposal.approvalFormatted = formatPercent(approval, false);
+      } else {
+        proposal.approvalFormatted = "N/A";
       }
-      proposal.approval = approval;
-      proposal.approvalFormatted = formatPercent(approval, false);
 
       // Participation is totalVotes / totalSupply
-      let participation = Number(totalVotes) / Number(totalSupply);
-      // Limit participation percentage to 100% max.
-      if (participation > 1) {
-        participation = 1;
+      if (totalSupply) {
+        let participation = Number(totalVotes) / Number(totalSupply);
+        // Limit participation percentage to 100% max.
+        if (participation > 1) {
+          participation = 1;
+        }
+        proposal.participation = participation;
+        proposal.participationFormatted = formatPercent(participation, false);
+      } else {
+        proposal.participationFormatted = "N/A";
       }
-      proposal.participation = participation;
-      proposal.participationFormatted = formatPercent(participation, false);
     }
 
     // TODO Get user's connected wallet submission status for this proposal
@@ -315,7 +330,7 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
 
   // From the largest number to the smallest number.
   if (rangeStartBlock > rangeEndBlock) {
-    console.log("smallest to BIGGESTeeeeee")
+    console.log("BIGGEST to smallest")
     for (let i = rangeStartBlock; i > rangeEndBlock; i -= chunkSize) {
       if (!shouldFetchProposals.value) return;
 
@@ -347,6 +362,7 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
 
       batchFetchProposals(chunkEvents);
 
+      console.log("set BlockFetchedRanges toBlock: ", toBlock, " fromBlock ", fromBlock);
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
         web3Store.chainId,
         fundStore.fund?.address,
@@ -363,7 +379,7 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
       }
     }
   } else {
-    console.log("BIGGEST to smallest")
+    console.log("smallest to BIGGEST")
 
     for (let i = rangeEndBlock; i < rangeStartBlock; i += chunkSize) {
       if (!shouldFetchProposals.value) return;
@@ -398,8 +414,8 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
         web3Store.chainId,
         fundStore.fund?.address,
-        fromBlock,
         toBlock,
+        fromBlock,
       )
       await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -416,6 +432,46 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
 }
 
 onMounted(async () => {
+  // console.log("\n\n________________________");
+  // console.log("fetch governance proposal events for fund: ", fund.address);
+  // shouldFetchProposals.value = true;
+  //
+  // const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
+  // console.log("currentBlock: ", currentBlock);
+  //
+  // const [mostRecentFetchedBlock, oldestFetchedBlock] = governanceProposalStore.getFundProposalsBlockFetchedRanges(
+  //   web3Store.chainId, fundStore.fund?.address,
+  // )
+  //
+  // if (mostRecentFetchedBlock !== undefined && oldestFetchedBlock !== undefined) {
+  //   console.log("fetch from current block to most recent fetched block", currentBlock, mostRecentFetchedBlock)
+  //   // From smallest to biggest.
+  //   await fetchProposals(mostRecentFetchedBlock + 1, currentBlock);
+  //
+  //   // fetch from the already fetched the oldest block number to hardcoded limit oldest date.
+  //   // ---------| oldest fetched | xxxxxxxxxx <to fetch> xxxxxxxxxx | GENESIS BLOCK
+  //   console.log("fetch from already fetched oldest block to 0", currentBlock)
+  //   // From biggest to smallest
+  //   await fetchProposals(oldestFetchedBlock - 1, 0);
+  // } else {
+  //   // Fetch all history.
+  //   governanceProposalStore.resetProposals(web3Store.chainId, fundStore.fund?.address)
+  //   console.log("fetch all blocks")
+  //   await fetchProposals(currentBlock, 0);
+  // }
+});
+onBeforeUnmount(() => {
+  console.log("Component is being unmounted, stopping the fetch");
+  shouldFetchProposals.value = false;
+});
+
+const startFetch = async () => {
+  if (shouldFetchProposals.value) {
+    console.log("stop fetching")
+    shouldFetchProposals.value = false;
+    loadingProposals.value = false;
+    return
+  }
   console.log("\n\n________________________");
   console.log("fetch governance proposal events for fund: ", fund.address);
   shouldFetchProposals.value = true;
@@ -426,6 +482,8 @@ onMounted(async () => {
   const [mostRecentFetchedBlock, oldestFetchedBlock] = governanceProposalStore.getFundProposalsBlockFetchedRanges(
     web3Store.chainId, fundStore.fund?.address,
   )
+  console.log("mostRecentFetchedBlock: ", mostRecentFetchedBlock, "oldestFetchedBlock:", oldestFetchedBlock);
+
 
   if (mostRecentFetchedBlock !== undefined && oldestFetchedBlock !== undefined) {
     console.log("fetch from current block to most recent fetched block", currentBlock, mostRecentFetchedBlock)
@@ -434,7 +492,7 @@ onMounted(async () => {
 
     // fetch from the already fetched the oldest block number to hardcoded limit oldest date.
     // ---------| oldest fetched | xxxxxxxxxx <to fetch> xxxxxxxxxx | GENESIS BLOCK
-    console.log("fetch from already fetched oldest block to 0", currentBlock)
+    console.log("fetch from already fetched oldest block to 0", oldestFetchedBlock)
     // From biggest to smallest
     await fetchProposals(oldestFetchedBlock - 1, 0);
   } else {
@@ -443,11 +501,7 @@ onMounted(async () => {
     console.log("fetch all blocks")
     await fetchProposals(currentBlock, 0);
   }
-});
-onBeforeUnmount(() => {
-  console.log("Component is being unmounted, stopping the fetch");
-  shouldFetchProposals.value = false;
-});
+}
 </script>
 
 <style scoped lang="scss">

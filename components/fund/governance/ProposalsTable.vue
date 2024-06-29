@@ -75,13 +75,13 @@
     <template #[`item.approval`]="{ item }">
       {{ item.approvalFormatted }}
       <v-tooltip activator="parent" location="bottom">
-        {{ item.forVotesFormatted }} of {{ item.quorumVotesFormatted }} {{ fund?.governanceToken.symbol }}
+        {{ item.forVotesFormatted }} of {{ item.quorumVotesFormatted }}
       </v-tooltip>
     </template>
     <template #[`item.participation`]="{ item }">
       {{ item.participationFormatted }}
       <v-tooltip activator="parent" location="bottom">
-        {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }} {{ fund?.governanceToken.symbol }}
+        {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }}
       </v-tooltip>
     </template>
 
