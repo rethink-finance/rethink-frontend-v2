@@ -7,7 +7,7 @@
     :items="items"
     :loading="loading && items.length === 0"
     loading-text="Loading Activity"
-    @click:row="(item: any) => $router.push(`governance/proposal/${item.proposalId}`)"
+    @click:row="(_: any, item: any) => $router.push(`governance/proposal/${item.item?.proposalId}`)"
   >
     <template #[`header.approval`]="{ column }">
       <!-- HEADERS -->
@@ -42,7 +42,7 @@
     <template #[`item.title`]="{ item }">
       <div class="proposal__title">
         <div>
-          {{ item.title }}
+          {{ item.title }} {{ item.proposalId }}
         </div>
         <div class="proposal__tags">
           <FundGovernanceProposalStateChip
@@ -56,6 +56,9 @@
         </div>
       </div>
     </template>
+    <template #[`item.createdDatetime`]="{ item }">
+      {{ item.createdDatetimeFormatted }}
+    </template>
     <!-- TODO display this only if wallet connected -->
     <template #[`item.submission_status`]="{ item }">
       <div class="submission_status">
@@ -65,20 +68,20 @@
           class="submission_status__icon"
         />
         <div class="submission_status__text">
-          {{ item.submission_status }}
+          {{ item.submission_status ?? "N/A" }}
         </div>
       </div>
     </template>
     <template #[`item.approval`]="{ item }">
       {{ item.approvalFormatted }}
       <v-tooltip activator="parent" location="bottom">
-        {{ item.forVotesFormatted }} of {{ item.quorumFormatted }} {{ fund?.governanceToken.symbol }}
+        {{ item.forVotesFormatted }} of {{ item.quorumVotesFormatted }}
       </v-tooltip>
     </template>
     <template #[`item.participation`]="{ item }">
       {{ item.participationFormatted }}
       <v-tooltip activator="parent" location="bottom">
-        {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }} {{ fund?.governanceToken.symbol }}
+        {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }}
       </v-tooltip>
     </template>
 
@@ -136,6 +139,7 @@ const headers = computed(() => {
   const headers: any[] = [
     { title: "#", key: "index", sortable: false },
     { title: "Proposal Title", key: "title", sortable: true },
+    { title: "Created", key: "createdDatetime", sortable: true },
   ];
   if (accountStore.isConnected) {
     headers.push({ title: "Submission", key: "submission_status", sortable: true });

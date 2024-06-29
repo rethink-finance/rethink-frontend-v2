@@ -38,8 +38,13 @@ const emit = defineEmits(["updateBreadcrumbs"]);
 const { selectedFundSlug } = toRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
-    title: "Proposals",
+    title: "All Proposals",
     disabled: false,
+    to: `/details/${selectedFundSlug.value}/governance`,
+  },
+  {
+    title: "Edit Proposal",
+    disabled: true,
     to: `/details/${selectedFundSlug.value}/governance`,
   },
 ];
@@ -78,6 +83,9 @@ const metaBottom = [
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
+});
+onBeforeUnmount(() => {
+  emit("updateBreadcrumbs", []);
 });
 
 const copyText = (text: string) => {
