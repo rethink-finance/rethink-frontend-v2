@@ -57,7 +57,9 @@ export const useGovernanceProposalsStore = defineStore({
         this.fundProposals[chainId] = {};
       }
       this.fundProposals[chainId][fundAddress] = {};
-      setLocalStorageItem("fundProposals", cleanComplexWeb3Data(this.fundProposals, true));
+      this.fundProposalsBlockFetchedRanges[chainId] = {};
+      setLocalStorageItem("fundProposals", "{}");
+      setLocalStorageItem("fundProposalsBlockFetchedRanges",  "{}");
     },
     storeProposal(chainId: string, fundAddress: string, proposal: IGovernanceProposal): void {
       this.fundProposals[chainId] ??= {};
@@ -99,10 +101,8 @@ export const useGovernanceProposalsStore = defineStore({
         if (oldestBlock < currentOldestBlock) {
           currentOldestBlock = oldestBlock;
         }
-        console.log("new range setup: ", currentMostRecentBlock, currentOldestBlock)
         this.fundProposalsBlockFetchedRanges[chainId][fundAddress] = [currentMostRecentBlock, currentOldestBlock];
       } else {
-        console.log("initial range setup: ", latestBlock, oldestBlock)
         this.fundProposalsBlockFetchedRanges[chainId][fundAddress] = [latestBlock, oldestBlock];
       }
       setLocalStorageItem("fundProposalsBlockFetchedRanges", cleanComplexWeb3Data(

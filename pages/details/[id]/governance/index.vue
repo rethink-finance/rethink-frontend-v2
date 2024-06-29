@@ -294,7 +294,6 @@ const batchFetchProposals = async (chunkEvents: any[]) => {
       proposal.calldatasDecoded.push(governanceProposalStore.decodeProposalCallData(calldata));
     }
 
-    console.log("THIS proposal: ", proposal);
     governanceProposalStore.storeProposal(web3Store.chainId, fundStore.fund?.address, proposal)
   }
 }
@@ -319,7 +318,8 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
   // It looks like this range is arbitrary, specific to RPC, so we should try and guess it and increase exponentially
   // until they block us, and then we decrease it.
   // some RPCs can take more than 1M in arbitrum if logged in
-  let chunkSize = 1000000;
+  // let chunkSize = 1000000;
+  let chunkSize = 3000;
   let maxValidChunkSize = chunkSize * 2;
 
   // TODO we can do batch requests for example 10x3000
@@ -341,23 +341,26 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
       console.log("fetch ProposalCreated events from: ", fromBlock, " to ", toBlock, " timestamp: ", toBlockTimestamp);
 
       let chunkEvents;
-      try {
-        chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
-          fromBlock,
-          toBlock,
-        });
-        if (chunkSize * 2 <= maxValidChunkSize) {
-          chunkSize *= 2;
-          maxValidChunkSize = chunkSize;
-          console.log("new chunkSize: ", chunkSize);
+      while (chunkSize > 100 && chunkSize > 0) {
+        console.log("getPastEvents chunkSize: ", chunkSize);
+        try {
+          chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
+            fromBlock,
+            toBlock,
+          });
+          console.log("chunkevents fetched: ", chunkEvents);
+
+          if (chunkSize * 2 <= maxValidChunkSize) {
+            chunkSize *= 2;
+            maxValidChunkSize = chunkSize;
+            console.log("new chunkSize: ", chunkSize);
+          }
+          break
+        } catch {
+          chunkSize /= 2;
+          console.log("reduce chunkSize: ", chunkSize);
+          fromBlock = Math.max(i - chunkSize + 1, 0);
         }
-      } catch {
-        chunkSize /= 2;
-        fromBlock = Math.max(i - chunkSize + 1, 0);
-        chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
-          fromBlock,
-          toBlock,
-        });
       }
 
       batchFetchProposals(chunkEvents);
@@ -390,23 +393,25 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
       console.log("fetch ProposalCreated events from: ", fromBlock, " to ", toBlock, " timestamp: ", toBlockTimestamp);
 
       let chunkEvents;
-      try {
-        chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
-          fromBlock,
-          toBlock,
-        });
-        if (chunkSize * 2 <= maxValidChunkSize) {
-          chunkSize *= 2;
-          maxValidChunkSize = chunkSize;
-          console.log("new chunkSize: ", chunkSize);
+      while (chunkSize > 100 && chunkSize > 0) {
+        console.log("getPastEvents chunkSize: ", chunkSize);
+        try {
+          chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
+            fromBlock,
+            toBlock,
+          });
+          console.log("chunkevents fetched: ", chunkEvents);
+          if (chunkSize * 2 <= maxValidChunkSize) {
+            chunkSize *= 2;
+            maxValidChunkSize = chunkSize;
+            console.log("new chunkSize: ", chunkSize);
+          }
+          break;
+        } catch {
+          chunkSize /= 2;
+          console.log("reduce chunkSize: ", chunkSize);
+          toBlock = Math.max(i + chunkSize - 1, 0);
         }
-      } catch {
-        chunkSize /= 2;
-        toBlock = Math.max(i + chunkSize - 1, 0);
-        chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
-          fromBlock,
-          toBlock,
-        });
       }
 
       batchFetchProposals(chunkEvents);
@@ -417,7 +422,7 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
         toBlock,
         fromBlock,
       )
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // await new Promise(resolve => setTimeout(resolve, 1000));
 
       // TODO also save from what to what block we already fetched to prevent refetching same values if
       // value is already saved in the store. and to continue fetching from that block range
@@ -431,38 +436,13 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
   loadingProposals.value = false;
 }
 
-onMounted(async () => {
-  // console.log("\n\n________________________");
-  // console.log("fetch governance proposal events for fund: ", fund.address);
-  // shouldFetchProposals.value = true;
-  //
-  // const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
-  // console.log("currentBlock: ", currentBlock);
-  //
-  // const [mostRecentFetchedBlock, oldestFetchedBlock] = governanceProposalStore.getFundProposalsBlockFetchedRanges(
-  //   web3Store.chainId, fundStore.fund?.address,
-  // )
-  //
-  // if (mostRecentFetchedBlock !== undefined && oldestFetchedBlock !== undefined) {
-  //   console.log("fetch from current block to most recent fetched block", currentBlock, mostRecentFetchedBlock)
-  //   // From smallest to biggest.
-  //   await fetchProposals(mostRecentFetchedBlock + 1, currentBlock);
-  //
-  //   // fetch from the already fetched the oldest block number to hardcoded limit oldest date.
-  //   // ---------| oldest fetched | xxxxxxxxxx <to fetch> xxxxxxxxxx | GENESIS BLOCK
-  //   console.log("fetch from already fetched oldest block to 0", currentBlock)
-  //   // From biggest to smallest
-  //   await fetchProposals(oldestFetchedBlock - 1, 0);
-  // } else {
-  //   // Fetch all history.
-  //   governanceProposalStore.resetProposals(web3Store.chainId, fundStore.fund?.address)
-  //   console.log("fetch all blocks")
-  //   await fetchProposals(currentBlock, 0);
-  // }
+onMounted( () => {
+  startFetch();
 });
 onBeforeUnmount(() => {
   console.log("Component is being unmounted, stopping the fetch");
   shouldFetchProposals.value = false;
+  loadingProposals.value = false;
 });
 
 const startFetch = async () => {
