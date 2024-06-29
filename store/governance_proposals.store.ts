@@ -38,12 +38,11 @@ interface IState {
   fundProposalsBlockFetchedRanges: Record<string, Record<string, number[]>>;
 }
 
-
 export const useGovernanceProposalsStore = defineStore({
   id: "governanceProposalStore",
   state: (): IState => ({
-    fundProposals: {},
-    fundProposalsBlockFetchedRanges: {},
+    fundProposals: getLocalStorageItem("fundProposals", {}),
+    fundProposalsBlockFetchedRanges: getLocalStorageItem("fundProposalsBlockFetchedRanges", {}),
   }),
   getters: {
     fundStore(): any {
@@ -58,6 +57,14 @@ export const useGovernanceProposalsStore = defineStore({
         this.fundProposals[chainId] = {};
       }
       this.fundProposals[chainId][fundAddress] = {};
+      setLocalStorageItem("fundProposals", cleanComplexWeb3Data(this.fundProposals, true));
+    },
+    storeProposal(chainId: string, fundAddress: string, proposal: IGovernanceProposal): void {
+      this.fundProposals[chainId] ??= {};
+      this.fundProposals[chainId][fundAddress] ??= {};
+      this.fundProposals[chainId][fundAddress][proposal.proposalId] = proposal;
+      console.warn("storeProposal: ", cleanComplexWeb3Data(this.fundProposals, true))
+      setLocalStorageItem("fundProposals", cleanComplexWeb3Data(this.fundProposals, true));
     },
     getProposals(chainId: string, fundAddress?: string): IGovernanceProposal[] {
       if (!fundAddress || !(chainId in this.fundProposals) || !(fundAddress in this.fundProposals[chainId])) return [];
@@ -71,11 +78,6 @@ export const useGovernanceProposalsStore = defineStore({
         return [undefined, undefined];
       }
       return this.fundProposalsBlockFetchedRanges[chainId][fundAddress];
-    },
-    storeProposal(chainId: string, fundAddress: string, proposal: IGovernanceProposal): void {
-      this.fundProposals[chainId] ??= {};
-      this.fundProposals[chainId][fundAddress] ??= {};
-      this.fundProposals[chainId][fundAddress][proposal.proposalId] = proposal;
     },
     setFundProposalsBlockFetchedRanges(
       chainId: string,
@@ -103,6 +105,9 @@ export const useGovernanceProposalsStore = defineStore({
         console.log("initial range setup: ", latestBlock, oldestBlock)
         this.fundProposalsBlockFetchedRanges[chainId][fundAddress] = [latestBlock, oldestBlock];
       }
+      setLocalStorageItem("fundProposalsBlockFetchedRanges", cleanComplexWeb3Data(
+        this.fundProposalsBlockFetchedRanges, true),
+      );
     },
     decodeProposalCreatedEvent(event: EventLog): IGovernanceProposal | undefined {
       if (!event.raw) return undefined;

@@ -294,7 +294,7 @@ const batchFetchProposals = async (chunkEvents: any[]) => {
       proposal.calldatasDecoded.push(governanceProposalStore.decodeProposalCallData(calldata));
     }
 
-    console.log("proposal: ", proposal);
+    console.log("THIS proposal: ", proposal);
     governanceProposalStore.storeProposal(web3Store.chainId, fundStore.fund?.address, proposal)
   }
 }
