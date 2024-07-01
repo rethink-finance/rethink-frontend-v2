@@ -1,0 +1,1 @@
+import{dF as o,dG as t,dH as m,dI as u,dJ as d,dK as g}from"./entry.CjJcyvhY.js";function c(){for(var r=[],e=0;e<arguments.length;e++)r[e]=arguments[e];var n=o(r),s=t(r,1/0),a=r;return a.length?a.length===1?u(a[0]):d(s)(g(a,n)):m}export{c as m};
