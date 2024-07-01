@@ -4,7 +4,7 @@
 		- avg blocks per second (this will need to be found by iterating over fixed block rages in the explorer and taking note of "enough" samples to compute the avg time passed between those fixed block ranges)
 
 
-- when starting to query events first
+- when starting to query events first, inside of `startFetch` but before any `fetchProposals` is executed
 	- dblock_dt = find the difference in seconds between:  (oiv start time) - (fund factory creation block time)
 	- dblock_dt / avg blocks_per_sec should give an aproximate dblocks
 	- start block event time
