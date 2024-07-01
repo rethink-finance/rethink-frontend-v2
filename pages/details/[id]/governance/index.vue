@@ -320,7 +320,7 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
   // some RPCs can take more than 1M in arbitrum if logged in
   // let chunkSize = 1000000;
   let chunkSize = 3000;
-  let maxValidChunkSize = chunkSize * 2;
+  let maxValidChunkSize;
 
   // TODO we can do batch requests for example 10x3000
   // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
@@ -348,16 +348,16 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
             fromBlock,
             toBlock,
           });
-          console.log("chunkevents fetched: ", chunkEvents);
+          console.log("chunkevents fetched: ", chunkEvents, " chunksize: ", chunkSize, maxValidChunkSize);
 
-          if (chunkSize * 2 <= maxValidChunkSize) {
+          if (!maxValidChunkSize || chunkSize * 2 <= maxValidChunkSize) {
             chunkSize *= 2;
-            maxValidChunkSize = chunkSize;
             console.log("new chunkSize: ", chunkSize);
           }
           break
         } catch {
           chunkSize /= 2;
+          maxValidChunkSize = chunkSize;
           console.log("reduce chunkSize: ", chunkSize);
           fromBlock = Math.max(i - chunkSize + 1, 0);
         }
@@ -400,15 +400,15 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
             fromBlock,
             toBlock,
           });
-          console.log("chunkevents fetched: ", chunkEvents);
-          if (chunkSize * 2 <= maxValidChunkSize) {
+          console.log("chunkevents fetched: ", chunkEvents, " chunksize: ", chunkSize, maxValidChunkSize);
+          if (!maxValidChunkSize || chunkSize * 2 <= maxValidChunkSize) {
             chunkSize *= 2;
-            maxValidChunkSize = chunkSize;
             console.log("new chunkSize: ", chunkSize);
           }
           break;
         } catch {
           chunkSize /= 2;
+          maxValidChunkSize = chunkSize;
           console.log("reduce chunkSize: ", chunkSize);
           toBlock = Math.max(i + chunkSize - 1, 0);
         }
