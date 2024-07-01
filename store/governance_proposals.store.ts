@@ -41,8 +41,8 @@ interface IState {
 export const useGovernanceProposalsStore = defineStore({
   id: "governanceProposalStore",
   state: (): IState => ({
-    fundProposals: getLocalStorageItem("fundProposals", {}),
-    fundProposalsBlockFetchedRanges: getLocalStorageItem("fundProposalsBlockFetchedRanges", {}),
+    fundProposals: getLocalStorageItem("fundProposals", {}) ?? {},
+    fundProposalsBlockFetchedRanges: getLocalStorageItem("fundProposalsBlockFetchedRanges", {}) ?? {},
   }),
   getters: {
     fundStore(): any {
@@ -53,13 +53,15 @@ export const useGovernanceProposalsStore = defineStore({
     resetProposals(chainId: string, fundAddress?: string): void {
       if (!fundAddress) return;
 
-      if (!(chainId in this.fundProposals)) {
+      const chainData = this.fundProposals?.[chainId];
+      console.log("this.fundProposals: ", this.fundProposals, typeof this.fundProposals)
+      if (!(chainData)) {
         this.fundProposals[chainId] = {};
       }
       this.fundProposals[chainId][fundAddress] = {};
       this.fundProposalsBlockFetchedRanges[chainId] = {};
-      setLocalStorageItem("fundProposals", "{}");
-      setLocalStorageItem("fundProposalsBlockFetchedRanges",  "{}");
+      setLocalStorageItem("fundProposals", {});
+      setLocalStorageItem("fundProposalsBlockFetchedRanges",  {});
     },
     storeProposal(chainId: string, fundAddress: string, proposal: IGovernanceProposal): void {
       this.fundProposals[chainId] ??= {};
@@ -69,17 +71,26 @@ export const useGovernanceProposalsStore = defineStore({
       setLocalStorageItem("fundProposals", cleanComplexWeb3Data(this.fundProposals, true));
     },
     getProposals(chainId: string, fundAddress?: string): IGovernanceProposal[] {
-      if (!fundAddress || !(chainId in this.fundProposals) || !(fundAddress in this.fundProposals[chainId])) return [];
+      if (!fundAddress) return [];
+
+      const chainData = this.fundProposals?.[chainId];
+      if (!chainData) return [];
+
+      const fundData = chainData[fundAddress];
+      if (!fundData) return [];
+
       return Object.values(this.fundProposals[chainId][fundAddress]);
     },
     getFundProposalsBlockFetchedRanges(chainId: string, fundAddress?: string): number[] | undefined[] {
-      if (
-        !fundAddress || !(chainId in this.fundProposalsBlockFetchedRanges) ||
-        !(fundAddress in this.fundProposalsBlockFetchedRanges[chainId])
-      ) {
-        return [undefined, undefined];
-      }
-      return this.fundProposalsBlockFetchedRanges[chainId][fundAddress];
+      if (!fundAddress) return [undefined, undefined];
+
+      const chainData = this.fundProposalsBlockFetchedRanges?.[chainId];
+      if (!chainData) return [undefined, undefined];
+
+      const fundData = chainData[fundAddress];
+      if (!fundData) return [undefined, undefined];
+
+      return fundData;
     },
     setFundProposalsBlockFetchedRanges(
       chainId: string,

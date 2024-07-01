@@ -12,7 +12,11 @@ const parseBigInt = (_: string, value: any) => {
 
 export const getLocalStorageItem = (key: string, defaultValue: any) => {
   const item = localStorage.getItem(key);
-  return item ? JSON.parse(item, parseBigInt) : defaultValue;
+  try {
+    return item ? JSON.parse(item, parseBigInt) : defaultValue;
+  } catch {
+    return {};
+  }
 };
 
 export const setLocalStorageItem = (key: string, value: any) => {
