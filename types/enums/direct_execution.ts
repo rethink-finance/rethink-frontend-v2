@@ -20,8 +20,9 @@ export const ExecutionStepMap: Record<ExecutionStep, IExecutionStep> = {
   },
 };
 
-type DirectExecutionFieldsMapType = {
-  [key in ExecutionStep]: {
+// this is part of stepper form
+export type FieldsMapType = {
+  [key in string]: {
     label: string;
     key: string;
     type: InputType;
@@ -31,6 +32,7 @@ type DirectExecutionFieldsMapType = {
   }[];
 };
 
+// this is part of stepper form
 export enum InputType {
   Text = "text",
   Textarea = "textarea",
@@ -42,14 +44,14 @@ export const defaultInputTypeValue: Record<InputType, any> = {
   [InputType.Number]: 0,
 };
 
-export const DirectExecutionFieldsMap: DirectExecutionFieldsMapType = {
+export const DirectExecutionFieldsMap: FieldsMapType = {
   [ExecutionStep.Setup]: [
     {
       label: "Row TX",
       key: "rowTX",
       type: InputType.Text,
       placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-      rules: [formRules.isValidAddress, formRules.isRequired],
+      rules: [formRules.isValidAddress, formRules.required],
     },
     {
       label: "Gas to send with transaction",
@@ -57,21 +59,21 @@ export const DirectExecutionFieldsMap: DirectExecutionFieldsMapType = {
       type: InputType.Number,
       placeholder: "E.g. 0",
       min: 0,
-      rules: [formRules.isPositiveNumber, formRules.isRequired],
+      rules: [formRules.required, formRules.isPositiveNumber],
     },
     {
       label: "Address of Contract Interaction",
       key: "addressOfContractInteraction",
       type: InputType.Text,
       placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-      rules: [formRules.isValidAddress, formRules.isRequired],
+      rules: [formRules.isValidAddress, formRules.required],
     },
     {
       label: "Operations",
       key: "operations",
       type: InputType.Textarea,
       placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-      rules: [formRules.isRequired],
+      rules: [formRules.required],
     },
   ],
 
@@ -81,14 +83,14 @@ export const DirectExecutionFieldsMap: DirectExecutionFieldsMapType = {
       key: "proposalTitle",
       type: InputType.Text,
       placeholder: "E.g. Proposal Title",
-      rules: [formRules.isRequired],
+      rules: [formRules.required],
     },
     {
       label: "Proposal Description",
       key: "proposalDescription",
       type: InputType.Textarea,
       placeholder: "E.g. Proposal Description",
-      rules: [formRules.isRequired],
+      rules: [formRules.required],
     },
   ],
 };

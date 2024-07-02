@@ -25,17 +25,14 @@
         :placeholder="field.placeholder"
         :type="field.type"
         :min="field.min"
-        :rules="fieldRules(field)"
-        required
+        :rules="field.rules"
       />
     </template>
     <template v-else-if="field.type === InputType.Textarea">
       <v-textarea
         v-model="valueDetails[field.key]"
         :placeholder="field.placeholder"
-        :rules="fieldRules(field)"
-        hide-details
-        required
+        :rules="field.rules"
       />
     </template>
   </v-col>
@@ -71,16 +68,14 @@ const valueDetails = computed({
   },
 });
 
-console.log("FIELDSSDSDSDSDSDSD", props.fields);
-
 /**
  * Form fields validation
  **/
-const rules = [formRules.required];
+// const rules = [formRules.required];
 
 const fieldRules = (field: any) => {
   // Concat default rules with field specific rules if it has it.
-  return rules.concat(field.rules || []);
+  return field.rules || [];
 };
 
 const allFieldsValid = computed(() =>

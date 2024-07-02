@@ -46,69 +46,45 @@
     </div>
 
     <div class="main_card stepper__step-content">
-      <v-form
-        ref="form"
-        v-model="formIsValid"
-        v-if="activeMainStep === ExecutionStep.Setup"
-      >
-        <v-row>
-          <v-col>
-            <strong>Set up Execution’ Actions</strong>
-          </v-col>
-        </v-row>
+      <v-form ref="form" v-model="formIsValid">
+        <div class="form__content" v-for="(step, index) in entry" :key="index">
+          <div class="wrapper" v-if="activeMainStep === step.stepName">
+            <v-row>
+              <v-col>
+                <strong>{{ step.formTitle }}</strong>
+              </v-col>
+            </v-row>
 
-        <v-row>
-          <FundGovernanceDirectExecutionFields
-            :model-value="entry[0]?.steps?.[activeSubStep]"
-            :fields="fields"
-          />
-        </v-row>
-      </v-form>
-
-      <v-form v-if="activeMainStep === ExecutionStep.Details">
-        <v-row>
-          <v-col>
-            <strong>Provide Proposal Information</strong>
-          </v-col>
-        </v-row>
-
-        <v-row>
-          <v-col>
-            <v-label>Proposal Title</v-label>
-            <v-text-field
-              v-model="proposalTitle"
-              placeholder="E.g. Proposal to change the governance"
-              :rules="rules"
-              required
-            />
-
-            <v-label>Proposal Description</v-label>
-            <v-textarea
-              v-model="proposalDescription"
-              placeholder="E.g. This proposal aims to change the governance of the fund"
-              :rules="rules"
-              required
-            />
-          </v-col>
-        </v-row>
+            <v-row>
+              <FundGovernanceDirectExecutionFields
+                :model-value="step?.steps?.[activeSubStep]"
+                :fields="fields"
+              />
+            </v-row>
+          </div>
+        </div>
       </v-form>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ExecutionStep } from "~/types/enums/direct_execution";
+import { type FieldsMapType } from "~/types/enums/direct_execution";
 
 const props = defineProps({
   entry: {
     type: Array as PropType<any[]>,
     default: () => [],
   },
-  fields: {
-    type: Array as PropType<any[]>,
+  fieldsMap: {
+    type: Object as PropType<FieldsMapType>,
     default: () => [],
   },
 });
+
+const fields = computed(() => props.fieldsMap[activeMainStep.value] || []);
+
+console.log("FIELDS: ", fields);
 
 // add new sub step
 const addNewSubstep = (step: any) => {
@@ -158,22 +134,10 @@ const activeMainStep = ref(stepNames[0]);
 const activeSubStep = ref(0);
 
 // select main step
-const selectMainStep = (step: ExecutionStep) => {
+const selectMainStep = (step: string) => {
   if (activeMainStep.value === step) return;
-
   activeMainStep.value = step;
-
   activeSubStep.value = 0;
-
-  //   // if we are on the details step, reset the substep
-  //   if (step === ExecutionStep.Details) {
-  //     activeSubStep.value = -1;
-  //   }
-
-  //   // if we are on the setup step and no substep is selected, select the first one
-  //   if (step === ExecutionStep.Setup && activeSubStep.value === -1) {
-  //     activeSubStep.value = 0;
-  //   }
 };
 
 const selectSubStep = (index: number) => {
