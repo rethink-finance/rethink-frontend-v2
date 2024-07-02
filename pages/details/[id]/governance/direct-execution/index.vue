@@ -17,101 +17,8 @@
       </div>
     </UiHeader>
     <!-- content -->
-    <div class="wizard">
-      <div class="main_card wizard__main-steps">
-        <div
-          class="main-step"
-          v-for="(step, index) in executionEntry"
-          :key="index"
-          :class="{ 'main-step--active': step.activeStep === activeStep }"
-          @click="selectMainStep(step.activeStep)"
-        >
-          <div class="main-step__title">
-            <div class="main-step__count">{{ index + 1 }}</div>
-            {{ step.stepLabel }}
-          </div>
 
-          <div class="sub-steps" v-if="step?.steps && step?.steps.length > 0">
-            <div
-              class="sub-steps__sub-step"
-              v-if="step.activeStep === ExecutionStep.Setup"
-              v-for="(executionStep, index) in step.steps"
-              :key="index"
-              :class="{
-                'sub-steps__sub-step--active': index === activeSubStep,
-              }"
-              @click="selectExecutionSubstep(index)"
-            >
-              <div class="sub-steps__dashed-line" />
-              <div class="sub-steps__label">Execution {{ index + 1 }}</div>
-              <UiDetailsButton
-                small
-                v-if="
-                  executionEntry?.[0]?.steps &&
-                  executionEntry?.[0]?.steps?.length > 1
-                "
-                class="sub-steps__delete-button"
-                @click.stop="deleteExecutionSubstep(index)"
-              >
-                <v-icon icon="mdi-delete" color="error" />
-              </UiDetailsButton>
-            </div>
-            <div class="sub-steps__add-new-step" @click="addNewExecutionStep">
-              Add Execution +
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="main_card wizard__step-content">
-        <v-form
-          ref="form"
-          v-model="formIsValid"
-          v-if="activeStep === ExecutionStep.Setup"
-        >
-          <v-row>
-            <v-col>
-              <strong>Set up Execution’ Actions</strong>
-            </v-col>
-          </v-row>
-
-          <v-row>
-            <FundGovernanceDirectExecutionFields
-              :model-value="executionEntry[0]?.steps?.[activeSubStep]"
-              :fields="fields"
-            />
-          </v-row>
-        </v-form>
-
-        <v-form v-if="activeStep === ExecutionStep.Details">
-          <v-row>
-            <v-col>
-              <strong>Provide Proposal Information</strong>
-            </v-col>
-          </v-row>
-
-          <v-row>
-            <v-col>
-              <v-label>Proposal Title</v-label>
-              <v-text-field
-                v-model="proposalTitle"
-                placeholder="E.g. Proposal to change the governance"
-                :rules="rules"
-                required
-              />
-
-              <v-label>Proposal Description</v-label>
-              <v-textarea
-                v-model="proposalDescription"
-                placeholder="E.g. This proposal aims to change the governance of the fund"
-                :rules="rules"
-                required
-              />
-            </v-col>
-          </v-row>
-        </v-form>
-      </div>
-    </div>
+    <UiStepper :entry="executionEntry" :fields="fields" />
   </div>
 </template>
 
@@ -121,7 +28,6 @@ import {
   ExecutionStep,
   ExecutionStepMap,
 } from "~/types/enums/direct_execution";
-import type { IExecutionEntry } from "~/types/execution_step";
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
@@ -141,10 +47,18 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const executionEntry = ref([
   {
+    stepName: ExecutionStep.Setup,
     stepLabel: ExecutionStepMap[ExecutionStep.Setup].name,
     formTitle: ExecutionStepMap[ExecutionStep.Setup].formTitle,
-    activeStep: ExecutionStep.Setup,
+    stepDefaultValues: {
+      rowTX: "",
+      gasToSendWithTransaction: "",
+      addressOfContractInteraction: "",
+      operations: "",
+    },
+
     multipleSteps: true,
+    substepLabel: "Execution",
     steps: [
       {
         rowTX: "",
@@ -152,46 +66,26 @@ const executionEntry = ref([
         addressOfContractInteraction: "",
         operations: "",
       },
-    ] as IExecutionEntry[],
+    ] as any[],
   },
   {
+    stepName: ExecutionStep.Details,
     stepLabel: ExecutionStepMap[ExecutionStep.Details].name,
     formTitle: ExecutionStepMap[ExecutionStep.Details].formTitle,
-    activeStep: ExecutionStep.Details,
+
     multipleSteps: false,
-    // steps: [
-    // {
-    proposalTitle: "",
-    proposalDescription: "",
-    //   },
-    // ],
+    stepDefaultValues: {
+      proposalTitle: "",
+      proposalDescription: "",
+    },
+    steps: [
+      {
+        proposalTitle: "",
+        proposalDescription: "",
+      },
+    ],
   },
 ]);
-
-// add new execution step
-const addNewExecutionStep = () => {
-  executionEntry?.value?.[0]?.steps?.push({
-    rowTX: "",
-    gasToSendWithTransaction: "",
-    addressOfContractInteraction: "",
-    operations: "",
-  });
-};
-
-// delete execution step
-const deleteExecutionSubstep = (index: number) => {
-  // don't allow to delete the last step
-  if (executionEntry?.value?.[0]?.steps?.length === 1) {
-    return;
-  }
-
-  executionEntry?.value?.[0]?.steps?.splice(index, 1);
-
-  // if the deleted step was the active one, set the first step as active
-  if (activeSubStep.value === index) {
-    activeSubStep.value = 0;
-  }
-};
 
 // form validation
 const formIsValid = ref(false);
@@ -221,23 +115,6 @@ const selectExecutionSubstep = (index: number) => {
 };
 
 const fields = computed(() => DirectExecutionFieldsMap[activeStep.value] || []);
-
-// Computed properties for v-model
-const proposalTitle = computed({
-  get: () => executionEntry.value[1].proposalTitle ?? "",
-
-  set: (value) => {
-    executionEntry.value[1].proposalTitle = value;
-  },
-});
-
-const proposalDescription = computed({
-  get: () => executionEntry.value[1].proposalDescription ?? "",
-
-  set: (value) => {
-    executionEntry.value[1].proposalDescription = value;
-  },
-});
 
 const redirectInfo = () => {
   console.log(
