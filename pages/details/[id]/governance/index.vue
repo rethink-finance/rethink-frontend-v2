@@ -23,8 +23,7 @@
         </v-btn>
         <div class="tools__success-rate">
           <div class="tools__val">
-            <!-- TODO calculate success rate -->
-            N/A
+            {{ proposalsSuccessRate }}
           </div>
           <div class="tools__subtext">
             Success Rate
@@ -68,6 +67,7 @@ const governanceProposalStore = useGovernanceProposalsStore();
 
 // dummy data for manage delegate button
 const manageDelegateUrl = "https://www.google.com";
+
 // dummy data governance activity
 const governanceProposals = computed(() => {
   const proposals = governanceProposalStore.getProposals(web3Store.chainId, fundStore.fund?.address)
@@ -81,18 +81,30 @@ const governanceProposals = computed(() => {
 
   return proposals;
 });
+
 const proposalsCountText = computed(() => {
   if (governanceProposals.value.length === 1) {
     return "1 Proposal";
   }
   return governanceProposals.value.length + " Proposals";
 });
+const pendingProposals = computed(() => {
+  return governanceProposals.value.filter(proposal => proposal.state === ProposalState.Pending);
+});
 const pendingProposalsCountText = computed(() => {
-  const pendingProposals = governanceProposals.value.filter(proposal => proposal.state === ProposalState.Pending);
-  if (pendingProposals.length === 1) {
+  if (pendingProposals.value.length === 1) {
     return "1 Pending Proposal";
   }
-  return pendingProposals.length + " Pending Proposals";
+  return pendingProposals.value.length + " Pending Proposals";
+});
+const proposalsSuccessRate = computed(() => {
+  const successProposals = governanceProposals.value.filter(proposal => [ProposalState.Succeeded, ProposalState.Executed].includes(proposal.state));
+  const allFinishedProposalsCount = governanceProposals.value.length - pendingProposals.value.length;
+  let successRate = 0;
+  if (allFinishedProposalsCount) {
+    successRate = successProposals.length / (governanceProposals.value.length - pendingProposals.value.length)
+  }
+  return formatPercent(successRate, false)
 });
 
 // fetchProposals can be a super long-lasting process, so if the user changes
@@ -184,7 +196,7 @@ const loadingProposals = ref(false);
  * to compare them with function signatures of our ABIs
  * TODO or just try decoding calldatas with our ABIs
  */
-const batchFetchProposals = async (chunkEvents: any[]) => {
+const parseProposals = async (chunkEvents: any[]) => {
   if (!fundStore.fund?.governanceToken.decimals) {
     console.error("No fund governance token decimals found.")
     toastStore.errorToast("No fund governance token decimals found.")
@@ -287,8 +299,6 @@ const batchFetchProposals = async (chunkEvents: any[]) => {
       }
     }
 
-    // TODO Get user's connected wallet submission status for this proposal
-    //   proposal.submission_status = ""
     proposal.calldatasDecoded = [];
     for (const calldata of proposal.calldatas) {
       proposal.calldatasDecoded.push(governanceProposalStore.decodeProposalCallData(calldata));
@@ -310,9 +320,6 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
     return
   }
   loadingProposals.value = true;
-
-  // const safeBlock = web3Store.getContractCreationBlock(fundStore.fund?.safeAddress)
-  // console.log("safe block: ", safeBlock)
 
   // TODO arbitrum1 RPCs can take ranges of more blocks, like 1M, polygon cries if we use more than 3k
   // It looks like this range is arbitrary, specific to RPC, so we should try and guess it and increase exponentially
@@ -363,7 +370,7 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
         }
       }
 
-      batchFetchProposals(chunkEvents);
+      parseProposals(chunkEvents);
 
       console.log("set BlockFetchedRanges toBlock: ", toBlock, " fromBlock ", fromBlock);
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
@@ -374,8 +381,6 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
       )
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // TODO also save from what to what block we already fetched to prevent refetching same values if
-      // value is already saved in the store. and to continue fetching from that block range
       const lastProposal = governanceProposals.value[governanceProposals.value.length];
       if (lastProposal?.createdTimestamp < targetTimestamp) {
         break;
@@ -414,7 +419,7 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
         }
       }
 
-      batchFetchProposals(chunkEvents);
+      parseProposals(chunkEvents);
 
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
         web3Store.chainId,
@@ -424,8 +429,6 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
       )
       // await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // TODO also save from what to what block we already fetched to prevent refetching same values if
-      // value is already saved in the store. and to continue fetching from that block range
       const lastProposal = governanceProposals.value[governanceProposals.value.length];
       if (lastProposal?.createdTimestamp < targetTimestamp) {
         break;
@@ -436,6 +439,7 @@ const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) =>
   loadingProposals.value = false;
 }
 
+// TODO iterate over all already fetched proposals that are still votable and update their state (createdBlockNumber).
 onMounted( () => {
   startFetch();
 });

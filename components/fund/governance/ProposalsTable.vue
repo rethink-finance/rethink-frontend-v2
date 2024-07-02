@@ -42,7 +42,7 @@
     <template #[`item.title`]="{ item }">
       <div class="proposal__title">
         <div>
-          {{ item.title }} {{ item.proposalId }}
+          {{ item.title }}
         </div>
         <div class="proposal__tags">
           <FundGovernanceProposalStateChip
@@ -59,18 +59,20 @@
     <template #[`item.createdDatetime`]="{ item }">
       {{ item.createdDatetimeFormatted }}
     </template>
-    <!-- TODO display this only if wallet connected -->
+
     <template #[`item.submission_status`]="{ item }">
-      <div class="submission_status">
-        <Icon
-          :icon="icons[item.submission_status as keyof typeof icons]"
-          width="1.4rem"
-          class="submission_status__icon"
-        />
-        <div class="submission_status__text">
-          {{ item.submission_status ?? "N/A" }}
-        </div>
-      </div>
+      <Icon
+        v-if="hasAccountVoted(item.proposalId)"
+        icon="octicon:check-circle-fill-16"
+        width="1rem"
+        height="1rem"
+        color="var(--color-success)"
+      />
+      <icon
+        v-else
+        icon="octicon:x-circle-fill-16"
+        color="var(--color-error)"
+      />
     </template>
     <template #[`item.approval`]="{ item }">
       {{ item.approvalFormatted }}
@@ -113,7 +115,6 @@ import { useAccountStore } from "~/store/account.store";
 
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
-const { fund } = toRefs(fundStore);
 
 // defined icons for submission_status
 const icons = {
@@ -124,7 +125,7 @@ const icons = {
   Approved: "material-symbols:done",
 };
 
-defineProps({
+const props = defineProps({
   items: {
     type: Array as () => IGovernanceProposal[],
     default: () => [],
@@ -135,6 +136,38 @@ defineProps({
   },
 });
 
+const connectedAccountProposalsHasVoted = ref<Record<string, Record<string, boolean>>>({});
+const hasAccountVoted = (proposalId: string) => {
+  const activeAccountAddress = fundStore.activeAccountAddress;
+  if (!activeAccountAddress || !connectedAccountProposalsHasVoted.value?.[proposalId]) return false;
+  return connectedAccountProposalsHasVoted.value?.[proposalId][activeAccountAddress] ?? false;
+}
+
+
+// TODO to fetch status of all votes of all users we again have to iterate over all events and check VoteCast event
+watch(() => props.items, () => {
+  console.log("props items watcher", props.items);
+  if (fundStore.activeAccountAddress !== undefined) {
+    const activeAccountAddress = fundStore.activeAccountAddress;
+
+    for (const proposal of props.items) {
+      connectedAccountProposalsHasVoted.value[proposal.proposalId] ??= {};
+      // Do not fetch the hasVoted again if we already know he has voted.
+      if (connectedAccountProposalsHasVoted.value[proposal.proposalId][activeAccountAddress]) continue;
+
+      console.log("get votes for ", proposal.proposalId);
+      fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call().then(
+        (hasVoted: boolean) => {
+          console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)
+          connectedAccountProposalsHasVoted.value[proposal.proposalId][activeAccountAddress] = hasVoted;
+        },
+      );
+    }
+  }
+},
+{ immediate: true },
+);
+
 const headers = computed(() => {
   const headers: any[] = [
     { title: "#", key: "index", sortable: false },
@@ -142,7 +175,7 @@ const headers = computed(() => {
     { title: "Created", key: "createdDatetime", sortable: true },
   ];
   if (accountStore.isConnected) {
-    headers.push({ title: "Submission", key: "submission_status", sortable: true });
+    headers.push({ title: "Has Voted", key: "submission_status", sortable: true, align: "center" });
   }
 
   headers.push(...[

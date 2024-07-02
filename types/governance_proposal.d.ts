@@ -66,7 +66,6 @@ export default interface IGovernanceProposal {
   createdDatetimeFormatted: string,
 
   // Frontend fields:
-  submission_status: string, // e.g. "Pending"
   approval: number,
   approvalFormatted: string, // e.g. "40%"
   participation: number, // e.g. "10%"
