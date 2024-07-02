@@ -61,6 +61,11 @@
     </template>
 
     <template #[`item.submission_status`]="{ item }">
+      <template
+        v-if="hasAccountVoted(item.proposalId) === undefined"
+      >
+        N/A
+      </template>
       <Icon
         v-if="hasAccountVoted(item.proposalId)"
         icon="octicon:check-circle-fill-16"
@@ -139,7 +144,8 @@ const props = defineProps({
 const connectedAccountProposalsHasVoted = ref<Record<string, Record<string, boolean>>>({});
 const hasAccountVoted = (proposalId: string) => {
   const activeAccountAddress = fundStore.activeAccountAddress;
-  if (!activeAccountAddress || !connectedAccountProposalsHasVoted.value?.[proposalId]) return false;
+  if (!activeAccountAddress) return false;
+  if (connectedAccountProposalsHasVoted.value?.[proposalId] === undefined) return undefined;
   return connectedAccountProposalsHasVoted.value?.[proposalId][activeAccountAddress] ?? false;
 }
 
