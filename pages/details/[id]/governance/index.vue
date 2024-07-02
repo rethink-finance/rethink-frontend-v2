@@ -6,9 +6,16 @@
       </template>
     </UiDataRowCard>
 
-    <UiMainCard title="Governance Activity" :subtitle="pendingProposalsCountText">
+    <UiMainCard
+      title="Governance Activity"
+      :subtitle="pendingProposalsCountText"
+    >
       <template #header-right>
-        <UiDropdown :options="dropdownOptions" label="Create Proposal" />
+        <UiDropdown
+          :options="dropdownOptionsLabels"
+          label="Create Proposal"
+          @update:selected="selectOption"
+        />
       </template>
       <template #tools>
         <v-btn
@@ -26,12 +33,13 @@
             <!-- TODO calculate success rate -->
             N/A
           </div>
-          <div class="tools__subtext">
-            Success Rate
-          </div>
+          <div class="tools__subtext">Success Rate</div>
         </div>
       </template>
-      <FundGovernanceTableProposals :items="governanceProposals" :loading="loadingProposals" />
+      <FundGovernanceTableProposals
+        :items="governanceProposals"
+        :loading="loadingProposals"
+      />
     </UiMainCard>
 
     <UiMainCard title="Trending Delegates" subtitle="4 Delegated Wallets">
@@ -58,8 +66,12 @@ import type ITrendingDelegates from "~/types/trending_delegates";
 import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDelegates.vue";
 import { cleanComplexWeb3Data } from "~/composables/utils";
 import { useFundStore } from "~/store/fund.store";
-import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
+import {
+  ProposalState,
+  ProposalStateMapping,
+} from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
+const router = useRouter();
 const fundStore = useFundStore();
 
 // dummy data for manage delegate button
@@ -73,7 +85,9 @@ const proposalsCountText = computed(() => {
   return governanceProposals.value.length + " Proposals";
 });
 const pendingProposalsCountText = computed(() => {
-  const pendingProposals = governanceProposals.value.filter(proposal => proposal.state === ProposalState.Pending);
+  const pendingProposals = governanceProposals.value.filter(
+    (proposal) => proposal.state === ProposalState.Pending
+  );
   if (pendingProposals.length === 1) {
     return "1 Pending Proposal";
   }
@@ -107,20 +121,54 @@ const trendingDelegates: ITrendingDelegates[] = [
     voting_power: "720.000.000 SOON",
   },
 ];
-// Dummy data for dropdown options
-const dropdownOptions = [
-  "Delegated permissions",
-  "Direct Execution",
-  "NAV Methods",
-  "Fund Settings",
-];
+
+type DropdownOption = {
+  click: () => void;
+};
+
+const dropdownOptions: Record<string, DropdownOption> = {
+  "Direct Execution": {
+    click: () => {
+      // change route to direct execution
+
+      router.push(
+        `/details/${fundStore.selectedFundSlug}/governance/direct-execution`
+      );
+    },
+  },
+  "Delegated permissions": {
+    click: () => {
+      console.log("Delegated permissions");
+    },
+  },
+  "NAV Methods": {
+    click: () => {
+      console.log("NAV Methods");
+    },
+  },
+  "Fund Settings": {
+    click: () => {
+      console.log("Fund Settings");
+    },
+  },
+};
+
+const dropdownOptionsLabels = Object.keys(dropdownOptions);
+
+const selectOption = (option: string) => {
+  if (dropdownOptions[option]) {
+    dropdownOptions[option].click();
+  } else {
+    console.error("Option not found");
+  }
+};
 
 const fund = useAttrs().fund as IFund;
 
-
-const proposalCreatedEventInputs = RethinkFundGovernor.abi.find(
-  event => event.name === "ProposalCreated" && event.type === "event",
-)?.inputs ?? [];
+const proposalCreatedEventInputs =
+  RethinkFundGovernor.abi.find(
+    (event) => event.name === "ProposalCreated" && event.type === "event"
+  )?.inputs ?? [];
 const loadingProposals = ref(false);
 /**
  * Example data of one decoded proposal:
@@ -171,8 +219,8 @@ const loadingProposals = ref(false);
  */
 const getAllProposals = async () => {
   if (!fundStore.fund?.governanceToken.decimals) {
-    console.error("No governance token decimals found.")
-    return
+    console.error("No governance token decimals found.");
+    return;
   }
   loadingProposals.value = true;
   governanceProposals.value = [];
@@ -189,10 +237,13 @@ const getAllProposals = async () => {
     const toBlock = i;
     const fromBlock = Math.max(i - chunkSize + 1, 0);
 
-    const chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
-      fromBlock,
-      toBlock,
-    });
+    const chunkEvents = await fundStore.fundGovernorContract.getPastEvents(
+      "ProposalCreated",
+      {
+        fromBlock,
+        toBlock,
+      }
+    );
 
     for (const event of chunkEvents) {
       const proposal = decodeProposalCreatedEvent(event);
@@ -207,40 +258,73 @@ const getAllProposals = async () => {
       // console.log("Vote Start Date: ", voteStartDate);
       // console.log("Vote End Date: ", voteEndDate);
 
-      const proposalState = await fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
-      proposal.state = ProposalStateMapping[proposalState]
+      const proposalState = await fundStore.fundGovernorContract.methods
+        .state(proposal.proposalId)
+        .call();
+      proposal.state = ProposalStateMapping[proposalState];
 
-      const votes = await fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
+      const votes = await fundStore.fundGovernorContract.methods
+        .proposalVotes(proposal.proposalId)
+        .call();
       console.log("proposal votes: ", votes);
 
       // Get the Governance Token total supply of when the proposal was created.
-      const totalSupply = await fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber);
+      const totalSupply = await fundStore.fundGovernanceTokenContract.methods
+        .totalSupply()
+        .call({}, proposal.createdBlockNumber);
       proposal.totalSupply = totalSupply;
-      proposal.totalSupplyFormatted = formatTokenValue(totalSupply, fundStore.fund?.governanceToken.decimals);
+      proposal.totalSupplyFormatted = formatTokenValue(
+        totalSupply,
+        fundStore.fund?.governanceToken.decimals
+      );
 
-      const quorumWhenProposalCreated = await fundStore.fundGovernorContract.methods.quorum(proposal.createdTimestamp).call()
+      const quorumWhenProposalCreated =
+        await fundStore.fundGovernorContract.methods
+          .quorum(proposal.createdTimestamp)
+          .call();
       proposal.quorum = quorumWhenProposalCreated;
-      proposal.quorumFormatted = formatTokenValue(quorumWhenProposalCreated, fundStore.fund?.governanceToken.decimals);
+      proposal.quorumFormatted = formatTokenValue(
+        quorumWhenProposalCreated,
+        fundStore.fund?.governanceToken.decimals
+      );
 
       if (votes) {
-        const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
+        const totalVotes =
+          votes.forVotes + votes.abstainVotes + votes.againstVotes;
         proposal.totalVotes = totalVotes;
-        proposal.totalVotesFormatted = formatTokenValue(totalVotes, fundStore.fund?.governanceToken.decimals);
+        proposal.totalVotesFormatted = formatTokenValue(
+          totalVotes,
+          fundStore.fund?.governanceToken.decimals
+        );
         proposal.forVotes = votes.forVotes;
         proposal.abstainVotes = votes.abstainVotes;
         proposal.againstVotes = votes.againstVotes;
-        proposal.forVotesFormatted = formatTokenValue(votes.forVotes, fundStore.fund?.governanceToken.decimals);
-        proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, fundStore.fund?.governanceToken.decimals);
-        proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, fundStore.fund?.governanceToken.decimals);
+        proposal.forVotesFormatted = formatTokenValue(
+          votes.forVotes,
+          fundStore.fund?.governanceToken.decimals
+        );
+        proposal.abstainVotesFormatted = formatTokenValue(
+          votes.abstainVotes,
+          fundStore.fund?.governanceToken.decimals
+        );
+        proposal.againstVotesFormatted = formatTokenValue(
+          votes.againstVotes,
+          fundStore.fund?.governanceToken.decimals
+        );
 
-        let approval = Number(votes.forVotes) / Number(quorumWhenProposalCreated);
+        let approval =
+          Number(votes.forVotes) / Number(quorumWhenProposalCreated);
         // Limit approval percentage to 100% max.
         if (approval > 1) {
           approval = 1;
         }
         proposal.approval = approval;
         proposal.approvalFormatted = formatPercent(approval, false);
-        console.log("approvalFormatted: ", proposal.approvalFormatted, approval)
+        console.log(
+          "approvalFormatted: ",
+          proposal.approvalFormatted,
+          approval
+        );
 
         // Participation is totalVotes / totalSupply
         let participation = Number(totalVotes) / Number(totalSupply);
@@ -250,14 +334,18 @@ const getAllProposals = async () => {
         }
         proposal.participation = participation;
         proposal.participationFormatted = formatPercent(participation, false);
-        console.log("participationFormatted: ", proposal.participationFormatted, proposal.participation)
+        console.log(
+          "participationFormatted: ",
+          proposal.participationFormatted,
+          proposal.participation
+        );
       }
 
       // TODO Get user's connected wallet submission status for this proposal
       //   proposal.submission_status = ""
 
       console.log("proposal: ", proposal);
-      governanceProposals.value.push(proposal)
+      governanceProposals.value.push(proposal);
     }
     // TODO Remove this break in the future. Just for testing purposes to get at least 4 events.
     //  in the future we have to fetch all events until the creation of governance contract
@@ -265,7 +353,7 @@ const getAllProposals = async () => {
   }
 
   loadingProposals.value = false;
-}
+};
 
 const decodeProposalCreatedEvent = (event: EventLog) => {
   if (!event.raw) return undefined;
@@ -275,7 +363,7 @@ const decodeProposalCreatedEvent = (event: EventLog) => {
   const decodedEvent = fundStore.web3.eth.abi.decodeLog(
     proposalCreatedEventInputs ?? [],
     event.raw?.data ?? "",
-    topics.slice(1),
+    topics.slice(1)
   );
   const proposal = cleanComplexWeb3Data(decodedEvent) as IGovernanceProposal;
 
@@ -287,8 +375,8 @@ const decodeProposalCreatedEvent = (event: EventLog) => {
     proposal.title = proposal.description;
   }
 
-  return proposal
-}
+  return proposal;
+};
 
 onMounted(() => {
   console.log("fetch governance proposal events for fund: ", fund.address);
@@ -339,23 +427,23 @@ onMounted(() => {
   margin-bottom: 2rem;
 
   // remove outer border
-  :deep(.data_row__panel){
+  :deep(.data_row__panel) {
     border: 0;
     border-radius: 0.25rem !important;
     background-color: rgb(var(--v-theme-surface));
   }
-    // add more spacing to content inside
-    :deep(.v-expansion-panel-text__wrapper) {
-      padding-bottom: 2rem;
-    }
-    // add borders to text fields inside panel
-   :deep(.v-expansion-panels) {
-      border: 1px solid $color-gray-transparent;
-      border-radius: 0.25rem !important;
+  // add more spacing to content inside
+  :deep(.v-expansion-panel-text__wrapper) {
+    padding-bottom: 2rem;
+  }
+  // add borders to text fields inside panel
+  :deep(.v-expansion-panels) {
+    border: 1px solid $color-gray-transparent;
+    border-radius: 0.25rem !important;
 
-      .data_row__panel {
-        padding: 0;
-      }
+    .data_row__panel {
+      padding: 0;
     }
+  }
 }
 </style>
