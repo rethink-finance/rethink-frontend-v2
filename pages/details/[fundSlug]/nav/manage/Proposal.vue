@@ -201,6 +201,9 @@ const formIsValid = ref(false);
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
 });
+onBeforeUnmount(() => {
+  emit("updateBreadcrumbs", []);
+});
 
 const newEntriesCount = computed(() => {
   return fundManagedNAVMethods.value.filter(method => method.isNew).length ?? 0;

@@ -7,7 +7,7 @@
     :items="items"
     :loading="loading && items.length === 0"
     loading-text="Loading Activity"
-    @click:row="(item: any) => $router.push(`governance/proposal/${item.proposalId}`)"
+    @click:row="(_: any, item: any) => $router.push(`governance/proposal/${item.item?.proposalId}`)"
   >
     <template #[`header.approval`]="{ column }">
       <!-- HEADERS -->
@@ -56,29 +56,39 @@
         </div>
       </div>
     </template>
-    <!-- TODO display this only if wallet connected -->
+    <template #[`item.createdDatetime`]="{ item }">
+      {{ item.createdDatetimeFormatted }}
+    </template>
+
     <template #[`item.submission_status`]="{ item }">
-      <div class="submission_status">
-        <Icon
-          :icon="icons[item.submission_status as keyof typeof icons]"
-          width="1.4rem"
-          class="submission_status__icon"
-        />
-        <div class="submission_status__text">
-          {{ item.submission_status }}
-        </div>
-      </div>
+      <template
+        v-if="hasAccountVoted(item.proposalId) === undefined"
+      >
+        N/A
+      </template>
+      <Icon
+        v-if="hasAccountVoted(item.proposalId)"
+        icon="octicon:check-circle-fill-16"
+        width="1rem"
+        height="1rem"
+        color="var(--color-success)"
+      />
+      <icon
+        v-else
+        icon="octicon:x-circle-fill-16"
+        color="var(--color-error)"
+      />
     </template>
     <template #[`item.approval`]="{ item }">
       {{ item.approvalFormatted }}
       <v-tooltip activator="parent" location="bottom">
-        {{ item.forVotesFormatted }} of {{ item.quorumFormatted }} {{ fund?.governanceToken.symbol }}
+        {{ item.forVotesFormatted }} of {{ item.quorumVotesFormatted }}
       </v-tooltip>
     </template>
     <template #[`item.participation`]="{ item }">
       {{ item.participationFormatted }}
       <v-tooltip activator="parent" location="bottom">
-        {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }} {{ fund?.governanceToken.symbol }}
+        {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }}
       </v-tooltip>
     </template>
 
@@ -110,7 +120,6 @@ import type IGovernanceProposal from "~/types/governance_proposal";
 
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
-const { fund } = toRefs(fundStore);
 
 // defined icons for submission_status
 const icons = {
@@ -121,7 +130,7 @@ const icons = {
   Approved: "material-symbols:done",
 };
 
-defineProps({
+const props = defineProps({
   items: {
     type: Array as () => IGovernanceProposal[],
     default: () => [],
@@ -132,13 +141,47 @@ defineProps({
   },
 });
 
+const connectedAccountProposalsHasVoted = ref<Record<string, Record<string, boolean>>>({});
+const hasAccountVoted = (proposalId: string) => {
+  const activeAccountAddress = fundStore.activeAccountAddress;
+  if (!activeAccountAddress) return false;
+  if (connectedAccountProposalsHasVoted.value?.[proposalId] === undefined) return undefined;
+  return connectedAccountProposalsHasVoted.value?.[proposalId][activeAccountAddress] ?? false;
+}
+
+
+// TODO to fetch status of all votes of all users we again have to iterate over all events and check VoteCast event
+watch(() => props.items, () => {
+  console.log("props items watcher", props.items);
+  if (fundStore.activeAccountAddress !== undefined) {
+    const activeAccountAddress = fundStore.activeAccountAddress;
+
+    for (const proposal of props.items) {
+      connectedAccountProposalsHasVoted.value[proposal.proposalId] ??= {};
+      // Do not fetch the hasVoted again if we already know he has voted.
+      if (connectedAccountProposalsHasVoted.value[proposal.proposalId][activeAccountAddress]) continue;
+
+      console.log("get votes for ", proposal.proposalId);
+      fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call().then(
+        (hasVoted: boolean) => {
+          console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)
+          connectedAccountProposalsHasVoted.value[proposal.proposalId][activeAccountAddress] = hasVoted;
+        },
+      );
+    }
+  }
+},
+{ immediate: true },
+);
+
 const headers = computed(() => {
   const headers: any[] = [
     { title: "#", key: "index", sortable: false },
     { title: "Proposal Title", key: "title", sortable: true },
+    { title: "Created", key: "createdDatetime", sortable: true },
   ];
   if (accountStore.isConnected) {
-    headers.push({ title: "Submission", key: "submission_status", sortable: true });
+    headers.push({ title: "Has Voted", key: "submission_status", sortable: true, align: "center" });
   }
 
   headers.push(...[

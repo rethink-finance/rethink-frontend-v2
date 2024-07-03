@@ -55,6 +55,7 @@ export default interface IGovernanceProposal {
   values: string[],
   signatures: string[],
   calldatas: string[],
+  calldatasDecoded: Record<string, any> | undefined [],
 
   // Called from the "state" function (IGovernorUpgradeable.ProposalState)
   state: ProposalState,
@@ -62,16 +63,16 @@ export default interface IGovernanceProposal {
   // Created timestamp is fetched from the event's block timestamp.
   createdTimestamp: number,
   createdBlockNumber: bigint,
+  createdDatetimeFormatted: string,
 
   // Frontend fields:
-  submission_status: string, // e.g. "Pending"
   approval: number,
   approvalFormatted: string, // e.g. "40%"
   participation: number, // e.g. "10%"
   participationFormatted: string, // e.g. "10%"
   // Quorum in time when the proposal aws created.
-  quorum: bigint, // e.g. 50k
-  quorumFormatted: string, // e.g. 50k
+  quorumVotes: bigint, // e.g. 50k
+  quorumVotesFormatted: string, // e.g. 50k
   forVotes: bigint,
   forVotesFormatted: string, // e.g. 50k
   abstainVotes: bigint,

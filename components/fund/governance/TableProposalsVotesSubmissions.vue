@@ -15,12 +15,12 @@
     <template #[`item.submission_status`]="{ item }">
       <div class="submission_status">
         <Icon
-          :icon="icons[item.submission_status as keyof typeof icons]"
+          :icon="icons[item.state as keyof typeof icons]"
           width="1.4rem"
           class="submission_status__icon"
         />
         <div class="submission_status__text">
-          {{ item.submission_status }}
+          {{ item.state }}
         </div>
       </div>
     </template>

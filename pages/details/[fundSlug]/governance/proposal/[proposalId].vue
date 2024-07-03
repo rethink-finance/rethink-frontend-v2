@@ -1,7 +1,8 @@
 <template>
-  <div class="proposal-detail">
-    <!-- TODO better to just pass the proposalDetails as prop  -->
-    <FundGovernanceProposalSectionTop :proposal-details="proposalDetails" />
+  <div v-if="proposal?.proposalId" class="proposal-detail">
+    <FundGovernanceProposalSectionTop
+      :proposal="proposal"
+    />
 
     <div class="section-bottom">
       <div class="main_card section-bottom--left">
@@ -37,12 +38,12 @@
             <div class="section-bottom__outcome">
               <FundGovernanceProgressInsight
                 title="Approval Rate"
-                :progress="proposalDetails?.approval"
+                :progress="proposal?.approval"
                 subtext="Approval"
               />
               <FundGovernanceProgressInsight
                 title="Participation Rate"
-                :progress="proposalDetails.participation"
+                :progress="proposal.participation"
                 subtext="Support"
               />
             </div>
@@ -51,65 +52,67 @@
         <UiDataRowCard title="Roadmap" class="data_row_card">
           <template #body>
             <FundGovernanceProposalRoadmap
-              :proposal-details="proposalDetails"
+              :proposal="proposal"
             />
           </template>
         </UiDataRowCard>
       </div>
     </div>
   </div>
+  <div v-else class="text-center mt-6 align-center">
+    Oops, proposal data is not available.
+  </div>
 </template>
 
 <script setup lang="ts">
-import { reactive } from "vue";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { useFundStore } from "~/store/fund.store";
-import { ProposalState } from "~/types/enums/governance_proposal";
+import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
+import { useWeb3Store } from "~/store/web3.store";
 import type IGovernanceProposal from "~/types/governance_proposal";
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
+const web3Store = useWeb3Store();
+const fundStore = useFundStore();
+const route = useRoute();
+const proposalId = route.params.proposalId as string;
+const fundSlug = route.params.fundSlug as string;
+console.log("proposal", proposalId);
+console.log("fundSlug", fundSlug);
 
 const { selectedFundSlug } = toRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
-    title: "Proposals",
+    title: "All Proposals",
     disabled: false,
     to: `/details/${selectedFundSlug.value}/governance`,
   },
+  {
+    title: "Proposal Details",
+    disabled: true,
+    to: `/details/${selectedFundSlug.value}/governance`,
+  },
 ];
-
-// dummy data
-const proposalDetails: Partial<IGovernanceProposal> = {
-  proposalId: "75jfh475hqc",
-  proposer: "0x1f98dgfgF984",
-  state: ProposalState.Active,
-  title: "Unlock airdrop permission to 0x1f98dgfgF984",
-  submission_status: "Pending",
-  approval: 70,
-  participation: 32.123412,
-  // tags: ["direct_execution"],
-  quorum: BigInt(250000),
-};
 
 const proposalsVotesSubmissions: Partial<IGovernanceProposal>[] = [
   {
     proposalId: "75jfh475hqc",
     proposer: "0x1f98dgfgF984",
-    submission_status: "Abstained",
-    quorum: BigInt(2500000),
+    // submission_status: "Abstained", // TODO fix
+    quorumVotes: BigInt(2500000),
   },
   {
     proposalId: "75jfh475hqc",
     proposer: "0x1f98dgfgF984",
-    submission_status: "Abstained",
-    quorum: BigInt(150000),
+    // submission_status: "Abstained", // TODO fix
+    quorumVotes: BigInt(150000),
   },
   {
     proposalId: "75jfh475hqc",
     proposer: "0x1f98dgfgF984",
-    submission_status: "Abstained",
-    quorum: BigInt(800000),
+    // submission_status: "Abstained", // TODO fix
+    quorumVotes: BigInt(800000),
   },
 ];
 
@@ -122,9 +125,21 @@ const tabsContent: Record<string, any> = {
   two: "Tab Two",
 };
 
+const governanceProposalStore = useGovernanceProposalsStore();
+const proposal = computed(() => {
+  return governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
+})
+
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
 });
+onBeforeUnmount(() => {
+  emit("updateBreadcrumbs", []);
+});
+
+const copyText = (text: string) => {
+  navigator.clipboard.writeText(text);
+};
 </script>
 
 <style scoped lang="scss">

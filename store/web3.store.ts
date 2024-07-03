@@ -11,6 +11,18 @@ interface IState {
   cachedTokens: Record<string, any>;
 }
 
+const removeDuplicates = (arr: any[]) => {
+  const seen = new Set();
+  return arr.filter(item => {
+    if (seen.has(item)) {
+      return false;
+    }
+    seen.add(item);
+    return true;
+
+  });
+}
+
 export const useWeb3Store = defineStore({
   id: "web3store",
   state: (): IState => ({
@@ -23,7 +35,7 @@ export const useWeb3Store = defineStore({
         chainId: "0x89",
         chainName: "Polygon",
         chainShort: "matic",
-        rpcUrl: "https://polygon.drpc.org",
+        rpcUrl: "https://polygon-pokt.nodies.app",
         rpcUrls: [
           "https://polygon.drpc.org",
           "https://polygon.llamarpc.com",
@@ -35,12 +47,12 @@ export const useWeb3Store = defineStore({
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
         chainShort: "arb1",
-        rpcUrl: "https://arbitrum.drpc.org",
+        rpcUrl: "https://arb-pokt.nodies.app",
         rpcUrls: [
-          "https://arbitrum.llamarpc.com",
-          "https://1rpc.io/arb",
-          "https://arb-pokt.nodies.app",
-          "https://arbitrum.drpc.org",
+          "https://arbitrum.llamarpc.com",  // Max 10k blocks
+          "https://1rpc.io/arb",            // Max 1k blocks
+          "https://arb-pokt.nodies.app",    // Pruned Node / Light node, no logs...
+          "https://arbitrum.drpc.org",      // Max 10k blocks, if auth: more than 1M
         ],
       },
       "0xfc": {
@@ -49,6 +61,23 @@ export const useWeb3Store = defineStore({
         chainShort: "frax",
         rpcUrl: "https://rpc.frax.com",
       },
+      "0x1": {
+        chainId: "0x1",
+        chainName: "Ethereum",
+        chainShort: "eth",
+        rpcUrl: "https://rpc.ankr.com/eth",
+        rpcUrls: [
+          "https://eth.drpc.org",
+          "https://endpoints.omniatech.io/v1/eth/mainnet/public",  
+          "https://ethereum.blockpi.network/v1/rpc/public",    
+          "https://api.zan.top/node/v1/eth/mainnet/public",    
+          "https://rpc.ankr.com/eth", 
+          "https://rpc.flashbots.net/fast",  
+          "https://rpc.flashbots.net",    
+          "https://rpc.lokibuilder.xyz/wallet",    
+          "https://api.stateless.solutions/ethereum/v1/demo",
+        ],
+      }
     },
     cachedTokens: {
       "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063": {
@@ -73,6 +102,9 @@ export const useWeb3Store = defineStore({
         return currentProvider.clientUrl;
       }
       return "";
+    },
+    currentNetwork(): INetwork {
+      return this.networksMap[this.chainId]
     },
   },
   actions: {
@@ -120,7 +152,7 @@ export const useWeb3Store = defineStore({
       if (web3Provider) {
         this.web3 = web3Provider;
       } else {
-        const rpcUrls = network.rpcUrls || [network.rpcUrl];
+        const rpcUrls = removeDuplicates([network.rpcUrl, ...network.rpcUrls ?? []]);
         for (const rpcUrl of rpcUrls) {
           this.web3 = new Web3(rpcUrl);
 
