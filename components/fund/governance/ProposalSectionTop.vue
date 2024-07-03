@@ -1,46 +1,42 @@
 <template>
   <div class="section-top">
     <h2 class="section-top__title">
-      {{ proposalDetails.title }}
+      {{ proposal.title }}
     </h2>
 
     <div class="section-top__meta-container">
       <div class="section-top__meta">
         <div class="section-top__meta-row">
           <FundGovernanceProposalStateChip
-            v-if="proposalDetails.state"
-            :value="proposalDetails.state"
+            :value="proposal.state"
             class="section-top__tag"
           />
           <FundGovernanceProposalStateChip
             value="Permissions"
             class="section-top__tag"
           />
-          <div class="section-top__submission">
-            <Icon
-              :icon="
-                icons[proposalDetails.submission_status as keyof typeof icons]
-              "
-              width="0.9rem"
-              class="section-top__submission-icon"
-            />
-            <div class="section-top__submission-text">
-              {{ proposalDetails.submission_status }}
-            </div>
-          </div>
+          <!--          <div class="section-top__submission">-->
+          <!--            <Icon-->
+          <!--              :icon="icons[submission as keyof typeof icons]"-->
+          <!--              width="0.9rem"-->
+          <!--              class="section-top__submission-icon"-->
+          <!--            />-->
+          <!--            <div class="section-top__submission-text">-->
+          <!--              {{ submission }}-->
+          <!--            </div>-->
+          <!--          </div>-->
         </div>
 
         <div class="section-top__meta-row">
           <div
-            v-for="item in metaBottom"
+            v-for="item in metaCopyTags"
             :key="item.label"
             class="section-top__meta-item"
           >
             <div class="meta-label">
               {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
             </div>
-
-            <ui-tooltip-click tooltip-text="Copied">
+            <ui-tooltip-click :tooltip-text="`Copied to clipboard: ${item.value}`">
               <Icon
                 icon="clarity:copy-line"
                 class="section-top__copy-icon"
@@ -55,9 +51,11 @@
       <v-btn
         v-if="!isButtonHidden"
         class="section-top__submit-button"
-        @click="handleButtonClick"
-        v-text="buttonText"
-      />
+        @click="submitButtonClick"
+      >
+        {{ submitButtonText }}
+      </v-btn>
+
 
       <v-dialog
         v-model="isDialogOpen"
@@ -80,7 +78,7 @@
           </div>
 
           <div
-            v-for="item in metaBottom.slice(0, 1)"
+            v-for="item in metaCopyTags.slice(0, 1)"
             :key="item.label"
             class="di-card__subtext"
           >
@@ -98,11 +96,11 @@
           </div>
 
           <h2 class="di-card__title">
-            {{ proposalDetails.title }}
+            {{ proposal.title }}
           </h2>
 
           <div class="di-card__voting-power meta-label meta-label--uppercase">
-            Voting Power: {{ proposalDetails.totalVotes }}
+            Voting Power: {{ proposal.totalVotes }}
           </div>
 
           <v-radio-group v-model="selectedRadio" class="di-card__radio-group">
@@ -137,13 +135,19 @@
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 // toast
 import { truncateAddress } from "~/composables/addressUtils";
 // import { useToastStore } from "~/store/toast.store";
 import type IGovernanceProposal from "~/types/governance_proposal";
 
-// defined icons for submission
+const props = defineProps({
+  proposal: {
+    type: Object as PropType<IGovernanceProposal>,
+    default: () => {},
+  },
+});
+
 const icons = {
   Pending: "material-symbols:timer-outline",
   Missed: "material-symbols:priority-high",
@@ -152,110 +156,102 @@ const icons = {
   Approved: "material-symbols:done",
 };
 
-// const toastStore = useToastStore();
-
-interface MetaItem {
+interface IMetaItem {
   label: string;
   value: string;
   format?: (value: string) => string;
 }
-
 const radioOptions: { label: string; value: string; icon: string }[] = [
   { label: "Approve", value: "approve", icon: icons.Approved },
   { label: "Reject", value: "reject", icon: icons.Rejected },
   { label: "Abstain", value: "abstain", icon: icons.Abstained },
 ];
 
-export default defineComponent({
-  name: "ProposalSectionTop",
-  props: {
-    proposalDetails: {
-      type: Object as PropType<Partial<IGovernanceProposal>>,
-      default: () => ({}),
+const metaCopyTags = computed((): IMetaItem[] => {
+  return [
+    {
+      label: "Proposal ID:",
+      value: props.proposal.proposalId,
     },
-  },
-  data: () => ({
-    icons,
-    isDialogOpen: false,
-    radioOptions,
-    selectedRadio: "",
-  }),
-  computed: {
-    isButtonHidden() {
-      // list all submission statuses that should hide the button
-      const hiddenBySubmission = ["Rejected"].includes(
-        this.proposalDetails.submission_status ?? "",
-      );
-      // list all tags that should hide the button
-      // const hiddenByTags = ["failed"].some(
-      //   (tag) => this.proposalDetails?.tags?.includes(tag) ?? false
-      // );
-
-      // return hiddenBySubmission || hiddenByTags;
-      return hiddenBySubmission;
+    {
+      label: "Proposer",
+      value: props.proposal.proposer,
+      format: truncateAddress,
     },
-    isApproved() {
-      return this.proposalDetails.submission_status === "Approved";
-    },
-    buttonText() {
-      return this.isApproved ? "Execute Proposal" : "Submit Vote";
-    },
-    metaBottom() {
-      return [
-        {
-          label: "Proposal ID:",
-          value: this.proposalDetails?.proposalId || "",
-        },
-        {
-          label: "Created by",
-          value: this.proposalDetails?.proposer || "",
-          format: truncateAddress,
-        },
-      ];
-    },
-  },
-  methods: {
-    classesRadioIcon(value: string) {
-      return [
-        "di-card__radio",
-        { [`di-card__radio--${value}`]: value === this.selectedRadio },
-      ];
-    },
-    copyText(text: string) {
-      navigator.clipboard.writeText(text);
-    },
-    handleButtonClick() {
-      // if proposal is approved, execute proposal
-      if (this.isApproved) {
-        this.executeProposal();
-      }
-      // if proposal is not approved, open dialog
-      // for submission
-      else {
-        this.dialogOpen();
-      }
-    },
-    submitProposal(selectedRadio: string) {
-      const msg = {
-        approve: "Voted to Approve",
-        reject: "Voted to Reject",
-        abstain: "Voted to Abstain",
-      } as Record<string, string>;
-
-      // toastStore.successToast(msg[selectedRadio]);
-      this.dialogClose();
-    },
-    executeProposal() {
-      alert("Execute Proposal");
-    },
-    dialogOpen() {
-      this.isDialogOpen = true;
-    },
-    dialogClose() {
-      this.isDialogOpen = false;
-    },
-  },
+  ];
 });
+
+const proposalSubmissionStatus = computed(() => {
+  // TODO todo get actual submission status (pass from parent)
+  return "";
+  // return props.proposal.submission_status
+});
+
+const isButtonHidden = computed(() => {
+  // list all submission statuses that should hide the button
+  // list all tags that should hide the button
+  // const hiddenByTags = ["failed"].some(
+  //   (tag) => this.proposal?.tags?.includes(tag) ?? false
+  // );
+
+  // return hiddenBySubmission || hiddenByTags;
+  return ["Rejected"].includes(
+    proposalSubmissionStatus.value ?? "",
+  );
+});
+
+const isProposalApproved = computed(() => {
+  return proposalSubmissionStatus.value === "Approved";
+});
+
+const submitButtonText = computed(() => {
+  return isProposalApproved.value ? "Execute Proposal" : "Submit Vote";
+});
+
+const isDialogOpen = ref(false);
+const selectedRadio = ref("");
+
+const copyText = (text: string) => {
+  navigator.clipboard.writeText(text);
+}
+const submitButtonClick = () => {
+  // if proposal is approved, execute proposal
+  if (isProposalApproved.value) {
+    executeProposal();
+  } else {
+  // if proposal is not approved, open dialog
+  // for submission
+    dialogOpen();
+  }
+}
+
+const submitProposal = (selectedRadio: string) => {
+  // const msg = {
+  //   approve: "Voted to Approve",
+  //   reject: "Voted to Reject",
+  //   abstain: "Voted to Abstain",
+  // } as Record<string, string>;
+
+  console.log(selectedRadio);
+  // toastStore.successToast(msg[selectedRadio]);
+  dialogClose();
+}
+
+const executeProposal = () => {
+  alert("Execute Proposal");
+}
+const dialogOpen = () => {
+  isDialogOpen.value = true;
+}
+const dialogClose = () => {
+  isDialogOpen.value = false;
+}
+const classesRadioIcon = (value: string) => {
+  return [
+    "di-card__radio",
+    { [`di-card__radio--${value}`]: value === selectedRadio.value },
+  ];
+}
 </script>
 
 <style scoped lang="scss">

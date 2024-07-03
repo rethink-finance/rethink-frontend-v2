@@ -34,18 +34,18 @@ import type IGovernanceProposal from "~/types/governance_proposal";
 
 export default {
   props: {
-    proposalDetails: {
+    proposal: {
       type: Object as () => Partial<IGovernanceProposal>,
       default: () => ({}),
     },
   },
   computed: {
     parsedRoadmap() {
-      const voteStart = this.proposalDetails?.voteStart
-        ? new Date(this.proposalDetails.voteStart)
+      const voteStart = this.proposal?.voteStart
+        ? new Date(this.proposal.voteStart)
         : null;
-      const voteEnd = this.proposalDetails?.voteEnd
-        ? new Date(this.proposalDetails.voteEnd)
+      const voteEnd = this.proposal?.voteEnd
+        ? new Date(this.proposal.voteEnd)
         : null;
 
       // TODO: proposal execution date is missing

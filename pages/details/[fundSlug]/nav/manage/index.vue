@@ -79,6 +79,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
 });
+onBeforeUnmount(() => {
+  emit("updateBreadcrumbs", []);
+});
 </script>
 
 <style scoped lang="scss">

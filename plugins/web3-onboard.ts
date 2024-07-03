@@ -41,14 +41,26 @@ export default defineNuxtPlugin(() => {
         id: "0x89",
         token: "MATIC",
         label: "Polygon",
-        rpcUrl: "https://polygon-rpc.com/",
+        rpcUrl: "https://polygon.drpc.org",
       },
       {
         id: "0xa4b1",
         token: "ARB1",
-        label: "Arbitrum One Goerli Testnet",
-        rpcUrl: "https://arbitrum.llamarpc.com",
+        label: "Arbitrum One",
+        rpcUrl: "https://1rpc.io/arb",
       },
+      {
+        id: "0xfc",
+        token: "frxETH",
+        label: "Fraxtal",
+        rpcUrl: "https://rpc.frax.com",
+      },
+      {
+        id: "0x1",
+        token: "ETH",
+        label: "Ethereum",
+        rpcUrl: "https://rpc.ankr.com/eth",
+      }
     ],
     theme: "dark",
     appMetadata: {

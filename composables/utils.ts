@@ -42,25 +42,36 @@ const ignoreKeys: Set<string> = new Set(["__length__"]);
  * after the data is ABI decoded. Numeric indexes are removed.
  *
  * @param {any} data - The data to be cleaned. It can be of any type.
+ * @param preserveBigInt If true, when formatting bigint to string, the "n" is preserved, so that it can be
+ *    parsed back to the bigint from string.
+ * @param level Depth level when serializing nested objects.
  * @returns {any} - The cleaned data, with arrays and objects recursively processed.
  */
-export const cleanComplexWeb3Data = (data: any): any => {
+export const cleanComplexWeb3Data = (data: any, preserveBigInt: boolean = false, level: number = 0): any => {
   if (Array.isArray(data)) {
     // Recursively clean each item in the array
-    return data.map((item) => cleanComplexWeb3Data(item));
+    return data.map((item) => cleanComplexWeb3Data(item, preserveBigInt, level + 1));
   } else if (typeof data === "object" && data !== null) {
     // Prepare an object to accumulate the cleaned data
     const cleanedData: { [key: string]: any } = {};
     Object.keys(data).forEach((key) => {
-      // Check if the key is not numeric
-      if (!ignoreKeys.has(key) && isNaN(Number(key))) {
-        // Recursively clean and assign if key is not numeric and not ignored
-        cleanedData[key] = cleanComplexWeb3Data(data[key]);
+      if (ignoreKeys.has(key)) return;
+
+      // Check if the key is not numeric, ignore numeric values, but keep hex keys like ("0x5231").
+      // Ignore index keys such as { 0: {}, 1: "test" }
+      if (!key.startsWith("0x") && level === 0 && !isNaN(Number(key))) {
+        return;
       }
+      // Recursively clean and assign if key is not numeric and not ignored
+      cleanedData[key] = cleanComplexWeb3Data(data[key], preserveBigInt, level + 1);
     });
     return cleanedData;
   } else if (typeof data === "bigint") {
-    return data.toString();
+    let bigintFormatted = data.toString();
+    if (preserveBigInt) {
+      bigintFormatted += "n";
+    }
+    return bigintFormatted;
   }
   // Return primitive types unchanged
   return data;

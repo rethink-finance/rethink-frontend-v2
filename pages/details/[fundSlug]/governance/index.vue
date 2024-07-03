@@ -8,7 +8,7 @@
 
     <UiMainCard title="Governance Activity" :subtitle="pendingProposalsCountText">
       <template #header-right>
-        <UiDropdown :options="dropdownOptions" label="Create Proposal" />
+        <UiDropdown :options="dropdownOptions" label="Create Proposal" @click="startFetch" />
       </template>
       <template #tools>
         <v-btn
@@ -23,15 +23,14 @@
         </v-btn>
         <div class="tools__success-rate">
           <div class="tools__val">
-            <!-- TODO calculate success rate -->
-            N/A
+            {{ proposalsSuccessRate }}
           </div>
           <div class="tools__subtext">
             Success Rate
           </div>
         </div>
       </template>
-      <FundGovernanceTableProposals :items="governanceProposals" :loading="loadingProposals" />
+      <FundGovernanceProposalsTable :items="governanceProposals" :loading="loadingProposals" />
     </UiMainCard>
 
     <UiMainCard title="Trending Delegates" subtitle="4 Delegated Wallets">
@@ -49,36 +48,68 @@
 
 <script setup lang="ts">
 // types
-import type { EventLog } from "web3";
-import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import type IFund from "~/types/fund";
 import type ITrendingDelegates from "~/types/trending_delegates";
 
+
 // components
 import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDelegates.vue";
-import { cleanComplexWeb3Data } from "~/composables/utils";
 import { useFundStore } from "~/store/fund.store";
+import { useToastStore } from "~/store/toast.store";
 import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
-import type IGovernanceProposal from "~/types/governance_proposal";
+import { ClockMode } from "~/types/enums/clock_mode";
+import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
+import { useWeb3Store } from "~/store/web3.store";
 const fundStore = useFundStore();
+const toastStore = useToastStore();
+const web3Store = useWeb3Store();
+const governanceProposalStore = useGovernanceProposalsStore();
 
 // dummy data for manage delegate button
 const manageDelegateUrl = "https://www.google.com";
+
 // dummy data governance activity
-const governanceProposals = ref<IGovernanceProposal[]>([]);
+const governanceProposals = computed(() => {
+  const proposals = governanceProposalStore.getProposals(web3Store.chainId, fundStore.fund?.address)
+
+  // Sort the events by createdTimestamp
+  proposals.sort((a, b) => {
+    const timestampA = a.createdTimestamp;
+    const timestampB = b.createdTimestamp;
+    return timestampB - timestampA;
+  });
+
+  return proposals;
+});
+
 const proposalsCountText = computed(() => {
   if (governanceProposals.value.length === 1) {
     return "1 Proposal";
   }
   return governanceProposals.value.length + " Proposals";
 });
+const pendingProposals = computed(() => {
+  return governanceProposals.value.filter(proposal => proposal.state === ProposalState.Pending);
+});
 const pendingProposalsCountText = computed(() => {
-  const pendingProposals = governanceProposals.value.filter(proposal => proposal.state === ProposalState.Pending);
-  if (pendingProposals.length === 1) {
+  if (pendingProposals.value.length === 1) {
     return "1 Pending Proposal";
   }
-  return pendingProposals.length + " Pending Proposals";
+  return pendingProposals.value.length + " Pending Proposals";
 });
+const proposalsSuccessRate = computed(() => {
+  const successProposals = governanceProposals.value.filter(proposal => [ProposalState.Succeeded, ProposalState.Executed].includes(proposal.state));
+  const allFinishedProposalsCount = governanceProposals.value.length - pendingProposals.value.length;
+  let successRate = 0;
+  if (allFinishedProposalsCount) {
+    successRate = successProposals.length / (governanceProposals.value.length - pendingProposals.value.length)
+  }
+  return formatPercent(successRate, false)
+});
+
+// fetchProposals can be a super long-lasting process, so if the user changes
+// page we want to stop fetching proposals.
+const shouldFetchProposals = ref(false);
 
 // Dummy data for trending delegates
 const trendingDelegates: ITrendingDelegates[] = [
@@ -111,19 +142,15 @@ const trendingDelegates: ITrendingDelegates[] = [
 const dropdownOptions = [
   "Delegated permissions",
   "Direct Execution",
-  "NAV Methods",
-  "Fund Settings",
+  "NAV Methods",  // TODO link to NAV methods, already exists
+  "Fund Settings",   // TODO disabled
 ];
 
 const fund = useAttrs().fund as IFund;
-
-
-const proposalCreatedEventInputs = RethinkFundGovernor.abi.find(
-  event => event.name === "ProposalCreated" && event.type === "event",
-)?.inputs ?? [];
 const loadingProposals = ref(false);
+
 /**
- * Example data of one decoded proposal:
+ * Example data of one decoded proposal, data that came from the ProposalCreated event:
  *
  * {
  *     "proposalId": "100928362673962953747976977800166144740308816222406020172969996550573666024331",
@@ -169,80 +196,97 @@ const loadingProposals = ref(false);
  * to compare them with function signatures of our ABIs
  * TODO or just try decoding calldatas with our ABIs
  */
-const getAllProposals = async () => {
+const parseProposals = async (chunkEvents: any[]) => {
   if (!fundStore.fund?.governanceToken.decimals) {
-    console.error("No governance token decimals found.")
+    console.error("No fund governance token decimals found.")
+    toastStore.errorToast("No fund governance token decimals found.")
     return
   }
-  loadingProposals.value = true;
-  governanceProposals.value = [];
-  const latestBlock = Number(await fundStore.web3.eth.getBlockNumber());
-  console.log("latestBlock: ", latestBlock);
-  // const safeBlock = fundStore.web3Store.getContractCreationBlock(fundStore.fund?.safeAddress)
-  // console.log("safe block: ", safeBlock)
+  if (!fundStore.fund.clockMode?.mode) {
+    console.error("Fund clock mode is unknown.")
+    toastStore.errorToast("Fund clock mode is unknown.")
+    return
+  }
 
-  const chunkSize = 3000;
-  // TODO we can do batch requests for example 10x3000
-  // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
-  // We fetch from the most recent to least recent block number.
-  for (let i = latestBlock; i >= 0; i -= chunkSize) {
-    const toBlock = i;
-    const fromBlock = Math.max(i - chunkSize + 1, 0);
+  for (const event of chunkEvents) {
+    console.log("event");
+    console.log(event);
+    const proposal = governanceProposalStore.decodeProposalCreatedEvent(event);
+    if (!proposal) continue;
 
-    const chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
-      fromBlock,
-      toBlock,
-    });
+    const block = await fundStore.web3.eth.getBlock(event.blockNumber);
+    proposal.createdTimestamp = Number(block.timestamp);
+    proposal.createdDatetimeFormatted = formatDate(new Date(Number(block.timestamp) * 1000));
+    proposal.createdBlockNumber = event.blockNumber;
 
-    for (const event of chunkEvents) {
-      const proposal = decodeProposalCreatedEvent(event);
-      if (!proposal) continue;
+    // const voteStartDate = new Date(Number(proposal.voteStart) * 1000);
+    // const voteEndDate = new Date(Number(proposal.voteEnd) * 1000);
+    // console.log("Vote Start Date: ", voteStartDate);
+    // console.log("Vote End Date: ", voteEndDate);
 
-      const block = await fundStore.web3.eth.getBlock(event.blockNumber);
-      proposal.createdTimestamp = Number(block.timestamp);
-      proposal.createdBlockNumber = event.blockNumber;
+    const proposalState = await fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
+    proposal.state = ProposalStateMapping[proposalState]
 
-      // const voteStartDate = new Date(Number(proposal.voteStart) * 1000);
-      // const voteEndDate = new Date(Number(proposal.voteEnd) * 1000);
-      // console.log("Vote Start Date: ", voteStartDate);
-      // console.log("Vote End Date: ", voteEndDate);
+    const votes = await fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
+    console.log("proposal votes: ", votes);
 
-      const proposalState = await fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
-      proposal.state = ProposalStateMapping[proposalState]
-
-      const votes = await fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
-      console.log("proposal votes: ", votes);
-
-      // Get the Governance Token total supply of when the proposal was created.
-      const totalSupply = await fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber);
+    console.log("get total supply at blockNumber: ", proposal.createdBlockNumber);
+    // Get the Governance Token total supply of when the proposal was created.
+    let totalSupply;
+    try {
+      totalSupply = await fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber);
       proposal.totalSupply = totalSupply;
-      proposal.totalSupplyFormatted = formatTokenValue(totalSupply, fundStore.fund?.governanceToken.decimals);
+      proposal.totalSupplyFormatted = formatTokenValue(totalSupply, fundStore.fund?.governanceToken?.decimals);
+    } catch (error: any) {
+      // Sometimes it happens: missing trie node
+      console.error("failed fetching total supply", error);
+      proposal.totalSupplyFormatted = "N/A"
+    }
 
-      const quorumWhenProposalCreated = await fundStore.fundGovernorContract.methods.quorum(proposal.createdTimestamp).call()
-      proposal.quorum = quorumWhenProposalCreated;
-      proposal.quorumFormatted = formatTokenValue(quorumWhenProposalCreated, fundStore.fund?.governanceToken.decimals);
+    console.log("proposal created blockNumber ", proposal.createdBlockNumber, " timestamp ", proposal.createdTimestamp);
+    try {
+      // To get quorum in time, we have to pass the timePoint, but it depends on the clock mode.
+      // If clock mode is:
+      // - timestamp: use proposal created timestamp
+      // - blocknumber: use proposal created block number
+      const timePoint = fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber ?
+        proposal.createdBlockNumber :
+        proposal.createdTimestamp;
 
-      if (votes) {
-        const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
-        proposal.totalVotes = totalVotes;
-        proposal.totalVotesFormatted = formatTokenValue(totalVotes, fundStore.fund?.governanceToken.decimals);
-        proposal.forVotes = votes.forVotes;
-        proposal.abstainVotes = votes.abstainVotes;
-        proposal.againstVotes = votes.againstVotes;
-        proposal.forVotesFormatted = formatTokenValue(votes.forVotes, fundStore.fund?.governanceToken.decimals);
-        proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, fundStore.fund?.governanceToken.decimals);
-        proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, fundStore.fund?.governanceToken.decimals);
+      const quorumWhenProposalCreated = await fundStore.fundGovernorContract.methods.quorumNumerator(timePoint).call()
+      proposal.quorumVotes = quorumWhenProposalCreated;
+      proposal.quorumVotesFormatted = formatTokenValue(quorumWhenProposalCreated, fundStore.fund?.governanceToken?.decimals);
+    } catch (e: any) {
+      console.error("error fetching quorumVotes: ", e);
+      proposal.quorumVotesFormatted = "N/A";
+    }
 
-        let approval = Number(votes.forVotes) / Number(quorumWhenProposalCreated);
+    console.log("parse votes");
+    if (votes) {
+      const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
+      proposal.totalVotes = totalVotes;
+      proposal.totalVotesFormatted = formatTokenValue(totalVotes, fundStore.fund?.governanceToken.decimals);
+      proposal.forVotes = votes.forVotes;
+      proposal.abstainVotes = votes.abstainVotes;
+      proposal.againstVotes = votes.againstVotes;
+      proposal.forVotesFormatted = formatTokenValue(votes.forVotes, fundStore.fund?.governanceToken.decimals);
+      proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, fundStore.fund?.governanceToken.decimals);
+      proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, fundStore.fund?.governanceToken.decimals);
+
+      if (proposal.quorumVotes) {
+        let approval = Number(votes.forVotes) / Number(proposal.quorumVotes);
         // Limit approval percentage to 100% max.
         if (approval > 1) {
           approval = 1;
         }
         proposal.approval = approval;
         proposal.approvalFormatted = formatPercent(approval, false);
-        console.log("approvalFormatted: ", proposal.approvalFormatted, approval)
+      } else {
+        proposal.approvalFormatted = "N/A";
+      }
 
-        // Participation is totalVotes / totalSupply
+      // Participation is totalVotes / totalSupply
+      if (totalSupply) {
         let participation = Number(totalVotes) / Number(totalSupply);
         // Limit participation percentage to 100% max.
         if (participation > 1) {
@@ -250,50 +294,198 @@ const getAllProposals = async () => {
         }
         proposal.participation = participation;
         proposal.participationFormatted = formatPercent(participation, false);
-        console.log("participationFormatted: ", proposal.participationFormatted, proposal.participation)
+      } else {
+        proposal.participationFormatted = "N/A";
+      }
+    }
+
+    proposal.calldatasDecoded = [];
+    for (const calldata of proposal.calldatas) {
+      proposal.calldatasDecoded.push(governanceProposalStore.decodeProposalCallData(calldata));
+    }
+
+    governanceProposalStore.storeProposal(web3Store.chainId, fundStore.fund?.address, proposal)
+  }
+}
+
+const fetchProposals = async (rangeStartBlock: number, rangeEndBlock: number) => {
+  if (!fundStore.fund?.governanceToken.decimals) {
+    console.error("No fund governance token decimals found.")
+    toastStore.errorToast("No fund governance token decimals found.")
+    return
+  }
+  if (!fundStore.fund.clockMode?.mode) {
+    console.error("Fund clock mode is unknown.")
+    toastStore.errorToast("Fund clock mode is unknown.")
+    return
+  }
+  loadingProposals.value = true;
+
+  // TODO arbitrum1 RPCs can take ranges of more blocks, like 1M, polygon cries if we use more than 3k
+  // It looks like this range is arbitrary, specific to RPC, so we should try and guess it and increase exponentially
+  // until they block us, and then we decrease it.
+  // some RPCs can take more than 1M in arbitrum if logged in
+  // let chunkSize = 1000000;
+  let chunkSize = 3000;
+  let maxValidChunkSize;
+
+  // TODO we can do batch requests for example 10x3000
+  // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
+  // We fetch from the most recent to least recent block number.
+  const targetDate = new Date("2024-04-01T00:00:00Z");
+  const targetTimestamp = Math.floor(targetDate.getTime() / 1000);
+
+  // From the largest number to the smallest number.
+  if (rangeStartBlock > rangeEndBlock) {
+    console.log("BIGGEST to smallest")
+    for (let i = rangeStartBlock; i > rangeEndBlock; i -= chunkSize) {
+      if (!shouldFetchProposals.value) return;
+
+      const toBlock = i;
+      let fromBlock = Math.max(i - chunkSize + 1, 0);
+      const block = await fundStore.web3.eth.getBlock(toBlock);
+      const toBlockTimestamp = new Date(Number(block.timestamp) * 1000)
+      console.log("fetch ProposalCreated events from: ", fromBlock, " to ", toBlock, " timestamp: ", toBlockTimestamp);
+
+      let chunkEvents;
+      while (chunkSize > 100 && chunkSize > 0) {
+        console.log("getPastEvents chunkSize: ", chunkSize);
+        try {
+          chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
+            fromBlock,
+            toBlock,
+          });
+          console.log("chunkevents fetched: ", chunkEvents, " chunksize: ", chunkSize, maxValidChunkSize);
+
+          if (!maxValidChunkSize || chunkSize * 2 <= maxValidChunkSize) {
+            chunkSize *= 2;
+            console.log("new chunkSize: ", chunkSize);
+          }
+          break
+        } catch {
+          chunkSize /= 2;
+          maxValidChunkSize = chunkSize;
+          console.log("reduce chunkSize: ", chunkSize);
+          fromBlock = Math.max(i - chunkSize + 1, 0);
+        }
       }
 
-      // TODO Get user's connected wallet submission status for this proposal
-      //   proposal.submission_status = ""
+      parseProposals(chunkEvents);
 
-      console.log("proposal: ", proposal);
-      governanceProposals.value.push(proposal)
+      console.log("set BlockFetchedRanges toBlock: ", toBlock, " fromBlock ", fromBlock);
+      governanceProposalStore.setFundProposalsBlockFetchedRanges(
+        web3Store.chainId,
+        fundStore.fund?.address,
+        toBlock,
+        fromBlock,
+      )
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const lastProposal = governanceProposals.value[governanceProposals.value.length];
+      if (lastProposal?.createdTimestamp < targetTimestamp) {
+        break;
+      }
     }
-    // TODO Remove this break in the future. Just for testing purposes to get at least 4 events.
-    //  in the future we have to fetch all events until the creation of governance contract
-    if (governanceProposals.value.length > 3) break;
+  } else {
+    console.log("smallest to BIGGEST")
+
+    for (let i = rangeEndBlock; i < rangeStartBlock; i += chunkSize) {
+      if (!shouldFetchProposals.value) return;
+      const fromBlock = Math.max(i, 0);
+      let toBlock = i + chunkSize - 1;
+      const block = await fundStore.web3.eth.getBlock(toBlock);
+      const toBlockTimestamp = new Date(Number(block.timestamp) * 1000)
+      console.log("fetch ProposalCreated events from: ", fromBlock, " to ", toBlock, " timestamp: ", toBlockTimestamp);
+
+      let chunkEvents;
+      while (chunkSize > 100 && chunkSize > 0) {
+        console.log("getPastEvents chunkSize: ", chunkSize);
+        try {
+          chunkEvents = await fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
+            fromBlock,
+            toBlock,
+          });
+          console.log("chunkevents fetched: ", chunkEvents, " chunksize: ", chunkSize, maxValidChunkSize);
+          if (!maxValidChunkSize || chunkSize * 2 <= maxValidChunkSize) {
+            chunkSize *= 2;
+            console.log("new chunkSize: ", chunkSize);
+          }
+          break;
+        } catch {
+          chunkSize /= 2;
+          maxValidChunkSize = chunkSize;
+          console.log("reduce chunkSize: ", chunkSize);
+          toBlock = Math.max(i + chunkSize - 1, 0);
+        }
+      }
+
+      parseProposals(chunkEvents);
+
+      governanceProposalStore.setFundProposalsBlockFetchedRanges(
+        web3Store.chainId,
+        fundStore.fund?.address,
+        toBlock,
+        fromBlock,
+      )
+      // await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const lastProposal = governanceProposals.value[governanceProposals.value.length];
+      if (lastProposal?.createdTimestamp < targetTimestamp) {
+        break;
+      }
+    }
   }
 
   loadingProposals.value = false;
 }
 
-const decodeProposalCreatedEvent = (event: EventLog) => {
-  if (!event.raw) return undefined;
-  const topics = event.raw?.topics as string[];
-
-  // Decode event data.
-  const decodedEvent = fundStore.web3.eth.abi.decodeLog(
-    proposalCreatedEventInputs ?? [],
-    event.raw?.data ?? "",
-    topics.slice(1),
-  );
-  const proposal = cleanComplexWeb3Data(decodedEvent) as IGovernanceProposal;
-
-  try {
-    const parsedDescription = JSON.parse(proposal.description);
-    proposal.title = parsedDescription.title;
-    proposal.description = parsedDescription.description;
-  } catch {
-    proposal.title = proposal.description;
-  }
-
-  return proposal
-}
-
-onMounted(() => {
-  console.log("fetch governance proposal events for fund: ", fund.address);
-  getAllProposals();
+// TODO iterate over all already fetched proposals that are still votable and update their state (createdBlockNumber).
+onMounted( () => {
+  startFetch();
 });
+onBeforeUnmount(() => {
+  console.log("Component is being unmounted, stopping the fetch");
+  shouldFetchProposals.value = false;
+  loadingProposals.value = false;
+});
+
+const startFetch = async () => {
+  if (shouldFetchProposals.value) {
+    console.log("stop fetching")
+    shouldFetchProposals.value = false;
+    loadingProposals.value = false;
+    return
+  }
+  console.log("\n\n________________________");
+  console.log("fetch governance proposal events for fund: ", fund.address);
+  shouldFetchProposals.value = true;
+
+  const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
+  console.log("currentBlock: ", currentBlock);
+
+  const [mostRecentFetchedBlock, oldestFetchedBlock] = governanceProposalStore.getFundProposalsBlockFetchedRanges(
+    web3Store.chainId, fundStore.fund?.address,
+  )
+  console.log("mostRecentFetchedBlock: ", mostRecentFetchedBlock, "oldestFetchedBlock:", oldestFetchedBlock);
+
+
+  if (mostRecentFetchedBlock !== undefined && oldestFetchedBlock !== undefined) {
+    console.log("fetch from current block to most recent fetched block", currentBlock, mostRecentFetchedBlock)
+    // From smallest to biggest.
+    await fetchProposals(mostRecentFetchedBlock + 1, currentBlock);
+
+    // fetch from the already fetched the oldest block number to hardcoded limit oldest date.
+    // ---------| oldest fetched | xxxxxxxxxx <to fetch> xxxxxxxxxx | GENESIS BLOCK
+    console.log("fetch from already fetched oldest block to 0", oldestFetchedBlock)
+    // From biggest to smallest
+    await fetchProposals(oldestFetchedBlock - 1, 0);
+  } else {
+    // Fetch all history.
+    governanceProposalStore.resetProposals(web3Store.chainId, fundStore.fund?.address)
+    console.log("fetch all blocks")
+    await fetchProposals(currentBlock, 0);
+  }
+}
 </script>
 
 <style scoped lang="scss">
