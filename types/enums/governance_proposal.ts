@@ -12,11 +12,12 @@ export enum ProposalState {
 }
 
 
-// export enum VoteType {
-//   Against = "Against",
-//   For = "For",
-//   Abstain = "Abstain"
-// }
+// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.5/contracts/governance/extensions/GovernorCountingSimple.sol
+export enum VoteType {
+  Against = "Reject",
+  For = "Approve",
+  Abstain = "Abstain"
+}
 //
 // export enum Rounding {
 //   Floor = "Floor",
@@ -52,11 +53,27 @@ export const ProposalStateMapping: { [key: number]: ProposalState } = {
   7: ProposalState.Executed,
 };
 //
-// export const VoteTypeMapping: { [key: number]: VoteType } = {
-//   0: VoteType.Against,
-//   1: VoteType.For,
-//   2: VoteType.Abstain,
-// };
+
+export const VoteTypeNumberMapping: Record<VoteType, number> = {
+  [VoteType.Against]: 0,
+  [VoteType.For]: 1,
+  [VoteType.Abstain]: 2,
+};
+export const VoteTypeMapping: { [key: number]: VoteType } = {
+  1: VoteType.For,
+  0: VoteType.Against,
+  2: VoteType.Abstain,
+};
+export const VoteTypeIcon = {
+  [VoteType.For]: "material-symbols:done",
+  [VoteType.Against]: "material-symbols:close",
+  [VoteType.Abstain]: "material-symbols:question-mark",
+};
+export const VoteTypeClass: Record<VoteType, string> = {
+  [VoteType.For]: "for",
+  [VoteType.Against]: "against",
+  [VoteType.Abstain]: "abstain",
+};
 //
 // export const RoundingMapping: { [key: number]: Rounding } = {
 //   0: Rounding.Floor,

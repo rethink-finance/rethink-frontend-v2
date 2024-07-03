@@ -512,7 +512,7 @@ const createProposal = async () => {
     if (receipt.status) {
       toastStore.successToast(
         "Register the proposal transactions was successful. " +
-        "You can now vote on the proposal in the pool governance page.",
+        "You can now vote on the proposal in the governance page.",
       );
     } else {
       toastStore.errorToast(
