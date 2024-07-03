@@ -65,8 +65,9 @@ export const useWeb3Store = defineStore({
         chainId: "0x1",
         chainName: "Ethereum",
         chainShort: "eth",
-        rpcUrl: "https://eth.drpc.org",
+        rpcUrl: "https://rpc.ankr.com/eth",
         rpcUrls: [
+          "https://eth.drpc.org",
           "https://endpoints.omniatech.io/v1/eth/mainnet/public",  
           "https://ethereum.blockpi.network/v1/rpc/public",    
           "https://api.zan.top/node/v1/eth/mainnet/public",    
@@ -74,8 +75,7 @@ export const useWeb3Store = defineStore({
           "https://rpc.flashbots.net/fast",  
           "https://rpc.flashbots.net",    
           "https://rpc.lokibuilder.xyz/wallet",    
-          "https://api.stateless.solutions/ethereum/v1/demo",   
-          "https://eth.drpc.org",  
+          "https://api.stateless.solutions/ethereum/v1/demo",
         ],
       }
     },
