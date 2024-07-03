@@ -1,43 +1,42 @@
 <template>
   <div class="section-top">
     <h2 class="section-top__title">
-      {{ title }}
+      {{ proposal.title }}
     </h2>
 
     <div class="section-top__meta-container">
       <div class="section-top__meta">
         <div class="section-top__meta-row">
           <FundGovernanceProposalStateChip
-            :value="state"
+            :value="proposal.state"
             class="section-top__tag"
           />
           <FundGovernanceProposalStateChip
             value="Permissions"
             class="section-top__tag"
           />
-          <div class="section-top__submission">
-            <Icon
-              :icon="icons[submission as keyof typeof icons]"
-              width="0.9rem"
-              class="section-top__submission-icon"
-            />
-            <div class="section-top__submission-text">
-              {{ submission }}
-            </div>
-          </div>
+          <!--          <div class="section-top__submission">-->
+          <!--            <Icon-->
+          <!--              :icon="icons[submission as keyof typeof icons]"-->
+          <!--              width="0.9rem"-->
+          <!--              class="section-top__submission-icon"-->
+          <!--            />-->
+          <!--            <div class="section-top__submission-text">-->
+          <!--              {{ submission }}-->
+          <!--            </div>-->
+          <!--          </div>-->
         </div>
 
         <div class="section-top__meta-row">
           <div
-            v-for="item in metaBottom"
+            v-for="item in metaCopyTags"
             :key="item.label"
             class="section-top__meta-item"
           >
             <div class="section-top__meta-label">
               {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
             </div>
-
-            <ui-tooltip-click tooltip-text="Copied">
+            <ui-tooltip-click :tooltip-text="`Copied to clipboard: ${item.value}`">
               <Icon
                 icon="clarity:copy-line"
                 class="section-top__copy-icon"
@@ -49,17 +48,16 @@
         </div>
       </div>
 
-      <v-btn class="section-top__submit-button" @click="submitProposal">
+      <v-btn class="section-top__submit-button" @click="submitVote">
         Submit Vote
       </v-btn>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-// utils
+<script setup lang="ts">
+import type IGovernanceProposal from "~/types/governance_proposal";
 
-// defined icons for submission
 const icons = {
   Pending: "material-symbols:timer-outline",
   Missed: "material-symbols:priority-high",
@@ -68,44 +66,39 @@ const icons = {
   Approved: "material-symbols:done",
 };
 
-interface MetaItem {
+interface IMetaItem {
   label: string;
   value: string;
   format?: (value: string) => string;
 }
+const metaCopyTags = computed((): IMetaItem[] => {
+  return [
+    {
+      label: "Proposal ID:",
+      value: props.proposal.proposalId,
+    },
+    {
+      label: "Proposer",
+      value: props.proposal.proposer,
+      format: truncateAddress,
+    },
+  ];
+});
 
-export default defineComponent({
-  name: "ProposalSectionTop",
-  props: {
-    title: {
-      type: String,
-      default: "",
-    },
-    state: {
-      type: String,
-      default: "",
-    },
-    submission: {
-      type: String,
-      default: "",
-    },
-    metaBottom: {
-      type: Array as () => MetaItem[],
-      default: () => [],
-    },
-  },
-  data: () => ({
-    icons,
-  }),
-  methods: {
-    copyText(text: string) {
-      navigator.clipboard.writeText(text);
-    },
-    submitProposal() {
-      alert("Submit Vote");
-    },
+
+const props = defineProps({
+  proposal: {
+    type: Object as PropType<IGovernanceProposal>,
+    default: () => {},
   },
 });
+
+const copyText = (text: string) => {
+  navigator.clipboard.writeText(text);
+}
+const submitVote = () => {
+  alert("Submit Vote");
+}
 </script>
 
 <style scoped lang="scss">

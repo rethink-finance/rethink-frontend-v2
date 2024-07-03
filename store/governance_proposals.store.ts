@@ -80,6 +80,17 @@ export const useGovernanceProposalsStore = defineStore({
 
       return Object.values(this.fundProposals[chainId][fundAddress]);
     },
+    getProposal(chainId: string, fundAddress?: string, proposalId?: string): IGovernanceProposal | undefined {
+      if (!fundAddress || !proposalId) return undefined;
+
+      const chainData = this.fundProposals?.[chainId];
+      if (!chainData) return undefined;
+
+      const fundData = chainData[fundAddress];
+      if (!fundData) return undefined;
+
+      return fundData[proposalId];
+    },
     getFundProposalsBlockFetchedRanges(chainId: string, fundAddress?: string): number[] | undefined[] {
       if (!fundAddress) return [undefined, undefined];
 
