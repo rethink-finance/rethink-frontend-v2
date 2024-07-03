@@ -65,6 +65,7 @@
 
 <script setup lang="ts">
 // types
+import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import type IFund from "~/types/fund";
 import type ITrendingDelegates from "~/types/trending_delegates";
 
@@ -79,6 +80,7 @@ import {
   ProposalState,
   ProposalStateMapping,
 } from "~/types/enums/governance_proposal";
+const router = useRouter();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
