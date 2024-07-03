@@ -1,75 +1,117 @@
 <template>
-  <div class="stepper">
-    <div class="main_card stepper__main-steps">
-      <div
-        class="main-step"
-        v-for="(step, index) in entry"
-        :key="index"
-        :class="{ 'main-step--active': step.stepName === activeMainStep }"
-        @click="selectMainStep(step.stepName)"
-      >
-        <div class="main-step__title">
-          <div class="main-step__count">{{ index + 1 }}</div>
-          {{ step.stepLabel }}
-        </div>
+  <section class="section-stepper">
+    <UiHeader>
+      <div class="main_header__title">
+        {{ title }}
+        <UiTooltipClick
+          v-if="tooltipText"
+          :tooltip-text="tooltipText"
+          :hide-after="3000"
+        >
+          <Icon
+            icon="material-symbols:info-outline"
+            class="main_header__info-icon"
+            width="1.5rem"
+            @click="tooltipClick"
+          />
+        </UiTooltipClick>
+      </div>
 
-        <div class="sub-steps" v-if="step.multipleSteps">
-          <div
-            class="sub-steps__sub-step"
-            v-for="(substep, index) in step.steps"
-            :key="index"
-            :class="{
-              'sub-steps__sub-step--active': index === activeSubStep,
-            }"
-            @click="selectSubStep(index)"
-          >
-            <div class="sub-steps__dashed-line" />
-            <div class="sub-steps__label">
-              {{ step.substepLabel }}
+      <v-btn
+        class="button--primary"
+        :type="isLastStep ? 'submit' : 'button'"
+        @click="handleButtonClick"
+      >
+        {{ isLastStep ? submitLabel : "Next" }}
+      </v-btn>
+    </UiHeader>
+
+    <div class="stepper">
+      <div class="main_card stepper__main-steps">
+        <div
+          v-for="(step, index) in entry"
+          :key="index"
+          class="main-step"
+          :class="{ 'main-step--active': step.stepName === activeMainStep }"
+        >
+          <div class="main-step__title" @click="selectMainStep(step.stepName)">
+            <div class="main-step__count">
               {{ index + 1 }}
             </div>
-
-            <UiDetailsButton
-              v-if="step.steps && step.steps?.length > 1"
-              small
-              class="sub-steps__delete-button"
-              @click.stop="deleteSubstep(index)"
-            >
-              <v-icon icon="mdi-delete" color="error" />
-            </UiDetailsButton>
+            {{ step.stepLabel }}
           </div>
-          <div class="sub-steps__add-new-step" @click="addNewSubstep(step)">
-            Add {{ step.substepLabel }} +
+
+          <div v-if="step.multipleSteps" class="sub-steps">
+            <div
+              v-for="(substep, index) in step.steps"
+              :key="index"
+              class="sub-steps__sub-step"
+              :class="{
+                'sub-steps__sub-step--active':
+                  index === activeSubStep && step.stepName === activeMainStep,
+              }"
+              @click="selectSubStep(step, index)"
+            >
+              <div class="sub-steps__dashed-line" />
+              <div class="sub-steps__label">
+                {{ step.substepLabel }}
+                {{ index + 1 }}
+              </div>
+
+              <UiDetailsButton
+                v-if="
+                  step.steps &&
+                    step.steps?.length > 1 &&
+                    index === activeSubStep &&
+                    step.stepName === activeMainStep
+                "
+                small
+                class="sub-steps__delete-button"
+                @click.stop="deleteSubstep(step, index)"
+              >
+                <v-icon icon="mdi-delete" color="error" />
+              </UiDetailsButton>
+            </div>
+            <div
+              v-if="step.stepName === activeMainStep"
+              class="sub-steps__add-new-step"
+              @click="addNewSubstep(step)"
+            >
+              Add {{ step.substepLabel }} +
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="main_card stepper__step-content">
-      <v-form ref="form" v-model="formIsValid">
-        <div class="form__content" v-for="(step, index) in entry" :key="index">
-          <div class="wrapper" v-if="activeMainStep === step.stepName">
-            <v-row>
-              <v-col>
-                <strong>{{ step.formTitle }}</strong>
-              </v-col>
-            </v-row>
-
-            <v-row>
-              <FundGovernanceDirectExecutionFields
+      <div class="main_card stepper__step-content">
+        <v-form ref="form">
+          <div
+            v-for="(step, index) in entry"
+            :key="index"
+            class="form__content"
+          >
+            <v-row v-if="step.stepName === activeMainStep">
+              <UiStepperFields
                 :model-value="step?.steps?.[activeSubStep]"
                 :fields="fields"
+                :title="step.formTitle"
+                :text="step.formText"
+                @validate="validate"
               />
             </v-row>
           </div>
-        </div>
-      </v-form>
+        </v-form>
+      </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
-import { type FieldsMapType } from "~/types/enums/direct_execution";
+import { ref } from "vue";
+import { type FieldsMapType } from "~/types/enums/stepper";
+
+import { useToastStore } from "~/store/toast.store";
+const toastStore = useToastStore();
 
 const props = defineProps({
   entry: {
@@ -78,60 +120,50 @@ const props = defineProps({
   },
   fieldsMap: {
     type: Object as PropType<FieldsMapType>,
-    default: () => [],
+    default: () => ({}),
+  },
+  title: {
+    type: String,
+    default: "",
+  },
+  tooltipText: {
+    type: String,
+    default: "",
+  },
+  tooltipClick: {
+    type: Function,
+    default: () => {},
+  },
+  submitLabel: {
+    type: String,
+    default: "Submit",
+  },
+  submitEvent: {
+    type: Function,
+    default: () => {},
   },
 });
 
-const fields = computed(() => props.fieldsMap[activeMainStep.value] || []);
-
-console.log("FIELDS: ", fields);
-
-// add new sub step
-const addNewSubstep = (step: any) => {
-  const activeMainStepIndex = props.entry.findIndex(
-    (step) => step.stepName === activeMainStep.value
-  );
-
-  props.entry?.[activeMainStepIndex]?.steps?.push({
-    ...props.entry?.[activeMainStepIndex]?.stepDefaultValues,
-  });
-};
-
-// delete sub step
-const deleteSubstep = (index: number) => {
-  const activeMainStepIndex = props.entry.findIndex(
-    (step) => step.stepName === activeMainStep.value
-  );
-
-  // don't allow to delete if there is only one step
-  if (props.entry?.[activeMainStepIndex]?.steps?.length === 1) {
-    return;
-  }
-
-  props.entry?.[activeMainStepIndex]?.steps?.splice(index, 1);
-
-  // if the deleted step was the active one, set the first step as active
-  if (activeSubStep.value === index) {
-    activeSubStep.value = 0;
-  }
-
-  // if deleted step doesn't exist anymore, set the last one as active
-  if (
-    activeSubStep.value >= props.entry?.[activeMainStepIndex]?.steps?.length
-  ) {
-    activeSubStep.value = props.entry?.[activeMainStepIndex]?.steps?.length - 1;
-  }
-};
+// define the form ref
+const form = ref();
 
 // form validation
 const formIsValid = ref(false);
-const rules = [formRules.required];
 
 // get step names from the entry
 const stepNames = props.entry.map((step) => step.stepName);
-
+// active step
 const activeMainStep = ref(stepNames[0]);
 const activeSubStep = ref(0);
+
+const fields = computed(() => props.fieldsMap[activeMainStep.value] || []);
+const isLastStep = computed(() => {
+  return !!(
+    activeMainStep.value === stepNames[stepNames.length - 1] &&
+    activeSubStep.value ===
+      props.entry?.[stepNames.length - 1]?.steps?.length - 1
+  );
+});
 
 // select main step
 const selectMainStep = (step: string) => {
@@ -140,35 +172,107 @@ const selectMainStep = (step: string) => {
   activeSubStep.value = 0;
 };
 
-const selectSubStep = (index: number) => {
+const selectSubStep = (mainStep: any, index: number) => {
+  const mainStepIndex = props.entry.findIndex(
+    (step) => step.stepName === mainStep.stepName,
+  );
+
+  activeMainStep.value = mainStep.stepName;
   activeSubStep.value = index;
 };
 
-// Computed properties for v-model
-const proposalTitle = computed({
-  get: () => props.entry[1].steps[0].proposalTitle ?? "",
+// add new sub step
+const addNewSubstep = (mainStep: any) => {
+  activeMainStep.value = mainStep.stepName;
 
-  set: (value) => {
-    props.entry[1].steps[0].proposalTitle = value;
-  },
-});
-
-const proposalDescription = computed({
-  get: () => props.entry[1].steps[0].proposalDescription ?? "",
-
-  set: (value) => {
-    props.entry[1].steps[0].proposalDescription = value;
-  },
-});
-
-const redirectInfo = () => {
-  console.log(
-    "we can redirect to a new page, show a tooltip message or do whatever we want here"
+  const mainStepIndex = props.entry.findIndex(
+    (step) => step.stepName === mainStep.stepName,
   );
+
+  props.entry?.[mainStepIndex]?.steps?.push({
+    ...props.entry?.[mainStepIndex]?.stepDefaultValues,
+  });
+
+  // set new step as active
+  activeSubStep.value = props.entry?.[mainStepIndex]?.steps?.length - 1;
+  activeMainStep.value = mainStep.stepName;
+};
+
+// delete sub step
+const deleteSubstep = (mainStep: any, index: number) => {
+  const mainStepIndex = props.entry.findIndex(
+    (step) => step.stepName === mainStep.stepName,
+  );
+
+  // don't allow to delete if there is only one step
+  if (props.entry?.[mainStepIndex]?.steps?.length === 1) {
+    return;
+  }
+
+  props.entry?.[mainStepIndex]?.steps?.splice(index, 1);
+
+  // if deleted step was a last step, set the previous step as active
+  if (activeSubStep.value === props.entry?.[mainStepIndex]?.steps?.length) {
+    activeSubStep.value = props.entry?.[mainStepIndex]?.steps?.length - 1;
+  }
+};
+
+// check if all main steps and substeps are valid
+const validate = () => {
+  const isValid = props.entry.map((step) => {
+    return step.steps.every((substep: any) => {
+      return substep.isValid === true;
+    });
+  });
+
+  console.log("isValid", isValid);
+
+  formIsValid.value = isValid.every((step) => step === true);
+};
+
+const handleButtonClick = () => {
+  isLastStep.value ? submit() : nextStep();
+};
+
+const submit = () => {
+  if (formIsValid.value) {
+    props.submitEvent();
+  } else {
+    form.value?.validate();
+    toastStore.warningToast("Please fill all the required fields");
+  }
+};
+
+const nextStep = () => {
+  const mainStepIndex = props.entry.findIndex(
+    (step) => step.stepName === activeMainStep.value,
+  );
+
+  if (activeSubStep.value === props.entry?.[mainStepIndex]?.steps?.length - 1) {
+    const nextMainStepIndex = stepNames.indexOf(activeMainStep.value) + 1;
+    activeMainStep.value = stepNames[nextMainStepIndex];
+    activeSubStep.value = 0;
+  } else {
+    activeSubStep.value = activeSubStep.value + 1;
+  }
 };
 </script>
 
 <style scoped lang="scss">
+.main_header {
+  &__title {
+    display: flex;
+    align-items: center;
+    align-content: center;
+    gap: 10px;
+  }
+
+  &__info-icon {
+    display: flex;
+    cursor: pointer;
+    color: $color-text-irrelevant;
+  }
+}
 .stepper {
   display: flex;
   flex-direction: column;

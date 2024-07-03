@@ -1,16 +1,19 @@
-import type { IExecutionStep } from "~/types/execution_step";
+import type { FieldsMapType } from "./stepper";
+import { InputType } from "./stepper";
+import type { IStepperStep } from "~/types/stepper";
 
 export enum ExecutionStep {
   Setup = "setup",
   Details = "details",
 }
 
-export const ExecutionStepMap: Record<ExecutionStep, IExecutionStep> = {
+// define step map
+export const ExecutionStepMap: Record<ExecutionStep, IStepperStep> = {
   [ExecutionStep.Setup]: {
     name: "Execution Setup",
     formTitle: "Set up Execution’ Actions",
     formText:
-      "<p>CALL DATAS</p><p>The data for the function arguments you wish to send when the action executes</p>",
+      "<strong>CALL DATA</strong><p>The data for the function arguments you wish to send when the action executes</p>",
     key: ExecutionStep.Setup,
   },
   [ExecutionStep.Details]: {
@@ -20,30 +23,7 @@ export const ExecutionStepMap: Record<ExecutionStep, IExecutionStep> = {
   },
 };
 
-// this is part of stepper form
-export type FieldsMapType = {
-  [key in string]: {
-    label: string;
-    key: string;
-    type: InputType;
-    placeholder?: string;
-    rules?: any[];
-    min?: number;
-  }[];
-};
-
-// this is part of stepper form
-export enum InputType {
-  Text = "text",
-  Textarea = "textarea",
-  Number = "number",
-}
-export const defaultInputTypeValue: Record<InputType, any> = {
-  [InputType.Text]: "",
-  [InputType.Textarea]: "",
-  [InputType.Number]: 0,
-};
-
+// define fields map
 export const DirectExecutionFieldsMap: FieldsMapType = {
   [ExecutionStep.Setup]: [
     {
@@ -71,8 +51,8 @@ export const DirectExecutionFieldsMap: FieldsMapType = {
     {
       label: "Operations",
       key: "operations",
-      type: InputType.Textarea,
-      placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+      type: InputType.Text,
+      placeholder: "unit8",
       rules: [formRules.required],
     },
   ],

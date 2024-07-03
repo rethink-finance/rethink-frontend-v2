@@ -1,23 +1,15 @@
 <template>
   <div class="dirext-execution">
-    <UiHeader>
-      <div class="main_header__title">
-        Direct Execution Proposal
-        <UiTooltipClick
-          tooltip-text="We can show more info text, redirect to a new page etc."
-          :hide-after="3000"
-        >
-          <Icon
-            icon="material-symbols:info-outline"
-            class="main_header__info-icon"
-            width="1.5rem"
-            @click="redirectInfo"
-          />
-        </UiTooltipClick>
-      </div>
-    </UiHeader>
     <!-- content -->
-    <UiStepper :entry="executionEntry" :fields-map="fieldsMap" />
+    <UiStepper
+      :entry="executionEntry"
+      :fields-map="fieldsMap"
+      title="Direct Execution Proposal"
+      tooltip-text="We can show more info text, redirect to a new page etc."
+      :tooltip-click="tooltipClick"
+      submit-label="Create Proposal"
+      :submit-event="submitProposal"
+    />
   </div>
 </template>
 
@@ -49,6 +41,8 @@ const executionEntry = ref([
     stepName: ExecutionStep.Setup,
     stepLabel: ExecutionStepMap[ExecutionStep.Setup].name,
     formTitle: ExecutionStepMap[ExecutionStep.Setup].formTitle,
+    formText: ExecutionStepMap[ExecutionStep.Setup].formText,
+
     stepDefaultValues: {
       rowTX: "",
       gasToSendWithTransaction: "",
@@ -87,9 +81,13 @@ const executionEntry = ref([
 ]);
 const fieldsMap = ref(DirectExecutionFieldsMap);
 
-const redirectInfo = () => {
+const submitProposal = () => {
+  alert("submit proposal");
+};
+
+const tooltipClick = () => {
   console.log(
-    "we can redirect to a new page, show a tooltip message or do whatever we want here"
+    "we can redirect to a new page, show a tooltip message or do whatever we want here",
   );
 };
 
