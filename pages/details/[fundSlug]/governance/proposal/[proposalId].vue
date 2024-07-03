@@ -1,11 +1,7 @@
 <template>
-  <div class="proposal-detail">
-    <!-- TODO better to just pass the proposalDetails as prop  -->
+  <div v-if="proposal?.proposalId" class="proposal-detail">
     <FundGovernanceProposalSectionTop
-      :title="proposalDetails.title"
-      :state="proposalDetails.state"
-      :submission="proposalDetails.submission"
-      :meta-bottom="metaBottom"
+      :proposal="proposal"
     />
 
     <div class="section-bottom">
@@ -24,16 +20,26 @@
       </div>
     </div>
   </div>
+  <div v-else class="text-center mt-6 align-center">
+    Oops, proposal data is not available.
+  </div>
 </template>
 
 <script setup lang="ts">
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { useFundStore } from "~/store/fund.store";
-import { truncateAddress } from "~/composables/addressUtils";
-import { ProposalState } from "~/types/enums/governance_proposal";
+import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
+import { useWeb3Store } from "~/store/web3.store";
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
+const web3Store = useWeb3Store();
+const fundStore = useFundStore();
+const route = useRoute();
+const proposalId = route.params.proposalId as string;
+const fundSlug = route.params.fundSlug as string;
+console.log("proposal", proposalId);
+console.log("fundSlug", fundSlug);
 
 const { selectedFundSlug } = toRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
@@ -43,12 +49,15 @@ const breadcrumbItems: BreadcrumbItem[] = [
     to: `/details/${selectedFundSlug.value}/governance`,
   },
   {
-    title: "Edit Proposal",
+    title: "Proposal Details",
     disabled: true,
     to: `/details/${selectedFundSlug.value}/governance`,
   },
 ];
-
+const governanceProposalStore = useGovernanceProposalsStore();
+const proposal = computed(() => {
+  return governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
+})
 // defined icons for submission
 const icons = {
   Pending: "material-symbols:timer-outline",
@@ -57,29 +66,6 @@ const icons = {
   Rejected: "material-symbols:close",
   Approved: "material-symbols:done",
 };
-
-// dummy data
-const proposalDetails = {
-  id: "75jfh475hqc",
-  createdBy: "0x1f98dgfgF984",
-  state: ProposalState.Active,
-  title: "Unlock airdrop permission to 0x1f98dgfgF984",
-  submission: "Pending",
-  approval: "40%",
-  participation: "10%",
-};
-
-const metaBottom = [
-  {
-    label: "Proposal ID:",
-    value: proposalDetails.id,
-  },
-  {
-    label: "Created by",
-    value: proposalDetails.createdBy,
-    format: truncateAddress,
-  },
-];
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);

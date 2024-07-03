@@ -12,7 +12,7 @@
           :src="fund.photoUrl"
           class="fund-name__avatar_img"
           alt="fund cover image"
-        />
+        >
       </v-avatar>
       <div class="fund-name__title">
         <p>
@@ -53,9 +53,11 @@
     <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
-    <h2 class="mb-2">Fund not found</h2>
+    <h2 class="mb-2">
+      Fund not found
+    </h2>
     <p class="text-center">
-      Are you sure you are on the right network? <br />
+      Are you sure you are on the right network? <br>
       Try switching to a different network.
     </p>
   </div>
@@ -75,7 +77,7 @@ const route = useRoute();
 const loading = ref(true);
 // fund address is always in the second position of the route
 // e.g. /details/TFD3-0x1234 -> 0x1234
-const [tokenSymbol, fundAddress] = route.fullPath.split("/")[2].split("-");
+const [tokenSymbol, fundAddress] = route.path.split("/")[2].split("-");
 
 onUnmounted(() => {
   fundStore.fund = {} as IFund;
@@ -109,7 +111,7 @@ watch(
   () => web3Store.chainId,
   () => {
     fetchFund();
-  }
+  },
 );
 // Watch for route changes to reset the breadcrumbs
 watch(
@@ -123,7 +125,7 @@ watch(
     ) {
       setBreadcrumbItems([]);
     }
-  }
+  },
 );
 
 onMounted(() => {
@@ -132,7 +134,7 @@ onMounted(() => {
 });
 const fund = computed(() => fundStore.fund as IFund);
 const fundDetailsRoute = computed(
-  () => `/details/${tokenSymbol}-${fundAddress}`
+  () => `/details/${tokenSymbol}-${fundAddress}`,
 );
 
 const routes: IRoute[] = [
