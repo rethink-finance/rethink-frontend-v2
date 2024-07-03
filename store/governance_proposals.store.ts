@@ -36,6 +36,7 @@ interface IState {
   }
   */
   fundProposalsBlockFetchedRanges: Record<string, Record<string, number[]>>;
+  connectedAccountProposalsHasVoted: Record<string, Record<string, boolean>>,
 }
 
 export const useGovernanceProposalsStore = defineStore({
@@ -43,6 +44,7 @@ export const useGovernanceProposalsStore = defineStore({
   state: (): IState => ({
     fundProposals: getLocalStorageItem("fundProposals", {}) ?? {},
     fundProposalsBlockFetchedRanges: getLocalStorageItem("fundProposalsBlockFetchedRanges", {}) ?? {},
+    connectedAccountProposalsHasVoted: {},
   }),
   getters: {
     fundStore(): any {
@@ -90,6 +92,22 @@ export const useGovernanceProposalsStore = defineStore({
       if (!fundData) return undefined;
 
       return fundData[proposalId];
+    },
+    hasAccountVoted(proposalId: string): boolean | undefined {
+      const activeAccountAddress = this.fundStore.activeAccountAddress;
+      if (!activeAccountAddress) return false;
+      if (this.connectedAccountProposalsHasVoted?.[proposalId] === undefined) {
+        return undefined;
+      }
+      return this.connectedAccountProposalsHasVoted?.[proposalId][activeAccountAddress];
+    },
+    fetchHasAccountVoted(proposalId: string): boolean | undefined {
+      const activeAccountAddress = this.fundStore.activeAccountAddress;
+      if (!activeAccountAddress) return false;
+      if (this.connectedAccountProposalsHasVoted?.[proposalId] === undefined) {
+        return undefined;
+      }
+      return this.connectedAccountProposalsHasVoted?.[proposalId][activeAccountAddress];
     },
     getFundProposalsBlockFetchedRanges(chainId: string, fundAddress?: string): number[] | undefined[] {
       if (!fundAddress) return [undefined, undefined];

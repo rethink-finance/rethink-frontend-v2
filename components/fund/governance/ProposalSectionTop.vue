@@ -49,7 +49,7 @@
       </div>
 
       <v-btn
-        v-if="!isButtonHidden"
+        v-if="isSubmitButtonVisible"
         class="section-top__submit-button"
         @click="submitButtonClick"
       >
@@ -140,6 +140,7 @@
 import { truncateAddress } from "~/composables/addressUtils";
 // import { useToastStore } from "~/store/toast.store";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { ProposalState } from "~/types/enums/governance_proposal";
 
 const props = defineProps({
   proposal: {
@@ -187,25 +188,20 @@ const proposalSubmissionStatus = computed(() => {
   // return props.proposal.submission_status
 });
 
-const isButtonHidden = computed(() => {
-  // list all submission statuses that should hide the button
-  // list all tags that should hide the button
-  // const hiddenByTags = ["failed"].some(
-  //   (tag) => this.proposal?.tags?.includes(tag) ?? false
-  // );
-
-  // return hiddenBySubmission || hiddenByTags;
-  return ["Rejected"].includes(
-    proposalSubmissionStatus.value ?? "",
-  );
+const isSubmitButtonVisible = computed(() => {
+  // On active state user can vote, and on succeeded it can be exceuted.
+  return [ProposalState.Active, ProposalState.Succeeded].includes(props.proposal.state);
 });
 
-const isProposalApproved = computed(() => {
-  return proposalSubmissionStatus.value === "Approved";
+const hasProposalSucceeded = computed(() => {
+  return props.proposal.state === ProposalState.Succeeded;
+});
+const hasProposalExecuted = computed(() => {
+  return props.proposal.state === ProposalState.Executed;
 });
 
 const submitButtonText = computed(() => {
-  return isProposalApproved.value ? "Execute Proposal" : "Submit Vote";
+  return hasProposalSucceeded.value ? "Execute Proposal" : "Submit Vote";
 });
 
 const isDialogOpen = ref(false);
@@ -216,7 +212,7 @@ const copyText = (text: string) => {
 }
 const submitButtonClick = () => {
   // if proposal is approved, execute proposal
-  if (isProposalApproved.value) {
+  if (hasProposalSucceeded.value) {
     executeProposal();
   } else {
   // if proposal is not approved, open dialog
