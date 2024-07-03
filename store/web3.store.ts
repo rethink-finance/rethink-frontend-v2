@@ -61,6 +61,12 @@ export const useWeb3Store = defineStore({
         chainShort: "frax",
         rpcUrl: "https://rpc.frax.com",
       },
+      "0x1": {
+        chainId: "0x1",
+        chainName: "Ethereum",
+        chainShort: "eth",
+        rpcUrl: "https://eth.drpc.org",
+      }
     },
     cachedTokens: {
       "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063": {

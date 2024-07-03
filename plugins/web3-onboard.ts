@@ -55,6 +55,12 @@ export default defineNuxtPlugin(() => {
         label: "Fraxtal",
         rpcUrl: "https://rpc.frax.com",
       },
+      {
+        id: "0x1",
+        token: "ETH",
+        label: "Ethereum",
+        rpcUrl: "https://eth.drpc.org",
+      },
     ],
     theme: "dark",
     appMetadata: {
