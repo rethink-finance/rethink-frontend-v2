@@ -68,7 +68,7 @@ export default interface IGovernanceProposal {
   // Frontend fields:
   approval: number,
   approvalFormatted: string, // e.g. "40%"
-  participation: number, // e.g. "10%"
+  participation: number, // e.g. 0.1
   participationFormatted: string, // e.g. "10%"
   // Quorum in time when the proposal aws created.
   quorumVotes: bigint, // e.g. 50k

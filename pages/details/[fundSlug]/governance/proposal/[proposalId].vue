@@ -120,10 +120,12 @@ const selectedTab = reactive({
   tab: "one",
 });
 
-const tabsContent: Record<string, any> = {
-  one: "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Iste vel harum explicabo veritatis officia quam quibusdam illum aut sunt! Consequatur placeat id vero porro? Accusamus similique excepturi odio voluptatibus perspiciatis, porro possimus omnis non facilis? Porro eum eaque dolor debitis, quibusdam quas, modi iusto pariatur facere aperiam dolorem rem optio ad nisi repudiandae veritatis, quia accusamus quaerat excepturi cum! Officiis asperiores sint eius totam culpa quia",
-  two: "Tab Two",
-};
+const tabsContent = computed((): Record<string, any> => (
+  {
+    one: proposal.value?.description ?? "",
+    two: "Tab Two",
+  }
+));
 
 const governanceProposalStore = useGovernanceProposalsStore();
 const proposal = computed(() => {
@@ -136,10 +138,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
 });
-
-const copyText = (text: string) => {
-  navigator.clipboard.writeText(text);
-};
 </script>
 
 <style scoped lang="scss">

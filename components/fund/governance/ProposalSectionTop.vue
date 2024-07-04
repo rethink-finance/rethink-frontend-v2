@@ -49,7 +49,7 @@
       </div>
 
       <v-btn
-        v-if="!isButtonHidden"
+        v-if="isSubmitButtonVisible"
         class="section-top__submit-button"
         @click="submitButtonClick"
       >
@@ -70,7 +70,7 @@
             </div>
 
             <Icon
-              :icon="icons.Rejected"
+              :icon="VoteTypeIcon[VoteType.Against]"
               class="di-card__close-icon"
               width="1.5rem"
               @click="dialogClose"
@@ -100,12 +100,12 @@
           </h2>
 
           <div class="di-card__voting-power meta-label meta-label--uppercase">
-            Voting Power: {{ proposal.totalVotes }}
+            Voting Power: N/A (TODO)
           </div>
 
-          <v-radio-group v-model="selectedRadio" class="di-card__radio-group">
+          <v-radio-group v-model="selectedVoteOption" class="di-card__radio-group">
             <v-radio
-              v-for="option in radioOptions"
+              v-for="option in voteOptions"
               :key="option.value"
               :label="option.label"
               :value="option.value"
@@ -115,7 +115,7 @@
                 <Icon
                   :icon="option.icon"
                   width="1.4rem"
-                  :class="classesRadioIcon(option.value)"
+                  :class="voteOptionIcon(option.value)"
                 />
                 {{ option.label }}
               </template>
@@ -124,8 +124,9 @@
 
           <v-btn
             class="di-card__submit-button"
-            :disabled="!selectedRadio"
-            @click="submitProposal(selectedRadio)"
+            :disabled="!selectedVoteOption"
+            :loading="loadingSubmitVote"
+            @click="submitVote"
           >
             Submit Vote
           </v-btn>
@@ -140,6 +141,15 @@
 import { truncateAddress } from "~/composables/addressUtils";
 // import { useToastStore } from "~/store/toast.store";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import {
+  ProposalState,
+  VoteType,
+  VoteTypeClass, VoteTypeIcon,
+  VoteTypeMapping,
+  VoteTypeNumberMapping,
+} from "~/types/enums/governance_proposal";
+import { useFundStore } from "~/store/fund.store";
+import { useToastStore } from "~/store/toast.store";
 
 const props = defineProps({
   proposal: {
@@ -148,25 +158,21 @@ const props = defineProps({
   },
 });
 
-const icons = {
-  Pending: "material-symbols:timer-outline",
-  Missed: "material-symbols:priority-high",
-  Abstained: "material-symbols:question-mark",
-  Rejected: "material-symbols:close",
-  Approved: "material-symbols:done",
-};
+const fundStore = useFundStore();
+const toastStore = useToastStore();
+const loadingSubmitVote = ref(false);
 
 interface IMetaItem {
   label: string;
   value: string;
   format?: (value: string) => string;
 }
-const radioOptions: { label: string; value: string; icon: string }[] = [
-  { label: "Approve", value: "approve", icon: icons.Approved },
-  { label: "Reject", value: "reject", icon: icons.Rejected },
-  { label: "Abstain", value: "abstain", icon: icons.Abstained },
-];
 
+const voteOptions: { label: string; value: number; icon: string }[] = [
+  { label: VoteType.For, value: VoteTypeNumberMapping[VoteType.For], icon: VoteTypeIcon[VoteType.For] },
+  { label: VoteType.Against, value: VoteTypeNumberMapping[VoteType.Against], icon: VoteTypeIcon[VoteType.Against] },
+  { label: VoteType.Abstain, value: VoteTypeNumberMapping[VoteType.Abstain], icon: VoteTypeIcon[VoteType.Abstain] },
+];
 const metaCopyTags = computed((): IMetaItem[] => {
   return [
     {
@@ -181,42 +187,32 @@ const metaCopyTags = computed((): IMetaItem[] => {
   ];
 });
 
-const proposalSubmissionStatus = computed(() => {
-  // TODO todo get actual submission status (pass from parent)
-  return "";
-  // return props.proposal.submission_status
+const isSubmitButtonVisible = computed(() => {
+  // On active state user can vote, and on succeeded it can be exceuted.
+  return [ProposalState.Active, ProposalState.Succeeded].includes(props.proposal.state);
 });
 
-const isButtonHidden = computed(() => {
-  // list all submission statuses that should hide the button
-  // list all tags that should hide the button
-  // const hiddenByTags = ["failed"].some(
-  //   (tag) => this.proposal?.tags?.includes(tag) ?? false
-  // );
-
-  // return hiddenBySubmission || hiddenByTags;
-  return ["Rejected"].includes(
-    proposalSubmissionStatus.value ?? "",
-  );
+const hasProposalSucceeded = computed(() => {
+  return props.proposal.state === ProposalState.Succeeded;
 });
-
-const isProposalApproved = computed(() => {
-  return proposalSubmissionStatus.value === "Approved";
+const hasProposalExecuted = computed(() => {
+  return props.proposal.state === ProposalState.Executed;
 });
 
 const submitButtonText = computed(() => {
-  return isProposalApproved.value ? "Execute Proposal" : "Submit Vote";
+  if (hasProposalSucceeded.value) return "Execute Proposal"
+  if (hasProposalExecuted.value) return "N/A"
+  return "Submit Vote";
 });
 
 const isDialogOpen = ref(false);
-const selectedRadio = ref("");
-
+const selectedVoteOption = ref<number>();
 const copyText = (text: string) => {
   navigator.clipboard.writeText(text);
 }
 const submitButtonClick = () => {
   // if proposal is approved, execute proposal
-  if (isProposalApproved.value) {
+  if (hasProposalSucceeded.value) {
     executeProposal();
   } else {
   // if proposal is not approved, open dialog
@@ -225,16 +221,35 @@ const submitButtonClick = () => {
   }
 }
 
-const submitProposal = (selectedRadio: string) => {
-  // const msg = {
-  //   approve: "Voted to Approve",
-  //   reject: "Voted to Reject",
-  //   abstain: "Voted to Abstain",
-  // } as Record<string, string>;
+const submitVote = () => {
+  loadingSubmitVote.value = true;
+  console.log("cast vote", props.proposal.proposalId, selectedVoteOption.value)
 
-  console.log(selectedRadio);
-  // toastStore.successToast(msg[selectedRadio]);
-  dialogClose();
+  fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).send(
+    {
+      from: fundStore.activeAccountAddress,
+    },
+  ).on("transactionHash", (hash: string) => {
+    console.log("tx hash: " + hash);
+    toastStore.addToast("Your vote has been submitted. Please wait for it to be confirmed.");
+  }).on("receipt", (receipt: any) => {
+    console.log("receipt: ", receipt);
+    if (receipt.status) {
+      toastStore.successToast("Vote successful.");
+    } else {
+      toastStore.errorToast(
+        "The vote transaction has failed. Please contact the Rethink Finance support.",
+      );
+    }
+    loadingSubmitVote.value = false;
+    dialogClose();
+  }).on("error", (error: any) => {
+    console.error(error);
+    loadingSubmitVote.value = false;
+    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    dialogClose();
+  });
+  // toastStore.successToast(msg[selectedVoteOption]);
 }
 
 const executeProposal = () => {
@@ -246,10 +261,11 @@ const dialogOpen = () => {
 const dialogClose = () => {
   isDialogOpen.value = false;
 }
-const classesRadioIcon = (value: string) => {
+
+const voteOptionIcon = (voteType: number) => {
   return [
     "di-card__radio",
-    { [`di-card__radio--${value}`]: value === selectedRadio.value },
+    { [`di-card__radio--${VoteTypeClass[VoteTypeMapping[voteType]]}`]: voteType === selectedVoteOption.value },
   ];
 }
 </script>
@@ -411,10 +427,10 @@ const classesRadioIcon = (value: string) => {
   }
   // color for icons
   &__radio {
-    &--approve {
+    &--for {
       color: $color-success;
     }
-    &--reject {
+    &--against {
       color: $color-error;
     }
     &--abstain {

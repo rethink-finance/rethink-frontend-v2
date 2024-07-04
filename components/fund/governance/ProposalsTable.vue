@@ -62,12 +62,12 @@
 
     <template #[`item.submission_status`]="{ item }">
       <template
-        v-if="hasAccountVoted(item.proposalId) === undefined"
+        v-if="governanceProposalStore.hasAccountVoted(item.proposalId) === undefined"
       >
         N/A
       </template>
       <Icon
-        v-if="hasAccountVoted(item.proposalId)"
+        v-if="governanceProposalStore.hasAccountVoted(item.proposalId)"
         icon="octicon:check-circle-fill-16"
         width="1rem"
         height="1rem"
@@ -117,8 +117,10 @@
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 
 const fundStore = useFundStore();
+const governanceProposalStore = useGovernanceProposalsStore();
 const accountStore = useAccountStore();
 
 // defined icons for submission_status
@@ -141,34 +143,27 @@ const props = defineProps({
   },
 });
 
-const connectedAccountProposalsHasVoted = ref<Record<string, Record<string, boolean>>>({});
-const hasAccountVoted = (proposalId: string) => {
-  const activeAccountAddress = fundStore.activeAccountAddress;
-  if (!activeAccountAddress) return false;
-  if (connectedAccountProposalsHasVoted.value?.[proposalId] === undefined) return undefined;
-  return connectedAccountProposalsHasVoted.value?.[proposalId][activeAccountAddress] ?? false;
-}
-
 
 // TODO to fetch status of all votes of all users we again have to iterate over all events and check VoteCast event
 watch(() => props.items, () => {
   console.log("props items watcher", props.items);
-  if (fundStore.activeAccountAddress !== undefined) {
-    const activeAccountAddress = fundStore.activeAccountAddress;
+  if (fundStore.activeAccountAddress === undefined) {
+    return
+  }
+  const activeAccountAddress = fundStore.activeAccountAddress;
 
-    for (const proposal of props.items) {
-      connectedAccountProposalsHasVoted.value[proposal.proposalId] ??= {};
-      // Do not fetch the hasVoted again if we already know he has voted.
-      if (connectedAccountProposalsHasVoted.value[proposal.proposalId][activeAccountAddress]) continue;
+  for (const proposal of props.items) {
+    governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId] ??= {};
+    // Do not fetch the hasVoted again if we already know he has voted.
+    if (governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress]) continue;
 
-      console.log("get votes for ", proposal.proposalId);
-      fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call().then(
-        (hasVoted: boolean) => {
-          console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)
-          connectedAccountProposalsHasVoted.value[proposal.proposalId][activeAccountAddress] = hasVoted;
-        },
-      );
-    }
+    console.log("get votes for ", proposal.proposalId);
+    fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call().then(
+      (hasVoted: boolean) => {
+        console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)
+        governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress] = hasVoted;
+      },
+    );
   }
 },
 { immediate: true },
