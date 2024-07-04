@@ -36,18 +36,11 @@
           <div class="tools__subtext">Success Rate</div>
         </div>
       </template>
-      <<<<<<< HEAD:pages/details/[id]/governance/index.vue
-      <FundGovernanceTableProposals
-        :items="governanceProposals"
-        :loading="loadingProposals"
-      />
-      =======
+
       <FundGovernanceProposalsTable
         :items="governanceProposals"
         :loading="loadingProposals"
       />
-      >>>>>>>
-      92664e0a865c673b3a44fe77ee4d6ba27188f7fa:pages/details/[fundSlug]/governance/index.vue
     </UiMainCard>
 
     <UiMainCard title="Trending Delegates" subtitle="4 Delegated Wallets">
