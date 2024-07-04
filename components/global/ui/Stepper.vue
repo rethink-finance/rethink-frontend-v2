@@ -29,15 +29,15 @@
     <div class="stepper">
       <div class="main_card stepper__main-steps">
         <div
-          v-for="(step, index) in entry"
-          :key="index"
+          v-for="(step, mainStepIndex) in entry"
+          :key="mainStepIndex"
           class="main-step"
           :class="{ 'main-step--active': step.stepName === activeMainStep }"
         >
           <div class="main-step__info" @click="selectMainStep(step.stepName)">
             <div class="main-step__title">
               <div class="main-step__count">
-                {{ index + 1 }}
+                {{ mainStepIndex + 1 }}
               </div>
               {{ step.stepLabel }}
             </div>
@@ -61,19 +61,19 @@
 
           <div v-if="step.multipleSteps" class="sub-steps">
             <div
-              v-for="(substep, index) in step.steps"
-              :key="index"
+              v-for="(substep, substepIndex) in step.steps"
+              :key="substepIndex"
               class="sub-steps__sub-step"
               :class="{
                 'sub-steps__sub-step--active':
-                  index === activeSubStep && step.stepName === activeMainStep,
+                  substepIndex === activeSubStep && step.stepName === activeMainStep,
               }"
-              @click="selectSubStep(step, index)"
+              @click="selectSubStep(step, substepIndex)"
             >
               <div class="sub-steps__dashed-line" />
               <div class="sub-steps__label">
                 {{ step.substepLabel }}
-                {{ index + 1 }}
+                {{ substepIndex + 1 }}
               </div>
 
               <div class="sub-steps__icons">
@@ -81,12 +81,12 @@
                   v-if="
                     step.steps &&
                       step.steps?.length > 1 &&
-                      index === activeSubStep &&
+                      substepIndex === activeSubStep &&
                       step.stepName === activeMainStep
                   "
                   small
                   class="sub-steps__delete-button"
-                  @click.stop="deleteSubstep(step, index)"
+                  @click.stop="deleteSubstep(step, substepIndex)"
                 >
                   <v-icon icon="mdi-delete" color="error" />
                 </UiDetailsButton>
@@ -207,9 +207,6 @@ const selectMainStep = (step: string) => {
 };
 
 const selectSubStep = (mainStep: any, index: number) => {
-  const mainStepIndex = props.entry.findIndex(
-    (step) => step.stepName === mainStep.stepName,
-  );
 
   activeMainStep.value = mainStep.stepName;
   activeSubStep.value = index;
@@ -258,8 +255,6 @@ const validate = () => {
       return substep.isValid === true;
     });
   });
-
-  console.log("isValid", isValid);
 
   formIsValid.value = isValid.every((step) => step === true);
 };
