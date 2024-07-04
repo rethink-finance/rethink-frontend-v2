@@ -71,6 +71,7 @@ import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { ProposalState } from "~/types/enums/governance_proposal";
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 const web3Store = useWeb3Store();
@@ -81,6 +82,7 @@ const fundSlug = route.params.fundSlug as string;
 console.log("proposal", proposalId);
 console.log("fundSlug", fundSlug);
 
+// TODO add proposalcreated block id to the proposalID and fetch it always from the block
 const { selectedFundSlug } = toRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -128,8 +130,17 @@ const tabsContent = computed((): Record<string, any> => (
 ));
 
 const governanceProposalStore = useGovernanceProposalsStore();
+const proposalFetched = ref(false);
+
 const proposal = computed(() => {
-  return governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
+  const proposal = governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
+  console.log(proposal);
+  if (!proposalFetched.value && proposal?.state === ProposalState.Active && proposal.createdBlockNumber) {
+    // Refetch it to update it, maybe it came from local storage.
+    governanceProposalStore.fetchBlockProposals(proposal.createdBlockNumber);
+    proposalFetched.value = true;
+  }
+  return proposal;
 })
 
 onMounted(() => {
