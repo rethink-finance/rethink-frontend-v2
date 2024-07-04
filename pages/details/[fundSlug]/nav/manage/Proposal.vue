@@ -130,12 +130,12 @@
               </v-btn>
               <v-btn
                 class="bg-primary text-secondary ms-6"
-                :disabled="!fundStore.activeAccountAddress"
+                :disabled="!accountStore.isConnected"
                 @click="createProposal"
               >
                 Create Proposal
                 <v-tooltip
-                  v-if="!fundStore.activeAccountAddress"
+                  v-if="!accountStore.isConnected"
                   :model-value="true"
                   activator="parent"
                   location="top"
@@ -163,9 +163,11 @@ import { useWeb3Store } from "~/store/web3.store";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useToastStore } from "~/store/toast.store";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
+import { useAccountStore } from "~/store/account.store";
 
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
+const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const emit = defineEmits(["updateBreadcrumbs"]);
 
