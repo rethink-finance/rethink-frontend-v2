@@ -32,31 +32,13 @@
           v-for="(step, mainStepIndex) in entry"
           :key="mainStepIndex"
           class="main-step"
-          :class="{ 'main-step--active': step.stepName === activeMainStep }"
+          :class="mainStepClasses(step)"
         >
-          <div class="main-step__info" @click="selectMainStep(step.stepName)">
-            <div class="main-step__title">
-              <div class="main-step__count">
-                {{ mainStepIndex + 1 }}
-              </div>
-              {{ step.stepLabel }}
+          <div class="main-step__title" @click="selectMainStep(step.stepName)">
+            <div class="main-step__count">
+              {{ mainStepIndex + 1 }}
             </div>
-            <Icon
-              v-if="
-                step.steps.some((substep: any) => substep.isValid === false)
-              "
-              icon="weui:error-outlined"
-              width="1rem"
-              class="sub-steps__icon error"
-            />
-            <Icon
-              v-else-if="
-                step.steps.every((substep: any) => substep.isValid === true)
-              "
-              icon="material-symbols:check-circle-outline"
-              width="1rem"
-              class="sub-steps__icon success"
-            />
+            {{ step.stepLabel }}
           </div>
 
           <div v-if="step.multipleSteps" class="sub-steps">
@@ -66,7 +48,8 @@
               class="sub-steps__sub-step"
               :class="{
                 'sub-steps__sub-step--active':
-                  substepIndex === activeSubStep && step.stepName === activeMainStep,
+                  substepIndex === activeSubStep &&
+                  step.stepName === activeMainStep,
               }"
               @click="selectSubStep(step, substepIndex)"
             >
@@ -199,6 +182,23 @@ const isLastStep = computed(() => {
   );
 });
 
+// main step classes
+const mainStepClasses = (step: any) => {
+  return [
+    { "main-step--active": activeMainStep.value === step.stepName },
+    {
+      "main-step--error": step.steps.some(
+        (substep: any) => substep.isValid === false,
+      ),
+    },
+    {
+      "main-step--success": step.steps.every(
+        (substep: any) => substep.isValid === true,
+      ),
+    },
+  ];
+};
+
 // select main step
 const selectMainStep = (step: string) => {
   if (activeMainStep.value === step) return;
@@ -207,7 +207,6 @@ const selectMainStep = (step: string) => {
 };
 
 const selectSubStep = (mainStep: any, index: number) => {
-
   activeMainStep.value = mainStep.stepName;
   activeSubStep.value = index;
 };
@@ -295,12 +294,6 @@ const nextStep = () => {
     align-content: center;
     gap: 10px;
   }
-
-  &__info-icon {
-    display: flex;
-    cursor: pointer;
-    color: $color-text-irrelevant;
-  }
 }
 .stepper {
   display: flex;
@@ -348,6 +341,19 @@ const nextStep = () => {
     .main-step__count {
       color: $color-primary;
       border: none;
+    }
+  }
+
+  // error state
+  &--error {
+    .main-step__count {
+      color: $color-error;
+    }
+  }
+  // success state
+  &--success {
+    .main-step__count {
+      color: $color-success;
     }
   }
 
