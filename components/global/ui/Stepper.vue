@@ -34,11 +34,29 @@
           class="main-step"
           :class="{ 'main-step--active': step.stepName === activeMainStep }"
         >
-          <div class="main-step__title" @click="selectMainStep(step.stepName)">
-            <div class="main-step__count">
-              {{ index + 1 }}
+          <div class="main-step__info" @click="selectMainStep(step.stepName)">
+            <div class="main-step__title">
+              <div class="main-step__count">
+                {{ index + 1 }}
+              </div>
+              {{ step.stepLabel }}
             </div>
-            {{ step.stepLabel }}
+            <Icon
+              v-if="
+                step.steps.some((substep: any) => substep.isValid === false)
+              "
+              icon="weui:error-outlined"
+              width="1rem"
+              class="sub-steps__icon error"
+            />
+            <Icon
+              v-else-if="
+                step.steps.every((substep: any) => substep.isValid === true)
+              "
+              icon="material-symbols:check-circle-outline"
+              width="1rem"
+              class="sub-steps__icon success"
+            />
           </div>
 
           <div v-if="step.multipleSteps" class="sub-steps">
@@ -58,19 +76,35 @@
                 {{ index + 1 }}
               </div>
 
-              <UiDetailsButton
-                v-if="
-                  step.steps &&
-                    step.steps?.length > 1 &&
-                    index === activeSubStep &&
-                    step.stepName === activeMainStep
-                "
-                small
-                class="sub-steps__delete-button"
-                @click.stop="deleteSubstep(step, index)"
-              >
-                <v-icon icon="mdi-delete" color="error" />
-              </UiDetailsButton>
+              <div class="sub-steps__icons">
+                <UiDetailsButton
+                  v-if="
+                    step.steps &&
+                      step.steps?.length > 1 &&
+                      index === activeSubStep &&
+                      step.stepName === activeMainStep
+                  "
+                  small
+                  class="sub-steps__delete-button"
+                  @click.stop="deleteSubstep(step, index)"
+                >
+                  <v-icon icon="mdi-delete" color="error" />
+                </UiDetailsButton>
+                <div v-else class="sub-steps__feedback-icons">
+                  <Icon
+                    v-if="substep.isValid === false"
+                    icon="weui:error-outlined"
+                    width="1rem"
+                    class="sub-steps__icon error"
+                  />
+                  <Icon
+                    v-else-if="substep.isValid === true"
+                    icon="material-symbols:check-circle-outline"
+                    width="1rem"
+                    class="sub-steps__icon success"
+                  />
+                </div>
+              </div>
             </div>
             <div
               v-if="step.stepName === activeMainStep"
@@ -322,6 +356,13 @@ const nextStep = () => {
     }
   }
 
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+
   &__title {
     font-weight: 700;
     cursor: pointer;
@@ -401,6 +442,29 @@ const nextStep = () => {
     text-align: center;
 
     transition: background-color 0.3s ease;
+  }
+
+  &__icons {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    background-color: $color-gray-light-transparent;
+  }
+
+  &__icon {
+    &:only-child {
+      margin-left: auto;
+      margin-right: 0.5rem;
+    }
+
+    &.error {
+      color: $color-error;
+    }
+
+    &.success {
+      color: $color-success;
+    }
   }
 
   &__add-new-step:hover {

@@ -111,4 +111,7 @@ watch(
   font-weight: 500;
   color: $color-text-irrelevant;
 }
+.label_required {
+  margin-bottom: 5px;
+}
 </style>
