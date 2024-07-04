@@ -1,6 +1,6 @@
 <template>
   <div class="dirext-execution">
-    <!-- content -->
+    <!-- Stepper with header -->
     <UiStepper
       :entry="executionEntry"
       :fields-map="fieldsMap"
@@ -87,7 +87,7 @@ const submitProposal = () => {
 
 const tooltipClick = () => {
   console.log(
-    "we can redirect to a new page, show a tooltip message or do whatever we want here",
+    "we can redirect to a new page, show a tooltip message or do whatever we want here"
   );
 };
 
@@ -98,20 +98,5 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .direct-execution {
-}
-
-.main_header {
-  &__title {
-    display: flex;
-    align-items: center;
-    align-content: center;
-    gap: 10px;
-  }
-
-  &__info-icon {
-    display: flex;
-    cursor: pointer;
-    color: $color-text-irrelevant;
-  }
 }
 </style>
