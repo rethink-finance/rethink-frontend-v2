@@ -55,8 +55,11 @@
             >
               <div class="sub-steps__dashed-line" />
               <div class="sub-steps__label">
-                {{ step.substepLabel }}
-                {{ substepIndex + 1 }}
+                {{
+                  substep[step.substepKey]
+                    ? substep[step.substepKey]
+                    : step.substepLabel + " " + (substepIndex + 1)
+                }}
               </div>
 
               <div class="sub-steps__icons">
@@ -125,7 +128,6 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { type FieldsMapType } from "~/types/enums/stepper";
 
 import { useToastStore } from "~/store/toast.store";
 const toastStore = useToastStore();
@@ -136,7 +138,7 @@ const props = defineProps({
     default: () => [],
   },
   fieldsMap: {
-    type: Object as PropType<FieldsMapType>,
+    type: Object as PropType<any>,
     default: () => ({}),
   },
   title: {
@@ -173,7 +175,29 @@ const stepNames = props.entry.map((step) => step.stepName);
 const activeMainStep = ref(stepNames[0]);
 const activeSubStep = ref(0);
 
-const fields = computed(() => props.fieldsMap[activeMainStep.value] || []);
+// this f-n will be used to get the active substep name in case of dynamic fields
+// it will be used to get the fields for the active substep based on the
+const activeSubstepName = computed(() => {
+  const { steps, substepKey } = props.entry.find(
+    (step) => step.stepName === activeMainStep.value,
+  ) as any;
+
+  return steps[activeSubStep.value][substepKey];
+});
+
+const fields = computed(
+  // in case substepKey is provided, get the fields based on the substep key
+  // otherwise get the fields based on the active substep
+  () => {
+    if (activeSubstepName.value) {
+      return (
+        props.fieldsMap[activeMainStep.value][activeSubstepName.value] || []
+      );
+    }
+    return props.fieldsMap[activeMainStep.value] || [];
+  },
+);
+
 const isLastStep = computed(() => {
   return !!(
     activeMainStep.value === stepNames[stepNames.length - 1] &&
@@ -294,6 +318,10 @@ const nextStep = () => {
     align-content: center;
     gap: 10px;
   }
+  &__info-icon {
+    cursor: pointer;
+    display: flex;
+  }
 }
 .stepper {
   display: flex;
@@ -395,6 +423,10 @@ const nextStep = () => {
 
     &:last-of-type {
       margin-bottom: 0;
+    }
+
+    &__prefix {
+      overflow: hidden;
     }
 
     // active state
