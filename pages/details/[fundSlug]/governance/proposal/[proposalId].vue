@@ -22,17 +22,27 @@
         </v-tabs>
 
         <v-card-text class="section-bottom__tab-content">
-          <div v-if="selectedTab === 'description'">
+          <template v-if="selectedTab === 'description'">
             {{ proposal?.description ?? "" }}
-          </div>
-          <div v-else-if="selectedTab === 'executableCode'">
-            <div v-for="(calldata, index) in proposal.calldatasDecoded" class="mb-4">
+          </template>
+          <template v-else-if="selectedTab === 'executableCode'">
+            <div
+              v-for="(calldata, index) in proposal.calldatasDecoded"
+              :key="index"
+              class="mb-6"
+            >
               <strong class="text-primary">{{ index }}#</strong>
               <div>
                 <strong>Contract:</strong> {{ calldata.contractName ?? "N/A" }}
               </div>
               <div>
                 <strong>Function:</strong> {{ calldata.functionName ?? "N/A" }}
+              </div>
+              <div>
+                <strong>Target:</strong> {{ proposal?.targets?.[index] ?? "N/A" }}
+              </div>
+              <div>
+                <strong>Value:</strong> {{ proposal?.values?.[index] ?? "N/A" }}
               </div>
               <UiDataRowCard
                 :grow-column1="true"
@@ -67,13 +77,13 @@
                 </template>
               </UiDataRowCard>
             </div>
-          </div>
-          <div v-else-if="selectedTab === 'voteSubmissions'">
+          </template>
+          <template v-else-if="selectedTab === 'voteSubmissions'">
             <FundGovernanceTableProposalsVotesSubmissions
               :items="proposalsVotesSubmissions"
               :loading="false"
             />
-          </div>
+          </template>
         </v-card-text>
       </div>
 
@@ -203,7 +213,6 @@ watch(
 );
 
 const formatCalldata = (calldata: any) => {
-  console.log(JSON.stringify(calldata, null, 2));
   try {
     return JSON.stringify(calldata, null, 2)
   } catch {
