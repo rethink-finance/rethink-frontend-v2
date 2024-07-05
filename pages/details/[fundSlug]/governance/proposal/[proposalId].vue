@@ -135,7 +135,7 @@ const proposalFetched = ref(false);
 const proposal = computed(() => {
   const proposal = governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
   console.log(proposal);
-  if (!proposalFetched.value && proposal?.state === ProposalState.Active && proposal.createdBlockNumber) {
+  if (!proposalFetched.value && proposal?.createdBlockNumber) {
     // Refetch it to update it, maybe it came from local storage.
     governanceProposalStore.fetchBlockProposals(proposal.createdBlockNumber);
     proposalFetched.value = true;
