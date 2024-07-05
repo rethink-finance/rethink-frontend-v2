@@ -264,10 +264,6 @@ export const useGovernanceProposalsStore = defineStore({
      *     "voteEnd": "1718623316",
      *     "description": "{\"title\":\"01 - NAV Methods\",\"description\":\"See details bellow\"}"
      * }
-     *
-     * TODO check first few 8 bytes of calldatas to see if the function signature matches any of ours, for example
-     * to compare them with function signatures of our ABIs
-     * TODO or just try decoding calldatas with our ABIs
      */
     async parseProposalCreatedEvents(events: any[]) {
       if (!this.fundStore.fund?.governanceToken.decimals) {

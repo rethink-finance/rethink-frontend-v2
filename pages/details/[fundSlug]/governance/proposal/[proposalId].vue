@@ -112,12 +112,14 @@
             <div class="section-bottom__outcome">
               <FundGovernanceProgressInsight
                 title="Approval Rate"
-                :progress="proposal?.approval"
+                :value="proposal?.approval"
+                :format-function="formatPercent"
                 subtext="Approval"
               />
               <FundGovernanceProgressInsight
                 title="Participation Rate"
-                :progress="proposal.participation"
+                :value="proposal?.participation"
+                :format-function="formatPercent"
                 subtext="Support"
               />
             </div>

@@ -79,13 +79,13 @@ const columns = ref([
     header: "Cumulative",
     size: 100,
     maxSize: 130,
-    cell: (info) => formatPercent(info.getValue()),
+    cell: (info) => formatPercent(info.getValue(), true),
   },
   {
     accessorKey: "monthlyReturnPercent",
     header: "Monthly",
     maxSize: 100,
-    cell: (info) => formatPercent(info.getValue()),
+    cell: (info) => formatPercent(info.getValue(), true),
   },
   {
     accessorKey: "sharpeRatio",

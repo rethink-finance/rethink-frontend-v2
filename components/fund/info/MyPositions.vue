@@ -20,7 +20,7 @@
       <div class="data_bar__item">
         <div class="data_bar__title">
           <!--        <div class="data_bar__title" :class="numberColorClass(fund.totalReturn)">-->
-          <!--          {{ fund.totalReturn ? formatPercent(fund.totalReturn) : "N/A" }}-->
+          <!--          {{ fund.totalReturn ? formatPercent(fund.totalReturn, true) : "N/A" }}-->
           {{ userFundAllowanceFormatted }}
         </div>
         <div class="data_bar__subtitle">
