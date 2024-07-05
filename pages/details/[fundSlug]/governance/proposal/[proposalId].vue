@@ -68,7 +68,7 @@
                       </div>
                       <div>
                         <v-switch
-                          v-model="decodedProposalCalldatas[index]"
+                          v-model="toggledDecodedProposalCalldatas[index]"
                           label="Decode"
                           color="primary"
                           hide-details
@@ -78,14 +78,23 @@
                     </div>
                   </template>
                   <template #body>
-                    <div class="code_block">
-                      <template v-if="decodedProposalCalldatas[index]">
-                        {{ formatCalldata(calldata?.decodedCalldata) }}
+                    <template v-if="toggledDecodedProposalCalldatas[index]">
+                      <template v-if="proposal?.calldataTypes[index] === ProposalCalldataType.NAV_UPDATE">
+                        <FundNavMethodsTable
+                          :methods="parseNavEntries(proposal?.calldatasDecoded?.[index]?.calldataDecoded)"
+                        />
                       </template>
                       <template v-else>
-                        {{ calldata?.calldata }}
+                        <div class="code_block">
+                          {{ formatCalldata(calldata?.calldataDecoded) }}
+                        </div>
                       </template>
-                    </div>
+                    </template>
+                    <template v-else>
+                      <div class="code_block">
+                        {{ calldata?.calldata }}
+                      </div>
+                    </template>
                   </template>
                 </UiDataRowCard>
               </div>
@@ -151,6 +160,8 @@ import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import type INAVMethod from "~/types/nav_method";
+import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -163,10 +174,10 @@ const showRawCalldatas = ref(false);
 console.log("proposal", proposalId);
 console.log("fundSlug", fundSlug);
 
-const decodedProposalCalldatas = ref<Record<number, boolean>>({});
+const toggledDecodedProposalCalldatas = ref<Record<number, boolean>>({});
 
 const toggleProposalCalldataUndecoded = (index: number) => {
-  decodedProposalCalldatas.value[index] = !(decodedProposalCalldatas.value[index] ?? false);
+  toggledDecodedProposalCalldatas.value[index] = !(toggledDecodedProposalCalldatas.value[index] ?? false);
 }
 
 const { selectedFundSlug } = toRefs(useFundStore());
@@ -219,6 +230,15 @@ const proposal = computed(():IGovernanceProposal | undefined => {
   return proposal;
 })
 
+const parseNavEntries = (calldataDecoded: any): INAVMethod[] => {
+  console.log("calldataDecoded", calldataDecoded);
+  const navEntries = [];
+  for (const navEntry of calldataDecoded?.navUpdateData ?? []) {
+    navEntries.push(fundStore.parseNAVEntry(navEntry));
+  }
+  return navEntries
+}
+
 const rawProposalData = computed(() => {
   return {
     targets: proposal.value?.targets ?? [],
@@ -232,7 +252,7 @@ watch(
     if (!newProposal) return;
 
     newProposal.calldatas.forEach((_, index) => {
-      decodedProposalCalldatas.value[index] = true;
+      toggledDecodedProposalCalldatas.value[index] = true;
     })
   },
   { immediate: true },

@@ -203,7 +203,7 @@ export const useGovernanceProposalsStore = defineStore({
         return {
           functionName: functionAbi.function.name,
           contractName: functionAbi.contractName,
-          decodedCalldata: decoded,
+          calldataDecoded: decoded,
           calldata,
         };
       } catch (error: any) {
@@ -373,10 +373,10 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.calldataTypes = [];
 
         proposal.calldatas.forEach((calldata, i) => {
-          const decodedCalldata = this.decodeProposalCallData(calldata);
-          proposal.calldatasDecoded.push(decodedCalldata);
+          const calldataDecoded = this.decodeProposalCallData(calldata);
+          proposal.calldatasDecoded.push(calldataDecoded);
 
-          if (decodedCalldata?.functionName === "updateNav") {
+          if (calldataDecoded?.functionName === "updateNav") {
             proposal.calldataTypes.push(ProposalCalldataType.NAV_UPDATE);
           } else if (proposal.targets[i] === this.fundStore.fund?.safeAddress) {
             proposal.calldataTypes.push(ProposalCalldataType.DIRECT_EXECUTION);
@@ -389,8 +389,6 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.calldataTags = [...new Set(proposal.calldataTypes.filter(
           calldataType => calldataType !== ProposalCalldataType.UNDEFINED,
         ))];
-
-        console.log("ZodiacRolesV1ModifierUpgradeableBeaconAddress: ", this.web3Store.ZodiacRolesV1ModifierUpgradeableBeaconAddress)
 
         this.storeProposal(this.web3Store.chainId, this.fundStore.fund?.address, proposal)
       }
