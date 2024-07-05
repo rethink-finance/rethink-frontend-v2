@@ -41,6 +41,7 @@
  * }
  */
 import { ProposalState } from "~/types/enums/governance_proposal";
+import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 
 
 export default interface IGovernanceProposal {
@@ -57,7 +58,10 @@ export default interface IGovernanceProposal {
   signatures: string[],
   calldatas: string[],
   descriptionHash: string,
-  calldatasDecoded: Record<string, any> | undefined [],
+  calldatasDecoded: (Record<string, any> | undefined)[],
+  calldataTypes: (ProposalCalldataType | undefined)[],
+  // Calldata Tags are just unique calldataTypes without the undefined type.
+  calldataTags: ProposalCalldataTypes[],
 
   // Called from the "state" function (IGovernorUpgradeable.ProposalState)
   state: ProposalState,

@@ -50,7 +50,9 @@
             class="proposal__tag"
           />
           <FundGovernanceProposalStateChip
-            value="Permissions"
+            v-for="(calldataTag, index) of item.calldataTags ?? []"
+            :key="index"
+            :value="calldataTag"
             class="proposal__tag"
           />
         </div>

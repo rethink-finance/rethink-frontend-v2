@@ -21,63 +21,77 @@
           </v-tab>
         </v-tabs>
 
-        <v-card-text class="section-bottom__tab-content">
+        <v-card-text class="section-bottom__tab-content position-relative">
           <template v-if="selectedTab === 'description'">
             {{ proposal?.description ?? "" }}
           </template>
           <template v-else-if="selectedTab === 'executableCode'">
-            <div
-              v-for="(calldata, index) in proposal.calldatasDecoded"
-              :key="index"
-              class="mb-6"
-            >
-              <strong class="text-primary">{{ index }}#</strong>
-              <div>
-                <strong>Contract:</strong> {{ calldata.contractName ?? "N/A" }}
+            <v-switch
+              v-model="showRawCalldatas"
+              label="Raw"
+              class="section-bottom__show_raw_calldatas_switch"
+              color="primary"
+              hide-details
+            />
+            <div v-if="showRawCalldatas">
+              <div class="code_block">
+                {{ formatCalldata(rawProposalData) }}
               </div>
-              <div>
-                <strong>Function:</strong> {{ calldata.functionName ?? "N/A" }}
-              </div>
-              <div>
-                <strong>Target:</strong> {{ proposal?.targets?.[index] ?? "N/A" }}
-              </div>
-              <div>
-                <strong>Value:</strong> {{ proposal?.values?.[index] ?? "N/A" }}
-              </div>
-              <UiDataRowCard
-                :grow-column1="true"
-                is-expanded
-              >
-                <template #title>
-                  <div class="d-flex align-center justify-space-between">
-                    <div>
-                      Calldata
-                    </div>
-                    <div>
-                      <v-switch
-                        v-model="decodedProposalCalldatas[index]"
-                        label="Decode"
-                        color="primary"
-                        hide-details
-                        :true-value="undefined"
-                        @click.stop="toggleProposalCalldataUndecoded(index)"
-                      />
-                    </div>
-                  </div>
-                </template>
-                <template #body>
-                  <div class="code_block">
-                    <template v-if="decodedProposalCalldatas[index]">
-                      {{ formatCalldata(calldata?.decodedCalldata) }}
-                    </template>
-                    <template v-else>
-                      {{ calldata?.calldata }}
-                    </template>
-                  </div>
-                </template>
-              </UiDataRowCard>
             </div>
+            <template v-else>
+              <div
+                v-for="(calldata, index) in proposal.calldatasDecoded"
+                :key="index"
+                class="mb-6"
+              >
+                <strong class="text-primary">{{ index }}#</strong>
+                <div>
+                  <strong>Contract:</strong> {{ calldata?.contractName ?? "N/A" }}
+                </div>
+                <div>
+                  <strong>Function:</strong> {{ calldata?.functionName ?? "N/A" }}
+                </div>
+                <div>
+                  <strong>Target:</strong> {{ proposal?.targets?.[index] ?? "N/A" }}
+                </div>
+                <div>
+                  <strong>Value:</strong> {{ proposal?.values?.[index] ?? "N/A" }}
+                </div>
+                <UiDataRowCard
+                  :grow-column1="true"
+                  is-expanded
+                >
+                  <template #title>
+                    <div class="d-flex align-center justify-space-between">
+                      <div>
+                        Calldata
+                      </div>
+                      <div>
+                        <v-switch
+                          v-model="decodedProposalCalldatas[index]"
+                          label="Decode"
+                          color="primary"
+                          hide-details
+                          @click.stop="toggleProposalCalldataUndecoded(index)"
+                        />
+                      </div>
+                    </div>
+                  </template>
+                  <template #body>
+                    <div class="code_block">
+                      <template v-if="decodedProposalCalldatas[index]">
+                        {{ formatCalldata(calldata?.decodedCalldata) }}
+                      </template>
+                      <template v-else>
+                        {{ calldata?.calldata }}
+                      </template>
+                    </div>
+                  </template>
+                </UiDataRowCard>
+              </div>
+            </template>
           </template>
+
           <template v-else-if="selectedTab === 'voteSubmissions'">
             <FundGovernanceTableProposalsVotesSubmissions
               :items="proposalsVotesSubmissions"
@@ -143,12 +157,13 @@ const fundStore = useFundStore();
 const route = useRoute();
 const proposalId = route.params.proposalId as string;
 const fundSlug = route.params.fundSlug as string;
+const showRawCalldatas = ref(false);
 console.log("proposal", proposalId);
 console.log("fundSlug", fundSlug);
 
-const decodedProposalCalldatas = ref<Record<string, boolean>>({});
+const decodedProposalCalldatas = ref<Record<number, boolean>>({});
 
-const toggleProposalCalldataUndecoded = (index: string) => {
+const toggleProposalCalldataUndecoded = (index: number) => {
   decodedProposalCalldatas.value[index] = !(decodedProposalCalldatas.value[index] ?? false);
 }
 
@@ -200,6 +215,15 @@ const proposal = computed(():IGovernanceProposal | undefined => {
     proposalFetched.value = true;
   }
   return proposal;
+})
+
+const rawProposalData = computed(() => {
+  return {
+    targets: proposal.value?.targets ?? [],
+    values: proposal.value?.values ?? [],
+    signatures: proposal.value?.signatures ?? [],
+    calldatas: proposal.value?.calldatas ?? [],
+  }
 })
 watch(
   () => proposal.value, (newProposal: IGovernanceProposal | undefined) => {
@@ -319,6 +343,7 @@ onBeforeUnmount(() => {
 
   &__tab-content {
     padding: 1rem;
+    position: relative;
     @include borderGray;
 
     background-color: $color-gray-light-transparent;
@@ -326,6 +351,10 @@ onBeforeUnmount(() => {
     font-size: 1rem;
     font-weight: 400;
     color: $color-text-irrelevant;
+  }
+  &__show_raw_calldatas_switch {
+    position: absolute;
+    right: 1rem;
   }
 
   // Breakpoints

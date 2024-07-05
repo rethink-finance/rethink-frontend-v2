@@ -13,6 +13,7 @@ import { ProposalStateMapping } from "~/types/enums/governance_proposal";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { useWeb3Store } from "~/store/web3.store";
 import { useToastStore } from "~/store/toast.store";
+import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 
 interface IState {
   /* Example fund proposals.
@@ -279,6 +280,7 @@ export const useGovernanceProposalsStore = defineStore({
         this.toastStore.errorToast("Fund clock mode is unknown.")
         return
       }
+      const roleModAddress = await this.fundStore.getRoleModAddress();
 
       for (const event of events) {
         console.log("event");
@@ -372,9 +374,27 @@ export const useGovernanceProposalsStore = defineStore({
         }
 
         proposal.calldatasDecoded = [];
-        for (const calldata of proposal.calldatas) {
-          proposal.calldatasDecoded.push(this.decodeProposalCallData(calldata));
-        }
+        proposal.calldataTypes = [];
+
+        proposal.calldatas.forEach((calldata, i) => {
+          const decodedCalldata = this.decodeProposalCallData(calldata);
+          proposal.calldatasDecoded.push(decodedCalldata);
+
+          if (decodedCalldata?.functionName === "updateNav") {
+            proposal.calldataTypes.push(ProposalCalldataType.NAV_UPDATE);
+          } else if (proposal.targets[i] === this.fundStore.fund?.safeAddress) {
+            proposal.calldataTypes.push(ProposalCalldataType.DIRECT_EXECUTION);
+          } else if (proposal.targets[i] === roleModAddress) {
+            proposal.calldataTypes.push(ProposalCalldataType.PERMISSIONS);
+          } else {
+            proposal.calldataTypes.push(ProposalCalldataType.UNDEFINED);
+          }
+        });
+        proposal.calldataTags = [...new Set(proposal.calldataTypes.filter(
+          calldataType => calldataType !== ProposalCalldataType.UNDEFINED,
+        ))];
+
+        console.log("ZodiacRolesV1ModifierUpgradeableBeaconAddress: ", this.web3Store.ZodiacRolesV1ModifierUpgradeableBeaconAddress)
 
         this.storeProposal(this.web3Store.chainId, this.fundStore.fund?.address, proposal)
       }

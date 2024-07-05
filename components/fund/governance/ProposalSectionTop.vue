@@ -12,7 +12,9 @@
             class="section-top__tag"
           />
           <FundGovernanceProposalStateChip
-            value="Permissions"
+            v-for="(calldataTag, index) of proposal.calldataTags ?? []"
+            :key="index"
+            :value="calldataTag"
             class="section-top__tag"
           />
           <!--          <div class="section-top__submission">-->
