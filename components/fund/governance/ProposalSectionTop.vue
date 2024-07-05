@@ -278,7 +278,7 @@ const executeProposal = async () => {
         props.proposal.targets,
         props.proposal.values,
         props.proposal.calldatas,
-        props.proposal.description,
+        props.proposal.descriptionHash,
       ], null, 2,
     ),
   )
@@ -288,7 +288,7 @@ const executeProposal = async () => {
       props.proposal.targets,
       props.proposal.values,
       props.proposal.calldatas,
-      ethers.keccak256(ethers.toUtf8Bytes(props.proposal.description)),
+      props.proposal.descriptionHash,
     ).send(
       {
         from: fundStore.activeAccountAddress,

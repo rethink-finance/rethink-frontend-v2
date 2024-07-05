@@ -51,10 +51,12 @@ export default interface IGovernanceProposal {
   voteStart: string,
   voteEnd: string,
 
+  // Original event data
   targets: string[],
   values: string[],
   signatures: string[],
   calldatas: string[],
+  descriptionHash: string,
   calldatasDecoded: Record<string, any> | undefined [],
 
   // Called from the "state" function (IGovernorUpgradeable.ProposalState)

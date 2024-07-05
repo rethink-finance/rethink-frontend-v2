@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
 import { eth } from "web3";
+import { ethers } from "ethers";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import { cleanComplexWeb3Data } from "~/composables/utils";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
@@ -171,6 +172,7 @@ export const useGovernanceProposalsStore = defineStore({
       const proposal = cleanComplexWeb3Data(decodedEvent) as IGovernanceProposal;
 
       try {
+        proposal.descriptionHash = ethers.keccak256(ethers.toUtf8Bytes(proposal.description));
         const parsedDescription = JSON.parse(proposal.description);
         proposal.title = parsedDescription.title;
         proposal.description = parsedDescription.description;
