@@ -6,23 +6,69 @@
 
     <div class="section-bottom">
       <div class="main_card section-bottom--left">
-        <v-tabs v-model="selectedTab.tab" class="section-bottom__tabs">
-          <v-tab value="one" class="section-bottom__tab">
+        <v-tabs v-model="selectedTab" class="section-bottom__tabs">
+          <v-tab value="description" class="section-bottom__tab">
             Description
           </v-tab>
-          <v-tab value="two" class="section-bottom__tab">
+          <v-tab value="executableCode" class="section-bottom__tab">
             Executable Code
           </v-tab>
           <v-tab
-            value="three"
+            value="voteSubmissions"
             class="section-bottom__tab"
-          >Votes Submissions</v-tab>
+          >
+            Votes Submissions
+          </v-tab>
         </v-tabs>
 
         <v-card-text class="section-bottom__tab-content">
-          <div v-if="selectedTab.tab === 'one'" v-html="tabsContent.one" />
-          <div v-else-if="selectedTab.tab === 'two'" v-html="tabsContent.two" />
-          <div v-else-if="selectedTab.tab === 'three'">
+          <div v-if="selectedTab === 'description'">
+            {{ proposal?.description ?? "" }}
+          </div>
+          <div v-else-if="selectedTab === 'executableCode'">
+            <div v-for="(calldata, index) in proposal.calldatasDecoded" class="mb-4">
+              <strong class="text-primary">{{ index }}#</strong>
+              <div>
+                <strong>Contract:</strong> {{ calldata.contractName ?? "N/A" }}
+              </div>
+              <div>
+                <strong>Function:</strong> {{ calldata.functionName ?? "N/A" }}
+              </div>
+              <UiDataRowCard
+                :grow-column1="true"
+                is-expanded
+              >
+                <template #title>
+                  <div class="d-flex align-center justify-space-between">
+                    <div>
+                      Calldata
+                    </div>
+                    <div>
+                      <v-switch
+                        v-model="decodedProposalCalldatas[index]"
+                        label="Decode"
+                        color="primary"
+                        hide-details
+                        :true-value="undefined"
+                        @click.stop="toggleProposalCalldataUndecoded(index)"
+                      />
+                    </div>
+                  </div>
+                </template>
+                <template #body>
+                  <div class="code_block">
+                    <template v-if="decodedProposalCalldatas[index]">
+                      {{ formatCalldata(calldata?.decodedCalldata) }}
+                    </template>
+                    <template v-else>
+                      {{ calldata?.calldata }}
+                    </template>
+                  </div>
+                </template>
+              </UiDataRowCard>
+            </div>
+          </div>
+          <div v-else-if="selectedTab === 'voteSubmissions'">
             <FundGovernanceTableProposalsVotesSubmissions
               :items="proposalsVotesSubmissions"
               :loading="false"
@@ -32,7 +78,11 @@
       </div>
 
       <div class="section-bottom--right">
-        <UiDataRowCard title="Outcome" class="data_row_card">
+        <UiDataRowCard
+          title="Outcome"
+          class="data_row_card"
+          is-expanded
+        >
           <!-- TODO: check how to set default-active state for accordion/expansion card -->
           <template #body>
             <div class="section-bottom__outcome">
@@ -49,7 +99,11 @@
             </div>
           </template>
         </UiDataRowCard>
-        <UiDataRowCard title="Roadmap" class="data_row_card">
+        <UiDataRowCard
+          title="Roadmap"
+          class="data_row_card"
+          is-expanded
+        >
           <template #body>
             <FundGovernanceProposalRoadmap
               :proposal="proposal"
@@ -71,7 +125,7 @@ import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IGovernanceProposal from "~/types/governance_proposal";
-import { ProposalState } from "~/types/enums/governance_proposal";
+
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 const web3Store = useWeb3Store();
@@ -82,7 +136,12 @@ const fundSlug = route.params.fundSlug as string;
 console.log("proposal", proposalId);
 console.log("fundSlug", fundSlug);
 
-// TODO add proposalcreated block id to the proposalID and fetch it always from the block
+const decodedProposalCalldatas = ref<Record<string, boolean>>({});
+
+const toggleProposalCalldataUndecoded = (index: string) => {
+  decodedProposalCalldatas.value[index] = !(decodedProposalCalldatas.value[index] ?? false);
+}
+
 const { selectedFundSlug } = toRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -118,23 +177,13 @@ const proposalsVotesSubmissions: Partial<IGovernanceProposal>[] = [
   },
 ];
 
-const selectedTab = reactive({
-  tab: "one",
-});
-
-const tabsContent = computed((): Record<string, any> => (
-  {
-    one: proposal.value?.description ?? "",
-    two: "Tab Two",
-  }
-));
-
+const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
 const proposalFetched = ref(false);
 
-const proposal = computed(() => {
+const proposal = computed(():IGovernanceProposal | undefined => {
   const proposal = governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
-  console.log(proposal);
+
   if (!proposalFetched.value && proposal?.createdBlockNumber) {
     // Refetch it to update it, maybe it came from local storage.
     governanceProposalStore.fetchBlockProposals(proposal.createdBlockNumber);
@@ -142,6 +191,26 @@ const proposal = computed(() => {
   }
   return proposal;
 })
+watch(
+  () => proposal.value, (newProposal: IGovernanceProposal | undefined) => {
+    if (!newProposal) return;
+
+    newProposal.calldatas.forEach((_, index) => {
+      decodedProposalCalldatas.value[index] = true;
+    })
+  },
+  { immediate: true },
+);
+
+const formatCalldata = (calldata: any) => {
+  console.log(JSON.stringify(calldata, null, 2));
+  try {
+    return JSON.stringify(calldata, null, 2)
+  } catch {
+    console.warn("failed");
+    return calldata;
+  }
+}
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);

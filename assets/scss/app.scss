@@ -163,3 +163,9 @@ a {
     }
   }
 }
+
+.code_block {
+  white-space: pre-wrap; /* This preserves both spaces and line breaks */
+  word-break: break-all; /* This ensures long words are broken to fit */
+  font-family: monospace; /* Use a monospace font to mimic code appearance */
+}
