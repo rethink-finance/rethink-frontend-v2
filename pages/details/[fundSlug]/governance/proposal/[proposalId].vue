@@ -68,17 +68,17 @@
                       </div>
                       <div>
                         <v-switch
-                          v-model="toggledDecodedProposalCalldatas[index]"
-                          label="Decode"
+                          v-model="toggledRawProposalCalldatas[index]"
+                          label="Raw"
                           color="primary"
                           hide-details
-                          @click.stop="toggleProposalCalldataUndecoded(index)"
+                          @click.stop="toggleRawProposalCalldata(index)"
                         />
                       </div>
                     </div>
                   </template>
                   <template #body>
-                    <template v-if="toggledDecodedProposalCalldatas[index]">
+                    <template v-if="!toggledRawProposalCalldatas[index]">
                       <template v-if="proposal?.calldataTypes[index] === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
                           :methods="parseNavEntries(proposal?.calldatasDecoded?.[index]?.calldataDecoded)"
@@ -174,10 +174,10 @@ const showRawCalldatas = ref(false);
 console.log("proposal", proposalId);
 console.log("fundSlug", fundSlug);
 
-const toggledDecodedProposalCalldatas = ref<Record<number, boolean>>({});
+const toggledRawProposalCalldatas = ref<Record<number, boolean>>({});
 
-const toggleProposalCalldataUndecoded = (index: number) => {
-  toggledDecodedProposalCalldatas.value[index] = !(toggledDecodedProposalCalldatas.value[index] ?? false);
+const toggleRawProposalCalldata = (index: number) => {
+  toggledRawProposalCalldatas.value[index] = !(toggledRawProposalCalldatas.value[index] ?? false);
 }
 
 const { selectedFundSlug } = toRefs(useFundStore());
@@ -252,7 +252,7 @@ watch(
     if (!newProposal) return;
 
     newProposal.calldatas.forEach((_, index) => {
-      toggledDecodedProposalCalldatas.value[index] = true;
+      toggledRawProposalCalldatas.value[index] = false;
     })
   },
   { immediate: true },
