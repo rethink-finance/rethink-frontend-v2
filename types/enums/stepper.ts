@@ -17,3 +17,11 @@ export enum InputType {
   Number = "number",
   Select = "select",
 }
+
+export const DefaultValues = {
+  text: "",
+  textarea: "",
+  checkbox: false,
+  number: "",
+  select: "",
+} as const;

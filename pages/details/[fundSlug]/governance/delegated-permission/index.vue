@@ -43,7 +43,6 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 // format substeps for the stepper
 const allSubstepsFormatted = formatArrayToObject(allSubsteps);
-console.log("allSubstepsFormatted: ", allSubstepsFormatted);
 
 const delegatedEntry = ref([
   {
@@ -52,12 +51,12 @@ const delegatedEntry = ref([
     formTitle: DelegatedStepMap[DelegatedStep.Setup].formTitle,
     formText: DelegatedStepMap[DelegatedStep.Setup].formText,
 
-    stepDefaultValues: formatInputToObject(allSubstepsFormatted.allowTarget), // default value when adding a new substep
+    stepDefaultValues: formatInputToObject(allSubstepsFormatted.assignRoles), // default value when adding a new substep
 
     substepKey: "contractMethod",
     multipleSteps: true,
     substepLabel: "Permission",
-    steps: [formatInputToObject(allSubstepsFormatted.allowTarget)], // default values for the first substep
+    steps: [formatInputToObject(allSubstepsFormatted.assignRoles)], // default values for the first substep
   },
   {
     stepName: DelegatedStep.Details,
@@ -96,7 +95,7 @@ function formatInputToObject(input: any) {
   console.log("input: ", input);
 
   input?.forEach((item: any) => {
-    const { key, type } = item;
+    const { key, type, isArray } = item;
     let value;
 
     // Determine the default value based on the type
@@ -111,9 +110,15 @@ function formatInputToObject(input: any) {
         value = item.defaultValue;
         break;
       case "checkbox":
-        value = true;
+        value = false;
+        break;
       default:
         value = "";
+    }
+
+    // If the field is an array, we need to wrap the value in an array
+    if (isArray) {
+      value = [value];
     }
 
     result[key] = value;

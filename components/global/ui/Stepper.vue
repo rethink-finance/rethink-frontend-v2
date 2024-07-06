@@ -476,6 +476,10 @@ const nextStep = () => {
     text-align: center;
 
     transition: background-color 0.3s ease;
+
+    &:hover {
+      background-color: $color-gray-light-transparent;
+    }
   }
 
   &__icons {
@@ -499,10 +503,6 @@ const nextStep = () => {
     &.success {
       color: $color-success;
     }
-  }
-
-  &__add-new-step:hover {
-    background-color: $color-gray-light-transparent;
   }
 }
 </style>

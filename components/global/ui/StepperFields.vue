@@ -16,49 +16,134 @@
   >
     <v-label class="label_required">
       {{ field.label }}
+      <v-label v-if="field.isArray" class="label_required__label_type">
+        {{ field.placeholder.replace("E.g.", "") }}[]
+      </v-label>
     </v-label>
+
     <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
       <v-text-field
+        v-if="!field.isArray"
         v-model="valueDetails[field.key]"
         :placeholder="field.placeholder"
         :type="field.type"
         :min="field.min"
         :rules="field.rules"
       />
+      <div
+        v-for="(value, index) in valueDetails[field.key]"
+        v-else
+        class="is-array"
+      >
+        <div class="is-array__count-index">
+          {{ index + 1 }}
+        </div>
+        <v-text-field
+          :key="index"
+          v-model="valueDetails[field.key][index]"
+          :placeholder="field.placeholder"
+          :type="field.type"
+          :min="field.min"
+          :rules="field.rules"
+          class="is-array__input"
+        >
+          <Icon
+            icon="material-symbols:cancel-outline"
+            class="is-array__remove"
+            @click="removeField(field, index)"
+          /></v-text-field>
+      </div>
     </template>
     <template v-else-if="field.type === InputType.Textarea">
       <v-textarea
+        v-if="!field.isArray"
         v-model="valueDetails[field.key]"
         :placeholder="field.placeholder"
         :rules="field.rules"
       />
+      <div
+        v-for="(value, index) in valueDetails[field.key]"
+        v-else
+        class="is-array"
+      >
+        <div class="is-array__count-index">
+          {{ index + 1 }}
+        </div>
+        <v-textarea
+          :key="index"
+          v-model="valueDetails[field.key][index]"
+          :placeholder="field.placeholder"
+          :rules="field.rules"
+        />
+        <Icon
+          icon="material-symbols:cancel-outline"
+          class="is-array__remove"
+          @click="removeField(field, index)"
+        />
+      </div>
     </template>
     <template v-else-if="field.type === InputType.Select">
       <v-select
+        v-if="!field.isArray"
         v-model="valueDetails[field.key]"
         :rules="field.rules"
         :items="field.choices"
         item-title="title"
         item-value="value"
       />
+      <div
+        v-for="(value, index) in valueDetails[field.key]"
+        v-else
+        class="is-array"
+      >
+        <div class="is-array__count-index">
+          {{ index + 1 }}
+        </div>
+        <v-select
+          :key="index"
+          v-model="valueDetails[field.key][index]"
+          :rules="field.rules"
+          :items="field.choices"
+          item-title="title"
+          item-value="value"
+        />
+        <Icon
+          icon="material-symbols:cancel-outline"
+          class="is-array__remove"
+          @click="removeField(field, index)"
+        />
+      </div>
     </template>
     <template v-else-if="field.type === InputType.Checkbox">
-      <v-checkbox v-model="valueDetails[field.key]" />
+      <v-checkbox v-if="!field.isArray" v-model="valueDetails[field.key]" />
+
+      <div
+        v-for="(value, index) in valueDetails[field.key]"
+        v-else
+        class="is-array"
+      >
+        <div class="is-array__count-index">
+          {{ index + 1 }}
+        </div>
+        <v-checkbox :key="index" v-model="valueDetails[field.key][index]" />
+        <Icon
+          icon="material-symbols:cancel-outline"
+          class="is-array__remove"
+          @click="removeField(field, index)"
+        />
+      </div>
     </template>
     <!-- check if field "isArray", if yes allow adding new fields -->
     <template v-if="field.isArray">
-      <v-btn @click="addNewField(field)">
-        Add
-      </v-btn>
-      <v-btn @click="removeField(field)">
-        Remove
-      </v-btn>
+      <div class="add-new-field" flat @click="addNewField(field)">
+        Add Parameters +
+      </div>
     </template>
   </v-col>
 </template>
 
 <script setup lang="ts">
-import { InputType } from "~/types/enums/stepper";
+import { DefaultValues, InputType } from "~/types/enums/stepper";
 const emit = defineEmits(["update:modelValue", "validate"]);
 
 const props = defineProps({
@@ -99,15 +184,21 @@ const allFieldsValid = computed(() =>
 );
 
 const addNewField = (field: any) => {
-  // Add a new field to the array.
-  console.log("valueDetails: ", valueDetails.value);
-  console.log("field: ", field);
+  const type = field.type as InputType;
+  const defaultValue = DefaultValues[type];
+
+  valueDetails.value[field.key].push(defaultValue);
 };
 
-const removeField = (field: any) => {
-  // Remove a field from the array.
-  console.log("valueDetails: ", valueDetails.value);
-  console.log("field: ", field);
+const removeField = (field: any, index: number) => {
+  // don't allow to delete if it's the last item
+  const isLastItem = valueDetails.value[field.key].length === 1;
+  if (isLastItem) {
+    return;
+  }
+
+  // Remove the field at the given index
+  valueDetails.value[field.key].splice(index, 1);
 };
 
 // Check the validity of each field.
@@ -115,6 +206,8 @@ watch(
   valueDetails,
   () => {
     valueDetails.value.isValid = allFieldsValid.value;
+
+    console.log("valueDetails: ", valueDetails.value);
     emit("validate", valueDetails.value);
   },
   { deep: true },
@@ -134,5 +227,72 @@ watch(
 }
 .label_required {
   margin-bottom: 5px;
+
+  &__label_type {
+    margin-left: 5px;
+  }
+}
+
+.is-array {
+  display: flex;
+  align-content: center;
+  gap: 10px;
+
+  margin: 10px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &__count-index {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    width: 42px;
+    height: 42px;
+    background-color: $color-background-button;
+    @include borderGray;
+  }
+
+  &__input {
+    :deep(.v-field__input) {
+      flex-direction: row-reverse;
+      padding: 0 10px 0 0;
+      min-height: 2.5rem;
+    }
+  }
+
+  &__remove {
+    cursor: pointer;
+
+    width: 25px;
+    height: 25px;
+    color: $color-background-button;
+
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: $color-error;
+    }
+  }
+}
+
+.add-new-field {
+  width: max-content;
+  margin-left: auto;
+  padding: 0.5rem;
+
+  font-size: $text-sm;
+  color: $color-text-irrelevant;
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background-color: $color-gray-light-transparent;
+  }
 }
 </style>
