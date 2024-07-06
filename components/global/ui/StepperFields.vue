@@ -45,6 +45,15 @@
     <template v-else-if="field.type === InputType.Checkbox">
       <v-checkbox v-model="valueDetails[field.key]" />
     </template>
+    <!-- check if field "isArray", if yes allow adding new fields -->
+    <template v-if="field.isArray">
+      <v-btn @click="addNewField(field)">
+        Add
+      </v-btn>
+      <v-btn @click="removeField(field)">
+        Remove
+      </v-btn>
+    </template>
   </v-col>
 </template>
 
@@ -88,6 +97,18 @@ const allFieldsValid = computed(() =>
     return field?.rules?.every((rule: any) => rule(value) === true) ?? true;
   }),
 );
+
+const addNewField = (field: any) => {
+  // Add a new field to the array.
+  console.log("valueDetails: ", valueDetails.value);
+  console.log("field: ", field);
+};
+
+const removeField = (field: any) => {
+  // Remove a field from the array.
+  console.log("valueDetails: ", valueDetails.value);
+  console.log("field: ", field);
+};
 
 // Check the validity of each field.
 watch(

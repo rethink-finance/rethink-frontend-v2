@@ -19,12 +19,15 @@ import {
   DelegatedStep,
   DelegatedStepMap,
   allSubsteps,
-  substepChoices,
 } from "~/types/enums/delegated_permission";
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { useFundStore } from "~/store/fund.store";
+
+import addressesJson from "~/assets/contracts/addresses.json";
+import type IAddresses from "~/types/addresses";
+const addresses: IAddresses = addressesJson as IAddresses;
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -40,6 +43,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 // format substeps for the stepper
 const allSubstepsFormatted = formatArrayToObject(allSubsteps);
+console.log("allSubstepsFormatted: ", allSubstepsFormatted);
 
 const delegatedEntry = ref([
   {
@@ -48,15 +52,13 @@ const delegatedEntry = ref([
     formTitle: DelegatedStepMap[DelegatedStep.Setup].formTitle,
     formText: DelegatedStepMap[DelegatedStep.Setup].formText,
 
-    stepDefaultValues: {
-      ...formatInputToObject(allSubstepsFormatted.allowTarget), // default value when adding a new substep
-    },
+    stepDefaultValues: formatInputToObject(allSubstepsFormatted.allowTarget), // default value when adding a new substep
+
     substepKey: "contractMethod",
     multipleSteps: true,
     substepLabel: "Permission",
-    steps: [{ ...formatInputToObject(allSubstepsFormatted.allowTarget) }], // default values for the first substep
+    steps: [formatInputToObject(allSubstepsFormatted.allowTarget)], // default values for the first substep
   },
-
   {
     stepName: DelegatedStep.Details,
     stepLabel: DelegatedStepMap[DelegatedStep.Details].name,
@@ -74,6 +76,7 @@ const delegatedEntry = ref([
     ],
   },
 ]);
+
 const fieldsMap = ref(DelegatedPermissionFieldsMap);
 
 function formatArrayToObject(array: { [key: string]: any }[]): any {
@@ -90,6 +93,8 @@ function formatArrayToObject(array: { [key: string]: any }[]): any {
 function formatInputToObject(input: any) {
   const result = {} as any;
 
+  console.log("input: ", input);
+
   input?.forEach((item: any) => {
     const { key, type } = item;
     let value;
@@ -103,8 +108,10 @@ function formatInputToObject(input: any) {
         value = "";
         break;
       case "select":
-        value = substepChoices[0].value; // default value for select
+        value = item.defaultValue;
         break;
+      case "checkbox":
+        value = true;
       default:
         value = "";
     }
