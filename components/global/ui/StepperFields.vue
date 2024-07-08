@@ -179,7 +179,19 @@ const allFieldsValid = computed(() =>
 
     // Check if the value is valid for all rules.
     // If there are no rules, the field is valid.
-    return field?.rules?.every((rule: any) => rule(value) === true) ?? true;
+    return (
+      field?.rules?.every((rule: any) => {
+        // we need to check if a value is an array
+        // if it is, we need to check each value in the array
+        if (Array.isArray(value)) {
+          return value.every((val) => {
+            return rule(val) === true;
+          });
+        }
+
+        return rule(value) === true;
+      }) ?? true
+    );
   }),
 );
 
@@ -237,8 +249,6 @@ watch(
   display: flex;
   align-content: center;
   gap: 10px;
-
-  margin: 10px;
 
   &:last-child {
     margin-bottom: 0;
