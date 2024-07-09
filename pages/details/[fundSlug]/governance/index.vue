@@ -43,13 +43,22 @@
 
     <UiMainCard title="Trending Delegates" subtitle="4 Delegated Wallets">
       <template #header-right>
-        <v-btn
-          class="manage-button"
-          variant="outlined"
-          @click="openDelegateDialog"
+        <UiTooltipClick
+          :tooltipText="
+            accountStore.isConnected
+              ? ''
+              : 'Connect your wallet to delegate your votes'
+          "
+          :hide-after="2200"
         >
-          Manage Delegation
-        </v-btn>
+          <v-btn
+            class="manage-button"
+            variant="outlined"
+            @click="accountStore.isConnected ? openDelegateDialog() : null"
+          >
+            Manage Delegation
+          </v-btn>
+        </UiTooltipClick>
       </template>
       <TableTrendingDelegates :items="trendingDelegates" />
     </UiMainCard>
@@ -149,12 +158,14 @@ import type ITrendingDelegates from "~/types/trending_delegates";
 
 // components
 import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDelegates.vue";
+import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import { ProposalState } from "~/types/enums/governance_proposal";
 
+const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
