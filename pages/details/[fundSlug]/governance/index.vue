@@ -481,13 +481,18 @@ const delegate = async (isMyself = false) => {
         governanceToken
       );
 
-      console.log("externalGovToken: ", externalGovToken);
-
       try {
+        const estimatedGas = await fundStore.fundContract.methods
+          .delegate(delegateTo)
+          .estimateGas();
+
+        console.log("estimatedGas: ", estimatedGas);
+
         await externalGovToken.methods
           .delegate(delegateTo)
           .send({
             from: fundStore.activeAccountAddress,
+            gas: estimatedGas,
           })
           .on("transactionHash", function (hash: any) {
             console.log("tx hash: " + hash);
@@ -525,10 +530,17 @@ const delegate = async (isMyself = false) => {
     } else {
       try {
         //  gov contract
+        const estimatedGas = await fundStore.fundContract.methods
+          .delegate(delegateTo)
+          .estimateGas();
+
+        console.log("estimatedGas: ", estimatedGas);
+
         await fundStore.fundContract.methods
           .delegate(delegateTo)
           .send({
             from: fundStore.activeAccountAddress,
+            gas: estimatedGas,
           })
           .on("transactionHash", function (hash: any) {
             console.log("tx hash: " + hash);
