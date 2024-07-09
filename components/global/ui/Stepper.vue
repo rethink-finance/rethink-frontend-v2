@@ -244,9 +244,14 @@ const addNewSubstep = (mainStep: any) => {
     (step) => step.stepName === mainStep.stepName,
   );
 
-  props.entry?.[mainStepIndex]?.steps?.push({
+  // substep to add
+  const newSubstep = {
     ...props.entry?.[mainStepIndex]?.stepDefaultValues,
-  });
+  };
+
+  console.log("newSubstep: ", newSubstep);
+
+  props.entry?.[mainStepIndex]?.steps?.push(newSubstep);
 
   // set new step as active
   activeSubStep.value = props.entry?.[mainStepIndex]?.steps?.length - 1;
@@ -271,6 +276,8 @@ const deleteSubstep = (mainStep: any, index: number) => {
     activeSubStep.value = props.entry?.[mainStepIndex]?.steps?.length - 1;
   }
 };
+
+console.log("entry: ", props.entry);
 
 // check if all main steps and substeps are valid
 const validate = () => {

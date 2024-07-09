@@ -86,6 +86,7 @@ function formatArrayToObject(array: { [key: string]: any }[]): any {
     result[key] = item[key];
   });
 
+  console.log("RESULTS: ", result);
   return result;
 }
 
@@ -121,7 +122,7 @@ function formatInputToObject(input: any) {
       value = [value];
     }
 
-    result[key] = value;
+    JSON.parse(JSON.stringify((result[key] = value)));
   }) || {};
 
   console.log("result: ", result);
@@ -149,3 +150,4 @@ onMounted(() => {
 .delegated-permission {
 }
 </style>
+[ "" ]
