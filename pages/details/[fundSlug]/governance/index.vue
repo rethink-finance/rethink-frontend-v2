@@ -488,8 +488,8 @@ const delegate = async (isMyself = false) => {
           .delegate(delegateTo)
           .send({
             from: fundStore.activeAccountAddress,
-            maxPriorityFeePerGas: undefined,
-            maxFeePerGas: undefined,
+            maxPriorityFeePerGas: "",
+            maxFeePerGas: "",
           })
           .on("transactionHash", function (hash: any) {
             console.log("tx hash: " + hash);
@@ -531,8 +531,8 @@ const delegate = async (isMyself = false) => {
           .delegate(delegateTo)
           .send({
             from: fundStore.activeAccountAddress,
-            maxPriorityFeePerGas: null,
-            maxFeePerGas: null,
+            maxPriorityFeePerGas: "",
+            maxFeePerGas: "",
           })
           .on("transactionHash", function (hash: any) {
             console.log("tx hash: " + hash);
