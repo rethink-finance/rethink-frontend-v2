@@ -35,7 +35,7 @@ const excludeFundAddrs = {
   "0xa4b1": [],
   "0xfc": [],
   "0x1": [],
-} as IContractAddresses;
+} as IExcludeFundAddr;
 
 interface IState {
   funds: IFund[];
@@ -133,7 +133,7 @@ export const useFundsStore = defineStore({
           if (isExcludeFunds) {
             let fieldName = this.web3Store.chainId as keyof IExcludeFundAddr;
 
-            if (excludeFundAddrs[fieldName].includes(address)) {
+            if (excludeFundAddrs[fieldName].indexOf(address) > -1) {
                 return;
             }
           }
