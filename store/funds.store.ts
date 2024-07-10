@@ -9,6 +9,7 @@ import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
+import type IContractAddresses from "~/types/addresses";
 import type INAVUpdate from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import type IToken from "~/types/token";
@@ -22,6 +23,19 @@ const addresses: IAddresses = addressesJson as IAddresses;
 
 const GovernableFundFactoryContractName = "GovernableFundFactoryBeaconProxy";
 const RethinkReaderContractName = "RethinkReader";
+const isExcludeFunds = true;
+
+
+// interface
+export interface IExcludeFundAddr {
+  [chainId: string]: string[]
+};
+const excludeFundAddrs = {
+  "0x89": ["0x0657DC652F88B55Dd16f5D6cE687672264f9b61E", "0x8fAE33f10854c20a811246849A0d4131caf72125", "0x6DFbEE70f1250C2dECb3E9bCb2BE3AF19b15e631", "0xf48E3fa13cb2390e472cf1CA64F941eB7BD27475", "0x82CBA6D1A6dCeb408d7F048493262b83c9744f4D", "0xcfD904C4C857784686029995886d627da1aeFbe4", "0xe93CB20Fc113355753B6D237c3949E0452981dC3", "0x6edC5f675C5A20e867aeF0633033a17EA256637E", "0x920fdA0F59bDc852eD19e3ad975a808101ea2a29", "0x1550D564fEBE8c398F3cc398c9ac2a9e89E89A4F", "0x07094Bb5f175A4E6b074e5E79F6439a8A929533B", "0x98F1c2035680E4215cD5726a11279da96C07835F"],
+  "0xa4b1": [],
+  "0xfc": [],
+  "0x1": [],
+} as IContractAddresses;
 
 interface IState {
   funds: IFund[];
@@ -116,6 +130,14 @@ export const useFundsStore = defineStore({
 
         // @dev NOTE: there is also: totalDepositBal for each fund if we need it.
         fundAddresses.forEach((address, index) => {
+          if (isExcludeFunds) {
+            let fieldName = this.web3Store.chainId as keyof IExcludeFundAddr;
+
+            if (excludeFundAddrs[fieldName].includes(address)) {
+                return;
+            }
+          }
+
           const fundStartTime = dataNAVs.startTime[index];
           const fund: IFund = {
             chainName: this.web3Store.chainName,
