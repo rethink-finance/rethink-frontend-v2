@@ -130,12 +130,12 @@
               </v-btn>
               <v-btn
                 class="bg-primary text-secondary ms-6"
-                :disabled="!fundStore.activeAccountAddress"
+                :disabled="!accountStore.isConnected"
                 @click="createProposal"
               >
                 Create Proposal
                 <v-tooltip
-                  v-if="!fundStore.activeAccountAddress"
+                  v-if="!accountStore.isConnected"
                   :model-value="true"
                   activator="parent"
                   location="top"
@@ -163,9 +163,11 @@ import { useWeb3Store } from "~/store/web3.store";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useToastStore } from "~/store/toast.store";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
+import { useAccountStore } from "~/store/account.store";
 
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
+const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const emit = defineEmits(["updateBreadcrumbs"]);
 
@@ -337,16 +339,8 @@ const encodeRoleModEntries = async (proposalEntries: any[]): Promise<[any[], any
 
   loading.value = true;
   const proposalRoleModMethods = ZodiacRoles.abi.filter((val) => (val.type === "function"));
-  const startAddress = "0x0000000000000000000000000000000000000001";
-  /*
-  function getModulesPaginated(
-    address start,
-    uint256 pageSize
-  )
-   */
-  const safeModules = await fundStore.fundSafeContract.methods.getModulesPaginated(startAddress, 10).call();
-  const roleModAddr = safeModules[0][1];
-  console.log("roleModAddr: ", roleModAddr);
+  const roleModAddress = await fundStore.getRoleModAddress();
+  console.log("roleModAddress: ", roleModAddress);
 
   const encodedRoleModEntries = [];
 
@@ -375,7 +369,7 @@ const encodeRoleModEntries = async (proposalEntries: any[]): Promise<[any[], any
     );
     console.log("roleModFunctionData: ", i,  JSON.stringify(roleModFunctionData, null, 2))
     encodedRoleModEntries.push(encodedRoleModFunction);
-    targets.push(roleModAddr);
+    targets.push(roleModAddress);
     gasValues.push(0)
   }
 

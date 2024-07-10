@@ -46,6 +46,8 @@ interface IState {
   userFundShareValue: bigint
   selectedFundAddress: string;
   fundManagedNAVMethods: INAVMethod[],
+  // Cached roleMod addresses for each fund.
+  fundRoleModAddress: Record<string, string>,
 }
 
 
@@ -61,6 +63,7 @@ export const useFundStore = defineStore({
     userFundDelegateAddress: "",
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
+    fundRoleModAddress: {},
   }),
   getters: {
     accountStore(): any {
@@ -614,6 +617,28 @@ export const useFundStore = defineStore({
 
       this.userFundShareValue = balanceWei;
       return this.userFundShareValue;
+    },
+    async getRoleModAddress(): Promise<string> {
+      if (!this.fund?.address) return "";
+
+      // If we have already fetched the role mod address for the current fund, just return it.
+      let roleModAddress = this.fundRoleModAddress[this.fund.address ?? ""];
+      if (roleModAddress) {
+        return roleModAddress;
+      }
+
+      // If role mod address was not fetched yet, fetch it now.
+      const startAddress = "0x0000000000000000000000000000000000000001";
+      /*
+      function getModulesPaginated(
+        address start,
+        uint256 pageSize
+      )
+       */
+      const safeModules = await this.fundSafeContract.methods.getModulesPaginated(startAddress, 10).call();
+      roleModAddress = safeModules[0][1];
+      this.fundRoleModAddress[this.fund?.address ?? ""] = roleModAddress;
+      return roleModAddress;
     },
   },
 });

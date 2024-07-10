@@ -1,6 +1,9 @@
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import type INetwork from "~/types/network";
+import addressesJson from "~/assets/contracts/addresses.json";
+import type IAddresses from "~/types/addresses";
+const addresses: IAddresses = addressesJson as IAddresses;
 
 interface IState {
   web3?: Web3;
@@ -105,6 +108,9 @@ export const useWeb3Store = defineStore({
     },
     currentNetwork(): INetwork {
       return this.networksMap[this.chainId]
+    },
+    NAVCalculatorBeaconProxyAddress(): string {
+      return addresses.NAVCalculatorBeaconProxy[this.chainId]
     },
   },
   actions: {

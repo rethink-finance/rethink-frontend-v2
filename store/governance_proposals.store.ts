@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
 import { eth } from "web3";
+import { ethers } from "ethers";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import { cleanComplexWeb3Data } from "~/composables/utils";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
@@ -12,6 +13,7 @@ import { ProposalStateMapping } from "~/types/enums/governance_proposal";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { useWeb3Store } from "~/store/web3.store";
 import { useToastStore } from "~/store/toast.store";
+import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 
 interface IState {
   /* Example fund proposals.
@@ -171,6 +173,7 @@ export const useGovernanceProposalsStore = defineStore({
       const proposal = cleanComplexWeb3Data(decodedEvent) as IGovernanceProposal;
 
       try {
+        proposal.descriptionHash = ethers.keccak256(ethers.toUtf8Bytes(proposal.description));
         const parsedDescription = JSON.parse(proposal.description);
         proposal.title = parsedDescription.title;
         proposal.description = parsedDescription.description;
@@ -200,7 +203,7 @@ export const useGovernanceProposalsStore = defineStore({
         return {
           functionName: functionAbi.function.name,
           contractName: functionAbi.contractName,
-          decodedCalldata: decoded,
+          calldataDecoded: decoded,
           calldata,
         };
       } catch (error: any) {
@@ -261,10 +264,6 @@ export const useGovernanceProposalsStore = defineStore({
      *     "voteEnd": "1718623316",
      *     "description": "{\"title\":\"01 - NAV Methods\",\"description\":\"See details bellow\"}"
      * }
-     *
-     * TODO check first few 8 bytes of calldatas to see if the function signature matches any of ours, for example
-     * to compare them with function signatures of our ABIs
-     * TODO or just try decoding calldatas with our ABIs
      */
     async parseProposalCreatedEvents(events: any[]) {
       if (!this.fundStore.fund?.governanceToken.decimals) {
@@ -277,6 +276,7 @@ export const useGovernanceProposalsStore = defineStore({
         this.toastStore.errorToast("Fund clock mode is unknown.")
         return
       }
+      const roleModAddress = await this.fundStore.getRoleModAddress();
 
       for (const event of events) {
         console.log("event");
@@ -370,9 +370,25 @@ export const useGovernanceProposalsStore = defineStore({
         }
 
         proposal.calldatasDecoded = [];
-        for (const calldata of proposal.calldatas) {
-          proposal.calldatasDecoded.push(this.decodeProposalCallData(calldata));
-        }
+        proposal.calldataTypes = [];
+
+        proposal.calldatas.forEach((calldata, i) => {
+          const calldataDecoded = this.decodeProposalCallData(calldata);
+          proposal.calldatasDecoded.push(calldataDecoded);
+
+          if (calldataDecoded?.functionName === "updateNav") {
+            proposal.calldataTypes.push(ProposalCalldataType.NAV_UPDATE);
+          } else if (proposal.targets[i] === this.fundStore.fund?.safeAddress) {
+            proposal.calldataTypes.push(ProposalCalldataType.DIRECT_EXECUTION);
+          } else if (proposal.targets[i] === roleModAddress) {
+            proposal.calldataTypes.push(ProposalCalldataType.PERMISSIONS);
+          } else {
+            proposal.calldataTypes.push(ProposalCalldataType.UNDEFINED);
+          }
+        });
+        proposal.calldataTags = [...new Set(proposal.calldataTypes.filter(
+          calldataType => calldataType !== ProposalCalldataType.UNDEFINED,
+        ))];
 
         this.storeProposal(this.web3Store.chainId, this.fundStore.fund?.address, proposal)
       }

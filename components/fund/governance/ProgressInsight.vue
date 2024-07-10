@@ -6,7 +6,8 @@
       </h3>
       <v-progress-linear
         :height="height"
-        :model-value="progress"
+        :model-value="value"
+        :max="max"
         class="progress-insight__progress-bar"
       />
       <div class="progress-insight__progress-text">
@@ -19,7 +20,7 @@
 <script lang="ts">
 export default {
   props: {
-    progress: {
+    value: {
       type: Number,
       default: 0,
     },
@@ -35,13 +36,25 @@ export default {
       type: String,
       default: "",
     },
+    min: {
+      type: Number,
+      default: 0,
+    },
+    max: {
+      type: Number,
+      default: 1,
+    },
+    formatFunction: {
+      type: Function,
+      default: (value: any) => value,
+    },
   },
   computed: {
     parsedProgressText(): string {
       // Ensure the number is between 0 and 100
-      const limitedValue = Math.max(0, Math.min(100, this.progress)).toFixed(0);
-
-      return limitedValue ? `${limitedValue}% ${this.subtext}` : "";
+      const limitedValue = Math.max(this.min, Math.min(this.max, this.value));
+      console.log(limitedValue);
+      return limitedValue ? `${this.formatFunction(this.value)} ${this.subtext}` : "";
     },
   },
 };

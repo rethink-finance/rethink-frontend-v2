@@ -42,6 +42,10 @@ export default defineComponent({
     let timerId: ReturnType<typeof setTimeout> | undefined;
 
     const showTooltip = () => {
+      if (props.tooltipText === "") {
+        return;
+      }
+
       show.value = true;
       if (timerId) {
         clearTimeout(timerId); // Clear any existing timer

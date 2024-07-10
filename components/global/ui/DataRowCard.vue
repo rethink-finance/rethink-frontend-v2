@@ -1,5 +1,6 @@
 <template>
   <v-expansion-panels
+    v-model="expandedList"
     class="data_row"
     variant="accordion"
     :readonly="isReadOnly"
@@ -15,7 +16,9 @@
         <div class="data_row__header">
           <div class="data_row__column" :class="{'data_row__column--grow': growColumn1}">
             <div class="data_row__title">
-              {{ title }}
+              <slot name="title">
+                {{ title }}
+              </slot>
             </div>
             <div v-if="subtitle" class="data_row__subtitle">
               {{ subtitle }}
@@ -151,6 +154,19 @@ export default defineComponent({
       type: String,
       default: "",
     },
+    isExpanded: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    const expandedList = [];
+    if (this.isExpanded) {
+      expandedList.push(0)
+    }
+    return {
+      expandedList,
+    }
   },
   computed: {
     hasBody(): boolean {

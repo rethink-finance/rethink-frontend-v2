@@ -12,7 +12,9 @@
             class="section-top__tag"
           />
           <FundGovernanceProposalStateChip
-            value="Permissions"
+            v-for="(calldataTag, index) of proposal.calldataTags ?? []"
+            :key="index"
+            :value="calldataTag"
             class="section-top__tag"
           />
           <!--          <div class="section-top__submission">-->
@@ -51,14 +53,44 @@
       <v-btn
         v-if="isSubmitButtonVisible"
         class="section-top__submit-button"
+        :loading="loadingExecuteProposal"
+        :disabled="!accountStore.isConnected"
         @click="submitButtonClick"
       >
         {{ submitButtonText }}
+        <v-tooltip
+          v-if="!accountStore.isConnected"
+          :model-value="true"
+          activator="parent"
+          location="top"
+          @update:model-value="false"
+        >
+          Connect your wallet.
+        </v-tooltip>
+      </v-btn>
+
+      <v-btn
+        v-if="isSubmitButtonVisible"
+        class="section-top__submit-button"
+        :loading="loadingExecuteProposal"
+        :disabled="!accountStore.isConnected"
+        @click="submitButtonClickExecute"
+      >
+        {{ submitButtonTextExecute }}
+        <v-tooltip
+          v-if="!accountStore.isConnected"
+          :model-value="true"
+          activator="parent"
+          location="top"
+          @update:model-value="false"
+        >
+          Connect your wallet.
+        </v-tooltip>
       </v-btn>
 
 
       <v-dialog
-        v-model="isDialogOpen"
+        v-model="isVoteDialogOpen"
         scrim="black"
         opacity="0.25"
         max-width="500"
@@ -73,7 +105,7 @@
               :icon="VoteTypeIcon[VoteType.Against]"
               class="di-card__close-icon"
               width="1.5rem"
-              @click="dialogClose"
+              @click="closeVoteDialog"
             />
           </div>
 
@@ -138,6 +170,7 @@
 
 <script setup lang="ts">
 // toast
+import { ethers } from "ethers";
 import { truncateAddress } from "~/composables/addressUtils";
 // import { useToastStore } from "~/store/toast.store";
 import type IGovernanceProposal from "~/types/governance_proposal";
@@ -150,6 +183,7 @@ import {
 } from "~/types/enums/governance_proposal";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
+import { useAccountStore } from "~/store/account.store";
 
 const props = defineProps({
   proposal: {
@@ -160,7 +194,9 @@ const props = defineProps({
 
 const fundStore = useFundStore();
 const toastStore = useToastStore();
+const accountStore = useAccountStore();
 const loadingSubmitVote = ref(false);
+const loadingExecuteProposal = ref(false);
 
 interface IMetaItem {
   label: string;
@@ -205,7 +241,11 @@ const submitButtonText = computed(() => {
   return "Submit Vote";
 });
 
-const isDialogOpen = ref(false);
+const submitButtonTextExecute = computed(() => {
+  return "Execute Proposal"
+});
+
+const isVoteDialogOpen = ref(false);
 const selectedVoteOption = ref<number>();
 const copyText = (text: string) => {
   navigator.clipboard.writeText(text);
@@ -217,49 +257,101 @@ const submitButtonClick = () => {
   } else {
   // if proposal is not approved, open dialog
   // for submission
-    dialogOpen();
+    openVoteDialog();
   }
 }
 
-const submitVote = () => {
+const submitButtonClickExecute = () => {
+  // execute proposal
+  executeProposal();
+}
+
+const submitVote = async () => {
   loadingSubmitVote.value = true;
   console.log("cast vote", props.proposal.proposalId, selectedVoteOption.value)
 
-  fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).send(
-    {
-      from: fundStore.activeAccountAddress,
-    },
-  ).on("transactionHash", (hash: string) => {
-    console.log("tx hash: " + hash);
-    toastStore.addToast("Your vote has been submitted. Please wait for it to be confirmed.");
-  }).on("receipt", (receipt: any) => {
-    console.log("receipt: ", receipt);
-    if (receipt.status) {
-      toastStore.successToast("Vote successful.");
-    } else {
-      toastStore.errorToast(
-        "The vote transaction has failed. Please contact the Rethink Finance support.",
-      );
-    }
+  try {
+    await fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).send(
+      {
+        from: fundStore.activeAccountAddress,
+      },
+    ).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("Your vote has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
+      if (receipt.status) {
+        toastStore.successToast("Vote successful.");
+      } else {
+        toastStore.errorToast(
+          "The vote transaction has failed. Please contact the Rethink Finance support.",
+        );
+      }
+      loadingSubmitVote.value = false;
+      closeVoteDialog();
+    }).on("error", (error: any) => {
+      console.error(error);
+      loadingSubmitVote.value = false;
+      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+      closeVoteDialog();
+    });
+  } catch {
     loadingSubmitVote.value = false;
-    dialogClose();
-  }).on("error", (error: any) => {
-    console.error(error);
-    loadingSubmitVote.value = false;
-    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-    dialogClose();
-  });
-  // toastStore.successToast(msg[selectedVoteOption]);
+  }
 }
 
-const executeProposal = () => {
-  alert("Execute Proposal");
+const executeProposal = async () => {
+  loadingExecuteProposal.value = true;
+  console.log("execute Data:",
+    JSON.stringify(
+      [
+        props.proposal.targets,
+        props.proposal.values,
+        props.proposal.calldatas,
+        props.proposal.descriptionHash,
+      ], null, 2,
+    ),
+  )
+
+  try {
+    await fundStore.fundGovernorContract.methods.execute(
+      props.proposal.targets,
+      props.proposal.values,
+      props.proposal.calldatas,
+      props.proposal.descriptionHash,
+    ).send(
+      {
+        from: fundStore.activeAccountAddress,
+      },
+    ).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("Proposal execution has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
+      if (receipt.status) {
+        toastStore.successToast("Proposal execution successful.");
+      } else {
+        toastStore.errorToast(
+          "Proposal execution transaction has failed. Please contact the Rethink Finance support.",
+        );
+      }
+      loadingExecuteProposal.value = false;
+    }).on("error", (error: any) => {
+      console.error(error);
+      console.log("testeee");
+      loadingExecuteProposal.value = false;
+      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    });
+  } catch {
+    console.log("testee");
+    loadingExecuteProposal.value = false;
+  }
 }
-const dialogOpen = () => {
-  isDialogOpen.value = true;
+const openVoteDialog = () => {
+  isVoteDialogOpen.value = true;
 }
-const dialogClose = () => {
-  isDialogOpen.value = false;
+const closeVoteDialog = () => {
+  isVoteDialogOpen.value = false;
 }
 
 const voteOptionIcon = (voteType: number) => {

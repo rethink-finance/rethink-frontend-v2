@@ -146,7 +146,8 @@ const routes: IRoute[] = [
   },
   {
     to: `/details/${tokenSymbol}-${fundAddress}/governance`,
-    exactMatch: true,
+    exactMatch: false,
+    matchPrefix: `/details/${tokenSymbol}-${fundAddress}/governance`,
     title: "Governance",
     text: "",
   },

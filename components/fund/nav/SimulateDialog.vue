@@ -75,16 +75,13 @@
 
 <script setup lang="ts">
 import type INAVMethod from "~/types/nav_method";
-import addressesJson from "~/assets/contracts/addresses.json";
 import NAVCalculatorJSON from "~/assets/contracts/NAVCalculator.json";
-import type IAddresses from "~/types/addresses";
 import { useWeb3Store } from "~/store/web3.store";
 import { useFundStore } from "~/store/fund.store";
 import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
 import { useToastStore } from "~/store/toast.store";
 import { useFundsStore } from "~/store/funds.store";
 // Since the direct import won't infer the custom type, we cast it here.:
-const addresses: IAddresses = addressesJson as IAddresses;
 
 const web3Store = useWeb3Store();
 const fundsStore = useFundsStore();
@@ -125,7 +122,7 @@ onMounted(async () => {
 
   const NAVCalculatorContract = new web3Store.web3.eth.Contract(
     NAVCalculatorJSON.abi,
-    addresses.NAVCalculatorBeaconProxy[web3Store.chainId],
+    web3Store.NAVCalculatorBeaconProxyAddress,
   );
 
   const baseDecimals = fundStore.fund?.baseToken.decimals;
