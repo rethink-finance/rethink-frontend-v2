@@ -66,6 +66,8 @@ import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 
+const emit = defineEmits(["deposit-success"]);
+
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
@@ -284,6 +286,10 @@ const deposit = async () => {
         // Refresh user balances & allowance.
         fundStore.fetchUserBalances();
         tokenValue.value = "0.0";
+
+        // emit event to open the delegate votes modal
+        emit("deposit-success");
+        
       } else {
         toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
       }
