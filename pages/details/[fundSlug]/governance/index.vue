@@ -12,8 +12,9 @@
     >
       <template #header-right>
         <UiDropdown
-          :options="dropdownOptions"
+          :options="dropdownOptionsLabels"
           label="Create Proposal"
+          @update:selected="selectOption"
           @click="startFetch"
         />
       </template>
@@ -23,7 +24,7 @@
           variant="outlined"
         >
           <div>All Activity</div>
-          <div class="tools__all-activity-btn__subtext">
+          <div class="tools_all-activity-btn_subtext">
             ({{ proposalsCountText }})
           </div>
           <Icon icon="mdi:filter-variant" width="1rem" />
@@ -63,96 +64,14 @@
       <TableTrendingDelegates :items="trendingDelegates" />
     </UiMainCard>
 
-    <v-dialog
-      v-model="isDelegateDialogOpen"
-      scrim="black"
-      opacity="0.25"
-      max-width="500"
-    >
-      <div class="main_card di-card">
-        <div class="di-card__header-container">
-          <div class="di-card__header">Delegate</div>
-
-          <Icon
-            icon="material-symbols:close"
-            class="di-card__close-icon"
-            width="1.5rem"
-            @click="
-              delegateToSomeoneElse
-                ? (delegateToSomeoneElse = false)
-                : closeDelegateDialog()
-            "
-          />
-        </div>
-
-        <div class="di-card__content">
-          <div v-if="!delegateToSomeoneElse" class="di-card__button-container">
-            <v-btn
-              :disabled="loadingDelegates"
-              class="di-card__submit-button"
-              variant="outlined"
-              @click="delegate(true)"
-            >
-              <template #prepend>
-                <v-progress-circular
-                  v-if="loadingDelegates"
-                  class="d-flex"
-                  size="20"
-                  width="3"
-                  indeterminate
-                />
-              </template>
-              Myself
-            </v-btn>
-
-            <v-btn
-              :disabled="loadingDelegates"
-              class="di-card__submit-button"
-              variant="outlined"
-              @click="delegateToSomeoneElse = true"
-            >
-              Someone else
-            </v-btn>
-          </div>
-
-          <div v-else class="di-card__someone-else-container">
-            <v-label class="di-card__label label_required"> Address </v-label>
-            <v-text-field
-              v-model="delegateAddress"
-              placeholder="Enter the address of the delegate"
-              :rules="rules"
-              required
-            />
-
-            <v-btn
-              :disabled="!isDelegatedAddressValid || loadingDelegates"
-              class="di-card__delegate-votes"
-              variant="flat"
-              @click="delegate()"
-              color="rgba(210, 223, 255, 1)"
-            >
-              <template #prepend>
-                <v-progress-circular
-                  v-if="loadingDelegates"
-                  class="d-flex"
-                  size="20"
-                  width="3"
-                  indeterminate
-                />
-              </template>
-              Delegate votes
-            </v-btn>
-          </div>
-        </div>
-      </div>
-    </v-dialog>
+    <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" />
   </div>
 </template>
 
 <script setup lang="ts">
 // contract
-import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 // types
+import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import type IFund from "~/types/fund";
 import type ITrendingDelegates from "~/types/trending_delegates";
 
@@ -164,7 +83,7 @@ import { useGovernanceProposalsStore } from "~/store/governance_proposals.store"
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import { ProposalState } from "~/types/enums/governance_proposal";
-
+const router = useRouter();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
@@ -251,38 +170,64 @@ const trendingDelegates: ITrendingDelegates[] = [
     voting_power: "720.000.000 SOON",
   },
 ];
-// Dummy data for dropdown options
-const dropdownOptions = [
-  "Delegated permissions",
-  "Direct Execution",
-  "NAV Methods", // TODO link to NAV methods, already exists
-  "Fund Settings", // TODO disabled
-];
+
+type DropdownOption = {
+  click: () => void;
+};
+
+const dropdownOptions: Record<string, DropdownOption> = {
+  "Direct Execution": {
+    click: () => {
+      // change route to direct execution
+      router.push(`
+        /details/${fundStore.selectedFundSlug}/governance/direct-execution
+      `);
+    },
+  },
+  "Delegated permissions": {
+    click: () => {
+      // change route to delegated permissions
+      router.push(`
+        /details/${fundStore.selectedFundSlug}/governance/delegated-permission
+      `);
+    },
+  },
+  "NAV Methods": {
+    click: () => {
+      console.log("NAV Methods");
+    },
+  },
+  "Fund Settings": {
+    click: () => {
+      console.log("Fund Settings");
+    },
+  },
+};
+
+const dropdownOptionsLabels = Object.keys(dropdownOptions);
+
+const selectOption = (option: string) => {
+  if (dropdownOptions[option]) {
+    dropdownOptions[option].click();
+  } else {
+    console.error("Option not found");
+  }
+};
 
 const fund = useAttrs().fund as IFund;
+
+const proposalCreatedEventInputs =
+  RethinkFundGovernor.abi.find(
+    (event) => event.name === "ProposalCreated" && event.type === "event"
+  )?.inputs ?? [];
 const loadingProposals = ref(false);
-const loadingDelegates = ref(false);
 
 // delegate dialog
 const isDelegateDialogOpen = ref(false);
-const delegateToSomeoneElse = ref(false);
-
-const delegateAddress = ref("");
-const rules = [formRules.required, formRules.isValidAddress];
-
-const isDelegatedAddressValid = computed(() => {
-  return rules.every((rule) => {
-    return rule(delegateAddress.value) === true;
-  });
-});
 
 const openDelegateDialog = () => {
+  console.log("openDelegateDialog");
   isDelegateDialogOpen.value = true;
-};
-const closeDelegateDialog = () => {
-  isDelegateDialogOpen.value = false;
-  delegateToSomeoneElse.value = false;
-  delegateAddress.value = "";
 };
 
 const fetchProposals = async (
@@ -458,125 +403,6 @@ const fetchProposals = async (
   loadingProposals.value = false;
 };
 
-const delegate = async (isMyself = false) => {
-  const nullAddr = "0x0000000000000000000000000000000000000000";
-
-  const delegateTo = isMyself
-    ? fundStore.activeAccountAddress
-    : delegateAddress.value;
-  const governanceToken = fundStore.fund?.governanceToken.address;
-  const fundAddress = fundStore.fund?.address;
-
-  console.log("delegateTo: ", delegateTo);
-  console.log("fundAddress: ", fundAddress);
-  console.log("governanceToken: ", governanceToken);
-
-  if (fundAddress != null) {
-    loadingDelegates.value = true;
-
-    // external gov token
-    if (governanceToken != fundAddress && governanceToken != nullAddr) {
-      const externalGovToken = new fundStore.web3.eth.Contract(
-        ERC20Votes.abi,
-        governanceToken
-      );
-
-      try {
-        const estimatedGas = await fundStore.fundContract.methods
-          .delegate(delegateTo)
-          .estimateGas();
-
-        console.log("estimatedGas: ", estimatedGas);
-
-        await externalGovToken.methods
-          .delegate(delegateTo)
-          .send({
-            from: fundStore.activeAccountAddress,
-            gas: estimatedGas,
-          })
-          .on("transactionHash", function (hash: any) {
-            console.log("tx hash: " + hash);
-            toastStore.warningToast(
-              "The transaction has been submitted. Please wait for it to be confirmed."
-            );
-          })
-          .on("receipt", function (receipt: any) {
-            console.log(receipt);
-            if (receipt.status) {
-              toastStore.successToast(
-                "Delegation of Governance Tokens Succeeded"
-              );
-            } else {
-              toastStore.errorToast(
-                "The delegateTo tx has failed. Please contact the Rethink Finance support."
-              );
-            }
-            loadingDelegates.value = false;
-          })
-          .on("error", function (error: any) {
-            console.log(error);
-            loadingDelegates.value = false;
-            toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support."
-            );
-          });
-      } catch (error) {
-        console.error("Error delegating to external gov token: ", error);
-        loadingDelegates.value = false;
-        toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support."
-        );
-      }
-    } else {
-      try {
-        //  gov contract
-        const estimatedGas = await fundStore.fundContract.methods
-          .delegate(delegateTo)
-          .estimateGas();
-
-        console.log("estimatedGas: ", estimatedGas);
-
-        await fundStore.fundContract.methods
-          .delegate(delegateTo)
-          .send({
-            from: fundStore.activeAccountAddress,
-            gas: estimatedGas,
-          })
-          .on("transactionHash", function (hash: any) {
-            console.log("tx hash: " + hash);
-            toastStore.warningToast(
-              "The transaction has been submitted. Please wait for it to be confirmed."
-            );
-          })
-          .on("receipt", function (receipt: any) {
-            console.log(receipt);
-            if (receipt.status) {
-              toastStore.successToast(
-                "Delegation of Governance Tokens Succeeded"
-              );
-            } else {
-              toastStore.errorToast(
-                "The delegateTo tx has failed. Please contact the Rethink Finance support."
-              );
-            }
-            loadingDelegates.value = false;
-          })
-          .on("error", function (error: any) {
-            console.log(error);
-            loadingDelegates.value = false;
-            toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support."
-            );
-          });
-      } catch (error: any) {
-        console.error("Error delegating to fund contract: ", error);
-        loadingDelegates.value = false;
-        toastStore.errorToast(error.message);
-      }
-    }
-  }
-};
-
 // TODO iterate over all already fetched proposals that are still votable and update their state (createdBlockNumber).
 onMounted(() => {
   startFetch();
@@ -594,7 +420,7 @@ const startFetch = async () => {
     loadingProposals.value = false;
     return;
   }
-  console.log("\n\n________________________");
+  console.log("\n\n__________");
   console.log("fetch governance proposal events for fund: ", fund.address);
   shouldFetchProposals.value = true;
 
@@ -710,57 +536,5 @@ const startFetch = async () => {
 
 .manage-button {
   color: rgb(210, 223, 255) !important;
-}
-
-.di-card {
-  @include borderGray;
-  margin: 0 auto;
-  color: white;
-  min-width: 500px;
-
-  &__header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  &__header {
-    font-size: $text-lg;
-    font-weight: 700;
-  }
-
-  &__close-icon {
-    cursor: pointer;
-    color: $color-steel-blue;
-  }
-
-  &__content {
-    margin-top: 2rem;
-  }
-
-  &__button-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  &__submit-button {
-    width: 100%;
-    margin: 0 auto;
-    max-width: 350px;
-
-    color: $color-light-subtitle !important;
-  }
-
-  &__label {
-    color: $color-light-subtitle;
-    margin-bottom: 0.25rem;
-  }
-
-  &__delegate-votes {
-    width: 100%;
-    margin-top: 1rem;
-  }
 }
 </style>
