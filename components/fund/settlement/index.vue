@@ -5,9 +5,7 @@
         <div class="section_title">
           {{ fund?.plannedSettlementPeriod || "N/A" }}
         </div>
-        <div class="section_subtitle">
-          Next Settlement
-        </div>
+        <div class="section_subtitle">Next Settlement</div>
       </div>
       <div class="fund_settlement__buttons">
         <v-btn
@@ -34,19 +32,23 @@
     </div>
     <div class="fund_settlement__card_boxes">
       <div v-if="selectedActionButtonValue" class="card_box">
-        <FundSettlementDeposit v-if="isSelectedDepositButton" />
+        <FundSettlementDeposit
+          v-if="isSelectedDepositButton"
+          @deposit-success="openDelegateDialog"
+        />
         <FundSettlementRedeem v-if="isSelectedRedeemButton" />
       </div>
       <div class="card_box card_box--no-padding">
         <FundSettlementNotification />
       </div>
     </div>
+
+    <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" />
   </div>
 </template>
 
 <script lang="ts">
 import type IFund from "~/types/fund";
-
 
 export default {
   name: "Settlement",
@@ -59,6 +61,7 @@ export default {
   data() {
     return {
       selectedActionButtonValue: "",
+      isDelegateDialogOpen: false,
     };
   },
   computed: {
@@ -83,7 +86,13 @@ export default {
 
       // Return "button-active" if buttonType matches this.selectedActionButtonValue,
       // otherwise return "button-inactive"
-      return buttonType === this.selectedActionButtonValue ? "button-active" : "button-inactive";
+      return buttonType === this.selectedActionButtonValue
+        ? "button-active"
+        : "button-inactive";
+    },
+    openDelegateDialog() {
+      console.log("openDelegateDialog");
+      this.isDelegateDialogOpen = true;
     },
   },
 };
