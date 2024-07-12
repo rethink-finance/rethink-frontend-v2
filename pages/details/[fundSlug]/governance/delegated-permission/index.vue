@@ -9,6 +9,7 @@
       :tooltip-click="tooltipClick"
       submit-label="Create Proposal"
       :submit-event="submitProposal"
+      @fields-changed="contractMethodChanged"
     />
   </div>
 </template>
@@ -51,12 +52,12 @@ const delegatedEntry = ref([
     formTitle: DelegatedStepMap[DelegatedStep.Setup].formTitle,
     formText: DelegatedStepMap[DelegatedStep.Setup].formText,
 
-    stepDefaultValues: formatInputToObject(allSubstepsFormatted.assignRoles), // default value when adding a new substep
+    stepDefaultValues: formatInputToObject(allSubstepsFormatted.scopeFunction), // default value when adding a new substep
 
     substepKey: "contractMethod",
     multipleSteps: true,
     substepLabel: "Permission",
-    steps: [formatInputToObject(allSubstepsFormatted.assignRoles)], // default values for the first substep
+    steps: [formatInputToObject(allSubstepsFormatted.scopeFunction)], // default values for the first substep
   },
   {
     stepName: DelegatedStep.Details,
@@ -86,7 +87,6 @@ function formatArrayToObject(array: { [key: string]: any }[]): any {
     result[key] = item[key];
   });
 
-  console.log("RESULTS: ", result);
   return result;
 }
 
@@ -122,13 +122,61 @@ function formatInputToObject(input: any) {
       value = [value];
     }
 
-    JSON.parse(JSON.stringify((result[key] = value)));
+    result[key] = value;
   }) || {};
-
-  console.log("result: ", result);
 
   return result;
 }
+
+// we need to change the inputs based on the contractMethod
+const contractMethodChanged = (
+  mainStepName: any,
+  subStepIndex: any,
+  step: any
+) => {
+  // console.log("mainStepName: ", mainStepName);
+  // console.log("subStepIndex: ", subStepIndex);
+  // console.log("step: ", step);
+
+  // we need to formatInputToObject for the new substep inputs based on the contractMethod
+  const newInput = formatInputToObject(
+    allSubstepsFormatted[step.contractMethod]
+  );
+  newInput.isValid = false;
+
+  const mainStepIndex = delegatedEntry.value.findIndex(
+    (entry) => entry.stepName === mainStepName
+  );
+  if (mainStepIndex === -1) {
+    console.error("Main step not found");
+    return;
+  }
+
+  const currentInputs = delegatedEntry.value[mainStepIndex].steps[subStepIndex];
+  if (!currentInputs) {
+    console.error("Substep not found");
+    return;
+  }
+
+  const keysToDelete = Object.keys(currentInputs).filter(
+    (key) => key !== "contractMethod"
+  );
+
+  // check if currentInputs has the same keys as newInput
+  // if it does, we don't need to do anything
+  const hasSameKeys = Object.keys(currentInputs).every(
+    (key) => key in newInput
+  );
+  if (hasSameKeys) {
+    return;
+  }
+
+  keysToDelete.forEach((key) => {
+    delete currentInputs[key];
+  });
+
+  Object.assign(currentInputs, newInput); // add new input to the current inputs
+};
 
 const submitProposal = () => {
   alert("submit proposal");
@@ -137,7 +185,7 @@ const submitProposal = () => {
 
 const tooltipClick = () => {
   console.log(
-    "we can redirect to a new page, show a tooltip message or do whatever we want here",
+    "we can redirect to a new page, show a tooltip message or do whatever we want here"
   );
 };
 
