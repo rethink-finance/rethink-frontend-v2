@@ -116,7 +116,6 @@
           class="data_row_card"
           is-expanded
         >
-          <!-- TODO: check how to set default-active state for accordion/expansion card -->
           <template #body>
             <div class="section-bottom__outcome">
               <FundGovernanceProgressInsight
