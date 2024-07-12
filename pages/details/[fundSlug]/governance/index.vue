@@ -12,7 +12,7 @@
     >
       <template #header-right>
         <UiDropdown
-          :options="dropdownOptionsLabels"
+          :options="dropdownOptionsItems"
           label="Create Proposal"
           @update:selected="selectOption"
           @click="startFetch"
@@ -173,6 +173,7 @@ const trendingDelegates: ITrendingDelegates[] = [
 
 type DropdownOption = {
   click: () => void;
+  disabled?: boolean;
 };
 
 const dropdownOptions: Record<string, DropdownOption> = {
@@ -201,10 +202,16 @@ const dropdownOptions: Record<string, DropdownOption> = {
     click: () => {
       console.log("Fund Settings");
     },
+    disabled: true,
   },
 };
 
-const dropdownOptionsLabels = Object.keys(dropdownOptions);
+const dropdownOptionsItems = Object.keys(dropdownOptions).map((key) => {
+  return {
+    label: key,
+    disabled: dropdownOptions[key]?.disabled || false,
+  };
+});
 
 const selectOption = (option: string) => {
   if (dropdownOptions[option]) {
