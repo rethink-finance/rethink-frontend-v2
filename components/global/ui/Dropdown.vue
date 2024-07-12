@@ -15,12 +15,12 @@
       <div v-if="isOpen" class="dropdown-menu">
         <div
           v-for="option in options"
-          :key="option"
-          class="dropdown-item"
-          @click="selectOption(option)"
+          :key="option.label"
+          :class="`dropdown-item` + (option.disabled ? ` disabled` : ``)"
+          @click="!option.disabled ? selectOption(option.label) : null"
         >
           <div>
-            {{ option }}
+            {{ option.label }}
           </div>
           <Icon class="arrow-icon" icon="mdi:arrow-right" />
         </div>
@@ -105,20 +105,26 @@ export default {
   font-weight: 500;
   font-size: $text-sm;
   border-top: 1px solid $color-border-dark;
+  user-select: none;
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
-.dropdown-item:hover {
+.dropdown-item:not(.disabled):hover {
   background-color: $color-background-button;
+
+  .arrow-icon {
+    opacity: 1;
+  }
 }
 
 .arrow-icon {
   opacity: 0;
   transition: opacity 0.3s ease;
   color: $color-primary;
-}
-
-.dropdown-item:hover .arrow-icon {
-  opacity: 1;
 }
 
 /* Fade and Slide transition classes */
