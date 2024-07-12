@@ -179,17 +179,17 @@ const dropdownOptions: Record<string, DropdownOption> = {
   "Direct Execution": {
     click: () => {
       // change route to direct execution
-      router.push(`
-        /details/${fundStore.selectedFundSlug}/governance/direct-execution
-      `);
+      router.push(
+        `/details/${fundStore.selectedFundSlug}/governance/direct-execution`
+      );
     },
   },
   "Delegated permissions": {
     click: () => {
       // change route to delegated permissions
-      router.push(`
-        /details/${fundStore.selectedFundSlug}/governance/delegated-permission
-      `);
+      router.push(
+        `/details/${fundStore.selectedFundSlug}/governance/delegated-permission`
+      );
     },
   },
   "NAV Methods": {
