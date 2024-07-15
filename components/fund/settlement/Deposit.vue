@@ -66,6 +66,8 @@ import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 
+const emit = defineEmits(["deposit-success"]);
+
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
@@ -171,7 +173,7 @@ const requestDeposit = async () => {
   const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei ]);
 
   try {
-    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
@@ -267,7 +269,7 @@ const deposit = async () => {
   const encodedFunctionCall = iface.encodeFunctionData("deposit");
 
   try {
-    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
@@ -284,6 +286,10 @@ const deposit = async () => {
         // Refresh user balances & allowance.
         fundStore.fetchUserBalances();
         tokenValue.value = "0.0";
+
+        // emit event to open the delegate votes modal
+        emit("deposit-success");
+        
       } else {
         toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
       }
@@ -311,7 +317,7 @@ const cancelDeposit = async () => {
   const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ true ]);
 
   try {
-    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,

@@ -2,8 +2,8 @@
   <div class="overview">
     <v-expansion-panels v-model="openPanel" variant="accordion">
       <v-expansion-panel class="main_expansion_panel" value="overview" eager>
-        <v-expansion-panel-title class="main_expansion_panel__title section_title main_card" static>
-          Fund Setting
+        <v-expansion-panel-title class="main_expansion_panel__title main_card" static>
+          OIV Settings
         </v-expansion-panel-title>
         <v-expansion-panel-text class="main_expansion_panel__body">
           <div class="main_card">
@@ -33,7 +33,7 @@
         eager
       >
         <v-expansion-panel-title
-          class="main_expansion_panel__title section_title main_card"
+          class="main_expansion_panel__title main_card"
           static
         >
           Collapse
@@ -61,7 +61,15 @@ const isOverviewPanelOpen = computed(() => openPanel.value === "overview");
 </script>
 
 <style lang="scss" scoped>
-.main_card {
-  margin-bottom: 0;
+.overview{
+  margin-bottom: 2rem;
+}
+.main_expansion_panel{
+  border: 0;
+  border-radius: 0.25rem !important;
+  background-color: rgb(var(--v-theme-surface));
+}
+.main_expansion_panel__title{
+  height: 3.5rem;
 }
 </style>

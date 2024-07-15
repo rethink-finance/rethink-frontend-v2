@@ -85,6 +85,18 @@
       <tr class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
         <td :colspan="columns.length" class="pa-0">
           <div class="nav_entries__details">
+            <div class="nav_entries__details">
+              
+              <ui-tooltip-click tooltip-text="Copied">
+                Details Hash: {{ item.detailsHash }}
+                <Icon
+                  icon="clarity:copy-line"
+                  class="section-top__copy-icon"
+                  width="0.8rem"
+                  @click="copyText(item.detailsHash)"
+                />
+              </ui-tooltip-click>
+            </div>
             <div class="nav_entries__json">
               {{ item.detailsJson }}
             </div>
@@ -175,6 +187,10 @@ export default defineComponent({
     },
   },
   methods: {
+    copyText(text: string | undefined) {
+      const data = text as string;
+      navigator.clipboard.writeText(data);
+    },
     simulatedNAVIconColor(method: INAVMethod) {
       if (!method.foundMatchingPastNAVUpdateEntryFundAddress) {
         return "var(--color-warning)";

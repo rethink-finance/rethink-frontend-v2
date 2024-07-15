@@ -96,12 +96,14 @@ a {
   }
   &__title {
     font-weight: 700;
+    color: $color-white;
     padding: 1.5rem;
     margin-bottom: 0;
 
     &.v-expansion-panel-title {
       padding: 1.5rem;
       background: $color-surface;
+      font-size: 1rem;
       &.v-expansion-panel-title--active {
         .v-expansion-panel-title__icon {
           color: $color-primary;
@@ -162,4 +164,10 @@ a {
       //background-color: $color-badge-navy;
     }
   }
+}
+
+.code_block {
+  white-space: pre-wrap; /* This preserves both spaces and line breaks */
+  word-break: break-all; /* This ensures long words are broken to fit */
+  font-family: monospace; /* Use a monospace font to mimic code appearance */
 }

@@ -27,7 +27,7 @@ export const formatDate = (date: Date) => {
  * @param defaultValue - Optional. Default return value if the passed value is null or undefined.
  * @returns {string} A string representing the converted percentage with two decimal places.
  */
-export const formatPercent = (value?: number | bigint, includeSign: boolean = true, defaultValue: any = undefined): string => {
+export const formatPercent = (value?: number | bigint, includeSign: boolean = false, defaultValue: any = undefined): string => {
   if (value === undefined || value === null) return defaultValue;
   value = Number(value);
 

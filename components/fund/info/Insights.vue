@@ -36,7 +36,7 @@
           class="data_bar__title"
           :class="numberColorClass(fund.cumulativeReturnPercent)"
         >
-          {{ fund.cumulativeReturnPercent ? formatPercent(fund.cumulativeReturnPercent) : "N/A" }}
+          {{ fund.cumulativeReturnPercent ? formatPercent(fund.cumulativeReturnPercent, true) : "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           Cumulative
@@ -47,7 +47,7 @@
           class="data_bar__title"
           :class="numberColorClass(fund.monthlyReturnPercent)"
         >
-          {{ fund.monthlyReturnPercent ? formatPercent(fund.monthlyReturnPercent) : "N/A" }}
+          {{ fund.monthlyReturnPercent ? formatPercent(fund.monthlyReturnPercent, true) : "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           Monthly Return

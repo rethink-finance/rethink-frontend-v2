@@ -157,7 +157,7 @@ const requestRedeem = async () => {
   const encodedFunctionCall = iface.encodeFunctionData("requestWithdraw", [ tokensWei ]);
 
   try {
-    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
@@ -206,7 +206,7 @@ const redeem = async () => {
   const encodedFunctionCall = iface.encodeFunctionData("withdraw");
 
   try {
-    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,
@@ -256,7 +256,7 @@ const cancelRedeem = async () => {
   const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ false ]);
 
   try {
-    await fundStore.fundContract.methods.fundFlowCall(encodedFunctionCall).send({
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       maxPriorityFeePerGas: null,
       maxFeePerGas: null,

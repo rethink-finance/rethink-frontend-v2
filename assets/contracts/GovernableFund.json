@@ -1788,12 +1788,12 @@
     {
       "inputs": [
         {
-          "internalType": "bool",
-          "name": "isDeposit",
-          "type": "bool"
+          "internalType": "address",
+          "name": "navExecutor",
+          "type": "address"
         }
       ],
-      "name": "revokeDepositWithrawal",
+      "name": "executeNAVUpdate",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -1801,19 +1801,12 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
+          "internalType": "bytes",
+          "name": "flowCall",
+          "type": "bytes"
         }
       ],
-      "name": "requestDeposit",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "deposit",
+      "name": "fundFlowsCall",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -1835,50 +1828,21 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
+          "internalType": "uint8",
+          "name": "feeKind",
+          "type": "uint8"
         }
       ],
-      "name": "requestWithdraw",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "withdraw",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "calculateAccruedManagementFees",
+      "name": "calculateAccrued",
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "accruedFees",
+          "name": "",
           "type": "uint256"
         }
       ],
-      "stateMutability": "view",
-      "type": "function",
-      "constant": true
-    },
-    {
-      "inputs": [],
-      "name": "calculateAccruedPerformanceFees",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "accruedFees",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "stateMutability": "nonpayable",
+      "type": "function"
     },
     {
       "inputs": [

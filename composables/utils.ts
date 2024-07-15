@@ -123,6 +123,10 @@ const chainIconMap: Record<string, Record<string, string>> = {
     name: "token-branded:arbitrum",
     size: "2rem",
   },
+  eth: {
+    name: "token-branded:eth",
+    size: "2rem",
+  },
 };
 
 export const getChainIcon = (chainShort: string) => {

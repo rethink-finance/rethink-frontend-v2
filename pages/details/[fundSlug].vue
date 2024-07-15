@@ -7,7 +7,7 @@
   </div>
   <div v-else-if="fund?.address" class="w-100">
     <div class="fund-name">
-      <v-avatar size="1.5rem" rounded="">
+      <v-avatar size="4rem" rounded="">
         <img
           :src="fund.photoUrl"
           class="fund-name__avatar_img"
@@ -75,7 +75,7 @@ const route = useRoute();
 const loading = ref(true);
 // fund address is always in the second position of the route
 // e.g. /details/TFD3-0x1234 -> 0x1234
-const [tokenSymbol, fundAddress] = route.fullPath.split("/")[2].split("-");
+const [tokenSymbol, fundAddress] = route.path.split("/")[2].split("-");
 
 onUnmounted(() => {
   fundStore.fund = {} as IFund;
@@ -144,7 +144,8 @@ const routes: IRoute[] = [
   },
   {
     to: `/details/${tokenSymbol}-${fundAddress}/governance`,
-    exactMatch: true,
+    exactMatch: false,
+    matchPrefix: `/details/${tokenSymbol}-${fundAddress}/governance`,
     title: "Governance",
     text: "",
   },

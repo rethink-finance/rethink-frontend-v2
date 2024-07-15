@@ -41,6 +41,7 @@
  * }
  */
 import { ProposalState } from "~/types/enums/governance_proposal";
+import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 
 
 export default interface IGovernanceProposal {
@@ -51,11 +52,16 @@ export default interface IGovernanceProposal {
   voteStart: string,
   voteEnd: string,
 
+  // Original event data
   targets: string[],
   values: string[],
   signatures: string[],
   calldatas: string[],
-  calldatasDecoded: Record<string, any> | undefined [],
+  descriptionHash: string,
+  calldatasDecoded: (Record<string, any> | undefined)[],
+  calldataTypes: (ProposalCalldataType | undefined)[],
+  // Calldata Tags are just unique calldataTypes without the undefined type.
+  calldataTags: ProposalCalldataTypes[],
 
   // Called from the "state" function (IGovernorUpgradeable.ProposalState)
   state: ProposalState,
@@ -66,10 +72,9 @@ export default interface IGovernanceProposal {
   createdDatetimeFormatted: string,
 
   // Frontend fields:
-  submission_status: string, // e.g. "Pending"
   approval: number,
   approvalFormatted: string, // e.g. "40%"
-  participation: number, // e.g. "10%"
+  participation: number, // e.g. 0.1
   participationFormatted: string, // e.g. "10%"
   // Quorum in time when the proposal aws created.
   quorumVotes: bigint, // e.g. 50k

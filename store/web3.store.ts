@@ -1,6 +1,9 @@
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import type INetwork from "~/types/network";
+import addressesJson from "~/assets/contracts/addresses.json";
+import type IAddresses from "~/types/addresses";
+const addresses: IAddresses = addressesJson as IAddresses;
 
 interface IState {
   web3?: Web3;
@@ -61,6 +64,23 @@ export const useWeb3Store = defineStore({
         chainShort: "frax",
         rpcUrl: "https://rpc.frax.com",
       },
+      "0x1": {
+        chainId: "0x1",
+        chainName: "Ethereum",
+        chainShort: "eth",
+        rpcUrl: "https://rpc.ankr.com/eth",
+        rpcUrls: [
+          "https://eth.drpc.org",
+          "https://endpoints.omniatech.io/v1/eth/mainnet/public",
+          "https://ethereum.blockpi.network/v1/rpc/public",
+          "https://api.zan.top/node/v1/eth/mainnet/public",
+          "https://rpc.ankr.com/eth",
+          "https://rpc.flashbots.net/fast",
+          "https://rpc.flashbots.net",
+          "https://rpc.lokibuilder.xyz/wallet",
+          "https://api.stateless.solutions/ethereum/v1/demo",
+        ],
+      },
     },
     cachedTokens: {
       "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063": {
@@ -88,6 +108,9 @@ export const useWeb3Store = defineStore({
     },
     currentNetwork(): INetwork {
       return this.networksMap[this.chainId]
+    },
+    NAVCalculatorBeaconProxyAddress(): string {
+      return addresses.NAVCalculatorBeaconProxy[this.chainId]
     },
   },
   actions: {
