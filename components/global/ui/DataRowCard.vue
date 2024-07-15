@@ -207,6 +207,7 @@ export default defineComponent({
     gap: 2.5rem;
     overflow: hidden;
     flex-grow: 1;
+    line-height: normal;
   }
   &__action_text{
     margin: auto;
@@ -216,7 +217,6 @@ export default defineComponent({
     overflow: hidden;
     padding: 0.5rem 1rem;
     height: 3.5rem;
-    line-height: 1;
     font-size: 1rem;
   }
   &__body {
