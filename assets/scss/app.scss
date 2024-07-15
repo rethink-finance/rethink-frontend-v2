@@ -96,12 +96,14 @@ a {
   }
   &__title {
     font-weight: 700;
+    color: $color-white;
     padding: 1.5rem;
     margin-bottom: 0;
 
     &.v-expansion-panel-title {
       padding: 1.5rem;
       background: $color-surface;
+      font-size: 1rem;
       &.v-expansion-panel-title--active {
         .v-expansion-panel-title__icon {
           color: $color-primary;
