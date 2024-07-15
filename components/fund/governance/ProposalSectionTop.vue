@@ -69,26 +69,6 @@
         </v-tooltip>
       </v-btn>
 
-      <v-btn
-        v-if="isSubmitButtonVisible"
-        class="section-top__submit-button"
-        :loading="loadingExecuteProposal"
-        :disabled="!accountStore.isConnected"
-        @click="submitButtonClickExecute"
-      >
-        {{ submitButtonTextExecute }}
-        <v-tooltip
-          v-if="!accountStore.isConnected"
-          :model-value="true"
-          activator="parent"
-          location="top"
-          @update:model-value="false"
-        >
-          Connect your wallet.
-        </v-tooltip>
-      </v-btn>
-
-
       <v-dialog
         v-model="isVoteDialogOpen"
         scrim="black"
@@ -259,11 +239,6 @@ const submitButtonClick = () => {
   // for submission
     openVoteDialog();
   }
-}
-
-const submitButtonClickExecute = () => {
-  // execute proposal
-  executeProposal();
 }
 
 const submitVote = async () => {
