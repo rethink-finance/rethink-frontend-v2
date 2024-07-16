@@ -519,6 +519,7 @@ const startFetch = async () => {
 // overrides for expansion-panel
 .data_row_card {
   margin-bottom: 2rem;
+  overflow: unset;
 
   // remove outer border
   :deep(.data_row__panel) {
@@ -529,6 +530,9 @@ const startFetch = async () => {
   // add more spacing to content inside
   :deep(.v-expansion-panel-text__wrapper) {
     padding-bottom: 2rem;
+  }
+  :deep(.v-expansion-panel-title) {
+    padding: 1.5rem;
   }
   // add borders to text fields inside panel
   :deep(.v-expansion-panels) {

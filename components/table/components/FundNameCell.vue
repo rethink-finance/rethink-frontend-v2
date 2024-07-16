@@ -1,6 +1,6 @@
 <template>
   <div class="fund_name">
-    <v-avatar size="2rem" rounded="0" class="fund_name__avatar">
+    <v-avatar size="3rem" rounded="0" class="fund_name__avatar">
       <img
         cover
         :src="props.image"
@@ -33,8 +33,8 @@ const props = defineProps({
     border-radius: 0.25rem;
     margin-right: 0.75rem;
     img {
-      width: 2rem;
-      height: 2rem;
+      width: 3rem;
+      height: 3rem;
     }
   }
 }

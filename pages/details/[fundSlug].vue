@@ -7,12 +7,12 @@
   </div>
   <div v-else-if="fund?.address" class="w-100">
     <div class="fund-name">
-      <v-avatar size="1.5rem" rounded="">
+      <v-avatar size="4rem" rounded="">
         <img
           :src="fund.photoUrl"
           class="fund-name__avatar_img"
           alt="fund cover image"
-        >
+        />
       </v-avatar>
       <div class="fund-name__title">
         <p>
@@ -53,11 +53,9 @@
     <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
-    <h2 class="mb-2">
-      Fund not found
-    </h2>
+    <h2 class="mb-2">Fund not found</h2>
     <p class="text-center">
-      Are you sure you are on the right network? <br>
+      Are you sure you are on the right network? <br />
       Try switching to a different network.
     </p>
   </div>
@@ -111,7 +109,7 @@ watch(
   () => web3Store.chainId,
   () => {
     fetchFund();
-  },
+  }
 );
 // Watch for route changes to reset the breadcrumbs
 watch(
@@ -125,7 +123,7 @@ watch(
     ) {
       setBreadcrumbItems([]);
     }
-  },
+  }
 );
 
 onMounted(() => {
@@ -134,7 +132,7 @@ onMounted(() => {
 });
 const fund = computed(() => fundStore.fund as IFund);
 const fundDetailsRoute = computed(
-  () => `/details/${tokenSymbol}-${fundAddress}`,
+  () => `/details/${tokenSymbol}-${fundAddress}`
 );
 
 const routes: IRoute[] = [
