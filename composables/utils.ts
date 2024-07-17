@@ -59,7 +59,7 @@ export const cleanComplexWeb3Data = (data: any, preserveBigInt: boolean = false,
 
       // Check if the key is not numeric, ignore numeric values, but keep hex keys like ("0x5231").
       // Ignore index keys such as { 0: {}, 1: "test" }
-      if (!key.startsWith("0x") && level === 0 && !isNaN(Number(key))) {
+      if (!key.startsWith("0x") && !isNaN(Number(key))) {
         return;
       }
       // Recursively clean and assign if key is not numeric and not ignored
