@@ -82,6 +82,7 @@ const executionEntry = ref([
 const fieldsMap = ref(DirectExecutionFieldsMap);
 
 const submitProposal = () => {
+  console.log("VALUES: ", executionEntry.value);
   alert("submit proposal");
 };
 

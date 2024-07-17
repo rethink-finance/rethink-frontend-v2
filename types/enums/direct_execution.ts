@@ -1,6 +1,6 @@
+import type { IStepperStep } from "~/types/stepper";
 import type { FieldsMapType } from "./stepper";
 import { InputType } from "./stepper";
-import type { IStepperStep } from "~/types/stepper";
 
 export enum ExecutionStep {
   Setup = "setup",
@@ -63,7 +63,8 @@ export const DirectExecutionFieldsMap: FieldsMapType = {
       key: "proposalTitle",
       type: InputType.Text,
       placeholder: "E.g. Proposal Title",
-      rules: [formRules.required],
+      charLimit: 150,
+      rules: [formRules.required, formRules.charLimit(150)],
     },
     {
       label: "Proposal Description",

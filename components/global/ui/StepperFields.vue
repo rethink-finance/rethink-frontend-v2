@@ -14,11 +14,18 @@
     class="method_details"
     cols="12"
   >
-    <v-label class="label_required">
-      {{ field.label }}
-      <v-label v-if="field.isArray" class="label_required__label_type">
-        {{ field.placeholder.replace("E.g.", "") }}[]
-      </v-label>
+    <v-label class="row-title">
+      <div class="label_required row-title__title">
+        {{ field.label }}
+        <v-label v-if="field.isArray" class="label_required__label_type">
+          {{ field.placeholder.replace("E.g.", "") }}[]
+        </v-label>
+      </div>
+      <ui-char-limit
+        v-if="field.charLimit"
+        :charLimit="field.charLimit"
+        :charNumber="valueDetails[field.key]"
+      />
     </v-label>
 
     <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
@@ -51,7 +58,7 @@
             icon="material-symbols:cancel-outline"
             class="is-array__remove"
             @click="removeField(field, index)"
-          /></v-text-field>
+        /></v-text-field>
       </div>
     </template>
     <template v-else-if="field.type === InputType.Textarea">
@@ -90,11 +97,12 @@
         :items="field.choices"
         item-title="title"
         item-value="value"
+        class="field-select"
       />
       <div
         v-for="(value, index) in valueDetails[field.key]"
         v-else
-        class="is-array"
+        class="is-array select"
       >
         <div class="is-array__count-index">
           {{ index + 1 }}
@@ -106,6 +114,7 @@
           :items="field.choices"
           item-title="title"
           item-value="value"
+          class="field-select"
         />
         <Icon
           icon="material-symbols:cancel-outline"
@@ -192,12 +201,15 @@ const allFieldsValid = computed(() =>
         return rule(value) === true;
       }) ?? true
     );
-  }),
+  })
 );
 
 const addNewField = (field: any) => {
   const type = field.type as InputType;
-  const defaultValue = DefaultValues[type];
+  const defaultValue =
+    field?.defaultValue !== undefined
+      ? field.defaultValue
+      : DefaultValues[type];
 
   valueDetails.value[field.key].push(defaultValue);
 };
@@ -222,7 +234,7 @@ watch(
     console.log("valueDetails: ", valueDetails.value);
     emit("validate", valueDetails.value);
   },
-  { deep: true },
+  { deep: true }
 );
 </script>
 
@@ -237,6 +249,12 @@ watch(
   font-weight: 500;
   color: $color-text-irrelevant;
 }
+
+.row-title {
+  display: flex;
+  justify-content: space-between;
+}
+
 .label_required {
   margin-bottom: 5px;
 
@@ -252,6 +270,20 @@ watch(
 
   &:last-child {
     margin-bottom: 0;
+  }
+
+  // position the remove icon to the top right of the select field
+  &.select {
+    position: relative;
+
+    :deep(.v-field) {
+      padding-right: 40px;
+    }
+    .is-array__remove {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
   }
 
   &__count-index {
@@ -303,6 +335,15 @@ watch(
 
   &:hover {
     background-color: $color-gray-light-transparent;
+  }
+}
+
+.field-select {
+  line-height: normal;
+
+  :deep(.v-field__input) {
+    padding: 12px;
+    min-height: 45px;
   }
 }
 </style>

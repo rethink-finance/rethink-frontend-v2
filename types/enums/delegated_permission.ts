@@ -1,5 +1,5 @@
-import { InputType } from "./stepper";
 import type { IStepperStep } from "~/types/stepper";
+import { InputType } from "./stepper";
 
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 
@@ -32,7 +32,7 @@ export const formatFieldName = (name: string) => {
 
 // get all methods from ZodiacRoles contract
 const proposalRoleModMethods = ZodiacRoles.abi.filter(
-  (val) => val.type === "function",
+  (val) => val.type === "function"
 );
 // make a list of choices for the select field out of the methods
 export const substepChoices = proposalRoleModMethods.map((val) => {
@@ -59,6 +59,10 @@ const defineFieldDetails = (val: any) => {
   let placeholder = `E.g. ${val.type}`.replace("[]", "");
   let rules = [formRules.required];
 
+  // default values for select boolean select field
+  let choices = [] as { title: string; value: any }[];
+  let defaultValue = undefined;
+
   if (numberTypes.some((type) => val.type.includes(type))) {
     type = InputType.Number;
 
@@ -73,16 +77,22 @@ const defineFieldDetails = (val: any) => {
     }
     rules = [formRules.required, formRules.isValidAddress];
   } else if (boolTypes.some((type) => val.type.includes(type))) {
-    type = InputType.Checkbox;
+    type = InputType.Select;
+    choices = [
+      { title: "True", value: true },
+      { title: "False", value: false },
+    ];
+    defaultValue = false;
   }
 
-  return { type, placeholder, rules };
+  return { type, placeholder, rules, choices, defaultValue };
 };
 
 // shape substep fields for each method from ZodiacRoles contract
 export const allSubsteps = proposalRoleModMethods.map((val: any) => {
   const substepFields = val.inputs.map((input: any) => {
-    const { type, placeholder, rules } = defineFieldDetails(input);
+    const { type, placeholder, rules, choices, defaultValue } =
+      defineFieldDetails(input);
 
     return {
       label: formatFieldName(input.name),
@@ -91,6 +101,8 @@ export const allSubsteps = proposalRoleModMethods.map((val: any) => {
       rules,
       placeholder,
       isArray: input.type.includes("[]"),
+      choices,
+      defaultValue,
     };
   });
 
@@ -127,7 +139,8 @@ export const DelegatedPermissionFieldsMap: any = {
       key: "proposalTitle",
       type: InputType.Text,
       placeholder: "E.g. Proposal Title",
-      rules: [formRules.required],
+      charLimit: 150,
+      rules: [formRules.required, formRules.charLimit(150)],
     },
     {
       label: "Proposal Description",

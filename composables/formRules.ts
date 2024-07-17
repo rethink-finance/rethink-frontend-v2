@@ -25,4 +25,11 @@ export const formRules: Record<string, any> = {
       "Value must be a valid uint16 (0 to 65535)."
     );
   },
+
+  charLimit: (maxChars: number) => (value: any) => {
+    return (
+      (typeof value === "string" && value.length <= maxChars) ||
+      `This field must be at most ${maxChars} characters.`
+    );
+  },
 };

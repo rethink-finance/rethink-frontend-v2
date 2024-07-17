@@ -6,6 +6,7 @@ export type FieldsMapType = {
     placeholder?: string;
     rules?: any[];
     min?: number;
+    charLimit?: number;
     choices?: { value: number; title: string }[];
   }[];
 };
