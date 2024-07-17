@@ -161,9 +161,15 @@ import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useWeb3Store } from "~/store/web3.store";
 import GovernableFund from "assets/contracts/GovernableFund.json";
+import NAVExecutor from "assets/contracts/NAVExecutor.json";
 import { useToastStore } from "~/store/toast.store";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 import { useAccountStore } from "~/store/account.store";
+import addressesJson from "~/assets/contracts/addresses.json";
+
+import type IAddresses from "~/types/addresses";
+// Since the direct import won't infer the custom type, we cast it here.:
+const addresses: IAddresses = addressesJson as IAddresses;
 
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
@@ -223,6 +229,10 @@ const updateNavABI = GovernableFund.abi.find(
 );
 const collectFeesABI = GovernableFund.abi.find(
   func => func.name === "collectFees" && func.type === "function",
+);
+
+const storeNAVDataABI = NAVExecutor.abi.find(
+  func => func.name === "storeNAVData" && func.type === "function",
 );
 
 
@@ -449,7 +459,44 @@ const createProposal = async () => {
     console.log("encodedRoleModEntries: ", encodedRoleModEntries);
     console.log("roleModTargets: ", roleModTargets);
     console.log("roleModGasValues: ", roleModGasValues);
+
+    /*
+      TODO:
+
+        
+        NEED TO SETUP NEW NAV PERMISSION
+        
+        //target address is fund contract
+        component.defaultNavEntryPermission[0].value[1].data = component.getSelectedFundAddress;
+        //again, need to set target addr for scope target
+        component.defaultNavEntryPermission[1].value[1].data = component.getSelectedFundAddress;
+        //functionSig
+        component.defaultNavEntryPermission[0].value[2].data = "0xa61f5814";
+        
+        //raw data to permission
+        let navExecutorAddr = addresses["NAVExecutorBeaconProxy"][parseInt(component.chainId)];
+        console.log(navExecutorAddr);
+        let navWords = ["0x000000000000000000000000" + navExecutorAddr.slice(2)];
+        let navIsScoped = [true];
+        let navTypeNComp = ["0"];
+
+        //isParamScoped
+        component.defaultNavEntryPermission[0].value[3].data = navIsScoped;
+        //paramType
+        component.defaultNavEntryPermission[0].value[4].data = navTypeNComp;
+        //paramComp
+        component.defaultNavEntryPermission[0].value[5].data = navTypeNComp;
+        //compValue
+        component.defaultNavEntryPermission[0].value[6].data = navWords;
+    */
   }
+
+
+  const encodedDataStoreNAVDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
+    storeNAVDataABI as AbiFunctionFragment, [fundStore.fund?.address, encodedNavUpdateEntries],
+  );
+  const navExecutorAddr = addresses["NAVExecutorBeaconProxy"][web3Store.chainId];
+
 
   /*
   function propose(
@@ -480,14 +527,16 @@ const createProposal = async () => {
       fundStore.fund?.address,
       fundStore.fund?.address,
       fundStore.fund?.address,
+      navExecutorAddr,
       ...roleModTargets,
     ],
-    [0,0,0,0, ...roleModGasValues],
+    [0,0,0,0,0, ...roleModGasValues],
     [
       encodedNavUpdateEntries,
       encodedCollectFlowFeesAbiJSON,
       encodedCollectManagerFeesAbiJSON,
       encodedCollectPerformanceFeesAbiJSON,
+      encodedDataStoreNAVDataNavUpdateEntries,
       ...encodedRoleModEntries,
     ],
     JSON.stringify({
