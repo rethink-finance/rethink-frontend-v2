@@ -12,24 +12,20 @@
             </v-tooltip>
             {{ truncateAddress(fundStore.userFundDelegateAddress) }}
           </template>
-
         </div>
-        <div class="data_bar__subtitle">
-          Delegating To
-        </div>
+        <div class="data_bar__subtitle">Delegating To</div>
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ userGovernanceTokenBalanceFormatted }} {{ fund.governanceToken.symbol }}
+          {{ userGovernanceTokenBalanceFormatted }}
+          {{ fund.governanceToken.symbol }}
         </div>
-        <div class="data_bar__subtitle">
-          Voting Power
-        </div>
+        <div class="data_bar__subtitle">Voting Power</div>
       </div>
       <div class="data_bar__item">
         <UiLinkExternalButton
           class="fund_info_governance__manage_button"
-          title="Manage"
+          title="Delegate"
           :href="governanceManageUrl"
         />
       </div>
@@ -38,8 +34,8 @@
 </template>
 
 <script lang="ts">
-import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
+import type IFund from "~/types/fund";
 
 export default {
   name: "FundInfoGovernance",
@@ -51,11 +47,14 @@ export default {
   },
   setup() {
     const fundStore = useFundStore();
-    return { fundStore }
+    return { fundStore };
   },
   computed: {
     userGovernanceTokenBalanceFormatted() {
-      return formatTokenValue(this.fundStore.userGovernanceTokenBalance, this.fund.governanceToken.decimals);
+      return formatTokenValue(
+        this.fundStore.userGovernanceTokenBalance,
+        this.fund.governanceToken.decimals
+      );
     },
     governanceManageUrl(): string {
       /** Example:

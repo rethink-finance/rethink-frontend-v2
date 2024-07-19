@@ -6,6 +6,7 @@
 
     <div v-if="isConnected" class="fund_info__user_data main_grid">
       <FundInfoMyPositions :fund="fund" />
+      <FundInfoGovernance :fund="fund" />
     </div>
   </div>
 </template>
@@ -24,7 +25,7 @@ export default {
   },
   setup() {
     const { isConnected } = storeToRefs(useAccountStore());
-    return { isConnected }
+    return { isConnected };
   },
 };
 </script>
