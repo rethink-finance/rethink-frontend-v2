@@ -39,5 +39,13 @@ export default {
   @include sm {
     gap: 3rem;
   }
+
+  &__user_data {
+    grid-template-columns: 1fr;
+
+    @include lg {
+      grid-template-columns: 4fr 6fr;
+    }
+  }
 }
 </style>
