@@ -85,15 +85,13 @@
       <tr class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
         <td :colspan="columns.length" class="pa-0">
           <div class="nav_entries__details">
-            <div class="nav_entries__details">
-              
+            <div @click="copyText(item.detailsHash)">
               <ui-tooltip-click tooltip-text="Copied">
                 Details Hash: {{ item.detailsHash }}
                 <Icon
                   icon="clarity:copy-line"
                   class="section-top__copy-icon"
                   width="0.8rem"
-                  @click="copyText(item.detailsHash)"
                 />
               </ui-tooltip-click>
             </div>

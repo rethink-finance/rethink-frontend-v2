@@ -148,12 +148,15 @@
     </div>
   </div>
   <v-progress-circular
-    v-else
+    v-else-if="loadingProposal"
     class="loading_spinner"
     size="50"
     width="3"
     indeterminate
   />
+  <div v-else class="text-center mt-6 align-center">
+    Oops, proposal data is not available.
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -175,6 +178,7 @@ const proposalSlug = route.params.proposalId as string;
 const [createdBlockNumber, proposalId] = proposalSlug.split("-") as [bigint, string];
 const fundSlug = route.params.fundSlug as string;
 const showRawCalldatas = ref(false);
+const loadingProposal = ref(false);
 console.log("proposal", proposalId);
 console.log("fundSlug", fundSlug);
 
@@ -271,11 +275,15 @@ const formatCalldata = (calldata: any) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   emit("updateBreadcrumbs", breadcrumbItems);
 
   // fetch block proposals based on createdBlockNumber
-  governanceProposalStore.fetchBlockProposals(createdBlockNumber);
+  loadingProposal.value = true;
+  try {
+    await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
+  } catch {}
+  loadingProposal.value = false;
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
