@@ -459,20 +459,16 @@ const createProposal = async () => {
     console.log("encodedRoleModEntries: ", encodedRoleModEntries);
     console.log("roleModTargets: ", roleModTargets);
     console.log("roleModGasValues: ", roleModGasValues);
-
     /*
-      TODO:
+      TODO: NEED TO SETUP NEW NAV PERMISSION
 
-        
-        NEED TO SETUP NEW NAV PERMISSION
-        
         //target address is fund contract
         component.defaultNavEntryPermission[0].value[1].data = component.getSelectedFundAddress;
         //again, need to set target addr for scope target
         component.defaultNavEntryPermission[1].value[1].data = component.getSelectedFundAddress;
         //functionSig
         component.defaultNavEntryPermission[0].value[2].data = "0xa61f5814";
-        
+
         //raw data to permission
         let navExecutorAddr = addresses["NAVExecutorBeaconProxy"][parseInt(component.chainId)];
         console.log(navExecutorAddr);
@@ -490,12 +486,10 @@ const createProposal = async () => {
         component.defaultNavEntryPermission[0].value[6].data = navWords;
     */
   }
-
-
   const encodedDataStoreNAVDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
     storeNAVDataABI as AbiFunctionFragment, [fundStore.fund?.address, encodedNavUpdateEntries],
   );
-  const navExecutorAddr = addresses["NAVExecutorBeaconProxy"][web3Store.chainId];
+  const navExecutorAddr = addresses.NAVExecutorBeaconProxy[web3Store.chainId];
 
 
   /*

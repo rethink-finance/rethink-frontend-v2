@@ -6,6 +6,8 @@ export const formRules: Record<string, any> = {
     "This field is required.",
   isValidAddress: (value: any) =>
     ethers.isAddress(value) || "This address is not valid..",
+  isValidHexString: (value: any) =>
+    ethers.isHexString(value) || "This hex string is not valid..",
 
   isPositiveNumber: (value: any) =>
     value > 0 || "This field must be a positive number.",

@@ -1,6 +1,6 @@
-import type { IStepperStep } from "~/types/stepper";
 import type { FieldsMapType } from "./stepper";
 import { InputType } from "./stepper";
+import type { IStepperStep } from "~/types/stepper";
 
 export enum ExecutionStep {
   Setup = "setup",
@@ -27,14 +27,14 @@ export const ExecutionStepMap: Record<ExecutionStep, IStepperStep> = {
 export const DirectExecutionFieldsMap: FieldsMapType = {
   [ExecutionStep.Setup]: [
     {
-      label: "Row TX",
-      key: "rowTX",
-      type: InputType.Text,
+      label: "Raw TX Data",
+      key: "rawTxData",
+      type: InputType.Textarea,
       placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-      rules: [formRules.isValidAddress, formRules.required],
+      rules: [formRules.isValidHexString, formRules.required],
     },
     {
-      label: "Gas to send with transaction",
+      label: "Gas To Send With Transaction",
       key: "gasToSendWithTransaction",
       type: InputType.Number,
       placeholder: "E.g. 0",
@@ -49,10 +49,10 @@ export const DirectExecutionFieldsMap: FieldsMapType = {
       rules: [formRules.isValidAddress, formRules.required],
     },
     {
-      label: "Operations",
-      key: "operations",
+      label: "Operation",
+      key: "operation",
       type: InputType.Text,
-      placeholder: "unit8",
+      placeholder: "uint8",
       rules: [formRules.required],
     },
   ],

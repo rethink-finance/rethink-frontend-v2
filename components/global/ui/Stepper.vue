@@ -20,6 +20,7 @@
       <v-btn
         class="button--primary"
         :type="isLastStep ? 'submit' : 'button'"
+        :loading="isSubmitLoading"
         @click="handleButtonClick"
       >
         {{ isLastStep ? submitLabel : "Next" }}
@@ -163,6 +164,10 @@ const props = defineProps({
   submitEvent: {
     type: Function,
     default: () => {},
+  },
+  isSubmitLoading: {
+    type: Boolean,
+    default: false,
   },
 });
 

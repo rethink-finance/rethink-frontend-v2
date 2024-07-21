@@ -1,8 +1,8 @@
 export interface IExecutionEntry {
-  rowTX: string;
+  rawTxData: string;
   gasToSendWithTransaction: string;
   addressOfContractInteraction: string;
-  operations: string;
+  operation: string;
 
   // Optional
   proposalTitle?: string;

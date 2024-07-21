@@ -5,10 +5,12 @@ import defaultAvatar from "@/assets/images/default_avatar.webp";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
+import SafeMultiSendCallOnlyJson from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import { useFundStore } from "~/store/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
+import type { IContractAddresses } from "~/types/addresses";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
@@ -19,6 +21,7 @@ import type IToken from "~/types/token";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
+const SafeMultiSendCallOnlyAddresses: IContractAddresses = SafeMultiSendCallOnlyJson.networkAddresses as IContractAddresses;
 
 const GovernableFundFactoryContractName = "GovernableFundFactoryBeaconProxy";
 const RethinkReaderContractName = "RethinkReader";
@@ -106,6 +109,9 @@ export const useFundsStore = defineStore({
     rethinkReaderContract(): Contract {
       const contractAddress = addresses[RethinkReaderContractName][this.web3Store.chainId];
       return new this.web3.eth.Contract(RethinkReader.abi, contractAddress)
+    },
+    safeMultiSendCallOnlyToAddress(): string {
+      return SafeMultiSendCallOnlyAddresses[parseInt(this.web3Store.chainId).toString()]
     },
   },
   actions: {

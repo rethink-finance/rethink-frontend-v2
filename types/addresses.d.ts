@@ -1,4 +1,4 @@
-interface IContractAddresses {
+export interface IContractAddresses {
   [chainId: string]: string;
 }
 
