@@ -7,7 +7,7 @@
     :items="items"
     :loading="loading && items.length === 0"
     loading-text="Loading Activity"
-    @click:row="(_: any, item: any) => $router.push(`governance/proposal/${item.item?.proposalId}`)"
+    @click:row="rowClick"
   >
     <template #[`header.approval`]="{ column }">
       <!-- HEADERS -->
@@ -120,9 +120,10 @@
 // types
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
-import type IGovernanceProposal from "~/types/governance_proposal";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
+import type IGovernanceProposal from "~/types/governance_proposal";
 
+const router = useRouter();
 const fundStore = useFundStore();
 const governanceProposalStore = useGovernanceProposalsStore();
 const accountStore = useAccountStore();
@@ -195,6 +196,12 @@ const headers = computed(() => {
 
   return headers;
 });
+
+// navigate to proposal detail page
+const rowClick = (_:any, item: any) => {
+  const {createdBlockNumber, proposalId} = item.item;
+  router.push(`governance/proposal/${createdBlockNumber}-${proposalId}`);
+};
 </script>
 
 <style lang="scss" scoped>
