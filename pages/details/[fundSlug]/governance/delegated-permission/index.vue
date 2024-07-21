@@ -19,16 +19,12 @@ import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
   DelegatedStepMap,
-  allSubsteps,
+  allSubSteps,
 } from "~/types/enums/delegated_permission";
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { useFundStore } from "~/store/fund.store";
-
-import addressesJson from "~/assets/contracts/addresses.json";
-import type IAddresses from "~/types/addresses";
-const addresses: IAddresses = addressesJson as IAddresses;
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -43,7 +39,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 // format substeps for the stepper
-const allSubstepsFormatted = formatArrayToObject(allSubsteps);
+const allSubstepsFormatted = formatArrayToObject(allSubSteps);
 
 const delegatedEntry = ref([
   {
@@ -52,12 +48,14 @@ const delegatedEntry = ref([
     formTitle: DelegatedStepMap[DelegatedStep.Setup].formTitle,
     formText: DelegatedStepMap[DelegatedStep.Setup].formText,
 
-    stepDefaultValues: formatInputToObject(allSubstepsFormatted.scopeFunction), // default value when adding a new substep
+    // default value when adding a new sub step
+    stepDefaultValues: formatInputToObject(allSubstepsFormatted.scopeFunction),
 
-    substepKey: "contractMethod",
+    subStepKey: "contractMethod",
     multipleSteps: true,
-    substepLabel: "Permission",
-    steps: [formatInputToObject(allSubstepsFormatted.scopeFunction)], // default values for the first substep
+    subStepLabel: "Permission",
+    // default values for the first sub step
+    steps: [formatInputToObject(allSubstepsFormatted.scopeFunction)],
   },
   {
     stepName: DelegatedStep.Details,
@@ -132,7 +130,7 @@ function formatInputToObject(input: any) {
 const contractMethodChanged = (
   mainStepName: any,
   subStepIndex: any,
-  step: any
+  step: any,
 ) => {
   // console.log("mainStepName: ", mainStepName);
   // console.log("subStepIndex: ", subStepIndex);
@@ -140,12 +138,12 @@ const contractMethodChanged = (
 
   // we need to formatInputToObject for the new substep inputs based on the contractMethod
   const newInput = formatInputToObject(
-    allSubstepsFormatted[step.contractMethod]
+    allSubstepsFormatted[step.contractMethod],
   );
   newInput.isValid = false;
 
   const mainStepIndex = delegatedEntry.value.findIndex(
-    (entry) => entry.stepName === mainStepName
+    (entry) => entry.stepName === mainStepName,
   );
   if (mainStepIndex === -1) {
     console.error("Main step not found");
@@ -159,13 +157,13 @@ const contractMethodChanged = (
   }
 
   const keysToDelete = Object.keys(currentInputs).filter(
-    (key) => key !== "contractMethod"
+    (key) => key !== "contractMethod",
   );
 
   // check if currentInputs has the same keys as newInput
   // if it does, we don't need to do anything
   const hasSameKeys = Object.keys(currentInputs).every(
-    (key) => key in newInput
+    (key) => key in newInput,
   );
   if (hasSameKeys) {
     return;
@@ -185,7 +183,7 @@ const submitProposal = () => {
 
 const tooltipClick = () => {
   console.log(
-    "we can redirect to a new page, show a tooltip message or do whatever we want here"
+    "we can redirect to a new page, show a tooltip message or do whatever we want here",
   );
 };
 

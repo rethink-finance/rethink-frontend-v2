@@ -50,7 +50,7 @@ const executionEntry = ref([
     },
 
     multipleSteps: true,
-    substepLabel: "Execution",
+    subStepLabel: "Execution",
     steps: [
       {
         rowTX: "",

@@ -1,5 +1,5 @@
-import type { IStepperStep } from "~/types/stepper";
 import { InputType } from "./stepper";
+import type { IStepperStep } from "~/types/stepper";
 
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 
@@ -32,14 +32,14 @@ export const formatFieldName = (name: string) => {
 
 // get all methods from ZodiacRoles contract
 const proposalRoleModMethods = ZodiacRoles.abi.filter(
-  (val) => val.type === "function"
+  (val) => val.type === "function",
 );
 // make a list of choices for the select field out of the methods
 export const substepChoices = proposalRoleModMethods.map((val) => {
   return { title: formatFieldName(val?.name || ""), value: val.name };
 });
 
-// define select field that will be used in all substeps
+// define select field that will be used in all sub steps
 const selectField = {
   label: "Contract Method",
   key: "contractMethod",
@@ -61,7 +61,7 @@ const defineFieldDetails = (val: any) => {
 
   // default values for select boolean select field
   let choices = [] as { title: string; value: any }[];
-  let defaultValue = undefined;
+  let defaultValue;
 
   if (numberTypes.some((type) => val.type.includes(type))) {
     type = InputType.Number;
@@ -88,11 +88,16 @@ const defineFieldDetails = (val: any) => {
   return { type, placeholder, rules, choices, defaultValue };
 };
 
-// shape substep fields for each method from ZodiacRoles contract
-export const allSubsteps = proposalRoleModMethods.map((val: any) => {
-  const substepFields = val.inputs.map((input: any) => {
-    const { type, placeholder, rules, choices, defaultValue } =
-      defineFieldDetails(input);
+// shape sub step fields for each method from ZodiacRoles contract
+export const allSubSteps = proposalRoleModMethods.map((val: any) => {
+  const subStepFields = val.inputs.map((input: any) => {
+    const {
+      type,
+      placeholder,
+      rules,
+      choices,
+      defaultValue,
+    } = defineFieldDetails(input);
 
     return {
       label: formatFieldName(input.name),
@@ -106,14 +111,14 @@ export const allSubsteps = proposalRoleModMethods.map((val: any) => {
     };
   });
 
-  const selectFieldForSubstep = JSON.parse(JSON.stringify(selectField));
-  selectFieldForSubstep.defaultValue = val.name;
+  const selectFieldForSubStep = JSON.parse(JSON.stringify(selectField));
+  selectFieldForSubStep.defaultValue = val.name;
 
   // add select field to the beginning of each substep
-  const substepFieldsWithSelect = [selectFieldForSubstep, ...substepFields];
+  const subStepFieldsWithSelect = [selectFieldForSubStep, ...subStepFields];
 
   return {
-    [val.name]: substepFieldsWithSelect,
+    [val.name]: subStepFieldsWithSelect,
   };
 });
 
@@ -131,7 +136,7 @@ function formatArrayToObject(array: { [key: string]: any }[]): any {
 
 // define fields map
 export const DelegatedPermissionFieldsMap: any = {
-  [DelegatedStep.Setup]: formatArrayToObject(allSubsteps),
+  [DelegatedStep.Setup]: formatArrayToObject(allSubSteps),
 
   [DelegatedStep.Details]: [
     {

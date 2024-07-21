@@ -23,8 +23,8 @@
       </div>
       <ui-char-limit
         v-if="field.charLimit"
-        :charLimit="field.charLimit"
-        :charNumber="valueDetails[field.key]"
+        :char-limit="field.charLimit"
+        :char-number="valueDetails[field.key]"
       />
     </v-label>
 
@@ -43,7 +43,7 @@
         class="is-array"
       >
         <div class="is-array__count-index">
-          {{ index + 1 }}
+          {{ index }}
         </div>
         <v-text-field
           :key="index"
@@ -58,7 +58,7 @@
             icon="material-symbols:cancel-outline"
             class="is-array__remove"
             @click="removeField(field, index)"
-        /></v-text-field>
+          /></v-text-field>
       </div>
     </template>
     <template v-else-if="field.type === InputType.Textarea">
@@ -74,7 +74,7 @@
         class="is-array"
       >
         <div class="is-array__count-index">
-          {{ index + 1 }}
+          {{ index }}
         </div>
         <v-textarea
           :key="index"
@@ -105,7 +105,7 @@
         class="is-array select"
       >
         <div class="is-array__count-index">
-          {{ index + 1 }}
+          {{ index }}
         </div>
         <v-select
           :key="index"
@@ -132,7 +132,7 @@
         class="is-array"
       >
         <div class="is-array__count-index">
-          {{ index + 1 }}
+          {{ index }}
         </div>
         <v-checkbox :key="index" v-model="valueDetails[field.key][index]" />
         <Icon
@@ -144,7 +144,7 @@
     </template>
     <!-- check if field "isArray", if yes allow adding new fields -->
     <template v-if="field.isArray">
-      <div class="add-new-field" flat @click="addNewField(field)">
+      <div class="add-new-field" @click="addNewField(field)">
         Add Parameters +
       </div>
     </template>
@@ -201,7 +201,7 @@ const allFieldsValid = computed(() =>
         return rule(value) === true;
       }) ?? true
     );
-  })
+  }),
 );
 
 const addNewField = (field: any) => {
@@ -234,7 +234,7 @@ watch(
     console.log("valueDetails: ", valueDetails.value);
     emit("validate", valueDetails.value);
   },
-  { deep: true }
+  { deep: true },
 );
 </script>
 

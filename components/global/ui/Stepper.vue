@@ -56,9 +56,9 @@
               <div class="sub-steps__dashed-line" />
               <div class="sub-steps__label">
                 {{
-                  substep[step.substepKey]
-                    ? formatFieldName(substep[step.substepKey])
-                    : step.substepLabel + " " + (substepIndex + 1)
+                  substep[step.subStepKey]
+                    ? formatFieldName(substep[step.subStepKey])
+                    : step.subStepLabel + " " + (substepIndex + 1)
                 }}
               </div>
 
@@ -97,7 +97,7 @@
               class="sub-steps__add-new-step"
               @click="addNewSubstep(step)"
             >
-              Add {{ step.substepLabel }} +
+              Add {{ step.subStepLabel }} +
             </div>
           </div>
         </div>
@@ -181,15 +181,15 @@ const activeSubStep = ref(0);
 // this f-n will be used to get the active substep name in case of dynamic fields
 // it will be used to get the fields for the active substep based on the substep key
 const activeSubstepName = computed(() => {
-  const { steps, substepKey } = props.entry.find(
+  const { steps, subStepKey } = props.entry.find(
     (step) => step.stepName === activeMainStep.value,
   ) as any;
 
-  return steps[activeSubStep.value][substepKey];
+  return steps[activeSubStep.value][subStepKey];
 });
 
 const fields = computed(
-  // in case substepKey is provided, get the fields based on the substep key
+  // in case subStepKey is provided, get the fields based on the substep key
   // otherwise get the fields based on the active substep
   () => {
     if (activeSubstepName.value) {
