@@ -81,7 +81,6 @@ export const useGovernanceProposalsStore = defineStore({
       this.fundProposals[chainId] ??= {};
       this.fundProposals[chainId][fundAddress] ??= {};
       this.fundProposals[chainId][fundAddress][proposal.proposalId] = cleanComplexWeb3Data(proposal);
-      console.log("Cleaned proposal: ", this.fundProposals);
       setLocalStorageItem("fundProposals", this.fundProposals);
     },
     getProposals(chainId: string, fundAddress?: string): IGovernanceProposal[] {
