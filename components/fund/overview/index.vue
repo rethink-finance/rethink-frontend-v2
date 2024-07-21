@@ -24,6 +24,16 @@
             </div>
           </div>
 
+
+          <div class="main_card">
+            <div class="main_expansion_panel__subtitle">
+              Whitelist
+            </div>
+            <div>
+              <FundOverviewDeposits :fund="fund" />
+            </div>
+          </div>
+
         </v-expansion-panel-text>
       </v-expansion-panel>
       <v-expansion-panel
