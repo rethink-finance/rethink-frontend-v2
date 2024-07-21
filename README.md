@@ -58,6 +58,13 @@ Usage example:
 ```vue
 <Icon icon="octicon:question-16" width="1rem" />
 ```
+### Show Test Funds
+By default we do not show test funds.
+To show test funds, you can set a variable to local storage:
+```js
+excludeTestFunds: false
+```
+To hide test funds you have to add them to the `excludeFundAddrs` in the `funds.store.ts`.
 
 ### Dev Notes
 0) NAV update entires indices start with 1 instead of 0! **!IMPORTANT**

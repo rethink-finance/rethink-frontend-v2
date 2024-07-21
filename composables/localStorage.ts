@@ -10,12 +10,12 @@ const parseBigInt = (_: string, value: any) => {
   return value;
 };
 
-export const getLocalStorageItem = (key: string, defaultValue: any) => {
+export const getLocalStorageItem = (key: string, defaultValue: any = {}) => {
   const item = localStorage.getItem(key);
   try {
     return item ? JSON.parse(item, parseBigInt) : defaultValue;
   } catch {
-    return {};
+    return defaultValue;
   }
 };
 
