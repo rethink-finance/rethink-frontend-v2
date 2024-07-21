@@ -27,7 +27,6 @@ const RethinkReaderContractName = "RethinkReader";
 // excludeTestFunds: false
 // to local storage.
 const excludeTestFunds = getLocalStorageItem("excludeTestFunds", true);
-console.error("excludeTestFunds", excludeTestFunds);
 const excludeNAVDetails = true;
 
 // interface
