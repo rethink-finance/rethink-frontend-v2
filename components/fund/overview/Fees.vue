@@ -5,27 +5,35 @@
       subtitle="Management Fee"
       :title2="formatAddress(fund?.managementFeeAddress)"
       subtitle2="Distributed to"
+      :title3="fund?.managementPeriod"
+      subtitle3="Fee Period (Days)"
+      class="main_grid__item"
     />
     <UiDataRowCard
       :title="formatFee(fund?.performanceFee)"
-      subtitle="Performance Fee"
+      subtitle="Profit Management Fee"
       :title2="formatAddress(fund?.performanceFeeAddress)"
       subtitle2="Distributed to"
       :grow-column2="true"
-      :title3="formatFee(fund.performaceHurdleRateBps)"
-      subtitle3="Hurdle Rate"
+      :title3="fund?.performancePeriod"
+      subtitle3="Fee Period (Days)"
+      :title4="formatFee(fund.performaceHurdleRateBps)"
+      subtitle4="Hurdle Rate"
+      class="main_grid__item"
     />
     <UiDataRowCard
       :title="formatFee(fund?.depositFee)"
       subtitle="Deposit Fee"
       :title2="formatAddress(fund?.depositFeeAddress)"
       subtitle2="Distributed to"
+      class="main_grid__item"
     />
     <UiDataRowCard
       :title="formatFee(fund?.withdrawFee)"
       subtitle="Exit Fee"
       :title2="formatAddress(fund?.withdrawFeeAddress)"
       subtitle2="Distributed to"
+      class="main_grid__item"
     />
   </div>
 </template>
@@ -48,12 +56,24 @@ export default defineComponent({
       return `${feePercent}%`;
     },
     formatAddress(address?: string) {
-      if (!address || isZeroAddress(address)) return "N/A"
+      if (!address || isZeroAddress(address)) return "N/A";
       return address;
     },
   },
-})
+});
 </script>
 
 <style lang="scss" scoped>
+.main_grid {
+  &__item {
+    :deep(.data_row__column) {
+      &:first-child {
+        min-width: 10rem;
+      }
+      &:nth-child(2) {
+        flex-grow: unset;
+      }
+    }
+  }
+}
 </style>

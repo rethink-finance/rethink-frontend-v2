@@ -80,8 +80,8 @@ export const useGovernanceProposalsStore = defineStore({
     storeProposal(chainId: string, fundAddress: string, proposal: IGovernanceProposal): void {
       this.fundProposals[chainId] ??= {};
       this.fundProposals[chainId][fundAddress] ??= {};
-      this.fundProposals[chainId][fundAddress][proposal.proposalId] = proposal;
-      setLocalStorageItem("fundProposals", cleanComplexWeb3Data(this.fundProposals, true));
+      this.fundProposals[chainId][fundAddress][proposal.proposalId] = cleanComplexWeb3Data(proposal);
+      setLocalStorageItem("fundProposals", this.fundProposals);
     },
     getProposals(chainId: string, fundAddress?: string): IGovernanceProposal[] {
       if (!fundAddress) return [];
@@ -109,17 +109,10 @@ export const useGovernanceProposalsStore = defineStore({
       const activeAccountAddress = this.fundStore.activeAccountAddress;
       if (!activeAccountAddress) return false;
       if (this.connectedAccountProposalsHasVoted?.[proposalId] === undefined) {
+        // This means that we don't know, vote status was not fetched yet or had some troubles fetching it.
         return undefined;
       }
-      return this.connectedAccountProposalsHasVoted?.[proposalId][activeAccountAddress];
-    },
-    fetchHasAccountVoted(proposalId: string): boolean | undefined {
-      const activeAccountAddress = this.fundStore.activeAccountAddress;
-      if (!activeAccountAddress) return false;
-      if (this.connectedAccountProposalsHasVoted?.[proposalId] === undefined) {
-        return undefined;
-      }
-      return this.connectedAccountProposalsHasVoted?.[proposalId][activeAccountAddress];
+      return this.connectedAccountProposalsHasVoted?.[proposalId]?.[activeAccountAddress];
     },
     getFundProposalsBlockFetchedRanges(chainId: string, fundAddress?: string): number[] | undefined[] {
       if (!fundAddress) return [undefined, undefined];

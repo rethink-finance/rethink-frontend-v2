@@ -40,6 +40,14 @@
               {{ subtitle3 }}
             </div>
           </div>
+          <div v-if="title4" class="data_row__column" :class="{'data_row__column--grow': growColumn4}">
+            <div class="data_row__title">
+              {{ title4 }}
+            </div>
+            <div v-if="subtitle4" class="data_row__subtitle">
+              {{ subtitle4 }}
+            </div>
+          </div>
         </div>
 
         <template #actions="{ expanded }">
@@ -139,6 +147,18 @@ export default defineComponent({
       default: "",
     },
     growColumn3: {
+      type: Boolean,
+      default: false,
+    },
+    title4: {
+      type: String,
+      default: "",
+    },
+    subtitle4: {
+      type: String,
+      default: "",
+    },
+    growColumn4: {
       type: Boolean,
       default: false,
     },

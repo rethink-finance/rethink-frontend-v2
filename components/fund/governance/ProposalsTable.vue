@@ -68,18 +68,20 @@
       >
         N/A
       </template>
-      <Icon
-        v-if="governanceProposalStore.hasAccountVoted(item.proposalId)"
-        icon="octicon:check-circle-fill-16"
-        width="1rem"
-        height="1rem"
-        color="var(--color-success)"
-      />
-      <icon
-        v-else
-        icon="octicon:x-circle-fill-16"
-        color="var(--color-error)"
-      />
+      <template v-else>
+        <Icon
+          v-if="governanceProposalStore.hasAccountVoted(item.proposalId)"
+          icon="octicon:check-circle-fill-16"
+          width="1rem"
+          height="1rem"
+          color="var(--color-success)"
+        />
+        <icon
+          v-else
+          icon="octicon:x-circle-fill-16"
+          color="var(--color-error)"
+        />
+      </template>
     </template>
     <template #[`item.approval`]="{ item }">
       {{ item.approvalFormatted }}
