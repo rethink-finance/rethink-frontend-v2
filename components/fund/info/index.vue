@@ -6,6 +6,7 @@
 
     <div v-if="isConnected" class="fund_info__user_data main_grid">
       <FundInfoMyPositions :fund="fund" />
+      <FundInfoGovernance :fund="fund" />
     </div>
   </div>
 </template>
@@ -24,7 +25,7 @@ export default {
   },
   setup() {
     const { isConnected } = storeToRefs(useAccountStore());
-    return { isConnected }
+    return { isConnected };
   },
 };
 </script>
@@ -37,6 +38,14 @@ export default {
 
   @include sm {
     gap: 3rem;
+  }
+
+  &__user_data {
+    grid-template-columns: 1fr;
+
+    @include lg {
+      grid-template-columns: 4fr 6fr;
+    }
   }
 }
 </style>

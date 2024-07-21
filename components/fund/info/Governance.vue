@@ -12,34 +12,40 @@
             </v-tooltip>
             {{ truncateAddress(fundStore.userFundDelegateAddress) }}
           </template>
-
         </div>
-        <div class="data_bar__subtitle">
-          Delegating To
-        </div>
+        <div class="data_bar__subtitle">Delegating To</div>
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ userGovernanceTokenBalanceFormatted }} {{ fund.governanceToken.symbol }}
+          {{ userFundGovernanceTokenFormatted }}
         </div>
-        <div class="data_bar__subtitle">
-          Voting Power
-        </div>
+        <div class="data_bar__subtitle">Gov. Token</div>
       </div>
       <div class="data_bar__item">
-        <UiLinkExternalButton
-          class="fund_info_governance__manage_button"
-          title="Manage"
-          :href="governanceManageUrl"
-        />
+        <div class="data_bar__title">
+          {{ userGovernanceTokenBalanceFormatted }}
+          {{ fund.governanceToken.symbol }}
+        </div>
+        <div class="data_bar__subtitle">Voting Power</div>
+      </div>
+      <div class="data_bar__item">
+        <v-btn
+          class="button"
+          variant="outlined"
+          @click="isDelegateDialogOpen = true"
+        >
+          Delegate
+        </v-btn>
       </div>
     </UiDataBar>
+
+    <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" />
   </div>
 </template>
 
 <script lang="ts">
-import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
+import type IFund from "~/types/fund";
 
 export default {
   name: "FundInfoGovernance",
@@ -51,18 +57,40 @@ export default {
   },
   setup() {
     const fundStore = useFundStore();
-    return { fundStore }
+    return { fundStore };
+  },
+  data() {
+    return {
+      isDelegateDialogOpen: false,
+    };
   },
   computed: {
     userGovernanceTokenBalanceFormatted() {
-      return formatTokenValue(this.fundStore.userGovernanceTokenBalance, this.fund.governanceToken.decimals);
+      return formatTokenValue(
+        this.fundStore.userGovernanceTokenBalance,
+        this.fund.governanceToken.decimals
+      );
     },
-    governanceManageUrl(): string {
-      /** Example:
-       * https://www.tally.xyz/gov/tfd3-0xface6562d7e39ea73b67404a6454fbbbefeca553
-       * **/
-      return `https://www.tally.xyz/gov/${this.fund.fundToken.symbol}-${this.fund.governorAddress}/my-voting-power`;
+    fundGovernanceToken() {
+      return this.fundStore.fund?.governanceToken;
     },
+    userFundGovernanceTokenFormatted() {
+      if (!this.fundGovernanceToken) return "N/A";
+      const value = Number(
+        formatTokenValue(
+          this.fundStore.userGovernanceTokenBalance,
+          this.fundGovernanceToken.decimals,
+          false
+        )
+      );
+      return formatNumberShort(value) + " " + this.fundGovernanceToken.symbol;
+    },
+    // governanceManageUrl(): string {
+    //   /** Example:
+    //    * https://www.tally.xyz/gov/tfd3-0xface6562d7e39ea73b67404a6454fbbbefeca553
+    //    * **/
+    //   return `https://www.tally.xyz/gov/${this.fund.fundToken.symbol}-${this.fund.governorAddress}/my-voting-power`;
+    // },
   },
 };
 </script>
@@ -78,5 +106,9 @@ export default {
       padding-right: 1.25rem !important;
     }
   }
+}
+
+button {
+  color: $color-secondary !important;
 }
 </style>

@@ -247,10 +247,13 @@ const delegate = async (isMyself = false) => {
 
 <style scoped lang="scss">
 .di-card {
-  @include borderGray;
   margin: 0 auto;
+  padding-bottom: 2rem;
+  width: 100%;
+  max-width: 500px;
   color: white;
-  min-width: 500px;
+
+  @include borderGray;
 
   &__header-container {
     display: flex;
