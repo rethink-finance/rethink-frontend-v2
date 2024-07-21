@@ -66,9 +66,9 @@
                 <UiDetailsButton
                   v-if="
                     step.steps &&
-                    step.steps?.length > 1 &&
-                    substepIndex === activeSubStep &&
-                    step.stepName === activeMainStep
+                      step.steps?.length > 1 &&
+                      substepIndex === activeSubStep &&
+                      step.stepName === activeMainStep
                   "
                   small
                   class="sub-steps__delete-button"
@@ -182,7 +182,7 @@ const activeSubStep = ref(0);
 // it will be used to get the fields for the active substep based on the substep key
 const activeSubstepName = computed(() => {
   const { steps, substepKey } = props.entry.find(
-    (step) => step.stepName === activeMainStep.value
+    (step) => step.stepName === activeMainStep.value,
   ) as any;
 
   return steps[activeSubStep.value][substepKey];
@@ -195,14 +195,14 @@ const fields = computed(
     if (activeSubstepName.value) {
       // we need to change entry field values based on the active substep
       const activeSubstep = props.entry.find(
-        (step) => step.stepName === activeMainStep.value
+        (step) => step.stepName === activeMainStep.value,
       )?.steps?.[activeSubStep.value];
 
       emit(
         "fields-changed",
         activeMainStep.value,
         activeSubStep.value,
-        activeSubstep
+        activeSubstep,
       );
 
       return (
@@ -210,11 +210,11 @@ const fields = computed(
       );
     }
     return props.fieldsMap[activeMainStep.value] || [];
-  }
+  },
 );
 
 const isLastStep = computed(() => {
-  return !!(
+  return (
     activeMainStep.value === stepNames[stepNames.length - 1] &&
     activeSubStep.value ===
       props.entry?.[stepNames.length - 1]?.steps?.length - 1
@@ -227,12 +227,12 @@ const mainStepClasses = (step: any) => {
     { "main-step--active": activeMainStep.value === step.stepName },
     {
       "main-step--error": step.steps.some(
-        (substep: any) => substep.isValid === false
+        (substep: any) => substep.isValid === false,
       ),
     },
     {
       "main-step--success": step.steps.every(
-        (substep: any) => substep.isValid === true
+        (substep: any) => substep.isValid === true,
       ),
     },
   ];
@@ -255,15 +255,15 @@ const addNewSubstep = (mainStep: any) => {
   activeMainStep.value = mainStep.stepName;
 
   const mainStepIndex = props.entry.findIndex(
-    (step) => step.stepName === mainStep.stepName
+    (step) => step.stepName === mainStep.stepName,
   );
 
-  // substep to add
-  const newSubstep = JSON.parse(
-    JSON.stringify(props.entry?.[mainStepIndex]?.stepDefaultValues)
+  // sub step to add
+  const newSubStep = JSON.parse(
+    JSON.stringify(props.entry?.[mainStepIndex]?.stepDefaultValues),
   );
 
-  props.entry?.[mainStepIndex]?.steps?.push(newSubstep);
+  props.entry?.[mainStepIndex]?.steps?.push(newSubStep);
 
   // set new step as active
   activeSubStep.value = props.entry?.[mainStepIndex]?.steps?.length - 1;
@@ -273,7 +273,7 @@ const addNewSubstep = (mainStep: any) => {
 // delete sub step
 const deleteSubstep = (mainStep: any, index: number) => {
   const mainStepIndex = props.entry.findIndex(
-    (step) => step.stepName === mainStep.stepName
+    (step) => step.stepName === mainStep.stepName,
   );
 
   // don't allow to delete if there is only one step
@@ -315,7 +315,7 @@ const submit = () => {
 
 const nextStep = () => {
   const mainStepIndex = props.entry.findIndex(
-    (step) => step.stepName === activeMainStep.value
+    (step) => step.stepName === activeMainStep.value,
   );
 
   if (activeSubStep.value === props.entry?.[mainStepIndex]?.steps?.length - 1) {

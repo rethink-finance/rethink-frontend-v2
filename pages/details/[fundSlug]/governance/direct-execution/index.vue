@@ -6,7 +6,6 @@
       :fields-map="fieldsMap"
       title="Direct Execution Proposal"
       tooltip-text="We can show more info text, redirect to a new page etc."
-      :tooltip-click="tooltipClick"
       submit-label="Create Proposal"
       :submit-event="submitProposal"
     />
@@ -86,18 +85,10 @@ const submitProposal = () => {
   alert("submit proposal");
 };
 
-const tooltipClick = () => {
-  console.log(
-    "we can redirect to a new page, show a tooltip message or do whatever we want here"
-  );
-};
-
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
 });
 </script>
 
 <style scoped lang="scss">
-.direct-execution {
-}
 </style>
