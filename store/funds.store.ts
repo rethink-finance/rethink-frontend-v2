@@ -1,3 +1,4 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import type { AbiInput } from "web3";
 import { Web3 } from "web3";
@@ -5,18 +6,16 @@ import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
-import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
-import type IFund from "~/types/fund";
+import { useFundStore } from "~/store/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
-import type IContractAddresses from "~/types/addresses";
-import type INAVUpdate from "~/types/nav_update";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
-import type IToken from "~/types/token";
-import type IPositionTypeCount from "~/types/position_type";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
-import { useFundStore } from "~/store/fund.store";
+import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
+import type IFund from "~/types/fund";
 import type INAVMethod from "~/types/nav_method";
+import type INAVUpdate from "~/types/nav_update";
+import type IPositionTypeCount from "~/types/position_type";
+import type IToken from "~/types/token";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -230,8 +229,10 @@ export const useFundsStore = defineStore({
             depositFeeAddress: "",
             withdrawFee: "",
             withdrawFeeAddress: "",
+            managementPeriod: "",
             managementFee: "",
             managementFeeAddress: "",
+            performancePeriod: "",
             performanceFee: "",
             performanceFeeAddress: "",
             performaceHurdleRateBps: "",

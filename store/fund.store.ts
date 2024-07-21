@@ -1,14 +1,21 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
+import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import { ethers } from "ethers";
-import GovernableFund from "~/assets/contracts/GovernableFund.json";
-import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
-import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
-import RethinkReader from "~/assets/contracts/RethinkReader.json";
-import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import ERC20 from "~/assets/contracts/ERC20.json";
+import GovernableFund from "~/assets/contracts/GovernableFund.json";
+import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
+import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
+import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
+import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
+import { formatJson, pluralizeWord } from "~/composables/utils";
 import { useAccountStore } from "~/store/account.store";
+import { useWeb3Store } from "~/store/web3.store";
+import type IAddresses from "~/types/addresses";
+import type IClockMode from "~/types/clock_mode";
+import type ICyclePendingRequest from "~/types/cycle_pending_request";
+import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
@@ -17,17 +24,10 @@ import {
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
-import { useWeb3Store } from "~/store/web3.store";
-import type IAddresses from "~/types/addresses";
-import type INAVUpdate from "~/types/nav_update";
 import type INAVMethod from "~/types/nav_method";
-import type ICyclePendingRequest from "~/types/cycle_pending_request";
-import type IToken from "~/types/token";
+import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
-import type IClockMode from "~/types/clock_mode";
-import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
-import { formatJson, pluralizeWord } from "~/composables/utils";
+import type IToken from "~/types/token";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -183,6 +183,13 @@ export const useFundStore = defineStore({
     async fetchFundData(): Promise<IFund> {
       // Fetch inception date
       const settingsData = await this.fundContract.methods.getFundSettings().call();
+      const performancePeriod = await this.fundContract.methods.feePerformancePeriod().call();
+      const managementPeriod = await this.fundContract.methods.feeManagePeriod().call();
+
+      // Adding properties to the existing settingsData object
+      settingsData.performancePeriod = performancePeriod;
+      settingsData.managementPeriod = managementPeriod;
+
       // Process the fund settings with a method assumed to be available in the current scope
       const fundSettings: IFundSettings = this.parseFundSettings(settingsData);
 
@@ -382,8 +389,10 @@ export const useFundStore = defineStore({
           depositFeeAddress: fundSettings.feeCollectors[0],
           withdrawFee: fundSettings.withdrawFee.toString(),
           withdrawFeeAddress: fundSettings.feeCollectors[1],
+          managementPeriod: fundSettings.managementPeriod.toString(),
           managementFee: fundSettings.managementFee.toString(),
           managementFeeAddress: fundSettings.feeCollectors[2],
+          performancePeriod: fundSettings.performancePeriod.toString(),
           performanceFee: fundSettings.performanceFee.toString(),
           performanceFeeAddress: fundSettings.feeCollectors[3],
           performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,

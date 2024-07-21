@@ -1,8 +1,8 @@
+import type IClockMode from "~/types/clock_mode";
 import type ICyclePendingRequest from '~/types/cycle_pending_request';
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
-import type IClockMode from "~/types/clock_mode";
 
 /**
  * Example API response data of getFundSettings:
@@ -93,9 +93,11 @@ export default interface IFund {
   withdrawFee: string;
   withdrawFeeAddress: string;
   // 2
+  managementPeriod: string;
   managementFee: string;
   managementFeeAddress: string;
   // 3
+  performancePeriod: string;
   performanceFee: string;
   performanceFeeAddress: string;
   performaceHurdleRateBps: string;
