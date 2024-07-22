@@ -22,7 +22,7 @@ export const DelegatedStepMap: Record<DelegatedStep, IStepperStep> = {
   },
 };
 
-export const formatFieldName = (name: string) => {
+export const formatFunctionName = (name: string) => {
   // split camelCase to words
   let output = name.replace(/([A-Z])/g, " $1");
   // capitalize the first letter
@@ -36,7 +36,7 @@ const proposalRoleModMethods = ZodiacRoles.abi.filter(
 );
 // make a list of choices for the select field out of the methods
 export const roleModMethodChoices = proposalRoleModMethods.map((func) => {
-  return { title: formatFieldName(func?.name || ""), value: func.name };
+  return { title: formatFunctionName(func?.name || ""), value: func.name };
 });
 
 // define select field that will be used in all sub steps
@@ -85,8 +85,9 @@ const parseFuncInputDetails = (input: any) => {
   }
 
   return {
-    label: formatFieldName(input.name),
+    label: formatFunctionName(input.name),
     key: input.name,
+    internalType: input.internalType,
     type,
     rules,
     placeholder,
@@ -97,20 +98,24 @@ const parseFuncInputDetails = (input: any) => {
 };
 
 // shape sub step fields for each method from ZodiacRoles contract
-export const allSubSteps = proposalRoleModMethods.reduce((acc: any, func: any) => {
-  const subStepFields = func.inputs.map(parseFuncInputDetails);
+export const proposalRoleModMethodAbiMap = proposalRoleModMethods.reduce((acc: any, functionAbi: any) => {
+  acc[functionAbi.name] = functionAbi;
+  return acc;
+}, {});
+export const proposalRoleModMethodStepsMap = proposalRoleModMethods.reduce((acc: any, functionAbi: any) => {
+  const subStepFields = functionAbi.inputs.map(parseFuncInputDetails);
 
   const selectFieldForSubStep = JSON.parse(JSON.stringify(selectField));
-  selectFieldForSubStep.defaultValue = func.name;
+  selectFieldForSubStep.defaultValue = functionAbi.name;
 
   // add select field to the beginning of each sub-step
-  acc[func.name] = [selectFieldForSubStep, ...subStepFields];
+  acc[functionAbi.name] = [selectFieldForSubStep, ...subStepFields];
   return acc;
 }, {});
 
 // define fields map
 export const DelegatedPermissionFieldsMap: any = {
-  [DelegatedStep.Setup]: allSubSteps,
+  [DelegatedStep.Setup]: proposalRoleModMethodStepsMap,
 
   [DelegatedStep.Details]: [
     {

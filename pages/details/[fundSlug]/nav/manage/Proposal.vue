@@ -252,59 +252,50 @@ const getMethodsPastNAVUpdateIndex = (methods: Record<string, any>[]) => {
 const generateNAVPermission = (encodedNavUpdateEntries: string) =>  {
   // Default NAV entry permission
   const navEntryPermission: Record<string, any> = {
-    "idx": 0,
     "value": [
       {
-        "idx": 0,
         "isArray": false,
         "data": "1",
         "internalType": "uint16",
         "name": "role",
       },
       {
-        "idx": 1,
         "isArray": false,
         "data": null,
         "internalType": "address",
         "name": "targetAddress",
       },
       {
-        "idx": 2,
         "isArray": false,
         "data": null,
         "internalType": "bytes4",
         "name": "functionSig",
       },
       {
-        "idx": 3,
         "isArray": true,
         "data": [],
         "internalType": "bool[]",
         "name": "isParamScoped",
       },
       {
-        "idx": 4,
         "isArray": true,
         "data": [],
         "internalType": "enum ParameterType[]",
         "name": "paramType",
       },
       {
-        "idx": 5,
         "isArray": true,
         "data": [],
         "internalType": "enum Comparison[]",
         "name": "paramComp",
       },
       {
-        "idx": 6,
         "isArray": true,
         "data": [],
         "internalType": "bytes[]",
         "name": "compValue",
       },
       {
-        "idx": 7,
         "isArray": false,
         "data": "1",
         "internalType": "enum ExecutionOptions",
@@ -364,7 +355,6 @@ const encodeRoleModEntries = async (proposalEntries: any[]): Promise<[any[], any
     for (let j = 0; j< proposalEntries[i].value.length; j++) {
       /*
         {
-          "idx": 0,
           "isArray": false,
           "data": "0xe977757dA5fd73Ca3D2bA6b7B544bdF42bb2CBf6",
           "internalType": "address",
