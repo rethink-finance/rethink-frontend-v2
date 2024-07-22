@@ -22,13 +22,6 @@ export const DelegatedStepMap: Record<DelegatedStep, IStepperStep> = {
   },
 };
 
-export const formatFunctionName = (name: string) => {
-  // split camelCase to words
-  let output = name.replace(/([A-Z])/g, " $1");
-  // capitalize the first letter
-  output = output.charAt(0).toUpperCase() + output.slice(1);
-  return output;
-};
 
 // get all methods from ZodiacRoles contract
 const proposalRoleModMethods = ZodiacRoles.abi.filter(
@@ -36,7 +29,7 @@ const proposalRoleModMethods = ZodiacRoles.abi.filter(
 );
 // make a list of choices for the select field out of the methods
 export const roleModMethodChoices = proposalRoleModMethods.map((func) => {
-  return { title: formatFunctionName(func?.name || ""), value: func.name };
+  return { title: abiFunctionNameToLabel(func?.name || ""), value: func.name };
 });
 
 // define select field that will be used in all sub steps
@@ -85,7 +78,7 @@ const parseFuncInputDetails = (input: any) => {
   }
 
   return {
-    label: formatFunctionName(input.name),
+    label: abiFunctionNameToLabel(input.name),
     key: input.name,
     internalType: input.internalType,
     type,

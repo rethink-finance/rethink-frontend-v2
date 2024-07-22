@@ -25,7 +25,6 @@ import {
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { useFundStore } from "~/store/fund.store";
-import { useFundsStore } from "~/store/funds.store";
 import { useWeb3Store } from "~/store/web3.store";
 import { useToastStore } from "~/store/toast.store";
 import { prepRoleModEntryInput } from "~/composables/parseNavMethodDetails";
@@ -35,7 +34,6 @@ const emit = defineEmits(["updateBreadcrumbs"]);
 const loading = ref(false);
 
 const fundStore = useFundStore();
-const fundsStore = useFundsStore();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const { selectedFundSlug } = toRefs(useFundStore());
@@ -189,6 +187,9 @@ const submitProposal = async () => {
   const encodedRoleModEntries = [];
   const targets = [];
   const gasValues = [];
+  // TODO this code is almost a complete duplicate of prepRoleModEntryInput and can be refactored...
+  //   this version is slightly more dynamic as it gets function ABI by function name, instead of index value, but
+  //   input data types differ.... we have to unify them and use typescript types
 
   for (let i = 0; i < transactions.length; i++) {
     const trx = transactions[i];
