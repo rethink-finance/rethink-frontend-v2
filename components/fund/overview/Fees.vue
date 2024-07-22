@@ -5,7 +5,7 @@
       subtitle="Management Fee"
       :title2="formatAddress(fund?.managementFeeAddress)"
       subtitle2="Distributed to"
-      :title3="fund?.managementPeriod"
+      :title3="formatPeriod(fund?.managementPeriod)"
       subtitle3="Fee Period (Days)"
       class="main_grid__item"
     />
@@ -15,7 +15,7 @@
       :title2="formatAddress(fund?.performanceFeeAddress)"
       subtitle2="Distributed to"
       :grow-column2="true"
-      :title3="fund?.performancePeriod"
+      :title3="formatPeriod(fund?.performancePeriod)"
       subtitle3="Fee Period (Days)"
       :title4="formatFee(fund.performaceHurdleRateBps)"
       subtitle4="Hurdle Rate"
@@ -50,6 +50,10 @@ export default defineComponent({
     },
   },
   methods: {
+    formatPeriod(period?: any) {
+      if (period == 0) return 365;
+      return period;
+    },
     formatFee(feeBps?: any) {
       if (feeBps === undefined || feeBps === null) return "N/A";
       const feePercent = (Number(feeBps) / 100).toString();
