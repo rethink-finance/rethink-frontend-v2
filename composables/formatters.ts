@@ -28,8 +28,6 @@ export const formatDateLong = (date: Date) => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  console.log("DATE;:", date);
-
   const dayName = days[date.getUTCDay()];
   const monthName = months[date.getUTCMonth()];
   const day = date.getUTCDate();
