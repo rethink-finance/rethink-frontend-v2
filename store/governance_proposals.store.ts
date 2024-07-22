@@ -1,19 +1,19 @@
+import GovernableFund from "assets/contracts/GovernableFund.json";
+import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
 import { eth } from "web3";
-import { ethers } from "ethers";
-import type IGovernanceProposal from "~/types/governance_proposal";
-import { cleanComplexWeb3Data } from "~/composables/utils";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
-import GovernableFund from "assets/contracts/GovernableFund.json";
+import { cleanComplexWeb3Data } from "~/composables/utils";
 import { useFundStore } from "~/store/fund.store";
-import { ProposalStateMapping } from "~/types/enums/governance_proposal";
-import { ClockMode } from "~/types/enums/clock_mode";
-import { useWeb3Store } from "~/store/web3.store";
 import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
+import { ClockMode } from "~/types/enums/clock_mode";
+import { ProposalStateMapping } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
+import type IGovernanceProposal from "~/types/governance_proposal";
 
 interface IState {
   /* Example fund proposals.
@@ -282,10 +282,14 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.createdDatetimeFormatted = formatDate(new Date(Number(block.timestamp) * 1000));
         proposal.createdBlockNumber = event.blockNumber;
 
-        // const voteStartDate = new Date(Number(proposal.voteStart) * 1000);
-        // const voteEndDate = new Date(Number(proposal.voteEnd) * 1000);
-        // console.log("Vote Start Date: ", voteStartDate);
-        // console.log("Vote End Date: ", voteEndDate);
+        // If the clock mode is block number, we have to check a timestamp for the block number.
+        if(this.fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber) {
+          const blockStart = await this.fundStore.web3.eth.getBlock(proposal.voteStart);
+          const blockEnd = await this.fundStore.web3.eth.getBlock(proposal.voteEnd);
+
+          proposal.voteStart = blockStart.timestamp;
+          proposal.voteEnd = blockEnd.timestamp;
+        }
 
         const proposalState = await this.fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
         proposal.state = ProposalStateMapping[proposalState]

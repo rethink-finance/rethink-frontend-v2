@@ -29,7 +29,7 @@
 </template>
 
 <script lang="ts">
-import { formatDate } from "~/composables/formatters";
+import { formatDateLong } from "~/composables/formatters";
 import type IGovernanceProposal from "~/types/governance_proposal";
 
 export default {
@@ -42,10 +42,10 @@ export default {
   computed: {
     parsedRoadmap() {
       const voteStart = this.proposal?.voteStart
-        ? new Date(this.proposal.voteStart)
+        ? new Date(Number(this.proposal.voteStart) * 1000)
         : null;
       const voteEnd = this.proposal?.voteEnd
-        ? new Date(this.proposal.voteEnd)
+        ? new Date(Number(this.proposal.voteEnd) * 1000)
         : null;
 
       // TODO: proposal execution date is missing
@@ -55,21 +55,21 @@ export default {
           title: "Proposal on Chain",
           subtitle: "Start of Voting Period",
           icon: "material-symbols:how-to-vote-outline",
-          date: voteStart ? formatDate(voteStart) : "",
+          date: voteStart ? formatDateLong(voteStart) : "",
           hasStarted: voteStart && new Date() > voteStart,
         },
         {
           title: "Proposal Results",
           subtitle: "End of Voting Period",
           icon: "material-symbols:ballot-outline",
-          date: voteEnd ? formatDate(voteEnd) : "",
+          date: voteEnd ? formatDateLong(voteEnd) : "",
           hasStarted: voteEnd && new Date() > voteEnd,
         },
         {
           title: "Proposal Execution",
           subtitle: "Enactment on Chain",
           icon: "material-symbols:rocket-launch-outline-rounded",
-          date: voteEnd ? formatDate(voteEnd) : "",
+          date: voteEnd ? formatDateLong(voteEnd) : "",
           hasStarted: voteEnd && new Date() > voteEnd,
         },
       ];
@@ -107,6 +107,12 @@ export default {
         display: none;
       }
     }
+  }
+
+  &__date {
+    font-size: 14px;
+    margin-left: 2rem;
+    margin-bottom: 0.25rem;
   }
 
   &__container {

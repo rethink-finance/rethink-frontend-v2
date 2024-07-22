@@ -18,6 +18,32 @@ export const formatDate = (date: Date) => {
 }
 
 /**
+ * Formats a date string into "Day Mon dd, yyyy, hh:mm am/pm" format.
+ *
+ * @param {Date} date - The Date object to be formatted.
+ * @returns {string} The formatted date string.
+ */
+export const formatDateLong = (date: Date) => {
+  if(!date) return "";
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  console.log("DATE;:", date);
+
+  const dayName = days[date.getUTCDay()];
+  const monthName = months[date.getUTCMonth()];
+  const day = date.getUTCDate();
+  const year = date.getUTCFullYear(); // Full year
+  let hour = date.getUTCHours();
+  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+  const ampm = hour >= 12 ? 'pm' : 'am';
+  hour = hour % 12;
+  hour = hour ? hour : 12; // the hour '0' should be '12'
+
+  return `${dayName} ${monthName} ${day}, ${year}, ${hour}:${minutes} ${ampm}`;
+}
+
+/**
  * Converts a decimal number to a percentage string.
  * Optionally includes a "+" or "-" sign based on the number's positivity or negativity,
  * and the percentage value is formatted to two decimal places.
