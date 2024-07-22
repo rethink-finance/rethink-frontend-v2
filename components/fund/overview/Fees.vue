@@ -51,8 +51,8 @@ export default defineComponent({
   },
   methods: {
     formatPeriod(period?: any) {
-      if (period == 0) return 365;
-      return period;
+      if (period == 0) return "365";
+      return JSON.stringify(period);
     },
     formatFee(feeBps?: any) {
       if (feeBps === undefined || feeBps === null) return "N/A";
