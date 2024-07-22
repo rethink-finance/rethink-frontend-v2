@@ -32,11 +32,11 @@ export const formatFieldName = (name: string) => {
 
 // get all methods from ZodiacRoles contract
 const proposalRoleModMethods = ZodiacRoles.abi.filter(
-  (val) => val.type === "function",
+  (func) => func.type === "function",
 );
 // make a list of choices for the select field out of the methods
-export const substepChoices = proposalRoleModMethods.map((val) => {
-  return { title: formatFieldName(val?.name || ""), value: val.name };
+export const roleModMethodChoices = proposalRoleModMethods.map((func) => {
+  return { title: formatFieldName(func?.name || ""), value: func.name };
 });
 
 // define select field that will be used in all sub steps
@@ -44,39 +44,38 @@ const selectField = {
   label: "Contract Method",
   key: "contractMethod",
   type: InputType.Select,
-  defaultValue: substepChoices[0].value,
-  choices: substepChoices,
+  defaultValue: roleModMethodChoices[0].value,
+  choices: roleModMethodChoices,
 };
 
-const defineFieldDetails = (val: any) => {
+const parseFuncInputDetails = (input: any) => {
   const numberTypes = ["uint", "int"];
   const textTypes = ["address", "bytes"];
   const boolTypes = ["bool"];
-
   const addressPlaceholder = "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 
   let type = InputType.Text;
-  let placeholder = `E.g. ${val.type}`.replace("[]", "");
+  let placeholder = `E.g. ${input.type}`.replace("[]", "");
   let rules = [formRules.required];
 
   // default values for select boolean select field
   let choices = [] as { title: string; value: any }[];
   let defaultValue;
 
-  if (numberTypes.some((type) => val.type.includes(type))) {
+  if (numberTypes.some((type) => input.type.includes(type))) {
     type = InputType.Number;
 
-    if (val.type.includes("uint8")) {
+    if (input.type.includes("uint8")) {
       rules = [formRules.required, formRules.isValidUint8];
-    } else if (val.type.includes("uint16")) {
+    } else if (input.type.includes("uint16")) {
       rules = [formRules.required, formRules.isValidUint16];
     }
-  } else if (textTypes.some((type) => val.type.includes(type))) {
-    if (val.type.includes("address")) {
+  } else if (textTypes.some((type) => input.type.includes(type))) {
+    if (input.type.includes("address")) {
       placeholder = addressPlaceholder;
     }
     rules = [formRules.required, formRules.isValidAddress];
-  } else if (boolTypes.some((type) => val.type.includes(type))) {
+  } else if (boolTypes.some((type) => input.type.includes(type))) {
     type = InputType.Select;
     choices = [
       { title: "True", value: true },
@@ -85,58 +84,33 @@ const defineFieldDetails = (val: any) => {
     defaultValue = false;
   }
 
-  return { type, placeholder, rules, choices, defaultValue };
+  return {
+    label: formatFieldName(input.name),
+    key: input.name,
+    type,
+    rules,
+    placeholder,
+    isArray: input.type.includes("[]"),
+    choices,
+    defaultValue,
+  }
 };
 
 // shape sub step fields for each method from ZodiacRoles contract
-export const allSubSteps = proposalRoleModMethods.map((val: any) => {
-  const subStepFields = val.inputs.map((input: any) => {
-    const {
-      type,
-      placeholder,
-      rules,
-      choices,
-      defaultValue,
-    } = defineFieldDetails(input);
-
-    return {
-      label: formatFieldName(input.name),
-      key: input.name,
-      type,
-      rules,
-      placeholder,
-      isArray: input.type.includes("[]"),
-      choices,
-      defaultValue,
-    };
-  });
+export const allSubSteps = proposalRoleModMethods.reduce((acc: any, func: any) => {
+  const subStepFields = func.inputs.map(parseFuncInputDetails);
 
   const selectFieldForSubStep = JSON.parse(JSON.stringify(selectField));
-  selectFieldForSubStep.defaultValue = val.name;
+  selectFieldForSubStep.defaultValue = func.name;
 
-  // add select field to the beginning of each substep
-  const subStepFieldsWithSelect = [selectFieldForSubStep, ...subStepFields];
-
-  return {
-    [val.name]: subStepFieldsWithSelect,
-  };
-});
-
-// format array to object
-function formatArrayToObject(array: { [key: string]: any }[]): any {
-  const result: any = {};
-
-  array.forEach((item) => {
-    const key = Object.keys(item)[0];
-    result[key] = item[key];
-  });
-
-  return result;
-}
+  // add select field to the beginning of each sub-step
+  acc[func.name] = [selectFieldForSubStep, ...subStepFields];
+  return acc;
+}, {});
 
 // define fields map
 export const DelegatedPermissionFieldsMap: any = {
-  [DelegatedStep.Setup]: formatArrayToObject(allSubSteps),
+  [DelegatedStep.Setup]: allSubSteps,
 
   [DelegatedStep.Details]: [
     {

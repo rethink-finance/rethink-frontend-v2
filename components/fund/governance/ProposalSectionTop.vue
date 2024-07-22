@@ -221,10 +221,6 @@ const submitButtonText = computed(() => {
   return "Submit Vote";
 });
 
-const submitButtonTextExecute = computed(() => {
-  return "Execute Proposal"
-});
-
 const isVoteDialogOpen = ref(false);
 const selectedVoteOption = ref<number>();
 const copyText = (text: string) => {
