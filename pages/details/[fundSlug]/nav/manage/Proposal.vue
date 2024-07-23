@@ -252,59 +252,50 @@ const getMethodsPastNAVUpdateIndex = (methods: Record<string, any>[]) => {
 const generateNAVPermission = (encodedNavUpdateEntries: string) =>  {
   // Default NAV entry permission
   const navEntryPermission: Record<string, any> = {
-    "idx": 0,
     "value": [
       {
-        "idx": 0,
         "isArray": false,
         "data": "1",
         "internalType": "uint16",
         "name": "role",
       },
       {
-        "idx": 1,
         "isArray": false,
         "data": null,
         "internalType": "address",
         "name": "targetAddress",
       },
       {
-        "idx": 2,
         "isArray": false,
         "data": null,
         "internalType": "bytes4",
         "name": "functionSig",
       },
       {
-        "idx": 3,
         "isArray": true,
         "data": [],
         "internalType": "bool[]",
         "name": "isParamScoped",
       },
       {
-        "idx": 4,
         "isArray": true,
         "data": [],
         "internalType": "enum ParameterType[]",
         "name": "paramType",
       },
       {
-        "idx": 5,
         "isArray": true,
         "data": [],
         "internalType": "enum Comparison[]",
         "name": "paramComp",
       },
       {
-        "idx": 6,
         "isArray": true,
         "data": [],
         "internalType": "bytes[]",
         "name": "compValue",
       },
       {
-        "idx": 7,
         "isArray": false,
         "data": "1",
         "internalType": "enum ExecutionOptions",
@@ -364,7 +355,6 @@ const encodeRoleModEntries = async (proposalEntries: any[]): Promise<[any[], any
     for (let j = 0; j< proposalEntries[i].value.length; j++) {
       /*
         {
-          "idx": 0,
           "isArray": false,
           "data": "0xe977757dA5fd73Ca3D2bA6b7B544bdF42bb2CBf6",
           "internalType": "address",
@@ -459,20 +449,16 @@ const createProposal = async () => {
     console.log("encodedRoleModEntries: ", encodedRoleModEntries);
     console.log("roleModTargets: ", roleModTargets);
     console.log("roleModGasValues: ", roleModGasValues);
-
     /*
-      TODO:
+      TODO: NEED TO SETUP NEW NAV PERMISSION
 
-        
-        NEED TO SETUP NEW NAV PERMISSION
-        
         //target address is fund contract
         component.defaultNavEntryPermission[0].value[1].data = component.getSelectedFundAddress;
         //again, need to set target addr for scope target
         component.defaultNavEntryPermission[1].value[1].data = component.getSelectedFundAddress;
         //functionSig
         component.defaultNavEntryPermission[0].value[2].data = "0xa61f5814";
-        
+
         //raw data to permission
         let navExecutorAddr = addresses["NAVExecutorBeaconProxy"][parseInt(component.chainId)];
         console.log(navExecutorAddr);
@@ -490,12 +476,10 @@ const createProposal = async () => {
         component.defaultNavEntryPermission[0].value[6].data = navWords;
     */
   }
-
-
   const encodedDataStoreNAVDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
     storeNAVDataABI as AbiFunctionFragment, [fundStore.fund?.address, encodedNavUpdateEntries],
   );
-  const navExecutorAddr = addresses["NAVExecutorBeaconProxy"][web3Store.chainId];
+  const navExecutorAddr = addresses.NAVExecutorBeaconProxy[web3Store.chainId];
 
 
   /*
@@ -521,53 +505,58 @@ const createProposal = async () => {
   loading.value = true;
 
   // ADD encoded entries for OIV permissions
-  fundStore.fundGovernorContract.methods.propose(
-    [
-      fundStore.fund?.address,
-      fundStore.fund?.address,
-      fundStore.fund?.address,
-      fundStore.fund?.address,
-      navExecutorAddr,
-      ...roleModTargets,
-    ],
-    [0,0,0,0,0, ...roleModGasValues],
-    [
-      encodedNavUpdateEntries,
-      encodedCollectFlowFeesAbiJSON,
-      encodedCollectManagerFeesAbiJSON,
-      encodedCollectPerformanceFeesAbiJSON,
-      encodedDataStoreNAVDataNavUpdateEntries,
-      ...encodedRoleModEntries,
-    ],
-    JSON.stringify({
-      title: proposal.value.title,
-      description: proposal.value.description,
-    }),
-  ).send({
-    from: fundStore.activeAccountAddress,
-    maxPriorityFeePerGas: undefined,
-    maxFeePerGas: undefined,
-  }).on("transactionHash", (hash: string) => {
-    console.log("tx hash: " + hash);
-    toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
-  }).on("receipt", (receipt: any) => {
-    console.log("receipt: ", receipt);
-    if (receipt.status) {
-      toastStore.successToast(
-        "Register the proposal transactions was successful. " +
-        "You can now vote on the proposal in the governance page.",
-      );
-    } else {
-      toastStore.errorToast(
-        "The register proposal transaction has failed. Please contact the Rethink Finance support.",
-      );
-    }
+  try {
+    await fundStore.fundGovernorContract.methods.propose(
+      [
+        fundStore.fund?.address,
+        fundStore.fund?.address,
+        fundStore.fund?.address,
+        fundStore.fund?.address,
+        navExecutorAddr,
+        ...roleModTargets,
+      ],
+      [0,0,0,0,0, ...roleModGasValues],
+      [
+        encodedNavUpdateEntries,
+        encodedCollectFlowFeesAbiJSON,
+        encodedCollectManagerFeesAbiJSON,
+        encodedCollectPerformanceFeesAbiJSON,
+        encodedDataStoreNAVDataNavUpdateEntries,
+        ...encodedRoleModEntries,
+      ],
+      JSON.stringify({
+        title: proposal.value.title,
+        description: proposal.value.description,
+      }),
+    ).send({
+      from: fundStore.activeAccountAddress,
+      maxPriorityFeePerGas: undefined,
+      maxFeePerGas: undefined,
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
+      if (receipt.status) {
+        toastStore.successToast(
+          "Register the proposal transactions was successful. " +
+          "You can now vote on the proposal in the governance page.",
+        );
+      } else {
+        toastStore.errorToast(
+          "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+        );
+      }
+      loading.value = false;
+    }).on("error", (error: any) => {
+      console.error(error);
+      loading.value = false;
+      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    });
+  } catch (error: any) {
     loading.value = false;
-  }).on("error", (error: any) => {
-    console.error(error);
-    loading.value = false;
-    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-  });
+    toastStore.errorToast(error.message);
+  }
 }
 
 </script>

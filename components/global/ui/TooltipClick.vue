@@ -1,6 +1,6 @@
 <template>
   <v-tooltip v-model="show" :open-on-hover="false" :location="location">
-    <template v-slot:activator="{ props }">
+    <template #activator="{ props }">
       <div v-bind="props" @click="showTooltip">
         <slot />
       </div>

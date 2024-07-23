@@ -147,6 +147,13 @@
       </div>
     </div>
   </div>
+  <v-progress-circular
+    v-else-if="loadingProposal"
+    class="loading_spinner"
+    size="50"
+    width="3"
+    indeterminate
+  />
   <div v-else class="text-center mt-6 align-center">
     Oops, proposal data is not available.
   </div>
@@ -158,18 +165,20 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { useWeb3Store } from "~/store/web3.store";
+import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
-import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const route = useRoute();
-const proposalId = route.params.proposalId as string;
+const proposalSlug = route.params.proposalId as string;
+const [createdBlockNumber, proposalId] = proposalSlug.split("-") as [bigint, string];
 const fundSlug = route.params.fundSlug as string;
 const showRawCalldatas = ref(false);
+const loadingProposal = ref(false);
 console.log("proposal", proposalId);
 console.log("fundSlug", fundSlug);
 
@@ -266,8 +275,15 @@ const formatCalldata = (calldata: any) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   emit("updateBreadcrumbs", breadcrumbItems);
+
+  // fetch block proposals based on createdBlockNumber
+  loadingProposal.value = true;
+  try {
+    await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
+  } catch {}
+  loadingProposal.value = false;
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
@@ -390,5 +406,9 @@ onBeforeUnmount(() => {
       width: 25%;
     }
   }
+}
+.loading_spinner {
+  display: flex;
+  margin: 50px auto 0;
 }
 </style>

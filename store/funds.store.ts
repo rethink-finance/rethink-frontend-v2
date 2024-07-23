@@ -1,14 +1,16 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import type { AbiInput } from "web3";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
+import SafeMultiSendCallOnlyJson from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import { useFundStore } from "~/store/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
+import type { IContractAddresses } from "~/types/addresses";
 import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
@@ -19,33 +21,48 @@ import type IToken from "~/types/token";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
+const SafeMultiSendCallOnlyAddresses: IContractAddresses = SafeMultiSendCallOnlyJson.networkAddresses as IContractAddresses;
 
 const GovernableFundFactoryContractName = "GovernableFundFactoryBeaconProxy";
 const RethinkReaderContractName = "RethinkReader";
-const isExcludeFunds = true;
-const isExcludeNAVDetails = true;
 
-
-// interface
-export interface IExcludeFundAddr {
-  [chainId: string]: string[]
-};
+// You can see test funds by storing:
+// excludeTestFunds: false
+// to local storage.
+const excludeTestFunds = getLocalStorageItem("excludeTestFunds", true);
+const excludeNAVDetails = true;
 
 // interface
 export interface IExcludeNAVDetailsHashes {
   [chainId: string]: string[]
-};
+}
 
 /*
-  @dev: TODO: MOVE BELOW TO FILE(s)
+  @dev: TODO: MOVE excludeFundAddrs TO FILE
 */
 const excludeFundAddrs = {
-  "0x89": ["0x0657DC652F88B55Dd16f5D6cE687672264f9b61E", "0x8fAE33f10854c20a811246849A0d4131caf72125", "0x6DFbEE70f1250C2dECb3E9bCb2BE3AF19b15e631", "0xf48E3fa13cb2390e472cf1CA64F941eB7BD27475", "0x82CBA6D1A6dCeb408d7F048493262b83c9744f4D", "0xcfD904C4C857784686029995886d627da1aeFbe4", "0xe93CB20Fc113355753B6D237c3949E0452981dC3", "0x6edC5f675C5A20e867aeF0633033a17EA256637E", "0x920fdA0F59bDc852eD19e3ad975a808101ea2a29", "0x1550D564fEBE8c398F3cc398c9ac2a9e89E89A4F", "0x07094Bb5f175A4E6b074e5E79F6439a8A929533B", "0x98F1c2035680E4215cD5726a11279da96C07835F"],
+  "0x89": [
+    "0x0657DC652F88B55Dd16f5D6cE687672264f9b61E",
+    "0x8fAE33f10854c20a811246849A0d4131caf72125",
+    "0x6DFbEE70f1250C2dECb3E9bCb2BE3AF19b15e631",
+    "0xf48E3fa13cb2390e472cf1CA64F941eB7BD27475",
+    "0x82CBA6D1A6dCeb408d7F048493262b83c9744f4D",
+    "0xcfD904C4C857784686029995886d627da1aeFbe4",
+    "0xe93CB20Fc113355753B6D237c3949E0452981dC3",
+    "0x6edC5f675C5A20e867aeF0633033a17EA256637E",
+    "0x920fdA0F59bDc852eD19e3ad975a808101ea2a29",
+    "0x1550D564fEBE8c398F3cc398c9ac2a9e89E89A4F",
+    "0x07094Bb5f175A4E6b074e5E79F6439a8A929533B",
+    "0x98F1c2035680E4215cD5726a11279da96C07835F",
+  ],
   "0xa4b1": [],
   "0xfc": [],
   "0x1": [],
-} as IExcludeFundAddr;
+} as Record<string, string[]>;
 
+/*
+  @dev: TODO: MOVE excludeNAVDetailsHashes TO FILE
+*/
 const excludeNAVDetailsHashes = {
   "0x89": [],
   "0xa4b1": [],
@@ -53,9 +70,6 @@ const excludeNAVDetailsHashes = {
   "0x1": [],
 } as IExcludeNAVDetailsHashes;
 
-/*
-  @dev: TODO: MOVE ABOVE TO FILE(s)
-*/
 interface IState {
   funds: IFund[];
   // All original NAV methods.
@@ -95,6 +109,9 @@ export const useFundsStore = defineStore({
     rethinkReaderContract(): Contract {
       const contractAddress = addresses[RethinkReaderContractName][this.web3Store.chainId];
       return new this.web3.eth.Contract(RethinkReader.abi, contractAddress)
+    },
+    safeMultiSendCallOnlyToAddress(): string {
+      return SafeMultiSendCallOnlyAddresses[parseInt(this.web3Store.chainId).toString()]
     },
   },
   actions: {
@@ -149,12 +166,10 @@ export const useFundsStore = defineStore({
 
         // @dev NOTE: there is also: totalDepositBal for each fund if we need it.
         fundAddresses.forEach((address, index) => {
-          if (isExcludeFunds) {
-            let fieldName = this.web3Store.chainId as keyof IExcludeFundAddr;
-
-            if (excludeFundAddrs[fieldName].indexOf(address) > -1) {
-                return;
-            }
+          if (
+            excludeTestFunds &&
+            excludeFundAddrs[this.web3Store.chainId].includes(address)) {
+            return;
           }
 
           const fundStartTime = dataNAVs.startTime[index];
@@ -317,14 +332,11 @@ export const useFundsStore = defineStore({
               // console.log("[KEEP] navEntry: ", navEntry);
               const parsedNavEntry: INAVMethod = this.fundStore.parseNAVEntry(navEntry);
 
-
-              if (parsedNavEntry.detailsHash) {
-                if (isExcludeNAVDetails) {
-                  let chainID_ = this.web3Store.chainId as keyof IExcludeFundAddr;
-                  if (excludeNAVDetailsHashes[chainID_].indexOf(parsedNavEntry.detailsHash) > -1) {
-                      return;
-                  }
-                }
+              if (
+                excludeNAVDetails &&
+                parsedNavEntry.detailsHash &&
+                excludeNAVDetailsHashes[this.web3Store.chainId].includes(parsedNavEntry.detailsHash)) {
+                return;
               }
 
               // Set the past NAV update entry fund address to the original fund address
