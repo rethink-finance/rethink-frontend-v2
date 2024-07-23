@@ -3,7 +3,6 @@
     <UiDataRowCard
       :title="depositsTitle"
       :body="depositsBody"
-      subtitle="Whitelist"
     />
   </div>
 </template>
