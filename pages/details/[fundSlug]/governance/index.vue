@@ -187,11 +187,11 @@ const dropdownOptions: Record<string, DropdownOption> = {
       );
     },
   },
-  "Delegated permissions": {
+  "Delegated Permissions": {
     click: () => {
       // change route to delegated permissions
       router.push(
-        `/details/${fundStore.selectedFundSlug}/governance/delegated-permission`,
+        `/details/${fundStore.selectedFundSlug}/governance/delegated-permissions`,
       );
     },
   },
