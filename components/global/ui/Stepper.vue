@@ -58,7 +58,7 @@
               <div class="sub-steps__label">
                 {{
                   substep[step.subStepKey]
-                    ? formatFieldName(substep[step.subStepKey])
+                    ? abiFunctionNameToLabel(substep[step.subStepKey])
                     : step.subStepLabel + " " + (substepIndex + 1)
                 }}
               </div>
@@ -129,9 +129,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-
 import { useToastStore } from "~/store/toast.store";
-import { formatFieldName } from "~/types/enums/delegated_permission";
 const toastStore = useToastStore();
 
 const emit = defineEmits(["fields-changed"]);

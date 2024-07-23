@@ -6,9 +6,9 @@
       :fields-map="fieldsMap"
       title="Delegated Permissions Proposal"
       tooltip-text="We can show more info text, redirect to a new page etc."
-      :tooltip-click="tooltipClick"
       submit-label="Create Proposal"
       :submit-event="submitProposal"
+      :is-submit-loading="loading"
       @fields-changed="contractMethodChanged"
     />
   </div>
@@ -18,17 +18,24 @@
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
-  DelegatedStepMap,
-  allSubSteps,
+  DelegatedStepMap, proposalRoleModMethodAbiMap,
+  proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { useFundStore } from "~/store/fund.store";
+import { useWeb3Store } from "~/store/web3.store";
+import { useToastStore } from "~/store/toast.store";
+import { prepRoleModEntryInput } from "~/composables/parseNavMethodDetails";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
+const loading = ref(false);
 
+const fundStore = useFundStore();
+const web3Store = useWeb3Store();
+const toastStore = useToastStore();
 const { selectedFundSlug } = toRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -38,9 +45,10 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-// format substeps for the stepper
-const allSubstepsFormatted = formatArrayToObject(allSubSteps);
-
+// TODO revert to scopeFunction
+// const defaultMethod = formatInputToObject(proposalRoleModMethodStepsMap.scopeFunction);
+const defaultMethod = formatInputToObject(proposalRoleModMethodStepsMap.allowTarget);
+console.log(proposalRoleModMethodStepsMap);
 const delegatedEntry = ref([
   {
     stepName: DelegatedStep.Setup,
@@ -49,13 +57,13 @@ const delegatedEntry = ref([
     formText: DelegatedStepMap[DelegatedStep.Setup].formText,
 
     // default value when adding a new sub step
-    stepDefaultValues: formatInputToObject(allSubstepsFormatted.scopeFunction),
+    stepDefaultValues: defaultMethod,
 
     subStepKey: "contractMethod",
     multipleSteps: true,
     subStepLabel: "Permission",
     // default values for the first sub step
-    steps: [formatInputToObject(allSubstepsFormatted.scopeFunction)],
+    steps: [defaultMethod],
   },
   {
     stepName: DelegatedStep.Details,
@@ -77,20 +85,11 @@ const delegatedEntry = ref([
 
 const fieldsMap = ref(DelegatedPermissionFieldsMap);
 
-function formatArrayToObject(array: { [key: string]: any }[]): any {
-  const result: any = {};
-
-  array.forEach((item) => {
-    const key = Object.keys(item)[0];
-    result[key] = item[key];
-  });
-
-  return result;
-}
-
 function formatInputToObject(input: any) {
+  /*
+  input parameter is an actual function ABI from the RolesFull.json RoleMod contract.
+   */
   const result = {} as any;
-
   console.log("input: ", input);
 
   input?.forEach((item: any) => {
@@ -121,7 +120,7 @@ function formatInputToObject(input: any) {
     }
 
     result[key] = value;
-  }) || {};
+  });
 
   return result;
 }
@@ -138,7 +137,7 @@ const contractMethodChanged = (
 
   // we need to formatInputToObject for the new substep inputs based on the contractMethod
   const newInput = formatInputToObject(
-    allSubstepsFormatted[step.contractMethod],
+    proposalRoleModMethodStepsMap[step.contractMethod],
   );
   newInput.isValid = false;
 
@@ -176,15 +175,95 @@ const contractMethodChanged = (
   Object.assign(currentInputs, newInput); // add new input to the current inputs
 };
 
-const submitProposal = () => {
-  alert("submit proposal");
-  console.log("delegatedEntry: ", delegatedEntry.value);
-};
+const submitProposal = async () => {
+  const transactions = delegatedEntry.value.find(step => step.stepName === DelegatedStep.Setup)?.steps as any[];
+  const details = delegatedEntry.value.find(step => step.stepName === DelegatedStep.Details)?.steps[0];
+  if (!web3Store.web3 || !details || !transactions?.length) return;
 
-const tooltipClick = () => {
-  console.log(
-    "we can redirect to a new page, show a tooltip message or do whatever we want here",
+  const roleModAddress = await fundStore.getRoleModAddress();
+
+  console.log(toRaw(transactions));
+  console.log(toRaw(details));
+  const encodedRoleModEntries = [];
+  const targets = [];
+  const gasValues = [];
+  // TODO this code is almost a complete duplicate of prepRoleModEntryInput and can be refactored...
+  //   this version is slightly more dynamic as it gets function ABI by function name, instead of index value, but
+  //   input data types differ.... we have to unify them and use typescript types
+
+  for (let i = 0; i < transactions.length; i++) {
+    const trx = transactions[i];
+    // Make sure function parameters are in the correct order, take them from function ABI and copy from the trx data
+    // that was filled from the form inputs. Then prepare data, parsing/casting to correct types.
+    const roleModFunctionData = proposalRoleModMethodStepsMap[trx.contractMethod].filter(
+      (method: any) => method.key !== "contractMethod",
+    ).map(
+      (method: any) => prepRoleModEntryInput(
+        {
+          ...method,
+          data: trx[method.key],
+        },
+      ),
+    )
+    const encodedRoleModFunction = web3Store.web3?.eth.abi.encodeFunctionCall(
+      proposalRoleModMethodAbiMap[trx.contractMethod], roleModFunctionData,
+    );
+    encodedRoleModEntries.push(encodedRoleModFunction);
+    targets.push(roleModAddress);
+    gasValues.push(0)
+  }
+  console.log("propose:",
+    JSON.stringify(
+      [
+        targets,
+        gasValues,
+        encodedRoleModEntries,
+        JSON.stringify({
+          title: details?.proposalTitle,
+          description: details?.proposalDescription,
+        }),
+      ], null, 2),
   );
+  loading.value = true;
+
+  try {
+    await fundStore.fundGovernorContract.methods.propose(
+      targets,
+      gasValues,
+      encodedRoleModEntries,
+      JSON.stringify({
+        title: details?.proposalTitle,
+        description: details?.proposalDescription,
+      }),
+    ).send({
+      from: fundStore.activeAccountAddress,
+      maxPriorityFeePerGas: undefined,
+      maxFeePerGas: undefined,
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
+      if (receipt.status) {
+        toastStore.successToast(
+          "Register the proposal transactions was successful. " +
+          "You can now vote on the proposal in the governance page.",
+        );
+      } else {
+        toastStore.errorToast(
+          "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+        );
+      }
+      loading.value = false;
+    }).on("error", (error: any) => {
+      console.error(error);
+      loading.value = false;
+      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    });
+  } catch (error: any) {
+    loading.value = false;
+    toastStore.errorToast(error.message);
+  }
 };
 
 onMounted(() => {
@@ -193,7 +272,4 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.delegated-permission {
-}
 </style>
-[ "" ]

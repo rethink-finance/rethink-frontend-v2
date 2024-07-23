@@ -112,3 +112,11 @@ export const formatTokenValue = (value: bigint, decimals: number, shouldCommify 
     return ethers.formatUnits(value, decimals);
   }
 }
+
+export const abiFunctionNameToLabel = (name: string) => {
+  // split camelCase to words
+  let output = name.replace(/([A-Z])/g, " $1");
+  // capitalize the first letter
+  output = output.charAt(0).toUpperCase() + output.slice(1);
+  return output;
+};
