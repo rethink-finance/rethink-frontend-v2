@@ -14,17 +14,6 @@
               <FundOverviewBasics :fund="fund" />
             </div>
           </div>
-
-          <div class="main_card">
-            <div class="main_expansion_panel__subtitle">
-              Fees
-            </div>
-            <div>
-              <FundOverviewFees :fund="fund" />
-            </div>
-          </div>
-
-
           <div class="main_card">
             <div class="main_expansion_panel__subtitle">
               Whitelist
@@ -34,6 +23,14 @@
             </div>
           </div>
 
+          <div class="main_card">
+            <div class="main_expansion_panel__subtitle">
+              Fees
+            </div>
+            <div>
+              <FundOverviewFees :fund="fund" />
+            </div>
+          </div>
         </v-expansion-panel-text>
       </v-expansion-panel>
       <v-expansion-panel
