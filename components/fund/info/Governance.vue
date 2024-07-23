@@ -17,12 +17,6 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
-          {{ userFundGovernanceTokenFormatted }}
-        </div>
-        <div class="data_bar__subtitle">Gov. Token</div>
-      </div>
-      <div class="data_bar__item">
-        <div class="data_bar__title">
           {{ userGovernanceTokenBalanceFormatted }}
           {{ fund.governanceToken.symbol }}
         </div>

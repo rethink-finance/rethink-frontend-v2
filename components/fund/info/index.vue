@@ -44,7 +44,7 @@ export default {
     grid-template-columns: 1fr;
 
     @include lg {
-      grid-template-columns: 4fr 6fr;
+      grid-template-columns: 6fr 6fr;
     }
   }
 }
