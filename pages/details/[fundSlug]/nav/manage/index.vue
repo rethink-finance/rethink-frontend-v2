@@ -2,16 +2,12 @@
   <div>
     <UiHeader>
       <div>
-        <div class="main_header__title">
-          Manage NAV Methods
-        </div>
+        <div class="main_header__title">Manage NAV Methods</div>
       </div>
       <div>
         <FundNavSimulateDialog />
 
-        <nuxt-link
-          :to="`/details/${selectedFundSlug}/nav/manage/proposal`"
-        >
+        <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/proposal`">
           <v-btn class="bg-primary text-secondary ms-6">
             Create NAV Proposal
           </v-btn>
@@ -21,33 +17,20 @@
     <div class="main_card">
       <UiHeader>
         <div>
-          <nuxt-link
-            :to="`/details/${selectedFundSlug}/nav/manage/newMethod`"
-          >
-            <v-btn
-              class="text-secondary me-4"
-              variant="outlined"
-            >
+          <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/newMethod`">
+            <v-btn class="text-secondary me-4" variant="outlined">
               Define New Method
             </v-btn>
           </nuxt-link>
           <nuxt-link
             :to="`/details/${selectedFundSlug}/nav/manage/addFromLibrary`"
           >
-            <v-btn
-              class="text-secondary"
-              variant="outlined"
-            >
+            <v-btn class="text-secondary" variant="outlined">
               Add From Library
             </v-btn>
           </nuxt-link>
         </div>
-        <!--        TODO implement saving/loading drafts to local storage -->
-        <v-btn
-          class="text-secondary"
-          variant="outlined"
-          disabled
-        >
+        <v-btn class="text-secondary" variant="outlined" @click="saveDraft">
           Save Draft
         </v-btn>
       </UiHeader>
@@ -58,10 +41,19 @@
 
 <script setup lang="ts">
 import { useFundStore } from "~/store/fund.store";
+import { useToastStore } from "~/store/toast.store";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 
-const { selectedFundSlug, fundManagedNAVMethods, fundLastNAVUpdateEntries } = toRefs(useFundStore());
+const {
+  selectedFundSlug,
+  selectedFundAddress,
+  fundManagedNAVMethods,
+  fundLastNAVUpdateEntries,
+} = toRefs(useFundStore());
+
+const toastStore = useToastStore();
+const fundManagedNAVMethodsLocalStorage = ref({});
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -76,6 +68,34 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
+const getItemFromLocalStorage = (key: string) => {
+  const item = localStorage.getItem(key);
+  return item ? JSON.parse(item) : null;
+};
+
+const setItemInLocalStorage = (key: string, value: any) => {
+  localStorage.setItem(key, JSON.stringify(value));
+};
+
+const saveDraft = () => {
+  try {
+    let navUpdateEntries = getItemFromLocalStorage("navUpdateEntries");
+    if (!navUpdateEntries) {
+      navUpdateEntries = {};
+    }
+
+    navUpdateEntries[selectedFundAddress.value] = JSON.parse(
+      JSON.stringify(fundManagedNAVMethods.value)
+    );
+
+    setItemInLocalStorage("navUpdateEntries", navUpdateEntries);
+    toastStore.successToast("Draft saved successfully");
+  } catch (e) {
+    console.error(e);
+    toastStore.errorToast("Failed to save draft");
+  }
+};
+
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
 });
@@ -84,6 +104,4 @@ onBeforeUnmount(() => {
 });
 </script>
 
-<style scoped lang="scss">
-
-</style>
+<style scoped lang="scss"></style>
