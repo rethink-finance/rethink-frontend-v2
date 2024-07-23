@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -274,6 +274,9 @@ export const useFundStore = defineStore({
         const results = await Promise.allSettled([
           fundContract.methods.getFundStartTime().call(),
           fundContract.methods.fundMetadata().call() as Promise<string>,
+          fundContract.methods._feeBal().call() as Promise<string>,
+          fundBaseTokenContract.methods.balanceOf(fundSettings.safe).call() as Promise<string>,
+          fundBaseTokenContract.methods.balanceOf(fundSettings.fundAddress).call() as Promise<string>,
           this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken) as Promise<string>,
           this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken) as Promise<number>,
           this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken) as Promise<string>,
@@ -294,6 +297,9 @@ export const useFundStore = defineStore({
         const [
           fundStartTime,
           metaDataJson,
+          feeBalance,
+          safeContractBaseTokenBalance,
+          fundContractBaseTokenBalance,
           baseTokenSymbol,
           baseTokenDecimals,
           governanceTokenSymbol,
@@ -397,6 +403,9 @@ export const useFundStore = defineStore({
           performanceFeeAddress: fundSettings.feeCollectors[3],
           performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
           feeCollectors: fundSettings.feeCollectors,
+          feeBalance,
+          safeContractBaseTokenBalance,
+          fundContractBaseTokenBalance,
 
           // NAV Updates
           navUpdates: [] as INAVUpdate[],
