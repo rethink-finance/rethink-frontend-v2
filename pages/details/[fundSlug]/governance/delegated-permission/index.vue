@@ -45,10 +45,8 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-// TODO revert to scopeFunction
-// const defaultMethod = formatInputToObject(proposalRoleModMethodStepsMap.scopeFunction);
-const defaultMethod = formatInputToObject(proposalRoleModMethodStepsMap.allowTarget);
-console.log(proposalRoleModMethodStepsMap);
+const defaultMethod = formatInputToObject(proposalRoleModMethodStepsMap.scopeFunction);
+
 const delegatedEntry = ref([
   {
     stepName: DelegatedStep.Setup,
@@ -131,10 +129,6 @@ const contractMethodChanged = (
   subStepIndex: any,
   step: any,
 ) => {
-  // console.log("mainStepName: ", mainStepName);
-  // console.log("subStepIndex: ", subStepIndex);
-  // console.log("step: ", step);
-
   // we need to formatInputToObject for the new substep inputs based on the contractMethod
   const newInput = formatInputToObject(
     proposalRoleModMethodStepsMap[step.contractMethod],
