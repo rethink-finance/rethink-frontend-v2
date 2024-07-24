@@ -12,7 +12,7 @@
     >
       <template #header-right>
         <UiDropdown
-          :options="dropdownOptionsItems"
+          :options="createProposalDropdownOptions"
           label="Create Proposal"
           @update:selected="selectOption"
           @click="startFetch"
@@ -187,17 +187,19 @@ const dropdownOptions: Record<string, DropdownOption> = {
       );
     },
   },
-  "Delegated permissions": {
+  "Delegated Permissions": {
     click: () => {
       // change route to delegated permissions
       router.push(
-        `/details/${fundStore.selectedFundSlug}/governance/delegated-permission`,
+        `/details/${fundStore.selectedFundSlug}/governance/delegated-permissions`,
       );
     },
   },
   "NAV Methods": {
     click: () => {
-      console.log("NAV Methods");
+      router.push(
+        `/details/${fundStore.selectedFundSlug}/nav/manage`,
+      );
     },
   },
   "Fund Settings": {
@@ -208,7 +210,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
   },
 };
 
-const dropdownOptionsItems = Object.keys(dropdownOptions).map((key) => {
+const createProposalDropdownOptions = Object.keys(dropdownOptions).map((key) => {
   return {
     label: key,
     disabled: dropdownOptions[key]?.disabled || false,

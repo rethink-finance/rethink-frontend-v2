@@ -252,6 +252,9 @@ export const useFundsStore = defineStore({
             performanceFeeAddress: "",
             performaceHurdleRateBps: "",
             feeCollectors: [],
+            feeBalance: BigInt(0),  // in base token
+            safeContractBaseTokenBalance: BigInt(0),
+            fundContractBaseTokenBalance: BigInt(0),
 
             // NAV Updates
             navUpdates: [] as INAVUpdate[],
