@@ -24,12 +24,38 @@
           <div class="di_card__subtext">
             Simulate NAV before updating or creating a proposal
           </div>
-          <div class="d-flex mb-5">
+          <div class="d-flex mb-2">
             <div class="di_card__text_total">
-              Total NAV:
+              <strong>Total NAV:</strong>
             </div>
             <div class="di_card__text_value">
               {{ formattedTotalSimulatedNAV }}
+            </div>
+          </div>
+          <div class="di_card__balances">
+            <div class="d-flex">
+              <div class="di_card__text_total">
+                Fund Contract Balance:
+              </div>
+              <div class="di_card__text_value">
+                {{ formattedFundContractBaseTokenBalance }}
+              </div>
+            </div>
+            <div class="d-flex">
+              <div class="di_card__text_total">
+                Safe Balance:
+              </div>
+              <div class="di_card__text_value">
+                {{ formattedSafeContractBaseTokenBalance }}
+              </div>
+            </div>
+            <div class="d-flex">
+              <div class="di_card__text_total">
+                Fees Balance:
+              </div>
+              <div class="di_card__text_value">
+                {{ formattedFeeBalance }}
+              </div>
             </div>
           </div>
         </v-card-title>
@@ -91,7 +117,24 @@ const totalSimulatedNAV = ref(0n);
 const { fundManagedNAVMethods } = toRefs(fundStore);
 
 const formattedTotalSimulatedNAV = computed(() => {
-  return formatNAV(totalSimulatedNAV.value);
+  const fund = fundStore.fund;
+  const totalNAV = (
+    totalSimulatedNAV.value +
+    (fund?.fundContractBaseTokenBalance || 0n) +
+    (fund?.safeContractBaseTokenBalance || 0n) +
+    (fund?.feeBalance || 0n)
+  );
+  return formatNAV(totalNAV);
+});
+
+const formattedFeeBalance = computed(() => {
+  return formatNAV(fundStore.fund?.feeBalance);
+});
+const formattedSafeContractBaseTokenBalance = computed(() => {
+  return formatNAV(fundStore.fund?.safeContractBaseTokenBalance);
+});
+const formattedFundContractBaseTokenBalance = computed(() => {
+  return formatNAV(fundStore.fund?.fundContractBaseTokenBalance);
 });
 
 const formatNAV = (value: any) => {
@@ -205,6 +248,9 @@ onMounted(async () => {
   @include borderGray;
   color: white;
 
+  &__balances {
+    line-height: 1.5rem;
+  }
   &__header{
     font-size: $text-md;
     font-weight: 700;

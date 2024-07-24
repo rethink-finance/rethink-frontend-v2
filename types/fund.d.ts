@@ -101,6 +101,10 @@ export default interface IFund {
   performanceFee: string;
   performanceFeeAddress: string;
   performaceHurdleRateBps: string;
+  // _feeBal
+  feeBalance: bigint;
+  safeContractBaseTokenBalance: bigint;
+  fundContractBaseTokenBalance: bigint;
   /**
    * [
    *   DepositFee,

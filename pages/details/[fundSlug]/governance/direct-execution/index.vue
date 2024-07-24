@@ -97,15 +97,15 @@ const submitProposal = async () => {
   const details = executionEntry.value.find(step => step.stepName === ExecutionStep.Details)?.steps[0];
   if (!web3Store.web3 || !details || !transactions?.length) return;
 
-  console.log(transactions);
-  console.log(details);
+  console.log(toRaw(transactions));
+  console.log(toRaw(details));
 
   const to = fundsStore.safeMultiSendCallOnlyToAddress;
   console.log("to address: ", to);
   const multisendAbiJSON = SafeMultiSendCallOnly.abi[0];
   const processedTxs = [];
   const targets = [];
-  const gasVals = [];
+  const gasValues = [];
 
   // execTransaction function
   const execTransactionABI = GnosisSafeL2JSON.abi[29] as AbiFunctionFragment;
@@ -132,13 +132,13 @@ const submitProposal = async () => {
 
     processedTxs.push(filteredFinalTxData);
     targets.push(fundStore.fund?.safeAddress);
-    gasVals.push(0);
+    gasValues.push(0);
   }
   console.log("propose:",
     JSON.stringify(
       [
         targets,
-        gasVals,
+        gasValues,
         processedTxs,
         JSON.stringify({
           title: details?.proposalTitle,
@@ -151,7 +151,7 @@ const submitProposal = async () => {
   try {
     await fundStore.fundGovernorContract.methods.propose(
       targets,
-      gasVals,
+      gasValues,
       processedTxs,
       JSON.stringify({
         title: details?.proposalTitle,
