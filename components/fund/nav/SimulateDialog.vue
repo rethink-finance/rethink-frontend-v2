@@ -55,6 +55,7 @@
             <v-btn
               class="text-secondary"
               variant="outlined"
+              @click="manageMethods(isActive)"
             >
               Manage Methods
             </v-btn>
@@ -74,21 +75,22 @@
 </template>
 
 <script setup lang="ts">
-import type INAVMethod from "~/types/nav_method";
 import NAVCalculatorJSON from "~/assets/contracts/NAVCalculator.json";
-import { useWeb3Store } from "~/store/web3.store";
 import { useFundStore } from "~/store/fund.store";
-import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
-import { useToastStore } from "~/store/toast.store";
 import { useFundsStore } from "~/store/funds.store";
+import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
+import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
+import type INAVMethod from "~/types/nav_method";
 // Since the direct import won't infer the custom type, we cast it here.:
 
+const router = useRouter();
 const web3Store = useWeb3Store();
 const fundsStore = useFundsStore();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const totalSimulatedNAV = ref(0n);
-const { fundManagedNAVMethods } = toRefs(fundStore);
+const {selectedFundSlug, fundManagedNAVMethods } = toRefs(fundStore);
 
 const formattedTotalSimulatedNAV = computed(() => {
   return formatNAV(totalSimulatedNAV.value);
@@ -198,6 +200,10 @@ onMounted(async () => {
   }
 });
 
+const manageMethods = (isActive: Ref<boolean>) => {
+  router.push(`/details/${selectedFundSlug.value}/nav/manage`);
+  isActive.value = false;
+};
 </script>
 
 <style lang="scss" scoped>

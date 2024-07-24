@@ -30,7 +30,12 @@
             </v-btn>
           </nuxt-link>
         </div>
-        <v-btn class="text-secondary" variant="outlined" @click="saveDraft">
+        <v-btn
+          class="text-secondary"
+          variant="outlined"
+          @click="saveDraft"
+          :disabled="isSaveDraftDisabled"
+        >
           Save Draft
         </v-btn>
       </UiHeader>
@@ -53,7 +58,6 @@ const {
 } = toRefs(useFundStore());
 
 const toastStore = useToastStore();
-const fundManagedNAVMethodsLocalStorage = ref({});
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -77,6 +81,15 @@ const setItemInLocalStorage = (key: string, value: any) => {
   localStorage.setItem(key, JSON.stringify(value));
 };
 
+const getNAVMethodsFromLocalStorage = () => {
+  let navUpdateEntries = getItemFromLocalStorage("navUpdateEntries");
+  if (!navUpdateEntries) {
+    navUpdateEntries = {};
+  }
+
+  return navUpdateEntries[selectedFundAddress.value] || {};
+};
+
 const saveDraft = () => {
   try {
     let navUpdateEntries = getItemFromLocalStorage("navUpdateEntries");
@@ -89,12 +102,24 @@ const saveDraft = () => {
     );
 
     setItemInLocalStorage("navUpdateEntries", navUpdateEntries);
+    fundManagedNAVMethodsLocalStorage.value = getNAVMethodsFromLocalStorage();
+
     toastStore.successToast("Draft saved successfully");
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to save draft");
   }
 };
+
+const fundManagedNAVMethodsLocalStorage = ref(getNAVMethodsFromLocalStorage());
+
+const isSaveDraftDisabled = computed(() => {
+  const output =
+    JSON.stringify(fundManagedNAVMethods.value) ===
+    JSON.stringify(fundManagedNAVMethodsLocalStorage.value);
+
+  return output;
+});
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
