@@ -118,6 +118,10 @@ const toastStore = useToastStore();
 const totalSimulatedNAV = ref(0n);
 const {selectedFundSlug, fundManagedNAVMethods } = toRefs(fundStore);
 
+const fundManagedNAVMethodsDeep = computed(() => {
+  return JSON.parse(JSON.stringify(fundManagedNAVMethods.value)) as INAVMethod[];
+});
+
 const formattedTotalSimulatedNAV = computed(() => {
   const fund = fundStore.fund;
   const totalNAV = (
@@ -177,7 +181,7 @@ onMounted(async () => {
   }
 
   // TODO Simulate all at once as many promises instead of one by one.
-  for (const navEntry of fundManagedNAVMethods.value as INAVMethod[]) {
+  for (const navEntry of fundManagedNAVMethodsDeep.value) {
     navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
     if (!navEntry.pastNAVUpdateEntryFundAddress) {
       navEntry.pastNAVUpdateEntryFundAddress = fundsStore.navMethodDetailsHashToFundAddress[navEntry.detailsHash ?? ""];
