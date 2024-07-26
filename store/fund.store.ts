@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -92,7 +92,8 @@ export const useFundStore = defineStore({
       return formatNumberShort(totalNAV) + " " + state.fund.baseToken.symbol;
     },
     selectedFundSlug(state: IState): string {
-      return (state.fund?.fundToken.symbol || "") + "-" + (state.fund?.address || "");
+      const chainId = this.web3Store?.chainId || "";
+      return (chainId) + "-" + (state.fund?.fundToken.symbol || "") + "-" + (state.fund?.address || "");
     },
     fundLastNAVUpdate(state: IState): INAVUpdate | undefined {
       if (!state.fund?.navUpdates.length) return undefined;
