@@ -33,7 +33,7 @@
     </template>
 
     <template #[`item.simulatedNav`]="{ value, item }">
-      <div class="d-flex justify-end">
+      <div :class="`item-simulated-nav ${value ? 'has-value' : ''}`">
         <div>
           {{ value ?? "N/A" }}
         </div>
@@ -288,4 +288,12 @@ export default defineComponent({
   }
 }
 
+.item-simulated-nav {
+  display: flex;
+  justify-content: flex-end;
+
+  &.has-value {
+    color: var(--color-warning);
+  }
+}
 </style>
