@@ -30,14 +30,24 @@
             </v-btn>
           </nuxt-link>
         </div>
-        <v-btn
-          class="text-secondary"
-          variant="outlined"
-          @click="saveDraft"
-          :disabled="isSaveDraftDisabled"
-        >
-          Save Draft
-        </v-btn>
+        <div class="btn-draft">
+          <v-btn
+            v-if="isClearDraftVisible"
+            class="text-secondary"
+            variant="outlined"
+            @click="clearDraft"
+          >
+            Clear Draft
+          </v-btn>
+          <v-btn
+            class="text-secondary"
+            variant="outlined"
+            @click="saveDraft"
+            :disabled="isSaveDraftDisabled"
+          >
+            Save Draft
+          </v-btn>
+        </div>
       </UiHeader>
       <FundNavMethodsTable v-model:methods="fundManagedNAVMethods" deletable />
     </div>
@@ -47,9 +57,18 @@
 <script setup lang="ts">
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
+
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
+const route = useRoute();
 
+// fund address is always in the third position of the route
+// e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
+const fundAddress = route.path.split("/")[2].split("-")[2];
+
+const loadingDraftClear = ref(false);
+
+const fundStore = useFundStore();
 const {
   selectedFundSlug,
   selectedFundAddress,
@@ -90,6 +109,34 @@ const getNAVMethodsFromLocalStorage = () => {
   return navUpdateEntries[selectedFundAddress.value] || {};
 };
 
+const clearDraft = async () => {
+  try {
+    loadingDraftClear.value = true;
+
+    let navUpdateEntries = getItemFromLocalStorage("navUpdateEntries");
+    if (!navUpdateEntries) {
+      navUpdateEntries = {};
+    }
+
+    delete navUpdateEntries[selectedFundAddress.value];
+
+    setItemInLocalStorage("navUpdateEntries", navUpdateEntries);
+    fundManagedNAVMethodsLocalStorage.value = getNAVMethodsFromLocalStorage();
+
+    // reset the fundManagedNAVMethods to fundLastNAVUpdateEntries
+    fundStore.fundManagedNAVMethods = JSON.parse(
+      JSON.stringify(fundLastNAVUpdateEntries.value)
+    );
+
+    toastStore.successToast("Draft cleared successfully");
+  } catch (e) {
+    console.error(e);
+    toastStore.errorToast("Failed to clear draft");
+  } finally {
+    loadingDraftClear.value = false;
+  }
+};
+
 const saveDraft = () => {
   try {
     let navUpdateEntries = getItemFromLocalStorage("navUpdateEntries");
@@ -114,9 +161,22 @@ const saveDraft = () => {
 const fundManagedNAVMethodsLocalStorage = ref(getNAVMethodsFromLocalStorage());
 
 const isSaveDraftDisabled = computed(() => {
-  const output =
+  const isSameAsLastUpdate =
+    JSON.stringify(fundManagedNAVMethods.value) ===
+    JSON.stringify(fundLastNAVUpdateEntries.value);
+
+  const isSameAsLocalStorage =
     JSON.stringify(fundManagedNAVMethods.value) ===
     JSON.stringify(fundManagedNAVMethodsLocalStorage.value);
+
+  return isSameAsLastUpdate || isSameAsLocalStorage;
+});
+
+const isClearDraftVisible = computed(() => {
+  // check if the draft is empty
+  const output =
+    JSON.stringify(fundManagedNAVMethodsLocalStorage.value) !==
+    JSON.stringify({});
 
   return output;
 });
@@ -129,4 +189,11 @@ onBeforeUnmount(() => {
 });
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.btn-draft {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+</style>
