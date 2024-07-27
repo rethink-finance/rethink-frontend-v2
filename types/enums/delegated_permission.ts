@@ -64,15 +64,19 @@ const parseFuncInputDetails = (input: any) => {
       rules = [formRules.required, formRules.isValidUint16];
     }
   } else if (textTypes.some((type) => input.type.includes(type))) {
+    rules = [formRules.required];
     if (input.type.includes("address")) {
       placeholder = addressPlaceholder;
+      rules.push(formRules.isValidAddress);
     }
-    rules = [formRules.required, formRules.isValidAddress];
+    if (input.type.includes("bytes")) {
+      rules.push(formRules.isValidHexString);
+    }
   } else if (boolTypes.some((type) => input.type.includes(type))) {
     type = InputType.Select;
     choices = [
-      { title: "True", value: true },
-      { title: "False", value: false },
+      { title: "true", value: true },
+      { title: "false", value: false },
     ];
     defaultValue = false;
   }
@@ -81,6 +85,7 @@ const parseFuncInputDetails = (input: any) => {
     label: abiFunctionNameToLabel(input.name),
     key: input.name,
     internalType: input.internalType,
+    input,
     type,
     rules,
     placeholder,

@@ -17,8 +17,11 @@
     <v-label class="row-title">
       <div class="label_required row-title__title">
         {{ field.label }}
-        <v-label v-if="field.isArray" class="label_required__label_type">
-          {{ field.placeholder.replace("E.g.", "") }}[]
+        <v-label class="label_required__label_type">
+          {{ field.internalType }}
+          <template v-if="field.internalType !== field.input?.type">
+            ({{ field.input?.type }})
+          </template>
         </v-label>
       </div>
       <ui-char-limit
