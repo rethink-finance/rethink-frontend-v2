@@ -32,8 +32,8 @@
       />
     </template>
 
-    <template #[`item.simulatedNav`]="{ value, item }">
-      <div :class="`item-simulated-nav ${value ? 'has-value' : ''}`">
+    <template #[`item.simulatedNavFormatted`]="{ value, item }">
+      <div class="item-simulated-nav">
         <div>
           {{ value ?? "N/A" }}
         </div>
@@ -160,7 +160,9 @@ export default defineComponent({
       ];
       // Simulated NAV value.
       if (this.showSimulatedNav) {
-        headers.push({ title: "Simulated NAV", key: "simulatedNav", align: "end", sortable: false, width: "260px" })
+        headers.push(
+          { title: "Simulated NAV", key: "simulatedNavFormatted", align: "end", sortable: false, width: "260px" },
+        )
       }
 
       // Expand details button
@@ -291,9 +293,5 @@ export default defineComponent({
 .item-simulated-nav {
   display: flex;
   justify-content: flex-end;
-
-  &.has-value {
-    color: var(--color-warning);
-  }
 }
 </style>

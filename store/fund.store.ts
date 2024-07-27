@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -169,12 +169,12 @@ export const useFundStore = defineStore({
           fundAddress in navUpdateEntries
         ) {
           this.fundManagedNAVMethods = JSON.parse(
-            JSON.stringify(navUpdateEntries[fundAddress])
+            JSON.stringify(navUpdateEntries[fundAddress]),
           );
         } else {
           // If they don't exist in the localStorage, set them to the last update
           this.fundManagedNAVMethods = JSON.parse(
-            JSON.stringify(this.fundLastNAVUpdateEntries)
+            JSON.stringify(this.fundLastNAVUpdateEntries),
           );
         }
         console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
@@ -187,6 +187,8 @@ export const useFundStore = defineStore({
       } catch (e) {
         console.error(`Failed fetching user fundBalances fund ${fundAddress} -> `, e)
       }
+
+      this.mergeNAVMethodsFromLocalStorage();
     },
     /**
      * Fetches multiple fund data:
@@ -674,6 +676,18 @@ export const useFundStore = defineStore({
       roleModAddress = safeModules[0][1];
       this.fundRoleModAddress[this.fund?.address ?? ""] = roleModAddress;
       return roleModAddress;
+    },
+    mergeNAVMethodsFromLocalStorage() {
+      let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
+      if (!navUpdateEntries) {
+        navUpdateEntries = {};
+      }
+
+      // TODO here we should merge the fetched NAV methods (fundManagedNAVMethods) with those
+      //  from local storage one by one and take our changed properties also along with those fetched.
+      //  you can merge both objects with spread operator ({...a, ...localStorageMethod}) for each method
+      // this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || {};
+      // TODO also here save to localStorage newly merged version of navUpdateEntries
     },
   },
 });

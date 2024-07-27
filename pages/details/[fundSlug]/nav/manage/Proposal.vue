@@ -153,9 +153,9 @@
 </template>
 
 <script setup lang="ts">
+import type { AbiFunctionFragment } from "web3";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import NAVExecutor from "assets/contracts/NAVExecutor.json";
-import type { AbiFunctionFragment } from "web3";
 import addressesJson from "~/assets/contracts/addresses.json";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 import { useAccountStore } from "~/store/account.store";
@@ -176,7 +176,7 @@ const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const emit = defineEmits(["updateBreadcrumbs"]);
 
-const {selectedFundAddress, selectedFundSlug, fundManagedNAVMethods, fundLastNAVUpdate } = toRefs(fundStore);
+const { selectedFundAddress, selectedFundSlug, fundManagedNAVMethods, fundLastNAVUpdate } = toRefs(fundStore);
 const proposal = ref({
   title: "",
   allowManagerToUpdateNav: false,
@@ -562,14 +562,9 @@ const createProposal = async () => {
   }
 }
 
-const getItemFromLocalStorage = (key: string) => {
-  const item = localStorage.getItem(key);
-  return item ? JSON.parse(item) : null;
-};
-
 const removeDraft = () => {
   try {
-    let navUpdateEntries = getItemFromLocalStorage("navUpdateEntries");
+    let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
     if (!navUpdateEntries) {
       navUpdateEntries = {};
     }

@@ -1,14 +1,27 @@
 <template>
-  <v-dialog scrim="black" opacity="0.5" height="80%" max-width="90%" scrollable>
-    <template #activator="{ props: activatorProps }">
-      <v-btn class="text-secondary" variant="outlined" v-bind="activatorProps">
+  <v-dialog
+    v-model="isDialogOpen"
+    scrim="black"
+    opacity="0.5"
+    height="80%"
+    max-width="90%"
+    scrollable
+  >
+    <template #activator>
+      <v-btn
+        class="text-secondary"
+        variant="outlined"
+        @click="openDialog()"
+      >
         Simulate NAV
       </v-btn>
     </template>
     <template #default="{ isActive }">
       <v-card class="di_card">
         <v-card-title>
-          <div class="di_card__header">NAV Update Simulation</div>
+          <div class="di_card__header">
+            NAV Update Simulation
+          </div>
           <div class="di_card__subtext">
             Simulate NAV before updating or creating a proposal
           </div>
@@ -22,19 +35,25 @@
           </div>
           <div class="di_card__balances">
             <div class="d-flex">
-              <div class="di_card__text_total">Fund Contract Balance:</div>
+              <div class="di_card__text_total">
+                Fund Contract Balance:
+              </div>
               <div class="di_card__text_value">
                 {{ formattedFundContractBaseTokenBalance }}
               </div>
             </div>
             <div class="d-flex">
-              <div class="di_card__text_total">Safe Balance:</div>
+              <div class="di_card__text_total">
+                Safe Balance:
+              </div>
               <div class="di_card__text_value">
                 {{ formattedSafeContractBaseTokenBalance }}
               </div>
             </div>
             <div class="d-flex">
-              <div class="di_card__text_total">Fees Balance:</div>
+              <div class="di_card__text_total">
+                Fees Balance:
+              </div>
               <div class="di_card__text_value">
                 {{ formattedFeeBalance }}
               </div>
@@ -42,7 +61,7 @@
           </div>
         </v-card-title>
         <v-card-text>
-          <div class="di_card__table" v-if="!isNavSimulationLoading">
+          <div v-if="!isNavSimulationLoading" class="di_card__table">
             <FundNavMethodsTable
               v-model:methods="fundManagedNAVMethods"
               show-simulated-nav
@@ -53,7 +72,7 @@
               indeterminate
               color="primary"
               size="64"
-            ></v-progress-circular>
+            />
           </div>
         </v-card-text>
 
@@ -101,34 +120,40 @@ import {
   PositionType,
   PositionTypeToNAVCalculationMethod,
 } from "~/types/enums/position_type";
-import type INAVMethod from "~/types/nav_method";
-// Since the direct import won't infer the custom type, we cast it here.:
 
-const router = useRouter();
 const web3Store = useWeb3Store();
 const fundsStore = useFundsStore();
 const fundStore = useFundStore();
+const { fundManagedNAVMethods } = toRefs(useFundStore());
 const toastStore = useToastStore();
-const totalSimulatedNAV = ref(0n);
 const isNavSimulationLoading = ref(false);
-const { selectedFundSlug, fundManagedNAVMethods } = toRefs(fundStore);
+const isDialogOpen = ref(false);
 
-const fundManagedNAVMethodsDeep = computed(() => {
-  return JSON.parse(
-    JSON.stringify(fundManagedNAVMethods.value)
-  ) as INAVMethod[];
+const totalSimulatedNAV = computed(() => {
+  return fundManagedNAVMethods.value.reduce(
+    (totalValue, method: any) => {
+      // Do not count deleted methods to total simulated NAV.
+      const methodSimulatedNav = method.deleted ? 0n : (method.simulatedNav || 0n);
+      return totalValue + methodSimulatedNav;
+    },
+    0n,
+  )
 });
+
+function openDialog() {
+  simulateNAV();
+  isDialogOpen.value = true;
+}
 
 const formattedTotalSimulatedNAV = computed(() => {
   const fund = fundStore.fund;
   const totalNAV =
-    totalSimulatedNAV.value +
+    (totalSimulatedNAV.value || 0n) +
     (fund?.fundContractBaseTokenBalance || 0n) +
     (fund?.safeContractBaseTokenBalance || 0n) +
     (fund?.feeBalance || 0n);
   return formatNAV(totalNAV);
 });
-
 const formattedFeeBalance = computed(() => {
   return formatNAV(fundStore.fund?.feeBalance);
 });
@@ -153,42 +178,38 @@ const formatNAV = (value: any) => {
 };
 
 onMounted(() => {
-  simulateNAV();
+  init();
 });
 
-const simulateNAV = async () => {
+async function init() {
+  const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays();
+  const fundAddresses: string[] = fundsInfoArrays[0];
+
+  // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
+  // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
+  // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
+  await fundsStore.fetchAllNavMethods(fundAddresses);
+}
+
+async function simulateNAV() {
+  const baseDecimals = fundStore.fund?.baseToken.decimals;
+  if (!baseDecimals) {
+    toastStore.errorToast(
+      "Failed preparing NAV Illiquid method, fund base token decimals are not known.",
+    );
+    return;
+  }
+
+  isNavSimulationLoading.value = true;
+  if (!web3Store.web3) return;
   try {
-    isNavSimulationLoading.value = true;
-    totalSimulatedNAV.value = 0n;
-
-    if (!web3Store.web3) return;
-    // TODO add loading indicators
-    // TODO only call after the modal is opened, not on created
-    const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays();
-    const fundAddresses: string[] = fundsInfoArrays[0];
-
-    // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
-    // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
-    // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
-    await fundsStore.fetchAllNavMethods(fundAddresses);
-
     const NAVCalculatorContract = new web3Store.web3.eth.Contract(
       NAVCalculatorJSON.abi,
-      web3Store.NAVCalculatorBeaconProxyAddress
+      web3Store.NAVCalculatorBeaconProxyAddress,
     );
 
-    const baseDecimals = fundStore.fund?.baseToken.decimals;
-    if (!baseDecimals) {
-      toastStore.errorToast(
-        "Failed preparing NAV Illiquid method, fund base token decimals are not known."
-      );
-      throw new Error(
-        "Failed preparing NAV Illiquid method, base decimals are not known."
-      );
-    }
-
     // TODO Simulate all at once as many promises instead of one by one.
-    for (const navEntry of fundManagedNAVMethodsDeep.value) {
+    for (const navEntry of fundManagedNAVMethods.value) {
       navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
       if (!navEntry.pastNAVUpdateEntryFundAddress) {
         navEntry.pastNAVUpdateEntryFundAddress =
@@ -232,39 +253,41 @@ const simulateNAV = async () => {
           parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
           parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
           navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
-        ]
+        ],
       );
 
       // console.log("json: ", JSON.stringify(callData, null, 2))
       const navCalculationMethod =
         PositionTypeToNAVCalculationMethod[navEntry.positionType];
-      navEntry.simulatedNav = "N/A";
+      navEntry.simulatedNavFormatted = "N/A";
+      navEntry.simulatedNav = 0n;
       try {
         const simulatedVal: bigint = await NAVCalculatorContract.methods[
           navCalculationMethod
         ](...callData).call();
-        totalSimulatedNAV.value += simulatedVal;
         console.log("simulated value: ", simulatedVal);
 
-        navEntry.simulatedNav = formatNAV(simulatedVal);
+        navEntry.simulatedNavFormatted = formatNAV(simulatedVal);
+        navEntry.simulatedNav = simulatedVal;
       } catch (error: any) {
         console.error(
           "Failed simulating value for entry, check if there was some difference when " +
             "hashing details on INAVMethod detailsHash: ",
           navEntry,
-          error
+          error,
         );
       }
     }
+    console.log("refreshed:", fundManagedNAVMethods.value)
   } catch (error) {
     console.error("Error simulating NAV: ", error);
     toastStore.errorToast(
-      "There has been an error. Please contact the Rethink Finance support."
+      "There has been an error. Please contact the Rethink Finance support.",
     );
   } finally {
     isNavSimulationLoading.value = false;
   }
-};
+}
 </script>
 
 <style lang="scss" scoped>
