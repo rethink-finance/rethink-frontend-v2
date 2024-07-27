@@ -29,7 +29,7 @@ const proposalRoleModMethods = ZodiacRoles.abi.filter(
 );
 // make a list of choices for the select field out of the methods
 export const roleModMethodChoices = proposalRoleModMethods.map((func) => {
-  return { title: abiFunctionNameToLabel(func?.name || ""), value: func.name };
+  return { title: func.name, value: func.name };
 });
 
 // define select field that will be used in all sub steps
