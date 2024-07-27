@@ -56,11 +56,7 @@
             >
               <div class="sub-steps__dashed-line" />
               <div class="sub-steps__label">
-                {{
-                  substep[step.subStepKey]
-                    ? abiFunctionNameToLabel(substep[step.subStepKey])
-                    : step.subStepLabel + " " + (substepIndex + 1)
-                }}
+                {{ substep[step.subStepKey] ?? (step.subStepLabel + " " + (substepIndex + 1)) }}
               </div>
 
               <div class="sub-steps__icons">

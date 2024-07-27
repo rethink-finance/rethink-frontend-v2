@@ -91,7 +91,11 @@ export const prepRoleModEntryInput = (value: any) => {
       } else if (dtype.startsWith("enum")) {
         retDat.push(value.data[i]);
       } else if (dtype.startsWith("bool")) {
-        retDat.push(value.data[i] === "true");
+        if (typeof value.data[i] === "boolean") {
+          retDat.push(value.data[i]);
+        } else {
+          retDat.push(value.data[i] === "true");
+        }
       }
     }
     return retDat;
@@ -108,6 +112,9 @@ export const prepRoleModEntryInput = (value: any) => {
   } else if (dtype.startsWith("enum")) {
     return value.data;
   } else if (dtype.startsWith("bool")) {
+    if (typeof value.data === "boolean") {
+      return value.data;
+    }
     return value.data === "true";
   }
 }

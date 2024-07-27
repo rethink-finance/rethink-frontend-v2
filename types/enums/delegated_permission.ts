@@ -82,7 +82,7 @@ const parseFuncInputDetails = (input: any) => {
   }
 
   return {
-    label: abiFunctionNameToLabel(input.name),
+    label: input.name,
     key: input.name,
     internalType: input.internalType,
     input,
