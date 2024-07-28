@@ -51,7 +51,12 @@
           </v-btn>
         </div>
       </UiHeader>
-      <FundNavMethodsTable v-model:methods="fundManagedNAVMethods" deletable />
+      <FundNavMethodsTable
+        v-model:methods="fundManagedNAVMethods"
+        deletable
+        show-base-token-balances
+        show-simulated-nav
+      />
     </div>
   </div>
 </template>

@@ -122,10 +122,12 @@
 
 <script lang="ts">
 import type INAVMethod from "~/types/nav_method";
+import { PositionType } from "~/types/enums/position_type";
+import { useFundStore } from "~/store/fund.store";
 
 
 export default defineComponent({
-  name: "NAVMethods",
+  name: "FundNavMethodsTable",
   props: {
     // TODO prevent directly modifying passed methods and use computed() get & set for it
     methods: {
@@ -137,6 +139,10 @@ export default defineComponent({
     usedMethods: {
       type: Array as () => INAVMethod[],
       default: () => [],
+    },
+    showBaseTokenBalances: {
+      type: Boolean,
+      default: false,
     },
     showSimulatedNav: {
       type: Boolean,
@@ -152,6 +158,10 @@ export default defineComponent({
     },
   },
   emits: ["update:methods", "selectedChanged"],
+  setup() {
+    const fundStore = useFundStore();
+    return { fundStore }
+  },
   data: () => ({
     expanded: [],
     selected: [],
@@ -187,14 +197,59 @@ export default defineComponent({
     usedMethodHashes(): string[] {
       return this.usedMethods.map(method => method.detailsHash || "");
     },
+    formattedFeeBalance() {
+      return this.formatNAV(this.fundStore.fund?.feeBalance);
+    },
     computedMethods() {
-      return this.methods.map(method => ({
-        ...method,
-        isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
-      }));
+      const methods = [];
+      if (this.showBaseTokenBalances) {
+        methods.push({
+          positionName: "Fund Balance",
+          valuationSource: "-",
+          positionType: PositionType.Liquid,
+          simulatedNavFormatted: this.formattedFeeBalance,
+          deleted: false,
+          isSimulatedNavError: false,
+        } as any)
+        methods.push({
+          positionName: "Safe Balance",
+          valuationSource: "-",
+          positionType: PositionType.Liquid,
+          simulatedNavFormatted: this.formattedFeeBalance,
+          deleted: false,
+          isSimulatedNavError: false,
+        } as any)
+        methods.push({
+          positionName: "Fees Balance",
+          valuationSource: "-",
+          positionType: PositionType.Liquid,
+          simulatedNavFormatted: this.formattedFeeBalance,
+          deleted: false,
+          isSimulatedNavError: false,
+        } as any)
+      }
+      return [
+        ...methods,
+        ...this.methods.map(method => ({
+          ...method,
+          isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
+        })),
+      ];
     },
   },
   methods: {
+    formatNAV(value: any) {
+      const baseSymbol = this.fundStore.fund?.baseToken.symbol;
+      const baseDecimals = this.fundStore.fund?.baseToken.decimals;
+      if (!baseDecimals) {
+        return value;
+      }
+
+      const valueFormatted = value
+        ? formatNumberShort(Number(formatTokenValue(value, baseDecimals, false)))
+        : "0";
+      return valueFormatted + " " + baseSymbol;
+    },
     copyText(text: string | undefined) {
       const data = text as string;
       navigator.clipboard.writeText(data);
