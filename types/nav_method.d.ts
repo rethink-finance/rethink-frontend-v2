@@ -45,8 +45,9 @@ export default interface INAVMethod {
   deleted?: boolean,  // THis is only used in the frontend, to mark it for deletion when managing NAV methods.
   isNew?: boolean,  // THis is only used in the frontend, to mark it as new when managing NAV methods.
   simulatedNav?: bigint,  // THis is only used in the frontend, when simulating NAV methods.
-  simulatedNavFormatted?: string,  // THis is only used in the frontend, when simulating NAV methods.
-  isNavSimulationLoading?: boolean,  // THis is only used in the frontend, when simulating NAV methods.
+  isSimulatedNavError?: boolean,
+  simulatedNavFormatted?: string,
+  isNavSimulationLoading?: boolean,
   // THis is only used in the frontend, as methods don't have any IDs, we hash their contents to compare them.
   // Hash is generated from the detailsJson.
   detailsHash?: string,

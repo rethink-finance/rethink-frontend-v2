@@ -33,7 +33,7 @@
     </template>
 
     <template #[`item.simulatedNavFormatted`]="{ value, item }">
-      <div class="item-simulated-nav">
+      <div :class="`item-simulated-nav ${item.isSimulatedNavError ? 'item-simulated-nav--error' : ''}`">
         <div v-if="item.isNavSimulationLoading">
           <v-progress-circular
             indeterminate
@@ -301,5 +301,9 @@ export default defineComponent({
 .item-simulated-nav {
   display: flex;
   justify-content: flex-end;
+
+  &--error {
+    color: $color-error;
+  }
 }
 </style>

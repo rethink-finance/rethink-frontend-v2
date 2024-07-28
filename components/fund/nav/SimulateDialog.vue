@@ -216,9 +216,12 @@ async function simulateNAV() {
   for (const navEntryOriginal of navMethods) {
     const navEntry: INAVMethod = JSON.parse(JSON.stringify(navEntryOriginal));
     navMethodsWithSimulatedNAV.value.push(navEntry);
+    // await simulateNAVMethodValue(navEntry);
+  }
+  for (const navEntry of navMethodsWithSimulatedNAV.value) {
     promises.push(simulateNAVMethodValue(navEntry));
   }
-  await Promise.all(promises);
+  await Promise.allSettled(promises);
   isNavSimulationLoading.value = false;
 }
 
@@ -298,6 +301,7 @@ async function simulateNAVMethodValue(navEntry: INAVMethod) {
       navEntry.simulatedNavFormatted = formatNAV(simulatedVal);
       navEntry.simulatedNav = simulatedVal;
     } catch (error: any) {
+      navEntry.isSimulatedNavError = true;
       console.error(
         "Failed simulating value for entry, check if there was some difference when " +
         "hashing details on INAVMethod detailsHash: ",
@@ -311,6 +315,7 @@ async function simulateNAVMethodValue(navEntry: INAVMethod) {
       "There has been an error. Please contact the Rethink Finance support.",
     );
   } finally {
+    console.log("stop nav");
     navEntry.isNavSimulationLoading = false;
   }
 }
