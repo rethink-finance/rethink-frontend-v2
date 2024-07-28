@@ -70,7 +70,7 @@ const {
   selectedFundSlug,
   selectedFundAddress,
   fundManagedNAVMethods,
-  fundLastNAVUpdateEntries,
+  fundLastNAVUpdateMethods,
 } = toRefs(useFundStore());
 
 const toastStore = useToastStore();
@@ -93,9 +93,9 @@ const clearDraft = () => {
   try {
     const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
 
-    // reset the fundManagedNAVMethods to fundLastNAVUpdateEntries
+    // reset the fundManagedNAVMethods to fundLastNAVUpdateMethods
     fundManagedNAVMethods.value = JSON.parse(
-      JSON.stringify(fundLastNAVUpdateEntries.value),
+      JSON.stringify(fundLastNAVUpdateMethods.value),
     );
     navUpdateEntries[selectedFundAddress.value] = fundManagedNAVMethods.value;
     setLocalStorageItem("navUpdateEntries", navUpdateEntries);
@@ -131,7 +131,7 @@ const isSaveDraftDisabled = computed(() => {
   return false;
   const isSameAsLastUpdate =
     JSON.stringify(fundManagedNAVMethods.value) ===
-    JSON.stringify(fundLastNAVUpdateEntries.value);
+    JSON.stringify(fundLastNAVUpdateMethods.value);
 
   // const isSameAsLocalStorage =
   //   JSON.stringify(fundManagedNAVMethods.value) ===

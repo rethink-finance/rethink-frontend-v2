@@ -45,6 +45,7 @@ interface IState {
   userFundDelegateAddress: string;
   userFundShareValue: bigint
   selectedFundAddress: string;
+  // Fund NAV methods that user can manage and change, delete, add...
   fundManagedNAVMethods: INAVMethod[],
   // Cached roleMod addresses for each fund.
   fundRoleModAddress: Record<string, string>,
@@ -97,9 +98,10 @@ export const useFundStore = defineStore({
     },
     fundLastNAVUpdate(state: IState): INAVUpdate | undefined {
       if (!state.fund?.navUpdates.length) return undefined;
-      return state.fund.navUpdates[state.fund.navUpdates.length - 1];
+      // It is the first one, as they sorted from most recent to least recent.
+      return state.fund.navUpdates[0];
     },
-    fundLastNAVUpdateEntries(): INAVMethod[] {
+    fundLastNAVUpdateMethods(): INAVMethod[] {
       return this.fundLastNAVUpdate?.entries || [];
     },
     /**
@@ -174,7 +176,7 @@ export const useFundStore = defineStore({
         } else {
           // If they don't exist in the localStorage, set them to the last update
           this.fundManagedNAVMethods = JSON.parse(
-            JSON.stringify(this.fundLastNAVUpdateEntries),
+            JSON.stringify(this.fundLastNAVUpdateMethods),
           );
         }
         console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);

@@ -10,7 +10,7 @@
         </div>
       </div>
       <div class="button_container">
-        <FundNavSimulateDialog :use-last-nav-methods="true" />
+        <FundNavSimulateDialog :use-last-nav-update-methods="true" />
 
         <ui-tooltip-click
           :tooltip-text="
@@ -63,7 +63,7 @@
         </div>
       </UiHeader>
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
-        <FundNavMethodsTable :methods="fundLastNAVUpdateEntries" />
+        <FundNavMethodsTable :methods="fundLastNAVUpdateMethods" />
       </div>
     </div>
 
@@ -96,7 +96,7 @@ const {
   fundTotalNAVFormattedShort,
   selectedFundSlug,
   fundLastNAVUpdate,
-  fundLastNAVUpdateEntries,
+  fundLastNAVUpdateMethods,
 } = toRefs(useFundStore());
 
 const isLoading = ref(false);

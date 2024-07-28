@@ -116,7 +116,7 @@ import {
 import type INAVMethod from "~/types/nav_method";
 
 const props = defineProps({
-  useLastNavMethods: {
+  useLastNavUpdateMethods: {
     type: Boolean,
     default: false,
   },
@@ -124,7 +124,7 @@ const props = defineProps({
 const web3Store = useWeb3Store();
 const fundsStore = useFundsStore();
 const fundStore = useFundStore();
-const { fundManagedNAVMethods } = toRefs(useFundStore());
+const { fundManagedNAVMethods, fundLastNAVUpdateMethods } = toRefs(useFundStore());
 const toastStore = useToastStore();
 const isNavSimulationLoading = ref(false);
 const isDialogOpen = ref(false);
@@ -197,8 +197,6 @@ const navMethodsWithSimulatedNAV = ref([] as INAVMethod[]);
 
 watch(
   fundManagedNAVMethods.value, () => {
-    // navMethodsWithSimulatedNAV.value = JSON.parse(JSON.stringify(fundManagedNAVMethods.value));
-    console.log("funds changed");
     simulateNAV();
   },
   { deep: true, immediate: true },
@@ -222,11 +220,14 @@ async function simulateNAV() {
     web3Store.NAVCalculatorBeaconProxyAddress,
   );
 
+  // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
+  // Otherwise, take managed methods, that user can change.
+  const navMethods = props.useLastNavUpdateMethods ? fundLastNAVUpdateMethods.value : fundManagedNAVMethods.value;
   // TODO Simulate all at once as many promises instead of one by one.
-  for (const navEntryOriginal of fundManagedNAVMethods.value) {
+  for (const navEntryOriginal of navMethods) {
     const navEntry: INAVMethod = JSON.parse(JSON.stringify(navEntryOriginal));
     navMethodsWithSimulatedNAV.value.push(navEntry);
-    console.log("CC nav entry:", navEntry);
+
     try {
       navEntry.isNavSimulationLoading = true;
       navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
