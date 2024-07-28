@@ -297,7 +297,6 @@ async function simulateNAV() {
           error,
         );
       }
-      console.log("refreshed:", fundManagedNAVMethods.value)
     } catch (error) {
       console.error("Error simulating NAV: ", error);
       toastStore.errorToast(
