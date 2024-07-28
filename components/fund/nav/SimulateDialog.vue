@@ -130,7 +130,7 @@ const isNavSimulationLoading = ref(false);
 const isDialogOpen = ref(false);
 
 const totalSimulatedNAV = computed(() => {
-  return fundManagedNAVMethods.value.reduce(
+  return navMethodsWithSimulatedNAV.value.reduce(
     (totalValue, method: any) => {
       // Do not count deleted methods to total simulated NAV.
       const methodSimulatedNav = method.deleted ? 0n : (method.simulatedNav || 0n);
