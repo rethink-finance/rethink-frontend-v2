@@ -315,7 +315,6 @@ async function simulateNAVMethodValue(navEntry: INAVMethod) {
       "There has been an error. Please contact the Rethink Finance support.",
     );
   } finally {
-    console.log("stop nav");
     navEntry.isNavSimulationLoading = false;
   }
 }
