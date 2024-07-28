@@ -3,7 +3,7 @@
     <template v-if="fund.navUpdates?.length > 0">
 
       <UiDataRowCard
-        v-for="(navUpdate, index) in parsedNavUpdates"
+        v-for="(navUpdate, index) in fund.navUpdates"
         :key="index"
         :title="navUpdate.date"
         :grow-column1="true"
@@ -41,14 +41,6 @@ export default defineComponent({
   methods: {
     formatNAV(value: bigint) {
       return formatTokenValue(value, this.fund.baseToken.decimals) + " " + this.fund.baseToken.symbol;
-    },
-  },
-  computed: {
-    parsedNavUpdates() {
-      if (this.fund.navUpdates.length === 0) return [];
-
-      // reverse the array to show the latest updates first
-      return this.fund.navUpdates.reverse();
     },
   },
 })

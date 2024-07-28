@@ -532,7 +532,8 @@ export const useFundStore = defineStore({
         }
       });
 
-      return navUpdates;
+      // reverse the array to show the latest updates first
+      return navUpdates.reverse();
     },
     /**
      * Fetches connected user's wallet balance of the fund base/denomination token.
