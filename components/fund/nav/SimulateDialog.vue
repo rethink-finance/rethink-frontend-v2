@@ -61,17 +61,10 @@
           </div>
         </v-card-title>
         <v-card-text>
-          <div v-if="!isNavSimulationLoading" class="di_card__table">
+          <div class="di_card__table">
             <FundNavMethodsTable
-              v-model:methods="fundManagedNAVMethods"
+              v-model:methods="navMethodsWithSimulatedNAV"
               show-simulated-nav
-            />
-          </div>
-          <div v-else class="loader_container">
-            <v-progress-circular
-              indeterminate
-              color="primary"
-              size="64"
             />
           </div>
         </v-card-text>
@@ -120,7 +113,14 @@ import {
   PositionType,
   PositionTypeToNAVCalculationMethod,
 } from "~/types/enums/position_type";
+import type INAVMethod from "~/types/nav_method";
 
+const props = defineProps({
+  useLastNavMethods: {
+    type: Boolean,
+    default: false,
+  },
+});
 const web3Store = useWeb3Store();
 const fundsStore = useFundsStore();
 const fundStore = useFundStore();
@@ -141,7 +141,7 @@ const totalSimulatedNAV = computed(() => {
 });
 
 function openDialog() {
-  simulateNAV();
+  // simulateNAV();
   isDialogOpen.value = true;
 }
 
@@ -191,6 +191,19 @@ async function init() {
   await fundsStore.fetchAllNavMethods(fundAddresses);
 }
 
+// An object holding simulated nav values for each NAV method.
+// Key is method hash, value is simulated NAV value.
+const navMethodsWithSimulatedNAV = ref([] as INAVMethod[]);
+
+watch(
+  fundManagedNAVMethods.value, () => {
+    // navMethodsWithSimulatedNAV.value = JSON.parse(JSON.stringify(fundManagedNAVMethods.value));
+    console.log("funds changed");
+    simulateNAV();
+  },
+  { deep: true, immediate: true },
+);
+
 async function simulateNAV() {
   const baseDecimals = fundStore.fund?.baseToken.decimals;
   if (!baseDecimals) {
@@ -200,16 +213,22 @@ async function simulateNAV() {
     return;
   }
 
-  isNavSimulationLoading.value = true;
   if (!web3Store.web3) return;
-  try {
-    const NAVCalculatorContract = new web3Store.web3.eth.Contract(
-      NAVCalculatorJSON.abi,
-      web3Store.NAVCalculatorBeaconProxyAddress,
-    );
+  isNavSimulationLoading.value = true;
+  navMethodsWithSimulatedNAV.value = [];
 
-    // TODO Simulate all at once as many promises instead of one by one.
-    for (const navEntry of fundManagedNAVMethods.value) {
+  const NAVCalculatorContract = new web3Store.web3.eth.Contract(
+    NAVCalculatorJSON.abi,
+    web3Store.NAVCalculatorBeaconProxyAddress,
+  );
+
+  // TODO Simulate all at once as many promises instead of one by one.
+  for (const navEntryOriginal of fundManagedNAVMethods.value) {
+    const navEntry: INAVMethod = JSON.parse(JSON.stringify(navEntryOriginal));
+    navMethodsWithSimulatedNAV.value.push(navEntry);
+    console.log("CC nav entry:", navEntry);
+    try {
+      navEntry.isNavSimulationLoading = true;
       navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
       if (!navEntry.pastNAVUpdateEntryFundAddress) {
         navEntry.pastNAVUpdateEntryFundAddress =
@@ -277,16 +296,17 @@ async function simulateNAV() {
           error,
         );
       }
+      console.log("refreshed:", fundManagedNAVMethods.value)
+    } catch (error) {
+      console.error("Error simulating NAV: ", error);
+      toastStore.errorToast(
+        "There has been an error. Please contact the Rethink Finance support.",
+      );
+    } finally {
+      navEntry.isNavSimulationLoading = false;
     }
-    console.log("refreshed:", fundManagedNAVMethods.value)
-  } catch (error) {
-    console.error("Error simulating NAV: ", error);
-    toastStore.errorToast(
-      "There has been an error. Please contact the Rethink Finance support.",
-    );
-  } finally {
-    isNavSimulationLoading.value = false;
   }
+  isNavSimulationLoading.value = false;
 }
 </script>
 

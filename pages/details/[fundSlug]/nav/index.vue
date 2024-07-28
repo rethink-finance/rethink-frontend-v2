@@ -10,7 +10,7 @@
         </div>
       </div>
       <div class="button_container">
-        <FundNavSimulateDialog />
+        <FundNavSimulateDialog :use-last-nav-methods="true" />
 
         <ui-tooltip-click
           :tooltip-text="
@@ -41,7 +41,9 @@
     <div class="main_card">
       <UiHeader>
         <div>
-          <div class="main_expansion_panel__subtitle mb-4">NAV Methods</div>
+          <div class="main_expansion_panel__subtitle mb-4">
+            NAV Methods
+          </div>
           <div>
             <nuxt-link
               class="nav__learn_more_link"
@@ -66,7 +68,9 @@
     </div>
 
     <div class="main_card">
-      <div class="main_expansion_panel__subtitle">NAV Updates</div>
+      <div class="main_expansion_panel__subtitle">
+        NAV Updates
+      </div>
       <div>
         <FundNavUpdates :fund="fund" />
       </div>
@@ -109,11 +113,11 @@ const updateNAV = async () => {
     const chainId =
       web3Store.chainId as keyof (typeof addresses)["NAVExecutorBeaconProxy"];
 
-    const navExecutorAddr = addresses["NAVExecutorBeaconProxy"][chainId];
+    const navExecutorAddr = addresses.NAVExecutorBeaconProxy[chainId];
 
     if (!navExecutorAddr) {
       toastStore.errorToast(
-        "The NAV Executor address is not available for this network. Please contact the Rethink Finance support."
+        "The NAV Executor address is not available for this network. Please contact the Rethink Finance support.",
       );
       isLoading.value = false;
       return;
@@ -129,7 +133,7 @@ const updateNAV = async () => {
       .on("transactionHash", function (hash: any) {
         console.log("tx hash: " + hash);
         toastStore.warningToast(
-          "The transaction has been submitted. Please wait for it to be confirmed."
+          "The transaction has been submitted. Please wait for it to be confirmed.",
         );
       })
       .on("receipt", function (receipt: any) {
@@ -138,7 +142,7 @@ const updateNAV = async () => {
           toastStore.successToast("The recalculation of OIV NAV has Succeeded");
         } else {
           toastStore.errorToast(
-            "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support."
+            "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
           );
         }
         isLoading.value = false;
@@ -148,14 +152,14 @@ const updateNAV = async () => {
         isLoading.value = false;
 
         toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support."
+          "There has been an error. Please contact the Rethink Finance support.",
         );
       });
   } catch (error) {
     console.error("Error updating NAV: ", error);
     isLoading.value = false;
     toastStore.errorToast(
-      "There has been an error. Please contact the Rethink Finance support."
+      "There has been an error. Please contact the Rethink Finance support.",
     );
   }
 };

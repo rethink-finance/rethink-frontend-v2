@@ -34,7 +34,15 @@
 
     <template #[`item.simulatedNavFormatted`]="{ value, item }">
       <div class="item-simulated-nav">
-        <div>
+        <div v-if="item.isNavSimulationLoading || true">
+          <v-progress-circular
+            indeterminate
+            color="gray"
+            size="16"
+            width="2"
+          />
+        </div>
+        <div v-else>
           {{ value ?? "N/A" }}
         </div>
         <div v-if="item.pastNAVUpdateEntryFundAddress" class="ms-2 justify-center align-center d-flex">
