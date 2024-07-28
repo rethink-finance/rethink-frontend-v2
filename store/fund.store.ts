@@ -157,28 +157,9 @@ export const useFundStore = defineStore({
 
       try {
         this.fund = await this.fetchFundData() as IFund;
-        // Fetch fund NAV methods from localStorage
-        const navUpdateEntriesStr = localStorage.getItem("navUpdateEntries");
-        const navUpdateEntries = navUpdateEntriesStr
-          ? JSON.parse(navUpdateEntriesStr)
-          : {};
-
-        // Set fund NAV methods to be edited.
-        // Ensure navUpdateEntries is an object and check if the specific fund address exists
-        if (
-          typeof navUpdateEntries === "object" &&
-          navUpdateEntries !== null &&
-          fundAddress in navUpdateEntries
-        ) {
-          this.fundManagedNAVMethods = JSON.parse(
-            JSON.stringify(navUpdateEntries[fundAddress]),
-          );
-        } else {
-          // If they don't exist in the localStorage, set them to the last update
-          this.fundManagedNAVMethods = JSON.parse(
-            JSON.stringify(this.fundLastNAVUpdateMethods),
-          );
-        }
+        this.fundManagedNAVMethods = JSON.parse(
+          JSON.stringify(this.fundLastNAVUpdateMethods),
+        );
         console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
         console.log("fund: ", this.fund)
       } catch (e) {

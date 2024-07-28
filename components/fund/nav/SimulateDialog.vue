@@ -141,7 +141,7 @@ const totalSimulatedNAV = computed(() => {
 });
 
 function openDialog() {
-  // simulateNAV();
+  simulateNAV();
   isDialogOpen.value = true;
 }
 
@@ -211,7 +211,7 @@ async function simulateNAV() {
     return;
   }
 
-  if (!web3Store.web3) return;
+  if (!web3Store.web3 || isNavSimulationLoading.value) return;
   isNavSimulationLoading.value = true;
   navMethodsWithSimulatedNAV.value = [];
 
