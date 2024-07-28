@@ -203,6 +203,27 @@ watch(
 );
 
 async function simulateNAV() {
+  if (!web3Store.web3 || isNavSimulationLoading.value) return;
+  isNavSimulationLoading.value = true;
+  navMethodsWithSimulatedNAV.value = [];
+
+  // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
+  // Otherwise, take managed methods, that user can change.
+  const navMethods = props.useLastNavUpdateMethods ? fundLastNAVUpdateMethods.value : fundManagedNAVMethods.value;
+  // Simulate all at once as many promises instead of one by one.
+  const promises = [];
+
+  for (const navEntryOriginal of navMethods) {
+    const navEntry: INAVMethod = JSON.parse(JSON.stringify(navEntryOriginal));
+    navMethodsWithSimulatedNAV.value.push(navEntry);
+    promises.push(simulateNAVMethodValue(navEntry));
+  }
+  await Promise.all(promises);
+  isNavSimulationLoading.value = false;
+}
+
+async function simulateNAVMethodValue(navEntry: INAVMethod) {
+  if (!web3Store.web3) return;
   const baseDecimals = fundStore.fund?.baseToken.decimals;
   if (!baseDecimals) {
     toastStore.errorToast(
@@ -211,102 +232,87 @@ async function simulateNAV() {
     return;
   }
 
-  if (!web3Store.web3 || isNavSimulationLoading.value) return;
-  isNavSimulationLoading.value = true;
-  navMethodsWithSimulatedNAV.value = [];
-
   const NAVCalculatorContract = new web3Store.web3.eth.Contract(
     NAVCalculatorJSON.abi,
     web3Store.NAVCalculatorBeaconProxyAddress,
   );
-
-  // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
-  // Otherwise, take managed methods, that user can change.
-  const navMethods = props.useLastNavUpdateMethods ? fundLastNAVUpdateMethods.value : fundManagedNAVMethods.value;
-  // TODO Simulate all at once as many promises instead of one by one.
-  for (const navEntryOriginal of navMethods) {
-    const navEntry: INAVMethod = JSON.parse(JSON.stringify(navEntryOriginal));
-    navMethodsWithSimulatedNAV.value.push(navEntry);
-
-    try {
-      navEntry.isNavSimulationLoading = true;
-      navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
-      if (!navEntry.pastNAVUpdateEntryFundAddress) {
-        navEntry.pastNAVUpdateEntryFundAddress =
-          fundsStore.navMethodDetailsHashToFundAddress[
-            navEntry.detailsHash ?? ""
-          ];
-      }
-      if (!navEntry.pastNAVUpdateEntryFundAddress) {
-        // If there is no pastNAVUpdateEntryFundAddress the simulation will fail later.
-        // A missing pastNAVUpdateEntryFundAddress can mean two things:
-        //   1) A proposal is not approved yet and so its methods are not yet in the allNavMethods
-        //     -> that means the method was created on this fund, so we take address of this fund.
-        //  2) There was some difference when hashing details on INAVMethod detailsHash.
-        //    -> it will be hard to detect this, NAV simulation will fail, and we will take a look what happened.
-        //    -> We have a bigger problem if it won't fail, we should mark the address somewhere in the table.
-        //
-        // Here we take solution 1), as we assume that the method was not yet added to allMethods
-        navEntry.pastNAVUpdateEntryFundAddress = fundStore.fund?.address;
-        navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
-      }
-
-      const callData = [];
-      if (navEntry.positionType === PositionType.Liquid) {
-        callData.push(prepNAVMethodLiquid(navEntry.details));
-        callData.push(fundStore.fund?.safeAddress);
-      } else if (navEntry.positionType === PositionType.Illiquid) {
-        callData.push(prepNAVMethodIlliquid(navEntry.details, baseDecimals));
-        callData.push(fundStore.fund?.safeAddress);
-      } else if (navEntry.positionType === PositionType.NFT) {
-        callData.push(prepNAVMethodNFT(navEntry.details));
-        // callData.push(fundStore.fund?.safeAddress);
-      } else if (navEntry.positionType === PositionType.Composable) {
-        callData.push(prepNAVMethodComposable(navEntry.details));
-      }
-
-      callData.push(
-        ...[
-          fundStore.fund?.address, // fund
-          0, // navEntryIndex
-          navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
-          parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
-          parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
-          navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
-        ],
-      );
-
-      // console.log("json: ", JSON.stringify(callData, null, 2))
-      const navCalculationMethod =
-        PositionTypeToNAVCalculationMethod[navEntry.positionType];
-      navEntry.simulatedNavFormatted = "N/A";
-      navEntry.simulatedNav = 0n;
-      try {
-        const simulatedVal: bigint = await NAVCalculatorContract.methods[
-          navCalculationMethod
-        ](...callData).call();
-        console.log("simulated value: ", simulatedVal);
-
-        navEntry.simulatedNavFormatted = formatNAV(simulatedVal);
-        navEntry.simulatedNav = simulatedVal;
-      } catch (error: any) {
-        console.error(
-          "Failed simulating value for entry, check if there was some difference when " +
-            "hashing details on INAVMethod detailsHash: ",
-          navEntry,
-          error,
-        );
-      }
-    } catch (error) {
-      console.error("Error simulating NAV: ", error);
-      toastStore.errorToast(
-        "There has been an error. Please contact the Rethink Finance support.",
-      );
-    } finally {
-      navEntry.isNavSimulationLoading = false;
+  try {
+    navEntry.isNavSimulationLoading = true;
+    navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
+    if (!navEntry.pastNAVUpdateEntryFundAddress) {
+      navEntry.pastNAVUpdateEntryFundAddress =
+        fundsStore.navMethodDetailsHashToFundAddress[
+          navEntry.detailsHash ?? ""
+        ];
     }
+    if (!navEntry.pastNAVUpdateEntryFundAddress) {
+      // If there is no pastNAVUpdateEntryFundAddress the simulation will fail later.
+      // A missing pastNAVUpdateEntryFundAddress can mean two things:
+      //   1) A proposal is not approved yet and so its methods are not yet in the allNavMethods
+      //     -> that means the method was created on this fund, so we take address of this fund.
+      //  2) There was some difference when hashing details on INAVMethod detailsHash.
+      //    -> it will be hard to detect this, NAV simulation will fail, and we will take a look what happened.
+      //    -> We have a bigger problem if it won't fail, we should mark the address somewhere in the table.
+      //
+      // Here we take solution 1), as we assume that the method was not yet added to allMethods
+      navEntry.pastNAVUpdateEntryFundAddress = fundStore.fund?.address;
+      navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
+    }
+
+    const callData = [];
+    if (navEntry.positionType === PositionType.Liquid) {
+      callData.push(prepNAVMethodLiquid(navEntry.details));
+      callData.push(fundStore.fund?.safeAddress);
+    } else if (navEntry.positionType === PositionType.Illiquid) {
+      callData.push(prepNAVMethodIlliquid(navEntry.details, baseDecimals));
+      callData.push(fundStore.fund?.safeAddress);
+    } else if (navEntry.positionType === PositionType.NFT) {
+      callData.push(prepNAVMethodNFT(navEntry.details));
+      // callData.push(fundStore.fund?.safeAddress);
+    } else if (navEntry.positionType === PositionType.Composable) {
+      callData.push(prepNAVMethodComposable(navEntry.details));
+    }
+
+    callData.push(
+      ...[
+        fundStore.fund?.address, // fund
+        0, // navEntryIndex
+        navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
+        parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
+        parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
+        navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
+      ],
+    );
+
+    // console.log("json: ", JSON.stringify(callData, null, 2))
+    const navCalculationMethod =
+      PositionTypeToNAVCalculationMethod[navEntry.positionType];
+    navEntry.simulatedNavFormatted = "N/A";
+    navEntry.simulatedNav = 0n;
+    try {
+      const simulatedVal: bigint = await NAVCalculatorContract.methods[
+        navCalculationMethod
+      ](...callData).call();
+      console.log("simulated value: ", simulatedVal);
+
+      navEntry.simulatedNavFormatted = formatNAV(simulatedVal);
+      navEntry.simulatedNav = simulatedVal;
+    } catch (error: any) {
+      console.error(
+        "Failed simulating value for entry, check if there was some difference when " +
+        "hashing details on INAVMethod detailsHash: ",
+        navEntry,
+        error,
+      );
+    }
+  } catch (error) {
+    console.error("Error simulating NAV: ", error);
+    toastStore.errorToast(
+      "There has been an error. Please contact the Rethink Finance support.",
+    );
+  } finally {
+    navEntry.isNavSimulationLoading = false;
   }
-  isNavSimulationLoading.value = false;
 }
 </script>
 
