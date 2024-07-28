@@ -34,7 +34,7 @@
 
     <template #[`item.simulatedNavFormatted`]="{ value, item }">
       <div class="item-simulated-nav">
-        <div v-if="item.isNavSimulationLoading || true">
+        <div v-if="item.isNavSimulationLoading">
           <v-progress-circular
             indeterminate
             color="gray"
