@@ -371,9 +371,7 @@ export default defineComponent({
         return value;
       }
 
-      const valueFormatted = value
-        ? formatNumberShort(Number(formatTokenValue(value, baseDecimals, false)))
-        : "0";
+      const valueFormatted = value ? formatTokenValue(value, baseDecimals) : "0";
       return valueFormatted + " " + baseSymbol;
     },
     copyText(text: string | undefined) {

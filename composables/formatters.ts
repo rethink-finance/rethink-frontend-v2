@@ -55,6 +55,7 @@ export const formatNumberShort = (number?: number) => {
 
 export const commify = (value: string | number | bigint) => {
   value = value.toString();
+  const DECIMAL_PLACES_ROUNDING = 2;
 
   const match = value.match(/^(-?)([0-9]*)(\.?)([0-9]*)$/);
   if (!match || (!match[2] && !match[4])) {
@@ -77,7 +78,7 @@ export const commify = (value: string | number | bigint) => {
 
       // Convert to string and ensure it retains three decimal places.
       // Split and take only the decimal part.
-      frac = rounded.toFixed(3).split(".")[1];
+      frac = rounded.toFixed(DECIMAL_PLACES_ROUNDING).split(".")[1];
     }
   }
 
