@@ -82,6 +82,7 @@
                       <template v-if="proposal?.calldataTypes[index] === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
                           :methods="parseNavEntries(proposal?.calldatasDecoded?.[index]?.calldataDecoded)"
+                          show-simulated-nav
                         />
                       </template>
                       <template v-else>

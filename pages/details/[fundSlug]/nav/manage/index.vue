@@ -7,7 +7,7 @@
         </div>
       </div>
       <div>
-        <FundNavSimulateDialog />
+        <FundNavSimulateButton />
 
         <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/proposal`">
           <v-btn class="bg-primary text-secondary ms-6">

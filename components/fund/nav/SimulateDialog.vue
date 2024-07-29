@@ -64,6 +64,7 @@
           <div class="di_card__table">
             <FundNavMethodsTable
               v-model:methods="navMethodsWithSimulatedNAV"
+              show-last-nav-update-value
               show-simulated-nav
             />
           </div>
@@ -182,6 +183,9 @@ onMounted(() => {
 });
 
 async function init() {
+  if (fundsStore.allNavMethods?.length) {
+    return
+  }
   const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays();
   const fundAddresses: string[] = fundsInfoArrays[0];
 
@@ -216,7 +220,6 @@ async function simulateNAV() {
   for (const navEntryOriginal of navMethods) {
     const navEntry: INAVMethod = JSON.parse(JSON.stringify(navEntryOriginal));
     navMethodsWithSimulatedNAV.value.push(navEntry);
-    // await simulateNAVMethodValue(navEntry);
   }
   for (const navEntry of navMethodsWithSimulatedNAV.value) {
     promises.push(simulateNAVMethodValue(navEntry));
