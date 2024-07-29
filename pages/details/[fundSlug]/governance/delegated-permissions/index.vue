@@ -155,8 +155,8 @@ const contractMethodChanged = (
 
   // check if currentInputs has the same keys as newInput
   // if it does, we don't need to do anything
-  const hasSameKeys = Object.keys(currentInputs).every(
-    (key) => key in newInput,
+  const hasSameKeys = Object.keys(newInput).every(
+    (key) => key in currentInputs,
   );
   if (hasSameKeys) {
     return;
