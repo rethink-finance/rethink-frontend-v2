@@ -303,6 +303,7 @@ async function simulateNAVMethodValue(navEntry: INAVMethod) {
 
       navEntry.simulatedNavFormatted = formatNAV(simulatedVal);
       navEntry.simulatedNav = simulatedVal;
+      navEntry.isSimulatedNavError = false;
     } catch (error: any) {
       navEntry.isSimulatedNavError = true;
       console.error(

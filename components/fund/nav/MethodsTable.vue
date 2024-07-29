@@ -104,16 +104,32 @@
         small
         @click.stop="deleteMethod(item)"
       >
-        <v-icon
-          v-if="item.deleted"
-          icon="mdi-arrow-u-left-top"
-          color="secondary"
-        />
-        <v-icon
-          v-else
-          icon="mdi-delete"
-          color="error"
-        />
+        <v-tooltip v-if="item.deleted" activator="parent" location="bottom">
+          <template #default>
+            Undo Delete
+          </template>
+          <template #activator="{ props }">
+            <v-icon
+              icon="mdi-arrow-u-left-top"
+              color="secondary"
+              v-bind="props"
+            />
+          </template>
+        </v-tooltip>
+
+        <v-tooltip v-else activator="parent" location="bottom">
+          <template #default>
+            Delete NAV Method
+          </template>
+          <template #activator="{ props }">
+            <v-icon
+              icon="mdi-delete"
+              color="error"
+              v-bind="props"
+            />
+          </template>
+        </v-tooltip>
+
       </UiDetailsButton>
     </template>
 
@@ -459,6 +475,7 @@ export default defineComponent({
 
           navEntry.simulatedNavFormatted = this.formatNAV(simulatedVal);
           navEntry.simulatedNav = simulatedVal;
+          navEntry.isSimulatedNavError = false;
         } catch (error: any) {
           navEntry.isSimulatedNavError = true;
           console.error(
