@@ -66,6 +66,7 @@
         <FundNavMethodsTable
           :methods="fundLastNAVUpdateMethods"
           show-last-nav-update-value
+          show-base-token-balances
           show-simulated-nav
         />
       </div>

@@ -13,6 +13,22 @@
     :show-select="selectable"
     @input="onSelectionChanged"
   >
+    <template #[`body.prepend`]>
+      <tr v-if="showLastNavUpdateValue || showSimulatedNav" class="nav_entries__summary_row">
+        <td><strong>Total</strong></td>
+        <td />
+        <td />
+        <td />
+        <td v-if="showLastNavUpdateValue" class="text-right">
+          <!-- TODO -->
+          -
+        </td>
+        <td v-if="showSimulatedNav" class="text-right">
+          <strong>{{ formattedTotalSimulatedNAV }}</strong>
+        </td>
+        <td />
+      </tr>
+    </template>
     <template #[`item.index`]="{ index }">
       <strong class="td_index">{{ index + 1 }}</strong>
     </template>
@@ -202,12 +218,24 @@ export default defineComponent({
       // Simulated NAV value.
       if (this.showLastNavUpdateValue) {
         headers.push(
-          { title: "Last NAV Update Value", key: "lastNavUpdateValueFormatted", sortable: false, width: "160px" },
+          {
+            title: "Last NAV Update Value",
+            key: "lastNavUpdateValueFormatted",
+            align: "end",
+            sortable: false,
+            width: "160px",
+          },
         )
       }
       if (this.showSimulatedNav) {
         headers.push(
-          { title: "Simulated NAV", key: "simulatedNavFormatted", align: "end", sortable: false, width: "160px" },
+          {
+            title: "Simulated NAV",
+            key: "simulatedNavFormatted",
+            align: "end",
+            sortable: false,
+            width: "160px",
+          },
         )
       }
 
@@ -224,6 +252,27 @@ export default defineComponent({
     },
     usedMethodHashes(): string[] {
       return this.usedMethods.map(method => method.detailsHash || "");
+    },
+    formattedTotalSimulatedNAV() {
+      // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
+      const fund = this.fundStore.fund;
+      const totalNAV =
+        (this.totalNavMethodsSimulatedNAV || 0n) +
+        (fund?.fundContractBaseTokenBalance || 0n) +
+        (fund?.safeContractBaseTokenBalance || 0n) +
+        (fund?.feeBalance || 0n);
+      return this.formatNAV(totalNAV);
+    },
+    totalNavMethodsSimulatedNAV() {
+      // Sum simulated NAV value of all methods.
+      return this.methods.reduce(
+        (totalValue: bigint, method: any) => {
+          // Do not count deleted methods to total simulated NAV.
+          const methodSimulatedNav = method.deleted ? 0n : (method.simulatedNav || 0n);
+          return totalValue + methodSimulatedNav;
+        },
+        0n,
+      )
     },
     formattedFundContractBaseTokenBalance() {
       return this.formatNAV(this.fundStore.fund?.fundContractBaseTokenBalance);
@@ -485,6 +534,9 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .nav_entries {
+  &__summary_row {
+    background: $color-badge-navy;
+  }
   &__details {
     font-family: monospace;
     white-space: pre-wrap;
