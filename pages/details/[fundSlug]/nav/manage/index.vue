@@ -7,7 +7,7 @@
         </div>
       </div>
       <div>
-        <FundNavSimulateDialog />
+        <FundNavSimulateButton />
 
         <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/proposal`">
           <v-btn class="bg-primary text-secondary ms-6">
@@ -51,7 +51,13 @@
           </v-btn>
         </div>
       </UiHeader>
-      <FundNavMethodsTable v-model:methods="fundManagedNAVMethods" deletable />
+      <FundNavMethodsTable
+        v-model:methods="fundManagedNAVMethods"
+        deletable
+        show-summary-row
+        show-base-token-balances
+        show-simulated-nav
+      />
     </div>
   </div>
 </template>

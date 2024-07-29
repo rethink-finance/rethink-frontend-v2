@@ -30,6 +30,7 @@
         :methods="allNavMethods"
         :used-methods="fundStore.fundManagedNAVMethods"
         selectable
+        show-simulated-nav
         @selected-changed="onSelectionChanged"
       />
     </div>
