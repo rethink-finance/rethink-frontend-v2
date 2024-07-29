@@ -49,6 +49,7 @@ interface IState {
   fundManagedNAVMethods: INAVMethod[],
   // Cached roleMod addresses for each fund.
   fundRoleModAddress: Record<string, string>,
+  refreshSimulateNAVCounter: number,
 }
 
 
@@ -65,6 +66,7 @@ export const useFundStore = defineStore({
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
+    refreshSimulateNAVCounter: 0,
   }),
   getters: {
     accountStore(): any {
@@ -405,7 +407,7 @@ export const useFundStore = defineStore({
           performanceFeeAddress: fundSettings.feeCollectors[3],
           performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
           feeCollectors: fundSettings.feeCollectors,
-          feeBalance,
+          feeBalance: feeBalance * -1n, // Fees should be negative
           safeContractBaseTokenBalance,
           fundContractBaseTokenBalance,
 

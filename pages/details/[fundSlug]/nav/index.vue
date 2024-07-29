@@ -10,7 +10,7 @@
         </div>
       </div>
       <div class="button_container">
-        <FundNavSimulateDialog :use-last-nav-update-methods="true" />
+        <FundNavSimulateButton />
 
         <ui-tooltip-click
           :tooltip-text="
@@ -63,7 +63,13 @@
         </div>
       </UiHeader>
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
-        <FundNavMethodsTable :methods="fundLastNAVUpdateMethods" />
+        <FundNavMethodsTable
+          :methods="fundLastNAVUpdateMethods"
+          show-summary-row
+          show-last-nav-update-value
+          show-base-token-balances
+          show-simulated-nav
+        />
       </div>
     </div>
 
