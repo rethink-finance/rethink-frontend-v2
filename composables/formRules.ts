@@ -34,4 +34,12 @@ export const formRules: Record<string, any> = {
       `This field must be at most ${maxChars} characters.`
     );
   },
+
+  isValidByteLength: (byteLength: number) => (value: any) => {
+    const expectedLength = 2 * byteLength + 2; // 2 hex chars per byte + 2 for '0x' prefix
+    return (
+      value.length === expectedLength ||
+      `Value must be a valid hex string of length ${byteLength} bytes.`
+    );
+  },
 };

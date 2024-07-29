@@ -1,5 +1,5 @@
-import { InputType } from "./stepper";
 import type { IStepperStep } from "~/types/stepper";
+import { InputType } from "./stepper";
 
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 
@@ -70,6 +70,13 @@ const parseFuncInputDetails = (input: any) => {
       rules.push(formRules.isValidAddress);
     }
     if (input.type.includes("bytes")) {
+      const byteLength = Number(input.type.replace(/\D/g, "")); // remove all non-digits
+
+      if (byteLength !== 0) {
+        placeholder = `E.g. 0x${"00".repeat(byteLength)}`;
+        rules.push(formRules.isValidByteLength(byteLength));
+      }
+      
       rules.push(formRules.isValidHexString);
     }
   } else if (boolTypes.some((type) => input.type.includes(type))) {
