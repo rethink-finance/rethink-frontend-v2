@@ -23,8 +23,27 @@
           <!-- TODO -->
           -
         </td>
-        <td v-if="showSimulatedNav" class="text-right">
-          <strong>{{ formattedTotalSimulatedNAV }}</strong>
+        <td v-if="showSimulatedNav" class="text-right font-weight-black">
+          <div :class="`item-simulated-nav ${simulatedNavErrorCount > 0 ? 'item-simulated-nav--error' : ''}`">
+            <div>
+              {{ formattedTotalSimulatedNAV }}
+            </div>
+            <div
+              v-if="simulatedNavErrorCount > 0"
+              class="ms-2 justify-center align-center d-flex"
+            >
+              <Icon
+                icon="octicon:question-16"
+                width="1rem"
+                font-bold
+                color="var(--color-danger)"
+              />
+              <v-tooltip activator="parent" location="bottom">
+                Total value may not include all simulated NAV method values.<br>
+                Retry simulating NAV.
+              </v-tooltip>
+            </div>
+          </div>
         </td>
         <td />
         <td v-if="deletable" />
@@ -69,10 +88,18 @@
         <div v-else>
           {{ value ?? "-" }}
         </div>
-        <div v-if="item.pastNAVUpdateEntryFundAddress" class="ms-2 justify-center align-center d-flex">
+        <div
+          v-if="item.pastNAVUpdateEntryFundAddress || item.isSimulatedNavError"
+          class="ms-2 justify-center align-center d-flex"
+        >
           <Icon icon="octicon:question-16" width="1rem" :color="simulatedNAVIconColor(item)" />
           <v-tooltip activator="parent" location="right">
-            pastNAVUpdateEntryFundAddress: <br> <strong>{{ item.pastNAVUpdateEntryFundAddress }}</strong>
+            <template v-if="item.isSimulatedNavError">
+              Something went wrong while simulating NAV value. Retry simulating NAV.
+            </template>
+            <template v-else>
+              pastNAVUpdateEntryFundAddress: <br> <strong>{{ item.pastNAVUpdateEntryFundAddress }}</strong>
+            </template>
           </v-tooltip>
         </div>
       </div>
@@ -304,6 +331,9 @@ export default defineComponent({
     formattedFeeBalance() {
       return this.formatNAV(this.fundStore.fund?.feeBalance);
     },
+    simulatedNavErrorCount() {
+      return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
+    },
     computedMethods() {
       const methods = [];
       if (this.showBaseTokenBalances) {
@@ -404,7 +434,7 @@ export default defineComponent({
       this.isNavSimulationLoading = false;
     },
     async simulateNAVMethodValue(navEntry: INAVMethod) {
-      if (!this.web3Store.web3) return;
+      if (!this.web3Store.web3 || !navEntry.detailsHash) return;
       const baseDecimals = this.fundStore.fund?.baseToken.decimals;
       if (!baseDecimals) {
         this.toastStore.errorToast(
