@@ -54,6 +54,7 @@
       <FundNavMethodsTable
         v-model:methods="fundManagedNAVMethods"
         deletable
+        show-summary-row
         show-base-token-balances
         show-simulated-nav
       />

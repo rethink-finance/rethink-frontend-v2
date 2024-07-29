@@ -14,7 +14,7 @@
     @input="onSelectionChanged"
   >
     <template #[`body.prepend`]>
-      <tr v-if="showLastNavUpdateValue || showSimulatedNav" class="nav_entries__summary_row">
+      <tr v-if="showSummaryRow && (showLastNavUpdateValue || showSimulatedNav)" class="nav_entries__summary_row">
         <td><strong>Total</strong></td>
         <td />
         <td />
@@ -27,6 +27,8 @@
           <strong>{{ formattedTotalSimulatedNAV }}</strong>
         </td>
         <td />
+        <td v-if="deletable" />
+        <td v-if="selectable" />
       </tr>
     </template>
     <template #[`item.index`]="{ index }">
@@ -129,7 +131,6 @@
             />
           </template>
         </v-tooltip>
-
       </UiDetailsButton>
     </template>
 
@@ -188,6 +189,10 @@ export default defineComponent({
       default: () => [],
     },
     showBaseTokenBalances: {
+      type: Boolean,
+      default: false,
+    },
+    showSummaryRow: {
       type: Boolean,
       default: false,
     },
