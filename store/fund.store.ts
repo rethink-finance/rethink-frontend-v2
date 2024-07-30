@@ -45,9 +45,11 @@ interface IState {
   userFundDelegateAddress: string;
   userFundShareValue: bigint
   selectedFundAddress: string;
+  // Fund NAV methods that user can manage and change, delete, add...
   fundManagedNAVMethods: INAVMethod[],
   // Cached roleMod addresses for each fund.
   fundRoleModAddress: Record<string, string>,
+  refreshSimulateNAVCounter: number,
 }
 
 
@@ -64,6 +66,7 @@ export const useFundStore = defineStore({
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
+    refreshSimulateNAVCounter: 0,
   }),
   getters: {
     accountStore(): any {
@@ -92,13 +95,15 @@ export const useFundStore = defineStore({
       return formatNumberShort(totalNAV) + " " + state.fund.baseToken.symbol;
     },
     selectedFundSlug(state: IState): string {
-      return (state.fund?.fundToken.symbol || "") + "-" + (state.fund?.address || "");
+      const chainId = this.web3Store?.chainId || "";
+      return (chainId) + "-" + (state.fund?.fundToken.symbol || "") + "-" + (state.fund?.address || "");
     },
     fundLastNAVUpdate(state: IState): INAVUpdate | undefined {
       if (!state.fund?.navUpdates.length) return undefined;
-      return state.fund.navUpdates[state.fund.navUpdates.length - 1];
+      // It is the first one, as they sorted from most recent to least recent.
+      return state.fund.navUpdates[0];
     },
-    fundLastNAVUpdateEntries(): INAVMethod[] {
+    fundLastNAVUpdateMethods(): INAVMethod[] {
       return this.fundLastNAVUpdate?.entries || [];
     },
     /**
@@ -154,12 +159,9 @@ export const useFundStore = defineStore({
 
       try {
         this.fund = await this.fetchFundData() as IFund;
-
-        // Set fund NAV methods to be edited.
-        // Create a deep copy of the array to prevent changing the original by reference.
-        // TODO first check if they already exist in the localStorage as draft?
-        console.log("fundLastNAVUpdateEntries: ", this.fundLastNAVUpdateEntries);
-        this.fundManagedNAVMethods = JSON.parse(JSON.stringify(this.fundLastNAVUpdateEntries));
+        this.fundManagedNAVMethods = JSON.parse(
+          JSON.stringify(this.fundLastNAVUpdateMethods),
+        );
         console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
         console.log("fund: ", this.fund)
       } catch (e) {
@@ -170,6 +172,8 @@ export const useFundStore = defineStore({
       } catch (e) {
         console.error(`Failed fetching user fundBalances fund ${fundAddress} -> `, e)
       }
+
+      this.mergeNAVMethodsFromLocalStorage();
     },
     /**
      * Fetches multiple fund data:
@@ -403,7 +407,7 @@ export const useFundStore = defineStore({
           performanceFeeAddress: fundSettings.feeCollectors[3],
           performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
           feeCollectors: fundSettings.feeCollectors,
-          feeBalance,
+          feeBalance: feeBalance * -1n, // Fees should be negative
           safeContractBaseTokenBalance,
           fundContractBaseTokenBalance,
 
@@ -530,7 +534,8 @@ export const useFundStore = defineStore({
         }
       });
 
-      return navUpdates;
+      // reverse the array to show the latest updates first
+      return navUpdates.reverse();
     },
     /**
      * Fetches connected user's wallet balance of the fund base/denomination token.
@@ -657,6 +662,18 @@ export const useFundStore = defineStore({
       roleModAddress = safeModules[0][1];
       this.fundRoleModAddress[this.fund?.address ?? ""] = roleModAddress;
       return roleModAddress;
+    },
+    mergeNAVMethodsFromLocalStorage() {
+      let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
+      if (!navUpdateEntries) {
+        navUpdateEntries = {};
+      }
+
+      // TODO here we should merge the fetched NAV methods (fundManagedNAVMethods) with those
+      //  from local storage one by one and take our changed properties also along with those fetched.
+      //  you can merge both objects with spread operator ({...a, ...localStorageMethod}) for each method
+      // this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || {};
+      // TODO also here save to localStorage newly merged version of navUpdateEntries
     },
   },
 });

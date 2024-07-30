@@ -13,6 +13,43 @@
     :show-select="selectable"
     @input="onSelectionChanged"
   >
+    <template #[`body.prepend`]>
+      <tr v-if="showSummaryRow && (showLastNavUpdateValue || showSimulatedNav)" class="nav_entries__summary_row">
+        <td><strong>Total</strong></td>
+        <td />
+        <td />
+        <td />
+        <td v-if="showLastNavUpdateValue" class="text-right">
+          <!-- TODO -->
+          -
+        </td>
+        <td v-if="showSimulatedNav" class="text-right font-weight-black">
+          <div :class="`item-simulated-nav ${simulatedNavErrorCount > 0 ? 'item-simulated-nav--error' : ''}`">
+            <div>
+              {{ formattedTotalSimulatedNAV }}
+            </div>
+            <div
+              v-if="simulatedNavErrorCount > 0"
+              class="ms-2 justify-center align-center d-flex"
+            >
+              <Icon
+                icon="octicon:question-16"
+                width="1rem"
+                font-bold
+                color="var(--color-danger)"
+              />
+              <v-tooltip activator="parent" location="bottom">
+                Total value may not include all simulated NAV method values.<br>
+                Retry simulating NAV.
+              </v-tooltip>
+            </div>
+          </div>
+        </td>
+        <td />
+        <td v-if="deletable" />
+        <td v-if="selectable" />
+      </tr>
+    </template>
     <template #[`item.index`]="{ index }">
       <strong class="td_index">{{ index + 1 }}</strong>
     </template>
@@ -21,8 +58,11 @@
       {{ value ?? "N/A" }}
     </template>
 
-    <template #[`item.valuationSource`]="{ value }">
-      {{ value ?? "N/A" }}
+    <template #[`item.valuationSource`]="{ value, item }">
+      <Logo v-if="item.isRethinkPosition" small />
+      <template v-else>
+        {{ value ?? "N/A" }}
+      </template>
     </template>
 
     <template #[`item.positionType`]="{ value, item }">
@@ -31,16 +71,35 @@
         :disabled="item.deleted || item.isAlreadyUsed"
       />
     </template>
+    <template #[`item.lastNavUpdateValueFormatted`]="{ value }">
+      {{ value ?? "-" }}
+    </template>
 
-    <template #[`item.simulatedNav`]="{ value, item }">
-      <div class="d-flex justify-end">
-        <div>
-          {{ value ?? "N/A" }}
+    <template #[`item.simulatedNavFormatted`]="{ value, item }">
+      <div :class="`item-simulated-nav ${item.isSimulatedNavError ? 'item-simulated-nav--error' : ''}`">
+        <div v-if="item.isNavSimulationLoading">
+          <v-progress-circular
+            indeterminate
+            color="gray"
+            size="16"
+            width="2"
+          />
         </div>
-        <div v-if="item.pastNAVUpdateEntryFundAddress" class="ms-2 justify-center align-center d-flex">
+        <div v-else>
+          {{ value ?? "-" }}
+        </div>
+        <div
+          v-if="item.pastNAVUpdateEntryFundAddress || item.isSimulatedNavError"
+          class="ms-2 justify-center align-center d-flex"
+        >
           <Icon icon="octicon:question-16" width="1rem" :color="simulatedNAVIconColor(item)" />
           <v-tooltip activator="parent" location="right">
-            pastNAVUpdateEntryFundAddress: <br> <strong>{{ item.pastNAVUpdateEntryFundAddress }}</strong>
+            <template v-if="item.isSimulatedNavError">
+              Something went wrong while simulating NAV value. Retry simulating NAV.
+            </template>
+            <template v-else>
+              pastNAVUpdateEntryFundAddress: <br> <strong>{{ item.pastNAVUpdateEntryFundAddress }}</strong>
+            </template>
           </v-tooltip>
         </div>
       </div>
@@ -48,6 +107,7 @@
 
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
       <UiDetailsButton
+        v-if="item.detailsJson"
         text="Details"
         :active="isExpanded(internalItem)"
         :disabled="item.deleted || item.isAlreadyUsed"
@@ -67,25 +127,45 @@
     </template>
 
     <template #[`item.delete`]="{ item }">
-      <UiDetailsButton small @click.stop="deleteMethod(item)">
-        <v-icon
-          v-if="item.deleted"
-          icon="mdi-arrow-u-left-top"
-          color="secondary"
-        />
-        <v-icon
-          v-else
-          icon="mdi-delete"
-          color="error"
-        />
+      <!-- Rethink Position such as fund, safe, fees cannot be deleted -->
+      <UiDetailsButton
+        v-if="!item.isRethinkPosition"
+        small
+        @click.stop="deleteMethod(item)"
+      >
+        <v-tooltip v-if="item.deleted" activator="parent" location="bottom">
+          <template #default>
+            Undo Delete
+          </template>
+          <template #activator="{ props }">
+            <v-icon
+              icon="mdi-arrow-u-left-top"
+              color="secondary"
+              v-bind="props"
+            />
+          </template>
+        </v-tooltip>
+
+        <v-tooltip v-else activator="parent" location="bottom">
+          <template #default>
+            Delete NAV Method
+          </template>
+          <template #activator="{ props }">
+            <v-icon
+              icon="mdi-delete"
+              color="error"
+              v-bind="props"
+            />
+          </template>
+        </v-tooltip>
       </UiDetailsButton>
     </template>
 
     <template #expanded-row="{ columns, item }">
-      <tr class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
+      <tr v-if="item.detailsJson" class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
         <td :colspan="columns.length" class="pa-0">
           <div class="nav_entries__details">
-            <div @click="copyText(item.detailsHash)">
+            <div v-if="!item.isRethinkPosition" @click="copyText(item.detailsHash)">
               <ui-tooltip-click tooltip-text="Copied">
                 Details Hash: {{ item.detailsHash }}
                 <Icon
@@ -114,12 +194,17 @@
 
 <script lang="ts">
 import type INAVMethod from "~/types/nav_method";
+import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
+import { useFundStore } from "~/store/fund.store";
+import { useWeb3Store } from "~/store/web3.store";
+import NAVCalculatorJSON from "assets/contracts/NAVCalculator.json";
+import { useToastStore } from "~/store/toast.store";
+import { useFundsStore } from "~/store/funds.store";
 
 
 export default defineComponent({
-  name: "NAVMethods",
+  name: "FundNavMethodsTable",
   props: {
-    // TODO prevent directly modifying passed methods and use computed() get & set for it
     methods: {
       type: Array as () => INAVMethod[],
       default: () => [],
@@ -129,6 +214,18 @@ export default defineComponent({
     usedMethods: {
       type: Array as () => INAVMethod[],
       default: () => [],
+    },
+    showBaseTokenBalances: {
+      type: Boolean,
+      default: false,
+    },
+    showSummaryRow: {
+      type: Boolean,
+      default: false,
+    },
+    showLastNavUpdateValue: {
+      type: Boolean,
+      default: false,
     },
     showSimulatedNav: {
       type: Boolean,
@@ -144,9 +241,17 @@ export default defineComponent({
     },
   },
   emits: ["update:methods", "selectedChanged"],
+  setup() {
+    const fundStore = useFundStore();
+    const fundsStore = useFundsStore();
+    const web3Store = useWeb3Store();
+    const toastStore = useToastStore();
+    return { fundStore, fundsStore, web3Store, toastStore }
+  },
   data: () => ({
     expanded: [],
     selected: [],
+    isNavSimulationLoading: false,
   }),
   computed: {
     headers() {
@@ -159,8 +264,27 @@ export default defineComponent({
         { title: "Position Type", key: "positionType", sortable: false },
       ];
       // Simulated NAV value.
+      if (this.showLastNavUpdateValue) {
+        headers.push(
+          {
+            title: "Last NAV Update Value",
+            key: "lastNavUpdateValueFormatted",
+            align: "end",
+            sortable: false,
+            width: "160px",
+          },
+        )
+      }
       if (this.showSimulatedNav) {
-        headers.push({ title: "Simulated NAV", key: "simulatedNav", align: "end", sortable: false, width: "260px" })
+        headers.push(
+          {
+            title: "Simulated NAV",
+            key: "simulatedNavFormatted",
+            align: "end",
+            sortable: false,
+            width: "160px",
+          },
+        )
       }
 
       // Expand details button
@@ -177,17 +301,231 @@ export default defineComponent({
     usedMethodHashes(): string[] {
       return this.usedMethods.map(method => method.detailsHash || "");
     },
+    formattedTotalSimulatedNAV() {
+      // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
+      const fund = this.fundStore.fund;
+      const totalNAV =
+        (this.totalNavMethodsSimulatedNAV || 0n) +
+        (fund?.fundContractBaseTokenBalance || 0n) +
+        (fund?.safeContractBaseTokenBalance || 0n) +
+        (fund?.feeBalance || 0n);
+      return this.formatNAV(totalNAV);
+    },
+    totalNavMethodsSimulatedNAV() {
+      // Sum simulated NAV value of all methods.
+      return this.methods.reduce(
+        (totalValue: bigint, method: any) => {
+          // Do not count deleted methods to total simulated NAV.
+          const methodSimulatedNav = method.deleted ? 0n : (method.simulatedNav || 0n);
+          return totalValue + methodSimulatedNav;
+        },
+        0n,
+      )
+    },
+    formattedFundContractBaseTokenBalance() {
+      return this.formatNAV(this.fundStore.fund?.fundContractBaseTokenBalance);
+    },
+    formattedSafeContractBaseTokenBalance() {
+      return this.formatNAV(this.fundStore.fund?.safeContractBaseTokenBalance);
+    },
+    formattedFeeBalance() {
+      return this.formatNAV(this.fundStore.fund?.feeBalance);
+    },
+    simulatedNavErrorCount() {
+      return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
+    },
     computedMethods() {
-      return this.methods.map(method => ({
-        ...method,
-        isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
-      }));
+      const methods = [];
+      if (this.showBaseTokenBalances) {
+        methods.push({
+          positionName: "Fund Balance",
+          valuationSource: "Rethink",
+          positionType: PositionType.Liquid,
+          simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
+          isRethinkPosition: true,
+          detailsHash: "-1",
+          detailsJson: {
+            "fundContractAddress": this.fundStore.fund?.address,
+          },
+        } as any)
+        methods.push({
+          positionName: "Safe Balance",
+          valuationSource: "Rethink",
+          positionType: PositionType.Liquid,
+          simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
+          isRethinkPosition: true,
+          detailsHash: "-2",
+          detailsJson: {
+            "safeContractAddress": this.fundStore.fund?.safeAddress,
+          },
+        } as any)
+        methods.push({
+          positionName: "Fees Balance",
+          valuationSource: "Rethink",
+          positionType: PositionType.Liquid,
+          simulatedNavFormatted: this.formattedFeeBalance,
+          isRethinkPosition: true,
+          detailsHash: "-3",
+        } as any)
+      }
+      return [
+        ...methods,
+        ...this.methods.map(method => ({
+          ...method,
+          isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
+        })),
+      ];
+    },
+  },
+  watch: {
+    methods: {
+      handler() {
+        // Simulate NAV method values everytime NAV methods change.
+        this.simulateNAV();
+      },
+      deep: true,
+      immediate: true,
+    },
+    "fundStore.refreshSimulateNAVCounter": {
+      handler() {
+        // Simulate NAV method values everytime Simulate NAV button is pressed and refreshSimulateNAVCounter changes.
+        this.simulateNAV();
+      },
     },
   },
   methods: {
+    formatNAV(value: any) {
+      const baseSymbol = this.fundStore.fund?.baseToken.symbol;
+      const baseDecimals = this.fundStore.fund?.baseToken.decimals;
+      if (!baseDecimals) {
+        return value;
+      }
+
+      const valueFormatted = value ? formatTokenValue(value, baseDecimals) : "0";
+      return valueFormatted + " " + baseSymbol;
+    },
     copyText(text: string | undefined) {
       const data = text as string;
       navigator.clipboard.writeText(data);
+    },
+    async simulateNAV() {
+      if (!this.web3Store.web3 || this.isNavSimulationLoading) return;
+      if (!this.fundsStore.allNavMethods?.length) {
+        const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
+        const fundAddresses: string[] = fundsInfoArrays[0];
+
+        // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
+        // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
+        // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
+        await this.fundsStore.fetchAllNavMethods(fundAddresses);
+      }
+
+      this.isNavSimulationLoading = true;
+
+      // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
+      // Otherwise, take managed methods, that user can change.
+      // Simulate all at once as many promises instead of one by one.
+      const promises = [];
+
+      for (const navEntry of this.methods) {
+        promises.push(this.simulateNAVMethodValue(navEntry));
+      }
+      await Promise.allSettled(promises);
+      this.isNavSimulationLoading = false;
+    },
+    async simulateNAVMethodValue(navEntry: INAVMethod) {
+      if (!this.web3Store.web3 || !navEntry.detailsHash) return;
+      const baseDecimals = this.fundStore.fund?.baseToken.decimals;
+      if (!baseDecimals) {
+        this.toastStore.errorToast(
+          "Failed preparing NAV Illiquid method, fund base token decimals are not known.",
+        );
+        return;
+      }
+
+      const NAVCalculatorContract = new this.web3Store.web3.eth.Contract(
+        NAVCalculatorJSON.abi,
+        this.web3Store.NAVCalculatorBeaconProxyAddress,
+      );
+      try {
+        navEntry.isNavSimulationLoading = true;
+        navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
+        if (!navEntry.pastNAVUpdateEntryFundAddress) {
+          navEntry.pastNAVUpdateEntryFundAddress =
+            this.fundsStore.navMethodDetailsHashToFundAddress[
+              navEntry.detailsHash ?? ""
+            ];
+        }
+        if (!navEntry.pastNAVUpdateEntryFundAddress) {
+          // If there is no pastNAVUpdateEntryFundAddress the simulation will fail later.
+          // A missing pastNAVUpdateEntryFundAddress can mean two things:
+          //   1) A proposal is not approved yet and so its methods are not yet in the allNavMethods
+          //     -> that means the method was created on this fund, so we take address of this fund.
+          //  2) There was some difference when hashing details on INAVMethod detailsHash.
+          //    -> it will be hard to detect this, NAV simulation will fail, and we will take a look what happened.
+          //    -> We have a bigger problem if it won't fail, we should mark the address somewhere in the table.
+          //
+          // Here we take solution 1), as we assume that the method was not yet added to allMethods
+          navEntry.pastNAVUpdateEntryFundAddress = this.fundStore.fund?.address;
+          navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
+        }
+
+        const callData = [];
+        if (navEntry.positionType === PositionType.Liquid) {
+          callData.push(prepNAVMethodLiquid(navEntry.details));
+          callData.push(this.fundStore.fund?.safeAddress);
+        } else if (navEntry.positionType === PositionType.Illiquid) {
+          callData.push(prepNAVMethodIlliquid(navEntry.details, baseDecimals));
+          callData.push(this.fundStore.fund?.safeAddress);
+        } else if (navEntry.positionType === PositionType.NFT) {
+          callData.push(prepNAVMethodNFT(navEntry.details));
+          // callData.push(this.fundStore.fund?.safeAddress);
+        } else if (navEntry.positionType === PositionType.Composable) {
+          callData.push(prepNAVMethodComposable(navEntry.details));
+        }
+
+        callData.push(
+          ...[
+            this.fundStore.fund?.address, // fund
+            0, // navEntryIndex
+            navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
+            parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
+            parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
+            navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
+          ],
+        );
+
+        // console.log("json: ", JSON.stringify(callData, null, 2))
+        const navCalculationMethod =
+          PositionTypeToNAVCalculationMethod[navEntry.positionType];
+        navEntry.simulatedNavFormatted = "N/A";
+        navEntry.simulatedNav = 0n;
+        try {
+          const simulatedVal: bigint = await NAVCalculatorContract.methods[
+            navCalculationMethod
+          ](...callData).call();
+          console.log("simulated value: ", simulatedVal);
+
+          navEntry.simulatedNavFormatted = this.formatNAV(simulatedVal);
+          navEntry.simulatedNav = simulatedVal;
+          navEntry.isSimulatedNavError = false;
+        } catch (error: any) {
+          navEntry.isSimulatedNavError = true;
+          console.error(
+            "Failed simulating value for entry, check if there was some difference when " +
+            "hashing details on INAVMethod detailsHash: ",
+            navEntry,
+            error,
+          );
+        }
+      } catch (error) {
+        console.error("Error simulating NAV: ", error);
+        this.toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      } finally {
+        navEntry.isNavSimulationLoading = false;
+      }
     },
     simulatedNAVIconColor(method: INAVMethod) {
       if (!method.foundMatchingPastNAVUpdateEntryFundAddress) {
@@ -246,6 +584,9 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .nav_entries {
+  &__summary_row {
+    background: $color-badge-navy;
+  }
   &__details {
     font-family: monospace;
     white-space: pre-wrap;
@@ -288,4 +629,12 @@ export default defineComponent({
   }
 }
 
+.item-simulated-nav {
+  display: flex;
+  justify-content: flex-end;
+
+  &--error {
+    color: $color-error;
+  }
+}
 </style>

@@ -1,5 +1,5 @@
-import { InputType } from "./stepper";
 import type { IStepperStep } from "~/types/stepper";
+import { InputType } from "./stepper";
 
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 
@@ -29,7 +29,7 @@ const proposalRoleModMethods = ZodiacRoles.abi.filter(
 );
 // make a list of choices for the select field out of the methods
 export const roleModMethodChoices = proposalRoleModMethods.map((func) => {
-  return { title: abiFunctionNameToLabel(func?.name || ""), value: func.name };
+  return { title: func.name, value: func.name };
 });
 
 // define select field that will be used in all sub steps
@@ -64,23 +64,35 @@ const parseFuncInputDetails = (input: any) => {
       rules = [formRules.required, formRules.isValidUint16];
     }
   } else if (textTypes.some((type) => input.type.includes(type))) {
+    rules = [formRules.required];
     if (input.type.includes("address")) {
       placeholder = addressPlaceholder;
+      rules.push(formRules.isValidAddress);
     }
-    rules = [formRules.required, formRules.isValidAddress];
+    if (input.type.includes("bytes")) {
+      const byteLength = Number(input.type.replace(/\D/g, "")); // remove all non-digits
+
+      if (byteLength !== 0) {
+        placeholder = `E.g. 0x${"00".repeat(byteLength)}`;
+        rules.push(formRules.isValidByteLength(byteLength));
+      }
+      
+      rules.push(formRules.isValidHexString);
+    }
   } else if (boolTypes.some((type) => input.type.includes(type))) {
     type = InputType.Select;
     choices = [
-      { title: "True", value: true },
-      { title: "False", value: false },
+      { title: "true", value: true },
+      { title: "false", value: false },
     ];
     defaultValue = false;
   }
 
   return {
-    label: abiFunctionNameToLabel(input.name),
+    label: input.name,
     key: input.name,
     internalType: input.internalType,
+    input,
     type,
     rules,
     placeholder,

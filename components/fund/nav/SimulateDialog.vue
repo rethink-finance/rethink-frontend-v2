@@ -1,16 +1,17 @@
 <template>
   <v-dialog
+    v-model="isDialogOpen"
     scrim="black"
     opacity="0.5"
     height="80%"
     max-width="90%"
     scrollable
   >
-    <template #activator="{ props: activatorProps }">
+    <template #activator>
       <v-btn
         class="text-secondary"
         variant="outlined"
-        v-bind="activatorProps"
+        @click="openDialog()"
       >
         Simulate NAV
       </v-btn>
@@ -62,7 +63,8 @@
         <v-card-text>
           <div class="di_card__table">
             <FundNavMethodsTable
-              v-model:methods="fundManagedNAVMethods"
+              v-model:methods="navMethodsWithSimulatedNAV"
+              show-last-nav-update-value
               show-simulated-nav
             />
           </div>
@@ -79,54 +81,80 @@
               Close
             </v-btn>
             <v-btn
-              class="text-secondary"
-              variant="outlined"
-            >
-              Manage Methods
-            </v-btn>
-            <v-btn
-              class="text-secondary"
+              :disabled="isNavSimulationLoading"
+              class="di-card__delegate-votes"
               variant="flat"
+              @click="simulateNAV"
             >
-              Update NAV
+              <template #prepend>
+                <v-progress-circular
+                  v-if="isNavSimulationLoading"
+                  class="d-flex"
+                  size="20"
+                  width="3"
+                  indeterminate
+                />
+              </template>
+              Re-simulate NAV
             </v-btn>
           </div>
         </v-card-actions>
       </v-card>
-
     </template>
   </v-dialog>
-
 </template>
 
 <script setup lang="ts">
-import type INAVMethod from "~/types/nav_method";
 import NAVCalculatorJSON from "~/assets/contracts/NAVCalculator.json";
-import { useWeb3Store } from "~/store/web3.store";
 import { useFundStore } from "~/store/fund.store";
-import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
-import { useToastStore } from "~/store/toast.store";
 import { useFundsStore } from "~/store/funds.store";
-// Since the direct import won't infer the custom type, we cast it here.:
+import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
+import {
+  PositionType,
+  PositionTypeToNAVCalculationMethod,
+} from "~/types/enums/position_type";
+import type INAVMethod from "~/types/nav_method";
 
+const props = defineProps({
+  useLastNavUpdateMethods: {
+    type: Boolean,
+    default: false,
+  },
+});
 const web3Store = useWeb3Store();
 const fundsStore = useFundsStore();
 const fundStore = useFundStore();
+const { fundManagedNAVMethods, fundLastNAVUpdateMethods } = toRefs(useFundStore());
 const toastStore = useToastStore();
-const totalSimulatedNAV = ref(0n);
-const { fundManagedNAVMethods } = toRefs(fundStore);
+const isNavSimulationLoading = ref(false);
+const isDialogOpen = ref(false);
+
+const totalSimulatedNAV = computed(() => {
+  return navMethodsWithSimulatedNAV.value.reduce(
+    (totalValue, method: any) => {
+      // Do not count deleted methods to total simulated NAV.
+      const methodSimulatedNav = method.deleted ? 0n : (method.simulatedNav || 0n);
+      return totalValue + methodSimulatedNav;
+    },
+    0n,
+  )
+});
+
+function openDialog() {
+  simulateNAV();
+  isDialogOpen.value = true;
+}
 
 const formattedTotalSimulatedNAV = computed(() => {
   const fund = fundStore.fund;
-  const totalNAV = (
-    totalSimulatedNAV.value +
+  const totalNAV =
+    (totalSimulatedNAV.value || 0n) +
     (fund?.fundContractBaseTokenBalance || 0n) +
     (fund?.safeContractBaseTokenBalance || 0n) +
-    (fund?.feeBalance || 0n)
-  );
+    (fund?.feeBalance || 0n);
   return formatNAV(totalNAV);
 });
-
 const formattedFeeBalance = computed(() => {
   return formatNAV(fundStore.fund?.feeBalance);
 });
@@ -144,41 +172,84 @@ const formatNAV = (value: any) => {
     return value;
   }
 
-  const valueFormatted = value ? formatNumberShort(
-    Number(formatTokenValue(value, baseDecimals, false)),
-  ) : "0";
+  const valueFormatted = value
+    ? formatNumberShort(Number(formatTokenValue(value, baseDecimals, false)))
+    : "0";
   return valueFormatted + " " + baseSymbol;
-}
+};
 
-onMounted(async () => {
-  if (!web3Store.web3) return;
-  // TODO move this to another function
-  // TODO add loading indicators
-  // TODO only call after the modal is opened, not on created
-  const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays()
+onMounted(() => {
+  init();
+});
+
+async function init() {
+  if (fundsStore.allNavMethods?.length) {
+    return
+  }
+  const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays();
   const fundAddresses: string[] = fundsInfoArrays[0];
 
   // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
   // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
   // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
   await fundsStore.fetchAllNavMethods(fundAddresses);
+}
+
+// An object holding simulated nav values for each NAV method.
+// Key is method hash, value is simulated NAV value.
+const navMethodsWithSimulatedNAV = ref([] as INAVMethod[]);
+
+watch(
+  fundManagedNAVMethods.value, () => {
+    simulateNAV();
+  },
+  { deep: true, immediate: true },
+);
+
+async function simulateNAV() {
+  if (!web3Store.web3 || isNavSimulationLoading.value) return;
+  isNavSimulationLoading.value = true;
+  navMethodsWithSimulatedNAV.value = [];
+
+  // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
+  // Otherwise, take managed methods, that user can change.
+  const navMethods = props.useLastNavUpdateMethods ? fundLastNAVUpdateMethods.value : fundManagedNAVMethods.value;
+  // Simulate all at once as many promises instead of one by one.
+  const promises = [];
+
+  for (const navEntryOriginal of navMethods) {
+    const navEntry: INAVMethod = JSON.parse(JSON.stringify(navEntryOriginal));
+    navMethodsWithSimulatedNAV.value.push(navEntry);
+  }
+  for (const navEntry of navMethodsWithSimulatedNAV.value) {
+    promises.push(simulateNAVMethodValue(navEntry));
+  }
+  await Promise.allSettled(promises);
+  isNavSimulationLoading.value = false;
+}
+
+async function simulateNAVMethodValue(navEntry: INAVMethod) {
+  if (!web3Store.web3) return;
+  const baseDecimals = fundStore.fund?.baseToken.decimals;
+  if (!baseDecimals) {
+    toastStore.errorToast(
+      "Failed preparing NAV Illiquid method, fund base token decimals are not known.",
+    );
+    return;
+  }
 
   const NAVCalculatorContract = new web3Store.web3.eth.Contract(
     NAVCalculatorJSON.abi,
     web3Store.NAVCalculatorBeaconProxyAddress,
   );
-
-  const baseDecimals = fundStore.fund?.baseToken.decimals;
-  if (!baseDecimals) {
-    toastStore.errorToast("Failed preparing NAV Illiquid method, fund base token decimals are not known.")
-    throw new Error("Failed preparing NAV Illiquid method, base decimals are not known.")
-  }
-
-  // TODO Simulate all at once as many promises instead of one by one.
-  for (const navEntry of fundManagedNAVMethods.value as INAVMethod[]) {
+  try {
+    navEntry.isNavSimulationLoading = true;
     navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
     if (!navEntry.pastNAVUpdateEntryFundAddress) {
-      navEntry.pastNAVUpdateEntryFundAddress = fundsStore.navMethodDetailsHashToFundAddress[navEntry.detailsHash ?? ""];
+      navEntry.pastNAVUpdateEntryFundAddress =
+        fundsStore.navMethodDetailsHashToFundAddress[
+          navEntry.detailsHash ?? ""
+        ];
     }
     if (!navEntry.pastNAVUpdateEntryFundAddress) {
       // If there is no pastNAVUpdateEntryFundAddress the simulation will fail later.
@@ -217,30 +288,40 @@ onMounted(async () => {
         parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
         navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
       ],
-    )
+    );
 
     // console.log("json: ", JSON.stringify(callData, null, 2))
-    const navCalculationMethod = PositionTypeToNAVCalculationMethod[navEntry.positionType];
-    navEntry.simulatedNav = "N/A"
+    const navCalculationMethod =
+      PositionTypeToNAVCalculationMethod[navEntry.positionType];
+    navEntry.simulatedNavFormatted = "N/A";
+    navEntry.simulatedNav = 0n;
     try {
-      const simulatedVal: bigint = await NAVCalculatorContract.methods[navCalculationMethod] (
-        ...callData,
-      ).call();
-      totalSimulatedNAV.value += simulatedVal;
-      console.log("simulated value: ", simulatedVal)
+      const simulatedVal: bigint = await NAVCalculatorContract.methods[
+        navCalculationMethod
+      ](...callData).call();
+      console.log("simulated value: ", simulatedVal);
 
-      navEntry.simulatedNav = formatNAV(simulatedVal);
+      navEntry.simulatedNavFormatted = formatNAV(simulatedVal);
+      navEntry.simulatedNav = simulatedVal;
+      navEntry.isSimulatedNavError = false;
     } catch (error: any) {
+      navEntry.isSimulatedNavError = true;
       console.error(
         "Failed simulating value for entry, check if there was some difference when " +
         "hashing details on INAVMethod detailsHash: ",
         navEntry,
         error,
-      )
+      );
     }
+  } catch (error) {
+    console.error("Error simulating NAV: ", error);
+    toastStore.errorToast(
+      "There has been an error. Please contact the Rethink Finance support.",
+    );
+  } finally {
+    navEntry.isNavSimulationLoading = false;
   }
-});
-
+}
 </script>
 
 <style lang="scss" scoped>
@@ -251,7 +332,7 @@ onMounted(async () => {
   &__balances {
     line-height: 1.5rem;
   }
-  &__header{
+  &__header {
     font-size: $text-md;
     font-weight: 700;
     margin-bottom: 0.25rem;
@@ -260,12 +341,12 @@ onMounted(async () => {
     font-size: $text-sm;
     font-weight: 500;
     color: $color-text-irrelevant;
-    margin-bottom: 2.5rem
+    margin-bottom: 2.5rem;
   }
   &__text_total {
     font-size: $text-md;
     font-weight: 400;
-    margin-right: .5rem
+    margin-right: 0.5rem;
   }
   &__text_value {
     font-size: $text-md;
@@ -273,7 +354,7 @@ onMounted(async () => {
   }
   &__table {
     @include borderGray;
-    border-radius: .5rem;
+    border-radius: 0.5rem;
     overflow-y: auto;
     margin-bottom: 1.5rem;
   }
@@ -284,5 +365,11 @@ onMounted(async () => {
     gap: 1.5rem;
     margin: 1rem 0;
   }
+}
+.loader_container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
 }
 </style>

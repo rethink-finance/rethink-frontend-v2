@@ -22,8 +22,18 @@
         :type="isLastStep ? 'submit' : 'button'"
         :loading="isSubmitLoading"
         @click="handleButtonClick"
+        :disabled="isLastStep && !accountStore.isConnected"
       >
         {{ isLastStep ? submitLabel : "Next" }}
+        <v-tooltip
+          v-if="isLastStep && !accountStore.isConnected"
+          :model-value="true"
+          activator="parent"
+          location="top"
+          @update:model-value="true"
+        >
+          Connect your wallet to create a proposal.
+        </v-tooltip>
       </v-btn>
     </UiHeader>
 
@@ -56,11 +66,7 @@
             >
               <div class="sub-steps__dashed-line" />
               <div class="sub-steps__label">
-                {{
-                  substep[step.subStepKey]
-                    ? abiFunctionNameToLabel(substep[step.subStepKey])
-                    : step.subStepLabel + " " + (substepIndex + 1)
-                }}
+                {{ substep[step.subStepKey] ?? (step.subStepLabel + " " + (substepIndex + 1)) }}
               </div>
 
               <div class="sub-steps__icons">
@@ -129,8 +135,10 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useAccountStore } from "~/store/account.store";
 import { useToastStore } from "~/store/toast.store";
 const toastStore = useToastStore();
+const accountStore = useAccountStore();
 
 const emit = defineEmits(["fields-changed"]);
 

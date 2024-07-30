@@ -5,9 +5,9 @@ export const formRules: Record<string, any> = {
     (value !== "" && value !== undefined && value !== null) ||
     "This field is required.",
   isValidAddress: (value: any) =>
-    ethers.isAddress(value) || "This address is not valid..",
+    ethers.isAddress(value) || "This address is not valid.",
   isValidHexString: (value: any) =>
-    ethers.isHexString(value) || "This hex string is not valid..",
+    ethers.isHexString(value) || "This is not a valid hex string.",
 
   isPositiveNumber: (value: any) =>
     value > 0 || "This field must be a positive number.",
@@ -32,6 +32,14 @@ export const formRules: Record<string, any> = {
     return (
       (typeof value === "string" && value.length <= maxChars) ||
       `This field must be at most ${maxChars} characters.`
+    );
+  },
+
+  isValidByteLength: (byteLength: number) => (value: any) => {
+    const expectedLength = 2 * byteLength + 2; // 2 hex chars per byte + 2 for '0x' prefix
+    return (
+      value.length === expectedLength ||
+      `Value must be a valid hex string of length ${byteLength} bytes.`
     );
   },
 };

@@ -24,10 +24,10 @@ import {
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
-import { useFundStore } from "~/store/fund.store";
-import { useWeb3Store } from "~/store/web3.store";
-import { useToastStore } from "~/store/toast.store";
 import { prepRoleModEntryInput } from "~/composables/parseNavMethodDetails";
+import { useFundStore } from "~/store/fund.store";
+import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -55,7 +55,7 @@ const delegatedEntry = ref([
     formText: DelegatedStepMap[DelegatedStep.Setup].formText,
 
     // default value when adding a new sub step
-    stepDefaultValues: defaultMethod,
+    stepDefaultValues: JSON.parse(JSON.stringify(defaultMethod)),
 
     subStepKey: "contractMethod",
     multipleSteps: true,
@@ -155,8 +155,8 @@ const contractMethodChanged = (
 
   // check if currentInputs has the same keys as newInput
   // if it does, we don't need to do anything
-  const hasSameKeys = Object.keys(currentInputs).every(
-    (key) => key in newInput,
+  const hasSameKeys = Object.keys(newInput).every(
+    (key) => key in currentInputs,
   );
   if (hasSameKeys) {
     return;

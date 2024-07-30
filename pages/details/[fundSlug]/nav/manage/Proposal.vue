@@ -153,19 +153,18 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
 import type { AbiFunctionFragment } from "web3";
+import GovernableFund from "assets/contracts/GovernableFund.json";
+import NAVExecutor from "assets/contracts/NAVExecutor.json";
+import addressesJson from "~/assets/contracts/addresses.json";
+import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
+import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
+import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
 import { PositionType } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import { useWeb3Store } from "~/store/web3.store";
-import GovernableFund from "assets/contracts/GovernableFund.json";
-import NAVExecutor from "assets/contracts/NAVExecutor.json";
-import { useToastStore } from "~/store/toast.store";
-import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
-import { useAccountStore } from "~/store/account.store";
-import addressesJson from "~/assets/contracts/addresses.json";
 
 import type IAddresses from "~/types/addresses";
 // Since the direct import won't infer the custom type, we cast it here.:
@@ -177,7 +176,7 @@ const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const emit = defineEmits(["updateBreadcrumbs"]);
 
-const { selectedFundSlug, fundManagedNAVMethods, fundLastNAVUpdate } = toRefs(fundStore);
+const { selectedFundAddress, selectedFundSlug, fundManagedNAVMethods, fundLastNAVUpdate } = toRefs(fundStore);
 const proposal = ref({
   title: "",
   allowManagerToUpdateNav: false,
@@ -535,9 +534,13 @@ const createProposal = async () => {
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
+
+      removeDraft();
     }).on("receipt", (receipt: any) => {
       console.log("receipt: ", receipt);
       if (receipt.status) {
+
+        removeDraft();
         toastStore.successToast(
           "Register the proposal transactions was successful. " +
           "You can now vote on the proposal in the governance page.",
@@ -558,6 +561,23 @@ const createProposal = async () => {
     toastStore.errorToast(error.message);
   }
 }
+
+const removeDraft = () => {
+  try {
+    let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
+    if (!navUpdateEntries) {
+      navUpdateEntries = {};
+    }
+
+    // we need to delete navUpdateEntries[selectedFundAddress.value];
+    delete navUpdateEntries[selectedFundAddress.value];
+    localStorage.setItem("navUpdateEntries", JSON.stringify(navUpdateEntries));
+  } catch (e) {
+    console.error(e);
+    toastStore.errorToast("Failed to remove draft");
+  }
+};
+
 
 </script>
 

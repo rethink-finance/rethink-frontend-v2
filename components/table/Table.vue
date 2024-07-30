@@ -48,7 +48,7 @@
           v-for="row in table.getRowModel().rows"
           :key="row.id"
           :style="{ height: rowHeight }"
-          @click="$router.push(`/details/${row.original.fundToken.symbol}-${row.original.address}`)"
+          @click="navigateFundDetails(row)"
         >
           <td
             v-for="cell in row.getVisibleCells()"
@@ -112,6 +112,10 @@ import {
   useVueTable,
 } from "@tanstack/vue-table";
 import { onMounted, ref, watch } from "vue";
+import { useWeb3Store } from "~/store/web3.store";
+
+const web3Store = useWeb3Store();
+const router = useRouter();
 
 const props = defineProps({
   captionSide: {
@@ -219,6 +223,12 @@ const toggleSorting = (column: any) => {
 };
 const filterTable = (value: any) => {
   filtering.value = value;
+};
+
+const navigateFundDetails = (row: any) => {
+  const chainId = web3Store.chainId;
+  router.push(`/details/${chainId}-${row.original.fundToken.symbol}-${row.original.address}`)
+  
 };
 
 // const gotoPage = (pageIndex: any) => {
