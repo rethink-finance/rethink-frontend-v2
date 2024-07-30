@@ -295,8 +295,9 @@ export const useGovernanceProposalsStore = defineStore({
                 console.log("blockExecuted: ", blockExecuted);
                 proposal.executedTimestamp = Number(blockExecuted.timestamp);
                 proposal.executedBlockNumber = executedEvent.blockNumber;
-
+                // store proposal 
                 console.log("proposal with executed data:", proposal);
+                this.storeProposal(this.web3Store.chainId, this.fundStore.fund?.address, proposal)
                 break;
               }
             }
@@ -334,10 +335,7 @@ export const useGovernanceProposalsStore = defineStore({
         const proposalState = await this.fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
         proposal.state = ProposalStateMapping[proposalState]
 
-        console.log("proposal: ", proposal)
-
-        // Fetch the executed block number
-        await this.proposalExecutedBlockNumber(proposal);
+        console.log("proposal: ", proposal);
 
         // If the clock mode is block number, we have to check a timestamp for the block number.
         if(this.fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber) {

@@ -6,9 +6,19 @@
       :class="classes(item)"
       flat
     >
-      <div class="proposal-roadmap__date">
+    
+      <div class="proposal-roadmap__date" v-if="item.date">
         {{ item.date }}
       </div>
+      <v-progress-circular
+        v-if="isStateExecuted && !item.date"
+        indeterminate
+        color="primary"
+        height="2"
+        width="2"
+        class="mb-2 d-flex mx-auto"
+        rounded
+      />
 
       <div class="proposal-roadmap__container">
         <div class="proposal-roadmap__icon">
@@ -30,6 +40,7 @@
 
 <script lang="ts">
 import { formatDateLong } from "~/composables/formatters";
+import { ProposalState } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
 
 export default {
@@ -75,6 +86,9 @@ export default {
           hasStarted: executionDate && new Date() > executionDate,
         },
       ];
+    },
+    isStateExecuted() {
+      return this.proposal?.state === ProposalState.Executed;
     },
   },
 

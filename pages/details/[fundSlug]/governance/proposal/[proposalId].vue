@@ -284,6 +284,10 @@ onMounted(async () => {
   loadingProposal.value = true;
   try {
     await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
+
+    if(proposal.value && !proposal.value?.executedBlockNumber) {
+      await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
+    }
   } catch {}
   loadingProposal.value = false;
 });
