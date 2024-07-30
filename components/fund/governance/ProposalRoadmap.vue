@@ -48,7 +48,9 @@ export default {
         ? new Date(Number(this.proposal.voteEnd) * 1000)
         : null;
 
-      // TODO: proposal execution date is missing
+        const executionDate = this.proposal?.executedTimestamp
+        ? new Date(Number(this.proposal.executedTimestamp) * 1000)
+        : null;
 
       return [
         {
@@ -69,8 +71,8 @@ export default {
           title: "Proposal Execution",
           subtitle: "Enactment on Chain",
           icon: "material-symbols:rocket-launch-outline-rounded",
-          date: voteEnd ? formatDateLong(voteEnd) : "",
-          hasStarted: voteEnd && new Date() > voteEnd,
+          date: executionDate ? formatDateLong(executionDate) : "",
+          hasStarted: executionDate && new Date() > executionDate,
         },
       ];
     },

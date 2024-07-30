@@ -11,7 +11,7 @@ import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import { ClockMode } from "~/types/enums/clock_mode";
-import { ProposalStateMapping } from "~/types/enums/governance_proposal";
+import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 
@@ -258,6 +258,47 @@ export const useGovernanceProposalsStore = defineStore({
      *     "description": "{\"title\":\"01 - NAV Methods\",\"description\":\"See details bellow\"}"
      * }
      */
+    async proposalExecutedBlockNumber(proposal: IGovernanceProposal) {
+      // fetch the proposal executed block number
+      try {
+        // only fetch the executed block number if the proposal is executed
+        if(proposal.state === ProposalState.Executed) {
+          const currentBlock = Number(await this.fundStore.web3.eth.getBlockNumber());
+          console.log("currentBlock:", currentBlock);
+        
+          const startBlock = BigInt(proposal.createdBlockNumber);
+          const endBlock = BigInt(currentBlock);
+          const chunkSize = 3000n;
+          let proposalExecuted: any[] = [];
+        
+          for (let fromBlock = startBlock; fromBlock <= endBlock; fromBlock += chunkSize) {
+            const toBlock = fromBlock + chunkSize - 1n > endBlock ? endBlock : fromBlock + chunkSize - 1n;
+            console.log(`Fetching events from ${fromBlock} to ${toBlock}`);
+        
+            const events = await this.fundStore.fundGovernorContract.getPastEvents("ProposalExecuted", {
+              fromBlock: Number(fromBlock),
+              toBlock: Number(toBlock),
+            });
+
+            proposalExecuted = proposalExecuted.concat(events);
+          }
+        
+          console.log("ProposalExecuted:", proposalExecuted);
+        
+          if (proposalExecuted.length > 0) {
+            const executedEvent = proposalExecuted.find((event: any) => event.returnValues.proposalId.toString() === proposal.proposalId);
+
+            console.log("executedEvent:", executedEvent);
+            if (executedEvent) {
+              proposal.executedBlockNumber = executedEvent.blockNumber;
+            }
+          }
+
+        }
+      } catch (e) {
+        console.error("error fetching ProposalExecuted: ", e);
+      }
+    },
     async parseProposalCreatedEvents(events: any[]) {
       if (!this.fundStore.fund?.governanceToken.decimals) {
         console.error("No fund governance token decimals found.")
@@ -282,17 +323,26 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.createdDatetimeFormatted = formatDate(new Date(Number(block.timestamp) * 1000));
         proposal.createdBlockNumber = event.blockNumber;
 
+        const proposalState = await this.fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
+        proposal.state = ProposalStateMapping[proposalState]
+
+        console.log("proposal: ", proposal)
+
+        // Fetch the executed block number
+        await this.proposalExecutedBlockNumber(proposal);
+
         // If the clock mode is block number, we have to check a timestamp for the block number.
         if(this.fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber) {
           const blockStart = await this.fundStore.web3.eth.getBlock(proposal.voteStart);
           const blockEnd = await this.fundStore.web3.eth.getBlock(proposal.voteEnd);
 
+          if(proposal.executedBlockNumber) {
+            const blockExecuted = await this.fundStore.web3.eth.getBlock(proposal.executedBlockNumber);
+            proposal.executedTimestamp = blockExecuted.timestamp;
+          }
           proposal.voteStart = blockStart.timestamp;
           proposal.voteEnd = blockEnd.timestamp;
         }
-
-        const proposalState = await this.fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
-        proposal.state = ProposalStateMapping[proposalState]
 
         const votes = await this.fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
         console.log("proposal votes: ", votes);
