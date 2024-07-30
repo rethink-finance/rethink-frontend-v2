@@ -291,15 +291,8 @@ export const useGovernanceProposalsStore = defineStore({
               console.log("proposal executed event: ", executedEvent);
 
               if (executedEvent) {
-                // check if the clock mode is block number or timestamp
-                if(this.fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber) {
-                  const blockExecuted = await this.fundStore.web3.eth.getBlock(executedEvent.blockNumber);
-                  proposal.executedTimestamp = Number(blockExecuted.timestamp);
-                }
-                else {
-                  proposal.executedTimestamp = Number(executedEvent.blockNumber);
-                }
-
+                const blockExecuted = await this.fundStore.web3.eth.getBlock(executedEvent.blockNumber);
+                proposal.executedTimestamp = Number(blockExecuted.timestamp);
                 proposal.executedBlockNumber = executedEvent.blockNumber;
                 break;
               }
