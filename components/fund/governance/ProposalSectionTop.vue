@@ -293,6 +293,7 @@ const executeProposal = async () => {
     ).send(
       {
         from: fundStore.activeAccountAddress,
+        gas: 9000000,
       },
     ).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
