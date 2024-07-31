@@ -125,12 +125,14 @@
                 :value="proposal?.approval"
                 :format-function="formatPercent"
                 subtext="Approval"
+                :tooltip-text="`${ proposal.forVotesFormatted } of ${ proposal.quorumVotesFormatted }`"
               />
               <FundGovernanceProgressInsight
                 title="Participation Rate"
                 :value="proposal?.participation"
                 :format-function="formatPercent"
                 subtext="Support"
+                :tooltip-text="`${ proposal.totalVotesFormatted } of ${ proposal.totalSupplyFormatted }`"
               />
             </div>
           </template>
