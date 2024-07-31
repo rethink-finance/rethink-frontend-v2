@@ -14,7 +14,6 @@ import { useAccountStore } from "~/store/account.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
-import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import {
   NAVEntryTypeToPositionTypeMap,
@@ -28,6 +27,11 @@ import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
+import {
+  FundTransactionType,
+  FundTransactionTypeStorageSlotIdxMap,
+} from "~/types/enums/fund_transaction_type";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -44,6 +48,8 @@ interface IState {
   userFundAllowance: bigint;
   userFundDelegateAddress: string;
   userFundShareValue: bigint
+  userDepositRequest?: IFundTransactionRequest;
+  userWithdrawalRequest?: IFundTransactionRequest;
   selectedFundAddress: string;
   // Fund NAV methods that user can manage and change, delete, add...
   fundManagedNAVMethods: INAVMethod[],
@@ -63,6 +69,8 @@ export const useFundStore = defineStore({
     userFundAllowance: BigInt("0"),
     userFundShareValue: BigInt("0"),
     userFundDelegateAddress: "",
+    userDepositRequest: undefined,
+    userWithdrawalRequest: undefined,
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
@@ -86,7 +94,7 @@ export const useFundStore = defineStore({
       return Number(state.fund.totalNAVWei / state.fund.fundTokenTotalSupply);
     },
     fundToBaseTokenExchangeRate(state: IState): number {
-      if (!state.fund?.totalNAVWei) return 0;
+      if (!state.fund?.totalNAVWei || !this.baseToFundTokenExchangeRate) return 0;
       return 1 / this.baseToFundTokenExchangeRate;
     },
     fundTotalNAVFormattedShort(state: IState): string {
@@ -252,6 +260,7 @@ export const useFundStore = defineStore({
         this.fetchUserFundDelegateAddress(),
         this.fetchUserFundShareValue(),
         this.fetchUserFundAllowance(),
+        this.fetchUserFundDepositRequest(),
       ]);
     },
     /**
@@ -365,7 +374,6 @@ export const useFundStore = defineStore({
           monthlyReturnPercent: 0,
           sharpeRatio: 0,
           positionTypeCounts: [] as IPositionTypeCount[],
-          cyclePendingRequests: [] as ICyclePendingRequest[],
 
           // My Fund Positions
           netDeposits: "",
@@ -632,14 +640,69 @@ export const useFundStore = defineStore({
       try {
         balanceWei = await this.fundContract.methods.valueOf(this.activeAccountAddress).call();
       } catch (e) {
-        console.error(
-          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
+        console.error(          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
         );
       }
       console.log("balanceWei user fund share value:", balanceWei);
 
       this.userFundShareValue = balanceWei;
       return this.userFundShareValue;
+    },
+    /**
+     * Fetch user's fund share value (denominated in base token).
+     */
+    async fetchUserFundDepositRequest() {
+      // this.userFundShareValue = BigInt("0");
+      if (!this.activeAccountAddress) return console.error("Active account not found");
+      if (!this.fund?.address) return "";
+      this.userDepositRequest = undefined;
+      this.userWithdrawalRequest = undefined;
+
+      try {
+        this.userDepositRequest = await this.fetchUserFundDepositWithdrawalRequest(FundTransactionType.Deposit)
+        console.warn("DEPOSIT REQUEST", this.userDepositRequest)
+      } catch (e) {
+        console.error(
+          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
+        );
+      }
+      try {
+        this.userWithdrawalRequest = await this.fetchUserFundDepositWithdrawalRequest(FundTransactionType.Withdrawal)
+        console.warn("WITHDRAWAL REQUEST", this.userDepositRequest)
+      } catch (e) {
+        console.error(
+          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
+        );
+      }
+    },
+    async fetchUserFundDepositWithdrawalRequest(fundTransactionType: FundTransactionType) {
+      if (!this.activeAccountAddress) return;
+      if (!this.fund?.address) return;
+      const slotId = FundTransactionTypeStorageSlotIdxMap[fundTransactionType];
+
+      // GovernableFundStorage.sol
+      const userRequestAddress = getAddressMappingStorageKeyAtIndex(this.activeAccountAddress, slotId)
+      const userRequestTimestampAddress = incrementStorageKey(userRequestAddress)
+      console.warn("REQUEST key", userRequestAddress);
+
+      try {
+        const amount = await this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestAddress);
+        const amountWei = BigInt(ethers.stripZerosLeft(amount))
+        console.warn("REQUEST AMOUNT", amountWei)
+        const ts = await this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestTimestampAddress);
+        const timestamp = Number(ethers.stripZerosLeft(ts))
+        return {
+          amount: amountWei,
+          timestamp,
+          type: fundTransactionType,
+        } as IFundTransactionRequest;
+      } catch (e) {
+        console.error(
+          `Failed fetching deposit/withdrawal request ${this.fund?.address} slot: ${slotId}. -> `, e,
+        );
+      }
+
+      return undefined
     },
     async getRoleModAddress(): Promise<string> {
       if (!this.fund?.address) return "";

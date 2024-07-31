@@ -5,7 +5,9 @@
         <div class="section_title">
           {{ fund?.plannedSettlementPeriod || "N/A" }}
         </div>
-        <div class="section_subtitle">Next Settlement</div>
+        <div class="section_subtitle">
+          Next Settlement
+        </div>
       </div>
       <div class="fund_settlement__buttons">
         <v-btn
@@ -36,7 +38,7 @@
           v-if="isSelectedDepositButton"
           @deposit-success="openDelegateDialog"
         />
-        <FundSettlementRedeem v-if="isSelectedRedeemButton" />
+        <FundSettlementRedeem v-else-if="isSelectedRedeemButton" />
       </div>
       <div class="card_box card_box--no-padding">
         <FundSettlementNotification />

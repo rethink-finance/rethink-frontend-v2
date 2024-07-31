@@ -2,9 +2,9 @@
   <div class="pending_request card_box card_box--no-padding">
     <div class="pending_request__header">
       <div class="pending_request__pending_tokens">
-        Pending Request
+        Pending {{ fundTransactionRequest?.type }} Request
         <div>
-          {{ pendingRequest.pending_tokens }} {{ pendingRequest.token }}
+          {{ fundTransactionRequestAmountFormatted }} {{ token0?.symbol }}
         </div>
       </div>
       <div class="pending_request__icon_more">
@@ -13,27 +13,47 @@
     </div>
     <div class="pending_request__header pending_request__header--bg-light">
       <div>
-        Available
+        Claimable
       </div>
       <div class="pending_request__available_token">
-        {{ pendingRequest.available_tokens }} {{ pendingRequest.token }}
+        {{ claimableTokenValue }} {{ token1?.symbol }}
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import type ICyclePendingRequest from "~/types/cycle_pending_request";
+<script setup lang="ts">
 
-export default {
-  name: "PendingRequest",
-  props: {
-    pendingRequest: {
-      type: Object as PropType<ICyclePendingRequest>,
-      default: () => {},
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
+import type IToken from "~/types/token";
+const props = defineProps({
+  fundTransactionRequest: {
+    type: Object as PropType<IFundTransactionRequest>,
+    default: () => {},
+  },
+  token0: {
+    type: Object as PropType<IToken>,
+    default: () => {
     },
   },
-};
+  token1: {
+    type: Object as PropType<IToken>,
+    default: () => {
+    },
+  },
+  exchangeRate: {
+    type: Number,
+    default: 0,
+  },
+});
+const fundTransactionRequestAmountFormatted = computed(() => {
+  return formatTokenValue(props.fundTransactionRequest.amount, props.token0.decimals);
+});
+const claimableTokenValue = computed(() => {
+  if (!props.exchangeRate) return "N/A"
+  // Continue to use your trimTrailingZeros utility function as needed
+  return trimTrailingZeros((Number(props.fundTransactionRequest.amount) * props.exchangeRate).toFixed(4));
+});
 </script>
 
 <style lang="scss" scoped>

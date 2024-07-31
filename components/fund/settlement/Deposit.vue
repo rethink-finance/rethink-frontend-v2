@@ -289,7 +289,6 @@ const deposit = async () => {
 
         // emit event to open the delegate votes modal
         emit("deposit-success");
-        
       } else {
         toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
       }

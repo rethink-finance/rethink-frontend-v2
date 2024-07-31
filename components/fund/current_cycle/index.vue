@@ -10,52 +10,75 @@
         <v-btn
           @click="claimTokens"
         >
-          Claim
+          Process Request
           <v-tooltip activator="parent" location="bottom">
-            Claim tokens.
+            Process Request.
           </v-tooltip>
         </v-btn>
       </div>
     </div>
-    <div class="fund_settlement__pending_requests">
+    <div v-if="userDepositRequest || userWithdrawalRequest" class="fund_settlement__pending_requests">
       <FundCurrentCyclePendingRequest
-        v-for="pendingRequest in fund.cyclePendingRequests"
-        :key="pendingRequest.id"
-        :pending-request="pendingRequest"
+        v-if="userDepositRequest"
+        :fund-transaction-request="userDepositRequest"
+        :exchange-rate="baseToFundTokenExchangeRate"
+        :token0="fund.baseToken"
+        :token1="fund.fundToken"
       />
+      <FundCurrentCyclePendingRequest
+        v-if="userWithdrawalRequest"
+        :fund-transaction-request="userWithdrawalRequest"
+        :exchange-rate="fundToBaseTokenExchangeRate"
+        :token1="fund.baseToken"
+        :token0="fund.fundToken"
+      />
+    </div>
+    <div v-else class="fund_settlement__no_pending_requests">
+      Currently there are no deposit or withdrawal requests.
     </div>
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import type IFund from "~/types/fund";
 import { useToastStore } from "~/store/toast.store";
+import { useFundStore } from "~/store/fund.store";
 
-export default {
-  name: "CurrentCycle",
-  props: {
-    fund: {
-      type: Object as PropType<IFund>,
-      default: () => {},
-    },
+const toastStore = useToastStore()
+const fundStore = useFundStore()
+const {
+  userFundAllowance,
+  userFundTokenBalance,
+  userBaseTokenBalance,
+  userDepositRequest,
+  userWithdrawalRequest,
+  baseToFundTokenExchangeRate,
+  fundToBaseTokenExchangeRate,
+} = toRefs(fundStore);
+
+defineProps({
+  fund: {
+    type: Object as PropType<IFund>,
+    default: () => {},
   },
-  setup() {
-    const toastStore = useToastStore();
-    return {
-      toastStore,
-    }
-  },
-  methods: {
-    claimTokens() {
-      this.toastStore.addToast("Claim");
-    },
-  },
-};
+})
+
+const claimTokens = () => {
+  toastStore.addToast("Claim " + userDepositRequest);
+  console.log("userBaseTokenBalance: ", toRaw(userBaseTokenBalance))
+  console.log("userFundTokenBalance: ", toRaw(userFundTokenBalance))
+  console.log("userFundAllowance: ", toRaw(userFundAllowance))
+  console.log("userDepositRequest: ", toRaw(userDepositRequest))
+  console.log("userWithdrawalRequest: ", toRaw(userWithdrawalRequest))
+}
 </script>
 
 <style lang="scss" scoped>
 .fund_settlement {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 
   &__buttons {
     display: flex;
@@ -65,6 +88,13 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+  }
+  &__no_pending_requests {
+    display: flex;
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
   }
 }
 </style>
