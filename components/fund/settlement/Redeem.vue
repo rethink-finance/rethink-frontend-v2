@@ -167,6 +167,7 @@ const requestRedemption = async () => {
     }).on("receipt", (receipt: any) => {
       console.log(receipt);
 
+      fundStore.fetchUserBalances();
       if (receipt.status) {
         toastStore.successToast(
           "Your withdrawal request was successful. It may take 10 seconds or more for values to update.",

@@ -242,7 +242,7 @@ const approveAllowance = async () => {
   const [gasPrice, gasEstimate] = await estimateGasApprove(tokensWei);
 
   try {
-    // call the approve method
+    // call the approval method
     await fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei).send({
       from: accountStore.activeAccount.address,
       gas: gasEstimate,
@@ -250,15 +250,13 @@ const approveAllowance = async () => {
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-
     }).on("receipt", (receipt: any) => {
       console.log("receipt :", receipt);
 
       if (receipt.status) {
         toastStore.successToast("The approval was successful. You can make the deposit now.");
 
-        // refresh values
-        // needs to be updated this way because Polygon RPC nodes are slow with updating state
+        // Refresh allowance value.
         fundStore.userFundAllowance = allowanceValue;
       } else {
         toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
