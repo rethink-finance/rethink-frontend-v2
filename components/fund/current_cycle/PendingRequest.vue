@@ -86,11 +86,13 @@ const props = defineProps({
 });
 
 const fundTransactionRequestAmountFormatted = computed(() => {
-  return formatTokenValue(props.fundTransactionRequest.amount, props.token0.decimals);
+  return formatTokenValue(props.fundTransactionRequest.amount, props.token0.decimals, false);
 });
 const claimableTokenValue = computed(() => {
   if (!props.exchangeRate) return 0
-  return formatTokenValue(props.fundTransactionRequest.amount * BigInt(props.exchangeRate), props.token1.decimals);
+  const rate = BigInt(Math.round(props.exchangeRate * 1000));
+  const value = props.fundTransactionRequest.amount * rate;
+  return formatTokenValue(value / BigInt(1000), props.token1.decimals, false);
 });
 
 const isLoadingCancelRequest = ref(false);
