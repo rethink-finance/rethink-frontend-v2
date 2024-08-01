@@ -51,8 +51,11 @@
         <div>
           Balance: {{ token1UserBalanceFormatted }} {{ token1.symbol }}
         </div>
-        <div>
+        <div v-if="fundStore.fundLastNAVUpdate">
           Based on Last NAV Update: {{ exchangeRateText }}
+        </div>
+        <div v-else>
+          There was no NAV update yet: 1 {{ token0?.symbol }} = 1 {{ token1?.symbol }}
         </div>
       </div>
     </div>
@@ -65,6 +68,7 @@
 <script setup lang="ts">
 import { ethers } from "ethers";
 import type IToken from "~/types/token";
+import { useFundStore } from "~/store/fund.store";
 
 type RuleFunction = (...args: any[]) => boolean | string;
 type RulesArray = RuleFunction[];
@@ -101,6 +105,7 @@ const props = defineProps({
     default: () => [],
   },
 });
+const fundStore = useFundStore();
 
 const emit = defineEmits(["update:modelValue"]);
 

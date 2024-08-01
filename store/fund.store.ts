@@ -90,10 +90,14 @@ export const useFundStore = defineStore({
       return this.web3Store.web3;
     },
     baseToFundTokenExchangeRate(state: IState): number {
+      // If there was no NAV update yet, the exchange rate is 1:1
+      if (!this.fundLastNAVUpdate) return 1
       if (!state.fund?.fundTokenTotalSupply) return 0;
       return Number(state.fund.totalNAVWei / state.fund.fundTokenTotalSupply);
     },
     fundToBaseTokenExchangeRate(state: IState): number {
+      // If there was no NAV update yet, the exchange rate is 1:1
+      if (!this.fundLastNAVUpdate) return 1
       if (!state.fund?.totalNAVWei || !this.baseToFundTokenExchangeRate) return 0;
       return 1 / this.baseToFundTokenExchangeRate;
     },
@@ -671,7 +675,6 @@ export const useFundStore = defineStore({
       if (!this.fund?.address) return "";
 
       try {
-        this.userDepositRequest = undefined;
         this.userDepositRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Deposit)
       } catch (e) {
         console.error(
@@ -679,7 +682,6 @@ export const useFundStore = defineStore({
         );
       }
       try {
-        this.userRedemptionRequest = undefined;
         this.userRedemptionRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Redemption)
         console.log("redemption", this.userRedemptionRequest);
       } catch (e) {
@@ -689,8 +691,8 @@ export const useFundStore = defineStore({
       }
     },
     async fetchUserFundTransactionRequest(fundTransactionType: FundTransactionType) {
-      if (!this.activeAccountAddress) return;
-      if (!this.fund?.address) return;
+      if (!this.activeAccountAddress) return undefined;
+      if (!this.fund?.address) return undefined;
       const slotId = FundTransactionTypeStorageSlotIdxMap[fundTransactionType];
 
       // GovernableFundStorage.sol
