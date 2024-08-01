@@ -51,8 +51,11 @@
         :token0="fund.fundToken"
       />
     </div>
+    <div v-else-if="!accountStore.isConnected" class="fund_settlement__no_pending_requests">
+      Connect your wallet to view deposit or redemption requests.
+    </div>
     <div v-else class="fund_settlement__no_pending_requests">
-      Currently there are no deposit or withdrawal requests.
+      Currently there are no deposit or redemption requests.
     </div>
   </div>
 </template>
