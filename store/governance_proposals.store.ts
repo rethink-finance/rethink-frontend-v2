@@ -396,7 +396,11 @@ export const useGovernanceProposalsStore = defineStore({
           proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, this.fundStore.fund?.governanceToken.decimals);
           proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, this.fundStore.fund?.governanceToken.decimals);
 
-          if (proposal.quorumVotes) {
+          if (proposal.quorumVotes === 0n && Number(votes.forVotes) > 0) {
+            // If quorum is 0, it means that there should be more than 0 FOR votes for proposal to pass.
+            proposal.approval = 1;
+            proposal.approvalFormatted = formatPercent(proposal.approval, false);
+          } else if (proposal.quorumVotes) {
             let approval = Number(votes.forVotes) / Number(proposal.quorumVotes);
             // Limit approval percentage to 100% max.
             if (approval > 1) {

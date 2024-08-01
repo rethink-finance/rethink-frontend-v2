@@ -4,12 +4,21 @@
       <h3 v-if="title" class="progress-insight__title">
         {{ title }}
       </h3>
-      <v-progress-linear
-        :height="height"
-        :model-value="value"
-        :max="max"
-        class="progress-insight__progress-bar"
-      />
+      <v-tooltip activator="parent" location="bottom" :disabled="!tooltipText">
+        <template #activator="{ props }">
+          <v-progress-linear
+            v-bind="props"
+            :height="height"
+            :model-value="value"
+            :max="max"
+            class="progress-insight__progress-bar"
+          />
+        </template>
+        <template #default>
+          {{ tooltipText }}
+        </template>
+      </v-tooltip>
+
       <div class="progress-insight__progress-text">
         {{ parsedProgressText }}
       </div>
@@ -33,6 +42,10 @@ export default {
       default: "",
     },
     subtext: {
+      type: String,
+      default: "",
+    },
+    tooltipText: {
       type: String,
       default: "",
     },

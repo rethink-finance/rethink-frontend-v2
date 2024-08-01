@@ -211,7 +211,7 @@ const routes: IRoute[] = [
   {
     to: fundDetailsRoute.value,
     exactMatch: true,
-    title: "Fund Details",
+    title: "Overview",
     text: "",
   },
   {
@@ -228,12 +228,12 @@ const routes: IRoute[] = [
     title: "NAV",
     text: "",
   },
-  // {
-  //   to: `${fundDetailsRoute.value}/permissions`,
-  //   exactMatch: true,
-  //   title: "Permissions",
-  //   text:"",
-  // },
+  {
+    to: `${fundDetailsRoute.value}/permissions`,
+    exactMatch: true,
+    title: "Permissions",
+    text:"",
+  },
 ];
 
 const isPathActive = (path: string = "", exactMatch = true) =>
