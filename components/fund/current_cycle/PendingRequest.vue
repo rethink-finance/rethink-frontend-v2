@@ -90,8 +90,7 @@ const fundTransactionRequestAmountFormatted = computed(() => {
 });
 const claimableTokenValue = computed(() => {
   if (!props.exchangeRate) return 0
-  // Continue to use your trimTrailingZeros utility function as needed
-  return trimTrailingZeros((Number(props.fundTransactionRequest.amount) * props.exchangeRate).toFixed(4));
+  return formatTokenValue(props.fundTransactionRequest.amount * BigInt(props.exchangeRate), props.token1.decimals);
 });
 
 const isLoadingCancelRequest = ref(false);
