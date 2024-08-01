@@ -331,8 +331,9 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.createdTimestamp = Number(block.timestamp);
         proposal.createdDatetimeFormatted = formatDate(new Date(Number(block.timestamp) * 1000));
         proposal.createdBlockNumber = event.blockNumber;
+        
         // keep track of the proposal executed timestamp and block number if the proposal is executed
-        const executedProposal = this.fundProposals[this.web3Store.chainId][this.fundStore.fund?.address][proposal.proposalId];
+        const executedProposal = this.fundProposals?.[this.web3Store.chainId]?.[this.fundStore.fund?.address]?.[proposal.proposalId];
         proposal.executedTimestamp = executedProposal?.executedTimestamp;
         proposal.executedBlockNumber = executedProposal?.executedBlockNumber;
 
