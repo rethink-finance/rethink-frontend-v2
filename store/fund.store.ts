@@ -681,6 +681,7 @@ export const useFundStore = defineStore({
       try {
         this.userRedemptionRequest = undefined;
         this.userRedemptionRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Redemption)
+        console.log("redemption", this.userRedemptionRequest);
       } catch (e) {
         console.error(
           "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,

@@ -6,7 +6,7 @@
           Current Cycle
         </div>
       </div>
-      <div v-if="userDepositRequest || userRedemptionRequest" class="fund_settlement__buttons">
+      <div v-if="userDepositRequestExists || userRedemptionRequestExists" class="fund_settlement__buttons">
         <v-btn
           :disabled="isProcessRequestDisabled"
           @click="processRequest"
@@ -35,7 +35,7 @@
         </v-btn>
       </div>
     </div>
-    <div v-if="userDepositRequest || userRedemptionRequest" class="fund_settlement__pending_requests">
+    <div v-if="userDepositRequestExists || userRedemptionRequestExists" class="fund_settlement__pending_requests">
       <FundCurrentCyclePendingRequest
         v-if="userDepositRequestExists"
         :fund-transaction-request="userDepositRequest"
