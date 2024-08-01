@@ -66,6 +66,7 @@ import { computed, ref } from "vue";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
+import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
@@ -167,11 +168,17 @@ const requestRedemption = async () => {
     }).on("receipt", (receipt: any) => {
       console.log(receipt);
 
-      fundStore.fetchUserFundDepositRedemptionRequests();
+      // TODO takes 15-20 sec for node to sync .. fix
+      // fundStore.fetchUserFundDepositRedemptionRequests();
       if (receipt.status) {
         toastStore.successToast(
           "Your withdrawal request was successful. It may take 10 seconds or more for values to update.",
         );
+        fundStore.userRedemptionRequest = {
+          amount: tokensWei,
+          timestamp: Date.now(),
+          type: FundTransactionType.Redemption,
+        }
         tokenValue.value = "0.0";
       } else {
         toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
