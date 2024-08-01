@@ -75,9 +75,6 @@ const tokenValue = ref("0.0");
 const tokenValueChanged = ref(false);
 const fund = computed(() => fundStore.fund);
 const {
-  userFundTokenBalance,
-  userBaseTokenBalance,
-  userDepositRequest,
   userDepositRequestExists,
 } = toRefs(fundStore);
 
@@ -98,8 +95,9 @@ const rules = [
     const valueWei = ethers.parseUnits(value, fund.value?.baseToken.decimals);
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
 
-    console.log("[REDEEM] check user base token balance wei: ", valueWei, fundStore.userBaseTokenBalance);
-    if (fundStore.userBaseTokenBalance < valueWei) {
+    console.log("[DEPOSIT] check user base token balance wei: ", valueWei, fundStore.userBaseTokenBalance);
+    // This condition is only valid for Request Deposit, we don't check this condition for Approve.
+    if (!userDepositRequestExists.value && fundStore.userBaseTokenBalance < valueWei) {
       const userBaseTokenBalanceFormatted = formatTokenValue(fundStore.userBaseTokenBalance, fund.value.baseToken.decimals);
       return {
         message: `Your ${fund.value.baseToken.symbol} balance is too low: ${userBaseTokenBalanceFormatted}.`,
