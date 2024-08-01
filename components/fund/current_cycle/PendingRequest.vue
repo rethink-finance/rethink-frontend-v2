@@ -95,13 +95,7 @@ const claimableTokenValue = computed(() => {
 });
 
 const isLoadingCancelRequest = ref(false);
-try {
-  // const receipt = await fundStore.web3.eth.getTransactionReceipt("0x2cbb7997b1fdca2d82e15e8f6e4f17405570af00214f08d8a25b65f0f30461d7");
-  const receipt = await fundStore.web3.eth.getTransactionReceipt("0xf5ef022059e77bf99249e66052a44190044fa95b5c4a5d1e2eaae0dd0d89552a");
-  console.log("TXXXX", receipt);
-} catch (e) {
-  console.error("TXXX", e);
-}
+
 const cancelPendingRequest = async () => {
   if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to cancel the deposit.")
