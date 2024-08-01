@@ -267,7 +267,7 @@ export const useFundStore = defineStore({
     fetchUserBalances() {
       if (!this.accountStore.activeAccount?.address) return;
 
-      return Promise.all([
+      return Promise.allSettled([
         this.fetchUserBaseTokenBalance(),
         this.fetchUserFundTokenBalance(),
         this.fetchUserGovernanceTokenBalance(),

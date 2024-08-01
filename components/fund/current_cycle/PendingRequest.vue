@@ -131,8 +131,13 @@ const cancelPendingRequest = async () => {
         toastStore.successToast(
           `Cancellation of a ${props.fundTransactionRequest.type} request was successful.`,
         );
-        fundStore.fetchUserFundDepositRedemptionRequests();
+        if (isDepositRequest) {
+          fundStore.userDepositRequest = undefined;
+        } else {
+          fundStore.userRedemptionRequest = undefined;
+        }
       } else {
+        fundStore.fetchUserFundDepositRedemptionRequests();
         toastStore.errorToast(
           "Your deposit request has failed. Please contact the Rethink Finance support.",
         );
