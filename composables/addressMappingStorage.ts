@@ -7,9 +7,7 @@ function remove0xPrefix(str: string): string {
 
 export function getAddressMappingStorageKeyAtIndex(addr: string, slotNo: number): string {
   const pos = remove0xPrefix(ethers.zeroPadValue(ethers.toBeHex(slotNo), 32));
-  console.log("pos: ", pos)
   const key = remove0xPrefix(ethers.zeroPadValue(ethers.getAddress(addr), 32));
-  console.log("key: ", key)
   const concatenated = key + pos;
   return ethers.keccak256("0x" + concatenated);
 }

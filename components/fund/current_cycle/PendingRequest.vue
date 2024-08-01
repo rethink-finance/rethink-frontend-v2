@@ -8,8 +8,30 @@
         </div>
       </div>
       <div class="pending_request__icon_more">
-        <Icon name="material-symbols:more-vert" width="1.5rem" />
+        <Icon
+          icon="ic:twotone-cancel"
+          width="1.5rem"
+          @click="toggleCancelButton"
+        />
       </div>
+      <v-btn
+        v-if="showCancelButton"
+        v-click-outside="hideCancelButton"
+        :disabled="isLoadingCancelRequest"
+        class="pending_request__cancel_button bg-primary text-secondary"
+        @click="cancelPendingRequest"
+      >
+        <template #prepend>
+          <v-progress-circular
+            v-if="isLoadingCancelRequest"
+            class="d-flex"
+            size="20"
+            width="3"
+            indeterminate
+          />
+        </template>
+        Cancel {{ fundTransactionRequest.type }} Request
+      </v-btn>
     </div>
     <div class="pending_request__header pending_request__header--bg-light">
       <div>
@@ -23,9 +45,25 @@
 </template>
 
 <script setup lang="ts">
-
+import { ethers } from "ethers";
+import { ref } from "vue";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IToken from "~/types/token";
+import { useFundStore } from "~/store/fund.store";
+import { useToastStore } from "~/store/toast.store";
+import { useAccountStore } from "~/store/account.store";
+import { FundTransactionType } from "~/types/enums/fund_transaction_type";
+const fundStore = useFundStore();
+const toastStore = useToastStore();
+const accountStore = useAccountStore();
+const showCancelButton = ref(false);
+
+const toggleCancelButton = () => {
+  showCancelButton.value = !showCancelButton.value;
+}
+const hideCancelButton = () => {
+  showCancelButton.value = false;
+}
 const props = defineProps({
   fundTransactionRequest: {
     type: Object as PropType<IFundTransactionRequest>,
@@ -46,14 +84,81 @@ const props = defineProps({
     default: 0,
   },
 });
+
 const fundTransactionRequestAmountFormatted = computed(() => {
   return formatTokenValue(props.fundTransactionRequest.amount, props.token0.decimals);
 });
 const claimableTokenValue = computed(() => {
-  if (!props.exchangeRate) return "N/A"
+  if (!props.exchangeRate) return 0
   // Continue to use your trimTrailingZeros utility function as needed
   return trimTrailingZeros((Number(props.fundTransactionRequest.amount) * props.exchangeRate).toFixed(4));
 });
+
+const isLoadingCancelRequest = ref(false);
+try {
+  // const receipt = await fundStore.web3.eth.getTransactionReceipt("0x2cbb7997b1fdca2d82e15e8f6e4f17405570af00214f08d8a25b65f0f30461d7");
+  const receipt = await fundStore.web3.eth.getTransactionReceipt("0xf5ef022059e77bf99249e66052a44190044fa95b5c4a5d1e2eaae0dd0d89552a");
+  console.log("TXXXX", receipt);
+} catch (e) {
+  console.error("TXXX", e);
+}
+const cancelPendingRequest = async () => {
+  if (!accountStore.activeAccount?.address) {
+    toastStore.errorToast("Connect your wallet to cancel the deposit.")
+    return;
+  }
+  const isDepositRequest = props.fundTransactionRequest.type === FundTransactionType.Deposit;
+  console.log(`Cancel ${props.fundTransactionRequest.type} Request`);
+  isLoadingCancelRequest.value = true;
+
+  const ABI = [ "function revokeDepositWithrawal(bool isDeposit)" ];
+  const iface = new ethers.Interface(ABI);
+  const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ isDepositRequest ]);
+  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+
+  try {
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+      from: accountStore.activeAccount.address,
+      gas: gasEstimate,
+      gasPrice,
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
+
+      if (receipt.status) {
+        toastStore.successToast(
+          `Cancellation of a ${props.fundTransactionRequest.type} request was successful.`,
+        );
+        fundStore.fetchUserFundDepositWithdrawalRequests();
+      } else {
+        toastStore.errorToast(
+          "Your deposit request has failed. Please contact the Rethink Finance support.",
+        );
+      }
+      isLoadingCancelRequest.value = false;
+      hideCancelButton();
+    }).on("error", (error: any) => {
+      handleError(error);
+    });
+  } catch (error: any) {
+    handleError(error);
+  }
+}
+
+const handleError = (error: any) => {
+  // Check Metamask errors:
+  // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
+  if (error?.code === 4001) {
+    toastStore.addToast("Transaction was rejected.")
+  } else {
+    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    console.error(error);
+  }
+  isLoadingCancelRequest.value = false;
+  fundStore.fetchUserFundDepositWithdrawalRequests();
+}
 </script>
 
 <style lang="scss" scoped>
@@ -71,16 +176,22 @@ const claimableTokenValue = computed(() => {
     justify-content: space-between;
     width: 100%;
   }
+  &__cancel_button {
+    position: absolute;
+    right: 32px;
+    top: 0;
+  }
   &__icon_more {
     position: absolute;
     right: 0;
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
-    color: $color-moonlight-light;
-
+    //color: $color-moonlight-light;
+    color: $color-error;
     :hover {
-      color: lighten($color-moonlight-light, 10%);
+      //color: lighten($color-moonlight-light, 10%);
+      color: darken($color-error, 10%);
     }
   }
   &__header {

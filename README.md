@@ -83,6 +83,7 @@ import { init } from "@web3-onboard/vue"
    - totalWithrawalBalance
    - revokeDepositWithrawal
    - performaceHurdleRateBps
+   - revokeDepositWithrawal
 
 
 ### TODO Create Contract TYPES (TypeScript)

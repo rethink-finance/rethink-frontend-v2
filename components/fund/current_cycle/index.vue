@@ -6,27 +6,45 @@
           Current Cycle
         </div>
       </div>
-      <div class="fund_settlement__buttons">
+      <div v-if="userDepositRequest || userWithdrawalRequest" class="fund_settlement__buttons">
         <v-btn
-          @click="claimTokens"
+          :disabled="isProcessRequestDisabled"
+          @click="processRequest"
         >
+          <template #prepend>
+            <v-progress-circular
+              v-if="isAnythingLoading"
+              class="d-flex"
+              size="20"
+              width="3"
+              indeterminate
+            />
+          </template>
           Process Request
           <v-tooltip activator="parent" location="bottom">
-            Process Request.
+            <template v-if="depositDisabledTooltipText">
+              {{ depositDisabledTooltipText }}
+            </template>
+            <template v-else-if="withdrawalDisabledTooltipText">
+              {{ withdrawalDisabledTooltipText }}
+            </template>
+            <template v-else>
+              Process Request.
+            </template>
           </v-tooltip>
         </v-btn>
       </div>
     </div>
     <div v-if="userDepositRequest || userWithdrawalRequest" class="fund_settlement__pending_requests">
       <FundCurrentCyclePendingRequest
-        v-if="userDepositRequest"
+        v-if="userDepositRequestExists"
         :fund-transaction-request="userDepositRequest"
         :exchange-rate="baseToFundTokenExchangeRate"
         :token0="fund.baseToken"
         :token1="fund.fundToken"
       />
       <FundCurrentCyclePendingRequest
-        v-if="userWithdrawalRequest"
+        v-if="userWithdrawalRequestExists"
         :fund-transaction-request="userWithdrawalRequest"
         :exchange-rate="fundToBaseTokenExchangeRate"
         :token1="fund.baseToken"
@@ -40,12 +58,18 @@
 </template>
 
 <script setup lang="ts">
+import { ethers } from "ethers";
+import { computed, ref } from "vue";
 import type IFund from "~/types/fund";
 import { useToastStore } from "~/store/toast.store";
 import { useFundStore } from "~/store/fund.store";
 
+import { useAccountStore } from "~/store/account.store";
+const emit = defineEmits(["deposit-success"]);
+
 const toastStore = useToastStore()
 const fundStore = useFundStore()
+const accountStore = useAccountStore();
 const {
   userFundAllowance,
   userFundTokenBalance,
@@ -54,6 +78,8 @@ const {
   userWithdrawalRequest,
   baseToFundTokenExchangeRate,
   fundToBaseTokenExchangeRate,
+  userDepositRequestExists,
+  userWithdrawalRequestExists,
 } = toRefs(fundStore);
 
 defineProps({
@@ -62,14 +88,120 @@ defineProps({
     default: () => {},
   },
 })
+const isProcessRequestDisabled = computed(() => {
+  if (isAnythingLoading.value) return true;
 
-const claimTokens = () => {
+  // Disable process request button if the user can't do deposit nor withdrawal.
+  if (!depositDisabledTooltipText.value || !withdrawalDisabledTooltipText.value) {
+    return false;
+  }
+  return true
+});
+
+const processRequest = () => {
   toastStore.addToast("Claim " + userDepositRequest);
   console.log("userBaseTokenBalance: ", toRaw(userBaseTokenBalance))
   console.log("userFundTokenBalance: ", toRaw(userFundTokenBalance))
   console.log("userFundAllowance: ", toRaw(userFundAllowance))
   console.log("userDepositRequest: ", toRaw(userDepositRequest))
   console.log("userWithdrawalRequest: ", toRaw(userWithdrawalRequest))
+  deposit();
+  // withdraw();
+}
+
+const loadingDeposit = ref(false);
+const loadingWithdrawal = ref(false);
+
+const isAnythingLoading = computed(() => {
+  return loadingDeposit.value || loadingWithdrawal.value;
+});
+const depositDisabledTooltipText = computed(() => {
+  if (!userDepositRequestExists.value) {
+    return "There is no deposit request."
+  }
+  console.log("allwoance", userFundAllowance.value)
+  console.log("userDepositRequest", userDepositRequest?.value?.amount || 0n)
+  if (userFundAllowance.value < (userDepositRequest?.value?.amount || 0n)) {
+    return "Not enough allowance to process the deposit request."
+  }
+  return ""
+});
+const withdrawalDisabledTooltipText = computed(() => {
+  if (!userWithdrawalRequestExists.value) {
+    return "There is no withdrawal request."
+  }
+  if (userFundTokenBalance.value < (userWithdrawalRequest?.value?.amount || 0n)) {
+    return "Not enough fund tokens to process the withdrawals request."
+  }
+  return ""
+});
+
+const deposit = async () => {
+  if (!accountStore.activeAccount?.address) {
+    toastStore.errorToast("Connect your wallet to deposit tokens to the fund.")
+    return;
+  }
+  if (!fundStore.fund) {
+    toastStore.errorToast("Fund data is missing.")
+    return;
+  }
+  if (!userDepositRequest?.value?.amount) {
+    toastStore.errorToast("Deposit request data is missing.")
+    return;
+  }
+  console.log("DEPOSIT");
+  loadingDeposit.value = true;
+
+  console.log("Deposit tokensWei: ", userDepositRequest?.value?.amount, "from : ", accountStore.activeAccount.address);
+
+  const ABI = [ "function deposit()" ];
+  const iface = new ethers.Interface(ABI);
+  const encodedFunctionCall = iface.encodeFunctionData("deposit");
+  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+
+  try {
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+      from: accountStore.activeAccount.address,
+      gas: gasEstimate,
+      gasPrice,
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
+
+      if (receipt.status) {
+        toastStore.successToast("Your deposit was successful.");
+
+        // Refresh user balances & allowance & refresh pending requests.
+        fundStore.fetchUserBalances();
+
+        // emit event to open the delegate votes modal
+        emit("deposit-success");
+      } else {
+        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
+      }
+
+      loadingDeposit.value = false;
+    }).on("error", (error: any) => {
+      handleError(error);
+    });
+  } catch (error: any) {
+    handleError(error);
+  }
+}
+
+const handleError = (error: any) => {
+  // Check Metamask errors:
+  // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
+  if (error?.code === 4001) {
+    toastStore.addToast("Transaction was rejected.")
+  } else {
+    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    console.error(error);
+  }
+  loadingDeposit.value = false;
 }
 </script>
 

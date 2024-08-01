@@ -114,6 +114,20 @@ export const useFundStore = defineStore({
     fundLastNAVUpdateMethods(): INAVMethod[] {
       return this.fundLastNAVUpdate?.entries || [];
     },
+    userDepositRequestExists(): boolean {
+      return (this.userDepositRequest?.amount || 0) > 0
+    },
+    userWithdrawalRequestExists(): boolean {
+      return (this.userWithdrawalRequest?.amount || 0) > 0
+    },
+    userFundSuggestedAllowance(): bigint {
+      const userBaseTokenBalance = this.userBaseTokenBalance || 0n;
+      const userDepositRequestAmount = this.userDepositRequest?.amount || 0n;
+      return userBaseTokenBalance + userDepositRequestAmount;
+    },
+    userFundSuggestedAllowanceFormatted(): string {
+      return ethers.formatUnits(this.userFundSuggestedAllowance, this.fund?.baseToken.decimals);
+    },
     /**
      * Contracts
      */
@@ -260,7 +274,7 @@ export const useFundStore = defineStore({
         this.fetchUserFundDelegateAddress(),
         this.fetchUserFundShareValue(),
         this.fetchUserFundAllowance(),
-        this.fetchUserFundDepositRequest(),
+        this.fetchUserFundDepositWithdrawalRequests(),
       ]);
     },
     /**
@@ -651,31 +665,29 @@ export const useFundStore = defineStore({
     /**
      * Fetch user's fund share value (denominated in base token).
      */
-    async fetchUserFundDepositRequest() {
+    async fetchUserFundDepositWithdrawalRequests() {
       // this.userFundShareValue = BigInt("0");
       if (!this.activeAccountAddress) return console.error("Active account not found");
       if (!this.fund?.address) return "";
-      this.userDepositRequest = undefined;
-      this.userWithdrawalRequest = undefined;
 
       try {
-        this.userDepositRequest = await this.fetchUserFundDepositWithdrawalRequest(FundTransactionType.Deposit)
-        console.warn("DEPOSIT REQUEST", this.userDepositRequest)
+        this.userDepositRequest = undefined;
+        this.userDepositRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Deposit)
       } catch (e) {
         console.error(
           "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
         );
       }
       try {
-        this.userWithdrawalRequest = await this.fetchUserFundDepositWithdrawalRequest(FundTransactionType.Withdrawal)
-        console.warn("WITHDRAWAL REQUEST", this.userDepositRequest)
+        this.userWithdrawalRequest = undefined;
+        this.userWithdrawalRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Withdrawal)
       } catch (e) {
         console.error(
           "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
         );
       }
     },
-    async fetchUserFundDepositWithdrawalRequest(fundTransactionType: FundTransactionType) {
+    async fetchUserFundTransactionRequest(fundTransactionType: FundTransactionType) {
       if (!this.activeAccountAddress) return;
       if (!this.fund?.address) return;
       const slotId = FundTransactionTypeStorageSlotIdxMap[fundTransactionType];
@@ -683,14 +695,16 @@ export const useFundStore = defineStore({
       // GovernableFundStorage.sol
       const userRequestAddress = getAddressMappingStorageKeyAtIndex(this.activeAccountAddress, slotId)
       const userRequestTimestampAddress = incrementStorageKey(userRequestAddress)
-      console.warn("REQUEST key", userRequestAddress);
 
       try {
         const amount = await this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestAddress);
-        const amountWei = BigInt(ethers.stripZerosLeft(amount))
-        console.warn("REQUEST AMOUNT", amountWei)
+        let amountWei: string | bigint = ethers.stripZerosLeft(amount);
+        amountWei = amountWei === "0x" ? 0n : BigInt(amountWei);
+
         const ts = await this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestTimestampAddress);
-        const timestamp = Number(ethers.stripZerosLeft(ts))
+        let timestamp: string | number = ethers.stripZerosLeft(ts);
+        timestamp = timestamp === "0x" ? 0 : Number(timestamp);
+
         return {
           amount: amountWei,
           timestamp,
@@ -737,6 +751,32 @@ export const useFundStore = defineStore({
       //  you can merge both objects with spread operator ({...a, ...localStorageMethod}) for each method
       // this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || {};
       // TODO also here save to localStorage newly merged version of navUpdateEntries
+    },
+    async estimateGasFundFlowsCall(encodedFunctionCall: any) {
+      try {
+        const transactionObject = {
+          from: this.activeAccountAddress,
+          to: this.fundContract.options.address,
+          data: this.fundContract.methods.fundFlowsCall(encodedFunctionCall).encodeABI(),
+        };
+
+        // Use Promise.allSettled to handle both promises
+        const [gasPriceResult, gasEstimateResult] = await Promise.allSettled([
+          this.web3.eth.getGasPrice(),
+          this.web3.eth.estimateGas(transactionObject),
+        ]);
+
+        // Extract the results or handle errors
+        const gasPrice = gasPriceResult.status === "fulfilled" ? gasPriceResult.value : undefined;
+        const gasEstimate = gasEstimateResult.status === "fulfilled" ? gasEstimateResult.value : undefined;
+        console.log("Estimated Gas:", gasEstimate);
+        console.log("Estimated Gas Price:", gasPrice);
+
+        return [gasPrice, gasEstimate];
+      } catch (error) {
+        console.error("Error estimating gas:", error);
+      }
+      return [undefined, undefined];
     },
   },
 });
