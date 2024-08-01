@@ -6,7 +6,7 @@
           Current Cycle
         </div>
       </div>
-      <div v-if="userDepositRequest || userWithdrawalRequest" class="fund_settlement__buttons">
+      <div v-if="userDepositRequest || userRedemptionRequest" class="fund_settlement__buttons">
         <v-btn
           :disabled="isProcessRequestDisabled"
           @click="processRequest"
@@ -35,7 +35,7 @@
         </v-btn>
       </div>
     </div>
-    <div v-if="userDepositRequest || userWithdrawalRequest" class="fund_settlement__pending_requests">
+    <div v-if="userDepositRequest || userRedemptionRequest" class="fund_settlement__pending_requests">
       <FundCurrentCyclePendingRequest
         v-if="userDepositRequestExists"
         :fund-transaction-request="userDepositRequest"
@@ -44,8 +44,8 @@
         :token1="fund.fundToken"
       />
       <FundCurrentCyclePendingRequest
-        v-if="userWithdrawalRequestExists"
-        :fund-transaction-request="userWithdrawalRequest"
+        v-if="userRedemptionRequestExists"
+        :fund-transaction-request="userRedemptionRequest"
         :exchange-rate="fundToBaseTokenExchangeRate"
         :token1="fund.baseToken"
         :token0="fund.fundToken"
@@ -73,13 +73,12 @@ const accountStore = useAccountStore();
 const {
   userFundAllowance,
   userFundTokenBalance,
-  userBaseTokenBalance,
   userDepositRequest,
-  userWithdrawalRequest,
+  userRedemptionRequest,
   baseToFundTokenExchangeRate,
   fundToBaseTokenExchangeRate,
   userDepositRequestExists,
-  userWithdrawalRequestExists,
+  userRedemptionRequestExists,
 } = toRefs(fundStore);
 
 defineProps({
@@ -99,21 +98,19 @@ const isProcessRequestDisabled = computed(() => {
 });
 
 const processRequest = () => {
-  toastStore.addToast("Claim " + userDepositRequest);
-  console.log("userBaseTokenBalance: ", toRaw(userBaseTokenBalance))
-  console.log("userFundTokenBalance: ", toRaw(userFundTokenBalance))
-  console.log("userFundAllowance: ", toRaw(userFundAllowance))
-  console.log("userDepositRequest: ", toRaw(userDepositRequest))
-  console.log("userWithdrawalRequest: ", toRaw(userWithdrawalRequest))
-  deposit();
-  // withdraw();
+  if (userDepositRequestExists.value) {
+    deposit();
+  }
+  if (userRedemptionRequestExists.value) {
+    withdraw();
+  }
 }
 
 const loadingDeposit = ref(false);
-const loadingWithdrawal = ref(false);
+const loadingRedemption = ref(false);
 
 const isAnythingLoading = computed(() => {
-  return loadingDeposit.value || loadingWithdrawal.value;
+  return loadingDeposit.value || loadingRedemption.value;
 });
 const depositDisabledTooltipText = computed(() => {
   if (!userDepositRequestExists.value) {
@@ -127,10 +124,10 @@ const depositDisabledTooltipText = computed(() => {
   return ""
 });
 const withdrawalDisabledTooltipText = computed(() => {
-  if (!userWithdrawalRequestExists.value) {
+  if (!userRedemptionRequestExists.value) {
     return "There is no withdrawal request."
   }
-  if (userFundTokenBalance.value < (userWithdrawalRequest?.value?.amount || 0n)) {
+  if (userFundTokenBalance.value < (userRedemptionRequest?.value?.amount || 0n)) {
     return "Not enough fund tokens to process the withdrawals request."
   }
   return ""
@@ -151,7 +148,6 @@ const deposit = async () => {
   }
   console.log("DEPOSIT");
   loadingDeposit.value = true;
-
   console.log("Deposit tokensWei: ", userDepositRequest?.value?.amount, "from : ", accountStore.activeAccount.address);
 
   const ABI = [ "function deposit()" ];
@@ -171,11 +167,11 @@ const deposit = async () => {
     }).on("receipt", (receipt: any) => {
       console.log("receipt: ", receipt);
 
+      // Refresh user balances & allowance & refresh pending requests.
+      fundStore.fetchUserBalances();
+
       if (receipt.status) {
         toastStore.successToast("Your deposit was successful.");
-
-        // Refresh user balances & allowance & refresh pending requests.
-        fundStore.fetchUserBalances();
 
         // emit event to open the delegate votes modal
         emit("deposit-success");
@@ -185,9 +181,67 @@ const deposit = async () => {
 
       loadingDeposit.value = false;
     }).on("error", (error: any) => {
+      loadingDeposit.value = false;
       handleError(error);
     });
   } catch (error: any) {
+    loadingDeposit.value = false;
+    handleError(error);
+  }
+}
+
+
+const withdraw = async () => {
+  if (!accountStore.activeAccount?.address) {
+    toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
+    return;
+  }
+  if (!fundStore.fund) {
+    toastStore.errorToast("Fund data is missing.")
+    return;
+  }
+  if (!userRedemptionRequest?.value?.amount) {
+    toastStore.errorToast("Deposit request data is missing.")
+    return;
+  }
+  console.log("[REDEEM]");
+  loadingRedemption.value = true;
+  console.log("[REDEEM] tokensWei: ", userRedemptionRequest?.value?.amount, "from : ", accountStore.activeAccount.address);
+
+  const ABI = [ "function withdraw()" ];
+  const iface = new ethers.Interface(ABI);
+  const encodedFunctionCall = iface.encodeFunctionData("withdraw");
+  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+
+  try {
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+      from: accountStore.activeAccount.address,
+      gas: gasEstimate,
+      gasPrice,
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
+
+      // Refresh user balances & allowance.
+      fundStore.fetchUserBalances();
+
+      if (receipt.status) {
+        toastStore.successToast(
+          "Your withdrawal was successful. It may take 10 seconds or more for values to update.",
+        );
+      } else {
+        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
+      }
+
+      loadingRedemption.value = false;
+    }).on("error", (error: any) => {
+      loadingRedemption.value = false;
+      handleError(error);
+    });
+  } catch (error: any) {
+    loadingRedemption.value = false;
     handleError(error);
   }
 }
@@ -201,7 +255,6 @@ const handleError = (error: any) => {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
   }
-  loadingDeposit.value = false;
 }
 </script>
 

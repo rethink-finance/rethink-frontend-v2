@@ -278,7 +278,12 @@ const buttons = ref([
     isVisible: computed(() => !userDepositRequestExists.value),
     disabled: isRequestDepositDisabled,
     loading: loadingRequestDeposit,
-    tooltipText: undefined,
+    tooltipText: computed(() => {
+      if (userDepositRequestExists.value) {
+        return "Deposit request already exists. To change it, you first have to cancel the existing one."
+      }
+      return ""
+    }),
   },
   {
     name: "Approve",

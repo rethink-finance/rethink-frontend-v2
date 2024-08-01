@@ -14,6 +14,7 @@
           <v-tooltip
             v-for="(button, index) in buttons"
             :key="index"
+            location="bottom"
             :disabled="!button.tooltipText"
             bottom
           >
@@ -76,6 +77,9 @@ const fund = computed(() => fundStore.fund);
 const loadingRequestRedeem = ref(false);
 const loadingCancelRedeem = ref(false);
 const loadingRedeem = ref(false);
+const {
+  userRedemptionRequestExists,
+} = toRefs(fundStore);
 
 watch(() => tokenValue.value, () => {
   tokenValueChanged.value = true;
@@ -103,15 +107,9 @@ const rules = [
   },
 ];
 
-const isAnythingLoading = computed(() => {
-  // Object.values returns an array of values from the actions object
-  // some() checks if at least one element passes the test implemented by the provided function
-  return (loadingRequestRedeem.value || loadingCancelRedeem.value || loadingRedeem.value);
-});
-
-const isRedeemDisabled = computed(() => {
+const isRequestRedeemDisabled = computed(() => {
   // Disable deposit button if any of rules is false.
-  return errorMessages.value.length > 0 || isAnythingLoading.value;
+  return errorMessages.value.length > 0 || loadingRequestRedeem.value || userRedemptionRequestExists.value;
 });
 
 const errorMessages = computed<IError[]>(() => {
@@ -137,7 +135,7 @@ const handleError = (error: any) => {
 }
 
 
-const requestRedeem = async () => {
+const requestRedemption = async () => {
   if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
     return;
@@ -146,7 +144,7 @@ const requestRedeem = async () => {
     toastStore.errorToast("Fund data is missing.")
     return;
   }
-  console.log("[REQUEST REDEEM]");
+  console.log("[REQUEST REDEMPTION]");
   loadingRequestRedeem.value = true;
 
   const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.fundToken.decimals)
@@ -187,132 +185,21 @@ const requestRedeem = async () => {
   }
 }
 
-const redeem = async () => {
-  if (!accountStore.activeAccount?.address) {
-    toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
-    return;
-  }
-  if (!fund.value) {
-    toastStore.errorToast("Fund data is missing.")
-    return;
-  }
-  console.log("[REDEEM]");
-  loadingRedeem.value = true;
-
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.fundToken.decimals)
-  console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
-
-  const ABI = [ "function withdraw()" ];
-  const iface = new ethers.Interface(ABI);
-  const encodedFunctionCall = iface.encodeFunctionData("withdraw");
-  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
-
-  try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
-      gas: gasEstimate,
-      gasPrice,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-
-      if (receipt.status) {
-        toastStore.successToast(
-          "Your withdrawal was successful. It may take 10 seconds or more for values to update.",
-        );
-
-        // Refresh user balances & allowance.
-        fundStore.fetchUserBalances();
-        tokenValue.value = "0.0";
-      } else {
-        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-      }
-
-      loadingRedeem.value = false;
-    }).on("error", (error: any) => {
-      handleError(error);
-    });
-  } catch (error: any) {
-    handleError(error);
-  }
-}
-
-
-const cancelRedeem = async () => {
-  if (!accountStore.activeAccount?.address) {
-    toastStore.errorToast("Connect your wallet to cancel an ongoing redeem.")
-    return;
-  }
-  if (!fund.value) {
-    toastStore.errorToast("Fund data is missing.")
-    return;
-  }
-  loadingCancelRedeem.value = true;
-  console.log("[CANCEL REDEEM] from : ", accountStore.activeAccount.address);
-
-  const ABI = [ "function revokeDepositWithrawal(bool isDeposit)" ];
-  const iface = new ethers.Interface(ABI);
-  const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ false ]);
-  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
-
-  try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
-      gas: gasEstimate,
-      gasPrice,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-
-      if (receipt.status) {
-        toastStore.successToast(
-          "Withdrawal cancellation was successful. It may take 10 seconds or more for values to update.",
-        );
-
-        tokenValue.value = "0.0";
-      } else {
-        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-      }
-
-      loadingCancelRedeem.value = false;
-    }).on("error", (error: any) => {
-      handleError(error);
-    });
-  } catch (error: any) {
-    handleError(error);
-  }
-}
-
-
 const buttons = ref([
   {
-    name: "Request Redeem",
-    onClick: requestRedeem,
-    disabled: isRedeemDisabled,
+    name: "Request Redemption",
+    onClick: requestRedemption,
+    disabled: isRequestRedeemDisabled,
     loading: loadingRequestRedeem,
-    tooltipText: undefined,
-  },
-  {
-    name: "Cancel Redeem",
-    onClick: cancelRedeem,
-    disabled: isAnythingLoading,
-    loading: loadingCancelRedeem,
-    tooltipText: undefined,
-  },
-  {
-    name: "Redeem",
-    onClick: redeem,
-    disabled: isRedeemDisabled,
-    loading: loadingRedeem,
-    tooltipText: undefined,
+    tooltipText: computed(() => {
+      if (userRedemptionRequestExists.value) {
+        return "Redemption request already exists. To change it, you first have to cancel the existing one."
+      }
+      return ""
+    }),
   },
 ]);
+
 </script>
 
 <style lang="scss" scoped>

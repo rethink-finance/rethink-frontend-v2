@@ -49,7 +49,7 @@ interface IState {
   userFundDelegateAddress: string;
   userFundShareValue: bigint
   userDepositRequest?: IFundTransactionRequest;
-  userWithdrawalRequest?: IFundTransactionRequest;
+  userRedemptionRequest?: IFundTransactionRequest;
   selectedFundAddress: string;
   // Fund NAV methods that user can manage and change, delete, add...
   fundManagedNAVMethods: INAVMethod[],
@@ -70,7 +70,7 @@ export const useFundStore = defineStore({
     userFundShareValue: BigInt("0"),
     userFundDelegateAddress: "",
     userDepositRequest: undefined,
-    userWithdrawalRequest: undefined,
+    userRedemptionRequest: undefined,
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
@@ -117,8 +117,8 @@ export const useFundStore = defineStore({
     userDepositRequestExists(): boolean {
       return (this.userDepositRequest?.amount || 0) > 0
     },
-    userWithdrawalRequestExists(): boolean {
-      return (this.userWithdrawalRequest?.amount || 0) > 0
+    userRedemptionRequestExists(): boolean {
+      return (this.userRedemptionRequest?.amount || 0) > 0
     },
     userFundSuggestedAllowance(): bigint {
       const userBaseTokenBalance = this.userBaseTokenBalance || 0n;
@@ -274,7 +274,7 @@ export const useFundStore = defineStore({
         this.fetchUserFundDelegateAddress(),
         this.fetchUserFundShareValue(),
         this.fetchUserFundAllowance(),
-        this.fetchUserFundDepositWithdrawalRequests(),
+        this.fetchUserFundDepositRedemptionRequests(),
       ]);
     },
     /**
@@ -665,7 +665,7 @@ export const useFundStore = defineStore({
     /**
      * Fetch user's fund share value (denominated in base token).
      */
-    async fetchUserFundDepositWithdrawalRequests() {
+    async fetchUserFundDepositRedemptionRequests() {
       // this.userFundShareValue = BigInt("0");
       if (!this.activeAccountAddress) return console.error("Active account not found");
       if (!this.fund?.address) return "";
@@ -679,8 +679,8 @@ export const useFundStore = defineStore({
         );
       }
       try {
-        this.userWithdrawalRequest = undefined;
-        this.userWithdrawalRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Withdrawal)
+        this.userRedemptionRequest = undefined;
+        this.userRedemptionRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Redemption)
       } catch (e) {
         console.error(
           "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
