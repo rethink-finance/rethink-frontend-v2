@@ -21,16 +21,9 @@
             />
           </template>
           Process Request
-          <v-tooltip activator="parent" location="bottom">
-            <template v-if="depositDisabledTooltipText">
-              {{ depositDisabledTooltipText }}
-            </template>
-            <template v-else-if="withdrawalDisabledTooltipText">
-              {{ withdrawalDisabledTooltipText }}
-            </template>
-            <template v-else>
-              Process Request.
-            </template>
+          <v-tooltip v-if="depositDisabledTooltipText && withdrawalDisabledTooltipText" activator="parent" location="bottom">
+            {{ depositDisabledTooltipText }}
+            {{ withdrawalDisabledTooltipText }}
           </v-tooltip>
         </v-btn>
       </div>

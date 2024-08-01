@@ -8,11 +8,17 @@
         </div>
       </div>
       <div class="pending_request__icon_more">
-        <Icon
-          icon="ic:twotone-cancel"
-          width="1.5rem"
-          @click="toggleCancelButton"
-        />
+        <v-tooltip activator="parent" location="left">
+          <template #activator="{ props }">
+            <Icon
+              v-bind="props"
+              icon="ic:twotone-cancel"
+              width="1.5rem"
+              @click="toggleCancelButton"
+            />
+          </template>
+          Cancel {{ fundTransactionRequest.type }} Request
+        </v-tooltip>
       </div>
       <v-btn
         v-if="showCancelButton"
