@@ -7,25 +7,32 @@
         </div>
       </div>
       <div v-if="userDepositRequestExists || userRedemptionRequestExists" class="fund_settlement__buttons">
-        <v-btn
-          :disabled="isProcessRequestDisabled"
-          @click="processRequest"
-        >
-          <template #prepend>
-            <v-progress-circular
-              v-if="isAnythingLoading"
-              class="d-flex"
-              size="20"
-              width="3"
-              indeterminate
-            />
+        <v-tooltip v-if="depositDisabledTooltipText || redemptionDisabledTooltipText" activator="parent" location="bottom">
+          <template #activator="props">
+            <v-btn
+              v-bind="props"
+              :disabled="isProcessRequestDisabled"
+              @click="processRequest"
+            >
+              <template #prepend>
+                <v-progress-circular
+                  v-if="isAnythingLoading"
+                  class="d-flex"
+                  size="20"
+                  width="3"
+                  indeterminate
+                />
+              </template>
+              Process Request
+            </v-btn>
           </template>
-          Process Request
-          <v-tooltip v-if="depositDisabledTooltipText && withdrawalDisabledTooltipText" activator="parent" location="bottom">
+          <template v-if="userDepositRequestExists">
             {{ depositDisabledTooltipText }}
-            {{ withdrawalDisabledTooltipText }}
-          </v-tooltip>
-        </v-btn>
+          </template>
+          <template v-if="userRedemptionRequestExists">
+            {{ redemptionDisabledTooltipText }}
+          </template>
+        </v-tooltip>
       </div>
     </div>
     <div v-if="userDepositRequestExists || userRedemptionRequestExists" class="fund_settlement__pending_requests">
@@ -86,8 +93,8 @@ defineProps({
 const isProcessRequestDisabled = computed(() => {
   if (isAnythingLoading.value) return true;
 
-  // Disable process request button if the user can't do deposit nor withdrawal.
-  if (!depositDisabledTooltipText.value || !withdrawalDisabledTooltipText.value) {
+  // Do not disable process request button if the user can do deposit or withdrawal.
+  if (!depositDisabledTooltipText.value || !redemptionDisabledTooltipText.value) {
     return false;
   }
   return true
@@ -119,7 +126,7 @@ const depositDisabledTooltipText = computed(() => {
   }
   return ""
 });
-const withdrawalDisabledTooltipText = computed(() => {
+const redemptionDisabledTooltipText = computed(() => {
   if (!userRedemptionRequestExists.value) {
     return "There is no withdrawal request."
   }
