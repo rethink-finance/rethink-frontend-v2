@@ -6,7 +6,10 @@
           Current Cycle
         </div>
       </div>
-      <div v-if="userDepositRequestExists || userRedemptionRequestExists" class="fund_settlement__buttons">
+      <div
+        v-if="userDepositRequestExists || userRedemptionRequestExists"
+        class="fund_settlement__buttons"
+      >
         <v-tooltip
           :disabled="!(depositDisabledTooltipText || redemptionDisabledTooltipText)"
           activator="parent"
@@ -33,13 +36,17 @@
           <template v-if="userDepositRequestExists">
             {{ depositDisabledTooltipText }}
           </template>
+          <br v-if="userDepositRequestExists && userRedemptionRequestExists">
           <template v-if="userRedemptionRequestExists">
             {{ redemptionDisabledTooltipText }}
           </template>
         </v-tooltip>
       </div>
     </div>
-    <div v-if="userDepositRequestExists || userRedemptionRequestExists" class="fund_settlement__pending_requests">
+    <div
+      v-if="userDepositRequestExists || userRedemptionRequestExists"
+      class="fund_settlement__pending_requests"
+    >
       <FundCurrentCyclePendingRequest
         v-if="userDepositRequestExists"
         :fund-transaction-request="userDepositRequest"
@@ -87,6 +94,8 @@ const {
   userRedemptionRequest,
   baseToFundTokenExchangeRate,
   fundToBaseTokenExchangeRate,
+  shouldUserWaitSettlementOrCancelDeposit,
+  shouldUserWaitSettlementOrCancelRedemption,
   userDepositRequestExists,
   userRedemptionRequestExists,
 } = toRefs(fundStore);
@@ -100,7 +109,7 @@ defineProps({
 const isProcessRequestDisabled = computed(() => {
   if (isAnythingLoading.value) return true;
 
-  // Do not disable process request button if the user can do deposit or withdrawal.
+  // Do not disable process request button if the user can do either deposit or redemption.
   if (!depositDisabledTooltipText.value || !redemptionDisabledTooltipText.value) {
     return false;
   }
@@ -112,7 +121,7 @@ const processRequest = () => {
     deposit();
   }
   if (userRedemptionRequestExists.value) {
-    withdraw();
+    redeem();
   }
 }
 
@@ -126,19 +135,24 @@ const depositDisabledTooltipText = computed(() => {
   if (!userDepositRequestExists.value) {
     return "There is no deposit request."
   }
-  console.log("allwoance", userFundAllowance.value)
-  console.log("userDepositRequest", userDepositRequest?.value?.amount || 0n)
   if (userFundAllowance.value < (userDepositRequest?.value?.amount || 0n)) {
     return "Not enough allowance to process the deposit request."
+  }
+  if (shouldUserWaitSettlementOrCancelDeposit.value) {
+    return "Wait for settlement or cancel the deposit request."
   }
   return ""
 });
 const redemptionDisabledTooltipText = computed(() => {
   if (!userRedemptionRequestExists.value) {
-    return "There is no withdrawal request."
+    return "There is no redemption request."
   }
   if (userFundTokenBalance.value < (userRedemptionRequest?.value?.amount || 0n)) {
-    return "Not enough fund tokens to process the withdrawals request."
+    return "Not enough fund tokens to process the redemptions request."
+  }
+
+  if (shouldUserWaitSettlementOrCancelRedemption.value) {
+    return "Wait for settlement or cancel the redemption request."
   }
   return ""
 });
@@ -201,7 +215,7 @@ const deposit = async () => {
 }
 
 
-const withdraw = async () => {
+const redeem = async () => {
   if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
     return;
@@ -211,7 +225,7 @@ const withdraw = async () => {
     return;
   }
   if (!userRedemptionRequest?.value?.amount) {
-    toastStore.errorToast("Deposit request data is missing.")
+    toastStore.errorToast("Redemption request data is missing.")
     return;
   }
   console.log("[REDEEM]");
@@ -239,7 +253,7 @@ const withdraw = async () => {
 
       if (receipt.status) {
         toastStore.successToast(
-          "Your withdrawal was successful. It may take 10 seconds or more for values to update.",
+          "Your redemption was successful. It may take 10 seconds or more for values to update.",
         );
       } else {
         toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");

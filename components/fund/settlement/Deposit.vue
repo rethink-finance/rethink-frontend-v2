@@ -11,9 +11,14 @@
     <template #buttons>
       <div v-if="accountStore.isConnected">
         <div class="deposit_button_group">
-          <template v-if="canProcessDeposit">
+          <template v-if="shouldUserWaitSettlementOrCancelDeposit">
             <h3>
-              You can now process or cancel your deposit request.
+              Wait for settlement or cancel the deposit request.
+            </h3>
+          </template>
+          <template v-else-if="canUserProcessDeposit">
+            <h3>
+              You can now process or cancel the deposit request.
             </h3>
           </template>
           <template v-for="(button) in buttons">
@@ -48,6 +53,22 @@
               </template>
             </v-tooltip>
           </template>
+          <div v-if="showApproveAllowanceWarning" class="d-flex align-center">
+            <Icon
+              icon="zondicons:exclamation-outline"
+              class="text-warning me-1"
+              height="1.2rem"
+              width="1.2rem"
+            />
+            Approve at least
+            <strong
+              class="set_approve_allowance_button mx-1"
+              @click="setTokenValueToDepositRequestAmount"
+            >
+              {{ depositRequestAmountFormatted }} {{ fundStore?.fund?.baseToken.symbol }}
+            </strong>
+            to process the deposit request.
+          </div>
         </div>
         <div v-if="visibleErrorMessages && tokenValueChanged" class="text-red mt-4 text-center">
           <div v-for="(error, index) in visibleErrorMessages" :key="index">
@@ -80,6 +101,10 @@ const tokenValue = ref("0.0");
 const tokenValueChanged = ref(false);
 const fund = computed(() => fundStore.fund);
 const {
+  shouldUserRequestDeposit,
+  shouldUserApproveAllowance,
+  canUserProcessDeposit,
+  shouldUserWaitSettlementOrCancelDeposit,
   userDepositRequest,
   userDepositRequestExists,
 } = toRefs(fundStore);
@@ -114,6 +139,12 @@ const rules = [
   },
 ];
 
+const depositRequestAmountFormatted = computed(() => {
+  const baseToken = fundStore.fund?.baseToken;
+  if (!userDepositRequest?.value?.amount || !baseToken) return "N/A"
+  return formatTokenValue(userDepositRequest?.value?.amount, baseToken.decimals, false);
+});
+
 const isAnythingLoading = computed(() => {
   // Object.values returns an array of values from the actions object
   // some() checks if at least one element passes the test implemented by the provided function
@@ -130,6 +161,10 @@ const errorMessages = computed<IError[]>(() => {
 });
 const visibleErrorMessages = computed<IError[]>( () => {
   return errorMessages.value.filter((error: IError) => error.display)
+})
+const tokensWei = computed( () => {
+  if (!fund.value?.baseToken) return 0n;
+  return ethers.parseUnits(tokenValue.value, fund.value?.baseToken.decimals)
 })
 
 const handleError = (error: any) => {
@@ -162,12 +197,11 @@ const requestDeposit = async () => {
   console.log("REQUEST DEPOSIT");
   loadingRequestDeposit.value = true;
 
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals)
-  console.log("Request deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
+  console.log("Request deposit tokensWei: ", tokensWei.value, "from : ", accountStore.activeAccount.address);
 
   const ABI = [ "function requestDeposit(uint256 amount)" ];
   const iface = new ethers.Interface(ABI);
-  const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei ]);
+  const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei.value ]);
   const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
@@ -179,7 +213,7 @@ const requestDeposit = async () => {
       console.log("tx hash: ", hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
 
-    }).on("receipt", async (receipt: any) => {
+    }).on("receipt", (receipt: any) => {
       console.log("receipt :", receipt);
 
       if (receipt.status) {
@@ -189,7 +223,7 @@ const requestDeposit = async () => {
         // TODO takes 15-20 sec for node to sync .. fix
         // await fundStore.fetchUserBalances();
         fundStore.userDepositRequest = {
-          amount: tokensWei,
+          amount: tokensWei.value,
           timestamp: Date.now(),
           type: FundTransactionType.Deposit,
         }
@@ -206,33 +240,9 @@ const requestDeposit = async () => {
   }
 };
 
-const estimateGasApprove = async (tokensWei: bigint) => {
-  try {
-    const transactionObject = {
-      from: fundStore.activeAccountAddress,
-      to: fundStore.fundBaseTokenContract.options.address,
-      data: fundStore.fundBaseTokenContract.methods.approve(fund.value?.address, tokensWei).encodeABI(),
-    };
-
-    // Use Promise.allSettled to handle both promises
-    const [gasPriceResult, gasEstimateResult] = await Promise.allSettled([
-      fundStore.web3.eth.getGasPrice(),
-      fundStore.web3.eth.estimateGas(transactionObject),
-    ]);
-
-    // Extract the results or handle errors
-    const gasPrice = gasPriceResult.status === "fulfilled" ? gasPriceResult.value : undefined;
-    const gasEstimate = gasEstimateResult.status === "fulfilled" ? gasEstimateResult.value : undefined;
-    console.log("Estimated Gas:", gasEstimate);
-    console.log("Estimated Gas Price:", gasPrice);
-
-    return [gasPrice, gasEstimate];
-  } catch (error) {
-    console.error("Error estimating gas:", error);
-  }
-  return [undefined, undefined];
-};
-
+const setTokenValueToDepositRequestAmount = () => {
+  tokenValue.value = depositRequestAmountFormatted.value;
+}
 const approveAllowance = async () => {
   if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to approve allowance.")
@@ -245,17 +255,13 @@ const approveAllowance = async () => {
   console.log("APPROVE ALLOWANCE");
   loadingApproveAllowance.value = true;
 
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals)
-  console.log("Approve allowance tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
-  const allowanceValue = tokensWei;
-  const [gasPrice, gasEstimate] = await estimateGasApprove(tokensWei);
+  console.log("Approve allowance tokensWei: ", tokensWei.value, "from : ", accountStore.activeAccount.address);
+  const allowanceValue = tokensWei.value;
 
   try {
     // call the approval method
-    await fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei).send({
+    await fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei.value).send({
       from: accountStore.activeAccount.address,
-      gas: gasEstimate,
-      gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
@@ -279,25 +285,17 @@ const approveAllowance = async () => {
   }
 }
 
-const shouldRequestDeposit = computed(() => {
-  // User deposit request does not exist yet.
-  return !userDepositRequestExists.value
-});
-const shouldApproveAllowance = computed(() => {
+const showApproveAllowanceWarning = computed(() => {
   // User deposit request exists and allowance is bigger.
-  return userDepositRequestExists.value && fundStore.userFundAllowance < (userDepositRequest?.value?.amount || 0n)
+  return shouldUserApproveAllowance.value && tokensWei.value < (userDepositRequest?.value?.amount || 0n)
 });
 
-const canProcessDeposit = computed(() => {
-  // User deposit request exists and allowance is bigger.
-  return !shouldRequestDeposit.value && !shouldApproveAllowance.value;
-});
 
 const buttons = ref([
   {
     name: "Request Deposit",
     onClick: requestDeposit,
-    isVisible: shouldRequestDeposit,
+    isVisible: shouldUserRequestDeposit,
     disabled: isRequestDepositDisabled,
     loading: loadingRequestDeposit,
     tooltipText: computed(() => {
@@ -312,7 +310,7 @@ const buttons = ref([
     onClick: approveAllowance,
     disabled: isRequestDepositDisabled,
     loading: loadingApproveAllowance,
-    isVisible: shouldApproveAllowance,
+    isVisible: shouldUserApproveAllowance,
     tooltipText: undefined,
   },
 ]);
@@ -324,5 +322,11 @@ const buttons = ref([
   display: flex;
   justify-content: space-around;
   flex-wrap: wrap;
+}
+.set_approve_allowance_button {
+  &:hover {
+    cursor: pointer;
+    text-decoration: underline;
+  }
 }
 </style>

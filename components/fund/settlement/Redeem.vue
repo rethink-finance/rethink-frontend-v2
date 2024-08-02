@@ -11,39 +11,49 @@
     <template #buttons>
       <div v-if="accountStore.isConnected">
         <div class="deposit_button_group">
-          <v-tooltip
-            v-for="(button, index) in buttons"
-            :key="index"
-            location="bottom"
-            :disabled="!button.tooltipText"
-            bottom
-          >
-            <template #default>
-              {{ button.tooltipText }}
-            </template>
-            <template #activator="{ props }">
-              <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
-              <span v-bind="props">
-                <v-btn
-                  class="bg-primary text-secondary"
-                  :disabled="button.disabled"
-                  @click="button.onClick"
-                >
-                  <template #prepend>
-                    <v-progress-circular
-                      v-if="button.loading"
-                      class="d-flex"
-                      size="20"
-                      width="3"
-                      indeterminate
-                    />
-                  </template>
-                  {{ button.name }}
-                </v-btn>
-              </span>
-            </template>
-          </v-tooltip>
-
+          <template v-if="shouldUserWaitSettlementOrCancelRedemption">
+            <h3>
+              Wait for settlement or cancel the redemption request.
+            </h3>
+          </template>
+          <template v-else-if="userRedemptionRequestExists">
+            <h3>
+              You can now process or cancel the redemption request.
+            </h3>
+          </template>
+          <template v-for="button in buttons">
+            <v-tooltip
+              v-if="button.isVisible"
+              location="bottom"
+              :disabled="!button.tooltipText"
+              bottom
+            >
+              <template #default>
+                {{ button.tooltipText }}
+              </template>
+              <template #activator="{ props }">
+                <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
+                <span v-bind="props">
+                  <v-btn
+                    class="bg-primary text-secondary"
+                    :disabled="button.disabled"
+                    @click="button.onClick"
+                  >
+                    <template #prepend>
+                      <v-progress-circular
+                        v-if="button.loading"
+                        class="d-flex"
+                        size="20"
+                        width="3"
+                        indeterminate
+                      />
+                    </template>
+                    {{ button.name }}
+                  </v-btn>
+                </span>
+              </template>
+            </v-tooltip>
+          </template>
         </div>
         <div v-if="visibleErrorMessages && tokenValueChanged" class="text-red mt-4 text-center">
           <div v-for="(error, index) in visibleErrorMessages" :key="index">
@@ -79,6 +89,7 @@ const loadingRequestRedeem = ref(false);
 const loadingCancelRedeem = ref(false);
 const loadingRedeem = ref(false);
 const {
+  shouldUserWaitSettlementOrCancelRedemption,
   userRedemptionRequestExists,
 } = toRefs(fundStore);
 
@@ -199,6 +210,7 @@ const buttons = ref([
     onClick: requestRedemption,
     disabled: isRequestRedeemDisabled,
     loading: loadingRequestRedeem,
+    isVisible: computed(() => !userRedemptionRequestExists.value),
     tooltipText: computed(() => {
       if (userRedemptionRequestExists.value) {
         return "Redemption request already exists. To change it, you first have to cancel the existing one."

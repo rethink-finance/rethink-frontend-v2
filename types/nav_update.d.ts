@@ -54,6 +54,7 @@ import type INAVMethod from "~/types/nav_method";
  */
 export default interface INAVUpdate {
   date: string;
+  timestamp: number;
   totalNAV: bigint;
   quantity: {
     [PositionType.Liquid]: bigint;

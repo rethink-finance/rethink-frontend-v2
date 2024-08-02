@@ -186,6 +186,7 @@ const handleError = (error: any) => {
     position: absolute;
     right: 32px;
     top: 0;
+    z-index: 3000;
   }
   &__icon_more {
     position: absolute;

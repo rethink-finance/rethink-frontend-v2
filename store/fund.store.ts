@@ -149,6 +149,41 @@ export const useFundStore = defineStore({
     userFundSuggestedAllowanceFormatted(): string {
       return ethers.formatUnits(this.userFundSuggestedAllowance, this.fund?.baseToken.decimals);
     },
+    shouldUserRequestDeposit(): boolean {
+      // User deposit request does not exist yet, he should request deposit.
+      return !this.userDepositRequestExists
+    },
+    shouldUserApproveAllowance(): boolean {
+      // User deposit request exists and allowance is bigger.
+      return this.userDepositRequestExists && this.userFundAllowance < (this.userDepositRequest?.amount || 0n)
+    },
+    canUserProcessDeposit(): boolean {
+      // User deposit request exists and allowance is bigger.
+      return !this.shouldUserRequestDeposit && !this.shouldUserApproveAllowance;
+    },
+    shouldUserWaitSettlementOrCancelDeposit(): boolean {
+      // If there was no NAV update yet, the user can process deposit request.
+      // There is no need to wait until the next settlement.
+      if (
+        !this.canUserProcessDeposit ||
+        !this.fundLastNAVUpdate?.timestamp ||
+        !this.userDepositRequest?.timestamp
+      ) return false;
+      // User deposit request exists and is valid, but there has to be at least 1 NAV update
+      // made after the deposit was requested.
+      return this.userDepositRequest.timestamp < this.fundLastNAVUpdate?.timestamp;
+    },
+    shouldUserWaitSettlementOrCancelRedemption(): boolean {
+      // If there was no NAV update yet, the user can process deposit request.
+      // There is no need to wait until the next settlement.
+      if (
+        !this.fundLastNAVUpdate?.timestamp ||
+        !this.userRedemptionRequest?.timestamp
+      ) return false;
+      // User redemption request exists and is valid, but there has to be at least 1 NAV update
+      // made after the redemption was requested.
+      return this.userRedemptionRequest.timestamp < this.fundLastNAVUpdate?.timestamp;
+    },
     /**
      * Contracts
      */
@@ -542,10 +577,12 @@ export const useFundStore = defineStore({
           return totalNAV;
         });
 
+        const navTimestamp = Number(fundNavUpdateTimes[i] * 1000n);
         navUpdates.push(
           {
             // If the datetime of the NAV update is available format it, otherwise just use the index (e.g. #2).
-            date: fundNavUpdateTimes[i] ? formatDate(new Date(Number(fundNavUpdateTimes[i]) * 1000)) : `#${(i+1).toString()}}`,
+            date: fundNavUpdateTimes[i] ? formatDate(new Date(navTimestamp)) : `#${(i+1).toString()}}`,
+            timestamp: navTimestamp,
             totalNAV,
             quantity,
             entries: [],
