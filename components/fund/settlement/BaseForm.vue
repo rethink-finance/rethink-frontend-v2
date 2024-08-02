@@ -51,8 +51,11 @@
         <div>
           Balance: {{ token1UserBalanceFormatted }} {{ token1.symbol }}
         </div>
-        <div>
+        <div v-if="fundStore.fundLastNAVUpdate">
           Based on Last NAV Update: {{ exchangeRateText }}
+        </div>
+        <div v-else>
+          There was no NAV update yet: 1 {{ token0?.symbol }} = 1 {{ token1?.symbol }}
         </div>
       </div>
     </div>
@@ -65,6 +68,7 @@
 <script setup lang="ts">
 import { ethers } from "ethers";
 import type IToken from "~/types/token";
+import { useFundStore } from "~/store/fund.store";
 
 type RuleFunction = (...args: any[]) => boolean | string;
 type RulesArray = RuleFunction[];
@@ -101,6 +105,7 @@ const props = defineProps({
     default: () => [],
   },
 });
+const fundStore = useFundStore();
 
 const emit = defineEmits(["update:modelValue"]);
 
@@ -129,19 +134,12 @@ const token1UserBalanceFormatted = computed(() => {
   return formatTokenValue(props.token1UserBalance, props.token0.decimals);
 });
 
-
-const exchangeRateText = computed(() => {
-  if (!props.exchangeRate) return "--"
-  let exchangeRate: string | number = props.exchangeRate;
-  if (exchangeRate > 1) {
-    // If the number is bigger than 1, clip it to two decimals.
-    exchangeRate = exchangeRate.toFixed(2);
-  }
-  // Make sure to handle potential reactivity or null checks as needed
-  return `1 ${props.token0.symbol} = ${exchangeRate} ${props.token1.symbol}`;
+const exchangeRateText = computed((): string => {
+  return getExchangeRateText(props.exchangeRate, props.token0.symbol, props.token1.symbol)
 });
 
 const calculatedToken1Value = computed(() => {
+  if (!props.exchangeRate) return "N/A"
   // Continue to use your trimTrailingZeros utility function as needed
   return trimTrailingZeros((Number(tokenValue.value) * props.exchangeRate).toFixed(4));
 });

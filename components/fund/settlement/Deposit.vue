@@ -11,38 +11,64 @@
     <template #buttons>
       <div v-if="accountStore.isConnected">
         <div class="deposit_button_group">
-          <v-tooltip
-            v-for="(button, index) in buttons"
-            :key="index"
-            :disabled="!button.tooltipText"
-            bottom
-          >
-            <template #default>
-              {{ button.tooltipText }}
-            </template>
-            <template #activator="{ props }">
-              <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
-              <span v-bind="props">
-                <v-btn
-                  class="bg-primary text-secondary"
-                  :disabled="button.disabled"
-                  @click="button.onClick"
-                >
-                  <template #prepend>
-                    <v-progress-circular
-                      v-if="button.loading"
-                      class="d-flex"
-                      size="20"
-                      width="3"
-                      indeterminate
-                    />
-                  </template>
-                  {{ button.name }}
-                </v-btn>
-              </span>
-            </template>
-          </v-tooltip>
-
+          <template v-if="shouldUserWaitSettlementOrCancelDeposit">
+            <h3>
+              Wait for settlement or cancel the deposit request.
+            </h3>
+          </template>
+          <template v-else-if="canUserProcessDeposit">
+            <h3>
+              You can now process or cancel the deposit request.
+            </h3>
+          </template>
+          <template v-for="(button) in buttons">
+            <v-tooltip
+              v-if="button.isVisible"
+              :disabled="!button.tooltipText"
+              bottom
+            >
+              <template #default>
+                {{ button.tooltipText }}
+              </template>
+              <template #activator="{ props }">
+                <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
+                <span v-bind="props">
+                  <v-btn
+                    class="bg-primary text-secondary"
+                    :disabled="button.disabled"
+                    @click="button.onClick"
+                  >
+                    <template #prepend>
+                      <v-progress-circular
+                        v-if="button.loading"
+                        class="d-flex"
+                        size="20"
+                        width="3"
+                        indeterminate
+                      />
+                    </template>
+                    {{ button.name }}
+                  </v-btn>
+                </span>
+              </template>
+            </v-tooltip>
+          </template>
+          <div v-if="showApproveAllowanceWarning" class="d-flex align-center">
+            <Icon
+              icon="zondicons:exclamation-outline"
+              class="text-warning me-1"
+              height="1.2rem"
+              width="1.2rem"
+            />
+            Approve at least
+            <strong
+              class="set_approve_allowance_button mx-1"
+              @click="setTokenValueToDepositRequestAmount"
+            >
+              {{ depositRequestAmountFormatted }} {{ fundStore?.fund?.baseToken.symbol }}
+            </strong>
+            to process the deposit request.
+          </div>
         </div>
         <div v-if="visibleErrorMessages && tokenValueChanged" class="text-red mt-4 text-center">
           <div v-for="(error, index) in visibleErrorMessages" :key="index">
@@ -65,8 +91,8 @@ import { computed, ref } from "vue";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
+import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 
-const emit = defineEmits(["deposit-success"]);
 
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
@@ -74,11 +100,17 @@ const fundStore = useFundStore();
 const tokenValue = ref("0.0");
 const tokenValueChanged = ref(false);
 const fund = computed(() => fundStore.fund);
+const {
+  shouldUserRequestDeposit,
+  shouldUserApproveAllowance,
+  canUserProcessDeposit,
+  shouldUserWaitSettlementOrCancelDeposit,
+  userDepositRequest,
+  userDepositRequestExists,
+} = toRefs(fundStore);
 
 const loadingRequestDeposit = ref(false);
 const loadingApproveAllowance = ref(false);
-const loadingDeposit = ref(false);
-const loadingCancelDeposit = ref(false);
 
 watch(() => tokenValue.value, () => {
   tokenValueChanged.value = true;
@@ -94,8 +126,9 @@ const rules = [
     const valueWei = ethers.parseUnits(value, fund.value?.baseToken.decimals);
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
 
-    console.log("[REDEEM] check user base token balance wei: ", valueWei, fundStore.userBaseTokenBalance);
-    if (fundStore.userBaseTokenBalance < valueWei) {
+    console.log("[DEPOSIT] check user base token balance wei: ", valueWei, fundStore.userBaseTokenBalance);
+    // This condition is only valid for Request Deposit, we don't check this condition for Approve.
+    if (!userDepositRequestExists.value && fundStore.userBaseTokenBalance < valueWei) {
       const userBaseTokenBalanceFormatted = formatTokenValue(fundStore.userBaseTokenBalance, fund.value.baseToken.decimals);
       return {
         message: `Your ${fund.value.baseToken.symbol} balance is too low: ${userBaseTokenBalanceFormatted}.`,
@@ -106,23 +139,19 @@ const rules = [
   },
 ];
 
+const depositRequestAmountFormatted = computed(() => {
+  const baseToken = fundStore.fund?.baseToken;
+  if (!userDepositRequest?.value?.amount || !baseToken) return "N/A"
+  return formatTokenValue(userDepositRequest?.value?.amount, baseToken.decimals, false);
+});
+
 const isAnythingLoading = computed(() => {
   // Object.values returns an array of values from the actions object
   // some() checks if at least one element passes the test implemented by the provided function
-  return (loadingRequestDeposit.value || loadingApproveAllowance.value || loadingDeposit.value || loadingCancelDeposit.value);
+  return (loadingRequestDeposit.value || loadingApproveAllowance.value);
 });
 
-const isEnoughAllowance = computed(() => {
-  if (!fund.value) return false;
-  const valueWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals);
-  return valueWei <= fundStore.userFundAllowance;
-});
-const isDepositDisabled = computed(() => {
-  // Disable deposit button if any of rules is false.
-  return errorMessages.value.length > 0 || isAnythingLoading.value || !isEnoughAllowance.value;
-});
 const isRequestDepositDisabled = computed(() => {
-  // Disable deposit button if any of rules is false.
   return errorMessages.value.length > 0 || isAnythingLoading.value;
 });
 
@@ -132,6 +161,10 @@ const errorMessages = computed<IError[]>(() => {
 });
 const visibleErrorMessages = computed<IError[]>( () => {
   return errorMessages.value.filter((error: IError) => error.display)
+})
+const tokensWei = computed( () => {
+  if (!fund.value?.baseToken) return 0n;
+  return ethers.parseUnits(tokenValue.value, fund.value?.baseToken.decimals)
 })
 
 const handleError = (error: any) => {
@@ -145,8 +178,7 @@ const handleError = (error: any) => {
   }
   loadingRequestDeposit.value = false;
   loadingApproveAllowance.value = false;
-  loadingDeposit.value = false;
-  loadingCancelDeposit.value = false;
+  fundStore.fetchUserBalances();
 }
 
 /**
@@ -165,18 +197,18 @@ const requestDeposit = async () => {
   console.log("REQUEST DEPOSIT");
   loadingRequestDeposit.value = true;
 
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals)
-  console.log("Request deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
+  console.log("Request deposit tokensWei: ", tokensWei.value, "from : ", accountStore.activeAccount.address);
 
   const ABI = [ "function requestDeposit(uint256 amount)" ];
   const iface = new ethers.Interface(ABI);
-  const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei ]);
+  const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei.value ]);
+  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+    fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
-      maxPriorityFeePerGas: null,
-      maxFeePerGas: null,
+      gas: gasEstimate,
+      gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
@@ -186,11 +218,19 @@ const requestDeposit = async () => {
 
       if (receipt.status) {
         toastStore.successToast("Your deposit request was successful.");
-        tokenValue.value = "0.0";
+        // Set form token value to user's current balance + current deposit request value so that
+        // he can approve it without inputting the value himself, for better UX.
+        // TODO takes 15-20 sec for node to sync .. fix
+        // await fundStore.fetchUserBalances();
+        fundStore.userDepositRequest = {
+          amount: tokensWei.value,
+          timestamp: Date.now(),
+          type: FundTransactionType.Deposit,
+        }
       } else {
         toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
+        fundStore.fetchUserBalances();
       }
-
       loadingRequestDeposit.value = false;
     }).on("error", (error: any) => {
       handleError(error);
@@ -200,7 +240,9 @@ const requestDeposit = async () => {
   }
 };
 
-
+const setTokenValueToDepositRequestAmount = () => {
+  tokenValue.value = depositRequestAmountFormatted.value;
+}
 const approveAllowance = async () => {
   if (!accountStore.activeAccount?.address) {
     toastStore.errorToast("Connect your wallet to approve allowance.")
@@ -213,28 +255,23 @@ const approveAllowance = async () => {
   console.log("APPROVE ALLOWANCE");
   loadingApproveAllowance.value = true;
 
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals)
-  console.log("Approve allowance tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
-  const allowanceValue = tokensWei;
+  console.log("Approve allowance tokensWei: ", tokensWei.value, "from : ", accountStore.activeAccount.address);
+  const allowanceValue = tokensWei.value;
 
   try {
-    // call the approve method
-    await fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei).send({
+    // call the approval method
+    await fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei.value).send({
       from: accountStore.activeAccount.address,
-      maxPriorityFeePerGas: null,
-      maxFeePerGas: null,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-
     }).on("receipt", (receipt: any) => {
       console.log("receipt :", receipt);
 
       if (receipt.status) {
         toastStore.successToast("The approval was successful. You can make the deposit now.");
 
-        // refresh values
-        // needs to be updated this way because Polygon RPC nodes are slow with updating state
+        // Refresh allowance value.
         fundStore.userFundAllowance = allowanceValue;
       } else {
         toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
@@ -248,128 +285,33 @@ const approveAllowance = async () => {
   }
 }
 
+const showApproveAllowanceWarning = computed(() => {
+  // User deposit request exists and allowance is bigger.
+  return shouldUserApproveAllowance.value && tokensWei.value < (userDepositRequest?.value?.amount || 0n)
+});
 
-const deposit = async () => {
-  if (!accountStore.activeAccount?.address) {
-    toastStore.errorToast("Connect your wallet to deposit tokens to the fund.")
-    return;
-  }
-  if (!fund.value) {
-    toastStore.errorToast("Fund data is missing.")
-    return;
-  }
-  console.log("DEPOSIT");
-  loadingDeposit.value = true;
-
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.baseToken.decimals)
-  console.log("Deposit tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
-
-  const ABI = [ "function deposit()" ];
-  const iface = new ethers.Interface(ABI);
-  const encodedFunctionCall = iface.encodeFunctionData("deposit");
-
-  try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
-      maxPriorityFeePerGas: null,
-      maxFeePerGas: null,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-
-      if (receipt.status) {
-        toastStore.successToast("Your deposit was successful.");
-
-        // Refresh user balances & allowance.
-        fundStore.fetchUserBalances();
-        tokenValue.value = "0.0";
-
-        // emit event to open the delegate votes modal
-        emit("deposit-success");
-        
-      } else {
-        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-      }
-
-      loadingDeposit.value = false;
-    }).on("error", (error: any) => {
-      handleError(error);
-    });
-  } catch (error: any) {
-    handleError(error);
-  }
-}
-
-
-const cancelDeposit = async () => {
-  if (!accountStore.activeAccount?.address) {
-    toastStore.errorToast("Connect your wallet to cancel the deposit.")
-    return;
-  }
-  console.log("Cancel Deposit");
-  loadingCancelDeposit.value = true;
-
-  const ABI = [ "function revokeDepositWithrawal(bool isDeposit)" ];
-  const iface = new ethers.Interface(ABI);
-  const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ true ]);
-
-  try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
-      maxPriorityFeePerGas: null,
-      maxFeePerGas: null,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-
-      if (receipt.status) {
-        toastStore.successToast("Your deposit request was successful.");
-        tokenValue.value = "0.0";
-      } else {
-        toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
-      }
-      loadingCancelDeposit.value = false;
-    }).on("error", (error: any) => {
-      handleError(error);
-    });
-  } catch (error: any) {
-    handleError(error);
-  }
-}
 
 const buttons = ref([
   {
     name: "Request Deposit",
     onClick: requestDeposit,
+    isVisible: shouldUserRequestDeposit,
     disabled: isRequestDepositDisabled,
     loading: loadingRequestDeposit,
-    tooltipText: undefined,
+    tooltipText: computed(() => {
+      if (userDepositRequestExists.value) {
+        return "Deposit request already exists. To change it, you first have to cancel the existing one."
+      }
+      return ""
+    }),
   },
   {
     name: "Approve",
     onClick: approveAllowance,
     disabled: isRequestDepositDisabled,
     loading: loadingApproveAllowance,
+    isVisible: shouldUserApproveAllowance,
     tooltipText: undefined,
-  },
-  {
-    name: "Cancel Deposit",
-    onClick: cancelDeposit,
-    disabled: isAnythingLoading,
-    loading: loadingCancelDeposit,
-    tooltipText: undefined,
-  },
-  {
-    name: "Deposit",
-    onClick: deposit,
-    disabled: isDepositDisabled,
-    loading: loadingDeposit,
-    tooltipText: computed(() => !isEnoughAllowance.value ? "Not enough allowance." : undefined),
   },
 ]);
 </script>
@@ -380,5 +322,11 @@ const buttons = ref([
   display: flex;
   justify-content: space-around;
   flex-wrap: wrap;
+}
+.set_approve_allowance_button {
+  &:hover {
+    cursor: pointer;
+    text-decoration: underline;
+  }
 }
 </style>

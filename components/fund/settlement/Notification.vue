@@ -1,7 +1,11 @@
 <template>
   <div v-if="fund" class="deposit_redeem_notification">
     <div>
-      <Icon icon="zondicons:exclamation-outline" width="1.5rem" color="var(--color-primary)" />
+      <Icon
+        icon="zondicons:exclamation-outline"
+        width="1.5rem"
+        color="var(--color-primary)"
+      />
     </div>
 
     <p>

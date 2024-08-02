@@ -11,7 +11,6 @@ import { useFundStore } from "~/store/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type { IContractAddresses } from "~/types/addresses";
-import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type INAVMethod from "~/types/nav_method";
@@ -248,7 +247,6 @@ export const useFundsStore = defineStore({
                 count: Number(dataNAVs.illiquidLen[index] || 0),
               },
             ] as IPositionTypeCount[],
-            cyclePendingRequests: [] as ICyclePendingRequest[],
 
             // My Fund Positions
             netDeposits: "",

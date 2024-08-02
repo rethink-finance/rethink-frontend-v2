@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
-import { ethers } from "ethers";
+import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -14,7 +14,6 @@ import { useAccountStore } from "~/store/account.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
-import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import {
   NAVEntryTypeToPositionTypeMap,
@@ -28,6 +27,11 @@ import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
+import {
+  FundTransactionType,
+  FundTransactionTypeStorageSlotIdxMap,
+} from "~/types/enums/fund_transaction_type";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -44,6 +48,8 @@ interface IState {
   userFundAllowance: bigint;
   userFundDelegateAddress: string;
   userFundShareValue: bigint
+  userDepositRequest?: IFundTransactionRequest;
+  userRedemptionRequest?: IFundTransactionRequest;
   selectedFundAddress: string;
   // Fund NAV methods that user can manage and change, delete, add...
   fundManagedNAVMethods: INAVMethod[],
@@ -63,6 +69,8 @@ export const useFundStore = defineStore({
     userFundAllowance: BigInt("0"),
     userFundShareValue: BigInt("0"),
     userFundDelegateAddress: "",
+    userDepositRequest: undefined,
+    userRedemptionRequest: undefined,
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
@@ -81,13 +89,34 @@ export const useFundStore = defineStore({
     web3(): Web3 {
       return this.web3Store.web3;
     },
-    baseToFundTokenExchangeRate(state: IState): number {
-      if (!state.fund?.fundTokenTotalSupply) return 0;
-      return Number(state.fund.totalNAVWei / state.fund.fundTokenTotalSupply);
+    baseToFundTokenExchangeRate(): number {
+      // If there was no NAV update yet, the exchange rate is 1:1
+      if (!this.fundLastNAVUpdate) return 1
+      if (!this.fund?.fundTokenTotalSupply) return 0;
+
+      // Create FixedNumber instances
+      const totalNAV = FixedNumber.fromString(
+        ethers.formatUnits(this.fund.totalNAVWei, this.fund.baseToken.decimals),
+      );
+      const fundTokenTotalSupply = FixedNumber.fromString(
+        ethers.formatUnits(this.fund.fundTokenTotalSupply, this.fund.fundToken.decimals),
+      );
+
+      // Perform the division
+      return Number(totalNAV.div(fundTokenTotalSupply));
     },
-    fundToBaseTokenExchangeRate(state: IState): number {
-      if (!state.fund?.totalNAVWei) return 0;
-      return 1 / this.baseToFundTokenExchangeRate;
+    fundToBaseTokenExchangeRate(): number {
+      // If there was no NAV update yet, the exchange rate is 1:1
+      if (!this.fundLastNAVUpdate) return 1
+      if (!this.fund?.totalNAVWei || !this.baseToFundTokenExchangeRate) return 0;
+
+      const totalNAV = FixedNumber.fromString(
+        ethers.formatUnits(this.fund.totalNAVWei, this.fund.baseToken.decimals),
+      );
+      const fundTokenTotalSupply = FixedNumber.fromString(
+        ethers.formatUnits(this.fund.fundTokenTotalSupply, this.fund.fundToken.decimals),
+      );
+      return Number(fundTokenTotalSupply.div(totalNAV));
     },
     fundTotalNAVFormattedShort(state: IState): string {
       if (!state.fund?.totalNAVWei) return "N/A";
@@ -104,6 +133,55 @@ export const useFundStore = defineStore({
     },
     fundLastNAVUpdateMethods(): INAVMethod[] {
       return this.fundLastNAVUpdate?.entries || [];
+    },
+    userDepositRequestExists(): boolean {
+      return (this.userDepositRequest?.amount || 0) > 0
+    },
+    userRedemptionRequestExists(): boolean {
+      return (this.userRedemptionRequest?.amount || 0) > 0
+    },
+    userFundSuggestedAllowance(): bigint {
+      const userBaseTokenBalance = this.userBaseTokenBalance || 0n;
+      const userDepositRequestAmount = this.userDepositRequest?.amount || 0n;
+      return userBaseTokenBalance + userDepositRequestAmount;
+    },
+    userFundSuggestedAllowanceFormatted(): string {
+      return ethers.formatUnits(this.userFundSuggestedAllowance, this.fund?.baseToken.decimals);
+    },
+    shouldUserRequestDeposit(): boolean {
+      // User deposit request does not exist yet, he should request deposit.
+      return !this.userDepositRequestExists
+    },
+    shouldUserApproveAllowance(): boolean {
+      // User deposit request exists and allowance is bigger.
+      return this.userDepositRequestExists && this.userFundAllowance < (this.userDepositRequest?.amount || 0n)
+    },
+    canUserProcessDeposit(): boolean {
+      // User deposit request exists and allowance is bigger.
+      return !this.shouldUserRequestDeposit && !this.shouldUserApproveAllowance;
+    },
+    shouldUserWaitSettlementOrCancelDeposit(): boolean {
+      // If there was no NAV update yet, the user can process deposit request.
+      // There is no need to wait until the next settlement.
+      if (
+        !this.canUserProcessDeposit ||
+        !this.fundLastNAVUpdate?.timestamp ||
+        !this.userDepositRequest?.timestamp
+      ) return false;
+      // User deposit request exists and is valid, but there has to be at least 1 NAV update
+      // made after the deposit was requested.
+      return this.userDepositRequest.timestamp < this.fundLastNAVUpdate?.timestamp;
+    },
+    shouldUserWaitSettlementOrCancelRedemption(): boolean {
+      // If there was no NAV update yet, the user can process deposit request.
+      // There is no need to wait until the next settlement.
+      if (
+        !this.fundLastNAVUpdate?.timestamp ||
+        !this.userRedemptionRequest?.timestamp
+      ) return false;
+      // User redemption request exists and is valid, but there has to be at least 1 NAV update
+      // made after the redemption was requested.
+      return this.userRedemptionRequest.timestamp < this.fundLastNAVUpdate?.timestamp;
     },
     /**
      * Contracts
@@ -162,7 +240,7 @@ export const useFundStore = defineStore({
           JSON.stringify(this.fundLastNAVUpdateMethods),
         );
         console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
-        console.log("fund: ", this.fund)
+        console.log("fund: ", toRaw(this.fund))
       } catch (e) {
         console.error(`Failed fetching fund ${fundAddress} -> `, e)
       }
@@ -244,13 +322,14 @@ export const useFundStore = defineStore({
     fetchUserBalances() {
       if (!this.accountStore.activeAccount?.address) return;
 
-      return Promise.all([
+      return Promise.allSettled([
         this.fetchUserBaseTokenBalance(),
         this.fetchUserFundTokenBalance(),
         this.fetchUserGovernanceTokenBalance(),
         this.fetchUserFundDelegateAddress(),
         this.fetchUserFundShareValue(),
         this.fetchUserFundAllowance(),
+        this.fetchUserFundDepositRedemptionRequests(),
       ]);
     },
     /**
@@ -364,7 +443,6 @@ export const useFundStore = defineStore({
           monthlyReturnPercent: 0,
           sharpeRatio: 0,
           positionTypeCounts: [] as IPositionTypeCount[],
-          cyclePendingRequests: [] as ICyclePendingRequest[],
 
           // My Fund Positions
           netDeposits: "",
@@ -498,10 +576,12 @@ export const useFundStore = defineStore({
           return totalNAV;
         });
 
+        const navTimestamp = Number(fundNavUpdateTimes[i] * 1000n);
         navUpdates.push(
           {
             // If the datetime of the NAV update is available format it, otherwise just use the index (e.g. #2).
-            date: fundNavUpdateTimes[i] ? formatDate(new Date(Number(fundNavUpdateTimes[i]) * 1000)) : `#${(i+1).toString()}}`,
+            date: fundNavUpdateTimes[i] ? formatDate(new Date(navTimestamp)) : `#${(i+1).toString()}}`,
+            timestamp: navTimestamp,
             totalNAV,
             quantity,
             entries: [],
@@ -630,14 +710,68 @@ export const useFundStore = defineStore({
       try {
         balanceWei = await this.fundContract.methods.valueOf(this.activeAccountAddress).call();
       } catch (e) {
-        console.error(
-          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
+        console.error(          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
         );
       }
       console.log("balanceWei user fund share value:", balanceWei);
 
       this.userFundShareValue = balanceWei;
       return this.userFundShareValue;
+    },
+    /**
+     * Fetch user's fund share value (denominated in base token).
+     */
+    async fetchUserFundDepositRedemptionRequests() {
+      // this.userFundShareValue = BigInt("0");
+      if (!this.activeAccountAddress) return console.error("Active account not found");
+      if (!this.fund?.address) return "";
+
+      try {
+        this.userDepositRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Deposit)
+      } catch (e) {
+        console.error(
+          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
+        );
+      }
+      try {
+        this.userRedemptionRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Redemption)
+        console.log("redemption", this.userRedemptionRequest);
+      } catch (e) {
+        console.error(
+          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
+        );
+      }
+    },
+    async fetchUserFundTransactionRequest(fundTransactionType: FundTransactionType) {
+      if (!this.activeAccountAddress) return undefined;
+      if (!this.fund?.address) return undefined;
+      const slotId = FundTransactionTypeStorageSlotIdxMap[fundTransactionType];
+
+      // GovernableFundStorage.sol
+      const userRequestAddress = getAddressMappingStorageKeyAtIndex(this.activeAccountAddress, slotId)
+      const userRequestTimestampAddress = incrementStorageKey(userRequestAddress)
+
+      try {
+        const amount = await this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestAddress);
+        let amountWei: string | bigint = ethers.stripZerosLeft(amount);
+        amountWei = amountWei === "0x" ? 0n : BigInt(amountWei);
+
+        const ts = await this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestTimestampAddress);
+        let timestamp: string | number = ethers.stripZerosLeft(ts);
+        timestamp = timestamp === "0x" ? 0 : Number(timestamp);
+
+        return {
+          amount: amountWei,
+          timestamp,
+          type: fundTransactionType,
+        } as IFundTransactionRequest;
+      } catch (e) {
+        console.error(
+          `Failed fetching deposit/withdrawal request ${this.fund?.address} slot: ${slotId}. -> `, e,
+        );
+      }
+
+      return undefined
     },
     async getRoleModAddress(): Promise<string> {
       if (!this.fund?.address) return "";
@@ -672,6 +806,32 @@ export const useFundStore = defineStore({
       //  you can merge both objects with spread operator ({...a, ...localStorageMethod}) for each method
       // this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || {};
       // TODO also here save to localStorage newly merged version of navUpdateEntries
+    },
+    async estimateGasFundFlowsCall(encodedFunctionCall: any) {
+      try {
+        const transactionObject = {
+          from: this.activeAccountAddress,
+          to: this.fundContract.options.address,
+          data: this.fundContract.methods.fundFlowsCall(encodedFunctionCall).encodeABI(),
+        };
+
+        // Use Promise.allSettled to handle both promises
+        const [gasPriceResult, gasEstimateResult] = await Promise.allSettled([
+          this.web3.eth.getGasPrice(),
+          this.web3.eth.estimateGas(transactionObject),
+        ]);
+
+        // Extract the results or handle errors
+        const gasPrice = gasPriceResult.status === "fulfilled" ? gasPriceResult.value : undefined;
+        const gasEstimate = gasEstimateResult.status === "fulfilled" ? gasEstimateResult.value : undefined;
+        console.log("Estimated Gas:", gasEstimate);
+        console.log("Estimated Gas Price:", gasPrice);
+
+        return [gasPrice, gasEstimate];
+      } catch (error) {
+        console.error("Error estimating gas:", error);
+      }
+      return [undefined, undefined];
     },
   },
 });
