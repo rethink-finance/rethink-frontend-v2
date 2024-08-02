@@ -11,6 +11,11 @@
     <template #buttons>
       <div v-if="accountStore.isConnected">
         <div class="deposit_button_group">
+          <template v-if="canProcessDeposit">
+            <h3>
+              You can now process or cancel your deposit request.
+            </h3>
+          </template>
           <template v-for="(button) in buttons">
             <v-tooltip
               v-if="button.isVisible"
@@ -75,6 +80,7 @@ const tokenValue = ref("0.0");
 const tokenValueChanged = ref(false);
 const fund = computed(() => fundStore.fund);
 const {
+  userDepositRequest,
   userDepositRequestExists,
 } = toRefs(fundStore);
 
@@ -272,11 +278,26 @@ const approveAllowance = async () => {
     handleError(error);
   }
 }
+
+const shouldRequestDeposit = computed(() => {
+  // User deposit request does not exist yet.
+  return !userDepositRequestExists.value
+});
+const shouldApproveAllowance = computed(() => {
+  // User deposit request exists and allowance is bigger.
+  return userDepositRequestExists.value && fundStore.userFundAllowance < (userDepositRequest?.value?.amount || 0n)
+});
+
+const canProcessDeposit = computed(() => {
+  // User deposit request exists and allowance is bigger.
+  return !shouldRequestDeposit.value && !shouldApproveAllowance.value;
+});
+
 const buttons = ref([
   {
     name: "Request Deposit",
     onClick: requestDeposit,
-    isVisible: computed(() => !userDepositRequestExists.value),
+    isVisible: shouldRequestDeposit,
     disabled: isRequestDepositDisabled,
     loading: loadingRequestDeposit,
     tooltipText: computed(() => {
@@ -291,7 +312,7 @@ const buttons = ref([
     onClick: approveAllowance,
     disabled: isRequestDepositDisabled,
     loading: loadingApproveAllowance,
-    isVisible: userDepositRequestExists,
+    isVisible: shouldApproveAllowance,
     tooltipText: undefined,
   },
 ]);
