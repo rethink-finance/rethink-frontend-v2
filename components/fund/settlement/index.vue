@@ -40,9 +40,6 @@
         />
         <FundSettlementRedeem v-else-if="isSelectedRedeemButton" />
       </div>
-      <div class="card_box card_box--no-padding">
-        <FundSettlementNotification />
-      </div>
     </div>
 
     <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" />
@@ -62,7 +59,7 @@ export default {
   },
   data() {
     return {
-      selectedActionButtonValue: "",
+      selectedActionButtonValue: "deposit",
       isDelegateDialogOpen: false,
     };
   },

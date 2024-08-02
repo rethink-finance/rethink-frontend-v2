@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
@@ -89,17 +89,34 @@ export const useFundStore = defineStore({
     web3(): Web3 {
       return this.web3Store.web3;
     },
-    baseToFundTokenExchangeRate(state: IState): number {
+    baseToFundTokenExchangeRate(): number {
       // If there was no NAV update yet, the exchange rate is 1:1
       if (!this.fundLastNAVUpdate) return 1
-      if (!state.fund?.fundTokenTotalSupply) return 0;
-      return Number(state.fund.totalNAVWei / state.fund.fundTokenTotalSupply);
+      if (!this.fund?.fundTokenTotalSupply) return 0;
+
+      // Create FixedNumber instances
+      const totalNAV = FixedNumber.fromString(
+        ethers.formatUnits(this.fund.totalNAVWei, this.fund.baseToken.decimals),
+      );
+      const fundTokenTotalSupply = FixedNumber.fromString(
+        ethers.formatUnits(this.fund.fundTokenTotalSupply, this.fund.fundToken.decimals),
+      );
+
+      // Perform the division
+      return Number(totalNAV.div(fundTokenTotalSupply));
     },
-    fundToBaseTokenExchangeRate(state: IState): number {
+    fundToBaseTokenExchangeRate(): number {
       // If there was no NAV update yet, the exchange rate is 1:1
       if (!this.fundLastNAVUpdate) return 1
-      if (!state.fund?.totalNAVWei || !this.baseToFundTokenExchangeRate) return 0;
-      return 1 / this.baseToFundTokenExchangeRate;
+      if (!this.fund?.totalNAVWei || !this.baseToFundTokenExchangeRate) return 0;
+
+      const totalNAV = FixedNumber.fromString(
+        ethers.formatUnits(this.fund.totalNAVWei, this.fund.baseToken.decimals),
+      );
+      const fundTokenTotalSupply = FixedNumber.fromString(
+        ethers.formatUnits(this.fund.fundTokenTotalSupply, this.fund.fundToken.decimals),
+      );
+      return Number(fundTokenTotalSupply.div(totalNAV));
     },
     fundTotalNAVFormattedShort(state: IState): string {
       if (!state.fund?.totalNAVWei) return "N/A";
@@ -189,7 +206,7 @@ export const useFundStore = defineStore({
           JSON.stringify(this.fundLastNAVUpdateMethods),
         );
         console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
-        console.log("fund: ", this.fund)
+        console.log("fund: ", toRaw(this.fund))
       } catch (e) {
         console.error(`Failed fetching fund ${fundAddress} -> `, e)
       }

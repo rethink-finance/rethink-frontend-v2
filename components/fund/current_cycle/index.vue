@@ -61,6 +61,9 @@
     <div v-else class="fund_settlement__no_pending_requests">
       Currently there are no deposit or redemption requests.
     </div>
+    <div class="card_box card_box--no-padding mt-8">
+      <FundSettlementNotification />
+    </div>
   </div>
 </template>
 
