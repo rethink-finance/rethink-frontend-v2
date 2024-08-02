@@ -7,7 +7,11 @@
         </div>
       </div>
       <div v-if="userDepositRequestExists || userRedemptionRequestExists" class="fund_settlement__buttons">
-        <v-tooltip v-if="depositDisabledTooltipText || redemptionDisabledTooltipText" activator="parent" location="bottom">
+        <v-tooltip
+          :disabled="!(depositDisabledTooltipText || redemptionDisabledTooltipText)"
+          activator="parent"
+          location="bottom"
+        >
           <template #activator="props">
             <v-btn
               v-bind="props"
