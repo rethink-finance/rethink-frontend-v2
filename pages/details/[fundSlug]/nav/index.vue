@@ -78,7 +78,7 @@
         NAV Updates
       </div>
       <div>
-        <FundNavUpdates :fund="fund" />
+        <FundNavUpdates :fund="parsedFundNavUpdates" />
       </div>
     </div>
   </div>
@@ -169,6 +169,16 @@ const updateNAV = async () => {
     );
   }
 };
+// return fund with reversed navUpdates array to show the latest updates first
+const parsedFundNavUpdates = computed(() => {
+  if (!fund.navUpdates) return fund;
+
+  return {
+    ...fund,
+    // Create a shallow copy of the navUpdates array and reverse it
+    navUpdates: fund.navUpdates.slice().reverse(),
+  };
+});
 </script>
 
 <style scoped lang="scss">

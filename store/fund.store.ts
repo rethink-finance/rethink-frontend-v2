@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -535,7 +535,7 @@ export const useFundStore = defineStore({
       });
 
       // reverse the array to show the latest updates first
-      return navUpdates.reverse();
+      return navUpdates;
     },
     /**
      * Fetches connected user's wallet balance of the fund base/denomination token.
