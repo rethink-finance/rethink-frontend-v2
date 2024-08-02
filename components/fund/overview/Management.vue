@@ -8,16 +8,17 @@
       :title="fund.minLiquidAssetShare || 'N/A'"
       subtitle="Min. Liquid Asset Share "
     />
-    <UiDataRowCard
+    <!-- We don’t have to show Address, just Planned Settlement Cycle and Planned Liq. Asset Share -->
+    <!-- <UiDataRowCard
       :title="managementTitle"
       :body="managementBody"
       subtitle="Management"
-    />
+    /> -->
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from "vue"
+import { defineComponent, type PropType } from "vue";
 import type IFund from "~/types/fund";
 
 export default defineComponent({

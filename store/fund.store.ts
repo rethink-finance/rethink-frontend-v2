@@ -129,8 +129,7 @@ export const useFundStore = defineStore({
     },
     fundLastNAVUpdate(state: IState): INAVUpdate | undefined {
       if (!state.fund?.navUpdates.length) return undefined;
-      // It is the first one, as they sorted from most recent to least recent.
-      return state.fund.navUpdates[0];
+      return state.fund.navUpdates[state.fund.navUpdates.length - 1];
     },
     fundLastNAVUpdateMethods(): INAVMethod[] {
       return this.fundLastNAVUpdate?.entries || [];
@@ -614,8 +613,7 @@ export const useFundStore = defineStore({
         }
       });
 
-      // reverse the array to show the latest updates first
-      return navUpdates.reverse();
+      return navUpdates;
     },
     /**
      * Fetches connected user's wallet balance of the fund base/denomination token.
