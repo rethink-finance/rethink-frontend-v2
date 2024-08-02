@@ -16,9 +16,11 @@
         <div class="info_container__buttons">
           <UiLinkExternalButton
             title="View OIV Permissions"
-            :href="gnosisLink"
+            :href="navigateToGnosis"
           />
-          <v-btn color="primary"> Create Permissions Proposal </v-btn>
+          <v-btn color="primary" @click="navigateToCreatePermissions">
+            Create Permissions Proposal
+          </v-btn>
         </div>
       </div>
     </UiMainCard>
@@ -34,6 +36,7 @@ import { useFundStore } from "~/store/fund.store";
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 
+const router = useRouter();
 const fundStore = useFundStore();
 
 const fund = useAttrs().fund as IFund;
@@ -47,14 +50,36 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-const gnosisLink = computed(() => {
+const navigateToGnosis = ref("");
+
+const updateGnosisLink = async () => {
   if (!fund) {
-    return "";
+    navigateToGnosis.value = "";
+    return;
   }
-  console.log("fund", fund);
-  console.log("selectedFundAddress", selectedFundAddress.value);
-  return `https://roles-v1.gnosisguild.org/#/${fund.chainShort}:${selectedFundAddress.value}`;
-});
+
+  try {
+    const roleModAddress = await fundStore.getRoleModAddress();
+    navigateToGnosis.value = `https://roles-v1.gnosisguild.org/#/${fund.chainShort}:${roleModAddress}`;
+  } catch (error) {
+    console.error(error);
+    navigateToGnosis.value = "";
+  }
+};
+
+watch(
+  () => [fund.chainShort, fundStore.getRoleModAddress],
+  () => {
+    updateGnosisLink();
+  },
+  { immediate: true }
+);
+
+const navigateToCreatePermissions = () => {
+  router.push(
+    `/details/${selectedFundSlug.value}/governance/delegated-permissions`
+  );
+};
 
 onMounted(async () => {
   emit("updateBreadcrumbs", breadcrumbItems);
