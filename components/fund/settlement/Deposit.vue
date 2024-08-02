@@ -181,13 +181,12 @@ const requestDeposit = async () => {
         // Set form token value to user's current balance + current deposit request value so that
         // he can approve it without inputting the value himself, for better UX.
         // TODO takes 15-20 sec for node to sync .. fix
-        await fundStore.fetchUserBalances();
+        // await fundStore.fetchUserBalances();
         fundStore.userDepositRequest = {
           amount: tokensWei,
           timestamp: Date.now(),
           type: FundTransactionType.Deposit,
         }
-        tokenValue.value = fundStore.userFundSuggestedAllowanceFormatted;
       } else {
         toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
         fundStore.fetchUserBalances();
