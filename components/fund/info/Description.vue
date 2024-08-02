@@ -15,7 +15,11 @@
       </div>
     </div>
     <p class="text-secondary">
-      {{ fund.description }}
+      {{ fundDescriptionText }}
+      <UiShowMoreButton
+        v-if="isDescriptionToLong"
+        v-model="showMore"
+      />
     </p>
   </div>
 </template>
@@ -32,7 +36,10 @@ export default {
     },
   },
   data() {
-    return {};
+    return {
+      maxDescriptionLength: 300,
+      showMore: false,
+    };
   },
   computed: {
     buttonLinks() {
@@ -69,28 +76,16 @@ export default {
        * **/
       return `https://app.safe.global/balances?safe=${this.fund.chainShort}:${this.fund.safeAddress}`;
     },
-  },
-  methods: {
-    async copyFundAddr() {
-      try {
-        await navigator.clipboard.writeText(this.fund.address);
-        // const msg = "Copied Fund Address (" + this.fund.address + ") to clipboard";
-        // this.$toast.success(msg);
-      } catch ($e) {console.error($e);}
+    isDescriptionToLong(): boolean {
+      if (!this.fund?.description) return false;
+      return this.fund.description.length > this.maxDescriptionLength
     },
-    async copyGovernorAddr() {
-      try {
-        await navigator.clipboard.writeText(this.fund?.governorAddress);
-        // const msg = "Copied Governor Address (" + this.fund.governor + ") to clipboard";
-        // this.$toast.success(msg);
-      } catch ($e) {}
-    },
-    async copySafeAddr() {
-      try {
-        await navigator.clipboard.writeText(this.fund?.safeAddress);
-        // const msg = "Copied Safe Address (" + this.fund.safe + ") to clipboard";
-        // this.$toast.success(msg);
-      } catch ($e) {}
+    fundDescriptionText(): string {
+      if (!this.fund?.description) return "";
+      if (this.isDescriptionToLong && !this.showMore) {
+        return this.fund?.description?.slice(0, this.maxDescriptionLength) + "...";
+      }
+      return this.fund?.description;
     },
   },
 };
