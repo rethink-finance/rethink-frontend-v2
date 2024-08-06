@@ -2,15 +2,19 @@
   <v-btn
     class="text-secondary"
     variant="outlined"
-    @click="fundStore.refreshSimulateNAVCounter += 1"
+    @click="handleSimulateNav"
   >
     Simulate NAV
   </v-btn>
 </template>
 
 <script setup lang="ts">
-import { useFundStore } from "~/store/fund.store";
-const fundStore = useFundStore();
+import { defineEmits } from "vue";
+const emit = defineEmits(["simulateNAV"]);
+
+const handleSimulateNav = () => {
+  emit("simulateNAV");
+};
 </script>
 
 <style lang="scss" scoped>

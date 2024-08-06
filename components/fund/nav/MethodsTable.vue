@@ -239,6 +239,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    simulateNavCounter: {
+      type: Number,
+      default: 0,
+    },
   },
   emits: ["update:methods", "selectedChanged"],
   setup() {
@@ -390,10 +394,10 @@ export default defineComponent({
       deep: true,
       immediate: true,
     },
-    "fundStore.refreshSimulateNAVCounter": {
+    "simulateNavCounter": {
       handler() {
         // Simulate NAV method values everytime Simulate NAV button is pressed and refreshSimulateNAVCounter changes.
-        console.log("refreshSimulateNAVCounter:", this.fundStore.refreshSimulateNAVCounter)
+        console.log("refreshSimulateNAVCounter:", this.simulateNavCounter)
         this.simulateNAV();
       },
     },
