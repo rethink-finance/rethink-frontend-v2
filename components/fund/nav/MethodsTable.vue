@@ -385,19 +385,12 @@ export default defineComponent({
     },
   },
   watch: {
-    methodsLength: {
-      handler() {
-        // Simulate NAV method values everytime NAV methods change.
-        console.log("SIMULATE BY METHODS LENGTH")
-        this.simulateNAV();
-      },
-      deep: true,
-      immediate: true,
-    },
     "simulateNavCounter": {
       handler() {
-        // Simulate NAV method values everytime Simulate NAV button is pressed and refreshSimulateNAVCounter changes.
-        console.log("refreshSimulateNAVCounter:", this.simulateNavCounter)
+        // Simulate NAV method values everytime Simulate NAV button is pressed and simulateNavCounter changes.
+        console.log("simulateNavCounter:", this.simulateNavCounter)
+        // TODO: decide if we want to use simulateNAV from fund.store.ts or not
+        // this.simulateNAV(this.methods, this.fundsStore, this.isNavSimulationLoading); 
         this.simulateNAV();
       },
     },

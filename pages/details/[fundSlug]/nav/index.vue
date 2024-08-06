@@ -187,6 +187,10 @@ const parsedFundNavUpdates = computed(() => {
     navUpdates: fund.navUpdates.slice().reverse(),
   };
 });
+
+onMounted(() => {
+  handleSimulateNav(); // trigger simulate NAV on mount
+});
 </script>
 
 <style scoped lang="scss">

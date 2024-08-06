@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -16,22 +16,22 @@ import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
 import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import {
+  FundTransactionType,
+  FundTransactionTypeStorageSlotIdxMap,
+} from "~/types/enums/fund_transaction_type";
+import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
   PositionTypeKeys,
-  PositionTypes,
+  PositionTypes
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
-import {
-  FundTransactionType,
-  FundTransactionTypeStorageSlotIdxMap,
-} from "~/types/enums/fund_transaction_type";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -55,7 +55,6 @@ interface IState {
   fundManagedNAVMethods: INAVMethod[],
   // Cached roleMod addresses for each fund.
   fundRoleModAddress: Record<string, string>,
-  refreshSimulateNAVCounter: number,
 }
 
 
@@ -74,7 +73,6 @@ export const useFundStore = defineStore({
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
-    refreshSimulateNAVCounter: 0,
   }),
   getters: {
     accountStore(): any {
@@ -551,6 +549,141 @@ export const useFundStore = defineStore({
         detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
       } as INAVMethod
     },
+    // TODO: delete code for simulateNAV in case we decide to not use it from fund.store.ts
+    // async simulateNAV(methods: any, fundsStore: any, isNavSimulationLoading: boolean) {
+    //   if (!this.web3Store.web3 || isNavSimulationLoading) return;
+    //   isNavSimulationLoading = true;
+    //   if (!fundsStore.allNavMethods?.length) {
+    //     const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays();
+    //     const fundAddresses: string[] = fundsInfoArrays[0];
+
+    //     // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
+    //     // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
+    //     // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
+    //     console.log("simulate fetch all nav methods")
+    //     await fundsStore.fetchAllNavMethods(fundAddresses);
+    //   }
+    //   console.log("START SIMULATE:", isNavSimulationLoading)
+
+    //   // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
+    //   // Otherwise, take managed methods, that user can change.
+    //   // Simulate all at once as many promises instead of one by one.
+    //   const promises = [];
+
+    //   for (const navEntry of methods) {
+    //     console.log("push navEntry", navEntry);
+    //     promises.push(this.simulateNAVMethodValue(navEntry, fundsStore, isNavSimulationLoading));
+    //   }
+    //   const settled = await Promise.allSettled(promises);
+    //   isNavSimulationLoading = false;
+    //   console.log("SIMULATE DONE:", isNavSimulationLoading, settled)
+    // },
+    // async simulateNAVMethodValue(navEntry: INAVMethod, fundsStore: any, isNavSimulationLoading: boolean) {
+    //   if (!this.web3Store.web3 || !navEntry.detailsHash) return;
+    //   const baseDecimals = this.fund?.baseToken.decimals;
+    //   if (!baseDecimals) {
+    //     // this.toastStore.errorToast(
+    //     //   "Failed preparing NAV Illiquid method, fund base token decimals are not known.",
+    //     // );
+    //     return;
+    //   }
+
+    //   const NAVCalculatorContract = new this.web3Store.web3.eth.Contract(
+    //     NAVCalculatorJSON.abi,
+    //     this.web3Store.NAVCalculatorBeaconProxyAddress,
+    //   );
+    //   try {
+    //     navEntry.isNavSimulationLoading = true;
+    //     navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
+    //     if (!navEntry.pastNAVUpdateEntryFundAddress) {
+    //       navEntry.pastNAVUpdateEntryFundAddress =
+    //         fundsStore.navMethodDetailsHashToFundAddress[
+    //           navEntry.detailsHash ?? ""
+    //         ];
+    //     }
+    //     if (!navEntry.pastNAVUpdateEntryFundAddress) {
+    //       // If there is no pastNAVUpdateEntryFundAddress the simulation will fail later.
+    //       // A missing pastNAVUpdateEntryFundAddress can mean two things:
+    //       //   1) A proposal is not approved yet and so its methods are not yet in the allNavMethods
+    //       //     -> that means the method was created on this fund, so we take address of this fund.
+    //       //  2) There was some difference when hashing details on INAVMethod detailsHash.
+    //       //    -> it will be hard to detect this, NAV simulation will fail, and we will take a look what happened.
+    //       //    -> We have a bigger problem if it won't fail, we should mark the address somewhere in the table.
+    //       //
+    //       // Here we take solution 1), as we assume that the method was not yet added to allMethods
+    //       navEntry.pastNAVUpdateEntryFundAddress = this.fund?.address;
+    //       navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
+    //     }
+
+    //     const callData = [];
+    //     if (navEntry.positionType === PositionType.Liquid) {
+    //       callData.push(prepNAVMethodLiquid(navEntry.details));
+    //       callData.push(this.fund?.safeAddress);
+    //     } else if (navEntry.positionType === PositionType.Illiquid) {
+    //       callData.push(prepNAVMethodIlliquid(navEntry.details, baseDecimals));
+    //       callData.push(this.fund?.safeAddress);
+    //     } else if (navEntry.positionType === PositionType.NFT) {
+    //       callData.push(prepNAVMethodNFT(navEntry.details));
+    //       // callData.push(this.fund?.safeAddress);
+    //     } else if (navEntry.positionType === PositionType.Composable) {
+    //       callData.push(prepNAVMethodComposable(navEntry.details));
+    //     }
+
+    //     callData.push(
+    //       ...[
+    //         this.fund?.address, // fund
+    //         0, // navEntryIndex
+    //         navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
+    //         parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
+    //         parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
+    //         navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
+    //       ],
+    //     );
+
+    //     // console.log("json: ", JSON.stringify(callData, null, 2))
+    //     const navCalculationMethod =
+    //       PositionTypeToNAVCalculationMethod[navEntry.positionType];
+    //     navEntry.simulatedNavFormatted = "N/A";
+    //     navEntry.simulatedNav = 0n;
+
+    //     console.log("isNavSimulationLoading:", isNavSimulationLoading)
+    //     try {
+    //       const simulatedVal: bigint = await NAVCalculatorContract.methods[
+    //         navCalculationMethod
+    //       ](...callData).call();
+    //       console.log("simulated value: ", simulatedVal);
+
+    //       navEntry.simulatedNavFormatted = this.formatNAV(simulatedVal);
+    //       navEntry.simulatedNav = simulatedVal;
+    //       navEntry.isSimulatedNavError = false;
+    //     } catch (error: any) {
+    //       navEntry.isSimulatedNavError = true;
+    //       console.error(
+    //         "Failed simulating value for entry, check if there was some difference when " +
+    //         "hashing details on INAVMethod detailsHash: ",
+    //         navEntry,
+    //         error,
+    //       );
+    //     }
+    //   } catch (error) {
+    //     console.error("Error simulating NAV: ", error);
+    //     // this.toastStore.errorToast(
+    //     //   "There has been an error. Please contact the Rethink Finance support.",
+    //     // );
+    //   } finally {
+    //     navEntry.isNavSimulationLoading = false;
+    //   }
+    // },
+    // formatNAV(value: any) {
+    //   const baseSymbol = this.fund?.baseToken.symbol;
+    //   const baseDecimals = this.fund?.baseToken.decimals;
+    //   if (!baseDecimals) {
+    //     return value;
+    //   }
+
+    //   const valueFormatted = value ? formatTokenValue(value, baseDecimals) : "0";
+    //   return valueFormatted + " " + baseSymbol;
+    // },
     async parseFundNAVUpdates(dataNAV: any): Promise<INAVUpdate[]> {
       const navUpdates = [] as INAVUpdate[];
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable).
