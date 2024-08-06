@@ -26,6 +26,10 @@
         </div>
 
         <div class="di-card__content">
+          <div class="di-card">
+            (NOTE: You must always delegate to yourself first, even if you want to delegate to someone else!)
+          </div>
+
           <div v-if="!delegateToSomeoneElse" class="di-card__button-container">
             <v-btn
               :disabled="loadingDelegates"
