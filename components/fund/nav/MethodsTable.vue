@@ -193,13 +193,13 @@
 </template>
 
 <script lang="ts">
-import type INAVMethod from "~/types/nav_method";
-import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
-import { useFundStore } from "~/store/fund.store";
-import { useWeb3Store } from "~/store/web3.store";
 import NAVCalculatorJSON from "assets/contracts/NAVCalculator.json";
-import { useToastStore } from "~/store/toast.store";
+import { useFundStore } from "~/store/fund.store";
 import { useFundsStore } from "~/store/funds.store";
+import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
+import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
+import type INAVMethod from "~/types/nav_method";
 
 
 export default defineComponent({
@@ -376,11 +376,15 @@ export default defineComponent({
         })),
       ];
     },
+    methodsLength() {
+      return this.methods.length;
+    },
   },
   watch: {
-    methods: {
+    methodsLength: {
       handler() {
         // Simulate NAV method values everytime NAV methods change.
+        console.log("SIMULATE BY METHODS LENGTH")
         this.simulateNAV();
       },
       deep: true,
@@ -389,6 +393,7 @@ export default defineComponent({
     "fundStore.refreshSimulateNAVCounter": {
       handler() {
         // Simulate NAV method values everytime Simulate NAV button is pressed and refreshSimulateNAVCounter changes.
+        console.log("refreshSimulateNAVCounter:", this.fundStore.refreshSimulateNAVCounter)
         this.simulateNAV();
       },
     },
@@ -410,6 +415,7 @@ export default defineComponent({
     },
     async simulateNAV() {
       if (!this.web3Store.web3 || this.isNavSimulationLoading) return;
+      this.isNavSimulationLoading = true;
       if (!this.fundsStore.allNavMethods?.length) {
         const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
         const fundAddresses: string[] = fundsInfoArrays[0];
@@ -417,10 +423,10 @@ export default defineComponent({
         // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
         // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
         // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
+        console.log("simulate fetch all nav methods")
         await this.fundsStore.fetchAllNavMethods(fundAddresses);
       }
-
-      this.isNavSimulationLoading = true;
+      console.log("START SIMULATE:", this.isNavSimulationLoading)
 
       // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
       // Otherwise, take managed methods, that user can change.
@@ -428,10 +434,12 @@ export default defineComponent({
       const promises = [];
 
       for (const navEntry of this.methods) {
+        console.log("push navEntry", navEntry);
         promises.push(this.simulateNAVMethodValue(navEntry));
       }
-      await Promise.allSettled(promises);
+      const settled = await Promise.allSettled(promises);
       this.isNavSimulationLoading = false;
+      console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
     },
     async simulateNAVMethodValue(navEntry: INAVMethod) {
       if (!this.web3Store.web3 || !navEntry.detailsHash) return;
@@ -500,6 +508,8 @@ export default defineComponent({
           PositionTypeToNAVCalculationMethod[navEntry.positionType];
         navEntry.simulatedNavFormatted = "N/A";
         navEntry.simulatedNav = 0n;
+
+        console.log("isNavSimulationLoading:", this.isNavSimulationLoading)
         try {
           const simulatedVal: bigint = await NAVCalculatorContract.methods[
             navCalculationMethod
