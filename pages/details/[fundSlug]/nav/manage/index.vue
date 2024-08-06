@@ -71,7 +71,6 @@ const emit = defineEmits(["updateBreadcrumbs"]);
 
 const loadingDraftClear = ref(false);
 
-const fundStore = useFundStore();
 const {
   selectedFundSlug,
   selectedFundAddress,
