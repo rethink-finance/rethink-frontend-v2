@@ -20,17 +20,17 @@ export default defineComponent({
   },
   computed: {
     depositsTitle() {
-      const addressCount = this.fund?.depositAddresses?.length ?? 0;
+      const addressCount = this.fund?.allowedDepositAddresses?.length ?? 0;
       if (addressCount === 1) {
         return `${addressCount} Address`
       }
       return `${addressCount} Addresses`
     },
     depositsBody() {
-      if (this.fund?.depositAddresses?.length) {
-        return this.fund.depositAddresses.join("\n");
+      if (this.fund?.allowedDepositAddresses?.length) {
+        return this.fund.allowedDepositAddresses.join("\n");
       }
-      return "There are currently no addresses."
+      return "There are currently no whitelisted deposit addresses."
     },
   },
 })

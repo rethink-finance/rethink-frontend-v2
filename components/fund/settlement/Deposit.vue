@@ -320,8 +320,10 @@ const buttons = ref([
 .deposit_button_group {
   gap: 1rem;
   display: flex;
-  justify-content: space-around;
+  flex-direction: column;
+  justify-content: center;
   flex-wrap: wrap;
+  align-items: center;
 }
 .set_approve_allowance_button {
   &:hover {

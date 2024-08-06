@@ -251,8 +251,9 @@ export const useFundsStore = defineStore({
             // My Fund Positions
             netDeposits: "",
             // Overview fields
-            depositAddresses: [],
-            managementAddresses: [],
+            isWhitelistedDeposits: true,
+            allowedDepositAddresses: [],
+            allowedManagerAddresses: [],
             plannedSettlementPeriod: "",
             minLiquidAssetShare: "",
 

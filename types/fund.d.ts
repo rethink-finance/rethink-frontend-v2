@@ -60,8 +60,9 @@ export default interface IFund {
   netDeposits: string;
 
   // Overview fields
-  depositAddresses: string[];
-  managementAddresses: string[];
+  isWhitelistedDeposits: boolean,
+  allowedDepositAddresses: string[];
+  allowedManagerAddresses: string[];
 
   // Governance
   // https://docs.tally.xyz/user-guides/deploying-governor-daos/choose-governor-parameters#how-to-pick-the-proposal-threshold

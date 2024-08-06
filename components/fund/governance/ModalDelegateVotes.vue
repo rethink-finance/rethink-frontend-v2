@@ -3,8 +3,8 @@
     <v-dialog
       :model-value="modelValue"
       scrim="black"
-      opacity="0.25"
-      max-width="500"
+      opacity="0.3"
+      max-width="600"
       @update:model-value="closeDelegateDialog"
     >
       <div class="main_card di-card">
@@ -27,7 +27,8 @@
 
         <div class="di-card__content">
           <div class="di-card">
-            (NOTE: You must always delegate to yourself first, even if you want to delegate to someone else!)
+            <strong>NOTE:</strong>
+            You must always delegate to yourself first, even if you want to delegate to someone else!
           </div>
 
           <div v-if="!delegateToSomeoneElse" class="di-card__button-container">
@@ -98,20 +99,15 @@
 <script setup lang="ts">
 // contract
 import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
-// types
-import type IFund from "~/types/fund";
 // components
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
-import { useWeb3Store } from "~/store/web3.store";
 
-const props = defineProps({ modelValue: Boolean });
+defineProps({ modelValue: Boolean });
 const emit = defineEmits(["update:modelValue"]);
 
 const fundStore = useFundStore();
 const toastStore = useToastStore();
-const web3Store = useWeb3Store();
-const fund = useAttrs().fund as IFund;
 
 // delegate dialog
 const loadingDelegates = ref(false);
@@ -139,21 +135,21 @@ const delegate = async (isMyself = false) => {
   const delegateTo = isMyself
     ? fundStore.activeAccountAddress
     : delegateAddress.value;
-  const governanceToken = fundStore.fund?.governanceToken.address;
+  const governanceTokenAddress = fundStore.fund?.governanceToken.address;
   const fundAddress = fundStore.fund?.address;
 
   console.log("delegateTo: ", delegateTo);
   console.log("fundAddress: ", fundAddress);
-  console.log("governanceToken: ", governanceToken);
+  console.log("governanceTokenAddress: ", governanceTokenAddress);
 
   if (fundAddress != null) {
     loadingDelegates.value = true;
 
     // external gov token
-    if (governanceToken != fundAddress && governanceToken != nullAddr) {
+    if (governanceTokenAddress !== fundAddress && governanceTokenAddress != nullAddr) {
       const externalGovToken = new fundStore.web3.eth.Contract(
         ERC20Votes.abi,
-        governanceToken,
+        governanceTokenAddress,
       );
 
       try {

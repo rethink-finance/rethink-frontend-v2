@@ -147,12 +147,21 @@ const redemptionDisabledTooltipText = computed(() => {
   if (!userRedemptionRequestExists.value) {
     return "There is no redemption request."
   }
-  if (userFundTokenBalance.value < (userRedemptionRequest?.value?.amount || 0n)) {
+  const redemptionRequestAmount = userRedemptionRequest?.value?.amount || 0n;
+  if (userFundTokenBalance.value < redemptionRequestAmount) {
     return "Not enough fund tokens to process the redemptions request."
   }
-
   if (shouldUserWaitSettlementOrCancelRedemption.value) {
     return "Wait for settlement or cancel the redemption request."
+  }
+  // Check if there is even enough liquidity in the fund contract to redeem the requested amount.
+  const fundContractBaseTokenBalance = fundStore.fund?.fundContractBaseTokenBalance || 0n;
+  if (fundContractBaseTokenBalance > redemptionRequestAmount) {
+    return "Not enough liquidity in the fund contract."
+  }
+  const fundAllowedDepositAddresses = fundStore.fund?.allowedDepositAddresses || [];
+  if (fundStore.fund?.isWhitelistedDeposits && !fundAllowedDepositAddresses.includes(fundStore.activeAccountAddress || "")) {
+    return `Your account address ${fundStore.activeAccountAddress} is not whitelisted to allow deposits into this fund.`
   }
   return ""
 });

@@ -31,15 +31,15 @@ export default defineComponent({
   },
   computed: {
     managementTitle() {
-      const addressCount = this.fund?.managementAddresses?.length ?? 0;
+      const addressCount = this.fund?.allowedManagerAddresses?.length ?? 0;
       if (addressCount === 1) {
         return `${addressCount} Address`
       }
       return `${addressCount} Addresses`
     },
     managementBody() {
-      if (this.fund?.managementAddresses?.length) {
-        return this.fund.managementAddresses.join("\n");
+      if (this.fund?.allowedManagerAddresses?.length) {
+        return this.fund.allowedManagerAddresses.join("\n");
       }
       return "There are currently no addresses."
     },
