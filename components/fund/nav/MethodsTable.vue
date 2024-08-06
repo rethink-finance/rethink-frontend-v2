@@ -193,13 +193,13 @@
 </template>
 
 <script lang="ts">
-import type INAVMethod from "~/types/nav_method";
-import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
-import { useFundStore } from "~/store/fund.store";
-import { useWeb3Store } from "~/store/web3.store";
 import NAVCalculatorJSON from "assets/contracts/NAVCalculator.json";
-import { useToastStore } from "~/store/toast.store";
+import { useFundStore } from "~/store/fund.store";
 import { useFundsStore } from "~/store/funds.store";
+import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
+import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
+import type INAVMethod from "~/types/nav_method";
 
 
 export default defineComponent({
@@ -376,11 +376,15 @@ export default defineComponent({
         })),
       ];
     },
+    methodsLength() {
+      return this.methods.length;
+    },
   },
   watch: {
-    methods: {
+    methodsLength: {
       handler() {
         // Simulate NAV method values everytime NAV methods change.
+        console.log("SIMULATE BY METHODS LENGTH")
         this.simulateNAV();
       },
       deep: true,
@@ -389,6 +393,7 @@ export default defineComponent({
     "fundStore.refreshSimulateNAVCounter": {
       handler() {
         // Simulate NAV method values everytime Simulate NAV button is pressed and refreshSimulateNAVCounter changes.
+        console.log("refreshSimulateNAVCounter:", this.fundStore.refreshSimulateNAVCounter)
         this.simulateNAV();
       },
     },
