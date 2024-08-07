@@ -239,6 +239,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    triggerSimulateNav: {
+      type: Number,
+      default: 0,
+    },
   },
   emits: ["update:methods", "selectedChanged"],
   setup() {
@@ -387,13 +391,11 @@ export default defineComponent({
         console.log("SIMULATE BY METHODS LENGTH")
         this.simulateNAV();
       },
-      deep: true,
-      immediate: true,
     },
-    "fundStore.refreshSimulateNAVCounter": {
+    "triggerSimulateNav": {
       handler() {
-        // Simulate NAV method values everytime Simulate NAV button is pressed and refreshSimulateNAVCounter changes.
-        console.log("refreshSimulateNAVCounter:", this.fundStore.refreshSimulateNAVCounter)
+        // Simulate NAV method values everytime Simulate NAV button is pressed and triggerSimulateNav changes.
+        console.log("triggerSimulateNav:", this.triggerSimulateNav)
         this.simulateNAV();
       },
     },
@@ -442,7 +444,7 @@ export default defineComponent({
       console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
     },
     async simulateNAVMethodValue(navEntry: INAVMethod) {
-      if (!this.web3Store.web3 || !navEntry.detailsHash) return;
+      if (!this.web3Store.web3 || !navEntry.detailsHash || navEntry.isNavSimulationLoading) return;
       const baseDecimals = this.fundStore.fund?.baseToken.decimals;
       if (!baseDecimals) {
         this.toastStore.errorToast(

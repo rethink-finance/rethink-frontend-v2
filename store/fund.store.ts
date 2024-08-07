@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -16,22 +16,22 @@ import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
 import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import {
+  FundTransactionType,
+  FundTransactionTypeStorageSlotIdxMap,
+} from "~/types/enums/fund_transaction_type";
+import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
   PositionTypeKeys,
-  PositionTypes,
+  PositionTypes
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
-import {
-  FundTransactionType,
-  FundTransactionTypeStorageSlotIdxMap,
-} from "~/types/enums/fund_transaction_type";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -55,7 +55,6 @@ interface IState {
   fundManagedNAVMethods: INAVMethod[],
   // Cached roleMod addresses for each fund.
   fundRoleModAddress: Record<string, string>,
-  refreshSimulateNAVCounter: number,
 }
 
 
@@ -74,7 +73,6 @@ export const useFundStore = defineStore({
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
-    refreshSimulateNAVCounter: 0,
   }),
   getters: {
     accountStore(): any {

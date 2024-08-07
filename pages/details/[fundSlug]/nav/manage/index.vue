@@ -7,7 +7,9 @@
         </div>
       </div>
       <div>
-        <FundNavSimulateButton />
+        <FundNavSimulateButton 
+          @simulateNAV="handleSimulateNav" 
+        />
 
         <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/proposal`">
           <v-btn class="bg-primary text-secondary ms-6">
@@ -57,6 +59,7 @@
         show-summary-row
         show-base-token-balances
         show-simulated-nav
+        :trigger-simulate-nav="triggerSimulateNav"
       />
     </div>
   </div>
@@ -70,6 +73,7 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 
 const loadingDraftClear = ref(false);
+const triggerSimulateNav = ref(0);
 
 const {
   selectedFundSlug,
@@ -92,6 +96,10 @@ const breadcrumbItems: BreadcrumbItem[] = [
     to: `/details/${selectedFundSlug.value}/nav/manage`,
   },
 ];
+
+const handleSimulateNav = () => {
+  triggerSimulateNav.value++;
+};
 
 const clearDraft = () => {
   loadingDraftClear.value = true;
@@ -158,6 +166,7 @@ const isClearDraftVisible = computed(() => {
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
+  handleSimulateNav(); // trigger simulate NAV on mount
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
