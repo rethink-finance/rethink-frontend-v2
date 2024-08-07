@@ -239,7 +239,7 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    simulateNavCounter: {
+    triggerSimulateNav: {
       type: Number,
       default: 0,
     },
@@ -385,12 +385,16 @@ export default defineComponent({
     },
   },
   watch: {
-    "simulateNavCounter": {
+    methodsLength: {
       handler() {
-        // Simulate NAV method values everytime Simulate NAV button is pressed and simulateNavCounter changes.
-        console.log("simulateNavCounter:", this.simulateNavCounter)
-        // TODO: decide if we want to use simulateNAV from fund.store.ts or not
-        // this.simulateNAV(this.methods, this.fundsStore, this.isNavSimulationLoading); 
+        // Simulate NAV method values everytime NAV methods change.
+        this.simulateNAV();
+      },
+    },
+    "triggerSimulateNav": {
+      handler() {
+        // Simulate NAV method values everytime Simulate NAV button is pressed and triggerSimulateNav changes.
+        console.log("triggerSimulateNav:", this.triggerSimulateNav)
         this.simulateNAV();
       },
     },
@@ -439,7 +443,7 @@ export default defineComponent({
       console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
     },
     async simulateNAVMethodValue(navEntry: INAVMethod) {
-      if (!this.web3Store.web3 || !navEntry.detailsHash) return;
+      if (!this.web3Store.web3 || !navEntry.detailsHash || navEntry.isNavSimulationLoading) return;
       const baseDecimals = this.fundStore.fund?.baseToken.decimals;
       if (!baseDecimals) {
         this.toastStore.errorToast(

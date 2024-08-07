@@ -71,7 +71,7 @@
           show-last-nav-update-value
           show-base-token-balances
           show-simulated-nav
-          :simulate-nav-counter="simulateNavCounter"
+          :trigger-simulate-nav="triggerSimulateNav"
         />
       </div>
     </div>
@@ -109,7 +109,7 @@ const {
 } = toRefs(useFundStore());
 
 const isLoading = ref(false);
-const simulateNavCounter = ref(0);
+const triggerSimulateNav = ref(0);
 
 const fundLastNAVUpdateDate = computed(() => {
   if (!fundLastNAVUpdate.value) return "N/A";
@@ -117,7 +117,7 @@ const fundLastNAVUpdateDate = computed(() => {
 });
 
 const handleSimulateNav = () => {
-  simulateNavCounter.value++;
+  triggerSimulateNav.value++;
 };
 
 const updateNAV = async () => {

@@ -59,7 +59,7 @@
         show-summary-row
         show-base-token-balances
         show-simulated-nav
-        :simulate-nav-counter="simulateNavCounter"
+        :trigger-simulate-nav="triggerSimulateNav"
       />
     </div>
   </div>
@@ -73,7 +73,7 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 
 const loadingDraftClear = ref(false);
-const simulateNavCounter = ref(0);
+const triggerSimulateNav = ref(0);
 
 const {
   selectedFundSlug,
@@ -104,7 +104,7 @@ watch(() => fundManagedNAVMethods.value.length, () => {
 });
 
 const handleSimulateNav = () => {
-  simulateNavCounter.value++;
+  triggerSimulateNav.value++;
 };
 
 const clearDraft = () => {
