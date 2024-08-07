@@ -97,12 +97,6 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-// watcher for methods length to trigger simulate nav
-watch(() => fundManagedNAVMethods.value.length, () => {
-  console.log("triggered by methods length");
-  handleSimulateNav();
-});
-
 const handleSimulateNav = () => {
   triggerSimulateNav.value++;
 };

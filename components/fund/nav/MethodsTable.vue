@@ -388,6 +388,7 @@ export default defineComponent({
     methodsLength: {
       handler() {
         // Simulate NAV method values everytime NAV methods change.
+        console.log("SIMULATE BY METHODS LENGTH")
         this.simulateNAV();
       },
     },
