@@ -1,0 +1,1 @@
+import{u as n}from"./fund.store.Bv78Y8-Y.js";import{n as o,o as a,D as r,w as s,d as u,x as i,V as m}from"./entry.BYja-uxQ.js";const _=o({__name:"SimulateButton",setup(c){const t=n();return(l,e)=>(a(),r(m,{class:"text-secondary",variant:"outlined",onClick:e[0]||(e[0]=d=>i(t).refreshSimulateNAVCounter+=1)},{default:s(()=>[u(" Simulate NAV ")]),_:1}))}});export{_};

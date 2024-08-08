@@ -1,0 +1,1 @@
+import{dJ as o,dK as t,dL as m,dM as u,dN as d,dO as g}from"./entry.BYja-uxQ.js";function c(){for(var r=[],e=0;e<arguments.length;e++)r[e]=arguments[e];var n=o(r),s=t(r,1/0),a=r;return a.length?a.length===1?u(a[0]):d(s)(g(a,n)):m}export{c as m};

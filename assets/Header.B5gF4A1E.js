@@ -1,0 +1,1 @@
+import{_ as o,o as t,c as n,aG as s}from"./entry.BYja-uxQ.js";const c={},_={class:"main_header"};function a(e,r){return t(),n("div",_,[s(e.$slots,"default")])}const l=o(c,[["render",a]]);export{l as default};
