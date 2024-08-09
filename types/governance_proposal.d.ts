@@ -71,6 +71,10 @@ export default interface IGovernanceProposal {
   createdBlockNumber: bigint,
   createdDatetimeFormatted: string,
 
+  // Executed timestamp is fetched from the event's block timestamp.
+  executedTimestamp: number,
+  executedBlockNumber: bigint,
+  
   // Frontend fields:
   approval: number,
   approvalFormatted: string, // e.g. "40%"

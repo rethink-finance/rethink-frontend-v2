@@ -1,19 +1,19 @@
+import GovernableFund from "assets/contracts/GovernableFund.json";
+import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
 import { eth } from "web3";
-import { ethers } from "ethers";
-import type IGovernanceProposal from "~/types/governance_proposal";
-import { cleanComplexWeb3Data } from "~/composables/utils";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
-import GovernableFund from "assets/contracts/GovernableFund.json";
+import { cleanComplexWeb3Data } from "~/composables/utils";
 import { useFundStore } from "~/store/fund.store";
-import { ProposalStateMapping } from "~/types/enums/governance_proposal";
-import { ClockMode } from "~/types/enums/clock_mode";
-import { useWeb3Store } from "~/store/web3.store";
 import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
+import { ClockMode } from "~/types/enums/clock_mode";
+import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
+import type IGovernanceProposal from "~/types/governance_proposal";
 
 interface IState {
   /* Example fund proposals.
@@ -258,6 +258,56 @@ export const useGovernanceProposalsStore = defineStore({
      *     "description": "{\"title\":\"01 - NAV Methods\",\"description\":\"See details bellow\"}"
      * }
      */
+    async proposalExecutedBlockNumber(proposal: IGovernanceProposal) {
+      // fetch the proposal executed block number
+      try {
+        // only fetch the executed block number if the proposal is executed
+        if(proposal.state === ProposalState.Executed) {
+          const currentBlock = Number(await this.fundStore.web3.eth.getBlockNumber());
+          console.log("currentBlock:", currentBlock);
+        
+          const startBlock = BigInt(proposal.createdBlockNumber);
+          const endBlock = BigInt(currentBlock);
+          const chunkSize = 3000n;
+          let proposalExecutedEvents: any[] = [];
+        
+          for (let fromBlock = startBlock; fromBlock <= endBlock; fromBlock += chunkSize) {
+            const toBlock = fromBlock + chunkSize - 1n > endBlock ? endBlock : fromBlock + chunkSize - 1n;
+            console.log(`Fetching events from ${fromBlock} to ${toBlock}`);
+        
+            const events = await this.fundStore.fundGovernorContract.getPastEvents("ProposalExecuted", {
+              fromBlock: Number(fromBlock),
+              toBlock: Number(toBlock),
+            });
+
+            proposalExecutedEvents = proposalExecutedEvents.concat(events);
+
+            console.log("proposalExecutedEvents: ", proposalExecutedEvents);
+
+            // find the correct executed event for the proposal and break the loop
+            if (proposalExecutedEvents.length > 0) {
+              const executedEvent = proposalExecutedEvents.find((event: any) => event.returnValues.proposalId.toString() === proposal.proposalId);
+              
+              console.log("proposal executed event: ", executedEvent);
+
+              if (executedEvent) {
+                const blockExecuted = await this.fundStore.web3.eth.getBlock(executedEvent.blockNumber);
+                console.log("blockExecuted: ", blockExecuted);
+                proposal.executedTimestamp = Number(blockExecuted.timestamp);
+                proposal.executedBlockNumber = executedEvent.blockNumber;
+                // store proposal 
+                console.log("proposal with executed data:", proposal);
+                this.storeProposal(this.web3Store.chainId, this.fundStore.fund?.address, proposal)
+                break;
+              }
+            }
+          }
+
+        }
+      } catch (e) {
+        console.error("error fetching ProposalExecuted: ", e);
+      }
+    },
     async parseProposalCreatedEvents(events: any[]) {
       if (!this.fundStore.fund?.governanceToken.decimals) {
         console.error("No fund governance token decimals found.")
@@ -281,14 +331,25 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.createdTimestamp = Number(block.timestamp);
         proposal.createdDatetimeFormatted = formatDate(new Date(Number(block.timestamp) * 1000));
         proposal.createdBlockNumber = event.blockNumber;
-
-        // const voteStartDate = new Date(Number(proposal.voteStart) * 1000);
-        // const voteEndDate = new Date(Number(proposal.voteEnd) * 1000);
-        // console.log("Vote Start Date: ", voteStartDate);
-        // console.log("Vote End Date: ", voteEndDate);
+        
+        // keep track of the proposal executed timestamp and block number if the proposal is executed
+        const executedProposal = this.fundProposals?.[this.web3Store.chainId]?.[this.fundStore.fund?.address]?.[proposal.proposalId];
+        proposal.executedTimestamp = executedProposal?.executedTimestamp;
+        proposal.executedBlockNumber = executedProposal?.executedBlockNumber;
 
         const proposalState = await this.fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
         proposal.state = ProposalStateMapping[proposalState]
+
+        console.log("proposal: ", proposal);
+
+        // If the clock mode is block number, we have to check a timestamp for the block number.
+        if(this.fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber) {
+          const blockStart = await this.fundStore.web3.eth.getBlock(proposal.voteStart);
+          const blockEnd = await this.fundStore.web3.eth.getBlock(proposal.voteEnd);
+
+          proposal.voteStart = blockStart.timestamp;
+          proposal.voteEnd = blockEnd.timestamp;
+        }
 
         const votes = await this.fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
         console.log("proposal votes: ", votes);
