@@ -32,7 +32,7 @@ const internalValueAsString = computed({
       // Convert the string input to a number
       const parsedValue = parseFloat(newValue);
       if (!isNaN(parsedValue)) {
-        internalValue.value = parsedValue.toString();
+        internalValue.value = newValue.toString();
       }
     }
     emit("update:modelValue", internalValue.value);

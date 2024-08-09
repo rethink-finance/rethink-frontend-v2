@@ -5,13 +5,17 @@
         <div class="data_bar__title">
           {{ fund?.netDeposits || "N/A" }}
         </div>
-        <div class="data_bar__subtitle">Net Deposits</div>
+        <div class="data_bar__subtitle">
+          Net Deposits
+        </div>
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
           {{ userCurrentValueFormatted }}
         </div>
-        <div class="data_bar__subtitle">Current Value</div>
+        <div class="data_bar__subtitle">
+          Current Value
+        </div>
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
@@ -55,8 +59,8 @@ export default {
         formatTokenValue(
           this.fundStore.userFundAllowance,
           this.fundBaseToken.decimals,
-          false
-        )
+          false,
+        ),
       );
       return formatNumberShort(value) + " " + this.fundBaseToken.symbol;
     },
@@ -66,8 +70,8 @@ export default {
         formatTokenValue(
           this.fundStore.userFundShareValue,
           this.fundBaseToken.decimals,
-          false
-        )
+          false,
+        ),
       );
       return formatNumberShort(value) + " " + this.fundBaseToken.symbol;
     },

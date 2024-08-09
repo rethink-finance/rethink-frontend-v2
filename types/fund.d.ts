@@ -1,5 +1,4 @@
 import type IClockMode from "~/types/clock_mode";
-import type ICyclePendingRequest from '~/types/cycle_pending_request';
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
@@ -49,7 +48,6 @@ export default interface IFund {
   cumulativeReturnPercent: number; // TODO
   monthlyReturnPercent: number; // TODO
   sharpeRatio: number; // TODO
-  cyclePendingRequests: ICyclePendingRequest[]; // TODO
   positionTypeCounts: IPositionTypeCount[];
 
   // Metadata
@@ -62,8 +60,9 @@ export default interface IFund {
   netDeposits: string;
 
   // Overview fields
-  depositAddresses: string[];
-  managementAddresses: string[];
+  isWhitelistedDeposits: boolean,
+  allowedDepositAddresses: string[];
+  allowedManagerAddresses: string[];
 
   // Governance
   // https://docs.tally.xyz/user-guides/deploying-governor-daos/choose-governor-parameters#how-to-pick-the-proposal-threshold

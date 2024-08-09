@@ -11,7 +11,6 @@ import { useFundStore } from "~/store/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type { IContractAddresses } from "~/types/addresses";
-import type ICyclePendingRequest from "~/types/cycle_pending_request";
 import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type INAVMethod from "~/types/nav_method";
@@ -63,11 +62,41 @@ const excludeFundAddrs = {
 /*
   @dev: TODO: MOVE excludeNAVDetailsHashes TO FILE
 */
+
+
 const excludeNAVDetailsHashes = {
-  "0x89": [],
-  "0xa4b1": [],
-  "0xfc": [],
-  "0x1": [],
+  "0x89": [
+    "0x3bc4ee0e074a885338da25914b831e58806cb1102ea8a232538ac982f0feae6a",
+    "0xe8c1c9ff413ad54389e2561f191d619ff3546f3415938f9be62dc31486dd081d",
+    "0x34c87e2372a6c660136757072c25183c3ec09646595730af8163ae28880bf130",
+    "0xa16bc751ca6b7cc8a22bd5681a8c721000d31f3b9065d550af98822187f5f6ff",
+    "0xaafeb0595fedeea04c3cc198e4c8e7f7a7fbbcafb471601c08b96b25989f15cb",
+    "0xff1938ed40a09521e438d91c962e23716b9271630c14df68b48ea03247194521",
+  ],
+  "0xa4b1": [
+    "0x3bc4ee0e074a885338da25914b831e58806cb1102ea8a232538ac982f0feae6a",
+    "0xe8c1c9ff413ad54389e2561f191d619ff3546f3415938f9be62dc31486dd081d",
+    "0x34c87e2372a6c660136757072c25183c3ec09646595730af8163ae28880bf130",
+    "0xa16bc751ca6b7cc8a22bd5681a8c721000d31f3b9065d550af98822187f5f6ff",
+    "0xaafeb0595fedeea04c3cc198e4c8e7f7a7fbbcafb471601c08b96b25989f15cb",
+    "0xff1938ed40a09521e438d91c962e23716b9271630c14df68b48ea03247194521",
+  ],
+  "0xfc": [
+    "0x3bc4ee0e074a885338da25914b831e58806cb1102ea8a232538ac982f0feae6a",
+    "0xe8c1c9ff413ad54389e2561f191d619ff3546f3415938f9be62dc31486dd081d",
+    "0x34c87e2372a6c660136757072c25183c3ec09646595730af8163ae28880bf130",
+    "0xa16bc751ca6b7cc8a22bd5681a8c721000d31f3b9065d550af98822187f5f6ff",
+    "0xaafeb0595fedeea04c3cc198e4c8e7f7a7fbbcafb471601c08b96b25989f15cb",
+    "0xff1938ed40a09521e438d91c962e23716b9271630c14df68b48ea03247194521",
+  ],
+  "0x1": [
+    "0x3bc4ee0e074a885338da25914b831e58806cb1102ea8a232538ac982f0feae6a",
+    "0xe8c1c9ff413ad54389e2561f191d619ff3546f3415938f9be62dc31486dd081d",
+    "0x34c87e2372a6c660136757072c25183c3ec09646595730af8163ae28880bf130",
+    "0xa16bc751ca6b7cc8a22bd5681a8c721000d31f3b9065d550af98822187f5f6ff",
+    "0xaafeb0595fedeea04c3cc198e4c8e7f7a7fbbcafb471601c08b96b25989f15cb",
+    "0xff1938ed40a09521e438d91c962e23716b9271630c14df68b48ea03247194521",
+  ],
 } as IExcludeNAVDetailsHashes;
 
 interface IState {
@@ -218,13 +247,13 @@ export const useFundsStore = defineStore({
                 count: Number(dataNAVs.illiquidLen[index] || 0),
               },
             ] as IPositionTypeCount[],
-            cyclePendingRequests: [] as ICyclePendingRequest[],
 
             // My Fund Positions
             netDeposits: "",
             // Overview fields
-            depositAddresses: [],
-            managementAddresses: [],
+            isWhitelistedDeposits: true,
+            allowedDepositAddresses: [],
+            allowedManagerAddresses: [],
             plannedSettlementPeriod: "",
             minLiquidAssetShare: "",
 

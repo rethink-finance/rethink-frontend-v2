@@ -46,7 +46,7 @@
       md="4"
     >
       <Icon
-        name="ic:baseline-copyright"
+        icon="ic:baseline-copyright"
         color="white"
         width="1rem"
         class="me-1"

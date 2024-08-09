@@ -3,13 +3,15 @@
     <v-dialog
       :model-value="modelValue"
       scrim="black"
-      opacity="0.25"
-      max-width="500"
+      opacity="0.3"
+      max-width="600"
       @update:model-value="closeDelegateDialog"
     >
       <div class="main_card di-card">
         <div class="di-card__header-container">
-          <div class="di-card__header">Delegate</div>
+          <div class="di-card__header">
+            Delegate
+          </div>
 
           <Icon
             icon="material-symbols:close"
@@ -24,6 +26,11 @@
         </div>
 
         <div class="di-card__content">
+          <div class="di-card">
+            <strong>NOTE:</strong>
+            You must always delegate to yourself first, even if you want to delegate to someone else!
+          </div>
+
           <div v-if="!delegateToSomeoneElse" class="di-card__button-container">
             <v-btn
               :disabled="loadingDelegates"
@@ -54,7 +61,9 @@
           </div>
 
           <div v-else class="di-card__someone-else-container">
-            <v-label class="di-card__label label_required"> Address </v-label>
+            <v-label class="di-card__label label_required">
+              Address
+            </v-label>
             <v-text-field
               v-model="delegateAddress"
               placeholder="Enter the address of the delegate"
@@ -66,8 +75,8 @@
               :disabled="!isDelegatedAddressValid || loadingDelegates"
               class="di-card__delegate-votes"
               variant="flat"
-              @click="delegate()"
               color="rgba(210, 223, 255, 1)"
+              @click="delegate()"
             >
               <template #prepend>
                 <v-progress-circular
@@ -90,20 +99,15 @@
 <script setup lang="ts">
 // contract
 import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
-// types
-import type IFund from "~/types/fund";
 // components
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
-import { useWeb3Store } from "~/store/web3.store";
 
-const props = defineProps({ modelValue: Boolean });
+defineProps({ modelValue: Boolean });
 const emit = defineEmits(["update:modelValue"]);
 
 const fundStore = useFundStore();
 const toastStore = useToastStore();
-const web3Store = useWeb3Store();
-const fund = useAttrs().fund as IFund;
 
 // delegate dialog
 const loadingDelegates = ref(false);
@@ -131,21 +135,21 @@ const delegate = async (isMyself = false) => {
   const delegateTo = isMyself
     ? fundStore.activeAccountAddress
     : delegateAddress.value;
-  const governanceToken = fundStore.fund?.governanceToken.address;
+  const governanceTokenAddress = fundStore.fund?.governanceToken.address;
   const fundAddress = fundStore.fund?.address;
 
   console.log("delegateTo: ", delegateTo);
   console.log("fundAddress: ", fundAddress);
-  console.log("governanceToken: ", governanceToken);
+  console.log("governanceTokenAddress: ", governanceTokenAddress);
 
   if (fundAddress != null) {
     loadingDelegates.value = true;
 
     // external gov token
-    if (governanceToken != fundAddress && governanceToken != nullAddr) {
+    if (governanceTokenAddress !== fundAddress && governanceTokenAddress != nullAddr) {
       const externalGovToken = new fundStore.web3.eth.Contract(
         ERC20Votes.abi,
-        governanceToken
+        governanceTokenAddress,
       );
 
       try {
@@ -164,18 +168,18 @@ const delegate = async (isMyself = false) => {
           .on("transactionHash", function (hash: any) {
             console.log("tx hash: " + hash);
             toastStore.warningToast(
-              "The transaction has been submitted. Please wait for it to be confirmed."
+              "The transaction has been submitted. Please wait for it to be confirmed.",
             );
           })
           .on("receipt", function (receipt: any) {
             console.log(receipt);
             if (receipt.status) {
               toastStore.successToast(
-                "Delegation of Governance Tokens Succeeded"
+                "Delegation of Governance Tokens Succeeded",
               );
             } else {
               toastStore.errorToast(
-                "The delegateTo tx has failed. Please contact the Rethink Finance support."
+                "The delegateTo tx has failed. Please contact the Rethink Finance support.",
               );
             }
             loadingDelegates.value = false;
@@ -184,14 +188,14 @@ const delegate = async (isMyself = false) => {
             console.log(error);
             loadingDelegates.value = false;
             toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support."
+              "There has been an error. Please contact the Rethink Finance support.",
             );
           });
       } catch (error) {
         console.error("Error delegating to external gov token: ", error);
         loadingDelegates.value = false;
         toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support."
+          "There has been an error. Please contact the Rethink Finance support.",
         );
       }
     } else {
@@ -212,18 +216,18 @@ const delegate = async (isMyself = false) => {
           .on("transactionHash", function (hash: any) {
             console.log("tx hash: " + hash);
             toastStore.warningToast(
-              "The transaction has been submitted. Please wait for it to be confirmed."
+              "The transaction has been submitted. Please wait for it to be confirmed.",
             );
           })
           .on("receipt", function (receipt: any) {
             console.log(receipt);
             if (receipt.status) {
               toastStore.successToast(
-                "Delegation of Governance Tokens Succeeded"
+                "Delegation of Governance Tokens Succeeded",
               );
             } else {
               toastStore.errorToast(
-                "The delegateTo tx has failed. Please contact the Rethink Finance support."
+                "The delegateTo tx has failed. Please contact the Rethink Finance support.",
               );
             }
             loadingDelegates.value = false;
@@ -232,7 +236,7 @@ const delegate = async (isMyself = false) => {
             console.log(error);
             loadingDelegates.value = false;
             toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support."
+              "There has been an error. Please contact the Rethink Finance support.",
             );
           });
       } catch (error: any) {
@@ -260,28 +264,23 @@ const delegate = async (isMyself = false) => {
     justify-content: space-between;
     align-items: center;
   }
-
   &__header {
     font-size: $text-lg;
     font-weight: 700;
   }
-
   &__close-icon {
     cursor: pointer;
     color: $color-steel-blue;
   }
-
   &__content {
     margin-top: 2rem;
   }
-
   &__button-container {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     gap: 1rem;
   }
-
   &__submit-button {
     width: 100%;
     margin: 0 auto;
@@ -289,12 +288,10 @@ const delegate = async (isMyself = false) => {
 
     color: $color-light-subtitle !important;
   }
-
   &__label {
     color: $color-light-subtitle;
     margin-bottom: 0.25rem;
   }
-
   &__delegate-votes {
     width: 100%;
     margin-top: 1rem;

@@ -1,23 +1,21 @@
 <template>
   <div class="fund_details">
     <FundOverview :fund="fund" />
-    
+
     <div class="main_card">
       <FundInfo :fund="fund" />
     </div>
-   
+
     <div class="d-flex flex-column">
       <div class="main_card main_grid order-1 order-sm-0">
         <FundSettlement :fund="fund" />
-        <!-- TODO current cycle is work in progress -->
-        <!--          <FundCurrentCycle :fund="fund" />-->
+        <FundCurrentCycle :fund="fund" />
       </div>
 
       <div class="main_card">
         <FundChart :fund="fund" />
       </div>
     </div>
-
   </div>
 </template>
 

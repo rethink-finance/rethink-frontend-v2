@@ -9,7 +9,7 @@ export const useToastStore = defineStore({
   }),
 
   actions: {
-    addToast(message: string, level?: string, duration: number=4000): void {
+    addToast(message: string, level?: string, duration: number=5000): void {
       /**
        * @param {number} duration -
        * Time (in milliseconds) to wait until snackbar is automatically hidden.
@@ -18,7 +18,9 @@ export const useToastStore = defineStore({
        * Changes to this property will reset the timeout.
        */
       // Check if a toast with the same message already exists
-      const existingToast = this.toasts.find((toast) => toast.message === message);
+      const existingToast = this.toasts.find(
+        (toast) => toast.message === message,
+      );
 
       if (existingToast) {
         // If found, close the existing toast
