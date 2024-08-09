@@ -43,14 +43,6 @@
           >
             Clear Draft
           </v-btn>
-          <v-btn
-            class="text-secondary"
-            variant="outlined"
-            :disabled="isSaveDraftDisabled"
-            @click="saveDraft"
-          >
-            Save Draft
-          </v-btn>
         </div>
       </UiHeader>
       <FundNavMethodsTable
@@ -72,8 +64,6 @@ import { useToastStore } from "~/store/toast.store";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 
-const loadingDraftClear = ref(false);
-const triggerSimulateNav = ref(0);
 
 const {
   selectedFundSlug,
@@ -97,6 +87,10 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
+const loadingDraftClear = ref(false);
+const triggerSimulateNav = ref(0);
+const fundManagedNAVMethodsLocalStorage = ref(getLocalStorageItem("navUpdateEntries", {})[selectedFundAddress.value] || {});
+
 const handleSimulateNav = () => {
   triggerSimulateNav.value++;
 };
@@ -104,12 +98,11 @@ const handleSimulateNav = () => {
 const clearDraft = () => {
   loadingDraftClear.value = true;
   try {
-    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
-
     // reset the fundManagedNAVMethods to fundLastNAVUpdateMethods
-    fundManagedNAVMethods.value = JSON.parse(
-      JSON.stringify(fundLastNAVUpdateMethods.value),
-    );
+    fundManagedNAVMethods.value =  JSON.parse(JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt), parseBigInt);
+    fundManagedNAVMethodsLocalStorage.value = fundManagedNAVMethods.value;
+    // reset the local storage as well
+    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
     navUpdateEntries[selectedFundAddress.value] = fundManagedNAVMethods.value;
     setLocalStorageItem("navUpdateEntries", navUpdateEntries);
 
@@ -127,42 +120,36 @@ const saveDraft = () => {
     const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
 
     navUpdateEntries[selectedFundAddress.value] = JSON.parse(
-      JSON.stringify(fundManagedNAVMethods.value),
+    JSON.stringify(fundManagedNAVMethods.value, stringifyBigInt)
     );
-
     setLocalStorageItem("navUpdateEntries", navUpdateEntries);
-    fundManagedNAVMethods.value = navUpdateEntries[selectedFundAddress.value];
+    fundManagedNAVMethodsLocalStorage.value = navUpdateEntries[selectedFundAddress.value];
     console.log("LS: ", navUpdateEntries)
-    toastStore.successToast("Draft saved successfully");
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to save draft");
   }
 };
 
-const isSaveDraftDisabled = computed(() => {
-  return false;
-  const isSameAsLastUpdate =
-    JSON.stringify(fundManagedNAVMethods.value) ===
-    JSON.stringify(fundLastNAVUpdateMethods.value);
-
-  // const isSameAsLocalStorage =
-  //   JSON.stringify(fundManagedNAVMethods.value) ===
-  //   JSON.stringify(fundManagedNAVMethods.value);
-
-  return isSameAsLastUpdate ;
-  // return isSameAsLastUpdate || isSameAsLocalStorage;
-});
-
 const isClearDraftVisible = computed(() => {
-  return true;
-  // check if the draft is empty
-  const output =
-    JSON.stringify(fundManagedNAVMethods.value) !==
-    JSON.stringify({});
+  // check if the draft is the same as the last update
+  const isSameAsLastUpdate =
+    JSON.stringify(fundManagedNAVMethodsLocalStorage.value, stringifyBigInt) ===
+    JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt);
+    const isDraftEmpty = Object.keys(fundManagedNAVMethodsLocalStorage.value).length === 0;
 
-  return output;
+  return !isSameAsLastUpdate && !isDraftEmpty;
 });
+
+// watch for changes in fundManagedNAVMethods
+// and update the local storage
+watch(
+  fundManagedNAVMethods,
+  () => {
+    saveDraft();
+  },
+  { deep: true }
+);
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);

@@ -795,15 +795,17 @@ export const useFundStore = defineStore({
     },
     mergeNAVMethodsFromLocalStorage() {
       let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
-      if (!navUpdateEntries) {
-        navUpdateEntries = {};
+      // if there are no NAV methods in local storage, save them
+      if (!navUpdateEntries || !this.selectedFundAddress || !navUpdateEntries[this.selectedFundAddress]) {
+        navUpdateEntries = {
+          ...navUpdateEntries,
+          [this.selectedFundAddress]: this.fundManagedNAVMethods,
+        };
+        setLocalStorageItem("navUpdateEntries", navUpdateEntries);
       }
-
-      // TODO here we should merge the fetched NAV methods (fundManagedNAVMethods) with those
-      //  from local storage one by one and take our changed properties also along with those fetched.
-      //  you can merge both objects with spread operator ({...a, ...localStorageMethod}) for each method
-      // this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || {};
-      // TODO also here save to localStorage newly merged version of navUpdateEntries
+      
+      // if there are NAV methods in local storage, assign them to the fundManagedNAVMethods.
+      this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || [];
     },
     async estimateGasFundFlowsCall(encodedFunctionCall: any) {
       try {
