@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -16,22 +16,22 @@ import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
 import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import {
+  FundTransactionType,
+  FundTransactionTypeStorageSlotIdxMap,
+} from "~/types/enums/fund_transaction_type";
+import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
   PositionTypeKeys,
-  PositionTypes,
+  PositionTypes
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
-import {
-  FundTransactionType,
-  FundTransactionTypeStorageSlotIdxMap,
-} from "~/types/enums/fund_transaction_type";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -55,7 +55,6 @@ interface IState {
   fundManagedNAVMethods: INAVMethod[],
   // Cached roleMod addresses for each fund.
   fundRoleModAddress: Record<string, string>,
-  refreshSimulateNAVCounter: number,
 }
 
 
@@ -74,7 +73,6 @@ export const useFundStore = defineStore({
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
-    refreshSimulateNAVCounter: 0,
   }),
   getters: {
     accountStore(): any {
@@ -798,15 +796,17 @@ export const useFundStore = defineStore({
     },
     mergeNAVMethodsFromLocalStorage() {
       let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
-      if (!navUpdateEntries) {
-        navUpdateEntries = {};
+      // if there are no NAV methods in local storage, save them
+      if (!navUpdateEntries || !this.selectedFundAddress || !navUpdateEntries[this.selectedFundAddress]) {
+        navUpdateEntries = {
+          ...navUpdateEntries,
+          [this.selectedFundAddress]: this.fundManagedNAVMethods,
+        };
+        setLocalStorageItem("navUpdateEntries", navUpdateEntries);
       }
-
-      // TODO here we should merge the fetched NAV methods (fundManagedNAVMethods) with those
-      //  from local storage one by one and take our changed properties also along with those fetched.
-      //  you can merge both objects with spread operator ({...a, ...localStorageMethod}) for each method
-      // this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || {};
-      // TODO also here save to localStorage newly merged version of navUpdateEntries
+      
+      // if there are NAV methods in local storage, assign them to the fundManagedNAVMethods.
+      this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || [];
     },
     async estimateGasFundFlowsCall(encodedFunctionCall: any) {
       try {

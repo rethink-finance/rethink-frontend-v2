@@ -10,7 +10,9 @@
         </div>
       </div>
       <div class="button_container">
-        <FundNavSimulateButton />
+        <FundNavSimulateButton 
+          @simulateNAV="handleSimulateNav"
+        />
 
         <ui-tooltip-click
           :tooltip-text="
@@ -69,6 +71,7 @@
           show-last-nav-update-value
           show-base-token-balances
           show-simulated-nav
+          :trigger-simulate-nav="triggerSimulateNav"
         />
       </div>
     </div>
@@ -106,11 +109,16 @@ const {
 } = toRefs(useFundStore());
 
 const isLoading = ref(false);
+const triggerSimulateNav = ref(0);
 
 const fundLastNAVUpdateDate = computed(() => {
   if (!fundLastNAVUpdate.value) return "N/A";
   return fundLastNAVUpdate.value.date ?? "N/A";
 });
+
+const handleSimulateNav = () => {
+  triggerSimulateNav.value++;
+};
 
 const updateNAV = async () => {
   console.log("UPDATE NAV");
@@ -178,6 +186,10 @@ const parsedFundNavUpdates = computed(() => {
     // Create a shallow copy of the navUpdates array and reverse it
     navUpdates: fund.navUpdates.slice().reverse(),
   };
+});
+
+onMounted(() => {
+  handleSimulateNav(); // trigger simulate NAV on mount
 });
 </script>
 
