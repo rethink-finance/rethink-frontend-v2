@@ -167,7 +167,7 @@ const delegate = async (isMyself = false) => {
           })
           .on("transactionHash", function (hash: any) {
             console.log("tx hash: " + hash);
-            toastStore.warningToast(
+            toastStore.addToast(
               "The transaction has been submitted. Please wait for it to be confirmed.",
             );
           })
@@ -215,7 +215,7 @@ const delegate = async (isMyself = false) => {
           })
           .on("transactionHash", function (hash: any) {
             console.log("tx hash: " + hash);
-            toastStore.warningToast(
+            toastStore.addToast(
               "The transaction has been submitted. Please wait for it to be confirmed.",
             );
           })

@@ -68,7 +68,7 @@ export default {
       if (!this.fundBaseToken) return "N/A";
       const value = Number(
         formatTokenValue(
-          this.fundStore.userFundShareValue,
+          this.fundStore.userCurrentValue,
           this.fundBaseToken.decimals,
           false,
         ),

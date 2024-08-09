@@ -226,6 +226,7 @@ export const useFundsStore = defineStore({
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
             totalNAVWei: dataNAVs.totalNav[index],
+            totalDepositBalance: BigInt("0"),
             cumulativeReturnPercent: 0,
             monthlyReturnPercent: 0,
             sharpeRatio: 0,
