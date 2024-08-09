@@ -71,9 +71,6 @@
 </template>
 
 <script setup lang="ts">
-// contract
-// types
-import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import type IFund from "~/types/fund";
 import type ITrendingDelegates from "~/types/trending_delegates";
 
@@ -145,32 +142,32 @@ const proposalsSuccessRate = computed(() => {
 // page we want to stop fetching proposals.
 const shouldFetchProposals = ref(false);
 
-// Dummy data for trending delegates
+// TODO Dummy data for trending delegates
 const trendingDelegates: ITrendingDelegates[] = [
-  {
-    delegated_members: "0x1f98dgdaddasdfgF984",
-    delegators: "16 Members",
-    impact: "10%",
-    voting_power: "570.000.000 SOON",
-  },
-  {
-    delegated_members: "0xEd2026078669d1135991E850c88Cf71cdAEB4d00",
-    delegators: "13 Members",
-    impact: "20%",
-    voting_power: "850.000.000 SOON",
-  },
-  {
-    delegated_members: "0x1f98dgdaddasdfgF984",
-    delegators: "8 Members",
-    impact: "8%",
-    voting_power: "440.000.000 SOON",
-  },
-  {
-    delegated_members: "0xEd2026078669d1135991E850c88Cf71cdAEB4d00",
-    delegators: "5 Members",
-    impact: "16%",
-    voting_power: "720.000.000 SOON",
-  },
+  // {
+  //   delegated_members: "0x1f98dgdaddasdfgF984",
+  //   delegators: "16 Members",
+  //   impact: "10%",
+  //   voting_power: "570.000.000 SOON",
+  // },
+  // {
+  //   delegated_members: "0xEd2026078669d1135991E850c88Cf71cdAEB4d00",
+  //   delegators: "13 Members",
+  //   impact: "20%",
+  //   voting_power: "850.000.000 SOON",
+  // },
+  // {
+  //   delegated_members: "0x1f98dgdaddasdfgF984",
+  //   delegators: "8 Members",
+  //   impact: "8%",
+  //   voting_power: "440.000.000 SOON",
+  // },
+  // {
+  //   delegated_members: "0xEd2026078669d1135991E850c88Cf71cdAEB4d00",
+  //   delegators: "5 Members",
+  //   impact: "16%",
+  //   voting_power: "720.000.000 SOON",
+  // },
 ];
 
 type DropdownOption = {
@@ -268,7 +265,7 @@ const fetchProposals = async (
 
   // From the largest number to the smallest number.
   if (rangeStartBlock > rangeEndBlock) {
-    console.log("BIGGEST to smallest");
+    console.warn("\nBIGGEST to smallest:", rangeStartBlock, rangeEndBlock);
     for (let i = rangeStartBlock; i > rangeEndBlock; i -= chunkSize) {
       if (!shouldFetchProposals.value) return;
 
@@ -345,9 +342,9 @@ const fetchProposals = async (
       }
     }
   } else {
-    console.log("smallest to BIGGEST");
+    console.warn("\nsmallest to BIGGEST", rangeStartBlock, rangeEndBlock);
 
-    for (let i = rangeEndBlock; i < rangeStartBlock; i += chunkSize) {
+    for (let i = rangeStartBlock; i < rangeEndBlock; i += chunkSize) {
       if (!shouldFetchProposals.value) return;
       const fromBlock = Math.max(i, 0);
       let toBlock = i + chunkSize - 1;
@@ -460,12 +457,12 @@ const startFetch = async () => {
     oldestFetchedBlock !== undefined
   ) {
     console.log(
-      "fetch from current block to most recent fetched block",
-      currentBlock,
+      "fetch from last fetched block to current block",
+      currentBlock - 1,
       mostRecentFetchedBlock,
     );
     // From smallest to biggest.
-    await fetchProposals(mostRecentFetchedBlock + 1, currentBlock);
+    await fetchProposals(mostRecentFetchedBlock + 1, currentBlock - 1);
 
     // fetch from the already fetched the oldest block number to hardcoded limit oldest date.
     // ---------| oldest fetched | xxxxxxxxxx <to fetch> xxxxxxxxxx | GENESIS BLOCK
@@ -474,7 +471,9 @@ const startFetch = async () => {
       oldestFetchedBlock,
     );
     // From biggest to smallest
-    await fetchProposals(oldestFetchedBlock - 1, 0);
+    if (oldestFetchedBlock) {
+      await fetchProposals(oldestFetchedBlock - 1, 0);
+    }
   } else {
     // Fetch all history.
     governanceProposalStore.resetProposals(

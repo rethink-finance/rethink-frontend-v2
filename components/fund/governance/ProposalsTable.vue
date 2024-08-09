@@ -84,16 +84,20 @@
       </template>
     </template>
     <template #[`item.approval`]="{ item }">
-      {{ item.approvalFormatted }}
-      <v-tooltip activator="parent" location="bottom">
-        {{ item.forVotesFormatted }} of {{ item.quorumVotesFormatted }}
-      </v-tooltip>
+      <div>
+        {{ item.approvalFormatted }}
+        <v-tooltip activator="parent" location="bottom">
+          {{ item.forVotesFormatted }} of {{ item.quorumVotesFormatted }}
+        </v-tooltip>
+      </div>
     </template>
     <template #[`item.participation`]="{ item }">
-      {{ item.participationFormatted }}
-      <v-tooltip activator="parent" location="bottom">
-        {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }}
-      </v-tooltip>
+      <div>
+        {{ item.participationFormatted }}
+        <v-tooltip activator="parent" location="bottom">
+          {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }}
+        </v-tooltip>
+      </div>
     </template>
 
     <!-- LOADER SKELETON -->
@@ -151,7 +155,6 @@ const props = defineProps({
 
 // TODO to fetch status of all votes of all users we again have to iterate over all events and check VoteCast event
 watch(() => props.items, () => {
-  console.log("props items watcher", props.items);
   if (fundStore.activeAccountAddress === undefined) {
     return
   }
@@ -162,10 +165,10 @@ watch(() => props.items, () => {
     // Do not fetch the hasVoted again if we already know he has voted.
     if (governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress]) continue;
 
-    console.log("get votes for ", proposal.proposalId);
+    // console.log("get votes for ", proposal.proposalId);
     fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call().then(
       (hasVoted: boolean) => {
-        console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)
+        // console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)
         governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress] = hasVoted;
       },
     );
@@ -199,7 +202,7 @@ const headers = computed(() => {
 
 // navigate to proposal detail page
 const rowClick = (_:any, item: any) => {
-  const {createdBlockNumber, proposalId} = item.item;
+  const { createdBlockNumber, proposalId } = item.item;
   router.push(`governance/proposal/${createdBlockNumber}-${proposalId}`);
 };
 </script>
