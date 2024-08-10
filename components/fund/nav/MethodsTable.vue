@@ -239,10 +239,6 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    triggerSimulateNav: {
-      type: Number,
-      default: 0,
-    },
   },
   emits: ["update:methods", "selectedChanged"],
   setup() {
@@ -380,22 +376,22 @@ export default defineComponent({
         })),
       ];
     },
-    methodsLength() {
-      return this.methods.length;
-    },
   },
   watch: {
-    methodsLength: {
-      handler() {
+    "methods.length": {
+      handler(newLen: any, oldLen: any) {
         // Simulate NAV method values everytime NAV methods change.
-        console.log("SIMULATE BY METHODS LENGTH")
+        if (!this.methods.length || oldLen === newLen) return;
+        console.log("SIMULATE BY METHODS LENGTH", oldLen, newLen)
         this.simulateNAV();
       },
+      deep: true,
+      immediate: true,
     },
-    "triggerSimulateNav": {
+    "fundStore.refreshSimulateNAVCounter": {
       handler() {
         // Simulate NAV method values everytime Simulate NAV button is pressed and triggerSimulateNav changes.
-        console.log("triggerSimulateNav:", this.triggerSimulateNav)
+        console.warn("fundStore.refreshSimulateNAVCounter:")
         this.simulateNAV();
       },
     },

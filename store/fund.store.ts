@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -23,7 +23,7 @@ import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
   PositionTypeKeys,
-  PositionTypes
+  PositionTypes,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
@@ -55,6 +55,7 @@ interface IState {
   fundManagedNAVMethods: INAVMethod[],
   // Cached roleMod addresses for each fund.
   fundRoleModAddress: Record<string, string>,
+  refreshSimulateNAVCounter: number,
 }
 
 
@@ -73,6 +74,7 @@ export const useFundStore = defineStore({
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
+    refreshSimulateNAVCounter: 0,
   }),
   getters: {
     accountStore(): any {
@@ -796,14 +798,16 @@ export const useFundStore = defineStore({
     mergeNAVMethodsFromLocalStorage() {
       let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
       // if there are no NAV methods in local storage, save them
+      console.log("LOCAL STORAGE", navUpdateEntries);
       if (!navUpdateEntries || !this.selectedFundAddress || !navUpdateEntries[this.selectedFundAddress]) {
+        console.log("MERGE NAV methods from LOCAL STORAGE", this.fundManagedNAVMethods);
         navUpdateEntries = {
           ...navUpdateEntries,
           [this.selectedFundAddress]: this.fundManagedNAVMethods,
         };
         setLocalStorageItem("navUpdateEntries", navUpdateEntries);
       }
-      
+
       // if there are NAV methods in local storage, assign them to the fundManagedNAVMethods.
       this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || [];
     },

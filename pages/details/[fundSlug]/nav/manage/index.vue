@@ -7,9 +7,7 @@
         </div>
       </div>
       <div>
-        <FundNavSimulateButton 
-          @simulateNAV="handleSimulateNav" 
-        />
+        <FundNavSimulateButton />
 
         <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/proposal`">
           <v-btn class="bg-primary text-secondary ms-6">
@@ -51,7 +49,6 @@
         show-summary-row
         show-base-token-balances
         show-simulated-nav
-        :trigger-simulate-nav="triggerSimulateNav"
       />
     </div>
   </div>
@@ -88,12 +85,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 const loadingDraftClear = ref(false);
-const triggerSimulateNav = ref(0);
 const fundManagedNAVMethodsLocalStorage = ref(getLocalStorageItem("navUpdateEntries", {})[selectedFundAddress.value] || {});
-
-const handleSimulateNav = () => {
-  triggerSimulateNav.value++;
-};
 
 const clearDraft = () => {
   loadingDraftClear.value = true;
@@ -120,7 +112,7 @@ const saveDraft = () => {
     const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
 
     navUpdateEntries[selectedFundAddress.value] = JSON.parse(
-    JSON.stringify(fundManagedNAVMethods.value, stringifyBigInt)
+      JSON.stringify(fundManagedNAVMethods.value, stringifyBigInt),
     );
     setLocalStorageItem("navUpdateEntries", navUpdateEntries);
     fundManagedNAVMethodsLocalStorage.value = navUpdateEntries[selectedFundAddress.value];
@@ -136,7 +128,7 @@ const isClearDraftVisible = computed(() => {
   const isSameAsLastUpdate =
     JSON.stringify(fundManagedNAVMethodsLocalStorage.value, stringifyBigInt) ===
     JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt);
-    const isDraftEmpty = Object.keys(fundManagedNAVMethodsLocalStorage.value).length === 0;
+  const isDraftEmpty = Object.keys(fundManagedNAVMethodsLocalStorage.value).length === 0;
 
   return !isSameAsLastUpdate && !isDraftEmpty;
 });
@@ -148,12 +140,11 @@ watch(
   () => {
     saveDraft();
   },
-  { deep: true }
+  { deep: true },
 );
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
-  handleSimulateNav(); // trigger simulate NAV on mount
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
