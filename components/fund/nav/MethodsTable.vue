@@ -19,9 +19,10 @@
         <td />
         <td />
         <td />
-        <td v-if="showLastNavUpdateValue" class="text-right">
-          <!-- TODO -->
-          -
+        <td v-if="showLastNavUpdateValue" class="text-right font-weight-black">
+          <div>
+            {{ formattedTotalLastNAV }}
+          </div>
         </td>
         <td v-if="showSimulatedNav" class="text-right font-weight-black">
           <div :class="`item-simulated-nav ${simulatedNavErrorCount > 0 ? 'item-simulated-nav--error' : ''}`">
@@ -71,7 +72,7 @@
         :disabled="item.deleted || item.isAlreadyUsed"
       />
     </template>
-    <template #[`item.lastNavUpdateValueFormatted`]="{ value }">
+    <template #[`item.pastNavValueFormatted`]="{ value }">
       {{ value ?? "-" }}
     </template>
 
@@ -193,13 +194,13 @@
 </template>
 
 <script lang="ts">
-import NAVCalculatorJSON from "assets/contracts/NAVCalculator.json";
 import { useFundStore } from "~/store/fund.store";
 import { useFundsStore } from "~/store/funds.store";
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
+import type { INAVParts } from "~/types/fund";
 
 
 export default defineComponent({
@@ -214,6 +215,10 @@ export default defineComponent({
     usedMethods: {
       type: Array as () => INAVMethod[],
       default: () => [],
+    },
+    navUpdateIndex: {
+      type: Number,
+      default: undefined,
     },
     showBaseTokenBalances: {
       type: Boolean,
@@ -268,7 +273,7 @@ export default defineComponent({
         headers.push(
           {
             title: "Last NAV Update Value",
-            key: "lastNavUpdateValueFormatted",
+            key: "pastNavValueFormatted",
             align: "end",
             sortable: false,
             width: "160px",
@@ -311,6 +316,14 @@ export default defineComponent({
         (fund?.feeBalance || 0n);
       return this.formatNAV(totalNAV);
     },
+    formattedTotalLastNAV() {
+      const totalNAV =
+        (this.navParts?.baseAssetOIVBal || 0n) +
+        (this.navParts?.baseAssetSafeBal || 0n) +
+        (this.navParts?.feeBal || 0n) +
+        (this.navParts?.totalNAV || 0n);
+      return this.formatNAV(totalNAV);
+    },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
       return this.methods.reduce(
@@ -334,13 +347,20 @@ export default defineComponent({
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
     },
+    navParts(): INAVParts | undefined {
+      if (!this.navUpdateIndex) return undefined;
+      return this.fundStore.fund?.navParts?.[this.navUpdateIndex] as INAVParts;
+    },
     computedMethods() {
       const methods = [];
+
       if (this.showBaseTokenBalances) {
         methods.push({
           positionName: "Fund Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
+          pastNavValue: this.navParts?.baseAssetOIVBal,
+          pastNavValueFormatted: this.formatNAV(this.navParts?.baseAssetOIVBal),
           simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-1",
@@ -352,6 +372,8 @@ export default defineComponent({
           positionName: "Safe Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
+          pastNavValue: this.navParts?.baseAssetSafeBal,
+          pastNavValueFormatted: this.formatNAV(this.navParts?.baseAssetSafeBal),
           simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-2",
@@ -363,6 +385,8 @@ export default defineComponent({
           positionName: "Fees Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
+          pastNavValue: this.navParts?.feeBal,
+          pastNavValueFormatted: this.formatNAV(this.navParts?.feeBal),
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
           detailsHash: "-3",
@@ -451,10 +475,6 @@ export default defineComponent({
         return;
       }
 
-      const NAVCalculatorContract = new this.web3Store.web3.eth.Contract(
-        NAVCalculatorJSON.abi,
-        this.web3Store.NAVCalculatorBeaconProxyAddress,
-      );
       try {
         navEntry.isNavSimulationLoading = true;
         navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
@@ -511,7 +531,7 @@ export default defineComponent({
 
         console.log("isNavSimulationLoading:", this.isNavSimulationLoading)
         try {
-          const simulatedVal: bigint = await NAVCalculatorContract.methods[
+          const simulatedVal: bigint = await this.fundStore.navCalculatorContract.methods[
             navCalculationMethod
           ](...callData).call();
           console.log("simulated value: ", simulatedVal);

@@ -13,7 +13,12 @@
         bg-transparent
       >
         <template #body>
-          <FundNavMethodsTable :methods="navUpdate.entries" />
+          <FundNavMethodsTable
+            :methods="navUpdate.entries"
+            :nav-update-index="index + 1"
+            show-summary-row
+            show-last-nav-update-value
+          />
         </template>
         <!--        <template #actions="{detailsExpanded}">-->
         <!--          <UiDetailsButton text="Details" :active="detailsExpanded" />-->

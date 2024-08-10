@@ -6,6 +6,7 @@ import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
+import NavCalculator from "~/assets/contracts/NAVCalculator.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
@@ -22,6 +23,7 @@ import {
   PositionTypes,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
+import type { INAVParts } from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
@@ -32,6 +34,7 @@ import {
   FundTransactionType,
   FundTransactionTypeStorageSlotIdxMap,
 } from "~/types/enums/fund_transaction_type";
+import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -229,6 +232,10 @@ export const useFundStore = defineStore({
       const contractAddress = addresses[RethinkReaderContractName][this.web3Store.chainId];
       return new this.web3.eth.Contract(RethinkReader.abi, contractAddress)
     },
+    // @ts-expect-error: we should extend the return type as Contract<...>
+    navCalculatorContract(): Contract {
+      return new this.web3.eth.Contract(NavCalculator.abi, this.web3Store.NAVCalculatorBeaconProxyAddress)
+    },
     /**
      * Returns a block number of the transaction that created the safe contract.
      */
@@ -312,6 +319,7 @@ export const useFundStore = defineStore({
         console.log("fund NAV: ", dataNAV)
         fund.positionTypeCounts = this.parseFundPositionTypeCounts(dataNAV);
         fund.navUpdates = await this.parseFundNAVUpdates(dataNAV);
+        fund.navParts = await this.fetchNavParts(fund.navUpdates.length);
       } catch (error) {
         console.error("Error calling getNAVDataForFund: ", error, "fund: ", fundSettings.fundAddress);
       }
@@ -525,6 +533,7 @@ export const useFundStore = defineStore({
 
           // NAV Updates
           navUpdates: [] as INAVUpdate[],
+          navParts: [] as INAVParts[],
         } as IFund;
 
         // Process metadata if available
@@ -586,9 +595,36 @@ export const useFundStore = defineStore({
         detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
       } as INAVMethod
     },
+    async fetchNavParts(navUpdatesLen: number): Promise<INAVParts[]> {
+      const promises: Promise<any>[] = Array.from(
+        { length: navUpdatesLen },
+        (_, index) => this.navCalculatorContract.methods.getNAVParts(
+          this.selectedFundAddress, index + 1,
+        ).call(),
+      );
+
+      const navPartsPromises = await Promise.allSettled(promises);
+      const parsedNavParts: INAVParts[] = [];
+      navPartsPromises.forEach((navPartsResult, index) => {
+        if (navPartsResult.status === "fulfilled") {
+          const navParts: Record<string, any> = navPartsResult.value;
+          parsedNavParts.push({
+            baseAssetOIVBal: navParts.baseAssetOIVBal,
+            baseAssetSafeBal: navParts.baseAssetSafeBal,
+            feeBal: navParts.feeBal,
+            totalNAV: navParts.totalNAV,
+          } as INAVParts)
+        } else {
+          console.error(`Failed to fetch NAV parts ${index + 1}:`, navPartsResult.reason);
+        }
+      });
+
+      return parsedNavParts;
+    },
     async parseFundNAVUpdates(dataNAV: any): Promise<INAVUpdate[]> {
       const navUpdates = [] as INAVUpdate[];
-      // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable).
+      // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable), they should all
+      // have the same length so we just use the liquid key.
       const navUpdatesLen = dataNAV[PositionType.Liquid].length;
       const fundNavUpdateTimes = await this.fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call();
 
@@ -623,31 +659,23 @@ export const useFundStore = defineStore({
           },
         )
       }
+
       console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
       // Fetch NAV JSON entries for each NAV update.
-      const promises: Promise<any>[] = Array.from(
-        { length: navUpdatesLen },
-        (_, index) => this.fundContract.methods.getNavEntry(index + 1).call(),
-      );
-
-      // Each NAV update has more entries.
-      // Parse and store them to the NAV update entries.
-      const navUpdatePromises = await Promise.allSettled(promises);
+      const navEntries: Record<string, any>[][] = dataNAV.encodedNavUpdate.map(decodeNavUpdateEntry);
 
       // Process results
-      navUpdatePromises.forEach((navUpdateResult, index) => {
-        if (navUpdateResult.status === "fulfilled") {
-          const navEntries: Record<string, any>[] = navUpdateResult.value;
-          console.log("navEntries: ", navEntries);
-
-          for (const navEntry of navEntries) {
-            navUpdates[index].entries.push(this.parseNAVEntry(navEntry))
-          }
-        } else {
-          console.error(`Failed to fetch NAV entry ${index + 1}:`, navUpdateResult.reason);
+      for (const [index, navMethods] of navEntries.entries()) {
+        // TODO remove this if when reader contract is fixed.
+        if (!navMethods.length) continue
+        for (const navMethod of navMethods) {
+          const parsedNavMethod = this.parseNAVEntry(navMethod);
+          // parsedNavMethod.pastNavValue = dataNAV[parsedNavMethod.positionType][index]
+          navUpdates[index].entries.push(parsedNavMethod)
+          console.warn("parsedNavMethod:", dataNAV[parsedNavMethod.positionType][index])
         }
-      });
-
+      }
+      console.warn("navUpdates: ", navUpdates);
       return navUpdates;
     },
     /**

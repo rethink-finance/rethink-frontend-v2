@@ -1,8 +1,6 @@
 import { defineStore } from "pinia";
-import type { AbiInput } from "web3";
 import { Web3 } from "web3";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
-import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import SafeMultiSendCallOnlyJson from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
@@ -13,10 +11,12 @@ import type IAddresses from "~/types/addresses";
 import type { IContractAddresses } from "~/types/addresses";
 import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
+import type { INAVParts } from "~/types/fund";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
+import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -288,6 +288,7 @@ export const useFundsStore = defineStore({
 
             // NAV Updates
             navUpdates: [] as INAVUpdate[],
+            navParts: [] as INAVParts[],
           };
 
           const metaDataJson = dataNAVs.fundMetadata[index];
@@ -343,10 +344,6 @@ export const useFundsStore = defineStore({
       this.navMethodDetailsHashToFundAddress = {};
 
       console.log("allFundsNavData: ", allFundsNavData);
-      const getNavEntryFunctionABI: AbiInput[] = GovernableFund.abi.find(
-        func => func.name === "getNavEntry" && func.type === "function",
-      )?.outputs || [];
-
       console.log("Fetch all NAV methods");
       for (const navData of allFundsNavData) {
         if (!navData.encodedNavUpdate?.length) continue;
@@ -354,7 +351,7 @@ export const useFundsStore = defineStore({
         for (const encodedNavUpdate of navData.encodedNavUpdate) {
           try {
             // Decode NAV entry data.
-            const navEntries: Record<string, any>[] = this.web3.eth.abi.decodeParameters(getNavEntryFunctionABI, encodedNavUpdate)[0] as any[];
+            const navEntries: Record<string, any>[] = decodeNavUpdateEntry(encodedNavUpdate);
 
             for (const [i, navEntry] of navEntries.entries()) {
               // Ignore NAV methods that are not original NAV entries.

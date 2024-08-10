@@ -238,10 +238,7 @@ async function simulateNAVMethodValue(navEntry: INAVMethod) {
     return;
   }
 
-  const NAVCalculatorContract = new web3Store.web3.eth.Contract(
-    NAVCalculatorJSON.abi,
-    web3Store.NAVCalculatorBeaconProxyAddress,
-  );
+  const NAVCalculatorContract = fundStore.navCalculatorContract;
   try {
     navEntry.isNavSimulationLoading = true;
     navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;

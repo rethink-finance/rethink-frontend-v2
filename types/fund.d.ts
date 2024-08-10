@@ -3,6 +3,13 @@ import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 
+export interface INAVParts {
+  baseAssetOIVBal: bigint,
+  baseAssetSafeBal: bigint,
+  feeBal: bigint,
+  totalNAV: bigint,
+}
+
 /**
  * Example API response data of getFundSettings:
  * allowedDepositAddrs: []
@@ -117,4 +124,5 @@ export default interface IFund {
 
   // NAV Updates
   navUpdates: INAVUpdate[];
+  navParts: INAVParts[];
 }

@@ -34,6 +34,10 @@ export default interface INAVMethod {
   // pastNAVUpdateEntryFundAddress is original if it was found in fetchAllNavMethods
   foundMatchingPastNAVUpdateEntryFundAddress?: boolean,
   pastNAVUpdateEntryFundAddress?: string,
+  // NAV value of that NAV method (if it was already executed in the past)
+  pastNavValue?: bigint,
+  pastNavValueFormatted?: bigint,
+
   // @dev note:
   // It is very important to keep the same structure of the details hash always, as it is used to
   // compare NAV methods by the hashed details value, and any additional key value pair would break it.
