@@ -7,6 +7,9 @@
         </div>
         <div class="main_header__subtitle">
           Last updated on <strong>{{ fundLastNAVUpdateDate }}</strong>
+          <strong v-if="isClearDraftVisible">
+            (DRAFT)
+          </strong>
         </div>
       </div>
     </UiHeader>
@@ -90,43 +93,67 @@
             required
           />
 
-          <v-row class="nav_method_changes">
-            <v-expansion-panels>
+          <v-row class="proposal_description d-flex flex-grow-1 justify-space-between align-center">
+            <v-label class="label_required">
+              NAV Methods
+            </v-label>
+            <div>
+              <nuxt-link :to="`/details/${selectedFundSlug}/nav/newMethod`">
+                <v-btn class="text-secondary me-4" variant="outlined">
+                  Create New Method
+                </v-btn>
+              </nuxt-link>
+              <nuxt-link
+                :to="`/details/${selectedFundSlug}/nav/addFromLibrary`"
+              >
+                <v-btn class="text-secondary" variant="outlined">
+                  Add From Library
+                </v-btn>
+              </nuxt-link>
+            </div>
+          </v-row>
+          <v-row>
+            <v-expansion-panels v-model="expandedPanels">
               <v-expansion-panel eager>
                 <v-expansion-panel-title static>
-                  <div class="nav_method_changes__title">
-                    <div>
-                      Proposal Methods
-                    </div>
-                    <div>
-                      •
-                    </div>
-                    <div v-if="newEntriesCount" class="text-success">
-                      {{ newEntriesCount }} New
-                    </div>
-                    <div v-if="deletedEntriesCount" class="text-error">
-                      {{ deletedEntriesCount }} Deleted
-                    </div>
-                    <div v-if="!newEntriesCount && !deletedEntriesCount">
-                      0 Changes
+                  <div class="d-flex flex-grow-1 justify-space-between align-center me-4">
+                    <div class="nav_methods_title">
+                      <div>
+                        •
+                      </div>
+                      <div v-if="newEntriesCount" class="text-success">
+                        {{ newEntriesCount }} New
+                      </div>
+                      <div v-if="deletedEntriesCount" class="text-error">
+                        {{ deletedEntriesCount }} Deleted
+                      </div>
+                      <div v-if="!newEntriesCount && !deletedEntriesCount">
+                        0 Changes
+                      </div>
                     </div>
                   </div>
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
-                  <FundNavMethodsTable v-model:methods="fundManagedNAVMethods" deletable />
+                  <FundNavMethodsTable
+                    v-model:methods="fundManagedNAVMethods"
+                    show-base-token-balances
+                    show-simulated-nav
+                    show-summary-row
+                    deletable
+                  />
                 </v-expansion-panel-text>
               </v-expansion-panel>
             </v-expansion-panels>
           </v-row>
 
           <v-row>
-            <div class="action-buttons">
+            <div class="action_buttons">
               <v-btn
                 class="text-secondary"
                 variant="outlined"
-                :disabled="true"
+                @click="clearDraft"
               >
-                Save Draft
+                Reset Draft
               </v-btn>
               <v-btn
                 class="bg-primary text-secondary ms-6"
@@ -156,8 +183,8 @@
 import type { AbiFunctionFragment } from "web3";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import NAVExecutor from "assets/contracts/NAVExecutor.json";
-import addressesJson from "~/assets/contracts/addresses.json";
-import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
+import addressesJson from "assets/contracts/addresses.json";
+import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -176,7 +203,15 @@ const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const emit = defineEmits(["updateBreadcrumbs"]);
 
-const { selectedFundAddress, selectedFundSlug, fundManagedNAVMethods, fundLastNAVUpdate } = toRefs(fundStore);
+const {
+  selectedFundAddress,
+  selectedFundSlug,
+  fundManagedNAVMethods,
+  fundLastNAVUpdate,
+  fundLastNAVUpdateMethods,
+} = toRefs(fundStore);
+const expandedPanels = ref([0]);
+
 const proposal = ref({
   title: "",
   allowManagerToUpdateNav: false,
@@ -190,14 +225,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
     to: `/details/${selectedFundSlug.value}/nav`,
   },
   {
-    title: "Manage NAV Methods",
-    disabled: false,
-    to: `/details/${selectedFundSlug.value}/nav/manage`,
-  },
-  {
     title: "Create NAV Proposal",
     disabled: true,
-    to: `/details/${selectedFundSlug.value}/nav/manage/proposal`,
+    to: `/details/${selectedFundSlug.value}/nav/proposal`,
   },
 ];
 
@@ -207,6 +237,7 @@ const formIsValid = ref(false);
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
+  proposal.value = getProposalDraft();
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
@@ -535,12 +566,11 @@ const createProposal = async () => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
 
-      removeDraft();
+      clearDraft();
     }).on("receipt", (receipt: any) => {
       console.log("receipt: ", receipt);
       if (receipt.status) {
-
-        removeDraft();
+        clearDraft();
         toastStore.successToast(
           "Register the proposal transactions was successful. " +
           "You can now vote on the proposal in the governance page.",
@@ -562,23 +592,128 @@ const createProposal = async () => {
   }
 }
 
-const removeDraft = () => {
-  try {
-    let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
-    if (!navUpdateEntries) {
-      navUpdateEntries = {};
-    }
+watch(
+  fundManagedNAVMethods,
+  () => {
+    saveDraft();
+  },
+  { deep: true },
+);
+watch(
+  proposal,
+  () => {
+    saveProposalDraft();
+  },
+  { deep: true },
+);
+const isClearDraftVisible = computed(() => {
+  // check if the draft is the same as the last update
+  const isSameAsLastUpdate =
+    JSON.stringify(fundManagedNAVMethods.value, stringifyBigInt) ===
+    JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt);
+  const isDraftEmpty = Object.keys(fundManagedNAVMethods.value).length === 0;
 
+  if (proposal.value?.title || proposal.value?.description) return true;
+
+  return !isSameAsLastUpdate && !isDraftEmpty;
+});
+const clearDraft = () => {
+  // loadingDraftClear.value = true;
+  try {
+    fundManagedNAVMethods.value =  JSON.parse(JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt), parseBigInt);
+    // reset the local storage as well
+    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
+    // navUpdateEntries[selectedFundAddress.value] = fundManagedNAVMethods.value;
     // we need to delete navUpdateEntries[selectedFundAddress.value];
     delete navUpdateEntries[selectedFundAddress.value];
-    localStorage.setItem("navUpdateEntries", JSON.stringify(navUpdateEntries));
+
+    setLocalStorageItem("navUpdateEntries", navUpdateEntries);
+
+    toastStore.successToast("Draft cleared successfully");
   } catch (e) {
     console.error(e);
-    toastStore.errorToast("Failed to remove draft");
+    toastStore.errorToast("Failed to clear NAV draft");
+  } finally {
+    // loadingDraftClear.value = false;
+  }
+
+  try {
+    resetProposalDraft();
+  } catch (e) {
+    console.error(e);
+    toastStore.errorToast("Failed to clear proposal draft");
+  } finally {
+    // loadingDraftClear.value = false;
+  }
+};
+const saveDraft = () => {
+  try {
+    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
+
+    navUpdateEntries[selectedFundAddress.value] = JSON.parse(
+      JSON.stringify(fundManagedNAVMethods.value, stringifyBigInt),
+    );
+
+    setLocalStorageItem("navUpdateEntries", navUpdateEntries);
+    console.log("LS: ", navUpdateEntries)
+  } catch (e) {
+    console.error(e);
+    toastStore.errorToast("Failed to save NAV draft");
   }
 };
 
+const getDefaultProposal = () => {
+  return {
+    title: "",
+    allowManagerToUpdateNav: false,
+    collectManagementFees: false,
+    description: "",
+  }
+}
+const getProposalDraft = () => {
+  const fundProposalDrafts = getLocalStorageItem("fundProposalDrafts", {});
+  return fundProposalDrafts[selectedFundAddress.value]?.nav || getDefaultProposal()
+}
 
+const saveProposalDraft = () => {
+  try {
+    const fundProposalDrafts = getLocalStorageItem("fundProposalDrafts", {});
+
+    if (!fundProposalDrafts[selectedFundAddress.value]) {
+      fundProposalDrafts[selectedFundAddress.value] = {};
+    }
+
+    fundProposalDrafts[selectedFundAddress.value].nav = JSON.parse(
+      JSON.stringify(proposal.value, stringifyBigInt),
+    );
+    setLocalStorageItem("fundProposalDrafts", fundProposalDrafts);
+    console.log("LS proposals: ", fundProposalDrafts)
+  } catch (e) {
+    console.error(e);
+    toastStore.errorToast("Failed to save fund proposal draft");
+  }
+};
+
+const resetProposalDraft = () => {
+  try {
+    const fundProposalDrafts = getLocalStorageItem("fundProposalDrafts", {});
+
+    if (!fundProposalDrafts[selectedFundAddress.value]) {
+      fundProposalDrafts[selectedFundAddress.value] = {};
+    }
+
+    if (Object.hasOwn(fundProposalDrafts[selectedFundAddress.value] || {}, "nav")) {
+      // Clear draft and proposal value.
+      delete fundProposalDrafts[selectedFundAddress.value].nav;
+    }
+    proposal.value = getDefaultProposal();
+    setLocalStorageItem("fundProposalDrafts", fundProposalDrafts);
+    console.log("LS RESET proposals: ", fundProposalDrafts)
+  } catch (e) {
+    console.error(e);
+    toastStore.errorToast("Failed to save fund proposal draft");
+  }
+};
 </script>
 
 <style scoped lang="scss">
@@ -661,22 +796,19 @@ const removeDraft = () => {
   margin-bottom: 1.5rem;
 }
 
-.nav_method_changes {
-  margin: 2rem 0;
-
-  &__title {
+.nav_methods_title {
     display: flex;
     flex-direction: row;
     gap: .5rem;
     font-weight: 500;
     font-size: $text-sm;
-  }
 }
 
-.action-buttons {
+.action_buttons {
   width: 100%;
   display: flex;
   flex-direction: row;
-  justify-content: end;
+  margin-top: 1rem;
+  justify-content: space-between;
 }
 </style>

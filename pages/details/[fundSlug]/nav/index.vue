@@ -55,9 +55,9 @@
           </div>
         </div>
         <div>
-          <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage`">
-            <v-btn class="text-secondary" variant="outlined">
-              Manage Methods
+          <nuxt-link :to="`/details/${selectedFundSlug}/nav/proposal`">
+            <v-btn class="bg-primary text-secondary ms-6">
+              Create NAV Proposal
             </v-btn>
           </nuxt-link>
         </div>
