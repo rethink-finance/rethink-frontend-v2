@@ -21,7 +21,7 @@
         />
         <div v-else class="w-100 d-flex justify-center align-center h-100">
           <h3>
-            No NAV data available yet.
+            No NAV updates available yet.
           </h3>
         </div>
       </ClientOnly>

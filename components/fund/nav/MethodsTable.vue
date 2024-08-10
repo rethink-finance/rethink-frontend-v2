@@ -1,6 +1,6 @@
 <template>
   <v-data-table
-    v-if="methods.length"
+    v-if="computedMethods.length"
     v-model="selected"
     v-model:expanded="expanded"
     :headers="headers"
