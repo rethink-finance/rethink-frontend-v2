@@ -392,6 +392,8 @@ onBeforeUnmount(() => {
     font-size: 1rem;
     font-weight: 400;
     color: $color-text-irrelevant;
+    white-space: break-spaces;
+    overflow-wrap: break-word;
   }
   &__show_raw_calldatas_switch {
     position: absolute;
