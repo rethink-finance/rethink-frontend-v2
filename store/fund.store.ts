@@ -118,10 +118,41 @@ export const useFundStore = defineStore({
       );
       return Number(fundTokenTotalSupply.div(totalNAV));
     },
-    fundTotalNAVFormattedShort(state: IState): string {
-      if (!state.fund?.totalNAVWei) return "N/A";
-      const totalNAV = Number(formatTokenValue(state.fund.totalNAVWei, state.fund.baseToken.decimals, false));
-      return formatNumberShort(totalNAV) + " " + state.fund.baseToken.symbol;
+    userCurrentValue(): bigint {
+      /**
+       * User current value (in base currency) is calculated as:
+       * (totalNAV() * balanceOf(ownr)) / totalSupply();
+       *
+       * But if there are no NAV updates yet, we should take _totalDepositBal instead of totalNAV(), as totalNAV()
+       * in the fund GovernableFund.sol contract is not updated yet, (_nav is zero).
+       */
+      // If any NAV update exists, we can just return the totalNAV value from the fund contract.
+      if (this.fundLastNAVUpdate?.timestamp) return this.userFundShareValue || 0n;
+
+      // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
+      const fundTokenTotalSupply = this.fund?.fundTokenTotalSupply || 0n;
+      return (this.fundTotalNAV * this.userFundTokenBalance) / fundTokenTotalSupply;
+    },
+    fundTotalNAV(): bigint {
+      /**
+       * Total NAV is calculated in GovernableFund.sol as:
+       * _nav
+       * + IERC20(FundSettings.baseToken).balanceOf(address(this))
+       * + IERC20(FundSettings.baseToken).balanceOf(FundSettings.safe)
+       * - _feeBal
+       *
+       * But if there are no NAV updates yet, we should take _totalDepositBal instead to get a correct value.
+       */
+      // If any NAV update exists, we can just return the totalNAV value from the fund contract.
+      if (this.fundLastNAVUpdate?.timestamp) return this.fund?.totalNAVWei || 0n;
+
+      // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
+      return this.fund?.totalDepositBalance || 0n;
+    },
+    fundTotalNAVFormattedShort(): string {
+      if (!this.fund?.address) return "N/A";
+      const totalNAV = Number(formatTokenValue(this.fundTotalNAV, this.fund.baseToken.decimals, false));
+      return formatNumberShort(totalNAV) + " " + this.fund.baseToken.symbol;
     },
     selectedFundSlug(state: IState): string {
       const chainId = this.web3Store?.chainId || "";
@@ -367,6 +398,7 @@ export const useFundStore = defineStore({
           this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
           fundTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
           fundContract.methods.totalNAV().call() as Promise<bigint>,
+          fundContract.methods._totalDepositBal().call() as Promise<bigint>,
           rethinkFundGovernorContract.methods.votingDelay().call() as Promise<number>,
           rethinkFundGovernorContract.methods.votingPeriod().call() as Promise<number>,
           rethinkFundGovernorContract.methods.proposalThreshold().call() as Promise<number>,
@@ -390,6 +422,7 @@ export const useFundStore = defineStore({
           fundTokenDecimals,
           fundTokenTotalSupply,
           fundTotalNAV,
+          fundTotalDepositBalance,
           fundVotingDelay,
           fundVotingPeriod,
           fundProposalThreshold,
@@ -437,6 +470,7 @@ export const useFundStore = defineStore({
             decimals: governanceTokenDecimals ?? 18,
           } as IToken,
           totalNAVWei: fundTotalNAV || BigInt("0"),
+          totalDepositBalance: fundTotalDepositBalance || BigInt("0"),
           governanceTokenTotalSupply,
           fundTokenTotalSupply,
           cumulativeReturnPercent: 0,
@@ -736,7 +770,6 @@ export const useFundStore = defineStore({
       }
       try {
         this.userRedemptionRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Redemption)
-        console.log("redemption", this.userRedemptionRequest);
       } catch (e) {
         console.error(
           "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
