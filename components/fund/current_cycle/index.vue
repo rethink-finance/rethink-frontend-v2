@@ -141,6 +141,9 @@ const depositDisabledTooltipText = computed(() => {
   if (shouldUserWaitSettlementOrCancelDeposit.value) {
     return "Wait for settlement or cancel the deposit request."
   }
+  if (!fundStore.isUserWalletWhitelisted) {
+    return "Your wallet address is not whitelisted to allow deposits into this fund."
+  }
   return ""
 });
 const redemptionDisabledTooltipText = computed(() => {
@@ -161,7 +164,7 @@ const redemptionDisabledTooltipText = computed(() => {
   }
 
   if (!fundStore.isUserWalletWhitelisted) {
-    return `Your account address ${fundStore.activeAccountAddress} is not whitelisted to allow deposits into this fund.`
+    return "Your wallet address is not whitelisted to allow deposits into this fund."
   }
   return ""
 });

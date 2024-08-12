@@ -216,7 +216,7 @@ const buttons = ref([
         return "Redemption request already exists. To change it, you first have to cancel the existing one."
       }
       if (!fundStore.isUserWalletWhitelisted) {
-        return "Your account address is not whitelisted to allow deposits into this fund."
+        return "Your wallet address is not whitelisted to allow deposits into this fund."
       }
       return ""
     }),
