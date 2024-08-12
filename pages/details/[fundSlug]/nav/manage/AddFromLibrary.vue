@@ -57,7 +57,7 @@ const { selectedFundSlug } = toRefs(fundStore);
 const { allNavMethods } = toRefs(fundsStore);
 
 const breadcrumbItems: BreadcrumbItem[] = [
-  {
+  {W
     title: "NAV Methods",
     disabled: false,
     to: `/details/${selectedFundSlug.value}/nav`,
@@ -65,12 +65,12 @@ const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "Manage NAV Methods",
     disabled: false,
-    to: `/details/${selectedFundSlug.value}/nav/manage/proposal`,
+    to: `/details/${selectedFundSlug.value}/nav/manage`,
   },
   {
     title: "Add From Library",
     disabled: true,
-    to: `/details/${selectedFundSlug.value}/nav/addFromLibrary`,
+    to: `/details/${selectedFundSlug.value}/nav/manage/addFromLibrary`,
   },
 ];
 
