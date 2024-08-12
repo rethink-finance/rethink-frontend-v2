@@ -179,6 +179,12 @@ export const useFundStore = defineStore({
     userFundSuggestedAllowanceFormatted(): string {
       return ethers.formatUnits(this.userFundSuggestedAllowance, this.fund?.baseToken.decimals);
     },
+    isUserWalletWhitelisted(): boolean {
+      const fundAllowedDepositAddresses = this.fund?.allowedDepositAddresses || [];
+      if (!this.fund?.isWhitelistedDeposits) return true;
+
+      return fundAllowedDepositAddresses.includes(this.activeAccountAddress || "");
+    },
     shouldUserRequestDeposit(): boolean {
       // User deposit request does not exist yet, he should request deposit.
       return !this.userDepositRequestExists

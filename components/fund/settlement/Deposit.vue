@@ -152,7 +152,7 @@ const isAnythingLoading = computed(() => {
 });
 
 const isRequestDepositDisabled = computed(() => {
-  return errorMessages.value.length > 0 || isAnythingLoading.value;
+  return errorMessages.value.length > 0 || isAnythingLoading.value || !fundStore.isUserWalletWhitelisted;
 });
 
 const errorMessages = computed<IError[]>(() => {
@@ -301,6 +301,9 @@ const buttons = ref([
     tooltipText: computed(() => {
       if (userDepositRequestExists.value) {
         return "Deposit request already exists. To change it, you first have to cancel the existing one."
+      }
+      if (!fundStore.isUserWalletWhitelisted) {
+        return "Your account address is not whitelisted to allow deposits into this fund."
       }
       return ""
     }),

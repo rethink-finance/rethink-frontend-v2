@@ -159,8 +159,8 @@ const redemptionDisabledTooltipText = computed(() => {
   if (fundContractBaseTokenBalance > redemptionRequestAmount) {
     return "Not enough liquidity in the fund contract."
   }
-  const fundAllowedDepositAddresses = fundStore.fund?.allowedDepositAddresses || [];
-  if (fundStore.fund?.isWhitelistedDeposits && !fundAllowedDepositAddresses.includes(fundStore.activeAccountAddress || "")) {
+
+  if (!fundStore.isUserWalletWhitelisted) {
     return `Your account address ${fundStore.activeAccountAddress} is not whitelisted to allow deposits into this fund.`
   }
   return ""
