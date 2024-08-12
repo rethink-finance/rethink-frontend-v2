@@ -12,7 +12,7 @@
           :src="fund.photoUrl"
           class="fund-name__avatar_img"
           alt="fund cover image"
-        />
+        >
       </v-avatar>
       <div class="fund-name__title">
         <p>
@@ -56,9 +56,11 @@
     <v-progress-circular indeterminate />
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
-    <h2 class="mb-2">Fund not found</h2>
+    <h2 class="mb-2">
+      Fund not found
+    </h2>
     <p class="text-center">
-      Are you sure you are on the right network? <br />
+      Are you sure you are on the right network? <br>
       Try switching to a different network.
     </p>
   </div>
@@ -102,15 +104,17 @@ const fetchFund = async () => {
     console.error("No fund address provided in the route.");
     return;
   }
-  loading.value = true;
 
+  loading.value = true;
   try {
     await fundStore.getFund(fundAddress);
   } catch (e) {
     console.error("Failed fetching fund -> ", e);
   }
-
   loading.value = false;
+
+  fundStore.fetchFundNAVUpdates();
+  fundStore.fetchUserBalances();
 };
 
 // TODO: two watchers ? can we combine them?
@@ -118,7 +122,7 @@ watch(
   () => web3Store.chainId,
   () => {
     fetchFund();
-  }
+  },
 );
 // Watch for route changes to reset the breadcrumbs
 watch(
@@ -132,7 +136,7 @@ watch(
     ) {
       setBreadcrumbItems([]);
     }
-  }
+  },
 );
 
 const switchNetwork = async (chainId: string) => {
@@ -202,7 +206,7 @@ onMounted(() => {
 });
 const fund = computed(() => fundStore.fund as IFund);
 const fundDetailsRoute = computed(
-  () => `/details/${chainId}-${tokenSymbol}-${fundAddress}`
+  () => `/details/${chainId}-${tokenSymbol}-${fundAddress}`,
 );
 
 

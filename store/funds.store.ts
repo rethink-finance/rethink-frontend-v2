@@ -288,7 +288,6 @@ export const useFundsStore = defineStore({
 
             // NAV Updates
             navUpdates: [] as INAVUpdate[],
-            navParts: [] as INAVParts[],
           };
 
           const metaDataJson = dataNAVs.fundMetadata[index];

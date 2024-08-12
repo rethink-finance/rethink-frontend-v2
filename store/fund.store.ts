@@ -17,6 +17,10 @@ import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
 import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import {
+  FundTransactionType,
+  FundTransactionTypeStorageSlotIdxMap,
+} from "~/types/enums/fund_transaction_type";
+import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
   PositionTypeKeys,
@@ -30,11 +34,8 @@ import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
-import {
-  FundTransactionType,
-  FundTransactionTypeStorageSlotIdxMap,
-} from "~/types/enums/fund_transaction_type";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
+import { parseBigInt } from "~/composables/localStorage";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -59,6 +60,9 @@ interface IState {
   // Cached roleMod addresses for each fund.
   fundRoleModAddress: Record<string, string>,
   refreshSimulateNAVCounter: number,
+  // Loading flags
+  loadingNavUpdates: boolean,
+  loadingUserBalances: boolean,
 }
 
 
@@ -78,6 +82,8 @@ export const useFundStore = defineStore({
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
     refreshSimulateNAVCounter: 0,
+    loadingNavUpdates: false,
+    loadingUserBalances: false,
   }),
   getters: {
     accountStore(): any {
@@ -274,21 +280,10 @@ export const useFundStore = defineStore({
 
       try {
         this.fund = await this.fetchFundData() as IFund;
-        this.fundManagedNAVMethods = JSON.parse(
-          JSON.stringify(this.fundLastNAVUpdateMethods),
-        );
-        console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
         console.log("fund: ", toRaw(this.fund))
       } catch (e) {
         console.error(`Failed fetching fund ${fundAddress} -> `, e)
       }
-      try {
-        await this.fetchUserBalances();
-      } catch (e) {
-        console.error(`Failed fetching user fundBalances fund ${fundAddress} -> `, e)
-      }
-
-      this.mergeNAVMethodsFromLocalStorage();
     },
     /**
      * Fetches multiple fund data:
@@ -312,18 +307,29 @@ export const useFundStore = defineStore({
       // Process the fund settings with a method assumed to be available in the current scope
       const fundSettings: IFundSettings = this.parseFundSettings(settingsData);
 
-      const fund = await this.fetchFundMetadata(fundSettings);
+      return await this.fetchFundMetadata(fundSettings);
+    },
+    async fetchFundNAVUpdates(): Promise<void> {
+      if (!this.fund) return
+      this.loadingNavUpdates = true;
 
       try {
-        const dataNAV = await this.rethinkReaderContract.methods.getNAVDataForFund(fundSettings.fundAddress).call();
+        const dataNAV = await this.rethinkReaderContract.methods.getNAVDataForFund(this.fund?.address).call();
         console.log("fund NAV: ", dataNAV)
-        fund.positionTypeCounts = this.parseFundPositionTypeCounts(dataNAV);
-        fund.navUpdates = await this.parseFundNAVUpdates(dataNAV);
-        fund.navParts = await this.fetchNavParts(fund.navUpdates.length);
+        this.fund.positionTypeCounts = this.parseFundPositionTypeCounts(dataNAV);
+        this.fund.navUpdates = await this.parseFundNAVUpdates(dataNAV);
       } catch (error) {
-        console.error("Error calling getNAVDataForFund: ", error, "fund: ", fundSettings.fundAddress);
+        console.error("Error calling getNAVDataForFund: ", error, "fund: ", this.fund.address);
       }
-      return fund;
+
+      console.warn("LAST METHODS", this.fundLastNAVUpdateMethods)
+      this.fundManagedNAVMethods = JSON.parse(
+        JSON.stringify(this.fundLastNAVUpdateMethods, stringifyBigInt), parseBigInt,
+      );
+      console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
+      this.mergeNAVMethodsFromLocalStorage();
+
+      this.loadingNavUpdates = false;
     },
     parseFundSettings(fundData: any) {
       const fundSettings: Partial<IFundSettings> = {};
@@ -358,10 +364,11 @@ export const useFundStore = defineStore({
         ...(from ? { from } : {}),
       } as IClockMode;
     },
-    fetchUserBalances() {
+    async fetchUserBalances() {
       if (!this.accountStore.activeAccount?.address) return;
+      this.loadingUserBalances = true;
 
-      return Promise.allSettled([
+      const promises = await Promise.allSettled([
         this.fetchUserBaseTokenBalance(),
         this.fetchUserFundTokenBalance(),
         this.fetchUserGovernanceTokenBalance(),
@@ -370,6 +377,9 @@ export const useFundStore = defineStore({
         this.fetchUserFundAllowance(),
         this.fetchUserFundDepositRedemptionRequests(),
       ]);
+
+      this.loadingUserBalances = false;
+      return promises
     },
     /**
      * Fetches multiple fund metadata such as:
@@ -533,7 +543,6 @@ export const useFundStore = defineStore({
 
           // NAV Updates
           navUpdates: [] as INAVUpdate[],
-          navParts: [] as INAVParts[],
         } as IFund;
 
         // Process metadata if available
@@ -596,6 +605,7 @@ export const useFundStore = defineStore({
       } as INAVMethod
     },
     async fetchNavParts(navUpdatesLen: number): Promise<INAVParts[]> {
+      // Important to know: nav update indices start with 1, not with 0.
       const promises: Promise<any>[] = Array.from(
         { length: navUpdatesLen },
         (_, index) => this.navCalculatorContract.methods.getNAVParts(
@@ -613,20 +623,25 @@ export const useFundStore = defineStore({
             baseAssetSafeBal: navParts.baseAssetSafeBal,
             feeBal: navParts.feeBal,
             totalNAV: navParts.totalNAV,
+            total: navParts.baseAssetOIVBal + navParts.baseAssetSafeBal + navParts.feeBal + navParts.totalNAV,
           } as INAVParts)
         } else {
           console.error(`Failed to fetch NAV parts ${index + 1}:`, navPartsResult.reason);
         }
       });
+      console.log("NAV parts", parsedNavParts)
 
       return parsedNavParts;
     },
     async parseFundNAVUpdates(dataNAV: any): Promise<INAVUpdate[]> {
       const navUpdates = [] as INAVUpdate[];
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable), they should all
-      // have the same length so we just use the liquid key.
+      // have the same length, so we just use the liquid key.
       const navUpdatesLen = dataNAV[PositionType.Liquid].length;
       const fundNavUpdateTimes = await this.fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call();
+
+      // Get a list of NAV parts (total NAV, fees, OIV balance, safe balance) for each NAV update.
+      const navParts = await this.fetchNavParts(navUpdatesLen);
 
       for (let i= 0; i < navUpdatesLen; i++) {
         let totalNAV = BigInt("0");
@@ -653,6 +668,7 @@ export const useFundStore = defineStore({
             // If the datetime of the NAV update is available format it, otherwise just use the index (e.g. #2).
             date: fundNavUpdateTimes[i] ? formatDate(new Date(navTimestamp)) : `#${(i+1).toString()}}`,
             timestamp: navTimestamp,
+            navParts: navParts[i],
             totalNAV,
             quantity,
             entries: [],
@@ -660,21 +676,45 @@ export const useFundStore = defineStore({
         )
       }
 
-      console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
       // Fetch NAV JSON entries for each NAV update.
-      const navEntries: Record<string, any>[][] = dataNAV.encodedNavUpdate.map(decodeNavUpdateEntry);
+      const promises: Promise<any>[] = Array.from(
+        { length: navUpdatesLen },
+        (_, index) => this.fundContract.methods.getNavEntry(index + 1).call(),
+      );
+
+      // Each NAV update has more entries.
+      // Parse and store them to the NAV update entries.
+      const navUpdatePromises = await Promise.allSettled(promises);
 
       // Process results
-      for (const [index, navMethods] of navEntries.entries()) {
-        // TODO remove this if when reader contract is fixed.
-        if (!navMethods.length) continue
-        for (const navMethod of navMethods) {
-          const parsedNavMethod = this.parseNAVEntry(navMethod);
-          // parsedNavMethod.pastNavValue = dataNAV[parsedNavMethod.positionType][index]
-          navUpdates[index].entries.push(parsedNavMethod)
-          console.warn("parsedNavMethod:", dataNAV[parsedNavMethod.positionType][index])
+      navUpdatePromises.forEach((navUpdateResult, index) => {
+        if (navUpdateResult.status === "fulfilled") {
+          const navEntries: Record<string, any>[] = navUpdateResult.value;
+          console.log("navEntries: ", navEntries);
+
+          for (const navEntry of navEntries) {
+            navUpdates[index].entries.push(this.parseNAVEntry(navEntry))
+          }
+        } else {
+          console.error(`Failed to fetch NAV entry ${index + 1}:`, navUpdateResult.reason);
         }
-      }
+      });
+
+      console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
+      // TODO use this code when reader contract is fixed
+      // Fetch NAV JSON entries for each NAV update.
+      // const navEntries: Record<string, any>[][] = dataNAV.encodedNavUpdate.map(decodeNavUpdateEntry);
+      //
+      // // Process results
+      // for (const [index, navMethods] of navEntries.entries()) {
+      //   // TODO remove this if when reader contract is fixed.
+      //   if (!navMethods.length) continue
+      //   for (const navMethod of navMethods) {
+      //     const parsedNavMethod = this.parseNAVEntry(navMethod);
+      //     // parsedNavMethod.pastNavValue = dataNAV[parsedNavMethod.positionType][index]
+      //     navUpdates[index].entries.push(parsedNavMethod)
+      //   }
+      // }
       console.warn("navUpdates: ", navUpdates);
       return navUpdates;
     },
@@ -859,15 +899,19 @@ export const useFundStore = defineStore({
     },
     mergeNAVMethodsFromLocalStorage() {
       let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
-      if (!navUpdateEntries) {
-        navUpdateEntries = {};
+      // if there are no NAV methods in local storage, save them
+      console.log("LOCAL STORAGE", navUpdateEntries);
+      if (!navUpdateEntries || !this.selectedFundAddress || !navUpdateEntries[this.selectedFundAddress]) {
+        console.log("MERGE NAV methods from LOCAL STORAGE", this.fundManagedNAVMethods);
+        navUpdateEntries = {
+          ...navUpdateEntries,
+          [this.selectedFundAddress]: this.fundManagedNAVMethods,
+        };
+        setLocalStorageItem("navUpdateEntries", navUpdateEntries);
       }
 
-      // TODO here we should merge the fetched NAV methods (fundManagedNAVMethods) with those
-      //  from local storage one by one and take our changed properties also along with those fetched.
-      //  you can merge both objects with spread operator ({...a, ...localStorageMethod}) for each method
-      // this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || {};
-      // TODO also here save to localStorage newly merged version of navUpdateEntries
+      // if there are NAV methods in local storage, assign them to the fundManagedNAVMethods.
+      this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || [];
     },
     async estimateGasFundFlowsCall(encodedFunctionCall: any) {
       try {

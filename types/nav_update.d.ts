@@ -1,5 +1,6 @@
 import { PositionType } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
+import type { INAVParts } from "~/types/fund";
 
 /**
  * NavEntryKeys = [
@@ -63,4 +64,5 @@ export default interface INAVUpdate {
     [PositionType.NFT]: bigint;
   };
   entries: INAVMethod[],
+  navParts?: INAVParts;
 }

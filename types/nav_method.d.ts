@@ -1,5 +1,6 @@
 import { PositionType } from "~/types/enums/position_type";
 import { ValuationType } from "~/types/enums/valuation_type";
+import type { INAVParts } from "~/types/fund";
 
 
 /**

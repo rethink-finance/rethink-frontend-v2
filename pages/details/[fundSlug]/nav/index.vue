@@ -65,6 +65,7 @@
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
         <FundNavMethodsTable
           :methods="fundLastNAVUpdateMethods"
+          :loading="fundStore.loadingNavUpdates"
           show-summary-row
           show-last-nav-update-value
           show-base-token-balances

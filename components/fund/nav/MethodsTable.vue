@@ -1,6 +1,7 @@
 <template>
+  <v-skeleton-loader v-if="loading" type="table" />
   <v-data-table
-    v-if="methods.length"
+    v-if="computedMethods.length"
     v-model="selected"
     v-model:expanded="expanded"
     :headers="headers"
@@ -244,6 +245,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ["update:methods", "selectedChanged"],
   setup() {
@@ -317,12 +322,7 @@ export default defineComponent({
       return this.formatNAV(totalNAV);
     },
     formattedTotalLastNAV() {
-      const totalNAV =
-        (this.navParts?.baseAssetOIVBal || 0n) +
-        (this.navParts?.baseAssetSafeBal || 0n) +
-        (this.navParts?.feeBal || 0n) +
-        (this.navParts?.totalNAV || 0n);
-      return this.formatNAV(totalNAV);
+      return this.formatNAV(this.navParts?.total || 0n);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
@@ -349,7 +349,7 @@ export default defineComponent({
     },
     navParts(): INAVParts | undefined {
       if (!this.navUpdateIndex) return undefined;
-      return this.fundStore.fund?.navParts?.[this.navUpdateIndex] as INAVParts;
+      return this.fundStore.fund?.navUpdates?.[this.navUpdateIndex].navParts as INAVParts;
     },
     computedMethods() {
       const methods = [];
@@ -400,15 +400,13 @@ export default defineComponent({
         })),
       ];
     },
-    methodsLength() {
-      return this.methods.length;
-    },
   },
   watch: {
-    methodsLength: {
-      handler() {
+    "methods.length": {
+      handler(newLen: any, oldLen: any) {
         // Simulate NAV method values everytime NAV methods change.
-        console.log("SIMULATE BY METHODS LENGTH")
+        if (!this.methods.length || oldLen === newLen) return;
+        console.log("SIMULATE BY METHODS LENGTH", oldLen, newLen)
         this.simulateNAV();
       },
       deep: true,
@@ -416,8 +414,8 @@ export default defineComponent({
     },
     "fundStore.refreshSimulateNAVCounter": {
       handler() {
-        // Simulate NAV method values everytime Simulate NAV button is pressed and refreshSimulateNAVCounter changes.
-        console.log("refreshSimulateNAVCounter:", this.fundStore.refreshSimulateNAVCounter)
+        // Simulate NAV method values everytime Simulate NAV button is pressed and triggerSimulateNav changes.
+        console.warn("fundStore.refreshSimulateNAVCounter:")
         this.simulateNAV();
       },
     },
@@ -458,7 +456,6 @@ export default defineComponent({
       const promises = [];
 
       for (const navEntry of this.methods) {
-        console.log("push navEntry", navEntry);
         promises.push(this.simulateNAVMethodValue(navEntry));
       }
       const settled = await Promise.allSettled(promises);
@@ -466,7 +463,7 @@ export default defineComponent({
       console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
     },
     async simulateNAVMethodValue(navEntry: INAVMethod) {
-      if (!this.web3Store.web3 || !navEntry.detailsHash) return;
+      if (!this.web3Store.web3 || !navEntry.detailsHash || navEntry.isNavSimulationLoading) return;
       const baseDecimals = this.fundStore.fund?.baseToken.decimals;
       if (!baseDecimals) {
         this.toastStore.errorToast(
@@ -534,7 +531,7 @@ export default defineComponent({
           const simulatedVal: bigint = await this.fundStore.navCalculatorContract.methods[
             navCalculationMethod
           ](...callData).call();
-          console.log("simulated value: ", simulatedVal);
+          // console.log("simulated value: ", simulatedVal);
 
           navEntry.simulatedNavFormatted = this.formatNAV(simulatedVal);
           navEntry.simulatedNav = simulatedVal;
