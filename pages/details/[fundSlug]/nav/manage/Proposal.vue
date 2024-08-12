@@ -9,14 +9,6 @@
           Last updated on <strong>{{ fundLastNAVUpdateDate }}</strong>
         </div>
       </div>
-      <v-btn
-        class="text-secondary"
-        variant="outlined"
-        :disabled="!isClearDraftVisible"
-        @click="clearDraft"
-      >
-        Clear Draft
-      </v-btn>
     </UiHeader>
     <div class="main_card">
       <v-form ref="form" v-model="formIsValid">
@@ -230,7 +222,6 @@ const formIsValid = ref(false);
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
-  proposal.value = getProposalDraft();
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
@@ -592,26 +583,7 @@ watch(
   },
   { deep: true },
 );
-watch(
-  proposal,
-  () => {
-    saveProposalDraft();
-  },
-  { deep: true },
-);
-const isClearDraftVisible = computed(() => {
-  // TODO now has a problem, probably because of "deleted" prop is added, to replicate:
-  // just open the page and go to antoher page and come back and save draft will be enabled, without any changes
-  // check if the draft is the same as the last update
-  const isSameAsLastUpdate =
-    JSON.stringify(fundManagedNAVMethods.value, stringifyBigInt) ===
-    JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt);
-  const isDraftEmpty = Object.keys(fundManagedNAVMethods.value).length === 0;
 
-  if (proposal.value?.title || proposal.value?.description) return true;
-
-  return !isSameAsLastUpdate && !isDraftEmpty;
-});
 const clearDraft = () => {
   try {
     fundManagedNAVMethods.value =  JSON.parse(JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt), parseBigInt);
@@ -628,14 +600,8 @@ const clearDraft = () => {
     console.error(e);
     toastStore.errorToast("Failed to clear NAV draft");
   }
-
-  try {
-    resetProposalDraft();
-  } catch (e) {
-    console.error(e);
-    toastStore.errorToast("Failed to clear proposal draft");
-  }
 };
+
 const saveDraft = () => {
   try {
     const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
@@ -651,19 +617,6 @@ const saveDraft = () => {
     toastStore.errorToast("Failed to save NAV draft");
   }
 };
-
-const getDefaultProposal = () => {
-  return {
-    title: "",
-    allowManagerToUpdateNav: false,
-    collectManagementFees: false,
-    description: "",
-  }
-}
-const getProposalDraft = () => {
-  const fundProposalDrafts = getLocalStorageItem("fundProposalDrafts", {});
-  return fundProposalDrafts[selectedFundAddress.value]?.nav || getDefaultProposal()
-}
 
 const saveProposalDraft = () => {
   try {
@@ -684,26 +637,6 @@ const saveProposalDraft = () => {
   }
 };
 
-const resetProposalDraft = () => {
-  try {
-    const fundProposalDrafts = getLocalStorageItem("fundProposalDrafts", {});
-
-    if (!fundProposalDrafts[selectedFundAddress.value]) {
-      fundProposalDrafts[selectedFundAddress.value] = {};
-    }
-
-    if (Object.hasOwn(fundProposalDrafts[selectedFundAddress.value] || {}, "nav")) {
-      // Clear draft and proposal value.
-      delete fundProposalDrafts[selectedFundAddress.value].nav;
-    }
-    proposal.value = getDefaultProposal();
-    setLocalStorageItem("fundProposalDrafts", fundProposalDrafts);
-    console.log("LS RESET proposals: ", fundProposalDrafts)
-  } catch (e) {
-    console.error(e);
-    toastStore.errorToast("Failed to save fund proposal draft");
-  }
-};
 </script>
 
 <style scoped lang="scss">
