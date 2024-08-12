@@ -309,9 +309,14 @@ export const useGovernanceProposalsStore = defineStore({
       }
     },
     async getBlockPerHoursRate() {      
-      const currentBlock = await this.fundStore.web3.eth.getBlock('latest');
+      const web3 = this.getWeb3InstanceByChainId();
+
+      const currentBlock = await web3.eth.getBlock('latest');
       const currentBlockNumber = Number(currentBlock.number);
       const currentBlockTimestamp = Number(currentBlock.timestamp);
+
+      console.log(`Current block number: ${currentBlockNumber}`);
+      console.log(`Current block timestamp: ${currentBlockTimestamp}`);
       
       const oneHourInSeconds = 3600; 
       const targetTimestamp = currentBlockTimestamp - oneHourInSeconds;
@@ -323,7 +328,7 @@ export const useGovernanceProposalsStore = defineStore({
 
       while (low <= high) {
         const mid = Math.floor((low + high) / 2);
-        const block = await this.fundStore.web3.eth.getBlock(mid);
+        const block = await web3.eth.getBlock(mid);
         const blockTimestamp = Number(block.timestamp); 
 
         // here we are trying to find the block that is closest to the target timestamp
@@ -346,7 +351,7 @@ export const useGovernanceProposalsStore = defineStore({
 
       // if we didn't find the block, we can just use the high block
       if (!targetBlock) {
-        targetBlock = await this.fundStore.web3.eth.getBlock(high);
+        targetBlock = await web3.eth.getBlock(high);
       }
 
       // calculate how many blocks are produced in the last hour
@@ -368,24 +373,26 @@ export const useGovernanceProposalsStore = defineStore({
 
       return estimatedTimestamp;
     },
-    async setVoteStartEndTimestamp(proposal: IGovernanceProposal) {
-        // we can list more chainIdMap if needed
-        // for now we know that arb-1 chain should use eth chain to get the block number and all the other stuff because arbi-1 saves events in eth chain
-        const chainIdMap = {
-          "0xa4b1": "0x1", 
-        }
-        const chainId = this.web3Store.chainId as keyof typeof chainIdMap;
-        const chainIdMapKey = chainIdMap[chainId];
+    getWeb3InstanceByChainId() {
+      // we can list more chainIdMap if needed
+      // for now we know that arb-1 chain should use eth chain to get the block number and all the other stuff because arbi-1 saves events in eth chain
+      const chainIdMap = {
+        "0xa4b1": "0x1", 
+      }
+      const chainId = this.web3Store.chainId as keyof typeof chainIdMap;
+      const chainIdMapKey = chainIdMap[chainId];
 
-        let web3;
-        // if the chainIdMapKey is found, use the rpcUrl from the chainIdMap
-        if (chainIdMapKey) {
-          console.log("chainIdMapKey: ", chainIdMapKey);
-          web3 = new Web3(this.web3Store.networksMap[chainIdMapKey].rpcUrl);
-        } else {
-          console.log("use the current web3");
-          web3 = this.fundStore.web3;
-        }
+      // if the chainIdMapKey is found, use the rpcUrl from the chainIdMap
+      if (chainIdMapKey) {
+        console.log("chainIdMapKey: ", chainIdMapKey);
+        return new Web3(this.web3Store.networksMap[chainIdMapKey].rpcUrl) as Web3;
+      } 
+      // if the chainIdMapKey is not found, use the current web3
+      console.log("use the current web3");
+      return this.fundStore.web3 as Web3;
+    },
+    async setVoteStartEndTimestamp(proposal: IGovernanceProposal) {
+        const web3 = this.getWeb3InstanceByChainId();
       
         // get the latest block
         const currentBlock = await web3.eth.getBlock('latest');
@@ -400,7 +407,7 @@ export const useGovernanceProposalsStore = defineStore({
           console.log("fetch blockEnd");
           const blockEnd = await web3.eth.getBlock(proposal.voteEnd);
           console.log("blockEnd: ", blockEnd);
-          proposal.voteEnd = blockEnd?.timestamp;
+          proposal.voteEnd = blockEnd?.timestamp.toString();
         }
         // if the voteEnd is in the future, we have to estimate the timestamp
         else{
@@ -415,7 +422,7 @@ export const useGovernanceProposalsStore = defineStore({
           console.log("fetch blockStart");
           const blockStart = await web3.eth.getBlock(proposal.voteStart);
           console.log("blockStart: ", blockStart);
-          proposal.voteStart = blockStart?.timestamp;
+          proposal.voteStart = blockStart?.timestamp.toString();
         }
         // if the voteStart is in the future, we have to estimate the timestamp
         else{
