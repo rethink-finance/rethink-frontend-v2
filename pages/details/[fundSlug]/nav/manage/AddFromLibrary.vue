@@ -57,7 +57,7 @@ const { selectedFundSlug } = toRefs(fundStore);
 const { allNavMethods } = toRefs(fundsStore);
 
 const breadcrumbItems: BreadcrumbItem[] = [
-  {W
+  {
     title: "NAV Methods",
     disabled: false,
     to: `/details/${selectedFundSlug.value}/nav`,
@@ -103,7 +103,7 @@ const addMethods = () => {
   }
 
   // Redirect back to Manage methods page.
-  router.push(`/details/${selectedFundSlug.value}/nav/manage/proposal`);
+  router.push(`/details/${selectedFundSlug.value}/nav/manage`);
   toastStore.addToast("Methods added successfully.")
 }
 </script>

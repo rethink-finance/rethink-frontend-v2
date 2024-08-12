@@ -423,7 +423,7 @@ const addMethod = () => {
   fundStore.fundManagedNAVMethods.push(newNavEntry);
 
   // Redirect back to Manage methods page.
-  router.push(`/details/${selectedFundSlug.value}/nav/manage/proposal`);
+  router.push(`/details/${selectedFundSlug.value}/nav/manage`);
   toastStore.addToast("Method added successfully.")
 }
 </script>
