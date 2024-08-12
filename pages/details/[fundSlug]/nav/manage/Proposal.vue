@@ -6,7 +6,7 @@
           Create NAV Proposal
         </div>
         <div class="main_header__subtitle">
-          Last updated on <strong>{{ fundLastNAVUpdateDate }}</strong>
+          Last NAV update date: <strong>{{ fundLastNAVUpdateDate }}</strong>
         </div>
       </div>
     </UiHeader>
