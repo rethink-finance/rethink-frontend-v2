@@ -42,6 +42,31 @@ export const formatDateLong = (date: Date) => {
 }
 
 /**
+ * Formats a Date object into a localized string representation.
+ * 
+ * The format will be: "Day Mon dd, yyyy, hh:mm am/pm" for locales using the 12-hour clock,
+ * and may vary based on the locale provided (defaults to 'en-US').
+ *
+ * @param {Date} date - The Date object to be formatted.
+ * @returns {string} The formatted date string in the format "Day Mon dd, yyyy, hh:mm am/pm" 
+ *                   or according to the provided locale's default format.
+ */
+export const formatDateToLocaleString = (date: Date) => {
+  if (!date) return "";
+
+  // TODO: we can add a locale parameter to this function to allow for custom locale formatting.
+  return date.toLocaleString('en-US', {
+    weekday: 'short',   // e.g., "Mon"
+    year: 'numeric',    // e.g., "2023"
+    month: 'short',     // e.g., "Jan"
+    day: 'numeric',     // e.g., "5"
+    hour: 'numeric',    // e.g., "5 PM"
+    minute: '2-digit',  // e.g., "05"
+    hour12: true        // 12-hour clock, "AM/PM"
+  });
+}
+
+/**
  * Converts a decimal number to a percentage string.
  * Optionally includes a "+" or "-" sign based on the number's positivity or negativity,
  * and the percentage value is formatted to two decimal places.
