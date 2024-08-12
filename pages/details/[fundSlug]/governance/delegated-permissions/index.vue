@@ -5,7 +5,6 @@
       :entry="delegatedEntry"
       :fields-map="fieldsMap"
       title="Delegated Permissions Proposal"
-      tooltip-text="We can show more info text, redirect to a new page etc."
       submit-label="Create Proposal"
       :submit-event="submitProposal"
       :is-submit-loading="loading"

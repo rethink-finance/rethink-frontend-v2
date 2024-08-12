@@ -1,6 +1,6 @@
 <template>
   <v-data-table
-    v-if="methods.length"
+    v-if="computedMethods.length"
     v-model="selected"
     v-model:expanded="expanded"
     :headers="headers"
@@ -376,15 +376,13 @@ export default defineComponent({
         })),
       ];
     },
-    methodsLength() {
-      return this.methods.length;
-    },
   },
   watch: {
-    methodsLength: {
-      handler() {
+    "methods.length": {
+      handler(newLen: any, oldLen: any) {
         // Simulate NAV method values everytime NAV methods change.
-        console.log("SIMULATE BY METHODS LENGTH")
+        if (!this.methods.length || oldLen === newLen) return;
+        console.log("SIMULATE BY METHODS LENGTH", oldLen, newLen)
         this.simulateNAV();
       },
       deep: true,
@@ -392,8 +390,8 @@ export default defineComponent({
     },
     "fundStore.refreshSimulateNAVCounter": {
       handler() {
-        // Simulate NAV method values everytime Simulate NAV button is pressed and refreshSimulateNAVCounter changes.
-        console.log("refreshSimulateNAVCounter:", this.fundStore.refreshSimulateNAVCounter)
+        // Simulate NAV method values everytime Simulate NAV button is pressed and triggerSimulateNav changes.
+        console.warn("fundStore.refreshSimulateNAVCounter:")
         this.simulateNAV();
       },
     },
@@ -442,7 +440,7 @@ export default defineComponent({
       console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
     },
     async simulateNAVMethodValue(navEntry: INAVMethod) {
-      if (!this.web3Store.web3 || !navEntry.detailsHash) return;
+      if (!this.web3Store.web3 || !navEntry.detailsHash || navEntry.isNavSimulationLoading) return;
       const baseDecimals = this.fundStore.fund?.baseToken.decimals;
       if (!baseDecimals) {
         this.toastStore.errorToast(

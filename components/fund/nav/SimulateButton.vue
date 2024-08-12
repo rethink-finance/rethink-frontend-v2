@@ -12,6 +12,3 @@
 import { useFundStore } from "~/store/fund.store";
 const fundStore = useFundStore();
 </script>
-
-<style lang="scss" scoped>
-</style>

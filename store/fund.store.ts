@@ -16,6 +16,10 @@ import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
 import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import {
+  FundTransactionType,
+  FundTransactionTypeStorageSlotIdxMap,
+} from "~/types/enums/fund_transaction_type";
+import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
   PositionTypeKeys,
@@ -23,15 +27,11 @@ import {
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
-import {
-  FundTransactionType,
-  FundTransactionTypeStorageSlotIdxMap,
-} from "~/types/enums/fund_transaction_type";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -831,15 +831,19 @@ export const useFundStore = defineStore({
     },
     mergeNAVMethodsFromLocalStorage() {
       let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
-      if (!navUpdateEntries) {
-        navUpdateEntries = {};
+      // if there are no NAV methods in local storage, save them
+      console.log("LOCAL STORAGE", navUpdateEntries);
+      if (!navUpdateEntries || !this.selectedFundAddress || !navUpdateEntries[this.selectedFundAddress]) {
+        console.log("MERGE NAV methods from LOCAL STORAGE", this.fundManagedNAVMethods);
+        navUpdateEntries = {
+          ...navUpdateEntries,
+          [this.selectedFundAddress]: this.fundManagedNAVMethods,
+        };
+        setLocalStorageItem("navUpdateEntries", navUpdateEntries);
       }
 
-      // TODO here we should merge the fetched NAV methods (fundManagedNAVMethods) with those
-      //  from local storage one by one and take our changed properties also along with those fetched.
-      //  you can merge both objects with spread operator ({...a, ...localStorageMethod}) for each method
-      // this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || {};
-      // TODO also here save to localStorage newly merged version of navUpdateEntries
+      // if there are NAV methods in local storage, assign them to the fundManagedNAVMethods.
+      this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || [];
     },
     async estimateGasFundFlowsCall(encodedFunctionCall: any) {
       try {

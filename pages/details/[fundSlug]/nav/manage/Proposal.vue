@@ -6,41 +6,42 @@
           Create NAV Proposal
         </div>
         <div class="main_header__subtitle">
-          Last updated on <strong>{{ fundLastNAVUpdateDate }}</strong>
+          Last NAV update date: <strong>{{ fundLastNAVUpdateDate }}</strong>
         </div>
       </div>
     </UiHeader>
     <div class="main_card">
       <v-form ref="form" v-model="formIsValid">
         <v-container fluid>
-          <div class="mb-8">
-            <v-row>
-              <div class="proposal_title_field">
-                <v-label class="label_required">
-                  Proposal Title
+          <!-- Proposal Title -->
+          <v-row>
+            <div class="proposal_title_field">
+              <v-label class="label_required">
+                Proposal Title
+              </v-label>
+              <div class="proposal_title_field__char_limit">
+                <v-label>
+                  MAX 150
                 </v-label>
-                <div class="proposal_title_field__char_limit">
-                  <v-label>
-                    MAX 150
-                  </v-label>
-                  <v-icon icon="mdi-circle-outline" size="15" />
-                </div>
+                <v-icon icon="mdi-circle-outline" size="15" />
               </div>
-            </v-row>
-            <v-row>
-              <v-text-field
-                v-model="proposal.title"
-                placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
-                required
-              />
-            </v-row>
-          </div>
+            </div>
+          </v-row>
+          <v-row class="mb-6">
+            <v-text-field
+              v-model="proposal.title"
+              placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+              required
+            />
+          </v-row>
+
+          <!-- Management -->
           <v-row>
             <v-label class="label_required">
               Management
             </v-label>
           </v-row>
-          <v-row>
+          <v-row class="mb-6">
             <div class="management">
               <div class="management__card">
                 <div class="management__row">
@@ -78,6 +79,8 @@
               </div>
             </div>
           </v-row>
+
+          <!-- Proposal Description -->
           <v-row>
             <v-label class="label_required proposal_description">
               Proposal Description
@@ -85,49 +88,54 @@
           </v-row>
           <v-textarea
             v-model="proposal.description"
+            class="mb-6"
             :placeholder="`Type here`"
             hide-details
             required
           />
 
-          <v-row class="nav_method_changes">
+          <v-row class="proposal_description d-flex flex-grow-1 justify-space-between align-center">
+            <v-label class="label_required">
+              NAV Methods
+            </v-label>
+          </v-row>
+          <v-row class="mb-4">
             <v-expansion-panels>
               <v-expansion-panel eager>
                 <v-expansion-panel-title static>
-                  <div class="nav_method_changes__title">
-                    <div>
-                      Proposal Methods
-                    </div>
-                    <div>
-                      •
-                    </div>
-                    <div v-if="newEntriesCount" class="text-success">
-                      {{ newEntriesCount }} New
-                    </div>
-                    <div v-if="deletedEntriesCount" class="text-error">
-                      {{ deletedEntriesCount }} Deleted
-                    </div>
-                    <div v-if="!newEntriesCount && !deletedEntriesCount">
-                      0 Changes
+                  <div class="d-flex flex-grow-1 justify-space-between align-center me-4">
+                    <div class="nav_methods_title">
+                      <div>
+                        •
+                      </div>
+                      <div v-if="newEntriesCount" class="text-success">
+                        {{ newEntriesCount }} New
+                      </div>
+                      <div v-if="deletedEntriesCount" class="text-error">
+                        {{ deletedEntriesCount }} Deleted
+                      </div>
+                      <div v-if="!newEntriesCount && !deletedEntriesCount">
+                        0 Changes
+                      </div>
                     </div>
                   </div>
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
-                  <FundNavMethodsTable v-model:methods="fundManagedNAVMethods" deletable />
+                  <FundNavMethodsTable
+                    v-model:methods="fundManagedNAVMethods"
+                    show-base-token-balances
+                    show-simulated-nav
+                    show-summary-row
+                    deletable
+                  />
                 </v-expansion-panel-text>
               </v-expansion-panel>
             </v-expansion-panels>
           </v-row>
 
+          <!-- Action Buttons -->
           <v-row>
-            <div class="action-buttons">
-              <v-btn
-                class="text-secondary"
-                variant="outlined"
-                :disabled="true"
-              >
-                Save Draft
-              </v-btn>
+            <div class="action_buttons">
               <v-btn
                 class="bg-primary text-secondary ms-6"
                 :disabled="!accountStore.isConnected"
@@ -156,8 +164,8 @@
 import type { AbiFunctionFragment } from "web3";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import NAVExecutor from "assets/contracts/NAVExecutor.json";
-import addressesJson from "~/assets/contracts/addresses.json";
-import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
+import addressesJson from "assets/contracts/addresses.json";
+import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -176,7 +184,14 @@ const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const emit = defineEmits(["updateBreadcrumbs"]);
 
-const { selectedFundAddress, selectedFundSlug, fundManagedNAVMethods, fundLastNAVUpdate } = toRefs(fundStore);
+const {
+  selectedFundAddress,
+  selectedFundSlug,
+  fundManagedNAVMethods,
+  fundLastNAVUpdate,
+  fundLastNAVUpdateMethods,
+} = toRefs(fundStore);
+
 const proposal = ref({
   title: "",
   allowManagerToUpdateNav: false,
@@ -532,12 +547,11 @@ const createProposal = async () => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
 
-      removeDraft();
+      clearDraft();
     }).on("receipt", (receipt: any) => {
       console.log("receipt: ", receipt);
       if (receipt.status) {
-
-        removeDraft();
+        clearDraft();
         toastStore.successToast(
           "Register the proposal transactions was successful. " +
           "You can now vote on the proposal in the governance page.",
@@ -559,22 +573,66 @@ const createProposal = async () => {
   }
 }
 
-const removeDraft = () => {
-  try {
-    let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
-    if (!navUpdateEntries) {
-      navUpdateEntries = {};
-    }
+watch(
+  fundManagedNAVMethods,
+  () => {
+    saveDraft();
+  },
+  { deep: true },
+);
 
+const clearDraft = () => {
+  try {
+    fundManagedNAVMethods.value =  JSON.parse(JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt), parseBigInt);
+    // reset the local storage as well
+    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
+    // navUpdateEntries[selectedFundAddress.value] = fundManagedNAVMethods.value;
     // we need to delete navUpdateEntries[selectedFundAddress.value];
     delete navUpdateEntries[selectedFundAddress.value];
-    localStorage.setItem("navUpdateEntries", JSON.stringify(navUpdateEntries));
+
+    setLocalStorageItem("navUpdateEntries", navUpdateEntries);
+
+    toastStore.successToast("Draft cleared successfully");
   } catch (e) {
     console.error(e);
-    toastStore.errorToast("Failed to remove draft");
+    toastStore.errorToast("Failed to clear NAV draft");
   }
 };
 
+const saveDraft = () => {
+  try {
+    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
+
+    navUpdateEntries[selectedFundAddress.value] = JSON.parse(
+      JSON.stringify(fundManagedNAVMethods.value, stringifyBigInt),
+    );
+
+    setLocalStorageItem("navUpdateEntries", navUpdateEntries);
+    console.log("LS: ", navUpdateEntries)
+  } catch (e) {
+    console.error(e);
+    toastStore.errorToast("Failed to save NAV draft");
+  }
+};
+
+const saveProposalDraft = () => {
+  try {
+    const fundProposalDrafts = getLocalStorageItem("fundProposalDrafts", {});
+
+    if (!fundProposalDrafts[selectedFundAddress.value]) {
+      fundProposalDrafts[selectedFundAddress.value] = {};
+    }
+
+    fundProposalDrafts[selectedFundAddress.value].nav = JSON.parse(
+      JSON.stringify(proposal.value, stringifyBigInt),
+    );
+    setLocalStorageItem("fundProposalDrafts", fundProposalDrafts);
+    console.log("LS proposals: ", fundProposalDrafts)
+  } catch (e) {
+    console.error(e);
+    toastStore.errorToast("Failed to save fund proposal draft");
+  }
+};
 
 </script>
 
@@ -653,27 +711,19 @@ const removeDraft = () => {
   }
 }
 
-.proposal_description {
-  margin-top: 2.25rem;
-  margin-bottom: 1.5rem;
-}
-
-.nav_method_changes {
-  margin: 2rem 0;
-
-  &__title {
+.nav_methods_title {
     display: flex;
     flex-direction: row;
     gap: .5rem;
     font-weight: 500;
     font-size: $text-sm;
-  }
 }
 
-.action-buttons {
+.action_buttons {
   width: 100%;
   display: flex;
   flex-direction: row;
-  justify-content: end;
+  margin-top: 1rem;
+  justify-content: flex-end;
 }
 </style>

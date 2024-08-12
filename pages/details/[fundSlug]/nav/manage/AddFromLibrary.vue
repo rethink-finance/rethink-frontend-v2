@@ -95,7 +95,6 @@ const onSelectionChanged = (hashes: string[]) => {
 }
 const addMethods = () => {
   // // Add newly defined method to fund managed methods.
-  // TODO prevent selecting duplicates, pass already selected methods to the table and mark them as "in use".
   const methods = allNavMethods.value.filter(method => selectedMethodHashes.value.includes(method.detailsHash || ""));
 
   for (const method of methods) {
