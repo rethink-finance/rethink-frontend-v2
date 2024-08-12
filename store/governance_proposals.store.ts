@@ -2,7 +2,7 @@ import GovernableFund from "assets/contracts/GovernableFund.json";
 import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
-import { eth } from "web3";
+import { eth, Web3 } from "web3";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
@@ -308,6 +308,123 @@ export const useGovernanceProposalsStore = defineStore({
         console.error("error fetching ProposalExecuted: ", e);
       }
     },
+    async getBlockPerHoursRate() {      
+      const currentBlock = await this.fundStore.web3.eth.getBlock('latest');
+      const currentBlockNumber = Number(currentBlock.number);
+      const currentBlockTimestamp = Number(currentBlock.timestamp);
+      
+      const oneHourInSeconds = 3600; 
+      const targetTimestamp = currentBlockTimestamp - oneHourInSeconds;
+
+      // find the block number for the target timestamp
+      let low = 0;
+      let high = currentBlockNumber;
+      let targetBlock;
+
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        const block = await this.fundStore.web3.eth.getBlock(mid);
+        const blockTimestamp = Number(block.timestamp); 
+
+        // here we are trying to find the block that is closest to the target timestamp
+        if (blockTimestamp < targetTimestamp) {
+          low = mid + 1;
+        } else if (blockTimestamp > targetTimestamp) {
+          high = mid - 1;
+        } else {
+          targetBlock = block;
+          break;
+        }
+
+        // check if the block is close enough to the target timestamp
+        // target timestamp is approximately 1 hour ago from the current block timestamp
+        if (Math.abs(blockTimestamp - targetTimestamp) < oneHourInSeconds / 10) {
+          targetBlock = block;
+          break;
+        }
+      }
+
+      // if we didn't find the block, we can just use the high block
+      if (!targetBlock) {
+        targetBlock = await this.fundStore.web3.eth.getBlock(high);
+      }
+
+      // calculate how many blocks are produced in the last hour
+      const blocksPerHour = (currentBlockNumber - Number(targetBlock.number)) / ((currentBlockTimestamp - Number(targetBlock.timestamp)) / oneHourInSeconds);
+
+      console.log(`Blocks per hour rate: ${blocksPerHour}`);
+      return blocksPerHour;
+    },
+    async estimateTimestampFromBlockNumber(currentBlockNumber: number, currentBlockTimestamp:number, targetBlockNumber: number) {
+      const blockPerHour = await this.getBlockPerHoursRate();
+      // Calculate blocks per second instead of blocks per hour
+      const blocksPerSecond = blockPerHour / 3600;
+      // Calculate the number of blocks remaining
+      const blocksRemaining = targetBlockNumber - currentBlockNumber;
+      // Estimate how much time in seconds until the target block
+      const estimatedTimeInSeconds = blocksRemaining / blocksPerSecond;
+      // Estimate the target timestamp
+      const estimatedTimestamp = currentBlockTimestamp + estimatedTimeInSeconds;
+
+      return estimatedTimestamp;
+    },
+    async setVoteStartEndTimestamp(proposal: IGovernanceProposal) {
+        // we can list more chainIdMap if needed
+        // for now we know that arb-1 chain should use eth chain to get the block number and all the other stuff because arbi-1 saves events in eth chain
+        const chainIdMap = {
+          "0xa4b1": "0x1", 
+        }
+        const chainId = this.web3Store.chainId as keyof typeof chainIdMap;
+        const chainIdMapKey = chainIdMap[chainId];
+
+        let web3;
+        // if the chainIdMapKey is found, use the rpcUrl from the chainIdMap
+        if (chainIdMapKey) {
+          console.log("chainIdMapKey: ", chainIdMapKey);
+          web3 = new Web3(this.web3Store.networksMap[chainIdMapKey].rpcUrl);
+        } else {
+          console.log("use the current web3");
+          web3 = this.fundStore.web3;
+        }
+      
+        // get the latest block
+        const currentBlock = await web3.eth.getBlock('latest');
+        const currentBlockNumber = Number(currentBlock.number);
+        const currentBlockTimestamp = Number(currentBlock.timestamp);
+        console.log("currentBlock: ", currentBlock);  
+        console.log("proposal voteEnd: ", proposal.voteEnd);
+        console.log("proposal voteStart: ", proposal.voteStart);
+
+        // if the voteEnd is in the past, we can fetch the block number
+        if(Number(proposal.voteEnd) <= currentBlockNumber) {
+          console.log("fetch blockEnd");
+          const blockEnd = await web3.eth.getBlock(proposal.voteEnd);
+          console.log("blockEnd: ", blockEnd);
+          proposal.voteEnd = blockEnd?.timestamp;
+        }
+        // if the voteEnd is in the future, we have to estimate the timestamp
+        else{
+          console.log("estimate blockEnd");
+          const estimatedEndTimestamp = await this.estimateTimestampFromBlockNumber(currentBlockNumber, currentBlockTimestamp, Number(proposal.voteEnd));
+          console.log("estimatedEndTimestamp: ", estimatedEndTimestamp);
+          proposal.voteEnd = estimatedEndTimestamp.toString();
+        }
+
+        // if the voteStart is in the past, we can fetch the block number
+        if(Number(proposal.voteStart) <= currentBlockNumber) {
+          console.log("fetch blockStart");
+          const blockStart = await web3.eth.getBlock(proposal.voteStart);
+          console.log("blockStart: ", blockStart);
+          proposal.voteStart = blockStart?.timestamp;
+        }
+        // if the voteStart is in the future, we have to estimate the timestamp
+        else{
+          console.log("estimate blockStart");
+          const estimatedStartTimestamp = await this.estimateTimestampFromBlockNumber(currentBlockNumber,currentBlockTimestamp, Number(proposal.voteStart));
+          console.log("estimatedStartTimestamp: ", estimatedStartTimestamp);
+          proposal.voteStart = estimatedStartTimestamp.toString();
+        }
+    },
     async parseProposalCreatedEvents(events: any[]) {
       if (!this.fundStore.fund?.governanceToken.decimals) {
         console.error("No fund governance token decimals found.")
@@ -344,13 +461,10 @@ export const useGovernanceProposalsStore = defineStore({
 
         // If the clock mode is block number, we have to check a timestamp for the block number.
         if(this.fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber) {
-          const blockStart = await this.fundStore.web3.eth.getBlock(proposal.voteStart);
-          const blockEnd = await this.fundStore.web3.eth.getBlock(proposal.voteEnd);
-
-          proposal.voteStart = blockStart.timestamp;
-          proposal.voteEnd = blockEnd.timestamp;
+          await this.setVoteStartEndTimestamp(proposal);
         }
-
+        console.log("proposal:" , proposal)
+        
         const votes = await this.fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
         console.log("proposal votes: ", votes);
 
