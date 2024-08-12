@@ -7,43 +7,49 @@
         </div>
         <div class="main_header__subtitle">
           Last updated on <strong>{{ fundLastNAVUpdateDate }}</strong>
-          <strong v-if="isClearDraftVisible">
-            (DRAFT)
-          </strong>
         </div>
       </div>
+      <v-btn
+        class="text-secondary"
+        variant="outlined"
+        :disabled="!isClearDraftVisible"
+        @click="clearDraft"
+      >
+        Clear Draft
+      </v-btn>
     </UiHeader>
     <div class="main_card">
       <v-form ref="form" v-model="formIsValid">
         <v-container fluid>
-          <div class="mb-8">
-            <v-row>
-              <div class="proposal_title_field">
-                <v-label class="label_required">
-                  Proposal Title
+          <!-- Proposal Title -->
+          <v-row>
+            <div class="proposal_title_field">
+              <v-label class="label_required">
+                Proposal Title
+              </v-label>
+              <div class="proposal_title_field__char_limit">
+                <v-label>
+                  MAX 150
                 </v-label>
-                <div class="proposal_title_field__char_limit">
-                  <v-label>
-                    MAX 150
-                  </v-label>
-                  <v-icon icon="mdi-circle-outline" size="15" />
-                </div>
+                <v-icon icon="mdi-circle-outline" size="15" />
               </div>
-            </v-row>
-            <v-row>
-              <v-text-field
-                v-model="proposal.title"
-                placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
-                required
-              />
-            </v-row>
-          </div>
+            </div>
+          </v-row>
+          <v-row class="mb-6">
+            <v-text-field
+              v-model="proposal.title"
+              placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+              required
+            />
+          </v-row>
+
+          <!-- Management -->
           <v-row>
             <v-label class="label_required">
               Management
             </v-label>
           </v-row>
-          <v-row>
+          <v-row class="mb-6">
             <div class="management">
               <div class="management__card">
                 <div class="management__row">
@@ -81,6 +87,8 @@
               </div>
             </div>
           </v-row>
+
+          <!-- Proposal Description -->
           <v-row>
             <v-label class="label_required proposal_description">
               Proposal Description
@@ -88,6 +96,7 @@
           </v-row>
           <v-textarea
             v-model="proposal.description"
+            class="mb-6"
             :placeholder="`Type here`"
             hide-details
             required
@@ -97,23 +106,9 @@
             <v-label class="label_required">
               NAV Methods
             </v-label>
-            <div>
-              <nuxt-link :to="`/details/${selectedFundSlug}/nav/newMethod`">
-                <v-btn class="text-secondary me-4" variant="outlined">
-                  Create New Method
-                </v-btn>
-              </nuxt-link>
-              <nuxt-link
-                :to="`/details/${selectedFundSlug}/nav/addFromLibrary`"
-              >
-                <v-btn class="text-secondary" variant="outlined">
-                  Add From Library
-                </v-btn>
-              </nuxt-link>
-            </div>
           </v-row>
-          <v-row>
-            <v-expansion-panels v-model="expandedPanels">
+          <v-row class="mb-4">
+            <v-expansion-panels>
               <v-expansion-panel eager>
                 <v-expansion-panel-title static>
                   <div class="d-flex flex-grow-1 justify-space-between align-center me-4">
@@ -146,15 +141,9 @@
             </v-expansion-panels>
           </v-row>
 
+          <!-- Action Buttons -->
           <v-row>
             <div class="action_buttons">
-              <v-btn
-                class="text-secondary"
-                variant="outlined"
-                @click="clearDraft"
-              >
-                Reset Draft
-              </v-btn>
               <v-btn
                 class="bg-primary text-secondary ms-6"
                 :disabled="!accountStore.isConnected"
@@ -210,7 +199,6 @@ const {
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
 } = toRefs(fundStore);
-const expandedPanels = ref([0]);
 
 const proposal = ref({
   title: "",
@@ -225,9 +213,14 @@ const breadcrumbItems: BreadcrumbItem[] = [
     to: `/details/${selectedFundSlug.value}/nav`,
   },
   {
+    title: "Manage NAV Methods",
+    disabled: false,
+    to: `/details/${selectedFundSlug.value}/nav/manage`,
+  },
+  {
     title: "Create NAV Proposal",
     disabled: true,
-    to: `/details/${selectedFundSlug.value}/nav/proposal`,
+    to: `/details/${selectedFundSlug.value}/nav/manage/proposal`,
   },
 ];
 
@@ -607,6 +600,8 @@ watch(
   { deep: true },
 );
 const isClearDraftVisible = computed(() => {
+  // TODO now has a problem, probably because of "deleted" prop is added, to replicate:
+  // just open the page and go to antoher page and come back and save draft will be enabled, without any changes
   // check if the draft is the same as the last update
   const isSameAsLastUpdate =
     JSON.stringify(fundManagedNAVMethods.value, stringifyBigInt) ===
@@ -618,7 +613,6 @@ const isClearDraftVisible = computed(() => {
   return !isSameAsLastUpdate && !isDraftEmpty;
 });
 const clearDraft = () => {
-  // loadingDraftClear.value = true;
   try {
     fundManagedNAVMethods.value =  JSON.parse(JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt), parseBigInt);
     // reset the local storage as well
@@ -633,8 +627,6 @@ const clearDraft = () => {
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to clear NAV draft");
-  } finally {
-    // loadingDraftClear.value = false;
   }
 
   try {
@@ -642,8 +634,6 @@ const clearDraft = () => {
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to clear proposal draft");
-  } finally {
-    // loadingDraftClear.value = false;
   }
 };
 const saveDraft = () => {
@@ -791,11 +781,6 @@ const resetProposalDraft = () => {
   }
 }
 
-.proposal_description {
-  margin-top: 2.25rem;
-  margin-bottom: 1.5rem;
-}
-
 .nav_methods_title {
     display: flex;
     flex-direction: row;
@@ -809,6 +794,6 @@ const resetProposalDraft = () => {
   display: flex;
   flex-direction: row;
   margin-top: 1rem;
-  justify-content: space-between;
+  justify-content: flex-end;
 }
 </style>

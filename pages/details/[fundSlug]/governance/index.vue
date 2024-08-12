@@ -198,7 +198,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
   "NAV Methods": {
     click: () => {
       router.push(
-        `/details/${fundStore.selectedFundSlug}/nav/proposal`,
+        `/details/${fundStore.selectedFundSlug}/nav/manage/proposal`,
       );
     },
   },

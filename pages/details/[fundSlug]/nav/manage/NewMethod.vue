@@ -220,9 +220,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
     to: `/details/${selectedFundSlug.value}/nav`,
   },
   {
-    title: "Create NAV Methods",
+    title: "Manage NAV Methods",
     disabled: false,
-    to: `/details/${selectedFundSlug.value}/nav/proposal`,
+    to: `/details/${selectedFundSlug.value}/nav/manage/proposal`,
   },
   {
     title: "Define New Method",
@@ -423,7 +423,7 @@ const addMethod = () => {
   fundStore.fundManagedNAVMethods.push(newNavEntry);
 
   // Redirect back to Manage methods page.
-  router.push(`/details/${selectedFundSlug.value}/nav/proposal`);
+  router.push(`/details/${selectedFundSlug.value}/nav/manage/proposal`);
   toastStore.addToast("Method added successfully.")
 }
 </script>
