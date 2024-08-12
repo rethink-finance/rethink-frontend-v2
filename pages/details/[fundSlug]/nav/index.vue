@@ -66,6 +66,7 @@
         <FundNavMethodsTable
           :methods="fundLastNAVUpdateMethods"
           :loading="fundStore.loadingNavUpdates"
+          :nav-parts="fundLastNAVUpdate?.navParts"
           show-summary-row
           show-last-nav-update-value
           show-base-token-balances
@@ -109,7 +110,7 @@ const {
 const isLoading = ref(false);
 
 const fundLastNAVUpdateDate = computed(() => {
-  if (!fundLastNAVUpdate.value) return "N/A";
+  if (!fundLastNAVUpdate?.value?.date) return "N/A";
   return fundLastNAVUpdate.value.date ?? "N/A";
 });
 

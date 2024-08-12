@@ -217,9 +217,9 @@ export default defineComponent({
       type: Array as () => INAVMethod[],
       default: () => [],
     },
-    navUpdateIndex: {
-      type: Number,
-      default: undefined,
+    navParts: {
+      type: Object as () => INAVParts,
+      default: () => undefined,
     },
     showBaseTokenBalances: {
       type: Boolean,
@@ -346,10 +346,6 @@ export default defineComponent({
     },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
-    },
-    navParts(): INAVParts | undefined {
-      if (!this.navUpdateIndex) return undefined;
-      return this.fundStore.fund?.navUpdates?.[this.navUpdateIndex].navParts as INAVParts;
     },
     computedMethods() {
       const methods = [];

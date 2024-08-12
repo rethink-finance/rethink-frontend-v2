@@ -665,6 +665,8 @@ export const useFundStore = defineStore({
         const navTimestamp = Number(fundNavUpdateTimes[i] * 1000n);
         navUpdates.push(
           {
+            // NAV update indices start from 1, not from 0.
+            index: i + 1,
             // If the datetime of the NAV update is available format it, otherwise just use the index (e.g. #2).
             date: fundNavUpdateTimes[i] ? formatDate(new Date(navTimestamp)) : `#${(i+1).toString()}}`,
             timestamp: navTimestamp,

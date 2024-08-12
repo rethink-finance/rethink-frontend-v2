@@ -54,6 +54,9 @@ import type { INAVParts } from "~/types/fund";
  * }
  */
 export default interface INAVUpdate {
+  // In the contract index starts with 1.
+  // To get first NAV update data from the contract you have to call getNavEntry(1)
+  index: number,
   date: string;
   timestamp: number;
   totalNAV: bigint;
