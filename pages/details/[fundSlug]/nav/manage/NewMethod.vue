@@ -222,7 +222,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "Manage NAV Methods",
     disabled: false,
-    to: `/details/${selectedFundSlug.value}/nav/manage/proposal`,
+    to: `/details/${selectedFundSlug.value}/nav/manage`,
   },
   {
     title: "Define New Method",
