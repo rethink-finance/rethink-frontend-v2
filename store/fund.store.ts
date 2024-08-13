@@ -627,41 +627,35 @@ export const useFundStore = defineStore({
           } as INAVParts)
         } else {
           parsedNavParts.push(undefined);
-          console.error(`Failed to fetch NAV parts ${index + 1}:`, navPartsResult.reason);
+          console.error(`Failed to fetch NAV parts ${index}:`, navPartsResult.reason);
         }
       });
       console.log("NAV parts", parsedNavParts)
 
       return parsedNavParts;
     },
-    async fetchLastNavUpdateCalculatorCaches(navMethods: INAVMethod[]) {
-      // Fetch last NAV update's methods' cached past values.
-      // Currently only the last NAV update methods' values are cached for all methods.
-      // getNAVIlliquidCache
-      const promises = [];
-      for (const [navMethodIndex, navMethod] of navMethods.entries()) {
-        const calculatorMethod = PositionTypeToNAVCacheMethod[navMethod.positionType]
-        promises.push(this.navCalculatorContract.methods[calculatorMethod](this.selectedFundAddress, navMethodIndex).call())
-        navMethod.pastNavValueLoading = true;
-        navMethod.pastNavValueError = false;
-      }
-      const navCachePromises = await Promise.allSettled(promises);
+    async updateNavMethodPastNavValue(navMethodIndex: number, navMethod: INAVMethod) {
+      // NOTE: Important to know, that this currently only works for the methods of the last NAV update.
+      // Fetch NAV method cached past value.
+      const calculatorMethod = PositionTypeToNAVCacheMethod[navMethod.positionType]
 
-      // Process results
-      navCachePromises.forEach((navCacheResult, navMethodIndex) => {
-        if (navCacheResult.status === "fulfilled") {
-          const pastNavValue = navCacheResult.value.reduce(
-            (acc: bigint, val: bigint) => acc + val,
-            0n,
-          );
-          navMethods[navMethodIndex].pastNavValue = pastNavValue;
-          navMethods[navMethodIndex].pastNavValueFormatted = this.formatNAV(pastNavValue);
-          navMethods[navMethodIndex].pastNavValueLoading = false;
-        } else {
-          navMethods[navMethodIndex].pastNavValueError = true;
-          console.error(`Failed to fetch NAV entry ${navMethodIndex + 1}:`, navCacheResult.reason);
-        }
-      });
+      navMethod.pastNavValue = undefined;
+      navMethod.pastNavValueFormatted = undefined;
+      navMethod.pastNavValueLoading = true;
+      navMethod.pastNavValueError = false;
+      try {
+        const navCacheResult = await this.navCalculatorContract.methods[calculatorMethod](this.selectedFundAddress, navMethodIndex).call()
+        const pastNavValue = navCacheResult.reduce(
+          (acc: bigint, val: bigint) => acc + val,
+          0n,
+        );
+        navMethod.pastNavValue = pastNavValue;
+        navMethod.pastNavValueFormatted = this.formatNAV(pastNavValue);
+      } catch (error) {
+        navMethod.pastNavValueError = true;
+        console.error(`Failed to fetch NAV method last NAV value ${navMethodIndex}:`, navMethod, error);
+      }
+      navMethod.pastNavValueLoading = false;
     },
     async parseFundNAVUpdates(dataNAV: any): Promise<INAVUpdate[]> {
       const navUpdates = [] as INAVUpdate[];
@@ -749,7 +743,11 @@ export const useFundStore = defineStore({
       //   }
       // }
       console.warn("navUpdates: ", navUpdates, navUpdatesLen);
-      await this.fetchLastNavUpdateCalculatorCaches(navUpdates[navUpdates.length - 1].entries ?? [])
+      const lastNavUpdateNavMethods = navUpdates[navUpdates.length - 1].entries ?? [];
+      console.warn("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
+      lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
+        this.updateNavMethodPastNavValue(navMethodIndex, navMethod);
+      });
       return navUpdates;
     },
     /**

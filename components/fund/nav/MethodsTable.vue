@@ -74,16 +74,27 @@
       />
     </template>
     <template #[`item.pastNavValueFormatted`]="{ value, item }">
-      <div v-if="item.pastNavValueLoading">
-        <v-progress-circular
-          indeterminate
-          color="gray"
-          size="16"
-          width="2"
-        />
-      </div>
-      <div v-else>
-        {{ value ?? "-" }}
+      <div :class="`item-simulated-nav ${item.pastNavValueError ? 'item-simulated-nav--error' : ''}`">
+        <div v-if="item.pastNavValueLoading">
+          <v-progress-circular
+            indeterminate
+            color="gray"
+            size="16"
+            width="2"
+          />
+        </div>
+        <div v-else>
+          {{ value ?? "-" }}
+        </div>
+        <div
+          v-if="item.pastNavValueError"
+          class="ms-2 justify-center align-center d-flex"
+        >
+          <Icon icon="octicon:question-16" width="1rem" />
+          <v-tooltip activator="parent" location="right">
+            Something went wrong while getting the last NAV value.
+          </v-tooltip>
+        </div>
       </div>
     </template>
 
