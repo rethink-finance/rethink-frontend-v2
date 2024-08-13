@@ -35,6 +35,11 @@ export interface IExcludeNAVDetailsHashes {
   [chainId: string]: string[]
 }
 
+export interface IUniqueNAVMethods {
+  [detailsHash: string]: boolean
+}
+
+
 /*
   @dev: TODO: MOVE excludeFundAddrs TO FILE
 */
@@ -60,6 +65,7 @@ const excludeFundAddrs = {
 
 /*
   @dev: TODO: MOVE excludeNAVDetailsHashes TO FILE
+
 */
 
 
@@ -71,37 +77,20 @@ const excludeNAVDetailsHashes = {
     "0xa16bc751ca6b7cc8a22bd5681a8c721000d31f3b9065d550af98822187f5f6ff",
     "0xaafeb0595fedeea04c3cc198e4c8e7f7a7fbbcafb471601c08b96b25989f15cb",
     "0xff1938ed40a09521e438d91c962e23716b9271630c14df68b48ea03247194521",
+    "0x4540573583751108c4459901c74ec3738180c04e57ea478727edb1604c83f3eb",
+    "0xae2f7bfa21371222957a40eeb141e08927b136dc36ab7d19829accc9bed7ca61",
+    "0x55fb025681fba04713d81375989c071d1525dac9190df1485102c5188adbbd58"
   ],
-  "0xa4b1": [
-    "0x3bc4ee0e074a885338da25914b831e58806cb1102ea8a232538ac982f0feae6a",
-    "0xe8c1c9ff413ad54389e2561f191d619ff3546f3415938f9be62dc31486dd081d",
-    "0x34c87e2372a6c660136757072c25183c3ec09646595730af8163ae28880bf130",
-    "0xa16bc751ca6b7cc8a22bd5681a8c721000d31f3b9065d550af98822187f5f6ff",
-    "0xaafeb0595fedeea04c3cc198e4c8e7f7a7fbbcafb471601c08b96b25989f15cb",
-    "0xff1938ed40a09521e438d91c962e23716b9271630c14df68b48ea03247194521",
-  ],
-  "0xfc": [
-    "0x3bc4ee0e074a885338da25914b831e58806cb1102ea8a232538ac982f0feae6a",
-    "0xe8c1c9ff413ad54389e2561f191d619ff3546f3415938f9be62dc31486dd081d",
-    "0x34c87e2372a6c660136757072c25183c3ec09646595730af8163ae28880bf130",
-    "0xa16bc751ca6b7cc8a22bd5681a8c721000d31f3b9065d550af98822187f5f6ff",
-    "0xaafeb0595fedeea04c3cc198e4c8e7f7a7fbbcafb471601c08b96b25989f15cb",
-    "0xff1938ed40a09521e438d91c962e23716b9271630c14df68b48ea03247194521",
-  ],
-  "0x1": [
-    "0x3bc4ee0e074a885338da25914b831e58806cb1102ea8a232538ac982f0feae6a",
-    "0xe8c1c9ff413ad54389e2561f191d619ff3546f3415938f9be62dc31486dd081d",
-    "0x34c87e2372a6c660136757072c25183c3ec09646595730af8163ae28880bf130",
-    "0xa16bc751ca6b7cc8a22bd5681a8c721000d31f3b9065d550af98822187f5f6ff",
-    "0xaafeb0595fedeea04c3cc198e4c8e7f7a7fbbcafb471601c08b96b25989f15cb",
-    "0xff1938ed40a09521e438d91c962e23716b9271630c14df68b48ea03247194521",
-  ],
+  "0xa4b1": [],
+  "0xfc": [],
+  "0x1": [],
 } as IExcludeNAVDetailsHashes;
 
 interface IState {
   funds: IFund[];
   // All original NAV methods.
   allNavMethods: INAVMethod[],
+  uniqueNavMethods: INAVMethod[],
   // Get the address of the original fund of all original NAV methods.
   navMethodDetailsHashToFundAddress: Record<string, string>,
 }
@@ -111,6 +100,7 @@ export const useFundsStore = defineStore({
   state: (): IState => ({
     funds: [] as IFund[],
     allNavMethods: [] as INAVMethod[],
+    uniqueNavMethods: [] as INAVMethod[],
     navMethodDetailsHashToFundAddress: {} as Record<string, string>,
   }),
   getters: {
@@ -364,7 +354,7 @@ export const useFundsStore = defineStore({
                 excludeNAVDetails &&
                 parsedNavMethod.detailsHash &&
                 excludeNAVDetailsHashes[this.web3Store.chainId].includes(parsedNavMethod.detailsHash)) {
-                return;
+                continue;
               }
 
               // Set the past NAV update fund address to the original fund address
@@ -386,6 +376,16 @@ export const useFundsStore = defineStore({
       }
 
       this.allNavMethods = allMethods;
+      const seenValues = {} as IUniqueNAVMethods;
+      const uniqueMethods = allMethods.filter((method: any) => {
+        if (!seenValues[method.detailsHash]) {
+          seenValues[method.detailsHash] = true;
+          return true; // include value in the new list
+        }
+        return false; // exclude value from the new list
+      });
+
+      this.uniqueNavMethods = uniqueMethods;
     },
   },
 });
