@@ -62,7 +62,7 @@ export const formatDateToLocaleString = (date: Date) => {
     day: 'numeric',     // e.g., "5"
     hour: 'numeric',    // e.g., "5 PM"
     minute: '2-digit',  // e.g., "05"
-    hour12: true        // 12-hour clock, "AM/PM"
+    hour12: false        // 12-hour clock, "AM/PM"
   });
 }
 
