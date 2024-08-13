@@ -6,6 +6,7 @@ import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
+import NavCalculator from "~/assets/contracts/NAVCalculator.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
@@ -23,15 +24,17 @@ import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
   PositionTypeKeys,
-  PositionTypes,
+  PositionTypes, PositionTypeToNAVCacheMethod,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
+import type { INAVParts } from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
+import { parseBigInt } from "~/composables/localStorage";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -56,6 +59,9 @@ interface IState {
   // Cached roleMod addresses for each fund.
   fundRoleModAddress: Record<string, string>,
   refreshSimulateNAVCounter: number,
+  // Loading flags
+  loadingNavUpdates: boolean,
+  loadingUserBalances: boolean,
 }
 
 
@@ -75,6 +81,8 @@ export const useFundStore = defineStore({
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
     refreshSimulateNAVCounter: 0,
+    loadingNavUpdates: false,
+    loadingUserBalances: false,
   }),
   getters: {
     accountStore(): any {
@@ -235,6 +243,10 @@ export const useFundStore = defineStore({
       const contractAddress = addresses[RethinkReaderContractName][this.web3Store.chainId];
       return new this.web3.eth.Contract(RethinkReader.abi, contractAddress)
     },
+    // @ts-expect-error: we should extend the return type as Contract<...>
+    navCalculatorContract(): Contract {
+      return new this.web3.eth.Contract(NavCalculator.abi, this.web3Store.NAVCalculatorBeaconProxyAddress)
+    },
     /**
      * Returns a block number of the transaction that created the safe contract.
      */
@@ -273,21 +285,10 @@ export const useFundStore = defineStore({
 
       try {
         this.fund = await this.fetchFundData() as IFund;
-        this.fundManagedNAVMethods = JSON.parse(
-          JSON.stringify(this.fundLastNAVUpdateMethods),
-        );
-        console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
         console.log("fund: ", toRaw(this.fund))
       } catch (e) {
         console.error(`Failed fetching fund ${fundAddress} -> `, e)
       }
-      try {
-        await this.fetchUserBalances();
-      } catch (e) {
-        console.error(`Failed fetching user fundBalances fund ${fundAddress} -> `, e)
-      }
-
-      this.mergeNAVMethodsFromLocalStorage();
     },
     /**
      * Fetches multiple fund data:
@@ -311,17 +312,29 @@ export const useFundStore = defineStore({
       // Process the fund settings with a method assumed to be available in the current scope
       const fundSettings: IFundSettings = this.parseFundSettings(settingsData);
 
-      const fund = await this.fetchFundMetadata(fundSettings);
+      return await this.fetchFundMetadata(fundSettings);
+    },
+    async fetchFundNAVUpdates(): Promise<void> {
+      if (!this.fund) return
+      this.loadingNavUpdates = true;
 
       try {
-        const dataNAV = await this.rethinkReaderContract.methods.getNAVDataForFund(fundSettings.fundAddress).call();
+        const dataNAV = await this.rethinkReaderContract.methods.getNAVDataForFund(this.fund?.address).call();
         console.log("fund NAV: ", dataNAV)
-        fund.positionTypeCounts = this.parseFundPositionTypeCounts(dataNAV);
-        fund.navUpdates = await this.parseFundNAVUpdates(dataNAV);
+        this.fund.positionTypeCounts = this.parseFundPositionTypeCounts(dataNAV);
+        this.fund.navUpdates = await this.parseFundNAVUpdates(dataNAV);
       } catch (error) {
-        console.error("Error calling getNAVDataForFund: ", error, "fund: ", fundSettings.fundAddress);
+        console.error("Error calling getNAVDataForFund: ", error, "fund: ", this.fund.address);
       }
-      return fund;
+
+      console.warn("LAST METHODS", this.fundLastNAVUpdateMethods)
+      this.fundManagedNAVMethods = JSON.parse(
+        JSON.stringify(this.fundLastNAVUpdateMethods, stringifyBigInt), parseBigInt,
+      );
+      console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
+      this.mergeNAVMethodsFromLocalStorage();
+
+      this.loadingNavUpdates = false;
     },
     parseFundSettings(fundData: any) {
       const fundSettings: Partial<IFundSettings> = {};
@@ -356,10 +369,11 @@ export const useFundStore = defineStore({
         ...(from ? { from } : {}),
       } as IClockMode;
     },
-    fetchUserBalances() {
+    async fetchUserBalances() {
       if (!this.accountStore.activeAccount?.address) return;
+      this.loadingUserBalances = true;
 
-      return Promise.allSettled([
+      const promises = await Promise.allSettled([
         this.fetchUserBaseTokenBalance(),
         this.fetchUserFundTokenBalance(),
         this.fetchUserGovernanceTokenBalance(),
@@ -368,6 +382,9 @@ export const useFundStore = defineStore({
         this.fetchUserFundAllowance(),
         this.fetchUserFundDepositRedemptionRequests(),
       ]);
+
+      this.loadingUserBalances = false;
+      return promises
     },
     /**
      * Fetches multiple fund metadata such as:
@@ -563,25 +580,26 @@ export const useFundStore = defineStore({
 
       return positionTypeCounts;
     },
-    parseNAVEntry(navEntryData: Record<string, any>): INAVMethod {
+    parseNAVMethod(index: number, navMethodData: Record<string, any>): INAVMethod {
       let description;
-      const positionType = NAVEntryTypeToPositionTypeMap[navEntryData.entryType];
+      const positionType = NAVEntryTypeToPositionTypeMap[navMethodData.entryType];
 
       try {
-        if (navEntryData.description === "") {
+        if (navMethodData.description === "") {
           description = {};
         } else {
-          description = JSON.parse(navEntryData.description ?? "{}");
+          description = JSON.parse(navMethodData.description ?? "{}");
         }
       } catch (error) {
         // Handle the error or rethrow it
         console.warn("Failed to parse NAV entry JSON description string: ", error);
       }
 
-      const details = cleanComplexWeb3Data(navEntryData);
+      const details = cleanComplexWeb3Data(navMethodData);
       const detailsJson = formatJson(details);
 
       return {
+        index,
         positionType,
         positionName: description?.positionName,
         valuationSource: description?.valuationSource,
@@ -590,11 +608,68 @@ export const useFundStore = defineStore({
         detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
       } as INAVMethod
     },
+    async fetchNavParts(navUpdatesLen: number): Promise<(INAVParts | undefined)[]> {
+      // Important to know: nav update indices start with 1, not with 0.
+      const promises: Promise<any>[] = Array.from(
+        { length: navUpdatesLen },
+        (_, index) => this.navCalculatorContract.methods.getNAVParts(
+          this.selectedFundAddress, index + 1,
+        ).call(),
+      );
+
+      const navPartsPromises = await Promise.allSettled(promises);
+      const parsedNavParts: (INAVParts | undefined)[] = [];
+      navPartsPromises.forEach((navPartsResult, index) => {
+        if (navPartsResult.status === "fulfilled") {
+          const navParts: Record<string, any> = navPartsResult.value;
+          parsedNavParts.push({
+            baseAssetOIVBal: navParts.baseAssetOIVBal,
+            baseAssetSafeBal: navParts.baseAssetSafeBal,
+            feeBal: navParts.feeBal,
+            totalNAV: navParts.totalNAV,
+            total: navParts.baseAssetOIVBal + navParts.baseAssetSafeBal + navParts.feeBal + navParts.totalNAV,
+          } as INAVParts)
+        } else {
+          parsedNavParts.push(undefined);
+          console.error(`Failed to fetch NAV parts ${index}:`, navPartsResult.reason);
+        }
+      });
+      console.log("NAV parts", parsedNavParts)
+
+      return parsedNavParts;
+    },
+    async updateNavMethodPastNavValue(navMethodIndex: number, navMethod: INAVMethod) {
+      // NOTE: Important to know, that this currently only works for the methods of the last NAV update.
+      // Fetch NAV method cached past value.
+      const calculatorMethod = PositionTypeToNAVCacheMethod[navMethod.positionType]
+
+      navMethod.pastNavValue = undefined;
+      navMethod.pastNavValueFormatted = undefined;
+      navMethod.pastNavValueLoading = true;
+      navMethod.pastNavValueError = false;
+      try {
+        const navCacheResult = await this.navCalculatorContract.methods[calculatorMethod](this.selectedFundAddress, navMethodIndex).call()
+        const pastNavValue = navCacheResult.reduce(
+          (acc: bigint, val: bigint) => acc + val,
+          0n,
+        );
+        navMethod.pastNavValue = pastNavValue;
+        navMethod.pastNavValueFormatted = this.formatNAV(pastNavValue);
+      } catch (error) {
+        navMethod.pastNavValueError = true;
+        console.error(`Failed to fetch NAV method last NAV value ${navMethodIndex}:`, navMethod, error);
+      }
+      navMethod.pastNavValueLoading = false;
+    },
     async parseFundNAVUpdates(dataNAV: any): Promise<INAVUpdate[]> {
       const navUpdates = [] as INAVUpdate[];
-      // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable).
+      // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable), they should all
+      // have the same length, so we just use the liquid key.
       const navUpdatesLen = dataNAV[PositionType.Liquid].length;
       const fundNavUpdateTimes = await this.fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call();
+
+      // Get a list of NAV parts (total NAV, fees, OIV balance, safe balance) for each NAV update.
+      const navParts = await this.fetchNavParts(navUpdatesLen);
 
       for (let i= 0; i < navUpdatesLen; i++) {
         let totalNAV = BigInt("0");
@@ -618,16 +693,19 @@ export const useFundStore = defineStore({
         const navTimestamp = Number(fundNavUpdateTimes[i] * 1000n);
         navUpdates.push(
           {
+            // NAV update indices start from 1, not from 0.
+            index: i + 1,
             // If the datetime of the NAV update is available format it, otherwise just use the index (e.g. #2).
             date: fundNavUpdateTimes[i] ? formatDate(new Date(navTimestamp)) : `#${(i+1).toString()}}`,
             timestamp: navTimestamp,
+            navParts: navParts[i],
             totalNAV,
             quantity,
             entries: [],
           },
         )
       }
-      console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
+
       // Fetch NAV JSON entries for each NAV update.
       const promises: Promise<any>[] = Array.from(
         { length: navUpdatesLen },
@@ -639,19 +717,41 @@ export const useFundStore = defineStore({
       const navUpdatePromises = await Promise.allSettled(promises);
 
       // Process results
-      navUpdatePromises.forEach((navUpdateResult, index) => {
+      navUpdatePromises.forEach((navUpdateResult, navUpdateIndex) => {
         if (navUpdateResult.status === "fulfilled") {
-          const navEntries: Record<string, any>[] = navUpdateResult.value;
-          console.log("navEntries: ", navEntries);
+          const navMethods: Record<string, any>[] = navUpdateResult.value;
+          console.log("navMethods: ", navMethods);
 
-          for (const navEntry of navEntries) {
-            navUpdates[index].entries.push(this.parseNAVEntry(navEntry))
+          for (const [navMethodIndex, navMethod] of navMethods.entries()) {
+            navUpdates[navUpdateIndex].entries.push(this.parseNAVMethod(navMethodIndex, navMethod))
           }
         } else {
-          console.error(`Failed to fetch NAV entry ${index + 1}:`, navUpdateResult.reason);
+          console.error(`Failed to fetch NAV entry ${navUpdateIndex + 1}:`, navUpdateResult.reason);
         }
       });
 
+      console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
+      // TODO use this code when reader contract is fixed
+      // Fetch NAV JSON entries for each NAV update.
+      // const navUpdates: Record<string, any>[][] = dataNAV.encodedNavUpdate.map(decodeNavUpdateEntry);
+      //
+      // // Process results
+      // for (const [navUpdateIndex, navMethods] of navUpdates.entries()) {
+      //   // TODO remove this if when reader contract is fixed.
+      //   if (!navMethods.length) continue
+      //   for (const [navMethodIndex, navMethod] of navMethods.entries()) {
+      //     const parsedNavMethod = this.parseNAVMethod(navMethodIndex, navMethod);
+      //     // TODO this is not ok
+      //     // parsedNavMethod.pastNavValue = dataNAV[parsedNavMethod.positionType][navUpdateIndex]
+      //     navUpdates[navUpdateIndex].entries.push(parsedNavMethod)
+      //   }
+      // }
+      console.warn("navUpdates: ", navUpdates, navUpdatesLen);
+      const lastNavUpdateNavMethods = navUpdates[navUpdates.length - 1].entries ?? [];
+      console.warn("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
+      lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
+        this.updateNavMethodPastNavValue(navMethodIndex, navMethod);
+      });
       return navUpdates;
     },
     /**
@@ -874,6 +974,16 @@ export const useFundStore = defineStore({
         console.error("Error estimating gas:", error);
       }
       return [undefined, undefined];
+    },
+    formatNAV(value: any): string {
+      const baseSymbol = this.fund?.baseToken.symbol;
+      const baseDecimals = this.fund?.baseToken.decimals;
+      if (!baseDecimals) {
+        return value;
+      }
+
+      const valueFormatted = value ? formatTokenValue(value, baseDecimals) : "0";
+      return valueFormatted + " " + baseSymbol;
     },
   },
 });

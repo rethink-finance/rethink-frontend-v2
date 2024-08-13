@@ -6,8 +6,7 @@
       :class="classes(item)"
       flat
     >
-    
-      <div class="proposal-roadmap__date" v-if="item.date">
+      <div v-if="item.date" class="proposal-roadmap__date">
         {{ item.date }}
       </div>
       <v-progress-circular
@@ -39,7 +38,6 @@
 </template>
 
 <script lang="ts">
-import { formatDateLong } from "~/composables/formatters";
 import { ProposalState } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
 
@@ -59,7 +57,7 @@ export default {
         ? new Date(Number(this.proposal.voteEnd) * 1000)
         : null;
 
-        const executionDate = this.proposal?.executedTimestamp
+      const executionDate = this.proposal?.executedTimestamp
         ? new Date(Number(this.proposal.executedTimestamp) * 1000)
         : null;
 

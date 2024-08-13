@@ -1,8 +1,6 @@
 import { defineStore } from "pinia";
-import type { AbiInput } from "web3";
 import { Web3 } from "web3";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
-import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import SafeMultiSendCallOnlyJson from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
@@ -17,6 +15,7 @@ import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
+import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -101,7 +100,7 @@ export const useFundsStore = defineStore({
   state: (): IState => ({
     funds: [] as IFund[],
     allNavMethods: [] as INAVMethod[],
-    uniqueNavMethods: [] as INAVMethod[], 
+    uniqueNavMethods: [] as INAVMethod[],
     navMethodDetailsHashToFundAddress: {} as Record<string, string>,
   }),
   getters: {
@@ -333,44 +332,40 @@ export const useFundsStore = defineStore({
       this.navMethodDetailsHashToFundAddress = {};
 
       console.log("allFundsNavData: ", allFundsNavData);
-      const getNavEntryFunctionABI: AbiInput[] = GovernableFund.abi.find(
-        func => func.name === "getNavEntry" && func.type === "function",
-      )?.outputs || [];
-
       console.log("Fetch all NAV methods");
-      for (const navData of allFundsNavData) {
-        if (!navData.encodedNavUpdate?.length) continue;
+      for (const [fundIndex, fundNavData] of allFundsNavData.entries()) {
+        if (!fundNavData.encodedNavUpdate?.length) continue;
 
-        for (const encodedNavUpdate of navData.encodedNavUpdate) {
+        for (const [navUpdateIndex, encodedNavUpdate] of fundNavData.encodedNavUpdate.entries()) {
           try {
-            // Decode NAV entry data.
-            const navEntries: Record<string, any>[] = this.web3.eth.abi.decodeParameters(getNavEntryFunctionABI, encodedNavUpdate)[0] as any[];
+            // Decode NAV update methods data.
+            const navMethods: Record<string, any>[] = decodeNavUpdateEntry(encodedNavUpdate);
 
-            for (const [i, navEntry] of navEntries.entries()) {
+            for (const [navMethodIndex, navMethod] of navMethods.entries()) {
               // Ignore NAV methods that are not original NAV entries.
-              if (navEntry.isPastNAVUpdate || navEntry.pastNAVUpdateIndex !== 0n) {
-                // console.log("[SKIP] navEntry: ", navEntry);
+              if (navMethod.isPastNAVUpdate || navMethod.pastNAVUpdateIndex !== 0n) {
+                // console.log("[SKIP] navMethod: ", navMethod);
                 continue;
               }
-              // console.log("[KEEP] navEntry: ", navEntry);
-              const parsedNavEntry: INAVMethod = this.fundStore.parseNAVEntry(navEntry);
+              // console.log("[KEEP] navMethod: ", navMethod);
+              const parsedNavMethod: INAVMethod = this.fundStore.parseNAVMethod(navMethodIndex, navMethod);
 
               if (
                 excludeNAVDetails &&
-                parsedNavEntry.detailsHash &&
-                excludeNAVDetailsHashes[this.web3Store.chainId].includes(parsedNavEntry.detailsHash)) {
+                parsedNavMethod.detailsHash &&
+                excludeNAVDetailsHashes[this.web3Store.chainId].includes(parsedNavMethod.detailsHash)) {
                 continue;
               }
 
-              // Set the past NAV update entry fund address to the original fund address
+              // Set the past NAV update fund address to the original fund address
               // the entry was created on.
-              const fundAddress = fundAddresses[i];
-              parsedNavEntry.pastNAVUpdateEntryFundAddress = fundAddress;
-              allMethods.push(parsedNavEntry);
-              if (parsedNavEntry.detailsHash) {
-                this.navMethodDetailsHashToFundAddress[parsedNavEntry.detailsHash] = fundAddress;
+              const fundAddress = fundAddresses[fundIndex];
+              parsedNavMethod.pastNAVUpdateEntryFundAddress = fundAddress;
+              allMethods.push(parsedNavMethod);
+              if (parsedNavMethod.detailsHash) {
+                this.navMethodDetailsHashToFundAddress[parsedNavMethod.detailsHash] = fundAddress;
               } else {
-                console.error("Missing detailsHash for NAV entry ", navEntry);
+                console.error("Missing detailsHash for NAV method ", navUpdateIndex, navMethod);
               }
             }
           } catch (error: any) {

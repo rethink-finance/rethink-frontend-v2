@@ -1,4 +1,5 @@
 <template>
+  <v-skeleton-loader v-if="loading" type="table" />
   <v-data-table
     v-if="computedMethods.length"
     v-model="selected"
@@ -19,9 +20,10 @@
         <td />
         <td />
         <td />
-        <td v-if="showLastNavUpdateValue" class="text-right">
-          <!-- TODO -->
-          -
+        <td v-if="showLastNavUpdateValue" class="text-right font-weight-black">
+          <div>
+            {{ formattedTotalLastNAV }}
+          </div>
         </td>
         <td v-if="showSimulatedNav" class="text-right font-weight-black">
           <div :class="`item-simulated-nav ${simulatedNavErrorCount > 0 ? 'item-simulated-nav--error' : ''}`">
@@ -71,8 +73,29 @@
         :disabled="item.deleted || item.isAlreadyUsed"
       />
     </template>
-    <template #[`item.lastNavUpdateValueFormatted`]="{ value }">
-      {{ value ?? "-" }}
+    <template #[`item.pastNavValueFormatted`]="{ value, item }">
+      <div :class="`item-simulated-nav ${item.pastNavValueError ? 'item-simulated-nav--error' : ''}`">
+        <div v-if="item.pastNavValueLoading">
+          <v-progress-circular
+            indeterminate
+            color="gray"
+            size="16"
+            width="2"
+          />
+        </div>
+        <div v-else>
+          {{ value ?? "-" }}
+        </div>
+        <div
+          v-if="item.pastNavValueError"
+          class="ms-2 justify-center align-center d-flex"
+        >
+          <Icon icon="octicon:question-16" width="1rem" />
+          <v-tooltip activator="parent" location="right">
+            Something went wrong while getting the last NAV value.
+          </v-tooltip>
+        </div>
+      </div>
     </template>
 
     <template #[`item.simulatedNavFormatted`]="{ value, item }">
@@ -193,13 +216,13 @@
 </template>
 
 <script lang="ts">
-import NAVCalculatorJSON from "assets/contracts/NAVCalculator.json";
 import { useFundStore } from "~/store/fund.store";
 import { useFundsStore } from "~/store/funds.store";
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
+import type { INAVParts } from "~/types/fund";
 
 
 export default defineComponent({
@@ -214,6 +237,10 @@ export default defineComponent({
     usedMethods: {
       type: Array as () => INAVMethod[],
       default: () => [],
+    },
+    navParts: {
+      type: Object as () => INAVParts,
+      default: () => undefined,
     },
     showBaseTokenBalances: {
       type: Boolean,
@@ -239,6 +266,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ["update:methods", "selectedChanged"],
   setup() {
@@ -246,7 +277,8 @@ export default defineComponent({
     const fundsStore = useFundsStore();
     const web3Store = useWeb3Store();
     const toastStore = useToastStore();
-    return { fundStore, fundsStore, web3Store, toastStore }
+    const { formatNAV } = toRefs(fundStore);
+    return { fundStore, fundsStore, web3Store, toastStore, formatNAV }
   },
   data: () => ({
     expanded: [],
@@ -268,7 +300,7 @@ export default defineComponent({
         headers.push(
           {
             title: "Last NAV Update Value",
-            key: "lastNavUpdateValueFormatted",
+            key: "pastNavValueFormatted",
             align: "end",
             sortable: false,
             width: "160px",
@@ -311,6 +343,9 @@ export default defineComponent({
         (fund?.feeBalance || 0n);
       return this.formatNAV(totalNAV);
     },
+    formattedTotalLastNAV() {
+      return this.formatNAV(this.navParts?.total || 0n);
+    },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
       return this.methods.reduce(
@@ -336,11 +371,14 @@ export default defineComponent({
     },
     computedMethods() {
       const methods = [];
+
       if (this.showBaseTokenBalances) {
         methods.push({
           positionName: "Fund Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
+          pastNavValue: this.navParts?.baseAssetOIVBal,
+          pastNavValueFormatted: this.formatNAV(this.navParts?.baseAssetOIVBal),
           simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-1",
@@ -352,6 +390,8 @@ export default defineComponent({
           positionName: "Safe Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
+          pastNavValue: this.navParts?.baseAssetSafeBal,
+          pastNavValueFormatted: this.formatNAV(this.navParts?.baseAssetSafeBal),
           simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-2",
@@ -363,6 +403,8 @@ export default defineComponent({
           positionName: "Fees Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
+          pastNavValue: this.navParts?.feeBal,
+          pastNavValueFormatted: this.formatNAV(this.navParts?.feeBal),
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
           detailsHash: "-3",
@@ -397,16 +439,6 @@ export default defineComponent({
     },
   },
   methods: {
-    formatNAV(value: any) {
-      const baseSymbol = this.fundStore.fund?.baseToken.symbol;
-      const baseDecimals = this.fundStore.fund?.baseToken.decimals;
-      if (!baseDecimals) {
-        return value;
-      }
-
-      const valueFormatted = value ? formatTokenValue(value, baseDecimals) : "0";
-      return valueFormatted + " " + baseSymbol;
-    },
     copyText(text: string | undefined) {
       const data = text as string;
       navigator.clipboard.writeText(data);
@@ -432,7 +464,6 @@ export default defineComponent({
       const promises = [];
 
       for (const navEntry of this.methods) {
-        console.log("push navEntry", navEntry);
         promises.push(this.simulateNAVMethodValue(navEntry));
       }
       const settled = await Promise.allSettled(promises);
@@ -449,10 +480,6 @@ export default defineComponent({
         return;
       }
 
-      const NAVCalculatorContract = new this.web3Store.web3.eth.Contract(
-        NAVCalculatorJSON.abi,
-        this.web3Store.NAVCalculatorBeaconProxyAddress,
-      );
       try {
         navEntry.isNavSimulationLoading = true;
         navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
@@ -509,10 +536,10 @@ export default defineComponent({
 
         console.log("isNavSimulationLoading:", this.isNavSimulationLoading)
         try {
-          const simulatedVal: bigint = await NAVCalculatorContract.methods[
+          const simulatedVal: bigint = await this.fundStore.navCalculatorContract.methods[
             navCalculationMethod
           ](...callData).call();
-          console.log("simulated value: ", simulatedVal);
+          // console.log("simulated value: ", simulatedVal);
 
           navEntry.simulatedNavFormatted = this.formatNAV(simulatedVal);
           navEntry.simulatedNav = simulatedVal;

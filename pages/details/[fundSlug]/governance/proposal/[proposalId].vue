@@ -244,11 +244,11 @@ const proposal = computed(():IGovernanceProposal | undefined => {
 
 const parseNavEntries = (calldataDecoded: any): INAVMethod[] => {
   console.log("calldataDecoded", calldataDecoded);
-  const navEntries = [];
-  for (const navEntry of calldataDecoded?.navUpdateData ?? []) {
-    navEntries.push(fundStore.parseNAVEntry(navEntry));
+  const navMethods = [];
+  for (const [index, navMethod] of (calldataDecoded?.navUpdateData ?? []).entries()) {
+    navMethods.push(fundStore.parseNAVMethod(index, navMethod));
   }
-  return navEntries
+  return navMethods
 }
 
 const rawProposalData = computed(() => {

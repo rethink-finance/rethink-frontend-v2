@@ -52,6 +52,12 @@ export const PositionTypeToNAVCalculationMethod: Record<PositionType, string> = 
   [PositionType.NFT]: "nftCalculationReadOnly",
   [PositionType.Composable]: "composableCalculationReadOnly",
 }
+export const PositionTypeToNAVCacheMethod: Record<PositionType, string> = {
+  [PositionType.Liquid]: "getNAVLiquidCache",
+  [PositionType.Illiquid]: "getNAVIlliquidCache",
+  [PositionType.NFT]: "getNAVNFTCache",
+  [PositionType.Composable]: "getNAVComposableCache",
+}
 export const PositionTypeToValuationTypesMap: Record<PositionType, ValuationType[]> = {
   [PositionType.Liquid]: [
     ValuationType.DEXPair,

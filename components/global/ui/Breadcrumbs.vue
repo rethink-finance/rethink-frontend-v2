@@ -1,5 +1,5 @@
 <template>
-  <v-breadcrumbs :items="items">
+  <v-breadcrumbs :items="items" class="breadcrumbs pa-0 mt-n4">
     <template #divider>
       <v-icon icon="mdi-chevron-left" />
     </template>
@@ -14,3 +14,9 @@ defineProps<{
   items: BreadcrumbItem[]
 }>();
 </script>
+
+<style lang="scss" scoped>
+.breadcrumbs {
+ height: 1rem;
+}
+</style>

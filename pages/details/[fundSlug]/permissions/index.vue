@@ -10,8 +10,7 @@
             class="info_container__link"
             href="https://docs.rethink.finance/rethink.finance"
             target="_blank"
-            >Learn more here</a
-          >.
+          >Learn more here</a>.
         </p>
         <div class="info_container__buttons">
           <UiLinkExternalButton
@@ -30,25 +29,15 @@
 <script setup lang="ts">
 // types
 import type IFund from "~/types/fund";
-import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // components
 import { useFundStore } from "~/store/fund.store";
-// emits
-const emit = defineEmits(["updateBreadcrumbs"]);
 
 const router = useRouter();
 const fundStore = useFundStore();
 
 const fund = useAttrs().fund as IFund;
-const { selectedFundAddress, selectedFundSlug } = toRefs(useFundStore());
+const { selectedFundSlug } = toRefs(useFundStore());
 
-const breadcrumbItems: BreadcrumbItem[] = [
-  {
-    title: "Permissions",
-    disabled: false,
-    to: `/details/${selectedFundSlug.value}/permissions`,
-  },
-];
 
 const navigateToGnosis = ref("");
 
@@ -72,21 +61,14 @@ watch(
   () => {
     updateGnosisLink();
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const navigateToCreatePermissions = () => {
   router.push(
-    `/details/${selectedFundSlug.value}/governance/delegated-permissions`
+    `/details/${selectedFundSlug.value}/governance/delegated-permissions`,
   );
 };
-
-onMounted(async () => {
-  emit("updateBreadcrumbs", breadcrumbItems);
-});
-onBeforeUnmount(() => {
-  emit("updateBreadcrumbs", []);
-});
 </script>
 
 <style scoped lang="scss">

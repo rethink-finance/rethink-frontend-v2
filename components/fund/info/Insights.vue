@@ -16,8 +16,17 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title">
-          {{ fundStore.fundTotalNAVFormattedShort ?? "N/A" }}
+        <div class="data_bar__title" :class="{'justify-center': fundStore.loadingNavUpdates}">
+          <v-progress-circular
+            v-if="fundStore.loadingNavUpdates"
+            class="d-flex"
+            size="18"
+            width="2"
+            indeterminate
+          />
+          <template v-else>
+            {{ fundStore.fundTotalNAVFormattedShort ?? "N/A" }}
+          </template>
         </div>
         <div class="data_bar__subtitle">
           AUM
