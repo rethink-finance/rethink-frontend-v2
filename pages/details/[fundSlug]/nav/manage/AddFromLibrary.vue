@@ -27,7 +27,7 @@
       </div>
       <FundNavMethodsTable
         v-else
-        :methods="allNavMethods"
+        :methods="uniqueNavMethods"
         :used-methods="fundStore.fundManagedNAVMethods"
         selectable
         show-simulated-nav
@@ -55,6 +55,8 @@ const selectedMethodHashes = ref<string[]>([]);
 
 const { selectedFundSlug } = toRefs(fundStore);
 const { allNavMethods } = toRefs(fundsStore);
+const { uniqueNavMethods } = toRefs(fundsStore);
+
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -93,6 +95,7 @@ onBeforeUnmount(() => {
 const onSelectionChanged = (hashes: string[]) => {
   selectedMethodHashes.value = hashes;
 }
+
 const addMethods = () => {
   // // Add newly defined method to fund managed methods.
   const methods = allNavMethods.value.filter(method => selectedMethodHashes.value.includes(method.detailsHash || ""));

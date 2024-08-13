@@ -36,6 +36,11 @@ export interface IExcludeNAVDetailsHashes {
   [chainId: string]: string[]
 }
 
+export interface IUniqueNAVMethods {
+  [detailsHash: string]: boolean
+}
+
+
 /*
   @dev: TODO: MOVE excludeFundAddrs TO FILE
 */
@@ -86,6 +91,7 @@ interface IState {
   funds: IFund[];
   // All original NAV methods.
   allNavMethods: INAVMethod[],
+  uniqueNavMethods: INAVMethod[],
   // Get the address of the original fund of all original NAV methods.
   navMethodDetailsHashToFundAddress: Record<string, string>,
 }
@@ -95,6 +101,7 @@ export const useFundsStore = defineStore({
   state: (): IState => ({
     funds: [] as IFund[],
     allNavMethods: [] as INAVMethod[],
+    uniqueNavMethods: [] as INAVMethod[], 
     navMethodDetailsHashToFundAddress: {} as Record<string, string>,
   }),
   getters: {
@@ -374,6 +381,16 @@ export const useFundsStore = defineStore({
       }
 
       this.allNavMethods = allMethods;
+      const seenValues = {} as IUniqueNAVMethods;
+      const uniqueMethods = allMethods.filter((method: any) => {
+        if (!seenValues[method.detailsHash]) {
+          seenValues[method.detailsHash] = true;
+          return true; // include value in the new list
+        }
+        return false; // exclude value from the new list
+      });
+
+      this.uniqueNavMethods = uniqueMethods;
     },
   },
 });
