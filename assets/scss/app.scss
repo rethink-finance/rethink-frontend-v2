@@ -171,3 +171,8 @@ a {
   word-break: break-all; /* This ensures long words are broken to fit */
   font-family: monospace; /* Use a monospace font to mimic code appearance */
 }
+
+// disable number input field scroll
+input[type="number"]:focus:hover {
+  pointer-events: none;
+}
