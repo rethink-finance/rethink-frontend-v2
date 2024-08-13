@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -448,6 +448,7 @@ export const useFundStore = defineStore({
         console.log("clockMode: ", clockMode);
         console.log("fundSettings: ", fundSettings)
         const quorumVotes: bigint = governanceTokenTotalSupply as bigint * quorumNumerator as bigint / quorumDenominator as bigint;
+        const votingUnit = clockMode.mode === ClockMode.BlockNumber ? "block" : "second";
 
         const fund: IFund = {
           chainName: this.web3Store.chainName,
@@ -495,11 +496,8 @@ export const useFundStore = defineStore({
           minLiquidAssetShare: "",
 
           // Governance
-          // TODO need to fetch the CLOCK_MODE to know if it is in seconds or blocks
-          //  The unit this duration is expressed in depends on the clock (see EIP-6372) this contract uses.
-          //  Machine-readable description of the clock as specified in EIP-6372.
-          votingDelay: pluralizeWord("second", fundVotingDelay),
-          votingPeriod: pluralizeWord("second", fundVotingPeriod),
+          votingDelay: pluralizeWord(votingUnit, fundVotingDelay),
+          votingPeriod: pluralizeWord(votingUnit, fundVotingPeriod),
           proposalThreshold: (!fundProposalThreshold && fundProposalThreshold !== 0n) ? "N/A" : `${commify(fundProposalThreshold)} ${governanceTokenSymbol || "votes"}`,
           quorumVotes,
           quorumVotesFormatted: formatTokenValue(quorumVotes, governanceTokenDecimals),

@@ -6,9 +6,19 @@
       :class="classes(item)"
       flat
     >
-      <div class="proposal-roadmap__date">
+    
+      <div class="proposal-roadmap__date" v-if="item.date">
         {{ item.date }}
       </div>
+      <v-progress-circular
+        v-if="isStateExecuted && !item.date"
+        indeterminate
+        color="primary"
+        height="2"
+        width="2"
+        class="mb-2 d-flex mx-auto"
+        rounded
+      />
 
       <div class="proposal-roadmap__container">
         <div class="proposal-roadmap__icon">
@@ -29,7 +39,8 @@
 </template>
 
 <script lang="ts">
-import { formatDate } from "~/composables/formatters";
+import { formatDateLong } from "~/composables/formatters";
+import { ProposalState } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
 
 export default {
@@ -42,37 +53,42 @@ export default {
   computed: {
     parsedRoadmap() {
       const voteStart = this.proposal?.voteStart
-        ? new Date(this.proposal.voteStart)
+        ? new Date(Number(this.proposal.voteStart) * 1000)
         : null;
       const voteEnd = this.proposal?.voteEnd
-        ? new Date(this.proposal.voteEnd)
+        ? new Date(Number(this.proposal.voteEnd) * 1000)
         : null;
 
-      // TODO: proposal execution date is missing
+        const executionDate = this.proposal?.executedTimestamp
+        ? new Date(Number(this.proposal.executedTimestamp) * 1000)
+        : null;
 
       return [
         {
           title: "Proposal on Chain",
           subtitle: "Start of Voting Period",
           icon: "material-symbols:how-to-vote-outline",
-          date: voteStart ? formatDate(voteStart) : "",
+          date: voteStart ? formatDateToLocaleString(voteStart) : "",
           hasStarted: voteStart && new Date() > voteStart,
         },
         {
           title: "Proposal Results",
           subtitle: "End of Voting Period",
           icon: "material-symbols:ballot-outline",
-          date: voteEnd ? formatDate(voteEnd) : "",
+          date: voteEnd ? formatDateToLocaleString(voteEnd) : "",
           hasStarted: voteEnd && new Date() > voteEnd,
         },
         {
           title: "Proposal Execution",
           subtitle: "Enactment on Chain",
           icon: "material-symbols:rocket-launch-outline-rounded",
-          date: voteEnd ? formatDate(voteEnd) : "",
-          hasStarted: voteEnd && new Date() > voteEnd,
+          date: executionDate ? formatDateToLocaleString(executionDate) : "",
+          hasStarted: executionDate && new Date() > executionDate,
         },
       ];
+    },
+    isStateExecuted() {
+      return this.proposal?.state === ProposalState.Executed;
     },
   },
 
@@ -107,6 +123,12 @@ export default {
         display: none;
       }
     }
+  }
+
+  &__date {
+    font-size: 14px;
+    margin-left: 2rem;
+    margin-bottom: 0.25rem;
   }
 
   &__container {
