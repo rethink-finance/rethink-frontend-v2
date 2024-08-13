@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -672,24 +672,6 @@ export const useFundStore = defineStore({
       const navParts = await this.fetchNavParts(navUpdatesLen);
 
       for (let i= 0; i < navUpdatesLen; i++) {
-        let totalNAV = BigInt("0");
-        const quantity = {
-          [PositionType.Liquid]: BigInt("0"),
-          [PositionType.Illiquid]: BigInt("0"),
-          [PositionType.Composable]: BigInt("0"),
-          [PositionType.NFT]: BigInt("0"),
-        } as Record<PositionType, bigint>;
-
-        PositionTypeKeys.forEach((positionType: PositionType) => {
-          // Check if the key exists in the object to avoid errors
-          if (dataNAV[positionType][i]) {
-            quantity[positionType] = dataNAV[positionType][i].reduce((sum: bigint, value: bigint) => sum + value, BigInt("0"));
-            // Sum the array values and add to total
-            totalNAV += quantity[positionType];
-          }
-          return totalNAV;
-        });
-
         const navTimestamp = Number(fundNavUpdateTimes[i] * 1000n);
         navUpdates.push(
           {
@@ -699,8 +681,7 @@ export const useFundStore = defineStore({
             date: fundNavUpdateTimes[i] ? formatDate(new Date(navTimestamp)) : `#${(i+1).toString()}}`,
             timestamp: navTimestamp,
             navParts: navParts[i],
-            totalNAV,
-            quantity,
+            totalNAV: navParts[i]?.total,
             entries: [],
           },
         )

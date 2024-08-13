@@ -80,7 +80,7 @@
         NAV Updates
       </div>
       <div>
-        <FundNavUpdates :fund="parsedFundNavUpdates" />
+        <FundNavUpdates :fund="reversedFundNavUpdates" />
       </div>
     </div>
   </div>
@@ -172,7 +172,7 @@ const updateNAV = async () => {
   }
 };
 // return fund with reversed navUpdates array to show the latest updates first
-const parsedFundNavUpdates = computed(() => {
+const reversedFundNavUpdates = computed(() => {
   if (!fund.navUpdates) return fund;
 
   return {

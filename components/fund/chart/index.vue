@@ -56,10 +56,12 @@ export default {
       ];
     },
     totalNAVItems(): bigint[] {
-      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => navUpdate.totalNAV)
+      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n)
     },
     chartItems(): number[] {
-      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => parseFloat(ethers.formatUnits(navUpdate.totalNAV, this.fund.baseToken.decimals)))
+      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => parseFloat(
+        ethers.formatUnits(navUpdate.totalNAV || 0n, this.fund.baseToken.decimals),
+      ))
     },
     chartDates() {
       return this.fund.navUpdates.map((navUpdate: INAVUpdate) => navUpdate.date);

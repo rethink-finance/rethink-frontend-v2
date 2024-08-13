@@ -59,13 +59,7 @@ export default interface INAVUpdate {
   index: number,
   date: string;
   timestamp: number;
-  totalNAV: bigint;
-  quantity: {
-    [PositionType.Liquid]: bigint;
-    [PositionType.Illiquid]: bigint;
-    [PositionType.Composable]: bigint;
-    [PositionType.NFT]: bigint;
-  };
+  totalNAV?: bigint;
   entries: INAVMethod[],
   navParts?: INAVParts;
 }
