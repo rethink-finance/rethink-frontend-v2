@@ -73,8 +73,18 @@
         :disabled="item.deleted || item.isAlreadyUsed"
       />
     </template>
-    <template #[`item.pastNavValueFormatted`]="{ value }">
-      {{ value ?? "-" }}
+    <template #[`item.pastNavValueFormatted`]="{ value, item }">
+      <div v-if="item.pastNavValueLoading">
+        <v-progress-circular
+          indeterminate
+          color="gray"
+          size="16"
+          width="2"
+        />
+      </div>
+      <div v-else>
+        {{ value ?? "-" }}
+      </div>
     </template>
 
     <template #[`item.simulatedNavFormatted`]="{ value, item }">
@@ -256,7 +266,8 @@ export default defineComponent({
     const fundsStore = useFundsStore();
     const web3Store = useWeb3Store();
     const toastStore = useToastStore();
-    return { fundStore, fundsStore, web3Store, toastStore }
+    const { formatNAV } = toRefs(fundStore);
+    return { fundStore, fundsStore, web3Store, toastStore, formatNAV }
   },
   data: () => ({
     expanded: [],
@@ -417,16 +428,6 @@ export default defineComponent({
     },
   },
   methods: {
-    formatNAV(value: any) {
-      const baseSymbol = this.fundStore.fund?.baseToken.symbol;
-      const baseDecimals = this.fundStore.fund?.baseToken.decimals;
-      if (!baseDecimals) {
-        return value;
-      }
-
-      const valueFormatted = value ? formatTokenValue(value, baseDecimals) : "0";
-      return valueFormatted + " " + baseSymbol;
-    },
     copyText(text: string | undefined) {
       const data = text as string;
       navigator.clipboard.writeText(data);

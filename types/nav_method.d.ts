@@ -1,6 +1,5 @@
 import { PositionType } from "~/types/enums/position_type";
 import { ValuationType } from "~/types/enums/valuation_type";
-import type { INAVParts } from "~/types/fund";
 
 
 /**
@@ -28,6 +27,8 @@ export interface INAVMethodDetails {
 }
 
 export default interface INAVMethod {
+  // Index is a location of where in NAV update entries array the method is defined.
+  index?: number,
   positionName: string,
   valuationSource: string,
   positionType: PositionType,
@@ -37,7 +38,9 @@ export default interface INAVMethod {
   pastNAVUpdateEntryFundAddress?: string,
   // NAV value of that NAV method (if it was already executed in the past)
   pastNavValue?: bigint,
-  pastNavValueFormatted?: bigint,
+  pastNavValueFormatted?: string,
+  pastNavValueLoading?: boolean,
+  pastNavValueError?: boolean,
 
   // @dev note:
   // It is very important to keep the same structure of the details hash always, as it is used to

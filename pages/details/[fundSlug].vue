@@ -46,9 +46,7 @@
         </nuxt-link>
       </div>
 
-      <div>
-        <UiBreadcrumbs :items="breadcrumbItems" />
-      </div>
+      <UiBreadcrumbs :items="breadcrumbItems" />
     </div>
     <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>
@@ -275,7 +273,7 @@ const computedRoutes = computed(() => {
 }
 .details_nav {
   position: relative;
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
   padding-top: 1rem;
   width: 100%;
 }

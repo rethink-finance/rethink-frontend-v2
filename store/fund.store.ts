@@ -24,7 +24,7 @@ import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
   PositionTypeKeys,
-  PositionTypes,
+  PositionTypes, PositionTypeToNAVCacheMethod,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type { INAVParts } from "~/types/fund";
@@ -34,7 +34,6 @@ import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
-import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { parseBigInt } from "~/composables/localStorage";
 
 // Since the direct import won't infer the custom type, we cast it here.:
@@ -577,25 +576,26 @@ export const useFundStore = defineStore({
 
       return positionTypeCounts;
     },
-    parseNAVEntry(navEntryData: Record<string, any>): INAVMethod {
+    parseNAVMethod(index: number, navMethodData: Record<string, any>): INAVMethod {
       let description;
-      const positionType = NAVEntryTypeToPositionTypeMap[navEntryData.entryType];
+      const positionType = NAVEntryTypeToPositionTypeMap[navMethodData.entryType];
 
       try {
-        if (navEntryData.description === "") {
+        if (navMethodData.description === "") {
           description = {};
         } else {
-          description = JSON.parse(navEntryData.description ?? "{}");
+          description = JSON.parse(navMethodData.description ?? "{}");
         }
       } catch (error) {
         // Handle the error or rethrow it
         console.warn("Failed to parse NAV entry JSON description string: ", error);
       }
 
-      const details = cleanComplexWeb3Data(navEntryData);
+      const details = cleanComplexWeb3Data(navMethodData);
       const detailsJson = formatJson(details);
 
       return {
+        index,
         positionType,
         positionName: description?.positionName,
         valuationSource: description?.valuationSource,
@@ -604,7 +604,7 @@ export const useFundStore = defineStore({
         detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
       } as INAVMethod
     },
-    async fetchNavParts(navUpdatesLen: number): Promise<INAVParts[]> {
+    async fetchNavParts(navUpdatesLen: number): Promise<(INAVParts | undefined)[]> {
       // Important to know: nav update indices start with 1, not with 0.
       const promises: Promise<any>[] = Array.from(
         { length: navUpdatesLen },
@@ -614,7 +614,7 @@ export const useFundStore = defineStore({
       );
 
       const navPartsPromises = await Promise.allSettled(promises);
-      const parsedNavParts: INAVParts[] = [];
+      const parsedNavParts: (INAVParts | undefined)[] = [];
       navPartsPromises.forEach((navPartsResult, index) => {
         if (navPartsResult.status === "fulfilled") {
           const navParts: Record<string, any> = navPartsResult.value;
@@ -626,12 +626,42 @@ export const useFundStore = defineStore({
             total: navParts.baseAssetOIVBal + navParts.baseAssetSafeBal + navParts.feeBal + navParts.totalNAV,
           } as INAVParts)
         } else {
+          parsedNavParts.push(undefined);
           console.error(`Failed to fetch NAV parts ${index + 1}:`, navPartsResult.reason);
         }
       });
       console.log("NAV parts", parsedNavParts)
 
       return parsedNavParts;
+    },
+    async fetchLastNavUpdateCalculatorCaches(navMethods: INAVMethod[]) {
+      // Fetch last NAV update's methods' cached past values.
+      // Currently only the last NAV update methods' values are cached for all methods.
+      // getNAVIlliquidCache
+      const promises = [];
+      for (const [navMethodIndex, navMethod] of navMethods.entries()) {
+        const calculatorMethod = PositionTypeToNAVCacheMethod[navMethod.positionType]
+        promises.push(this.navCalculatorContract.methods[calculatorMethod](this.selectedFundAddress, navMethodIndex).call())
+        navMethod.pastNavValueLoading = true;
+        navMethod.pastNavValueError = false;
+      }
+      const navCachePromises = await Promise.allSettled(promises);
+
+      // Process results
+      navCachePromises.forEach((navCacheResult, navMethodIndex) => {
+        if (navCacheResult.status === "fulfilled") {
+          const pastNavValue = navCacheResult.value.reduce(
+            (acc: bigint, val: bigint) => acc + val,
+            0n,
+          );
+          navMethods[navMethodIndex].pastNavValue = pastNavValue;
+          navMethods[navMethodIndex].pastNavValueFormatted = this.formatNAV(pastNavValue);
+          navMethods[navMethodIndex].pastNavValueLoading = false;
+        } else {
+          navMethods[navMethodIndex].pastNavValueError = true;
+          console.error(`Failed to fetch NAV entry ${navMethodIndex + 1}:`, navCacheResult.reason);
+        }
+      });
     },
     async parseFundNAVUpdates(dataNAV: any): Promise<INAVUpdate[]> {
       const navUpdates = [] as INAVUpdate[];
@@ -689,35 +719,37 @@ export const useFundStore = defineStore({
       const navUpdatePromises = await Promise.allSettled(promises);
 
       // Process results
-      navUpdatePromises.forEach((navUpdateResult, index) => {
+      navUpdatePromises.forEach((navUpdateResult, navUpdateIndex) => {
         if (navUpdateResult.status === "fulfilled") {
-          const navEntries: Record<string, any>[] = navUpdateResult.value;
-          console.log("navEntries: ", navEntries);
+          const navMethods: Record<string, any>[] = navUpdateResult.value;
+          console.log("navMethods: ", navMethods);
 
-          for (const navEntry of navEntries) {
-            navUpdates[index].entries.push(this.parseNAVEntry(navEntry))
+          for (const [navMethodIndex, navMethod] of navMethods.entries()) {
+            navUpdates[navUpdateIndex].entries.push(this.parseNAVMethod(navMethodIndex, navMethod))
           }
         } else {
-          console.error(`Failed to fetch NAV entry ${index + 1}:`, navUpdateResult.reason);
+          console.error(`Failed to fetch NAV entry ${navUpdateIndex + 1}:`, navUpdateResult.reason);
         }
       });
 
       console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
       // TODO use this code when reader contract is fixed
       // Fetch NAV JSON entries for each NAV update.
-      // const navEntries: Record<string, any>[][] = dataNAV.encodedNavUpdate.map(decodeNavUpdateEntry);
+      // const navUpdates: Record<string, any>[][] = dataNAV.encodedNavUpdate.map(decodeNavUpdateEntry);
       //
       // // Process results
-      // for (const [index, navMethods] of navEntries.entries()) {
+      // for (const [navUpdateIndex, navMethods] of navUpdates.entries()) {
       //   // TODO remove this if when reader contract is fixed.
       //   if (!navMethods.length) continue
-      //   for (const navMethod of navMethods) {
-      //     const parsedNavMethod = this.parseNAVEntry(navMethod);
-      //     // parsedNavMethod.pastNavValue = dataNAV[parsedNavMethod.positionType][index]
-      //     navUpdates[index].entries.push(parsedNavMethod)
+      //   for (const [navMethodIndex, navMethod] of navMethods.entries()) {
+      //     const parsedNavMethod = this.parseNAVMethod(navMethodIndex, navMethod);
+      //     // TODO this is not ok
+      //     // parsedNavMethod.pastNavValue = dataNAV[parsedNavMethod.positionType][navUpdateIndex]
+      //     navUpdates[navUpdateIndex].entries.push(parsedNavMethod)
       //   }
       // }
-      console.warn("navUpdates: ", navUpdates);
+      console.warn("navUpdates: ", navUpdates, navUpdatesLen);
+      await this.fetchLastNavUpdateCalculatorCaches(navUpdates[navUpdates.length - 1].entries ?? [])
       return navUpdates;
     },
     /**
@@ -940,6 +972,16 @@ export const useFundStore = defineStore({
         console.error("Error estimating gas:", error);
       }
       return [undefined, undefined];
+    },
+    formatNAV(value: any): string {
+      const baseSymbol = this.fund?.baseToken.symbol;
+      const baseDecimals = this.fund?.baseToken.decimals;
+      if (!baseDecimals) {
+        return value;
+      }
+
+      const valueFormatted = value ? formatTokenValue(value, baseDecimals) : "0";
+      return valueFormatted + " " + baseSymbol;
     },
   },
 });

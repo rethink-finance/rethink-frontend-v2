@@ -45,12 +45,10 @@ export default defineComponent({
   },
   setup() {
     const fundStore = useFundStore();
-    return { fundStore };
+    const { formatNAV } = toRefs(fundStore);
+    return { fundStore, formatNAV };
   },
   methods: {
-    formatNAV(value: bigint) {
-      return formatTokenValue(value, this.fund.baseToken.decimals) + " " + this.fund.baseToken.symbol;
-    },
     navUpdateTotalNav(navUpdate: INAVUpdate) {
       if (!navUpdate.navParts?.total) return "N/A"
       return this.formatNAV(navUpdate.navParts?.total)

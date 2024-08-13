@@ -11,7 +11,6 @@ import type IAddresses from "~/types/addresses";
 import type { IContractAddresses } from "~/types/addresses";
 import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
-import type { INAVParts } from "~/types/fund";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
@@ -344,39 +343,39 @@ export const useFundsStore = defineStore({
 
       console.log("allFundsNavData: ", allFundsNavData);
       console.log("Fetch all NAV methods");
-      for (const navData of allFundsNavData) {
-        if (!navData.encodedNavUpdate?.length) continue;
+      for (const [fundIndex, fundNavData] of allFundsNavData.entries()) {
+        if (!fundNavData.encodedNavUpdate?.length) continue;
 
-        for (const encodedNavUpdate of navData.encodedNavUpdate) {
+        for (const [navUpdateIndex, encodedNavUpdate] of fundNavData.encodedNavUpdate.entries()) {
           try {
-            // Decode NAV entry data.
-            const navEntries: Record<string, any>[] = decodeNavUpdateEntry(encodedNavUpdate);
+            // Decode NAV update methods data.
+            const navMethods: Record<string, any>[] = decodeNavUpdateEntry(encodedNavUpdate);
 
-            for (const [i, navEntry] of navEntries.entries()) {
+            for (const [navMethodIndex, navMethod] of navMethods.entries()) {
               // Ignore NAV methods that are not original NAV entries.
-              if (navEntry.isPastNAVUpdate || navEntry.pastNAVUpdateIndex !== 0n) {
-                // console.log("[SKIP] navEntry: ", navEntry);
+              if (navMethod.isPastNAVUpdate || navMethod.pastNAVUpdateIndex !== 0n) {
+                // console.log("[SKIP] navMethod: ", navMethod);
                 continue;
               }
-              // console.log("[KEEP] navEntry: ", navEntry);
-              const parsedNavEntry: INAVMethod = this.fundStore.parseNAVEntry(navEntry);
+              // console.log("[KEEP] navMethod: ", navMethod);
+              const parsedNavMethod: INAVMethod = this.fundStore.parseNAVMethod(navMethodIndex, navMethod);
 
               if (
                 excludeNAVDetails &&
-                parsedNavEntry.detailsHash &&
-                excludeNAVDetailsHashes[this.web3Store.chainId].includes(parsedNavEntry.detailsHash)) {
+                parsedNavMethod.detailsHash &&
+                excludeNAVDetailsHashes[this.web3Store.chainId].includes(parsedNavMethod.detailsHash)) {
                 return;
               }
 
-              // Set the past NAV update entry fund address to the original fund address
+              // Set the past NAV update fund address to the original fund address
               // the entry was created on.
-              const fundAddress = fundAddresses[i];
-              parsedNavEntry.pastNAVUpdateEntryFundAddress = fundAddress;
-              allMethods.push(parsedNavEntry);
-              if (parsedNavEntry.detailsHash) {
-                this.navMethodDetailsHashToFundAddress[parsedNavEntry.detailsHash] = fundAddress;
+              const fundAddress = fundAddresses[fundIndex];
+              parsedNavMethod.pastNAVUpdateEntryFundAddress = fundAddress;
+              allMethods.push(parsedNavMethod);
+              if (parsedNavMethod.detailsHash) {
+                this.navMethodDetailsHashToFundAddress[parsedNavMethod.detailsHash] = fundAddress;
               } else {
-                console.error("Missing detailsHash for NAV entry ", navEntry);
+                console.error("Missing detailsHash for NAV method ", navUpdateIndex, navMethod);
               }
             }
           } catch (error: any) {
