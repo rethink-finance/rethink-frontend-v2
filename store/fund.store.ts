@@ -139,6 +139,7 @@ export const useFundStore = defineStore({
 
       // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
       const fundTokenTotalSupply = this.fund?.fundTokenTotalSupply || 0n;
+      if (!fundTokenTotalSupply) return 0n;
       return (this.fundTotalNAV * this.userFundTokenBalance) / fundTokenTotalSupply;
     },
     fundTotalNAV(): bigint {
@@ -159,16 +160,16 @@ export const useFundStore = defineStore({
     },
     fundTotalNAVFormattedShort(): string {
       if (!this.fund?.address) return "N/A";
-      const totalNAV = Number(formatTokenValue(this.fundTotalNAV, this.fund.baseToken.decimals, false));
-      return formatNumberShort(totalNAV) + " " + this.fund.baseToken.symbol;
+      const totalNAV = Number(formatTokenValue(this.fundTotalNAV, this.fund?.baseToken.decimals, false));
+      return formatNumberShort(totalNAV) + " " + this.fund?.baseToken.symbol;
     },
     selectedFundSlug(state: IState): string {
       const chainId = this.web3Store?.chainId || "";
       return (chainId) + "-" + (state.fund?.fundToken.symbol || "") + "-" + (state.fund?.address || "");
     },
     fundLastNAVUpdate(state: IState): INAVUpdate | undefined {
-      if (!state.fund?.navUpdates.length) return undefined;
-      return state.fund.navUpdates[state.fund.navUpdates.length - 1];
+      if (!state.fund?.navUpdates?.length) return undefined;
+      return state.fund?.navUpdates[state.fund?.navUpdates?.length - 1];
     },
     fundLastNAVUpdateMethods(): INAVMethod[] {
       return this.fundLastNAVUpdate?.entries || [];
@@ -728,7 +729,7 @@ export const useFundStore = defineStore({
       //   }
       // }
       console.warn("navUpdates: ", navUpdates, navUpdatesLen);
-      const lastNavUpdateNavMethods = navUpdates[navUpdates.length - 1].entries ?? [];
+      const lastNavUpdateNavMethods = navUpdates[navUpdates.length - 1]?.entries ?? [];
       console.warn("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
       lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
         this.updateNavMethodPastNavValue(navMethodIndex, navMethod);

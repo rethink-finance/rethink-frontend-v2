@@ -1,10 +1,10 @@
 <template>
-  <div class="chart">
+  <div v-if="!fundStore.loadingNavUpdates" class="chart">
     <div class="chart__toolbar">
       <div>
         <FundChartTypeSelector
           selected="aum"
-          :value="fundTotalNAVFormattedShort"
+          :value="fundStore.fundTotalNAVFormattedShort"
           @change="updateChart"
         />
       </div>
@@ -43,8 +43,8 @@ export default {
     },
   },
   setup() {
-    const { fundTotalNAVFormattedShort } = toRefs(useFundStore());
-    return { fundTotalNAVFormattedShort }
+    const fundStore = useFundStore();
+    return { fundStore }
   },
   computed: {
     series() {
@@ -56,15 +56,15 @@ export default {
       ];
     },
     totalNAVItems(): bigint[] {
-      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n)
+      return this.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n) || [];
     },
     chartItems(): number[] {
-      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => parseFloat(
-        ethers.formatUnits(navUpdate.totalNAV || 0n, this.fund.baseToken.decimals),
-      ))
+      return this.fund?.navUpdates?.map((navUpdate: INAVUpdate) => parseFloat(
+        ethers.formatUnits(navUpdate.totalNAV || 0n, this.fund?.baseToken.decimals),
+      )) || [];
     },
     chartDates() {
-      return this.fund.navUpdates.map((navUpdate: INAVUpdate) => navUpdate.date);
+      return this.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [];
     },
     options() {
       return {
@@ -178,7 +178,7 @@ export default {
   },
   methods: {
     formatWei(value: bigint) {
-      return formatTokenValue(value, this.fund.baseToken.decimals) + " " + this.fund.baseToken.symbol;
+      return formatTokenValue(value, this.fund?.baseToken.decimals) + " " + this.fund?.baseToken.symbol;
     },
     updateChart(value?: string) {
       console.log("updateChart: " + value)
