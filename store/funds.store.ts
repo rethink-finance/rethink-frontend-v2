@@ -61,6 +61,7 @@ const excludeFundAddrs = {
 
 /*
   @dev: TODO: MOVE excludeNAVDetailsHashes TO FILE
+
 */
 
 
@@ -348,7 +349,7 @@ export const useFundsStore = defineStore({
                 excludeNAVDetails &&
                 parsedNavEntry.detailsHash &&
                 excludeNAVDetailsHashes[this.web3Store.chainId].includes(parsedNavEntry.detailsHash)) {
-                return;
+                continue;
               }
 
               // Set the past NAV update entry fund address to the original fund address
