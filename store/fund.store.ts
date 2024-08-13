@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -16,6 +16,10 @@ import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
 import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import {
+  FundTransactionType,
+  FundTransactionTypeStorageSlotIdxMap,
+} from "~/types/enums/fund_transaction_type";
+import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
   PositionTypeKeys,
@@ -23,15 +27,11 @@ import {
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
-import {
-  FundTransactionType,
-  FundTransactionTypeStorageSlotIdxMap,
-} from "~/types/enums/fund_transaction_type";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -442,6 +442,7 @@ export const useFundStore = defineStore({
         console.log("clockMode: ", clockMode);
         console.log("fundSettings: ", fundSettings)
         const quorumVotes: bigint = governanceTokenTotalSupply as bigint * quorumNumerator as bigint / quorumDenominator as bigint;
+        const votingUnit = clockMode.mode === ClockMode.BlockNumber ? "block" : "second";
 
         const fund: IFund = {
           chainName: this.web3Store.chainName,
@@ -492,8 +493,8 @@ export const useFundStore = defineStore({
           // TODO need to fetch the CLOCK_MODE to know if it is in seconds or blocks
           //  The unit this duration is expressed in depends on the clock (see EIP-6372) this contract uses.
           //  Machine-readable description of the clock as specified in EIP-6372.
-          votingDelay: pluralizeWord("second", fundVotingDelay),
-          votingPeriod: pluralizeWord("second", fundVotingPeriod),
+          votingDelay: pluralizeWord(votingUnit, fundVotingDelay),
+          votingPeriod: pluralizeWord(votingUnit, fundVotingPeriod),
           proposalThreshold: (!fundProposalThreshold && fundProposalThreshold !== 0n) ? "N/A" : `${commify(fundProposalThreshold)} ${governanceTokenSymbol || "votes"}`,
           quorumVotes,
           quorumVotesFormatted: formatTokenValue(quorumVotes, governanceTokenDecimals),
