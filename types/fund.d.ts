@@ -8,8 +8,6 @@ export interface INAVParts {
   baseAssetSafeBal: bigint,
   feeBal: bigint,
   totalNAV: bigint,
-  // total is sum of all 4 values above.
-  total: bigint,
 }
 
 /**

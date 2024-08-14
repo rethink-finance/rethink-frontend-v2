@@ -3,7 +3,7 @@
     <UiHeader>
       <div>
         <div class="main_header__title">
-          {{ fundTotalNAVFormattedShort }}
+          {{ fundTotalNAVFormatted }}
         </div>
         <div class="main_header__subtitle">
           Last updated on <strong>{{ fundLastNAVUpdateDate }}</strong>
@@ -101,7 +101,6 @@ const web3Store = useWeb3Store();
 
 const fund = useAttrs().fund as IFund;
 const {
-  fundTotalNAVFormattedShort,
   selectedFundSlug,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
@@ -112,6 +111,11 @@ const isLoading = ref(false);
 const fundLastNAVUpdateDate = computed(() => {
   if (!fundLastNAVUpdate?.value?.date) return "N/A";
   return fundLastNAVUpdate.value.date ?? "N/A";
+});
+
+const fundTotalNAVFormatted = computed(() => {
+  if (!fundStore.fundTotalNAV) return "N/A";
+  return fundStore.formatNAV(fundStore.fundTotalNAV)
 });
 
 const updateNAV = async () => {

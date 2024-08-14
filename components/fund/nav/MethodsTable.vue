@@ -1,7 +1,7 @@
 <template>
   <v-skeleton-loader v-if="loading" type="table" />
   <v-data-table
-    v-if="computedMethods.length"
+    v-else-if="computedMethods.length"
     v-model="selected"
     v-model:expanded="expanded"
     :headers="headers"
@@ -344,7 +344,7 @@ export default defineComponent({
       return this.formatNAV(totalNAV);
     },
     formattedTotalLastNAV() {
-      return this.formatNAV(this.navParts?.total || 0n);
+      return this.formatNAV(this.navParts?.totalNAV || 0n);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.

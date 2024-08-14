@@ -50,8 +50,8 @@ export default defineComponent({
   },
   methods: {
     navUpdateTotalNav(navUpdate: INAVUpdate) {
-      if (!navUpdate.navParts?.total) return "N/A"
-      return this.formatNAV(navUpdate.navParts?.total)
+      if (!navUpdate.navParts?.totalNAV) return "N/A"
+      return this.formatNAV(navUpdate.navParts?.totalNAV)
     },
   },
 })

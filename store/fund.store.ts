@@ -628,7 +628,6 @@ export const useFundStore = defineStore({
             baseAssetSafeBal: navParts.baseAssetSafeBal,
             feeBal: navParts.feeBal,
             totalNAV: navParts.totalNAV,
-            total: navParts.baseAssetOIVBal + navParts.baseAssetSafeBal + navParts.feeBal + navParts.totalNAV,
           } as INAVParts)
         } else {
           parsedNavParts.push(undefined);
@@ -682,7 +681,7 @@ export const useFundStore = defineStore({
             date: fundNavUpdateTimes[i] ? formatDate(new Date(navTimestamp)) : `#${(i+1).toString()}}`,
             timestamp: navTimestamp,
             navParts: navParts[i],
-            totalNAV: navParts[i]?.total,
+            totalNAV: navParts[i]?.totalNAV,
             entries: [],
           },
         )
