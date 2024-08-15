@@ -141,9 +141,12 @@ const depositDisabledTooltipText = computed(() => {
   if (shouldUserWaitSettlementOrCancelDeposit.value) {
     return "Wait for settlement or cancel the deposit request."
   }
+  /*
+
+  TODO: ISSUES WITH THIS
   if (!fundStore.isUserWalletWhitelisted) {
     return "Your wallet address is not whitelisted to allow deposits into this fund."
-  }
+  } */
   return ""
 });
 const redemptionDisabledTooltipText = computed(() => {
@@ -162,10 +165,11 @@ const redemptionDisabledTooltipText = computed(() => {
   if (fundContractBaseTokenBalance > redemptionRequestAmount) {
     return "Not enough liquidity in the fund contract."
   }
-
+  /*
+  TODO: ISSUES WITH THIS
   if (!fundStore.isUserWalletWhitelisted) {
     return "Your wallet address is not whitelisted to allow deposits into this fund."
-  }
+  }*/
   return ""
 });
 

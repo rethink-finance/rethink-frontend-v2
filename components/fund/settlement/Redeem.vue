@@ -119,9 +119,19 @@ const rules = [
   },
 ];
 
+
+/*
+TODO: issues with this
 const isRequestRedeemDisabled = computed(() => {
   // Disable deposit button if any of rules is false.
   return errorMessages.value.length > 0 || loadingRequestRedeem.value  || !fundStore.isUserWalletWhitelisted;
+});
+
+*/
+
+const isRequestRedeemDisabled = computed(() => {
+  // Disable deposit button if any of rules is false.
+  return errorMessages.value.length > 0 || loadingRequestRedeem.value;
 });
 
 const errorMessages = computed<IError[]>(() => {
@@ -215,9 +225,12 @@ const buttons = ref([
       if (userRedemptionRequestExists.value) {
         return "Redemption request already exists. To change it, you first have to cancel the existing one."
       }
+      /*
+            TODO: issues with this
+
       if (!fundStore.isUserWalletWhitelisted) {
         return "Your wallet address is not whitelisted to allow deposits into this fund."
-      }
+      }*/
       return ""
     }),
   },
