@@ -3,6 +3,7 @@ import safeModule from "@web3-onboard/gnosis"
 import injectedModule from "@web3-onboard/injected-wallets"
 import { init } from "@web3-onboard/vue"
 import walletConnectModule from "@web3-onboard/walletconnect"
+import ledgerModule from '@web3-onboard/ledger'
 import logoSVG from "@/assets/images/logo_mobile.svg"
 
 export default defineNuxtPlugin(() => {
@@ -34,8 +35,16 @@ export default defineNuxtPlugin(() => {
     dappUrl: "https://rethink.finance",
   })
 
+  const ledger = ledgerModule({
+    /**
+     * Project ID associated with [WalletConnect account](https://cloud.walletconnect.com)
+     */
+    projectId: runtimeConfig.public.WALLET_CONNECT_PROJECT_ID || "1",
+    dappUrl: "https://rethink.finance",
+  })
+
   init({
-    wallets: [injected, safe, walletConnect],
+    wallets: [injected, safe, walletConnect, ledger],
     chains: [
       {
         id: "0x89",

@@ -48,6 +48,7 @@
     "@web3-onboard/core": "^2.21.6",
     "@web3-onboard/gnosis": "^2.2.1",
     "@web3-onboard/injected-wallets": "^2.10.11",
+    "@web3-onboard/ledger": "^2.7.1",
     "@web3-onboard/vue": "^2.7.12",
     "@web3-onboard/walletconnect": "^2.5.3",
     "apexcharts": "^3.47.0",
