@@ -4,6 +4,7 @@ import injectedModule from "@web3-onboard/injected-wallets"
 import { init } from "@web3-onboard/vue"
 import walletConnectModule from "@web3-onboard/walletconnect"
 import ledgerModule from '@web3-onboard/ledger'
+import enrkypt from '@web3-onboard/enkrypt'
 import logoSVG from "@/assets/images/logo_mobile.svg"
 
 export default defineNuxtPlugin(() => {
@@ -35,6 +36,9 @@ export default defineNuxtPlugin(() => {
     dappUrl: "https://rethink.finance",
   })
 
+  const enrkyptModule = enrkypt()
+
+
   const ledger = ledgerModule({
     /**
      * Project ID associated with [WalletConnect account](https://cloud.walletconnect.com)
@@ -44,7 +48,7 @@ export default defineNuxtPlugin(() => {
   })
 
   init({
-    wallets: [injected, safe, walletConnect, ledger],
+    wallets: [injected, safe, walletConnect, ledger, enrkyptModule],
     chains: [
       {
         id: "0x89",

@@ -46,6 +46,7 @@
     "@tanstack/vue-table": "^8.10.7",
     "@typechain/ethers-v6": "^0.5.1",
     "@web3-onboard/core": "^2.21.6",
+    "@web3-onboard/enkrypt": "^2.1.1",
     "@web3-onboard/gnosis": "^2.2.1",
     "@web3-onboard/injected-wallets": "^2.10.11",
     "@web3-onboard/ledger": "^2.7.1",
