@@ -293,7 +293,6 @@ const formIsValid = ref(false);
   &__toggle {
     display: flex;
     justify-content: flex-end;
-    margin-bottom: 0.5rem;
   }
 
   &__fields {
