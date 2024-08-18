@@ -3,7 +3,8 @@
     <div
       :class="
         `row_title__title` +
-        (isFieldRequired && field.isEditable ? ' label_required' : '')
+        (isFieldRequired && field.isEditable ? ' label_required' : '') +
+        (isDisabled ? ' label_disabled' : '')
       "
     >
       {{ field.label }}
@@ -95,6 +96,10 @@ const value = computed({
     font-size: 16px;
     font-weight: 500;
     color: $color-text-irrelevant;
+
+    &.label_disabled {
+      color: $color-disabled;
+    }
   }
 
   &__uneditable {
