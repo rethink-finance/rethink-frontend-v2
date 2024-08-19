@@ -317,13 +317,16 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       placeholder: "E.g. Proposal Title",
       charLimit: 150,
       rules: [formRules.required, formRules.charLimit(150)],
+      isEditable: true,
     },
     {
       label: "Proposal Description",
       key: "proposalDescription",
       type: InputType.Textarea,
       placeholder: "E.g. Proposal Description",
-      rules: [formRules.required],
+      charLimit: 660,
+      rules: [formRules.required, formRules.charLimit(660)],
+      isEditable: true,
     },
   ],
 };

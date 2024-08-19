@@ -12,24 +12,35 @@
         />
       </div>
 
-      <v-btn
-        class="button--primary"
-        :type="isLastStep ? 'submit' : 'button'"
-        :loading="isSubmitLoading"
-        @click="handleButtonClick"
-        :disabled="isLastStep && !accountStore.isConnected"
-      >
-        {{ isLastStep ? submitLabel : "Next" }}
-        <v-tooltip
-          v-if="isLastStep && !accountStore.isConnected"
-          :model-value="true"
-          activator="parent"
-          location="top"
-          @update:model-value="true"
+      <div class="buttons_container">
+        <v-btn
+          v-if="showPrevStep"
+          @click="prevStep"
+          variant="outlined"
+          color="secondary"
         >
-          Connect your wallet to create a proposal.
-        </v-tooltip>
-      </v-btn>
+          Previous
+        </v-btn>
+
+        <v-btn
+          class="button--primary"
+          :type="isLastStep ? 'submit' : 'button'"
+          :loading="isSubmitLoading"
+          @click="handleButtonClick"
+          :disabled="isLastStep && !accountStore.isConnected"
+        >
+          {{ isLastStep ? "Submit Proposal" : "Next" }}
+          <v-tooltip
+            v-if="isLastStep && !accountStore.isConnected"
+            :model-value="true"
+            activator="parent"
+            location="top"
+            @update:model-value="true"
+          >
+            Connect your wallet to create a proposal.
+          </v-tooltip>
+        </v-btn>
+      </div>
     </UiHeader>
 
     <div class="main_card stepper__step-content">
@@ -83,6 +94,7 @@
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
+import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import {
@@ -91,14 +103,15 @@ import {
   ProposalStepMap,
 } from "~/types/enums/fund_setting_proposal";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
+const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const router = useRouter();
 
 const { selectedFundSlug } = toRefs(fundStore);
 const isSubmitLoading = ref(false);
-const submitLabel = "Submit Proposal";
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -113,7 +126,11 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-const activeStep = ref(ProposalStep.Setup);
+const proposalSteps = Object.values(ProposalStep);
+
+const activeStep = ref(proposalSteps[0]);
+const form = ref(null);
+const formIsValid = ref(false);
 
 const proposal = ref({
   // Basics
@@ -181,10 +198,22 @@ const proposalEntry = ref([
       ProposalStepMap[ProposalStep.Details]?.sections?.map((section) => ({
         name: section?.name ?? "",
         fields:
-          FundSettingProposalFieldsMap[section.name]?.map((field) => ({
-            ...field,
-            value: proposal.value[field.key],
-          })) ?? [],
+          FundSettingProposalFieldsMap[section.key]?.map((field) => {
+            // if field is togglable, that means that more fields are in relation and they can be toggled
+            if (field.isTogglable) {
+              field.fields.map((subField) => {
+                return {
+                  ...subField,
+                  value: proposal.value[subField.key],
+                };
+              });
+            }
+
+            return {
+              ...field,
+              value: proposal.value[field.key],
+            };
+          }) ?? [],
       })) ?? [],
   },
 ]);
@@ -215,8 +244,14 @@ const allFieldsValid = computed(() =>
   })
 );
 
+const showPrevStep = computed(() => {
+  return activeStep.value !== proposalSteps[0];
+});
+
 const isLastStep = computed(() => {
-  return activeStep.value === ProposalStep.Details;
+  const output = activeStep.value === proposalSteps[proposalSteps.length - 1];
+  console.log("isLastStep", output);
+  return output;
 });
 
 const tooltipClick = () => {
@@ -237,13 +272,16 @@ const submit = () => {
   }
 };
 
+const prevStep = () => {
+  activeStep.value = proposalSteps[proposalSteps.indexOf(activeStep.value) - 1];
+};
+
 const nextStep = () => {
-  if (formIsValid.value) {
-    activeStep.value = ProposalStep.Details;
-  } else {
-    form.value?.validate();
-    toastStore.warningToast("Please fill all the required fields");
+  if (activeStep.value === proposalSteps[proposalSteps.length - 1]) {
+    return;
   }
+
+  activeStep.value = proposalSteps[proposalSteps.indexOf(activeStep.value) + 1];
 };
 
 onMounted(() => {
@@ -252,9 +290,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
 });
-
-const form = ref(null);
-const formIsValid = ref(false);
 </script>
 
 <style scoped lang="scss">
@@ -270,7 +305,11 @@ const formIsValid = ref(false);
     display: flex;
   }
 }
-
+.buttons_container {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
 .toggleable_group {
   &__toggle {
     display: flex;
