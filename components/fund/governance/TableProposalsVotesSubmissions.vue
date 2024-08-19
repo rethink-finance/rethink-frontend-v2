@@ -7,6 +7,7 @@
     :items="items"
     :loading="loading && items.length === 0"
     loading-text="Loading Activity"
+    items-per-page="-1"
   >
     <!-- BODY -->
     <template #[`item.proposer`]="{ item }">

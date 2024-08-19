@@ -12,6 +12,7 @@
     expand-on-click
     item-value="detailsHash"
     :show-select="selectable"
+    items-per-page="-1"
     @input="onSelectionChanged"
   >
     <template #[`body.prepend`]>

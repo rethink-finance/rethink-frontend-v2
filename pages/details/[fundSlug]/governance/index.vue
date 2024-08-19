@@ -254,8 +254,9 @@ const fetchProposals = async (
   // until they block us, and then we decrease it.
   // some RPCs can take more than 1M in arbitrum if logged in
   // let chunkSize = 1000000;
-  let chunkSize = 3000;
-  let maxValidChunkSize;
+  const INITIAL_CHUNK_SIZE = 1500;
+  let chunkSize = INITIAL_CHUNK_SIZE;
+  let waitTimeAfterError = 1000;
 
   // TODO we can do batch requests for example 10x3000
   // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
@@ -265,30 +266,21 @@ const fetchProposals = async (
 
   // From the largest number to the smallest number.
   if (rangeStartBlock > rangeEndBlock) {
-    console.warn("\nBIGGEST to smallest:", rangeStartBlock, rangeEndBlock);
-    for (let i = rangeStartBlock; i > rangeEndBlock; i -= chunkSize) {
+    console.warn("\nBIGGEST to smallest from: ", rangeEndBlock, " to: ",  rangeStartBlock);
+    let toBlock = Math.max(rangeStartBlock, 0);
+    let fromBlock = Math.min(toBlock - chunkSize + 1, rangeEndBlock);
+    while (true) {
+    // for (let i = rangeStartBlock; i > rangeEndBlock; i -= chunkSize) {
       if (!shouldFetchProposals.value) return;
-
-      const toBlock = i;
-      let fromBlock = Math.max(i - chunkSize + 1, 0);
-      const block = await fundStore.web3.eth.getBlock(toBlock);
-      if (!block) {
-        toastStore.errorToast("Something went wrong while fetching proposals.");
-        console.error("failed fetching block number: ", toBlock);
-        return;
-      }
-      const toBlockTimestamp = new Date(Number(block.timestamp) * 1000);
       console.log(
-        "fetch ProposalCreated events from: ",
+        "BGsm fetch ProposalCreated events from: ",
         fromBlock,
         " to ",
         toBlock,
-        " timestamp: ",
-        toBlockTimestamp,
       );
 
       let chunkEvents;
-      while (chunkSize > 100 && chunkSize > 0) {
+      while (true) {
         console.log("getPastEvents chunkSize: ", chunkSize);
         try {
           chunkEvents = await fundStore.fundGovernorContract.getPastEvents(
@@ -303,23 +295,31 @@ const fetchProposals = async (
             chunkEvents,
             " chunksize: ",
             chunkSize,
-            maxValidChunkSize,
           );
 
-          if (!maxValidChunkSize || chunkSize * 2 <= maxValidChunkSize) {
-            chunkSize *= 2;
-            console.log("new chunkSize: ", chunkSize);
-          }
+          chunkSize *= 2;
+          console.log("new chunkSize: ", chunkSize);
+          waitTimeAfterError = Math.max(1000, waitTimeAfterError / 2);
           break;
-        } catch {
-          chunkSize /= 2;
-          maxValidChunkSize = chunkSize;
-          console.log("reduce chunkSize: ", chunkSize);
-          fromBlock = Math.max(i - chunkSize + 1, 0);
+        } catch (error: any) {
+          // Wait max 10 seconds.
+          waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
+          console.error("getPastEvents", fromBlock, toBlock,  "error, wait ", waitTimeAfterError , error);
+
+          if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
+            // We probably tried fetching a range that is too big, reduce the chunk size by half
+            // and fix the fromBlock range.
+            chunkSize /= 2;
+            console.log("reduce chunkSize: ", chunkSize);
+            fromBlock = Math.max(toBlock - chunkSize + 1, 0);
+          }
+          await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
         }
       }
 
-      await governanceProposalStore.parseProposalCreatedEvents(chunkEvents);
+      if (chunkEvents?.length) {
+        await governanceProposalStore.parseProposalCreatedEvents(chunkEvents);
+      }
 
       console.log(
         "set BlockFetchedRanges toBlock: ",
@@ -333,40 +333,37 @@ const fetchProposals = async (
         toBlock,
         fromBlock,
       );
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Proposals were fetched successfully.
+      // Increase from and to blocks range.
+      toBlock = fromBlock - 1;
+      fromBlock = Math.max(toBlock - chunkSize + 1, 0);
+      console.warn("fromBlock: ", + fromBlock, "toBlocK: ", toBlock)
 
       const lastProposal =
         governanceProposals.value[governanceProposals.value.length];
-      if (lastProposal?.createdTimestamp < targetTimestamp) {
+      if (toBlock <= 0 || lastProposal?.createdTimestamp < targetTimestamp) {
         break;
       }
     }
   } else {
     console.warn("\nsmallest to BIGGEST", rangeStartBlock, rangeEndBlock);
 
-    for (let i = rangeStartBlock; i < rangeEndBlock; i += chunkSize) {
+    let fromBlock = Math.max(rangeStartBlock, 0);
+    let toBlock = Math.min(fromBlock + chunkSize - 1, rangeEndBlock);
+    while (true) {
+      // let i = rangeStartBlock; i < rangeEndBlock; i += chunkSize) {
       if (!shouldFetchProposals.value) return;
-      const fromBlock = Math.max(i, 0);
-      let toBlock = i + chunkSize - 1;
-      const block = await fundStore.web3.eth.getBlock(toBlock);
-      if (!block) {
-        toastStore.errorToast("Something went wrong while fetching proposals.");
-        console.error("failed fetching block number: ", toBlock);
-        return;
-      }
-      const toBlockTimestamp = new Date(Number(block.timestamp) * 1000);
-      console.log(
-        "fetch ProposalCreated events from: ",
-        fromBlock,
-        " to ",
-        toBlock,
-        " timestamp: ",
-        toBlockTimestamp,
-      );
 
+      console.log("getPastEvents chunkSize: ", chunkSize);
       let chunkEvents;
       while (chunkSize > 100 && chunkSize > 0) {
-        console.log("getPastEvents chunkSize: ", chunkSize);
+        console.log(
+          "smBG fetch ProposalCreated events from: ",
+          fromBlock,
+          " to ",
+          toBlock,
+        );
         try {
           chunkEvents = await fundStore.fundGovernorContract.getPastEvents(
             "ProposalCreated",
@@ -375,39 +372,55 @@ const fetchProposals = async (
               toBlock,
             },
           );
+
           console.log(
             "chunkevents fetched: ",
             chunkEvents,
             " chunksize: ",
             chunkSize,
-            maxValidChunkSize,
           );
-          if (!maxValidChunkSize || chunkSize * 2 <= maxValidChunkSize) {
-            chunkSize *= 2;
-            console.log("new chunkSize: ", chunkSize);
-          }
+          // All good, we can try increasing the chunk size by 2 to fetch bigger event ranges at once.
+          chunkSize *= 2;
+          console.log("new chunkSize: ", chunkSize);
+          waitTimeAfterError = Math.max(1000, waitTimeAfterError / 2);
           break;
-        } catch {
-          chunkSize /= 2;
-          maxValidChunkSize = chunkSize;
-          console.log("reduce chunkSize: ", chunkSize);
-          toBlock = Math.max(i + chunkSize - 1, 0);
+        } catch (error: any) {
+          // Wait max 10 seconds.
+          waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
+          console.error("getPastEvents", fromBlock, toBlock,  "error, wait ", waitTimeAfterError , error);
+
+          if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
+            // We probably tried fetching a range that is too big, reduce the chunk size by half
+            // and fix the toBlock range.
+            chunkSize /= 2;
+            console.log("reduce chunkSize: ", chunkSize);
+            toBlock = Math.min(fromBlock + chunkSize - 1, rangeEndBlock);
+          }
+          await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
         }
       }
 
-      await governanceProposalStore.parseProposalCreatedEvents(chunkEvents);
-
+      if (chunkEvents?.length) {
+        await governanceProposalStore.parseProposalCreatedEvents(chunkEvents);
+      }
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
         web3Store.chainId,
         fundStore.fund?.address,
         toBlock,
         fromBlock,
       );
-      // await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Proposals were fetched successfully.
+      // Increase from and to blocks range.
+      fromBlock = toBlock + 1;
+      toBlock += chunkSize - 1;
+      toBlock = Math.max(fromBlock + chunkSize - 1, rangeEndBlock);
+
+      console.warn("fromBlock: ", + fromBlock, "toBlocK: ", toBlock)
 
       const lastProposal =
         governanceProposals.value[governanceProposals.value.length];
-      if (lastProposal?.createdTimestamp < targetTimestamp) {
+      if (fromBlock >= rangeEndBlock || lastProposal?.createdTimestamp < targetTimestamp) {
         break;
       }
     }
@@ -437,8 +450,17 @@ const startFetch = async () => {
   console.log("fetch governance proposal events for fund: ", fund.address);
   shouldFetchProposals.value = true;
 
-  const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
-  console.log("currentBlock: ", currentBlock);
+  loadingProposals.value = true;
+  let currentBlock;
+  while (currentBlock === undefined) {
+    try {
+      currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
+      console.log("currentBlock: ", currentBlock);
+    } catch (error: any) {
+      console.log("failed fetching currentBlock: ", error);
+    }
+  }
+  loadingProposals.value = false;
 
   const [mostRecentFetchedBlock, oldestFetchedBlock] =
     governanceProposalStore.getFundProposalsBlockFetchedRanges(
