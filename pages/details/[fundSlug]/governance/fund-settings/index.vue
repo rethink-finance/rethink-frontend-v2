@@ -258,34 +258,16 @@ const formIsValid = ref(false);
 </script>
 
 <style scoped lang="scss">
-.buttons_container {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  margin-top: 0.5rem;
-}
-
-:deep(.v-expansion-panel-text__wrapper) {
-  padding: 0;
-}
-:deep(.v-expansion-panel-title) {
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-}
-
-.method_details_title {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  letter-spacing: 0.02625rem;
-  font-weight: 500;
-  color: $color-text-irrelevant;
-}
-.method_details_status {
-  color: $color-warning;
-
-  &--valid {
-    color: $color-success;
+.main_header {
+  &__title {
+    display: flex;
+    align-items: center;
+    align-content: center;
+    gap: 10px;
+  }
+  &__info-icon {
+    cursor: pointer;
+    display: flex;
   }
 }
 
