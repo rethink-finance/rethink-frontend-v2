@@ -4,6 +4,7 @@
     class="table-trending-delegates main_table"
     :headers="headers"
     :items="items"
+    items-per-page="-1"
   >
     <template #[`item.delegated_members`]="{ item }">
       <div class="data-cell__title">

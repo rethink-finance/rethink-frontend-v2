@@ -50,11 +50,11 @@ export default {
   },
   computed: {
     parsedRoadmap() {
-      const voteStart = this.proposal?.voteStart
-        ? new Date(Number(this.proposal.voteStart) * 1000)
+      const voteStart = this.proposal?.voteStartTimestamp
+        ? new Date(Number(this.proposal.voteStartTimestamp) * 1000)
         : null;
-      const voteEnd = this.proposal?.voteEnd
-        ? new Date(Number(this.proposal.voteEnd) * 1000)
+      const voteEnd = this.proposal?.voteEndTimestamp
+        ? new Date(Number(this.proposal.voteEndTimestamp) * 1000)
         : null;
 
       const executionDate = this.proposal?.executedTimestamp
@@ -66,14 +66,14 @@ export default {
           title: "Proposal on Chain",
           subtitle: "Start of Voting Period",
           icon: "material-symbols:how-to-vote-outline",
-          date: voteStart ? formatDateToLocaleString(voteStart) : "",
+          date: voteStart ? formatDateToLocaleString(voteStart) : this.proposal?.voteStart || "",
           hasStarted: voteStart && new Date() > voteStart,
         },
         {
           title: "Proposal Results",
           subtitle: "End of Voting Period",
           icon: "material-symbols:ballot-outline",
-          date: voteEnd ? formatDateToLocaleString(voteEnd) : "",
+          date: voteEnd ? formatDateToLocaleString(voteEnd) : this.proposal?.voteEnd || "",
           hasStarted: voteEnd && new Date() > voteEnd,
         },
         {

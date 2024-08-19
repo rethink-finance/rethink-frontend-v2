@@ -7,6 +7,7 @@
     :items="items"
     :loading="loading && items.length === 0"
     loading-text="Loading Activity"
+    items-per-page="-1"
     @click:row="rowClick"
   >
     <template #[`header.approval`]="{ column }">
@@ -63,8 +64,16 @@
     </template>
 
     <template #[`item.submission_status`]="{ item }">
+      <div v-if="item.hasVotedLoading">
+        <v-progress-circular
+          indeterminate
+          color="gray"
+          size="16"
+          width="2"
+        />
+      </div>
       <template
-        v-if="governanceProposalStore.hasAccountVoted(item.proposalId) === undefined"
+        v-else-if="governanceProposalStore.hasAccountVoted(item.proposalId) === undefined"
       >
         N/A
       </template>
@@ -166,12 +175,15 @@ watch(() => props.items, () => {
     if (governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress]) continue;
 
     // console.log("get votes for ", proposal.proposalId);
+    proposal.hasVotedLoading = true;
     fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call().then(
       (hasVoted: boolean) => {
         // console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)
         governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress] = hasVoted;
       },
-    );
+    ).finally(() => {
+      proposal.hasVotedLoading = false;
+    });
   }
 },
 { immediate: true },

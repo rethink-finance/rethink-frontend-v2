@@ -51,6 +51,9 @@ export default interface IGovernanceProposal {
   description: string,
   voteStart: string,
   voteEnd: string,
+  voteStartTimestamp?: string,
+  voteEndTimestamp?: string,
+  hasVotedLoading?: boolean,
 
   // Original event data
   targets: string[],
@@ -74,7 +77,7 @@ export default interface IGovernanceProposal {
   // Executed timestamp is fetched from the event's block timestamp.
   executedTimestamp: number,
   executedBlockNumber: bigint,
-  
+
   // Frontend fields:
   approval: number,
   approvalFormatted: string, // e.g. "40%"

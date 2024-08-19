@@ -33,7 +33,7 @@
           </template>
         </div>
         <div class="data_bar__subtitle">
-          OIV value
+          LP Tokens
         </div>
       </div>
       <div class="data_bar__item">
