@@ -1,6 +1,40 @@
-import type { IStepperStep } from "~/types/stepper";
-import type { FieldsMapType } from "./stepper";
 import { InputType } from "./stepper";
+
+export interface IFundSettingProposalStep {
+  name?: string;
+  key: string;
+  sections: IStepperSection[];
+}
+
+export interface IStepperSection {
+  name: string;
+  key: string;
+  info?: string;
+}
+
+export interface IField {
+  label: string;
+  key: string;
+  type: InputType;
+  placeholder: string;
+  rules: any[];
+  isEditable?: boolean;
+  min?: number;
+  charLimit?: number;
+  info?: string;
+  isTogglable?: boolean;
+  isToggleOn?: boolean;
+  fields?: IField[];
+  title?: string;
+}
+
+export interface IFieldGroup {
+  isTogglable: boolean;
+  isToggleOn: boolean;
+  fields: IField[];
+}
+
+export type FieldsMapType = Record<StepSections, IField[] | IFieldGroup[]>;
 
 export enum ProposalStep {
   Setup = "setup",
@@ -10,56 +44,35 @@ export enum ProposalStep {
 export enum StepSections {
   Basics = "basic",
   Fees = "fees",
-  //   Whitelist = "whitelist",
   Management = "management",
   Governance = "governance",
   Details = "details",
 }
 
-// define step map
-export const ProposalStepMap: Record<ProposalStep, IStepperStep> = {
+// 1. define ProposalStepMap which maps each proposal step to its corresponding sections
+export const ProposalStepMap: Record<ProposalStep, IFundSettingProposalStep> = {
   [ProposalStep.Setup]: {
     key: ProposalStep.Setup,
     sections: [
-      {
-        name: "Basic",
-        key: StepSections.Basics,
-      },
-      {
-        name: "Fees",
-        key: StepSections.Fees,
-      },
-      //   {
-      //     name: "Whitelist",
-      //     key: StepSections.Whitelist,
-
-      //   },
-      {
-        name: "Management",
-        key: StepSections.Management,
-      },
+      { name: "Basic", key: StepSections.Basics },
+      { name: "Fees", key: StepSections.Fees },
+      // { name: "Whitelist", key: StepSections.Whitelist },
+      { name: "Management", key: StepSections.Management },
       {
         name: "Governance",
         key: StepSections.Governance,
-
-        info: "To create a proposal to change governor framework or change it's settings, please contact rok@rethink.finance",
+        info: "To create a proposal to change the governor framework or its settings, please contact rok@rethink.finance",
       },
     ],
   },
   [ProposalStep.Details]: {
     name: "Proposal Details",
-
     key: ProposalStep.Details,
-    sections: [
-      {
-        name: "Details",
-        key: StepSections.Details,
-      },
-    ],
+    sections: [{ name: "Details", key: StepSections.Details }],
   },
 };
 
-// define fields map
+// 2. define FundSettingProposalFieldsMap which holds the form fields for each section
 export const FundSettingProposalFieldsMap: FieldsMapType = {
   [StepSections.Basics]: [
     {
@@ -166,7 +179,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           isEditable: true,
         },
         {
-          label: "Management Fee Period(Days)",
+          label: "Management Fee Period (Days)",
           key: "managementFeePeriod",
           type: InputType.Number,
           placeholder: "E.g. 0",
@@ -198,7 +211,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           isEditable: true,
         },
         {
-          label: "Profit Management Fee Period(Days)",
+          label: "Profit Management Fee Period (Days)",
           key: "profitManagementFeePeriod",
           type: InputType.Number,
           placeholder: "E.g. 0",
@@ -230,7 +243,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
   //   ],
   [StepSections.Management]: [
     {
-      label: "Planned Settlemnet Period (Days)",
+      label: "Planned Settlement Period (Days)",
       key: "plannedSettlementPeriod",
       type: InputType.Number,
       placeholder: "E.g. 0",
@@ -280,7 +293,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       isEditable: false,
     },
     {
-      title: "Proposal Threshold",
+      label: "Proposal Threshold",
       key: "proposalThreshold",
       type: InputType.Number,
       placeholder: "E.g. 0",
