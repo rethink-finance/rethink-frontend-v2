@@ -20,8 +20,8 @@ export default defineNuxtConfig({
   // },
   devtools: { enabled: false },
   typescript: {
-    typeCheck: false,
-    strict: false,
+    typeCheck: true,
+    strict: true,
   },
   build: {
     transpile: ["vuetify"],
