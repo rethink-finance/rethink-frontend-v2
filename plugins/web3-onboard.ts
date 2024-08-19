@@ -3,8 +3,8 @@ import safeModule from "@web3-onboard/gnosis"
 import injectedModule from "@web3-onboard/injected-wallets"
 import { init } from "@web3-onboard/vue"
 import walletConnectModule from "@web3-onboard/walletconnect"
-import ledgerModule from '@web3-onboard/ledger'
-import enrkypt from '@web3-onboard/enkrypt'
+import ledgerModule from "@web3-onboard/ledger"
+import enkrypt from "@web3-onboard/enkrypt"
 import logoSVG from "@/assets/images/logo_mobile.svg"
 
 export default defineNuxtPlugin(() => {
@@ -36,7 +36,7 @@ export default defineNuxtPlugin(() => {
     dappUrl: "https://rethink.finance",
   })
 
-  const enrkyptModule = enrkypt()
+  const enkryptModule = enkrypt()
 
 
   const ledger = ledgerModule({
@@ -48,7 +48,7 @@ export default defineNuxtPlugin(() => {
   })
 
   init({
-    wallets: [injected, safe, walletConnect, ledger, enrkyptModule],
+    wallets: [injected, safe, walletConnect, ledger, enkryptModule],
     chains: [
       {
         id: "0x89",
@@ -73,7 +73,7 @@ export default defineNuxtPlugin(() => {
         token: "ETH",
         label: "Ethereum",
         rpcUrl: "https://rpc.ankr.com/eth",
-      }
+      },
     ],
     theme: "dark",
     appMetadata: {
