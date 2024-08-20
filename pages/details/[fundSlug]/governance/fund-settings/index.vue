@@ -53,43 +53,46 @@
           >
             {{ section.name }}
 
-            <v-col
-              v-for="(field, index) in section.fields"
-              :key="index"
-              cols="12"
-            >
-              <div class="toggleable_group" v-if="field.isTogglable">
-                <div class="toggleable_group__toggle">
-                  <v-switch
-                    v-model="field.isToggleOn"
-                    color="primary"
-                    hide-details
-                  />
-                </div>
-
-                <div class="toggleable_group__fields">
-                  <v-col
-                    cols="6"
-                    v-for="(subField, index) in field.fields"
-                    :key="index"
-                  >
-                    <UiField
-                      :field="subField"
-                      v-model="proposal[subField.key]"
-                      :is-disabled="!field.isToggleOn"
-                      :class="`${isFieldModified(subField.key) ? 'modified-field' : ''}`"
+            <div class="fields">
+              <v-col
+                v-for="(field, index) in section.fields"
+                :key="index"
+                :cols="field?.cols ?? 12"
+              >
+                <div class="toggleable_group" v-if="field.isTogglable">
+                  <div class="toggleable_group__toggle">
+                    <v-switch
+                      v-model="field.isToggleOn"
+                      color="primary"
+                      hide-details
                     />
-                  </v-col>
+                  </div>
+
+                  <div class="fields">
+                    <v-col
+                      :cols="subField?.cols ?? 6"
+                      v-for="(subField, index) in field.fields"
+                      :key="index"
+                    >
+                      <UiField
+                        :field="subField"
+                        v-model="proposal[subField.key]"
+                        :is-disabled="!field.isToggleOn"
+                        :class="`${isFieldModified(subField.key) ? 'modified-field' : ''}`"
+                      />
+                    </v-col>
+                  </div>
                 </div>
-              </div>
-              <div v-else>
-                <UiField
-                  :field="field"
-                  v-model="proposal[field.key]"
-                  :class="`${isFieldModified(field.key) ? 'modified-field' : ''}`"
-                />
-              </div>
-            </v-col>
+                <div v-else>
+                  <UiField
+                    :field="field"
+                    v-model="proposal[field.key]"
+                    :class="`${isFieldModified(field.key) ? 'modified-field' : ''}`"
+                  />
+                  <!-- TODO: show info here if field has info -->
+                </div>
+              </v-col>
+            </div>
           </v-row>
         </div>
       </v-form>
@@ -380,11 +383,12 @@ onBeforeUnmount(() => {
     display: flex;
     justify-content: flex-end;
   }
+}
 
-  &__fields {
-    display: flex;
-    flex-wrap: wrap;
-  }
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .modified-field {

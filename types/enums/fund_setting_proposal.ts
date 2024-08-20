@@ -19,6 +19,7 @@ export interface IField {
   placeholder: string;
   rules: any[];
   isEditable?: boolean;
+  cols?: number;
   min?: number;
   charLimit?: number;
   info?: string;
@@ -82,6 +83,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       placeholder: "E.g. Fund DAO Name",
       rules: [formRules.required],
       isEditable: false,
+      cols: 6,
     },
     {
       label: "Token Symbol",
@@ -90,6 +92,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       placeholder: "E.g. Token Symbol",
       rules: [formRules.required],
       isEditable: false,
+      cols: 6,
     },
     {
       label: "Denomination Asset",
@@ -186,6 +189,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           min: 0,
           rules: [formRules.required, formRules.isPositiveNumber],
           isEditable: true,
+          cols: 12,
         },
       ],
     },
@@ -218,6 +222,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           min: 0,
           rules: [formRules.required, formRules.isPositiveNumber],
           isEditable: true,
+          cols: 12,
         },
         {
           label: "Hurdle Rate (%)",
@@ -227,6 +232,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           min: 0,
           rules: [formRules.required, formRules.isPositiveNumber],
           isEditable: true,
+          cols: 12,
         },
       ],
     },
