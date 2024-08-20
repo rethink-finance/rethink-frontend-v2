@@ -178,7 +178,7 @@ const proposal = ref({
   proposalDescription: "",
 });
 
-const proposalEntry = computed(() => [
+const proposalEntry = ref([
   {
     stepName: ProposalStep.Setup,
     stepLabel: ProposalStepMap[ProposalStep.Setup]?.name ?? "",
@@ -350,6 +350,28 @@ const isFieldModified = (key) => {
 
   return output;
 };
+
+watch(
+  proposal,
+  (newValue, oldValue) => {
+    proposalEntry.value.forEach((step) => {
+      step.sections.forEach((section) => {
+        if (section.isTogglable) {
+          section.fields.forEach((field) => {
+            field.fields.forEach((subField) => {
+              subField.value = newValue[subField.key];
+            });
+          });
+        } else {
+          section.fields.forEach((field) => {
+            field.value = newValue[field.key];
+          });
+        }
+      });
+    });
+  },
+  { deep: true }
+);
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
