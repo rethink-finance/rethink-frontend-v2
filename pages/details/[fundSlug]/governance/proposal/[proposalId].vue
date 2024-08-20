@@ -164,6 +164,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatPercent } from "~/composables/formatters";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { useFundStore } from "~/store/fund.store";

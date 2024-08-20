@@ -254,7 +254,7 @@ const connectingWallet = computed(() => accountStore.connectingWallet);
 const connectedWallet = computed(() => accountStore.connectedWallet);
 const connectedWalletIcon = computed(() => {
   if (!accountStore?.connectedWallet) return "";
-  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(accountStore.connectedWallet?.icon)))}`
+  return accountStore.connectedWallet?.icon || "";
 });
 
 onMounted(() => {

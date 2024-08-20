@@ -84,31 +84,20 @@
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
+import { formatPercent } from "~/composables/formatters";
+import { capitalizeFirst } from "~/composables/utils";
 import { numberColorClass } from "~/composables/numberColorClass";
 import { useFundStore } from "~/store/fund.store";
 import type IFund from "~/types/fund";
+const fundStore = useFundStore();
 
-export default {
-  name: "FundInfoInsights",
-  props: {
-    fund: {
-      type: Object as PropType<IFund>,
-      default: () => {},
-    },
+const props = defineProps({
+  fund: {
+    type: Object as PropType<IFund>,
+    default: () => {},
   },
-  setup() {
-    const fundStore = useFundStore();
-    return { fundStore }
-  },
-  data() {
-    return {};
-  },
-  computed: {
-    fundChainIcon() {
-      return getChainIcon(this.fund?.chainShort)
-    },
-  },
-  methods: { numberColorClass },
-};
+});
+
+const fundChainIcon = computed(() => getChainIcon(props.fund?.chainShort));
 </script>
