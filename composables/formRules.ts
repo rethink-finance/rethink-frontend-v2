@@ -10,7 +10,7 @@ export const formRules: Record<string, any> = {
     ethers.isHexString(value) || "This is not a valid hex string.",
 
   isPositiveNumber: (value: any) =>
-    value > 0 || "This field must be a positive number.",
+    value >= 0 || "This field must be a positive number.",
 
   isValidUint8: (value: any) => {
     const number = Number(value);

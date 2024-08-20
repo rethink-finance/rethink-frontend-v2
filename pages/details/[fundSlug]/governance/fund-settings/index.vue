@@ -77,12 +77,17 @@
                       :field="subField"
                       v-model="proposal[subField.key]"
                       :is-disabled="!field.isToggleOn"
+                      :class="`${isFieldModified(subField.key) ? 'modified-field' : ''}`"
                     />
                   </v-col>
                 </div>
               </div>
               <div v-else>
-                <UiField :field="field" v-model="proposal[field.key]" />
+                <UiField
+                  :field="field"
+                  v-model="proposal[field.key]"
+                  :class="`${isFieldModified(field.key) ? 'modified-field' : ''}`"
+                />
               </div>
             </v-col>
           </v-row>
@@ -102,6 +107,7 @@ import {
   ProposalStep,
   ProposalStepMap,
 } from "~/types/enums/fund_setting_proposal";
+import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -110,8 +116,9 @@ const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const router = useRouter();
 
+const fund = useAttrs().fund as IFund;
 const { selectedFundSlug } = toRefs(fundStore);
-const isSubmitLoading = ref(false);
+const proposalSteps = Object.values(ProposalStep);
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -126,12 +133,15 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-const proposalSteps = Object.values(ProposalStep);
-
+const isSubmitLoading = ref(false);
 const activeStep = ref(proposalSteps[0]);
 const form = ref(null);
 const formIsValid = ref(false);
 
+// TODO: implement undo changes that will reset form with initial values
+let proposalInitial: Record<string, any> = {}; // This will store initial values
+
+// TODO: rename keys to match the proposal keys from the API
 const proposal = ref({
   // Basics
   fundDAOName: "",
@@ -160,9 +170,12 @@ const proposal = ref({
   votingDelay: "",
   proposalThreshold: "",
   lateQuorum: "",
+  // Details
+  proposalTitle: "",
+  proposalDescription: "",
 });
 
-const proposalEntry = ref([
+const proposalEntry = computed(() => [
   {
     stepName: ProposalStep.Setup,
     stepLabel: ProposalStepMap[ProposalStep.Setup]?.name ?? "",
@@ -181,7 +194,6 @@ const proposalEntry = ref([
                 };
               });
             }
-
             return {
               ...field,
               value: proposal.value[field.key],
@@ -208,7 +220,6 @@ const proposalEntry = ref([
                 };
               });
             }
-
             return {
               ...field,
               value: proposal.value[field.key],
@@ -218,8 +229,8 @@ const proposalEntry = ref([
   },
 ]);
 
-const allFieldsValid = computed(() =>
-  proposalEntry.value.every((step) => {
+const checkIfAllFieldsValid = () => {
+  const output = proposalEntry.value.every((step) => {
     return step.sections.every((section) => {
       if (section.isTogglable) {
         return section.fields.every((field) => {
@@ -241,17 +252,17 @@ const allFieldsValid = computed(() =>
         });
       }
     });
-  })
-);
+  });
+
+  return output;
+};
 
 const showPrevStep = computed(() => {
   return activeStep.value !== proposalSteps[0];
 });
 
 const isLastStep = computed(() => {
-  const output = activeStep.value === proposalSteps[proposalSteps.length - 1];
-  console.log("isLastStep", output);
-  return output;
+  return activeStep.value === proposalSteps[proposalSteps.length - 1];
 });
 
 const tooltipClick = () => {
@@ -263,9 +274,16 @@ const handleButtonClick = () => {
 };
 
 const submit = () => {
+  console.log("proposal.value: ", proposal.value);
+
+  formIsValid.value = checkIfAllFieldsValid();
+
   if (formIsValid.value) {
     toastStore.successToast("Proposal submitted successfully");
-    router.push(`/details/${selectedFundSlug.value}/governance`);
+
+    // TODO: here goes the logic to submit the proposal
+
+    // router.push(`/details/${selectedFundSlug.value}/governance`);
   } else {
     form.value?.validate();
     toastStore.warningToast("Please fill all the required fields");
@@ -284,8 +302,55 @@ const nextStep = () => {
   activeStep.value = proposalSteps[proposalSteps.indexOf(activeStep.value) + 1];
 };
 
+const populateProposal = () => {
+  const fundDeepCopy = JSON.parse(
+    JSON.stringify(fund, stringifyBigInt),
+    parseBigInt
+  );
+
+  proposal.value = {
+    fundDAOName: fundDeepCopy?.title ?? "",
+    tokenSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
+    denominationAsset: fundDeepCopy?.baseToken?.address ?? "",
+    description: fundDeepCopy?.description ?? "",
+    depositFee: fundDeepCopy?.depositFee ?? "",
+    depositFeeRecipientAddress: fundDeepCopy?.depositFeeAddress ?? "",
+    redemptionFee: fundDeepCopy?.withdrawFee ?? "",
+    redemptionFeeRecipientAddress: fundDeepCopy?.withdrawFeeAddress ?? "",
+    managementFee: fundDeepCopy?.managementFee ?? "",
+    managementFeeRecipientAddress: fundDeepCopy?.managementFeeAddress ?? "",
+    managementFeePeriod: fundDeepCopy?.managementPeriod ?? "",
+    profitManagemnetFee: fundDeepCopy?.performanceFee ?? "",
+    profitManagemnetFeeRecipientAddress:
+      fundDeepCopy?.performanceFeeAddress ?? "",
+    profitManagementFeePeriod: fundDeepCopy?.performancePeriod ?? "",
+    hurdleRate: fundDeepCopy?.performaceHurdleRateBps ?? "",
+    plannedSettlementPeriod: fundDeepCopy?.plannedSettlementPeriod ?? "",
+    minLiquidAssetShare: fundDeepCopy?.minLiquidAssetShare ?? "",
+    governanceToken: fundDeepCopy?.governanceToken?.symbol ?? "",
+    quorum: fundDeepCopy?.quorumPercentage ?? "",
+    votingPeriod: fundDeepCopy?.votingPeriod ?? "",
+    votingDelay: fundDeepCopy?.votingDelay ?? "",
+    proposalThreshold: fundDeepCopy?.proposalThreshold ?? "",
+    lateQuorum: fundDeepCopy?.lateQuorum ?? "",
+  };
+
+  // Store the original values for comparison
+  proposalInitial = JSON.parse(
+    JSON.stringify(proposal.value, stringifyBigInt),
+    parseBigInt
+  );
+};
+
+const isFieldModified = (key) => {
+  const output = proposal.value[key] !== proposalInitial[key];
+
+  return output;
+};
+
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
+  populateProposal(); // Populate proposal with fund data
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
@@ -319,6 +384,12 @@ onBeforeUnmount(() => {
   &__fields {
     display: flex;
     flex-wrap: wrap;
+  }
+}
+
+.modified-field {
+  :deep(.v-field__input) {
+    color: var(--color-success);
   }
 }
 </style>
