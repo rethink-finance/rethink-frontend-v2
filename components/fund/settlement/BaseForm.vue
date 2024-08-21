@@ -55,7 +55,7 @@
           Based on Last NAV Update: {{ exchangeRateText }}
         </div>
         <div v-else>
-          There was no NAV update yet: 1 {{ token0?.symbol }} = 1 {{ token1?.symbol }}
+          There was no NAV update yet: 1 {{ token0?.symbol }} = {{ noNavUpdateToken1Value }} {{ token1?.symbol }}
         </div>
       </div>
     </div>
@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
+import { ethers, FixedNumber } from "ethers";
 import type IToken from "~/types/token";
 import { useFundStore } from "~/store/fund.store";
 
@@ -142,6 +142,13 @@ const calculatedToken1Value = computed(() => {
   if (!props.exchangeRate) return "N/A"
   // Continue to use your trimTrailingZeros utility function as needed
   return trimTrailingZeros((Number(tokenValue.value) * props.exchangeRate).toFixed(4));
+});
+const noNavUpdateToken1Value = computed(() => {
+  if (!props?.token0?.decimals || !props?.token1?.decimals) return "--";
+  // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
+  // If decimals are different, the ratio equals to token0 decimals / token1 decimals.
+  const exchangeRate = Number(props.token0.decimals) / Number(props.token1.decimals);
+  return trimTrailingZeros(exchangeRate.toFixed(4));
 });
 </script>
 

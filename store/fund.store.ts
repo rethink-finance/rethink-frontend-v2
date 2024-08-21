@@ -99,7 +99,12 @@ export const useFundStore = defineStore({
     },
     baseToFundTokenExchangeRate(): number {
       // If there was no NAV update yet, the exchange rate is 1:1
-      if (!this.fundLastNAVUpdate) return 1
+      if (!this.fundLastNAVUpdate) {
+        if (!this.fund?.baseToken || !this.fund?.fundToken) return 0;
+        // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
+        // If decimals are different, the ratio equals to base token decimals / fund token decimals.
+        return Number(this.fund?.baseToken.decimals) / Number(this.fund?.fundToken.decimals);
+      }
       if (!this.fund?.fundTokenTotalSupply) return 0;
 
       // Create FixedNumber instances
@@ -115,7 +120,12 @@ export const useFundStore = defineStore({
     },
     fundToBaseTokenExchangeRate(): number {
       // If there was no NAV update yet, the exchange rate is 1:1
-      if (!this.fundLastNAVUpdate) return 1
+      if (!this.fundLastNAVUpdate) {
+        if (!this.fund?.baseToken || !this.fund?.fundToken) return 0;
+        // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
+        // If decimals are different, the ratio equals to fund token decimals / base token decimals.
+        return Number(this.fund?.fundToken.decimals) / Number(this.fund?.baseToken.decimals);
+      }
       if (!this.fund?.totalNAVWei || !this.baseToFundTokenExchangeRate) return 0;
 
       const totalNAV = FixedNumber.fromString(
