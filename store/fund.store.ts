@@ -189,10 +189,16 @@ export const useFundStore = defineStore({
       return ethers.formatUnits(this.userFundSuggestedAllowance, this.fund?.baseToken.decimals);
     },
     isUserWalletWhitelisted(): boolean {
-      const fundAllowedDepositAddresses = this.fund?.allowedDepositAddresses || [];
+      // Return true if whitelisting is disabled. Anyone can deposit/redeem.
       if (!this.fund?.isWhitelistedDeposits) return true;
 
-      return fundAllowedDepositAddresses.includes(this.activeAccountAddress || "");
+      const fundAllowedDepositAddresses = (this.fund?.allowedDepositAddresses || []).map(
+        (address: string) => address.toLowerCase(),
+      );
+      console.log("fundAllowedDepositAddresses", fundAllowedDepositAddresses)
+
+      console.log("this.activeAccountAddress", this.activeAccountAddress?.toLowerCase())
+      return fundAllowedDepositAddresses.includes(this.activeAccountAddress?.toLowerCase() || "");
     },
     shouldUserRequestDeposit(): boolean {
       // User deposit request does not exist yet, he should request deposit.
