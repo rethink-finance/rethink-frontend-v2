@@ -207,9 +207,6 @@ export const useFundStore = defineStore({
       const fundAllowedDepositAddresses = (this.fund?.allowedDepositAddresses || []).map(
         (address: string) => address.toLowerCase(),
       );
-      console.log("fundAllowedDepositAddresses", fundAllowedDepositAddresses)
-
-      console.log("this.activeAccountAddress", this.activeAccountAddress?.toLowerCase())
       return fundAllowedDepositAddresses.includes(this.activeAccountAddress?.toLowerCase() || "");
     },
     shouldUserRequestDeposit(): boolean {
