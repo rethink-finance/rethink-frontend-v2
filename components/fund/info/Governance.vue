@@ -13,14 +13,18 @@
             {{ truncateAddress(fundStore.userFundDelegateAddress) }}
           </template>
         </div>
-        <div class="data_bar__subtitle">Delegating To</div>
+        <div class="data_bar__subtitle">
+          Delegating To
+        </div>
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
           {{ userGovernanceTokenBalanceFormatted }}
           {{ fund.governanceToken.symbol }}
         </div>
-        <div class="data_bar__subtitle">Voting Power</div>
+        <div class="data_bar__subtitle">
+          Voting Power
+        </div>
       </div>
       <div class="data_bar__item">
         <v-btn
@@ -37,56 +41,27 @@
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import { useFundStore } from "~/store/fund.store";
+import { truncateAddress , isZeroAddress } from "~/composables/addressUtils";
 import type IFund from "~/types/fund";
+const fundStore = useFundStore();
 
-export default {
-  name: "FundInfoGovernance",
-  props: {
-    fund: {
-      type: Object as PropType<IFund>,
-      default: () => {},
-    },
+const isDelegateDialogOpen = ref(false);
+
+const props = defineProps({
+  fund: {
+    type: Object as PropType<IFund>,
+    default: () => {},
   },
-  setup() {
-    const fundStore = useFundStore();
-    return { fundStore };
-  },
-  data() {
-    return {
-      isDelegateDialogOpen: false,
-    };
-  },
-  computed: {
-    userGovernanceTokenBalanceFormatted() {
-      return formatTokenValue(
-        this.fundStore.userGovernanceTokenBalance,
-        this.fund.governanceToken.decimals
-      );
-    },
-    fundGovernanceToken() {
-      return this.fundStore.fund?.governanceToken;
-    },
-    userFundGovernanceTokenFormatted() {
-      if (!this.fundGovernanceToken) return "N/A";
-      const value = Number(
-        formatTokenValue(
-          this.fundStore.userGovernanceTokenBalance,
-          this.fundGovernanceToken.decimals,
-          false
-        )
-      );
-      return formatNumberShort(value) + " " + this.fundGovernanceToken.symbol;
-    },
-    // governanceManageUrl(): string {
-    //   /** Example:
-    //    * https://www.tally.xyz/gov/tfd3-0xface6562d7e39ea73b67404a6454fbbbefeca553
-    //    * **/
-    //   return `https://www.tally.xyz/gov/${this.fund.fundToken.symbol}-${this.fund.governorAddress}/my-voting-power`;
-    // },
-  },
-};
+});
+
+const userGovernanceTokenBalanceFormatted = computed(() => {
+  return formatTokenValue(
+    fundStore.userGovernanceTokenBalance,
+    props.fund?.governanceToken.decimals,
+  );
+});
 </script>
 
 <style lang="scss" scoped>
