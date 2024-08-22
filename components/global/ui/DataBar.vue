@@ -23,6 +23,7 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .data_bar {
+  width: 100%;
   &__title {
     font-size: 1rem;
     font-weight: bold;

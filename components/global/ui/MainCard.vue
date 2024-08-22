@@ -2,12 +2,16 @@
   <div class="main_card">
     <div class="header">
       <div class="header__title-col">
-        <div class="header__title">{{ title }}</div>
-        <div class="header__sub-title">{{ subtitle }}</div>
+        <div class="header__title">
+          {{ title }}
+        </div>
+        <div class="header__sub-title">
+          {{ subtitle }}
+        </div>
       </div>
       <slot name="header-right" />
     </div>
-    <div class="tools" v-if="hasTools">
+    <div v-if="hasTools" class="tools">
       <slot name="tools" />
     </div>
     <slot />
@@ -19,11 +23,11 @@ export default {
   props: {
     title: {
       type: String,
-      defautlt: "",
+      default: "",
     },
     subtitle: {
       type: String,
-      defautlt: "",
+      default: "",
     },
   },
   computed: {

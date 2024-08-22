@@ -124,4 +124,12 @@ export default interface IFund {
 
   // NAV Updates
   navUpdates: INAVUpdate[];
+
+  // Deposit & Redemption Requests Balance
+  pendingDepositBalance?: bigint,
+  pendingRedemptionBalance?: bigint,
+  pendingDepositBalanceLoading?: boolean,
+  pendingDepositBalanceError?: boolean,
+  pendingRedemptionBalanceLoading?: boolean,
+  pendingRedemptionBalanceError?: boolean,
 }

@@ -72,7 +72,6 @@ export default defineComponent({
         align: "end",
       },
     ] as const),
-    _timerId: null as any as number | null,
   }),
   methods: {
     truncateAddress,

@@ -318,6 +318,7 @@ export const useFundStore = defineStore({
     async fetchFundData(): Promise<IFund> {
       // Fetch inception date
       const settingsData = await this.fundContract.methods.getFundSettings().call();
+      // TODO these 2 things can be fetched all at once async and even better along with other fund metadata, not here.
       const performancePeriod = await this.fundContract.methods.feePerformancePeriod().call();
       const managementPeriod = await this.fundContract.methods.feeManagePeriod().call();
 
@@ -401,6 +402,45 @@ export const useFundStore = defineStore({
 
       this.loadingUserBalances = false;
       return promises
+    },
+    fetchFundPendingDepositRedemptionBalance(): void {
+      if (!this.fund) return;
+      this.fund.pendingDepositBalanceError = false;
+      this.fund.pendingRedemptionBalanceError = false;
+      this.fund.pendingDepositBalanceLoading = true;
+      this.fund.pendingRedemptionBalanceLoading = true;
+
+      this.fundContract.methods.getCurrentPendingDepositBal().call().then(
+        (value: any) => {
+          if (this.fund) {
+            this.fund.pendingDepositBalance = value;
+          }
+        },
+      ).catch((error: any) => {
+        console.error("failed fetching fund deposit requests balance.", error)
+        if (this.fund) {
+          this.fund.pendingDepositBalanceError = true;
+        }
+      }).finally(() => {
+        if (this.fund) {
+          this.fund.pendingDepositBalanceLoading = false;
+        }
+      })
+      this.fundContract.methods.getCurrentPendingWithdrawalBal().call().then(
+        (value: any) => {
+          if (this.fund) {
+            this.fund.pendingRedemptionBalance = value;
+          }        },
+      ).catch((error: any) => {
+        console.error("failed fetching fund redemption requests balance.", error)
+        if (this.fund) {
+          this.fund.pendingRedemptionBalanceError = true;
+        }
+      }).finally(() => {
+        if (this.fund) {
+          this.fund.pendingRedemptionBalanceLoading = false;
+        }
+      })
     },
     /**
      * Fetches multiple fund metadata such as:
