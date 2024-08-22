@@ -103,7 +103,8 @@ export const useFundStore = defineStore({
         if (!this.fund?.baseToken || !this.fund?.fundToken) return 0;
         // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
         // If decimals are the same, exchange rate will be 10^0 -> 1
-        return 10 ** -Number(this.fund?.fundToken.decimals - this.fund.baseToken.decimals);
+        const decimalDiff = Number(this.fund?.fundToken.decimals) - Number(this.fund?.baseToken.decimals)
+        return 10 ** -decimalDiff;
       }
       if (!this.fund?.fundTokenTotalSupply) return 0;
 
@@ -124,7 +125,8 @@ export const useFundStore = defineStore({
         if (!this.fund?.baseToken || !this.fund?.fundToken) return 0;
         // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
         // If decimals are the same, exchange rate will be 10^0 -> 1
-        return 10 ** Number(this.fund?.fundToken.decimals - this.fund.baseToken.decimals);
+        const decimalDiff = Number(this.fund?.fundToken.decimals) - Number(this.fund?.baseToken.decimals)
+        return 10 ** decimalDiff;
       }
       if (!this.fund?.totalNAVWei || !this.baseToFundTokenExchangeRate) return 0;
 
