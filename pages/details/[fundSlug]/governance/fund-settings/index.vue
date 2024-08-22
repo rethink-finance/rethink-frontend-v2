@@ -43,60 +43,79 @@
       </div>
     </UiHeader>
 
-    <div class="main_card stepper__step-content">
-      <v-form ref="form">
-        <div v-for="(step, index) in proposalEntry" :key="index">
-          <v-row
-            v-if="step.stepName === activeStep"
-            v-for="(section, index) in step.sections"
-            :key="index"
-          >
+    <v-form ref="form">
+      <div v-for="(step, index) in proposalEntry" :key="index">
+        <div
+          v-if="step.stepName === activeStep"
+          v-for="(section, index) in step.sections"
+          :key="index"
+          class="section main_card"
+        >
+          <div class="section__title">
             {{ section.name }}
 
-            <div class="fields">
-              <v-col
-                v-for="(field, index) in section.fields"
-                :key="index"
-                :cols="field?.cols ?? 12"
-              >
-                <div class="toggleable_group" v-if="field.isToggleable">
-                  <div class="toggleable_group__toggle">
-                    <v-switch
-                      v-model="field.isToggleOn"
-                      color="primary"
-                      hide-details
-                    />
-                  </div>
+            <UiTooltipClick
+              v-if="section.info"
+              :tooltip-text="section.info"
+              :hide-after="3000"
+            >
+              <Icon
+                icon="material-symbols:info-outline"
+                class="section__info-icon"
+                width="1.5rem"
+              />
+            </UiTooltipClick>
+          </div>
 
-                  <div class="fields">
-                    <v-col
-                      :cols="subField?.cols ?? 6"
-                      v-for="(subField, index) in field.fields"
-                      :key="index"
-                    >
-                      <UiField
-                        :field="subField"
-                        v-model="proposal[subField.key]"
-                        :is-disabled="!field.isToggleOn"
-                        :class="`${isFieldModified(subField.key) ? 'modified-field' : ''}`"
-                      />
-                    </v-col>
-                  </div>
-                </div>
-                <div v-else>
-                  <UiField
-                    :field="field"
-                    v-model="proposal[field.key]"
-                    :class="`${isFieldModified(field.key) ? 'modified-field' : ''}`"
+          <UiInfoBox
+            class="info-box"
+            v-if="section.info"
+            :info="section.info"
+          />
+
+          <div class="fields">
+            <v-col
+              v-for="(field, index) in section.fields"
+              :key="index"
+              :cols="field?.cols ?? 12"
+            >
+              <div class="toggleable_group" v-if="field.isToggleable">
+                <div class="toggleable_group__toggle">
+                  <v-switch
+                    v-model="field.isToggleOn"
+                    color="primary"
+                    hide-details
                   />
-                  <!-- TODO: show info here if field has info -->
                 </div>
-              </v-col>
-            </div>
-          </v-row>
+
+                <div class="fields">
+                  <v-col
+                    :cols="subField?.cols ?? 6"
+                    v-for="(subField, index) in field.fields"
+                    :key="index"
+                  >
+                    <UiField
+                      :field="subField"
+                      v-model="proposal[subField.key]"
+                      :is-disabled="!field.isToggleOn"
+                      :class="`${isFieldModified(subField.key) ? 'modified-field' : ''}`"
+                    />
+                  </v-col>
+                </div>
+              </div>
+              <div v-else>
+                <UiField
+                  :field="field"
+                  v-model="proposal[field.key]"
+                  :class="`${isFieldModified(field.key) ? 'modified-field' : ''}`"
+                />
+                <!-- TODO: show info here if field has info -->
+              </div>
+            </v-col>
+          </div>
         </div>
-      </v-form>
-    </div>
+      </div>
+    </v-form>
   </div>
 </template>
 
@@ -208,8 +227,9 @@ function generateFields(section: IStepperSection, proposal: IProposal) {
 function generateSections(step: ProposalStep, proposal: IProposal) {
   return ProposalStepMap[step]?.sections?.map((section) => ({
     name: section?.name ?? "",
+    info: section?.info,
     fields: generateFields(section, proposal),
-  })) as { name: string; fields: IField[] }[];
+  })) as { name: string; fields: IField[]; info?: string }[];
 }
 
 // main proposalEntry array
@@ -297,6 +317,11 @@ const nextStep = () => {
   activeStep.value = proposalSteps[proposalSteps.indexOf(activeStep.value) + 1];
 };
 
+// if fee period is 0 set it to 365
+const parsedFeePeriod = (value: string) => {
+  return value === "0" ? "365" : value;
+};
+
 const populateProposal = () => {
   const fundDeepCopy = JSON.parse(
     JSON.stringify(fund, stringifyBigInt),
@@ -314,11 +339,13 @@ const populateProposal = () => {
     redemptionFeeRecipientAddress: fundDeepCopy?.withdrawFeeAddress ?? "",
     managementFee: fundDeepCopy?.managementFee ?? "",
     managementFeeRecipientAddress: fundDeepCopy?.managementFeeAddress ?? "",
-    managementFeePeriod: fundDeepCopy?.managementPeriod ?? "",
+    managementFeePeriod: parsedFeePeriod(fundDeepCopy?.managementPeriod ?? ""),
     profitManagemnetFee: fundDeepCopy?.performanceFee ?? "",
     profitManagemnetFeeRecipientAddress:
       fundDeepCopy?.performanceFeeAddress ?? "",
-    profitManagementFeePeriod: fundDeepCopy?.performancePeriod ?? "",
+    profitManagementFeePeriod: parsedFeePeriod(
+      fundDeepCopy?.performancePeriod ?? ""
+    ),
     hurdleRate: fundDeepCopy?.performaceHurdleRateBps ?? "",
     plannedSettlementPeriod: fundDeepCopy?.plannedSettlementPeriod ?? "",
     minLiquidAssetShare: fundDeepCopy?.minLiquidAssetShare ?? "",
@@ -385,6 +412,7 @@ onBeforeUnmount(() => {
   &__info-icon {
     cursor: pointer;
     display: flex;
+    color: $color-disabled;
   }
 }
 .buttons_container {
@@ -397,6 +425,28 @@ onBeforeUnmount(() => {
     display: flex;
     justify-content: flex-end;
   }
+}
+
+.section {
+  &__title {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 15px;
+
+    font-size: 16px;
+    font-weight: 700;
+    color: $color-white;
+  }
+  &__info-icon {
+    cursor: pointer;
+    color: $color-disabled;
+  }
+}
+
+.info-box {
+  margin: 12px 12px 40px;
 }
 
 .fields {

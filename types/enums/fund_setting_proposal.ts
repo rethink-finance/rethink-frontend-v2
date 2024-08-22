@@ -84,7 +84,10 @@ export const ProposalStepMap: Record<ProposalStep, IFundSettingProposalStep> = {
   [ProposalStep.Setup]: {
     key: ProposalStep.Setup,
     sections: [
-      { name: "Basic", key: StepSections.Basics },
+      {
+        name: "Basic",
+        key: StepSections.Basics,
+      },
       { name: "Fees", key: StepSections.Fees },
       // { name: "Whitelist", key: StepSections.Whitelist },
       { name: "Management", key: StepSections.Management },
