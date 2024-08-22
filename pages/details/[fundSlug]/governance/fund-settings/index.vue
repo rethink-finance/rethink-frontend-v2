@@ -59,7 +59,7 @@
                 :key="index"
                 :cols="field?.cols ?? 12"
               >
-                <div class="toggleable_group" v-if="field.isTogglable">
+                <div class="toggleable_group" v-if="field.isToggleable">
                   <div class="toggleable_group__toggle">
                     <v-switch
                       v-model="field.isToggleOn"
@@ -109,6 +109,9 @@ import {
   FundSettingProposalFieldsMap,
   ProposalStep,
   ProposalStepMap,
+  type IField,
+  type IProposal,
+  type IStepperSection,
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
@@ -142,10 +145,10 @@ const form = ref(null);
 const formIsValid = ref(false);
 
 // TODO: implement undo changes that will reset form with initial values
-let proposalInitial: Record<string, any> = {}; // This will store initial values
+let proposalInitial = {} as IProposal;
 
 // TODO: rename keys to match the proposal keys from the API
-const proposal = ref({
+const proposal = ref<IProposal>({
   // Basics
   fundDAOName: "",
   tokenSymbol: "",
@@ -178,82 +181,71 @@ const proposal = ref({
   proposalDescription: "",
 });
 
+// helper function to generate fields
+function generateFields(section: IStepperSection, proposal: IProposal) {
+  return FundSettingProposalFieldsMap[section.key]?.map((field) => {
+    if (field?.isToggleable) {
+      const output = field?.fields?.map((subField) => ({
+        ...subField,
+        value: proposal[subField?.key] as string,
+      }));
+
+      return {
+        ...field,
+        fields: output,
+      };
+    } else {
+      const fieldTyped = field as IField;
+      return {
+        ...fieldTyped,
+        value: proposal[fieldTyped.key] as string,
+      } as IField;
+    }
+  });
+}
+
+// helper function to generate sections
+function generateSections(step: ProposalStep, proposal: IProposal) {
+  return ProposalStepMap[step]?.sections?.map((section) => ({
+    name: section?.name ?? "",
+    fields: generateFields(section, proposal),
+  })) as { name: string; fields: IField[] }[];
+}
+
+// main proposalEntry array
 const proposalEntry = ref([
   {
     stepName: ProposalStep.Setup,
     stepLabel: ProposalStepMap[ProposalStep.Setup]?.name ?? "",
-
-    sections:
-      ProposalStepMap[ProposalStep.Setup]?.sections?.map((section) => ({
-        name: section?.name ?? "",
-        fields:
-          FundSettingProposalFieldsMap[section.key]?.map((field) => {
-            // if field is togglable, that means that more fields are in relation and they can be toggled
-            if (field.isTogglable) {
-              field.fields.map((subField) => {
-                return {
-                  ...subField,
-                  value: proposal.value[subField.key],
-                };
-              });
-            }
-            return {
-              ...field,
-              value: proposal.value[field.key],
-            };
-          }) ?? [],
-      })) ?? [],
+    sections: generateSections(ProposalStep.Setup, proposal.value),
   },
-
   {
     stepName: ProposalStep.Details,
     stepLabel: ProposalStepMap[ProposalStep.Details]?.name ?? "",
-
-    sections:
-      ProposalStepMap[ProposalStep.Details]?.sections?.map((section) => ({
-        name: section?.name ?? "",
-        fields:
-          FundSettingProposalFieldsMap[section.key]?.map((field) => {
-            // if field is togglable, that means that more fields are in relation and they can be toggled
-            if (field.isTogglable) {
-              field.fields.map((subField) => {
-                return {
-                  ...subField,
-                  value: proposal.value[subField.key],
-                };
-              });
-            }
-            return {
-              ...field,
-              value: proposal.value[field.key],
-            };
-          }) ?? [],
-      })) ?? [],
+    sections: generateSections(ProposalStep.Details, proposal.value),
   },
 ]);
 
 const checkIfAllFieldsValid = () => {
   const output = proposalEntry.value.every((step) => {
     return step.sections.every((section) => {
-      if (section.isTogglable) {
-        return section.fields.every((field) => {
-          return field.fields.every((subField) => {
+      return section.fields.every((field) => {
+        if (field?.isToggleable) {
+          return field?.fields?.every((subField) => {
             return (
               subField?.rules?.every((rule) => {
                 return rule(subField.value) === true;
               }) ?? true
             );
           });
-        });
-      } else {
-        return section.fields.every((field) => {
+        } else {
           return (
             field?.rules?.every((rule) => {
               return rule(field.value) === true;
             }) ?? true
           );
-        });
-      }
+        }
+      });
     });
   });
 
@@ -288,7 +280,7 @@ const submit = () => {
 
     // router.push(`/details/${selectedFundSlug.value}/governance`);
   } else {
-    form.value?.validate();
+    // form.value?.validate();
     toastStore.warningToast("Please fill all the required fields");
   }
 };
@@ -336,6 +328,8 @@ const populateProposal = () => {
     votingDelay: fundDeepCopy?.votingDelay ?? "",
     proposalThreshold: fundDeepCopy?.proposalThreshold ?? "",
     lateQuorum: fundDeepCopy?.lateQuorum ?? "",
+    proposalTitle: "",
+    proposalDescription: "",
   };
 
   // Store the original values for comparison
@@ -345,7 +339,7 @@ const populateProposal = () => {
   );
 };
 
-const isFieldModified = (key) => {
+const isFieldModified = (key: keyof IProposal) => {
   const output = proposal.value[key] !== proposalInitial[key];
 
   return output;
@@ -356,17 +350,15 @@ watch(
   (newValue, oldValue) => {
     proposalEntry.value.forEach((step) => {
       step.sections.forEach((section) => {
-        if (section.isTogglable) {
-          section.fields.forEach((field) => {
-            field.fields.forEach((subField) => {
-              subField.value = newValue[subField.key];
+        section.fields.forEach((field) => {
+          if (field?.isToggleable) {
+            field?.fields?.forEach((subField) => {
+              subField.value = newValue[subField?.key];
             });
-          });
-        } else {
-          section.fields.forEach((field) => {
-            field.value = newValue[field.key];
-          });
-        }
+          } else {
+            field.value = newValue[field?.key];
+          }
+        });
       });
     });
   },

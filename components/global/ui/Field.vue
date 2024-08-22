@@ -80,7 +80,7 @@ const props = defineProps({
 });
 
 const isFieldRequired = computed(() =>
-  props.field.rules.includes(formRules.required)
+  props?.field?.rules?.includes(formRules.required)
 );
 
 const value = computed({

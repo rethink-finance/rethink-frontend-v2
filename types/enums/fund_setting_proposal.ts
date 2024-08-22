@@ -2,19 +2,47 @@ import { InputType } from "./stepper";
 
 export interface IFundSettingProposalStep {
   name?: string;
-  key: string;
+  key: ProposalStep;
   sections: IStepperSection[];
 }
 
 export interface IStepperSection {
   name: string;
-  key: string;
+  key: StepSections;
   info?: string;
+}
+
+export interface IProposal {
+  fundDAOName: string;
+  tokenSymbol: string;
+  denominationAsset: string;
+  description: string;
+  depositFee: string;
+  depositFeeRecipientAddress: string;
+  redemptionFee: string;
+  redemptionFeeRecipientAddress: string;
+  managementFee: string;
+  managementFeeRecipientAddress: string;
+  managementFeePeriod: string;
+  profitManagemnetFee: string;
+  profitManagemnetFeeRecipientAddress: string;
+  profitManagementFeePeriod: string;
+  hurdleRate: string;
+  plannedSettlementPeriod: string;
+  minLiquidAssetShare: string;
+  governanceToken: string;
+  quorum: string;
+  votingPeriod: string;
+  votingDelay: string;
+  proposalThreshold: string;
+  lateQuorum: string;
+  proposalTitle: string;
+  proposalDescription: string;
 }
 
 export interface IField {
   label: string;
-  key: string;
+  key: keyof IProposal;
   type: InputType;
   placeholder: string;
   rules: any[];
@@ -23,14 +51,15 @@ export interface IField {
   min?: number;
   charLimit?: number;
   info?: string;
-  isTogglable?: boolean;
+  isToggleable?: boolean;
   isToggleOn?: boolean;
   fields?: IField[];
   title?: string;
+  value?: string;
 }
 
 export interface IFieldGroup {
-  isTogglable: boolean;
+  isToggleable: boolean;
   isToggleOn: boolean;
   fields: IField[];
 }
@@ -115,7 +144,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
   ],
   [StepSections.Fees]: [
     {
-      isTogglable: true,
+      isToggleable: true,
       isToggleOn: true,
       fields: [
         {
@@ -138,7 +167,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       ],
     },
     {
-      isTogglable: true,
+      isToggleable: true,
       isToggleOn: true,
       fields: [
         {
@@ -161,7 +190,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       ],
     },
     {
-      isTogglable: true,
+      isToggleable: true,
       isToggleOn: true,
       fields: [
         {
@@ -194,7 +223,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       ],
     },
     {
-      isTogglable: true,
+      isToggleable: true,
       isToggleOn: true,
       fields: [
         {
