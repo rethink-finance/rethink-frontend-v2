@@ -128,10 +128,10 @@ const tokenValueRules = [
 ];
 
 const token0UserBalanceFormatted = computed(() => {
-  return formatTokenValue(props.token0UserBalance, props.token0.decimals);
+  return formatTokenValue(props.token0UserBalance, props.token0.decimals, false);
 });
 const token1UserBalanceFormatted = computed(() => {
-  return formatTokenValue(props.token1UserBalance, props.token0.decimals);
+  return formatTokenValue(props.token1UserBalance, props.token1.decimals,false);
 });
 
 const exchangeRateText = computed((): string => {
@@ -141,7 +141,7 @@ const exchangeRateText = computed((): string => {
 const calculatedToken1Value = computed(() => {
   if (!props.exchangeRate) return "N/A"
   // Continue to use your trimTrailingZeros utility function as needed
-  return trimTrailingZeros((Number(tokenValue.value) * props.exchangeRate).toFixed(4));
+  return trimTrailingZeros((Number(tokenValue.value) * props.exchangeRate).toFixed(18));
 });
 const noNavUpdateToken1Value = computed(() => {
   if (!props?.token0?.decimals || !props?.token1?.decimals) return "--";
@@ -149,8 +149,7 @@ const noNavUpdateToken1Value = computed(() => {
   // If decimals are different, the ratio equals to token0 decimals / token1 decimals.
   const decimals = Number(props.token1.decimals - props.token0.decimals)
   const exchangeRate = 10 ** -decimals;
-  const roundDecimals = decimals > 0 ? decimals : 0;
-  return exchangeRate.toFixed(roundDecimals);
+  return trimTrailingZeros(exchangeRate.toFixed(18));
 });
 </script>
 
