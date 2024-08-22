@@ -55,6 +55,15 @@
     <template v-else-if="field.type === InputType.Checkbox">
       <v-checkbox v-model="value" :disabled="isDisabled || !field.isEditable" />
     </template>
+
+    <div class="info" v-if="field.info">
+      <Icon
+        icon="material-symbols:info-outline"
+        class="info__icon"
+        width="1.5rem"
+      />
+      <span>{{ field.info }}</span>
+    </div>
   </div>
 </template>
 
@@ -123,6 +132,26 @@ const value = computed({
   :deep(.v-field__input) {
     padding: 12px;
     min-height: 45px;
+  }
+}
+
+.info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  width: 100%;
+  padding: 16px;
+
+  background-color: $color-gray-light-transparent;
+  @include borderGray;
+
+  font-size: 14px;
+  font-weight: 400;
+
+  &__icon {
+    rotate: 180deg;
+    color: var(--color-primary);
   }
 }
 </style>
