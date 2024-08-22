@@ -500,17 +500,17 @@ export const useFundStore = defineStore({
           fundToken: {
             symbol: fundSettings.fundSymbol,
             address: fundSettings.fundAddress,
-            decimals: fundTokenDecimals ?? 18,
+            decimals: Number(fundTokenDecimals) ?? 18,
           } as IToken,
           baseToken: {
             symbol: baseTokenSymbol ?? "",
             address: fundSettings.baseToken,
-            decimals: baseTokenDecimals ?? 18,
+            decimals: Number(baseTokenDecimals) ?? 18,
           } as IToken,
           governanceToken: {
             symbol: governanceTokenSymbol ?? "",
             address: fundSettings.governanceToken,
-            decimals: governanceTokenDecimals ?? 18,
+            decimals: Number(governanceTokenDecimals) ?? 18,
           } as IToken,
           totalNAVWei: fundTotalNAV || BigInt("0"),
           totalDepositBalance: fundTotalDepositBalance || BigInt("0"),
