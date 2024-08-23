@@ -98,7 +98,7 @@ export default defineNuxtConfig({
     server: {
       https: {
         key: readFileSync("localhost-key.pem"),
-        cert: readFileSync("localhost-cert.pem"),
+        cert: readFileSync("localhost.pem"),
       },
     },
   },
