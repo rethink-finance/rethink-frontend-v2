@@ -217,28 +217,7 @@ const proposal = ref<IProposal>({
   proposalDescription: "",
 });
 
-const whitelist = ref<IWhitelist[]>([
-  {
-    deleted: false,
-    isNew: true,
-    address: "0x1234567890123456789012345678901234567890",
-  },
-  {
-    deleted: true,
-    isNew: false,
-    address: "0x1234567890123456789012345678901234567880",
-  },
-  {
-    deleted: true,
-    isNew: true,
-    address: "0x1234567890123456789012345678901234567870",
-  },
-  {
-    deleted: false,
-    isNew: false,
-    address: "0x1234567890123456789012345678901234567860",
-  },
-]);
+const whitelist = ref<IWhitelist[]>([]);
 
 // helper function to generate fields
 function generateFields(section: IStepperSection, proposal: IProposal) {
@@ -404,6 +383,14 @@ const populateProposal = () => {
     // whitelist: fundDeepCopy?.whitelist?.map((item) => item.address).join(","),
     whitelist: "",
   };
+
+  whitelist.value = fundDeepCopy?.allowedDepositAddresses?.map(
+    (item: string) => ({
+      deleted: false,
+      isNew: false,
+      address: item,
+    })
+  ) as IWhitelist[];
 
   // Store the original values for comparison
   proposalInitial = JSON.parse(
