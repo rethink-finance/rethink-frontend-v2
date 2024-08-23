@@ -95,11 +95,11 @@ export default defineNuxtConfig({
     plugins: [
       nodePolyfills(),
     ],
-    server: {
-      https: {
-        key: readFileSync("localhost-key.pem"),
-        cert: readFileSync("localhost.pem"),
-      },
+  },
+  devServer: {
+    https: {
+      key: "localhost-key.pem",
+      cert: "localhost.pem",
     },
   },
   plugins: [
