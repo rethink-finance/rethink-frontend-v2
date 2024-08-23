@@ -55,7 +55,7 @@
           Based on Last NAV Update: {{ exchangeRateText }}
         </div>
         <div v-else>
-          There was no NAV update yet: 1 {{ token0?.symbol }} = 1 {{ token1?.symbol }}
+          There was no NAV update yet: 1 {{ token0?.symbol }} = {{ noNavUpdateToken1Value }} {{ token1?.symbol }}
         </div>
       </div>
     </div>
@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
+import { ethers, FixedNumber } from "ethers";
 import type IToken from "~/types/token";
 import { useFundStore } from "~/store/fund.store";
 
@@ -128,10 +128,10 @@ const tokenValueRules = [
 ];
 
 const token0UserBalanceFormatted = computed(() => {
-  return formatTokenValue(props.token0UserBalance, props.token0.decimals);
+  return formatTokenValue(props.token0UserBalance, props.token0.decimals, false);
 });
 const token1UserBalanceFormatted = computed(() => {
-  return formatTokenValue(props.token1UserBalance, props.token0.decimals);
+  return formatTokenValue(props.token1UserBalance, props.token1.decimals,false);
 });
 
 const exchangeRateText = computed((): string => {
@@ -141,7 +141,15 @@ const exchangeRateText = computed((): string => {
 const calculatedToken1Value = computed(() => {
   if (!props.exchangeRate) return "N/A"
   // Continue to use your trimTrailingZeros utility function as needed
-  return trimTrailingZeros((Number(tokenValue.value) * props.exchangeRate).toFixed(4));
+  return trimTrailingZeros((Number(tokenValue.value) * props.exchangeRate).toFixed(18));
+});
+const noNavUpdateToken1Value = computed(() => {
+  if (!props?.token0?.decimals || !props?.token1?.decimals) return "--";
+  // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
+  // If decimals are different, the ratio equals to token0 decimals / token1 decimals.
+  const decimals = Number(props.token1.decimals - props.token0.decimals)
+  const exchangeRate = 10 ** -decimals;
+  return trimTrailingZeros(exchangeRate.toFixed(18));
 });
 </script>
 

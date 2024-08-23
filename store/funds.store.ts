@@ -80,7 +80,7 @@ const excludeNAVDetailsHashes = {
     "0xff1938ed40a09521e438d91c962e23716b9271630c14df68b48ea03247194521",
     "0x4540573583751108c4459901c74ec3738180c04e57ea478727edb1604c83f3eb",
     "0xae2f7bfa21371222957a40eeb141e08927b136dc36ab7d19829accc9bed7ca61",
-    "0x55fb025681fba04713d81375989c071d1525dac9190df1485102c5188adbbd58"
+    "0x55fb025681fba04713d81375989c071d1525dac9190df1485102c5188adbbd58",
   ],
   "0xa4b1": [],
   "0xfc": [],
@@ -211,7 +211,7 @@ export const useFundsStore = defineStore({
             baseToken: {
               address: "",  // Not important here.
               symbol: dataNAVs.fundBaseTokenSymbol[index],
-              decimals: dataNAVs.fundBaseTokenDecimals[index],
+              decimals: Number(dataNAVs.fundBaseTokenDecimals[index]),
             },
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
