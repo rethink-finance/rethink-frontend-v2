@@ -99,7 +99,13 @@ export const useFundStore = defineStore({
     },
     baseToFundTokenExchangeRate(): number {
       // If there was no NAV update yet, the exchange rate is 1:1
-      if (!this.fundLastNAVUpdate) return 1
+      if (!this.fundLastNAVUpdate) {
+        if (!this.fund?.baseToken || !this.fund?.fundToken) return 0;
+        // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
+        // If decimals are the same, exchange rate will be 10^0 -> 1
+        const decimalDiff = Number(this.fund?.fundToken.decimals) - Number(this.fund?.baseToken.decimals)
+        return 10 ** -decimalDiff;
+      }
       if (!this.fund?.fundTokenTotalSupply) return 0;
 
       // Create FixedNumber instances
@@ -115,7 +121,13 @@ export const useFundStore = defineStore({
     },
     fundToBaseTokenExchangeRate(): number {
       // If there was no NAV update yet, the exchange rate is 1:1
-      if (!this.fundLastNAVUpdate) return 1
+      if (!this.fundLastNAVUpdate) {
+        if (!this.fund?.baseToken || !this.fund?.fundToken) return 0;
+        // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
+        // If decimals are the same, exchange rate will be 10^0 -> 1
+        const decimalDiff = Number(this.fund?.fundToken.decimals) - Number(this.fund?.baseToken.decimals)
+        return 10 ** decimalDiff;
+      }
       if (!this.fund?.totalNAVWei || !this.baseToFundTokenExchangeRate) return 0;
 
       const totalNAV = FixedNumber.fromString(
@@ -189,10 +201,13 @@ export const useFundStore = defineStore({
       return ethers.formatUnits(this.userFundSuggestedAllowance, this.fund?.baseToken.decimals);
     },
     isUserWalletWhitelisted(): boolean {
-      const fundAllowedDepositAddresses = this.fund?.allowedDepositAddresses || [];
+      // Return true if whitelisting is disabled. Anyone can deposit/redeem.
       if (!this.fund?.isWhitelistedDeposits) return true;
 
-      return fundAllowedDepositAddresses.includes(this.activeAccountAddress || "");
+      const fundAllowedDepositAddresses = (this.fund?.allowedDepositAddresses || []).map(
+        (address: string) => address.toLowerCase(),
+      );
+      return fundAllowedDepositAddresses.includes(this.activeAccountAddress?.toLowerCase() || "");
     },
     shouldUserRequestDeposit(): boolean {
       // User deposit request does not exist yet, he should request deposit.
@@ -482,17 +497,17 @@ export const useFundStore = defineStore({
           fundToken: {
             symbol: fundSettings.fundSymbol,
             address: fundSettings.fundAddress,
-            decimals: fundTokenDecimals ?? 18,
+            decimals: Number(fundTokenDecimals) ?? 18,
           } as IToken,
           baseToken: {
             symbol: baseTokenSymbol ?? "",
             address: fundSettings.baseToken,
-            decimals: baseTokenDecimals ?? 18,
+            decimals: Number(baseTokenDecimals) ?? 18,
           } as IToken,
           governanceToken: {
             symbol: governanceTokenSymbol ?? "",
             address: fundSettings.governanceToken,
-            decimals: governanceTokenDecimals ?? 18,
+            decimals: Number(governanceTokenDecimals) ?? 18,
           } as IToken,
           totalNAVWei: fundTotalNAV || BigInt("0"),
           totalDepositBalance: fundTotalDepositBalance || BigInt("0"),
