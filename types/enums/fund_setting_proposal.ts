@@ -38,6 +38,13 @@ export interface IProposal {
   lateQuorum: string;
   proposalTitle: string;
   proposalDescription: string;
+  whitelist: string;
+}
+
+export interface IWhitelist {
+  address: string;
+  deleted: boolean;
+  isNew: boolean;
 }
 
 export interface IField {
@@ -45,7 +52,7 @@ export interface IField {
   key: keyof IProposal;
   type: InputType;
   placeholder: string;
-  rules: any[];
+  rules?: any[];
   isEditable?: boolean;
   cols?: number;
   min?: number;
@@ -74,6 +81,7 @@ export enum ProposalStep {
 export enum StepSections {
   Basics = "basic",
   Fees = "fees",
+  Whitelist = "whitelist",
   Management = "management",
   Governance = "governance",
   Details = "details",
@@ -89,7 +97,7 @@ export const ProposalStepMap: Record<ProposalStep, IFundSettingProposalStep> = {
         key: StepSections.Basics,
       },
       { name: "Fees", key: StepSections.Fees },
-      // { name: "Whitelist", key: StepSections.Whitelist },
+      { name: "Whitelist", key: StepSections.Whitelist },
       { name: "Management", key: StepSections.Management },
       {
         name: "Governance",
@@ -269,16 +277,14 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       ],
     },
   ],
-  //   [StepSections.Whitelist]: [
-  //     {
-  //       label: "Whitelist",
-  //       key: "whitelist",
-  //       type: InputType.Textarea,
-  //       placeholder: "E.g. Whitelist",
-  //       rules: [formRules.required],
-  //       isEditable: true,
-  //     },
-  //   ],
+  [StepSections.Whitelist]: [
+    {
+      label: "Whitelist",
+      key: "whitelist",
+      type: InputType.Text,
+      placeholder: "E.g. 0",
+    },
+  ],
   [StepSections.Management]: [
     {
       label: "Planned Settlement Period (Days)",

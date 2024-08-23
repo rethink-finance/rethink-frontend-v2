@@ -6,10 +6,20 @@
 
         <Icon
           icon="material-symbols:info-outline"
-          class="main_header__info-icon"
+          :class="'main_header__info-icon'"
           width="1.5rem"
-          @click="tooltipClick"
+          @click="handleInfoClick"
         />
+
+        <div :class="`info-box-v1 ${isInfoVisible ? 'visible' : ''}`">
+          Update Fund Settings on need!
+          <a
+            class="info-box-v1__link"
+            href="https://docs.rethink.finance/rethink.finance"
+            target="_blank"
+            >Learn More <Icon icon="maki:arrow" color="primary" width="1rem"
+          /></a>
+        </div>
       </div>
 
       <div class="buttons_container">
@@ -73,7 +83,7 @@
             :info="section.info"
           />
 
-          <div class="fields">
+          <div class="fields" v-if="section.name !== 'Whitelist'">
             <v-col
               v-for="(field, index) in section.fields"
               :key="index"
@@ -109,9 +119,11 @@
                   v-model="proposal[field.key]"
                   :class="`${isFieldModified(field.key) ? 'modified-field' : ''}`"
                 />
-                <!-- TODO: show info here if field has info -->
               </div>
             </v-col>
+          </div>
+          <div v-else class="section-whitelist">
+            <SectionWhitelist :items="whitelist" />
           </div>
         </div>
       </div>
@@ -131,9 +143,11 @@ import {
   type IField,
   type IProposal,
   type IStepperSection,
+  type IWhitelist,
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import SectionWhitelist from "./SectionWhitelist.vue";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
@@ -162,6 +176,7 @@ const isSubmitLoading = ref(false);
 const activeStep = ref(proposalSteps[0]);
 const form = ref(null);
 const formIsValid = ref(false);
+const isInfoVisible = ref(false);
 
 // TODO: implement undo changes that will reset form with initial values
 let proposalInitial = {} as IProposal;
@@ -185,6 +200,8 @@ const proposal = ref<IProposal>({
   profitManagemnetFeeRecipientAddress: "",
   profitManagementFeePeriod: "",
   hurdleRate: "",
+  // Whitelist
+  whitelist: "",
   // Management
   plannedSettlementPeriod: "",
   minLiquidAssetShare: "",
@@ -199,6 +216,29 @@ const proposal = ref<IProposal>({
   proposalTitle: "",
   proposalDescription: "",
 });
+
+const whitelist = ref<IWhitelist[]>([
+  {
+    deleted: false,
+    isNew: true,
+    address: "0x1234567890123456789012345678901234567890",
+  },
+  {
+    deleted: true,
+    isNew: false,
+    address: "0x1234567890123456789012345678901234567880",
+  },
+  {
+    deleted: true,
+    isNew: true,
+    address: "0x1234567890123456789012345678901234567870",
+  },
+  {
+    deleted: false,
+    isNew: false,
+    address: "0x1234567890123456789012345678901234567860",
+  },
+]);
 
 // helper function to generate fields
 function generateFields(section: IStepperSection, proposal: IProposal) {
@@ -280,8 +320,8 @@ const isLastStep = computed(() => {
   return activeStep.value === proposalSteps[proposalSteps.length - 1];
 });
 
-const tooltipClick = () => {
-  toastStore.addToast("This is a fund settings proposal.");
+const handleInfoClick = () => {
+  isInfoVisible.value = !isInfoVisible.value;
 };
 
 const handleButtonClick = () => {
@@ -328,6 +368,8 @@ const populateProposal = () => {
     parseBigInt
   );
 
+  console.log("fundDeepCopy: ", fundDeepCopy);
+
   proposal.value = {
     fundDAOName: fundDeepCopy?.title ?? "",
     tokenSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
@@ -357,6 +399,10 @@ const populateProposal = () => {
     lateQuorum: fundDeepCopy?.lateQuorum ?? "",
     proposalTitle: "",
     proposalDescription: "",
+
+    // whitelist
+    // whitelist: fundDeepCopy?.whitelist?.map((item) => item.address).join(","),
+    whitelist: "",
   };
 
   // Store the original values for comparison
@@ -403,8 +449,12 @@ onBeforeUnmount(() => {
 
 <style scoped lang="scss">
 .main_header {
+  flex-wrap: wrap;
+  gap: 15px;
+
   &__title {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     align-content: center;
     gap: 10px;
@@ -419,6 +469,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: row;
   gap: 0.5rem;
+  margin-left: auto;
 }
 .toggleable_group {
   &__toggle {
@@ -458,6 +509,37 @@ onBeforeUnmount(() => {
 .modified-field {
   :deep(.v-field__input) {
     color: var(--color-success);
+  }
+}
+
+.info-box-v1 {
+  display: flex;
+  gap: 40px;
+
+  padding: 12px;
+  border-radius: 4px;
+  background: linear-gradient(0deg, #111c35, #111c35),
+    linear-gradient(0deg, rgba(246, 249, 255, 0.08), rgba(246, 249, 255, 0.08));
+  box-shadow: 0px 0px 6px 0px #1f5fff29;
+
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: $color-text-irrelevant;
+
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+
+  &.visible {
+    opacity: 1;
+  }
+
+  &__link {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    color: $color-primary;
   }
 }
 </style>
