@@ -98,7 +98,7 @@ const onSelectionChanged = (hashes: string[]) => {
 
 const addMethods = () => {
   // // Add newly defined method to fund managed methods.
-  const methods = allNavMethods.value.filter(method => selectedMethodHashes.value.includes(method.detailsHash || ""));
+  const methods = uniqueNavMethods.value.filter(method => selectedMethodHashes.value.includes(method.detailsHash || ""));
 
   for (const method of methods) {
     method.isNew = true;
