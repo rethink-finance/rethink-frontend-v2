@@ -44,6 +44,7 @@ export default defineNuxtPlugin(() => {
      * Project ID associated with [WalletConnect account](https://cloud.walletconnect.com)
      */
     walletConnectVersion: 2,
+    enableDebugLogs: true,
     projectId: runtimeConfig.public.WALLET_CONNECT_PROJECT_ID || "1",
   })
 

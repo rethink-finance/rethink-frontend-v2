@@ -139,6 +139,7 @@ export const useWeb3Store = defineStore({
       return value;
     },
     async init(chainId?: string, web3Provider?: any): Promise<void> {
+      console.log("INIT: ", chainId, web3Provider);
       if (!chainId) {
         // Check if there exists last used chainId in the local storage.
         // It also needs to be a valid chainId.

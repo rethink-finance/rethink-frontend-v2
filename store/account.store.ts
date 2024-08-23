@@ -20,6 +20,7 @@ export const useAccountStore = defineStore("accounts", {
       return this.web3Onboard?.connectingWallet ?? false;
     },
     connectedWallet(): WalletState | undefined {
+      console.warn("CONNECTED ", this.web3Onboard?.connectedWallet)
       return this.web3Onboard?.connectedWallet || undefined;
     },
     connectedWalletChainId(): string | undefined {

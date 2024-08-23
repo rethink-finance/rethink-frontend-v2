@@ -343,7 +343,6 @@ export const useFundStore = defineStore({
         console.error("Error calling getNAVDataForFund: ", error, "fund: ", this.fund.address);
       }
 
-      console.warn("LAST METHODS", this.fundLastNAVUpdateMethods)
       this.fundManagedNAVMethods = JSON.parse(
         JSON.stringify(this.fundLastNAVUpdateMethods, stringifyBigInt), parseBigInt,
       );
@@ -932,7 +931,7 @@ export const useFundStore = defineStore({
     mergeNAVMethodsFromLocalStorage() {
       let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
       // if there are no NAV methods in local storage, save them
-      console.log("LOCAL STORAGE", navUpdateEntries);
+
       if (!navUpdateEntries || !this.selectedFundAddress || !navUpdateEntries[this.selectedFundAddress]) {
         console.log("MERGE NAV methods from LOCAL STORAGE", this.fundManagedNAVMethods);
         navUpdateEntries = {
