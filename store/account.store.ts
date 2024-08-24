@@ -62,8 +62,20 @@ export const useAccountStore = defineStore("accounts", {
     },
     async connectWallet() {
       // Connect to the web3-onboard.
-      await this.web3Onboard?.connectWallet();
-      await this.setAlreadyConnectedWallet();
+      if (!this.web3Onboard) {
+        console.error(" NO web 3 onboard")
+      }
+
+      try {
+        await this.web3Onboard?.connectWallet();
+      } catch (error) {
+        console.error("Error Luka connecting wallet:", error);
+      }
+      try {
+        await this.setAlreadyConnectedWallet();
+      } catch (error) {
+        console.error("Error Luka setAlreadyConnectedWallet:", error);
+      }
     },
     async disconnectWallet() {
       const { provider, label } = this.web3Onboard?.connectedWallet || {}

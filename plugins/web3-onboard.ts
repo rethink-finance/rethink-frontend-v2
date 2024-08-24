@@ -71,7 +71,7 @@ export default defineNuxtPlugin(() => {
       {
         id: "0x1",
         token: "ETH",
-        label: "ethereum test",
+        label: "Ethereum",
         rpcUrl: "https://rpc.ankr.com/eth",
       },
     ],
