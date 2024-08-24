@@ -332,7 +332,7 @@ export const useFundsStore = defineStore({
       const allMethods: INAVMethod[] = [];
       this.navMethodDetailsHashToFundAddress = {};
 
-      console.log("allFundsNavData: ", allFundsNavData);
+      // console.log("allFundsNavData: ", allFundsNavData);
       console.log("Fetch all NAV methods");
       for (const [fundIndex, fundNavData] of allFundsNavData.entries()) {
         if (!fundNavData.encodedNavUpdate?.length) continue;
@@ -373,9 +373,9 @@ export const useFundsStore = defineStore({
             console.log("error processing all NAV methods: ", error)
           }
         }
-        console.log("allMethods: ", allMethods)
       }
 
+      console.log("allMethods: ", allMethods)
       this.allNavMethods = allMethods;
       const seenValues = {} as IUniqueNAVMethods;
       const uniqueMethods = allMethods.filter((method: any) => {

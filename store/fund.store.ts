@@ -95,6 +95,7 @@ export const useFundStore = defineStore({
       return useWeb3Store();
     },
     web3(): Web3 {
+      console.warn("fundStore.web3 changed", this.web3Store.web3)
       return this.web3Store.web3;
     },
     baseToFundTokenExchangeRate(): number {

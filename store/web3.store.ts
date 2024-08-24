@@ -157,8 +157,10 @@ export const useWeb3Store = defineStore({
       this.chainShort = network.chainShort ?? "";
 
       if (web3Provider) {
+        console.warn("[INIT] has new web3provider", web3Provider)
         this.web3 = web3Provider;
       } else {
+        console.warn("[INIT] NO NEW web3provider")
         const rpcUrls = removeDuplicates([network.rpcUrl, ...network.rpcUrls ?? []]);
         for (const rpcUrl of rpcUrls) {
           this.web3 = new Web3(rpcUrl);
