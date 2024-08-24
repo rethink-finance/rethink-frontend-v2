@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev --https",
+    "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
@@ -24,7 +24,7 @@
     "eslint-plugin-nuxt": "^4.0.0",
     "eslint-plugin-prettier": "^5.1.0",
     "eslint-plugin-vue": "^9.17.0",
-    "nuxt": "^3.12.4",
+    "nuxt": "^3.13.0",
     "prettier": "^3.0.3",
     "sass": "^1.72.0",
     "typechain": "^8.3.2",

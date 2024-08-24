@@ -34,6 +34,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
+      BASE_DOMAIN: process.env.BASE_DOMAIN,
     },
   },
   routeRules: {
@@ -80,8 +81,8 @@ export default defineNuxtConfig({
       preprocessorOptions: {
         scss: {
           additionalData: "@import \"@/assets/scss/_variables.scss\";" +
-              "@import \"@/assets/scss/_mixins.scss\";" +
-              "@import \"@/assets/scss/_typography.scss\";",
+            "@import \"@/assets/scss/_mixins.scss\";" +
+            "@import \"@/assets/scss/_typography.scss\";",
         },
       },
     },
@@ -93,12 +94,6 @@ export default defineNuxtConfig({
     plugins: [
       nodePolyfills(),
     ],
-  },
-  devServer: {
-    https: {
-      key: "./certs/localhost-key.pem",
-      cert: "./certs/localhost.pem",
-    },
   },
   plugins: [
     "plugins/iconify.ts",
@@ -113,3 +108,4 @@ export default defineNuxtConfig({
   },
   compatibilityDate: "2024-08-20",
 });
+

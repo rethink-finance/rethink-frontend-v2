@@ -91,3 +91,18 @@ Generate typescript files for contract to be used as return types then.
 
 Example library: 
 [ethereum-abi-types-generator](https://www.npmjs.com/package/ethereum-abi-types-generator)
+
+
+# Stage Build
+To create a stage build, run:
+```shell
+# Create .stage.env
+touch .stage.env
+
+# Populate it with:
+BASE_DOMAIN="stage.rethink.finance"
+# Make sure you use the correct wallet connect project id that has verified stage.rethink.finance domain
+WALLET_CONNECT_PROJECT_ID="<insert_id>>"
+
+npx nuxi generate --dotenv .stage.env
+```
