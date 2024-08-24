@@ -95,9 +95,10 @@ export default defineNuxtConfig({
     ],
   },
   devServer: {
+    host: "localrethink.finance",
     https: {
       key: "./certs/localhost-key.pem",
-      cert: "./certs/localhost.pem",
+      cert: "./certs/localrethink.pem",  // or localhost.pem for using https://localhost:3000 instead of https://localrethink.finance:3000
     },
   },
   plugins: [
