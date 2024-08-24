@@ -90,7 +90,7 @@
               N/A
             </div>
             <template v-else>
-              {{ fund.pendingRedemptionBalance }} {{ fund.fundToken.symbol }}
+              {{ pendingRedemptionBalanceFormatted }} {{ fund.fundToken.symbol }}
             </template>
           </div>
           <div class="data_bar__subtitle">
@@ -110,7 +110,7 @@
               N/A
             </div>
             <template v-else>
-              {{ fund.pendingDepositBalance }} {{ fund.baseToken.symbol }}
+              {{ pendingDepositBalanceFormatted }} {{ fund.baseToken.symbol }}
             </template>
           </div>
           <div class="data_bar__subtitle">
@@ -140,8 +140,7 @@
       <UiDataBar>
         <div class="data_bar__item">
           <div class="data_bar__title">
-            <!-- TODO figure it out -->
-            N/A
+            {{ formatTokenValue(fund.fundContractBaseTokenBalance, fund.baseToken.decimals) }} {{ fund.baseToken.symbol }}
           </div>
           <div class="data_bar__subtitle">
             Fund Contract Balance
@@ -165,6 +164,7 @@
 <script setup lang="ts">
 import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
+import { formatTokenValue } from "~/composables/formatters";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -184,12 +184,23 @@ const isUsingZodiacPilotExtension = computed(() => {
   return fundStore.activeAccountAddress === fund?.safeAddress;
 });
 
+const pendingDepositBalanceFormatted = computed(() => {
+  if (!fund?.pendingDepositBalance) return 0;
+  return formatTokenValue(fund?.pendingDepositBalance, fund.baseToken.decimals, false)
+});
+const pendingRedemptionBalanceFormatted = computed(() => {
+  if (!fund?.pendingRedemptionBalance) return 0;
+  return formatTokenValue(fund?.pendingRedemptionBalance, fund.fundToken.decimals, false)
+});
+
 // TODO convert Redemption Requests to baseToken based on the current (simulated NAV) exch rate.
 const refreshFlowsInfo = () => {
   // TODO refresh simulated NAV
 
   // refresh Deposit & Redemption Requests
   fundStore.fetchFundPendingDepositRedemptionBalance();
+
+  // TODO refresh fund.fundContractBaseTokenBalance
 };
 
 const navigateToCreatePermissions = () => {
