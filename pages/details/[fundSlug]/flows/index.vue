@@ -7,7 +7,7 @@
         </div>
       </UiHeader>
 
-      <UiDataBar>
+      <UiDataBar bg-transparent>
         <div class="data_bar__item">
           <div class="data_bar__title">
             {{ fundLastNAVUpdate?.date || "N/A" }}
@@ -34,12 +34,26 @@
           </div>
         </div>
         <div class="data_bar__item">
-          <v-btn
-            class="button"
-            variant="outlined"
-          >
-            Switch To Zodiac Pilot
-          </v-btn>
+          <div class="switch_to_zodiac_notification">
+            <img
+              src="@/assets/images/zodiac_pilot.svg"
+              class="img_zodiac_pilot"
+            >
+            <template v-if="isUsingZodiacPilotExtension">
+              <div>
+                Connected to the Zodiac Pilot
+              </div>
+              <Icon
+                icon="octicon:check-circle-fill-16"
+                width="1rem"
+                height="1rem"
+                color="var(--color-success)"
+              />
+            </template>
+            <div v-else>
+              Switch to the Zodiac Pilot extension to complete the transfer and settle flows.
+            </div>
+          </div>
         </div>
       </UiDataBar>
     </div>
@@ -65,8 +79,19 @@
         </div>
         <div class="data_bar__item">
           <div class="data_bar__title">
-            <!-- TODO figure it out -->
-            N/A
+            <v-progress-circular
+              v-if="fund.pendingRedemptionBalanceLoading"
+              class="d-flex"
+              size="18"
+              width="2"
+              indeterminate
+            />
+            <div v-else-if="fund.pendingRedemptionBalanceError" class="text-error">
+              N/A
+            </div>
+            <template v-else>
+              {{ fund.pendingRedemptionBalance }} {{ fund.fundToken.symbol }}
+            </template>
           </div>
           <div class="data_bar__subtitle">
             Redemption Requests
@@ -74,8 +99,19 @@
         </div>
         <div class="data_bar__item">
           <div class="data_bar__title">
-            <!-- TODO figure it out -->
-            N/A
+            <v-progress-circular
+              v-if="fund.pendingDepositBalanceLoading"
+              class="d-flex"
+              size="18"
+              width="2"
+              indeterminate
+            />
+            <div v-else-if="fund.pendingDepositBalanceError" class="text-error">
+              N/A
+            </div>
+            <template v-else>
+              {{ fund.pendingDepositBalance }} {{ fund.baseToken.symbol }}
+            </template>
           </div>
           <div class="data_bar__subtitle">
             Deposit Rquests
@@ -142,7 +178,13 @@ const fundingGap = computed(() => {
   return 1
 });
 
+const isUsingZodiacPilotExtension = computed(() => {
+  // Check if user is using Zodiac Pilot extension.
+  // The connected wallet address is the same as custody (safe address).
+  return fundStore.activeAccountAddress === fund?.safeAddress;
+});
 
+// TODO convert Redemption Requests to baseToken based on the current (simulated NAV) exch rate.
 const refreshFlowsInfo = () => {
   // TODO refresh simulated NAV
 
@@ -162,5 +204,16 @@ const navigateToCreatePermissions = () => {
   @include sm {
     max-width: 420px;
   }
+}
+.switch_to_zodiac_notification {
+  align-items: center;
+  display: flex;
+  border: 1px solid $color-border-dark;
+  background: $color-gray-light-transparent;
+  padding: 1rem;
+  flex-direction: row;
+  border-radius: $default-border-radius;
+  font-weight: 600;
+  gap: 0.6rem;
 }
 </style>

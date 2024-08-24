@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "build_stage": "nuxi generate --dotenv .stage.env",
+    "build_stage": "BASE_DOMAIN=stage.rethink.finance nuxi generate",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",

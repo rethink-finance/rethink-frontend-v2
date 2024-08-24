@@ -3,7 +3,7 @@
     <div v-if="title" class="data_bar__title">
       {{ title }}
     </div>
-    <div class="data_bar__body">
+    <div class="data_bar__body" :class="{'data_bar__body--bg-transparent': bgTransparent}">
       <slot />
     </div>
   </div>
@@ -16,6 +16,10 @@ export default defineComponent({
     title: {
       type: String,
       default: "",
+    },
+    bgTransparent: {
+      type: Boolean,
+      default: false,
     },
   },
 })
@@ -47,6 +51,10 @@ export default defineComponent({
       padding: 1rem;
       flex-direction: row;
       border-radius: $default-border-radius;
+      &--bg-transparent {
+        background: transparent;
+        border: none;
+      }
     }
   }
   ::v-deep(*) {
