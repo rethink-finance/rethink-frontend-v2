@@ -61,6 +61,8 @@ export const useAccountStore = defineStore("accounts", {
       }
     },
     async connectWallet() {
+      console.warn(" TRY CONNECT")
+
       // Connect to the web3-onboard.
       if (!this.web3Onboard) {
         console.error(" NO web 3 onboard")
