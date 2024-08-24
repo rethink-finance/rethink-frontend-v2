@@ -130,6 +130,7 @@
           <v-btn
             class="text-secondary"
             variant="outlined"
+            @click="refreshFlowsInfo()"
           >
             Refresh Flows Info
           </v-btn>
