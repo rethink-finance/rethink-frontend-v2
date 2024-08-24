@@ -204,14 +204,12 @@ const requestDeposit = async () => {
   const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei.value ]);
   const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
+  console.log("isConnectedWalletUsingLedger:", accountStore.isConnectedWalletUsingLedger);
   console.log("contract:", fundStore.fundContract);
   console.warn("connectedWallet", accountStore?.connectedWallet)
   console.warn("connectedWallet.provider", accountStore?.connectedWallet?.provider)
   console.warn("web3Onboard", accountStore?.web3Onboard)
 
-  // const ethersProvider = new ethers.BrowserProvider(accountStore?.connectedWallet.provider, "any")
-  // const ethersFundContract = 1;
-  // const signer = ethersProvider.getSigner()
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,

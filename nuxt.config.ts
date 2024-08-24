@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:dns";
 import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
@@ -98,8 +96,8 @@ export default defineNuxtConfig({
   },
   devServer: {
     https: {
-      key: "localhost-key.pem",
-      cert: "localhost.pem",
+      key: "./certs/localhost-key.pem",
+      cert: "./certs/localhost.pem",
     },
   },
   plugins: [
