@@ -10,10 +10,11 @@ import logoSVG from "@/assets/images/logo_mobile.svg"
 export default defineNuxtPlugin(() => {
   const runtimeConfig = useRuntimeConfig()
   const injected = injectedModule();
+  const baseDomain = runtimeConfig.public.BASE_DOMAIN || "rethink.finance"
 
   // Wallets
   const safe = safeModule({
-    whitelistedDomains: [/rethink.finance/],
+    whitelistedDomains: [new RegExp(baseDomain)],
   })
   const walletConnect = walletConnectModule({
     /**
@@ -21,19 +22,19 @@ export default defineNuxtPlugin(() => {
          */
     projectId: runtimeConfig.public.WALLET_CONNECT_PROJECT_ID || "1",
     /**
-         * Chains required to be supported by all wallets connecting to your DApp
-         */
+     * Chains required to be supported by all wallets connecting to your DApp
+     */
     // requiredChains: [1],
     /**
-         * Chains required to be supported by all wallets connecting to your DApp
-         */
+     * Chains required to be supported by all wallets connecting to your DApp
+     */
     // optionalChains: [42161, 8453, 10, 137, 56],
     /**
-         * Defaults to `appMetadata.explore` that is supplied to the web3-onboard init
-         * Strongly recommended to provide atleast one URL as it is required by some wallets (i.e. MetaMask)
-         * To connect with WalletConnect
-         */
-    dappUrl: "https://rethink.finance",
+     * Defaults to `appMetadata.explore` that is supplied to the web3-onboard init
+     * Strongly recommended to provide atleast one URL as it is required by some wallets (i.e. MetaMask)
+     * To connect with WalletConnect
+     */
+    dappUrl: `https://${baseDomain}`,
   })
 
   const enkryptModule = enkrypt()
@@ -93,3 +94,4 @@ export default defineNuxtPlugin(() => {
     },
   })
 });
+
