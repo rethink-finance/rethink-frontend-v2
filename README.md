@@ -92,8 +92,14 @@ Generate typescript files for contract to be used as return types then.
 Example library: 
 [ethereum-abi-types-generator](https://www.npmjs.com/package/ethereum-abi-types-generator)
 
+## Production Build
+Build and deploy to GH pages.
+```shell
+npx nuxi generate; cd .output/public/; git init; git add -A; git commit -m "deployment to GH Pages"; git push -f git@github.com:rethink-finance/rethink-frontend-v2.git master:gh-pages; cd ../..;
+```
 
-# Stage Build
+
+## Stage Build
 To create a stage build, run:
 ```shell
 # Create .stage.env
