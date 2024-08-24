@@ -33,7 +33,7 @@ export default defineNuxtPlugin(() => {
          * Strongly recommended to provide atleast one URL as it is required by some wallets (i.e. MetaMask)
          * To connect with WalletConnect
          */
-    dappUrl: "https://rethink.finance",
+    dappUrl: "https://localrethink.finance:3000",
   })
 
   const enkryptModule = enkrypt()
