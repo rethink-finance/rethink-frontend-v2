@@ -1,9 +1,6 @@
 import { defineStore } from "pinia";
 import type { Account, WalletState } from "@web3-onboard/core/dist/types";
 import { Web3 } from "web3";
-import ledgerModule from "@web3-onboard/ledger";
-import { init, useOnboard } from "@web3-onboard/vue";
-import logoSVG from "assets/images/logo_mobile.svg";
 import { useWeb3Store } from "~/store/web3.store";
 
 interface IState {
