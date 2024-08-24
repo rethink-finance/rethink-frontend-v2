@@ -73,11 +73,18 @@
               :loading="connectingWallet"
               @click="onClickConnect"
             >
-              <img
-                v-if="connectedWallet?.icon"
-                :src="connectedWalletIcon"
-                class="connect_wallet_btn__icon"
-              >
+              <template v-if="connectedWallet?.icon">
+                <div
+                  v-if="isWalletIconSvg"
+                  class="connect_wallet_btn__icon"
+                  v-html="connectedWalletIcon"
+                />
+                <img
+                  v-else
+                  :src="connectedWalletIcon"
+                  class="connect_wallet_btn__icon"
+                >
+              </template>
               {{
                 connectedWallet
                   ? activeAccount
@@ -254,7 +261,15 @@ const connectingWallet = computed(() => accountStore.connectingWallet);
 const connectedWallet = computed(() => accountStore.connectedWallet);
 const connectedWalletIcon = computed(() => {
   if (!accountStore?.connectedWallet) return "";
-  return accountStore.connectedWallet?.icon || "";
+  const iconStr = accountStore.connectedWallet?.icon || "";
+  return iconStr.replace(/\n+/g, " ").trim();
+});
+
+
+const isWalletIconSvg = computed(() => {
+  const iconStr = connectedWalletIcon.value;
+  if (!iconStr) return false;
+  return iconStr.startsWith("<svg") && iconStr.endsWith("</svg>");
 });
 
 onMounted(() => {
@@ -327,6 +342,11 @@ const onClickConnect = async () => {
       width: 1.5rem;
       height: 1.5rem;
       margin-right: 0.5rem;
+
+      :deep(svg) {
+        width: 1.5rem;
+        height: 1.5rem;
+      }
     }
 
     &--connected {
