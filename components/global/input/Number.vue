@@ -5,6 +5,7 @@
     type="number"
     min="0"
     hide-spin-buttons
+    :placeholder="placeholder"
   />
 </template>
 
@@ -13,6 +14,10 @@ const props = defineProps({
   modelValue: {
     type: [Number, String],
     default: 0,
+  },
+  placeholder: {
+    type: String,
+    default: "0",
   },
 });
 

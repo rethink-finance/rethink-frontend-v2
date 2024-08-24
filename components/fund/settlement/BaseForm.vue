@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ethers, FixedNumber } from "ethers";
+import { ethers } from "ethers";
 import type IToken from "~/types/token";
 import { useFundStore } from "~/store/fund.store";
 
@@ -76,7 +76,7 @@ type RulesArray = RuleFunction[];
 const props = defineProps({
   modelValue: {
     type: String,
-    default: "0",
+    default: "",
   },
   token0: {
     type: Object as PropType<IToken>,
@@ -110,7 +110,7 @@ const fundStore = useFundStore();
 const emit = defineEmits(["update:modelValue"]);
 
 const tokenValue = computed({
-  get: () => props?.modelValue ?? "0",
+  get: () => props?.modelValue ?? "",
   set: (value: string) => {
     emit("update:modelValue", value);
   },
