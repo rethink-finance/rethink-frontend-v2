@@ -72,7 +72,6 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
-import { computed, ref } from "vue";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -81,7 +80,7 @@ import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
-const tokenValue = ref("0.0");
+const tokenValue = ref("");
 const tokenValueChanged = ref(false);
 const fund = computed(() => fundStore.fund);
 
@@ -126,7 +125,7 @@ const isRequestRedeemDisabled = computed(() => {
 
 const errorMessages = computed<IError[]>(() => {
   // Disable Redeem button if any of rules is false.
-  return rules.map(rule => rule(tokenValue.value)).filter(rule => rule !== true) as IError[];
+  return rules.map(rule => rule(tokenValue.value || "0")).filter(rule => rule !== true) as IError[];
 });
 const visibleErrorMessages = computed<IError[]>( () => {
   return errorMessages.value.filter((error: IError) => error.display)
@@ -159,7 +158,7 @@ const requestRedemption = async () => {
   console.log("[REQUEST REDEMPTION]");
   loadingRequestRedeem.value = true;
 
-  const tokensWei = ethers.parseUnits(tokenValue.value, fund.value.fundToken.decimals)
+  const tokensWei = ethers.parseUnits(tokenValue.value || "0", fund.value.fundToken.decimals)
   console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
 
   const ABI = [ "function requestWithdraw(uint256 amount)" ];

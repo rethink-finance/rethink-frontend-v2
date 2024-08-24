@@ -87,7 +87,6 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
-import { computed, ref } from "vue";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -97,7 +96,7 @@ import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
-const tokenValue = ref("0.0");
+const tokenValue = ref("");
 const tokenValueChanged = ref(false);
 const fund = computed(() => fundStore.fund);
 const {
@@ -157,14 +156,14 @@ const isRequestDepositDisabled = computed(() => {
 
 const errorMessages = computed<IError[]>(() => {
   // Disable deposit button if any of rules is false.
-  return rules.map(rule => rule(tokenValue.value)).filter(rule => rule !== true) as IError[];
+  return rules.map(rule => rule(tokenValue.value || "0")).filter(rule => rule !== true) as IError[];
 });
 const visibleErrorMessages = computed<IError[]>( () => {
   return errorMessages.value.filter((error: IError) => error.display)
 })
 const tokensWei = computed( () => {
   if (!fund.value?.baseToken) return 0n;
-  return ethers.parseUnits(tokenValue.value, fund.value?.baseToken.decimals)
+  return ethers.parseUnits(tokenValue.value || "0", fund.value?.baseToken.decimals)
 })
 
 const handleError = (error: any) => {
@@ -204,8 +203,14 @@ const requestDeposit = async () => {
   const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei.value ]);
   const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
+  console.log("isConnectedWalletUsingLedger:", accountStore.isConnectedWalletUsingLedger);
+  console.log("contract:", fundStore.fundContract);
+  console.warn("connectedWallet", accountStore?.connectedWallet)
+  console.warn("connectedWallet.provider", accountStore?.connectedWallet?.provider)
+  console.warn("web3Onboard", accountStore?.web3Onboard)
+
   try {
-    fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: accountStore.activeAccount.address,
       gas: gasEstimate,
       gasPrice,
