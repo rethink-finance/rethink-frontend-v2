@@ -104,5 +104,25 @@ BASE_DOMAIN="stage.rethink.finance"
 # Make sure you use the correct wallet connect project id that has verified stage.rethink.finance domain
 WALLET_CONNECT_PROJECT_ID="<insert_id>>"
 
+# Run
+npm run build_stage
+# or
 npx nuxi generate --dotenv .stage.env
+```
+
+Make sure that `.htaccess` file has:
+```txt
+# Ensure the site serves the correct files for each route.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Directly serve the index.html for the root
+  RewriteRule ^index\.html$ - [L]
+
+  # Only rewrite if the requested resource does not exist
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ /index.html [L]
+</IfModule>
 ```
