@@ -1,6 +1,10 @@
 import { defineStore } from "pinia";
 import type { Account, WalletState } from "@web3-onboard/core/dist/types";
 import { Web3 } from "web3";
+import ledgerModule from "@web3-onboard/ledger";
+import { init } from "@web3-onboard/vue";
+import injectedModule from "@web3-onboard/injected-wallets";
+import logoSVG from "assets/images/logo_mobile.svg";
 import { useWeb3Store } from "~/store/web3.store";
 
 interface IState {
@@ -62,6 +66,45 @@ export const useAccountStore = defineStore("accounts", {
     },
     async connectWallet() {
       console.warn(" TRY CONNECT")
+      const ledger = ledgerModule({
+        /**
+         * Project ID associated with [WalletConnect account](https://cloud.walletconnect.com)
+         */
+        walletConnectVersion: 2,
+        projectId: "1",
+      })
+      const injected = injectedModule();
+
+      init({
+        wallets: [injected, ledger],
+        chains: [
+          {
+            id: "0x89",
+            token: "MATIC",
+            label: "Polygon",
+            rpcUrl: "https://polygon.drpc.org",
+          },
+          {
+            id: "0x1",
+            token: "ETH",
+            label: "Ethereum",
+            rpcUrl: "https://rpc.ankr.com/eth",
+          },
+        ],
+        theme: "dark",
+        appMetadata: {
+          name: "Rethink.finance",
+          icon: logoSVG,
+          logo: logoSVG,
+          description: "Powering the transition to decentralised and non-custodial asset management.",
+          recommendedInjectedWallets: [
+            { name: "MetaMask", url: "https://metamask.io" },
+            { name: "WalletConnect", url: "https://cloud.walletconnect.com/sign-in" },
+            { name: "Safe", url: "https://app.safe.global/welcome" },
+            { name: "Ledger", url: "https://app.safe.global/welcome" },
+          ],
+        },
+      })
 
       // Connect to the web3-onboard.
       if (!this.web3Onboard) {
