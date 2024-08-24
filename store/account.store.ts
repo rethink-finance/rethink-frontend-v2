@@ -2,8 +2,7 @@ import { defineStore } from "pinia";
 import type { Account, WalletState } from "@web3-onboard/core/dist/types";
 import { Web3 } from "web3";
 import ledgerModule from "@web3-onboard/ledger";
-import { init } from "@web3-onboard/vue";
-import injectedModule from "@web3-onboard/injected-wallets";
+import { init, useOnboard } from "@web3-onboard/vue";
 import logoSVG from "assets/images/logo_mobile.svg";
 import { useWeb3Store } from "~/store/web3.store";
 
@@ -73,10 +72,8 @@ export const useAccountStore = defineStore("accounts", {
         walletConnectVersion: 2,
         projectId: "1",
       })
-      const injected = injectedModule();
-
       init({
-        wallets: [injected, ledger],
+        wallets: [ledger],
         chains: [
           {
             id: "0x89",
@@ -106,13 +103,15 @@ export const useAccountStore = defineStore("accounts", {
         },
       })
 
+      const web3Onboard = useOnboard()
+
       // Connect to the web3-onboard.
-      if (!this.web3Onboard) {
+      if (!web3Onboard) {
         console.error(" NO web 3 onboard")
       }
 
       try {
-        await this.web3Onboard?.connectWallet();
+        await web3Onboard.connectWallet();
       } catch (error) {
         console.error("Error Luka connecting wallet:", error);
       }
