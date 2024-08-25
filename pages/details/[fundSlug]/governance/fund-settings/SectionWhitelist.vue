@@ -77,9 +77,6 @@
           :error-messages="parsedBulkAddressErrors"
         >
         </v-textarea>
-        <!-- hide-details -->
-        <!-- :rules="bulkAddressRules"
-        class="mb-5" -->
 
         <div class="header__actions">
           <v-btn color="red" @click="toggleAddAddressList" variant="text">
@@ -118,8 +115,8 @@
       hide-default-header
       hover
       hide-actions
-      :pagination.sync="pagination"
       items-per-page="10"
+      :page="page"
     >
       <template #[`item.index`]="{ index }">
         <strong class="td_index">{{ index + 1 }}</strong>
@@ -169,11 +166,7 @@
       </template>
 
       <template #bottom>
-        <v-pagination
-          v-if="pages > 1"
-          v-model="pagination.page"
-          :length="pages"
-        ></v-pagination>
+        <v-pagination v-model="page" :length="pages"></v-pagination>
       </template>
     </v-data-table>
 
@@ -195,10 +188,13 @@ const emit = defineEmits(["update-items"]);
 
 const loading = ref(false);
 const search = ref("");
-const pagination = ref({
-  page: 1,
-  rowsPerPage: 10,
-  totalItems: 0,
+const page = ref(1);
+const pages = computed(() => {
+  const totalItems = props.items.length;
+  if (totalItems == null) return 0;
+
+  const output = Math.ceil(totalItems / 10);
+  return output;
 });
 const isAddAddressActive = ref(false);
 const isAddAddressListActive = ref(false);
@@ -264,16 +260,6 @@ const headers = computed(() => {
   ];
 
   return headers;
-});
-
-const pages = computed(() => {
-  if (
-    pagination.value.rowsPerPage == null ||
-    pagination.value.totalItems == null
-  )
-    return 0;
-
-  return Math.ceil(pagination.value.totalItems / pagination.value.rowsPerPage);
 });
 
 const methodProps = ({ item }: { item: IWhitelist }) => {
