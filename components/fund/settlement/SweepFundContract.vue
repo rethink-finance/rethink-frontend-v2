@@ -41,8 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
-import { type AbiFunctionFragment, eth } from "web3";
+import { eth } from "web3";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 
@@ -50,16 +49,7 @@ const toastStore = useToastStore();
 const fundStore = useFundStore();
 
 const { isUsingZodiacPilotExtension } = toRefs(fundStore);
-
-const baseToken = computed(() => {
-  return fundStore.fund?.baseToken;
-});
-const tokenValue = ref("");
 const isSweepLoading = ref(false);
-const tokensWei = computed( () => {
-  if (!baseToken.value) return 0n;
-  return ethers.parseUnits(tokenValue.value || "0", baseToken.value.decimals)
-})
 
 const isSweepContractDisabled = computed(() => {
   return !!sweepContractTooltipText.value || isSweepLoading.value || !isUsingZodiacPilotExtension.value;

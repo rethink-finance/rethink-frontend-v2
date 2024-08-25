@@ -66,7 +66,6 @@ interface IState {
   loadingUserBalances: boolean,
   isNavSimulationLoading: boolean,
   loadingUserFundDepositRedemptionRequests: boolean,
-  loadingFundBaseTokenBalance: boolean,
 }
 
 
@@ -90,7 +89,6 @@ export const useFundStore = defineStore({
     loadingUserBalances: false,
     isNavSimulationLoading: false,
     loadingUserFundDepositRedemptionRequests: false,
-    loadingFundBaseTokenBalance: false,
   }),
   getters: {
     accountStore(): any {
@@ -1089,19 +1087,22 @@ export const useFundStore = defineStore({
       return undefined
     },
     async fetchFundContractBaseTokenBalance() {
-      if (!this.activeAccountAddress) return undefined;
-      if (!this.fund?.address) return undefined;
-      this.loadingFundBaseTokenBalance = true;
+      if (!this.activeAccountAddress) return;
+      if (!this.fund?.address) return;
+
+      this.fund.fundContractBaseTokenBalanceLoading = true;
       let balanceWei = BigInt("0");
       try {
         balanceWei = await this.fundBaseTokenContract.methods.balanceOf(this.fund?.address).call()
+        this.fund.fundContractBaseTokenBalanceError = false;
       } catch (e) {
+        this.fund.fundContractBaseTokenBalanceError = true;
         console.error(
           "Failed fetching fetchFundBaseTokenBalance error. -> ", e,
         );
       }
       this.fund.fundContractBaseTokenBalance = balanceWei;
-      this.loadingFundBaseTokenBalance = false;
+      this.fund.fundContractBaseTokenBalanceLoading = false;
     },
     async getRoleModAddress(): Promise<string> {
       if (!this.fund?.address) return "";

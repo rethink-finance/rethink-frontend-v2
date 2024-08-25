@@ -112,6 +112,8 @@ export default interface IFund {
   feeBalance: bigint;
   safeContractBaseTokenBalance: bigint;
   fundContractBaseTokenBalance: bigint;
+  fundContractBaseTokenBalanceError?: boolean;
+  fundContractBaseTokenBalanceLoading?: boolean;
   /**
    * [
    *   DepositFee,

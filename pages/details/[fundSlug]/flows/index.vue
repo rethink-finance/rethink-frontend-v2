@@ -8,7 +8,16 @@
       <UiDataBar bg-transparent>
         <div class="data_bar__item">
           <div class="data_bar__title">
-            {{ fundLastNAVUpdate?.date || "N/A" }}
+            <v-progress-circular
+              v-if="fundStore.loadingNavUpdates"
+              class="d-flex"
+              size="18"
+              width="2"
+              indeterminate
+            />
+            <template v-else>
+              {{ fundLastNAVUpdate?.date || "N/A" }}
+            </template>
           </div>
           <div class="data_bar__subtitle">
             Last Settlement
@@ -67,7 +76,7 @@
         <div class="data_bar__item">
           <div class="data_bar__title">
             <v-progress-circular
-              v-if="isNavSimulationLoading"
+              v-if="fundStore.loadingNavUpdates || isNavSimulationLoading"
               class="d-flex"
               size="18"
               width="2"
@@ -161,7 +170,19 @@
       <UiDataBar>
         <div class="data_bar__item">
           <div class="data_bar__title">
-            {{ formatTokenValue(fund.fundContractBaseTokenBalance, fund.baseToken.decimals) }} {{ fund.baseToken.symbol }}
+            <v-progress-circular
+              v-if="fund.fundContractBaseTokenBalanceLoading"
+              class="d-flex"
+              size="18"
+              width="2"
+              indeterminate
+            />
+            <div v-else-if="fund.fundContractBaseTokenBalanceError" class="text-error">
+              N/A
+            </div>
+            <template v-else>
+              {{ formatTokenValue(fund.fundContractBaseTokenBalance, fund.baseToken.decimals) }} {{ fund.baseToken.symbol }}
+            </template>
           </div>
           <div class="data_bar__subtitle">
             Fund Contract Balance
@@ -244,13 +265,14 @@ const pendingRedemptionBalanceFormatted = computed(() => {
 
 // TODO convert Redemption Requests to baseToken based on the current (simulated NAV) exch rate.
 const refreshFlowsInfo = () => {
-  // Refresh simulated NAV
+  // Refresh current simulated NAV.
   fundStore.simulateCurrentNAV();
 
-  // refresh Deposit & Redemption Requests
+  // Refresh Deposit & Redemption Requests.
   fundStore.fetchFundPendingDepositRedemptionBalance();
 
-  // TODO refresh fund.fundContractBaseTokenBalance
+  // Refresh fund contract base token balance.
+  fundStore.fetchFundContractBaseTokenBalance();
 };
 
 watch(

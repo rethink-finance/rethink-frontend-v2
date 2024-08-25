@@ -67,7 +67,6 @@
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
-import type IFormError from "~/types/form_error";
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 
