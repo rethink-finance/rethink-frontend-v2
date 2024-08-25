@@ -301,7 +301,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       key: "plannedSettlementPeriod",
       type: InputType.Number,
       placeholder: "E.g. 0",
-      rules: [formRules.isPositiveNumber],
+      rules: [formRules.required, formRules.isPositiveNumber],
       isEditable: true,
     },
     {
@@ -309,7 +309,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       key: "minLiquidAssetShare",
       type: InputType.Number,
       placeholder: "E.g. 0",
-      rules: [formRules.isPositiveNumber],
+      rules: [formRules.required, formRules.isPositiveNumber],
       isEditable: true,
     },
   ],
