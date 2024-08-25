@@ -382,6 +382,7 @@ const handleAddNewAddressList = () => {
 
     newAddress.value = "";
     toastStore.successToast("Address list added to whitelist");
+    isAddAddressListActive.value = false;
   } catch (e) {
     console.log(e);
   }
