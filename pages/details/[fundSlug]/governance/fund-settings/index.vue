@@ -123,7 +123,10 @@
             </v-col>
           </div>
           <div v-else class="section-whitelist">
-            <SectionWhitelist :items="whitelist" />
+            <SectionWhitelist
+              :items="whitelist"
+              @update-items="whitelist = $event"
+            />
           </div>
         </div>
       </div>
