@@ -108,7 +108,7 @@
                       :field="subField"
                       v-model="proposal[subField.key]"
                       :is-disabled="!field.isToggleOn"
-                      :class="`${isFieldModified(subField.key) && step.stepName !== 'details' ? 'modified-field' : ''}`"
+                      :class="`${isFieldModified(subField.key) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
                     />
                   </v-col>
                 </div>
@@ -117,7 +117,7 @@
                 <UiField
                   :field="field"
                   v-model="proposal[field.key]"
-                  :class="`${isFieldModified(field.key) && step.stepName !== 'details' ? 'modified-field' : ''}`"
+                  :class="`${isFieldModified(field.key) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
                 />
               </div>
             </v-col>
