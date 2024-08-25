@@ -76,6 +76,7 @@ import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
+import type IFormError from "~/types/form_error";
 
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
@@ -96,12 +97,8 @@ watch(() => tokenValue.value, () => {
   tokenValueChanged.value = true;
 });
 
-interface IError {
-  message: string,
-  display: boolean,
-}
 const rules = [
-  (value: string): boolean | IError => {
+  (value: string): boolean | IFormError => {
     if (!fund.value) return { message: "Fund data is missing.", display: true }
     const valueWei = ethers.parseUnits(value, fund.value?.baseToken.decimals);
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
@@ -123,12 +120,12 @@ const isRequestRedeemDisabled = computed(() => {
   return errorMessages.value.length > 0 || loadingRequestRedeem.value  || !fundStore.isUserWalletWhitelisted;
 });
 
-const errorMessages = computed<IError[]>(() => {
+const errorMessages = computed<IFormError[]>(() => {
   // Disable Redeem button if any of rules is false.
-  return rules.map(rule => rule(tokenValue.value || "0")).filter(rule => rule !== true) as IError[];
+  return rules.map(rule => rule(tokenValue.value || "0")).filter(rule => rule !== true) as IFormError[];
 });
-const visibleErrorMessages = computed<IError[]>( () => {
-  return errorMessages.value.filter((error: IError) => error.display)
+const visibleErrorMessages = computed<IFormError[]>( () => {
+  return errorMessages.value.filter((error: IFormError) => error.display)
 })
 
 const handleError = (error: any) => {

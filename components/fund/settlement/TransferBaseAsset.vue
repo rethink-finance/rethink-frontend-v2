@@ -5,7 +5,7 @@
         Transfer Base Asset to the Fund Contract
       </div>
       <div class="transfer__subtitle">
-        Transfer any base asset amount from the custody (safe) to fund contract.
+        Transfer any base asset amount from the custody (safe) to the fund contract.
       </div>
     </div>
     <div class="transfer__token">
@@ -34,12 +34,12 @@
 
     <div class="buttons_container">
       <div>
-        <v-tooltip activator="parent" location="bottom" :disabled="isUsingZodiacPilotExtension">
+        <v-tooltip activator="parent" location="bottom" :disabled="!transferTooltipText">
           <template #activator="{ props }">
             <v-btn
               v-bind="props"
               class="bg-primary text-secondary"
-              :disabled="!isUsingZodiacPilotExtension || !!transferTooltipText"
+              :disabled="isTransferDisabled"
               @click="transfer()"
             >
               <template #prepend>
@@ -51,16 +51,11 @@
                   indeterminate
                 />
               </template>
-              Transfer
+              Transfer To Fund
             </v-btn>
           </template>
           <template #default>
-            <template v-if="!isUsingZodiacPilotExtension">
-              Switch to the Zodiac Pilot Extension to make a transfer.
-            </template>
-            <template v-else>
-              {{ transferTooltipText }}
-            </template>
+            {{ transferTooltipText }}
           </template>
         </v-tooltip>
       </div>
@@ -72,22 +67,26 @@
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
+import type IFormError from "~/types/form_error";
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 
 const { isUsingZodiacPilotExtension } = toRefs(fundStore);
 
-// const emit = defineEmits(["update:modelValue"]);
-
 const baseToken = computed(() => {
   return fundStore.fund?.baseToken;
 });
 const tokenValue = ref("");
+const tokenValueChanged = ref(false);
 const isTransferLoading = ref(false);
 const tokensWei = computed( () => {
   if (!baseToken.value) return 0n;
   return ethers.parseUnits(tokenValue.value || "0", baseToken.value.decimals)
 })
+
+watch(() => tokenValue.value, () => {
+  tokenValueChanged.value = true;
+});
 
 const setTokenValue = (value: any) => {
   tokenValue.value = value;
@@ -97,11 +96,28 @@ const tokenValueRules = [
   // TODO Add rule for max decimals
   (value: string) => {
     const valueWei = ethers.parseUnits(value || "0", baseToken.value?.decimals);
-    if (valueWei <= 0) return "Value must be positive."
-    if (valueWei > safeContractBaseTokenBalance.value) return "Not enough balance."
+    if (valueWei <= 0) {
+      return "Value must be positive."
+    }
+    if (valueWei > safeContractBaseTokenBalance.value) {
+      return "Not enough balance."
+    }
     return true;
   },
 ];
+const errorMessages = computed(() => {
+  return tokenValueRules.map(rule => rule(tokenValue.value || "0")).filter(rule => rule !== true);
+});
+const isTransferDisabled = computed(() => {
+  return errorMessages.value.length > 0 || isTransferLoading.value || !isUsingZodiacPilotExtension.value;
+});
+const transferTooltipText = computed(() => {
+  if (!isUsingZodiacPilotExtension.value) {
+    return "Switch to the Zodiac Pilot Extension to make a transfer.";
+  }
+  if (errorMessages.value.length && tokenValueChanged.value) return errorMessages.value[0];
+  return ""
+});
 
 const safeContractBaseTokenBalance = computed(() => {
   return fundStore.fund?.safeContractBaseTokenBalance || 0n;
@@ -110,15 +126,12 @@ const safeContractBaseTokenBalanceFormatted = computed(() => {
   if (!baseToken.value) return "--";
   return formatTokenValue(safeContractBaseTokenBalance.value, baseToken.value?.decimals, false);
 });
-const transferTooltipText = computed(() => {
-  return "test"
-});
 
 const transfer = async () => {
   isTransferLoading.value = true;
 
   try {
-    await fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei).send({
+    await fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei.value).send({
       from: fundStore.activeAccountAddress,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);
