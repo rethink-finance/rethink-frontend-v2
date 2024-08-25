@@ -1,65 +1,68 @@
 <template>
   <div class="transfer">
-    <div class="transfer__header">
-      <div class="transfer__title">
-        Transfer Base Asset to the Fund Contract
-      </div>
-      <div class="transfer__subtitle">
-        Transfer any base asset amount from the custody to the fund contract.
-      </div>
-    </div>
-    <div class="transfer__token">
-      <div class="transfer__token_data">
-        <div class="transfer__token_col">
-          {{ baseToken?.symbol }}
+    <div class="transfer__content">
+      <div class="transfer__header">
+        <div class="transfer__title">
+          Transfer Base Asset to the Fund Contract
         </div>
-        <div class="transfer__token_col pa-0 transfer__token_col--dark text-end">
-          <InputNumber
-            v-model="tokenValue"
-            :rules="tokenValueRules"
-            class="transfer__input_amount"
-          />
+        <div class="transfer__subtitle">
+          Transfer any base asset amount from the custody to the fund contract.
         </div>
       </div>
-      <div class="transfer__balance">
-        Balance:
-        <strong
-          class="set_token_value_button mx-1"
-          @click="setTokenValue(safeContractBaseTokenBalanceFormatted)"
-        >
-          {{ safeContractBaseTokenBalanceFormatted }} {{ baseToken?.symbol }}
-        </strong>
+      <div class="transfer__token">
+        <div class="transfer__token_data">
+          <div class="transfer__token_col">
+            {{ baseToken?.symbol }}
+          </div>
+          <div class="transfer__token_col pa-0 transfer__token_col--dark text-end">
+            <InputNumber
+              v-model="tokenValue"
+              :rules="tokenValueRules"
+              class="transfer__input_amount"
+            />
+          </div>
+        </div>
+        <div class="transfer__balance">
+          Balance:
+          <strong
+            class="set_token_value_button mx-1"
+            @click="setTokenValue(safeContractBaseTokenBalanceFormatted)"
+          >
+            {{ safeContractBaseTokenBalanceFormatted }} {{ baseToken?.symbol }}
+          </strong>
+        </div>
       </div>
-    </div>
 
-    <div class="buttons_container">
-      <div>
-        <v-tooltip activator="parent" location="bottom" :disabled="!transferTooltipText">
-          <template #activator="{ props }">
-            <v-btn
-              v-bind="props"
-              class="bg-primary text-secondary"
-              :disabled="isTransferDisabled"
-              @click="transfer()"
-            >
-              <template #prepend>
-                <v-progress-circular
-                  v-if="isTransferLoading"
-                  class="d-flex"
-                  size="20"
-                  width="3"
-                  indeterminate
-                />
-              </template>
-              Transfer To Fund
-            </v-btn>
-          </template>
-          <template #default>
-            {{ transferTooltipText }}
-          </template>
-        </v-tooltip>
+      <div class="buttons_container">
+        <div>
+          <v-tooltip activator="parent" location="bottom" :disabled="!transferTooltipText">
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                class="bg-primary text-secondary"
+                :disabled="isTransferDisabled"
+                @click="transfer()"
+              >
+                <template #prepend>
+                  <v-progress-circular
+                    v-if="isTransferLoading"
+                    class="d-flex"
+                    size="20"
+                    width="3"
+                    indeterminate
+                  />
+                </template>
+                Transfer To Fund
+              </v-btn>
+            </template>
+            <template #default>
+              {{ transferTooltipText }}
+            </template>
+          </v-tooltip>
+        </div>
       </div>
     </div>
+    <FundSettlementSwitchToZodiacPilotAlert v-if="!isUsingZodiacPilotExtension" />
   </div>
 </template>
 
@@ -179,10 +182,18 @@ const handleError = (error: any) => {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
   font-size: $text-sm;
   line-height: 1;
+  gap: 1rem;
 
+  &__content {
+    gap: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    flex-grow: 1;
+    justify-content: space-between;
+  }
   &__token {
     font-weight: 500;
     width: 100%;

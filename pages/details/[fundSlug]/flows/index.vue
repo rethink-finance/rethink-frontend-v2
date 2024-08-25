@@ -287,6 +287,7 @@ watch(
 
 <style scoped lang="scss">
 .fund_contract_notification {
+  margin: 0;
   @include sm {
     max-width: 420px;
   }

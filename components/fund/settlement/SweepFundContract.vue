@@ -1,42 +1,45 @@
 <template>
   <div class="transfer">
-    <div class="transfer__header">
-      <div class="transfer__title">
-        Transfer Base Asset to the Custody Contract
+    <div class="transfer__content">
+      <div class="transfer__header">
+        <div class="transfer__title">
+          Transfer Base Asset to the Custody Contract
+        </div>
+        <div class="transfer__subtitle">
+          Transfer any excess base asset amount from the fund contract back to the custody contract.
+        </div>
       </div>
-      <div class="transfer__subtitle">
-        Transfer any excess base asset amount from the fund contract back to the custody contract.
-      </div>
-    </div>
 
-    <div class="buttons_container">
-      <div>
-        <v-tooltip activator="parent" location="bottom" :disabled="!sweepContractTooltipText">
-          <template #activator="{ props }">
-            <v-btn
-              v-bind="props"
-              class="bg-primary text-secondary"
-              :disabled="isSweepContractDisabled"
-              @click="sweepFundContract()"
-            >
-              <template #prepend>
-                <v-progress-circular
-                  v-if="isSweepLoading"
-                  class="d-flex"
-                  size="20"
-                  width="3"
-                  indeterminate
-                />
-              </template>
-              Sweep Fund Contract
-            </v-btn>
-          </template>
-          <template #default>
-            {{ sweepContractTooltipText }}
-          </template>
-        </v-tooltip>
+      <div class="buttons_container">
+        <div>
+          <v-tooltip activator="parent" location="bottom" :disabled="!sweepContractTooltipText">
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                class="bg-primary text-secondary"
+                :disabled="isSweepContractDisabled"
+                @click="sweepFundContract()"
+              >
+                <template #prepend>
+                  <v-progress-circular
+                    v-if="isSweepLoading"
+                    class="d-flex"
+                    size="20"
+                    width="3"
+                    indeterminate
+                  />
+                </template>
+                Sweep Fund Contract
+              </v-btn>
+            </template>
+            <template #default>
+              {{ sweepContractTooltipText }}
+            </template>
+          </v-tooltip>
+        </div>
       </div>
     </div>
+    <FundSettlementSwitchToZodiacPilotAlert v-if="!isUsingZodiacPilotExtension" />
   </div>
 </template>
 
@@ -123,12 +126,19 @@ const handleError = (error: any) => {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   font-size: $text-sm;
   line-height: 1;
   height: 100%;
   justify-content: space-between;
 
+  &__content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    flex-grow: 1;
+    justify-content: space-between;
+  }
   &__token {
     font-weight: 500;
     width: 100%;
