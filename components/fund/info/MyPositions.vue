@@ -100,36 +100,15 @@ export default {
     },
     userFundTokenBalanceFormatted() {
       if (!this.fundToken) return "N/A";
-      const value = Number(
-        formatTokenValue(
-          this.fundStore.userFundTokenBalance,
-          this.fundToken.decimals,
-          false,
-        ),
-      );
-      return formatNumberShort(value) + " " + this.fundToken.symbol;
+      return this.fundStore.formatFundTokenValue(this.fundStore.userFundTokenBalance);
     },
     userFundAllowanceFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      const value = Number(
-        formatTokenValue(
-          this.fundStore.userFundAllowance,
-          this.fundBaseToken.decimals,
-          false,
-        ),
-      );
-      return formatNumberShort(value) + " " + this.fundBaseToken.symbol;
+      return this.fundStore.formatBaseTokenValue(this.fundStore.userFundAllowance);
     },
     userCurrentValueFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      const value = Number(
-        formatTokenValue(
-          this.fundStore.userCurrentValue,
-          this.fundBaseToken.decimals,
-          false,
-        ),
-      );
-      return formatNumberShort(value) + " " + this.fundBaseToken.symbol;
+      return this.fundStore.formatBaseTokenValue(this.fundStore.userCurrentValue);
     },
   },
   methods: { numberColorClass },

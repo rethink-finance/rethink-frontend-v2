@@ -116,7 +116,7 @@ const fundLastNAVUpdateDate = computed(() => {
 
 const fundTotalNAVFormatted = computed(() => {
   if (!fundStore.fundTotalNAV) return "N/A";
-  return fundStore.formatNAV(fundStore.fundTotalNAV)
+  return fundStore.formatBaseTokenValue(fundStore.fundTotalNAV)
 });
 
 const updateNAV = async () => {

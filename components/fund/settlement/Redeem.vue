@@ -186,7 +186,7 @@ const requestRedemption = async () => {
           timestamp: Date.now(),
           type: FundTransactionType.Redemption,
         }
-        tokenValue.value = "0.0";
+        tokenValue.value = "";
       } else {
         toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
       }

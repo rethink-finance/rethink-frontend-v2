@@ -65,6 +65,8 @@ interface IState {
   loadingNavUpdates: boolean,
   loadingUserBalances: boolean,
   isNavSimulationLoading: boolean,
+  loadingUserFundDepositRedemptionRequests: boolean,
+  loadingFundBaseTokenBalance: boolean,
 }
 
 
@@ -87,6 +89,8 @@ export const useFundStore = defineStore({
     loadingNavUpdates: false,
     loadingUserBalances: false,
     isNavSimulationLoading: false,
+    loadingUserFundDepositRedemptionRequests: false,
+    loadingFundBaseTokenBalance: false,
   }),
   getters: {
     accountStore(): any {
@@ -736,10 +740,8 @@ export const useFundStore = defineStore({
         console.log("[CURRENT NAV] simulate fetch all nav methods")
         await this.fundsStore.fetchAllNavMethods(fundAddresses);
       }
-      console.log("[CURRENT NAV] START SIMULATE:", this.isNavSimulationLoading)
+      console.log("[CURRENT NAV] START SIMULATE:")
 
-      // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
-      // Otherwise, take managed methods, that user can change.
       // Simulate all at once as many promises instead of one by one.
       const promises = [];
 
@@ -819,7 +821,7 @@ export const useFundStore = defineStore({
           ](...callData).call();
           // console.log("simulated value: ", simulatedVal);
 
-          navEntry.simulatedNavFormatted = this.formatNAV(simulatedVal);
+          navEntry.simulatedNavFormatted = this.formatBaseTokenValue(simulatedVal);
           navEntry.simulatedNav = simulatedVal;
           navEntry.isSimulatedNavError = false;
         } catch (error: any) {
@@ -853,7 +855,7 @@ export const useFundStore = defineStore({
           0n,
         );
         navMethod.pastNavValue = pastNavValue;
-        navMethod.pastNavValueFormatted = this.formatNAV(pastNavValue);
+        navMethod.pastNavValueFormatted = this.formatBaseTokenValue(pastNavValue);
       } catch (error) {
         navMethod.pastNavValueError = true;
         console.error(`Failed to fetch NAV method last NAV value ${navMethodIndex}:`, navMethod, error);
@@ -1037,28 +1039,23 @@ export const useFundStore = defineStore({
       this.userFundShareValue = balanceWei;
       return this.userFundShareValue;
     },
-    /**
-     * Fetch user's fund share value (denominated in base token).
-     */
     async fetchUserFundDepositRedemptionRequests() {
-      // this.userFundShareValue = BigInt("0");
       if (!this.activeAccountAddress) return console.error("Active account not found");
       if (!this.fund?.address) return "";
+      this.loadingUserFundDepositRedemptionRequests = true;
+      const [depositRequestResult, redemptionRequestResult] = await Promise.allSettled([
+        this.fetchUserFundTransactionRequest(FundTransactionType.Deposit),
+        this.fetchUserFundTransactionRequest(FundTransactionType.Redemption),
+      ]);
 
-      try {
-        this.userDepositRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Deposit)
-      } catch (e) {
-        console.error(
-          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
-        );
-      }
-      try {
-        this.userRedemptionRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Redemption)
-      } catch (e) {
-        console.error(
-          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
-        );
-      }
+      // Extract the results or handle errors
+      // TODO also if not fulfilled set that it had error and display error in place of the failed request
+      const depositRequest = depositRequestResult.status === "fulfilled" ? depositRequestResult.value : undefined;
+      const redemptionRequest = redemptionRequestResult.status === "fulfilled" ? redemptionRequestResult.value : undefined;
+      this.userDepositRequest = depositRequest;
+      this.userRedemptionRequest = redemptionRequest;
+
+      this.loadingUserFundDepositRedemptionRequests = false;
     },
     async fetchUserFundTransactionRequest(fundTransactionType: FundTransactionType) {
       if (!this.activeAccountAddress) return undefined;
@@ -1090,6 +1087,21 @@ export const useFundStore = defineStore({
       }
 
       return undefined
+    },
+    async fetchFundContractBaseTokenBalance() {
+      if (!this.activeAccountAddress) return undefined;
+      if (!this.fund?.address) return undefined;
+      this.loadingFundBaseTokenBalance = true;
+      let balanceWei = BigInt("0");
+      try {
+        balanceWei = await this.fundBaseTokenContract.methods.balanceOf(this.fund?.address).call()
+      } catch (e) {
+        console.error(
+          "Failed fetching fetchFundBaseTokenBalance error. -> ", e,
+        );
+      }
+      this.fund.fundContractBaseTokenBalance = balanceWei;
+      this.loadingFundBaseTokenBalance = false;
     },
     async getRoleModAddress(): Promise<string> {
       if (!this.fund?.address) return "";
@@ -1155,7 +1167,7 @@ export const useFundStore = defineStore({
       }
       return [undefined, undefined];
     },
-    formatNAV(value: any): string {
+    formatBaseTokenValue(value: any): string {
       const baseSymbol = this.fund?.baseToken.symbol;
       const baseDecimals = this.fund?.baseToken.decimals;
       if (!baseDecimals) {
@@ -1164,6 +1176,16 @@ export const useFundStore = defineStore({
 
       const valueFormatted = value ? formatTokenValue(value, baseDecimals) : "0";
       return valueFormatted + " " + baseSymbol;
+    },
+    formatFundTokenValue(value: any): string {
+      const fundSymbol = this.fund?.fundToken.symbol;
+      const fundDecimals = this.fund?.fundToken.decimals;
+      if (!fundDecimals) {
+        return value;
+      }
+
+      const valueFormatted = value ? formatTokenValue(value, fundDecimals) : "0";
+      return valueFormatted + " " + fundSymbol;
     },
   },
 });

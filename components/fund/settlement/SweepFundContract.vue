@@ -2,60 +2,37 @@
   <div class="transfer">
     <div class="transfer__header">
       <div class="transfer__title">
-        Transfer Base Asset to the Fund Contract
+        Transfer Base Asset to the Custody Contract
       </div>
       <div class="transfer__subtitle">
-        Transfer any base asset amount from the custody to the fund contract.
-      </div>
-    </div>
-    <div class="transfer__token">
-      <div class="transfer__token_data">
-        <div class="transfer__token_col">
-          {{ baseToken?.symbol }}
-        </div>
-        <div class="transfer__token_col pa-0 transfer__token_col--dark text-end">
-          <InputNumber
-            v-model="tokenValue"
-            :rules="tokenValueRules"
-            class="transfer__input_amount"
-          />
-        </div>
-      </div>
-      <div class="transfer__balance">
-        Balance:
-        <strong
-          class="set_token_value_button mx-1"
-          @click="setTokenValue(safeContractBaseTokenBalanceFormatted)"
-        >
-          {{ safeContractBaseTokenBalanceFormatted }} {{ baseToken?.symbol }}
-        </strong>
+        Transfer any excess base asset amount from the fund contract back to the custody contract.
       </div>
     </div>
 
     <div class="buttons_container">
       <div>
-        <v-tooltip activator="parent" location="bottom" :disabled="!transferTooltipText">
+        <v-tooltip activator="parent" location="bottom" :disabled="!sweepContractTooltipText">
           <template #activator="{ props }">
             <v-btn
               v-bind="props"
               class="bg-primary text-secondary"
-              :disabled="isTransferDisabled"
-              @click="transfer()"
+              :disabled="isSweepContractDisabled"
+              @click="sweepFundContract()"
             >
               <template #prepend>
                 <v-progress-circular
-                  v-if="isTransferLoading"
+                  v-if="isSweepLoading"
                   class="d-flex"
                   size="20"
                   width="3"
                   indeterminate
                 />
               </template>
-              Transfer To Fund
+              Sweep Fund Contract
             </v-btn>
           </template>
           <template #default>
-            {{ transferTooltipText }}
+            {{ sweepContractTooltipText }}
           </template>
         </v-tooltip>
       </div>
@@ -65,9 +42,10 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
+import { type AbiFunctionFragment, eth } from "web3";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
-import type IFormError from "~/types/form_error";
+
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 
@@ -77,61 +55,36 @@ const baseToken = computed(() => {
   return fundStore.fund?.baseToken;
 });
 const tokenValue = ref("");
-const tokenValueChanged = ref(false);
-const isTransferLoading = ref(false);
+const isSweepLoading = ref(false);
 const tokensWei = computed( () => {
   if (!baseToken.value) return 0n;
   return ethers.parseUnits(tokenValue.value || "0", baseToken.value.decimals)
 })
 
-watch(() => tokenValue.value, () => {
-  tokenValueChanged.value = true;
+const isSweepContractDisabled = computed(() => {
+  return !!sweepContractTooltipText.value || isSweepLoading.value || !isUsingZodiacPilotExtension.value;
 });
-
-const setTokenValue = (value: any) => {
-  tokenValue.value = value;
-}
-
-const tokenValueRules = [
-  // TODO Add rule for max decimals
-  (value: string) => {
-    const valueWei = ethers.parseUnits(value || "0", baseToken.value?.decimals);
-    if (valueWei <= 0) {
-      return "Value must be positive."
-    }
-    if (valueWei > safeContractBaseTokenBalance.value) {
-      return "Not enough balance."
-    }
-    return true;
-  },
-];
-const errorMessages = computed(() => {
-  return tokenValueRules.map(rule => rule(tokenValue.value || "0")).filter(rule => rule !== true);
-});
-const isTransferDisabled = computed(() => {
-  return errorMessages.value.length > 0 || isTransferLoading.value || !isUsingZodiacPilotExtension.value;
-});
-const transferTooltipText = computed(() => {
+const sweepContractTooltipText = computed(() => {
   if (!isUsingZodiacPilotExtension.value) {
     return "Switch to the Zodiac Pilot Extension to make a transfer.";
+  } else if (!fundContractBaseTokenBalance.value) {
+    return "Currently there are no base assets in the fund contract to sweep.";
   }
-  if (errorMessages.value.length && tokenValueChanged.value) return errorMessages.value[0];
   return ""
 });
 
-const safeContractBaseTokenBalance = computed(() => {
-  return fundStore.fund?.safeContractBaseTokenBalance || 0n;
-});
-const safeContractBaseTokenBalanceFormatted = computed(() => {
-  if (!baseToken.value) return "--";
-  return formatTokenValue(safeContractBaseTokenBalance.value, baseToken.value?.decimals, false);
+const fundContractBaseTokenBalance = computed(() => {
+  return fundStore.fund?.fundContractBaseTokenBalance || 0n;
 });
 
-const transfer = async () => {
-  isTransferLoading.value = true;
+
+const sweepFundContract = async () => {
+  isSweepLoading.value = true;
 
   try {
-    await fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei.value).send({
+    const functionSignatureHash = eth.abi.encodeFunctionSignature("sweepTokens()");
+
+    await fundStore.fundContract.methods.fundFlowsCall(functionSignatureHash).send({
       from: fundStore.activeAccountAddress,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);
@@ -139,7 +92,7 @@ const transfer = async () => {
     }).on("receipt", (receipt: any) => {
       console.log("receipt :", receipt);
       if (receipt.status) {
-        toastStore.successToast("Transfer was successful.");
+        toastStore.successToast("Fund contract sweep was successful.");
         // Refresh balances
         // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
         fundStore.fetchFundContractBaseTokenBalance();
@@ -147,7 +100,7 @@ const transfer = async () => {
         toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
         fundStore.fetchUserBalances();
       }
-      isTransferLoading.value = false;
+      isSweepLoading.value = false;
     }).on("error", (error: any) => {
       handleError(error);
     });
@@ -165,7 +118,7 @@ const handleError = (error: any) => {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
   }
-  isTransferLoading.value = false;
+  isSweepLoading.value = false;
 }
 </script>
 
@@ -183,6 +136,8 @@ const handleError = (error: any) => {
   gap: 1.5rem;
   font-size: $text-sm;
   line-height: 1;
+  height: 100%;
+  justify-content: space-between;
 
   &__token {
     font-weight: 500;

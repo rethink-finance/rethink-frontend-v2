@@ -43,8 +43,15 @@
         </v-tooltip>
       </div>
     </div>
+    <div v-if="!accountStore.isConnected" class="fund_settlement__no_pending_requests">
+      Connect your wallet to view deposit or redemption requests.
+    </div>
+    <div v-else-if="loadingUserFundDepositRedemptionRequests">
+      <v-skeleton-loader type="list-item-two-line" />
+      <v-skeleton-loader type="list-item-two-line" />
+    </div>
     <div
-      v-if="userDepositRequestExists || userRedemptionRequestExists"
+      v-else-if="userDepositRequestExists || userRedemptionRequestExists"
       class="fund_settlement__pending_requests"
     >
       <FundCurrentCyclePendingRequest
@@ -61,9 +68,6 @@
         :token1="fund.baseToken"
         :token0="fund.fundToken"
       />
-    </div>
-    <div v-else-if="!accountStore.isConnected" class="fund_settlement__no_pending_requests">
-      Connect your wallet to view deposit or redemption requests.
     </div>
     <div v-else class="fund_settlement__no_pending_requests">
       Currently there are no deposit or redemption requests.
@@ -103,6 +107,7 @@ const {
   shouldUserWaitSettlementOrCancelRedemption,
   userDepositRequestExists,
   userRedemptionRequestExists,
+  loadingUserFundDepositRedemptionRequests,
 } = toRefs(fundStore);
 
 defineProps({

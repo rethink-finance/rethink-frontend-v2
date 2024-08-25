@@ -81,7 +81,7 @@
               class="nav_simulated_value"
               :class="{'nav_simulated_value--warning': isAnySimulatedNavError}"
             >
-              {{ formatNAV(totalCurrentSimulatedNAV) }}
+              {{ formatBaseTokenValue(totalCurrentSimulatedNAV) }}
               <div
                 v-if="isAnySimulatedNavError"
                 class="ms-2 justify-center align-center d-flex"
@@ -193,7 +193,7 @@
 
     <div class="main_card main_grid">
       <FundSettlementTransferBaseAsset />
-      <FundSettlementTransferBaseAsset />
+      <FundSettlementSweepFundContract />
     </div>
   </div>
 </template>
@@ -207,7 +207,7 @@ const fundStore = useFundStore();
 
 const fund = useAttrs().fund as IFund;
 const {
-  formatNAV,
+  formatBaseTokenValue,
   isUsingZodiacPilotExtension,
   totalCurrentSimulatedNAV,
   fundLastNAVUpdate,
@@ -259,6 +259,7 @@ watch(
     console.warn("simulateCurrentNAV changed:")
     fundStore.simulateCurrentNAV();
   },
+  { immediate: true },
 );
 </script>
 

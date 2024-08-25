@@ -282,8 +282,8 @@ export default defineComponent({
     const fundsStore = useFundsStore();
     const web3Store = useWeb3Store();
     const toastStore = useToastStore();
-    const { formatNAV } = toRefs(fundStore);
-    return { fundStore, fundsStore, web3Store, toastStore, formatNAV }
+    const { formatBaseTokenValue } = toRefs(fundStore);
+    return { fundStore, fundsStore, web3Store, toastStore, formatBaseTokenValue }
   },
   data: () => ({
     expanded: [],
@@ -346,10 +346,10 @@ export default defineComponent({
         (fund?.fundContractBaseTokenBalance || 0n) +
         (fund?.safeContractBaseTokenBalance || 0n) +
         (fund?.feeBalance || 0n);
-      return this.formatNAV(totalNAV);
+      return this.formatBaseTokenValue(totalNAV);
     },
     formattedTotalLastNAV() {
-      return this.formatNAV(this.navParts?.totalNAV || 0n);
+      return this.formatBaseTokenValue(this.navParts?.totalNAV || 0n);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
@@ -363,13 +363,13 @@ export default defineComponent({
       )
     },
     formattedFundContractBaseTokenBalance() {
-      return this.formatNAV(this.fundStore.fund?.fundContractBaseTokenBalance);
+      return this.formatBaseTokenValue(this.fundStore.fund?.fundContractBaseTokenBalance);
     },
     formattedSafeContractBaseTokenBalance() {
-      return this.formatNAV(this.fundStore.fund?.safeContractBaseTokenBalance);
+      return this.formatBaseTokenValue(this.fundStore.fund?.safeContractBaseTokenBalance);
     },
     formattedFeeBalance() {
-      return this.formatNAV(this.fundStore.fund?.feeBalance);
+      return this.formatBaseTokenValue(this.fundStore.fund?.feeBalance);
     },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
@@ -383,7 +383,7 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
-          pastNavValueFormatted: this.formatNAV(this.navParts?.baseAssetOIVBal),
+          pastNavValueFormatted: this.formatBaseTokenValue(this.navParts?.baseAssetOIVBal),
           simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-1",
@@ -396,7 +396,7 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetSafeBal,
-          pastNavValueFormatted: this.formatNAV(this.navParts?.baseAssetSafeBal),
+          pastNavValueFormatted: this.formatBaseTokenValue(this.navParts?.baseAssetSafeBal),
           simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-2",
@@ -409,7 +409,7 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.feeBal,
-          pastNavValueFormatted: this.formatNAV(this.navParts?.feeBal),
+          pastNavValueFormatted: this.formatBaseTokenValue(this.navParts?.feeBal),
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
           detailsHash: "-3",
