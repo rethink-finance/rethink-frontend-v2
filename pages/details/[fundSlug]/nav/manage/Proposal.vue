@@ -77,6 +77,19 @@
                   />
                 </div>
               </div>
+              <div class="management__card--no-margin">
+                <div class="management__row">
+                  <div>
+                    Process withdraws after NAV update
+                  </div>
+                  <v-switch
+                    v-model="proposal.processWithdraw"
+                    color="primary"
+                    hide-details
+                    inset
+                  />
+                </div>
+              </div>
             </div>
           </v-row>
 
@@ -196,6 +209,7 @@ const proposal = ref({
   title: "",
   allowManagerToUpdateNav: false,
   collectManagementFees: false,
+  processWithdraw: false,
   description: "",
 })
 const breadcrumbItems: BreadcrumbItem[] = [
@@ -324,38 +338,38 @@ const generateNAVPermission = (encodedNavUpdateEntries: string) =>  {
       {
         "idx": 0,
         "isArray": false,
-        "data": "1", //TODO: ASSUMES ROLE ID OF 1, BUT COULD BE ANY OTHER ID, NEED A WAY TO POPULATE IT SMARTLY
+        "data": "1", // TODO: ASSUMES ROLE ID OF 1, BUT COULD BE ANY OTHER ID, NEED A WAY TO POPULATE IT SMARTLY
         "internalType": "uint16",
-        "name": "role"
+        "name": "role",
       },
       {
         "idx": 1,
         "isArray": false,
         "data": null,
         "internalType": "address",
-        "name": "targetAddress"
+        "name": "targetAddress",
       },
       {
         "idx": 2,
         "isArray": false,
         "data": "1",
         "internalType": "enum ExecutionOptions",
-        "name": "options"
-      }
+        "name": "options",
+      },
     ],
-    "valueMethodIdx": 0
+    "valueMethodIdx": 0,
   }
 
 
   // Target address is fund contract
   navEntryPermission.value[1].data = fundStore.fund?.address;
-  //again, need to set target addr for scope target
+  // again, need to set target addr for scope target
   recalcNavEntryPermission.value[1].data = fundStore.fund?.address;
-  
+
   // functionSig
   navEntryPermission.value[2].data = "0xa61f5814";
   const navExecutorAddr = addresses.NAVExecutorBeaconProxy[web3Store.chainId];
-  console.log(navExecutorAddr);  
+  console.log(navExecutorAddr);
   const navWords = ["0x000000000000000000000000" + navExecutorAddr.slice(2)];
   const navIsScoped = [true];
   const navTypeNComp = ["0"];
@@ -466,12 +480,13 @@ const createProposal = async () => {
   console.log("navUpdateEntries: ", navUpdateEntries);
   console.log("pastNavUpdateEntryAddresses: ", pastNavUpdateEntryAddresses);
   console.log("collectManagementFees: ", proposal.value.collectManagementFees);
+  console.log("processWithdraw: ", proposal.value.processWithdraw);
   const encodedNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
     updateNavABI as AbiFunctionFragment,
     [
       navUpdateEntries,
       pastNavUpdateEntryAddresses,
-      proposal.value.collectManagementFees,
+      proposal.value.processWithdraw,
     ],
   );
   console.log("encodedNavUpdateEntries: ", encodedNavUpdateEntries)
@@ -514,27 +529,55 @@ const createProposal = async () => {
   // Propose NAV update for fund (target: fund addr, payloadL bytes)
   console.log("Active Account: ", fundStore.activeAccountAddress)
   loading.value = true;
+  const targetAddresses = [
+    fundStore.fund?.address, // encodedNavUpdateEntries
+    fundStore.fund?.address, // encodedCollectFlowFeesAbiJSON
+  ]
+  const gasValues = [
+    0,  // encodedNavUpdateEntries
+    0,  // encodedCollectFlowFeesAbiJSON
+  ]
+  const calldatas = [
+    encodedNavUpdateEntries,
+    encodedCollectFlowFeesAbiJSON,
+  ]
 
+  // Conditionally include collect Management fees.
+  if (proposal.value.collectManagementFees) {
+    targetAddresses.push(fundStore.fund?.address);
+    gasValues.push(0);
+    calldatas.push(encodedCollectManagerFeesAbiJSON);
+  }
+
+  targetAddresses.push(...[
+    fundStore.fund?.address, // encodedCollectPerformanceFeesAbiJSON
+    navExecutorAddr,         // encodedDataStoreNAVDataNavUpdateEntries
+    ...roleModTargets,       // encodedRoleModEntries
+  ]);
+  gasValues.push(...[
+    0,  // encodedCollectPerformanceFeesAbiJSON
+    0,  // encodedDataStoreNAVDataNavUpdateEntries
+    ...roleModGasValues,  // encodedRoleModEntries
+  ]);
+  calldatas.push(...[
+    encodedCollectPerformanceFeesAbiJSON,
+    encodedDataStoreNAVDataNavUpdateEntries,
+    ...encodedRoleModEntries,
+  ]);
+  console.log("proposal:",
+    JSON.stringify({
+      targetAddresses,
+      gasValues,
+      calldatas,
+    },
+    null, 2),
+  )
   // ADD encoded entries for OIV permissions
   try {
     await fundStore.fundGovernorContract.methods.propose(
-      [
-        fundStore.fund?.address,
-        fundStore.fund?.address,
-        fundStore.fund?.address,
-        fundStore.fund?.address,
-        navExecutorAddr,
-        ...roleModTargets,
-      ],
-      [0,0,0,0,0, ...roleModGasValues],
-      [
-        encodedNavUpdateEntries,
-        encodedCollectFlowFeesAbiJSON,
-        encodedCollectManagerFeesAbiJSON,
-        encodedCollectPerformanceFeesAbiJSON,
-        encodedDataStoreNAVDataNavUpdateEntries,
-        ...encodedRoleModEntries,
-      ],
+      targetAddresses,
+      gasValues,
+      calldatas,
       JSON.stringify({
         title: proposal.value.title,
         description: proposal.value.description,
