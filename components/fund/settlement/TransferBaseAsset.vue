@@ -33,20 +33,14 @@
     </div>
 
     <div class="buttons_container">
-      <v-tooltip
-        :disabled="!transferTooltipText"
-        bottom
-      >
-        <template #default>
-          {{ transferTooltipText }}
-        </template>
-        <template #activator="{ props }">
-          <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
-          <span v-bind="props">
+      <div>
+        <v-tooltip activator="parent" location="bottom" :disabled="isUsingZodiacPilotExtension">
+          <template #activator="{ props }">
             <v-btn
+              v-bind="props"
               class="bg-primary text-secondary"
-              :disabled="!!transferTooltipText"
-              @click="transfer"
+              :disabled="!isUsingZodiacPilotExtension || !!transferTooltipText"
+              @click="transfer()"
             >
               <template #prepend>
                 <v-progress-circular
@@ -59,9 +53,17 @@
               </template>
               Transfer
             </v-btn>
-          </span>
-        </template>
-      </v-tooltip>
+          </template>
+          <template #default>
+            <template v-if="!isUsingZodiacPilotExtension">
+              Switch to the Zodiac Pilot Extension to make a transfer.
+            </template>
+            <template v-else>
+              {{ transferTooltipText }}
+            </template>
+          </template>
+        </v-tooltip>
+      </div>
     </div>
   </div>
 </template>
@@ -69,8 +71,11 @@
 <script setup lang="ts">
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund.store";
-
+import { useToastStore } from "~/store/toast.store";
+const toastStore = useToastStore();
 const fundStore = useFundStore();
+
+const { isUsingZodiacPilotExtension } = toRefs(fundStore);
 
 // const emit = defineEmits(["update:modelValue"]);
 
@@ -79,6 +84,10 @@ const baseToken = computed(() => {
 });
 const tokenValue = ref("");
 const isTransferLoading = ref(false);
+const tokensWei = computed( () => {
+  if (!baseToken.value) return 0n;
+  return ethers.parseUnits(tokenValue.value || "0", baseToken.value.decimals)
+})
 
 const setTokenValue = (value: any) => {
   tokenValue.value = value;
@@ -105,9 +114,46 @@ const transferTooltipText = computed(() => {
   return "test"
 });
 
-const transfer = () => {
+const transfer = async () => {
+  isTransferLoading.value = true;
+
+  try {
+    await fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei).send({
+      from: fundStore.activeAccountAddress,
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: ", hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt :", receipt);
+      if (receipt.status) {
+        toastStore.successToast("Your deposit request was successful.");
+        // TODO refresh balances
+        // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
+      } else {
+        toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
+        fundStore.fetchUserBalances();
+      }
+      isTransferLoading.value = false;
+    }).on("error", (error: any) => {
+      handleError(error);
+    });
+  } catch (error: any) {
+    handleError(error);
+  }
   return "test"
 };
+
+const handleError = (error: any) => {
+  // Check Metamask errors:
+  // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
+  if (error?.code === 4001) {
+    toastStore.addToast("Transaction was rejected.")
+  } else {
+    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    console.error(error);
+  }
+  isTransferLoading.value = false;
+}
 </script>
 
 <style lang="scss" scoped>

@@ -105,6 +105,11 @@ export const useFundStore = defineStore({
       console.warn("fundStore.web3 changed", this.web3Store.web3)
       return this.web3Store.web3;
     },
+    isUsingZodiacPilotExtension(): boolean {
+      // Check if user is using Zodiac Pilot extension.
+      // The connected wallet address is the same as custody (safe address).
+      return this.activeAccountAddress === this.fund?.safeAddress;
+    },
     baseToFundTokenExchangeRate(): number {
       // If there was no NAV update yet, the exchange rate is 1:1
       if (!this.fundLastNAVUpdate) {
@@ -408,7 +413,7 @@ export const useFundStore = defineStore({
       } as IClockMode;
     },
     async fetchUserBalances() {
-      if (!this.accountStore.activeAccount?.address) return;
+      if (!this.activeAccountAddress) return;
       this.loadingUserBalances = true;
 
       const promises = await Promise.allSettled([

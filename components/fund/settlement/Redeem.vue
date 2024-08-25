@@ -147,7 +147,7 @@ const handleError = (error: any) => {
 
 
 const requestRedemption = async () => {
-  if (!accountStore.activeAccount?.address) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
     return;
   }
@@ -159,7 +159,7 @@ const requestRedemption = async () => {
   loadingRequestRedeem.value = true;
 
   const tokensWei = ethers.parseUnits(tokenValue.value || "0", fund.value.fundToken.decimals)
-  console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
+  console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", fundStore.activeAccountAddress);
 
   const ABI = [ "function requestWithdraw(uint256 amount)" ];
   const iface = new ethers.Interface(ABI);
@@ -168,7 +168,7 @@ const requestRedemption = async () => {
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
+      from: fundStore.activeAccountAddress,
       gas: gasEstimate,
       gasPrice,
     }).on("transactionHash", (hash: string) => {

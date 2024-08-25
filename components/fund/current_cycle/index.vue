@@ -174,7 +174,7 @@ const redemptionDisabledTooltipText = computed(() => {
 });
 
 const deposit = async () => {
-  if (!accountStore.activeAccount?.address) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to deposit tokens to the fund.")
     return;
   }
@@ -188,7 +188,7 @@ const deposit = async () => {
   }
   console.log("DEPOSIT");
   loadingDeposit.value = true;
-  console.log("Deposit tokensWei: ", userDepositRequest?.value?.amount, "from : ", accountStore.activeAccount.address);
+  console.log("Deposit tokensWei: ", userDepositRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
 
   const ABI = [ "function deposit()" ];
   const iface = new ethers.Interface(ABI);
@@ -197,7 +197,7 @@ const deposit = async () => {
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
+      from: fundStore.activeAccountAddress,
       gas: gasEstimate,
       gasPrice,
     }).on("transactionHash", (hash: string) => {
@@ -232,7 +232,7 @@ const deposit = async () => {
 
 
 const redeem = async () => {
-  if (!accountStore.activeAccount?.address) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
     return;
   }
@@ -246,7 +246,7 @@ const redeem = async () => {
   }
   console.log("[REDEEM]");
   loadingRedemption.value = true;
-  console.log("[REDEEM] tokensWei: ", userRedemptionRequest?.value?.amount, "from : ", accountStore.activeAccount.address);
+  console.log("[REDEEM] tokensWei: ", userRedemptionRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
 
   const ABI = [ "function withdraw()" ];
   const iface = new ethers.Interface(ABI);
@@ -255,7 +255,7 @@ const redeem = async () => {
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
+      from: fundStore.activeAccountAddress,
       gas: gasEstimate,
       gasPrice,
     }).on("transactionHash", (hash: string) => {

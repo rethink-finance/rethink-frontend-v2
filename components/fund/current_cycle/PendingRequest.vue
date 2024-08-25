@@ -104,7 +104,7 @@ const claimableTokenValue = computed(() => {
 const isLoadingCancelRequest = ref(false);
 
 const cancelPendingRequest = async () => {
-  if (!accountStore.activeAccount?.address) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to cancel the deposit.")
     return;
   }
@@ -119,7 +119,7 @@ const cancelPendingRequest = async () => {
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
+      from: fundStore.activeAccountAddress,
       gas: gasEstimate,
       gasPrice,
     }).on("transactionHash", (hash: string) => {

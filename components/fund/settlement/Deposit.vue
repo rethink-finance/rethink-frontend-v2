@@ -185,7 +185,7 @@ const handleError = (error: any) => {
  * https://docs.web3js.org/guides/wallet/transactions#sending-a-transaction-and-listening-to-the-events
  */
 const requestDeposit = async () => {
-  if (!accountStore.activeAccount?.address) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to request deposit.")
     return;
   }
@@ -196,7 +196,7 @@ const requestDeposit = async () => {
   console.log("REQUEST DEPOSIT");
   loadingRequestDeposit.value = true;
 
-  console.log("Request deposit tokensWei: ", tokensWei.value, "from : ", accountStore.activeAccount.address);
+  console.log("Request deposit tokensWei: ", tokensWei.value, "from : ", fundStore.activeAccountAddress);
 
   const ABI = [ "function requestDeposit(uint256 amount)" ];
   const iface = new ethers.Interface(ABI);
@@ -211,7 +211,7 @@ const requestDeposit = async () => {
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
+      from: fundStore.activeAccountAddress,
       gas: gasEstimate,
       gasPrice,
     }).on("transactionHash", (hash: string) => {
@@ -249,7 +249,7 @@ const setTokenValueToDepositRequestAmount = () => {
   tokenValue.value = depositRequestAmountFormatted.value;
 }
 const approveAllowance = async () => {
-  if (!accountStore.activeAccount?.address) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to approve allowance.")
     return;
   }
@@ -260,13 +260,13 @@ const approveAllowance = async () => {
   console.log("APPROVE ALLOWANCE");
   loadingApproveAllowance.value = true;
 
-  console.log("Approve allowance tokensWei: ", tokensWei.value, "from : ", accountStore.activeAccount.address);
+  console.log("Approve allowance tokensWei: ", tokensWei.value, "from : ", fundStore.activeAccountAddress);
   const allowanceValue = tokensWei.value;
 
   try {
     // call the approval method
     await fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei.value).send({
-      from: accountStore.activeAccount.address,
+      from: fundStore.activeAccountAddress,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

@@ -22,15 +22,15 @@
             Planned Settlement Cycle
           </div>
         </div>
-        <div class="data_bar__item">
-          <div class="data_bar__title">
-            <!-- TODO figure it out -->
-            N/A
-          </div>
-          <div class="data_bar__subtitle">
-            Next Planned Settlement
-          </div>
-        </div>
+        <!-- TODO figure out Next Planned Settlement -->
+        <!--        <div class="data_bar__item">-->
+        <!--          <div class="data_bar__title">-->
+        <!--            N/A-->
+        <!--          </div>-->
+        <!--          <div class="data_bar__subtitle">-->
+        <!--            Next Planned Settlement-->
+        <!--          </div>-->
+        <!--        </div>-->
         <div class="data_bar__item">
           <div class="switch_to_zodiac_notification">
             <img
@@ -173,9 +173,20 @@
           </UiNotification>
         </div>
         <div class="data_bar__item">
-          <v-btn>
-            Update NAV and Settle Flows
-          </v-btn>
+          <v-tooltip activator="parent" location="bottom" :disabled="isUsingZodiacPilotExtension">
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                :disabled="!isUsingZodiacPilotExtension"
+                @click="refreshFlowsInfo()"
+              >
+                Update NAV and Settle Flows
+              </v-btn>
+            </template>
+            <template #default>
+              Switch to the Zodiac Pilot Extension to Update NAV and Settle Flows.
+            </template>
+          </v-tooltip>
         </div>
       </UiDataBar>
     </div>
@@ -197,6 +208,7 @@ const fundStore = useFundStore();
 const fund = useAttrs().fund as IFund;
 const {
   formatNAV,
+  isUsingZodiacPilotExtension,
   totalCurrentSimulatedNAV,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
@@ -209,11 +221,6 @@ const fundingGap = computed(() => {
   return 1
 });
 
-const isUsingZodiacPilotExtension = computed(() => {
-  // Check if user is using Zodiac Pilot extension.
-  // The connected wallet address is the same as custody (safe address).
-  return fundStore.activeAccountAddress === fund?.safeAddress;
-});
 const simulatedNavErrorCount = computed(() => {
   return fundLastNAVUpdateMethods.value.reduce(
     (errorCount: number, method: any) => {
