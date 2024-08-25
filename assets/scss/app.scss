@@ -48,15 +48,21 @@ a {
   border-radius: 0.25rem;
   background: $color-surface;
 
+  &__title {
+    display: flex;
+    align-items: center;
+    font-size: $text-lg;
+    color: $color-title;
+    font-weight: 500;
+    letter-spacing: $letter-spacing-lg;
+  }
   @include sm {
     margin-bottom: 1rem;
     padding: 1.5rem;
   }
-
   &--no-padding {
     padding: 0;
   }
-
   &--plain {
     @include sm {
       box-shadow: none;

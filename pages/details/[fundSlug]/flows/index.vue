@@ -1,11 +1,9 @@
 <template>
   <div class="flows">
     <div class="main_card">
-      <UiHeader>
-        <div class="main_header__title">
-          Settlement Cycle
-        </div>
-      </UiHeader>
+      <div class="main_card__title">
+        Settlement Cycle
+      </div>
 
       <UiDataBar bg-transparent>
         <div class="data_bar__item">
@@ -60,11 +58,9 @@
 
     <!-- Fund Contract -->
     <div class="main_card">
-      <UiHeader>
-        <div class="main_header__title">
-          Fund Contract
-        </div>
-      </UiHeader>
+      <div class="main_card__title">
+        Fund Contract
+      </div>
 
       <!--Simulated NAV & redemption & deposit requests-->
       <UiDataBar>
@@ -277,5 +273,10 @@ watch(
   &--warning {
     color: $color-warning;
   }
+}
+.main_card {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
 </style>
