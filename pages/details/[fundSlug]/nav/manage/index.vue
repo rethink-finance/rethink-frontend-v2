@@ -49,6 +49,7 @@
         show-summary-row
         show-base-token-balances
         show-simulated-nav
+        idx="nav/manage/index"
       />
     </div>
   </div>
@@ -112,7 +113,6 @@ const saveDraft = () => {
     );
 
     setLocalStorageItem("navUpdateEntries", navUpdateEntries);
-    console.log("LS: ", navUpdateEntries)
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to save NAV draft");

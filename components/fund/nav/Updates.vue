@@ -16,7 +16,7 @@
         bg-transparent
       >
         <template #body>
-          <FundNavMethodsTable :methods="navUpdate.entries" />
+          <FundNavMethodsTable :methods="navUpdate.entries" idx="navUpdates" />
         </template>
         <!--        <template #actions="{detailsExpanded}">-->
         <!--          <UiDetailsButton text="Details" :active="detailsExpanded" />-->

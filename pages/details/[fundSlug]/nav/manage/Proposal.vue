@@ -127,6 +127,7 @@
                     show-simulated-nav
                     show-summary-row
                     deletable
+                    idx="proposal"
                   />
                 </v-expansion-panel-text>
               </v-expansion-panel>
@@ -324,38 +325,38 @@ const generateNAVPermission = (encodedNavUpdateEntries: string) =>  {
       {
         "idx": 0,
         "isArray": false,
-        "data": "1", //TODO: ASSUMES ROLE ID OF 1, BUT COULD BE ANY OTHER ID, NEED A WAY TO POPULATE IT SMARTLY
+        "data": "1", // TODO: ASSUMES ROLE ID OF 1, BUT COULD BE ANY OTHER ID, NEED A WAY TO POPULATE IT SMARTLY
         "internalType": "uint16",
-        "name": "role"
+        "name": "role",
       },
       {
         "idx": 1,
         "isArray": false,
         "data": null,
         "internalType": "address",
-        "name": "targetAddress"
+        "name": "targetAddress",
       },
       {
         "idx": 2,
         "isArray": false,
         "data": "1",
         "internalType": "enum ExecutionOptions",
-        "name": "options"
-      }
+        "name": "options",
+      },
     ],
-    "valueMethodIdx": 0
+    "valueMethodIdx": 0,
   }
 
 
   // Target address is fund contract
   navEntryPermission.value[1].data = fundStore.fund?.address;
-  //again, need to set target addr for scope target
+  // again, need to set target addr for scope target
   recalcNavEntryPermission.value[1].data = fundStore.fund?.address;
-  
+
   // functionSig
   navEntryPermission.value[2].data = "0xa61f5814";
   const navExecutorAddr = addresses.NAVExecutorBeaconProxy[web3Store.chainId];
-  console.log(navExecutorAddr);  
+  console.log(navExecutorAddr);
   const navWords = ["0x000000000000000000000000" + navExecutorAddr.slice(2)];
   const navIsScoped = [true];
   const navTypeNComp = ["0"];
@@ -608,7 +609,6 @@ const saveDraft = () => {
     );
 
     setLocalStorageItem("navUpdateEntries", navUpdateEntries);
-    console.log("LS: ", navUpdateEntries)
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to save NAV draft");
@@ -627,7 +627,6 @@ const saveProposalDraft = () => {
       JSON.stringify(proposal.value, stringifyBigInt),
     );
     setLocalStorageItem("fundProposalDrafts", fundProposalDrafts);
-    console.log("LS proposals: ", fundProposalDrafts)
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to save fund proposal draft");

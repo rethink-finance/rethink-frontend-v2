@@ -71,6 +71,7 @@
           show-last-nav-update-value
           show-base-token-balances
           show-simulated-nav
+          idx="fundSlug/nav/index"
         />
       </div>
     </div>

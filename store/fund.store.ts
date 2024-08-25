@@ -23,8 +23,9 @@ import {
 import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
-  PositionTypeKeys,
-  PositionTypes, PositionTypeToNAVCacheMethod,
+  PositionTypes,
+  PositionTypeToNAVCacheMethod,
+  PositionTypeToNAVCalculationMethod,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type { INAVParts } from "~/types/fund";
@@ -35,6 +36,7 @@ import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import { parseBigInt } from "~/composables/localStorage";
+import { useFundsStore } from "~/store/funds.store";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -62,6 +64,7 @@ interface IState {
   // Loading flags
   loadingNavUpdates: boolean,
   loadingUserBalances: boolean,
+  isNavSimulationLoading: boolean,
 }
 
 
@@ -83,6 +86,7 @@ export const useFundStore = defineStore({
     refreshSimulateNAVCounter: 0,
     loadingNavUpdates: false,
     loadingUserBalances: false,
+    isNavSimulationLoading: false,
   }),
   getters: {
     accountStore(): any {
@@ -93,6 +97,9 @@ export const useFundStore = defineStore({
     },
     web3Store(): any {
       return useWeb3Store();
+    },
+    fundsStore(): any {
+      return useFundsStore();
     },
     web3(): Web3 {
       console.warn("fundStore.web3 changed", this.web3Store.web3)
@@ -245,6 +252,20 @@ export const useFundStore = defineStore({
       // made after the redemption was requested.
       return this.userRedemptionRequest.timestamp < this.fundLastNAVUpdate?.timestamp;
     },
+    totalCurrentSimulatedNAV(): bigint {
+      // Sum simulated NAV value of all methods.
+      const totalNavMethodsSimulatedNAV = this.fundLastNAVUpdateMethods.reduce(
+        (totalValue: bigint, method: any) => {
+          return totalValue + (method.simulatedNav || 0n);
+        },
+        0n,
+      )
+
+      return (totalNavMethodsSimulatedNAV || 0n) +
+        (this.fund?.fundContractBaseTokenBalance || 0n) +
+        (this.fund?.safeContractBaseTokenBalance || 0n) +
+        (this.fund?.feeBalance || 0n);
+    },
     /**
      * Contracts
      */
@@ -348,7 +369,7 @@ export const useFundStore = defineStore({
       this.fundManagedNAVMethods = JSON.parse(
         JSON.stringify(this.fundLastNAVUpdateMethods, stringifyBigInt), parseBigInt,
       );
-      console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
+      console.log("fundManagedNAVMethods: ", toRaw(this.fundManagedNAVMethods));
       this.mergeNAVMethodsFromLocalStorage();
 
       this.loadingNavUpdates = false;
@@ -693,6 +714,124 @@ export const useFundStore = defineStore({
 
       return parsedNavParts;
     },
+    async simulateCurrentNAV(): Promise<void> {
+      /**
+       * Simulate NAV for the fund last NAV update.
+       */
+      if (!this.web3Store.web3 || this.isNavSimulationLoading) return;
+      this.isNavSimulationLoading = true;
+
+      if (!this.fundsStore.allNavMethods?.length) {
+        const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
+        const fundAddresses: string[] = fundsInfoArrays[0];
+
+        // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
+        // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
+        // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
+        console.log("[CURRENT NAV] simulate fetch all nav methods")
+        await this.fundsStore.fetchAllNavMethods(fundAddresses);
+      }
+      console.log("[CURRENT NAV] START SIMULATE:", this.isNavSimulationLoading)
+
+      // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
+      // Otherwise, take managed methods, that user can change.
+      // Simulate all at once as many promises instead of one by one.
+      const promises = [];
+
+      for (const navEntry of this.fundLastNAVUpdateMethods) {
+        promises.push(this.simulateNAVMethodValue(navEntry));
+      }
+      const settled = await Promise.allSettled(promises);
+      this.isNavSimulationLoading = false;
+      console.log("[CURRENT NAV] SIMULATE DONE:", this.isNavSimulationLoading, settled)
+    },
+    async simulateNAVMethodValue(navEntry: INAVMethod) {
+      if (!this.web3Store.web3 || !navEntry.detailsHash || navEntry.isNavSimulationLoading) return;
+      const baseDecimals = this.fund?.baseToken.decimals;
+      if (!baseDecimals) {
+        console.error("simulateNAVMethodValue error, no fund base decimals.")
+        return;
+      }
+
+      try {
+        navEntry.isNavSimulationLoading = true;
+        navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
+        if (!navEntry.pastNAVUpdateEntryFundAddress) {
+          navEntry.pastNAVUpdateEntryFundAddress =
+            this.fundsStore.navMethodDetailsHashToFundAddress[
+              navEntry.detailsHash ?? ""
+            ];
+        }
+        if (!navEntry.pastNAVUpdateEntryFundAddress) {
+          // If there is no pastNAVUpdateEntryFundAddress the simulation will fail later.
+          // A missing pastNAVUpdateEntryFundAddress can mean two things:
+          //   1) A proposal is not approved yet and so its methods are not yet in the allNavMethods
+          //     -> that means the method was created on this fund, so we take address of this fund.
+          //  2) There was some difference when hashing details on INAVMethod detailsHash.
+          //    -> it will be hard to detect this, NAV simulation will fail, and we will take a look what happened.
+          //    -> We have a bigger problem if it won't fail, we should mark the address somewhere in the table.
+          //
+          // Here we take solution 1), as we assume that the method was not yet added to allMethods
+          navEntry.pastNAVUpdateEntryFundAddress = this.fund?.address;
+          navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
+        }
+
+        const callData = [];
+        if (navEntry.positionType === PositionType.Liquid) {
+          callData.push(prepNAVMethodLiquid(navEntry.details));
+          callData.push(this.fund?.safeAddress);
+        } else if (navEntry.positionType === PositionType.Illiquid) {
+          callData.push(prepNAVMethodIlliquid(navEntry.details, baseDecimals));
+          callData.push(this.fund?.safeAddress);
+        } else if (navEntry.positionType === PositionType.NFT) {
+          callData.push(prepNAVMethodNFT(navEntry.details));
+          // callData.push(this.fundStore.fund?.safeAddress);
+        } else if (navEntry.positionType === PositionType.Composable) {
+          callData.push(prepNAVMethodComposable(navEntry.details));
+        }
+
+        callData.push(
+          ...[
+            this.fund?.address, // fund
+            0, // navEntryIndex
+            navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
+            parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
+            parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
+            navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
+          ],
+        );
+
+        // console.log("json: ", JSON.stringify(callData, null, 2))
+        const navCalculationMethod =
+          PositionTypeToNAVCalculationMethod[navEntry.positionType];
+        navEntry.simulatedNavFormatted = "N/A";
+        navEntry.simulatedNav = 0n;
+
+        console.log("simulateNAVMethodValue isNavSimulationLoading:", this.isNavSimulationLoading)
+        try {
+          const simulatedVal: bigint = await this.navCalculatorContract.methods[
+            navCalculationMethod
+          ](...callData).call();
+          // console.log("simulated value: ", simulatedVal);
+
+          navEntry.simulatedNavFormatted = this.formatNAV(simulatedVal);
+          navEntry.simulatedNav = simulatedVal;
+          navEntry.isSimulatedNavError = false;
+        } catch (error: any) {
+          navEntry.isSimulatedNavError = true;
+          console.error(
+            "simulateNAVMethodValue: Failed simulating value for entry, check if there was some difference " +
+            "when hashing details on INAVMethod detailsHash: ",
+            navEntry,
+            error,
+          );
+        }
+      } catch (error) {
+        console.error("simulateNAVMethodValue Error simulating NAV: ", error);
+      } finally {
+        navEntry.isNavSimulationLoading = false;
+      }
+    },
     async updateNavMethodPastNavValue(navMethodIndex: number, navMethod: INAVMethod) {
       // NOTE: Important to know, that this currently only works for the methods of the last NAV update.
       // Fetch NAV method cached past value.
@@ -756,7 +895,7 @@ export const useFundStore = defineStore({
       navUpdatePromises.forEach((navUpdateResult, navUpdateIndex) => {
         if (navUpdateResult.status === "fulfilled") {
           const navMethods: Record<string, any>[] = navUpdateResult.value;
-          console.log("navMethods: ", navMethods);
+          // console.log("navMethods: ", navMethods);
 
           for (const [navMethodIndex, navMethod] of navMethods.entries()) {
             navUpdates[navUpdateIndex].entries.push(this.parseNAVMethod(navMethodIndex, navMethod))
@@ -766,7 +905,7 @@ export const useFundStore = defineStore({
         }
       });
 
-      console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
+      // console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
       // TODO use this code when reader contract is fixed
       // Fetch NAV JSON entries for each NAV update.
       // const navUpdates: Record<string, any>[][] = dataNAV.encodedNavUpdate.map(decodeNavUpdateEntry);
@@ -784,7 +923,7 @@ export const useFundStore = defineStore({
       // }
       console.warn("navUpdates: ", navUpdates, navUpdatesLen);
       const lastNavUpdateNavMethods = navUpdates[navUpdates.length - 1]?.entries ?? [];
-      console.warn("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
+      console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
       lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
         this.updateNavMethodPastNavValue(navMethodIndex, navMethod);
       });

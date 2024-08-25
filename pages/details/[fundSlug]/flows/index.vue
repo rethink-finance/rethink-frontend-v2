@@ -70,8 +70,32 @@
       <UiDataBar>
         <div class="data_bar__item">
           <div class="data_bar__title">
-            <!-- TODO figure it out -->
-            N/A
+            <v-progress-circular
+              v-if="isNavSimulationLoading"
+              class="d-flex"
+              size="18"
+              width="2"
+              indeterminate
+            />
+            <div v-else-if="fund.pendingRedemptionBalanceError" class="text-error">
+              N/A
+            </div>
+            <div
+              v-else
+              class="nav_simulated_value"
+              :class="{'nav_simulated_value--warning': isAnySimulatedNavError}"
+            >
+              {{ formatNAV(totalCurrentSimulatedNAV) }}
+              <div
+                v-if="isAnySimulatedNavError"
+                class="ms-2 justify-center align-center d-flex"
+              >
+                <Icon icon="octicon:question-16" width="1rem" color="var(--color-warning)" />
+                <v-tooltip activator="parent" location="right">
+                  Something went wrong while simulating NAV value. Retry simulating NAV.
+                </v-tooltip>
+              </div>
+            </div>
           </div>
           <div class="data_bar__subtitle">
             Simulated NAV
@@ -167,11 +191,16 @@ import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
 import { formatTokenValue } from "~/composables/formatters";
 
-const router = useRouter();
 const fundStore = useFundStore();
 
 const fund = useAttrs().fund as IFund;
-const { selectedFundSlug, fundLastNAVUpdate } = toRefs(fundStore);
+const {
+  formatNAV,
+  totalCurrentSimulatedNAV,
+  fundLastNAVUpdate,
+  fundLastNAVUpdateMethods,
+  isNavSimulationLoading,
+} = toRefs(fundStore);
 
 
 const fundingGap = computed(() => {
@@ -183,6 +212,17 @@ const isUsingZodiacPilotExtension = computed(() => {
   // Check if user is using Zodiac Pilot extension.
   // The connected wallet address is the same as custody (safe address).
   return fundStore.activeAccountAddress === fund?.safeAddress;
+});
+const simulatedNavErrorCount = computed(() => {
+  return fundLastNAVUpdateMethods.value.reduce(
+    (errorCount: number, method: any) => {
+      return errorCount + method.isSimulatedNavError ? 1 : 0;
+    },
+    0,
+  )
+});
+const isAnySimulatedNavError = computed(() => {
+  return simulatedNavErrorCount.value > 0;
 });
 
 const pendingDepositBalanceFormatted = computed(() => {
@@ -196,7 +236,8 @@ const pendingRedemptionBalanceFormatted = computed(() => {
 
 // TODO convert Redemption Requests to baseToken based on the current (simulated NAV) exch rate.
 const refreshFlowsInfo = () => {
-  // TODO refresh simulated NAV
+  // Refresh simulated NAV
+  fundStore.simulateCurrentNAV();
 
   // refresh Deposit & Redemption Requests
   fundStore.fetchFundPendingDepositRedemptionBalance();
@@ -204,11 +245,13 @@ const refreshFlowsInfo = () => {
   // TODO refresh fund.fundContractBaseTokenBalance
 };
 
-const navigateToCreatePermissions = () => {
-  router.push(
-    `/details/${selectedFundSlug.value}/governance/delegated-permissions`,
-  );
-};
+watch(
+  () => fundStore.fundLastNAVUpdateMethods,
+  () => {
+    console.warn("simulateCurrentNAV changed:")
+    fundStore.simulateCurrentNAV();
+  },
+);
 </script>
 
 <style scoped lang="scss">
@@ -227,5 +270,12 @@ const navigateToCreatePermissions = () => {
   border-radius: $default-border-radius;
   font-weight: 600;
   gap: 0.6rem;
+}
+.nav_simulated_value {
+  display: flex;
+  align-items: center;
+  &--warning {
+    color: $color-warning;
+  }
 }
 </style>
