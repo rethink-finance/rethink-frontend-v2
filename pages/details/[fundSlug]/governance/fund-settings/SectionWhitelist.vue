@@ -41,7 +41,7 @@
             label="Address"
             variant="outlined"
             single-line
-            :rules="newAddressRules"
+            :rules="singleAddressRules"
           ></v-text-field>
 
           <div class="header__actions">
@@ -53,13 +53,58 @@
               color="#ffffff"
               @click="handleAddNewAddress"
               variant="outlined"
-              :disabled="!isAddAddressValid"
+              :disabled="!isSingleAddressValid"
             >
               Add Address
             </v-btn>
           </div>
         </v-col>
       </div>
+    </div>
+
+    <!-- Bulk add -->
+    <div class="header__new-address" v-if="isAddAddressListActive">
+      <v-col cols="12">
+        <v-label class="row-title">
+          <div class="label_required row-title__title">Enter New Addresses</div>
+        </v-label>
+
+        <v-textarea
+          v-model="newAddress"
+          label="Addresses"
+          variant="outlined"
+          single-line
+          :error-messages="parsedBulkAddressErrors"
+        >
+        </v-textarea>
+        <!-- hide-details -->
+        <!-- :rules="bulkAddressRules"
+        class="mb-5" -->
+
+        <div class="header__actions">
+          <v-btn color="red" @click="toggleAddAddressList" variant="text">
+            Cancel
+          </v-btn>
+
+          <v-btn
+            color="#ffffff"
+            @click="openConfirmDialog"
+            variant="outlined"
+            :disabled="!isBulkAddressValid"
+          >
+            Add New Address List
+          </v-btn>
+        </div>
+      </v-col>
+
+      <!-- Confirm dialog -->
+      <UiConfirmDialog
+        v-model="confirmDialog"
+        title="Heads Up!"
+        confirmText="Add Address List"
+        message="By proceeding with <strong>'Add Address List'</strong>, all the previous addresses will be removed!"
+        @confirm="handleAddNewAddressList"
+      />
     </div>
 
     <v-skeleton-loader v-if="loading" type="table" />
@@ -132,12 +177,16 @@
       </template>
     </v-data-table>
 
-    <div v-else class="section_whitelist__no_data">No Whitelist</div>
+    <div v-else class="section_whitelist__no_data">
+      There are no addresses in the whitelist
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useToastStore } from "~/store/toast.store";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
+const toastStore = useToastStore();
 
 const props = defineProps<{
   items: IWhitelist[];
@@ -154,8 +203,11 @@ const pagination = ref({
 const isAddAddressActive = ref(false);
 const isAddAddressListActive = ref(false);
 const newAddress = ref("");
+const parsedBulkAddressErrors = ref<string[]>([]);
+const confirmDialog = ref(false);
 
-const newAddressRules = computed(() => [
+// Validation rules for a single address
+const singleAddressRules = computed(() => [
   formRules.isValidAddress,
   formRules.required,
   formRules.notSameAs(
@@ -163,6 +215,38 @@ const newAddressRules = computed(() => [
     "This address is already in the whitelist"
   ),
 ]);
+
+const bulkAddressRules = computed(() => {
+  // Split addresses by newline
+  const addressArray = newAddress.value.split(/\r?\n/).map((addr) => addr);
+
+  // Define type for address count accumulator
+  type AddressCount = Record<string, number>;
+
+  // Count the occurrences of each address
+  const addressCount: AddressCount = addressArray.reduce(
+    (acc: AddressCount, address: string) => {
+      acc[address] = (acc[address] || 0) + 1;
+      return acc;
+    },
+    {}
+  );
+
+  // Filter the addresses to include only those appearing 2 or more times
+  const addressList = addressArray.filter(
+    (address: string) => addressCount[address] >= 2
+  );
+
+  // Return validation rules
+  return [
+    formRules.isValidAddress,
+    formRules.required,
+    formRules.notSameAs(
+      addressList,
+      "This address is already in the whitelist"
+    ),
+  ];
+});
 
 const headers = computed(() => {
   const headers: any[] = [
@@ -205,14 +289,52 @@ const methodProps = ({ item }: { item: IWhitelist }) => {
   return {};
 };
 
-const isAddAddressValid = computed(() => {
-  const output = newAddressRules.value.every(
+const isSingleAddressValid = computed(() => {
+  const output = singleAddressRules.value.every(
     (rule) => rule(newAddress.value) === true
   );
 
-  console.log("isAddAddressValid: ", output);
   return output;
 });
+
+const isBulkAddressValid = computed(() => {
+  // we need to split the addresses by new line
+  const addressList = newAddress.value.split(/\r?\n/).map((addr) => addr);
+
+  const output = addressList.every((address) => {
+    return bulkAddressRules.value.every((rule) => rule(address) === true);
+  });
+
+  const errors = addressList
+    .map((address) => {
+      // Collect all error messages for the current address
+      const errorMessages = bulkAddressRules.value
+        .map((rule) => rule(address)) // Apply each rule
+        .filter((result) => typeof result === "string"); // Filter out valid results (true)
+
+      // If there are error messages, return an object with address and messages
+      if (errorMessages.length > 0) {
+        return {
+          address,
+          errors: errorMessages,
+        };
+      }
+
+      return null; // No errors for this address
+    })
+    .filter((item) => item !== null); // Filter out addresses with no errors
+
+  parsedBulkAddressErrors.value = errors.map((error) => {
+    if (!error.address) return "List is empty or containes empty lines";
+    return error.address + ": " + error.errors.join(", ");
+  });
+
+  return output;
+});
+
+const openConfirmDialog = () => {
+  confirmDialog.value = true;
+};
 
 const toggleAddAddress = () => {
   isAddAddressActive.value = !isAddAddressActive.value;
@@ -251,6 +373,29 @@ const handleAddNewAddress = () => {
     props.items.push(output);
 
     newAddress.value = "";
+    toastStore.successToast("Address added to whitelist");
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+const handleAddNewAddressList = () => {
+  try {
+    // we need to split the addresses by new line
+    const addressList = newAddress.value.split(/\r?\n/).map((addr) => addr);
+
+    const output = addressList.map((address) => {
+      return {
+        address,
+        isNew: true,
+        deleted: false,
+      };
+    });
+
+    emit("update-items", [...output]);
+
+    newAddress.value = "";
+    toastStore.successToast("Address list added to whitelist");
   } catch (e) {
     console.log(e);
   }
