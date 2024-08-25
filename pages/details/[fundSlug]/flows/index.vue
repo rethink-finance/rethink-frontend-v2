@@ -179,6 +179,11 @@
         </div>
       </UiDataBar>
     </div>
+
+    <div class="main_card main_grid">
+      <FundSettlementTransferBaseAsset />
+      <FundSettlementTransferBaseAsset />
+    </div>
   </div>
 </template>
 
@@ -274,7 +279,7 @@ watch(
     color: $color-warning;
   }
 }
-.main_card {
+.main_card:not(.main_grid) {
   display: flex;
   flex-direction: column;
   gap: 2rem;

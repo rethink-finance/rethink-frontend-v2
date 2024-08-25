@@ -23,8 +23,14 @@
           />
         </div>
       </div>
-      <div class="request_deposit__balance">
-        Balance: {{ token0UserBalanceFormatted }} {{ token0.symbol }}
+      <div class="request_deposit__balance request_deposit__balance--row">
+        Balance:
+        <strong
+          class="set_token_value_button mx-1"
+          @click="setTokenValue(token0UserBalanceFormatted)"
+        >
+          {{ token0UserBalanceFormatted }} {{ token0.symbol }}
+        </strong>
       </div>
     </div>
 
@@ -49,10 +55,16 @@
       </div>
       <div class="request_deposit__balance">
         <div>
-          Balance: {{ token1UserBalanceFormatted }} {{ token1.symbol }}
+          Balance:
+          <strong>{{ token1UserBalanceFormatted }} {{ token1.symbol }}</strong>
         </div>
         <div v-if="fundStore.fundLastNAVUpdate">
-          Based on Last NAV Update: {{ exchangeRateText }}
+          Based on Last NAV Update:
+          <div>
+            <strong>
+              {{ exchangeRateText }}
+            </strong>
+          </div>
         </div>
         <div v-else>
           There was no NAV update yet: 1 {{ token0?.symbol }} = {{ noNavUpdateToken1Value }} {{ token1?.symbol }}
@@ -115,6 +127,10 @@ const tokenValue = computed({
     emit("update:modelValue", value);
   },
 });
+
+const setTokenValue = (value: any) => {
+  tokenValue.value = value;
+}
 
 // Merge default rules with custom provided rules.
 const tokenValueRules = [
@@ -202,6 +218,18 @@ const noNavUpdateToken1Value = computed(() => {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+
+    &--row {
+      gap: 0.15rem;
+      align-items: center;
+      flex-direction: row;
+    }
+    .set_token_value_button {
+      &:hover {
+        cursor: pointer;
+        text-decoration: underline;
+      }
+    }
   }
 }
 </style>
