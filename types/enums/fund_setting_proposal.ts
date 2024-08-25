@@ -13,6 +13,7 @@ export interface IStepperSection {
 }
 
 export interface IProposal {
+  photoUrl: string;
   fundDAOName: string;
   tokenSymbol: string;
   denominationAsset: string;
@@ -116,6 +117,15 @@ export const ProposalStepMap: Record<ProposalStep, IFundSettingProposalStep> = {
 // 2. define FundSettingProposalFieldsMap which holds the form fields for each section
 export const FundSettingProposalFieldsMap: FieldsMapType = {
   [StepSections.Basics]: [
+    {
+      label: "Photo URL",
+      key: "photoUrl",
+      type: InputType.Image,
+      placeholder: "",
+      rules: [formRules.required],
+      isEditable: true,
+      cols: 12,
+    },
     {
       label: "Fund DAO Name",
       key: "fundDAOName",

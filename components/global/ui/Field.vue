@@ -1,6 +1,11 @@
 <template>
   <div class="field" v-bind="$attrs">
-    <v-label class="row_title">
+    <v-label
+      :class="
+        `row_title` +
+        (field.type === InputType.Image ? ' row_title__is-image' : '')
+      "
+    >
       <div
         :class="
           `row_title__title` +
@@ -54,6 +59,21 @@
 
     <template v-else-if="field.type === InputType.Checkbox">
       <v-checkbox v-model="value" :disabled="isDisabled || !field.isEditable" />
+    </template>
+
+    <template v-else-if="field.type === InputType.Image">
+      <div class="image_container">
+        <v-avatar size="12rem" rounded="">
+          <img :src="value" class="image_container__image" alt="image" />
+        </v-avatar>
+        <v-textarea
+          class="image_container__textarea"
+          v-model="value"
+          :placeholder="field.placeholder"
+          :rules="field.rules"
+          :disabled="isDisabled || !field.isEditable"
+        />
+      </div>
     </template>
 
     <InfoBox v-if="field.info" :info="field.info" />
@@ -110,6 +130,13 @@ const value = computed({
   &__uneditable {
     font-size: 12px;
   }
+
+  &__is-image {
+    margin-left: 0;
+    @include sm {
+      margin-left: 13rem;
+    }
+  }
 }
 
 .label_required {
@@ -126,6 +153,28 @@ const value = computed({
   :deep(.v-field__input) {
     padding: 12px;
     min-height: 45px;
+  }
+}
+
+.image_container {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 1rem;
+
+  @include sm {
+    flex-direction: row;
+  }
+
+  &__image {
+    border-radius: 0.25rem;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  &__textarea {
+    width: 100%;
   }
 }
 </style>

@@ -187,6 +187,7 @@ let proposalInitial = {} as IProposal;
 // TODO: rename keys to match the proposal keys from the API
 const proposal = ref<IProposal>({
   // Basics
+  photoUrl: "",
   fundDAOName: "",
   tokenSymbol: "",
   denominationAsset: "",
@@ -353,6 +354,7 @@ const populateProposal = () => {
   console.log("fundDeepCopy: ", fundDeepCopy);
 
   proposal.value = {
+    photoUrl: fundDeepCopy?.photoUrl ?? "",
     fundDAOName: fundDeepCopy?.title ?? "",
     tokenSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
     denominationAsset: fundDeepCopy?.baseToken?.address ?? "",
