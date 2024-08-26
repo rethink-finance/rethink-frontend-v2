@@ -120,7 +120,7 @@ const tokenValue = computed({
 const tokenValueRules = [
   // TODO Add rule for max decimals
   (value: string) => {
-    const valueWei = ethers.parseUnits(value, props.token0.decimals);
+    const valueWei = ethers.parseUnits(value || "0.0", props.token0.decimals);
     if (valueWei <= 0) return "Value must be positive."
     return true;
   },
