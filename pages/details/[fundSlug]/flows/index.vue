@@ -198,9 +198,19 @@
             <template #activator="{ props }">
               <v-btn
                 v-bind="props"
-                :disabled="!isUsingZodiacPilotExtension"
-                @click="refreshFlowsInfo()"
+                :disabled="!isUsingZodiacPilotExtension || loadingUpdateNav"
+                class="bg-primary text-secondary"
+                @click="fundStore.updateNAV()"
               >
+                <template #prepend>
+                  <v-progress-circular
+                    v-if="loadingUpdateNav"
+                    class="d-flex"
+                    size="20"
+                    width="3"
+                    indeterminate
+                  />
+                </template>
                 Update NAV and Settle Flows
               </v-btn>
             </template>
@@ -234,6 +244,7 @@ const {
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
   isNavSimulationLoading,
+  loadingUpdateNav,
 } = toRefs(fundStore);
 
 

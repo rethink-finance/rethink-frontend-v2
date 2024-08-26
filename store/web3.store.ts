@@ -112,6 +112,9 @@ export const useWeb3Store = defineStore({
     NAVCalculatorBeaconProxyAddress(): string {
       return addresses.NAVCalculatorBeaconProxy[this.chainId]
     },
+    NAVExecutorBeaconProxyAddress(): string {
+      return addresses.NAVExecutorBeaconProxy[this.chainId]
+    },
   },
   actions: {
     /**

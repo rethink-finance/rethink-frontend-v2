@@ -37,6 +37,7 @@ import type IToken from "~/types/token";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import { parseBigInt } from "~/composables/localStorage";
 import { useFundsStore } from "~/store/funds.store";
+import { useToastStore } from "~/store/toast.store";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -66,6 +67,7 @@ interface IState {
   loadingUserBalances: boolean,
   isNavSimulationLoading: boolean,
   loadingUserFundDepositRedemptionRequests: boolean,
+  loadingUpdateNav: boolean,
 }
 
 
@@ -85,10 +87,12 @@ export const useFundStore = defineStore({
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
     refreshSimulateNAVCounter: 0,
+    // Loading flags
     loadingNavUpdates: false,
     loadingUserBalances: false,
     isNavSimulationLoading: false,
     loadingUserFundDepositRedemptionRequests: false,
+    loadingUpdateNav: false,
   }),
   getters: {
     accountStore(): any {
@@ -102,6 +106,9 @@ export const useFundStore = defineStore({
     },
     fundsStore(): any {
       return useFundsStore();
+    },
+    toastStore(): any {
+      return useToastStore();
     },
     web3(): Web3 {
       console.warn("fundStore.web3 changed", this.web3Store.web3)
@@ -1187,6 +1194,56 @@ export const useFundStore = defineStore({
 
       const valueFormatted = value ? formatTokenValue(value, fundDecimals) : "0";
       return valueFormatted + " " + fundSymbol;
+    },
+    async updateNAV(): Promise<any> {
+      this.loadingUpdateNav = true;
+      try {
+        const navExecutorAddr = this.web3Store.NAVExecutorBeaconProxyAddress;
+
+        if (!navExecutorAddr) {
+          this.toastStore.errorToast(
+            "The NAV Executor address is not available for this network. Please contact the Rethink Finance support.",
+          );
+          this.loadingUpdateNav = false;
+          return;
+        }
+
+        return await this.fundContract.methods
+          .executeNAVUpdate(navExecutorAddr)
+          .send({
+            from: this.activeAccountAddress,
+          })
+          .on("transactionHash", (hash: any) => {
+            console.log("tx hash: " + hash);
+            this.toastStore.warningToast(
+              "The transaction has been submitted. Please wait for it to be confirmed.",
+            );
+          })
+          .on("receipt", (receipt: any) => {
+            console.log(receipt);
+            if (receipt.status) {
+              this.toastStore.successToast("The recalculation of OIV NAV has Succeeded");
+            } else {
+              this.toastStore.errorToast(
+                "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
+              );
+            }
+            this.loadingUpdateNav = false;
+          })
+          .on("error", (error: any) => {
+            console.log(error);
+            this.loadingUpdateNav = false;
+            this.toastStore.errorToast(
+              "There has been an error. Please contact the Rethink Finance support.",
+            );
+          });
+      } catch (error) {
+        console.error("Error updating NAV: ", error);
+        this.loadingUpdateNav = false;
+        this.toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      }
     },
   },
 });
