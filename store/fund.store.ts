@@ -1182,7 +1182,7 @@ export const useFundStore = defineStore({
         return value;
       }
 
-      const valueFormatted = value ? formatTokenValue(value, baseDecimals) : "0";
+      const valueFormatted = value ? formatTokenValue(value, baseDecimals, false) : "0";
       return valueFormatted + " " + baseSymbol;
     },
     formatFundTokenValue(value: any): string {
@@ -1192,7 +1192,7 @@ export const useFundStore = defineStore({
         return value;
       }
 
-      const valueFormatted = value ? formatTokenValue(value, fundDecimals) : "0";
+      const valueFormatted = value ? formatTokenValue(value, fundDecimals, false) : "0";
       return valueFormatted + " " + fundSymbol;
     },
     async updateNAV(): Promise<any> {
