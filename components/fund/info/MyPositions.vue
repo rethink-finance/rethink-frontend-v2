@@ -108,7 +108,7 @@ export default {
     },
     userCurrentValueFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      return this.fundStore.formatBaseTokenValue(this.fundStore.userCurrentValue);
+      return this.fundStore.formatBaseTokenValue(this.fundStore.userCurrentValue, false);
     },
   },
   methods: { numberColorClass },
