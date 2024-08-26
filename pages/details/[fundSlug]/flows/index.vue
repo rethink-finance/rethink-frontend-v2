@@ -90,7 +90,7 @@
               class="nav_simulated_value"
               :class="{'nav_simulated_value--warning': isAnySimulatedNavError}"
             >
-              {{ formatBaseTokenValue(totalCurrentSimulatedNAV, false) }}
+              {{ formatBaseTokenValue(totalCurrentSimulatedNAV) }}
               <div
                 v-if="isAnySimulatedNavError"
                 class="ms-2 justify-center align-center d-flex"
