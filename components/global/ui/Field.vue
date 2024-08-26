@@ -41,6 +41,7 @@
         v-model="value"
         :placeholder="field.placeholder"
         :rules="field.rules"
+        auto-grow
         :disabled="isDisabled || !field.isEditable"
       />
     </template>
@@ -71,6 +72,7 @@
           v-model="value"
           :placeholder="field.placeholder"
           :rules="field.rules"
+          rows="10"
           :disabled="isDisabled || !field.isEditable"
         />
       </div>
@@ -160,10 +162,12 @@ const value = computed({
   display: flex;
   flex-direction: column-reverse;
   align-items: center;
-  gap: 1rem;
+  gap: 0.2rem;
 
   @include sm {
     flex-direction: row;
+    align-items: flex-start;
+    gap: 1rem;
   }
 
   &__image {

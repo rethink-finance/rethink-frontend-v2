@@ -383,9 +383,6 @@ const populateProposal = () => {
     lateQuorum: fundDeepCopy?.lateQuorum ?? "",
     proposalTitle: "",
     proposalDescription: "",
-
-    // whitelist
-    // whitelist: fundDeepCopy?.whitelist?.map((item) => item.address).join(","),
     whitelist: "",
   };
 
