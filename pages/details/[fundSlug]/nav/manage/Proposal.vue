@@ -140,6 +140,7 @@
                     show-simulated-nav
                     show-summary-row
                     deletable
+                    idx="proposal"
                   />
                 </v-expansion-panel-text>
               </v-expansion-panel>
@@ -177,7 +178,6 @@
 import type { AbiFunctionFragment } from "web3";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import NAVExecutor from "assets/contracts/NAVExecutor.json";
-import addressesJson from "assets/contracts/addresses.json";
 import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
@@ -186,10 +186,6 @@ import { useWeb3Store } from "~/store/web3.store";
 import { PositionType } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-
-import type IAddresses from "~/types/addresses";
-// Since the direct import won't infer the custom type, we cast it here.:
-const addresses: IAddresses = addressesJson as IAddresses;
 
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
@@ -368,7 +364,7 @@ const generateNAVPermission = (encodedNavUpdateEntries: string) =>  {
 
   // functionSig
   navEntryPermission.value[2].data = "0xa61f5814";
-  const navExecutorAddr = addresses.NAVExecutorBeaconProxy[web3Store.chainId];
+  const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress;
   console.log(navExecutorAddr);
   const navWords = ["0x000000000000000000000000" + navExecutorAddr.slice(2)];
   const navIsScoped = [true];
@@ -505,7 +501,7 @@ const createProposal = async () => {
   const encodedDataStoreNAVDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
     storeNAVDataABI as AbiFunctionFragment, [fundStore.fund?.address, encodedNavUpdateEntries],
   );
-  const navExecutorAddr = addresses.NAVExecutorBeaconProxy[web3Store.chainId];
+  const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress;
 
 
   /*
@@ -651,7 +647,6 @@ const saveDraft = () => {
     );
 
     setLocalStorageItem("navUpdateEntries", navUpdateEntries);
-    console.log("LS: ", navUpdateEntries)
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to save NAV draft");
@@ -670,7 +665,6 @@ const saveProposalDraft = () => {
       JSON.stringify(proposal.value, stringifyBigInt),
     );
     setLocalStorageItem("fundProposalDrafts", fundProposalDrafts);
-    console.log("LS proposals: ", fundProposalDrafts)
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to save fund proposal draft");

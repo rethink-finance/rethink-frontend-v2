@@ -31,6 +31,7 @@
         :used-methods="fundStore.fundManagedNAVMethods"
         selectable
         show-simulated-nav
+        idx="addFromLibrary"
         @selected-changed="onSelectionChanged"
       />
     </div>

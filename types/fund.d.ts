@@ -112,6 +112,8 @@ export default interface IFund {
   feeBalance: bigint;
   safeContractBaseTokenBalance: bigint;
   fundContractBaseTokenBalance: bigint;
+  fundContractBaseTokenBalanceError?: boolean;
+  fundContractBaseTokenBalanceLoading?: boolean;
   /**
    * [
    *   DepositFee,
@@ -124,4 +126,12 @@ export default interface IFund {
 
   // NAV Updates
   navUpdates: INAVUpdate[];
+
+  // Deposit & Redemption Requests Balance
+  pendingDepositBalance?: bigint,
+  pendingRedemptionBalance?: bigint,
+  pendingDepositBalanceLoading?: boolean,
+  pendingDepositBalanceError?: boolean,
+  pendingRedemptionBalanceLoading?: boolean,
+  pendingRedemptionBalanceError?: boolean,
 }

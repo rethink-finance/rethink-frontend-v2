@@ -271,6 +271,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    idx: {
+      type: String,
+      default: "",
+    },
   },
   emits: ["update:methods", "selectedChanged"],
   setup() {
@@ -278,8 +282,8 @@ export default defineComponent({
     const fundsStore = useFundsStore();
     const web3Store = useWeb3Store();
     const toastStore = useToastStore();
-    const { formatNAV } = toRefs(fundStore);
-    return { fundStore, fundsStore, web3Store, toastStore, formatNAV }
+    const { formatBaseTokenValue } = toRefs(fundStore);
+    return { fundStore, fundsStore, web3Store, toastStore, formatBaseTokenValue }
   },
   data: () => ({
     expanded: [],
@@ -342,10 +346,10 @@ export default defineComponent({
         (fund?.fundContractBaseTokenBalance || 0n) +
         (fund?.safeContractBaseTokenBalance || 0n) +
         (fund?.feeBalance || 0n);
-      return this.formatNAV(totalNAV);
+      return this.formatBaseTokenValue(totalNAV);
     },
     formattedTotalLastNAV() {
-      return this.formatNAV(this.navParts?.totalNAV || 0n);
+      return this.formatBaseTokenValue(this.navParts?.totalNAV || 0n);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
@@ -359,13 +363,13 @@ export default defineComponent({
       )
     },
     formattedFundContractBaseTokenBalance() {
-      return this.formatNAV(this.fundStore.fund?.fundContractBaseTokenBalance);
+      return this.formatBaseTokenValue(this.fundStore.fund?.fundContractBaseTokenBalance);
     },
     formattedSafeContractBaseTokenBalance() {
-      return this.formatNAV(this.fundStore.fund?.safeContractBaseTokenBalance);
+      return this.formatBaseTokenValue(this.fundStore.fund?.safeContractBaseTokenBalance);
     },
     formattedFeeBalance() {
-      return this.formatNAV(this.fundStore.fund?.feeBalance);
+      return this.formatBaseTokenValue(this.fundStore.fund?.feeBalance);
     },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
@@ -379,7 +383,7 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
-          pastNavValueFormatted: this.formatNAV(this.navParts?.baseAssetOIVBal),
+          pastNavValueFormatted: this.formatBaseTokenValue(this.navParts?.baseAssetOIVBal),
           simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-1",
@@ -392,7 +396,7 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetSafeBal,
-          pastNavValueFormatted: this.formatNAV(this.navParts?.baseAssetSafeBal),
+          pastNavValueFormatted: this.formatBaseTokenValue(this.navParts?.baseAssetSafeBal),
           simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-2",
@@ -405,7 +409,7 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.feeBal,
-          pastNavValueFormatted: this.formatNAV(this.navParts?.feeBal),
+          pastNavValueFormatted: this.formatBaseTokenValue(this.navParts?.feeBal),
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
           detailsHash: "-3",
@@ -425,7 +429,6 @@ export default defineComponent({
       handler(newLen: any, oldLen: any) {
         // Simulate NAV method values everytime NAV methods change.
         if (!this.methods.length || oldLen === newLen) return;
-        console.log("SIMULATE BY METHODS LENGTH", oldLen, newLen)
         this.simulateNAV();
       },
       deep: true,
@@ -445,8 +448,9 @@ export default defineComponent({
       navigator.clipboard.writeText(data);
     },
     async simulateNAV() {
-      if (!this.web3Store.web3 || this.isNavSimulationLoading) return;
+      if (!this.showSimulatedNav || !this.web3Store.web3 || this.isNavSimulationLoading) return;
       this.isNavSimulationLoading = true;
+      console.warn(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
       if (!this.fundsStore.allNavMethods?.length) {
         const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
         const fundAddresses: string[] = fundsInfoArrays[0];
@@ -457,7 +461,6 @@ export default defineComponent({
         console.log("simulate fetch all nav methods")
         await this.fundsStore.fetchAllNavMethods(fundAddresses);
       }
-      console.log("START SIMULATE:", this.isNavSimulationLoading)
 
       // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
       // Otherwise, take managed methods, that user can change.
@@ -465,103 +468,11 @@ export default defineComponent({
       const promises = [];
 
       for (const navEntry of this.methods) {
-        promises.push(this.simulateNAVMethodValue(navEntry));
+        promises.push(this.fundStore.simulateNAVMethodValue(navEntry));
       }
       const settled = await Promise.allSettled(promises);
       this.isNavSimulationLoading = false;
       console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
-    },
-    async simulateNAVMethodValue(navEntry: INAVMethod) {
-      if (!this.web3Store.web3 || !navEntry.detailsHash || navEntry.isNavSimulationLoading) return;
-      const baseDecimals = this.fundStore.fund?.baseToken.decimals;
-      if (!baseDecimals) {
-        this.toastStore.errorToast(
-          "Failed preparing NAV Illiquid method, fund base token decimals are not known.",
-        );
-        return;
-      }
-
-      try {
-        navEntry.isNavSimulationLoading = true;
-        navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
-        if (!navEntry.pastNAVUpdateEntryFundAddress) {
-          navEntry.pastNAVUpdateEntryFundAddress =
-            this.fundsStore.navMethodDetailsHashToFundAddress[
-              navEntry.detailsHash ?? ""
-            ];
-        }
-        if (!navEntry.pastNAVUpdateEntryFundAddress) {
-          // If there is no pastNAVUpdateEntryFundAddress the simulation will fail later.
-          // A missing pastNAVUpdateEntryFundAddress can mean two things:
-          //   1) A proposal is not approved yet and so its methods are not yet in the allNavMethods
-          //     -> that means the method was created on this fund, so we take address of this fund.
-          //  2) There was some difference when hashing details on INAVMethod detailsHash.
-          //    -> it will be hard to detect this, NAV simulation will fail, and we will take a look what happened.
-          //    -> We have a bigger problem if it won't fail, we should mark the address somewhere in the table.
-          //
-          // Here we take solution 1), as we assume that the method was not yet added to allMethods
-          navEntry.pastNAVUpdateEntryFundAddress = this.fundStore.fund?.address;
-          navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
-        }
-
-        const callData = [];
-        if (navEntry.positionType === PositionType.Liquid) {
-          callData.push(prepNAVMethodLiquid(navEntry.details));
-          callData.push(this.fundStore.fund?.safeAddress);
-        } else if (navEntry.positionType === PositionType.Illiquid) {
-          callData.push(prepNAVMethodIlliquid(navEntry.details, baseDecimals));
-          callData.push(this.fundStore.fund?.safeAddress);
-        } else if (navEntry.positionType === PositionType.NFT) {
-          callData.push(prepNAVMethodNFT(navEntry.details));
-          // callData.push(this.fundStore.fund?.safeAddress);
-        } else if (navEntry.positionType === PositionType.Composable) {
-          callData.push(prepNAVMethodComposable(navEntry.details));
-        }
-
-        callData.push(
-          ...[
-            this.fundStore.fund?.address, // fund
-            0, // navEntryIndex
-            navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
-            parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
-            parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
-            navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
-          ],
-        );
-
-        // console.log("json: ", JSON.stringify(callData, null, 2))
-        const navCalculationMethod =
-          PositionTypeToNAVCalculationMethod[navEntry.positionType];
-        navEntry.simulatedNavFormatted = "N/A";
-        navEntry.simulatedNav = 0n;
-
-        console.log("isNavSimulationLoading:", this.isNavSimulationLoading)
-        try {
-          const simulatedVal: bigint = await this.fundStore.navCalculatorContract.methods[
-            navCalculationMethod
-          ](...callData).call();
-          // console.log("simulated value: ", simulatedVal);
-
-          navEntry.simulatedNavFormatted = this.formatNAV(simulatedVal);
-          navEntry.simulatedNav = simulatedVal;
-          navEntry.isSimulatedNavError = false;
-        } catch (error: any) {
-          navEntry.isSimulatedNavError = true;
-          console.error(
-            "Failed simulating value for entry, check if there was some difference when " +
-            "hashing details on INAVMethod detailsHash: ",
-            navEntry,
-            error,
-          );
-        }
-      } catch (error) {
-        console.error("Error simulating NAV: ", error);
-        this.toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support.",
-        );
-      } finally {
-        navEntry.isNavSimulationLoading = false;
-      }
     },
     simulatedNAVIconColor(method: INAVMethod) {
       if (!method.foundMatchingPastNAVUpdateEntryFundAddress) {

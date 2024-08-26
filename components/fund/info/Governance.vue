@@ -60,6 +60,7 @@ const userGovernanceTokenBalanceFormatted = computed(() => {
   return formatTokenValue(
     fundStore.userGovernanceTokenBalance,
     props.fund?.governanceToken.decimals,
+    false,
   );
 });
 </script>

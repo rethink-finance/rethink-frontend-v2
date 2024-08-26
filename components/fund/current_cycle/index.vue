@@ -43,8 +43,15 @@
         </v-tooltip>
       </div>
     </div>
+    <div v-if="!accountStore.isConnected" class="fund_settlement__no_pending_requests">
+      Connect your wallet to view deposit or redemption requests.
+    </div>
+    <div v-else-if="loadingUserFundDepositRedemptionRequests">
+      <v-skeleton-loader type="list-item-two-line" />
+      <v-skeleton-loader type="list-item-two-line" />
+    </div>
     <div
-      v-if="userDepositRequestExists || userRedemptionRequestExists"
+      v-else-if="userDepositRequestExists || userRedemptionRequestExists"
       class="fund_settlement__pending_requests"
     >
       <FundCurrentCyclePendingRequest
@@ -62,14 +69,16 @@
         :token0="fund.fundToken"
       />
     </div>
-    <div v-else-if="!accountStore.isConnected" class="fund_settlement__no_pending_requests">
-      Connect your wallet to view deposit or redemption requests.
-    </div>
     <div v-else class="fund_settlement__no_pending_requests">
       Currently there are no deposit or redemption requests.
     </div>
     <div class="card_box card_box--no-padding mt-8">
-      <FundSettlementNotification />
+      <UiNotification>
+        The deposit and redeem requests are settled within the planned Settlement Cycle
+        of <span class="text-primary">{{ fund?.plannedSettlementPeriod || "N/A" }}</span>.
+        You can learn more about how settlements work
+        <a href="https://docs.rethink.finance/rethink.finance" target="_blank">here</a>.
+      </UiNotification>
     </div>
   </div>
 </template>
@@ -98,6 +107,7 @@ const {
   shouldUserWaitSettlementOrCancelRedemption,
   userDepositRequestExists,
   userRedemptionRequestExists,
+  loadingUserFundDepositRedemptionRequests,
 } = toRefs(fundStore);
 
 defineProps({
@@ -169,7 +179,7 @@ const redemptionDisabledTooltipText = computed(() => {
 });
 
 const deposit = async () => {
-  if (!accountStore.activeAccount?.address) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to deposit tokens to the fund.")
     return;
   }
@@ -183,7 +193,7 @@ const deposit = async () => {
   }
   console.log("DEPOSIT");
   loadingDeposit.value = true;
-  console.log("Deposit tokensWei: ", userDepositRequest?.value?.amount, "from : ", accountStore.activeAccount.address);
+  console.log("Deposit tokensWei: ", userDepositRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
 
   const ABI = [ "function deposit()" ];
   const iface = new ethers.Interface(ABI);
@@ -192,7 +202,7 @@ const deposit = async () => {
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
+      from: fundStore.activeAccountAddress,
       gas: gasEstimate,
       gasPrice,
     }).on("transactionHash", (hash: string) => {
@@ -227,7 +237,7 @@ const deposit = async () => {
 
 
 const redeem = async () => {
-  if (!accountStore.activeAccount?.address) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
     return;
   }
@@ -241,7 +251,7 @@ const redeem = async () => {
   }
   console.log("[REDEEM]");
   loadingRedemption.value = true;
-  console.log("[REDEEM] tokensWei: ", userRedemptionRequest?.value?.amount, "from : ", accountStore.activeAccount.address);
+  console.log("[REDEEM] tokensWei: ", userRedemptionRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
 
   const ABI = [ "function withdraw()" ];
   const iface = new ethers.Interface(ABI);
@@ -250,7 +260,7 @@ const redeem = async () => {
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
+      from: fundStore.activeAccountAddress,
       gas: gasEstimate,
       gasPrice,
     }).on("transactionHash", (hash: string) => {

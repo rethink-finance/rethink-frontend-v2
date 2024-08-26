@@ -1,7 +1,7 @@
 <template>
   <span>
     <img
-      src="/logo.svg"
+      src="@/assets/images/logo.svg"
       class="rethink_logo"
       :class="{'rethink_logo--sm': small}"
     >

@@ -152,7 +152,9 @@ export const commify = (value: string | number | bigint) => {
 //   );
 // }
 
-export const formatTokenValue = (value: bigint, decimals: number, shouldCommify = true): string => {
+export const formatTokenValue = (value?: bigint, decimals?: number, shouldCommify = true): string => {
+  if (!value || !decimals) return "0";
+
   try {
     if (Number(value) === 0) return "0";
     const formattedValue = ethers.formatUnits(value, decimals);
