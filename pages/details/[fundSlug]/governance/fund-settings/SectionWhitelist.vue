@@ -42,7 +42,7 @@
             variant="outlined"
             single-line
             :rules="singleAddressRules"
-            @keydown.enter="handleAddNewAddress"
+            @keydown.enter="isSingleAddressValid ? handleAddNewAddress() : null"
           ></v-text-field>
 
           <div class="header__actions">
