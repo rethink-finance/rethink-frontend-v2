@@ -1175,24 +1175,24 @@ export const useFundStore = defineStore({
       }
       return [undefined, undefined];
     },
-    formatBaseTokenValue(value: any): string {
+    formatBaseTokenValue(value: any, shouldCommify: boolean = true): string {
       const baseSymbol = this.fund?.baseToken.symbol;
       const baseDecimals = this.fund?.baseToken.decimals;
       if (!baseDecimals) {
         return value;
       }
 
-      const valueFormatted = value ? formatTokenValue(value, baseDecimals, false) : "0";
+      const valueFormatted = value ? formatTokenValue(value, baseDecimals, shouldCommify) : "0";
       return valueFormatted + " " + baseSymbol;
     },
-    formatFundTokenValue(value: any): string {
+    formatFundTokenValue(value: any, shouldCommify: boolean = true): string {
       const fundSymbol = this.fund?.fundToken.symbol;
       const fundDecimals = this.fund?.fundToken.decimals;
       if (!fundDecimals) {
         return value;
       }
 
-      const valueFormatted = value ? formatTokenValue(value, fundDecimals, false) : "0";
+      const valueFormatted = value ? formatTokenValue(value, fundDecimals, shouldCommify) : "0";
       return valueFormatted + " " + fundSymbol;
     },
     async updateNAV(): Promise<any> {

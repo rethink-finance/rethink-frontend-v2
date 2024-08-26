@@ -3,10 +3,17 @@
     <UiHeader>
       <div>
         <div class="main_header__title">
-          {{ fundTotalNAVFormatted }}
+          <v-skeleton-loader v-if="fundStore.loadingNavUpdates" type="text" class="total_nav_skeleton" />
+          <template v-else>
+            {{ fundTotalNAVFormatted }}
+          </template>
         </div>
         <div class="main_header__subtitle">
-          Last updated on <strong>{{ fundLastNAVUpdateDate }}</strong>
+          <div>
+            Last updated on
+          </div>
+          <v-skeleton-loader v-if="fundStore.loadingNavUpdates" type="text" class="last_nav_update_skeleton" />
+          <strong v-else class="ms-2">{{ fundLastNAVUpdateDate }}</strong>
         </div>
       </div>
       <div class="button_container">
@@ -132,6 +139,22 @@ const reversedFundNavUpdates = computed(() => {
     color: $color-primary;
   }
 }
+.total_nav_skeleton :deep(.v-skeleton-loader__bone) {
+  height: 2rem;
+  margin: 0;
+}
+.last_nav_update_skeleton :deep(.v-skeleton-loader__bone) {
+  height: 1rem;
+  width: 4rem;
+  margin: 0.5rem 0 0 0.5rem;
+}
+.main_header__subtitle {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-content: center;
+}
+
 .button_container {
   display: flex;
   flex-direction: column;

@@ -100,11 +100,11 @@ export default {
     },
     userFundTokenBalanceFormatted() {
       if (!this.fundToken) return "N/A";
-      return this.fundStore.formatFundTokenValue(this.fundStore.userFundTokenBalance);
+      return this.fundStore.formatFundTokenValue(this.fundStore.userFundTokenBalance, false);
     },
     userFundAllowanceFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      return this.fundStore.formatBaseTokenValue(this.fundStore.userFundAllowance);
+      return this.fundStore.formatBaseTokenValue(this.fundStore.userFundAllowance, false);
     },
     userCurrentValueFormatted() {
       if (!this.fundBaseToken) return "N/A";
