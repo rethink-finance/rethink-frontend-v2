@@ -121,7 +121,17 @@
             <template v-else>
               {{ pendingRedemptionBalanceFormatted }} {{ fund.fundToken.symbol }}
               <div class="pending_redemptions_estimate">
-                ≈ {{ estimatedPendingRedemptionBalance }} {{ fund.baseToken.symbol }}
+                ≈
+                <v-progress-circular
+                  v-if="fundStore.loadingNavUpdates || isNavSimulationLoading"
+                  class="d-flex"
+                  size="18"
+                  width="2"
+                  indeterminate
+                />
+                <template v-else>
+                  {{ estimatedPendingRedemptionBalanceInBaseFormatted }}
+                </template>
               </div>
             </template>
           </div>
@@ -146,13 +156,29 @@
             </template>
           </div>
           <div class="data_bar__subtitle">
-            Deposit Rquests
+            Deposit Requests
           </div>
         </div>
         <div class="data_bar__item">
           <div class="data_bar__title">
-            <!-- TODO figure it out -->
-            N/A
+            <v-progress-circular
+              v-if="fundStore.loadingNavUpdates || isNavSimulationLoading"
+              class="d-flex"
+              size="18"
+              width="2"
+              indeterminate
+            />
+            <div v-else-if="fund.pendingRedemptionBalanceError" class="text-error">
+              N/A
+            </div>
+            <div
+              v-else
+              class="funding_gap"
+              :class="fundingGapClass"
+              @click="setTransferToFundValue(absoluteFundingGap)"
+            >
+              {{ fundingGapFormatted }}
+            </div>
           </div>
           <div class="data_bar__subtitle">
             Funding Gap
@@ -226,7 +252,7 @@
     </div>
 
     <div class="main_card main_grid">
-      <FundSettlementTransferBaseAsset />
+      <FundSettlementTransferBaseAsset v-model="transferToFundValue" />
       <FundSettlementSweepFundContract />
     </div>
   </div>
@@ -251,12 +277,7 @@ const {
   loadingUpdateNav,
 } = toRefs(fundStore);
 
-
-const fundingGap = computed(() => {
-  // Difference between fund contract liquidity and amount of redemption requests.
-  return 1
-});
-
+const transferToFundValue = ref("");
 const simulatedNavErrorCount = computed(() => {
   return fundLastNAVUpdateMethods.value.reduce(
     (errorCount: number, method: any) => {
@@ -278,10 +299,10 @@ const pendingRedemptionBalanceFormatted = computed(() => {
   return formatTokenValue(fund?.pendingRedemptionBalance, fund.fundToken.decimals, false)
 });
 
-const estimatedFundToBaseTokenExchangeRate = computed((): FixedNumber => {
+const estimatedFundToBaseTokenExchangeRate = computed((): FixedNumber | undefined => {
   // Estimated Fund to Base token exchange rate based on the current NAV simulated value or user's manual input.
   if (!fundStore.fund || !totalCurrentSimulatedNAV.value || !fundStore.fund?.fundTokenTotalSupply) {
-    return FixedNumber.fromString("0");
+    return undefined;
   }
 
   const fundTokenTotalSupply = FixedNumber.fromString(
@@ -294,19 +315,65 @@ const estimatedFundToBaseTokenExchangeRate = computed((): FixedNumber => {
   return totalCurrentSimulatedNAVValue.div(fundTokenTotalSupply);
 });
 
-const estimatedPendingRedemptionBalance = computed(() => {
+const estimatedPendingRedemptionBalanceInBase = computed(() => {
   // Estimated Fund to Base token exchange rate based on the current NAV simulated value or user's manual input.
-  if (!fundStore.fund || !fundStore.fund?.pendingRedemptionBalance) return 0;
+  if (!fundStore.fund || estimatedFundToBaseTokenExchangeRate.value === undefined) return undefined;
+  if (!fundStore.fund?.pendingRedemptionBalance) return FixedNumber.fromString("0");
 
   const pendingRedemptionBalance = FixedNumber.fromString(
     ethers.formatUnits(fundStore.fund?.pendingRedemptionBalance, fundStore.fund?.fundToken.decimals),
   );
 
   // Calculate the estimated value using the exchange rate
-  return roundToSignificantDigits(pendingRedemptionBalance.mul(estimatedFundToBaseTokenExchangeRate.value).toString());
+  return pendingRedemptionBalance.mul(estimatedFundToBaseTokenExchangeRate.value);
+});
+const estimatedPendingRedemptionBalanceInBaseFormatted = computed(() => {
+  // Estimated Fund to Base token exchange rate based on the current NAV simulated value or user's manual input.
+  if (!fundStore.fund || estimatedPendingRedemptionBalanceInBase.value === undefined) return "N/A";
+  if (estimatedPendingRedemptionBalanceInBase.value.isZero()) return "0 " + fundStore.fund.baseToken.symbol;
+
+  // Calculate the estimated value using the exchange rate
+  return roundToSignificantDigits(estimatedPendingRedemptionBalanceInBase.value.toString()) + " " + fundStore.fund.baseToken.symbol;
 });
 
-// TODO convert Redemption Requests to baseToken based on the current (simulated NAV) exch rate.
+
+const fundingGap = computed(() => {
+  if (!fundStore.fund || estimatedPendingRedemptionBalanceInBase.value === undefined) return undefined;
+
+  // Difference between fund contract liquidity and amount of redemption requests.
+  let fundContractBaseTokenBalance = FixedNumber.fromString("0");
+  if(fundStore.fund?.fundContractBaseTokenBalance) {
+    fundContractBaseTokenBalance = FixedNumber.fromString(
+      ethers.formatUnits(fundStore.fund?.fundContractBaseTokenBalance, fundStore.fund?.baseToken.decimals),
+    );
+  }
+  return fundContractBaseTokenBalance.sub(estimatedPendingRedemptionBalanceInBase.value)
+});
+
+
+const fundingGapFormatted = computed(() => {
+  if (!fundStore.fund || fundingGap.value === undefined) return "N/A";
+  return roundToSignificantDigits(fundingGap.value.toString()) + " " + fundStore.fund?.baseToken.symbol;
+});
+const absoluteFundingGap = computed(() => {
+  if (!fundStore.fund || fundingGap.value === undefined) return "";
+  return fundingGap.value.toString().replace("-", "");
+});
+
+const fundingGapClass = computed(() => {
+  if (!fundStore.fund || fundingGap.value === undefined) return "";
+  if (fundingGap.value.gt(FixedNumber.fromValue(0))) {
+    return "text-success";
+  } else if (fundingGap.value.lt(FixedNumber.fromValue(0))) {
+    return "text-error";
+  }
+  return "";
+});
+
+const setTransferToFundValue = (value: any) => {
+  transferToFundValue.value = value;
+}
+
 const refreshFlowsInfo = () => {
   // Refresh current simulated NAV.
   fundStore.simulateCurrentNAV();
@@ -359,7 +426,15 @@ watch(
   gap: 2rem;
 }
 .pending_redemptions_estimate {
+  display: flex;
+  gap: 0.5rem;
   margin-left: 0.25rem;
-  color: $color-primary-dark;
+  color: $color-primary;
+}
+.funding_gap {
+  &:hover {
+    cursor: pointer;
+    text-decoration: underline;
+  }
 }
 </style>

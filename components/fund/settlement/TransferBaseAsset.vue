@@ -80,7 +80,22 @@ const { isUsingZodiacPilotExtension } = toRefs(fundStore);
 const baseToken = computed(() => {
   return fundStore.fund?.baseToken;
 });
-const tokenValue = ref("");
+
+const emit = defineEmits(["update:modelValue"]);
+const props = defineProps({
+  modelValue: {
+    type: String,
+    default: "",
+  },
+});
+
+const tokenValue = computed({
+  get: () => props?.modelValue ?? "",
+  set: (value: string) => {
+    emit("update:modelValue", value);
+  },
+});
+
 const tokenValueChanged = ref(false);
 const isTransferLoading = ref(false);
 const tokensWei = computed( () => {
