@@ -113,6 +113,7 @@ export default defineComponent({
       font-size: $text-sm;
       line-height: 1;
       color: $color-light-subtitle;
+      align-items: center;
     }
   }
 }

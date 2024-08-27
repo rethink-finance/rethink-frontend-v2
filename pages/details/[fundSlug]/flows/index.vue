@@ -90,7 +90,28 @@
               class="nav_simulated_value"
               :class="{'nav_simulated_value--warning': isAnySimulatedNavError}"
             >
-              {{ formatBaseTokenValue(totalCurrentSimulatedNAV) }}
+              <div
+                v-if="isSimulatedNAVEdit"
+                class="transfer__token"
+              >
+                <div class="transfer__token_data">
+                  <div class="transfer__token_col px-4">
+                    {{ fundStore.fund?.baseToken?.symbol }}
+                  </div>
+                  <div class="transfer__token_col transfer__input pa-0 transfer__token_col--dark text-end">
+                    <InputNumber
+                      v-model="customSimulatedNAVValue"
+                      :rules="customSimulatedNAVValueRules"
+                      class="transfer__input_amount"
+                      hide-details
+                      @input="customSimulatedNAVValueChanged = true"
+                    />
+                  </div>
+                </div>
+              </div>
+              <template v-else>
+                {{ totalCurrentSimulatedNAVFormatted }}
+              </template>
               <div
                 v-if="isAnySimulatedNavError"
                 class="ms-2 justify-center align-center d-flex"
@@ -102,8 +123,32 @@
               </div>
             </div>
           </div>
-          <div class="data_bar__subtitle">
+          <div class="data_bar__subtitle d-flex">
             Simulated NAV
+            <UiDetailsButton
+              v-if="!isSimulatedNAVEdit"
+              class="ms-2"
+              xs
+              @click="toggleSimulatedNAVEdit()"
+            >
+              <Icon
+                icon="fa-solid:edit"
+                width="1.4em"
+                height="1.4em"
+              />
+            </UiDetailsButton>
+            <UiDetailsButton
+              v-else
+              class="ms-2"
+              xs
+              @click="toggleSimulatedNAVEdit()"
+            >
+              <Icon
+                icon="mdi-arrow-u-left-top"
+                width="1.4em"
+                height="1.4em"
+              />
+            </UiDetailsButton>
           </div>
         </div>
         <div class="data_bar__item">
@@ -268,7 +313,6 @@ const fundStore = useFundStore();
 
 const fund = useAttrs().fund as IFund;
 const {
-  formatBaseTokenValue,
   isUsingZodiacPilotExtension,
   totalCurrentSimulatedNAV,
   fundLastNAVUpdate,
@@ -277,6 +321,30 @@ const {
   loadingUpdateNav,
 } = toRefs(fundStore);
 
+const customSimulatedNAVValue = ref("");
+const customSimulatedNAVValueChanged = ref(false);
+
+watch(
+  () => totalCurrentSimulatedNAV.value,
+  () => {
+    // If user has not yet updated the custom simulated NAV value, update it with the actual simulated NAV.
+    if (!customSimulatedNAVValueChanged.value) {
+      customSimulatedNAVValue.value = formatTokenValue(totalCurrentSimulatedNAV.value, fund.baseToken.decimals, false);
+    }
+  },
+  { immediate: true },
+);
+const customSimulatedNAVValueRules = [
+  // TODO Add rule for max decimals
+  (value: string) => {
+    const valueWei = ethers.parseUnits(value || "0", fundStore.fund?.baseToken.decimals);
+    if (valueWei <= 0) {
+      return "Value must be positive."
+    }
+    return true;
+  },
+];
+const isSimulatedNAVEdit = ref(false);
 const transferToFundValue = ref("");
 const simulatedNavErrorCount = computed(() => {
   return fundLastNAVUpdateMethods.value.reduce(
@@ -291,11 +359,15 @@ const isAnySimulatedNavError = computed(() => {
 });
 
 const pendingDepositBalanceFormatted = computed(() => {
-  if (!fund?.pendingDepositBalance) return 0;
+  if (!fund?.pendingDepositBalance) return "0";
   return formatTokenValue(fund?.pendingDepositBalance, fund.baseToken.decimals, false)
 });
+const totalCurrentSimulatedNAVFormatted = computed(() => {
+  if (!totalCurrentSimulatedNAV.value) return "0";
+  return fundStore.formatBaseTokenValue(totalCurrentSimulatedNAV.value)
+});
 const pendingRedemptionBalanceFormatted = computed(() => {
-  if (!fund?.pendingRedemptionBalance) return 0;
+  if (!fund?.pendingRedemptionBalance) return "0";
   return formatTokenValue(fund?.pendingRedemptionBalance, fund.fundToken.decimals, false)
 });
 
@@ -308,9 +380,16 @@ const estimatedFundToBaseTokenExchangeRate = computed((): FixedNumber | undefine
   const fundTokenTotalSupply = FixedNumber.fromString(
     ethers.formatUnits(fundStore.fund?.fundTokenTotalSupply, fundStore.fund?.fundToken.decimals),
   );
-  const totalCurrentSimulatedNAVValue = FixedNumber.fromString(
-    ethers.formatUnits(totalCurrentSimulatedNAV.value, fundStore.fund?.baseToken.decimals),
-  );
+
+  // If user is editing simulated NAV, take his value to calculate exchange rate.
+  // Otherwise, take the fetched current simulated NAV value.
+  let navValueString;
+  if (isSimulatedNAVEdit.value) {
+    navValueString = customSimulatedNAVValue.value;
+  } else {
+    navValueString = ethers.formatUnits(totalCurrentSimulatedNAV.value, fundStore.fund?.baseToken.decimals);
+  }
+  const totalCurrentSimulatedNAVValue = FixedNumber.fromString(navValueString);
 
   return totalCurrentSimulatedNAVValue.div(fundTokenTotalSupply);
 });
@@ -323,6 +402,7 @@ const estimatedPendingRedemptionBalanceInBase = computed(() => {
   const pendingRedemptionBalance = FixedNumber.fromString(
     ethers.formatUnits(fundStore.fund?.pendingRedemptionBalance, fundStore.fund?.fundToken.decimals),
   );
+  console.log("actual value", pendingRedemptionBalance.mul(estimatedFundToBaseTokenExchangeRate.value));
 
   // Calculate the estimated value using the exchange rate
   return pendingRedemptionBalance.mul(estimatedFundToBaseTokenExchangeRate.value);
@@ -332,7 +412,8 @@ const estimatedPendingRedemptionBalanceInBaseFormatted = computed(() => {
   if (!fundStore.fund || !estimatedPendingRedemptionBalanceInBase.value || estimatedPendingRedemptionBalanceInBase.value.isZero()) {
     return "0 " + fundStore.fund?.baseToken.symbol;
   }
-  if (estimatedPendingRedemptionBalanceInBase.value.isZero()) return "0 " + fundStore.fund.baseToken.symbol;
+
+  console.log("estimatedPendingRedemptionBalanceInBase", estimatedPendingRedemptionBalanceInBase.value);
 
   // Calculate the estimated value using the exchange rate
   return roundToSignificantDigits(estimatedPendingRedemptionBalanceInBase.value.toString()) + " " + fundStore.fund.baseToken.symbol;
@@ -341,6 +422,7 @@ const estimatedPendingRedemptionBalanceInBaseFormatted = computed(() => {
 
 const fundingGap = computed(() => {
   if (!fundStore.fund || estimatedPendingRedemptionBalanceInBase.value === undefined) return undefined;
+  console.log("FF estimatedPendingRedemptionBalanceInBase", estimatedPendingRedemptionBalanceInBase.value);
 
   // Difference between fund contract liquidity and amount of redemption requests.
   let fundContractBaseTokenBalance = FixedNumber.fromString("0");
@@ -375,6 +457,9 @@ const fundingGapClass = computed(() => {
 const setTransferToFundValue = (value: any) => {
   transferToFundValue.value = value;
 }
+const toggleSimulatedNAVEdit = () => {
+  isSimulatedNAVEdit.value = !isSimulatedNAVEdit.value;
+}
 
 const refreshFlowsInfo = () => {
   // Refresh current simulated NAV.
@@ -390,7 +475,6 @@ const refreshFlowsInfo = () => {
 watch(
   () => fundStore.fundLastNAVUpdateMethods,
   () => {
-    console.warn("simulateCurrentNAV changed:")
     fundStore.simulateCurrentNAV();
   },
   { immediate: true },
@@ -437,6 +521,64 @@ watch(
   &:hover {
     cursor: pointer;
     text-decoration: underline;
+  }
+}
+.transfer {
+  display: flex;
+  flex-direction: column;
+  font-size: $text-sm;
+  line-height: 1;
+  gap: 1rem;
+
+  &__input {
+    width: 8rem;
+  }
+  &__content {
+    gap: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    flex-grow: 1;
+    justify-content: space-between;
+  }
+  &__token {
+    font-weight: 500;
+    width: 100%;
+  }
+  &__title {
+    font-size: $text-md;
+    font-weight: 500;
+    color: $color-title;
+    margin-bottom: 0.5rem;
+  }
+  &__subtitle {
+    font-size: $text-md;
+    color: $color-light-subtitle;
+  }
+  &__token_data {
+    @include borderGray;
+    display: flex;
+    flex-direction: row;
+    color: $color-white;
+    margin-bottom: 0.25rem;
+  }
+  &__token_col {
+    padding: 0.75rem;
+    height: 2.5rem;
+    background: $color-navy-gray;
+
+    &:first-of-type {
+      @include borderGray("border-right", false);
+    }
+    &--dark {
+      background: $color-navy-gray-dark;
+    }
+  }
+  &__balance {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.15rem;
   }
 }
 </style>
