@@ -33,6 +33,9 @@
         </div>
       </div>
 
+      <FundSettlementAlert v-if="!isUsingZodiacPilotExtension">
+        Switch to the Zodiac Pilot extension!
+      </FundSettlementAlert>
       <div class="buttons_container">
         <div>
           <v-tooltip activator="parent" location="bottom" :disabled="!transferTooltipText">
@@ -62,7 +65,6 @@
         </div>
       </div>
     </div>
-    <FundSettlementSwitchToZodiacPilotAlert v-if="!isUsingZodiacPilotExtension" />
   </div>
 </template>
 

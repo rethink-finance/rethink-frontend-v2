@@ -6,7 +6,7 @@
       height="1.2rem"
       width="1.2rem"
     />
-    Switch to the Zodiac Pilot extension!
+    <slot />
   </div>
 </template>
 
