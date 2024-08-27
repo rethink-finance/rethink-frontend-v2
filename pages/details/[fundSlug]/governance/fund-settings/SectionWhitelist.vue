@@ -312,7 +312,7 @@ const isBulkAddressValid = computed(() => {
     .filter((item) => item !== null); // Filter out addresses with no errors
 
   parsedBulkAddressErrors.value = errors.map((error) => {
-    if (!error.address) return "List is empty or containes empty lines";
+    if (!error.address) return "List is empty or contains empty lines";
     return error.address + ": " + error.errors.join(", ");
   });
 
