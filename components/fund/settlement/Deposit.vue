@@ -91,6 +91,7 @@ import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
+import type IFormError from "~/types/form_error";
 
 
 const toastStore = useToastStore();
@@ -115,12 +116,9 @@ watch(() => tokenValue.value, () => {
   tokenValueChanged.value = true;
 });
 
-interface IError {
-  message: string,
-  display: boolean,
-}
+
 const rules = [
-  (value: string): boolean | IError => {
+  (value: string): boolean | IFormError => {
     if (!fund.value) return { message: "Fund data is missing.", display: true }
     const valueWei = ethers.parseUnits(value, fund.value?.baseToken.decimals);
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
@@ -154,12 +152,12 @@ const isRequestDepositDisabled = computed(() => {
   return errorMessages.value.length > 0 || isAnythingLoading.value || !fundStore.isUserWalletWhitelisted;
 });
 
-const errorMessages = computed<IError[]>(() => {
+const errorMessages = computed<IFormError[]>(() => {
   // Disable deposit button if any of rules is false.
-  return rules.map(rule => rule(tokenValue.value || "0")).filter(rule => rule !== true) as IError[];
+  return rules.map(rule => rule(tokenValue.value || "0")).filter(rule => rule !== true) as IFormError[];
 });
-const visibleErrorMessages = computed<IError[]>( () => {
-  return errorMessages.value.filter((error: IError) => error.display)
+const visibleErrorMessages = computed<IFormError[]>( () => {
+  return errorMessages.value.filter((error: IFormError) => error.display)
 })
 const tokensWei = computed( () => {
   if (!fund.value?.baseToken) return 0n;
@@ -185,7 +183,7 @@ const handleError = (error: any) => {
  * https://docs.web3js.org/guides/wallet/transactions#sending-a-transaction-and-listening-to-the-events
  */
 const requestDeposit = async () => {
-  if (!accountStore.activeAccount?.address) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to request deposit.")
     return;
   }
@@ -196,7 +194,7 @@ const requestDeposit = async () => {
   console.log("REQUEST DEPOSIT");
   loadingRequestDeposit.value = true;
 
-  console.log("Request deposit tokensWei: ", tokensWei.value, "from : ", accountStore.activeAccount.address);
+  console.log("Request deposit tokensWei: ", tokensWei.value, "from : ", fundStore.activeAccountAddress);
 
   const ABI = [ "function requestDeposit(uint256 amount)" ];
   const iface = new ethers.Interface(ABI);
@@ -211,7 +209,7 @@ const requestDeposit = async () => {
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
+      from: fundStore.activeAccountAddress,
       gas: gasEstimate,
       gasPrice,
     }).on("transactionHash", (hash: string) => {
@@ -249,7 +247,7 @@ const setTokenValueToDepositRequestAmount = () => {
   tokenValue.value = depositRequestAmountFormatted.value;
 }
 const approveAllowance = async () => {
-  if (!accountStore.activeAccount?.address) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to approve allowance.")
     return;
   }
@@ -260,13 +258,13 @@ const approveAllowance = async () => {
   console.log("APPROVE ALLOWANCE");
   loadingApproveAllowance.value = true;
 
-  console.log("Approve allowance tokensWei: ", tokensWei.value, "from : ", accountStore.activeAccount.address);
+  console.log("Approve allowance tokensWei: ", tokensWei.value, "from : ", fundStore.activeAccountAddress);
   const allowanceValue = tokensWei.value;
 
   try {
     // call the approval method
     await fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei.value).send({
-      from: accountStore.activeAccount.address,
+      from: fundStore.activeAccountAddress,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

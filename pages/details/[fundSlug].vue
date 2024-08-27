@@ -113,6 +113,7 @@ const fetchFund = async () => {
 
   fundStore.fetchFundNAVUpdates();
   fundStore.fetchUserBalances();
+  fundStore.fetchFundPendingDepositRedemptionBalance();
 };
 
 // TODO: two watchers ? can we combine them?
@@ -249,6 +250,12 @@ const routes: IRoute[] = [
     to: `${fundDetailsRoute.value}/permissions`,
     exactMatch: true,
     title: "Permissions",
+    text:"",
+  },
+  {
+    to: `${fundDetailsRoute.value}/flows`,
+    exactMatch: true,
+    title: "Flows",
     text:"",
   },
 ];

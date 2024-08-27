@@ -102,18 +102,17 @@ npx nuxi generate; cd .output/public/; git init; git add -A; git commit -m "depl
 ## Stage Build
 To create a stage build, run:
 ```shell
-# Create .stage.env
-touch .stage.env
+# Create .env
+touch .env
 
 # Populate it with:
-BASE_DOMAIN="stage.rethink.finance"
 # Make sure you use the correct wallet connect project id that has verified stage.rethink.finance domain
 WALLET_CONNECT_PROJECT_ID="<insert_id>>"
 
 # Run
 npm run build_stage
 # or
-npx nuxi generate --dotenv .stage.env
+npx BASE_DOMAIN=stage.rethink.finance nuxi generate
 ```
 
 Make sure that `.htaccess` file has:

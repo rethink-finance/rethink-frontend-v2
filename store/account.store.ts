@@ -20,7 +20,7 @@ export const useAccountStore = defineStore("accounts", {
       return this.web3Onboard?.connectingWallet ?? false;
     },
     connectedWallet(): WalletState | undefined {
-      console.warn("accountStore,connectedWallet ", this.web3Onboard?.connectedWallet)
+      console.log("accountStore.connectedWallet ", this.web3Onboard?.connectedWallet)
       return this.web3Onboard?.connectedWallet || undefined;
     },
     connectedWalletChainId(): string | undefined {
@@ -40,12 +40,12 @@ export const useAccountStore = defineStore("accounts", {
   },
   actions: {
     async setAlreadyConnectedWallet() {
-      console.warn("Set already connected Wallet:", this.web3Onboard);
+      console.log("Set already connected Wallet:");
       const chainId = this.web3Onboard?.connectedChain?.id || "";
       await this.setActiveChain(chainId);
     },
     async setActiveChain(chainId: string): Promise<void> {
-      console.warn("setActiveChain", chainId);
+      console.log("setActiveChain", chainId);
       // If the user is currently on a different
       // network, ask him to switch it.
       if (chainId !== this.connectedWalletChainId) {
@@ -58,18 +58,14 @@ export const useAccountStore = defineStore("accounts", {
       }
 
       let web3Provider;
-      console.warn("setActiveChain connectedWallet.provider", toRaw(this.connectedWallet?.provider));
       if (this.connectedWallet) {
         web3Provider = new Web3(this.connectedWallet.provider);
       }
-      console.warn("setActiveChain web3Provider", web3Provider, this.web3Store.web3, web3Provider === this.web3Store.web3);
       if (web3Provider && web3Provider !== this.web3Store.web3) {
-        console.warn("setActiveChain is different web3Provider")
         await this.web3Store.init(chainId, web3Provider);
       }
     },
     async connectWallet() {
-      console.warn(" TRY CONNECT")
       try {
         await this.web3Onboard?.connectWallet();
       } catch (error) {

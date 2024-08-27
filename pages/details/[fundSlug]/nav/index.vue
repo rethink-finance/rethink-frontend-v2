@@ -3,10 +3,17 @@
     <UiHeader>
       <div>
         <div class="main_header__title">
-          {{ fundTotalNAVFormatted }}
+          <v-skeleton-loader v-if="fundStore.loadingNavUpdates" type="text" class="total_nav_skeleton" />
+          <template v-else>
+            {{ fundTotalNAVFormatted }}
+          </template>
         </div>
         <div class="main_header__subtitle">
-          Last updated on <strong>{{ fundLastNAVUpdateDate }}</strong>
+          <div>
+            Last updated on
+          </div>
+          <v-skeleton-loader v-if="fundStore.loadingNavUpdates" type="text" class="last_nav_update_skeleton" />
+          <strong v-else class="ms-2">{{ fundLastNAVUpdateDate }}</strong>
         </div>
       </div>
       <div class="button_container">
@@ -19,13 +26,13 @@
           :hide-after="1500"
         >
           <v-btn
-            :disabled="isLoading"
+            :disabled="loadingUpdateNav"
             class="bg-primary text-secondary"
-            @click="accountStore.isConnected ? updateNAV() : null"
+            @click="accountStore.isConnected ? fundStore.updateNAV() : null"
           >
             <template #prepend>
               <v-progress-circular
-                v-if="isLoading"
+                v-if="loadingUpdateNav"
                 class="d-flex"
                 size="20"
                 width="3"
@@ -71,6 +78,7 @@
           show-last-nav-update-value
           show-base-token-balances
           show-simulated-nav
+          idx="fundSlug/nav/index"
         />
       </div>
     </div>
@@ -87,26 +95,20 @@
 </template>
 
 <script setup lang="ts">
-import addresses from "~/assets/contracts/addresses.json";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
-import { useToastStore } from "~/store/toast.store";
-import { useWeb3Store } from "~/store/web3.store";
 import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
-const toastStore = useToastStore();
-const web3Store = useWeb3Store();
 
 const fund = useAttrs().fund as IFund;
 const {
   selectedFundSlug,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
+  loadingUpdateNav,
 } = toRefs(useFundStore());
-
-const isLoading = ref(false);
 
 const fundLastNAVUpdateDate = computed(() => {
   if (!fundLastNAVUpdate?.value?.date) return "N/A";
@@ -115,66 +117,9 @@ const fundLastNAVUpdateDate = computed(() => {
 
 const fundTotalNAVFormatted = computed(() => {
   if (!fundStore.fundTotalNAV) return "N/A";
-  return fundStore.formatNAV(fundStore.fundTotalNAV)
+  return fundStore.formatBaseTokenValue(fundStore.fundTotalNAV)
 });
 
-const updateNAV = async () => {
-  console.log("UPDATE NAV");
-  try {
-    isLoading.value = true;
-    const chainId =
-      web3Store.chainId as keyof (typeof addresses)["NAVExecutorBeaconProxy"];
-
-    const navExecutorAddr = addresses.NAVExecutorBeaconProxy[chainId];
-
-    if (!navExecutorAddr) {
-      toastStore.errorToast(
-        "The NAV Executor address is not available for this network. Please contact the Rethink Finance support.",
-      );
-      isLoading.value = false;
-      return;
-    }
-
-    await fundStore.fundContract.methods
-      .executeNAVUpdate(navExecutorAddr)
-      .send({
-        from: fundStore.activeAccountAddress,
-        maxPriorityFeePerGas: null,
-        maxFeePerGas: null,
-      })
-      .on("transactionHash", function (hash: any) {
-        console.log("tx hash: " + hash);
-        toastStore.warningToast(
-          "The transaction has been submitted. Please wait for it to be confirmed.",
-        );
-      })
-      .on("receipt", function (receipt: any) {
-        console.log(receipt);
-        if (receipt.status) {
-          toastStore.successToast("The recalculation of OIV NAV has Succeeded");
-        } else {
-          toastStore.errorToast(
-            "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
-          );
-        }
-        isLoading.value = false;
-      })
-      .on("error", function (error: any) {
-        console.log(error);
-        isLoading.value = false;
-
-        toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support.",
-        );
-      });
-  } catch (error) {
-    console.error("Error updating NAV: ", error);
-    isLoading.value = false;
-    toastStore.errorToast(
-      "There has been an error. Please contact the Rethink Finance support.",
-    );
-  }
-};
 // return fund with reversed navUpdates array to show the latest updates first
 const reversedFundNavUpdates = computed(() => {
   if (!fund.navUpdates) return fund;
@@ -194,6 +139,22 @@ const reversedFundNavUpdates = computed(() => {
     color: $color-primary;
   }
 }
+.total_nav_skeleton :deep(.v-skeleton-loader__bone) {
+  height: 2rem;
+  margin: 0;
+}
+.last_nav_update_skeleton :deep(.v-skeleton-loader__bone) {
+  height: 1rem;
+  width: 4rem;
+  margin: 0.5rem 0 0 0.5rem;
+}
+.main_header__subtitle {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-content: center;
+}
+
 .button_container {
   display: flex;
   flex-direction: column;

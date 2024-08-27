@@ -23,8 +23,9 @@ import {
 import {
   NAVEntryTypeToPositionTypeMap,
   PositionType,
-  PositionTypeKeys,
-  PositionTypes, PositionTypeToNAVCacheMethod,
+  PositionTypes,
+  PositionTypeToNAVCacheMethod,
+  PositionTypeToNAVCalculationMethod,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type { INAVParts } from "~/types/fund";
@@ -35,6 +36,8 @@ import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import { parseBigInt } from "~/composables/localStorage";
+import { useFundsStore } from "~/store/funds.store";
+import { useToastStore } from "~/store/toast.store";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -62,6 +65,9 @@ interface IState {
   // Loading flags
   loadingNavUpdates: boolean,
   loadingUserBalances: boolean,
+  isNavSimulationLoading: boolean,
+  loadingUserFundDepositRedemptionRequests: boolean,
+  loadingUpdateNav: boolean,
 }
 
 
@@ -81,8 +87,12 @@ export const useFundStore = defineStore({
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
     refreshSimulateNAVCounter: 0,
+    // Loading flags
     loadingNavUpdates: false,
     loadingUserBalances: false,
+    isNavSimulationLoading: false,
+    loadingUserFundDepositRedemptionRequests: false,
+    loadingUpdateNav: false,
   }),
   getters: {
     accountStore(): any {
@@ -94,9 +104,20 @@ export const useFundStore = defineStore({
     web3Store(): any {
       return useWeb3Store();
     },
+    fundsStore(): any {
+      return useFundsStore();
+    },
+    toastStore(): any {
+      return useToastStore();
+    },
     web3(): Web3 {
       console.warn("fundStore.web3 changed", this.web3Store.web3)
       return this.web3Store.web3;
+    },
+    isUsingZodiacPilotExtension(): boolean {
+      // Check if user is using Zodiac Pilot extension.
+      // The connected wallet address is the same as custody (safe address).
+      return this.activeAccountAddress === this.fund?.safeAddress;
     },
     baseToFundTokenExchangeRate(): number {
       // If there was no NAV update yet, the exchange rate is 1:1
@@ -245,6 +266,20 @@ export const useFundStore = defineStore({
       // made after the redemption was requested.
       return this.userRedemptionRequest.timestamp < this.fundLastNAVUpdate?.timestamp;
     },
+    totalCurrentSimulatedNAV(): bigint {
+      // Sum simulated NAV value of all methods.
+      const totalNavMethodsSimulatedNAV = this.fundLastNAVUpdateMethods.reduce(
+        (totalValue: bigint, method: any) => {
+          return totalValue + (method.simulatedNav || 0n);
+        },
+        0n,
+      )
+
+      return (totalNavMethodsSimulatedNAV || 0n) +
+        (this.fund?.fundContractBaseTokenBalance || 0n) +
+        (this.fund?.safeContractBaseTokenBalance || 0n) +
+        (this.fund?.feeBalance || 0n);
+    },
     /**
      * Contracts
      */
@@ -319,6 +354,7 @@ export const useFundStore = defineStore({
     async fetchFundData(): Promise<IFund> {
       // Fetch inception date
       const settingsData = await this.fundContract.methods.getFundSettings().call();
+      // TODO these 2 things can be fetched all at once async and even better along with other fund metadata, not here.
       const performancePeriod = await this.fundContract.methods.feePerformancePeriod().call();
       const managementPeriod = await this.fundContract.methods.feeManagePeriod().call();
 
@@ -347,7 +383,7 @@ export const useFundStore = defineStore({
       this.fundManagedNAVMethods = JSON.parse(
         JSON.stringify(this.fundLastNAVUpdateMethods, stringifyBigInt), parseBigInt,
       );
-      console.log("fundManagedNAVMethods: ", this.fundManagedNAVMethods);
+      console.log("fundManagedNAVMethods: ", toRaw(this.fundManagedNAVMethods));
       this.mergeNAVMethodsFromLocalStorage();
 
       this.loadingNavUpdates = false;
@@ -386,7 +422,7 @@ export const useFundStore = defineStore({
       } as IClockMode;
     },
     async fetchUserBalances() {
-      if (!this.accountStore.activeAccount?.address) return;
+      if (!this.activeAccountAddress) return;
       this.loadingUserBalances = true;
 
       const promises = await Promise.allSettled([
@@ -401,6 +437,45 @@ export const useFundStore = defineStore({
 
       this.loadingUserBalances = false;
       return promises
+    },
+    fetchFundPendingDepositRedemptionBalance(): void {
+      if (!this.fund) return;
+      this.fund.pendingDepositBalanceError = false;
+      this.fund.pendingRedemptionBalanceError = false;
+      this.fund.pendingDepositBalanceLoading = true;
+      this.fund.pendingRedemptionBalanceLoading = true;
+
+      this.fundContract.methods.getCurrentPendingDepositBal().call().then(
+        (value: any) => {
+          if (this.fund) {
+            this.fund.pendingDepositBalance = value;
+          }
+        },
+      ).catch((error: any) => {
+        console.error("failed fetching fund deposit requests balance.", error)
+        if (this.fund) {
+          this.fund.pendingDepositBalanceError = true;
+        }
+      }).finally(() => {
+        if (this.fund) {
+          this.fund.pendingDepositBalanceLoading = false;
+        }
+      })
+      this.fundContract.methods.getCurrentPendingWithdrawalBal().call().then(
+        (value: any) => {
+          if (this.fund) {
+            this.fund.pendingRedemptionBalance = value;
+          }        },
+      ).catch((error: any) => {
+        console.error("failed fetching fund redemption requests balance.", error)
+        if (this.fund) {
+          this.fund.pendingRedemptionBalanceError = true;
+        }
+      }).finally(() => {
+        if (this.fund) {
+          this.fund.pendingRedemptionBalanceLoading = false;
+        }
+      })
     },
     /**
      * Fetches multiple fund metadata such as:
@@ -653,6 +728,122 @@ export const useFundStore = defineStore({
 
       return parsedNavParts;
     },
+    async simulateCurrentNAV(): Promise<void> {
+      /**
+       * Simulate NAV for the fund last NAV update.
+       */
+      if (!this.web3Store.web3 || this.isNavSimulationLoading) return;
+      this.isNavSimulationLoading = true;
+
+      if (!this.fundsStore.allNavMethods?.length) {
+        const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
+        const fundAddresses: string[] = fundsInfoArrays[0];
+
+        // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
+        // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
+        // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
+        console.log("[CURRENT NAV] simulate fetch all nav methods")
+        await this.fundsStore.fetchAllNavMethods(fundAddresses);
+      }
+      console.log("[CURRENT NAV] START SIMULATE:")
+
+      // Simulate all at once as many promises instead of one by one.
+      const promises = [];
+
+      for (const navEntry of this.fundLastNAVUpdateMethods) {
+        promises.push(this.simulateNAVMethodValue(navEntry));
+      }
+      const settled = await Promise.allSettled(promises);
+      this.isNavSimulationLoading = false;
+      console.log("[CURRENT NAV] SIMULATE DONE:", this.isNavSimulationLoading, settled)
+    },
+    async simulateNAVMethodValue(navEntry: INAVMethod) {
+      if (!this.web3Store.web3 || !navEntry.detailsHash || navEntry.isNavSimulationLoading) return;
+      const baseDecimals = this.fund?.baseToken.decimals;
+      if (!baseDecimals) {
+        console.error("simulateNAVMethodValue error, no fund base decimals.")
+        return;
+      }
+
+      try {
+        navEntry.isNavSimulationLoading = true;
+        navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
+        if (!navEntry.pastNAVUpdateEntryFundAddress) {
+          navEntry.pastNAVUpdateEntryFundAddress =
+            this.fundsStore.navMethodDetailsHashToFundAddress[
+              navEntry.detailsHash ?? ""
+            ];
+        }
+        if (!navEntry.pastNAVUpdateEntryFundAddress) {
+          // If there is no pastNAVUpdateEntryFundAddress the simulation will fail later.
+          // A missing pastNAVUpdateEntryFundAddress can mean two things:
+          //   1) A proposal is not approved yet and so its methods are not yet in the allNavMethods
+          //     -> that means the method was created on this fund, so we take address of this fund.
+          //  2) There was some difference when hashing details on INAVMethod detailsHash.
+          //    -> it will be hard to detect this, NAV simulation will fail, and we will take a look what happened.
+          //    -> We have a bigger problem if it won't fail, we should mark the address somewhere in the table.
+          //
+          // Here we take solution 1), as we assume that the method was not yet added to allMethods
+          navEntry.pastNAVUpdateEntryFundAddress = this.fund?.address;
+          navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
+        }
+
+        const callData = [];
+        if (navEntry.positionType === PositionType.Liquid) {
+          callData.push(prepNAVMethodLiquid(navEntry.details));
+          callData.push(this.fund?.safeAddress);
+        } else if (navEntry.positionType === PositionType.Illiquid) {
+          callData.push(prepNAVMethodIlliquid(navEntry.details, baseDecimals));
+          callData.push(this.fund?.safeAddress);
+        } else if (navEntry.positionType === PositionType.NFT) {
+          callData.push(prepNAVMethodNFT(navEntry.details));
+          // callData.push(this.fundStore.fund?.safeAddress);
+        } else if (navEntry.positionType === PositionType.Composable) {
+          callData.push(prepNAVMethodComposable(navEntry.details));
+        }
+
+        callData.push(
+          ...[
+            this.fund?.address, // fund
+            0, // navEntryIndex
+            navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
+            parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
+            parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
+            navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
+          ],
+        );
+
+        // console.log("json: ", JSON.stringify(callData, null, 2))
+        const navCalculationMethod =
+          PositionTypeToNAVCalculationMethod[navEntry.positionType];
+        navEntry.simulatedNavFormatted = "N/A";
+        navEntry.simulatedNav = 0n;
+
+        console.log("simulateNAVMethodValue isNavSimulationLoading:", this.isNavSimulationLoading)
+        try {
+          const simulatedVal: bigint = await this.navCalculatorContract.methods[
+            navCalculationMethod
+          ](...callData).call();
+          // console.log("simulated value: ", simulatedVal);
+
+          navEntry.simulatedNavFormatted = this.formatBaseTokenValue(simulatedVal);
+          navEntry.simulatedNav = simulatedVal;
+          navEntry.isSimulatedNavError = false;
+        } catch (error: any) {
+          navEntry.isSimulatedNavError = true;
+          console.error(
+            "simulateNAVMethodValue: Failed simulating value for entry, check if there was some difference " +
+            "when hashing details on INAVMethod detailsHash: ",
+            navEntry,
+            error,
+          );
+        }
+      } catch (error) {
+        console.error("simulateNAVMethodValue Error simulating NAV: ", error);
+      } finally {
+        navEntry.isNavSimulationLoading = false;
+      }
+    },
     async updateNavMethodPastNavValue(navMethodIndex: number, navMethod: INAVMethod) {
       // NOTE: Important to know, that this currently only works for the methods of the last NAV update.
       // Fetch NAV method cached past value.
@@ -669,7 +860,7 @@ export const useFundStore = defineStore({
           0n,
         );
         navMethod.pastNavValue = pastNavValue;
-        navMethod.pastNavValueFormatted = this.formatNAV(pastNavValue);
+        navMethod.pastNavValueFormatted = this.formatBaseTokenValue(pastNavValue);
       } catch (error) {
         navMethod.pastNavValueError = true;
         console.error(`Failed to fetch NAV method last NAV value ${navMethodIndex}:`, navMethod, error);
@@ -716,7 +907,7 @@ export const useFundStore = defineStore({
       navUpdatePromises.forEach((navUpdateResult, navUpdateIndex) => {
         if (navUpdateResult.status === "fulfilled") {
           const navMethods: Record<string, any>[] = navUpdateResult.value;
-          console.log("navMethods: ", navMethods);
+          // console.log("navMethods: ", navMethods);
 
           for (const [navMethodIndex, navMethod] of navMethods.entries()) {
             navUpdates[navUpdateIndex].entries.push(this.parseNAVMethod(navMethodIndex, navMethod))
@@ -726,7 +917,7 @@ export const useFundStore = defineStore({
         }
       });
 
-      console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
+      // console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
       // TODO use this code when reader contract is fixed
       // Fetch NAV JSON entries for each NAV update.
       // const navUpdates: Record<string, any>[][] = dataNAV.encodedNavUpdate.map(decodeNavUpdateEntry);
@@ -744,7 +935,7 @@ export const useFundStore = defineStore({
       // }
       console.warn("navUpdates: ", navUpdates, navUpdatesLen);
       const lastNavUpdateNavMethods = navUpdates[navUpdates.length - 1]?.entries ?? [];
-      console.warn("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
+      console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
       lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
         this.updateNavMethodPastNavValue(navMethodIndex, navMethod);
       });
@@ -853,28 +1044,23 @@ export const useFundStore = defineStore({
       this.userFundShareValue = balanceWei;
       return this.userFundShareValue;
     },
-    /**
-     * Fetch user's fund share value (denominated in base token).
-     */
     async fetchUserFundDepositRedemptionRequests() {
-      // this.userFundShareValue = BigInt("0");
       if (!this.activeAccountAddress) return console.error("Active account not found");
       if (!this.fund?.address) return "";
+      this.loadingUserFundDepositRedemptionRequests = true;
+      const [depositRequestResult, redemptionRequestResult] = await Promise.allSettled([
+        this.fetchUserFundTransactionRequest(FundTransactionType.Deposit),
+        this.fetchUserFundTransactionRequest(FundTransactionType.Redemption),
+      ]);
 
-      try {
-        this.userDepositRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Deposit)
-      } catch (e) {
-        console.error(
-          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
-        );
-      }
-      try {
-        this.userRedemptionRequest = await this.fetchUserFundTransactionRequest(FundTransactionType.Redemption)
-      } catch (e) {
-        console.error(
-          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
-        );
-      }
+      // Extract the results or handle errors
+      // TODO also if not fulfilled set that it had error and display error in place of the failed request
+      const depositRequest = depositRequestResult.status === "fulfilled" ? depositRequestResult.value : undefined;
+      const redemptionRequest = redemptionRequestResult.status === "fulfilled" ? redemptionRequestResult.value : undefined;
+      this.userDepositRequest = depositRequest;
+      this.userRedemptionRequest = redemptionRequest;
+
+      this.loadingUserFundDepositRedemptionRequests = false;
     },
     async fetchUserFundTransactionRequest(fundTransactionType: FundTransactionType) {
       if (!this.activeAccountAddress) return undefined;
@@ -906,6 +1092,24 @@ export const useFundStore = defineStore({
       }
 
       return undefined
+    },
+    async fetchFundContractBaseTokenBalance() {
+      if (!this.activeAccountAddress) return;
+      if (!this.fund?.address) return;
+
+      this.fund.fundContractBaseTokenBalanceLoading = true;
+      let balanceWei = BigInt("0");
+      try {
+        balanceWei = await this.fundBaseTokenContract.methods.balanceOf(this.fund?.address).call()
+        this.fund.fundContractBaseTokenBalanceError = false;
+      } catch (e) {
+        this.fund.fundContractBaseTokenBalanceError = true;
+        console.error(
+          "Failed fetching fetchFundBaseTokenBalance error. -> ", e,
+        );
+      }
+      this.fund.fundContractBaseTokenBalance = balanceWei;
+      this.fund.fundContractBaseTokenBalanceLoading = false;
     },
     async getRoleModAddress(): Promise<string> {
       if (!this.fund?.address) return "";
@@ -971,15 +1175,75 @@ export const useFundStore = defineStore({
       }
       return [undefined, undefined];
     },
-    formatNAV(value: any): string {
+    formatBaseTokenValue(value: any, shouldCommify: boolean = true): string {
       const baseSymbol = this.fund?.baseToken.symbol;
       const baseDecimals = this.fund?.baseToken.decimals;
       if (!baseDecimals) {
         return value;
       }
 
-      const valueFormatted = value ? formatTokenValue(value, baseDecimals) : "0";
+      const valueFormatted = value ? formatTokenValue(value, baseDecimals, shouldCommify) : "0";
       return valueFormatted + " " + baseSymbol;
+    },
+    formatFundTokenValue(value: any, shouldCommify: boolean = true): string {
+      const fundSymbol = this.fund?.fundToken.symbol;
+      const fundDecimals = this.fund?.fundToken.decimals;
+      if (!fundDecimals) {
+        return value;
+      }
+
+      const valueFormatted = value ? formatTokenValue(value, fundDecimals, shouldCommify) : "0";
+      return valueFormatted + " " + fundSymbol;
+    },
+    async updateNAV(): Promise<any> {
+      this.loadingUpdateNav = true;
+      try {
+        const navExecutorAddr = this.web3Store.NAVExecutorBeaconProxyAddress;
+
+        if (!navExecutorAddr) {
+          this.toastStore.errorToast(
+            "The NAV Executor address is not available for this network. Please contact the Rethink Finance support.",
+          );
+          this.loadingUpdateNav = false;
+          return;
+        }
+
+        return await this.fundContract.methods
+          .executeNAVUpdate(navExecutorAddr)
+          .send({
+            from: this.activeAccountAddress,
+          })
+          .on("transactionHash", (hash: any) => {
+            console.log("tx hash: " + hash);
+            this.toastStore.warningToast(
+              "The transaction has been submitted. Please wait for it to be confirmed.",
+            );
+          })
+          .on("receipt", (receipt: any) => {
+            console.log(receipt);
+            if (receipt.status) {
+              this.toastStore.successToast("The recalculation of OIV NAV has Succeeded");
+            } else {
+              this.toastStore.errorToast(
+                "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
+              );
+            }
+            this.loadingUpdateNav = false;
+          })
+          .on("error", (error: any) => {
+            console.log(error);
+            this.loadingUpdateNav = false;
+            this.toastStore.errorToast(
+              "There has been an error. Please contact the Rethink Finance support.",
+            );
+          });
+      } catch (error) {
+        console.error("Error updating NAV: ", error);
+        this.loadingUpdateNav = false;
+        this.toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      }
     },
   },
 });

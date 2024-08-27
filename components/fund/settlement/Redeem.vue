@@ -76,6 +76,7 @@ import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
+import type IFormError from "~/types/form_error";
 
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
@@ -96,12 +97,8 @@ watch(() => tokenValue.value, () => {
   tokenValueChanged.value = true;
 });
 
-interface IError {
-  message: string,
-  display: boolean,
-}
 const rules = [
-  (value: string): boolean | IError => {
+  (value: string): boolean | IFormError => {
     if (!fund.value) return { message: "Fund data is missing.", display: true }
     const valueWei = ethers.parseUnits(value, fund.value?.baseToken.decimals);
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
@@ -123,12 +120,12 @@ const isRequestRedeemDisabled = computed(() => {
   return errorMessages.value.length > 0 || loadingRequestRedeem.value  || !fundStore.isUserWalletWhitelisted;
 });
 
-const errorMessages = computed<IError[]>(() => {
+const errorMessages = computed<IFormError[]>(() => {
   // Disable Redeem button if any of rules is false.
-  return rules.map(rule => rule(tokenValue.value || "0")).filter(rule => rule !== true) as IError[];
+  return rules.map(rule => rule(tokenValue.value || "0")).filter(rule => rule !== true) as IFormError[];
 });
-const visibleErrorMessages = computed<IError[]>( () => {
-  return errorMessages.value.filter((error: IError) => error.display)
+const visibleErrorMessages = computed<IFormError[]>( () => {
+  return errorMessages.value.filter((error: IFormError) => error.display)
 })
 
 const handleError = (error: any) => {
@@ -147,7 +144,7 @@ const handleError = (error: any) => {
 
 
 const requestRedemption = async () => {
-  if (!accountStore.activeAccount?.address) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
     return;
   }
@@ -159,7 +156,7 @@ const requestRedemption = async () => {
   loadingRequestRedeem.value = true;
 
   const tokensWei = ethers.parseUnits(tokenValue.value || "0", fund.value.fundToken.decimals)
-  console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", accountStore.activeAccount.address);
+  console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", fundStore.activeAccountAddress);
 
   const ABI = [ "function requestWithdraw(uint256 amount)" ];
   const iface = new ethers.Interface(ABI);
@@ -168,7 +165,7 @@ const requestRedemption = async () => {
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: accountStore.activeAccount.address,
+      from: fundStore.activeAccountAddress,
       gas: gasEstimate,
       gasPrice,
     }).on("transactionHash", (hash: string) => {
@@ -189,7 +186,7 @@ const requestRedemption = async () => {
           timestamp: Date.now(),
           type: FundTransactionType.Redemption,
         }
-        tokenValue.value = "0.0";
+        tokenValue.value = "";
       } else {
         toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
       }

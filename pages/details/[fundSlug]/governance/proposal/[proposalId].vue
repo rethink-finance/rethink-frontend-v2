@@ -84,6 +84,7 @@
                           :methods="parseNavEntries(proposal?.calldatasDecoded?.[index]?.calldataDecoded)"
                           show-summary-row
                           show-simulated-nav
+                          idx="[proposalId]"
                         />
                       </template>
                       <template v-else>

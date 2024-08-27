@@ -13,7 +13,7 @@
 const props = defineProps({
   modelValue: {
     type: [Number, String],
-    default: 0,
+    default: "",
   },
   placeholder: {
     type: String,
@@ -31,8 +31,8 @@ const internalValueAsString = computed({
   get: () => internalValue.value,
   set: (newValue) => {
     if (newValue === "") {
-      // Handle empty input by converting it to 0
-      internalValue.value = "0";
+      // Handle empty input by converting it to empty string.
+      internalValue.value = "";
     } else {
       // Convert the string input to a number
       const parsedValue = parseFloat(newValue);
