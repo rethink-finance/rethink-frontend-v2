@@ -120,6 +120,9 @@
             </div>
             <template v-else>
               {{ pendingRedemptionBalanceFormatted }} {{ fund.fundToken.symbol }}
+              <div class="pending_redemptions_estimate">
+                ≈ {{ estimatedPendingRedemptionBalance }} {{ fund.baseToken.symbol }}
+              </div>
             </template>
           </div>
           <div class="data_bar__subtitle">
@@ -230,9 +233,10 @@
 </template>
 
 <script setup lang="ts">
+import { ethers, FixedNumber } from "ethers";
 import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
-import { formatTokenValue } from "~/composables/formatters";
+import { formatTokenValue, roundToSignificantDigits } from "~/composables/formatters";
 
 const fundStore = useFundStore();
 
@@ -272,6 +276,34 @@ const pendingDepositBalanceFormatted = computed(() => {
 const pendingRedemptionBalanceFormatted = computed(() => {
   if (!fund?.pendingRedemptionBalance) return 0;
   return formatTokenValue(fund?.pendingRedemptionBalance, fund.fundToken.decimals, false)
+});
+
+const estimatedFundToBaseTokenExchangeRate = computed((): FixedNumber => {
+  // Estimated Fund to Base token exchange rate based on the current NAV simulated value or user's manual input.
+  if (!fundStore.fund || !totalCurrentSimulatedNAV.value || !fundStore.fund?.fundTokenTotalSupply) {
+    return FixedNumber.fromString("0");
+  }
+
+  const fundTokenTotalSupply = FixedNumber.fromString(
+    ethers.formatUnits(fundStore.fund?.fundTokenTotalSupply, fundStore.fund?.fundToken.decimals),
+  );
+  const totalCurrentSimulatedNAVValue = FixedNumber.fromString(
+    ethers.formatUnits(totalCurrentSimulatedNAV.value, fundStore.fund?.baseToken.decimals),
+  );
+
+  return totalCurrentSimulatedNAVValue.div(fundTokenTotalSupply);
+});
+
+const estimatedPendingRedemptionBalance = computed(() => {
+  // Estimated Fund to Base token exchange rate based on the current NAV simulated value or user's manual input.
+  if (!fundStore.fund || !fundStore.fund?.pendingRedemptionBalance) return 0;
+
+  const pendingRedemptionBalance = FixedNumber.fromString(
+    ethers.formatUnits(fundStore.fund?.pendingRedemptionBalance, fundStore.fund?.fundToken.decimals),
+  );
+
+  // Calculate the estimated value using the exchange rate
+  return roundToSignificantDigits(pendingRedemptionBalance.mul(estimatedFundToBaseTokenExchangeRate.value).toString());
 });
 
 // TODO convert Redemption Requests to baseToken based on the current (simulated NAV) exch rate.
@@ -325,5 +357,9 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 2rem;
+}
+.pending_redemptions_estimate {
+  margin-left: 0.25rem;
+  color: $color-primary-dark;
 }
 </style>
