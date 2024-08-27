@@ -301,7 +301,7 @@ const pendingRedemptionBalanceFormatted = computed(() => {
 
 const estimatedFundToBaseTokenExchangeRate = computed((): FixedNumber | undefined => {
   // Estimated Fund to Base token exchange rate based on the current NAV simulated value or user's manual input.
-  if (!fundStore.fund || !totalCurrentSimulatedNAV.value || !fundStore.fund?.fundTokenTotalSupply) {
+  if (!fundStore.fund || !fundStore.fund?.fundTokenTotalSupply) {
     return undefined;
   }
 
@@ -329,7 +329,9 @@ const estimatedPendingRedemptionBalanceInBase = computed(() => {
 });
 const estimatedPendingRedemptionBalanceInBaseFormatted = computed(() => {
   // Estimated Fund to Base token exchange rate based on the current NAV simulated value or user's manual input.
-  if (!fundStore.fund || estimatedPendingRedemptionBalanceInBase.value === undefined) return "N/A";
+  if (!fundStore.fund || !estimatedPendingRedemptionBalanceInBase.value || estimatedPendingRedemptionBalanceInBase.value.isZero()) {
+    return "0 " + fundStore.fund?.baseToken.symbol;
+  }
   if (estimatedPendingRedemptionBalanceInBase.value.isZero()) return "0 " + fundStore.fund.baseToken.symbol;
 
   // Calculate the estimated value using the exchange rate
