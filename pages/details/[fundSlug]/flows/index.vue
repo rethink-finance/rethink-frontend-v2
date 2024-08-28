@@ -307,7 +307,7 @@
 import { ethers, FixedNumber } from "ethers";
 import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
-import { formatTokenValue, roundToSignificantDigits } from "~/composables/formatters";
+import { formatTokenValue, roundToSignificantDecimals } from "~/composables/formatters";
 
 const fundStore = useFundStore();
 
@@ -416,7 +416,7 @@ const estimatedPendingRedemptionBalanceInBaseFormatted = computed(() => {
   console.log("estimatedPendingRedemptionBalanceInBase", estimatedPendingRedemptionBalanceInBase.value);
 
   // Calculate the estimated value using the exchange rate
-  return roundToSignificantDigits(estimatedPendingRedemptionBalanceInBase.value.toString()) + " " + fundStore.fund.baseToken.symbol;
+  return roundToSignificantDecimals(estimatedPendingRedemptionBalanceInBase.value.toString()) + " " + fundStore.fund.baseToken.symbol;
 });
 
 
@@ -437,7 +437,7 @@ const fundingGap = computed(() => {
 
 const fundingGapFormatted = computed(() => {
   if (!fundStore.fund || fundingGap.value === undefined) return "N/A";
-  return roundToSignificantDigits(fundingGap.value.toString()) + " " + fundStore.fund?.baseToken.symbol;
+  return roundToSignificantDecimals(fundingGap.value.toString()) + " " + fundStore.fund?.baseToken.symbol;
 });
 const absoluteFundingGap = computed(() => {
   if (!fundStore.fund || fundingGap.value === undefined) return "";

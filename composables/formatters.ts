@@ -144,32 +144,40 @@ export const commify = (value: string | number | bigint) => {
  * @param value The value to format, either a number or a bigint.
  * @param decimals The number of decimals the token has.
  * @param shouldCommify Add commas like: "10000" -> "10,000".
+ * @param shouldroundToSignificantDecimals Round to first 3 non-zero digits after the decimal point.".
  * @returns The formatted token value with a fixed precision of 3 decimal places.
  */
-// export const formatTokenValue = (value: number | bigint, decimals: number): string => {
-//   return trimTrailingZeros(
-//     (Math.floor(Number(ethers.formatUnits(value, decimals)) * 1000) / 1000).toFixed(3),
-//   );
-// }
 
-export const formatTokenValue = (value?: bigint, decimals?: number, shouldCommify = true): string => {
+export const formatTokenValue = (
+  value?: bigint,
+  decimals?: number,
+  shouldCommify = true,
+  shouldroundToSignificantDecimals = false,
+): string => {
   if (!value || !decimals) return "0";
 
   try {
     if (Number(value) === 0) return "0";
-    const formattedValue = ethers.formatUnits(value, decimals);
+    let formattedValue = ethers.formatUnits(value, decimals);
+    if (shouldroundToSignificantDecimals) {
+      console.log("unformatted:", formattedValue);
+      formattedValue = roundToSignificantDecimals(formattedValue, 3);
+      console.log("FFFFormatted:", formattedValue);
+    }
 
     return shouldCommify ? commify(formattedValue) : formattedValue;
-  } catch(error: any) {
+  } catch (error: any) {
     return ethers.formatUnits(value, decimals);
   }
 }
 
-export const roundToSignificantDigits = (value: number | string, precision: number = 3): string => {
+export const roundToSignificantDecimals = (value: number | string, precision: number = 3): string => {
   if (value === 0 || value === "0" || !value) return "0";
 
   // Convert the string to a number in scientific notation
   const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "0";
+  if (Number.isInteger(num)) return num.toString();
 
   // Convert to scientific notation
   const scientificNotation = num.toExponential();
@@ -186,11 +194,3 @@ export const roundToSignificantDigits = (value: number | string, precision: numb
   // Convert back to a string in standard notation
   return parseFloat(roundedNumber).toString();
 }
-
-export const abiFunctionNameToLabel = (name: string) => {
-  // split camelCase to words
-  let output = name.replace(/([A-Z])/g, " $1");
-  // capitalize the first letter
-  output = output.charAt(0).toUpperCase() + output.slice(1);
-  return output;
-};
