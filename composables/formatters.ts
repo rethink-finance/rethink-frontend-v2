@@ -165,6 +165,28 @@ export const formatTokenValue = (value?: bigint, decimals?: number, shouldCommif
   }
 }
 
+export const roundToSignificantDigits = (value: number | string, precision: number = 3): string => {
+  if (value === 0 || value === "0" || !value) return "0";
+
+  // Convert the string to a number in scientific notation
+  const num = typeof value === "string" ? parseFloat(value) : value;
+
+  // Convert to scientific notation
+  const scientificNotation = num.toExponential();
+
+  // Split into the coefficient and the exponent
+  const [coefficient, exponent] = scientificNotation.split("e");
+
+  // Round the coefficient to the desired precision
+  const roundedCoefficient = parseFloat(parseFloat(coefficient).toPrecision(precision)).toString();
+
+  // Combine the rounded coefficient with the exponent
+  const roundedNumber = roundedCoefficient + "e" + exponent;
+
+  // Convert back to a string in standard notation
+  return parseFloat(roundedNumber).toString();
+}
+
 export const abiFunctionNameToLabel = (name: string) => {
   // split camelCase to words
   let output = name.replace(/([A-Z])/g, " $1");

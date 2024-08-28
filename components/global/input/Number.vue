@@ -6,6 +6,8 @@
     min="0"
     hide-spin-buttons
     :placeholder="placeholder"
+    :hide-details="hideDetails"
+    @input="$emit('input', $event)"
   />
 </template>
 
@@ -19,9 +21,13 @@ const props = defineProps({
     type: String,
     default: "0",
   },
+  hideDetails: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue", "input"]);
 
 // Always store as a string
 const internalValue = ref(props.modelValue.toString());
@@ -30,6 +36,9 @@ const internalValue = ref(props.modelValue.toString());
 const internalValueAsString = computed({
   get: () => internalValue.value,
   set: (newValue) => {
+    if (newValue) {
+      newValue = newValue.replace("-", "")
+    }
     if (newValue === "") {
       // Handle empty input by converting it to empty string.
       internalValue.value = "";

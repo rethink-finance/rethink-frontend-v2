@@ -5,6 +5,7 @@
       'details_button--expanded': active,
       'details_button--disabled': disabled,
       'details_button--small': small,
+      'details_button--xs': xs,
     }"
   >
     <span v-if="text" :class="active ? 'details_button--text-expanded' : ''">
@@ -35,6 +36,10 @@ export default defineComponent({
       default: false,
     },
     small: {
+      type: Boolean,
+      default: false,
+    },
+    xs: {
       type: Boolean,
       default: false,
     },
@@ -72,6 +77,10 @@ export default defineComponent({
   }
   &--small {
     padding: 0.5rem;
+  }
+  &--xs {
+    padding: 0.25rem;
+    height: auto;
   }
   &--disabled {
     opacity: 0.65;

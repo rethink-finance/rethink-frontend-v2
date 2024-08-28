@@ -10,9 +10,12 @@
         </div>
       </div>
 
+      <FundSettlementAlert v-if="!isConnected">
+        Connect your wallet to sweep the fund contract.
+      </FundSettlementAlert>
       <div class="buttons_container">
         <div>
-          <v-tooltip activator="parent" location="bottom" :disabled="!sweepContractTooltipText">
+          <v-tooltip activator="parent" location="bottom" :disabled="!isConnected">
             <template #activator="{ props }">
               <v-btn
                 v-bind="props"
@@ -39,7 +42,6 @@
         </div>
       </div>
     </div>
-    <FundSettlementSwitchToZodiacPilotAlert v-if="!isUsingZodiacPilotExtension" />
   </div>
 </template>
 
@@ -47,20 +49,23 @@
 import { eth } from "web3";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
+import { useAccountStore } from "~/store/account.store";
 
+const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 
-const { isUsingZodiacPilotExtension } = toRefs(fundStore);
+const { isConnected } = toRefs(accountStore);
 const isSweepLoading = ref(false);
 
 const isSweepContractDisabled = computed(() => {
-  return !!sweepContractTooltipText.value || isSweepLoading.value || !isUsingZodiacPilotExtension.value;
+  return !!sweepContractTooltipText.value || isSweepLoading.value || !isConnected.value;
 });
 const sweepContractTooltipText = computed(() => {
-  if (!isUsingZodiacPilotExtension.value) {
-    return "Switch to the Zodiac Pilot Extension to make a transfer.";
+  if (!isConnected.value) {
+    return "Connect your wallet to sweep the fund contract.";
   } else if (!fundContractBaseTokenBalance.value) {
+    // TODO actually we need to check if there are excess funds to sweep.
     return "Currently there are no base assets in the fund contract to sweep.";
   }
   return ""
