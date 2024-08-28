@@ -2,12 +2,13 @@ import type IClockMode from "~/types/clock_mode";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
+import type IFundSettings from "./fund_settings";
 
 export interface INAVParts {
-  baseAssetOIVBal: bigint,
-  baseAssetSafeBal: bigint,
-  feeBal: bigint,
-  totalNAV: bigint,
+  baseAssetOIVBal: bigint;
+  baseAssetSafeBal: bigint;
+  feeBal: bigint;
+  totalNAV: bigint;
 }
 
 /**
@@ -31,6 +32,8 @@ export interface INAVParts {
  * safe: "0x41d528de21DaEF1B1FEAF66566977e35eE375fd0"
  */
 export default interface IFund {
+  // Original Fund Settings
+  originalFundSettings?: IFundSettings;
   // chain data is populated from the current network
   // the user has selected when fetching funds.
   chainName: string;
@@ -42,8 +45,8 @@ export default interface IFund {
   clockMode?: IClockMode;
 
   // Governor address or delegateToAddress
-  governorAddress: string;  // governor
-  safeAddress: string;  // safe
+  governorAddress: string; // governor
+  safeAddress: string; // safe
 
   inceptionDate: string;
   fundToken: IToken;
@@ -68,7 +71,7 @@ export default interface IFund {
   netDeposits: string;
 
   // Overview fields
-  isWhitelistedDeposits: boolean,
+  isWhitelistedDeposits: boolean;
   allowedDepositAddresses: string[];
   allowedManagerAddresses: string[];
 
@@ -128,10 +131,10 @@ export default interface IFund {
   navUpdates: INAVUpdate[];
 
   // Deposit & Redemption Requests Balance
-  pendingDepositBalance?: bigint,
-  pendingRedemptionBalance?: bigint,
-  pendingDepositBalanceLoading?: boolean,
-  pendingDepositBalanceError?: boolean,
-  pendingRedemptionBalanceLoading?: boolean,
-  pendingRedemptionBalanceError?: boolean,
+  pendingDepositBalance?: bigint;
+  pendingRedemptionBalance?: bigint;
+  pendingDepositBalanceLoading?: boolean;
+  pendingDepositBalanceError?: boolean;
+  pendingRedemptionBalanceLoading?: boolean;
+  pendingRedemptionBalanceError?: boolean;
 }

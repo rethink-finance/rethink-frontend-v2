@@ -35,7 +35,7 @@
         <v-btn
           class="button--primary"
           :type="isLastStep ? 'submit' : 'button'"
-          :loading="isSubmitLoading"
+          :loading="loading"
           @click="handleButtonClick"
           :disabled="isLastStep && !accountStore.isConnected"
         >
@@ -135,10 +135,13 @@
 </template>
 
 <script setup lang="ts">
+import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useRouter } from "vue-router";
+import type { AbiFunctionFragment } from "web3";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
 import {
   FundSettingProposalFieldsMap,
   ProposalStep,
@@ -154,6 +157,7 @@ import SectionWhitelist from "./SectionWhitelist.vue";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
+const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const router = useRouter();
@@ -175,16 +179,19 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-const isSubmitLoading = ref(false);
+const loading = ref(false);
 const activeStep = ref(proposalSteps[0]);
 const form = ref(null);
 const formIsValid = ref(false);
 const isInfoVisible = ref(false);
 
+const updateSettingsABI = GovernableFund.abi.find(
+  (func) => func.name === "updateSettings" && func.type === "function"
+);
+
 // TODO: implement undo changes that will reset form with initial values
 let proposalInitial = {} as IProposal;
 
-// TODO: rename keys to match the proposal keys from the API
 const proposal = ref<IProposal>({
   // Basics
   photoUrl: "",
@@ -311,21 +318,154 @@ const handleButtonClick = () => {
   isLastStep.value ? submit() : nextStep();
 };
 
-const submit = () => {
-  console.log("proposal.value: ", proposal.value);
-
+const submit = async () => {
+  if (!web3Store.web3) return;
   formIsValid.value = checkIfAllFieldsValid();
 
   if (formIsValid.value) {
-    toastStore.successToast("Proposal submitted successfully");
+    const formattedProposal = formatProposalData(proposal.value);
+    console.log("formattedProposal: ", formattedProposal);
 
-    // TODO: here goes the logic to submit the proposal
+    const encodedData = web3Store.web3.eth.abi.encodeFunctionCall(
+      updateSettingsABI as AbiFunctionFragment,
+      formattedProposal
+    );
 
-    // router.push(`/details/${selectedFundSlug.value}/governance`);
+    const targetAddresses = [fund.address];
+    const gasValues = [0];
+    const calldatas = [encodedData];
+
+    const proposalDetails = {
+      title: proposal.value.proposalTitle,
+      description: proposal.value.proposalDescription,
+    };
+
+    console.log(
+      "proposal:",
+      JSON.stringify(
+        {
+          targetAddresses,
+          gasValues,
+          calldatas,
+        },
+        null,
+        2
+      )
+    );
+
+    try {
+      await fundStore.fundGovernorContract.methods
+        .propose(
+          targetAddresses,
+          gasValues,
+          calldatas,
+          JSON.stringify({
+            title: proposal.value.proposalTitle,
+            description: proposal.value.proposalDescription,
+          })
+        )
+        .send({
+          from: fundStore.activeAccountAddress,
+          maxPriorityFeePerGas: undefined,
+          maxFeePerGas: undefined,
+        })
+        .on("transactionHash", (hash: string) => {
+          console.log("tx hash: " + hash);
+          toastStore.addToast(
+            "The proposal transaction has been submitted. Please wait for it to be confirmed."
+          );
+
+          router.push(`/details/${selectedFundSlug.value}/governance`);
+        })
+        .on("receipt", (receipt: any) => {
+          console.log("receipt: ", receipt);
+          if (receipt.status) {
+            toastStore.successToast(
+              "Register the proposal transactions was successful. " +
+                "You can now vote on the proposal in the governance page."
+            );
+            router.push(`/details/${selectedFundSlug.value}/governance`);
+          } else {
+            toastStore.errorToast(
+              "The register proposal transaction has failed. Please contact the Rethink Finance support."
+            );
+          }
+          loading.value = false;
+        })
+        .on("error", (error: any) => {
+          console.error(error);
+          loading.value = false;
+          toastStore.errorToast(
+            "There has been an error. Please contact the Rethink Finance support."
+          );
+        });
+    } catch (error: any) {
+      loading.value = false;
+      toastStore.errorToast(error.message);
+    }
   } else {
-    // form.value?.validate();
     toastStore.warningToast("Please fill all the required fields");
   }
+};
+
+// format proposal data to be sent to the backend
+const formatProposalData = (proposal: IProposal) => {
+  const originalFundSettings = fund.originalFundSettings;
+
+  console.log("originalFundSettings: ", originalFundSettings);
+
+  const fundSettings = {
+    // ...originalFundSettings,
+
+    depositFee: parseInt(proposal.depositFee),
+    withdrawFee: parseInt(proposal.redemptionFee),
+    performanceFee: parseInt(proposal.profitManagemnetFee),
+    managementFee: parseInt(proposal.managementFee),
+    performaceHurdleRateBps: parseInt(proposal.hurdleRate),
+    baseToken: proposal.denominationAsset,
+    safe: originalFundSettings?.safe, // did not change
+    isExternalGovTokenInUse: originalFundSettings?.isExternalGovTokenInUse, // did not change
+    isWhitelistedDeposits: originalFundSettings?.isWhitelistedDeposits, // did not change
+    allowedDepositAddrs: whitelist.value
+      .filter((item) => !item.deleted)
+      .map((item) => item.address),
+    allowedManagers: JSON.parse(
+      JSON.stringify(originalFundSettings?.allowedManagers)
+    ), // did not change
+    governanceToken: proposal.governanceToken,
+    fundAddress: originalFundSettings?.fundAddress, // did not change
+    governor: originalFundSettings?.governor, // did not change
+    fundName: proposal.fundDAOName,
+    fundSymbol: proposal.tokenSymbol,
+    feeCollectors: [
+      proposal.depositFeeRecipientAddress,
+      proposal.redemptionFeeRecipientAddress,
+      proposal.managementFeeRecipientAddress,
+      proposal.profitManagemnetFeeRecipientAddress,
+    ],
+  };
+
+  // metadata should be stringified
+  const metaData = {
+    photoUrl: proposal.photoUrl,
+    description: proposal.description,
+    plannedSettlementPeriod: proposal.plannedSettlementPeriod,
+    minLiquidAssetShare: proposal.minLiquidAssetShare,
+  };
+  // performance and management periods
+  const performancePeriod =
+    proposal.profitManagementFeePeriod == "365"
+      ? "0"
+      : proposal.profitManagementFeePeriod;
+  const managementPeriod =
+    proposal.managementFeePeriod == "365" ? "0" : proposal.managementFeePeriod;
+
+  return [
+    fundSettings,
+    JSON.stringify(metaData),
+    parseInt(managementPeriod),
+    parseInt(performancePeriod),
+  ];
 };
 
 const prevStep = () => {
@@ -354,11 +494,15 @@ const populateProposal = () => {
   console.log("fundDeepCopy: ", fundDeepCopy);
 
   proposal.value = {
+    // Metadata
     photoUrl: fundDeepCopy?.photoUrl ?? "",
+    plannedSettlementPeriod: fundDeepCopy?.plannedSettlementPeriod ?? "",
+    minLiquidAssetShare: fundDeepCopy?.minLiquidAssetShare ?? "",
+    description: fundDeepCopy?.description ?? "",
+    // Fund settings
     fundDAOName: fundDeepCopy?.title ?? "",
     tokenSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
     denominationAsset: fundDeepCopy?.baseToken?.address ?? "",
-    description: fundDeepCopy?.description ?? "",
     depositFee: fundDeepCopy?.depositFee ?? "",
     depositFeeRecipientAddress: fundDeepCopy?.depositFeeAddress ?? "",
     redemptionFee: fundDeepCopy?.withdrawFee ?? "",
@@ -373,16 +517,17 @@ const populateProposal = () => {
       fundDeepCopy?.performancePeriod ?? ""
     ),
     hurdleRate: fundDeepCopy?.performaceHurdleRateBps ?? "",
-    plannedSettlementPeriod: fundDeepCopy?.plannedSettlementPeriod ?? "",
-    minLiquidAssetShare: fundDeepCopy?.minLiquidAssetShare ?? "",
-    governanceToken: fundDeepCopy?.governanceToken?.symbol ?? "",
+    // Governance
+    governanceToken: fundDeepCopy?.governanceToken?.address ?? "",
     quorum: fundDeepCopy?.quorumPercentage ?? "",
     votingPeriod: fundDeepCopy?.votingPeriod ?? "",
     votingDelay: fundDeepCopy?.votingDelay ?? "",
     proposalThreshold: fundDeepCopy?.proposalThreshold ?? "",
     lateQuorum: fundDeepCopy?.lateQuorum ?? "",
+    // Details
     proposalTitle: "",
     proposalDescription: "",
+    // Whitelist
     whitelist: "",
   };
 
