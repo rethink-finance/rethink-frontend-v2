@@ -411,37 +411,73 @@ const submit = async () => {
 // format proposal data to be sent to the backend
 const formatProposalData = (proposal: IProposal) => {
   const originalFundSettings = fund.originalFundSettings;
-
   console.log("originalFundSettings: ", originalFundSettings);
 
-  const fundSettings = {
-    // ...originalFundSettings,
+  // check which fields are toggled off, and set them to 0 or null address
+  const toggledOffFields = proposalEntry.value
+    .map((step) => {
+      return step.sections.map((section) => {
+        return section.fields
+          .filter((field) => field.isToggleOn === false)
+          .map((field) => {
+            if (field.fields) {
+              return field.fields
+                .filter((subField) => !subField.isToggleOn)
+                .map((subField) => subField.key);
+            }
+            return field.key;
+          });
+      });
+    })
+    .flat(2)
+    .flat();
 
-    depositFee: parseInt(proposal.depositFee),
-    withdrawFee: parseInt(proposal.redemptionFee),
-    performanceFee: parseInt(proposal.profitManagemnetFee),
-    managementFee: parseInt(proposal.managementFee),
-    performaceHurdleRateBps: parseInt(proposal.hurdleRate),
-    baseToken: proposal.denominationAsset,
+  console.log("toggledOffFields: ", toggledOffFields);
+  const nullAddress = "0x0000000000000000000000000000000000000000";
+
+  const fundSettings = {
     safe: originalFundSettings?.safe, // did not change
     isExternalGovTokenInUse: originalFundSettings?.isExternalGovTokenInUse, // did not change
     isWhitelistedDeposits: originalFundSettings?.isWhitelistedDeposits, // did not change
+    allowedManagers: originalFundSettings?.allowedManagers, // did not change
+    fundAddress: originalFundSettings?.fundAddress, // did not change
+    governor: originalFundSettings?.governor, // did not change
+
+    depositFee: toggledOffFields.includes("depositFee")
+      ? 0
+      : parseInt(proposal.depositFee),
+    withdrawFee: toggledOffFields.includes("redemptionFee")
+      ? 0
+      : parseInt(proposal.redemptionFee),
+    performanceFee: toggledOffFields.includes("profitManagemnetFee")
+      ? 0
+      : parseInt(proposal.profitManagemnetFee),
+    managementFee: toggledOffFields.includes("managementFee")
+      ? 0
+      : parseInt(proposal.managementFee),
+    performaceHurdleRateBps: toggledOffFields.includes("hurdleRate")
+      ? 0
+      : parseInt(proposal.hurdleRate),
+    baseToken: proposal.denominationAsset,
     allowedDepositAddrs: whitelist.value
       .filter((item) => !item.deleted)
       .map((item) => item.address),
-    allowedManagers: JSON.parse(
-      JSON.stringify(originalFundSettings?.allowedManagers)
-    ), // did not change
     governanceToken: proposal.governanceToken,
-    fundAddress: originalFundSettings?.fundAddress, // did not change
-    governor: originalFundSettings?.governor, // did not change
     fundName: proposal.fundDAOName,
     fundSymbol: proposal.tokenSymbol,
     feeCollectors: [
-      proposal.depositFeeRecipientAddress,
-      proposal.redemptionFeeRecipientAddress,
-      proposal.managementFeeRecipientAddress,
-      proposal.profitManagemnetFeeRecipientAddress,
+      toggledOffFields.includes("depositFeeRecipientAddress")
+        ? nullAddress
+        : proposal.depositFeeRecipientAddress,
+      toggledOffFields.includes("redemptionFeeRecipientAddress")
+        ? nullAddress
+        : proposal.redemptionFeeRecipientAddress,
+      toggledOffFields.includes("managementFeeRecipientAddress")
+        ? nullAddress
+        : proposal.managementFeeRecipientAddress,
+      toggledOffFields.includes("profitManagemnetFeeRecipientAddress")
+        ? nullAddress
+        : proposal.profitManagemnetFeeRecipientAddress,
     ],
   };
 
@@ -453,18 +489,29 @@ const formatProposalData = (proposal: IProposal) => {
     minLiquidAssetShare: proposal.minLiquidAssetShare,
   };
   // performance and management periods
+  const isPerformancePeriod365 = proposal.profitManagementFeePeriod === "365";
+  const isManagementPeriod365 = proposal.managementFeePeriod === "365";
+  const isPerformancePeriodToggledOff = toggledOffFields.includes(
+    "profitManagementFeePeriod"
+  );
+  const isManagementPeriodToggledOff = toggledOffFields.includes(
+    "managementFeePeriod"
+  );
+
   const performancePeriod =
-    proposal.profitManagementFeePeriod == "365"
-      ? "0"
-      : proposal.profitManagementFeePeriod;
+    isPerformancePeriodToggledOff || isPerformancePeriod365
+      ? 0
+      : parseInt(proposal.profitManagementFeePeriod);
   const managementPeriod =
-    proposal.managementFeePeriod == "365" ? "0" : proposal.managementFeePeriod;
+    isManagementPeriodToggledOff || isManagementPeriod365
+      ? 0
+      : parseInt(proposal.managementFeePeriod);
 
   return [
     fundSettings,
     JSON.stringify(metaData),
-    parseInt(managementPeriod),
-    parseInt(performancePeriod),
+    managementPeriod,
+    performancePeriod,
   ];
 };
 
