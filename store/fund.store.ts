@@ -688,7 +688,6 @@ export const useFundStore = defineStore({
 
       const details = cleanComplexWeb3Data(navMethodData);
       const detailsJson = formatJson(details);
-      console.warn("detailsHash", ethers.keccak256(ethers.toUtf8Bytes(detailsJson)))
 
       return {
         index,
