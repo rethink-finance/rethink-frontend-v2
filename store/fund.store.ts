@@ -35,7 +35,7 @@ import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
-import { parseBigInt } from "~/composables/localStorage";
+import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
 import { useFundsStore } from "~/store/funds.store";
 import { useToastStore } from "~/store/toast.store";
 
@@ -688,6 +688,7 @@ export const useFundStore = defineStore({
 
       const details = cleanComplexWeb3Data(navMethodData);
       const detailsJson = formatJson(details);
+      console.warn("detailsHash", ethers.keccak256(ethers.toUtf8Bytes(detailsJson)))
 
       return {
         index,

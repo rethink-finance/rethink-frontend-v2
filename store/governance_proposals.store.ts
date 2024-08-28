@@ -149,8 +149,9 @@ export const useGovernanceProposalsStore = defineStore({
       } else {
         this.fundProposalsBlockFetchedRanges[chainId][fundAddress] = [latestBlock, oldestBlock];
       }
-      setLocalStorageItem("fundProposalsBlockFetchedRanges", cleanComplexWeb3Data(
-        this.fundProposalsBlockFetchedRanges, true),
+      setLocalStorageItem(
+        "fundProposalsBlockFetchedRanges",
+        cleanComplexWeb3Data(this.fundProposalsBlockFetchedRanges),
       );
     },
     decodeProposalCreatedEvent(event: EventLog): IGovernanceProposal | undefined {

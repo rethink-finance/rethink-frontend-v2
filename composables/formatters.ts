@@ -162,9 +162,7 @@ export const formatTokenValue = (
     if (Number(value) === 0) return "0";
     let formattedValue = ethers.formatUnits(value, decimals);
     if (shouldroundToSignificantDecimals) {
-      console.log("unformatted:", formattedValue);
       formattedValue = roundToSignificantDecimals(formattedValue, 3);
-      console.log("FFFFormatted:", formattedValue);
     }
 
     return shouldCommify ? commify(formattedValue) : formattedValue;
