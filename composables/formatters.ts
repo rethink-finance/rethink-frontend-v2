@@ -91,6 +91,8 @@ export const formatPercent = (value?: number | bigint, includeSign: boolean = fa
 }
 
 export const trimTrailingZeros = (value: string) => {
+  const num = parseFloat(value);
+  if (isNaN(num) || !value.includes(".")) return value;
   return value.replace(/\.?0*$/, "");
 }
 
