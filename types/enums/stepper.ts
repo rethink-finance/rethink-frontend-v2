@@ -17,6 +17,7 @@ export enum InputType {
   Checkbox = "checkbox",
   Number = "number",
   Select = "select",
+  Image = "image",
 }
 
 export const DefaultValues = {
@@ -25,4 +26,5 @@ export const DefaultValues = {
   checkbox: false,
   number: "",
   select: "",
+  image: "",
 } as const;

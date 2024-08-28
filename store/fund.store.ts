@@ -1,12 +1,12 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
-import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import NavCalculator from "~/assets/contracts/NAVCalculator.json";
+import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
@@ -559,6 +559,9 @@ export const useFundStore = defineStore({
         const votingUnit = clockMode.mode === ClockMode.BlockNumber ? "block" : "second";
 
         const fund: IFund = {
+          // Original fund settings
+          originalFundSettings: fundSettings,
+
           chainName: this.web3Store.chainName,
           chainShort: this.web3Store.chainShort,
           address: fundSettings.fundAddress || "",

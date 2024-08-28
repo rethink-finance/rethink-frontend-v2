@@ -201,9 +201,10 @@ const dropdownOptions: Record<string, DropdownOption> = {
   },
   "Fund Settings": {
     click: () => {
-      console.log("Fund Settings");
+      router.push(
+      `/details/${fundStore.selectedFundSlug}/governance/fund-settings`,
+      );
     },
-    disabled: true,
   },
 };
 
