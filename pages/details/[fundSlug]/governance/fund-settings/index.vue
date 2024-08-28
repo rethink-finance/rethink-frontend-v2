@@ -326,14 +326,23 @@ const submit = async () => {
     const formattedProposal = formatProposalData(proposal.value);
     console.log("formattedProposal: ", formattedProposal);
 
+    // TODO: we will delete this old proposal after we change how whitelist works in the backend
+    const formattedProposalOld = formatProposalDataOld();
+    console.log("formattedProposalOld: ", formattedProposalOld);
+
     const encodedData = web3Store.web3.eth.abi.encodeFunctionCall(
       updateSettingsABI as AbiFunctionFragment,
       formattedProposal
     );
 
-    const targetAddresses = [fund.address];
-    const gasValues = [0];
-    const calldatas = [encodedData];
+    const encodedDataOld = web3Store.web3.eth.abi.encodeFunctionCall(
+      updateSettingsABI as AbiFunctionFragment,
+      formattedProposalOld
+    );
+
+    const targetAddresses = [fund.address, fund.address];
+    const gasValues = [0, 0];
+    const calldatas = [encodedDataOld, encodedData];
 
     const proposalDetails = {
       title: proposal.value.proposalTitle,
@@ -506,6 +515,28 @@ const formatProposalData = (proposal: IProposal) => {
     isManagementPeriodToggledOff || isManagementPeriod365
       ? 0
       : parseInt(proposal.managementFeePeriod);
+
+  return [
+    fundSettings,
+    JSON.stringify(metaData),
+    managementPeriod,
+    performancePeriod,
+  ];
+};
+
+// TODO: we will delete this old proposal after we change how whitelist works in the backend
+const formatProposalDataOld = () => {
+  const fundSettings = {
+    ...fund.originalFundSettings,
+  };
+  const metaData = {
+    photoUrl: fund.photoUrl,
+    description: fund.description,
+    plannedSettlementPeriod: fund.plannedSettlementPeriod,
+    minLiquidAssetShare: fund.minLiquidAssetShare,
+  };
+  const performancePeriod = fund.performancePeriod;
+  const managementPeriod = fund.managementPeriod;
 
   return [
     fundSettings,
