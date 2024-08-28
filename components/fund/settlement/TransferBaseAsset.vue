@@ -33,6 +33,9 @@
         </div>
       </div>
 
+      <FundSettlementAlert v-if="!isUsingZodiacPilotExtension">
+        Switch to the Zodiac Pilot extension!
+      </FundSettlementAlert>
       <div class="buttons_container">
         <div>
           <v-tooltip activator="parent" location="bottom" :disabled="!transferTooltipText">
@@ -62,7 +65,6 @@
         </div>
       </div>
     </div>
-    <FundSettlementSwitchToZodiacPilotAlert v-if="!isUsingZodiacPilotExtension" />
   </div>
 </template>
 
@@ -78,7 +80,22 @@ const { isUsingZodiacPilotExtension } = toRefs(fundStore);
 const baseToken = computed(() => {
   return fundStore.fund?.baseToken;
 });
-const tokenValue = ref("");
+
+const emit = defineEmits(["update:modelValue"]);
+const props = defineProps({
+  modelValue: {
+    type: String,
+    default: "",
+  },
+});
+
+const tokenValue = computed({
+  get: () => props?.modelValue ?? "",
+  set: (value: string) => {
+    emit("update:modelValue", value);
+  },
+});
+
 const tokenValueChanged = ref(false);
 const isTransferLoading = ref(false);
 const tokensWei = computed( () => {
