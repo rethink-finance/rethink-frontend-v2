@@ -1,6 +1,6 @@
 <template>
   <div class="fund_info_my_positions">
-    <UiDataBar title="My Positions">
+    <UiDataBar title="My Deposits">
       <!-- TODO: Currently Hide Net Deposits until we start fetching them. -->
       <!--      <div class="data_bar__item">-->
       <!--        <div class="data_bar__title" :class="{'justify-center': fundStore.loadingUserBalances}">-->

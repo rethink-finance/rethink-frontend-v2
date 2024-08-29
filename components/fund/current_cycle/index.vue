@@ -1,10 +1,8 @@
 <template>
   <div class="fund_settlement">
     <div class="card_header">
-      <div>
-        <div class="section_title">
-          Current Cycle
-        </div>
+      <div class="card_header__title">
+        Pending Requests & align design with My Deposits
       </div>
       <div
         v-if="userDepositRequestExists || userRedemptionRequestExists"
@@ -86,9 +84,9 @@
 <script setup lang="ts">
 import { ethers } from "ethers";
 import { computed, ref } from "vue";
-import type IFund from "~/types/fund";
-import { useToastStore } from "~/store/toast.store";
 import { useFundStore } from "~/store/fund.store";
+import { useToastStore } from "~/store/toast.store";
+import type IFund from "~/types/fund";
 
 import { useAccountStore } from "~/store/account.store";
 const emit = defineEmits(["deposit-success"]);
@@ -325,6 +323,20 @@ const handleError = (error: any) => {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+  }
+}
+
+.card_header{
+  &__title{
+    font-size: 1rem;
+    font-weight: bold;
+    color: $color-subtitle;
+    line-height: 1;
+    margin-bottom: 0.75rem;
+
+    @include sm{
+      margin-bottom: 0
+    }
   }
 }
 </style>

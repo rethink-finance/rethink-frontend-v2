@@ -1,13 +1,8 @@
 <template>
   <div class="fund_settlement">
     <div class="card_header">
-      <div>
-        <div class="section_title">
-          {{ fund?.plannedSettlementPeriod || "N/A" }}
-        </div>
-        <div class="section_subtitle">
-          Next Settlement
-        </div>
+      <div class="card_header__title">
+        Manage Deposits & align design with My Deposits
       </div>
       <div class="fund_settlement__buttons">
         <v-btn
@@ -125,6 +120,18 @@ export default {
     gap: 1.5rem;
     @include sm {
       flex-direction: row;
+    }
+
+    &__title{
+      font-size: 1rem;
+      font-weight: bold;
+      color: $color-subtitle;
+      line-height: 1;
+      margin-bottom: 0.75rem;
+
+      @include sm{
+        margin-bottom: 0
+      }
     }
   }
 }
