@@ -26,6 +26,13 @@
             {{ proposal?.description ?? "" }}
           </template>
           <template v-else-if="selectedTab === 'executableCode'">
+            <!-- Show fund setting UI --> 
+            <FundSettingsExecutableCode 
+              v-if="isFundSettingsProposal"
+              :proposal="proposal" 
+            /> 
+            <!-- Show regular executable code --> 
+            <div v-else>
             <v-switch
               v-model="showRawCalldatas"
               label="Raw"
@@ -102,6 +109,7 @@
                 </UiDataRowCard>
               </div>
             </template>
+          </div>
           </template>
 
           <template v-else-if="selectedTab === 'voteSubmissions'">
@@ -174,6 +182,7 @@ import { useWeb3Store } from "~/store/web3.store";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
+import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -243,6 +252,14 @@ const proposal = computed(():IGovernanceProposal | undefined => {
   }
   return proposal;
 })
+
+const isFundSettingsProposal = computed(() => {
+  if (!proposal.value) return;  
+  // Check if the proposal is a fund settings proposal and if has 2 calldatasDecoded
+  // TODO: remove proposal?.value.calldatasDecoded?.length === 2 when the backend fixes whitelist logic
+  return proposal?.value.calldataTags?.includes(ProposalCalldataType.FUND_SETTINGS ) && proposal?.value.calldatasDecoded?.length === 2;
+
+});
 
 const parseNavEntries = (calldataDecoded: any): INAVMethod[] => {
   console.log("calldataDecoded", calldataDecoded);

@@ -1,5 +1,5 @@
 <template>
-  <div class="field" v-bind="$attrs">
+  <div :class="`field` + (isPreview ? ' label_preview' : '')" v-bind="$attrs">
     <v-label
       :class="
         `row_title` +
@@ -9,17 +9,22 @@
       <div
         :class="
           `row_title__title` +
-          (isFieldRequired && field.isEditable ? ' label_required' : '') +
-          (isDisabled ? ' label_disabled' : '')
+          (isFieldRequired && field.isEditable && !isPreview
+            ? ' label_required'
+            : '') +
+          (isDisabled && !isPreview ? ' label_disabled' : '')
         "
       >
         {{ field.label }}
-        <span v-if="!field.isEditable" class="row_title__uneditable">
+        <span
+          v-if="!field.isEditable && !isPreview"
+          class="row_title__uneditable"
+        >
           (Uneditable)
         </span>
       </div>
       <ui-char-limit
-        v-if="field.charLimit"
+        v-if="field.charLimit && !isPreview"
         :char-limit="field.charLimit"
         :char-number="value"
       />
@@ -32,7 +37,7 @@
         :type="field.type"
         :min="field.min"
         :rules="field.rules"
-        :disabled="isDisabled || !field.isEditable"
+        :disabled="isDisabled || !field.isEditable || isPreview"
       />
     </template>
 
@@ -42,7 +47,7 @@
         :placeholder="field.placeholder"
         :rules="field.rules"
         auto-grow
-        :disabled="isDisabled || !field.isEditable"
+        :disabled="isDisabled || !field.isEditable || isPreview"
       />
     </template>
 
@@ -54,7 +59,7 @@
         item-title="title"
         item-value="value"
         class="field-select"
-        :disabled="isDisabled || !field.isEditable"
+        :disabled="isDisabled || !field.isEditable || isPreview"
       />
     </template>
 
@@ -73,12 +78,12 @@
           :placeholder="field.placeholder"
           :rules="field.rules"
           rows="10"
-          :disabled="isDisabled || !field.isEditable"
+          :disabled="isDisabled || !field.isEditable || isPreview"
         />
       </div>
     </template>
 
-    <InfoBox v-if="field.info" :info="field.info" />
+    <InfoBox v-if="field.info && !isPreview" :info="field.info" />
   </div>
 </template>
 
@@ -99,6 +104,10 @@ const props = defineProps({
     default: () => "",
   },
   isDisabled: {
+    type: Boolean,
+    default: false,
+  },
+  isPreview: {
     type: Boolean,
     default: false,
   },
@@ -137,6 +146,15 @@ const value = computed({
     margin-left: 0;
     @include sm {
       margin-left: 13rem;
+    }
+  }
+}
+
+.field {
+  &.label_preview {
+    :deep(.v-field) {
+      color: $color-text-irrelevant;
+      opacity: 1;
     }
   }
 }
