@@ -30,6 +30,7 @@
             <FundSettingsExecutableCode 
               v-if="isFundSettingsProposal"
               :proposal="proposal" 
+              :fund="fundStore.fund"
             /> 
             <!-- Show regular executable code --> 
             <div v-else>

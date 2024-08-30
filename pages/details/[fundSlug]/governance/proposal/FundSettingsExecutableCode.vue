@@ -50,10 +50,12 @@ import {
   type IProposal,
   type IStepperSection,
 } from "~/types/enums/fund_setting_proposal";
+import type IFund from "~/types/fund";
 import type IGovernanceProposal from "~/types/governance_proposal";
 
 const props = defineProps<{
   proposal: IGovernanceProposal;
+  fund: IFund;
 }>();
 
 const proposalFundSettings = ref<Partial<IProposal>>({
@@ -124,13 +126,11 @@ function generateSections(proposal: Partial<IProposal>) {
 const sections = computed(() => generateSections(proposalFundSettings.value));
 
 const populateProposalData = () => {
-
-  console.log("props.proposal", props.proposal);
-  console.log("props.proposal", props.proposal);
-  console.log("props.proposal", props.proposal);
-  console.log("props.proposal", props.proposal);
-  console.log("props.proposal", props.proposal);
   if (!props.proposal) return;
+  const fundDeepCopy = props.fund ? JSON.parse(
+    JSON.stringify(props.fund, stringifyBigInt),
+    parseBigInt
+  ) : null;
 
   // TODO: index will change after we change the way whitelists toggles in the backend
   const calldata = props.proposal?.calldatasDecoded[1] ?? {};
@@ -168,12 +168,12 @@ const populateProposalData = () => {
     plannedSettlementPeriod: metaData.plannedSettlementPeriod,
     minLiquidAssetShare: metaData.minLiquidAssetShare,
     // Governance
-    governanceToken: settings.governanceToken,
-    quorum: "",
-    votingPeriod: "",
-    votingDelay: "",
-    proposalThreshold: "",
-    lateQuorum: "",
+    governanceToken: fundDeepCopy?.governanceToken?.address ?? "",
+    quorum: fundDeepCopy?.quorumPercentage ?? "",
+    votingPeriod: fundDeepCopy?.votingPeriod ?? "",
+    votingDelay: fundDeepCopy?.votingDelay ?? "",
+    proposalThreshold: fundDeepCopy?.proposalThreshold ?? "",
+    lateQuorum: fundDeepCopy?.lateQuorum ?? "",
   };
 
   return calldata;
