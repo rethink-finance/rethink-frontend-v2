@@ -142,9 +142,10 @@ export default {
   &__info{
     font-size: 1rem;
     font-weight: bold;
-    color: $color-white;
-    margin-bottom: 1.5rem;
-
+    color: $color-subtitle;
+    line-height: 1;
+    margin-bottom: 0.75rem;
+    
     @include sm{
       margin-bottom: 0
     }

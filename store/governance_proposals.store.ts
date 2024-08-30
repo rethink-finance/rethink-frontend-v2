@@ -1,8 +1,8 @@
+import GovernableFund from "assets/contracts/GovernableFund.json";
 import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
 import { eth, Web3 } from "web3";
-import GovernableFund from "assets/contracts/GovernableFund.json";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
@@ -564,6 +564,8 @@ export const useGovernanceProposalsStore = defineStore({
             proposal.calldataTypes.push(ProposalCalldataType.DIRECT_EXECUTION);
           } else if (proposal.targets[i] === roleModAddress) {
             proposal.calldataTypes.push(ProposalCalldataType.PERMISSIONS);
+          } else if(calldataDecoded?.functionName === "updateSettings") {
+            proposal.calldataTypes.push(ProposalCalldataType.FUND_SETTING);
           } else {
             proposal.calldataTypes.push(ProposalCalldataType.UNDEFINED);
           }
