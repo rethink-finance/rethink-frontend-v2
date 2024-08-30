@@ -2,7 +2,7 @@
   <div class="fund_settlement">
     <div class="card_header">
       <div class="card_header__title">
-        Pending Requests & align design with My Deposits
+        Pending Requests
       </div>
       <div
         v-if="userDepositRequestExists || userRedemptionRequestExists"

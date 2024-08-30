@@ -2,7 +2,7 @@
   <div class="fund_settlement">
     <div class="card_header">
       <div class="card_header__title">
-        Manage Deposits & align design with My Deposits
+        Manage Deposits
       </div>
       <div class="fund_settlement__buttons">
         <v-btn
