@@ -29,9 +29,9 @@ describe("cleanComplexWeb3Data", () => {
     expect(cleanComplexWeb3Data(data)).toEqual(expected);
   });
 
-  it("should handle BigInt values and preserve \"n\"", () => {
+  it("should handle BigInt values and remove \"n\"", () => {
     const data = { big: BigInt("12345678901234567890") };
-    const expected = { big: "12345678901234567890n" };
+    const expected = { big: "12345678901234567890" };
     expect(cleanComplexWeb3Data(data)).toEqual(expected);
   });
 
@@ -62,7 +62,7 @@ describe("cleanComplexWeb3Data", () => {
     const expected = {
       "0x1234": "keep",
       nested: {
-        key: "123n",
+        key: "123",
       },
       value: "test",
     };
@@ -80,7 +80,7 @@ describe("cleanComplexWeb3Data", () => {
     const expected = {
       level1: {
         level2: {
-          bigIntKey: "999n",
+          bigIntKey: "999",
         },
       },
     };

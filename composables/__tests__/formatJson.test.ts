@@ -45,7 +45,7 @@ describe("formatJson", () => {
       b: 23,
     };
     const expected = `{
-  "a": "12345678901234567890n",
+  "a": "12345678901234567890",
   "b": 23
 }`;
     expect(formatJson(data)).toBe(expected);
@@ -101,7 +101,7 @@ describe("formatJson", () => {
     expect(formatJson(undefined)).toBe(undefined); // JSON.stringify(undefined) returns undefined
   });
 
-  it("should handle deeply nested objects with BigInt values", () => {
+  it("should handle deeply nested objects with BigInt values to string", () => {
     const data = {
       z: BigInt("98765432109876543210"),
       y: {
@@ -111,12 +111,12 @@ describe("formatJson", () => {
       a: BigInt("98765432109876543210555555555555555555555555555555555"),
     };
     const expected = `{
-  "a": "98765432109876543210555555555555555555555555555555555n",
+  "a": "98765432109876543210555555555555555555555555555555555",
   "y": {
     "w": 42,
-    "x": "12345678901234567890n"
+    "x": "12345678901234567890"
   },
-  "z": "98765432109876543210n"
+  "z": "98765432109876543210"
 }`;
     expect(formatJson(data)).toBe(expected);
   });
