@@ -1,8 +1,8 @@
 <template>
   <div
-    class="fund_settings_executable_code section"
     v-for="(section, index) in sections"
     :key="index"
+    class="fund_settings_executable_code section"
   >
     <div class="section__title">
       {{ section.name }}
@@ -14,16 +14,16 @@
         :key="index"
         :cols="field?.cols ?? 12"
       >
-        <div class="toggleable_group" v-if="field.isToggleable">
+        <div v-if="field.isToggleable" class="toggleable_group">
           <div class="fields">
             <v-col
+              v-for="(subField, subFieldIndex) in field.fields"
+              :key="subFieldIndex"
               :cols="subField?.cols ?? 6"
-              v-for="(subField, index) in field.fields"
-              :key="index"
             >
               <UiField
-                :field="subField"
                 v-model="subField.value"
+                :field="subField"
                 :is-preview="true"
               />
             </v-col>
@@ -31,9 +31,9 @@
         </div>
         <UiField
           v-else
+          v-model="field.value"
           :field="field"
           :is-preview="true"
-          v-model="field.value"
         />
       </v-col>
     </div>
@@ -41,7 +41,6 @@
 </template>
 
 <script setup lang="ts">
-// fund store
 import {
   FundSettingProposalFieldsMap,
   ProposalStep,
@@ -50,12 +49,12 @@ import {
   type IProposal,
   type IStepperSection,
 } from "~/types/enums/fund_setting_proposal";
-import type IFund from "~/types/fund";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { useFundStore } from "~/store/fund.store";
+const fundStore = useFundStore();
 
 const props = defineProps<{
   proposal: IGovernanceProposal;
-  fund: IFund;
 }>();
 
 const proposalFundSettings = ref<Partial<IProposal>>({
@@ -104,13 +103,13 @@ function generateFields(section: IStepperSection, proposal: Partial<IProposal>) 
         ...field,
         fields: output,
       };
-    } else {
-      const fieldTyped = field as IField;
-      return {
-        ...fieldTyped,
-        value: proposal[fieldTyped.key] as string,
-      } as IField;
     }
+    const fieldTyped = field as IField;
+    return {
+      ...fieldTyped,
+      value: proposal[fieldTyped.key] as string,
+    } as IField;
+
   });
 }
 
@@ -127,9 +126,9 @@ const sections = computed(() => generateSections(proposalFundSettings.value));
 
 const populateProposalData = () => {
   if (!props.proposal) return;
-  const fundDeepCopy = props.fund ? JSON.parse(
-    JSON.stringify(props.fund, stringifyBigInt),
-    parseBigInt
+  const fundDeepCopy = fundStore.fund ? JSON.parse(
+    JSON.stringify(fundStore.fund, stringifyBigInt),
+    parseBigInt,
   ) : null;
 
   // TODO: index will change after we change the way whitelists toggles in the backend
@@ -157,10 +156,10 @@ const populateProposalData = () => {
     redemptionFeeRecipientAddress: settings.feeCollectors[1],
     managementFee: settings.managementFee,
     managementFeeRecipientAddress: settings.feeCollectors[2],
-    managementFeePeriod: managementFeePeriod,
+    managementFeePeriod,
     profitManagemnetFee: settings.performanceFee,
     profitManagemnetFeeRecipientAddress: settings.feeCollectors[3],
-    profitManagementFeePeriod: profitManagementFeePeriod,
+    profitManagementFeePeriod,
     hurdleRate: settings.performaceHurdleRateBps,
     // Whitelist
     whitelist: settings.allowedDepositAddrs.join("\n"),
@@ -185,7 +184,7 @@ watch(
   (newValue) => {
     populateProposalData();
   },
-  { immediate: true }
+  { immediate: true },
 );
 </script>
 
