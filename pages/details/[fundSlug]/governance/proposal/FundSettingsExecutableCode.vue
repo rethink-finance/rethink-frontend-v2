@@ -41,6 +41,7 @@
 </template>
 
 <script setup lang="ts">
+import { useFundStore } from "~/store/fund.store";
 import {
   FundSettingProposalFieldsMap,
   ProposalStep,
@@ -49,12 +50,10 @@ import {
   type IProposal,
   type IStepperSection,
 } from "~/types/enums/fund_setting_proposal";
-import type IGovernanceProposal from "~/types/governance_proposal";
-import { useFundStore } from "~/store/fund.store";
 const fundStore = useFundStore();
 
 const props = defineProps<{
-  proposal: IGovernanceProposal;
+  calldataDecoded: any;
 }>();
 
 const proposalFundSettings = ref<Partial<IProposal>>({
@@ -125,23 +124,22 @@ function generateSections(proposal: Partial<IProposal>) {
 const sections = computed(() => generateSections(proposalFundSettings.value));
 
 const populateProposalData = () => {
-  if (!props.proposal) return;
+  // if no decoded data, return
+  if (Object.keys(props.calldataDecoded).length === 0) return;
+
   const fundDeepCopy = fundStore.fund ? JSON.parse(
     JSON.stringify(fundStore.fund, stringifyBigInt),
     parseBigInt,
   ) : null;
 
-  // TODO: index will change after we change the way whitelists toggles in the backend
-  const calldata = props.proposal?.calldatasDecoded[1] ?? {};
-  if (Object.keys(calldata).length === 0) return;
 
   const settings = {
-    ...calldata.calldataDecoded._fundSettings,
+    ...props.calldataDecoded._fundSettings,
   };
-  const metaData = JSON.parse(calldata.calldataDecoded._fundMetadata);
-  const managementFeePeriod = calldata.calldataDecoded._feeManagePeriod;
+  const metaData = JSON.parse(props.calldataDecoded._fundMetadata);
+  const managementFeePeriod = props.calldataDecoded._feeManagePeriod;
   const profitManagementFeePeriod =
-    calldata.calldataDecoded._feePerformancePeriod;
+    props.calldataDecoded._feePerformancePeriod;
 
   proposalFundSettings.value = {
     photoUrl: metaData.photoUrl,
@@ -175,12 +173,11 @@ const populateProposalData = () => {
     lateQuorum: fundDeepCopy?.lateQuorum ?? "",
   };
 
-  return calldata;
 };
 
 // populate proposal data on load
 watch(
-  () => props.proposal,
+  () => props.calldataDecoded,
   (newValue) => {
     populateProposalData();
   },
