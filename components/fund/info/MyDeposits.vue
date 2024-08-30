@@ -1,5 +1,5 @@
 <template>
-  <div class="fund_info_my_positions">
+  <div class="my_deposits">
     <UiDataBar title="My Deposits">
       <!-- TODO: Currently Hide Net Deposits until we start fetching them. -->
       <!--      <div class="data_bar__item">-->
@@ -80,7 +80,7 @@ import { useFundStore } from "~/store/fund.store";
 import type IFund from "~/types/fund";
 
 export default {
-  name: "FundInfoMyPositions",
+  name: "FundInfoMyDeposits",
   props: {
     fund: {
       type: Object as PropType<IFund>,
@@ -100,15 +100,15 @@ export default {
     },
     userFundTokenBalanceFormatted() {
       if (!this.fundToken) return "N/A";
-      return this.fundStore.formatFundTokenValue(this.fundStore.userFundTokenBalance, false);
+      return this.fundStore.formatFundTokenValue(this.fundStore.userFundTokenBalance, false, true);
     },
     userFundAllowanceFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      return this.fundStore.formatBaseTokenValue(this.fundStore.userFundAllowance, false);
+      return this.fundStore.formatBaseTokenValue(this.fundStore.userFundAllowance, false, true);
     },
     userCurrentValueFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      return this.fundStore.formatBaseTokenValue(this.fundStore.userCurrentValue, false);
+      return this.fundStore.formatBaseTokenValue(this.fundStore.userCurrentValue, false, true);
     },
   },
   methods: { numberColorClass },

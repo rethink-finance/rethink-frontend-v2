@@ -8,7 +8,7 @@
         <v-btn
           :class="getDepositRedeemButtonClass('deposit')"
           variant="outlined"
-          @click="toggleActionButton('deposit')"
+          @click="selectActionButton('deposit')"
         >
           Deposit
           <v-tooltip activator="parent" location="bottom">
@@ -18,7 +18,7 @@
         <v-btn
           :class="getDepositRedeemButtonClass('redeem')"
           variant="outlined"
-          @click="toggleActionButton('redeem')"
+          @click="selectActionButton('redeem')"
         >
           Redeem
           <v-tooltip activator="parent" location="bottom">
@@ -67,12 +67,8 @@ export default {
     },
   },
   methods: {
-    toggleActionButton(value: string) {
-      if (this.selectedActionButtonValue === value) {
-        this.selectedActionButtonValue = "";
-      } else {
-        this.selectedActionButtonValue = value;
-      }
+    selectActionButton(value: string) {
+      this.selectedActionButtonValue = value;
     },
     getDepositRedeemButtonClass(buttonType: string) {
       // Check if this.selectedActionButtonValue is falsy and return "" if so

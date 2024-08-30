@@ -42,15 +42,13 @@ const ignoreKeys: Set<string> = new Set(["__length__"]);
  * after the data is ABI decoded. Numeric indexes are removed.
  *
  * @param {any} data - The data to be cleaned. It can be of any type.
- * @param preserveBigInt If true, when formatting bigint to string, the "n" is preserved, so that it can be
- *    parsed back to the bigint from string.
  * @param level Depth level when serializing nested objects.
  * @returns {any} - The cleaned data, with arrays and objects recursively processed.
  */
-export const cleanComplexWeb3Data = (data: any, preserveBigInt: boolean = false, level: number = 0): any => {
+export const cleanComplexWeb3Data = (data: any, level: number = 0): any => {
   if (Array.isArray(data)) {
     // Recursively clean each item in the array
-    return data.map((item) => cleanComplexWeb3Data(item, preserveBigInt, level + 1));
+    return data.map((item) => cleanComplexWeb3Data(item, level + 1));
   } else if (typeof data === "object" && data !== null) {
     // Prepare an object to accumulate the cleaned data
     const cleanedData: { [key: string]: any } = {};
@@ -63,23 +61,29 @@ export const cleanComplexWeb3Data = (data: any, preserveBigInt: boolean = false,
         return;
       }
       // Recursively clean and assign if key is not numeric and not ignored
-      cleanedData[key] = cleanComplexWeb3Data(data[key], preserveBigInt, level + 1);
+      cleanedData[key] = cleanComplexWeb3Data(data[key], level + 1);
     });
     return cleanedData;
   } else if (typeof data === "bigint") {
-    let bigintFormatted = data.toString();
-    if (preserveBigInt) {
-      bigintFormatted += "n";
-    }
-    return bigintFormatted;
+    // When formatting bigint to string, the "n" is preserved, so that it can be parsed back to the bigint from string.
+    return data.toString() + "n";
   }
   // Return primitive types unchanged
   return data;
 };
 
 export const formatJson = (data: any) => {
-  /** This function also sorts JSON keys alphabetically **/
-  const sortKeys = (value: any) => {
+  /**
+   * This function also sorts JSON keys alphabetically.
+   * **/
+  const sortKeys = (value: any): any => {
+    // If the value is an array, return it as-is.
+    // Arrays, unlike objects, have an inherent order that is significant and should be preserved.
+    if (Array.isArray(value)) {
+      return value.map(sortKeys); // Recursively apply sortKeys to each element of the array
+    }
+
+    // If the value is an object (but not null), sort its keys
     if (value && typeof value === "object" && !Array.isArray(value)) {
       return Object.keys(value)
         .sort()
@@ -96,7 +100,7 @@ export const formatJson = (data: any) => {
     (_, value) => {
       // Convert BigInt to string
       if (typeof value === "bigint") {
-        return value.toString();
+        return value.toString() + "n";
       }
       // Return the value unchanged if it doesn't need transformation
       return value;

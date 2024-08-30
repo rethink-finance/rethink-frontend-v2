@@ -10,11 +10,8 @@ import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
-import { parseBigInt } from "~/composables/localStorage";
 import { formatJson, pluralizeWord } from "~/composables/utils";
 import { useAccountStore } from "~/store/account.store";
-import { useFundsStore } from "~/store/funds.store";
-import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
@@ -33,11 +30,14 @@ import {
 import type IFund from "~/types/fund";
 import type { INAVParts } from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
+import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
+import { useFundsStore } from "~/store/funds.store";
+import { useToastStore } from "~/store/toast.store";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -561,7 +561,7 @@ export const useFundStore = defineStore({
         const fund: IFund = {
           // Original fund settings
           originalFundSettings: fundSettings,
-                    
+
           chainName: this.web3Store.chainName,
           chainShort: this.web3Store.chainShort,
           address: fundSettings.fundAddress || "",
@@ -1178,24 +1178,32 @@ export const useFundStore = defineStore({
       }
       return [undefined, undefined];
     },
-    formatBaseTokenValue(value: any, shouldCommify: boolean = true): string {
+    formatBaseTokenValue(
+      value: any,
+      shouldCommify: boolean = true,
+      shouldroundToSignificantDecimals: boolean = false,
+    ): string {
       const baseSymbol = this.fund?.baseToken.symbol;
       const baseDecimals = this.fund?.baseToken.decimals;
       if (!baseDecimals) {
         return value;
       }
 
-      const valueFormatted = value ? formatTokenValue(value, baseDecimals, shouldCommify) : "0";
+      const valueFormatted = value ? formatTokenValue(value, baseDecimals, shouldCommify, shouldroundToSignificantDecimals) : "0";
       return valueFormatted + " " + baseSymbol;
     },
-    formatFundTokenValue(value: any, shouldCommify: boolean = true): string {
+    formatFundTokenValue(
+      value: any,
+      shouldCommify: boolean = true,
+      shouldroundToSignificantDecimals: boolean = false,
+    ): string {
       const fundSymbol = this.fund?.fundToken.symbol;
       const fundDecimals = this.fund?.fundToken.decimals;
       if (!fundDecimals) {
         return value;
       }
 
-      const valueFormatted = value ? formatTokenValue(value, fundDecimals, shouldCommify) : "0";
+      const valueFormatted = value ? formatTokenValue(value, fundDecimals, shouldCommify, shouldroundToSignificantDecimals) : "0";
       return valueFormatted + " " + fundSymbol;
     },
     async updateNAV(): Promise<any> {
