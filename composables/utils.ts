@@ -65,8 +65,7 @@ export const cleanComplexWeb3Data = (data: any, level: number = 0): any => {
     });
     return cleanedData;
   } else if (typeof data === "bigint") {
-    // When formatting bigint to string, the "n" is preserved, so that it can be parsed back to the bigint from string.
-    return data.toString() + "n";
+    return data.toString();
   }
   // Return primitive types unchanged
   return data;
@@ -100,7 +99,7 @@ export const formatJson = (data: any) => {
     (_, value) => {
       // Convert BigInt to string
       if (typeof value === "bigint") {
-        return value.toString() + "n";
+        return value.toString();
       }
       // Return the value unchanged if it doesn't need transformation
       return value;

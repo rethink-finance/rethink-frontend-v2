@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -689,8 +689,11 @@ export const useFundStore = defineStore({
         console.warn("Failed to parse NAV entry JSON description string: ", error);
       }
 
+      // console.log("DETAILS raw 0 ", JSON.stringify(navMethodData, stringifyBigInt, 2))
       const details = cleanComplexWeb3Data(navMethodData);
+      // console.log("DETAILS cleaned 1 ", JSON.stringify(details, null, 2))
       const detailsJson = formatJson(details);
+      // console.log("DETAILS json 2 ", detailsJson)
 
       return {
         index,
