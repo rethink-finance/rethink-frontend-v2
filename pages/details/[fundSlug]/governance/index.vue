@@ -67,6 +67,25 @@
     </UiMainCard>
 
     <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" />
+
+    <UiConfirmDialog
+        v-model="confirmDialog"
+        title="Heads Up!"
+        confirm-text="Continue"
+        :cancel-text="updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to Proposal'"
+        message="You can create a new one or check the ongoing activity first!"
+        @confirm="handleNavigateToCreateProposal"
+        @cancel="updateSettingsProposals.length > 1 ? null : handleGoToFProposal()"
+        class="confirm_dialog"
+        :max-width="updateSettingsProposals.length > 1 ? 'unset' : '600px'"
+      >
+      <FundGovernanceProposalsTable
+        v-if="updateSettingsProposals.length > 1"
+        :items="updateSettingsProposals"
+        :loading="loadingProposals"
+        style="margin-top: 2rem;"
+      />
+      </UiConfirmDialog>
   </div>
 </template>
 
@@ -82,12 +101,16 @@ import { useGovernanceProposalsStore } from "~/store/governance_proposals.store"
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import { ProposalState } from "~/types/enums/governance_proposal";
+import type IGovernanceProposal from "~/types/governance_proposal";
 const router = useRouter();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 const governanceProposalStore = useGovernanceProposalsStore();
+
+const confirmDialog = ref(false);
+const updateSettingsProposals = ref([]) as Ref<IGovernanceProposal[]>;
 
 // dummy data governance activity
 const governanceProposals = computed(() => {
@@ -96,6 +119,13 @@ const governanceProposals = computed(() => {
     fundStore.fund?.address,
   );
 
+  // set updateSettingsProposals to proposals that have updateSettings calldata
+  updateSettingsProposals.value = proposals.filter((proposal) => {
+    return proposal.calldatasDecoded?.some(
+      (calldata) => calldata?.functionName === "updateSettings",
+    );
+  })
+  
   // Sort the events by createdTimestamp
   proposals.sort((a, b) => {
     const timestampA = a.createdTimestamp;
@@ -122,6 +152,9 @@ const pendingProposalsCountText = computed(() => {
     return "1 Pending Proposal";
   }
   return pendingProposals.value.length + " Pending Proposals";
+});
+const hasUpdateSettingsProposal = computed(() => {
+  return updateSettingsProposals.value.length > 0;
 });
 const proposalsSuccessRate = computed(() => {
   const successProposals = governanceProposals.value.filter((proposal) =>
@@ -201,13 +234,34 @@ const dropdownOptions: Record<string, DropdownOption> = {
   },
   "Fund Settings": {
     click: () => {
-      router.push(
-      `/details/${fundStore.selectedFundSlug}/governance/fund-settings`,
-      );
+      // if fund settings proposal already exist, open up the dialog
+      if(hasUpdateSettingsProposal.value) {
+        confirmDialog.value = true;
+        return;
+      }
+      
+      handleNavigateToCreateProposal();
     },
   },
 };
 
+const handleNavigateToCreateProposal = () => {
+  router.push(
+      `/details/${fundStore.selectedFundSlug}/governance/fund-settings`,
+      );
+};
+const handleGoToFProposal = () => {
+  const { createdBlockNumber, proposalId } = updateSettingsProposals.value[0];
+
+  if(!createdBlockNumber || !proposalId) {
+    console.error("No proposalId or createdBlockNumber found");
+    return;
+  }
+
+  router.push(
+    `/details/${fundStore.selectedFundSlug}/governance/proposal/${createdBlockNumber}-${proposalId}`
+  );
+};
 const createProposalDropdownOptions = Object.keys(dropdownOptions).map((key) => {
   return {
     label: key,
@@ -578,5 +632,9 @@ const startFetch = async () => {
 
 .manage-button {
   color: rgb(210, 223, 255) !important;
+}
+
+.confirm_dialog{
+  max-width: unset;
 }
 </style>

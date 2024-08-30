@@ -4,7 +4,7 @@
       :model-value="modelValue"
       scrim="black"
       opacity="0.3"
-      max-width="600"
+      :max-width="maxWidth ?? '600px'"
       @update:model-value="closeDelegateDialog"
     >
       <div class="main_card di_card">
@@ -27,16 +27,19 @@
         </div>
 
         <div class="di_card__content">
-          <div class="di_card__text" v-html="message"></div>
+          <div class="di_card__text" >
+            <span v-html="message"></span>
+            <slot /> <!-- This is where the content will be injected --> 
+          </div>
 
           <div class="di_card__button-container">
             <v-btn
               class="di_card__submit-button"
               variant="text"
               color="white"
-              @click="closeDelegateDialog()"
+              @click="cancel()"
             >
-              Cancel
+              {{ cancelText ?? "Cancel" }}
             </v-btn>
 
             <v-btn
@@ -59,13 +62,19 @@ defineProps({
   message: String,
   title: String,
   confirmText: String,
+  cancelText: String,
+  maxWidth: String,
 });
-const emit = defineEmits(["update:modelValue", "confirm"]);
+const emit = defineEmits(["update:modelValue", "confirm", "cancel"]);
 
 const closeDelegateDialog = () => {
   emit("update:modelValue", false);
 };
 
+const cancel = () => {
+  emit("update:modelValue", false);
+  emit("cancel");
+};
 const confirm = () => {
   emit("update:modelValue", false);
   emit("confirm");
@@ -77,7 +86,6 @@ const confirm = () => {
   margin: 0 auto;
   padding-bottom: 2rem;
   width: 100%;
-  max-width: 500px;
   color: white;
 
   @include borderGray;
