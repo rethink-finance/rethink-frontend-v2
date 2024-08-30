@@ -82,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
+import { ethers, FixedNumber } from "ethers";
 import { computed, ref } from "vue";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -155,19 +155,28 @@ const depositDisabledTooltipText = computed(() => {
   return ""
 });
 const redemptionDisabledTooltipText = computed(() => {
+  const redemptionRequestAmount = userRedemptionRequest?.value?.amount || 0n;
+
   if (!userRedemptionRequestExists.value) {
     return "There is no redemption request."
   }
-  const redemptionRequestAmount = userRedemptionRequest?.value?.amount || 0n;
   if (userFundTokenBalance.value < redemptionRequestAmount) {
     return "Not enough fund tokens to process the redemptions request."
   }
   if (shouldUserWaitSettlementOrCancelRedemption.value) {
     return "Wait for settlement or cancel the redemption request."
   }
+
   // Check if there is even enough liquidity in the fund contract to redeem the requested amount.
   const fundContractBaseTokenBalance = fundStore.fund?.fundContractBaseTokenBalance || 0n;
-  if (fundContractBaseTokenBalance > redemptionRequestAmount) {
+  // Get the last NAV update exchange rate.
+  const lastNAVExchangeRate = FixedNumber.fromString(fundStore.fundToBaseTokenExchangeRate.toString());
+  const redemptionRequestAmountFN = FixedNumber.fromValue(redemptionRequestAmount);
+  const fundContractBaseTokenBalanceFN = FixedNumber.fromString(
+    ethers.formatUnits(fundContractBaseTokenBalance, fundStore.fund?.fundToken.decimals),
+  );
+  const redemptionRequestAmountInBaseFN = redemptionRequestAmountFN.mul(lastNAVExchangeRate);
+  if (fundContractBaseTokenBalanceFN.lt(redemptionRequestAmountInBaseFN)) {
     return "Not enough liquidity in the fund contract."
   }
   if (!fundStore.isUserWalletWhitelisted) {
