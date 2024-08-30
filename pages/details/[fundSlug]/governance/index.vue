@@ -121,8 +121,8 @@ const governanceProposals = computed(() => {
 
   // set updateSettingsProposals to proposals that have updateSettings calldata
   updateSettingsProposals.value = proposals.filter((proposal) => {
-    return proposal.calldatasDecoded?.some(
-      (calldata) => calldata?.functionName === "updateSettings",
+    return proposal.calldataTags?.some(
+      (calldata) => calldata === "Fund Setting",
     );
   })
   
