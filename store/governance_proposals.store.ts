@@ -565,7 +565,7 @@ export const useGovernanceProposalsStore = defineStore({
           } else if (proposal.targets[i] === roleModAddress) {
             proposal.calldataTypes.push(ProposalCalldataType.PERMISSIONS);
           } else if(calldataDecoded?.functionName === "updateSettings") {
-            proposal.calldataTypes.push(ProposalCalldataType.FUND_SETTING);
+            proposal.calldataTypes.push(ProposalCalldataType.FUND_SETTINGS);
           } else {
             proposal.calldataTypes.push(ProposalCalldataType.UNDEFINED);
           }

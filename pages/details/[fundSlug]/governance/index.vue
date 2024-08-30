@@ -101,6 +101,7 @@ import { useGovernanceProposalsStore } from "~/store/governance_proposals.store"
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import { ProposalState } from "~/types/enums/governance_proposal";
+import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 const router = useRouter();
 const accountStore = useAccountStore();
@@ -122,7 +123,7 @@ const governanceProposals = computed(() => {
   // set updateSettingsProposals to proposals that have updateSettings calldata
   updateSettingsProposals.value = proposals.filter((proposal) => {
     return proposal.calldataTags?.some(
-      (calldata) => calldata === "Fund Setting",
+      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS,
     );
   })
   

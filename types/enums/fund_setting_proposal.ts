@@ -291,7 +291,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
     {
       label: "Whitelist",
       key: "whitelist",
-      type: InputType.Text,
+      type: InputType.Textarea,
       placeholder: "E.g. 0",
     },
   ],
