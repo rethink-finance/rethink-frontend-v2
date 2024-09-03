@@ -90,7 +90,10 @@ const proposalFundSettings = ref<Partial<IProposal>>({
 });
 
 // helper function to generate fields
-function generateFields(section: IStepperSection, proposal: Partial<IProposal>) {
+function generateFields(
+  section: IStepperSection,
+  proposal: Partial<IProposal>
+) {
   return FundSettingProposalFieldsMap[section.key]?.map((field) => {
     if (field?.isToggleable) {
       const output = field?.fields?.map((subField) => ({
@@ -108,7 +111,6 @@ function generateFields(section: IStepperSection, proposal: Partial<IProposal>) 
       ...fieldTyped,
       value: proposal[fieldTyped.key] as string,
     } as IField;
-
   });
 }
 
@@ -127,19 +129,16 @@ const populateProposalData = () => {
   // if no decoded data, return
   if (Object.keys(props.calldataDecoded).length === 0) return;
 
-  const fundDeepCopy = fundStore.fund ? JSON.parse(
-    JSON.stringify(fundStore.fund, stringifyBigInt),
-    parseBigInt,
-  ) : null;
-
+  const fundDeepCopy = fundStore.fund
+    ? JSON.parse(JSON.stringify(fundStore.fund, stringifyBigInt), parseBigInt)
+    : null;
 
   const settings = {
     ...props.calldataDecoded._fundSettings,
   };
   const metaData = JSON.parse(props.calldataDecoded._fundMetadata);
   const managementFeePeriod = props.calldataDecoded._feeManagePeriod;
-  const profitManagementFeePeriod =
-    props.calldataDecoded._feePerformancePeriod;
+  const profitManagementFeePeriod = props.calldataDecoded._feePerformancePeriod;
 
   proposalFundSettings.value = {
     photoUrl: metaData.photoUrl,
@@ -148,17 +147,17 @@ const populateProposalData = () => {
     denominationAsset: settings.baseToken,
     description: metaData.description,
     // Fees
-    depositFee: settings.depositFee,
+    depositFee: fromBpsToPercentage(settings.depositFee),
     depositFeeRecipientAddress: settings.feeCollectors[0],
-    redemptionFee: settings.withdrawFee,
+    redemptionFee: fromBpsToPercentage(settings.withdrawFee),
     redemptionFeeRecipientAddress: settings.feeCollectors[1],
-    managementFee: settings.managementFee,
+    managementFee: fromBpsToPercentage(settings.managementFee),
     managementFeeRecipientAddress: settings.feeCollectors[2],
     managementFeePeriod,
-    profitManagemnetFee: settings.performanceFee,
+    profitManagemnetFee: fromBpsToPercentage(settings.performanceFee),
     profitManagemnetFeeRecipientAddress: settings.feeCollectors[3],
     profitManagementFeePeriod,
-    hurdleRate: settings.performaceHurdleRateBps,
+    hurdleRate: fromBpsToPercentage(settings.performaceHurdleRateBps),
     // Whitelist
     whitelist: settings.allowedDepositAddrs.join("\n"),
     // Management
@@ -172,7 +171,6 @@ const populateProposalData = () => {
     proposalThreshold: fundDeepCopy?.proposalThreshold ?? "",
     lateQuorum: fundDeepCopy?.lateQuorum ?? "",
   };
-
 };
 
 // populate proposal data on load
@@ -181,7 +179,7 @@ watch(
   (newValue) => {
     populateProposalData();
   },
-  { immediate: true },
+  { immediate: true }
 );
 </script>
 
