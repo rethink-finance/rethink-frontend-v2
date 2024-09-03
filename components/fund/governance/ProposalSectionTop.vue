@@ -50,6 +50,8 @@
         </div>
       </div>
 
+      <!-- TODO: split submit and execute button -->
+      <!-- TODO: don't show the submit button if user already voted -->
       <v-btn
         v-if="isSubmitButtonVisible"
         class="section-top__submit-button"
@@ -150,10 +152,11 @@
 
 <script setup lang="ts">
 // toast
-import { ethers } from "ethers";
 import { truncateAddress } from "~/composables/addressUtils";
 // import { useToastStore } from "~/store/toast.store";
-import type IGovernanceProposal from "~/types/governance_proposal";
+import { useAccountStore } from "~/store/account.store";
+import { useFundStore } from "~/store/fund.store";
+import { useToastStore } from "~/store/toast.store";
 import {
   ProposalState,
   VoteType,
@@ -161,9 +164,7 @@ import {
   VoteTypeMapping,
   VoteTypeNumberMapping,
 } from "~/types/enums/governance_proposal";
-import { useFundStore } from "~/store/fund.store";
-import { useToastStore } from "~/store/toast.store";
-import { useAccountStore } from "~/store/account.store";
+import type IGovernanceProposal from "~/types/governance_proposal";
 
 const props = defineProps({
   proposal: {
