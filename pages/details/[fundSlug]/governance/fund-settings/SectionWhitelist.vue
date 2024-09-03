@@ -172,7 +172,10 @@
     </v-data-table>
 
     <div v-else class="section_whitelist__no_data">
-      There are no addresses in the whitelist
+      Currently there are no addresses in the whitelist.
+      <br />
+      This means that all addresses are allowed to participate in the fund.
+      <br />
     </div>
   </div>
 </template>

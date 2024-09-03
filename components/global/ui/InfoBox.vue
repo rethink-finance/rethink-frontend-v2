@@ -5,7 +5,7 @@
       class="info__icon"
       width="1.5rem"
     />
-    <span>{{ info }}</span>
+    <span v-html="props.info" />
   </div>
 </template>
 

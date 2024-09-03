@@ -75,6 +75,17 @@
                 width="1.5rem"
               />
             </UiTooltipClick>
+
+            <div
+              class="toggleable_group__toggle"
+              v-if="section.name === 'Whitelist'"
+            >
+              <v-switch
+                color="primary"
+                hide-details
+                v-model="isWhitelistToggled"
+              />
+            </div>
           </div>
 
           <UiInfoBox
@@ -122,11 +133,20 @@
               </div>
             </v-col>
           </div>
-          <div v-else class="section-whitelist">
+          <div v-else>
             <SectionWhitelist
+              v-if="isWhitelistToggled"
               :items="whitelist"
               @update-items="whitelist = $event"
             />
+            <div v-else>
+              <UiInfoBox
+                class="info-box"
+                info="Whitelist is disabled. This means that anyone can deposit into the fund. <br>
+                      If you want to enable the whitelist, please toggle the switch above. <br>
+                      Whitelist is a list of addresses that are allowed to deposit into the fund."
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -184,6 +204,7 @@ const activeStep = ref(proposalSteps[0]);
 const form = ref(null);
 const formIsValid = ref(false);
 const isInfoVisible = ref(false);
+const isWhitelistToggled = ref(true);
 
 const updateSettingsABI = GovernableFund.abi.find(
   (func) => func.name === "updateSettings" && func.type === "function"
@@ -444,6 +465,17 @@ const formatProposalData = (proposal: IProposal) => {
   console.log("toggledOffFields: ", toggledOffFields);
   const nullAddress = "0x0000000000000000000000000000000000000000";
 
+  // 1. if whitelist is toggled on, get the whitelist addresses and filter out the deleted ones
+  // 2. if whitelist is toggled off, set the whitelist to an empty array (this will toggle off currently whitelisted addresses in the backend)
+  //    because we are sending two calldatas to the backend(the first one is the old proposal and the second one is the new proposal)
+  //    old proposal will toggle off currently whitelisted addresses, and the new proposal will be an empty array which means that there will be no whitelisted addresses
+  let whitelistValue = [] as string[];
+  if (isWhitelistToggled.value === true) {
+    whitelistValue = whitelist.value
+      .filter((item) => !item.deleted)
+      .map((item) => item.address);
+  }
+
   const fundSettings = {
     safe: originalFundSettings?.safe, // did not change
     isExternalGovTokenInUse: originalFundSettings?.isExternalGovTokenInUse, // did not change
@@ -468,9 +500,7 @@ const formatProposalData = (proposal: IProposal) => {
       ? 0
       : parseInt(fromPercentageToBps(proposal.hurdleRate)),
     baseToken: proposal.denominationAsset,
-    allowedDepositAddrs: whitelist.value
-      .filter((item) => !item.deleted)
-      .map((item) => item.address),
+    allowedDepositAddrs: whitelistValue,
     governanceToken: proposal.governanceToken,
     fundName: proposal.fundDAOName,
     fundSymbol: proposal.tokenSymbol,
@@ -687,6 +717,7 @@ onBeforeUnmount(() => {
   &__toggle {
     display: flex;
     justify-content: flex-end;
+    margin-left: auto;
   }
 }
 
@@ -752,6 +783,13 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
     color: $color-primary;
+  }
+}
+
+.section-whitelist {
+  display: none;
+  &.toggle__on {
+    display: block;
   }
 }
 </style>
