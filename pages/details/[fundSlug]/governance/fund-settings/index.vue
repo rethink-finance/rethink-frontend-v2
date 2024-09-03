@@ -454,19 +454,19 @@ const formatProposalData = (proposal: IProposal) => {
 
     depositFee: toggledOffFields.includes("depositFee")
       ? 0
-      : parseInt(proposal.depositFee),
+      : parseInt(fromPercentageToBps(proposal.depositFee)),
     withdrawFee: toggledOffFields.includes("redemptionFee")
       ? 0
-      : parseInt(proposal.redemptionFee),
+      : parseInt(fromPercentageToBps(proposal.redemptionFee)),
     performanceFee: toggledOffFields.includes("profitManagemnetFee")
       ? 0
-      : parseInt(proposal.profitManagemnetFee),
+      : parseInt(fromPercentageToBps(proposal.profitManagemnetFee)),
     managementFee: toggledOffFields.includes("managementFee")
       ? 0
-      : parseInt(proposal.managementFee),
+      : parseInt(fromPercentageToBps(proposal.managementFee)),
     performaceHurdleRateBps: toggledOffFields.includes("hurdleRate")
       ? 0
-      : parseInt(proposal.hurdleRate),
+      : parseInt(fromPercentageToBps(proposal.hurdleRate)),
     baseToken: proposal.denominationAsset,
     allowedDepositAddrs: whitelist.value
       .filter((item) => !item.deleted)
@@ -581,20 +581,20 @@ const populateProposal = () => {
     fundDAOName: fundDeepCopy?.title ?? "",
     tokenSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
     denominationAsset: fundDeepCopy?.baseToken?.address ?? "",
-    depositFee: fundDeepCopy?.depositFee ?? "",
+    depositFee: fromBpsToPercentage(fundDeepCopy?.depositFee),
     depositFeeRecipientAddress: fundDeepCopy?.depositFeeAddress ?? "",
-    redemptionFee: fundDeepCopy?.withdrawFee ?? "",
+    redemptionFee: fromBpsToPercentage(fundDeepCopy?.withdrawFee),
     redemptionFeeRecipientAddress: fundDeepCopy?.withdrawFeeAddress ?? "",
-    managementFee: fundDeepCopy?.managementFee ?? "",
+    managementFee: fromBpsToPercentage(fundDeepCopy?.managementFee),
     managementFeeRecipientAddress: fundDeepCopy?.managementFeeAddress ?? "",
     managementFeePeriod: parsedFeePeriod(fundDeepCopy?.managementPeriod ?? ""),
-    profitManagemnetFee: fundDeepCopy?.performanceFee ?? "",
+    profitManagemnetFee: fromBpsToPercentage(fundDeepCopy?.performanceFee),
     profitManagemnetFeeRecipientAddress:
       fundDeepCopy?.performanceFeeAddress ?? "",
     profitManagementFeePeriod: parsedFeePeriod(
       fundDeepCopy?.performancePeriod ?? ""
     ),
-    hurdleRate: fundDeepCopy?.performaceHurdleRateBps ?? "",
+    hurdleRate: fromBpsToPercentage(fundDeepCopy?.performaceHurdleRateBps),
     // Governance
     governanceToken: fundDeepCopy?.governanceToken?.address ?? "",
     quorum: fundDeepCopy?.quorumPercentage ?? "",

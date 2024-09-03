@@ -194,3 +194,17 @@ export const roundToSignificantDecimals = (value: number | string, precision: nu
   // Convert back to a string in standard notation
   return parseFloat(roundedNumber).toString();
 }
+
+
+// we use this to convert the fee from bps to percentage and vice versa
+export const fromBpsToPercentage = (feeBps?: any) => {
+  if (feeBps === undefined || feeBps === null) return "0";
+  const feePercent = (Number(feeBps) / 100).toString();
+  return feePercent;
+};
+
+export const fromPercentageToBps = (feePercent?: any) => {
+  if (feePercent === undefined || feePercent === null) return "0";
+  const feeBps = (Number(feePercent) * 100).toString();
+  return feeBps;
+};
