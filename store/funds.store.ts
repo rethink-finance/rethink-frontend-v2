@@ -60,7 +60,9 @@ const excludeFundAddrs = {
     "0xdac03eD03EFDa65A1488c7f3f0302636491726B6",
     "0xBb1E02AcA8F7Cb2403c0Bf3aaA74001d38Beb488",
   ],
-  "0xa4b1": [],
+  "0xa4b1": [
+      "0xA5138779Bb08C8DE44692e183c586817a0bcEb42",
+  ],
   "0xfc": [],
   "0x1": [],
 } as Record<string, string[]>;
