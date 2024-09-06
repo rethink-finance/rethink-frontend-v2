@@ -248,6 +248,30 @@ const proposal = computed(():IGovernanceProposal | undefined => {
     governanceProposalStore.fetchBlockProposals(proposal.createdBlockNumber);
     proposalFetched.value = true;
   }
+
+  // TODO: remove this after BE whitelists are fixed
+  // first index is a default fund settings
+  const firstIndex = proposal?.calldataTypes?.indexOf(
+    ProposalCalldataType.FUND_SETTINGS
+  ) ?? -1;
+  // last index is a final fund settings
+  const lastIndex = proposal?.calldataTypes?.lastIndexOf(
+    ProposalCalldataType.FUND_SETTINGS
+  ) ?? -1;
+
+  console.log("firstIndex", firstIndex);
+  console.log("lastIndex", lastIndex);
+
+  // remove default fund settings from proposal
+  if (firstIndex !== lastIndex && firstIndex !== -1) {
+    console.log("removing default fund settings");
+    proposal?.targets?.splice(firstIndex, 1);
+    proposal?.values?.splice(firstIndex, 1);
+    proposal?.signatures?.splice(firstIndex, 1);
+    proposal?.calldatas?.splice(firstIndex, 1);
+    proposal?.calldatasDecoded?.splice(firstIndex, 1);
+  }
+
   return proposal;
 })
 
