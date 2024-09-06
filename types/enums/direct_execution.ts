@@ -1,6 +1,6 @@
+import type { IStepperStep } from "~/types/stepper";
 import type { FieldsMapType } from "./stepper";
 import { InputType } from "./stepper";
-import type { IStepperStep } from "~/types/stepper";
 
 export enum ExecutionStep {
   Setup = "setup",
@@ -39,7 +39,7 @@ export const DirectExecutionFieldsMap: FieldsMapType = {
       type: InputType.Number,
       placeholder: "E.g. 0",
       min: 0,
-      rules: [formRules.required, formRules.isPositiveNumber],
+      rules: [formRules.required, formRules.isNonNegativeNumber],
     },
     {
       label: "Address of Contract Interaction",
