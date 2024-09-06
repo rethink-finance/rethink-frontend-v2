@@ -69,23 +69,23 @@
     <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" />
 
     <UiConfirmDialog
-        v-model="confirmDialog"
-        title="Heads Up!"
-        confirm-text="Continue"
-        :cancel-text="updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to Proposal'"
-        message="You can create a new one or check the ongoing activity first!"
-        @confirm="handleNavigateToCreateProposal"
-        @cancel="updateSettingsProposals.length > 1 ? null : handleGoToFProposal()"
-        class="confirm_dialog"
-        :max-width="updateSettingsProposals.length > 1 ? 'unset' : '600px'"
-      >
+      v-model="confirmDialog"
+      title="Heads Up!"
+      confirm-text="Continue"
+      :cancel-text="updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to Proposal'"
+      message="You can create a new one or check the ongoing activity first!"
+      class="confirm_dialog"
+      :max-width="updateSettingsProposals.length > 1 ? 'unset' : '600px'"
+      @confirm="handleNavigateToCreateProposal"
+      @cancel="updateSettingsProposals.length > 1 ? null : handleGoToFProposal()"
+    >
       <FundGovernanceProposalsTable
         v-if="updateSettingsProposals.length > 1"
         :items="updateSettingsProposals"
         :loading="loadingProposals"
         style="margin-top: 2rem;"
       />
-      </UiConfirmDialog>
+    </UiConfirmDialog>
   </div>
 </template>
 
@@ -126,7 +126,7 @@ const governanceProposals = computed(() => {
       (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS,
     );
   })
-  
+
   // Sort the events by createdTimestamp
   proposals.sort((a, b) => {
     const timestampA = a.createdTimestamp;
@@ -240,7 +240,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
         confirmDialog.value = true;
         return;
       }
-      
+
       handleNavigateToCreateProposal();
     },
   },
@@ -248,8 +248,8 @@ const dropdownOptions: Record<string, DropdownOption> = {
 
 const handleNavigateToCreateProposal = () => {
   router.push(
-      `/details/${fundStore.selectedFundSlug}/governance/fund-settings`,
-      );
+    `/details/${fundStore.selectedFundSlug}/governance/fund-settings`,
+  );
 };
 const handleGoToFProposal = () => {
   const { createdBlockNumber, proposalId } = updateSettingsProposals.value[0];
@@ -260,7 +260,7 @@ const handleGoToFProposal = () => {
   }
 
   router.push(
-    `/details/${fundStore.selectedFundSlug}/governance/proposal/${createdBlockNumber}-${proposalId}`
+    `/details/${fundStore.selectedFundSlug}/governance/proposal/${createdBlockNumber}-${proposalId}`,
   );
 };
 const createProposalDropdownOptions = Object.keys(dropdownOptions).map((key) => {

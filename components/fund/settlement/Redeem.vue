@@ -161,13 +161,13 @@ const requestRedemption = async () => {
   const ABI = [ "function requestWithdraw(uint256 amount)" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("requestWithdraw", [ tokensWei ]);
-  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  // const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
-      gasPrice,
+      // gas: gasEstimate,
+      // gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
