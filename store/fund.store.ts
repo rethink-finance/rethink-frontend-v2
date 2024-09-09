@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -10,8 +10,11 @@ import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
+import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
 import { formatJson, pluralizeWord } from "~/composables/utils";
 import { useAccountStore } from "~/store/account.store";
+import { useFundsStore } from "~/store/funds.store";
+import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
@@ -30,14 +33,11 @@ import {
 import type IFund from "~/types/fund";
 import type { INAVParts } from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
-import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
-import { useFundsStore } from "~/store/funds.store";
-import { useToastStore } from "~/store/toast.store";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -623,7 +623,7 @@ export const useFundStore = defineStore({
             false,
             "N/A",
           ),
-          lateQuorum: pluralizeWord("second", fundLateQuorum),
+          lateQuorum: pluralizeWord(votingUnit, fundLateQuorum),
 
           // Fees
           depositFee: fundSettings.depositFee.toString(),

@@ -205,13 +205,13 @@ const deposit = async () => {
   const ABI = [ "function deposit()" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("deposit");
-  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  // const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
-      gasPrice,
+      // gas: gasEstimate,
+      // gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
@@ -263,13 +263,13 @@ const redeem = async () => {
   const ABI = [ "function withdraw()" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("withdraw");
-  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  // const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
-      gasPrice,
+      // gas: gasEstimate,
+      // gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
