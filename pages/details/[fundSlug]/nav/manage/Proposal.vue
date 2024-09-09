@@ -547,18 +547,12 @@ const createProposal = async () => {
 
   targetAddresses.push(...[
     fundStore.fund?.address, // encodedCollectPerformanceFeesAbiJSON
-    navExecutorAddr,         // encodedDataStoreNAVDataNavUpdateEntries
-    ...roleModTargets,       // encodedRoleModEntries
   ]);
   gasValues.push(...[
     0,  // encodedCollectPerformanceFeesAbiJSON
-    0,  // encodedDataStoreNAVDataNavUpdateEntries
-    ...roleModGasValues,  // encodedRoleModEntries
   ]);
   calldatas.push(...[
     encodedCollectPerformanceFeesAbiJSON,
-    encodedDataStoreNAVDataNavUpdateEntries,
-    ...encodedRoleModEntries,
   ]);
   console.log("proposal:",
     JSON.stringify({
@@ -593,6 +587,49 @@ const createProposal = async () => {
         clearDraft();
         toastStore.successToast(
           "Register the proposal transactions was successful. " +
+          "You can now vote on the proposal in the governance page.",
+        );
+      } else {
+        toastStore.errorToast(
+          "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+        );
+      }
+      loading.value = false;
+    }).on("error", (error: any) => {
+      console.error(error);
+      loading.value = false;
+      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    });
+  } catch (error: any) {
+    loading.value = false;
+    toastStore.errorToast(error.message);
+  }
+
+  // Permissions for non gov nav updates
+  try {
+    await fundStore.fundGovernorContract.methods.propose(
+      [navExecutorAddr].concat(roleModTargets),
+      [0].concat(roleModGasValues),
+      [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
+      JSON.stringify({
+        title: proposal.value.title,
+        description: proposal.value.description,
+      }),
+    ).send({
+      from: fundStore.activeAccountAddress,
+      maxPriorityFeePerGas: undefined,
+      maxFeePerGas: undefined,
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
+
+      clearDraft();
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
+      if (receipt.status) {
+        clearDraft();
+        toastStore.successToast(
+          "Requesting future NAV permissions transactions was successful. " +
           "You can now vote on the proposal in the governance page.",
         );
       } else {
