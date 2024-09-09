@@ -17,7 +17,10 @@
             class="info-box-v1__link"
             href="https://docs.rethink.finance/rethink.finance"
             target="_blank"
-            >Learn More <Icon icon="maki:arrow" color="primary" width="1rem"
+          >Learn More <Icon
+            icon="maki:arrow"
+            color="primary"
+            width="1rem"
           /></a>
         </div>
       </div>
@@ -25,9 +28,9 @@
       <div class="buttons_container">
         <v-btn
           v-if="showPrevStep"
-          @click="prevStep"
           variant="outlined"
           color="secondary"
+          @click="prevStep"
         >
           Previous
         </v-btn>
@@ -36,8 +39,8 @@
           class="button--primary"
           :type="isLastStep ? 'submit' : 'button'"
           :loading="loading"
-          @click="handleButtonClick"
           :disabled="isLastStep && !accountStore.isConnected"
+          @click="handleButtonClick"
         >
           {{ isLastStep ? "Submit Proposal" : "Next" }}
           <v-tooltip
@@ -56,8 +59,8 @@
     <v-form ref="form">
       <div v-for="(step, index) in proposalEntry" :key="index">
         <div
-          v-if="step.stepName === activeStep"
           v-for="(section, index) in step.sections"
+          v-if="step.stepName === activeStep"
           :key="index"
           class="section main_card"
         >
@@ -77,30 +80,30 @@
             </UiTooltipClick>
 
             <div
-              class="toggleable_group__toggle"
               v-if="section.name === 'Whitelist'"
+              class="toggleable_group__toggle"
             >
               <v-switch
+                v-model="isWhitelistToggled"
                 color="primary"
                 hide-details
-                v-model="isWhitelistToggled"
               />
             </div>
           </div>
 
           <UiInfoBox
-            class="info-box"
             v-if="section.info"
+            class="info-box"
             :info="section.info"
           />
 
-          <div class="fields" v-if="section.name !== 'Whitelist'">
+          <div v-if="section.name !== 'Whitelist'" class="fields">
             <v-col
               v-for="(field, index) in section.fields"
               :key="index"
               :cols="field?.cols ?? 12"
             >
-              <div class="toggleable_group" v-if="field.isToggleable">
+              <div v-if="field.isToggleable" class="toggleable_group">
                 <div class="toggleable_group__toggle">
                   <v-switch
                     v-model="field.isToggleOn"
@@ -111,13 +114,13 @@
 
                 <div class="fields">
                   <v-col
-                    :cols="subField?.cols ?? 6"
                     v-for="(subField, index) in field.fields"
                     :key="index"
+                    :cols="subField?.cols ?? 6"
                   >
                     <UiField
-                      :field="subField"
                       v-model="proposal[subField.key]"
+                      :field="subField"
                       :is-disabled="!field.isToggleOn"
                       :class="`${isFieldModified(subField.key) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
                     />
@@ -126,8 +129,8 @@
               </div>
               <div v-else>
                 <UiField
-                  :field="field"
                   v-model="proposal[field.key]"
+                  :field="field"
                   :class="`${isFieldModified(field.key) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
                 />
               </div>
@@ -155,9 +158,10 @@
 </template>
 
 <script setup lang="ts">
-import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
+import SectionWhitelist from "./SectionWhitelist.vue";
+import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -173,7 +177,6 @@ import {
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import SectionWhitelist from "./SectionWhitelist.vue";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
@@ -207,7 +210,7 @@ const isInfoVisible = ref(false);
 const isWhitelistToggled = ref(true);
 
 const updateSettingsABI = GovernableFund.abi.find(
-  (func) => func.name === "updateSettings" && func.type === "function"
+  (func) => func.name === "updateSettings" && func.type === "function",
 );
 
 // TODO: implement undo changes that will reset form with initial values
@@ -264,13 +267,13 @@ function generateFields(section: IStepperSection, proposal: IProposal) {
         ...field,
         fields: output,
       };
-    } else {
-      const fieldTyped = field as IField;
-      return {
-        ...fieldTyped,
-        value: proposal[fieldTyped.key] as string,
-      } as IField;
     }
+    const fieldTyped = field as IField;
+    return {
+      ...fieldTyped,
+      value: proposal[fieldTyped.key] as string,
+    } as IField;
+
   });
 }
 
@@ -309,13 +312,13 @@ const checkIfAllFieldsValid = () => {
               }) ?? true
             );
           });
-        } else {
-          return (
-            field?.rules?.every((rule) => {
-              return rule(field.value) === true;
-            }) ?? true
-          );
         }
+        return (
+          field?.rules?.every((rule) => {
+            return rule(field.value) === true;
+          }) ?? true
+        );
+
       });
     });
   });
@@ -353,12 +356,12 @@ const submit = async () => {
 
     const encodedData = web3Store.web3.eth.abi.encodeFunctionCall(
       updateSettingsABI as AbiFunctionFragment,
-      formattedProposal
+      formattedProposal,
     );
 
     const encodedDataOld = web3Store.web3.eth.abi.encodeFunctionCall(
       updateSettingsABI as AbiFunctionFragment,
-      formattedProposalOld
+      formattedProposalOld,
     );
 
     const targetAddresses = [fund.address, fund.address];
@@ -379,8 +382,8 @@ const submit = async () => {
           calldatas,
         },
         null,
-        2
-      )
+        2,
+      ),
     );
 
     try {
@@ -392,17 +395,15 @@ const submit = async () => {
           JSON.stringify({
             title: proposal.value.proposalTitle,
             description: proposal.value.proposalDescription,
-          })
+          }),
         )
         .send({
           from: fundStore.activeAccountAddress,
-          maxPriorityFeePerGas: undefined,
-          maxFeePerGas: undefined,
         })
         .on("transactionHash", (hash: string) => {
           console.log("tx hash: " + hash);
           toastStore.addToast(
-            "The proposal transaction has been submitted. Please wait for it to be confirmed."
+            "The proposal transaction has been submitted. Please wait for it to be confirmed.",
           );
 
           router.push(`/details/${selectedFundSlug.value}/governance`);
@@ -412,12 +413,12 @@ const submit = async () => {
           if (receipt.status) {
             toastStore.successToast(
               "Register the proposal transactions was successful. " +
-                "You can now vote on the proposal in the governance page."
+                "You can now vote on the proposal in the governance page.",
             );
             router.push(`/details/${selectedFundSlug.value}/governance`);
           } else {
             toastStore.errorToast(
-              "The register proposal transaction has failed. Please contact the Rethink Finance support."
+              "The register proposal transaction has failed. Please contact the Rethink Finance support.",
             );
           }
           loading.value = false;
@@ -426,7 +427,7 @@ const submit = async () => {
           console.error(error);
           loading.value = false;
           toastStore.errorToast(
-            "There has been an error. Please contact the Rethink Finance support."
+            "There has been an error. Please contact the Rethink Finance support.",
           );
         });
     } catch (error: any) {
@@ -531,10 +532,10 @@ const formatProposalData = (proposal: IProposal) => {
   const isPerformancePeriod365 = proposal.profitManagementFeePeriod === "365";
   const isManagementPeriod365 = proposal.managementFeePeriod === "365";
   const isPerformancePeriodToggledOff = toggledOffFields.includes(
-    "profitManagementFeePeriod"
+    "profitManagementFeePeriod",
   );
   const isManagementPeriodToggledOff = toggledOffFields.includes(
-    "managementFeePeriod"
+    "managementFeePeriod",
   );
 
   const performancePeriod =
@@ -596,7 +597,7 @@ const parsedFeePeriod = (value: string) => {
 const populateProposal = () => {
   const fundDeepCopy = JSON.parse(
     JSON.stringify(fund, stringifyBigInt),
-    parseBigInt
+    parseBigInt,
   );
 
   console.log("fundDeepCopy: ", fundDeepCopy);
@@ -622,7 +623,7 @@ const populateProposal = () => {
     profitManagemnetFeeRecipientAddress:
       fundDeepCopy?.performanceFeeAddress ?? "",
     profitManagementFeePeriod: parsedFeePeriod(
-      fundDeepCopy?.performancePeriod ?? ""
+      fundDeepCopy?.performancePeriod ?? "",
     ),
     hurdleRate: fromBpsToPercentage(fundDeepCopy?.performaceHurdleRateBps),
     // Governance
@@ -644,13 +645,13 @@ const populateProposal = () => {
       deleted: false,
       isNew: false,
       address: item,
-    })
+    }),
   ) as IWhitelist[];
 
   // Store the original values for comparison
   proposalInitial = JSON.parse(
     JSON.stringify(proposal.value, stringifyBigInt),
-    parseBigInt
+    parseBigInt,
   );
 };
 
@@ -677,7 +678,7 @@ watch(
       });
     });
   },
-  { deep: true }
+  { deep: true },
 );
 
 onMounted(() => {

@@ -57,11 +57,9 @@ import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IToken from "~/types/token";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
-import { useAccountStore } from "~/store/account.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 const fundStore = useFundStore();
 const toastStore = useToastStore();
-const accountStore = useAccountStore();
 const showCancelButton = ref(false);
 
 const toggleCancelButton = () => {
@@ -115,13 +113,10 @@ const cancelPendingRequest = async () => {
   const ABI = [ "function revokeDepositWithrawal(bool isDeposit)" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ isDepositRequest ]);
-  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
-      gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
