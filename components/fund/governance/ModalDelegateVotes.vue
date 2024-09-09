@@ -24,7 +24,7 @@
         </div>
 
         <div class="di-card__content">
-          <div class="di-card" v-html="parsedDelegateMessage" />
+          <div v-if="!delegateToSomeoneElse || delegateToSomeoneElse && fundStore?.shouldUserDelegate" class="di-card" v-html="parsedDelegateMessage" />
 
           <div v-if="!delegateToSomeoneElse" class="di-card__button-container">
             <v-btn
