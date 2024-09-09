@@ -1,9 +1,7 @@
 <template>
   <div class="fund_settlement">
     <div class="card_header">
-      <div class="card_header__title">
-        Manage Deposits
-      </div>
+      <div class="card_header__title">Manage Deposits</div>
       <div class="fund_settlement__buttons">
         <v-btn
           :class="getDepositRedeemButtonClass('deposit')"
@@ -51,6 +49,10 @@ export default {
       type: Object as PropType<IFund>,
       default: () => {},
     },
+    shouldUserDelegate: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -82,7 +84,12 @@ export default {
     },
     openDelegateDialog() {
       console.log("openDelegateDialog");
-      this.isDelegateDialogOpen = true;
+      console.log("this.shouldUserDelegate: ", this.shouldUserDelegate);
+
+      // only open the dialog if shouldUserDelegate is true
+      if (this.shouldUserDelegate) {
+        this.isDelegateDialogOpen = true;
+      }
     },
   },
 };
@@ -118,15 +125,15 @@ export default {
       flex-direction: row;
     }
 
-    &__title{
+    &__title {
       font-size: 1rem;
       font-weight: bold;
       color: $color-subtitle;
       line-height: 1;
       margin-bottom: 0.75rem;
 
-      @include sm{
-        margin-bottom: 0
+      @include sm {
+        margin-bottom: 0;
       }
     }
   }

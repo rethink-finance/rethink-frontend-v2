@@ -235,6 +235,14 @@ export const useFundStore = defineStore({
       );
       return fundAllowedDepositAddresses.includes(this.activeAccountAddress?.toLowerCase() || "");
     },
+    shouldUserDelegate(): boolean {
+      const nullAddress = "0x0000000000000000000000000000000000000000";
+      // User should delegate if he has no delegate address set.
+      return (
+        this.userFundDelegateAddress === nullAddress ||
+        !this.userFundDelegateAddress
+      );
+    },
     shouldUserRequestDeposit(): boolean {
       // User deposit request does not exist yet, he should request deposit.
       return !this.userDepositRequestExists

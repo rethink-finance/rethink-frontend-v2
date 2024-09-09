@@ -9,9 +9,7 @@
     >
       <div class="main_card di-card">
         <div class="di-card__header-container">
-          <div class="di-card__header">
-            Delegate
-          </div>
+          <div class="di-card__header">Delegate</div>
 
           <Icon
             icon="material-symbols:close"
@@ -26,10 +24,7 @@
         </div>
 
         <div class="di-card__content">
-          <div class="di-card">
-            <strong>NOTE:</strong>
-            You must always delegate to yourself first, even if you want to delegate to someone else!
-          </div>
+          <div class="di-card" v-html="parsedDelegateMessage" />
 
           <div v-if="!delegateToSomeoneElse" class="di-card__button-container">
             <v-btn
@@ -37,6 +32,7 @@
               class="di-card__submit-button"
               variant="outlined"
               @click="delegate(true)"
+              v-if="!hasDelegatedToYourself"
             >
               <template #prepend>
                 <v-progress-circular
@@ -61,9 +57,7 @@
           </div>
 
           <div v-else class="di-card__someone-else-container">
-            <v-label class="di-card__label label_required">
-              Address
-            </v-label>
+            <v-label class="di-card__label label_required"> Address </v-label>
             <v-text-field
               v-model="delegateAddress"
               placeholder="Enter the address of the delegate"
@@ -122,6 +116,32 @@ const isDelegatedAddressValid = computed(() => {
   });
 });
 
+const hasDelegatedToYourself = computed(() => {
+  return (
+    fundStore?.userFundDelegateAddress.toLowerCase() ===
+    fundStore.activeAccountAddress
+  );
+});
+
+const parsedDelegateMessage = computed(() => {
+  // return fundStore.fund?.delegates.find(
+  //   (delegate) => delegate.address === fundStore.activeAccountAddress,
+  // )?.delegate;
+
+  const delegateAddress = fundStore?.userFundDelegateAddress;
+  console.log("delegateAddress: ", delegateAddress);
+  let output = `You have delegated to ${delegateAddress}`;
+
+  if (fundStore?.shouldUserDelegate) {
+    output =
+      "You have not delegated to anyone yet.<br><br><strong>NOTE: </strong>You must always delegate to yourself first, even if you want to delegate to someone else!";
+  } else if (delegateAddress.toLowerCase() === fundStore.activeAccountAddress) {
+    output = "You have delegated to yourself.";
+  }
+
+  return output;
+});
+
 const closeDelegateDialog = () => {
   delegateToSomeoneElse.value = false;
   delegateAddress.value = "";
@@ -146,10 +166,13 @@ const delegate = async (isMyself = false) => {
     loadingDelegates.value = true;
 
     // external gov token
-    if (governanceTokenAddress !== fundAddress && governanceTokenAddress != nullAddr) {
+    if (
+      governanceTokenAddress !== fundAddress &&
+      governanceTokenAddress != nullAddr
+    ) {
       const externalGovToken = new fundStore.web3.eth.Contract(
         ERC20Votes.abi,
-        governanceTokenAddress,
+        governanceTokenAddress
       );
 
       try {
@@ -167,18 +190,18 @@ const delegate = async (isMyself = false) => {
           .on("transactionHash", function (hash: any) {
             console.log("tx hash: " + hash);
             toastStore.addToast(
-              "The transaction has been submitted. Please wait for it to be confirmed.",
+              "The transaction has been submitted. Please wait for it to be confirmed."
             );
           })
           .on("receipt", function (receipt: any) {
             console.log(receipt);
             if (receipt.status) {
               toastStore.successToast(
-                "Delegation of Governance Tokens Succeeded",
+                "Delegation of Governance Tokens Succeeded"
               );
             } else {
               toastStore.errorToast(
-                "The delegateTo tx has failed. Please contact the Rethink Finance support.",
+                "The delegateTo tx has failed. Please contact the Rethink Finance support."
               );
             }
             loadingDelegates.value = false;
@@ -187,14 +210,14 @@ const delegate = async (isMyself = false) => {
             console.log(error);
             loadingDelegates.value = false;
             toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support.",
+              "There has been an error. Please contact the Rethink Finance support."
             );
           });
       } catch (error) {
         console.error("Error delegating to external gov token: ", error);
         loadingDelegates.value = false;
         toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support.",
+          "There has been an error. Please contact the Rethink Finance support."
         );
       }
     } else {
@@ -214,18 +237,18 @@ const delegate = async (isMyself = false) => {
           .on("transactionHash", function (hash: any) {
             console.log("tx hash: " + hash);
             toastStore.addToast(
-              "The transaction has been submitted. Please wait for it to be confirmed.",
+              "The transaction has been submitted. Please wait for it to be confirmed."
             );
           })
           .on("receipt", function (receipt: any) {
             console.log(receipt);
             if (receipt.status) {
               toastStore.successToast(
-                "Delegation of Governance Tokens Succeeded",
+                "Delegation of Governance Tokens Succeeded"
               );
             } else {
               toastStore.errorToast(
-                "The delegateTo tx has failed. Please contact the Rethink Finance support.",
+                "The delegateTo tx has failed. Please contact the Rethink Finance support."
               );
             }
             loadingDelegates.value = false;
@@ -234,7 +257,7 @@ const delegate = async (isMyself = false) => {
             console.log(error);
             loadingDelegates.value = false;
             toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support.",
+              "There has been an error. Please contact the Rethink Finance support."
             );
           });
       } catch (error: any) {
@@ -250,7 +273,7 @@ const delegate = async (isMyself = false) => {
 <style scoped lang="scss">
 .di-card {
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
   margin-bottom: 2rem;
   width: 100%;
   max-width: 500px;
