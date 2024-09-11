@@ -574,6 +574,7 @@ const createProposal = async () => {
       }),
     ).send({
       from: fundStore.activeAccountAddress,
+      maxPriorityFeePerGas: undefined,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");

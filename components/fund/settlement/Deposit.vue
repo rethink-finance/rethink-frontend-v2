@@ -208,10 +208,9 @@ const requestDeposit = async () => {
   console.warn("web3Onboard", accountStore?.web3Onboard)
 
   try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+    fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      // gas: gasEstimate,
-      // gasPrice,
+      maxPriorityFeePerGas: undefined,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
@@ -265,6 +264,7 @@ const approveAllowance = async () => {
     // call the approval method
     await fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei.value).send({
       from: fundStore.activeAccountAddress,
+      maxPriorityFeePerGas: undefined,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

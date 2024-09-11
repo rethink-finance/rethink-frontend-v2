@@ -166,6 +166,7 @@ const requestRedemption = async () => {
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
+      maxPriorityFeePerGas: undefined,
       // gas: gasEstimate,
       // gasPrice,
     }).on("transactionHash", (hash: string) => {

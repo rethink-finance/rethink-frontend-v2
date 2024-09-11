@@ -210,6 +210,7 @@ const deposit = async () => {
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
+      maxPriorityFeePerGas: undefined,
       // gas: gasEstimate,
       // gasPrice,
     }).on("transactionHash", (hash: string) => {
@@ -268,6 +269,7 @@ const redeem = async () => {
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
+      maxPriorityFeePerGas: undefined,
       // gas: gasEstimate,
       // gasPrice,
     }).on("transactionHash", (hash: string) => {

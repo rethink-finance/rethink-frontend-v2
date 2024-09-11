@@ -1238,6 +1238,7 @@ export const useFundStore = defineStore({
           .executeNAVUpdate(navExecutorAddr)
           .send({
             from: this.activeAccountAddress,
+            maxPriorityFeePerGas: undefined,
           })
           .on("transactionHash", (hash: any) => {
             console.log("tx hash: " + hash);

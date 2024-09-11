@@ -84,6 +84,7 @@ const sweepFundContract = async () => {
 
     await fundStore.fundContract.methods.fundFlowsCall(functionSignatureHash).send({
       from: fundStore.activeAccountAddress,
+      maxPriorityFeePerGas: undefined,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

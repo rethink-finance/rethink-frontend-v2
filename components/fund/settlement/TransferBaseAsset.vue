@@ -152,6 +152,7 @@ const transfer = async () => {
   try {
     await fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei.value).send({
       from: fundStore.activeAccountAddress,
+      maxPriorityFeePerGas: undefined,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
