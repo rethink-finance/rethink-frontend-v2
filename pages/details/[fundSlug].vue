@@ -297,6 +297,7 @@ const computedRoutes = computed(() => {
 .details_nav {
   position: relative;
   padding-top: 8px;
+  margin-bottom: 2rem;
   width: 100%;
 }
 
