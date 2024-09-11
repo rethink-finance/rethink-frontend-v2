@@ -55,18 +55,38 @@
               class="select_network"
               density="compact"
               :bg-color="selectedChainId ? '' : 'error'"
-              label="Network"
               :items="networks"
               :loading="isSwitchingNetworks"
               item-title="chainName"
               item-value="chainId"
             >
+            <template #selection="{ item }">
+              <Icon
+                :icon="item.raw.icon.name"
+                class="select_item__icon mr-2"
+              />
+              <v-list-item-title>
+                {{ item.raw.chainName }}
+              </v-list-item-title>
+            </template>
               <template #item="{ props, item }">
-                <v-list-item v-bind="props" @click="switchNetwork(item.raw.chainId)" />
+                <div
+                  @click="switchNetwork(item.raw.chainId)"
+                  class="select_item"
+                  :class="{'select_item--active': item.raw.chainId === selectedChainId}"
+                  >
+                    <Icon
+                      :icon="item.raw.icon.name"
+                      class="select_item__icon"
+                    />
+                    <div>
+                      {{ item.raw.chainName }}
+                    </div>
+                </div>
               </template>
             </v-select>
             <v-btn
-              class="connect_wallet_btn nav-link px-4 py-3"
+              class="connect_wallet_btn nav-link px-4"
               :class="{'connect_wallet_btn--connected': connectedWallet}"
               variant="outlined"
               :disabled="connectingWallet"
@@ -337,6 +357,8 @@ const onClickConnect = async () => {
 
   .connect_wallet_btn {
     color: $color-primary;
+    margin-left: .5rem;
+    padding-block: 0.75rem;
 
     &__icon {
       width: 1.5rem;
@@ -350,6 +372,7 @@ const onClickConnect = async () => {
     }
 
     &--connected {
+      padding-block: .5rem;
       color: $color-light-subtitle;
       border-color: $color-gray-transparent;
     }
@@ -367,5 +390,28 @@ const onClickConnect = async () => {
 }
 .select_network {
   min-width: 9rem;
+}
+.select_item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem;
+  cursor: pointer;
+
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background-color: $color-hover;
+  }
+
+  &--active {
+    background-color: $color-border-light;
+  }
+
+  &__icon{
+    width: 1.5rem;
+    height: 1.5rem;
+  }
 }
 </style>

@@ -1,8 +1,8 @@
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import type INetwork from "~/types/network";
 import addressesJson from "~/assets/contracts/addresses.json";
 import type IAddresses from "~/types/addresses";
+import type INetwork from "~/types/network";
 const addresses: IAddresses = addressesJson as IAddresses;
 
 interface IState {
@@ -38,6 +38,7 @@ export const useWeb3Store = defineStore({
         chainId: "0x89",
         chainName: "Polygon",
         chainShort: "matic",
+        icon: getChainIcon("matic"),
         rpcUrl: "https://polygon-pokt.nodies.app",
         rpcUrls: [
           "https://polygon.drpc.org",
@@ -50,6 +51,7 @@ export const useWeb3Store = defineStore({
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
         chainShort: "arb1",
+        icon: getChainIcon("arb1"),
         rpcUrl: "https://arb-pokt.nodies.app",
         rpcUrls: [
           "https://arbitrum.llamarpc.com",  // Max 10k blocks
@@ -62,12 +64,14 @@ export const useWeb3Store = defineStore({
         chainId: "0xfc",
         chainName: "Fraxtal",
         chainShort: "frax",
+        icon: getChainIcon("frax"),
         rpcUrl: "https://rpc.frax.com",
       },
       "0x1": {
         chainId: "0x1",
         chainName: "Ethereum",
         chainShort: "eth",
+        icon: getChainIcon("eth"),
         rpcUrl: "https://rpc.ankr.com/eth",
         rpcUrls: [
           "https://eth.drpc.org",

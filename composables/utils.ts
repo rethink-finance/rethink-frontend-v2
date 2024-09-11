@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import type { PositionType } from "~/types/enums/position_type";
 import { PositionTypesMap } from "~/types/enums/position_type";
+import type { IIcon } from "~/types/network";
 
 export const variableType = (value: any) =>
   Object.prototype.toString.call(value).slice(8, -1); // accurately returns the parameter type [Array | Object | Number | Boolean | ...]
@@ -117,7 +118,7 @@ export const pluralizeWord = (word: string, count?: number | bigint) => {
   return pluralized;
 };
 
-const chainIconMap: Record<string, Record<string, string>> = {
+const chainIconMap: Record<string, IIcon> = {
   matic: {
     name: "cryptocurrency-color:matic",
     size: "1.5rem",
