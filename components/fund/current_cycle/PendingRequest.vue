@@ -113,11 +113,13 @@ const cancelPendingRequest = async () => {
   const ABI = [ "function revokeDepositWithrawal(bool isDeposit)" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ isDepositRequest ]);
+  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: undefined,
+      gas: gasEstimate,
+      maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

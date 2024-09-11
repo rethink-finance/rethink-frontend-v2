@@ -199,7 +199,7 @@ const requestDeposit = async () => {
   const ABI = [ "function requestDeposit(uint256 amount)" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei.value ]);
-  // const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   console.log("isConnectedWalletUsingLedger:", accountStore.isConnectedWalletUsingLedger);
   console.log("contract:", fundStore.fundContract);
@@ -208,9 +208,11 @@ const requestDeposit = async () => {
   console.warn("web3Onboard", accountStore?.web3Onboard)
 
   try {
+    console.log(fundStore.fundContract.config)
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: undefined,
+      gas: gasEstimate,
+      maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

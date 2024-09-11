@@ -205,14 +205,13 @@ const deposit = async () => {
   const ABI = [ "function deposit()" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("deposit");
-  // const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: undefined,
-      // gas: gasEstimate,
-      // gasPrice,
+      gas: gasEstimate,
+      maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
@@ -261,17 +260,16 @@ const redeem = async () => {
   loadingRedemption.value = true;
   console.log("[REDEEM] tokensWei: ", userRedemptionRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
 
-  const ABI = [ "function withdraw()" ];
-  const iface = new ethers.Interface(ABI);
+  const iface = new ethers.Interface([ "function withdraw()" ]);
   const encodedFunctionCall = iface.encodeFunctionData("withdraw");
-  // const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  fundStore.fundContract.methods.withdraw().encodeABI()
+  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: undefined,
-      // gas: gasEstimate,
-      // gasPrice,
+      gas: gasEstimate,
+      maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

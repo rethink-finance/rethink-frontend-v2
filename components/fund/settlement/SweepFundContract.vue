@@ -47,6 +47,7 @@
 
 <script setup lang="ts">
 import { eth } from "web3";
+import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { useAccountStore } from "~/store/account.store";
@@ -81,10 +82,14 @@ const sweepFundContract = async () => {
 
   try {
     const functionSignatureHash = eth.abi.encodeFunctionSignature("sweepTokens()");
+    const iface = new ethers.Interface([ "function sweepTokens()" ]);
+    const encodedFunctionCall = iface.encodeFunctionData("sweepTokens");
+    const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
     await fundStore.fundContract.methods.fundFlowsCall(functionSignatureHash).send({
       from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: undefined,
+      gas: gasEstimate,
+      maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
