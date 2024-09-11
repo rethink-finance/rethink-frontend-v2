@@ -128,7 +128,7 @@ export default {
     &__title {
       font-size: 1rem;
       font-weight: bold;
-      color: $color-subtitle;
+      color: $color-steel-blue;
       line-height: 1;
       margin-bottom: 0.75rem;
 

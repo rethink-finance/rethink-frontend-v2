@@ -31,8 +31,8 @@
 </template>
 
 <script lang="ts">
-import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund.store";
+import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
 
 export default defineComponent({

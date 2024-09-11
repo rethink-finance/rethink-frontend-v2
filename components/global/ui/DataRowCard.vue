@@ -258,7 +258,7 @@ export default defineComponent({
   }
   &__subtitle {
     font-weight: 500;
-    color: $color-subtitle;
+    color: $color-steel-blue;
     font-size: $text-sm;
   }
   &__column {

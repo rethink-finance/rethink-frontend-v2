@@ -175,10 +175,10 @@
 </template>
 
 <script setup lang="ts">
-import type { AbiFunctionFragment } from "web3";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import NAVExecutor from "assets/contracts/NAVExecutor.json";
 import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
+import type { AbiFunctionFragment } from "web3";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -711,7 +711,7 @@ const saveProposalDraft = () => {
 
 <style scoped lang="scss">
 .main_header__subtitle {
-  color: $color-subtitle;
+  color: $color-steel-blue;
   font-weight: 500;
 }
 
@@ -731,7 +731,7 @@ const saveProposalDraft = () => {
   &__char_limit {
     display: flex;
     flex-direction: row;
-    color: $color-subtitle;
+    color: $color-steel-blue;
     font-size: $text-sm;
     font-weight: 400;
     align-items: center;
@@ -771,7 +771,7 @@ const saveProposalDraft = () => {
     gap: .25rem;
     padding: .25rem;
     background-color: $color-background-button;
-    color: $color-subtitle;
+    color: $color-steel-blue;
     font-weight: 700;
     font-size: $text-sm;
     text-transform: uppercase;

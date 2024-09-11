@@ -98,33 +98,30 @@ export default {
   flex-direction: column;
   justify-content: space-between;
 
-  &__avatar_img {
-    border-radius: 0.25rem;
-    height: 100%;
-    width: 100%;
-    object-fit: cover;
-  }
-  &__details {
-    display: flex;
-    margin-bottom: 1.5rem;
-  }
-  &__title_wrapper {
+  &__header{
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    margin-left: 1rem;
+    align-items: none;
+
+    @include sm{
+      flex-direction: row;
+      align-items: center;
+    }
   }
-  &__title {
-    font-size: 1.5rem;
-    color: $color-title;
-    line-height: 1;
-  }
-  &__subtitle {
+
+  &__info{
     font-size: 1rem;
     font-weight: bold;
-    color: $color-subtitle;
+    color: $color-steel-blue;
     line-height: 1;
+    margin-bottom: 0.75rem;
+    
+    @include sm{
+      margin-bottom: 0
+    }
   }
+
   &__buttons {
     display: flex;
     flex-direction: column;
@@ -139,28 +136,7 @@ export default {
     }
   }
 
-  &__info{
-    font-size: 1rem;
-    font-weight: bold;
-    color: $color-subtitle;
-    line-height: 1;
-    margin-bottom: 0.75rem;
-    
-    @include sm{
-      margin-bottom: 0
-    }
-  }
 
-  &__header{
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: none;
 
-    @include sm{
-      flex-direction: row;
-      align-items: center;
-    }
-  }
 }
 </style>
