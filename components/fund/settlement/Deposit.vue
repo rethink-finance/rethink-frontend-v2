@@ -208,7 +208,7 @@ const requestDeposit = async () => {
   console.warn("web3Onboard", accountStore?.web3Onboard)
 
   try {
-    fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
       maxPriorityFeePerGas: undefined,
     }).on("transactionHash", (hash: string) => {
