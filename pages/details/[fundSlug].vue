@@ -6,20 +6,20 @@
     <v-skeleton-loader type="card" />
   </div>
   <div v-else-if="fund?.address" class="w-100">
-    <div class="fund-name">
-      <v-avatar size="4rem" rounded="">
+    <div class="fund_name">
+      <v-avatar class="fund_name__avatar" :rounded="false">
         <img
           :src="fund.photoUrl"
-          class="fund-name__avatar_img"
+          class="fund_name__avatar_img"
           alt="fund cover image"
         >
       </v-avatar>
-      <div class="fund-name__title">
+      <div class="fund_name__title">
         <p>
           {{ fund?.fundToken.symbol }}
         </p>
       </div>
-      <div class="fund-name__subtitle">
+      <div class="fund_name__subtitle">
         <p>
           {{ fund?.title }}
         </p>
@@ -47,8 +47,9 @@
         </nuxt-link>
       </div>
 
-      <UiBreadcrumbs :items="breadcrumbItems" />
     </div>
+    <UiBreadcrumbs :items="breadcrumbItems" class="breadcrumbs" />
+
     <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>
   <div v-else-if="isSwitchingNetworks" class="w-100 d-flex justify-center">
@@ -297,7 +298,6 @@ const computedRoutes = computed(() => {
 .details_nav {
   position: relative;
   padding-top: 8px;
-  margin-bottom: 2rem;
   width: 100%;
 }
 
@@ -309,7 +309,7 @@ const computedRoutes = computed(() => {
   padding-left: 1rem;
   padding-right: 1rem;
   padding-bottom: 8px;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
 
   background-color: $color-bg-transparent;
   border-radius: 4px;
@@ -358,7 +358,7 @@ const computedRoutes = computed(() => {
   height: 2px;
 }
 
-.fund-name {
+.fund_name {
   background-color: $color-bg-transparent;
   border-radius: $default-border-radius;
   padding: 0.5rem 0.62rem;
@@ -371,8 +371,12 @@ const computedRoutes = computed(() => {
     padding: 8px;
   }
 
+  &__avatar {
+    border: 0;
+  }
+
   &__avatar_img {
-    border-radius: 0.25rem;
+    border-radius: 50%;
     height: 100%;
     width: 100%;
     object-fit: cover;
@@ -388,5 +392,9 @@ const computedRoutes = computed(() => {
     font-size: $text-sm;
     color: $color-text-irrelevant;
   }
+}
+
+.breadcrumbs{
+  margin-bottom: 3rem;
 }
 </style>
