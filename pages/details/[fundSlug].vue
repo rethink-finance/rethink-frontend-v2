@@ -32,6 +32,7 @@
           v-for="navRoute in computedRoutes"
           :key="navRoute.to"
           :to="navRoute.to"
+          class="link"
         >
           <v-btn
             class="nav-link"
@@ -295,8 +296,7 @@ const computedRoutes = computed(() => {
 }
 .details_nav {
   position: relative;
-  margin-bottom: 2rem;
-  padding-top: 1rem;
+  padding-top: 8px;
   width: 100%;
 }
 
@@ -304,14 +304,26 @@ const computedRoutes = computed(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding-top: 1rem;
+  margin-top: 4px;
   padding-left: 1rem;
   padding-right: 1rem;
-  margin-bottom: 1rem;
+  padding-bottom: 8px;
+  margin-bottom: 3rem;
+
+  background-color: $color-bg-transparent;
+  border-radius: 4px;
 
   @include sm {
     padding-left: 0;
     padding-right: 0;
+  }
+}
+
+.link{
+  &:first-of-type{
+    .nav-link{
+      padding-left: 8px;
+    }
   }
 }
 
@@ -321,7 +333,7 @@ const computedRoutes = computed(() => {
   font-size: 1rem;
   font-weight: 700;
   padding: 0.5rem;
-
+  
   &:not(:hover) {
     opacity: 0.85;
   }
@@ -337,13 +349,16 @@ const computedRoutes = computed(() => {
 .overlay-container {
   position: absolute;
   bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+
   background-color: var(--color-divider);
-  width: 100%;
+  width: calc(100% - 16px);
   height: 2px;
 }
 
 .fund-name {
-  background-color: $color-gray-light-transparent;
+  background-color: $color-bg-transparent;
   border-radius: $default-border-radius;
   padding: 0.5rem 0.62rem;
   display: flex;
@@ -352,7 +367,7 @@ const computedRoutes = computed(() => {
   align-items: center;
 
   @include sm {
-    padding: 1rem 1.5rem;
+    padding: 8px;
   }
 
   &__avatar_img {
