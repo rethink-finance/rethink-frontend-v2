@@ -60,15 +60,15 @@
               item-title="chainName"
               item-value="chainId"
             >
-            <template #selection="{ item }">
-              <Icon
-                :icon="item.raw.icon.name"
-                class="select_item__icon mr-2"
-              />
-              <v-list-item-title>
-                {{ item.raw.chainName }}
-              </v-list-item-title>
-            </template>
+              <template #selection="{ item }">
+                <Icon
+                  :icon="item.raw.icon.name"
+                  class="select_item__icon mr-2"
+                />
+                <v-list-item-title>
+                  {{ item.raw.chainName }}
+                </v-list-item-title>
+              </template>
               <template #item="{ props, item }">
                 <div
                   @click="switchNetwork(item.raw.chainId)"
@@ -390,6 +390,10 @@ const onClickConnect = async () => {
 }
 .select_network {
   min-width: 9rem;
+
+  :deep(.v-input__details) {
+    display: none;
+  }
 }
 .select_item {
   display: flex;
