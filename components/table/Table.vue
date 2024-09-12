@@ -308,6 +308,13 @@ watch([() => props.data, () => props.columns], () => {
           position: relative;
           top: 2px;
         }
+
+        // active sort arrow color
+        :deep(.sort .sort__arrow--active) {
+          path{
+            fill: $color-primary;
+          }
+        }
       }
     }
   }
