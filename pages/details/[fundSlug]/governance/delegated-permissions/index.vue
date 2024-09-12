@@ -42,6 +42,11 @@ const breadcrumbItems: BreadcrumbItem[] = [
     disabled: false,
     to: `/details/${selectedFundSlug.value}/governance`,
   },
+  {
+    title: "Delegated Permission",
+    disabled: true,
+    to: `/details/${selectedFundSlug.value}/governance/delegated-permissions`,
+  },
 ];
 
 const defaultMethod = formatInputToObject(proposalRoleModMethodStepsMap.scopeFunction);

@@ -48,7 +48,7 @@
       </div>
 
     </div>
-    <UiBreadcrumbs :items="breadcrumbItems" class="breadcrumbs" />
+    <UiBreadcrumbs :items="breadcrumbItems" class="breadcrumbs" :prepend-breadcrumb="prependBreadcrumb" />
 
     <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>
@@ -67,7 +67,6 @@
 </template>
 
 <script lang="ts" setup>
-import { trimTrailingSlash } from "~/composables/utils";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -144,11 +143,14 @@ watch(
 watch(
   () => route.path,
   (newPath) => {
-    const pathRoot = `${fundDetailsRoute}`;
-    console.log(newPath);
+    const pathRoot = `${fundDetailsRoute.value}`;
+
     if (
-      trimTrailingSlash(newPath) === pathRoot ||
-      newPath === `${pathRoot}/nav`
+      newPath === pathRoot ||
+      newPath === `${pathRoot}/nav` || 
+      newPath === `${pathRoot}/permissions` ||
+      newPath === `${pathRoot}/flows` ||
+      newPath === `${pathRoot}/governance`
     ) {
       setBreadcrumbItems([]);
     }
@@ -225,6 +227,17 @@ const fundDetailsRoute = computed(
   () => `/details/${chainId}-${tokenSymbol}-${fundAddress}`,
 );
 
+// show icon + title in the breadcrumb for the fund
+const prependBreadcrumb = computed(() => {
+    const output = {
+      title: fund?.value?.fundToken?.symbol || "",
+      to: fundDetailsRoute?.value || "",
+      photoUrl: fund?.value?.photoUrl || "",
+      disabled: false
+    } as BreadcrumbItem;
+
+  return output;
+});
 
 
 const routes: IRoute[] = [

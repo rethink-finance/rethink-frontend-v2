@@ -32,8 +32,8 @@
 </template>
 
 <script lang="ts">
-import type ITrendingDelegates from "~/types/trending_delegates";
 import { truncateAddress } from "~/composables/addressUtils";
+import type ITrendingDelegates from "~/types/trending_delegates";
 
 export default defineComponent({
   name: "TableTrengingDelegates",
@@ -44,14 +44,13 @@ export default defineComponent({
     },
   },
   data: () => ({
-    expanded: [],
     // bug fix for vuetify table headers property 'align'
     // https://github.com/vuetifyjs/vuetify/issues/18901
     headers: ref([
       {
         title: "Delegated Members",
         key: "delegated_members",
-        value: (v: any) => v.delegated_members + " members",
+        value: (v: any) => pluralizeWord("member", v.delegated_members),
         sorable: false,
       },
       {

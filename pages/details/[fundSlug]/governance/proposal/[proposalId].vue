@@ -204,14 +204,14 @@ const toggleRawProposalCalldata = (index: number) => {
 const { selectedFundSlug } = toRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
-    title: "All Proposals",
+    title: "Governance",
     disabled: false,
     to: `/details/${selectedFundSlug.value}/governance`,
   },
   {
     title: "Proposal Details",
     disabled: true,
-    to: `/details/${selectedFundSlug.value}/governance`,
+    to: `/details/${selectedFundSlug.value}/governance/proposal/${createdBlockNumber}-${proposalId}`,
   },
 ];
 
