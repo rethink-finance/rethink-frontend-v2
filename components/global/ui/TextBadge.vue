@@ -44,15 +44,19 @@ defineProps({
   display: flex;
   flex-direction: row;
   gap: 0.5rem;
-  padding: 0.25rem;
   justify-content: center;
   align-items: center;
-  font-weight: bold;
+  
   width: max-content;
+  padding: 0.25rem;
+  
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
   color: $color-text-irrelevant;
 
   @include borderGray;
-  background: $color-badge-navy;
+  background: $color-gray-light-transparent;
 
   &--disabled {
     opacity: 0.65;
