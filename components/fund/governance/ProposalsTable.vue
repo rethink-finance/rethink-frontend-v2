@@ -12,7 +12,7 @@
   >
     <template #[`header.approval`]="{ column }">
       <!-- HEADERS -->
-      <div class="d-flex justify-center">
+      <div class="table_governance__header_cell">
         {{ column.title }}
         <span class="d-flex align-center ms-1">
           <Icon icon="octicon:question-16" width="1rem" />
@@ -196,7 +196,7 @@ const headers = computed(() => {
     { title: "Created", key: "createdDatetime", sortable: true },
   ];
   if (accountStore.isConnected) {
-    headers.push({ title: "Has Voted", key: "submission_status", sortable: true, align: "center" });
+    headers.push({ title: "Voted", key: "submission_status", sortable: true, align: "center" });
   }
 
   headers.push(...[
@@ -245,6 +245,12 @@ const rowClick = (_:any, item: any) => {
   &__skeleton_loader :deep(*) {
     margin: 0;
   }  
+
+  &__header_cell{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
 .proposal {
