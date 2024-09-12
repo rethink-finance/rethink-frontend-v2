@@ -80,14 +80,14 @@
       <template v-else>
         <Icon
           v-if="governanceProposalStore.hasAccountVoted(item.proposalId)"
-          icon="octicon:check-circle-fill-16"
+          icon="weui:done-filled"
           width="1rem"
           height="1rem"
           color="var(--color-success)"
         />
         <icon
           v-else
-          icon="octicon:x-circle-fill-16"
+          icon="mingcute:close-fill"
           color="var(--color-error)"
         />
       </template>
