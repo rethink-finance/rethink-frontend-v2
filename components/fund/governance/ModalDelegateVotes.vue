@@ -124,10 +124,6 @@ const hasDelegatedToYourself = computed(() => {
 });
 
 const parsedDelegateMessage = computed(() => {
-  // return fundStore.fund?.delegates.find(
-  //   (delegate) => delegate.address === fundStore.activeAccountAddress,
-  // )?.delegate;
-
   const delegateAddress = fundStore?.userFundDelegateAddress;
   console.log("delegateAddress: ", delegateAddress);
   let output = `You have delegated to ${delegateAddress}`;

@@ -55,11 +55,11 @@
           :hide-after="2200"
         >
           <v-btn
-            class="manage-button"
+            class="manage_button"
             variant="outlined"
             @click="accountStore.isConnected ? openDelegateDialog() : null"
           >
-            Manage Delegation
+            {{shouldUserDelegate ? "Assign Delegation" : "Manage Delegation"}}
           </v-btn>
         </UiTooltipClick>
       </template>
@@ -112,6 +112,7 @@ const governanceProposalStore = useGovernanceProposalsStore();
 
 const confirmDialog = ref(false);
 const updateSettingsProposals = ref([]) as Ref<IGovernanceProposal[]>;
+const { shouldUserDelegate } = toRefs(fundStore);
 
 // dummy data governance activity
 const governanceProposals = computed(() => {
@@ -631,8 +632,9 @@ const startFetch = async () => {
   }
 }
 
-.manage-button {
+.manage_button {
   color: rgb(210, 223, 255) !important;
+  padding-inline: 16px !important;
 }
 
 .confirm_dialog{
