@@ -6,7 +6,10 @@
     <v-skeleton-loader type="card" />
   </div>
   <div v-else-if="fund?.address" class="w-100">
-    <div class="fund_name">
+    <div
+      v-if="breadcrumbItems.length === 0"
+      class="fund_name"
+    >
       <v-avatar class="fund_name__avatar" :rounded="false">
         <img
           :src="fund.photoUrl"
@@ -25,7 +28,10 @@
         </p>
       </div>
     </div>
-    <div class="details_nav_container">
+    <div 
+      v-if="breadcrumbItems.length === 0"
+      class="details_nav_container"
+    >
       <div class="details_nav">
         <div class="overlay-container" />
         <nuxt-link
@@ -48,7 +54,12 @@
       </div>
 
     </div>
-    <UiBreadcrumbs :items="breadcrumbItems" class="breadcrumbs" :prepend-breadcrumb="prependBreadcrumb" />
+    <UiBreadcrumbs
+      v-if="breadcrumbItems.length > 0"
+      :items="breadcrumbItems"
+      class="breadcrumbs"
+      :prepend-breadcrumb="prependBreadcrumb"
+    />
 
     <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>
@@ -322,7 +333,7 @@ const computedRoutes = computed(() => {
   padding-left: 1rem;
   padding-right: 1rem;
   padding-bottom: 8px;
-  margin-bottom: 2rem;
+  margin-bottom: 40px;
 
   background-color: $color-bg-transparent;
   border-radius: 4px;
