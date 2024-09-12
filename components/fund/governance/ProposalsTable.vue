@@ -228,6 +228,14 @@ const rowClick = (_:any, item: any) => {
   :deep(.v-table__wrapper) {
     max-height: 500px;
   }
+  :deep(.v-data-table__tr) {
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+
+    &:hover {
+      background-color: $color-gray-light-transparent;
+      box-shadow: 0px 0px 10px 0px #1f5fff29;
+    }   
+  }
   &__no_data {
     text-align: center;
     padding: 1.5rem;
@@ -236,7 +244,7 @@ const rowClick = (_:any, item: any) => {
 
   &__skeleton_loader :deep(*) {
     margin: 0;
-  }
+  }  
 }
 
 .proposal {
