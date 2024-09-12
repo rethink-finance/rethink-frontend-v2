@@ -49,10 +49,6 @@ export default {
           href: this.deBankUrl,
         },
         {
-          title: "Tally - Governance",
-          href: this.governanceUrl,
-        },
-        {
           title: "Safe - Custody",
           href: this.custodyUrl,
         },
@@ -63,12 +59,6 @@ export default {
        * https://debank.com/profile/0x54b491bb5e59CD974dDc9b5a52478f54c07Aee78
        * **/
       return `https://debank.com/profile/${this.fund.safeAddress}`;
-    },
-    governanceUrl(): string {
-      /** Example:
-       * https://www.tally.xyz/gov/tfd3-0xface6562d7e39ea73b67404a6454fbbbefeca553
-       * **/
-      return `https://www.tally.xyz/gov/${this.fund.fundToken.symbol}-${this.fund.governorAddress}`;
     },
     custodyUrl(): string {
       /** Example:
