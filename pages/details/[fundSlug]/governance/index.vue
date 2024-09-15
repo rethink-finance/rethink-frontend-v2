@@ -1,5 +1,5 @@
 <template>
-  <div class="page-governance">
+  <div class="page-governance">    
     <UiDataRowCard title="Governance Settings" class="data_row_card">
       <template #body>
         <FundOverviewGovernance :fund="fund" />
@@ -94,7 +94,6 @@ import type IFund from "~/types/fund";
 import type ITrendingDelegates from "~/types/trending_delegates";
 
 // components
-import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDelegates.vue";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
@@ -619,7 +618,8 @@ const startFetch = async () => {
     padding-bottom: 2rem;
   }
   :deep(.v-expansion-panel-title) {
-    padding: 1.5rem;
+      padding: 1.5rem;
+      font-size: 1rem;
   }
   // add borders to text fields inside panel
   :deep(.v-expansion-panels) {

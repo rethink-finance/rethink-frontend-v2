@@ -55,7 +55,7 @@
             <span class="data_row__action_text" :class="expanded ? 'text-primary' : ''">
               <slot name="actionText" :expanded="expanded" />
             </span>
-            <v-icon :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
+            <v-icon class="data_row__action_icon" :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
           </slot>
         </template>
       </v-expansion-panel-title>
@@ -235,10 +235,11 @@ export default defineComponent({
   }
   .v-expansion-panel-title {
     overflow: hidden;
-    padding: 0.5rem 1rem;
-    height: 3.5rem;
-    font-size: 1rem;
+    padding: 10px 8px;
+    height: 56px;
+    font-size: 14px;
   }
+
   &__body {
     word-wrap: break-word;
     max-width: 100%;
@@ -264,7 +265,7 @@ export default defineComponent({
   &__column {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 4px;
     min-width: 7rem;
     max-width: 100%;
     margin-top: auto;
@@ -278,6 +279,11 @@ export default defineComponent({
   &__title, &__subtitle {
     @include ellipsis;
     max-width: 100%;
+  }
+
+  &__action_icon{
+    height: 24px;
+    width: 24px;
   }
 }
 </style>
