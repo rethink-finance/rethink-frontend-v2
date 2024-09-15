@@ -256,6 +256,7 @@ watch([() => props.data, () => props.columns], () => {
 <style lang="scss" scoped>
 .table_wrapper {
   overflow: auto;
+  @include customScrollbar;
 }
 .rethink-table {
   $cell-padding-inlinee: 1rem;

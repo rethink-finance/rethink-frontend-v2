@@ -234,6 +234,8 @@ const rowClick = (_:any, item: any) => {
   // add table max height
   :deep(.v-table__wrapper) {
     max-height: 500px;
+    
+    @include customScrollbar;
   }
   .v-data-table__row {
     cursor: pointer;
