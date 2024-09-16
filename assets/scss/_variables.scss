@@ -152,6 +152,8 @@ $default-border-properties: (
 }
 
 @mixin customScrollbar {
+    // offset the scrollbar to the left
+    padding-right: 10px;
     margin-right: -10px;
     
     /* Custom scrollbar styles */
