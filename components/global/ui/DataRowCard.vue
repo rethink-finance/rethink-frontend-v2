@@ -40,7 +40,7 @@
               {{ subtitle3 }}
             </div>
           </div>
-          <div v-if="title4" class="data_row__column" :class="{'data_row__column--grow': growColumn4}">
+          <div v-if="title4" class="data_row__column is-last" :class="{'data_row__column--grow': growColumn4}">
             <div class="data_row__title">
               {{ title4 }}
             </div>
@@ -274,6 +274,12 @@ export default defineComponent({
 
     &--grow {
       flex-grow: 1;
+    }
+
+    &.is-last {
+      margin-left: auto;
+      padding-left: 25px;
+      border-left: 1px solid $color-gray-transparent;
     }
   }
   &__title, &__subtitle {
