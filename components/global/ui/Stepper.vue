@@ -5,8 +5,8 @@
         {{ title }}
         <UiTooltipClick
           v-if="tooltipText"
-          :tooltip-text="tooltipText"
-          :hide-after="3000"
+          location="right"
+          :hide-after="6000"
         >
           <Icon
             icon="material-symbols:info-outline"
@@ -14,6 +14,24 @@
             width="1.5rem"
             @click="tooltipClick"
           />
+
+          <template #tooltip>
+            <div class="tooltip__content">
+              <span>{{ tooltipText }}</span>
+              <a
+                class="tooltip__link"
+                href="https://docs.rethink.finance/rethink.finance"
+                target="_blank"
+              >
+                Learn More 
+                <Icon
+                  icon="maki:arrow"
+                  color="primary"
+                  width="1rem"
+                />
+              </a>
+            </div>
+          </template>
         </UiTooltipClick>
       </div>
 
@@ -32,6 +50,7 @@
           location="top"
           @update:model-value="true"
         >
+        <!-- class="tooltip" -->
           Connect your wallet to create a proposal.
         </v-tooltip>
       </v-btn>
@@ -346,10 +365,14 @@ const nextStep = () => {
     align-items: center;
     align-content: center;
     gap: 10px;
+
+    font-size: 16px;
+    font-weight: bold;
   }
   &__info-icon {
     cursor: pointer;
     display: flex;
+    color: $color-text-irrelevant;
   }
 }
 .stepper {
@@ -531,6 +554,19 @@ const nextStep = () => {
     &.success {
       color: $color-success;
     }
+  }
+}
+.tooltip{
+  &__content{
+    display: flex;
+    gap: 40px;
+  }
+  &__link {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    color: $color-primary;
   }
 }
 </style>

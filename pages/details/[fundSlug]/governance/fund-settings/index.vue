@@ -4,14 +4,44 @@
       <div class="main_header__title">
         Fund Settings Proposal
 
-        <Icon
+        <UiTooltipClick
+          location="right"
+          :hide-after="6000"
+        >
+          <Icon
+            icon="material-symbols:info-outline"
+            :class="'main_header__info-icon'"
+            width="1.5rem"
+            @click="handleInfoClick"
+          />
+
+          <template #tooltip>
+            <div class="tooltip__content">
+              Update Fund Settings on need!
+              <a
+                class="tooltip__link"
+                href="https://docs.rethink.finance/rethink.finance"
+                target="_blank"
+              >
+                Learn More 
+                <Icon
+                  icon="maki:arrow"
+                  color="primary"
+                  width="1rem"
+                />
+              </a>
+            </div>
+          </template>
+        </UiTooltipClick>
+
+        <!-- <Icon
           icon="material-symbols:info-outline"
           :class="'main_header__info-icon'"
           width="1.5rem"
           @click="handleInfoClick"
-        />
+        /> -->
 
-        <div :class="`info-box-v1 ${isInfoVisible ? 'visible' : ''}`">
+        <!-- <div :class="`info-box-v1 ${isInfoVisible ? 'visible' : ''}`">
           Update Fund Settings on need!
           <a
             class="info-box-v1__link"
@@ -22,7 +52,7 @@
             color="primary"
             width="1rem"
           /></a>
-        </div>
+        </div> -->
       </div>
 
       <div class="buttons_container">
@@ -702,11 +732,14 @@ onBeforeUnmount(() => {
     align-items: center;
     align-content: center;
     gap: 10px;
+
+    font-size: 16px;
+    font-weight: bold;
   }
   &__info-icon {
     cursor: pointer;
     display: flex;
-    color: $color-disabled;
+    color: $color-text-irrelevant;
   }
 }
 .buttons_container {
@@ -763,9 +796,8 @@ onBeforeUnmount(() => {
 
   padding: 12px;
   border-radius: 4px;
-  background: linear-gradient(0deg, #111c35, #111c35),
-    linear-gradient(0deg, rgba(246, 249, 255, 0.08), rgba(246, 249, 255, 0.08));
-  box-shadow: 0px 0px 6px 0px #1f5fff29;
+  background-color: #111c35;
+  box-shadow: 0px 0px 16px 0px $color-box-shadow;
 
   font-size: 12px;
   font-weight: 500;
@@ -792,6 +824,19 @@ onBeforeUnmount(() => {
   display: none;
   &.toggle__on {
     display: block;
+  }
+}
+.tooltip{
+  &__content{
+    display: flex;
+    gap: 40px;
+  }
+  &__link {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    color: $color-primary;
   }
 }
 </style>

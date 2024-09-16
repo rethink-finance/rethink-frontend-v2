@@ -1,11 +1,11 @@
 <template>
-  <v-tooltip v-model="show" :open-on-hover="false" :location="location">
+  <v-tooltip v-model="show" :open-on-hover="false" :location="location" class="tooltip">
     <template #activator="{ props }">
       <div v-bind="props" @click="showTooltip">
         <slot />
       </div>
     </template>
-    <span>{{ tooltipText }}</span>
+    <slot name="tooltip" />
   </v-tooltip>
 </template>
 
@@ -37,14 +37,14 @@ export default defineComponent({
       default: "top",
     },
   },
-  setup(props) {
+  setup(props , { slots }) {
     const show = ref(false);
     let timerId: ReturnType<typeof setTimeout> | undefined;
 
     const showTooltip = () => {
-      if (props.tooltipText === "") {
-        return;
-      }
+      // only show tooltip if slot #tooltip is present
+      if(!slots.tooltip) return;
+      
 
       show.value = true;
       if (timerId) {

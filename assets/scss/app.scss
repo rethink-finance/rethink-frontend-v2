@@ -182,3 +182,20 @@ a {
 input[type="number"]:focus:hover {
   pointer-events: none;
 }
+
+
+/* global.scss or app.scss */
+.v-overlay.v-tooltip .v-overlay__content {
+    z-index: 2100;
+    pointer-events: all;
+
+    padding: 13px;
+    border-radius: 4px;
+    background-color: #111c35;
+    box-shadow: 0px 0px 16px 0px $color-box-shadow;
+    
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: $color-secondary;
+}
