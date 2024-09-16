@@ -11,10 +11,8 @@
   align-items: center;
   margin-bottom: 32px;
   &__title {
-    font-size: $text-xl;
-    color: $color-title;
-    font-weight: 500;
-    letter-spacing: $letter-spacing-lg;
+    font-size: 16px;
+    font-weight: bold;
   }
   &__subtitle {
     color: $color-text-irrelevant;
