@@ -77,6 +77,8 @@ const textColorClass = (level) => {
 :deep(.v-overlay__content.v-snackbar__wrapper){
   background-color: #111C35;
   color: $color-white;
+
+  box-shadow: 0px 0px 16px 0px $color-box-shadow;
 }
 
 .toast_content {
