@@ -4,20 +4,30 @@
     :key="toast.id"
     :model-value="true"
     :timeout="toast.duration"
-    :class="[backgroundClass(toast.level), 'text'+textColorClass(toast.level)]"
+    :class="['toast', backgroundClass(toast.level), 'text'+textColorClass(toast.level)]"
     multi-line
   >
-    {{ toast.message }}
+    <div class="toast_content">
+        <Icon
+          v-if="toastIcon(toast.level)"
+          :icon="toastIcon(toast.level)"
+          width="1.5rem"
+          class="icon__toast"
+        />
+
+      {{ toast.message }}
+    </div>
 
     <template #actions>
       <v-btn
-        :class="['btn-close'+textColorClass(toast.level)]"
+        :class="['btn-close', 'btn-close'+textColorClass(toast.level)]"
         icon
         @click="toastStore.closeToast(toast.id)"
       >
         <Icon
           icon="octicon:x-16"
           width="1.5rem"
+          class="icon"
         />
       </v-btn>
     </template>
@@ -36,13 +46,25 @@ watch(() => toastStore.toasts, (newToasts) => {
 const backgroundClass = (level) => {
   // Define your mapping of levels to background classes
   const levelClasses = {
-    success: "toast-bg-success",
-    warning: "toast-bg-warning ",
-    error: "toast-bg-danger",
+    success: "toast-success",
+    warning: "toast-warning ",
+    error: "toast-danger",
   };
 
   // Return the corresponding class for the given level
   return levelClasses[level] || "";
+};
+
+const toastIcon = (level) => {
+  // Define your mapping of levels to icons
+  const levelIcons = {
+    success: "material-symbols:check-circle-outline",
+    warning: "material-symbols:warning-outline",
+    error: "material-symbols:error-outline",
+  };
+
+  // Return the corresponding icon for the given level
+  return levelIcons[level] || "";
 };
 
 const textColorClass = (level) => {
@@ -52,34 +74,42 @@ const textColorClass = (level) => {
 </script>
 
 <style lang="scss" scoped>
-.toast-bg-success,
-.toast-bg-warning,
-.toast-bg-danger {
-  :deep(.v-snackbar__content) {
-    font-weight: bold !important;
+:deep(.v-overlay__content.v-snackbar__wrapper){
+  background-color: #111C35;
+  color: $color-white;
+}
+
+.toast_content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.toast-success {
+  .icon__toast {
+    color: #38DE38;
+  }
+}
+.toast-danger {
+  .icon__toast {
+    color: #DE3838;
+  }
+}
+.toast-warning {
+  .icon__toast {
+    color: #FB8C00;
   }
 }
 
-.toast-bg-success :deep(.v-overlay__content.v-snackbar__wrapper) {
-  background: $color-success !important;
-  color: $color-success-text !important;
-}
-.toast-bg-danger :deep(.v-overlay__content.v-snackbar__wrapper) {
-  background: $color-error !important;
-  color: $color-error-text !important;
-}
-.toast-bg-warning :deep(.v-overlay__content.v-snackbar__wrapper) {
-  background: $color-warning !important;
-  color: $color-warning-text !important;
-}
-
 :deep(.v-overlay__content.v-snackbar__wrapper) {
-  background: $color-toast !important;
-  border: 1px solid $color-secondary;
-
   .v-snackbar__content {
     font-weight: 500;
     line-height: 150%;
   }
+}
+:deep(.v-btn){
+  color: #AEC5FF !important;
+  height: 2.5rem !important;
+  width: 2.5rem !important;
+  padding: 0 !important;
 }
 </style>
