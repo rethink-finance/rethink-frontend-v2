@@ -9,7 +9,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 32px;
   &__title {
     font-size: $text-xl;
     color: $color-title;

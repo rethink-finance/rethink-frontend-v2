@@ -419,6 +419,6 @@ const computedRoutes = computed(() => {
 }
 
 .breadcrumbs{
-  margin-bottom: 3rem;
+  margin-bottom: 32px;
 }
 </style>

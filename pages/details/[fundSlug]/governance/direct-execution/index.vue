@@ -6,6 +6,7 @@
       :fields-map="fieldsMap"
       title="Direct Execution Proposal"
       submit-label="Create Proposal"
+      tooltip-text="Create a Direct Execution Proposal"
       :submit-event="submitProposal"
       :is-submit-loading="loading"
     />
