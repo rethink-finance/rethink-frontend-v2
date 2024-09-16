@@ -1,5 +1,5 @@
 <template>
-  <div class="page-governance">    
+  <div class="page-governance">
     <UiDataRowCard title="Governance Settings" class="data_row_card">
       <template #body>
         <FundOverviewGovernance :fund="fund" />
@@ -33,9 +33,7 @@
           <div class="tools__val">
             {{ proposalsSuccessRate }}
           </div>
-          <div class="tools__subtext">
-            Success Rate
-          </div>
+          <div class="tools__subtext">Success Rate</div>
         </div>
       </template>
       <FundGovernanceProposalsTable
@@ -47,19 +45,19 @@
     <UiMainCard title="Trending Delegates" subtitle="4 Delegated Wallets">
       <template #header-right>
         <UiTooltipClick
-          :tooltip-text="
-            accountStore.isConnected
-              ? ''
-              : 'Connect your wallet to delegate your votes'
-          "
-          :hide-after="2200"
+          :hide-after="6000"
+          :show-tooltip="!accountStore.isConnected"
         >
+          <template #tooltip>
+            Connect your wallet to delegate your votes
+          </template>
+
           <v-btn
             class="manage_button"
             variant="outlined"
             @click="accountStore.isConnected ? openDelegateDialog() : null"
           >
-            {{shouldUserDelegate ? "Assign Delegation" : "Manage Delegation"}}
+            {{ shouldUserDelegate ? "Assign Delegation" : "Manage Delegation" }}
           </v-btn>
         </UiTooltipClick>
       </template>
@@ -72,18 +70,22 @@
       v-model="confirmDialog"
       title="Heads Up!"
       confirm-text="Continue"
-      :cancel-text="updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to Proposal'"
+      :cancel-text="
+        updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to Proposal'
+      "
       message="You can create a new one or check the ongoing activity first!"
       class="confirm_dialog"
       :max-width="updateSettingsProposals.length > 1 ? 'unset' : '600px'"
       @confirm="handleNavigateToCreateProposal"
-      @cancel="updateSettingsProposals.length > 1 ? null : handleGoToFProposal()"
+      @cancel="
+        updateSettingsProposals.length > 1 ? null : handleGoToFProposal()
+      "
     >
       <FundGovernanceProposalsTable
         v-if="updateSettingsProposals.length > 1"
         :items="updateSettingsProposals"
         :loading="loadingProposals"
-        style="margin-top: 2rem;"
+        style="margin-top: 2rem"
       />
     </UiConfirmDialog>
   </div>
@@ -117,15 +119,15 @@ const { shouldUserDelegate } = toRefs(fundStore);
 const governanceProposals = computed(() => {
   const proposals = governanceProposalStore.getProposals(
     web3Store.chainId,
-    fundStore.fund?.address,
+    fundStore.fund?.address
   );
 
   // set updateSettingsProposals to proposals that have updateSettings calldata
   updateSettingsProposals.value = proposals.filter((proposal) => {
     return proposal.calldataTags?.some(
-      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS,
+      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS
     );
-  })
+  });
 
   // Sort the events by createdTimestamp
   proposals.sort((a, b) => {
@@ -145,7 +147,7 @@ const proposalsCountText = computed(() => {
 });
 const pendingProposals = computed(() => {
   return governanceProposals.value.filter(
-    (proposal) => proposal.state === ProposalState.Pending,
+    (proposal) => proposal.state === ProposalState.Pending
   );
 });
 const pendingProposalsCountText = computed(() => {
@@ -159,7 +161,7 @@ const hasUpdateSettingsProposal = computed(() => {
 });
 const proposalsSuccessRate = computed(() => {
   const successProposals = governanceProposals.value.filter((proposal) =>
-    [ProposalState.Succeeded, ProposalState.Executed].includes(proposal.state),
+    [ProposalState.Succeeded, ProposalState.Executed].includes(proposal.state)
   );
   const allFinishedProposalsCount =
     governanceProposals.value.length - pendingProposals.value.length;
@@ -214,7 +216,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
     click: () => {
       // change route to direct execution
       router.push(
-        `/details/${fundStore.selectedFundSlug}/governance/direct-execution`,
+        `/details/${fundStore.selectedFundSlug}/governance/direct-execution`
       );
     },
   },
@@ -222,21 +224,19 @@ const dropdownOptions: Record<string, DropdownOption> = {
     click: () => {
       // change route to delegated permissions
       router.push(
-        `/details/${fundStore.selectedFundSlug}/governance/delegated-permissions`,
+        `/details/${fundStore.selectedFundSlug}/governance/delegated-permissions`
       );
     },
   },
   "NAV Methods": {
     click: () => {
-      router.push(
-        `/details/${fundStore.selectedFundSlug}/nav/manage`,
-      );
+      router.push(`/details/${fundStore.selectedFundSlug}/nav/manage`);
     },
   },
   "Fund Settings": {
     click: () => {
       // if fund settings proposal already exist, open up the dialog
-      if(hasUpdateSettingsProposal.value) {
+      if (hasUpdateSettingsProposal.value) {
         confirmDialog.value = true;
         return;
       }
@@ -248,27 +248,29 @@ const dropdownOptions: Record<string, DropdownOption> = {
 
 const handleNavigateToCreateProposal = () => {
   router.push(
-    `/details/${fundStore.selectedFundSlug}/governance/fund-settings`,
+    `/details/${fundStore.selectedFundSlug}/governance/fund-settings`
   );
 };
 const handleGoToFProposal = () => {
   const { createdBlockNumber, proposalId } = updateSettingsProposals.value[0];
 
-  if(!createdBlockNumber || !proposalId) {
+  if (!createdBlockNumber || !proposalId) {
     console.error("No proposalId or createdBlockNumber found");
     return;
   }
 
   router.push(
-    `/details/${fundStore.selectedFundSlug}/governance/proposal/${createdBlockNumber}-${proposalId}`,
+    `/details/${fundStore.selectedFundSlug}/governance/proposal/${createdBlockNumber}-${proposalId}`
   );
 };
-const createProposalDropdownOptions = Object.keys(dropdownOptions).map((key) => {
-  return {
-    label: key,
-    disabled: dropdownOptions[key]?.disabled || false,
-  };
-});
+const createProposalDropdownOptions = Object.keys(dropdownOptions).map(
+  (key) => {
+    return {
+      label: key,
+      disabled: dropdownOptions[key]?.disabled || false,
+    };
+  }
+);
 
 const selectOption = (option: string) => {
   if (dropdownOptions[option]) {
@@ -291,7 +293,7 @@ const openDelegateDialog = () => {
 
 const fetchProposals = async (
   rangeStartBlock: number,
-  rangeEndBlock: number,
+  rangeEndBlock: number
 ) => {
   if (!fundStore.fund?.governanceToken.decimals) {
     console.error("No fund governance token decimals found.");
@@ -322,17 +324,22 @@ const fetchProposals = async (
 
   // From the largest number to the smallest number.
   if (rangeStartBlock > rangeEndBlock) {
-    console.warn("\nBIGGEST to smallest from: ", rangeEndBlock, " to: ",  rangeStartBlock);
+    console.warn(
+      "\nBIGGEST to smallest from: ",
+      rangeEndBlock,
+      " to: ",
+      rangeStartBlock
+    );
     let toBlock = Math.max(rangeStartBlock, 0);
     let fromBlock = Math.min(toBlock - chunkSize + 1, rangeEndBlock);
     while (true) {
-    // for (let i = rangeStartBlock; i > rangeEndBlock; i -= chunkSize) {
+      // for (let i = rangeStartBlock; i > rangeEndBlock; i -= chunkSize) {
       if (!shouldFetchProposals.value) return;
       console.log(
         "BGsm fetch ProposalCreated events from: ",
         fromBlock,
         " to ",
-        toBlock,
+        toBlock
       );
 
       let chunkEvents;
@@ -344,13 +351,13 @@ const fetchProposals = async (
             {
               fromBlock,
               toBlock,
-            },
+            }
           );
           console.log(
             "chunkevents fetched: ",
             chunkEvents,
             " chunksize: ",
-            chunkSize,
+            chunkSize
           );
 
           chunkSize *= 2;
@@ -360,7 +367,14 @@ const fetchProposals = async (
         } catch (error: any) {
           // Wait max 10 seconds.
           waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
-          console.error("getPastEvents", fromBlock, toBlock,  "error, wait ", waitTimeAfterError , error);
+          console.error(
+            "getPastEvents",
+            fromBlock,
+            toBlock,
+            "error, wait ",
+            waitTimeAfterError,
+            error
+          );
 
           if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
             // We probably tried fetching a range that is too big, reduce the chunk size by half
@@ -369,7 +383,9 @@ const fetchProposals = async (
             console.log("reduce chunkSize: ", chunkSize);
             fromBlock = Math.max(toBlock - chunkSize + 1, 0);
           }
-          await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
+          await new Promise((resolve) =>
+            setTimeout(resolve, waitTimeAfterError)
+          );
         }
       }
 
@@ -381,20 +397,20 @@ const fetchProposals = async (
         "set BlockFetchedRanges toBlock: ",
         toBlock,
         " fromBlock ",
-        fromBlock,
+        fromBlock
       );
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
         web3Store.chainId,
         fundStore.fund?.address,
         toBlock,
-        fromBlock,
+        fromBlock
       );
 
       // Proposals were fetched successfully.
       // Increase from and to blocks range.
       toBlock = fromBlock - 1;
       fromBlock = Math.max(toBlock - chunkSize + 1, 0);
-      console.warn("fromBlock: ", + fromBlock, "toBlocK: ", toBlock)
+      console.warn("fromBlock: ", +fromBlock, "toBlocK: ", toBlock);
 
       const lastProposal =
         governanceProposals.value[governanceProposals.value.length];
@@ -418,7 +434,7 @@ const fetchProposals = async (
           "smBG fetch ProposalCreated events from: ",
           fromBlock,
           " to ",
-          toBlock,
+          toBlock
         );
         try {
           chunkEvents = await fundStore.fundGovernorContract.getPastEvents(
@@ -426,14 +442,14 @@ const fetchProposals = async (
             {
               fromBlock,
               toBlock,
-            },
+            }
           );
 
           console.log(
             "chunkevents fetched: ",
             chunkEvents,
             " chunksize: ",
-            chunkSize,
+            chunkSize
           );
           // All good, we can try increasing the chunk size by 2 to fetch bigger event ranges at once.
           chunkSize *= 2;
@@ -443,7 +459,14 @@ const fetchProposals = async (
         } catch (error: any) {
           // Wait max 10 seconds.
           waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
-          console.error("getPastEvents", fromBlock, toBlock,  "error, wait ", waitTimeAfterError , error);
+          console.error(
+            "getPastEvents",
+            fromBlock,
+            toBlock,
+            "error, wait ",
+            waitTimeAfterError,
+            error
+          );
 
           if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
             // We probably tried fetching a range that is too big, reduce the chunk size by half
@@ -452,7 +475,9 @@ const fetchProposals = async (
             console.log("reduce chunkSize: ", chunkSize);
             toBlock = Math.min(fromBlock + chunkSize - 1, rangeEndBlock);
           }
-          await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
+          await new Promise((resolve) =>
+            setTimeout(resolve, waitTimeAfterError)
+          );
         }
       }
 
@@ -463,7 +488,7 @@ const fetchProposals = async (
         web3Store.chainId,
         fundStore.fund?.address,
         toBlock,
-        fromBlock,
+        fromBlock
       );
 
       // Proposals were fetched successfully.
@@ -472,11 +497,14 @@ const fetchProposals = async (
       toBlock += chunkSize - 1;
       toBlock = Math.max(fromBlock + chunkSize - 1, rangeEndBlock);
 
-      console.warn("fromBlock: ", + fromBlock, "toBlocK: ", toBlock)
+      console.warn("fromBlock: ", +fromBlock, "toBlocK: ", toBlock);
 
       const lastProposal =
         governanceProposals.value[governanceProposals.value.length];
-      if (fromBlock >= rangeEndBlock || lastProposal?.createdTimestamp < targetTimestamp) {
+      if (
+        fromBlock >= rangeEndBlock ||
+        lastProposal?.createdTimestamp < targetTimestamp
+      ) {
         break;
       }
     }
@@ -521,13 +549,13 @@ const startFetch = async () => {
   const [mostRecentFetchedBlock, oldestFetchedBlock] =
     governanceProposalStore.getFundProposalsBlockFetchedRanges(
       web3Store.chainId,
-      fundStore.fund?.address,
+      fundStore.fund?.address
     );
   console.log(
     "mostRecentFetchedBlock: ",
     mostRecentFetchedBlock,
     "oldestFetchedBlock:",
-    oldestFetchedBlock,
+    oldestFetchedBlock
   );
 
   if (
@@ -537,7 +565,7 @@ const startFetch = async () => {
     console.log(
       "fetch from last fetched block to current block",
       currentBlock - 1,
-      mostRecentFetchedBlock,
+      mostRecentFetchedBlock
     );
     // From smallest to biggest.
     await fetchProposals(mostRecentFetchedBlock + 1, currentBlock - 1);
@@ -546,7 +574,7 @@ const startFetch = async () => {
     // ---------| oldest fetched | xxxxxxxxxx <to fetch> xxxxxxxxxx | GENESIS BLOCK
     console.log(
       "fetch from already fetched oldest block to 0",
-      oldestFetchedBlock,
+      oldestFetchedBlock
     );
     // From biggest to smallest
     if (oldestFetchedBlock) {
@@ -556,7 +584,7 @@ const startFetch = async () => {
     // Fetch all history.
     governanceProposalStore.resetProposals(
       web3Store.chainId,
-      fundStore.fund?.address,
+      fundStore.fund?.address
     );
     console.log("fetch all blocks");
     await fetchProposals(currentBlock, 0);
@@ -618,8 +646,8 @@ const startFetch = async () => {
     padding-bottom: 2rem;
   }
   :deep(.v-expansion-panel-title) {
-      padding: 1.5rem;
-      font-size: 1rem;
+    padding: 1.5rem;
+    font-size: 1rem;
   }
   // add borders to text fields inside panel
   :deep(.v-expansion-panels) {
@@ -637,7 +665,7 @@ const startFetch = async () => {
   padding-inline: 16px !important;
 }
 
-.confirm_dialog{
+.confirm_dialog {
   max-width: unset;
 }
 </style>
