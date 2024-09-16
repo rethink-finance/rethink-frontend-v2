@@ -9,7 +9,38 @@
       tooltip-text="Create a Direct Execution Proposal"
       :submit-event="submitProposal"
       :is-submit-loading="loading"
-    />
+    >
+      <template #subtitle>
+        <UiTooltipClick
+          location="right"
+          :hide-after="6000"
+        >
+          <Icon
+            icon="material-symbols:info-outline"
+            class="info-icon"
+            width="1.5rem"
+          />
+
+          <template #tooltip>
+            <div class="tooltip__content">
+              <span>Create a Direct Execution Proposal</span>
+              <a
+                class="tooltip__link"
+                href="https://docs.rethink.finance/rethink.finance"
+                target="_blank"
+              >
+                Learn More 
+                <Icon
+                  icon="maki:arrow"
+                  color="primary"
+                  width="1rem"
+                />
+              </a>
+            </div>
+          </template>
+        </UiTooltipClick>
+      </template>
+    </UiStepper>
   </div>
 </template>
 
@@ -198,4 +229,23 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+.tooltip{
+  &__content{
+    display: flex;
+    gap: 40px;
+  }
+  &__link {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    color: $color-primary;
+  }
+}
+
+.info-icon {
+  cursor: pointer;
+  display: flex;
+  color: $color-text-irrelevant;
+}
 </style>
