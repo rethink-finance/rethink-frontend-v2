@@ -595,9 +595,13 @@ const startFetch = async () => {
 <style scoped lang="scss">
 // overrides for expansion-panel
 .data_row_card {
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
   overflow: unset;
 
+  @include sm {
+    margin-bottom: 1rem;
+  }
+  
   // remove outer border
   :deep(.data_row__panel) {
     border: 0;

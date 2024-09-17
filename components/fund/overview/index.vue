@@ -24,7 +24,11 @@ const isOverviewPanelOpen = computed(() => openPanel.value === "overview");
 
 <style lang="scss" scoped>
 .overview {
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
+
+  @include sm {
+    margin-bottom: 1rem;
+  }
 }
 .data_row_card {
   :deep(.v-expansion-panel-title) {

@@ -42,8 +42,7 @@ export default defineComponent({
       align-items: center;
       display: flex;
       justify-content: space-between;
-      border: 1px solid $color-border-dark;
-      background: $color-gray-light-transparent;
+      background: $color-card-background;
       padding: 1rem;
       flex-direction: row;
       border-radius: $default-border-radius;
@@ -108,7 +107,7 @@ export default defineComponent({
     .data_bar__subtitle {
       font-size: $text-sm;
       line-height: 1;
-      color: $color-light-subtitle;
+      color: $color-steel-blue;
       align-items: center;
     }
   }
