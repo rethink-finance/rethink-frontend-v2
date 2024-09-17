@@ -288,7 +288,7 @@ const routes: IRoute[] = [
 
 const isPathActive = (path: string = "", exactMatch = true) =>
   exactMatch ? route?.path === path : route?.path.startsWith(path);
-const getPathColor = (isActive = false, color = "var(--color-subtitle)") =>
+const getPathColor = (isActive = false, color = "#77839f") =>
   isActive ? "primary" : color;
 
 const computedRoutes = computed(() => {
