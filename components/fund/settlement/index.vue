@@ -1,7 +1,7 @@
 <template>
   <div class="fund_settlement">
     <div class="card_header">
-      <div class="card_header__title">
+      <div class="card_header__title subtitle_white">
         Manage Deposits
       </div>
       <div class="fund_settlement__buttons">
@@ -109,7 +109,7 @@ export default {
   button {
     color: $color-secondary !important;
     &.button-active,
-    &.button-active:hover, {
+    &.button-active:hover {
       background: $color-secondary !important;
       color: $color-primary !important;
     }
@@ -131,10 +131,6 @@ export default {
     }
 
     &__title {
-      font-size: 1rem;
-      font-weight: bold;
-      color: $color-steel-blue;
-      line-height: 1;
       margin-bottom: 0.75rem;
 
       @include sm {

@@ -1,19 +1,19 @@
 <template>
   <div class="accordion_content">
     <div class="main_card">
-      <div class="main_expansion_panel__subtitle">Basics</div>
+      <div class="subtitle_steel_blue">Basics</div>
       <FundOverviewBasics :fund="fund" />
     </div>
     <div class="main_card">
-      <div class="main_expansion_panel__subtitle">Whitelist</div>
+      <div class="subtitle_steel_blue">Whitelist</div>
       <FundOverviewDeposits :fund="fund" class="whitelist_card" />
     </div>
     <div class="main_card">
-      <div class="main_expansion_panel__subtitle">Management</div>
+      <div class="subtitle_steel_blue">Management</div>
       <FundOverviewManagement :fund="fund" />
     </div>
     <div class="main_card">
-      <div class="main_expansion_panel__subtitle">Fees</div>
+      <div class="subtitle_steel_blue">Fees</div>
       <FundOverviewFees :fund="fund" />
     </div>
   </div>

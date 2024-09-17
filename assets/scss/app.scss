@@ -206,3 +206,20 @@ input[type="number"]:focus:hover {
     box-shadow: none;
   }
 }
+
+
+// title grey
+.subtitle_steel_blue{
+  font-size: 16px;
+  font-weight: bold;
+  color: $color-steel-blue;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+
+.subtitle_white{
+  font-size: 16px;
+  font-weight: bold;
+  color: $color-white;
+  line-height: 1;
+}

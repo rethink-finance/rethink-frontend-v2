@@ -1,7 +1,7 @@
 <template>
   <div class="fund_settlement">
     <div class="card_header">
-      <div class="card_header__title">
+      <div class="card_header__title subtitle_white">
         Pending Requests
       </div>
       <div
@@ -337,10 +337,6 @@ const handleError = (error: any) => {
 
 .card_header{
   &__title{
-    font-size: 1rem;
-    font-weight: bold;
-    color: $color-steel-blue;
-    line-height: 1;
     margin-bottom: 0.75rem;
 
     @include sm{

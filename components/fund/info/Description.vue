@@ -2,7 +2,7 @@
   <div class="fund_description">
     <div class="fund_description__header">
       <div>
-        <div class="fund_description__info">
+        <div class="fund_description__info subtitle_white">
           Information
         </div>
       </div>
@@ -101,10 +101,6 @@ export default {
   }
 
   &__info{
-    font-size: 1rem;
-    font-weight: bold;
-    color: $color-steel-blue;
-    line-height: 1;
     margin-bottom: 0.75rem;
     
     @include sm{

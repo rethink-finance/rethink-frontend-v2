@@ -1,6 +1,6 @@
 <template>
   <div class="data_bar">
-    <div v-if="title" class="data_bar__title">
+    <div v-if="title" class="data_bar__title subtitle_white">
       {{ title }}
     </div>
     <div class="data_bar__body" :class="{'data_bar__body--bg-transparent': bgTransparent}">
@@ -29,10 +29,6 @@ export default defineComponent({
 .data_bar {
   width: 100%;
   &__title {
-    font-size: 1rem;
-    font-weight: bold;
-    color: $color-steel-blue;
-    line-height: 1;
     margin-bottom: 0.75rem;
     display: flex;
   }
