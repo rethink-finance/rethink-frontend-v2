@@ -247,6 +247,31 @@ const requestDeposit = async () => {
 const setTokenValueToDepositRequestAmount = () => {
   tokenValue.value = depositRequestAmountFormatted.value;
 }
+
+const estimateApproveAllowanceGas = async (fundAddress: string) => {
+  try {
+    const transactionObject = {
+      from: fundStore.activeAccountAddress,
+      to: fundStore.fundBaseTokenContract.options.address,
+      data: fundStore.fundBaseTokenContract.methods.approve(fundAddress, tokensWei.value).encodeABI(),
+    };
+
+    // Use Promise.allSettled to handle both promises
+    const [gasPriceResult, gasEstimateResult] = await Promise.allSettled([
+      fundStore.web3.eth.getGasPrice(),
+      fundStore.web3.eth.estimateGas(transactionObject),
+    ]);
+
+    // Extract the results or handle errors
+    const gasPrice = gasPriceResult.status === "fulfilled" ? gasPriceResult.value : undefined;
+    const gasEstimate = gasEstimateResult.status === "fulfilled" ? gasEstimateResult.value : undefined;
+    return [gasPrice, gasEstimate];
+  } catch (error) {
+    console.error("Error estimating gas:", error);
+  }
+  return [undefined, undefined];
+
+}
 const approveAllowance = async () => {
   if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to approve allowance.")
@@ -261,12 +286,14 @@ const approveAllowance = async () => {
 
   console.log("Approve allowance tokensWei: ", tokensWei.value, "from : ", fundStore.activeAccountAddress);
   const allowanceValue = tokensWei.value;
+  const [gasPrice, gasEstimate] = await estimateApproveAllowanceGas(fund.value.address);
 
   try {
     // call the approval method
     await fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei.value).send({
       from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: undefined,
+      gas: gasEstimate,
+      maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

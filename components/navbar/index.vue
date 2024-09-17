@@ -69,19 +69,19 @@
                   {{ item.raw.chainName }}
                 </v-list-item-title>
               </template>
-              <template #item="{ props, item }">
+              <template #item="{ item }">
                 <div
-                  @click="switchNetwork(item.raw.chainId)"
                   class="select_item"
                   :class="{'select_item--active': item.raw.chainId === selectedChainId}"
-                  >
-                    <Icon
-                      :icon="item.raw.icon.name"
-                      class="select_item__icon"
-                    />
-                    <div>
-                      {{ item.raw.chainName }}
-                    </div>
+                  @click="switchNetwork(item.raw.chainId)"
+                >
+                  <Icon
+                    :icon="item.raw.icon.name"
+                    class="select_item__icon"
+                  />
+                  <div>
+                    {{ item.raw.chainName }}
+                  </div>
                 </div>
               </template>
             </v-select>
