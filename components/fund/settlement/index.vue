@@ -1,7 +1,9 @@
 <template>
   <div class="fund_settlement">
     <div class="card_header">
-      <div class="card_header__title">Manage Deposits</div>
+      <div class="card_header__title">
+        Manage Deposits
+      </div>
       <div class="fund_settlement__buttons">
         <v-btn
           :class="getDepositRedeemButtonClass('deposit')"
@@ -103,9 +105,12 @@ export default {
     gap: 1rem;
     margin: auto 0;
   }
+  // TODO: this should be in the base classes, generalized for all buttons like this.
   button {
     color: $color-secondary !important;
-    &.button-active {
+    &.button-active,
+    &.button-active:hover, {
+      background: $color-secondary !important;
       color: $color-primary !important;
     }
     &.button-inactive {
