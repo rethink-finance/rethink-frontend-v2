@@ -216,5 +216,27 @@ export const useWeb3Store = defineStore({
       }
       return undefined
     },
+    async estimateGas(transactionData: Record<string, any>) {
+      if (!this.web3) {
+        return [undefined, undefined];
+      }
+
+      try {
+        // Use Promise.allSettled to handle both promises
+        const [gasPriceResult, gasEstimateResult] = await Promise.allSettled([
+          this.web3.eth.getGasPrice(),
+          this.web3.eth.estimateGas(transactionData),
+        ]);
+
+        // Extract the results or handle errors
+        const gasPrice = gasPriceResult.status === "fulfilled" ? gasPriceResult.value.toString() : undefined;
+        const gasEstimate = gasEstimateResult.status === "fulfilled" ? gasEstimateResult.value.toString() : undefined;
+        console.log("Estimate TRX", transactionData, " Gas:", gasEstimate, "Gas Price:", gasPrice);
+        return [gasPrice, gasEstimate];
+      } catch (error) {
+        console.error("Error estimating gas:", transactionData, error);
+      }
+      return [undefined, undefined];
+    },
   },
 });

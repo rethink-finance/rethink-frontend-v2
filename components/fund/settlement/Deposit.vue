@@ -92,11 +92,14 @@ import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
+import { useWeb3Store } from "~/store/web3.store";
 
 
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
+const web3Store = useWeb3Store();
+
 const tokenValue = ref("");
 const tokenValueChanged = ref(false);
 const fund = computed(() => fundStore.fund);
@@ -248,30 +251,6 @@ const setTokenValueToDepositRequestAmount = () => {
   tokenValue.value = depositRequestAmountFormatted.value;
 }
 
-const estimateApproveAllowanceGas = async (fundAddress: string) => {
-  try {
-    const transactionObject = {
-      from: fundStore.activeAccountAddress,
-      to: fundStore.fundBaseTokenContract.options.address,
-      data: fundStore.fundBaseTokenContract.methods.approve(fundAddress, tokensWei.value).encodeABI(),
-    };
-
-    // Use Promise.allSettled to handle both promises
-    const [gasPriceResult, gasEstimateResult] = await Promise.allSettled([
-      fundStore.web3.eth.getGasPrice(),
-      fundStore.web3.eth.estimateGas(transactionObject),
-    ]);
-
-    // Extract the results or handle errors
-    const gasPrice = gasPriceResult.status === "fulfilled" ? gasPriceResult.value : undefined;
-    const gasEstimate = gasEstimateResult.status === "fulfilled" ? gasEstimateResult.value : undefined;
-    return [gasPrice, gasEstimate];
-  } catch (error) {
-    console.error("Error estimating gas:", error);
-  }
-  return [undefined, undefined];
-
-}
 const approveAllowance = async () => {
   if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to approve allowance.")
@@ -286,7 +265,13 @@ const approveAllowance = async () => {
 
   console.log("Approve allowance tokensWei: ", tokensWei.value, "from : ", fundStore.activeAccountAddress);
   const allowanceValue = tokensWei.value;
-  const [gasPrice, gasEstimate] = await estimateApproveAllowanceGas(fund.value.address);
+  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+    {
+      from: fundStore.activeAccountAddress,
+      to: fundStore.fundBaseTokenContract.options.address,
+      data: fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei.value).encodeABI(),
+    },
+  );
 
   try {
     // call the approval method

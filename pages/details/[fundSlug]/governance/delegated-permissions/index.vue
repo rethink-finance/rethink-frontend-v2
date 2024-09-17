@@ -29,7 +29,7 @@
                 href="https://docs.rethink.finance/rethink.finance"
                 target="_blank"
               >
-                Learn More 
+                Learn More
                 <Icon
                   icon="maki:arrow"
                   color="primary"
@@ -255,18 +255,27 @@ const submitProposal = async () => {
   );
   loading.value = true;
 
-  try {
-    await fundStore.fundGovernorContract.methods.propose(
-      targets,
-      gasValues,
-      encodedRoleModEntries,
-      JSON.stringify({
-        title: details?.proposalTitle,
-        description: details?.proposalDescription,
-      }),
-    ).send({
+  const proposalData = [
+    targets,
+    gasValues,
+    encodedRoleModEntries,
+    JSON.stringify({
+      title: details?.proposalTitle,
+      description: details?.proposalDescription,
+    }),
+  ];
+  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+    {
       from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: undefined,
+      to: fundStore.fundGovernorContract.options.address,
+      data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
+    },
+  );
+  try {
+    await fundStore.fundGovernorContract.methods.propose(...proposalData).send({
+      from: fundStore.activeAccountAddress,
+      gas: gasEstimate,
+      maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");

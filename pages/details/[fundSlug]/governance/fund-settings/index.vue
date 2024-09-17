@@ -23,7 +23,7 @@
                 href="https://docs.rethink.finance/rethink.finance"
                 target="_blank"
               >
-                Learn More 
+                Learn More
                 <Icon
                   icon="maki:arrow"
                   color="primary"
@@ -188,9 +188,10 @@
 </template>
 
 <script setup lang="ts">
-import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
+import SectionWhitelist from "./SectionWhitelist.vue";
+import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -206,7 +207,6 @@ import {
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import SectionWhitelist from "./SectionWhitelist.vue";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
@@ -416,20 +416,29 @@ const submit = async () => {
       ),
     );
 
+    const proposalData = [
+      targetAddresses,
+      gasValues,
+      calldatas,
+      JSON.stringify({
+        title: proposal.value.proposalTitle,
+        description: proposal.value.proposalDescription,
+      }),
+    ];
+    const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+      {
+        from: fundStore.activeAccountAddress,
+        to: fundStore.fundGovernorContract.options.address,
+        data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
+      },
+    );
     try {
       await fundStore.fundGovernorContract.methods
-        .propose(
-          targetAddresses,
-          gasValues,
-          calldatas,
-          JSON.stringify({
-            title: proposal.value.proposalTitle,
-            description: proposal.value.proposalDescription,
-          }),
-        )
+        .propose(...proposalData)
         .send({
           from: fundStore.activeAccountAddress,
-          maxPriorityFeePerGas: undefined,
+          gas: gasEstimate,
+          maxPriorityFeePerGas: gasPrice,
         })
         .on("transactionHash", (hash: string) => {
           console.log("tx hash: " + hash);

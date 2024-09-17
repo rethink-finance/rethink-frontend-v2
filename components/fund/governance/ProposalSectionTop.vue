@@ -165,6 +165,7 @@ import {
   VoteTypeNumberMapping,
 } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { useWeb3Store } from "~/store/web3.store";
 
 const props = defineProps({
   proposal: {
@@ -172,7 +173,7 @@ const props = defineProps({
     default: () => {},
   },
 });
-
+const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
@@ -241,11 +242,20 @@ const submitButtonClick = () => {
 const submitVote = async () => {
   loadingSubmitVote.value = true;
   console.log("cast vote", props.proposal.proposalId, selectedVoteOption.value)
+  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+    {
+      from: fundStore.activeAccountAddress,
+      to: fundStore.fundGovernorContract.options.address,
+      data: fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).encodeABI(),
+    },
+  );
 
   try {
     await fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).send(
       {
         from: fundStore.activeAccountAddress,
+        gas: gasEstimate,
+        maxPriorityFeePerGas: gasPrice,
       },
     ).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
@@ -285,15 +295,25 @@ const executeProposal = async () => {
     ),
   )
 
+  const trxData = [
+    props.proposal.targets,
+    props.proposal.values,
+    props.proposal.calldatas,
+    props.proposal.descriptionHash,
+  ];
+  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+    {
+      from: fundStore.activeAccountAddress,
+      to: fundStore.fundGovernorContract.options.address,
+      data: fundStore.fundGovernorContract.methods.execute(...trxData).encodeABI(),
+    },
+  );
   try {
-    await fundStore.fundGovernorContract.methods.execute(
-      props.proposal.targets,
-      props.proposal.values,
-      props.proposal.calldatas,
-      props.proposal.descriptionHash,
-    ).send(
+    await fundStore.fundGovernorContract.methods.execute(...trxData).send(
       {
         from: fundStore.activeAccountAddress,
+        gas: gasEstimate,
+        maxPriorityFeePerGas: gasPrice,
       },
     ).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
@@ -310,12 +330,11 @@ const executeProposal = async () => {
       loadingExecuteProposal.value = false;
     }).on("error", (error: any) => {
       console.error(error);
-      console.log("testeee");
       loadingExecuteProposal.value = false;
       toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     });
-  } catch {
-    console.log("testee");
+  } catch (error: any) {
+    console.error("Error here proposal: ", error);
     loadingExecuteProposal.value = false;
   }
 }

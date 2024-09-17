@@ -1168,30 +1168,13 @@ export const useFundStore = defineStore({
       this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || [];
     },
     async estimateGasFundFlowsCall(encodedFunctionCall: any) {
-      try {
-        const transactionObject = {
+      return await this.web3Store.estimateGas(
+        {
           from: this.activeAccountAddress,
           to: this.fundContract.options.address,
           data: this.fundContract.methods.fundFlowsCall(encodedFunctionCall).encodeABI(),
-        };
-
-        // Use Promise.allSettled to handle both promises
-        const [gasPriceResult, gasEstimateResult] = await Promise.allSettled([
-          this.web3.eth.getGasPrice(),
-          this.web3.eth.estimateGas(transactionObject),
-        ]);
-
-        // Extract the results or handle errors
-        const gasPrice = gasPriceResult.status === "fulfilled" ? gasPriceResult.value : undefined;
-        const gasEstimate = gasEstimateResult.status === "fulfilled" ? gasEstimateResult.value : undefined;
-        console.log("Estimated Gas:", gasEstimate);
-        console.log("Estimated Gas Price:", gasPrice);
-
-        return [gasPrice, gasEstimate];
-      } catch (error) {
-        console.error("Error estimating gas:", error);
-      }
-      return [undefined, undefined];
+        },
+      );
     },
     formatBaseTokenValue(
       value: any,
@@ -1233,12 +1216,19 @@ export const useFundStore = defineStore({
           this.loadingUpdateNav = false;
           return;
         }
-
+        const [gasPrice, gasEstimate] = await this.web3Store.estimateGas(
+          {
+            from: this.activeAccountAddress,
+            to: this.fundContract.options.address,
+            data: this.fundContract.methods.executeNAVUpdate(navExecutorAddr).encodeABI(),
+          },
+        );
         return await this.fundContract.methods
           .executeNAVUpdate(navExecutorAddr)
           .send({
             from: this.activeAccountAddress,
-            maxPriorityFeePerGas: undefined,
+            gas: gasEstimate,
+            maxPriorityFeePerGas: gasPrice,
           })
           .on("transactionHash", (hash: any) => {
             console.log("tx hash: " + hash);

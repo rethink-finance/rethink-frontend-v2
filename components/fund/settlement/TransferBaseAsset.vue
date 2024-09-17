@@ -72,8 +72,10 @@
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
 const toastStore = useToastStore();
 const fundStore = useFundStore();
+const web3Store = useWeb3Store();
 
 const { isUsingZodiacPilotExtension } = toRefs(fundStore);
 
@@ -148,11 +150,19 @@ const safeContractBaseTokenBalanceFormatted = computed(() => {
 
 const transfer = async () => {
   isTransferLoading.value = true;
+  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+    {
+      from: fundStore.activeAccountAddress,
+      to: fundStore.fundBaseTokenContract.options.address,
+      data: fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei.value).encodeABI(),
+    },
+  );
 
   try {
     await fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei.value).send({
       from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: undefined,
+      gas: gasEstimate,
+      maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);
       toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

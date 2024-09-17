@@ -175,10 +175,10 @@
 </template>
 
 <script setup lang="ts">
+import type { AbiFunctionFragment } from "web3";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import NAVExecutor from "assets/contracts/NAVExecutor.json";
 import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
-import type { AbiFunctionFragment } from "web3";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -562,19 +562,29 @@ const createProposal = async () => {
     },
     null, 2),
   )
+
+  const proposalData = [
+    targetAddresses,
+    gasValues,
+    calldatas,
+    JSON.stringify({
+      title: proposal.value.title,
+      description: proposal.value.description,
+    }),
+  ];
+  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+    {
+      from: fundStore.activeAccountAddress,
+      to: fundStore.fundGovernorContract.options.address,
+      data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
+    },
+  );
   // ADD encoded entries for OIV permissions
   try {
-    await fundStore.fundGovernorContract.methods.propose(
-      targetAddresses,
-      gasValues,
-      calldatas,
-      JSON.stringify({
-        title: proposal.value.title,
-        description: proposal.value.description,
-      }),
-    ).send({
+    await fundStore.fundGovernorContract.methods.propose(...proposalData).send({
       from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: undefined,
+      gas: gasEstimate,
+      maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
@@ -604,20 +614,28 @@ const createProposal = async () => {
     toastStore.errorToast(error.message);
   }
 
+  const proposalData2 = [
+    [navExecutorAddr].concat(roleModTargets),
+    [0].concat(roleModGasValues),
+    [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
+    JSON.stringify({
+      title: proposal.value.title,
+      description: proposal.value.description,
+    }),
+  ];
+  const [gasPrice2, gasEstimate2] = await web3Store.estimateGas(
+    {
+      from: fundStore.activeAccountAddress,
+      to: fundStore.fundGovernorContract.options.address,
+      data: fundStore.fundGovernorContract.methods.propose(...proposalData2).encodeABI(),
+    },
+  );
   // Permissions for non gov nav updates
   try {
-    await fundStore.fundGovernorContract.methods.propose(
-      [navExecutorAddr].concat(roleModTargets),
-      [0].concat(roleModGasValues),
-      [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
-      JSON.stringify({
-        title: proposal.value.title,
-        description: proposal.value.description,
-      }),
-    ).send({
+    await fundStore.fundGovernorContract.methods.propose(...proposalData2).send({
       from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: undefined,
-      maxFeePerGas: undefined,
+      gas: gasEstimate2,
+      maxPriorityFeePerGas: gasPrice2,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
       toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
