@@ -12,7 +12,6 @@
             icon="material-symbols:info-outline"
             :class="'main_header__info-icon'"
             width="1.5rem"
-            @click="handleInfoClick"
           />
 
           <template #tooltip>
@@ -216,7 +215,6 @@ const loading = ref(false);
 const activeStep = ref(proposalSteps[0]);
 const form = ref(null);
 const formIsValid = ref(false);
-const isInfoVisible = ref(false);
 const isWhitelistToggled = ref(true);
 
 const updateSettingsABI = GovernableFund.abi.find(
@@ -344,9 +342,6 @@ const isLastStep = computed(() => {
   return activeStep.value === proposalSteps[proposalSteps.length - 1];
 });
 
-const handleInfoClick = () => {
-  isInfoVisible.value = !isInfoVisible.value;
-};
 
 const handleButtonClick = () => {
   isLastStep.value ? submit() : nextStep();
@@ -720,7 +715,7 @@ onBeforeUnmount(() => {
     flex-wrap: wrap;
     align-items: center;
     align-content: center;
-    gap: 10px;
+    gap: 20px;
   }
   &__info-icon {
     cursor: pointer;
@@ -771,37 +766,6 @@ onBeforeUnmount(() => {
     color: var(--color-success);
   }
 }
-
-.info-box-v1 {
-  display: flex;
-  gap: 40px;
-
-  padding: 12px;
-  border-radius: 4px;
-  background-color: #111c35;
-  box-shadow: 0px 0px 16px 0px $color-box-shadow;
-
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  color: $color-text-irrelevant;
-
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-
-  &.visible {
-    opacity: 1;
-  }
-
-  &__link {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
-    color: $color-primary;
-  }
-}
-
 .section-whitelist {
   display: none;
   &.toggle__on {

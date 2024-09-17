@@ -335,7 +335,7 @@ const nextStep = () => {
     display: flex;
     align-items: center;
     align-content: center;
-    gap: 10px;
+    gap: 20px;
   }
 }
 .stepper {

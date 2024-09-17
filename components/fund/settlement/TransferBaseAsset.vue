@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <FundSettlementAlert v-if="!isUsingZodiacPilotExtension">
+      <FundSettlementAlert v-if="!isUsingZodiacPilotExtension" class="switch_alert">
         Switch to the Zodiac Pilot extension!
       </FundSettlementAlert>
       <div class="buttons_container">
@@ -275,5 +275,8 @@ const handleError = (error: any) => {
     cursor: pointer;
     text-decoration: underline;
   }
+}
+.switch_alert{
+  justify-content: flex-start !important;
 }
 </style>
