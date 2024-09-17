@@ -7,7 +7,7 @@
     :class="{'data_row--readonly': isReadOnly}"
   >
     <v-expansion-panel
-      class="data_row__panel card_box card_box--no-padding"
+      class="data_row__panel"
       eager
       :class="{'data_row__panel--transparent': bgTransparent }"
       :readonly="isReadOnly"
@@ -214,7 +214,7 @@ export default defineComponent({
     }
   }
   &__panel {
-    background: $color-navy-gray-light;
+    background: $color-card-background;
 
     &--transparent {
       background: transparent;

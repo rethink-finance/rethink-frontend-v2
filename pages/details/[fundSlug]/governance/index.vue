@@ -593,6 +593,34 @@ const startFetch = async () => {
 </script>
 
 <style scoped lang="scss">
+// overrides for expansion-panel
+.data_row_card {
+  margin-bottom: 2rem;
+  overflow: unset;
+
+  // remove outer border
+  :deep(.data_row__panel) {
+    border: 0;
+
+  }
+  // add more spacing to content inside
+  :deep(.v-expansion-panel-text__wrapper) {
+    padding-bottom: 2rem;
+  }
+  :deep(.v-expansion-panel-title) {
+    padding: 1.5rem;
+    font-size: 1rem;
+  }
+  // add borders to text fields inside panel
+  :deep(.v-expansion-panels) {
+    border-radius: 0.25rem !important;
+
+    .data_row__panel {
+      padding: 0;
+    }
+  }
+}
+
 .tools {
   display: flex;
   flex-direction: row;
@@ -629,37 +657,6 @@ const startFetch = async () => {
     margin: 0 0.75rem;
   }
 }
-
-// overrides for expansion-panel
-.data_row_card {
-  margin-bottom: 2rem;
-  overflow: unset;
-
-  // remove outer border
-  :deep(.data_row__panel) {
-    border: 0;
-    border-radius: 0.25rem !important;
-    background-color: rgb(var(--v-theme-surface));
-  }
-  // add more spacing to content inside
-  :deep(.v-expansion-panel-text__wrapper) {
-    padding-bottom: 2rem;
-  }
-  :deep(.v-expansion-panel-title) {
-    padding: 1.5rem;
-    font-size: 1rem;
-  }
-  // add borders to text fields inside panel
-  :deep(.v-expansion-panels) {
-    border: 1px solid $color-gray-transparent;
-    border-radius: 0.25rem !important;
-
-    .data_row__panel {
-      padding: 0;
-    }
-  }
-}
-
 .manage_button {
   color: rgb(210, 223, 255) !important;
   padding-inline: 16px !important;

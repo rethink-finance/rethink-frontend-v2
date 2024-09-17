@@ -1,6 +1,7 @@
 $tooltip-background-color: rgb(var(--v-theme-surface));
 
-body, html {
+body,
+html {
   overflow-x: hidden;
 }
 
@@ -140,7 +141,7 @@ a {
 /* FORM */
 /* Append the asterisk to labels with the class 'required-label' */
 .label_required::after {
-  content: ' *';
+  content: " *";
   color: $color-primary;
   font-weight: bold;
   font-size: 1.5rem;
@@ -148,8 +149,6 @@ a {
   right: 0;
   margin-left: 0.1em;
 }
-
-
 
 /* TABLES */
 // TODO: move to another Table component and all Tables should extend it along with classes.
@@ -183,19 +182,27 @@ input[type="number"]:focus:hover {
   pointer-events: none;
 }
 
-
-/* global.scss or app.scss */
+// Tooltip styles
 .v-overlay.v-tooltip .v-overlay__content {
-    z-index: 2100;
-    pointer-events: all;
+  z-index: 2100;
+  pointer-events: all;
 
-    padding: 13px;
-    border-radius: 4px;
-    background-color: #111c35;
-    box-shadow: 0px 0px 16px 0px $color-box-shadow;
-    
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.03em;
-    color: $color-secondary;
+  padding: 13px;
+  border-radius: 4px;
+  background-color: #111c35;
+  box-shadow: 0px 0px 16px 0px $color-box-shadow;
+
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: $color-secondary;
+}
+
+// remove shadow from expansion panel
+.v-expansion-panel {
+  background: $color-card-background !important;
+
+  .v-expansion-panel__shadow {
+    box-shadow: none;
+  }
 }
