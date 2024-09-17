@@ -1,26 +1,29 @@
 <template>
   <div class="fund_description">
-    <div class="fund_description__header">
-      <div>
-        <div class="fund_description__info subtitle_white">
-          Information
-        </div>
+    <UiMainCard
+      title="Information"
+      class="fund_description__header"
+    >
+      <template #header-right>
+        <div class="fund_description__buttons">
+          <UiLinkExternalButton
+            v-for="buttonLink in buttonLinks"
+            :title="buttonLink.title"
+            :href="buttonLink.href"
+          />
       </div>
-      <div class="fund_description__buttons">
-        <UiLinkExternalButton
-          v-for="buttonLink in buttonLinks"
-          :title="buttonLink.title"
-          :href="buttonLink.href"
-        />
-      </div>
-    </div>
-    <p class="text-secondary">
-      {{ fundDescriptionText }}
-      <UiShowMoreButton
-        v-if="isDescriptionToLong"
-        v-model="showMore"
-      />
-    </p>
+      </template>
+
+      <template #tools>
+        <p class="text-secondary">
+          {{ fundDescriptionText }}
+          <UiShowMoreButton
+            v-if="isDescriptionToLong"
+            v-model="showMore"
+          />
+        </p>
+      </template>
+    </UiMainCard>
   </div>
 </template>
 
@@ -89,28 +92,15 @@ export default {
   justify-content: space-between;
 
   &__header{
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: none;
-
-    @include sm{
-      flex-direction: row;
-      align-items: center;
-    }
-  }
-
-  &__info{
-    margin-bottom: 0.75rem;
-    
-    @include sm{
-      margin-bottom: 0
-    }
+    padding: 0;
+    margin: 0;
   }
 
   &__buttons {
     display: flex;
     flex-direction: column;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 1.5rem;
 
     @include sm{
@@ -121,8 +111,5 @@ export default {
       text-transform: none;
     }
   }
-
-
-
 }
 </style>

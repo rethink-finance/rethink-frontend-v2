@@ -49,7 +49,6 @@ export default {
 
   @include sm {
     flex-direction: row;
-    align-items: center;
   }
 
   &__title-col {
