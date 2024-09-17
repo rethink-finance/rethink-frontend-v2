@@ -48,7 +48,7 @@
     <div class="main_card">
       <UiHeader>
         <div>
-          <div class="main_expansion_panel__subtitle mb-4">
+          <div class="subtitle_white mb-4">
             NAV Methods
           </div>
           <div>
@@ -84,7 +84,7 @@
     </div>
 
     <div class="main_card">
-      <div class="main_expansion_panel__subtitle">
+      <div class="subtitle_white mb-4">
         NAV Updates
       </div>
       <div>

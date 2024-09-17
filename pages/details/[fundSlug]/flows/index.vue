@@ -1,7 +1,7 @@
 <template>
   <div class="flows">
     <div class="main_card">
-      <div class="main_card__title">
+      <div class="subtitle_white">
         Settlement Cycle
       </div>
 
@@ -67,7 +67,7 @@
 
     <!-- Fund Contract -->
     <div class="main_card">
-      <div class="main_card__title">
+      <div class="subtitle_white">
         Fund Contract
       </div>
 
@@ -305,9 +305,9 @@
 
 <script setup lang="ts">
 import { ethers, FixedNumber } from "ethers";
-import type IFund from "~/types/fund";
-import { useFundStore } from "~/store/fund.store";
 import { formatTokenValue, roundToSignificantDecimals } from "~/composables/formatters";
+import { useFundStore } from "~/store/fund.store";
+import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();
 

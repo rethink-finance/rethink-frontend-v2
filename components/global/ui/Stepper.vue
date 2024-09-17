@@ -336,9 +336,6 @@ const nextStep = () => {
     align-items: center;
     align-content: center;
     gap: 10px;
-
-    font-size: 16px;
-    font-weight: bold;
   }
 }
 .stepper {

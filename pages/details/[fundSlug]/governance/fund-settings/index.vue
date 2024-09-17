@@ -33,26 +33,6 @@
             </div>
           </template>
         </UiTooltipClick>
-
-        <!-- <Icon
-          icon="material-symbols:info-outline"
-          :class="'main_header__info-icon'"
-          width="1.5rem"
-          @click="handleInfoClick"
-        /> -->
-
-        <!-- <div :class="`info-box-v1 ${isInfoVisible ? 'visible' : ''}`">
-          Update Fund Settings on need!
-          <a
-            class="info-box-v1__link"
-            href="https://docs.rethink.finance/rethink.finance"
-            target="_blank"
-          >Learn More <Icon
-            icon="maki:arrow"
-            color="primary"
-            width="1rem"
-          /></a>
-        </div> -->
       </div>
 
       <div class="buttons_container">
@@ -94,7 +74,7 @@
           :key="index"
           class="section main_card"
         >
-          <div class="section__title">
+          <div class="section__title subtitle_white">
             {{ section.name }}
 
             <UiTooltipClick
@@ -188,10 +168,9 @@
 </template>
 
 <script setup lang="ts">
+import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
-import SectionWhitelist from "./SectionWhitelist.vue";
-import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -207,6 +186,7 @@ import {
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import SectionWhitelist from "./SectionWhitelist.vue";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
@@ -741,9 +721,6 @@ onBeforeUnmount(() => {
     align-items: center;
     align-content: center;
     gap: 10px;
-
-    font-size: 16px;
-    font-weight: bold;
   }
   &__info-icon {
     cursor: pointer;
@@ -772,10 +749,6 @@ onBeforeUnmount(() => {
     align-items: center;
     padding: 12px;
     margin-bottom: 15px;
-
-    font-size: 16px;
-    font-weight: 700;
-    color: $color-white;
   }
   &__info-icon {
     cursor: pointer;

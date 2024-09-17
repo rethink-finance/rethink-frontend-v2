@@ -39,7 +39,7 @@ export default defineComponent({
     },
     showTooltip: {
       type: Boolean,
-      default: false,
+      default: true,
     },
   },
   setup(props, { slots }) {

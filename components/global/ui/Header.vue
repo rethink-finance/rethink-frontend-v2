@@ -13,6 +13,8 @@
   &__title {
     font-size: 16px;
     font-weight: bold;
+    line-height: 1;
+    color: $color-white;
   }
   &__subtitle {
     color: $color-text-irrelevant;
