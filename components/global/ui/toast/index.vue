@@ -75,7 +75,7 @@ const textColorClass = (level) => {
 
 <style lang="scss" scoped>
 :deep(.v-overlay__content.v-snackbar__wrapper){
-  background-color: #111C35;
+  background-color: $color-bg-toast;
   color: $color-white;
 
   box-shadow: 0px 0px 16px 0px $color-box-shadow;

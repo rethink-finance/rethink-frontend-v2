@@ -86,7 +86,7 @@ const confirm = () => {
   padding: 40px;
   width: 100%;
 
-  background-color: #111C35;
+  background-color: $color-bg-toast;
   box-shadow: 0px 0px 16px 0px $color-box-shadow;
 
   color: $color-white;
