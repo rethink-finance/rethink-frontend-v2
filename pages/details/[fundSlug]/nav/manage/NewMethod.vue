@@ -191,8 +191,8 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from "vue-router";
 import { ethers } from "ethers";
+import { useRouter } from "vue-router";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import {
@@ -429,6 +429,9 @@ const addMethod = () => {
 </script>
 
 <style scoped lang="scss">
+:deep(.main_header) {
+  min-height: 40px;  
+}
 .buttons_container {
   display: flex;
   flex-direction: row;
