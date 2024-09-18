@@ -9,6 +9,7 @@
     :cell-props="methodProps"
     class="main_table nav_entries"
     show-expand
+    :search="search"
     expand-on-click
     item-value="detailsHash"
     :show-select="selectable"
@@ -116,7 +117,6 @@
           v-if="item.pastNAVUpdateEntryFundAddress || item.isSimulatedNavError"
           class="ms-2 justify-center align-center d-flex"
         >
-          <Icon icon="octicon:question-16" width="1rem" :color="simulatedNAVIconColor(item)" />
           <v-tooltip activator="parent" location="right">
             <template v-if="item.isSimulatedNavError">
               Something went wrong while simulating NAV value. Retry simulating NAV.
@@ -132,7 +132,7 @@
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
       <UiDetailsButton
         v-if="item.detailsJson"
-        text="Details"
+        text="Raw"
         :active="isExpanded(internalItem)"
         :disabled="item.deleted || item.isAlreadyUsed"
         @click.stop="toggleExpand(internalItem)"
@@ -189,14 +189,18 @@
       <tr v-if="item.detailsJson" class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
         <td :colspan="columns.length" class="pa-0">
           <div class="nav_entries__details">
-            <div v-if="!item.isRethinkPosition" @click="copyText(item.detailsHash)">
-              <ui-tooltip-click tooltip-text="Copied">
+            <div v-if="!item.isRethinkPosition" @click="copyText(item.detailsHash)" class="detail_hash">
+              <ui-tooltip-click>
                 Details Hash: {{ item.detailsHash }}
                 <Icon
                   icon="clarity:copy-line"
                   class="section-top__copy-icon"
                   width="0.8rem"
                 />
+
+                <template #tooltip>
+                  Copied!
+                </template>
               </ui-tooltip-click>
             </div>
             <div class="nav_entries__json">
@@ -221,9 +225,9 @@ import { useFundStore } from "~/store/fund.store";
 import { useFundsStore } from "~/store/funds.store";
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
-import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
-import type INAVMethod from "~/types/nav_method";
+import { PositionType } from "~/types/enums/position_type";
 import type { INAVParts } from "~/types/fund";
+import type INAVMethod from "~/types/nav_method";
 
 
 export default defineComponent({
@@ -272,6 +276,10 @@ export default defineComponent({
       default: false,
     },
     idx: {
+      type: String,
+      default: "",
+    },
+    search: {
       type: String,
       default: "",
     },
@@ -531,6 +539,20 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .nav_entries {
+  @include borderGray;
+  border-color: $color-bg-transparent;
+  
+  :deep(.v-table__wrapper) {
+    @include customScrollbar;
+  }
+
+  :deep(.v-data-table__tr) {
+    height: 72px;
+  }
+  :deep(.v-data-table__td) {  
+    border-color: $color-bg-transparent !important;
+  }
+
   &__summary_row {
     background: $color-badge-navy;
   }
@@ -574,6 +596,11 @@ export default defineComponent({
       color: $color-error;
     }
   }
+}
+
+.detail_hash{
+  cursor: pointer;
+  margin-bottom: 30px;
 }
 
 .item-simulated-nav {
