@@ -24,10 +24,8 @@
         </nuxt-link>
 
         <ui-tooltip-click
-          :tooltip-text="
-            accountStore.isConnected ? '' : 'Connect your wallet to update NAV'
-          "
-          :hide-after="1500"
+          :hide-after="3000"
+          :show-tooltip="!accountStore.isConnected"
         >
           <v-btn
             :disabled="loadingUpdateNav"
@@ -45,6 +43,11 @@
             </template>
             Update NAV
           </v-btn>
+
+          <template #tooltip>
+            Connect your wallet to delegate your votes
+          </template>
+
         </ui-tooltip-click>
       </div>
     </UiHeader>

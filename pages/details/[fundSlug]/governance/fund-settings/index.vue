@@ -78,14 +78,17 @@
 
             <UiTooltipClick
               v-if="section.info"
-              :tooltip-text="section.info"
-              :hide-after="3000"
+              :hide-after="8000"
             >
               <Icon
                 icon="material-symbols:info-outline"
                 class="section__info-icon"
                 width="1.5rem"
               />
+
+              <template #tooltip>
+                {{ section.info }}
+              </template>
             </UiTooltipClick>
 
             <div

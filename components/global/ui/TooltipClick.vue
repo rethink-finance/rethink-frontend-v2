@@ -31,7 +31,7 @@ export default defineComponent({
   props: {
     hideAfter: {
       type: Number,
-      default: 1000,
+      default: 2000,
     },
     location: {
       type: String as PropType<"top" | "bottom" | "left" | "right">,

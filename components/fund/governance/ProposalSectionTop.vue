@@ -38,13 +38,21 @@
             <div class="meta-label">
               {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
             </div>
-            <ui-tooltip-click :tooltip-text="`Copied to clipboard: ${item.value}`">
+            <ui-tooltip-click
+              :hide-after="4000"
+            >
               <Icon
                 icon="clarity:copy-line"
                 class="section-top__copy-icon"
                 width="0.8rem"
                 @click="copyText(item.value)"
               />
+
+              <template #tooltip>
+                <div class="tooltip__content">
+                  <span>Copied to clipboard {{ item.value }}</span>
+                </div>
+              </template>
             </ui-tooltip-click>
           </div>
         </div>
@@ -157,6 +165,7 @@ import { truncateAddress } from "~/composables/addressUtils";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
 import {
   ProposalState,
   VoteType,
@@ -165,7 +174,6 @@ import {
   VoteTypeNumberMapping,
 } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
-import { useWeb3Store } from "~/store/web3.store";
 
 const props = defineProps({
   proposal: {
@@ -196,6 +204,7 @@ const metaCopyTags = computed((): IMetaItem[] => {
     {
       label: "Proposal ID:",
       value: props.proposal.proposalId,
+      format: truncateAddress,
     },
     {
       label: "Proposer",
