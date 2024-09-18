@@ -34,9 +34,10 @@
                 <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
                 <span v-bind="props">
                   <v-btn
-                    class="bg-primary text-secondary"
+                    class="deposit_button"
                     :disabled="button.disabled"
                     @click="button.onClick"
+                    variant="outlined"
                   >
                     <template #prepend>
                       <v-progress-circular
@@ -90,9 +91,9 @@ import { ethers } from "ethers";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
-import { useWeb3Store } from "~/store/web3.store";
 
 
 const toastStore = useToastStore();
@@ -344,6 +345,19 @@ const buttons = ref([
   justify-content: center;
   flex-wrap: wrap;
   align-items: center;
+
+
+  .deposit_button{
+    color: $color-primary !important;
+    border-color: $color-primary !important;
+
+    &:hover {
+      background: $color-primary !important;
+      color: $color-white !important;
+      border-color: $color-primary !important;
+    }
+  }
+
 }
 .set_approve_allowance_button {
   &:hover {

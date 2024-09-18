@@ -5,7 +5,7 @@
         <div class="header__title subtitle_white">
           {{ title }}
         </div>
-        <div class="header__sub-title">
+        <div class="header__sub-title" v-if="subtitle">
           {{ subtitle }}
         </div>
       </div>

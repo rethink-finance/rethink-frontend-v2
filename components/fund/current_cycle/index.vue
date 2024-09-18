@@ -70,14 +70,12 @@
     <div v-else class="fund_settlement__no_pending_requests">
       Currently there are no deposit or redemption requests.
     </div>
-    <div class="card_box card_box--no-padding mt-8">
-      <UiNotification>
-        The deposit and redeem requests are settled within the planned Settlement Cycle
-        of <span class="text-primary">{{ fund?.plannedSettlementPeriod || "N/A" }}</span>.
-        You can learn more about how settlements work
-        <a href="https://docs.rethink.finance/rethink.finance" target="_blank">here</a>.
-      </UiNotification>
-    </div>
+    <UiNotification>
+      The deposit and redeem requests are settled within the planned Settlement Cycle
+      of <span class="text-primary">{{ fund?.plannedSettlementPeriod || "N/A" }}</span>.
+      You can learn more about how settlements work
+      <a href="https://docs.rethink.finance/rethink.finance" target="_blank">here</a>.
+    </UiNotification>
   </div>
 </template>
 

@@ -107,14 +107,15 @@ export default {
   }
   // TODO: this should be in the base classes, generalized for all buttons like this.
   button {
-    color: $color-secondary !important;
+    color: $color-white !important;
+    border-color: $color-steel-blue !important;
     &.button-active,
     &.button-active:hover {
-      background: $color-secondary !important;
-      color: $color-primary !important;
+      background: unset !important;
+      color: $color-white !important;
     }
     &.button-inactive {
-      color: $color-inactive !important;
+      opacity: 0.32;
     }
   }
   &__card_boxes {
