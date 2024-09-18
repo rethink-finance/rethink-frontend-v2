@@ -6,7 +6,7 @@
     cols="12"
     :md="field.cols || 6"
   >
-    <v-label :class="{'label_required': !isFieldCheckbox(field)}">
+    <v-label :class="{'label_required mb-2': !isFieldCheckbox(field)}">
       {{ field.label }}
     </v-label>
     <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
