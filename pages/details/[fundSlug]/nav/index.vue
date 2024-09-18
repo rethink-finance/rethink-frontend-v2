@@ -17,7 +17,11 @@
         </div>
       </div>
       <div class="button_container">
-        <FundNavSimulateButton />
+        <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage`">
+          <v-btn class="text-secondary" variant="outlined">
+            Manage NAV Methods
+          </v-btn>
+        </nuxt-link>
 
         <ui-tooltip-click
           :tooltip-text="
@@ -60,13 +64,6 @@
               Learn more about NAV methods ->
             </nuxt-link>
           </div>
-        </div>
-        <div>
-          <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage`">
-            <v-btn class="text-secondary" variant="outlined">
-              Manage Methods
-            </v-btn>
-          </nuxt-link>
         </div>
       </UiHeader>
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">

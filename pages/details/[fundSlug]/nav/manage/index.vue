@@ -1,16 +1,26 @@
 <template>
   <div>
     <UiHeader>
-      <div>
-        <div class="main_header__title">
-          Manage NAV Methods
-        </div>
+      <div class="main_header__title">
+        Manage NAV Methods
       </div>
       <div>
-        <FundNavSimulateButton />
+        
+        <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/newMethod`">
+          <v-btn class="text-secondary me-4" variant="outlined">
+            Define New Method
+          </v-btn>
+        </nuxt-link>
+        <nuxt-link
+          :to="`/details/${selectedFundSlug}/nav/manage/addFromLibrary`"
+        >
+          <v-btn class="text-secondary me-4" variant="outlined">
+            Add From Library
+          </v-btn>
+        </nuxt-link>
 
         <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/proposal`">
-          <v-btn class="bg-primary text-secondary ms-6">
+          <v-btn class="bg-primary text-secondary">
             Create NAV Proposal
           </v-btn>
         </nuxt-link>
@@ -18,19 +28,8 @@
     </UiHeader>
     <div class="main_card">
       <UiHeader>
-        <div>
-          <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/newMethod`">
-            <v-btn class="text-secondary me-4" variant="outlined">
-              Define New Method
-            </v-btn>
-          </nuxt-link>
-          <nuxt-link
-            :to="`/details/${selectedFundSlug}/nav/manage/addFromLibrary`"
-          >
-            <v-btn class="text-secondary" variant="outlined">
-              Add From Library
-            </v-btn>
-          </nuxt-link>
+        <div class="subtitle_steel_blue mb-0">
+          {{ changesNumber }} Changes
         </div>
         <div class="btn-draft">
           <v-btn
@@ -71,6 +70,17 @@ const {
 } = toRefs(useFundStore());
 
 const toastStore = useToastStore();
+
+const changesNumber = computed(() => {
+  // check how many methods are deleted and added
+  const changedMethods = Object.values(fundManagedNAVMethods.value).filter(
+    (method) => {
+      return method.deleted || method.isNew;
+    }
+  )
+
+  return changedMethods.length;
+});
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -149,9 +159,6 @@ onBeforeUnmount(() => {
 
 <style scoped lang="scss">
 .btn-draft {
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 1rem;
+  min-height: 40px;
 }
 </style>

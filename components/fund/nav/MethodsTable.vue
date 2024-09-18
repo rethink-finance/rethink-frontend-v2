@@ -16,43 +16,41 @@
     items-per-page="-1"
     @input="onSelectionChanged"
   >
-    <template #[`body.prepend`]>
-      <tr v-if="showSummaryRow && (showLastNavUpdateValue || showSimulatedNav)" class="nav_entries__summary_row">
-        <td><strong>Total</strong></td>
-        <td />
-        <td />
-        <td />
-        <td v-if="showLastNavUpdateValue" class="text-right font-weight-black">
-          <div>
-            {{ formattedTotalLastNAV }}
+
+    <!-- template for header simulated  -->
+    <template #[`header.pastNavValueFormatted`]>
+      Last NAV Update
+      <div v-if="showSummaryRow && showLastNavUpdateValue" class="text-right">
+        {{ formattedTotalLastNAV }}
+      </div>
+    </template>
+     <template #[`header.simulatedNavFormatted`]>
+      <th>
+        <div class="d-flex">
+          Simulated NAV
+          <FundNavSimulateButton class="ms-1"/>
+      </div>
+      <div class="bottom" v-if="showSummaryRow && showSimulatedNav">
+        <div class="text-right">
+          {{ formattedTotalSimulatedNAV }}
+          <div
+            v-if="simulatedNavErrorCount > 0"
+            class="ms-2 justify-center align-center d-flex"
+          >
+            <Icon
+              icon="octicon:question-16"
+              width="1rem"
+              font-bold
+              color="var(--color-danger)"
+            />
+            <v-tooltip activator="parent" location="bottom">
+              Total value may not include all simulated NAV method values.<br>
+              Retry simulating NAV.
+            </v-tooltip>
           </div>
-        </td>
-        <td v-if="showSimulatedNav" class="text-right font-weight-black">
-          <div :class="`item-simulated-nav ${simulatedNavErrorCount > 0 ? 'item-simulated-nav--error' : ''}`">
-            <div>
-              {{ formattedTotalSimulatedNAV }}
-            </div>
-            <div
-              v-if="simulatedNavErrorCount > 0"
-              class="ms-2 justify-center align-center d-flex"
-            >
-              <Icon
-                icon="octicon:question-16"
-                width="1rem"
-                font-bold
-                color="var(--color-danger)"
-              />
-              <v-tooltip activator="parent" location="bottom">
-                Total value may not include all simulated NAV method values.<br>
-                Retry simulating NAV.
-              </v-tooltip>
-            </div>
-          </div>
-        </td>
-        <td />
-        <td v-if="deletable" />
-        <td v-if="selectable" />
-      </tr>
+        </div>
+      </div>
+      </th>
     </template>
     <template #[`item.index`]="{ index }">
       <strong class="td_index">{{ index + 1 }}</strong>
@@ -176,7 +174,7 @@
           </template>
           <template #activator="{ props }">
             <v-icon
-              icon="mdi-delete"
+              icon="mdi-delete-outline"
               color="error"
               v-bind="props"
             />
@@ -331,6 +329,12 @@ export default defineComponent({
           },
         )
       }
+      // <v-icon
+      //         icon="mdi-delete-outline"
+      //         mdi-update
+      //         color="error"
+      //         v-bind="props"
+      //       />
 
       // Expand details button
       headers.push({ key: "data-table-expand", sortable: false, align: "center" });
