@@ -20,10 +20,10 @@
                 Proposal Title
               </v-label>
               <div class="proposal_title_field__char_limit">
-                <v-label>
-                  MAX 150
-                </v-label>
-                <v-icon icon="mdi-circle-outline" size="15" />
+                <ui-char-limit
+                  :char-limit="150"
+                  :char-number="proposal.title"
+                />
               </div>
             </div>
           </v-row>
@@ -52,7 +52,6 @@
                     v-model="proposal.allowManagerToUpdateNav"
                     color="primary"
                     hide-details
-                    inset
                   />
                 </div>
                 <div class="d-inline-block">
@@ -64,7 +63,7 @@
                   </div>
                 </div>
               </div>
-              <div class="management__card--no-margin">
+              <div class="management__card">
                 <div class="management__row">
                   <div>
                     Collect management fees upon NAV proposal execution
@@ -73,7 +72,6 @@
                     v-model="proposal.collectManagementFees"
                     color="primary"
                     hide-details
-                    inset
                   />
                 </div>
               </div>
@@ -86,7 +84,6 @@
                     v-model="proposal.processWithdraw"
                     color="primary"
                     hide-details
-                    inset
                   />
                 </div>
               </div>
@@ -94,22 +91,23 @@
           </v-row>
 
           <!-- Proposal Description -->
-          <v-row>
-            <v-label class="label_required proposal_description">
+           <v-row>
+            <v-label class="label_required mb-2">
               Proposal Description
             </v-label>
           </v-row>
-          <v-textarea
-            v-model="proposal.description"
-            class="mb-6"
-            :placeholder="`Type here`"
-            hide-details
-            required
-          />
+          <v-row class="mb-6">
+            <v-textarea
+              v-model="proposal.description"
+              :placeholder="`Type here`"
+              hide-details
+              required
+            />
+          </v-row>
 
-          <v-row class="proposal_description d-flex flex-grow-1 justify-space-between align-center">
+          <v-row class="proposal_description d-flex flex-grow-1 justify-space-between align-center mb-2">
             <v-label class="label_required">
-              NAV Methods
+              Proposal Methods
             </v-label>
           </v-row>
           <v-row class="mb-4">
@@ -175,10 +173,10 @@
 </template>
 
 <script setup lang="ts">
-import type { AbiFunctionFragment } from "web3";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import NAVExecutor from "assets/contracts/NAVExecutor.json";
 import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
+import type { AbiFunctionFragment } from "web3";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -736,8 +734,9 @@ const saveProposalDraft = () => {
 .header {
   display: flex;
   flex-direction: row;
-  align-items: baseline;
+  align-items: center;
   gap: .62rem;
+  min-height: 40px;
 }
 .proposal_title_field {
   width: 100%;
