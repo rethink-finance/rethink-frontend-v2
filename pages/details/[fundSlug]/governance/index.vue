@@ -61,7 +61,7 @@
           </v-btn>
         </UiTooltipClick>
       </template>
-      <TableTrendingDelegates :items="trendingDelegates" />
+       <FundGovernanceTableTrendingDelegates :items="trendingDelegates" />
     </UiMainCard>
 
     <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" />

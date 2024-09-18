@@ -90,6 +90,7 @@ export default {
   gap: 1.5rem;
   flex-direction: column;
   justify-content: space-between;
+  
 
   &__header{
     padding: 0;
