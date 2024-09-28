@@ -209,10 +209,12 @@ export const useGovernanceProposalsStore = defineStore({
     },
     async fetchBlockProposals(blockNumber: bigint) {
       console.log("fetchBlockProposals:", blockNumber);
-      const proposalCreatedEvents = await this.fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
-        fromBlock: blockNumber,
-        toBlock: blockNumber,
-      });
+      const proposalCreatedEvents = await this.web3Store.callWithRetry(() =>
+        this.fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
+          fromBlock: blockNumber,
+          toBlock: blockNumber,
+        }),
+      );
       console.log("fetchBlockProposals events:", proposalCreatedEvents);
       await this.parseProposalCreatedEvents(proposalCreatedEvents);
     },
@@ -405,9 +407,8 @@ export const useGovernanceProposalsStore = defineStore({
         const blockEnd = await web3.eth.getBlock(proposal.voteEnd);
         console.log("blockEnd: ", blockEnd);
         proposal.voteEndTimestamp = blockEnd?.timestamp.toString();
-      }
-      // if the voteEnd is in the future, we have to estimate the timestamp
-      else{
+      } else {
+        // if the voteEnd is in the future, we have to estimate the timestamp
         console.log("estimate blockEnd");
         const estimatedEndTimestamp = await this.estimateTimestampFromBlockNumber(currentBlockNumber, currentBlockTimestamp, Number(proposal.voteEnd));
         console.log("estimatedEndTimestamp: ", estimatedEndTimestamp);
@@ -420,9 +421,8 @@ export const useGovernanceProposalsStore = defineStore({
         const blockStart = await web3.eth.getBlock(proposal.voteStart);
         console.log("blockStart: ", blockStart);
         proposal.voteStartTimestamp = blockStart?.timestamp.toString();
-      }
-      // if the voteStart is in the future, we have to estimate the timestamp
-      else{
+      } else{
+        // if the voteStart is in the future, we have to estimate the timestamp
         console.log("estimate blockStart");
         const estimatedStartTimestamp = await this.estimateTimestampFromBlockNumber(currentBlockNumber,currentBlockTimestamp, Number(proposal.voteStart));
         console.log("estimatedStartTimestamp: ", estimatedStartTimestamp);
@@ -430,6 +430,8 @@ export const useGovernanceProposalsStore = defineStore({
       }
     },
     async parseProposalCreatedEvents(events: any[]) {
+      if (!events?.length) return;
+
       if (!this.fundStore.fund?.governanceToken.decimals) {
         console.error("No fund governance token decimals found.")
         this.toastStore.errorToast("No fund governance token decimals found.")
