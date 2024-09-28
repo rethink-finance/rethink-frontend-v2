@@ -91,7 +91,7 @@
           </v-row>
 
           <!-- Proposal Description -->
-           <v-row>
+          <v-row>
             <v-label class="label_required mb-2">
               Proposal Description
             </v-label>
@@ -173,10 +173,10 @@
 </template>
 
 <script setup lang="ts">
+import type { AbiFunctionFragment } from "web3";
 import GovernableFund from "assets/contracts/GovernableFund.json";
 import NAVExecutor from "assets/contracts/NAVExecutor.json";
 import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
-import type { AbiFunctionFragment } from "web3";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -570,7 +570,7 @@ const createProposal = async () => {
       description: proposal.value.description,
     }),
   ];
-  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+  const [gasPrice] = await web3Store.estimateGas(
     {
       from: fundStore.activeAccountAddress,
       to: fundStore.fundGovernorContract.options.address,
@@ -581,7 +581,6 @@ const createProposal = async () => {
   try {
     await fundStore.fundGovernorContract.methods.propose(...proposalData).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
       maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
@@ -621,7 +620,7 @@ const createProposal = async () => {
       description: proposal.value.description,
     }),
   ];
-  const [gasPrice2, gasEstimate2] = await web3Store.estimateGas(
+  const [gasPrice2] = await web3Store.estimateGas(
     {
       from: fundStore.activeAccountAddress,
       to: fundStore.fundGovernorContract.options.address,
@@ -632,7 +631,6 @@ const createProposal = async () => {
   try {
     await fundStore.fundGovernorContract.methods.propose(...proposalData2).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate2,
       maxPriorityFeePerGas: gasPrice2,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);

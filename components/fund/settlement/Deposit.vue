@@ -36,8 +36,8 @@
                   <v-btn
                     class="deposit_button"
                     :disabled="button.disabled"
-                    @click="button.onClick"
                     variant="outlined"
+                    @click="button.onClick"
                   >
                     <template #prepend>
                       <v-progress-circular
@@ -203,7 +203,7 @@ const requestDeposit = async () => {
   const ABI = [ "function requestDeposit(uint256 amount)" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei.value ]);
-  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   console.log("isConnectedWalletUsingLedger:", accountStore.isConnectedWalletUsingLedger);
   console.log("contract:", fundStore.fundContract);
@@ -215,7 +215,6 @@ const requestDeposit = async () => {
     console.log(fundStore.fundContract.config)
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
       maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);
@@ -266,7 +265,7 @@ const approveAllowance = async () => {
 
   console.log("Approve allowance tokensWei: ", tokensWei.value, "from : ", fundStore.activeAccountAddress);
   const allowanceValue = tokensWei.value;
-  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+  const [gasPrice] = await web3Store.estimateGas(
     {
       from: fundStore.activeAccountAddress,
       to: fundStore.fundBaseTokenContract.options.address,
@@ -278,7 +277,6 @@ const approveAllowance = async () => {
     // call the approval method
     await fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei.value).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
       maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);

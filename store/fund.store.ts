@@ -1305,7 +1305,6 @@ export const useFundStore = defineStore({
           .executeNAVUpdate(navExecutorAddr)
           .send({
             from: this.activeAccountAddress,
-            gas: gasEstimate,
             maxPriorityFeePerGas: gasPrice,
           })
           .on("transactionHash", (hash: any) => {

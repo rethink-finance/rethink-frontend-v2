@@ -170,7 +170,7 @@ const delegate = async (isMyself = false) => {
       governanceTokenAddress !== fundAddress &&
       governanceTokenAddress !== nullAddr
     ) {
-      const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+      const [gasPrice] = await web3Store.estimateGas(
         {
           from: fundStore.activeAccountAddress,
           to: fundStore.fundGovernanceTokenContract.options.address,
@@ -182,7 +182,6 @@ const delegate = async (isMyself = false) => {
           .delegate(delegateTo)
           .send({
             from: fundStore.activeAccountAddress,
-            gas: gasEstimate,
             maxPriorityFeePerGas: gasPrice,
           })
           .on("transactionHash", function (hash: any) {
@@ -219,7 +218,7 @@ const delegate = async (isMyself = false) => {
         );
       }
     } else {
-      const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+      const [gasPrice] = await web3Store.estimateGas(
         {
           from: fundStore.activeAccountAddress,
           to: fundStore.fundContract.options.address,
@@ -231,7 +230,6 @@ const delegate = async (isMyself = false) => {
           .delegate(delegateTo)
           .send({
             from: fundStore.activeAccountAddress,
-            gas: gasEstimate,
             maxPriorityFeePerGas: gasPrice,
           })
           .on("transactionHash", function (hash: any) {

@@ -192,7 +192,7 @@ const submitProposal = async () => {
       description: details?.proposalDescription,
     }),
   ];
-  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+  const [gasPrice] = await web3Store.estimateGas(
     {
       from: fundStore.activeAccountAddress,
       to: fundStore.fundGovernorContract.options.address,
@@ -202,7 +202,6 @@ const submitProposal = async () => {
   try {
     await fundStore.fundGovernorContract.methods.propose(...proposalData).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
       maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);

@@ -150,7 +150,7 @@ const safeContractBaseTokenBalanceFormatted = computed(() => {
 
 const transfer = async () => {
   isTransferLoading.value = true;
-  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+  const [gasPrice] = await web3Store.estimateGas(
     {
       from: fundStore.activeAccountAddress,
       to: fundStore.fundBaseTokenContract.options.address,
@@ -161,7 +161,6 @@ const transfer = async () => {
   try {
     await fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei.value).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
       maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);

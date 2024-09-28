@@ -45,7 +45,7 @@ export const useWeb3Store = defineStore({
         chainName: "Polygon",
         chainShort: "matic",
         icon: getChainIcon("matic"),
-        rpcUrl: "https://polygon-rpc.com",
+        rpcUrl: "https://polygon-pokt.nodies.app",
         rpcUrls: [
           "https://polygon-rpc.com",
           "https://polygon.drpc.org",
