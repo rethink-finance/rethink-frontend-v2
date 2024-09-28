@@ -510,6 +510,7 @@ export const useFundStore = defineStore({
 
       try {
         // Fetch all token symbols, decimals and values.
+        // TODO move all these metadata calls to one ReaderContract method.
         const results = await Promise.allSettled(
           [
             () => fundContract.methods.getFundStartTime().call(),

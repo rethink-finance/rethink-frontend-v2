@@ -61,7 +61,7 @@ const excludeFundAddrs = {
     "0xBb1E02AcA8F7Cb2403c0Bf3aaA74001d38Beb488",
   ],
   "0xa4b1": [
-      "0xA5138779Bb08C8DE44692e183c586817a0bcEb42",
+    "0xA5138779Bb08C8DE44692e183c586817a0bcEb42",
   ],
   "0xfc": [],
   "0x1": [],
@@ -173,7 +173,6 @@ export const useFundsStore = defineStore({
      * Fetch funds and their metadata and NAV data.
      * This will return funds with just enough data to populate the discover table.
      * More data can be fetched from fundSettings later if needed, or added to the reader contract.
-     * - TODO: totalDepositBal (is also present if needed)
      */
     async fetchFundsMetadata(fundAddresses: string[], fundsInfo: any): Promise<IFund[]> {
       const funds: IFund[] = [];
@@ -186,7 +185,6 @@ export const useFundsStore = defineStore({
           fundAddresses, 0,
         ).call();
 
-        // @dev NOTE: there is also: totalDepositBal for each fund if we need it.
         fundAddresses.forEach((address, index) => {
           if (
             excludeTestFunds &&
@@ -219,7 +217,7 @@ export const useFundsStore = defineStore({
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
             totalNAVWei: dataNAVs.totalNav[index],
-            totalDepositBalance: BigInt("0"),
+            totalDepositBalance: dataNAVs.totalDepositBal[index] || BigInt("0"),
             cumulativeReturnPercent: 0,
             monthlyReturnPercent: 0,
             sharpeRatio: 0,
