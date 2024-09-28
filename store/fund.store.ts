@@ -510,29 +510,31 @@ export const useFundStore = defineStore({
 
       try {
         // Fetch all token symbols, decimals and values.
-        const results = await Promise.allSettled([
-          fundContract.methods.getFundStartTime().call(),
-          fundContract.methods.fundMetadata().call() as Promise<string>,
-          fundContract.methods._feeBal().call() as Promise<string>,
-          fundBaseTokenContract.methods.balanceOf(fundSettings.safe).call() as Promise<string>,
-          fundBaseTokenContract.methods.balanceOf(fundSettings.fundAddress).call() as Promise<string>,
-          this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken) as Promise<string>,
-          this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken) as Promise<number>,
-          this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken) as Promise<string>,
-          this.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
-          governanceTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
-          this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
-          fundTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
-          fundContract.methods.totalNAV().call() as Promise<bigint>,
-          fundContract.methods._totalDepositBal().call() as Promise<bigint>,
-          rethinkFundGovernorContract.methods.votingDelay().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.votingPeriod().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.proposalThreshold().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.quorumNumerator().call() as Promise<bigint>,
-          rethinkFundGovernorContract.methods.quorumDenominator().call() as Promise<bigint>,
-          rethinkFundGovernorContract.methods.CLOCK_MODE().call() as Promise<string>,
-        ]);
+        const results = await Promise.allSettled(
+          [
+            () => fundContract.methods.getFundStartTime().call(),
+            () => fundContract.methods.fundMetadata().call(),
+            () => fundContract.methods._feeBal().call(),
+            () => fundBaseTokenContract.methods.balanceOf(fundSettings.safe).call(),
+            () => fundBaseTokenContract.methods.balanceOf(fundSettings.fundAddress).call(),
+            () => this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken),
+            () => this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken),
+            () => this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken),
+            () => this.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken),
+            () => governanceTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
+            () => this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken),
+            () => fundTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
+            () => fundContract.methods.totalNAV().call(),
+            () => fundContract.methods._totalDepositBal().call(),
+            () => rethinkFundGovernorContract.methods.votingDelay().call(),
+            () => rethinkFundGovernorContract.methods.votingPeriod().call(),
+            () => rethinkFundGovernorContract.methods.proposalThreshold().call(),
+            () => rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call(),
+            () => rethinkFundGovernorContract.methods.quorumNumerator().call(),
+            () => rethinkFundGovernorContract.methods.quorumDenominator().call(),
+            () => rethinkFundGovernorContract.methods.CLOCK_MODE().call(),
+          ].map((fn: () => Promise<any>) => this.accountStore.requestConcurrencyLimit(fn)),
+        );
 
         const [
           fundStartTime,
@@ -556,11 +558,11 @@ export const useFundStore = defineStore({
           quorumNumerator,
           quorumDenominator,
           clockModeString,
-        ]: any[] = results.map(result => {
+        ]: any[] = results.map((result, index) => {
           if (result.status === "fulfilled") {
             return result.value
           }
-          console.error("Failed fetching fund data value for: ", result)
+          console.error("Failed fetching fund data value for: ", index, result)
           return undefined
         });
 

@@ -1,6 +1,8 @@
 import { defineStore } from "pinia";
 import type { Account, WalletState } from "@web3-onboard/core/dist/types";
 import { Web3 } from "web3";
+import pLimit from "p-limit";
+import type { LimitFunction } from "p-limit";
 import { useWeb3Store } from "~/store/web3.store";
 
 interface IState {
@@ -28,6 +30,12 @@ export const useAccountStore = defineStore("accounts", {
     },
     isConnected(): boolean {
       return !!this.connectedWallet;
+    },
+    requestConcurrencyLimit(): LimitFunction {
+      // If user is not authenticated, we want to limit concurrent requests to 2.
+      // 2 was chosen arbitrary, it needs to be a low number as RPC nodes block requests if too many are made
+      // at the same time. If user is authenticated (e.g. through Metamask), they allow more requests at once.
+      return this.isConnected ? pLimit(10) : pLimit(2);
     },
     activeAccount(): Account | undefined {
       return this.web3Onboard?.connectedWallet?.accounts[0];
