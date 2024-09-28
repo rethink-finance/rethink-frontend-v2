@@ -69,13 +69,18 @@
       >
         {{ submitButtonText }}
         <v-tooltip
-          v-if="!accountStore.isConnected"
+          v-if="!accountStore.isConnected || hasAccountVotedAlready"
           :model-value="true"
           activator="parent"
           location="top"
           @update:model-value="false"
         >
-          Connect your wallet.
+          <template v-if="!accountStore.isConnected">
+            Connect your wallet.
+          </template>
+          <template v-else-if="hasAccountVotedAlready">
+            You have already voted on this proposal.
+          </template>
         </v-tooltip>
       </v-btn>
 
@@ -174,6 +179,7 @@ import {
   VoteTypeNumberMapping,
 } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 
 const props = defineProps({
   proposal: {
@@ -185,6 +191,7 @@ const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
+const governanceProposalStore = useGovernanceProposalsStore();
 const loadingSubmitVote = ref(false);
 const loadingExecuteProposal = ref(false);
 
@@ -230,6 +237,9 @@ const submitButtonText = computed(() => {
   if (hasProposalSucceeded.value) return "Execute Proposal"
   if (hasProposalExecuted.value) return "N/A"
   return "Submit Vote";
+});
+const hasAccountVotedAlready = computed(() => {
+  return governanceProposalStore.hasAccountVoted(props.proposal.proposalId) !== undefined
 });
 
 const isVoteDialogOpen = ref(false);
