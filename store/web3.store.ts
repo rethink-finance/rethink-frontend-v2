@@ -45,11 +45,10 @@ export const useWeb3Store = defineStore({
         chainName: "Polygon",
         chainShort: "matic",
         icon: getChainIcon("matic"),
-        rpcUrl: "https://polygon-mainnet.g.alchemy.com/v2/demo2",
+        rpcUrl: "https://polygon.drpc.org",
         rpcUrls: [
-          "https://polygon-mainnet.g.alchemy.com/v2/demo2",
-          "https://polygon-rpc.com/",
           "https://polygon.drpc.org",
+          "https://polygon-rpc.com/",
           "https://polygon.llamarpc.com",
           "https://polygon-pokt.nodies.app",
           "https://polygon.rpc.blxrbdn.com",
