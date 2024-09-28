@@ -45,9 +45,11 @@ export const useWeb3Store = defineStore({
         chainName: "Polygon",
         chainShort: "matic",
         icon: getChainIcon("matic"),
-        rpcUrl: "https://polygon-mainnet.g.alchemy.com/v2/demo2",
+        rpcUrl: "https://polygon.llamarpc.com",
         rpcUrls: [
-          "https://polygon-mainnet.g.alchemy.com/v2/demo2",
+          "https://polygon.llamarpc.com",
+          "https://polygon.llamarpc.com",
+          "https://polygon.llamarpc.com",
           "https://polygon-rpc.com/",
           "https://polygon.drpc.org",
           "https://polygon.llamarpc.com",
@@ -108,6 +110,10 @@ export const useWeb3Store = defineStore({
   getters: {
     networks(): INetwork[] {
       return Object.values(this.networksMap);
+    },
+    currentNetworkRPCUrls(): string[] {
+      const network = this.networksMap[this.chainId];
+      return removeDuplicates([network.rpcUrl, ...(network.rpcUrls || [])]);
     },
     currentRPC(): string {
       const currentProvider: any = this.web3?.provider;
@@ -179,7 +185,7 @@ export const useWeb3Store = defineStore({
       } else {
         console.warn("[INIT] NO NEW web3provider")
         // Handle connecting to a working RPC
-        await this.switchRpcUrl();
+        this.switchRpcUrl();
       }
 
       localStorage.setItem("lastUsedChainId", chainId.toString());
@@ -216,42 +222,38 @@ export const useWeb3Store = defineStore({
       }
     },
     async callWithRetry(method: () => any): Promise<any> {
+      const RPCUrlsLength = this.currentNetworkRPCUrls.length;
       let retries = 0;
+      let switchedRPCCount = 0;
+
       console.log("callWithRetry");
       if (!method) {
         return method;
       }
-      while (retries < this.maxRetries) {
+      while (retries < this.maxRetries && switchedRPCCount <= RPCUrlsLength) {
         try {
           return await method();
         } catch (error) {
-          console.error(`RPC error: ${(error as Error).message}`, method);
+          const rpcUrl = (this.web3?.currentProvider as any)?.clientUrl;
+          console.error(`RPC error: ${(error as Error).message}`, method, rpcUrl);
           retries++;
           if (retries >= this.maxRetries) {
-            await this.switchRpcUrl();
+            this.switchRpcUrl();
             retries = 0;
+            switchedRPCCount++;
           }
           await this.delay(this.retryDelay);
         }
       }
       throw new Error("Max retries reached for all RPC URLs");
     },
-    async switchRpcUrl(): Promise<void> {
+    switchRpcUrl(): void {
       if (!this.chainId) return;
-      const network = this.networksMap[this.chainId];
-      console.log("network", network)
-      const rpcUrls = removeDuplicates([network.rpcUrl, ...(network.rpcUrls || [])]);
+      const rpcUrls = this.currentNetworkRPCUrls;
       this.currentRpcIndex = (this.currentRpcIndex + 1) % rpcUrls.length;
       const newRpcUrl = rpcUrls[this.currentRpcIndex];
       console.log(`Switching to RPC URL: ${newRpcUrl}`, this.currentRpcIndex);
       this.web3 = new Web3(newRpcUrl);
-
-      try {
-        // await this.checkConnection();
-      } catch (error) {
-        console.error(`Failed to connect to ${newRpcUrl}. Trying next...`);
-        await this.switchRpcUrl(); // Recursively try the next URL
-      }
     },
     delay(ms: number): Promise<void> {
       return new Promise(resolve => setTimeout(resolve, ms));

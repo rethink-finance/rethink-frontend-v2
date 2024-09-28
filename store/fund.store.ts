@@ -440,7 +440,12 @@ export const useFundStore = defineStore({
       } as IClockMode;
     },
     async fetchUserBalances() {
-      if (!this.activeAccountAddress) return;
+      if (
+        !this.activeAccountAddress ||
+        this.fund?.fundToken?.address ||
+        this.fund?.baseToken?.address ||
+        this.fund?.governanceToken?.address
+      ) return;
       this.loadingUserBalances = true;
 
       const promises = await Promise.allSettled(
@@ -1002,10 +1007,13 @@ export const useFundStore = defineStore({
       this.userBaseTokenBalance = BigInt("0");
 
       if (!this.fund?.baseToken?.address) {
-        throw new Error("Fund denomination token address is not available.")
+        console.log("Fund baseToken.address is not set.")
+        return
       }
-      if (!this.activeAccountAddress) throw new Error("Active account not found");
-
+      if (!this.activeAccountAddress) {
+        console.log("activeAccountAddress is not set.")
+        return
+      }
       this.userBaseTokenBalance = await this.callWithRetry(() =>
         this.fundBaseTokenContract.methods.balanceOf(this.activeAccountAddress).call(),
       );
@@ -1020,10 +1028,13 @@ export const useFundStore = defineStore({
       this.userFundTokenBalance = BigInt("0");
 
       if (!this.fund?.fundToken?.address) {
-        throw new Error("Fund token address is not available.")
+        console.log("Fund fundToken.address is not set.")
+        return
       }
-      if (!this.activeAccountAddress) throw new Error("Active account not found");
-
+      if (!this.activeAccountAddress) {
+        console.log("activeAccountAddress is not set.")
+        return
+      }
       this.userFundTokenBalance = await this.callWithRetry(() =>
         this.fundContract.methods.balanceOf(this.activeAccountAddress).call(),
       );
@@ -1038,10 +1049,13 @@ export const useFundStore = defineStore({
       this.userGovernanceTokenBalance = BigInt("0");
 
       if (!this.fund?.governanceToken?.address) {
-        throw new Error("Governance token address is not available.")
+        console.log("Fund governanceToken.address is not set.")
+        return
       }
-      if (!this.activeAccountAddress) throw new Error("Active account not found");
-
+      if (!this.activeAccountAddress) {
+        console.log("activeAccountAddress is not set.")
+        return
+      }
       this.userGovernanceTokenBalance = await this.callWithRetry(() =>
         this.fundGovernanceTokenContract.methods.balanceOf(
           this.activeAccountAddress,
@@ -1056,10 +1070,14 @@ export const useFundStore = defineStore({
      */
     async fetchUserFundDelegateAddress() {
       this.userFundDelegateAddress = "";
-      if (!this.fund?.fundToken?.address) {
-        throw new Error("Fund token address is not available.")
+      if (!this.fund?.governanceToken?.address) {
+        console.log("Fund governanceToken.address is not set.")
+        return
       }
-      if (!this.activeAccountAddress) throw new Error("Active account not found");
+      if (!this.activeAccountAddress) {
+        console.log("activeAccountAddress is not set.")
+        return
+      }
 
       this.userFundDelegateAddress = await this.callWithRetry(() =>
         this.fundContract.methods.delegates(this.activeAccountAddress).call(),
@@ -1072,9 +1090,9 @@ export const useFundStore = defineStore({
      */
     async fetchUserFundAllowance() {
       this.userFundAllowance = BigInt("0");
-
       if (!this.fund?.baseToken?.address) {
-        throw new Error("Fund denomination token is not available.")
+        console.log("Fund baseToken.address is not set.")
+        return
       }
       if (!this.activeAccountAddress) return console.error("Active account not found");
 
