@@ -1219,7 +1219,7 @@ export const useFundStore = defineStore({
           this.loadingUpdateNav = false;
           return;
         }
-        const [gasPrice, gasEstimate] = await this.web3Store.estimateGas(
+        const [gasPrice] = await this.web3Store.estimateGas(
           {
             from: this.activeAccountAddress,
             to: this.fundContract.options.address,
@@ -1230,7 +1230,6 @@ export const useFundStore = defineStore({
           .executeNAVUpdate(navExecutorAddr)
           .send({
             from: this.activeAccountAddress,
-            gas: gasEstimate,
             maxPriorityFeePerGas: gasPrice,
           })
           .on("transactionHash", (hash: any) => {

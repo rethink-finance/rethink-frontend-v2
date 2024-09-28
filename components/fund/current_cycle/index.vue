@@ -203,12 +203,11 @@ const deposit = async () => {
   const ABI = [ "function deposit()" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("deposit");
-  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
       maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
@@ -261,12 +260,11 @@ const redeem = async () => {
   const iface = new ethers.Interface([ "function withdraw()" ]);
   const encodedFunctionCall = iface.encodeFunctionData("withdraw");
   fundStore.fundContract.methods.withdraw().encodeABI()
-  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
       maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);

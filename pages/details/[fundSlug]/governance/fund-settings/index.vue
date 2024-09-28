@@ -170,9 +170,10 @@
 </template>
 
 <script setup lang="ts">
-import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
+import SectionWhitelist from "./SectionWhitelist.vue";
+import GovernableFund from "assets/contracts/GovernableFund.json";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -188,7 +189,6 @@ import {
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import SectionWhitelist from "./SectionWhitelist.vue";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
@@ -403,7 +403,7 @@ const submit = async () => {
         description: proposal.value.proposalDescription,
       }),
     ];
-    const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+    const [gasPrice] = await web3Store.estimateGas(
       {
         from: fundStore.activeAccountAddress,
         to: fundStore.fundGovernorContract.options.address,
@@ -415,7 +415,6 @@ const submit = async () => {
         .propose(...proposalData)
         .send({
           from: fundStore.activeAccountAddress,
-          gas: gasEstimate,
           maxPriorityFeePerGas: gasPrice,
         })
         .on("transactionHash", (hash: string) => {

@@ -113,12 +113,11 @@ const cancelPendingRequest = async () => {
   const ABI = [ "function revokeDepositWithrawal(bool isDeposit)" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ isDepositRequest ]);
-  const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
       maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);

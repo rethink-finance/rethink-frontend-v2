@@ -84,11 +84,10 @@ const sweepFundContract = async () => {
     const functionSignatureHash = eth.abi.encodeFunctionSignature("sweepTokens()");
     const iface = new ethers.Interface([ "function sweepTokens()" ]);
     const encodedFunctionCall = iface.encodeFunctionData("sweepTokens");
-    const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+    const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
     await fundStore.fundContract.methods.fundFlowsCall(functionSignatureHash).send({
       from: fundStore.activeAccountAddress,
-      gas: gasEstimate,
       maxPriorityFeePerGas: gasPrice,
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);

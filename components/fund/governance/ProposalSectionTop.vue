@@ -250,7 +250,7 @@ const submitButtonClick = () => {
 const submitVote = async () => {
   loadingSubmitVote.value = true;
   console.log("cast vote", props.proposal.proposalId, selectedVoteOption.value)
-  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+  const [gasPrice] = await web3Store.estimateGas(
     {
       from: fundStore.activeAccountAddress,
       to: fundStore.fundGovernorContract.options.address,
@@ -308,7 +308,7 @@ const executeProposal = async () => {
     props.proposal.calldatas,
     props.proposal.descriptionHash,
   ];
-  const [gasPrice, gasEstimate] = await web3Store.estimateGas(
+  const [gasPrice] = await web3Store.estimateGas(
     {
       from: fundStore.activeAccountAddress,
       to: fundStore.fundGovernorContract.options.address,
@@ -319,7 +319,6 @@ const executeProposal = async () => {
     await fundStore.fundGovernorContract.methods.execute(...trxData).send(
       {
         from: fundStore.activeAccountAddress,
-        gas: gasEstimate,
         maxPriorityFeePerGas: gasPrice,
       },
     ).on("transactionHash", (hash: string) => {
