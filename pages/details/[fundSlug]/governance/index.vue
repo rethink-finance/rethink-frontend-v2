@@ -334,6 +334,13 @@ const fetchProposals = async (
     );
     let toBlock = Math.max(rangeStartBlock, 0);
     let fromBlock = Math.max(toBlock - chunkSize + 1, rangeEndBlock);
+    // TODO BIG PROBLEM:
+    //   if I start fetching from block 1000 to 0 (by 100 chunk size) and then I stop I will save that last fetched block
+    //   number is 1000 and oldest is 900 and then next time when I start, I start from most recent block
+    //   number 2000 and go to 1000 and from 900 to 0... the problem is that the most recent block will be then
+    //   2000 even if I stopped before the 1000 and didnt fetch all from 2000 to 1000
+    //   FIX: only go from newest to oldest when there are no blocks fetched yet... otherwise go from the most recent
+    //   fetched block to the current block number.
     while (true) {
       // for (let i = rangeStartBlock; i > rangeEndBlock; i -= chunkSize) {
       if (!shouldFetchProposals.value) return;
@@ -538,6 +545,9 @@ const startFetch = async () => {
 
   loadingProposals.value = true;
   let currentBlock;
+  // TODO: different RPC providers can return different block numbers, especially if they are not fully synchronized
+  //   or if they have latency issues. This happens because each RPC node might be at a slightly different state of
+  //   the blockchain, particularly during times of heavy network traffic or when the nodes are under maintenance.
   while (currentBlock === undefined) {
     try {
       currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
