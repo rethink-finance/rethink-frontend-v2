@@ -1,8 +1,8 @@
-import GovernableFund from "assets/contracts/GovernableFund.json";
 import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
 import { eth, Web3 } from "web3";
+import GovernableFund from "assets/contracts/GovernableFund.json";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
@@ -484,7 +484,7 @@ export const useGovernanceProposalsStore = defineStore({
         try {
           totalSupply = await this.fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber);
           proposal.totalSupply = totalSupply;
-          proposal.totalSupplyFormatted = formatTokenValue(totalSupply, this.fundStore.fund?.governanceToken?.decimals);
+          proposal.totalSupplyFormatted = formatTokenValue(totalSupply, this.fundStore.fund?.governanceToken?.decimals, false);
         } catch (error: any) {
         // Sometimes it happens: missing trie node
           console.error("failed fetching total supply", error);
@@ -503,24 +503,24 @@ export const useGovernanceProposalsStore = defineStore({
 
           const quorumWhenProposalCreated = await this.fundStore.fundGovernorContract.methods.quorumNumerator(timePoint).call()
           proposal.quorumVotes = quorumWhenProposalCreated;
-          proposal.quorumVotesFormatted = formatTokenValue(quorumWhenProposalCreated, this.fundStore.fund?.governanceToken?.decimals);
+          proposal.quorumVotesFormatted = formatTokenValue(quorumWhenProposalCreated, this.fundStore.fund?.governanceToken?.decimals, false);
         } catch (e: any) {
           console.error("error fetching quorumVotes: ", e);
           proposal.quorumVotesFormatted = "N/A";
         }
 
-        console.log("parse votes");
+        console.log("parse votes", votes);
         if (votes) {
           const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
           proposal.totalVotes = totalVotes;
-          proposal.totalVotesFormatted = formatTokenValue(totalVotes, this.fundStore.fund?.governanceToken.decimals);
+          proposal.totalVotesFormatted = formatTokenValue(totalVotes, this.fundStore.fund?.governanceToken.decimals, false);
           proposal.forVotes = votes.forVotes;
           proposal.abstainVotes = votes.abstainVotes;
           proposal.againstVotes = votes.againstVotes;
-          proposal.forVotesFormatted = formatTokenValue(votes.forVotes, this.fundStore.fund?.governanceToken.decimals);
-          proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, this.fundStore.fund?.governanceToken.decimals);
-          proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, this.fundStore.fund?.governanceToken.decimals);
-
+          proposal.forVotesFormatted = formatTokenValue(votes.forVotes, this.fundStore.fund?.governanceToken.decimals, false);
+          proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, this.fundStore.fund?.governanceToken.decimals, false);
+          proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, this.fundStore.fund?.governanceToken.decimals, false);
+          console.log("proposal votes", proposal)
           if (proposal.quorumVotes === 0n && Number(votes.forVotes) > 0) {
             // If quorum is 0, it means that there should be more than 0 FOR votes for proposal to pass.
             proposal.approval = 1;
