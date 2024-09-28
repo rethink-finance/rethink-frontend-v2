@@ -1,8 +1,8 @@
-import { defineStore } from "pinia";
 import type { Account, WalletState } from "@web3-onboard/core/dist/types";
-import { Web3 } from "web3";
-import pLimit from "p-limit";
 import type { LimitFunction } from "p-limit";
+import pLimit from "p-limit";
+import { defineStore } from "pinia";
+import { Web3 } from "web3";
 import { useWeb3Store } from "~/store/web3.store";
 
 interface IState {
@@ -70,14 +70,32 @@ export const useAccountStore = defineStore("accounts", {
         web3Provider = new Web3(this.connectedWallet.provider);
       }
       if (web3Provider && web3Provider !== this.web3Store.web3) {
+        console.log("web3Provider", web3Provider);
+        console.log("web3Store.web3", this.web3Store.web3);
         await this.web3Store.init(chainId, web3Provider);
       }
     },
     async connectWallet() {
       try {
-        await this.web3Onboard?.connectWallet();
+        // when the user connects to the wallet, it will also switch the chain to the last used chainId on the WALLET.
+        // but if the last used chainId on the wallet is different from the last used chainId in the local storage,
+        // it needs to switch the chain to the last used chainId in the local storage.
+
+        // check the last used chainId in the local storage.
+        const lastUsedChainId = localStorage.getItem("lastUsedChainId");
+        
+        const wallet = await this.web3Onboard?.connectWallet();
+        // check the last used chainId on the connected wallet.
+        const connectedChainId = wallet?.chains[0]?.id || "";
+
+        // if the last used chainId (from localstorage) is different from the connected wallet chainId,
+        // switch the chain to the last used chainId.
+        const chainToUse = connectedChainId || lastUsedChainId;
+        if (chainToUse !== connectedChainId) {
+          await this.setActiveChain(chainToUse);
+        }
       } catch (error) {
-        console.error("Error Luka connecting wallet:", error);
+        console.error("Error connecting wallet:", error);
       }
     },
     async disconnectWallet() {
