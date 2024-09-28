@@ -7,6 +7,9 @@ const addresses: IAddresses = addressesJson as IAddresses;
 
 interface IState {
   web3?: Web3;
+  currentRpcIndex: number,
+  maxRetries: number,
+  retryDelay: number,
   chainId: string,
   chainName: string;
   chainShort: string;
@@ -30,6 +33,9 @@ export const useWeb3Store = defineStore({
   id: "web3store",
   state: (): IState => ({
     web3: undefined,
+    currentRpcIndex: -1,
+    maxRetries: 1,
+    retryDelay: 1500,
     chainId: "",
     chainName: "",
     chainShort: "",
@@ -39,8 +45,10 @@ export const useWeb3Store = defineStore({
         chainName: "Polygon",
         chainShort: "matic",
         icon: getChainIcon("matic"),
-        rpcUrl: "https://polygon-pokt.nodies.app",
+        rpcUrl: "https://polygon-mainnet.g.alchemy.com/v2/demo2",
         rpcUrls: [
+          "https://polygon-mainnet.g.alchemy.com/v2/demo2",
+          "https://polygon-rpc.com/",
           "https://polygon.drpc.org",
           "https://polygon.llamarpc.com",
           "https://polygon-pokt.nodies.app",
@@ -162,61 +170,29 @@ export const useWeb3Store = defineStore({
       const network: INetwork = this.networksMap[chainId];
       this.chainName = network.chainName ?? "";
       this.chainShort = network.chainShort ?? "";
+      // Lastly set chainId, as we sometimes use watcher on chainId to reload other pages.
+      this.chainId = chainId;
 
       if (web3Provider) {
         console.warn("[INIT] has new web3provider", web3Provider)
         this.web3 = web3Provider;
       } else {
         console.warn("[INIT] NO NEW web3provider")
-        const rpcUrls = removeDuplicates([network.rpcUrl, ...network.rpcUrls ?? []]);
-        for (const rpcUrl of rpcUrls) {
-          this.web3 = new Web3(rpcUrl);
-
-          try {
-            console.log("Check connection for RPC url", rpcUrl);
-            const lastBlock = await this.checkConnection();
-            if (!lastBlock || lastBlock <= 0n) {
-              console.log("no last block");
-              continue;
-            }
-            console.log("lastBlock: ", lastBlock);
-            break;
-          } catch (e: any) {
-            console.log("Connection failed for RPC url", rpcUrl, e);
-          }
-        }
+        // Handle connecting to a working RPC
+        await this.switchRpcUrl();
       }
 
-      // Lastly set chainId, as we sometimes use watcher on chainId to reload other pages.
-      this.chainId = chainId;
       localStorage.setItem("lastUsedChainId", chainId.toString());
       console.log(`init web3 chain: ${this.chainId} on ${this.currentRPC}`);
       console.log("----------------\n")
     },
     async checkConnection() {
-      return await this.web3?.eth.getBlockNumber();
-    },
-    async getContractCreationBlock (contractAddress: string) {
-      if (!this.web3) return undefined;
-      try {
-        // Get the transaction hash of the contract creation
-        const transactionHash = await this.web3.eth.getTransactionFromBlock(contractAddress, 0);
-        console.log("trx hash: ", transactionHash);
-        if (transactionHash !== undefined && transactionHash !== null) return;
-        // Get the transaction receipt using the transaction hash
-        // const transactionReceipt = await this.web3.eth.getTransactionReceipt(transactionHash);
-        //
-        // // Extract the block number
-        // const blockNumber = transactionReceipt.blockNumber;
-        //
-        // console.log(`Contract was deployed in block number: ${blockNumber}`);
-        // return blockNumber
-      } catch (error) {
-        console.error(`Error fetching contract creation block number: ${error}`);
-      }
-      return undefined
+      return await this.callWithRetry(() => this?.web3?.eth.getBlockNumber());
     },
     async estimateGas(transactionData: Record<string, any>) {
+      return await this.callWithRetry(() => this.estimateGasImpl(transactionData));
+    },
+    async estimateGasImpl(transactionData: Record<string, any>) {
       if (!this.web3) {
         return [undefined, undefined];
       }
@@ -235,8 +211,50 @@ export const useWeb3Store = defineStore({
         return [gasPrice, gasEstimate];
       } catch (error) {
         console.error("Error estimating gas:", transactionData, error);
+
+        return [undefined, undefined];
       }
-      return [undefined, undefined];
+    },
+    async callWithRetry(method: () => any): Promise<any> {
+      let retries = 0;
+      console.log("callWithRetry");
+      if (!method) {
+        return method;
+      }
+      while (retries < this.maxRetries) {
+        try {
+          return await method();
+        } catch (error) {
+          console.error(`RPC error: ${(error as Error).message}`, method);
+          retries++;
+          if (retries >= this.maxRetries) {
+            await this.switchRpcUrl();
+            retries = 0;
+          }
+          await this.delay(this.retryDelay);
+        }
+      }
+      throw new Error("Max retries reached for all RPC URLs");
+    },
+    async switchRpcUrl(): Promise<void> {
+      if (!this.chainId) return;
+      const network = this.networksMap[this.chainId];
+      console.log("network", network)
+      const rpcUrls = removeDuplicates([network.rpcUrl, ...(network.rpcUrls || [])]);
+      this.currentRpcIndex = (this.currentRpcIndex + 1) % rpcUrls.length;
+      const newRpcUrl = rpcUrls[this.currentRpcIndex];
+      console.log(`Switching to RPC URL: ${newRpcUrl}`, this.currentRpcIndex);
+      this.web3 = new Web3(newRpcUrl);
+
+      try {
+        // await this.checkConnection();
+      } catch (error) {
+        console.error(`Failed to connect to ${newRpcUrl}. Trying next...`);
+        await this.switchRpcUrl(); // Recursively try the next URL
+      }
+    },
+    delay(ms: number): Promise<void> {
+      return new Promise(resolve => setTimeout(resolve, ms));
     },
   },
 });
