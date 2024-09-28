@@ -442,9 +442,10 @@ export const useFundStore = defineStore({
     async fetchUserBalances() {
       if (
         !this.activeAccountAddress ||
-        this.fund?.fundToken?.address ||
-        this.fund?.baseToken?.address ||
-        this.fund?.governanceToken?.address
+        !this.fund?.fundToken?.address ||
+        !this.fund?.baseToken?.address ||
+        !this.fund?.governanceToken?.address ||
+        !this.fund?.address
       ) return;
       this.loadingUserBalances = true;
 

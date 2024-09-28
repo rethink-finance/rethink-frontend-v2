@@ -186,6 +186,7 @@ export const useWeb3Store = defineStore({
         console.warn("[INIT] NO NEW web3provider")
         // Handle connecting to a working RPC
         this.switchRpcUrl();
+        await this.checkConnection();
       }
 
       localStorage.setItem("lastUsedChainId", chainId.toString());
