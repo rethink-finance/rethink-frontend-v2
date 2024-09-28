@@ -161,7 +161,6 @@
 <script setup lang="ts">
 // toast
 import { truncateAddress } from "~/composables/addressUtils";
-// import { useToastStore } from "~/store/toast.store";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -263,7 +262,6 @@ const submitVote = async () => {
     await fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).send(
       {
         from: fundStore.activeAccountAddress,
-        gas: gasEstimate,
         maxPriorityFeePerGas: gasPrice,
       },
     ).on("transactionHash", (hash: string) => {
