@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -859,8 +859,6 @@ export const useFundStore = defineStore({
             error,
           );
         }
-      } catch (error) {
-        console.error("simulateNAVMethodValue Error simulating NAV: ", error);
       } finally {
         navEntry.isNavSimulationLoading = false;
       }

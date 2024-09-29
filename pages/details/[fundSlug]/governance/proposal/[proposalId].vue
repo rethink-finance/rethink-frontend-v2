@@ -81,7 +81,7 @@
                     <template v-if="!toggledRawProposalCalldatas[index]">
                       <template v-if="proposal?.calldataTypes[index] === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
-                          :methods="parseNavEntries(proposal?.calldatasDecoded?.[index]?.calldataDecoded)"
+                          :methods="allMethods[index]"
                           show-summary-row
                           show-simulated-nav
                           idx="[proposalId]"
@@ -192,6 +192,7 @@ const [createdBlockNumber, proposalId] = proposalSlug.split("-") as [bigint, str
 const fundSlug = route.params.fundSlug as string;
 const showRawCalldatas = ref(false);
 const loadingProposal = ref(false);
+const allMethods = ref<INAVMethod[][]>([]);
 console.log("proposal", proposalId);
 console.log("fundSlug", fundSlug);
 
@@ -298,7 +299,7 @@ watch(
 
     newProposal.calldatas.forEach((_, index) => {
       toggledRawProposalCalldatas.value[index] = false;
-    })
+    }) 
   },
   { immediate: true },
 );
@@ -325,6 +326,12 @@ onMounted(async () => {
     }
   } catch {}
   loadingProposal.value = false;
+
+  if (proposal.value) {
+    allMethods.value = proposal.value?.calldatasDecoded?.map((calldata) => {
+      return parseNavEntries(calldata?.calldataDecoded);
+    }) ?? [];
+  }
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);

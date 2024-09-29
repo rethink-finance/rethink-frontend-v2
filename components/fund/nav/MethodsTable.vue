@@ -329,13 +329,7 @@ export default defineComponent({
           },
         )
       }
-      // <v-icon
-      //         icon="mdi-delete-outline"
-      //         mdi-update
-      //         color="error"
-      //         v-bind="props"
-      //       />
-
+ 
       // Expand details button
       headers.push({ key: "data-table-expand", sortable: false, align: "center" });
       if (this.deletable) {
@@ -353,11 +347,15 @@ export default defineComponent({
     formattedTotalSimulatedNAV() {
       // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
       const fund = this.fundStore.fund;
-      const totalNAV =
-        (this.totalNavMethodsSimulatedNAV || 0n) +
+
+      const baseTokenBalance = 
         (fund?.fundContractBaseTokenBalance || 0n) +
         (fund?.safeContractBaseTokenBalance || 0n) +
         (fund?.feeBalance || 0n);
+
+      const totalNAV =
+        (this.totalNavMethodsSimulatedNAV || 0n) +
+        (this.showBaseTokenBalances ? baseTokenBalance : 0n);
       return this.formatBaseTokenValue(totalNAV);
     },
     formattedTotalLastNAV() {
@@ -449,7 +447,7 @@ export default defineComponent({
     "fundStore.refreshSimulateNAVCounter": {
       handler() {
         // Simulate NAV method values everytime Simulate NAV button is pressed and triggerSimulateNav changes.
-        console.warn("fundStore.refreshSimulateNAVCounter:")
+        console.log("fundStore.refreshSimulateNAVCounter:")
         this.simulateNAV();
       },
     },
@@ -462,7 +460,7 @@ export default defineComponent({
     async simulateNAV() {
       if (!this.showSimulatedNav || !this.web3Store.web3 || this.isNavSimulationLoading) return;
       this.isNavSimulationLoading = true;
-      console.warn(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
+      console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
       if (!this.fundsStore.allNavMethods?.length) {
         const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
         const fundAddresses: string[] = fundsInfoArrays[0];
@@ -478,7 +476,7 @@ export default defineComponent({
       // Otherwise, take managed methods, that user can change.
       // Simulate all at once as many promises instead of one by one.
       const promises = [];
-
+      
       for (const navEntry of this.methods) {
         promises.push(this.fundStore.simulateNAVMethodValue(navEntry));
       }
