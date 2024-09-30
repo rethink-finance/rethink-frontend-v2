@@ -114,9 +114,13 @@ const setTokenValue = (value: any) => {
 }
 
 const tokenValueRules = [
-  // TODO Add rule for max decimals
   (value: string) => {
-    const valueWei = ethers.parseUnits(value || "0", baseToken.value?.decimals);
+    let valueWei;
+    try {
+      valueWei = ethers.parseUnits(value || "0", baseToken.value?.decimals);
+    } catch {
+      return `Make sure the value has max ${baseToken.value?.decimals} decimals.`
+    }
     if (valueWei <= 0) {
       return "Value must be positive."
     }
@@ -188,7 +192,7 @@ const transfer = async () => {
 const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
-  if (error?.code === 4001) {
+  if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Transaction was rejected.")
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");

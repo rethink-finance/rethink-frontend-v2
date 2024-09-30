@@ -100,7 +100,15 @@ watch(() => tokenValue.value, () => {
 const rules = [
   (value: string): boolean | IFormError => {
     if (!fund.value) return { message: "Fund data is missing.", display: true }
-    const valueWei = ethers.parseUnits(value, fund.value?.baseToken.decimals);
+    let valueWei;
+    try {
+      valueWei = ethers.parseUnits(value || "0", fund.value?.baseToken.decimals);
+    } catch {
+      return {
+        message: `Make sure the value has max ${fund.value?.baseToken.decimals} decimals.`,
+        display: false,
+      }
+    }
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
 
     console.log("[REDEEM] check user fund token balance wei: ", valueWei, fundStore.userFundTokenBalance);
@@ -131,11 +139,12 @@ const visibleErrorMessages = computed<IFormError[]>( () => {
 const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
-  if (error?.code === 4001) {
+  if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Redeem transaction was rejected.")
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
+    fundStore.fetchUserBalances();
   }
   loadingRequestRedeem.value = false;
   loadingCancelRedeem.value = false;

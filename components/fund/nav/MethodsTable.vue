@@ -24,32 +24,32 @@
         {{ formattedTotalLastNAV }}
       </div>
     </template>
-     <template #[`header.simulatedNavFormatted`]>
+    <template #[`header.simulatedNavFormatted`]>
       <th>
         <div class="d-flex">
           Simulated NAV
-          <FundNavSimulateButton class="ms-1"/>
-      </div>
-      <div class="bottom" v-if="showSummaryRow && showSimulatedNav">
-        <div class="text-right">
-          {{ formattedTotalSimulatedNAV }}
-          <div
-            v-if="simulatedNavErrorCount > 0"
-            class="ms-2 justify-center align-center d-flex"
-          >
-            <Icon
-              icon="octicon:question-16"
-              width="1rem"
-              font-bold
-              color="var(--color-danger)"
-            />
-            <v-tooltip activator="parent" location="bottom">
-              Total value may not include all simulated NAV method values.<br>
-              Retry simulating NAV.
-            </v-tooltip>
+          <FundNavSimulateButton class="ms-1" />
+        </div>
+        <div v-if="showSummaryRow && showSimulatedNav" class="bottom">
+          <div class="text-right">
+            {{ formattedTotalSimulatedNAV }}
+            <div
+              v-if="simulatedNavErrorCount > 0"
+              class="ms-2 justify-center align-center d-flex"
+            >
+              <Icon
+                icon="octicon:question-16"
+                width="1rem"
+                font-bold
+                color="var(--color-danger)"
+              />
+              <v-tooltip activator="parent" location="bottom">
+                Total value may not include all simulated NAV method values.<br>
+                Retry simulating NAV.
+              </v-tooltip>
+            </div>
           </div>
         </div>
-      </div>
       </th>
     </template>
     <template #[`item.index`]="{ index }">
@@ -187,7 +187,7 @@
       <tr v-if="item.detailsJson" class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
         <td :colspan="columns.length" class="pa-0">
           <div class="nav_entries__details">
-            <div v-if="!item.isRethinkPosition" @click="copyText(item.detailsHash)" class="detail_hash">
+            <div v-if="!item.isRethinkPosition" class="detail_hash" @click="copyText(item.detailsHash)">
               <ui-tooltip-click>
                 Details Hash: {{ item.detailsHash }}
                 <Icon
@@ -540,7 +540,7 @@ export default defineComponent({
 .nav_entries {
   @include borderGray;
   border-color: $color-bg-transparent;
-  
+
   :deep(.v-table__wrapper) {
     @include customScrollbar;
   }
@@ -548,7 +548,7 @@ export default defineComponent({
   :deep(.v-data-table__tr) {
     height: 72px;
   }
-  :deep(.v-data-table__td) {  
+  :deep(.v-data-table__td) {
     border-color: $color-bg-transparent !important;
   }
 

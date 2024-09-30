@@ -33,7 +33,9 @@
           <div class="tools__val">
             {{ proposalsSuccessRate }}
           </div>
-          <div class="tools__subtext">Success Rate</div>
+          <div class="tools__subtext">
+            Success Rate
+          </div>
         </div>
       </template>
       <FundGovernanceProposalsTable
@@ -61,7 +63,7 @@
           </v-btn>
         </UiTooltipClick>
       </template>
-       <FundGovernanceTableTrendingDelegates :items="trendingDelegates" />
+      <FundGovernanceTableTrendingDelegates :items="trendingDelegates" />
     </UiMainCard>
 
     <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" />
@@ -119,13 +121,13 @@ const { shouldUserDelegate } = toRefs(fundStore);
 const governanceProposals = computed(() => {
   const proposals = governanceProposalStore.getProposals(
     web3Store.chainId,
-    fundStore.fund?.address
+    fundStore.fund?.address,
   );
 
   // set updateSettingsProposals to proposals that have updateSettings calldata
   updateSettingsProposals.value = proposals.filter((proposal) => {
     return proposal.calldataTags?.some(
-      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS
+      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS,
     );
   });
 
@@ -147,7 +149,7 @@ const proposalsCountText = computed(() => {
 });
 const pendingProposals = computed(() => {
   return governanceProposals.value.filter(
-    (proposal) => proposal.state === ProposalState.Pending
+    (proposal) => proposal.state === ProposalState.Pending,
   );
 });
 const pendingProposalsCountText = computed(() => {
@@ -161,7 +163,7 @@ const hasUpdateSettingsProposal = computed(() => {
 });
 const proposalsSuccessRate = computed(() => {
   const successProposals = governanceProposals.value.filter((proposal) =>
-    [ProposalState.Succeeded, ProposalState.Executed].includes(proposal.state)
+    [ProposalState.Succeeded, ProposalState.Executed].includes(proposal.state),
   );
   const allFinishedProposalsCount =
     governanceProposals.value.length - pendingProposals.value.length;
@@ -216,7 +218,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
     click: () => {
       // change route to direct execution
       router.push(
-        `/details/${fundStore.selectedFundSlug}/governance/direct-execution`
+        `/details/${fundStore.selectedFundSlug}/governance/direct-execution`,
       );
     },
   },
@@ -224,7 +226,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
     click: () => {
       // change route to delegated permissions
       router.push(
-        `/details/${fundStore.selectedFundSlug}/governance/delegated-permissions`
+        `/details/${fundStore.selectedFundSlug}/governance/delegated-permissions`,
       );
     },
   },
@@ -248,7 +250,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
 
 const handleNavigateToCreateProposal = () => {
   router.push(
-    `/details/${fundStore.selectedFundSlug}/governance/fund-settings`
+    `/details/${fundStore.selectedFundSlug}/governance/fund-settings`,
   );
 };
 const handleGoToFProposal = () => {
@@ -260,7 +262,7 @@ const handleGoToFProposal = () => {
   }
 
   router.push(
-    `/details/${fundStore.selectedFundSlug}/governance/proposal/${createdBlockNumber}-${proposalId}`
+    `/details/${fundStore.selectedFundSlug}/governance/proposal/${createdBlockNumber}-${proposalId}`,
   );
 };
 const createProposalDropdownOptions = Object.keys(dropdownOptions).map(
@@ -269,7 +271,7 @@ const createProposalDropdownOptions = Object.keys(dropdownOptions).map(
       label: key,
       disabled: dropdownOptions[key]?.disabled || false,
     };
-  }
+  },
 );
 
 const selectOption = (option: string) => {
@@ -293,7 +295,7 @@ const openDelegateDialog = () => {
 
 const fetchProposals = async (
   rangeStartBlock: number,
-  rangeEndBlock: number
+  rangeEndBlock: number,
 ) => {
   if (!fundStore.fund?.governanceToken.decimals) {
     console.error("No fund governance token decimals found.");
@@ -328,10 +330,17 @@ const fetchProposals = async (
       "\nBIGGEST to smallest from: ",
       rangeEndBlock,
       " to: ",
-      rangeStartBlock
+      rangeStartBlock,
     );
     let toBlock = Math.max(rangeStartBlock, 0);
-    let fromBlock = Math.min(toBlock - chunkSize + 1, rangeEndBlock);
+    let fromBlock = Math.max(toBlock - chunkSize + 1, rangeEndBlock);
+    // TODO BIG PROBLEM:
+    //   if I start fetching from block 1000 to 0 (by 100 chunk size) and then I stop I will save that last fetched block
+    //   number is 1000 and oldest is 900 and then next time when I start, I start from most recent block
+    //   number 2000 and go to 1000 and from 900 to 0... the problem is that the most recent block will be then
+    //   2000 even if I stopped before the 1000 and didnt fetch all from 2000 to 1000
+    //   FIX: only go from newest to oldest when there are no blocks fetched yet... otherwise go from the most recent
+    //   fetched block to the current block number.
     while (true) {
       // for (let i = rangeStartBlock; i > rangeEndBlock; i -= chunkSize) {
       if (!shouldFetchProposals.value) return;
@@ -339,7 +348,7 @@ const fetchProposals = async (
         "BGsm fetch ProposalCreated events from: ",
         fromBlock,
         " to ",
-        toBlock
+        toBlock,
       );
 
       let chunkEvents;
@@ -351,13 +360,13 @@ const fetchProposals = async (
             {
               fromBlock,
               toBlock,
-            }
+            },
           );
           console.log(
             "chunkevents fetched: ",
             chunkEvents,
             " chunksize: ",
-            chunkSize
+            chunkSize,
           );
 
           chunkSize *= 2;
@@ -373,7 +382,7 @@ const fetchProposals = async (
             toBlock,
             "error, wait ",
             waitTimeAfterError,
-            error
+            error,
           );
 
           if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
@@ -384,7 +393,7 @@ const fetchProposals = async (
             fromBlock = Math.max(toBlock - chunkSize + 1, 0);
           }
           await new Promise((resolve) =>
-            setTimeout(resolve, waitTimeAfterError)
+            setTimeout(resolve, waitTimeAfterError),
           );
         }
       }
@@ -397,13 +406,13 @@ const fetchProposals = async (
         "set BlockFetchedRanges toBlock: ",
         toBlock,
         " fromBlock ",
-        fromBlock
+        fromBlock,
       );
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
         web3Store.chainId,
         fundStore.fund?.address,
         toBlock,
-        fromBlock
+        fromBlock,
       );
 
       // Proposals were fetched successfully.
@@ -412,8 +421,8 @@ const fetchProposals = async (
       fromBlock = Math.max(toBlock - chunkSize + 1, 0);
       console.warn("fromBlock: ", +fromBlock, "toBlocK: ", toBlock);
 
-      const lastProposal =
-        governanceProposals.value[governanceProposals.value.length];
+      const lastProposal = governanceProposals.value[governanceProposals.value.length - 1];
+      console.warn("LAST PROPOSAL", lastProposal);
       if (toBlock <= 0 || lastProposal?.createdTimestamp < targetTimestamp) {
         break;
       }
@@ -434,7 +443,7 @@ const fetchProposals = async (
           "smBG fetch ProposalCreated events from: ",
           fromBlock,
           " to ",
-          toBlock
+          toBlock,
         );
         try {
           chunkEvents = await fundStore.fundGovernorContract.getPastEvents(
@@ -442,14 +451,14 @@ const fetchProposals = async (
             {
               fromBlock,
               toBlock,
-            }
+            },
           );
 
           console.log(
             "chunkevents fetched: ",
             chunkEvents,
             " chunksize: ",
-            chunkSize
+            chunkSize,
           );
           // All good, we can try increasing the chunk size by 2 to fetch bigger event ranges at once.
           chunkSize *= 2;
@@ -465,7 +474,7 @@ const fetchProposals = async (
             toBlock,
             "error, wait ",
             waitTimeAfterError,
-            error
+            error,
           );
 
           if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
@@ -476,7 +485,7 @@ const fetchProposals = async (
             toBlock = Math.min(fromBlock + chunkSize - 1, rangeEndBlock);
           }
           await new Promise((resolve) =>
-            setTimeout(resolve, waitTimeAfterError)
+            setTimeout(resolve, waitTimeAfterError),
           );
         }
       }
@@ -488,7 +497,7 @@ const fetchProposals = async (
         web3Store.chainId,
         fundStore.fund?.address,
         toBlock,
-        fromBlock
+        fromBlock,
       );
 
       // Proposals were fetched successfully.
@@ -536,6 +545,9 @@ const startFetch = async () => {
 
   loadingProposals.value = true;
   let currentBlock;
+  // TODO: different RPC providers can return different block numbers, especially if they are not fully synchronized
+  //   or if they have latency issues. This happens because each RPC node might be at a slightly different state of
+  //   the blockchain, particularly during times of heavy network traffic or when the nodes are under maintenance.
   while (currentBlock === undefined) {
     try {
       currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
@@ -549,13 +561,13 @@ const startFetch = async () => {
   const [mostRecentFetchedBlock, oldestFetchedBlock] =
     governanceProposalStore.getFundProposalsBlockFetchedRanges(
       web3Store.chainId,
-      fundStore.fund?.address
+      fundStore.fund?.address,
     );
   console.log(
     "mostRecentFetchedBlock: ",
     mostRecentFetchedBlock,
     "oldestFetchedBlock:",
-    oldestFetchedBlock
+    oldestFetchedBlock,
   );
 
   if (
@@ -565,16 +577,19 @@ const startFetch = async () => {
     console.log(
       "fetch from last fetched block to current block",
       currentBlock - 1,
-      mostRecentFetchedBlock
+      mostRecentFetchedBlock,
     );
     // From smallest to biggest.
-    await fetchProposals(mostRecentFetchedBlock + 1, currentBlock - 1);
+    // But only if current block is bigger than most recent already fetched block.
+    if (currentBlock - 1 > mostRecentFetchedBlock) {
+      await fetchProposals(mostRecentFetchedBlock + 1, currentBlock - 1);
+    }
 
     // fetch from the already fetched the oldest block number to hardcoded limit oldest date.
     // ---------| oldest fetched | xxxxxxxxxx <to fetch> xxxxxxxxxx | GENESIS BLOCK
     console.log(
       "fetch from already fetched oldest block to 0",
-      oldestFetchedBlock
+      oldestFetchedBlock,
     );
     // From biggest to smallest
     if (oldestFetchedBlock) {
@@ -584,7 +599,7 @@ const startFetch = async () => {
     // Fetch all history.
     governanceProposalStore.resetProposals(
       web3Store.chainId,
-      fundStore.fund?.address
+      fundStore.fund?.address,
     );
     console.log("fetch all blocks");
     await fetchProposals(currentBlock, 0);
@@ -601,7 +616,7 @@ const startFetch = async () => {
   @include sm {
     margin-bottom: 1rem;
   }
-  
+
   // remove outer border
   :deep(.data_row__panel) {
     border: 0;

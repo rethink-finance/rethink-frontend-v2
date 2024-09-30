@@ -153,14 +153,14 @@ const cancelPendingRequest = async () => {
 const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
-  if (error?.code === 4001) {
+  isLoadingCancelRequest.value = false;
+  if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Transaction was rejected.")
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
+    fundStore.fetchUserFundDepositRedemptionRequests();
   }
-  isLoadingCancelRequest.value = false;
-  fundStore.fetchUserFundDepositRedemptionRequests();
 }
 </script>
 

@@ -8,7 +8,7 @@
     :loading="loading && items.length === 0"
     loading-text="Loading Activity"
     items-per-page="-1"
-    >
+  >
     <template #[`header.approval`]="{ column }">
       <!-- HEADERS -->
       <div class="table_governance__header_cell">
@@ -45,10 +45,10 @@
               <div>{{ item.title }}</div>
             </div>
             <div class="proposal__tags">
-              <FundGovernanceProposalStateChip 
+              <FundGovernanceProposalStateChip
                 :value="item.state"
-                class="proposal__tag" 
-                />
+                class="proposal__tag"
+              />
               <FundGovernanceProposalStateChip
                 v-for="(calldataTag, index) of item.calldataTags ?? []"
                 :key="index"
@@ -61,12 +61,12 @@
         <td>{{ item.createdDatetimeFormatted }}</td>
         <td>
           <div v-if="item.hasVotedLoading">
-            <v-progress-circular 
+            <v-progress-circular
               indeterminate
               color="gray"
               size="16"
               width="2"
-              />
+            />
           </div>
           <div v-else-if="governanceProposalStore.hasAccountVoted(item.proposalId) === undefined">
             N/A
@@ -165,7 +165,7 @@ const getRowClass = (item: IGovernanceProposal) => {
 
   return [
     "v-data-table__row",
-    {'row-active': isActionRequired},
+    { "row-active": isActionRequired },
   ];
 };
 
@@ -241,7 +241,7 @@ const rowClick = (_:any, item: any) => {
     cursor: pointer;
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
     color: $color-steel-blue;
-    
+
     &.row-active {
       background-color: $color-navy-gray-light;
       color: $color-white;
@@ -250,7 +250,7 @@ const rowClick = (_:any, item: any) => {
     &:hover {
       background-color: $color-gray-light-transparent;
       box-shadow: 0px 0px 10px 0px #1f5fff29;
-    }   
+    }
   }
   &__no_data {
     text-align: center;
@@ -260,7 +260,7 @@ const rowClick = (_:any, item: any) => {
 
   &__skeleton_loader :deep(*) {
     margin: 0;
-  }  
+  }
 
   &__header_cell{
     display: flex;
@@ -272,16 +272,16 @@ const rowClick = (_:any, item: any) => {
 .proposal {
   &__title {
     padding-block: 0.5rem;
-   
+
   }
   &__title__text {
-    max-width: 400px; 
-    display: -webkit-box; 
-    -webkit-line-clamp: 3; 
-    -webkit-box-orient: vertical; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-    word-wrap: break-word; 
+    max-width: 400px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-wrap: break-word;
   }
 
   &__tags {
