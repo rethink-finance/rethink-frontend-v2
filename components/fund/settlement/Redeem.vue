@@ -131,11 +131,12 @@ const visibleErrorMessages = computed<IFormError[]>( () => {
 const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
-  if (error?.code === 4001) {
+  if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Redeem transaction was rejected.")
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
+    fundStore.fetchUserBalances();
   }
   loadingRequestRedeem.value = false;
   loadingCancelRedeem.value = false;
