@@ -348,14 +348,11 @@ export default defineComponent({
       // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
       const fund = this.fundStore.fund;
 
-      const baseTokenBalance = 
+      const totalNAV =
+        (this.totalNavMethodsSimulatedNAV || 0n) +
         (fund?.fundContractBaseTokenBalance || 0n) +
         (fund?.safeContractBaseTokenBalance || 0n) +
         (fund?.feeBalance || 0n);
-
-      const totalNAV =
-        (this.totalNavMethodsSimulatedNAV || 0n) +
-        (this.showBaseTokenBalances ? baseTokenBalance : 0n);
       return this.formatBaseTokenValue(totalNAV);
     },
     formattedTotalLastNAV() {

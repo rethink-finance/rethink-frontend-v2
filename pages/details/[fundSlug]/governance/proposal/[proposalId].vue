@@ -84,6 +84,7 @@
                           :methods="allMethods[index]"
                           show-summary-row
                           show-simulated-nav
+                          show-base-token-balances
                           idx="[proposalId]"
                         />
                       </template>
