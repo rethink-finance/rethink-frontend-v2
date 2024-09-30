@@ -181,8 +181,6 @@ const handleError = (error: any) => {
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
   loadingRequestDeposit.value = false;
   loadingApproveAllowance.value = false;
-  console.warn("code", error)
-  console.warn("code", error?.code)
   if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Transaction was rejected.")
   } else {
@@ -253,12 +251,6 @@ const requestDeposit = async () => {
       handleError(error);
     });
   } catch (error: any) {
-    console.warn("disp error")
-    console.log(error)
-    console.log(error.message)
-    console.log(error.code)
-    console.log(error.data)
-    console.log(error.data?.code)
     handleError(error);
   }
 };
