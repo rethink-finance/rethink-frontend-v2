@@ -39,13 +39,17 @@
               {{ fundLastNAVUpdate?.date || "N/A" }}
             </template>
           </div>
-          <div class="data_bar__subtitle">Last Settlement</div>
+          <div class="data_bar__subtitle">
+            Last Settlement
+          </div>
         </div>
         <div class="data_bar__item">
           <div class="data_bar__title">
             {{ fund.plannedSettlementPeriod || "N/A" }}
           </div>
-          <div class="data_bar__subtitle">Planned Settlement Cycle</div>
+          <div class="data_bar__subtitle">
+            Planned Settlement Cycle
+          </div>
         </div>
         <!-- TODO figure out Next Planned Settlement -->
         <!--        <div class="data_bar__item">-->
@@ -61,7 +65,7 @@
             <img
               src="@/assets/images/zodiac_pilot.svg"
               class="img_zodiac_pilot"
-            />
+            >
             <template v-if="isUsingZodiacPilotExtension">
               <div>Connected to the Zodiac Pilot</div>
               <Icon
@@ -225,7 +229,9 @@
                 </div>
               </template>
             </div>
-            <div class="data_bar__subtitle">Redemption Requests</div>
+            <div class="data_bar__subtitle">
+              Redemption Requests
+            </div>
           </div>
           <div class="data_bar__item">
             <div class="data_bar__title">
@@ -246,7 +252,9 @@
                 {{ pendingDepositBalanceFormatted }} {{ fund.baseToken.symbol }}
               </template>
             </div>
-            <div class="data_bar__subtitle">Deposit Requests</div>
+            <div class="data_bar__subtitle">
+              Deposit Requests
+            </div>
           </div>
           <div class="data_bar__item">
             <div class="data_bar__title">
@@ -272,7 +280,9 @@
                 {{ fundingGapFormatted }}
               </div>
             </div>
-            <div class="data_bar__subtitle">Funding Gap</div>
+            <div class="data_bar__subtitle">
+              Funding Gap
+            </div>
           </div>
         </div>
         <div class="column-4">
@@ -316,7 +326,9 @@
                 {{ fund.baseToken.symbol }}
               </template>
             </div>
-            <div class="data_bar__subtitle">Fund Contract Balance</div>
+            <div class="data_bar__subtitle">
+              Fund Contract Balance
+            </div>
           </div>
           <div class="data_bar__item">
             <UiNotification class="fund_contract_notification">
@@ -400,19 +412,20 @@ watch(
       customSimulatedNAVValue.value = formatTokenValue(
         totalCurrentSimulatedNAV.value,
         fund.baseToken.decimals,
-        false
+        false,
       );
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 const customSimulatedNAVValueRules = [
-  // TODO Add rule for max decimals
   (value: string) => {
-    const valueWei = ethers.parseUnits(
-      value || "0",
-      fundStore.fund?.baseToken.decimals
-    );
+    let valueWei;
+    try {
+      valueWei = ethers.parseUnits(value || "0", fundStore.fund?.baseToken.decimals);
+    } catch {
+      return `Make sure the value has max ${fundStore.fund?.baseToken.decimals} decimals.`
+    }
     if (valueWei <= 0) {
       return "Value must be positive.";
     }
@@ -426,7 +439,7 @@ const simulatedNavErrorCount = computed(() => {
     (errorCount: number, method: any) => {
       return errorCount + method.isSimulatedNavError ? 1 : 0;
     },
-    0
+    0,
   );
 });
 const isAnySimulatedNavError = computed(() => {
@@ -438,7 +451,7 @@ const pendingDepositBalanceFormatted = computed(() => {
   return formatTokenValue(
     fund?.pendingDepositBalance,
     fund.baseToken.decimals,
-    false
+    false,
   );
 });
 const totalCurrentSimulatedNAVFormatted = computed(() => {
@@ -450,7 +463,7 @@ const pendingRedemptionBalanceFormatted = computed(() => {
   return formatTokenValue(
     fund?.pendingRedemptionBalance,
     fund.fundToken.decimals,
-    false
+    false,
   );
 });
 
@@ -464,8 +477,8 @@ const estimatedFundToBaseTokenExchangeRate = computed(
     const fundTokenTotalSupply = FixedNumber.fromString(
       ethers.formatUnits(
         fundStore.fund?.fundTokenTotalSupply,
-        fundStore.fund?.fundToken.decimals
-      )
+        fundStore.fund?.fundToken.decimals,
+      ),
     );
 
     // If user is editing simulated NAV, take his value to calculate exchange rate.
@@ -476,14 +489,14 @@ const estimatedFundToBaseTokenExchangeRate = computed(
     } else {
       navValueString = ethers.formatUnits(
         totalCurrentSimulatedNAV.value,
-        fundStore.fund?.baseToken.decimals
+        fundStore.fund?.baseToken.decimals,
       );
     }
     const totalCurrentSimulatedNAVValue =
       FixedNumber.fromString(navValueString);
 
     return totalCurrentSimulatedNAVValue.div(fundTokenTotalSupply);
-  }
+  },
 );
 
 const estimatedPendingRedemptionBalanceInBase = computed(() => {
@@ -499,17 +512,17 @@ const estimatedPendingRedemptionBalanceInBase = computed(() => {
   const pendingRedemptionBalance = FixedNumber.fromString(
     ethers.formatUnits(
       fundStore.fund?.pendingRedemptionBalance,
-      fundStore.fund?.fundToken.decimals
-    )
+      fundStore.fund?.fundToken.decimals,
+    ),
   );
   console.log(
     "actual value",
-    pendingRedemptionBalance.mul(estimatedFundToBaseTokenExchangeRate.value)
+    pendingRedemptionBalance.mul(estimatedFundToBaseTokenExchangeRate.value),
   );
 
   // Calculate the estimated value using the exchange rate
   return pendingRedemptionBalance.mul(
-    estimatedFundToBaseTokenExchangeRate.value
+    estimatedFundToBaseTokenExchangeRate.value,
   );
 });
 const estimatedPendingRedemptionBalanceInBaseFormatted = computed(() => {
@@ -524,13 +537,13 @@ const estimatedPendingRedemptionBalanceInBaseFormatted = computed(() => {
 
   console.log(
     "estimatedPendingRedemptionBalanceInBase",
-    estimatedPendingRedemptionBalanceInBase.value
+    estimatedPendingRedemptionBalanceInBase.value,
   );
 
   // Calculate the estimated value using the exchange rate
   return (
     roundToSignificantDecimals(
-      estimatedPendingRedemptionBalanceInBase.value.toString()
+      estimatedPendingRedemptionBalanceInBase.value.toString(),
     ) +
     " " +
     fundStore.fund.baseToken.symbol
@@ -545,7 +558,7 @@ const fundingGap = computed(() => {
     return undefined;
   console.log(
     "FF estimatedPendingRedemptionBalanceInBase",
-    estimatedPendingRedemptionBalanceInBase.value
+    estimatedPendingRedemptionBalanceInBase.value,
   );
 
   // Difference between fund contract liquidity and amount of redemption requests.
@@ -554,12 +567,12 @@ const fundingGap = computed(() => {
     fundContractBaseTokenBalance = FixedNumber.fromString(
       ethers.formatUnits(
         fundStore.fund?.fundContractBaseTokenBalance,
-        fundStore.fund?.baseToken.decimals
-      )
+        fundStore.fund?.baseToken.decimals,
+      ),
     );
   }
   return fundContractBaseTokenBalance.sub(
-    estimatedPendingRedemptionBalanceInBase.value
+    estimatedPendingRedemptionBalanceInBase.value,
   );
 });
 
@@ -609,7 +622,7 @@ watch(
   () => {
     fundStore.simulateCurrentNAV();
   },
-  { immediate: true }
+  { immediate: true },
 );
 </script>
 
@@ -762,7 +775,7 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 20px;
-  
+
   @include lg {
     flex-direction: row;
   }

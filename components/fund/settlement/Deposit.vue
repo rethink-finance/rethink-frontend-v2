@@ -124,7 +124,15 @@ watch(() => tokenValue.value, () => {
 const rules = [
   (value: string): boolean | IFormError => {
     if (!fund.value) return { message: "Fund data is missing.", display: true }
-    const valueWei = ethers.parseUnits(value, fund.value?.baseToken.decimals);
+    let valueWei;
+    try {
+      valueWei = ethers.parseUnits(value, fund.value?.baseToken.decimals);
+    } catch {
+      return {
+        message: `Make sure the value has max ${fund.value?.baseToken.decimals} decimals.`,
+        display: false,
+      }
+    }
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
 
     console.log("[DEPOSIT] check user base token balance wei: ", valueWei, fundStore.userBaseTokenBalance);

@@ -134,9 +134,13 @@ const setTokenValue = (value: any) => {
 
 // Merge default rules with custom provided rules.
 const tokenValueRules = [
-  // TODO Add rule for max decimals
   (value: string) => {
-    const valueWei = ethers.parseUnits(value || "0", props.token0.decimals);
+    let valueWei;
+    try {
+      valueWei = ethers.parseUnits(value || "0", props.token0.decimals);
+    } catch {
+      return `Make sure the value has max ${props.token0.decimals} decimals.`
+    }
     if (valueWei <= 0) return "Value must be positive."
     return true;
   },
