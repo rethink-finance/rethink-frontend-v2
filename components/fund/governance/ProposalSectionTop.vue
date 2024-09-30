@@ -78,7 +78,7 @@
           <template v-if="!accountStore.isConnected">
             Connect your wallet.
           </template>
-          <template v-else-if="hasAccountVotedAlready">
+          <template v-else-if="hasAccountVotedAlready && !hasProposalSucceeded">
             You have already voted on this proposal.
           </template>
         </v-tooltip>
