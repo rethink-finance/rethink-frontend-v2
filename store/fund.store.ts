@@ -473,7 +473,9 @@ export const useFundStore = defineStore({
       this.fund.pendingDepositBalanceLoading = true;
       this.fund.pendingRedemptionBalanceLoading = true;
 
-      this.fundContract.methods.getCurrentPendingDepositBal().call().then(
+      this.callWithRetry(() =>
+        this.fundContract.methods.getCurrentPendingDepositBal().call(),
+      ).then(
         (value: any) => {
           if (this.fund) {
             this.fund.pendingDepositBalance = value;
@@ -489,7 +491,9 @@ export const useFundStore = defineStore({
           this.fund.pendingDepositBalanceLoading = false;
         }
       })
-      this.fundContract.methods.getCurrentPendingWithdrawalBal().call().then(
+      this.callWithRetry(() =>
+        this.fundContract.methods.getCurrentPendingWithdrawalBal().call(),
+      ).then(
         (value: any) => {
           if (this.fund) {
             this.fund.pendingRedemptionBalance = value;
