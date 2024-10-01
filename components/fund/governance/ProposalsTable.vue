@@ -59,7 +59,7 @@
           </div>
         </td>
         <td>{{ item.createdDatetimeFormatted }}</td>
-        <td>
+        <td v-if="accountStore.isConnected">
           <div v-if="item.hasVotedLoading">
             <v-progress-circular
               indeterminate
@@ -132,8 +132,10 @@ import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { ProposalState } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { useWeb3Store } from "~/store/web3.store";
 
 const router = useRouter();
+const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const governanceProposalStore = useGovernanceProposalsStore();
 const accountStore = useAccountStore();
@@ -170,7 +172,7 @@ const getRowClass = (item: IGovernanceProposal) => {
 };
 
 // TODO to fetch status of all votes of all users we again have to iterate over all events and check VoteCast event
-watch(() => props.items, () => {
+watch([() => props.items, () => fundStore.activeAccountAddress], () => {
   if (fundStore.activeAccountAddress === undefined) {
     return
   }
@@ -183,7 +185,9 @@ watch(() => props.items, () => {
 
     // console.log("get votes for ", proposal.proposalId);
     proposal.hasVotedLoading = true;
-    fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call().then(
+    web3Store.callWithRetry(() =>
+      fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call(),
+    ).then(
       (hasVoted: boolean) => {
         // console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)
         governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress] = hasVoted;

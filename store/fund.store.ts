@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -335,7 +335,7 @@ export const useFundStore = defineStore({
   actions: {
     // Proxy method to make callWithRetry accessible as this.callWithRetry
     callWithRetry(method: any): any {
-      return this.web3Store.callWithRetry(method); // Delegate to web3Store's callWithRetry
+      return this.web3Store.callWithRetry(method);
     },
     /**
      * Fetches all needed fund data..
@@ -473,7 +473,9 @@ export const useFundStore = defineStore({
       this.fund.pendingDepositBalanceLoading = true;
       this.fund.pendingRedemptionBalanceLoading = true;
 
-      this.fundContract.methods.getCurrentPendingDepositBal().call().then(
+      this.callWithRetry(() =>
+        this.fundContract.methods.getCurrentPendingDepositBal().call(),
+      ).then(
         (value: any) => {
           if (this.fund) {
             this.fund.pendingDepositBalance = value;
@@ -489,7 +491,9 @@ export const useFundStore = defineStore({
           this.fund.pendingDepositBalanceLoading = false;
         }
       })
-      this.fundContract.methods.getCurrentPendingWithdrawalBal().call().then(
+      this.callWithRetry(() =>
+        this.fundContract.methods.getCurrentPendingWithdrawalBal().call(),
+      ).then(
         (value: any) => {
           if (this.fund) {
             this.fund.pendingRedemptionBalance = value;

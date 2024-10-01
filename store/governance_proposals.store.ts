@@ -64,6 +64,9 @@ export const useGovernanceProposalsStore = defineStore({
     },
   },
   actions: {
+    callWithRetry(method: any): any {
+      return this.web3Store.callWithRetry(method);
+    },
     resetProposals(chainId: string, fundAddress?: string): void {
       if (!fundAddress) return;
 
@@ -209,7 +212,7 @@ export const useGovernanceProposalsStore = defineStore({
     },
     async fetchBlockProposals(blockNumber: bigint) {
       console.log("fetchBlockProposals:", blockNumber);
-      const proposalCreatedEvents = await this.web3Store.callWithRetry(() =>
+      const proposalCreatedEvents = await this.callWithRetry(() =>
         this.fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
           fromBlock: blockNumber,
           toBlock: blockNumber,
@@ -460,7 +463,9 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.executedTimestamp = executedProposal?.executedTimestamp;
         proposal.executedBlockNumber = executedProposal?.executedBlockNumber;
 
-        const proposalState = await this.fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
+        const proposalState = await this.callWithRetry(() =>
+          this.fundStore.fundGovernorContract.methods.state(proposal.proposalId).call(),
+        );
         proposal.state = ProposalStateMapping[proposalState]
 
         console.log("proposal: ", proposal);
@@ -477,14 +482,18 @@ export const useGovernanceProposalsStore = defineStore({
         }
         console.log("proposal:" , proposal)
 
-        const votes = await this.fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
+        const votes = await this.callWithRetry(() =>
+          this.fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call(),
+        );
         console.log("proposal votes: ", votes);
 
         console.log("get total supply at blockNumber: ", proposal.createdBlockNumber);
         // Get the Governance Token total supply of when the proposal was created.
         let totalSupply;
         try {
-          totalSupply = await this.fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber);
+          totalSupply = await this.callWithRetry(() =>
+            this.fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber),
+          );
           proposal.totalSupply = totalSupply;
           proposal.totalSupplyFormatted = formatTokenValue(totalSupply, this.fundStore.fund?.governanceToken?.decimals, false);
         } catch (error: any) {
@@ -495,15 +504,17 @@ export const useGovernanceProposalsStore = defineStore({
 
         console.log("proposal created blockNumber ", proposal.createdBlockNumber, " timestamp ", proposal.createdTimestamp);
         try {
-        // To get quorum in time, we have to pass the timePoint, but it depends on the clock mode.
-        // If clock mode is:
-        // - timestamp: use proposal created timestamp
-        // - blocknumber: use proposal created block number
+          // To get quorum in time, we have to pass the timePoint, but it depends on the clock mode.
+          // If clock mode is:
+          // - timestamp: use proposal created timestamp
+          // - blocknumber: use proposal created block number
           const timePoint = this.fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber ?
             proposal.createdBlockNumber :
             proposal.createdTimestamp;
 
-          const quorumWhenProposalCreated = await this.fundStore.fundGovernorContract.methods.quorumNumerator(timePoint).call()
+          const quorumWhenProposalCreated = await this.callWithRetry(() =>
+            this.fundStore.fundGovernorContract.methods.quorumNumerator(timePoint).call(),
+          );
           proposal.quorumVotes = quorumWhenProposalCreated;
           proposal.quorumVotesFormatted = formatTokenValue(quorumWhenProposalCreated, this.fundStore.fund?.governanceToken?.decimals, false);
         } catch (e: any) {
