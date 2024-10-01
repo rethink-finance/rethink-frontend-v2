@@ -137,6 +137,9 @@ export const useFundsStore = defineStore({
     },
   },
   actions: {
+    callWithRetry(method: any): any {
+      return this.web3Store.callWithRetry(method);
+    },
     batchFetchFundSettings() {
       /** @dev: I tried many, many things to make this BatchRequest work with web3 4.x, this is the closest I came.
        * https://docs.web3js.org/guides/web3_upgrade_guide/x/#web3-batchrequest
@@ -181,9 +184,11 @@ export const useFundsStore = defineStore({
         // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
         //  not used in the contract code, so I have set it to 0. Change this part in the future
         //  if the contract changes.
-        const dataNAVs: Record<string, any[]> = await this.rethinkReaderContract.methods.getFundNavMetaData(
-          fundAddresses, 0,
-        ).call();
+        const dataNAVs: Record<string, any[]> = await this.callWithRetry(() =>
+          this.rethinkReaderContract.methods.getFundNavMetaData(
+            fundAddresses, 0,
+          ).call(),
+        );
 
         fundAddresses.forEach((address, index) => {
           if (
@@ -300,9 +305,13 @@ export const useFundsStore = defineStore({
     },
     async fetchFundsInfoArrays() {
       const fundFactoryContract = this.fundFactoryContract;
-      const fundsLength = await fundFactoryContract.methods.registeredFundsLength().call();
+      const fundsLength = await this.callWithRetry(() =>
+        fundFactoryContract.methods.registeredFundsLength().call(),
+      );
 
-      return await fundFactoryContract.methods.registeredFundsData(0, fundsLength).call();
+      return await this.callWithRetry(() =>
+        fundFactoryContract.methods.registeredFundsData(0, fundsLength).call(),
+      );
     },
     /**
      * Fetches all funds data from the GovernableFundFactory.
@@ -329,7 +338,9 @@ export const useFundsStore = defineStore({
      * Fetches all NAV methods
      */
     async fetchAllNavMethods(fundAddresses: string[]) {
-      const allFundsNavData = await this.fundStore.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call();
+      const allFundsNavData = await this.callWithRetry(() =>
+        this.fundStore.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call(),
+      );
       const allMethods: INAVMethod[] = [];
       this.navMethodDetailsHashToFundAddress = {};
 

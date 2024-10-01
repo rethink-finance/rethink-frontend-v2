@@ -82,7 +82,6 @@
           You have voted on this proposal.
         </UiNotification>
 
-    
         <v-btn
           v-if="hasProposalSucceeded && !hasProposalExecuted"
           class="section-top__submit-button"
@@ -104,7 +103,7 @@
           </v-tooltip>
         </v-btn>
       </div>
-      
+
       <v-dialog
         v-model="isVoteDialogOpen"
         scrim="black"
@@ -378,7 +377,7 @@ watch(() => props.proposal.proposalId, (newProposalId) => {
   if (fundStore.activeAccountAddress === undefined || !newProposalId) {
     return;
   }
-  
+
   const activeAccountAddress = fundStore.activeAccountAddress;
 
   governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId] ??= {};
