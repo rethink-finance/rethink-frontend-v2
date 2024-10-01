@@ -150,7 +150,9 @@ export const useWeb3Store = defineStore({
       }
 
       // It does not exist, fetch it from the contract method.
-      const value = await tokenContract.methods[infoType]().call();
+      const value = await this.callWithRetry(() =>
+        tokenContract.methods[infoType]().call(),
+      );
       this.cachedTokens[tokenAddress] = this.cachedTokens[tokenAddress] || {};
       this.cachedTokens[tokenAddress][infoType] = value;
       return value;

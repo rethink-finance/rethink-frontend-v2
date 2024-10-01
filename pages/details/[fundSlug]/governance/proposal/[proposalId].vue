@@ -90,8 +90,8 @@
                       </template>
                       <template v-else-if="proposal?.calldataTypes[index] === ProposalCalldataType.FUND_SETTINGS">
                         <!-- Show fund setting UI -->
-                        <FundSettingsExecutableCode 
-                          :calldataDecoded="proposal?.calldatasDecoded?.[index]?.calldataDecoded" 
+                        <FundSettingsExecutableCode
+                          :calldata-decoded="proposal?.calldatasDecoded?.[index]?.calldataDecoded"
                         />
                       </template>
                       <template v-else>
@@ -172,9 +172,9 @@
 </template>
 
 <script setup lang="ts">
+import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { formatPercent } from "~/composables/formatters";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 // fund store
 import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
@@ -254,11 +254,11 @@ const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: remove this after BE whitelists are fixed
   // first index is a default fund settings
   const firstIndex = proposal?.calldataTypes?.indexOf(
-    ProposalCalldataType.FUND_SETTINGS
+    ProposalCalldataType.FUND_SETTINGS,
   ) ?? -1;
   // last index is a final fund settings
   const lastIndex = proposal?.calldataTypes?.lastIndexOf(
-    ProposalCalldataType.FUND_SETTINGS
+    ProposalCalldataType.FUND_SETTINGS,
   ) ?? -1;
 
   console.log("firstIndex", firstIndex);
@@ -300,7 +300,7 @@ watch(
 
     newProposal.calldatas.forEach((_, index) => {
       toggledRawProposalCalldatas.value[index] = false;
-    }) 
+    })
   },
   { immediate: true },
 );
