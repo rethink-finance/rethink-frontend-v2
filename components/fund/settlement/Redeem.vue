@@ -10,7 +10,7 @@
   >
     <template #buttons>
       <div v-if="accountStore.isConnected">
-        <div class="deposit_button_group">
+        <div class="buttons_group">
           <template v-if="shouldUserWaitSettlementOrCancelRedemption">
             <h3>
               Wait for settlement or cancel the redemption request.
@@ -35,8 +35,9 @@
                 <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
                 <span v-bind="props">
                   <v-btn
-                    class="bg-primary text-secondary"
+                    class="button"
                     :disabled="button.disabled"
+                    variant="outlined"
                     @click="button.onClick"
                   >
                     <template #prepend>
@@ -229,10 +230,25 @@ const buttons = ref([
 </script>
 
 <style lang="scss" scoped>
-.deposit_button_group {
+.buttons_group {
   gap: 1rem;
   display: flex;
-  justify-content: space-around;
+  flex-direction: column;
+  justify-content: center;
   flex-wrap: wrap;
+  align-items: center;
+
+
+  .button{
+    color: $color-primary !important;
+    border-color: $color-primary !important;
+
+    &:hover {
+      background: $color-primary !important;
+      color: $color-white !important;
+      border-color: $color-primary !important;
+    }
+  }
+
 }
 </style>
