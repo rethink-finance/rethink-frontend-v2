@@ -1,6 +1,6 @@
 <template>
   <div v-if="fund" class="deposit_redeem_notification">
-    <div>
+    <div class="d-flex">
       <Icon
         icon="zondicons:exclamation-outline"
         width="1.5rem"

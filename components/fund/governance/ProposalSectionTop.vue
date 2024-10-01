@@ -58,32 +58,53 @@
         </div>
       </div>
 
-      <!-- TODO: split submit and execute button -->
-      <!-- TODO: don't show the submit button if user already voted -->
-      <v-btn
-        v-if="isSubmitButtonVisible"
-        class="section-top__submit-button"
-        :loading="loadingExecuteProposal"
-        :disabled="!accountStore.isConnected"
-        @click="submitButtonClick"
-      >
-        {{ submitButtonText }}
-        <v-tooltip
-          v-if="!accountStore.isConnected || hasAccountVotedAlready"
-          :model-value="true"
-          activator="parent"
-          location="top"
-          @update:model-value="false"
+      <div class="buttons-container">
+        <v-btn
+          v-if="isProposalActive && !hasAccountVotedAlready"
+          class="section-top__submit-button"
+          :disabled="!accountStore.isConnected"
+          @click="openVoteDialog"
         >
-          <template v-if="!accountStore.isConnected">
-            Connect your wallet.
-          </template>
-          <template v-else-if="hasAccountVotedAlready && !hasProposalSucceeded">
-            You have already voted on this proposal.
-          </template>
-        </v-tooltip>
-      </v-btn>
+          Submit Vote
+          <v-tooltip
+            v-if="!accountStore.isConnected || hasAccountVotedAlready"
+            :model-value="true"
+            activator="parent"
+            location="top"
+            @update:model-value="false"
+          >
+            <template v-if="!accountStore.isConnected">
+              Connect your wallet.
+            </template>
+          </v-tooltip>
+        </v-btn>
+        <UiNotification v-else-if="hasAccountVotedAlready" class="notification">
+          You have already voted on this proposal.
+        </UiNotification>
 
+    
+        <v-btn
+          v-if="hasProposalSucceeded && !hasProposalExecuted"
+          class="section-top__submit-button"
+          :loading="loadingExecuteProposal"
+          :disabled="!accountStore.isConnected"
+          @click="executeProposal"
+        >
+          Execute Proposal
+          <v-tooltip
+            v-if="!accountStore.isConnected"
+            :model-value="true"
+            activator="parent"
+            location="top"
+            @update:model-value="false"
+          >
+            <template v-if="!accountStore.isConnected">
+              Connect your wallet.
+            </template>
+          </v-tooltip>
+        </v-btn>
+      </div>
+      
       <v-dialog
         v-model="isVoteDialogOpen"
         scrim="black"
@@ -168,6 +189,7 @@
 import { truncateAddress } from "~/composables/addressUtils";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
+import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import {
@@ -178,7 +200,6 @@ import {
   VoteTypeNumberMapping,
 } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
-import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 
 const props = defineProps({
   proposal: {
@@ -220,9 +241,8 @@ const metaCopyTags = computed((): IMetaItem[] => {
   ];
 });
 
-const isSubmitButtonVisible = computed(() => {
-  // On active state user can vote, and on succeeded it can be exceuted.
-  return [ProposalState.Active, ProposalState.Succeeded].includes(props.proposal.state);
+const isProposalActive = computed(() => {
+  return props.proposal?.state === ProposalState.Active ?? false;
 });
 
 const hasProposalSucceeded = computed(() => {
@@ -232,29 +252,14 @@ const hasProposalExecuted = computed(() => {
   return props.proposal.state === ProposalState.Executed;
 });
 
-const submitButtonText = computed(() => {
-  if (hasProposalSucceeded.value) return "Execute Proposal"
-  if (hasProposalExecuted.value) return "N/A"
-  return "Submit Vote";
-});
 const hasAccountVotedAlready = computed(() => {
-  return governanceProposalStore.hasAccountVoted(props.proposal.proposalId) !== undefined
+  return governanceProposalStore.hasAccountVoted(props.proposal.proposalId) ?? true;
 });
 
 const isVoteDialogOpen = ref(false);
 const selectedVoteOption = ref<number>();
 const copyText = (text: string) => {
   navigator.clipboard.writeText(text);
-}
-const submitButtonClick = () => {
-  // if proposal is approved, execute proposal
-  if (hasProposalSucceeded.value) {
-    executeProposal();
-  } else {
-  // if proposal is not approved, open dialog
-  // for submission
-    openVoteDialog();
-  }
 }
 
 const submitVote = async () => {
@@ -367,6 +372,33 @@ const voteOptionIcon = (voteType: number) => {
     { [`di-card__radio--${VoteTypeClass[VoteTypeMapping[voteType]]}`]: voteType === selectedVoteOption.value },
   ];
 }
+
+
+watch(() => props.proposal.proposalId, (newProposalId) => {
+  if (fundStore.activeAccountAddress === undefined || !newProposalId) {
+    return;
+  }
+  
+  const activeAccountAddress = fundStore.activeAccountAddress;
+
+  governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId] ??= {};
+
+  // Do not fetch the hasVoted again if we already know the account has voted.
+  if (governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][activeAccountAddress]) {
+    return;
+  }
+
+  // Fetch voting status for the specific proposal
+  props.proposal.hasVotedLoading = true;
+  fundStore.fundGovernorContract.methods.hasVoted(props.proposal.proposalId, activeAccountAddress).call()
+    .then((hasVoted: boolean) => {
+      governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][activeAccountAddress] = hasVoted;
+    })
+    .finally(() => {
+      props.proposal.hasVotedLoading = false;
+    });
+}, { immediate: true });
+
 </script>
 
 <style scoped lang="scss">
@@ -462,6 +494,7 @@ const voteOptionIcon = (voteType: number) => {
   @include borderGray;
   margin: 0 auto;
   color: white;
+  width: 100%;
 
   &__header-container {
     display: flex;
@@ -536,5 +569,14 @@ const voteOptionIcon = (voteType: number) => {
       color: $color-warning;
     }
   }
+}
+.buttons-container{
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  justify-content: center;
+}
+.notification{
+  margin: 0;
 }
 </style>
