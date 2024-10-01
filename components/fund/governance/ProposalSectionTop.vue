@@ -79,7 +79,7 @@
           </v-tooltip>
         </v-btn>
         <UiNotification v-else-if="hasAccountVotedAlready" class="notification">
-          You have already voted on this proposal.
+          You have voted on this proposal.
         </UiNotification>
 
     
