@@ -339,7 +339,7 @@ export const useFundsStore = defineStore({
      */
     async fetchAllNavMethods(fundAddresses: string[]) {
       const allFundsNavData = await this.callWithRetry(() =>
-        this.fundStore.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call(),
+        this.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call(),
       );
       const allMethods: INAVMethod[] = [];
       this.navMethodDetailsHashToFundAddress = {};
