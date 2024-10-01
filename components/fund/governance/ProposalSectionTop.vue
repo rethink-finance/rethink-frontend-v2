@@ -389,13 +389,13 @@ watch(() => props.proposal.proposalId, (newProposalId) => {
 
   // Fetch voting status for the specific proposal
   props.proposal.hasVotedLoading = true;
-  fundStore.fundGovernorContract.methods.hasVoted(props.proposal.proposalId, activeAccountAddress).call()
-    .then((hasVoted: boolean) => {
-      governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][activeAccountAddress] = hasVoted;
-    })
-    .finally(() => {
-      props.proposal.hasVotedLoading = false;
-    });
+  web3Store.callWithRetry(() =>
+    fundStore.fundGovernorContract.methods.hasVoted(props.proposal.proposalId, activeAccountAddress).call(),
+  ).then((hasVoted: boolean) => {
+    governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][activeAccountAddress] = hasVoted;
+  }).finally(() => {
+    props.proposal.hasVotedLoading = false;
+  });
 }, { immediate: true });
 
 </script>
