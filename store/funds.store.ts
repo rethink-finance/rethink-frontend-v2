@@ -1,10 +1,11 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
+import addressesJson from "~/assets/contracts/addresses.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import SafeMultiSendCallOnlyJson from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
-import addressesJson from "~/assets/contracts/addresses.json";
+import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { useFundStore } from "~/store/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
@@ -15,7 +16,6 @@ import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
-import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -197,6 +197,17 @@ export const useFundsStore = defineStore({
             return;
           }
 
+          // calculate cumulativeReturnPercent
+          // totalNAV() - _totalDepositBal  / _totalDepositBal
+          let cumulativeReturnPercent = 0;
+          const totalDepositBal = dataNAVs.totalDepositBal[index] || BigInt("0");
+          const totalNAV = dataNAVs.totalNav[index] || BigInt("0");
+          if(totalNAV > 0 && totalDepositBal > 0) {
+            cumulativeReturnPercent = Number(
+              (Number(totalNAV) - Number(totalDepositBal)) / Number(totalDepositBal) 
+            );
+          }
+
           const fundStartTime = dataNAVs.startTime[index];
           const fund: IFund = {
             chainName: this.web3Store.chainName,
@@ -223,7 +234,7 @@ export const useFundsStore = defineStore({
             governanceTokenTotalSupply: BigInt("0"),
             totalNAVWei: dataNAVs.totalNav[index],
             totalDepositBalance: dataNAVs.totalDepositBal[index] || BigInt("0"),
-            cumulativeReturnPercent: 0,
+            cumulativeReturnPercent: cumulativeReturnPercent,
             monthlyReturnPercent: 0,
             sharpeRatio: 0,
             positionTypeCounts: [
