@@ -259,3 +259,57 @@ export const useWeb3Store = defineStore({
     },
   },
 });
+
+/**
+ * Possible upgrade of callWithRetry would be creating a custom provider, so there will be no need to call any other
+ * method such as callWithRetry, but it can be used as is and internal logic of switching RPCs can be done inside
+ * this custom provider.
+ * Small Problem: if we are using already initialized provider passed from Metamask or something, we have to get the
+ * url from it and maybe some other settings also?
+ * TODO: pass chainId also to the provider
+ * TODO: override call method also
+ *
+ * Example:
+ *
+ * class CustomWeb3Provider extends Web3.providers.HttpProvider {
+ *   constructor(url, options = { suppressErrors: false, maxRetries: 3, fallbackNode: null }) {
+ *     super(url);  // Call the parent constructor (HttpProvider)
+ *     this.options = options;  // Store custom options
+ *     this.retryCount = 0;     // Initialize retry counter
+ *   }
+ *
+ *   // Override the send() method to add custom logic
+ *   send(payload, callback) {
+ *     const handleSend = (retryCount = 0) => {
+ *       super.send(payload, (error, result) => {
+ *         if (error) {
+ *           // Handle retries if maxRetries is set
+ *           if (retryCount < this.options.maxRetries) {
+ *             console.warn(`Retrying... (${retryCount + 1}/${this.options.maxRetries})`);
+ *             return handleSend(retryCount + 1); // Retry transaction
+ *           }
+ *
+ *           // Handle fallback node if provided and retries exhausted
+ *           if (this.options.fallbackNode && retryCount >= this.options.maxRetries) {
+ *             console.warn('Switching to fallback node:', this.options.fallbackNode);
+ *             this.setProvider(new Web3.providers.HttpProvider(this.options.fallbackNode));  // Switch to fallback node
+ *             return handleSend(0);  // Reset retry counter and try again
+ *           }
+ *
+ *           // Error suppression logic
+ *           if (this.options.suppressErrors) {
+ *             console.warn('Error suppressed:', error.message);  // Log as warning, suppress console.error
+ *             callback(null, null);  // Suppress the error in the callback
+ *           } else {
+ *             callback(error, null);  // Return the error if not suppressed
+ *           }
+ *         } else {
+ *           callback(null, result);  // Pass result if no error
+ *         }
+ *       });
+ *     };
+ *
+ *     handleSend();  // Initiate the send process with retry logic
+ *   }
+ * }
+ */

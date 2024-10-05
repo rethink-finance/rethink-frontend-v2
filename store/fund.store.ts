@@ -11,7 +11,7 @@ import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
-import { formatJson, pluralizeWord } from "~/composables/utils";
+import { cleanComplexWeb3Data, formatJson, pluralizeWord } from "~/composables/utils";
 import { useAccountStore } from "~/store/account.store";
 import { useFundsStore } from "~/store/funds.store";
 import { useToastStore } from "~/store/toast.store";
@@ -783,13 +783,12 @@ export const useFundStore = defineStore({
 
       if (!this.fundsStore.allNavMethods?.length) {
         const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
-        const fundAddresses: string[] = fundsInfoArrays[0];
 
         // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
         // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
         // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
         console.log("[CURRENT NAV] simulate fetch all nav methods")
-        await this.fundsStore.fetchAllNavMethods(fundAddresses);
+        await this.fundsStore.fetchAllNavMethods(fundsInfoArrays);
       }
       console.log("[CURRENT NAV] START SIMULATE:")
 
@@ -851,14 +850,18 @@ export const useFundStore = defineStore({
           callData.push(prepNAVMethodNFT(navEntry.details));
           // callData.push(this.fundStore.fund?.safeAddress);
         } else if (navEntry.positionType === PositionType.Composable) {
-          callData.push(prepNAVMethodComposable(navEntry.details));
+          callData.push(prepNAVMethodComposable(
+            navEntry.details,
+            navEntry.pastNAVUpdateEntrySafeAddress,
+            this.fund?.safeAddress,
+          ));
         }
 
         callData.push(
           ...[
             this.fund?.address, // fund
             0, // navEntryIndex
-            navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
+            false, // isPastNAVUpdate -- set to false to simulate on current fund.
             parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
             parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
             navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
@@ -872,6 +875,8 @@ export const useFundStore = defineStore({
         navEntry.simulatedNav = 0n;
 
         console.log("simulateNAVMethodValue isNavSimulationLoading:", this.isNavSimulationLoading)
+        console.log("navCalculationMethod:", navCalculationMethod)
+        console.log("callData:", callData)
         try {
           const simulatedVal: bigint = await this.callWithRetry(() =>
             this.navCalculatorContract.methods[

@@ -36,6 +36,7 @@ export default interface INAVMethod {
   // pastNAVUpdateEntryFundAddress is original if it was found in fetchAllNavMethods
   foundMatchingPastNAVUpdateEntryFundAddress?: boolean,
   pastNAVUpdateEntryFundAddress?: string,
+  pastNAVUpdateEntrySafeAddress?: string,
   // NAV value of that NAV method (if it was already executed in the past)
   pastNavValue?: bigint,
   pastNavValueFormatted?: string,

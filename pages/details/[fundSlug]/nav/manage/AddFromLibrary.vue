@@ -25,7 +25,7 @@
           hide-details
           single-line
           class="search"
-        ></v-text-field>
+        />
       </div>
       <div class="subtitle_steel_blue mb-0">
         {{ selectedMethodHashes.length }} selected
@@ -98,9 +98,8 @@ onMounted(async () => {
   if (!allNavMethods.value.length) {
     loadingAllNavMethods.value = true;
     const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays()
-    const fundAddresses: string[] = fundsInfoArrays[0];
     // Fetch all possible NAV methods for all funds
-    await fundsStore.fetchAllNavMethods(fundAddresses);
+    await fundsStore.fetchAllNavMethods(fundsInfoArrays);
     loadingAllNavMethods.value = false;
   }
 });

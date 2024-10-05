@@ -332,12 +332,14 @@ export const useFundsStore = defineStore({
       this.funds.push(...funds);
 
       // Fetch all possible NAV methods for all funds
-      this.fetchAllNavMethods(fundAddresses);
+      this.fetchAllNavMethods(fundsInfoArrays);
     },
     /**
      * Fetches all NAV methods
      */
-    async fetchAllNavMethods(fundAddresses: string[]) {
+    async fetchAllNavMethods(fundsInfoArrays: any[]) {
+      const fundAddresses: string[] = fundsInfoArrays[0];
+
       const allFundsNavData = await this.callWithRetry(() =>
         this.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call(),
       );
@@ -374,6 +376,7 @@ export const useFundsStore = defineStore({
               // the entry was created on.
               const fundAddress = fundAddresses[fundIndex];
               parsedNavMethod.pastNAVUpdateEntryFundAddress = fundAddress;
+              parsedNavMethod.pastNAVUpdateEntrySafeAddress = fundsInfoArrays[1][fundIndex].safe;
               allMethods.push(parsedNavMethod);
               if (parsedNavMethod.detailsHash) {
                 this.navMethodDetailsHashToFundAddress[parsedNavMethod.detailsHash] = fundAddress;
