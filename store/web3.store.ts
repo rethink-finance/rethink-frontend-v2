@@ -232,7 +232,15 @@ export const useWeb3Store = defineStore({
       while (retries < this.maxRetries && switchedRPCCount <= RPCUrlsLength) {
         try {
           return await method();
-        } catch (error) {
+        } catch (error: any) {
+          console.error("RPC error", error);
+          // Check Metamask errors:
+          // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
+          // Metamask rejected.
+          if ([4001, 100].includes(error?.code)) {
+            throw error;
+          }
+
           const rpcUrl = (this.web3?.currentProvider as any)?.clientUrl;
           console.error(`RPC error: ${(error as Error).message}`, method, rpcUrl);
           retries++;
@@ -252,7 +260,13 @@ export const useWeb3Store = defineStore({
       this.currentRpcIndex = (this.currentRpcIndex + 1) % rpcUrls.length;
       const newRpcUrl = rpcUrls[this.currentRpcIndex];
       console.log(`Switching to RPC URL: ${newRpcUrl}`, this.currentRpcIndex);
-      this.web3 = new Web3(newRpcUrl);
+      console.log(this.web3);
+      if (!this.web3) {
+        this.web3 = new Web3(newRpcUrl);
+      } else {
+        this.web3?.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
+      }
+
     },
     delay(ms: number): Promise<void> {
       return new Promise(resolve => setTimeout(resolve, ms));

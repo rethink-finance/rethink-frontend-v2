@@ -1309,36 +1309,39 @@ export const useFundStore = defineStore({
             data: this.fundContract.methods.executeNAVUpdate(navExecutorAddr).encodeABI(),
           },
         );
-        return await this.fundContract.methods
-          .executeNAVUpdate(navExecutorAddr)
-          .send({
-            from: this.activeAccountAddress,
-            maxPriorityFeePerGas: gasPrice,
-          })
-          .on("transactionHash", (hash: any) => {
-            console.log("tx hash: " + hash);
-            this.toastStore.warningToast(
-              "The transaction has been submitted. Please wait for it to be confirmed.",
-            );
-          })
-          .on("receipt", (receipt: any) => {
-            console.log(receipt);
-            if (receipt.status) {
-              this.toastStore.successToast("The recalculation of OIV NAV has Succeeded");
-            } else {
-              this.toastStore.errorToast(
-                "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
+
+        return await this.callWithRetry(() =>
+          this.fundContract.methods
+            .executeNAVUpdate(navExecutorAddr)
+            .send({
+              from: this.activeAccountAddress,
+              maxPriorityFeePerGas: gasPrice,
+            })
+            .on("transactionHash", (hash: any) => {
+              console.log("tx hash: " + hash);
+              this.toastStore.warningToast(
+                "The transaction has been submitted. Please wait for it to be confirmed.",
               );
-            }
-            this.loadingUpdateNav = false;
-          })
-          .on("error", (error: any) => {
-            console.log(error);
-            this.loadingUpdateNav = false;
-            this.toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support.",
-            );
-          });
+            })
+            .on("receipt", (receipt: any) => {
+              console.log(receipt);
+              if (receipt.status) {
+                this.toastStore.successToast("The recalculation of OIV NAV has Succeeded");
+              } else {
+                this.toastStore.errorToast(
+                  "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
+                );
+              }
+              this.loadingUpdateNav = false;
+            })
+            .on("error", (error: any) => {
+              console.log(error);
+              this.loadingUpdateNav = false;
+              this.toastStore.errorToast(
+                "There has been an error. Please contact the Rethink Finance support.",
+              );
+            }),
+        )
       } catch (error) {
         console.error("Error updating NAV: ", error);
         this.loadingUpdateNav = false;

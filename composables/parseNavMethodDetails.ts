@@ -62,8 +62,6 @@ export const prepNAVMethodComposable = (
   // Sometimes we want to replace an address in the encodedFunctionSignatureWithInputs with another one.
   // This happens when we are simulating NAV and we use the passed safeAddressToReplace
   // and it is replaced with safeAddressReplacement
-  console.log("safeAddressToReplace", safeAddressToReplace)
-
   let encodedSafeAddressToReplace = "";
   let encodedSafeAddressReplacement = "";
   if (safeAddressToReplace && safeAddressReplacement) {

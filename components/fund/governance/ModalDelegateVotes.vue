@@ -170,46 +170,48 @@ const delegate = async (isMyself = false) => {
       governanceTokenAddress !== fundAddress &&
       governanceTokenAddress !== nullAddr
     ) {
-      const [gasPrice] = await web3Store.estimateGas(
-        {
-          from: fundStore.activeAccountAddress,
-          to: fundStore.fundGovernanceTokenContract.options.address,
-          data: fundStore.fundGovernanceTokenContract.methods.delegate(delegateTo).encodeABI(),
-        },
-      );
       try {
-        await fundStore.fundGovernanceTokenContract.methods
-          .delegate(delegateTo)
-          .send({
+        const [gasPrice] = await web3Store.estimateGas(
+          {
             from: fundStore.activeAccountAddress,
-            maxPriorityFeePerGas: gasPrice,
-          })
-          .on("transactionHash", function (hash: any) {
-            console.log("tx hash: " + hash);
-            toastStore.addToast(
-              "The transaction has been submitted. Please wait for it to be confirmed.",
-            );
-          })
-          .on("receipt", function (receipt: any) {
-            console.log(receipt);
-            if (receipt.status) {
-              toastStore.successToast(
-                "Delegation of Governance Tokens Succeeded",
+            to: fundStore.fundGovernanceTokenContract.options.address,
+            data: fundStore.fundGovernanceTokenContract.methods.delegate(delegateTo).encodeABI(),
+          },
+        );
+        await web3Store.callWithRetry(() =>
+          fundStore.fundGovernanceTokenContract.methods
+            .delegate(delegateTo)
+            .send({
+              from: fundStore.activeAccountAddress,
+              maxPriorityFeePerGas: gasPrice,
+            })
+            .on("transactionHash", function (hash: any) {
+              console.log("tx hash: " + hash);
+              toastStore.addToast(
+                "The transaction has been submitted. Please wait for it to be confirmed.",
               );
-            } else {
+            })
+            .on("receipt", function (receipt: any) {
+              console.log(receipt);
+              if (receipt.status) {
+                toastStore.successToast(
+                  "Delegation of Governance Tokens Succeeded",
+                );
+              } else {
+                toastStore.errorToast(
+                  "The delegateTo tx has failed. Please contact the Rethink Finance support.",
+                );
+              }
+              loadingDelegates.value = false;
+            })
+            .on("error", function (error: any) {
+              console.log(error);
+              loadingDelegates.value = false;
               toastStore.errorToast(
-                "The delegateTo tx has failed. Please contact the Rethink Finance support.",
+                "There has been an error. Please contact the Rethink Finance support.",
               );
-            }
-            loadingDelegates.value = false;
-          })
-          .on("error", function (error: any) {
-            console.log(error);
-            loadingDelegates.value = false;
-            toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support.",
-            );
-          });
+            }),
+        )
       } catch (error) {
         console.error("Error delegating to external gov token: ", error);
         loadingDelegates.value = false;
@@ -226,38 +228,40 @@ const delegate = async (isMyself = false) => {
         },
       );
       try {
-        await fundStore.fundContract.methods
-          .delegate(delegateTo)
-          .send({
-            from: fundStore.activeAccountAddress,
-            maxPriorityFeePerGas: gasPrice,
-          })
-          .on("transactionHash", function (hash: any) {
-            console.log("tx hash: " + hash);
-            toastStore.addToast(
-              "The transaction has been submitted. Please wait for it to be confirmed.",
-            );
-          })
-          .on("receipt", function (receipt: any) {
-            console.log(receipt);
-            if (receipt.status) {
-              toastStore.successToast(
-                "Delegation of Governance Tokens Succeeded",
+        await web3Store.callWithRetry(() =>
+          fundStore.fundContract.methods
+            .delegate(delegateTo)
+            .send({
+              from: fundStore.activeAccountAddress,
+              maxPriorityFeePerGas: gasPrice,
+            })
+            .on("transactionHash", function (hash: any) {
+              console.log("tx hash: " + hash);
+              toastStore.addToast(
+                "The transaction has been submitted. Please wait for it to be confirmed.",
               );
-            } else {
+            })
+            .on("receipt", function (receipt: any) {
+              console.log(receipt);
+              if (receipt.status) {
+                toastStore.successToast(
+                  "Delegation of Governance Tokens Succeeded",
+                );
+              } else {
+                toastStore.errorToast(
+                  "The delegateTo tx has failed. Please contact the Rethink Finance support.",
+                );
+              }
+              loadingDelegates.value = false;
+            })
+            .on("error", function (error: any) {
+              console.log(error);
+              loadingDelegates.value = false;
               toastStore.errorToast(
-                "The delegateTo tx has failed. Please contact the Rethink Finance support.",
+                "There has been an error. Please contact the Rethink Finance support.",
               );
-            }
-            loadingDelegates.value = false;
-          })
-          .on("error", function (error: any) {
-            console.log(error);
-            loadingDelegates.value = false;
-            toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support.",
-            );
-          });
+            }),
+        )
       } catch (error: any) {
         console.error("Error delegating to fund contract: ", error);
         loadingDelegates.value = false;

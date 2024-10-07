@@ -200,30 +200,32 @@ const submitProposal = async () => {
     },
   );
   try {
-    await fundStore.fundGovernorContract.methods.propose(...proposalData).send({
-      from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: gasPrice,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
-        toastStore.successToast(
-          "The proposal transactions was successful. " +
-          "You can now vote on the proposal in the governance page.",
-        );
-      } else {
-        toastStore.errorToast(
-          "The proposal transaction has failed. Please contact the Rethink Finance support.",
-        );
-      }
-      loading.value = false;
-    }).on("error", (error: any) => {
-      console.error(error);
-      loading.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-    });
+    await web3Store.callWithRetry(() =>
+      fundStore.fundGovernorContract.methods.propose(...proposalData).send({
+        from: fundStore.activeAccountAddress,
+        maxPriorityFeePerGas: gasPrice,
+      }).on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
+      }).on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          toastStore.successToast(
+            "The proposal transactions was successful. " +
+            "You can now vote on the proposal in the governance page.",
+          );
+        } else {
+          toastStore.errorToast(
+            "The proposal transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loading.value = false;
+      }).on("error", (error: any) => {
+        console.error(error);
+        loading.value = false;
+        toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+      }),
+    )
   } catch (error: any) {
     loading.value = false;
     toastStore.errorToast(error.message);
