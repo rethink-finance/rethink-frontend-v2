@@ -64,7 +64,7 @@ export const useAccountStore = defineStore("accounts", {
       console.log({
         chainId,
         rpcUrls: toRaw(network.rpcUrls ?? []),
-        chainName: toRaw(network.chainName),
+        chainName: toRaw(network.chainNameLong ?? network.chainName),
         nativeCurrency: toRaw(network.nativeCurrency),
         blockExplorerUrls: toRaw(network.blockExplorerUrls),
       });
@@ -73,7 +73,7 @@ export const useAccountStore = defineStore("accounts", {
         params: [{
           chainId,
           rpcUrls: toRaw(network.rpcUrls ?? []),
-          chainName: toRaw(network.chainName),
+          chainName: toRaw(network.chainNameLong ?? network.chainName),
           nativeCurrency: toRaw(network.nativeCurrency),
           blockExplorerUrls: toRaw(network.blockExplorerUrls),
         }],

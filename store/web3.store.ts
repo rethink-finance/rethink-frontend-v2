@@ -43,6 +43,7 @@ export const useWeb3Store = defineStore({
       "0x89": {
         chainId: "0x89",
         chainName: "Polygon",
+        chainNameLong: "Polygon Mainnet",
         chainShort: "matic",
         nativeCurrency: {
           name: "POL",
@@ -69,8 +70,9 @@ export const useWeb3Store = defineStore({
           decimals: 18,
         },
         icon: getChainIcon("arb1"),
-        rpcUrl: "https://arb-pokt.nodies.app",
+        rpcUrl: "https://arb1.arbitrum.io/rpc",
         rpcUrls: [
+          "https://arb1.arbitrum.io/rpc",      // Max 10k blocks, if auth: more than 1M
           "https://arbitrum.drpc.org",      // Max 10k blocks, if auth: more than 1M
           "https://arbitrum.llamarpc.com",  // Max 10k blocks
           "https://1rpc.io/arb",            // Max 1k blocks
@@ -84,7 +86,7 @@ export const useWeb3Store = defineStore({
         chainShort: "frax",
         nativeCurrency: {
           name: "Frax",
-          symbol: "FRAX",
+          symbol: "frxETH",
           decimals: 18,
         },
         icon: getChainIcon("frax"),

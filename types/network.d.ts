@@ -1,6 +1,7 @@
 export default interface INetwork {
   chainId:  string,
   chainName: string,
+  chainNameLong?: string,
   chainShort: string,
   nativeCurrency: INativeCurrency,
   icon: IIcon,
