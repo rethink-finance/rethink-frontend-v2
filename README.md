@@ -16,6 +16,7 @@ Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introdu
 Make sure to install the dependencies:
 
 ```bash
+# Use Node 18 (18.20.4)
 npm install
 ```
 

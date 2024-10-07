@@ -44,6 +44,11 @@ export const useWeb3Store = defineStore({
         chainId: "0x89",
         chainName: "Polygon",
         chainShort: "matic",
+        nativeCurrency: {
+          name: "POL",
+          symbol: "POL",
+          decimals: 18,
+        },
         icon: getChainIcon("matic"),
         rpcUrl: "https://polygon-pokt.nodies.app",
         rpcUrls: [
@@ -52,31 +57,52 @@ export const useWeb3Store = defineStore({
           "https://polygon-pokt.nodies.app",
           "https://polygon.rpc.blxrbdn.com",
         ],
+        blockExplorerUrls: ["https://polygonscan.com"],
       },
       "0xa4b1": {
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
         chainShort: "arb1",
+        nativeCurrency: {
+          name: "Ether",
+          symbol: "ETH",
+          decimals: 18,
+        },
         icon: getChainIcon("arb1"),
         rpcUrl: "https://arb-pokt.nodies.app",
         rpcUrls: [
+          "https://arbitrum.drpc.org",      // Max 10k blocks, if auth: more than 1M
           "https://arbitrum.llamarpc.com",  // Max 10k blocks
           "https://1rpc.io/arb",            // Max 1k blocks
           "https://arb-pokt.nodies.app",    // Pruned Node / Light node, no logs...
-          "https://arbitrum.drpc.org",      // Max 10k blocks, if auth: more than 1M
         ],
+        blockExplorerUrls: ["https://arbiscan.io"],
       },
       "0xfc": {
         chainId: "0xfc",
         chainName: "Fraxtal",
         chainShort: "frax",
+        nativeCurrency: {
+          name: "Frax",
+          symbol: "FRAX",
+          decimals: 18,
+        },
         icon: getChainIcon("frax"),
         rpcUrl: "https://rpc.frax.com",
+        rpcUrls: [
+          "https://rpc.frax.com",
+        ],
+        blockExplorerUrls: ["https://fraxscan.com"],
       },
       "0x1": {
         chainId: "0x1",
         chainName: "Ethereum",
         chainShort: "eth",
+        nativeCurrency: {
+          name: "Ether",
+          symbol: "ETH",
+          decimals: 18,
+        },
         icon: getChainIcon("eth"),
         rpcUrl: "https://rpc.ankr.com/eth",
         rpcUrls: [
@@ -90,6 +116,7 @@ export const useWeb3Store = defineStore({
           "https://rpc.lokibuilder.xyz/wallet",
           "https://api.stateless.solutions/ethereum/v1/demo",
         ],
+        blockExplorerUrls: ["https://etherscan.io"],
       },
     },
     cachedTokens: {

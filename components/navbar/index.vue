@@ -56,7 +56,7 @@
               density="compact"
               :bg-color="selectedChainId ? '' : 'error'"
               :items="networks"
-              :loading="isSwitchingNetworks"
+              :loading="accountStore.isSwitchingNetworks"
               item-title="chainName"
               item-value="chainId"
             >
@@ -148,7 +148,6 @@ import type INetwork from "~/types/network";
 import type IRoute from "~/types/route";
 const accountStore = useAccountStore();
 const web3Store = useWeb3Store();
-const toastStore = useToastStore();
 
 const route = useRoute();
 
@@ -189,7 +188,6 @@ const routes : IRoute[] = [
 ]
 const selectedChainId = ref(web3Store.chainId);
 const networks: INetwork[] = web3Store.networks;
-const isSwitchingNetworks = ref(false);
 
 watch(() => web3Store.chainId, (newVal, oldVal) => {
   console.log(`Chain ID changed from ${oldVal} to ${newVal}`);
@@ -198,58 +196,12 @@ watch(() => web3Store.chainId, (newVal, oldVal) => {
 });
 
 const switchNetwork = async (chainId: string) => {
-  isSwitchingNetworks.value = true;
   try {
-    if (accountStore.connectedWallet) {
-      // Ask the connected user to switch network.
-      await accountStore.setActiveChain(chainId);
-    } else {
-      // Switch active chain.
-      await web3Store.init(chainId);
-    }
-
-    // Test connection, outer catch block will except exception.
-    try {
-      await web3Store.checkConnection();
-    } catch (e: any) {
-      toastStore.errorToast("Looks like there are RPC connection problems.")
-    }
-
+    await accountStore.switchNetwork(chainId)
   } catch (error: any) {
     // Revert the selected value to the previously selected chain.
     selectedChainId.value = web3Store.chainId;
-
-    // This error code indicates that the chain has not been added to MetaMask
-    if (error.code === 4902) {
-      try {
-        // Add the network if it is not yet added.
-        // TODO: finish this for better UX, get network RPC mapping
-        // await accountStore.connectedWallet?.provider.request({
-        //   method: 'wallet_addEthereumChain',
-        //   params: [{
-        //     chainId: chainId,
-        //     rpcUrl: 'https://rpc-mainnet.maticvigil.com/',
-        //     chainName: 'Polygon Mainnet',
-        //     nativeCurrency: {
-        //       name: 'MATIC',
-        //       symbol: 'MATIC', // 2-6 characters long
-        //       decimals: 18,
-        //     },
-        //     blockExplorerUrls: ['https://polygonscan.com']
-        //   }]
-        // });
-        toastStore.errorToast(
-          "Oops, something went wrong switching networks. " +
-          "Check if the network is added to your wallet provider.",
-        )
-      } catch (addError) {
-        console.error("Failed to add the network:", addError);
-      }
-    } else {
-      toastStore.errorToast("Oops, something went wrong switching networks.")
-    }
   }
-  isSwitchingNetworks.value = false;
 }
 const isPathActive = (path: string = "", exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);
 const getPathColor = (isActive = false, color = "var(--color-subtitle)") => (isActive ? "primary" : color);
