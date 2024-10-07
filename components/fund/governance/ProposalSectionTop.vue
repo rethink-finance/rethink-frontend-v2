@@ -241,7 +241,7 @@ const metaCopyTags = computed((): IMetaItem[] => {
 });
 
 const isProposalActive = computed(() => {
-  return props.proposal?.state === ProposalState.Active ?? false;
+  return props.proposal?.state === ProposalState.Active;
 });
 
 const hasProposalSucceeded = computed(() => {
