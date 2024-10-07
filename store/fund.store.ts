@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
+import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import NavCalculator from "~/assets/contracts/NAVCalculator.json";
@@ -329,7 +330,7 @@ export const useFundStore = defineStore({
     },
     // @ts-expect-error: we should extend the return type as Contract<...>...
     fundGovernanceTokenContract(): Contract {
-      return new this.web3.eth.Contract(ERC20, this.fund?.governanceToken.address);
+      return new this.web3.eth.Contract(ERC20Votes.abi, this.fund?.governanceToken.address);
     },
   },
   actions: {
