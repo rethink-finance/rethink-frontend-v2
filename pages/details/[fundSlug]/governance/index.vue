@@ -533,7 +533,7 @@ const fetchProposals = async (
             error,
           );
 
-          if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
+          if (chunkSize / 2 >= INITIAL_CHUNK_SIZE) {
             // We probably tried fetching a range that is too big, reduce the chunk size by half
             // and fix the fromBlock range.
             chunkSize /= 2;
@@ -631,7 +631,7 @@ const fetchProposals = async (
             error,
           );
 
-          if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
+          if (chunkSize / 2 >= INITIAL_CHUNK_SIZE) {
             // We probably tried fetching a range that is too big, reduce the chunk size by half
             // and fix the toBlock range.
             chunkSize /= 2;
