@@ -183,6 +183,7 @@ const proposalsSuccessRate = computed(() => {
 // fetchProposals can be a super long-lasting process, so if the user changes
 // page we want to stop fetching proposals.
 const shouldFetchProposals = ref(false);
+const shouldFetchTrendingDelegates = ref(true);
 
 // trending delegates
 const trendingDelegates = ref<ITrendingDelegates[]>([]);
@@ -203,138 +204,155 @@ const trendingDelegatesSubtitle = computed(() => {
 const loadingTrendingDelegate = ref(false);
 
 const fetchTrendingDelegates = async () => {
-  const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
-  console.log("currentBlock trending delegates:", currentBlock);
-
-  let fromBlock = BigInt(currentBlock);
-  const endBlock = BigInt(0);
-  let chunkSize = 1000n;
-  const minChunkSize = 1000n;
-  let trendingDelegatesEvents: any[] = [];
-  let delegateVotesChangedEvents: any[] = [];
-
-  while (fromBlock > endBlock) {
+  try {
     loadingTrendingDelegate.value = true;
+    const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
+    console.log("currentBlock trending delegates:", currentBlock);
 
-    let toBlock = fromBlock - chunkSize + 1n;
-    if (toBlock < endBlock) {
-      toBlock = endBlock;
-    }
+    let fromBlock = BigInt(currentBlock);
+    const endBlock = BigInt(0);
+    let chunkSize = 1000n;
+    const minChunkSize = 1000n;
+    let trendingDelegatesEvents: any[] = [];
+    let delegateVotesChangedEvents: any[] = [];
 
-    console.log("TD - chunkSize: ", chunkSize);
-    console.log(`TD - Fetching events from ${fromBlock} to ${toBlock}`);
-
-    try {
-      // fetch DelegateChanged events
-      const eventsDC = await fundStore.fundContract.getPastEvents(
-        "DelegateChanged",
-        {
-          fromBlock: Number(toBlock),
-          toBlock: Number(fromBlock),
-        }
-      );
-
-      trendingDelegatesEvents = trendingDelegatesEvents
-        .concat(eventsDC)
-        .sort((a, b) => Number(b.blockNumber) - Number(a.blockNumber));
-
-      trendingDelegates.value = await parseTrendingDelegateEvents(
-        trendingDelegatesEvents
-      );
-
-      // double the chunk size for the next iteration
-      chunkSize *= 2n;
-      console.log("Fetched and doubling chunkSize to: ", chunkSize);
-
-      fromBlock = toBlock - 1n; // prepare for the next range
-    } catch (error: any) {
-      console.error("Error fetching events: ", error);
-
-      // if fetching failed, halve the chunk size
-      chunkSize /= 2n;
-      if (chunkSize < minChunkSize) {
-        chunkSize = minChunkSize;
+    while (fromBlock > endBlock && shouldFetchTrendingDelegates.value) {
+      let toBlock = fromBlock - chunkSize + 1n;
+      if (toBlock < endBlock) {
+        toBlock = endBlock;
       }
-      console.log("Error encountered, reducing chunkSize to: ", chunkSize);
+
+      console.log("TD - chunkSize: ", chunkSize);
+      console.log(`TD - Fetching events from ${fromBlock} to ${toBlock}`);
+
+      try {
+        // fetch DelegateChanged events
+        const eventsDC = await fundStore.fundContract.getPastEvents(
+          "DelegateChanged",
+          {
+            fromBlock: Number(toBlock),
+            toBlock: Number(fromBlock),
+          }
+        );
+
+        trendingDelegatesEvents = trendingDelegatesEvents
+          .concat(eventsDC)
+          .sort((a, b) => Number(b.blockNumber) - Number(a.blockNumber));
+
+        trendingDelegates.value = await parseTrendingDelegateEvents(
+          trendingDelegatesEvents
+        );
+
+        // double the chunk size for the next iteration
+        chunkSize *= 2n;
+        console.log("Fetched and doubling chunkSize to: ", chunkSize);
+
+        fromBlock = toBlock - 1n; // prepare for the next range
+      } catch (error: any) {
+        console.error("Error fetching events: ", error);
+
+        // if fetching failed, halve the chunk size
+        chunkSize /= 2n;
+        if (chunkSize < minChunkSize) {
+          chunkSize = minChunkSize;
+        }
+        console.log("Error encountered, reducing chunkSize to: ", chunkSize);
+      }
     }
+    loadingTrendingDelegate.value = false;
+    console.log("All DelegateChanged events fetched");
+  } catch (error: any) {
+    console.error("Error fetching trending delegates: ", error);
+    loadingTrendingDelegate.value = false;
   }
-  loadingTrendingDelegate.value = false;
-  console.log("All DelegateChanged events fetched");
 };
 
 const parseTrendingDelegateEvents = async (eventsDelegateChanged: any[]) => {
-  const delegationsMap: Record<
-    string,
-    { delegator: Set<string>; event: Set<any> }
-  > = {};
+  try {
+    const delegationsMap: Record<
+      string,
+      { delegator: Set<string>; event: Set<any> }
+    > = {};
 
-  eventsDelegateChanged.forEach((event) => {
-    const delegator = event.returnValues.delegator; // the one who delegates
-    const delegatedMember = event.returnValues.toDelegate; // the member being delegated
+    eventsDelegateChanged.forEach((event) => {
+      const delegator = event.returnValues.delegator; // the one who delegates
+      const delegatedMember = event.returnValues.toDelegate; // the member being delegated
 
-    // only add delegator if it's not already in the set or if its not already in any other set
-    const shouldAddDelegator = Object.values(delegationsMap).every(
-      (delegatorsSet) => !delegatorsSet.delegator.has(delegator)
+      // only add delegator if it's not already in the set or if its not already in any other set
+      const shouldAddDelegator = Object.values(delegationsMap).every(
+        (delegatorsSet) => !delegatorsSet.delegator.has(delegator)
+      );
+
+      // if the member is not yet in the map, add them
+      if (!delegationsMap[delegatedMember]) {
+        delegationsMap[delegatedMember] = {
+          delegator: new Set(),
+          event: new Set(),
+        };
+      }
+
+      if (shouldAddDelegator) {
+        delegationsMap[delegatedMember].delegator.add(delegator);
+        delegationsMap[delegatedMember].event.add(event);
+      }
+    });
+
+    // prepare the trending delegates
+    const delegates: ITrendingDelegates[] = [];
+
+    await Promise.all(
+      Object.entries(delegationsMap).map(
+        async ([delegatedMember, delegatorsSet]) => {
+          const { votingPower, impact } =
+            await getVotingPowerAndImpact(delegatedMember);
+
+          const output = {
+            delegated_members: delegatedMember,
+            delegators: delegatorsSet.delegator.size,
+            impact: impact ?? "0%",
+            voting_power:
+              votingPower ?? "0 " + fundStore.fund?.governanceToken.symbol,
+          };
+
+          if (delegatorsSet.delegator.size >= 1) {
+            delegates.push(output);
+          }
+        }
+      )
     );
 
-    // if the member is not yet in the map, add them
-    if (!delegationsMap[delegatedMember]) {
-      delegationsMap[delegatedMember] = {
-        delegator: new Set(),
-        event: new Set(),
-      };
-    }
+    console.log("delegationsMap: ", delegationsMap);
+    console.log("trendingDelegates: ", trendingDelegates);
 
-    if (shouldAddDelegator) {
-      delegationsMap[delegatedMember].delegator.add(delegator);
-      delegationsMap[delegatedMember].event.add(event);
-    }
-  });
-
-  // prepare the trending delegates
-  const delegates: ITrendingDelegates[] = [];
-
-  await Promise.all(
-    Object.entries(delegationsMap).map(
-      async ([delegatedMember, delegatorsSet]) => {
-        const { votingPower, impact } =
-          await getVotingPowerAndImpact(delegatedMember);
-
-        const output = {
-          delegated_members: delegatedMember,
-          delegators: delegatorsSet.delegator.size,
-          impact: impact ?? "0%",
-          voting_power:
-            votingPower ?? "0 " + fundStore.fund?.governanceToken.symbol,
-        };
-
-        if (delegatorsSet.delegator.size >= 1) {
-          delegates.push(output);
-        }
-      }
-    )
-  );
-
-  console.log("delegationsMap: ", delegationsMap);
-  console.log("trendingDelegates: ", trendingDelegates);
-
-  return delegates as ITrendingDelegates[];
+    return delegates as ITrendingDelegates[];
+  } catch (error: any) {
+    console.error("Error parsing trending delegates: ", error);
+    return [];
+  }
 };
 
 async function getVotingPowerAndImpact(delegatedAddress: string) {
-  const votingPower = await fundStore.fundGovernanceTokenContract.methods
-    .getVotes(delegatedAddress)
-    .call();
+  try {
+    const votingPower = await fundStore.fundGovernanceTokenContract.methods
+      .getVotes(delegatedAddress)
+      .call();
 
-  const totalFundSupply = Number(fundStore?.fund?.fundTokenTotalSupply || 0);
-  // delegatedMemberVotingPower * 100 / totalFundSupply
-  const impact = (Number(votingPower) * 100) / totalFundSupply;
+    const totalFundSupply = Number(fundStore?.fund?.fundTokenTotalSupply || 0);
+    // delegatedMemberVotingPower * 100 / totalFundSupply
+    const impact = (Number(votingPower) * 100) / totalFundSupply;
 
-  return {
-    votingPower:
-      commify(votingPower) + " " + fundStore.fund?.governanceToken.symbol,
-    impact: impact.toFixed(0) + "%",
-  };
+    return {
+      votingPower:
+        commify(votingPower) + " " + fundStore.fund?.governanceToken.symbol,
+      impact: impact.toFixed(0) + "%",
+    };
+  } catch (error: any) {
+    console.error("Error getting voting power and impact: ", error);
+    return {
+      votingPower: "0 " + fundStore.fund?.governanceToken.symbol,
+      impact: "0%",
+    };
+  }
 }
 
 type DropdownOption = {
@@ -660,6 +678,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   console.log("Component is being unmounted, stopping the fetch");
   shouldFetchProposals.value = false;
+  shouldFetchTrendingDelegates.value = false;
   loadingProposals.value = false;
   loadingTrendingDelegate.value = false;
 });
