@@ -4,19 +4,25 @@ import pLimit from "p-limit";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import { useWeb3Store } from "~/store/web3.store";
+import { useToastStore } from "~/store/toast.store";
 
 interface IState {
   web3Onboard?: any;
+  isSwitchingNetworks: boolean,
 }
 
 
 export const useAccountStore = defineStore("accounts", {
   state: (): IState => ({
     web3Onboard: undefined as any | undefined,
+    isSwitchingNetworks: false,
   }),
   getters: {
     web3Store() {
       return useWeb3Store();
+    },
+    toastStore() {
+      return useToastStore();
     },
     connectingWallet(): boolean {
       return this.web3Onboard?.connectingWallet ?? false;
@@ -52,6 +58,71 @@ export const useAccountStore = defineStore("accounts", {
       const chainId = this.web3Onboard?.connectedChain?.id || "";
       await this.setActiveChain(chainId);
     },
+    async addNewNetwork(chainId: string) {
+      console.log("Add New Network for chain:", chainId);
+      const network = this.web3Store.networksMap[chainId];
+      console.log({
+        chainId,
+        rpcUrls: toRaw(network.rpcUrls ?? []),
+        chainName: toRaw(network.chainNameLong ?? network.chainName),
+        nativeCurrency: toRaw(network.nativeCurrency),
+        blockExplorerUrls: toRaw(network.blockExplorerUrls),
+      });
+      return await this.connectedWallet?.provider.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId,
+          rpcUrls: toRaw(network.rpcUrls ?? []),
+          chainName: toRaw(network.chainNameLong ?? network.chainName),
+          nativeCurrency: toRaw(network.nativeCurrency),
+          blockExplorerUrls: toRaw(network.blockExplorerUrls),
+        }],
+      });
+    },
+    async switchNetwork(chainId: string) {
+      this.isSwitchingNetworks = true;
+      let errorToThrow;
+
+      try {
+        if (this.connectedWallet) {
+          // Ask the connected user to switch network.
+          await this.setActiveChain(chainId);
+        } else {
+          // Switch active chain.
+          await this.web3Store.init(chainId);
+        }
+
+        // Test connection, outer catch block will except exception.
+        try {
+          await this.web3Store.checkConnection();
+        } catch (e: any) {
+          this.toastStore.errorToast("Looks like there are RPC connection problems.")
+        }
+      } catch (error: any) {
+        // This error code indicates that the chain has not been added to MetaMask
+        if (error.code === 4902) {
+          try {
+            // Add the network if it is not yet added.
+            this.toastStore.addToast(
+              "Add the selected network to your wallet provider.",
+            )
+            await this.addNewNetwork(chainId);
+            await this.switchNetwork(chainId);
+          } catch (addError) {
+            console.error("Failed to add the network:", addError);
+            this.toastStore.errorToast("Oops, something went wrong while adding a new network.")
+            errorToThrow = addError;
+          }
+        } else {
+          this.toastStore.errorToast("Oops, something went wrong while switching networks.")
+          errorToThrow = error;
+        }
+      }
+      this.isSwitchingNetworks = false;
+      if (errorToThrow) {
+        throw errorToThrow;
+      }
+    },
     async setActiveChain(chainId: string): Promise<void> {
       console.log("setActiveChain", chainId);
       // If the user is currently on a different
@@ -83,7 +154,7 @@ export const useAccountStore = defineStore("accounts", {
 
         // check the last used chainId in the local storage.
         const lastUsedChainId = localStorage.getItem("lastUsedChainId");
-        
+
         const wallet = await this.web3Onboard?.connectWallet();
         // check the last used chainId on the connected wallet.
         const connectedChainId = wallet?.chains[0]?.id || "";

@@ -58,6 +58,9 @@ import type IToken from "~/types/token";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
+import { useWeb3Store } from "~/store/web3.store";
+
+const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const showCancelButton = ref(false);
@@ -116,35 +119,37 @@ const cancelPendingRequest = async () => {
   const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: gasPrice,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
+    await web3Store.callWithRetry(() =>
+      fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+        from: fundStore.activeAccountAddress,
+        maxPriorityFeePerGas: gasPrice,
+      }).on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+      }).on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
 
-      if (receipt.status) {
-        toastStore.successToast(
-          `Cancellation of a ${props.fundTransactionRequest.type} request was successful.`,
-        );
-        if (isDepositRequest) {
-          fundStore.userDepositRequest = undefined;
+        if (receipt.status) {
+          toastStore.successToast(
+            `Cancellation of a ${props.fundTransactionRequest.type} request was successful.`,
+          );
+          if (isDepositRequest) {
+            fundStore.userDepositRequest = undefined;
+          } else {
+            fundStore.userRedemptionRequest = undefined;
+          }
         } else {
-          fundStore.userRedemptionRequest = undefined;
+          fundStore.fetchUserFundDepositRedemptionRequests();
+          toastStore.errorToast(
+            "Your deposit request has failed. Please contact the Rethink Finance support.",
+          );
         }
-      } else {
-        fundStore.fetchUserFundDepositRedemptionRequests();
-        toastStore.errorToast(
-          "Your deposit request has failed. Please contact the Rethink Finance support.",
-        );
-      }
-      isLoadingCancelRequest.value = false;
-      hideCancelButton();
-    }).on("error", (error: any) => {
-      handleError(error);
-    });
+        isLoadingCancelRequest.value = false;
+        hideCancelButton();
+      }).on("error", (error: any) => {
+        handleError(error);
+      }),
+    )
   } catch (error: any) {
     handleError(error);
   }

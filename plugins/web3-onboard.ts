@@ -75,6 +75,12 @@ export default defineNuxtPlugin(() => {
         label: "Ethereum",
         rpcUrl: "https://rpc.ankr.com/eth",
       },
+      {
+        id: "0x2105",
+        token: "ETH",
+        label: "BASE",
+        rpcUrl: "https://mainnet.base.org/",
+      },
     ],
     theme: "dark",
     appMetadata: {

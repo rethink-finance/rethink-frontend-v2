@@ -329,7 +329,7 @@ export default defineComponent({
           },
         )
       }
- 
+
       // Expand details button
       headers.push({ key: "data-table-expand", sortable: false, align: "center" });
       if (this.deletable) {
@@ -460,20 +460,19 @@ export default defineComponent({
       console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
       if (!this.fundsStore.allNavMethods?.length) {
         const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
-        const fundAddresses: string[] = fundsInfoArrays[0];
 
         // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
         // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
         // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
         console.log("simulate fetch all nav methods")
-        await this.fundsStore.fetchAllNavMethods(fundAddresses);
+        await this.fundsStore.fetchAllNavMethods(fundsInfoArrays);
       }
 
       // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
       // Otherwise, take managed methods, that user can change.
       // Simulate all at once as many promises instead of one by one.
       const promises = [];
-      
+
       for (const navEntry of this.methods) {
         promises.push(this.fundStore.simulateNAVMethodValue(navEntry));
       }

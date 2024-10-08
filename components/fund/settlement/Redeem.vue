@@ -78,7 +78,9 @@ import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
+import { useWeb3Store } from "~/store/web3.store";
 
+const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
@@ -173,36 +175,38 @@ const requestRedemption = async () => {
   const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: gasPrice,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    await web3Store.callWithRetry(() =>
+      fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+        from: fundStore.activeAccountAddress,
+        maxPriorityFeePerGas: gasPrice,
+      }).on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
 
-    }).on("receipt", (receipt: any) => {
-      console.log(receipt);
+      }).on("receipt", (receipt: any) => {
+        console.log(receipt);
 
-      // TODO takes 15-20 sec for node to sync .. fix
-      // fundStore.fetchUserFundDepositRedemptionRequests();
-      if (receipt.status) {
-        toastStore.successToast(
-          "Your withdrawal request was successful. It may take 10 seconds or more for values to update.",
-        );
-        fundStore.userRedemptionRequest = {
-          amount: tokensWei,
-          timestamp: Date.now(),
-          type: FundTransactionType.Redemption,
+        // TODO takes 15-20 sec for node to sync .. fix
+        // fundStore.fetchUserFundDepositRedemptionRequests();
+        if (receipt.status) {
+          toastStore.successToast(
+            "Your withdrawal request was successful. It may take 10 seconds or more for values to update.",
+          );
+          fundStore.userRedemptionRequest = {
+            amount: tokensWei,
+            timestamp: Date.now(),
+            type: FundTransactionType.Redemption,
+          }
+          tokenValue.value = "";
+        } else {
+          toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
         }
-        tokenValue.value = "";
-      } else {
-        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-      }
 
-      loadingRequestRedeem.value = false;
-    }).on("error", (error: any) => {
-      handleError(error);
-    });
+        loadingRequestRedeem.value = false;
+      }).on("error", (error: any) => {
+        handleError(error);
+      }),
+    )
   } catch (error: any) {
     handleError(error);
   }

@@ -43,7 +43,13 @@ export const useWeb3Store = defineStore({
       "0x89": {
         chainId: "0x89",
         chainName: "Polygon",
+        chainNameLong: "Polygon Mainnet",
         chainShort: "matic",
+        nativeCurrency: {
+          name: "POL",
+          symbol: "POL",
+          decimals: 18,
+        },
         icon: getChainIcon("matic"),
         rpcUrl: "https://polygon-pokt.nodies.app",
         rpcUrls: [
@@ -52,31 +58,53 @@ export const useWeb3Store = defineStore({
           "https://polygon-pokt.nodies.app",
           "https://polygon.rpc.blxrbdn.com",
         ],
+        blockExplorerUrls: ["https://polygonscan.com"],
       },
       "0xa4b1": {
         chainId: "0xa4b1",
         chainName: "Arbitrum One",
         chainShort: "arb1",
+        nativeCurrency: {
+          name: "Ether",
+          symbol: "ETH",
+          decimals: 18,
+        },
         icon: getChainIcon("arb1"),
-        rpcUrl: "https://arb-pokt.nodies.app",
+        rpcUrl: "https://arb1.arbitrum.io/rpc",
         rpcUrls: [
+          "https://arb1.arbitrum.io/rpc",      // Max 10k blocks, if auth: more than 1M
+          "https://arbitrum.drpc.org",      // Max 10k blocks, if auth: more than 1M
           "https://arbitrum.llamarpc.com",  // Max 10k blocks
           "https://1rpc.io/arb",            // Max 1k blocks
           "https://arb-pokt.nodies.app",    // Pruned Node / Light node, no logs...
-          "https://arbitrum.drpc.org",      // Max 10k blocks, if auth: more than 1M
         ],
+        blockExplorerUrls: ["https://arbiscan.io"],
       },
       "0xfc": {
         chainId: "0xfc",
         chainName: "Fraxtal",
         chainShort: "frax",
+        nativeCurrency: {
+          name: "Frax",
+          symbol: "frxETH",
+          decimals: 18,
+        },
         icon: getChainIcon("frax"),
         rpcUrl: "https://rpc.frax.com",
+        rpcUrls: [
+          "https://rpc.frax.com",
+        ],
+        blockExplorerUrls: ["https://fraxscan.com"],
       },
       "0x1": {
         chainId: "0x1",
         chainName: "Ethereum",
         chainShort: "eth",
+        nativeCurrency: {
+          name: "Ether",
+          symbol: "ETH",
+          decimals: 18,
+        },
         icon: getChainIcon("eth"),
         rpcUrl: "https://rpc.ankr.com/eth",
         rpcUrls: [
@@ -90,6 +118,30 @@ export const useWeb3Store = defineStore({
           "https://rpc.lokibuilder.xyz/wallet",
           "https://api.stateless.solutions/ethereum/v1/demo",
         ],
+        blockExplorerUrls: ["https://etherscan.io"],
+      },
+      "0x2105": {
+        chainId: "0x2105",
+        chainName: "Base",
+        chainShort: "base",
+        nativeCurrency: {
+          name: "Ether",
+          symbol: "ETH",
+          decimals: 18,
+        },
+        icon: getChainIcon("eth"),
+        rpcUrl: "https://mainnet.base.org",
+        rpcUrls: [
+          "https://mainnet.base.org",
+          "https://base.llamarpc.com",
+          "https://base-mainnet.public.blastapi.io",
+          "https://1rpc.io/base",
+          "https://gateway.tenderly.co/public/base",
+          "https://base.drpc.org",
+          "https://base.meowrpc.com",
+          "https://base.rpc.subquery.network/public",
+        ],
+        blockExplorerUrls: ["https://basescan.org"],
       },
     },
     cachedTokens: {
@@ -232,7 +284,16 @@ export const useWeb3Store = defineStore({
       while (retries < this.maxRetries && switchedRPCCount <= RPCUrlsLength) {
         try {
           return await method();
-        } catch (error) {
+        } catch (error: any) {
+          console.error("RPC error", error);
+          // Check Metamask errors:
+          // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
+          // Metamask rejected.
+          if ([4001].includes(error?.code) || error?.message?.indexOf("User denied transaction")) {
+            console.log("RPC error is one of known metamask errors", error?.code);
+            throw error;
+          }
+
           const rpcUrl = (this.web3?.currentProvider as any)?.clientUrl;
           console.error(`RPC error: ${(error as Error).message}`, method, rpcUrl);
           retries++;
@@ -252,10 +313,70 @@ export const useWeb3Store = defineStore({
       this.currentRpcIndex = (this.currentRpcIndex + 1) % rpcUrls.length;
       const newRpcUrl = rpcUrls[this.currentRpcIndex];
       console.log(`Switching to RPC URL: ${newRpcUrl}`, this.currentRpcIndex);
-      this.web3 = new Web3(newRpcUrl);
+      console.log(this.web3);
+      if (!this.web3) {
+        this.web3 = new Web3(newRpcUrl);
+      } else {
+        this.web3?.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
+      }
+
     },
     delay(ms: number): Promise<void> {
       return new Promise(resolve => setTimeout(resolve, ms));
     },
   },
 });
+
+/**
+ * Possible upgrade of callWithRetry would be creating a custom provider, so there will be no need to call any other
+ * method such as callWithRetry, but it can be used as is and internal logic of switching RPCs can be done inside
+ * this custom provider.
+ * Small Problem: if we are using already initialized provider passed from Metamask or something, we have to get the
+ * url from it and maybe some other settings also?
+ * TODO: pass chainId also to the provider
+ * TODO: override call method also
+ *
+ * Example:
+ *
+ * class CustomWeb3Provider extends Web3.providers.HttpProvider {
+ *   constructor(url, options = { suppressErrors: false, maxRetries: 3, fallbackNode: null }) {
+ *     super(url);  // Call the parent constructor (HttpProvider)
+ *     this.options = options;  // Store custom options
+ *     this.retryCount = 0;     // Initialize retry counter
+ *   }
+ *
+ *   // Override the send() method to add custom logic
+ *   send(payload, callback) {
+ *     const handleSend = (retryCount = 0) => {
+ *       super.send(payload, (error, result) => {
+ *         if (error) {
+ *           // Handle retries if maxRetries is set
+ *           if (retryCount < this.options.maxRetries) {
+ *             console.warn(`Retrying... (${retryCount + 1}/${this.options.maxRetries})`);
+ *             return handleSend(retryCount + 1); // Retry transaction
+ *           }
+ *
+ *           // Handle fallback node if provided and retries exhausted
+ *           if (this.options.fallbackNode && retryCount >= this.options.maxRetries) {
+ *             console.warn('Switching to fallback node:', this.options.fallbackNode);
+ *             this.setProvider(new Web3.providers.HttpProvider(this.options.fallbackNode));  // Switch to fallback node
+ *             return handleSend(0);  // Reset retry counter and try again
+ *           }
+ *
+ *           // Error suppression logic
+ *           if (this.options.suppressErrors) {
+ *             console.warn('Error suppressed:', error.message);  // Log as warning, suppress console.error
+ *             callback(null, null);  // Suppress the error in the callback
+ *           } else {
+ *             callback(error, null);  // Return the error if not suppressed
+ *           }
+ *         } else {
+ *           callback(null, result);  // Pass result if no error
+ *         }
+ *       });
+ *     };
+ *
+ *     handleSend();  // Initiate the send process with retry logic
+ *   }
+ * }
+ */

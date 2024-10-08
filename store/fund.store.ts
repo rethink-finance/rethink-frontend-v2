@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
+import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import NavCalculator from "~/assets/contracts/NAVCalculator.json";
@@ -11,7 +12,7 @@ import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
-import { formatJson, pluralizeWord } from "~/composables/utils";
+import { cleanComplexWeb3Data, formatJson, pluralizeWord } from "~/composables/utils";
 import { useAccountStore } from "~/store/account.store";
 import { useFundsStore } from "~/store/funds.store";
 import { useToastStore } from "~/store/toast.store";
@@ -329,7 +330,7 @@ export const useFundStore = defineStore({
     },
     // @ts-expect-error: we should extend the return type as Contract<...>...
     fundGovernanceTokenContract(): Contract {
-      return new this.web3.eth.Contract(ERC20, this.fund?.governanceToken.address);
+      return new this.web3.eth.Contract(ERC20Votes.abi, this.fund?.governanceToken.address);
     },
   },
   actions: {
@@ -783,13 +784,12 @@ export const useFundStore = defineStore({
 
       if (!this.fundsStore.allNavMethods?.length) {
         const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
-        const fundAddresses: string[] = fundsInfoArrays[0];
 
         // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
         // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
         // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
         console.log("[CURRENT NAV] simulate fetch all nav methods")
-        await this.fundsStore.fetchAllNavMethods(fundAddresses);
+        await this.fundsStore.fetchAllNavMethods(fundsInfoArrays);
       }
       console.log("[CURRENT NAV] START SIMULATE:")
 
@@ -851,14 +851,18 @@ export const useFundStore = defineStore({
           callData.push(prepNAVMethodNFT(navEntry.details));
           // callData.push(this.fundStore.fund?.safeAddress);
         } else if (navEntry.positionType === PositionType.Composable) {
-          callData.push(prepNAVMethodComposable(navEntry.details));
+          callData.push(prepNAVMethodComposable(
+            navEntry.details,
+            navEntry.pastNAVUpdateEntrySafeAddress,
+            this.fund?.safeAddress,
+          ));
         }
 
         callData.push(
           ...[
             this.fund?.address, // fund
             0, // navEntryIndex
-            navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
+            false, // isPastNAVUpdate -- set to false to simulate on current fund.
             parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
             parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
             navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
@@ -872,6 +876,8 @@ export const useFundStore = defineStore({
         navEntry.simulatedNav = 0n;
 
         console.log("simulateNAVMethodValue isNavSimulationLoading:", this.isNavSimulationLoading)
+        console.log("navCalculationMethod:", navCalculationMethod)
+        console.log("callData:", callData)
         try {
           const simulatedVal: bigint = await this.callWithRetry(() =>
             this.navCalculatorContract.methods[
@@ -1303,36 +1309,39 @@ export const useFundStore = defineStore({
             data: this.fundContract.methods.executeNAVUpdate(navExecutorAddr).encodeABI(),
           },
         );
-        return await this.fundContract.methods
-          .executeNAVUpdate(navExecutorAddr)
-          .send({
-            from: this.activeAccountAddress,
-            maxPriorityFeePerGas: gasPrice,
-          })
-          .on("transactionHash", (hash: any) => {
-            console.log("tx hash: " + hash);
-            this.toastStore.warningToast(
-              "The transaction has been submitted. Please wait for it to be confirmed.",
-            );
-          })
-          .on("receipt", (receipt: any) => {
-            console.log(receipt);
-            if (receipt.status) {
-              this.toastStore.successToast("The recalculation of OIV NAV has Succeeded");
-            } else {
-              this.toastStore.errorToast(
-                "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
+
+        return await this.callWithRetry(() =>
+          this.fundContract.methods
+            .executeNAVUpdate(navExecutorAddr)
+            .send({
+              from: this.activeAccountAddress,
+              maxPriorityFeePerGas: gasPrice,
+            })
+            .on("transactionHash", (hash: any) => {
+              console.log("tx hash: " + hash);
+              this.toastStore.warningToast(
+                "The transaction has been submitted. Please wait for it to be confirmed.",
               );
-            }
-            this.loadingUpdateNav = false;
-          })
-          .on("error", (error: any) => {
-            console.log(error);
-            this.loadingUpdateNav = false;
-            this.toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support.",
-            );
-          });
+            })
+            .on("receipt", (receipt: any) => {
+              console.log(receipt);
+              if (receipt.status) {
+                this.toastStore.successToast("The recalculation of OIV NAV has Succeeded");
+              } else {
+                this.toastStore.errorToast(
+                  "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
+                );
+              }
+              this.loadingUpdateNav = false;
+            })
+            .on("error", (error: any) => {
+              console.log(error);
+              this.loadingUpdateNav = false;
+              this.toastStore.errorToast(
+                "There has been an error. Please contact the Rethink Finance support.",
+              );
+            }),
+        )
       } catch (error) {
         console.error("Error updating NAV: ", error);
         this.loadingUpdateNav = false;
