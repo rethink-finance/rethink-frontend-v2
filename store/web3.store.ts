@@ -124,6 +124,12 @@ export const useWeb3Store = defineStore({
         chainId: "0x2105",
         chainName: "Base",
         chainShort: "base",
+        nativeCurrency: {
+          name: "Ether",
+          symbol: "ETH",
+          decimals: 18,
+        },
+        icon: getChainIcon("eth"),
         rpcUrl: "https://mainnet.base.org",
         rpcUrls: [
           "https://mainnet.base.org",
@@ -135,6 +141,7 @@ export const useWeb3Store = defineStore({
           "https://base.meowrpc.com",
           "https://base.rpc.subquery.network/public",
         ],
+        blockExplorerUrls: ["https://basescan.org"],
       },
     },
     cachedTokens: {
