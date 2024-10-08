@@ -56,7 +56,7 @@ export default interface IFund {
   governanceTokenTotalSupply: bigint;
   totalNAVWei: bigint;
   totalDepositBalance: bigint;
-  cumulativeReturnPercent: number; // TODO
+  cumulativeReturnPercent?: number;
   monthlyReturnPercent: number; // TODO
   sharpeRatio: number; // TODO
   positionTypeCounts: IPositionTypeCount[];
