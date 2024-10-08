@@ -64,7 +64,10 @@
           </v-btn>
         </UiTooltipClick>
       </template>
-      <FundGovernanceTableTrendingDelegates :items="trendingDelegates" />
+      <FundGovernanceTableTrendingDelegates
+        :items="trendingDelegates"
+        :loading="loadingTrendingDelegate"
+      />
     </UiMainCard>
 
     <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" />
@@ -188,6 +191,77 @@ const totalVotingPower = computed(() => {
   return fundStore?.fund?.fundTokenTotalSupply || 0;
 });
 
+// subtitle for trending delegates
+const trendingDelegatesSubtitle = computed(() => {
+  if (trendingDelegates.value.length === 1) {
+    return "1 Delegated Wallet";
+  }
+
+  return trendingDelegates.value.length + " Delegated Wallets";
+});
+
+const loadingTrendingDelegate = ref(false);
+
+const fetchTrendingDelegates = async () => {
+  const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
+  console.log("currentBlock trending delegates:", currentBlock);
+
+  let fromBlock = BigInt(currentBlock);
+  const endBlock = BigInt(0);
+  let chunkSize = 1000n;
+  const minChunkSize = 1000n;
+  let trendingDelegatesEvents: any[] = [];
+  let delegateVotesChangedEvents: any[] = [];
+
+  while (fromBlock > endBlock) {
+    loadingTrendingDelegate.value = true;
+
+    let toBlock = fromBlock - chunkSize + 1n;
+    if (toBlock < endBlock) {
+      toBlock = endBlock;
+    }
+
+    console.log("TD - chunkSize: ", chunkSize);
+    console.log(`TD - Fetching events from ${fromBlock} to ${toBlock}`);
+
+    try {
+      // fetch DelegateChanged events
+      const eventsDC = await fundStore.fundContract.getPastEvents(
+        "DelegateChanged",
+        {
+          fromBlock: Number(toBlock),
+          toBlock: Number(fromBlock),
+        }
+      );
+
+      trendingDelegatesEvents = trendingDelegatesEvents
+        .concat(eventsDC)
+        .sort((a, b) => Number(b.blockNumber) - Number(a.blockNumber));
+
+      trendingDelegates.value = await parseTrendingDelegateEvents(
+        trendingDelegatesEvents
+      );
+
+      // double the chunk size for the next iteration
+      chunkSize *= 2n;
+      console.log("Fetched and doubling chunkSize to: ", chunkSize);
+
+      fromBlock = toBlock - 1n; // prepare for the next range
+    } catch (error: any) {
+      console.error("Error fetching events: ", error);
+
+      // if fetching failed, halve the chunk size
+      chunkSize /= 2n;
+      if (chunkSize < minChunkSize) {
+        chunkSize = minChunkSize;
+      }
+      console.log("Error encountered, reducing chunkSize to: ", chunkSize);
+    }
+  }
+  loadingTrendingDelegate.value = false;
+  console.log("All DelegateChanged events fetched");
+};
+
 const parseTrendingDelegateEvents = async (eventsDelegateChanged: any[]) => {
   const delegationsMap: Record<
     string,
@@ -203,7 +277,7 @@ const parseTrendingDelegateEvents = async (eventsDelegateChanged: any[]) => {
       (delegatorsSet) => !delegatorsSet.delegator.has(delegator)
     );
 
-    //if the member is not yet in the map, add them
+    // if the member is not yet in the map, add them
     if (!delegationsMap[delegatedMember]) {
       delegationsMap[delegatedMember] = {
         delegator: new Set(),
@@ -262,15 +336,6 @@ async function getVotingPowerAndImpact(delegatedAddress: string) {
     impact: impact.toFixed(0) + "%",
   };
 }
-
-// Now you can use finalTrendingDelegates as a reactive value
-const trendingDelegatesSubtitle = computed(() => {
-  if (trendingDelegates.value.length === 1) {
-    return "1 Delegated Wallet";
-  }
-
-  return trendingDelegates.value.length + " Delegated Wallets";
-});
 
 type DropdownOption = {
   click: () => void;
@@ -671,73 +736,6 @@ const startFetch = async () => {
     console.log("fetch all blocks");
     await fetchProposals(currentBlock, 0);
   }
-};
-
-watch(trendingDelegates, (newVal) => {
-  console.log("Updated trending delegates:", newVal);
-});
-
-const loadingTrendingDelegate = ref(false);
-
-const fetchTrendingDelegates = async () => {
-  const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
-  console.log("currentBlock trending delegates:", currentBlock);
-
-  let fromBlock = BigInt(currentBlock);
-  const endBlock = BigInt(0);
-  let chunkSize = 1000n;
-  const minChunkSize = 1000n;
-  let trendingDelegatesEvents: any[] = [];
-  let delegateVotesChangedEvents: any[] = [];
-
-  while (fromBlock > endBlock) {
-    loadingTrendingDelegate.value = true;
-
-    let toBlock = fromBlock - chunkSize + 1n;
-    if (toBlock < endBlock) {
-      toBlock = endBlock;
-    }
-
-    console.log("TD - chunkSize: ", chunkSize);
-    console.log(`TD - Fetching events from ${fromBlock} to ${toBlock}`);
-
-    try {
-      //fetch DelegateChanged events
-      const eventsDC = await fundStore.fundContract.getPastEvents(
-        "DelegateChanged",
-        {
-          fromBlock: Number(toBlock),
-          toBlock: Number(fromBlock),
-        }
-      );
-
-      trendingDelegatesEvents = trendingDelegatesEvents
-        .concat(eventsDC)
-        .sort((a, b) => Number(b.blockNumber) - Number(a.blockNumber));
-
-      trendingDelegates.value = await parseTrendingDelegateEvents(
-        trendingDelegatesEvents
-      );
-
-      // double the chunk size for the next iteration
-      chunkSize *= 2n;
-      console.log("Fetched and doubling chunkSize to: ", chunkSize);
-
-      fromBlock = toBlock - 1n; // prepare for the next range
-    } catch (error: any) {
-      console.error("Error fetching events: ", error);
-
-      // if fetching failed, halve the chunk size
-      chunkSize /= 2n;
-      if (chunkSize < minChunkSize) {
-        chunkSize = minChunkSize;
-      }
-
-      console.log("Error encountered, reducing chunkSize to: ", chunkSize);
-    }
-  }
-  loadingTrendingDelegate.value = false;
-  console.log("All events fetched");
 };
 </script>
 

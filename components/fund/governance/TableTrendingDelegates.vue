@@ -5,6 +5,7 @@
     :headers="headers"
     :items="items"
     items-per-page="-1"
+    :loading="loading"
   >
     <template #[`item.delegated_members`]="{ item }">
       <div class="data-cell__title">
@@ -47,6 +48,10 @@ export default defineComponent({
     items: {
       type: Array as () => ITrendingDelegates[],
       default: () => [],
+    },
+    loading: {
+      type: Boolean,
+      default: false,
     },
   },
   data: () => ({
