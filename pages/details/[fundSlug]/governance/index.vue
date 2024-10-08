@@ -33,9 +33,7 @@
           <div class="tools__val">
             {{ proposalsSuccessRate }}
           </div>
-          <div class="tools__subtext">
-            Success Rate
-          </div>
+          <div class="tools__subtext">Success Rate</div>
         </div>
       </template>
       <FundGovernanceProposalsTable
@@ -44,7 +42,10 @@
       />
     </UiMainCard>
 
-    <UiMainCard title="Trending Delegates" subtitle="4 Delegated Wallets">
+    <UiMainCard
+      title="Trending Delegates"
+      :subtitle="trendingDelegatesSubtitle"
+    >
       <template #header-right>
         <UiTooltipClick
           :hide-after="6000"
@@ -95,7 +96,6 @@
 
 <script setup lang="ts">
 import type IFund from "~/types/fund";
-import type ITrendingDelegates from "~/types/trending_delegates";
 
 // components
 import { useAccountStore } from "~/store/account.store";
@@ -106,6 +106,7 @@ import { useWeb3Store } from "~/store/web3.store";
 import { ProposalState } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import type ITrendingDelegates from "~/types/trending_delegates";
 const router = useRouter();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
@@ -121,13 +122,13 @@ const { shouldUserDelegate } = toRefs(fundStore);
 const governanceProposals = computed(() => {
   const proposals = governanceProposalStore.getProposals(
     web3Store.chainId,
-    fundStore.fund?.address,
+    fundStore.fund?.address
   );
 
   // set updateSettingsProposals to proposals that have updateSettings calldata
   updateSettingsProposals.value = proposals.filter((proposal) => {
     return proposal.calldataTags?.some(
-      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS,
+      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS
     );
   });
 
@@ -149,7 +150,7 @@ const proposalsCountText = computed(() => {
 });
 const pendingProposals = computed(() => {
   return governanceProposals.value.filter(
-    (proposal) => proposal.state === ProposalState.Pending,
+    (proposal) => proposal.state === ProposalState.Pending
   );
 });
 const pendingProposalsCountText = computed(() => {
@@ -163,7 +164,7 @@ const hasUpdateSettingsProposal = computed(() => {
 });
 const proposalsSuccessRate = computed(() => {
   const successProposals = governanceProposals.value.filter((proposal) =>
-    [ProposalState.Succeeded, ProposalState.Executed].includes(proposal.state),
+    [ProposalState.Succeeded, ProposalState.Executed].includes(proposal.state)
   );
   const allFinishedProposalsCount =
     governanceProposals.value.length - pendingProposals.value.length;
@@ -180,33 +181,96 @@ const proposalsSuccessRate = computed(() => {
 // page we want to stop fetching proposals.
 const shouldFetchProposals = ref(false);
 
-// TODO Dummy data for trending delegates
-const trendingDelegates: ITrendingDelegates[] = [
-  // {
-  //   delegated_members: "0x1f98dgdaddasdfgF984",
-  //   delegators: "16 Members",
-  //   impact: "10%",
-  //   voting_power: "570.000.000 SOON",
-  // },
-  // {
-  //   delegated_members: "0xEd2026078669d1135991E850c88Cf71cdAEB4d00",
-  //   delegators: "13 Members",
-  //   impact: "20%",
-  //   voting_power: "850.000.000 SOON",
-  // },
-  // {
-  //   delegated_members: "0x1f98dgdaddasdfgF984",
-  //   delegators: "8 Members",
-  //   impact: "8%",
-  //   voting_power: "440.000.000 SOON",
-  // },
-  // {
-  //   delegated_members: "0xEd2026078669d1135991E850c88Cf71cdAEB4d00",
-  //   delegators: "5 Members",
-  //   impact: "16%",
-  //   voting_power: "720.000.000 SOON",
-  // },
-];
+// trending delegates
+const trendingDelegates = ref<ITrendingDelegates[]>([]);
+
+const totalVotingPower = computed(() => {
+  return fundStore?.fund?.fundTokenTotalSupply || 0;
+});
+
+const parseTrendingDelegateEvents = async (eventsDelegateChanged: any[]) => {
+  const delegationsMap: Record<
+    string,
+    { delegator: Set<string>; event: Set<any> }
+  > = {};
+
+  eventsDelegateChanged.forEach((event) => {
+    const delegator = event.returnValues.delegator; // the one who delegates
+    const delegatedMember = event.returnValues.toDelegate; // the member being delegated
+
+    // only add delegator if it's not already in the set or if its not already in any other set
+    const shouldAddDelegator = Object.values(delegationsMap).every(
+      (delegatorsSet) => !delegatorsSet.delegator.has(delegator)
+    );
+
+    //if the member is not yet in the map, add them
+    if (!delegationsMap[delegatedMember]) {
+      delegationsMap[delegatedMember] = {
+        delegator: new Set(),
+        event: new Set(),
+      };
+    }
+
+    if (shouldAddDelegator) {
+      delegationsMap[delegatedMember].delegator.add(delegator);
+      delegationsMap[delegatedMember].event.add(event);
+    }
+  });
+
+  // prepare the trending delegates
+  const delegates: ITrendingDelegates[] = [];
+
+  await Promise.all(
+    Object.entries(delegationsMap).map(
+      async ([delegatedMember, delegatorsSet]) => {
+        const { votingPower, impact } =
+          await getVotingPowerAndImpact(delegatedMember);
+
+        const output = {
+          delegated_members: delegatedMember,
+          delegators: delegatorsSet.delegator.size,
+          impact: impact ?? "0%",
+          voting_power:
+            votingPower ?? "0 " + fundStore.fund?.governanceToken.symbol,
+        };
+
+        if (delegatorsSet.delegator.size >= 1) {
+          delegates.push(output);
+        }
+      }
+    )
+  );
+
+  console.log("delegationsMap: ", delegationsMap);
+  console.log("trendingDelegates: ", trendingDelegates);
+
+  return delegates as ITrendingDelegates[];
+};
+
+async function getVotingPowerAndImpact(delegatedAddress: string) {
+  const votingPower = await fundStore.fundGovernanceTokenContract.methods
+    .getVotes(delegatedAddress)
+    .call();
+
+  const totalFundSupply = Number(fundStore?.fund?.fundTokenTotalSupply || 0);
+  // delegatedMemberVotingPower * 100 / totalFundSupply
+  const impact = (Number(votingPower) * 100) / totalFundSupply;
+
+  return {
+    votingPower:
+      commify(votingPower) + " " + fundStore.fund?.governanceToken.symbol,
+    impact: impact.toFixed(0) + "%",
+  };
+}
+
+// Now you can use finalTrendingDelegates as a reactive value
+const trendingDelegatesSubtitle = computed(() => {
+  if (trendingDelegates.value.length === 1) {
+    return "1 Delegated Wallet";
+  }
+
+  return trendingDelegates.value.length + " Delegated Wallets";
+});
 
 type DropdownOption = {
   click: () => void;
@@ -218,7 +282,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
     click: () => {
       // change route to direct execution
       router.push(
-        `/details/${fundStore.selectedFundSlug}/governance/direct-execution`,
+        `/details/${fundStore.selectedFundSlug}/governance/direct-execution`
       );
     },
   },
@@ -226,7 +290,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
     click: () => {
       // change route to delegated permissions
       router.push(
-        `/details/${fundStore.selectedFundSlug}/governance/delegated-permissions`,
+        `/details/${fundStore.selectedFundSlug}/governance/delegated-permissions`
       );
     },
   },
@@ -250,7 +314,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
 
 const handleNavigateToCreateProposal = () => {
   router.push(
-    `/details/${fundStore.selectedFundSlug}/governance/fund-settings`,
+    `/details/${fundStore.selectedFundSlug}/governance/fund-settings`
   );
 };
 const handleGoToFProposal = () => {
@@ -262,7 +326,7 @@ const handleGoToFProposal = () => {
   }
 
   router.push(
-    `/details/${fundStore.selectedFundSlug}/governance/proposal/${createdBlockNumber}-${proposalId}`,
+    `/details/${fundStore.selectedFundSlug}/governance/proposal/${createdBlockNumber}-${proposalId}`
   );
 };
 const createProposalDropdownOptions = Object.keys(dropdownOptions).map(
@@ -271,7 +335,7 @@ const createProposalDropdownOptions = Object.keys(dropdownOptions).map(
       label: key,
       disabled: dropdownOptions[key]?.disabled || false,
     };
-  },
+  }
 );
 
 const selectOption = (option: string) => {
@@ -295,7 +359,7 @@ const openDelegateDialog = () => {
 
 const fetchProposals = async (
   rangeStartBlock: number,
-  rangeEndBlock: number,
+  rangeEndBlock: number
 ) => {
   if (!fundStore.fund?.governanceToken.decimals) {
     console.error("No fund governance token decimals found.");
@@ -330,7 +394,7 @@ const fetchProposals = async (
       "\nBIGGEST to smallest from: ",
       rangeEndBlock,
       " to: ",
-      rangeStartBlock,
+      rangeStartBlock
     );
     let toBlock = Math.max(rangeStartBlock, 0);
     let fromBlock = Math.max(toBlock - chunkSize + 1, rangeEndBlock);
@@ -348,7 +412,7 @@ const fetchProposals = async (
         "BGsm fetch ProposalCreated events from: ",
         fromBlock,
         " to ",
-        toBlock,
+        toBlock
       );
 
       let chunkEvents;
@@ -360,13 +424,13 @@ const fetchProposals = async (
             {
               fromBlock,
               toBlock,
-            },
+            }
           );
           console.log(
             "chunkevents fetched: ",
             chunkEvents,
             " chunksize: ",
-            chunkSize,
+            chunkSize
           );
 
           chunkSize *= 2;
@@ -382,7 +446,7 @@ const fetchProposals = async (
             toBlock,
             "error, wait ",
             waitTimeAfterError,
-            error,
+            error
           );
 
           if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
@@ -393,7 +457,7 @@ const fetchProposals = async (
             fromBlock = Math.max(toBlock - chunkSize + 1, 0);
           }
           await new Promise((resolve) =>
-            setTimeout(resolve, waitTimeAfterError),
+            setTimeout(resolve, waitTimeAfterError)
           );
         }
       }
@@ -406,22 +470,23 @@ const fetchProposals = async (
         "set BlockFetchedRanges toBlock: ",
         toBlock,
         " fromBlock ",
-        fromBlock,
+        fromBlock
       );
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
         web3Store.chainId,
         fundStore.fund?.address,
         toBlock,
-        fromBlock,
+        fromBlock
       );
 
       // Proposals were fetched successfully.
       // Increase from and to blocks range.
       toBlock = fromBlock - 1;
       fromBlock = Math.max(toBlock - chunkSize + 1, 0);
-      console.warn("fromBlock: ", +fromBlock, "toBlocK: ", toBlock);
+      console.warn("fromBlock: ", +fromBlock, "toBlock: ", toBlock);
 
-      const lastProposal = governanceProposals.value[governanceProposals.value.length - 1];
+      const lastProposal =
+        governanceProposals.value[governanceProposals.value.length - 1];
       console.warn("LAST PROPOSAL", lastProposal);
       if (toBlock <= 0 || lastProposal?.createdTimestamp < targetTimestamp) {
         break;
@@ -443,7 +508,7 @@ const fetchProposals = async (
           "smBG fetch ProposalCreated events from: ",
           fromBlock,
           " to ",
-          toBlock,
+          toBlock
         );
         try {
           chunkEvents = await fundStore.fundGovernorContract.getPastEvents(
@@ -451,14 +516,14 @@ const fetchProposals = async (
             {
               fromBlock,
               toBlock,
-            },
+            }
           );
 
           console.log(
             "chunkevents fetched: ",
             chunkEvents,
             " chunksize: ",
-            chunkSize,
+            chunkSize
           );
           // All good, we can try increasing the chunk size by 2 to fetch bigger event ranges at once.
           chunkSize *= 2;
@@ -474,7 +539,7 @@ const fetchProposals = async (
             toBlock,
             "error, wait ",
             waitTimeAfterError,
-            error,
+            error
           );
 
           if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
@@ -485,7 +550,7 @@ const fetchProposals = async (
             toBlock = Math.min(fromBlock + chunkSize - 1, rangeEndBlock);
           }
           await new Promise((resolve) =>
-            setTimeout(resolve, waitTimeAfterError),
+            setTimeout(resolve, waitTimeAfterError)
           );
         }
       }
@@ -497,7 +562,7 @@ const fetchProposals = async (
         web3Store.chainId,
         fundStore.fund?.address,
         toBlock,
-        fromBlock,
+        fromBlock
       );
 
       // Proposals were fetched successfully.
@@ -524,12 +589,14 @@ const fetchProposals = async (
 
 // TODO iterate over all already fetched proposals that are still votable and update their state (createdBlockNumber).
 onMounted(() => {
+  fetchTrendingDelegates();
   startFetch();
 });
 onBeforeUnmount(() => {
   console.log("Component is being unmounted, stopping the fetch");
   shouldFetchProposals.value = false;
   loadingProposals.value = false;
+  loadingTrendingDelegate.value = false;
 });
 
 const startFetch = async () => {
@@ -561,13 +628,13 @@ const startFetch = async () => {
   const [mostRecentFetchedBlock, oldestFetchedBlock] =
     governanceProposalStore.getFundProposalsBlockFetchedRanges(
       web3Store.chainId,
-      fundStore.fund?.address,
+      fundStore.fund?.address
     );
   console.log(
     "mostRecentFetchedBlock: ",
     mostRecentFetchedBlock,
     "oldestFetchedBlock:",
-    oldestFetchedBlock,
+    oldestFetchedBlock
   );
 
   if (
@@ -577,7 +644,7 @@ const startFetch = async () => {
     console.log(
       "fetch from last fetched block to current block",
       currentBlock - 1,
-      mostRecentFetchedBlock,
+      mostRecentFetchedBlock
     );
     // From smallest to biggest.
     // But only if current block is bigger than most recent already fetched block.
@@ -589,7 +656,7 @@ const startFetch = async () => {
     // ---------| oldest fetched | xxxxxxxxxx <to fetch> xxxxxxxxxx | GENESIS BLOCK
     console.log(
       "fetch from already fetched oldest block to 0",
-      oldestFetchedBlock,
+      oldestFetchedBlock
     );
     // From biggest to smallest
     if (oldestFetchedBlock) {
@@ -599,11 +666,78 @@ const startFetch = async () => {
     // Fetch all history.
     governanceProposalStore.resetProposals(
       web3Store.chainId,
-      fundStore.fund?.address,
+      fundStore.fund?.address
     );
     console.log("fetch all blocks");
     await fetchProposals(currentBlock, 0);
   }
+};
+
+watch(trendingDelegates, (newVal) => {
+  console.log("Updated trending delegates:", newVal);
+});
+
+const loadingTrendingDelegate = ref(false);
+
+const fetchTrendingDelegates = async () => {
+  const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
+  console.log("currentBlock trending delegates:", currentBlock);
+
+  let fromBlock = BigInt(currentBlock);
+  const endBlock = BigInt(0);
+  let chunkSize = 1000n;
+  const minChunkSize = 1000n;
+  let trendingDelegatesEvents: any[] = [];
+  let delegateVotesChangedEvents: any[] = [];
+
+  while (fromBlock > endBlock) {
+    loadingTrendingDelegate.value = true;
+
+    let toBlock = fromBlock - chunkSize + 1n;
+    if (toBlock < endBlock) {
+      toBlock = endBlock;
+    }
+
+    console.log("TD - chunkSize: ", chunkSize);
+    console.log(`TD - Fetching events from ${fromBlock} to ${toBlock}`);
+
+    try {
+      //fetch DelegateChanged events
+      const eventsDC = await fundStore.fundContract.getPastEvents(
+        "DelegateChanged",
+        {
+          fromBlock: Number(toBlock),
+          toBlock: Number(fromBlock),
+        }
+      );
+
+      trendingDelegatesEvents = trendingDelegatesEvents
+        .concat(eventsDC)
+        .sort((a, b) => Number(b.blockNumber) - Number(a.blockNumber));
+
+      trendingDelegates.value = await parseTrendingDelegateEvents(
+        trendingDelegatesEvents
+      );
+
+      // double the chunk size for the next iteration
+      chunkSize *= 2n;
+      console.log("Fetched and doubling chunkSize to: ", chunkSize);
+
+      fromBlock = toBlock - 1n; // prepare for the next range
+    } catch (error: any) {
+      console.error("Error fetching events: ", error);
+
+      // if fetching failed, halve the chunk size
+      chunkSize /= 2n;
+      if (chunkSize < minChunkSize) {
+        chunkSize = minChunkSize;
+      }
+
+      console.log("Error encountered, reducing chunkSize to: ", chunkSize);
+    }
+  }
+  loadingTrendingDelegate.value = false;
+  console.log("All events fetched");
 };
 </script>
 
@@ -620,7 +754,6 @@ const startFetch = async () => {
   // remove outer border
   :deep(.data_row__panel) {
     border: 0;
-
   }
   // add more spacing to content inside
   :deep(.v-expansion-panel-text__wrapper) {
