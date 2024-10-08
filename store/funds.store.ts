@@ -1,4 +1,5 @@
 import defaultAvatar from "@/assets/images/default_avatar.webp";
+import { FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import addressesJson from "~/assets/contracts/addresses.json";
@@ -202,10 +203,17 @@ export const useFundsStore = defineStore({
           let cumulativeReturnPercent = 0;
           const totalDepositBal = dataNAVs.totalDepositBal[index] || BigInt("0");
           const totalNAV = dataNAVs.totalNav[index] || BigInt("0");
-          if(totalNAV > 0 && totalDepositBal > 0) {
-            cumulativeReturnPercent = Number(
-              (Number(totalNAV) - Number(totalDepositBal)) / Number(totalDepositBal) 
-            );
+
+          if (totalNAV > BigInt(0) && totalDepositBal > BigInt(0)) {
+            const fixedTotalNAV = FixedNumber.fromValue(totalNAV, 18);
+            const fixedTotalDepositBal = FixedNumber.fromValue(totalDepositBal, 18);
+            
+            // cumulativeReturnPercent = (totalNAV - totalDepositBal) / totalDepositBal
+            const cumulativeReturn = fixedTotalNAV
+              .sub(fixedTotalDepositBal)
+              .div(fixedTotalDepositBal);
+
+            cumulativeReturnPercent = cumulativeReturn.toUnsafeFloat();
           }
 
           const fundStartTime = dataNAVs.startTime[index];
