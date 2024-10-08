@@ -51,8 +51,10 @@ export const useWeb3Store = defineStore({
           decimals: 18,
         },
         icon: getChainIcon("matic"),
-        rpcUrl: "https://polygon-pokt.nodies.app",
+        rpcUrl: "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
         rpcUrls: [
+          // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
+          "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
           "https://polygon-rpc.com",
           "https://polygon.drpc.org",
           "https://polygon-pokt.nodies.app",
@@ -70,8 +72,10 @@ export const useWeb3Store = defineStore({
           decimals: 18,
         },
         icon: getChainIcon("arb1"),
-        rpcUrl: "https://arb1.arbitrum.io/rpc",
+        rpcUrl: "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
         rpcUrls: [
+          // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
+          "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
           "https://arb1.arbitrum.io/rpc",      // Max 10k blocks, if auth: more than 1M
           "https://arbitrum.drpc.org",      // Max 10k blocks, if auth: more than 1M
           "https://arbitrum.llamarpc.com",  // Max 10k blocks
@@ -80,22 +84,22 @@ export const useWeb3Store = defineStore({
         ],
         blockExplorerUrls: ["https://arbiscan.io"],
       },
-      "0xfc": {
-        chainId: "0xfc",
-        chainName: "Fraxtal",
-        chainShort: "frax",
-        nativeCurrency: {
-          name: "Frax",
-          symbol: "frxETH",
-          decimals: 18,
-        },
-        icon: getChainIcon("frax"),
-        rpcUrl: "https://rpc.frax.com",
-        rpcUrls: [
-          "https://rpc.frax.com",
-        ],
-        blockExplorerUrls: ["https://fraxscan.com"],
-      },
+      // "0xfc": {
+      //   chainId: "0xfc",
+      //   chainName: "Fraxtal",
+      //   chainShort: "frax",
+      //   nativeCurrency: {
+      //     name: "Frax",
+      //     symbol: "frxETH",
+      //     decimals: 18,
+      //   },
+      //   icon: getChainIcon("frax"),
+      //   rpcUrl: "https://rpc.frax.com",
+      //   rpcUrls: [
+      //     "https://rpc.frax.com",
+      //   ],
+      //   blockExplorerUrls: ["https://fraxscan.com"],
+      // },
       "0x1": {
         chainId: "0x1",
         chainName: "Ethereum",
@@ -106,8 +110,10 @@ export const useWeb3Store = defineStore({
           decimals: 18,
         },
         icon: getChainIcon("eth"),
-        rpcUrl: "https://rpc.ankr.com/eth",
+        rpcUrl: "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
         rpcUrls: [
+          // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
+          "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
           "https://eth.drpc.org",
           "https://endpoints.omniatech.io/v1/eth/mainnet/public",
           "https://ethereum.blockpi.network/v1/rpc/public",
@@ -317,6 +323,7 @@ export const useWeb3Store = defineStore({
       if (!this.web3) {
         this.web3 = new Web3(newRpcUrl);
       } else {
+        console.log("set new provider to RPC url", newRpcUrl);
         this.web3?.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
       }
 
