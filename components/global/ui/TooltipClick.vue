@@ -1,11 +1,17 @@
 <template>
-  <v-tooltip v-model="show" :open-on-hover="false" :location="location">
+  <v-tooltip
+    v-model="show"
+    :open-on-hover="false"
+    :location="location"
+    class="tooltip"
+  >
     <template #activator="{ props }">
-      <div v-bind="props" @click="showTooltip">
+      <div v-bind="props" @click="handleClick">
         <slot />
       </div>
     </template>
-    <span>{{ tooltipText }}</span>
+
+    <slot name="tooltip" />
   </v-tooltip>
 </template>
 
@@ -16,7 +22,6 @@
  * @description A Vue component that shows a tooltip on click.
  *
  * TooltipClick component props.
- * @property {string} tooltipText - The text to display in the tooltip.
  * @property {number} [hideAfter=1000] - Milliseconds after which tooltip hides automatically.
  * @property {"top" | "bottom" | "left" | "right"} [location="top"] - The position of the tooltip relative to the activator.
  */
@@ -24,25 +29,25 @@
 export default defineComponent({
   name: "TooltipClick",
   props: {
-    tooltipText: {
-      type: String,
-      default: "",
-    },
     hideAfter: {
       type: Number,
-      default: 1000,
+      default: 2000,
     },
     location: {
       type: String as PropType<"top" | "bottom" | "left" | "right">,
       default: "top",
     },
+    showTooltip: {
+      type: Boolean,
+      default: true,
+    },
   },
-  setup(props) {
+  setup(props, { slots }) {
     const show = ref(false);
     let timerId: ReturnType<typeof setTimeout> | undefined;
-
-    const showTooltip = () => {
-      if (props.tooltipText === "") {
+    const handleClick = () => {
+      console.log("showTooltip", props.showTooltip);
+      if (!props.showTooltip) {
         return;
       }
 
@@ -62,7 +67,7 @@ export default defineComponent({
     });
     return {
       show,
-      showTooltip,
+      handleClick,
     };
   },
 });

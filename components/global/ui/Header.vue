@@ -9,12 +9,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 32px;
   &__title {
-    font-size: $text-xl;
-    color: $color-title;
-    font-weight: 500;
-    letter-spacing: $letter-spacing-lg;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1;
+    color: $color-white;
   }
   &__subtitle {
     color: $color-text-irrelevant;

@@ -1,6 +1,6 @@
 <template>
   <div class="data_bar">
-    <div v-if="title" class="data_bar__title">
+    <div v-if="title" class="data_bar__title subtitle_white">
       {{ title }}
     </div>
     <div class="data_bar__body" :class="{'data_bar__body--bg-transparent': bgTransparent}">
@@ -29,10 +29,6 @@ export default defineComponent({
 .data_bar {
   width: 100%;
   &__title {
-    font-size: 1rem;
-    font-weight: bold;
-    color: $color-subtitle;
-    line-height: 1;
     margin-bottom: 0.75rem;
     display: flex;
   }
@@ -46,8 +42,7 @@ export default defineComponent({
       align-items: center;
       display: flex;
       justify-content: space-between;
-      border: 1px solid $color-border-dark;
-      background: $color-gray-light-transparent;
+      background: $color-card-background;
       padding: 1rem;
       flex-direction: row;
       border-radius: $default-border-radius;
@@ -112,7 +107,7 @@ export default defineComponent({
     .data_bar__subtitle {
       font-size: $text-sm;
       line-height: 1;
-      color: $color-light-subtitle;
+      color: $color-steel-blue;
       align-items: center;
     }
   }

@@ -9,28 +9,30 @@
     :cell-props="methodProps"
     class="main_table nav_entries"
     show-expand
+    :search="search"
     expand-on-click
     item-value="detailsHash"
     :show-select="selectable"
     items-per-page="-1"
     @input="onSelectionChanged"
   >
-    <template #[`body.prepend`]>
-      <tr v-if="showSummaryRow && (showLastNavUpdateValue || showSimulatedNav)" class="nav_entries__summary_row">
-        <td><strong>Total</strong></td>
-        <td />
-        <td />
-        <td />
-        <td v-if="showLastNavUpdateValue" class="text-right font-weight-black">
-          <div>
-            {{ formattedTotalLastNAV }}
-          </div>
-        </td>
-        <td v-if="showSimulatedNav" class="text-right font-weight-black">
-          <div :class="`item-simulated-nav ${simulatedNavErrorCount > 0 ? 'item-simulated-nav--error' : ''}`">
-            <div>
-              {{ formattedTotalSimulatedNAV }}
-            </div>
+
+    <!-- template for header simulated  -->
+    <template #[`header.pastNavValueFormatted`]>
+      Last NAV Update
+      <div v-if="showSummaryRow && showLastNavUpdateValue" class="text-right">
+        {{ formattedTotalLastNAV }}
+      </div>
+    </template>
+    <template #[`header.simulatedNavFormatted`]>
+      <th>
+        <div class="d-flex">
+          Simulated NAV
+          <FundNavSimulateButton class="ms-1" />
+        </div>
+        <div v-if="showSummaryRow && showSimulatedNav" class="bottom">
+          <div class="text-right">
+            {{ formattedTotalSimulatedNAV }}
             <div
               v-if="simulatedNavErrorCount > 0"
               class="ms-2 justify-center align-center d-flex"
@@ -47,11 +49,8 @@
               </v-tooltip>
             </div>
           </div>
-        </td>
-        <td />
-        <td v-if="deletable" />
-        <td v-if="selectable" />
-      </tr>
+        </div>
+      </th>
     </template>
     <template #[`item.index`]="{ index }">
       <strong class="td_index">{{ index + 1 }}</strong>
@@ -116,7 +115,6 @@
           v-if="item.pastNAVUpdateEntryFundAddress || item.isSimulatedNavError"
           class="ms-2 justify-center align-center d-flex"
         >
-          <Icon icon="octicon:question-16" width="1rem" :color="simulatedNAVIconColor(item)" />
           <v-tooltip activator="parent" location="right">
             <template v-if="item.isSimulatedNavError">
               Something went wrong while simulating NAV value. Retry simulating NAV.
@@ -132,7 +130,7 @@
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
       <UiDetailsButton
         v-if="item.detailsJson"
-        text="Details"
+        text="Raw"
         :active="isExpanded(internalItem)"
         :disabled="item.deleted || item.isAlreadyUsed"
         @click.stop="toggleExpand(internalItem)"
@@ -176,7 +174,7 @@
           </template>
           <template #activator="{ props }">
             <v-icon
-              icon="mdi-delete"
+              icon="mdi-delete-outline"
               color="error"
               v-bind="props"
             />
@@ -189,14 +187,18 @@
       <tr v-if="item.detailsJson" class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
         <td :colspan="columns.length" class="pa-0">
           <div class="nav_entries__details">
-            <div v-if="!item.isRethinkPosition" @click="copyText(item.detailsHash)">
-              <ui-tooltip-click tooltip-text="Copied">
+            <div v-if="!item.isRethinkPosition" class="detail_hash" @click="copyText(item.detailsHash)">
+              <ui-tooltip-click>
                 Details Hash: {{ item.detailsHash }}
                 <Icon
                   icon="clarity:copy-line"
                   class="section-top__copy-icon"
                   width="0.8rem"
                 />
+
+                <template #tooltip>
+                  Copied!
+                </template>
               </ui-tooltip-click>
             </div>
             <div class="nav_entries__json">
@@ -221,9 +223,9 @@ import { useFundStore } from "~/store/fund.store";
 import { useFundsStore } from "~/store/funds.store";
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
-import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
-import type INAVMethod from "~/types/nav_method";
+import { PositionType } from "~/types/enums/position_type";
 import type { INAVParts } from "~/types/fund";
+import type INAVMethod from "~/types/nav_method";
 
 
 export default defineComponent({
@@ -272,6 +274,10 @@ export default defineComponent({
       default: false,
     },
     idx: {
+      type: String,
+      default: "",
+    },
+    search: {
       type: String,
       default: "",
     },
@@ -341,6 +347,7 @@ export default defineComponent({
     formattedTotalSimulatedNAV() {
       // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
       const fund = this.fundStore.fund;
+
       const totalNAV =
         (this.totalNavMethodsSimulatedNAV || 0n) +
         (fund?.fundContractBaseTokenBalance || 0n) +
@@ -437,7 +444,7 @@ export default defineComponent({
     "fundStore.refreshSimulateNAVCounter": {
       handler() {
         // Simulate NAV method values everytime Simulate NAV button is pressed and triggerSimulateNav changes.
-        console.warn("fundStore.refreshSimulateNAVCounter:")
+        console.log("fundStore.refreshSimulateNAVCounter:")
         this.simulateNAV();
       },
     },
@@ -450,16 +457,15 @@ export default defineComponent({
     async simulateNAV() {
       if (!this.showSimulatedNav || !this.web3Store.web3 || this.isNavSimulationLoading) return;
       this.isNavSimulationLoading = true;
-      console.warn(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
+      console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
       if (!this.fundsStore.allNavMethods?.length) {
         const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
-        const fundAddresses: string[] = fundsInfoArrays[0];
 
         // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
         // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
         // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
         console.log("simulate fetch all nav methods")
-        await this.fundsStore.fetchAllNavMethods(fundAddresses);
+        await this.fundsStore.fetchAllNavMethods(fundsInfoArrays);
       }
 
       // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
@@ -531,6 +537,20 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .nav_entries {
+  @include borderGray;
+  border-color: $color-bg-transparent;
+
+  :deep(.v-table__wrapper) {
+    @include customScrollbar;
+  }
+
+  :deep(.v-data-table__tr) {
+    height: 72px;
+  }
+  :deep(.v-data-table__td) {
+    border-color: $color-bg-transparent !important;
+  }
+
   &__summary_row {
     background: $color-badge-navy;
   }
@@ -574,6 +594,11 @@ export default defineComponent({
       color: $color-error;
     }
   }
+}
+
+.detail_hash{
+  cursor: pointer;
+  margin-bottom: 30px;
 }
 
 .item-simulated-nav {

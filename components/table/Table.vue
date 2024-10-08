@@ -256,6 +256,7 @@ watch([() => props.data, () => props.columns], () => {
 <style lang="scss" scoped>
 .table_wrapper {
   overflow: auto;
+  @include customScrollbar;
 }
 .rethink-table {
   $cell-padding-inlinee: 1rem;
@@ -307,6 +308,13 @@ watch([() => props.data, () => props.columns], () => {
           margin-left: 0.125rem;
           position: relative;
           top: 2px;
+        }
+
+        // active sort arrow color
+        :deep(.sort .sort__arrow--active) {
+          path{
+            fill: $color-primary;
+          }
         }
       }
     }

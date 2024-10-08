@@ -81,16 +81,17 @@
                     <template v-if="!toggledRawProposalCalldatas[index]">
                       <template v-if="proposal?.calldataTypes[index] === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
-                          :methods="parseNavEntries(proposal?.calldatasDecoded?.[index]?.calldataDecoded)"
+                          :methods="allMethods[index]"
                           show-summary-row
                           show-simulated-nav
+                          show-base-token-balances
                           idx="[proposalId]"
                         />
                       </template>
                       <template v-else-if="proposal?.calldataTypes[index] === ProposalCalldataType.FUND_SETTINGS">
                         <!-- Show fund setting UI -->
-                        <FundSettingsExecutableCode 
-                          :calldataDecoded="proposal?.calldatasDecoded?.[index]?.calldataDecoded" 
+                        <FundSettingsExecutableCode
+                          :calldata-decoded="proposal?.calldatasDecoded?.[index]?.calldataDecoded"
                         />
                       </template>
                       <template v-else>
@@ -171,9 +172,9 @@
 </template>
 
 <script setup lang="ts">
+import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { formatPercent } from "~/composables/formatters";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 // fund store
 import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
@@ -192,6 +193,7 @@ const [createdBlockNumber, proposalId] = proposalSlug.split("-") as [bigint, str
 const fundSlug = route.params.fundSlug as string;
 const showRawCalldatas = ref(false);
 const loadingProposal = ref(false);
+const allMethods = ref<INAVMethod[][]>([]);
 console.log("proposal", proposalId);
 console.log("fundSlug", fundSlug);
 
@@ -204,14 +206,14 @@ const toggleRawProposalCalldata = (index: number) => {
 const { selectedFundSlug } = toRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
-    title: "All Proposals",
+    title: "Governance",
     disabled: false,
     to: `/details/${selectedFundSlug.value}/governance`,
   },
   {
     title: "Proposal Details",
     disabled: true,
-    to: `/details/${selectedFundSlug.value}/governance`,
+    to: `/details/${selectedFundSlug.value}/governance/proposal/${createdBlockNumber}-${proposalId}`,
   },
 ];
 
@@ -252,11 +254,11 @@ const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: remove this after BE whitelists are fixed
   // first index is a default fund settings
   const firstIndex = proposal?.calldataTypes?.indexOf(
-    ProposalCalldataType.FUND_SETTINGS
+    ProposalCalldataType.FUND_SETTINGS,
   ) ?? -1;
   // last index is a final fund settings
   const lastIndex = proposal?.calldataTypes?.lastIndexOf(
-    ProposalCalldataType.FUND_SETTINGS
+    ProposalCalldataType.FUND_SETTINGS,
   ) ?? -1;
 
   console.log("firstIndex", firstIndex);
@@ -325,6 +327,12 @@ onMounted(async () => {
     }
   } catch {}
   loadingProposal.value = false;
+
+  if (proposal.value) {
+    allMethods.value = proposal.value?.calldatasDecoded?.map((calldata) => {
+      return parseNavEntries(calldata?.calldataDecoded);
+    }) ?? [];
+  }
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);

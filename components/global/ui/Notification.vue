@@ -1,6 +1,6 @@
 <template>
   <div v-if="fund" class="deposit_redeem_notification">
-    <div>
+    <div class="d-flex">
       <Icon
         icon="zondicons:exclamation-outline"
         width="1.5rem"
@@ -23,11 +23,12 @@ const { fund } = toRefs(useFundStore());
 <style lang="scss" scoped>
 .deposit_redeem_notification {
   display: flex;
-  padding: 1rem;
-  gap: 1.5rem;
+  align-items: center;
+  padding: 16px;
+  gap: 26px;
   font-size: $text-sm;
-  color: $color-light-subtitle;
-  background: $color-gray-light-transparent;
+  color: $color-white;
+  background: $color-card-background;
   @include sm {
     @include borderGray();
     margin: 1.5rem 0;

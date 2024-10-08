@@ -10,7 +10,7 @@
   >
     <template #buttons>
       <div v-if="accountStore.isConnected">
-        <div class="deposit_button_group">
+        <div class="buttons_group">
           <template v-if="shouldUserWaitSettlementOrCancelRedemption">
             <h3>
               Wait for settlement or cancel the redemption request.
@@ -35,8 +35,9 @@
                 <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
                 <span v-bind="props">
                   <v-btn
-                    class="bg-primary text-secondary"
+                    class="button"
                     :disabled="button.disabled"
+                    variant="outlined"
                     @click="button.onClick"
                   >
                     <template #prepend>
@@ -77,7 +78,9 @@ import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
+import { useWeb3Store } from "~/store/web3.store";
 
+const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
@@ -100,7 +103,15 @@ watch(() => tokenValue.value, () => {
 const rules = [
   (value: string): boolean | IFormError => {
     if (!fund.value) return { message: "Fund data is missing.", display: true }
-    const valueWei = ethers.parseUnits(value, fund.value?.baseToken.decimals);
+    let valueWei;
+    try {
+      valueWei = ethers.parseUnits(value || "0", fund.value?.baseToken.decimals);
+    } catch {
+      return {
+        message: `Make sure the value has max ${fund.value?.baseToken.decimals} decimals.`,
+        display: false,
+      }
+    }
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
 
     console.log("[REDEEM] check user fund token balance wei: ", valueWei, fundStore.userFundTokenBalance);
@@ -131,11 +142,12 @@ const visibleErrorMessages = computed<IFormError[]>( () => {
 const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
-  if (error?.code === 4001) {
+  if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Redeem transaction was rejected.")
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
+    fundStore.fetchUserBalances();
   }
   loadingRequestRedeem.value = false;
   loadingCancelRedeem.value = false;
@@ -158,43 +170,43 @@ const requestRedemption = async () => {
   const tokensWei = ethers.parseUnits(tokenValue.value || "0", fund.value.fundToken.decimals)
   console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", fundStore.activeAccountAddress);
 
-  const ABI = [ "function requestWithdraw(uint256 amount)" ];
-  const iface = new ethers.Interface(ABI);
+  const iface = new ethers.Interface([ "function requestWithdraw(uint256 amount)" ]);
   const encodedFunctionCall = iface.encodeFunctionData("requestWithdraw", [ tokensWei ]);
-  // const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: fundStore.activeAccountAddress,
-      // gas: gasEstimate,
-      // gasPrice,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    await web3Store.callWithRetry(() =>
+      fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+        from: fundStore.activeAccountAddress,
+        maxPriorityFeePerGas: gasPrice,
+      }).on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
 
-    }).on("receipt", (receipt: any) => {
-      console.log(receipt);
+      }).on("receipt", (receipt: any) => {
+        console.log(receipt);
 
-      // TODO takes 15-20 sec for node to sync .. fix
-      // fundStore.fetchUserFundDepositRedemptionRequests();
-      if (receipt.status) {
-        toastStore.successToast(
-          "Your withdrawal request was successful. It may take 10 seconds or more for values to update.",
-        );
-        fundStore.userRedemptionRequest = {
-          amount: tokensWei,
-          timestamp: Date.now(),
-          type: FundTransactionType.Redemption,
+        // TODO takes 15-20 sec for node to sync .. fix
+        // fundStore.fetchUserFundDepositRedemptionRequests();
+        if (receipt.status) {
+          toastStore.successToast(
+            "Your withdrawal request was successful. It may take 10 seconds or more for values to update.",
+          );
+          fundStore.userRedemptionRequest = {
+            amount: tokensWei,
+            timestamp: Date.now(),
+            type: FundTransactionType.Redemption,
+          }
+          tokenValue.value = "";
+        } else {
+          toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
         }
-        tokenValue.value = "";
-      } else {
-        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-      }
 
-      loadingRequestRedeem.value = false;
-    }).on("error", (error: any) => {
-      handleError(error);
-    });
+        loadingRequestRedeem.value = false;
+      }).on("error", (error: any) => {
+        handleError(error);
+      }),
+    )
   } catch (error: any) {
     handleError(error);
   }
@@ -222,10 +234,25 @@ const buttons = ref([
 </script>
 
 <style lang="scss" scoped>
-.deposit_button_group {
+.buttons_group {
   gap: 1rem;
   display: flex;
-  justify-content: space-around;
+  flex-direction: column;
+  justify-content: center;
   flex-wrap: wrap;
+  align-items: center;
+
+
+  .button{
+    color: $color-primary !important;
+    border-color: $color-primary !important;
+
+    &:hover {
+      background: $color-primary !important;
+      color: $color-white !important;
+      border-color: $color-primary !important;
+    }
+  }
+
 }
 </style>

@@ -3,18 +3,7 @@
     <UiHeader>
       <div class="main_header__title">
         {{ title }}
-        <UiTooltipClick
-          v-if="tooltipText"
-          :tooltip-text="tooltipText"
-          :hide-after="3000"
-        >
-          <Icon
-            icon="material-symbols:info-outline"
-            class="main_header__info-icon"
-            width="1.5rem"
-            @click="tooltipClick"
-          />
-        </UiTooltipClick>
+        <slot name="subtitle" />
       </div>
 
       <v-btn
@@ -32,6 +21,7 @@
           location="top"
           @update:model-value="true"
         >
+        <!-- class="tooltip" -->
           Connect your wallet to create a proposal.
         </v-tooltip>
       </v-btn>
@@ -345,11 +335,7 @@ const nextStep = () => {
     display: flex;
     align-items: center;
     align-content: center;
-    gap: 10px;
-  }
-  &__info-icon {
-    cursor: pointer;
-    display: flex;
+    gap: 20px;
   }
 }
 .stepper {

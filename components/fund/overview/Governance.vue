@@ -1,5 +1,5 @@
 <template>
-  <div class="main_grid">
+  <div class="main_grid accordion_content">
     <UiDataRowCard :title="fund.governorAddress" subtitle="Governance Contract" />
     <UiDataRowCard :title="fund.governanceToken?.address" subtitle="Governance Token" />
     <UiDataRowCard :title="fund.votingDelay" subtitle="Voting Delay" />
@@ -36,4 +36,10 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+.accordion_content{
+  :deep(.v-expansion-panel-title) {
+      padding: 10px 8px !important;
+      font-size: 14px !important;
+  }
+}
 </style>

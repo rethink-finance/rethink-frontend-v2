@@ -35,7 +35,7 @@ function isArrowActive(key: string) {
 
   &__arrow {
     &:deep(*) {
-     fill: $color-subtitle;
+     fill: $color-steel-blue;
     }
     &--active:deep(*) {
       fill: $color-white;

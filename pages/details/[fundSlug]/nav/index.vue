@@ -17,13 +17,15 @@
         </div>
       </div>
       <div class="button_container">
-        <FundNavSimulateButton />
+        <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage`">
+          <v-btn class="text-secondary" variant="outlined">
+            Manage NAV Methods
+          </v-btn>
+        </nuxt-link>
 
         <ui-tooltip-click
-          :tooltip-text="
-            accountStore.isConnected ? '' : 'Connect your wallet to update NAV'
-          "
-          :hide-after="1500"
+          :hide-after="3000"
+          :show-tooltip="!accountStore.isConnected"
         >
           <v-btn
             :disabled="loadingUpdateNav"
@@ -41,6 +43,11 @@
             </template>
             Update NAV
           </v-btn>
+
+          <template #tooltip>
+            Connect your wallet to delegate your votes
+          </template>
+
         </ui-tooltip-click>
       </div>
     </UiHeader>
@@ -48,7 +55,7 @@
     <div class="main_card">
       <UiHeader>
         <div>
-          <div class="main_expansion_panel__subtitle mb-4">
+          <div class="subtitle_white mb-4">
             NAV Methods
           </div>
           <div>
@@ -60,13 +67,6 @@
               Learn more about NAV methods ->
             </nuxt-link>
           </div>
-        </div>
-        <div>
-          <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage`">
-            <v-btn class="text-secondary" variant="outlined">
-              Manage Methods
-            </v-btn>
-          </nuxt-link>
         </div>
       </UiHeader>
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
@@ -84,7 +84,7 @@
     </div>
 
     <div class="main_card">
-      <div class="main_expansion_panel__subtitle">
+      <div class="subtitle_white mb-4">
         NAV Updates
       </div>
       <div>

@@ -39,6 +39,8 @@ $vuetify-border-width: 1px;
     }
     &--variant-outlined {
       border-width: $vuetify-border-width;
+      border-color: $color-steel-blue;
+      color: $color-text-irrelevant !important;
       font-weight: bold;
       transition: border-color $default-transition-time ease;
 

@@ -29,6 +29,8 @@ $color-divider: #1a2234;
 $color-light-border: rgba(119, 130, 159, 1);
 $color-box-shadow: rgba(31, 95, 255, 0.16);
 $color-midnight-blue: #0c0d1229;
+$color-bg-transparent: #F6F9FF05;
+$color-bg-toast: #232E45;
 
 /* Vuetify colors */
 // Currently also defined in the plugins/vuetify.ts
@@ -148,4 +150,29 @@ $default-border-properties: (
 
   // Apply specific border position.
   #{$position}: 1px solid $border-color;
+}
+
+@mixin customScrollbar {
+    // offset the scrollbar to the left
+    padding-right: 10px;
+    margin-right: -10px;
+    
+    /* Custom scrollbar styles */
+    &::-webkit-scrollbar {
+      width: 4px; 
+      height: 4px;
+    }
+    &::-webkit-scrollbar-track {
+      background: $color-subtitle;
+      border-radius: 16px; 
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $color-primary;
+      border-radius: 16px; 
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: $color-steel-blue;
+    }
 }

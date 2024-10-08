@@ -61,7 +61,7 @@ const excludeFundAddrs = {
     "0xBb1E02AcA8F7Cb2403c0Bf3aaA74001d38Beb488",
   ],
   "0xa4b1": [
-      "0xA5138779Bb08C8DE44692e183c586817a0bcEb42",
+    "0xA5138779Bb08C8DE44692e183c586817a0bcEb42",
   ],
   "0xfc": [],
   "0x1": [],
@@ -137,6 +137,9 @@ export const useFundsStore = defineStore({
     },
   },
   actions: {
+    callWithRetry(method: any): any {
+      return this.web3Store.callWithRetry(method);
+    },
     batchFetchFundSettings() {
       /** @dev: I tried many, many things to make this BatchRequest work with web3 4.x, this is the closest I came.
        * https://docs.web3js.org/guides/web3_upgrade_guide/x/#web3-batchrequest
@@ -173,7 +176,6 @@ export const useFundsStore = defineStore({
      * Fetch funds and their metadata and NAV data.
      * This will return funds with just enough data to populate the discover table.
      * More data can be fetched from fundSettings later if needed, or added to the reader contract.
-     * - TODO: totalDepositBal (is also present if needed)
      */
     async fetchFundsMetadata(fundAddresses: string[], fundsInfo: any): Promise<IFund[]> {
       const funds: IFund[] = [];
@@ -182,11 +184,12 @@ export const useFundsStore = defineStore({
         // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
         //  not used in the contract code, so I have set it to 0. Change this part in the future
         //  if the contract changes.
-        const dataNAVs: Record<string, any[]> = await this.rethinkReaderContract.methods.getFundNavMetaData(
-          fundAddresses, 0,
-        ).call();
+        const dataNAVs: Record<string, any[]> = await this.callWithRetry(() =>
+          this.rethinkReaderContract.methods.getFundNavMetaData(
+            fundAddresses, 0,
+          ).call(),
+        );
 
-        // @dev NOTE: there is also: totalDepositBal for each fund if we need it.
         fundAddresses.forEach((address, index) => {
           if (
             excludeTestFunds &&
@@ -219,7 +222,7 @@ export const useFundsStore = defineStore({
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
             totalNAVWei: dataNAVs.totalNav[index],
-            totalDepositBalance: BigInt("0"),
+            totalDepositBalance: dataNAVs.totalDepositBal[index] || BigInt("0"),
             cumulativeReturnPercent: 0,
             monthlyReturnPercent: 0,
             sharpeRatio: 0,
@@ -302,9 +305,13 @@ export const useFundsStore = defineStore({
     },
     async fetchFundsInfoArrays() {
       const fundFactoryContract = this.fundFactoryContract;
-      const fundsLength = await fundFactoryContract.methods.registeredFundsLength().call();
+      const fundsLength = await this.callWithRetry(() =>
+        fundFactoryContract.methods.registeredFundsLength().call(),
+      );
 
-      return await fundFactoryContract.methods.registeredFundsData(0, fundsLength).call();
+      return await this.callWithRetry(() =>
+        fundFactoryContract.methods.registeredFundsData(0, fundsLength).call(),
+      );
     },
     /**
      * Fetches all funds data from the GovernableFundFactory.
@@ -325,13 +332,17 @@ export const useFundsStore = defineStore({
       this.funds.push(...funds);
 
       // Fetch all possible NAV methods for all funds
-      this.fetchAllNavMethods(fundAddresses);
+      this.fetchAllNavMethods(fundsInfoArrays);
     },
     /**
      * Fetches all NAV methods
      */
-    async fetchAllNavMethods(fundAddresses: string[]) {
-      const allFundsNavData = await this.fundStore.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call();
+    async fetchAllNavMethods(fundsInfoArrays: any[]) {
+      const fundAddresses: string[] = fundsInfoArrays[0];
+
+      const allFundsNavData = await this.callWithRetry(() =>
+        this.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call(),
+      );
       const allMethods: INAVMethod[] = [];
       this.navMethodDetailsHashToFundAddress = {};
 
@@ -365,6 +376,7 @@ export const useFundsStore = defineStore({
               // the entry was created on.
               const fundAddress = fundAddresses[fundIndex];
               parsedNavMethod.pastNAVUpdateEntryFundAddress = fundAddress;
+              parsedNavMethod.pastNAVUpdateEntrySafeAddress = fundsInfoArrays[1][fundIndex].safe;
               allMethods.push(parsedNavMethod);
               if (parsedNavMethod.detailsHash) {
                 this.navMethodDetailsHashToFundAddress[parsedNavMethod.detailsHash] = fundAddress;

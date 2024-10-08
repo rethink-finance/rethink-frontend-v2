@@ -1,8 +1,9 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
+import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import NavCalculator from "~/assets/contracts/NAVCalculator.json";
@@ -11,7 +12,7 @@ import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
-import { formatJson, pluralizeWord } from "~/composables/utils";
+import { cleanComplexWeb3Data, formatJson, pluralizeWord } from "~/composables/utils";
 import { useAccountStore } from "~/store/account.store";
 import { useFundsStore } from "~/store/funds.store";
 import { useToastStore } from "~/store/toast.store";
@@ -235,6 +236,14 @@ export const useFundStore = defineStore({
       );
       return fundAllowedDepositAddresses.includes(this.activeAccountAddress?.toLowerCase() || "");
     },
+    shouldUserDelegate(): boolean {
+      const nullAddress = "0x0000000000000000000000000000000000000000";
+      // User should delegate if he has no delegate address set.
+      return (
+        this.userFundDelegateAddress === nullAddress ||
+        !this.userFundDelegateAddress
+      );
+    },
     shouldUserRequestDeposit(): boolean {
       // User deposit request does not exist yet, he should request deposit.
       return !this.userDepositRequestExists
@@ -303,12 +312,6 @@ export const useFundStore = defineStore({
     navCalculatorContract(): Contract {
       return new this.web3.eth.Contract(NavCalculator.abi, this.web3Store.NAVCalculatorBeaconProxyAddress)
     },
-    /**
-     * Returns a block number of the transaction that created the safe contract.
-     */
-    safeContractCreationBlock(): bigint {
-      return this.web3Store.getContractCreationBlock(this.fund?.safeAddress);
-    },
     // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
     fundContract(): Contract {
       return new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress)
@@ -327,10 +330,14 @@ export const useFundStore = defineStore({
     },
     // @ts-expect-error: we should extend the return type as Contract<...>...
     fundGovernanceTokenContract(): Contract {
-      return new this.web3.eth.Contract(ERC20, this.fund?.governanceToken.address);
+      return new this.web3.eth.Contract(ERC20Votes.abi, this.fund?.governanceToken.address);
     },
   },
   actions: {
+    // Proxy method to make callWithRetry accessible as this.callWithRetry
+    callWithRetry(method: any): any {
+      return this.web3Store.callWithRetry(method);
+    },
     /**
      * Fetches all needed fund data..
      */
@@ -357,10 +364,16 @@ export const useFundStore = defineStore({
      */
     async fetchFundData(): Promise<IFund> {
       // Fetch inception date
-      const settingsData = await this.fundContract.methods.getFundSettings().call();
+      const settingsData = await this.callWithRetry(() =>
+        this.fundContract.methods.getFundSettings().call(),
+      );
       // TODO these 2 things can be fetched all at once async and even better along with other fund metadata, not here.
-      const performancePeriod = await this.fundContract.methods.feePerformancePeriod().call();
-      const managementPeriod = await this.fundContract.methods.feeManagePeriod().call();
+      const performancePeriod = await this.callWithRetry(() =>
+        this.fundContract.methods.feePerformancePeriod().call(),
+      );
+      const managementPeriod = await this.callWithRetry(() =>
+        this.fundContract.methods.feeManagePeriod().call(),
+      );
 
       // Adding properties to the existing settingsData object
       settingsData.performancePeriod = performancePeriod;
@@ -376,7 +389,9 @@ export const useFundStore = defineStore({
       this.loadingNavUpdates = true;
 
       try {
-        const dataNAV = await this.rethinkReaderContract.methods.getNAVDataForFund(this.fund?.address).call();
+        const dataNAV = await this.callWithRetry(() =>
+          this.rethinkReaderContract.methods.getNAVDataForFund(this.fund?.address).call(),
+        );
         console.log("fund NAV: ", dataNAV)
         this.fund.positionTypeCounts = this.parseFundPositionTypeCounts(dataNAV);
         this.fund.navUpdates = await this.parseFundNAVUpdates(dataNAV);
@@ -426,18 +441,28 @@ export const useFundStore = defineStore({
       } as IClockMode;
     },
     async fetchUserBalances() {
-      if (!this.activeAccountAddress) return;
+      if (
+        !this.activeAccountAddress ||
+        !this.fund?.fundToken?.address ||
+        !this.fund?.baseToken?.address ||
+        !this.fund?.governanceToken?.address ||
+        !this.fund?.address
+      ) return;
       this.loadingUserBalances = true;
 
-      const promises = await Promise.allSettled([
-        this.fetchUserBaseTokenBalance(),
-        this.fetchUserFundTokenBalance(),
-        this.fetchUserGovernanceTokenBalance(),
-        this.fetchUserFundDelegateAddress(),
-        this.fetchUserFundShareValue(),
-        this.fetchUserFundAllowance(),
-        this.fetchUserFundDepositRedemptionRequests(),
-      ]);
+      const promises = await Promise.allSettled(
+        [
+          () => this.fetchUserBaseTokenBalance(),
+          () => this.fetchUserFundTokenBalance(),
+          () => this.fetchUserGovernanceTokenBalance(),
+          () => this.fetchUserFundDelegateAddress(),
+          () => this.fetchUserFundShareValue(),
+          () => this.fetchUserFundAllowance(),
+          () => this.fetchUserFundDepositRedemptionRequests(),
+        ].map((fn: () => Promise<any>) => this.accountStore.requestConcurrencyLimit(
+          () => this.callWithRetry(fn)),
+        ),
+      );
 
       this.loadingUserBalances = false;
       return promises
@@ -449,7 +474,9 @@ export const useFundStore = defineStore({
       this.fund.pendingDepositBalanceLoading = true;
       this.fund.pendingRedemptionBalanceLoading = true;
 
-      this.fundContract.methods.getCurrentPendingDepositBal().call().then(
+      this.callWithRetry(() =>
+        this.fundContract.methods.getCurrentPendingDepositBal().call(),
+      ).then(
         (value: any) => {
           if (this.fund) {
             this.fund.pendingDepositBalance = value;
@@ -465,7 +492,9 @@ export const useFundStore = defineStore({
           this.fund.pendingDepositBalanceLoading = false;
         }
       })
-      this.fundContract.methods.getCurrentPendingWithdrawalBal().call().then(
+      this.callWithRetry(() =>
+        this.fundContract.methods.getCurrentPendingWithdrawalBal().call(),
+      ).then(
         (value: any) => {
           if (this.fund) {
             this.fund.pendingRedemptionBalance = value;
@@ -502,29 +531,34 @@ export const useFundStore = defineStore({
 
       try {
         // Fetch all token symbols, decimals and values.
-        const results = await Promise.allSettled([
-          fundContract.methods.getFundStartTime().call(),
-          fundContract.methods.fundMetadata().call() as Promise<string>,
-          fundContract.methods._feeBal().call() as Promise<string>,
-          fundBaseTokenContract.methods.balanceOf(fundSettings.safe).call() as Promise<string>,
-          fundBaseTokenContract.methods.balanceOf(fundSettings.fundAddress).call() as Promise<string>,
-          this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken) as Promise<string>,
-          this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken) as Promise<number>,
-          this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken) as Promise<string>,
-          this.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
-          governanceTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
-          this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken) as Promise<number>,
-          fundTokenContract.methods.totalSupply().call() as Promise<bigint>,  // Get un-cached total supply.
-          fundContract.methods.totalNAV().call() as Promise<bigint>,
-          fundContract.methods._totalDepositBal().call() as Promise<bigint>,
-          rethinkFundGovernorContract.methods.votingDelay().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.votingPeriod().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.proposalThreshold().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call() as Promise<number>,
-          rethinkFundGovernorContract.methods.quorumNumerator().call() as Promise<bigint>,
-          rethinkFundGovernorContract.methods.quorumDenominator().call() as Promise<bigint>,
-          rethinkFundGovernorContract.methods.CLOCK_MODE().call() as Promise<string>,
-        ]);
+        // TODO move all these metadata calls to one ReaderContract method.
+        const results = await Promise.allSettled(
+          [
+            () => fundContract.methods.getFundStartTime().call(),
+            () => fundContract.methods.fundMetadata().call(),
+            () => fundContract.methods._feeBal().call(),
+            () => fundBaseTokenContract.methods.balanceOf(fundSettings.safe).call(),
+            () => fundBaseTokenContract.methods.balanceOf(fundSettings.fundAddress).call(),
+            () => this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken),
+            () => this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken),
+            () => this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken),
+            () => this.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken),
+            () => governanceTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
+            () => this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken),
+            () => fundTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
+            () => fundContract.methods.totalNAV().call(),
+            () => fundContract.methods._totalDepositBal().call(),
+            () => rethinkFundGovernorContract.methods.votingDelay().call(),
+            () => rethinkFundGovernorContract.methods.votingPeriod().call(),
+            () => rethinkFundGovernorContract.methods.proposalThreshold().call(),
+            () => rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call(),
+            () => rethinkFundGovernorContract.methods.quorumNumerator().call(),
+            () => rethinkFundGovernorContract.methods.quorumDenominator().call(),
+            () => rethinkFundGovernorContract.methods.CLOCK_MODE().call(),
+          ].map((fn: () => Promise<any>) => this.accountStore.requestConcurrencyLimit(
+            () => this.callWithRetry(fn)),
+          ),
+        );
 
         const [
           fundStartTime,
@@ -548,11 +582,11 @@ export const useFundStore = defineStore({
           quorumNumerator,
           quorumDenominator,
           clockModeString,
-        ]: any[] = results.map(result => {
+        ]: any[] = results.map((result, index) => {
           if (result.status === "fulfilled") {
             return result.value
           }
-          console.error("Failed fetching fund data value for: ", result)
+          console.error("Failed fetching fund data value for: ", index, result)
           return undefined
         });
 
@@ -713,9 +747,12 @@ export const useFundStore = defineStore({
       // Important to know: nav update indices start with 1, not with 0.
       const promises: Promise<any>[] = Array.from(
         { length: navUpdatesLen },
-        (_, index) => this.navCalculatorContract.methods.getNAVParts(
-          this.selectedFundAddress, index + 1,
-        ).call(),
+        (_, index) =>
+          this.accountStore.requestConcurrencyLimit(() => this.callWithRetry(
+            () => this.navCalculatorContract.methods.getNAVParts(
+              this.selectedFundAddress, index + 1,
+            ).call(),
+          )),
       );
 
       const navPartsPromises = await Promise.allSettled(promises);
@@ -747,13 +784,12 @@ export const useFundStore = defineStore({
 
       if (!this.fundsStore.allNavMethods?.length) {
         const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
-        const fundAddresses: string[] = fundsInfoArrays[0];
 
         // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
         // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
         // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
         console.log("[CURRENT NAV] simulate fetch all nav methods")
-        await this.fundsStore.fetchAllNavMethods(fundAddresses);
+        await this.fundsStore.fetchAllNavMethods(fundsInfoArrays);
       }
       console.log("[CURRENT NAV] START SIMULATE:")
 
@@ -761,7 +797,13 @@ export const useFundStore = defineStore({
       const promises = [];
 
       for (const navEntry of this.fundLastNAVUpdateMethods) {
-        promises.push(this.simulateNAVMethodValue(navEntry));
+        promises.push(
+          this.accountStore.requestConcurrencyLimit(
+            () => this.callWithRetry(
+              () => this.simulateNAVMethodValue(navEntry),
+            ),
+          ),
+        );
       }
       const settled = await Promise.allSettled(promises);
       this.isNavSimulationLoading = false;
@@ -798,7 +840,7 @@ export const useFundStore = defineStore({
           navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
         }
 
-        const callData = [];
+        const callData : any[] = [];
         if (navEntry.positionType === PositionType.Liquid) {
           callData.push(prepNAVMethodLiquid(navEntry.details));
           callData.push(this.fund?.safeAddress);
@@ -809,14 +851,18 @@ export const useFundStore = defineStore({
           callData.push(prepNAVMethodNFT(navEntry.details));
           // callData.push(this.fundStore.fund?.safeAddress);
         } else if (navEntry.positionType === PositionType.Composable) {
-          callData.push(prepNAVMethodComposable(navEntry.details));
+          callData.push(prepNAVMethodComposable(
+            navEntry.details,
+            navEntry.pastNAVUpdateEntrySafeAddress,
+            this.fund?.safeAddress,
+          ));
         }
 
         callData.push(
           ...[
             this.fund?.address, // fund
             0, // navEntryIndex
-            navEntry.details.isPastNAVUpdate, // isPastNAVUpdate
+            false, // isPastNAVUpdate -- set to false to simulate on current fund.
             parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
             parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
             navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
@@ -830,10 +876,14 @@ export const useFundStore = defineStore({
         navEntry.simulatedNav = 0n;
 
         console.log("simulateNAVMethodValue isNavSimulationLoading:", this.isNavSimulationLoading)
+        console.log("navCalculationMethod:", navCalculationMethod)
+        console.log("callData:", callData)
         try {
-          const simulatedVal: bigint = await this.navCalculatorContract.methods[
-            navCalculationMethod
-          ](...callData).call();
+          const simulatedVal: bigint = await this.callWithRetry(() =>
+            this.navCalculatorContract.methods[
+              navCalculationMethod
+            ](...callData).call(),
+          );
           // console.log("simulated value: ", simulatedVal);
 
           navEntry.simulatedNavFormatted = this.formatBaseTokenValue(simulatedVal);
@@ -848,8 +898,6 @@ export const useFundStore = defineStore({
             error,
           );
         }
-      } catch (error) {
-        console.error("simulateNAVMethodValue Error simulating NAV: ", error);
       } finally {
         navEntry.isNavSimulationLoading = false;
       }
@@ -864,7 +912,9 @@ export const useFundStore = defineStore({
       navMethod.pastNavValueLoading = true;
       navMethod.pastNavValueError = false;
       try {
-        const navCacheResult = await this.navCalculatorContract.methods[calculatorMethod](this.selectedFundAddress, navMethodIndex).call()
+        const navCacheResult = await this.callWithRetry(() =>
+          this.navCalculatorContract.methods[calculatorMethod](this.selectedFundAddress, navMethodIndex).call(),
+        );
         const pastNavValue = navCacheResult.reduce(
           (acc: bigint, val: bigint) => acc + val,
           0n,
@@ -882,7 +932,10 @@ export const useFundStore = defineStore({
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable), they should all
       // have the same length, so we just use the liquid key.
       const navUpdatesLen = dataNAV[PositionType.Liquid].length;
-      const fundNavUpdateTimes = await this.fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call();
+      const fundNavUpdateTimes = await this.callWithRetry(() =>
+        this.fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call(),
+      );
+      console.warn("dataNAV ", dataNAV);
 
       // Get a list of NAV parts (total NAV, fees, OIV balance, safe balance) for each NAV update.
       const navParts = await this.fetchNavParts(navUpdatesLen);
@@ -906,7 +959,12 @@ export const useFundStore = defineStore({
       // Fetch NAV JSON entries for each NAV update.
       const promises: Promise<any>[] = Array.from(
         { length: navUpdatesLen },
-        (_, index) => this.fundContract.methods.getNavEntry(index + 1).call(),
+        (_, index) =>
+          this.accountStore.requestConcurrencyLimit(
+            () => this.callWithRetry(
+              () => this.fundContract.methods.getNavEntry(index + 1).call(),
+            ),
+          ),
       );
 
       // Each NAV update has more entries.
@@ -958,11 +1016,16 @@ export const useFundStore = defineStore({
       this.userBaseTokenBalance = BigInt("0");
 
       if (!this.fund?.baseToken?.address) {
-        throw new Error("Fund denomination token address is not available.")
+        console.log("Fund baseToken.address is not set.")
+        return
       }
-      if (!this.activeAccountAddress) throw new Error("Active account not found");
-
-      this.userBaseTokenBalance = await this.fundBaseTokenContract.methods.balanceOf(this.activeAccountAddress).call();
+      if (!this.activeAccountAddress) {
+        console.log("activeAccountAddress is not set.")
+        return
+      }
+      this.userBaseTokenBalance = await this.callWithRetry(() =>
+        this.fundBaseTokenContract.methods.balanceOf(this.activeAccountAddress).call(),
+      );
 
       console.log(`user base token balance of ${this.fund?.baseToken?.symbol} is ${this.userBaseTokenBalance}`);
       return this.userBaseTokenBalance;
@@ -974,11 +1037,16 @@ export const useFundStore = defineStore({
       this.userFundTokenBalance = BigInt("0");
 
       if (!this.fund?.fundToken?.address) {
-        throw new Error("Fund token address is not available.")
+        console.log("Fund fundToken.address is not set.")
+        return
       }
-      if (!this.activeAccountAddress) throw new Error("Active account not found");
-
-      this.userFundTokenBalance = await this.fundContract.methods.balanceOf(this.activeAccountAddress).call();
+      if (!this.activeAccountAddress) {
+        console.log("activeAccountAddress is not set.")
+        return
+      }
+      this.userFundTokenBalance = await this.callWithRetry(() =>
+        this.fundContract.methods.balanceOf(this.activeAccountAddress).call(),
+      );
 
       console.log(`user fund token balance of ${this.fund?.fundToken?.symbol} is ${this.userFundTokenBalance}`);
       return this.userFundTokenBalance;
@@ -990,13 +1058,18 @@ export const useFundStore = defineStore({
       this.userGovernanceTokenBalance = BigInt("0");
 
       if (!this.fund?.governanceToken?.address) {
-        throw new Error("Governance token address is not available.")
+        console.log("Fund governanceToken.address is not set.")
+        return
       }
-      if (!this.activeAccountAddress) throw new Error("Active account not found");
-
-      this.userGovernanceTokenBalance = await this.fundGovernanceTokenContract.methods.balanceOf(
-        this.activeAccountAddress,
-      ).call();
+      if (!this.activeAccountAddress) {
+        console.log("activeAccountAddress is not set.")
+        return
+      }
+      this.userGovernanceTokenBalance = await this.callWithRetry(() =>
+        this.fundGovernanceTokenContract.methods.balanceOf(
+          this.activeAccountAddress,
+        ).call(),
+      );
 
       console.log(`user governance token balance is ${this.userGovernanceTokenBalance} ${this.fund?.fundToken?.symbol}`);
       return this.userGovernanceTokenBalance;
@@ -1006,13 +1079,18 @@ export const useFundStore = defineStore({
      */
     async fetchUserFundDelegateAddress() {
       this.userFundDelegateAddress = "";
-      if (!this.fund?.fundToken?.address) {
-        throw new Error("Fund token address is not available.")
+      if (!this.fund?.governanceToken?.address) {
+        console.log("Fund governanceToken.address is not set.")
+        return
       }
-      if (!this.activeAccountAddress) throw new Error("Active account not found");
+      if (!this.activeAccountAddress) {
+        console.log("activeAccountAddress is not set.")
+        return
+      }
 
-      this.userFundDelegateAddress = await this.fundContract.methods.delegates(this.activeAccountAddress).call();
-
+      this.userFundDelegateAddress = await this.callWithRetry(() =>
+        this.fundContract.methods.delegates(this.activeAccountAddress).call(),
+      );
       return this.userFundDelegateAddress;
     },
     /**
@@ -1021,15 +1099,17 @@ export const useFundStore = defineStore({
      */
     async fetchUserFundAllowance() {
       this.userFundAllowance = BigInt("0");
-
       if (!this.fund?.baseToken?.address) {
-        throw new Error("Fund denomination token is not available.")
+        console.log("Fund baseToken.address is not set.")
+        return
       }
       if (!this.activeAccountAddress) return console.error("Active account not found");
 
-      this.userFundAllowance = await this.fundBaseTokenContract.methods.allowance(
-        this.activeAccountAddress, this.selectedFundAddress,
-      ).call();
+      this.userFundAllowance = await this.callWithRetry(() =>
+        this.fundBaseTokenContract.methods.allowance(
+          this.activeAccountAddress, this.selectedFundAddress,
+        ).call(),
+      );
 
       console.log(`user fund allowance of ${this.fund?.baseToken?.symbol} is ${this.userFundAllowance}`);
       return this.userFundAllowance;
@@ -1044,9 +1124,12 @@ export const useFundStore = defineStore({
 
       let balanceWei = BigInt("0");
       try {
-        balanceWei = await this.fundContract.methods.valueOf(this.activeAccountAddress).call();
+        balanceWei = await this.callWithRetry(() =>
+          this.fundContract.methods.valueOf(this.activeAccountAddress).call(),
+        );
       } catch (e) {
-        console.error(          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
+        console.error(
+          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ", e,
         );
       }
       console.log("balanceWei user fund share value:", balanceWei);
@@ -1058,10 +1141,13 @@ export const useFundStore = defineStore({
       if (!this.activeAccountAddress) return console.error("Active account not found");
       if (!this.fund?.address) return "";
       this.loadingUserFundDepositRedemptionRequests = true;
-      const [depositRequestResult, redemptionRequestResult] = await Promise.allSettled([
-        this.fetchUserFundTransactionRequest(FundTransactionType.Deposit),
-        this.fetchUserFundTransactionRequest(FundTransactionType.Redemption),
-      ]);
+      const [depositRequestResult, redemptionRequestResult] = await Promise.allSettled(
+        [
+          this.fetchUserFundTransactionRequest(FundTransactionType.Deposit),
+          this.fetchUserFundTransactionRequest(FundTransactionType.Redemption),
+        ].map((fn: any) => this.accountStore.requestConcurrencyLimit(fn),
+        ),
+      );
 
       // Extract the results or handle errors
       // TODO also if not fulfilled set that it had error and display error in place of the failed request
@@ -1082,11 +1168,15 @@ export const useFundStore = defineStore({
       const userRequestTimestampAddress = incrementStorageKey(userRequestAddress)
 
       try {
-        const amount = await this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestAddress);
+        const amount = await this.callWithRetry(() =>
+          this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestAddress),
+        );
         let amountWei: string | bigint = ethers.stripZerosLeft(amount);
         amountWei = amountWei === "0x" ? 0n : BigInt(amountWei);
 
-        const ts = await this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestTimestampAddress);
+        const ts = await this.callWithRetry(() =>
+          this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestTimestampAddress),
+        );
         let timestamp: string | number = ethers.stripZerosLeft(ts);
         timestamp = timestamp === "0x" ? 0 : Number(timestamp);
 
@@ -1110,7 +1200,9 @@ export const useFundStore = defineStore({
       this.fund.fundContractBaseTokenBalanceLoading = true;
       let balanceWei = BigInt("0");
       try {
-        balanceWei = await this.fundBaseTokenContract.methods.balanceOf(this.fund?.address).call()
+        balanceWei = await this.callWithRetry(() =>
+          this.fundBaseTokenContract.methods.balanceOf(this.fund?.address).call(),
+        );
         this.fund.fundContractBaseTokenBalanceError = false;
       } catch (e) {
         this.fund.fundContractBaseTokenBalanceError = true;
@@ -1138,7 +1230,9 @@ export const useFundStore = defineStore({
         uint256 pageSize
       )
        */
-      const safeModules = await this.fundSafeContract.methods.getModulesPaginated(startAddress, 10).call();
+      const safeModules = await this.callWithRetry(() =>
+        this.fundSafeContract.methods.getModulesPaginated(startAddress, 10).call(),
+      );
       roleModAddress = safeModules[0][1];
       this.fundRoleModAddress[this.fund?.address ?? ""] = roleModAddress;
       return roleModAddress;
@@ -1160,30 +1254,13 @@ export const useFundStore = defineStore({
       this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || [];
     },
     async estimateGasFundFlowsCall(encodedFunctionCall: any) {
-      try {
-        const transactionObject = {
+      return await this.web3Store.estimateGas(
+        {
           from: this.activeAccountAddress,
           to: this.fundContract.options.address,
           data: this.fundContract.methods.fundFlowsCall(encodedFunctionCall).encodeABI(),
-        };
-
-        // Use Promise.allSettled to handle both promises
-        const [gasPriceResult, gasEstimateResult] = await Promise.allSettled([
-          this.web3.eth.getGasPrice(),
-          this.web3.eth.estimateGas(transactionObject),
-        ]);
-
-        // Extract the results or handle errors
-        const gasPrice = gasPriceResult.status === "fulfilled" ? gasPriceResult.value : undefined;
-        const gasEstimate = gasEstimateResult.status === "fulfilled" ? gasEstimateResult.value : undefined;
-        console.log("Estimated Gas:", gasEstimate);
-        console.log("Estimated Gas Price:", gasPrice);
-
-        return [gasPrice, gasEstimate];
-      } catch (error) {
-        console.error("Error estimating gas:", error);
-      }
-      return [undefined, undefined];
+        },
+      );
     },
     formatBaseTokenValue(
       value: any,
@@ -1225,36 +1302,46 @@ export const useFundStore = defineStore({
           this.loadingUpdateNav = false;
           return;
         }
-
-        return await this.fundContract.methods
-          .executeNAVUpdate(navExecutorAddr)
-          .send({
+        const [gasPrice, gasEstimate] = await this.web3Store.estimateGas(
+          {
             from: this.activeAccountAddress,
-          })
-          .on("transactionHash", (hash: any) => {
-            console.log("tx hash: " + hash);
-            this.toastStore.warningToast(
-              "The transaction has been submitted. Please wait for it to be confirmed.",
-            );
-          })
-          .on("receipt", (receipt: any) => {
-            console.log(receipt);
-            if (receipt.status) {
-              this.toastStore.successToast("The recalculation of OIV NAV has Succeeded");
-            } else {
-              this.toastStore.errorToast(
-                "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
+            to: this.fundContract.options.address,
+            data: this.fundContract.methods.executeNAVUpdate(navExecutorAddr).encodeABI(),
+          },
+        );
+
+        return await this.callWithRetry(() =>
+          this.fundContract.methods
+            .executeNAVUpdate(navExecutorAddr)
+            .send({
+              from: this.activeAccountAddress,
+              maxPriorityFeePerGas: gasPrice,
+            })
+            .on("transactionHash", (hash: any) => {
+              console.log("tx hash: " + hash);
+              this.toastStore.warningToast(
+                "The transaction has been submitted. Please wait for it to be confirmed.",
               );
-            }
-            this.loadingUpdateNav = false;
-          })
-          .on("error", (error: any) => {
-            console.log(error);
-            this.loadingUpdateNav = false;
-            this.toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support.",
-            );
-          });
+            })
+            .on("receipt", (receipt: any) => {
+              console.log(receipt);
+              if (receipt.status) {
+                this.toastStore.successToast("The recalculation of OIV NAV has Succeeded");
+              } else {
+                this.toastStore.errorToast(
+                  "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
+                );
+              }
+              this.loadingUpdateNav = false;
+            })
+            .on("error", (error: any) => {
+              console.log(error);
+              this.loadingUpdateNav = false;
+              this.toastStore.errorToast(
+                "There has been an error. Please contact the Rethink Finance support.",
+              );
+            }),
+        )
       } catch (error) {
         console.error("Error updating NAV: ", error);
         this.loadingUpdateNav = false;

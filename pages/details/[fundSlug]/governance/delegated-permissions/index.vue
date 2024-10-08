@@ -9,7 +9,38 @@
       :submit-event="submitProposal"
       :is-submit-loading="loading"
       @fields-changed="contractMethodChanged"
-    />
+    >
+      <template #subtitle>
+        <UiTooltipClick
+          location="right"
+          :hide-after="6000"
+        >
+          <Icon
+            icon="material-symbols:info-outline"
+            class="info-icon"
+            width="1.5rem"
+          />
+
+          <template #tooltip>
+            <div class="tooltip__content">
+              <span>Create a Delegated Permission Proposal</span>
+              <a
+                class="tooltip__link"
+                href="https://docs.rethink.finance/rethink.finance"
+                target="_blank"
+              >
+                Learn More
+                <Icon
+                  icon="maki:arrow"
+                  color="primary"
+                  width="1rem"
+                />
+              </a>
+            </div>
+          </template>
+        </UiTooltipClick>
+      </template>
+    </UiStepper>
   </div>
 </template>
 
@@ -41,6 +72,11 @@ const breadcrumbItems: BreadcrumbItem[] = [
     title: "Governance",
     disabled: false,
     to: `/details/${selectedFundSlug.value}/governance`,
+  },
+  {
+    title: "Delegated Permission",
+    disabled: true,
+    to: `/details/${selectedFundSlug.value}/governance/delegated-permissions`,
   },
 ];
 
@@ -219,38 +255,49 @@ const submitProposal = async () => {
   );
   loading.value = true;
 
-  try {
-    await fundStore.fundGovernorContract.methods.propose(
-      targets,
-      gasValues,
-      encodedRoleModEntries,
-      JSON.stringify({
-        title: details?.proposalTitle,
-        description: details?.proposalDescription,
-      }),
-    ).send({
+  const proposalData = [
+    targets,
+    gasValues,
+    encodedRoleModEntries,
+    JSON.stringify({
+      title: details?.proposalTitle,
+      description: details?.proposalDescription,
+    }),
+  ];
+  const [gasPrice] = await web3Store.estimateGas(
+    {
       from: fundStore.activeAccountAddress,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
-        toastStore.successToast(
-          "Register the proposal transactions was successful. " +
-          "You can now vote on the proposal in the governance page.",
-        );
-      } else {
-        toastStore.errorToast(
-          "The register proposal transaction has failed. Please contact the Rethink Finance support.",
-        );
-      }
-      loading.value = false;
-    }).on("error", (error: any) => {
-      console.error(error);
-      loading.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-    });
+      to: fundStore.fundGovernorContract.options.address,
+      data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
+    },
+  );
+  try {
+    await web3Store.callWithRetry(() =>
+      fundStore.fundGovernorContract.methods.propose(...proposalData).send({
+        from: fundStore.activeAccountAddress,
+        maxPriorityFeePerGas: gasPrice,
+      }).on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
+      }).on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          toastStore.successToast(
+            "Register the proposal transactions was successful. " +
+            "You can now vote on the proposal in the governance page.",
+          );
+        } else {
+          toastStore.errorToast(
+            "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loading.value = false;
+      }).on("error", (error: any) => {
+        console.error(error);
+        loading.value = false;
+        toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+      }),
+    )
   } catch (error: any) {
     loading.value = false;
     toastStore.errorToast(error.message);
@@ -263,4 +310,23 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+.tooltip{
+  &__content{
+    display: flex;
+    gap: 40px;
+  }
+  &__link {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    color: $color-primary;
+  }
+}
+
+.info-icon {
+  cursor: pointer;
+  display: flex;
+  color: $color-text-irrelevant;
+}
 </style>

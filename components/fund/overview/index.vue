@@ -1,62 +1,10 @@
 <template>
   <div class="overview">
-    <v-expansion-panels v-model="openPanel" variant="accordion">
-      <v-expansion-panel class="main_expansion_panel" value="overview" eager>
-        <v-expansion-panel-title class="main_expansion_panel__title main_card" static>
-          OIV Settings
-        </v-expansion-panel-title>
-        <v-expansion-panel-text class="main_expansion_panel__body">
-          <div class="main_card">
-            <div class="main_expansion_panel__subtitle">
-              Basics
-            </div>
-            <div>
-              <FundOverviewBasics :fund="fund" />
-            </div>
-          </div>
-          <div class="main_card">
-            <div class="main_expansion_panel__subtitle">
-              Whitelist
-            </div>
-            <div>
-              <FundOverviewDeposits :fund="fund" />
-            </div>
-          </div>
-          <div class="main_card">
-            <div class="main_expansion_panel__subtitle">
-              Management
-            </div>
-            <div>
-              <FundOverviewManagement :fund="fund" />
-            </div>
-          </div>
-          <div class="main_card">
-            <div class="main_expansion_panel__subtitle">
-              Fees
-            </div>
-            <div>
-              <FundOverviewFees :fund="fund" />
-            </div>
-          </div>
-        </v-expansion-panel-text>
-      </v-expansion-panel>
-      <v-expansion-panel
-        v-if="isOverviewPanelOpen"
-        class="main_expansion_panel"
-        value="collapse"
-        eager
-      >
-        <v-expansion-panel-title
-          class="main_expansion_panel__title main_card"
-          static
-        >
-          Collapse
-          <template #actions="">
-            <v-icon color="primary" icon="mdi-chevron-up" />
-          </template>
-        </v-expansion-panel-title>
-      </v-expansion-panel>
-    </v-expansion-panels>
+    <UiDataRowCard title="OIV Settings" class="data_row_card">
+      <template #body>
+        <FundOverviewSettings :fund="fund" />
+      </template>
+    </UiDataRowCard>
   </div>
 </template>
 
@@ -75,15 +23,21 @@ const isOverviewPanelOpen = computed(() => openPanel.value === "overview");
 </script>
 
 <style lang="scss" scoped>
-.overview{
-  margin-bottom: 2rem;
+.overview {
+  margin-bottom: 2.5rem;
+
+  @include sm {
+    margin-bottom: 1rem;
+  }
 }
-.main_expansion_panel{
-  border: 0;
-  border-radius: 0.25rem !important;
-  background-color: rgb(var(--v-theme-surface));
-}
-.main_expansion_panel__title{
-  height: 3.5rem;
+.data_row_card {
+  :deep(.v-expansion-panel-title) {
+    padding: 1.5rem;
+    font-size: 1rem;
+  }
+
+  :deep(.v-expansion-panel-text__wrapper) {
+    padding: 0;
+  }
 }
 </style>

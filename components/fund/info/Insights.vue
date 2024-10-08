@@ -86,8 +86,8 @@
 
 <script setup lang="ts">
 import { formatPercent } from "~/composables/formatters";
-import { capitalizeFirst } from "~/composables/utils";
 import { numberColorClass } from "~/composables/numberColorClass";
+import { capitalizeFirst } from "~/composables/utils";
 import { useFundStore } from "~/store/fund.store";
 import type IFund from "~/types/fund";
 const fundStore = useFundStore();

@@ -6,32 +6,39 @@
     <v-skeleton-loader type="card" />
   </div>
   <div v-else-if="fund?.address" class="w-100">
-    <div class="fund-name">
-      <v-avatar size="4rem" rounded="">
+    <div
+      v-if="breadcrumbItems.length === 0"
+      class="fund_name"
+    >
+      <v-avatar class="fund_name__avatar" :rounded="false">
         <img
           :src="fund.photoUrl"
-          class="fund-name__avatar_img"
+          class="fund_name__avatar_img"
           alt="fund cover image"
         >
       </v-avatar>
-      <div class="fund-name__title">
+      <div class="fund_name__title">
         <p>
           {{ fund?.fundToken.symbol }}
         </p>
       </div>
-      <div class="fund-name__subtitle">
+      <div class="fund_name__subtitle">
         <p>
           {{ fund?.title }}
         </p>
       </div>
     </div>
-    <div class="details_nav_container">
+    <div
+      v-if="breadcrumbItems.length === 0"
+      class="details_nav_container"
+    >
       <div class="details_nav">
         <div class="overlay-container" />
         <nuxt-link
           v-for="navRoute in computedRoutes"
           :key="navRoute.to"
           :to="navRoute.to"
+          class="link"
         >
           <v-btn
             class="nav-link"
@@ -46,11 +53,17 @@
         </nuxt-link>
       </div>
 
-      <UiBreadcrumbs :items="breadcrumbItems" />
     </div>
+    <UiBreadcrumbs
+      v-if="breadcrumbItems.length > 0"
+      :items="breadcrumbItems"
+      class="breadcrumbs"
+      :prepend-breadcrumb="prependBreadcrumb"
+    />
+
     <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>
-  <div v-else-if="isSwitchingNetworks" class="w-100 d-flex justify-center">
+  <div v-else-if="accountStore.isSwitchingNetworks" class="w-100 d-flex justify-center">
     <v-progress-circular indeterminate />
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
@@ -65,23 +78,19 @@
 </template>
 
 <script lang="ts" setup>
-import { trimTrailingSlash } from "~/composables/utils";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
-import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 
 const accountStore = useAccountStore();
-const toastStore = useToastStore();
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
 const route = useRoute();
 const router = useRouter();
 const loading = ref(true);
-const isSwitchingNetworks = ref(false);
 // fund address is always in the third position of the route
 // e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
 const [chainId, tokenSymbol, fundAddress] = route.path.split("/")[2].split("-");
@@ -142,11 +151,14 @@ watch(
 watch(
   () => route.path,
   (newPath) => {
-    const pathRoot = `${fundDetailsRoute}`;
-    console.log(newPath);
+    const pathRoot = `${fundDetailsRoute.value}`;
+
     if (
-      trimTrailingSlash(newPath) === pathRoot ||
-      newPath === `${pathRoot}/nav`
+      newPath === pathRoot ||
+      newPath === `${pathRoot}/nav` ||
+      newPath === `${pathRoot}/permissions` ||
+      newPath === `${pathRoot}/flows` ||
+      newPath === `${pathRoot}/governance`
     ) {
       setBreadcrumbItems([]);
     }
@@ -154,58 +166,12 @@ watch(
 );
 
 const switchNetwork = async (chainId: string) => {
-  isSwitchingNetworks.value = true;
   try {
-    if (accountStore.connectedWallet) {
-      // Ask the connected user to switch network.
-      await accountStore.setActiveChain(chainId);
-    } else {
-      // Switch active chain.
-      await web3Store.init(chainId);
-    }
-
-    // Test connection, outer catch block will except exception.
-    try {
-      await web3Store.checkConnection();
-    } catch (e: any) {
-      toastStore.errorToast("Looks like there are RPC connection problems.")
-    }
-
+    await accountStore.switchNetwork(chainId)
   } catch (error: any) {
     // Redirect to the home page if the user cancels the network switch
     router.push("/");
-
-    // This error code indicates that the chain has not been added to MetaMask
-    if (error.code === 4902) {
-      try {
-        // Add the network if it is not yet added.
-        // TODO: finish this for better UX, get network RPC mapping
-        // await accountStore.connectedWallet?.provider.request({
-        //   method: 'wallet_addEthereumChain',
-        //   params: [{
-        //     chainId: chainId,
-        //     rpcUrl: 'https://rpc-mainnet.maticvigil.com/',
-        //     chainName: 'Polygon Mainnet',
-        //     nativeCurrency: {
-        //       name: 'MATIC',
-        //       symbol: 'MATIC', // 2-6 characters long
-        //       decimals: 18,
-        //     },
-        //     blockExplorerUrls: ['https://polygonscan.com']
-        //   }]
-        // });
-        toastStore.errorToast(
-          "Oops, something went wrong switching networks. " +
-          "Check if the network is added to your wallet provider.",
-        )
-      } catch (addError) {
-        console.error("Failed to add the network:", addError);
-      }
-    } else {
-      toastStore.errorToast("Oops, something went wrong switching networks.")
-    }
   }
-  isSwitchingNetworks.value = false;
 }
 
 onMounted(() => {
@@ -223,6 +189,17 @@ const fundDetailsRoute = computed(
   () => `/details/${chainId}-${tokenSymbol}-${fundAddress}`,
 );
 
+// show icon + title in the breadcrumb for the fund
+const prependBreadcrumb = computed(() => {
+  const output = {
+    title: fund?.value?.fundToken?.symbol || "",
+    to: fundDetailsRoute?.value || "",
+    photoUrl: fund?.value?.photoUrl || "",
+    disabled: false,
+  } as BreadcrumbItem;
+
+  return output;
+});
 
 
 const routes: IRoute[] = [
@@ -262,7 +239,7 @@ const routes: IRoute[] = [
 
 const isPathActive = (path: string = "", exactMatch = true) =>
   exactMatch ? route?.path === path : route?.path.startsWith(path);
-const getPathColor = (isActive = false, color = "var(--color-subtitle)") =>
+const getPathColor = (isActive = false, color = "#77839f") =>
   isActive ? "primary" : color;
 
 const computedRoutes = computed(() => {
@@ -295,8 +272,7 @@ const computedRoutes = computed(() => {
 }
 .details_nav {
   position: relative;
-  margin-bottom: 2rem;
-  padding-top: 1rem;
+  padding-top: 8px;
   width: 100%;
 }
 
@@ -304,14 +280,26 @@ const computedRoutes = computed(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding-top: 1rem;
+  margin-top: 4px;
   padding-left: 1rem;
   padding-right: 1rem;
-  margin-bottom: 1rem;
+  padding-bottom: 8px;
+  margin-bottom: 40px;
+
+  background-color: $color-bg-transparent;
+  border-radius: 4px;
 
   @include sm {
     padding-left: 0;
     padding-right: 0;
+  }
+}
+
+.link{
+  &:first-of-type{
+    .nav-link{
+      padding-left: 8px;
+    }
   }
 }
 
@@ -337,13 +325,16 @@ const computedRoutes = computed(() => {
 .overlay-container {
   position: absolute;
   bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+
   background-color: var(--color-divider);
-  width: 100%;
+  width: calc(100% - 16px);
   height: 2px;
 }
 
-.fund-name {
-  background-color: $color-gray-light-transparent;
+.fund_name {
+  background-color: $color-bg-transparent;
   border-radius: $default-border-radius;
   padding: 0.5rem 0.62rem;
   display: flex;
@@ -352,11 +343,15 @@ const computedRoutes = computed(() => {
   align-items: center;
 
   @include sm {
-    padding: 1rem 1.5rem;
+    padding: 8px;
+  }
+
+  &__avatar {
+    border: 0;
   }
 
   &__avatar_img {
-    border-radius: 0.25rem;
+    border-radius: 50%;
     height: 100%;
     width: 100%;
     object-fit: cover;
@@ -372,5 +367,9 @@ const computedRoutes = computed(() => {
     font-size: $text-sm;
     color: $color-text-irrelevant;
   }
+}
+
+.breadcrumbs{
+  margin-bottom: 32px;
 }
 </style>

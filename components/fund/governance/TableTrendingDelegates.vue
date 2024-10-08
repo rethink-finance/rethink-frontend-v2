@@ -11,13 +11,19 @@
         <div class="data-cell__text">
           {{ truncateAddress(item.delegated_members) }}
         </div>
-        <ui-tooltip-click tooltip-text="Copied" location="right">
+        <ui-tooltip-click location="right">
           <Icon
             icon="clarity:copy-line"
             class="copy-icon"
             width="1rem"
             @click="copyText(item.delegated_members)"
           />
+
+          <template #tooltip>
+            <div class="tooltip__content">
+              <span>Copied</span>
+            </div>
+          </template>
         </ui-tooltip-click>
       </div>
     </template>
@@ -32,8 +38,8 @@
 </template>
 
 <script lang="ts">
-import type ITrendingDelegates from "~/types/trending_delegates";
 import { truncateAddress } from "~/composables/addressUtils";
+import type ITrendingDelegates from "~/types/trending_delegates";
 
 export default defineComponent({
   name: "TableTrengingDelegates",
@@ -44,14 +50,13 @@ export default defineComponent({
     },
   },
   data: () => ({
-    expanded: [],
     // bug fix for vuetify table headers property 'align'
     // https://github.com/vuetifyjs/vuetify/issues/18901
     headers: ref([
       {
         title: "Delegated Members",
         key: "delegated_members",
-        value: (v: any) => v.delegated_members + " members",
+        value: (v: any) => pluralizeWord("member", v.delegated_members),
         sorable: false,
       },
       {

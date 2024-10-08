@@ -1,8 +1,8 @@
-import GovernableFund from "assets/contracts/GovernableFund.json";
 import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
 import { eth, Web3 } from "web3";
+import GovernableFund from "assets/contracts/GovernableFund.json";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
@@ -64,6 +64,9 @@ export const useGovernanceProposalsStore = defineStore({
     },
   },
   actions: {
+    callWithRetry(method: any): any {
+      return this.web3Store.callWithRetry(method);
+    },
     resetProposals(chainId: string, fundAddress?: string): void {
       if (!fundAddress) return;
 
@@ -209,10 +212,12 @@ export const useGovernanceProposalsStore = defineStore({
     },
     async fetchBlockProposals(blockNumber: bigint) {
       console.log("fetchBlockProposals:", blockNumber);
-      const proposalCreatedEvents = await this.fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
-        fromBlock: blockNumber,
-        toBlock: blockNumber,
-      });
+      const proposalCreatedEvents = await this.callWithRetry(() =>
+        this.fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
+          fromBlock: blockNumber,
+          toBlock: blockNumber,
+        }),
+      );
       console.log("fetchBlockProposals events:", proposalCreatedEvents);
       await this.parseProposalCreatedEvents(proposalCreatedEvents);
     },
@@ -405,9 +410,8 @@ export const useGovernanceProposalsStore = defineStore({
         const blockEnd = await web3.eth.getBlock(proposal.voteEnd);
         console.log("blockEnd: ", blockEnd);
         proposal.voteEndTimestamp = blockEnd?.timestamp.toString();
-      }
-      // if the voteEnd is in the future, we have to estimate the timestamp
-      else{
+      } else {
+        // if the voteEnd is in the future, we have to estimate the timestamp
         console.log("estimate blockEnd");
         const estimatedEndTimestamp = await this.estimateTimestampFromBlockNumber(currentBlockNumber, currentBlockTimestamp, Number(proposal.voteEnd));
         console.log("estimatedEndTimestamp: ", estimatedEndTimestamp);
@@ -420,9 +424,8 @@ export const useGovernanceProposalsStore = defineStore({
         const blockStart = await web3.eth.getBlock(proposal.voteStart);
         console.log("blockStart: ", blockStart);
         proposal.voteStartTimestamp = blockStart?.timestamp.toString();
-      }
-      // if the voteStart is in the future, we have to estimate the timestamp
-      else{
+      } else{
+        // if the voteStart is in the future, we have to estimate the timestamp
         console.log("estimate blockStart");
         const estimatedStartTimestamp = await this.estimateTimestampFromBlockNumber(currentBlockNumber,currentBlockTimestamp, Number(proposal.voteStart));
         console.log("estimatedStartTimestamp: ", estimatedStartTimestamp);
@@ -430,6 +433,8 @@ export const useGovernanceProposalsStore = defineStore({
       }
     },
     async parseProposalCreatedEvents(events: any[]) {
+      if (!events?.length) return;
+
       if (!this.fundStore.fund?.governanceToken.decimals) {
         console.error("No fund governance token decimals found.")
         this.toastStore.errorToast("No fund governance token decimals found.")
@@ -458,7 +463,9 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.executedTimestamp = executedProposal?.executedTimestamp;
         proposal.executedBlockNumber = executedProposal?.executedBlockNumber;
 
-        const proposalState = await this.fundStore.fundGovernorContract.methods.state(proposal.proposalId).call();
+        const proposalState = await this.callWithRetry(() =>
+          this.fundStore.fundGovernorContract.methods.state(proposal.proposalId).call(),
+        );
         proposal.state = ProposalStateMapping[proposalState]
 
         console.log("proposal: ", proposal);
@@ -475,16 +482,20 @@ export const useGovernanceProposalsStore = defineStore({
         }
         console.log("proposal:" , proposal)
 
-        const votes = await this.fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call();
+        const votes = await this.callWithRetry(() =>
+          this.fundStore.fundGovernorContract.methods.proposalVotes(proposal.proposalId).call(),
+        );
         console.log("proposal votes: ", votes);
 
         console.log("get total supply at blockNumber: ", proposal.createdBlockNumber);
         // Get the Governance Token total supply of when the proposal was created.
         let totalSupply;
         try {
-          totalSupply = await this.fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber);
+          totalSupply = await this.callWithRetry(() =>
+            this.fundStore.fundGovernanceTokenContract.methods.totalSupply().call({}, proposal.createdBlockNumber),
+          );
           proposal.totalSupply = totalSupply;
-          proposal.totalSupplyFormatted = formatTokenValue(totalSupply, this.fundStore.fund?.governanceToken?.decimals);
+          proposal.totalSupplyFormatted = formatTokenValue(totalSupply, this.fundStore.fund?.governanceToken?.decimals, false);
         } catch (error: any) {
         // Sometimes it happens: missing trie node
           console.error("failed fetching total supply", error);
@@ -493,34 +504,36 @@ export const useGovernanceProposalsStore = defineStore({
 
         console.log("proposal created blockNumber ", proposal.createdBlockNumber, " timestamp ", proposal.createdTimestamp);
         try {
-        // To get quorum in time, we have to pass the timePoint, but it depends on the clock mode.
-        // If clock mode is:
-        // - timestamp: use proposal created timestamp
-        // - blocknumber: use proposal created block number
+          // To get quorum in time, we have to pass the timePoint, but it depends on the clock mode.
+          // If clock mode is:
+          // - timestamp: use proposal created timestamp
+          // - blocknumber: use proposal created block number
           const timePoint = this.fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber ?
             proposal.createdBlockNumber :
             proposal.createdTimestamp;
 
-          const quorumWhenProposalCreated = await this.fundStore.fundGovernorContract.methods.quorumNumerator(timePoint).call()
+          const quorumWhenProposalCreated = await this.callWithRetry(() =>
+            this.fundStore.fundGovernorContract.methods.quorumNumerator(timePoint).call(),
+          );
           proposal.quorumVotes = quorumWhenProposalCreated;
-          proposal.quorumVotesFormatted = formatTokenValue(quorumWhenProposalCreated, this.fundStore.fund?.governanceToken?.decimals);
+          proposal.quorumVotesFormatted = formatTokenValue(quorumWhenProposalCreated, this.fundStore.fund?.governanceToken?.decimals, false);
         } catch (e: any) {
           console.error("error fetching quorumVotes: ", e);
           proposal.quorumVotesFormatted = "N/A";
         }
 
-        console.log("parse votes");
+        console.log("parse votes", votes);
         if (votes) {
           const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
           proposal.totalVotes = totalVotes;
-          proposal.totalVotesFormatted = formatTokenValue(totalVotes, this.fundStore.fund?.governanceToken.decimals);
+          proposal.totalVotesFormatted = formatTokenValue(totalVotes, this.fundStore.fund?.governanceToken.decimals, false);
           proposal.forVotes = votes.forVotes;
           proposal.abstainVotes = votes.abstainVotes;
           proposal.againstVotes = votes.againstVotes;
-          proposal.forVotesFormatted = formatTokenValue(votes.forVotes, this.fundStore.fund?.governanceToken.decimals);
-          proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, this.fundStore.fund?.governanceToken.decimals);
-          proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, this.fundStore.fund?.governanceToken.decimals);
-
+          proposal.forVotesFormatted = formatTokenValue(votes.forVotes, this.fundStore.fund?.governanceToken.decimals, false);
+          proposal.abstainVotesFormatted = formatTokenValue(votes.abstainVotes, this.fundStore.fund?.governanceToken.decimals, false);
+          proposal.againstVotesFormatted = formatTokenValue(votes.againstVotes, this.fundStore.fund?.governanceToken.decimals, false);
+          console.log("proposal votes", proposal)
           if (proposal.quorumVotes === 0n && Number(votes.forVotes) > 0) {
             // If quorum is 0, it means that there should be more than 0 FOR votes for proposal to pass.
             proposal.approval = 1;

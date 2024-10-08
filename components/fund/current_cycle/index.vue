@@ -1,7 +1,7 @@
 <template>
   <div class="fund_settlement">
     <div class="card_header">
-      <div class="card_header__title">
+      <div class="card_header__title subtitle_white">
         Pending Requests
       </div>
       <div
@@ -70,14 +70,12 @@
     <div v-else class="fund_settlement__no_pending_requests">
       Currently there are no deposit or redemption requests.
     </div>
-    <div class="card_box card_box--no-padding mt-8">
-      <UiNotification>
-        The deposit and redeem requests are settled within the planned Settlement Cycle
-        of <span class="text-primary">{{ fund?.plannedSettlementPeriod || "N/A" }}</span>.
-        You can learn more about how settlements work
-        <a href="https://docs.rethink.finance/rethink.finance" target="_blank">here</a>.
-      </UiNotification>
-    </div>
+    <UiNotification>
+      The deposit and redeem requests are settled within the planned Settlement Cycle
+      of <span class="text-primary">{{ fund?.plannedSettlementPeriod || "N/A" }}</span>.
+      You can learn more about how settlements work
+      <a href="https://docs.rethink.finance/rethink.finance" target="_blank">here</a>.
+    </UiNotification>
   </div>
 </template>
 
@@ -89,8 +87,10 @@ import { useToastStore } from "~/store/toast.store";
 import type IFund from "~/types/fund";
 
 import { useAccountStore } from "~/store/account.store";
+import { useWeb3Store } from "~/store/web3.store";
 const emit = defineEmits(["deposit-success"]);
 
+const web3Store = useWeb3Store();
 const toastStore = useToastStore()
 const fundStore = useFundStore()
 const accountStore = useAccountStore();
@@ -205,37 +205,37 @@ const deposit = async () => {
   const ABI = [ "function deposit()" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("deposit");
-  // const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: fundStore.activeAccountAddress,
-      // gas: gasEstimate,
-      // gasPrice,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    await web3Store.callWithRetry(() =>
+      fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+        from: fundStore.activeAccountAddress,
+        maxPriorityFeePerGas: gasPrice,
+      }).on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+      }).on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
 
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
+        // Refresh user balances & allowance & refresh pending requests.
+        fundStore.fetchUserBalances();
 
-      // Refresh user balances & allowance & refresh pending requests.
-      fundStore.fetchUserBalances();
+        if (receipt.status) {
+          toastStore.successToast("Your deposit was successful.");
 
-      if (receipt.status) {
-        toastStore.successToast("Your deposit was successful.");
+          // emit event to open the delegate votes modal
+          emit("deposit-success");
+        } else {
+          toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
+        }
 
-        // emit event to open the delegate votes modal
-        emit("deposit-success");
-      } else {
-        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-      }
-
-      loadingDeposit.value = false;
-    }).on("error", (error: any) => {
-      loadingDeposit.value = false;
-      handleError(error);
-    });
+        loadingDeposit.value = false;
+      }).on("error", (error: any) => {
+        loadingDeposit.value = false;
+        handleError(error);
+      }),
+    )
   } catch (error: any) {
     loadingDeposit.value = false;
     handleError(error);
@@ -260,38 +260,39 @@ const redeem = async () => {
   loadingRedemption.value = true;
   console.log("[REDEEM] tokensWei: ", userRedemptionRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
 
-  const ABI = [ "function withdraw()" ];
-  const iface = new ethers.Interface(ABI);
+  const iface = new ethers.Interface([ "function withdraw()" ]);
   const encodedFunctionCall = iface.encodeFunctionData("withdraw");
-  // const [gasPrice, gasEstimate] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  fundStore.fundContract.methods.withdraw().encodeABI()
+  const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: fundStore.activeAccountAddress,
-      // gas: gasEstimate,
-      // gasPrice,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
+    await web3Store.callWithRetry(() =>
+      fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+        from: fundStore.activeAccountAddress,
+        maxPriorityFeePerGas: gasPrice,
+      }).on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+      }).on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
 
-      // Refresh user balances & allowance.
-      fundStore.fetchUserBalances();
+        // Refresh user balances & allowance.
+        fundStore.fetchUserBalances();
 
-      if (receipt.status) {
-        toastStore.successToast(
-          "Your redemption was successful. It may take 10 seconds or more for values to update.",
-        );
-      } else {
-        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-      }
+        if (receipt.status) {
+          toastStore.successToast(
+            "Your redemption was successful. It may take 10 seconds or more for values to update.",
+          );
+        } else {
+          toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
+        }
 
-      loadingRedemption.value = false;
-    }).on("error", (error: any) => {
-      loadingRedemption.value = false;
-      handleError(error);
-    });
+        loadingRedemption.value = false;
+      }).on("error", (error: any) => {
+        loadingRedemption.value = false;
+        handleError(error);
+      }),
+    )
   } catch (error: any) {
     loadingRedemption.value = false;
     handleError(error);
@@ -301,7 +302,7 @@ const redeem = async () => {
 const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
-  if (error?.code === 4001) {
+  if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Transaction was rejected.")
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
@@ -337,10 +338,6 @@ const handleError = (error: any) => {
 
 .card_header{
   &__title{
-    font-size: 1rem;
-    font-weight: bold;
-    color: $color-subtitle;
-    line-height: 1;
     margin-bottom: 0.75rem;
 
     @include sm{

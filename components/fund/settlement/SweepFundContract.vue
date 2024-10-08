@@ -47,10 +47,13 @@
 
 <script setup lang="ts">
 import { eth } from "web3";
+import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { useAccountStore } from "~/store/account.store";
+import { useWeb3Store } from "~/store/web3.store";
 
+const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const fundStore = useFundStore();
@@ -81,27 +84,33 @@ const sweepFundContract = async () => {
 
   try {
     const functionSignatureHash = eth.abi.encodeFunctionSignature("sweepTokens()");
+    const iface = new ethers.Interface([ "function sweepTokens()" ]);
+    const encodedFunctionCall = iface.encodeFunctionData("sweepTokens");
+    const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
-    await fundStore.fundContract.methods.fundFlowsCall(functionSignatureHash).send({
-      from: fundStore.activeAccountAddress,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: ", hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt :", receipt);
-      if (receipt.status) {
-        toastStore.successToast("Fund contract sweep was successful.");
-        // Refresh balances
-        // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
-        fundStore.fetchFundContractBaseTokenBalance();
-      } else {
-        toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
-        fundStore.fetchUserBalances();
-      }
-      isSweepLoading.value = false;
-    }).on("error", (error: any) => {
-      handleError(error);
-    });
+    await web3Store.callWithRetry(() =>
+      fundStore.fundContract.methods.fundFlowsCall(functionSignatureHash).send({
+        from: fundStore.activeAccountAddress,
+        maxPriorityFeePerGas: gasPrice,
+      }).on("transactionHash", (hash: string) => {
+        console.log("tx hash: ", hash);
+        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+      }).on("receipt", (receipt: any) => {
+        console.log("receipt :", receipt);
+        if (receipt.status) {
+          toastStore.successToast("Fund contract sweep was successful.");
+          // Refresh balances
+          // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
+          fundStore.fetchFundContractBaseTokenBalance();
+        } else {
+          toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
+          fundStore.fetchUserBalances();
+        }
+        isSweepLoading.value = false;
+      }).on("error", (error: any) => {
+        handleError(error);
+      }),
+    )
   } catch (error: any) {
     handleError(error);
   }
@@ -110,7 +119,7 @@ const sweepFundContract = async () => {
 const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
-  if (error?.code === 4001) {
+  if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Transaction was rejected.")
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");

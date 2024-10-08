@@ -47,23 +47,23 @@
     <UiMainCard title="Trending Delegates" subtitle="4 Delegated Wallets">
       <template #header-right>
         <UiTooltipClick
-          :tooltip-text="
-            accountStore.isConnected
-              ? ''
-              : 'Connect your wallet to delegate your votes'
-          "
-          :hide-after="2200"
+          :hide-after="6000"
+          :show-tooltip="!accountStore.isConnected"
         >
+          <template #tooltip>
+            Connect your wallet to delegate your votes
+          </template>
+
           <v-btn
-            class="manage-button"
+            class="manage_button"
             variant="outlined"
             @click="accountStore.isConnected ? openDelegateDialog() : null"
           >
-            Manage Delegation
+            {{ shouldUserDelegate ? "Assign Delegation" : "Manage Delegation" }}
           </v-btn>
         </UiTooltipClick>
       </template>
-      <TableTrendingDelegates :items="trendingDelegates" />
+      <FundGovernanceTableTrendingDelegates :items="trendingDelegates" />
     </UiMainCard>
 
     <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" />
@@ -72,18 +72,22 @@
       v-model="confirmDialog"
       title="Heads Up!"
       confirm-text="Continue"
-      :cancel-text="updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to Proposal'"
+      :cancel-text="
+        updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to Proposal'
+      "
       message="You can create a new one or check the ongoing activity first!"
       class="confirm_dialog"
       :max-width="updateSettingsProposals.length > 1 ? 'unset' : '600px'"
       @confirm="handleNavigateToCreateProposal"
-      @cancel="updateSettingsProposals.length > 1 ? null : handleGoToFProposal()"
+      @cancel="
+        updateSettingsProposals.length > 1 ? null : handleGoToFProposal()
+      "
     >
       <FundGovernanceProposalsTable
         v-if="updateSettingsProposals.length > 1"
         :items="updateSettingsProposals"
         :loading="loadingProposals"
-        style="margin-top: 2rem;"
+        style="margin-top: 2rem"
       />
     </UiConfirmDialog>
   </div>
@@ -94,7 +98,6 @@ import type IFund from "~/types/fund";
 import type ITrendingDelegates from "~/types/trending_delegates";
 
 // components
-import TableTrendingDelegates from "~/components/fund/governance/TableTrendingDelegates.vue";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
@@ -112,6 +115,7 @@ const governanceProposalStore = useGovernanceProposalsStore();
 
 const confirmDialog = ref(false);
 const updateSettingsProposals = ref([]) as Ref<IGovernanceProposal[]>;
+const { shouldUserDelegate } = toRefs(fundStore);
 
 // dummy data governance activity
 const governanceProposals = computed(() => {
@@ -125,7 +129,7 @@ const governanceProposals = computed(() => {
     return proposal.calldataTags?.some(
       (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS,
     );
-  })
+  });
 
   // Sort the events by createdTimestamp
   proposals.sort((a, b) => {
@@ -228,15 +232,13 @@ const dropdownOptions: Record<string, DropdownOption> = {
   },
   "NAV Methods": {
     click: () => {
-      router.push(
-        `/details/${fundStore.selectedFundSlug}/nav/manage`,
-      );
+      router.push(`/details/${fundStore.selectedFundSlug}/nav/manage`);
     },
   },
   "Fund Settings": {
     click: () => {
       // if fund settings proposal already exist, open up the dialog
-      if(hasUpdateSettingsProposal.value) {
+      if (hasUpdateSettingsProposal.value) {
         confirmDialog.value = true;
         return;
       }
@@ -254,7 +256,7 @@ const handleNavigateToCreateProposal = () => {
 const handleGoToFProposal = () => {
   const { createdBlockNumber, proposalId } = updateSettingsProposals.value[0];
 
-  if(!createdBlockNumber || !proposalId) {
+  if (!createdBlockNumber || !proposalId) {
     console.error("No proposalId or createdBlockNumber found");
     return;
   }
@@ -263,12 +265,14 @@ const handleGoToFProposal = () => {
     `/details/${fundStore.selectedFundSlug}/governance/proposal/${createdBlockNumber}-${proposalId}`,
   );
 };
-const createProposalDropdownOptions = Object.keys(dropdownOptions).map((key) => {
-  return {
-    label: key,
-    disabled: dropdownOptions[key]?.disabled || false,
-  };
-});
+const createProposalDropdownOptions = Object.keys(dropdownOptions).map(
+  (key) => {
+    return {
+      label: key,
+      disabled: dropdownOptions[key]?.disabled || false,
+    };
+  },
+);
 
 const selectOption = (option: string) => {
   if (dropdownOptions[option]) {
@@ -322,11 +326,23 @@ const fetchProposals = async (
 
   // From the largest number to the smallest number.
   if (rangeStartBlock > rangeEndBlock) {
-    console.warn("\nBIGGEST to smallest from: ", rangeEndBlock, " to: ",  rangeStartBlock);
+    console.warn(
+      "\nBIGGEST to smallest from: ",
+      rangeEndBlock,
+      " to: ",
+      rangeStartBlock,
+    );
     let toBlock = Math.max(rangeStartBlock, 0);
-    let fromBlock = Math.min(toBlock - chunkSize + 1, rangeEndBlock);
+    let fromBlock = Math.max(toBlock - chunkSize + 1, rangeEndBlock);
+    // TODO BIG PROBLEM:
+    //   if I start fetching from block 1000 to 0 (by 100 chunk size) and then I stop I will save that last fetched block
+    //   number is 1000 and oldest is 900 and then next time when I start, I start from most recent block
+    //   number 2000 and go to 1000 and from 900 to 0... the problem is that the most recent block will be then
+    //   2000 even if I stopped before the 1000 and didnt fetch all from 2000 to 1000
+    //   FIX: only go from newest to oldest when there are no blocks fetched yet... otherwise go from the most recent
+    //   fetched block to the current block number.
     while (true) {
-    // for (let i = rangeStartBlock; i > rangeEndBlock; i -= chunkSize) {
+      // for (let i = rangeStartBlock; i > rangeEndBlock; i -= chunkSize) {
       if (!shouldFetchProposals.value) return;
       console.log(
         "BGsm fetch ProposalCreated events from: ",
@@ -360,7 +376,14 @@ const fetchProposals = async (
         } catch (error: any) {
           // Wait max 10 seconds.
           waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
-          console.error("getPastEvents", fromBlock, toBlock,  "error, wait ", waitTimeAfterError , error);
+          console.error(
+            "getPastEvents",
+            fromBlock,
+            toBlock,
+            "error, wait ",
+            waitTimeAfterError,
+            error,
+          );
 
           if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
             // We probably tried fetching a range that is too big, reduce the chunk size by half
@@ -369,7 +392,9 @@ const fetchProposals = async (
             console.log("reduce chunkSize: ", chunkSize);
             fromBlock = Math.max(toBlock - chunkSize + 1, 0);
           }
-          await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
+          await new Promise((resolve) =>
+            setTimeout(resolve, waitTimeAfterError),
+          );
         }
       }
 
@@ -394,10 +419,10 @@ const fetchProposals = async (
       // Increase from and to blocks range.
       toBlock = fromBlock - 1;
       fromBlock = Math.max(toBlock - chunkSize + 1, 0);
-      console.warn("fromBlock: ", + fromBlock, "toBlocK: ", toBlock)
+      console.warn("fromBlock: ", +fromBlock, "toBlocK: ", toBlock);
 
-      const lastProposal =
-        governanceProposals.value[governanceProposals.value.length];
+      const lastProposal = governanceProposals.value[governanceProposals.value.length - 1];
+      console.warn("LAST PROPOSAL", lastProposal);
       if (toBlock <= 0 || lastProposal?.createdTimestamp < targetTimestamp) {
         break;
       }
@@ -443,7 +468,14 @@ const fetchProposals = async (
         } catch (error: any) {
           // Wait max 10 seconds.
           waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
-          console.error("getPastEvents", fromBlock, toBlock,  "error, wait ", waitTimeAfterError , error);
+          console.error(
+            "getPastEvents",
+            fromBlock,
+            toBlock,
+            "error, wait ",
+            waitTimeAfterError,
+            error,
+          );
 
           if (chunkSize / 2 > INITIAL_CHUNK_SIZE) {
             // We probably tried fetching a range that is too big, reduce the chunk size by half
@@ -452,7 +484,9 @@ const fetchProposals = async (
             console.log("reduce chunkSize: ", chunkSize);
             toBlock = Math.min(fromBlock + chunkSize - 1, rangeEndBlock);
           }
-          await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
+          await new Promise((resolve) =>
+            setTimeout(resolve, waitTimeAfterError),
+          );
         }
       }
 
@@ -472,11 +506,14 @@ const fetchProposals = async (
       toBlock += chunkSize - 1;
       toBlock = Math.max(fromBlock + chunkSize - 1, rangeEndBlock);
 
-      console.warn("fromBlock: ", + fromBlock, "toBlocK: ", toBlock)
+      console.warn("fromBlock: ", +fromBlock, "toBlocK: ", toBlock);
 
       const lastProposal =
         governanceProposals.value[governanceProposals.value.length];
-      if (fromBlock >= rangeEndBlock || lastProposal?.createdTimestamp < targetTimestamp) {
+      if (
+        fromBlock >= rangeEndBlock ||
+        lastProposal?.createdTimestamp < targetTimestamp
+      ) {
         break;
       }
     }
@@ -508,6 +545,9 @@ const startFetch = async () => {
 
   loadingProposals.value = true;
   let currentBlock;
+  // TODO: different RPC providers can return different block numbers, especially if they are not fully synchronized
+  //   or if they have latency issues. This happens because each RPC node might be at a slightly different state of
+  //   the blockchain, particularly during times of heavy network traffic or when the nodes are under maintenance.
   while (currentBlock === undefined) {
     try {
       currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
@@ -540,7 +580,10 @@ const startFetch = async () => {
       mostRecentFetchedBlock,
     );
     // From smallest to biggest.
-    await fetchProposals(mostRecentFetchedBlock + 1, currentBlock - 1);
+    // But only if current block is bigger than most recent already fetched block.
+    if (currentBlock - 1 > mostRecentFetchedBlock) {
+      await fetchProposals(mostRecentFetchedBlock + 1, currentBlock - 1);
+    }
 
     // fetch from the already fetched the oldest block number to hardcoded limit oldest date.
     // ---------| oldest fetched | xxxxxxxxxx <to fetch> xxxxxxxxxx | GENESIS BLOCK
@@ -565,6 +608,38 @@ const startFetch = async () => {
 </script>
 
 <style scoped lang="scss">
+// overrides for expansion-panel
+.data_row_card {
+  margin-bottom: 2.5rem;
+  overflow: unset;
+
+  @include sm {
+    margin-bottom: 1rem;
+  }
+
+  // remove outer border
+  :deep(.data_row__panel) {
+    border: 0;
+
+  }
+  // add more spacing to content inside
+  :deep(.v-expansion-panel-text__wrapper) {
+    padding-bottom: 2rem;
+  }
+  :deep(.v-expansion-panel-title) {
+    padding: 1.5rem;
+    font-size: 1rem;
+  }
+  // add borders to text fields inside panel
+  :deep(.v-expansion-panels) {
+    border-radius: 0.25rem !important;
+
+    .data_row__panel {
+      padding: 0;
+    }
+  }
+}
+
 .tools {
   display: flex;
   flex-direction: row;
@@ -601,41 +676,12 @@ const startFetch = async () => {
     margin: 0 0.75rem;
   }
 }
-
-// overrides for expansion-panel
-.data_row_card {
-  margin-bottom: 2rem;
-  overflow: unset;
-
-  // remove outer border
-  :deep(.data_row__panel) {
-    border: 0;
-    border-radius: 0.25rem !important;
-    background-color: rgb(var(--v-theme-surface));
-  }
-  // add more spacing to content inside
-  :deep(.v-expansion-panel-text__wrapper) {
-    padding-bottom: 2rem;
-  }
-  :deep(.v-expansion-panel-title) {
-    padding: 1.5rem;
-  }
-  // add borders to text fields inside panel
-  :deep(.v-expansion-panels) {
-    border: 1px solid $color-gray-transparent;
-    border-radius: 0.25rem !important;
-
-    .data_row__panel {
-      padding: 0;
-    }
-  }
-}
-
-.manage-button {
+.manage_button {
   color: rgb(210, 223, 255) !important;
+  padding-inline: 16px !important;
 }
 
-.confirm_dialog{
+.confirm_dialog {
   max-width: unset;
 }
 </style>

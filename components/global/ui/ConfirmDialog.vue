@@ -34,9 +34,8 @@
 
           <div class="di_card__button-container">
             <v-btn
-              class="di_card__submit-button"
+              class="di_card__cancel-button"
               variant="text"
-              color="white"
               @click="cancel()"
             >
               {{ cancelText ?? "Cancel" }}
@@ -84,11 +83,13 @@ const confirm = () => {
 <style scoped lang="scss">
 .di_card {
   margin: 0 auto;
-  padding-bottom: 2rem;
+  padding: 40px;
   width: 100%;
-  color: white;
 
-  @include borderGray;
+  background-color: $color-bg-toast;
+  box-shadow: 0px 0px 16px 0px $color-box-shadow;
+
+  color: $color-white;
 
   &__header-container {
     display: flex;
@@ -98,8 +99,8 @@ const confirm = () => {
   &__header {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: $text-lg;
+    gap: 8px;
+    font-size: 16px;
     font-weight: 700;
   }
   &__info-icon {
@@ -123,6 +124,11 @@ const confirm = () => {
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
+  }
+
+  &__cancel-button {
+    color: $color-text-irrelevant !important;
+    font-weight: 500;
   }
 }
 </style>

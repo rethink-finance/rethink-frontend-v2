@@ -38,38 +38,71 @@
             <div class="meta-label">
               {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
             </div>
-            <ui-tooltip-click :tooltip-text="`Copied to clipboard: ${item.value}`">
+            <ui-tooltip-click
+              :hide-after="4000"
+            >
               <Icon
                 icon="clarity:copy-line"
                 class="section-top__copy-icon"
                 width="0.8rem"
                 @click="copyText(item.value)"
               />
+
+              <template #tooltip>
+                <div class="tooltip__content">
+                  <span>Copied to clipboard {{ item.value }}</span>
+                </div>
+              </template>
             </ui-tooltip-click>
           </div>
         </div>
       </div>
 
-      <!-- TODO: split submit and execute button -->
-      <!-- TODO: don't show the submit button if user already voted -->
-      <v-btn
-        v-if="isSubmitButtonVisible"
-        class="section-top__submit-button"
-        :loading="loadingExecuteProposal"
-        :disabled="!accountStore.isConnected"
-        @click="submitButtonClick"
-      >
-        {{ submitButtonText }}
-        <v-tooltip
-          v-if="!accountStore.isConnected"
-          :model-value="true"
-          activator="parent"
-          location="top"
-          @update:model-value="false"
+      <div class="buttons-container">
+        <v-btn
+          v-if="isProposalActive && !hasAccountVotedAlready"
+          class="section-top__submit-button"
+          :disabled="!accountStore.isConnected"
+          @click="openVoteDialog"
         >
-          Connect your wallet.
-        </v-tooltip>
-      </v-btn>
+          Submit Vote
+          <v-tooltip
+            v-if="!accountStore.isConnected || hasAccountVotedAlready"
+            :model-value="true"
+            activator="parent"
+            location="top"
+            @update:model-value="false"
+          >
+            <template v-if="!accountStore.isConnected">
+              Connect your wallet.
+            </template>
+          </v-tooltip>
+        </v-btn>
+        <UiNotification v-else-if="hasAccountVotedAlready" class="notification">
+          You have voted on this proposal.
+        </UiNotification>
+
+        <v-btn
+          v-if="hasProposalSucceeded && !hasProposalExecuted"
+          class="section-top__submit-button"
+          :loading="loadingExecuteProposal"
+          :disabled="!accountStore.isConnected"
+          @click="executeProposal"
+        >
+          Execute Proposal
+          <v-tooltip
+            v-if="!accountStore.isConnected"
+            :model-value="true"
+            activator="parent"
+            location="top"
+            @update:model-value="false"
+          >
+            <template v-if="!accountStore.isConnected">
+              Connect your wallet.
+            </template>
+          </v-tooltip>
+        </v-btn>
+      </div>
 
       <v-dialog
         v-model="isVoteDialogOpen"
@@ -153,10 +186,11 @@
 <script setup lang="ts">
 // toast
 import { truncateAddress } from "~/composables/addressUtils";
-// import { useToastStore } from "~/store/toast.store";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
+import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { useToastStore } from "~/store/toast.store";
+import { useWeb3Store } from "~/store/web3.store";
 import {
   ProposalState,
   VoteType,
@@ -172,10 +206,11 @@ const props = defineProps({
     default: () => {},
   },
 });
-
+const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
+const governanceProposalStore = useGovernanceProposalsStore();
 const loadingSubmitVote = ref(false);
 const loadingExecuteProposal = ref(false);
 
@@ -195,6 +230,7 @@ const metaCopyTags = computed((): IMetaItem[] => {
     {
       label: "Proposal ID:",
       value: props.proposal.proposalId,
+      format: truncateAddress,
     },
     {
       label: "Proposer",
@@ -204,9 +240,8 @@ const metaCopyTags = computed((): IMetaItem[] => {
   ];
 });
 
-const isSubmitButtonVisible = computed(() => {
-  // On active state user can vote, and on succeeded it can be exceuted.
-  return [ProposalState.Active, ProposalState.Succeeded].includes(props.proposal.state);
+const isProposalActive = computed(() => {
+  return props.proposal?.state === ProposalState.Active;
 });
 
 const hasProposalSucceeded = computed(() => {
@@ -216,10 +251,8 @@ const hasProposalExecuted = computed(() => {
   return props.proposal.state === ProposalState.Executed;
 });
 
-const submitButtonText = computed(() => {
-  if (hasProposalSucceeded.value) return "Execute Proposal"
-  if (hasProposalExecuted.value) return "N/A"
-  return "Submit Vote";
+const hasAccountVotedAlready = computed(() => {
+  return governanceProposalStore.hasAccountVoted(props.proposal.proposalId) ?? true;
 });
 
 const isVoteDialogOpen = ref(false);
@@ -227,46 +260,46 @@ const selectedVoteOption = ref<number>();
 const copyText = (text: string) => {
   navigator.clipboard.writeText(text);
 }
-const submitButtonClick = () => {
-  // if proposal is approved, execute proposal
-  if (hasProposalSucceeded.value) {
-    executeProposal();
-  } else {
-  // if proposal is not approved, open dialog
-  // for submission
-    openVoteDialog();
-  }
-}
 
 const submitVote = async () => {
   loadingSubmitVote.value = true;
   console.log("cast vote", props.proposal.proposalId, selectedVoteOption.value)
+  const [gasPrice] = await web3Store.estimateGas(
+    {
+      from: fundStore.activeAccountAddress,
+      to: fundStore.fundGovernorContract.options.address,
+      data: fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).encodeABI(),
+    },
+  );
 
   try {
-    await fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).send(
-      {
-        from: fundStore.activeAccountAddress,
-      },
-    ).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("Your vote has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
-        toastStore.successToast("Vote successful.");
-      } else {
-        toastStore.errorToast(
-          "The vote transaction has failed. Please contact the Rethink Finance support.",
-        );
-      }
-      loadingSubmitVote.value = false;
-      closeVoteDialog();
-    }).on("error", (error: any) => {
-      console.error(error);
-      loadingSubmitVote.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-      closeVoteDialog();
-    });
+    await web3Store.callWithRetry(() =>
+      fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).send(
+        {
+          from: fundStore.activeAccountAddress,
+          maxPriorityFeePerGas: gasPrice,
+        },
+      ).on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast("Your vote has been submitted. Please wait for it to be confirmed.");
+      }).on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          toastStore.successToast("Vote successful.");
+        } else {
+          toastStore.errorToast(
+            "The vote transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loadingSubmitVote.value = false;
+        closeVoteDialog();
+      }).on("error", (error: any) => {
+        console.error(error);
+        loadingSubmitVote.value = false;
+        toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+        closeVoteDialog();
+      }),
+    )
   } catch {
     loadingSubmitVote.value = false;
   }
@@ -285,37 +318,47 @@ const executeProposal = async () => {
     ),
   )
 
+  const trxData = [
+    props.proposal.targets,
+    props.proposal.values,
+    props.proposal.calldatas,
+    props.proposal.descriptionHash,
+  ];
+  const [gasPrice] = await web3Store.estimateGas(
+    {
+      from: fundStore.activeAccountAddress,
+      to: fundStore.fundGovernorContract.options.address,
+      data: fundStore.fundGovernorContract.methods.execute(...trxData).encodeABI(),
+    },
+  );
   try {
-    await fundStore.fundGovernorContract.methods.execute(
-      props.proposal.targets,
-      props.proposal.values,
-      props.proposal.calldatas,
-      props.proposal.descriptionHash,
-    ).send(
-      {
-        from: fundStore.activeAccountAddress,
-      },
-    ).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("Proposal execution has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
-        toastStore.successToast("Proposal execution successful.");
-      } else {
-        toastStore.errorToast(
-          "Proposal execution transaction has failed. Please contact the Rethink Finance support.",
-        );
-      }
-      loadingExecuteProposal.value = false;
-    }).on("error", (error: any) => {
-      console.error(error);
-      console.log("testeee");
-      loadingExecuteProposal.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-    });
-  } catch {
-    console.log("testee");
+    await web3Store.callWithRetry(() =>
+      fundStore.fundGovernorContract.methods.execute(...trxData).send(
+        {
+          from: fundStore.activeAccountAddress,
+          maxPriorityFeePerGas: gasPrice,
+        },
+      ).on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast("Proposal execution has been submitted. Please wait for it to be confirmed.");
+      }).on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          toastStore.successToast("Proposal execution successful.");
+        } else {
+          toastStore.errorToast(
+            "Proposal execution transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loadingExecuteProposal.value = false;
+      }).on("error", (error: any) => {
+        console.error(error);
+        loadingExecuteProposal.value = false;
+        toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+      }),
+    )
+  } catch (error: any) {
+    console.error("Error here proposal: ", error);
     loadingExecuteProposal.value = false;
   }
 }
@@ -332,6 +375,33 @@ const voteOptionIcon = (voteType: number) => {
     { [`di-card__radio--${VoteTypeClass[VoteTypeMapping[voteType]]}`]: voteType === selectedVoteOption.value },
   ];
 }
+
+
+watch(() => props.proposal.proposalId, (newProposalId) => {
+  if (fundStore.activeAccountAddress === undefined || !newProposalId) {
+    return;
+  }
+
+  const activeAccountAddress = fundStore.activeAccountAddress;
+
+  governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId] ??= {};
+
+  // Do not fetch the hasVoted again if we already know the account has voted.
+  if (governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][activeAccountAddress]) {
+    return;
+  }
+
+  // Fetch voting status for the specific proposal
+  props.proposal.hasVotedLoading = true;
+  web3Store.callWithRetry(() =>
+    fundStore.fundGovernorContract.methods.hasVoted(props.proposal.proposalId, activeAccountAddress).call(),
+  ).then((hasVoted: boolean) => {
+    governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][activeAccountAddress] = hasVoted;
+  }).finally(() => {
+    props.proposal.hasVotedLoading = false;
+  });
+}, { immediate: true });
+
 </script>
 
 <style scoped lang="scss">
@@ -427,6 +497,7 @@ const voteOptionIcon = (voteType: number) => {
   @include borderGray;
   margin: 0 auto;
   color: white;
+  width: 100%;
 
   &__header-container {
     display: flex;
@@ -501,5 +572,14 @@ const voteOptionIcon = (voteType: number) => {
       color: $color-warning;
     }
   }
+}
+.buttons-container{
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  justify-content: center;
+}
+.notification{
+  margin: 0;
 }
 </style>

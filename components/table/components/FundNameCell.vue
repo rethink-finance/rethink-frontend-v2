@@ -1,12 +1,12 @@
 <template>
   <div class="fund_name">
-    <v-avatar size="3rem" rounded="0" class="fund_name__avatar">
+    <v-avatar size="3rem" :rounded="true" class="fund_name__avatar">
       <img
         cover
         :src="props.image"
       >
     </v-avatar>
-    <div class="title-wrapper d-flex align-items-center">
+    <div class="title_wrapper">
       <h4>{{ title }}</h4>
       <h5>{{ subtitle }}</h5>
     </div>
@@ -30,19 +30,18 @@ const props = defineProps({
   flex-direction: row;
 
   &__avatar {
-    border-radius: 0.25rem;
+    border-radius: 50%;
     margin-right: 0.75rem;
     img {
-      width: 3rem;
-      height: 3rem;
+      width: 100%;
+      height: 100%;
     }
   }
 }
-.title-wrapper {
-  justify-content: center;
-  align-items: flex-start;
+.title_wrapper {
   display: flex;
   flex-direction: column;
+  justify-content: space-around;
   gap: 0.25rem;
   flex-grow: 1; /* Allow the title wrapper to fill available space */
   min-width: 0; /* Prevents flex items from growing past their content size */

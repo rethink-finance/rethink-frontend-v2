@@ -2,16 +2,43 @@
   <div>
     <UiHeader>
       <div class="main_header__title">
-        Define New Method
+        Define New Methods
+
+        <UiTooltipClick
+          location="right"
+          :hide-after="6000"
+        >
+          <Icon
+            icon="material-symbols:info-outline"
+            class="info-icon"
+            width="1.5rem"
+          />
+
+          <template #tooltip>
+            <div class="tooltip__content">
+              <a
+                class="tooltip__link"
+                href="https://docs.rethink.finance/rethink.finance"
+                target="_blank"
+              >
+                Learn More
+                <Icon
+                  icon="maki:arrow"
+                  color="primary"
+                  width="1rem"
+                />
+              </a>
+            </div>
+          </template>
+        </UiTooltipClick>
       </div>
     </UiHeader>
 
     <div class="main_card">
       <v-form ref="form" v-model="formIsValid">
-        <v-container fluid>
           <v-row>
             <v-col>
-              <strong>Position Method</strong>
+              <strong>Define Position Method</strong>
             </v-col>
           </v-row>
           <v-row>
@@ -19,7 +46,7 @@
               cols="12"
               sm="6"
             >
-              <v-label class="label_required">
+              <v-label class="label_required mb-2">
                 Position Name
               </v-label>
               <v-text-field
@@ -33,7 +60,7 @@
               cols="12"
               sm="6"
             >
-              <v-label class="label_required">
+              <v-label class="label_required mb-2">
                 Valuation Source
               </v-label>
               <v-text-field
@@ -50,10 +77,10 @@
               cols="12"
               sm="6"
             >
-              <v-label>
+              <v-label class="mb-2">
                 Position Type
               </v-label>
-              <div>
+              <div class="toggle_buttons">
                 <v-btn-toggle v-model="navEntry.positionType" group>
                   <v-btn
                     v-for="positionType in creatablePositionTypes"
@@ -71,8 +98,8 @@
               cols="12"
               sm="6"
             >
-              <v-label> Valuation Type </v-label>
-              <div>
+              <v-label class="mb-2"> Valuation Type </v-label>
+              <div class="toggle_buttons">
                 <v-btn-toggle v-model="navEntry.valuationType" group>
                   <v-btn
                     v-for="valuationType in valuationTypes"
@@ -87,7 +114,7 @@
             </v-col>
           </v-row>
 
-          <v-row class="mt-4">
+          <v-row class="mt-10">
             <v-col>
               <strong>Method Details</strong>
             </v-col>
@@ -129,13 +156,11 @@
                       </div>
                     </v-expansion-panel-title>
                     <v-expansion-panel-text>
-                      <v-row>
                         <FundNavMethodDetails
                           v-model="navEntry.details[navEntry.positionType][index]"
                           :position-type="navEntry.positionType"
                           :valuation-type="navEntry.valuationType"
                         />
-                      </v-row>
                     </v-expansion-panel-text>
                   </v-expansion-panel>
                 </v-expansion-panels>
@@ -180,7 +205,6 @@
               </v-btn>
             </v-col>
           </v-row>
-        </v-container>
       </v-form>
 
       <div class="buttons_container">
@@ -191,8 +215,8 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from "vue-router";
 import { ethers } from "ethers";
+import { useRouter } from "vue-router";
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import {
@@ -429,6 +453,35 @@ const addMethod = () => {
 </script>
 
 <style scoped lang="scss">
+.main_header {
+  min-height: 40px;  
+ 
+  &__title {
+    display: flex;
+    align-items: center;
+    align-content: center;
+    gap: 20px;
+  }
+}
+.tooltip{
+  &__content{
+    display: flex;
+    gap: 40px;
+  }
+  &__link {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    color: $color-primary;
+  }
+}
+
+.info-icon {
+  cursor: pointer;
+  display: flex;
+  color: $color-text-irrelevant;
+}
 .buttons_container {
   display: flex;
   flex-direction: row;
@@ -457,6 +510,24 @@ const addMethod = () => {
 
   &--valid {
     color: $color-success;
+  }
+}
+// toggle buttons
+.toggle_buttons {
+  .v-btn-toggle {
+    display: flex;
+    gap: 10px;
+
+    .v-btn {
+      opacity: 0.35;
+      color: $color-text-irrelevant;
+      border-radius: 4px !important;
+      @include borderGray;
+    }
+    .v-btn--active {
+      color: $color-white !important;
+      opacity: 1;
+    }
   }
 }
 </style>

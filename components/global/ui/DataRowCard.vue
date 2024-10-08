@@ -7,7 +7,7 @@
     :class="{'data_row--readonly': isReadOnly}"
   >
     <v-expansion-panel
-      class="data_row__panel card_box card_box--no-padding"
+      class="data_row__panel"
       eager
       :class="{'data_row__panel--transparent': bgTransparent }"
       :readonly="isReadOnly"
@@ -40,7 +40,7 @@
               {{ subtitle3 }}
             </div>
           </div>
-          <div v-if="title4" class="data_row__column" :class="{'data_row__column--grow': growColumn4}">
+          <div v-if="title4" class="data_row__column is-last" :class="{'data_row__column--grow': growColumn4}">
             <div class="data_row__title">
               {{ title4 }}
             </div>
@@ -55,7 +55,7 @@
             <span class="data_row__action_text" :class="expanded ? 'text-primary' : ''">
               <slot name="actionText" :expanded="expanded" />
             </span>
-            <v-icon :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
+            <v-icon class="data_row__action_icon" :color="expanded ? 'primary' : ''" :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
           </slot>
         </template>
       </v-expansion-panel-title>
@@ -214,7 +214,7 @@ export default defineComponent({
     }
   }
   &__panel {
-    background: $color-navy-gray-light;
+    background: $color-card-background;
 
     &--transparent {
       background: transparent;
@@ -235,10 +235,11 @@ export default defineComponent({
   }
   .v-expansion-panel-title {
     overflow: hidden;
-    padding: 0.5rem 1rem;
-    height: 3.5rem;
-    font-size: 1rem;
+    padding: 10px 8px;
+    height: 56px;
+    font-size: 14px;
   }
+
   &__body {
     word-wrap: break-word;
     max-width: 100%;
@@ -258,13 +259,13 @@ export default defineComponent({
   }
   &__subtitle {
     font-weight: 500;
-    color: $color-subtitle;
+    color: $color-steel-blue;
     font-size: $text-sm;
   }
   &__column {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 4px;
     min-width: 7rem;
     max-width: 100%;
     margin-top: auto;
@@ -274,10 +275,21 @@ export default defineComponent({
     &--grow {
       flex-grow: 1;
     }
+
+    &.is-last {
+      margin-left: auto;
+      padding-left: 25px;
+      border-left: 1px solid $color-gray-transparent;
+    }
   }
   &__title, &__subtitle {
     @include ellipsis;
     max-width: 100%;
+  }
+
+  &__action_icon{
+    height: 24px;
+    width: 24px;
   }
 }
 </style>

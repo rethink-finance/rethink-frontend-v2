@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { encodeParameter } from "web3-eth-abi";
 
 /**
  * Position Type Methods preparing data from actual Object to an array of values that are ready to be encoded.
@@ -53,11 +54,32 @@ export const prepNAVMethodNFT = (details: Record<string, any>): any[] => {
   ]);
 }
 
-export const prepNAVMethodComposable = (details: Record<string, any>): any[] => {
+export const prepNAVMethodComposable = (
+  details: Record<string, any>,
+  safeAddressToReplace: string = "",
+  safeAddressReplacement: string= "",
+): any[] => {
+  // Sometimes we want to replace an address in the encodedFunctionSignatureWithInputs with another one.
+  // This happens when we are simulating NAV and we use the passed safeAddressToReplace
+  // and it is replaced with safeAddressReplacement
+  let encodedSafeAddressToReplace = "";
+  let encodedSafeAddressReplacement = "";
+  if (safeAddressToReplace && safeAddressReplacement) {
+    encodedSafeAddressToReplace = encodeParameter("address", safeAddressToReplace).replace("0x", "");
+    console.log("encodedSafeAddressToReplace", encodedSafeAddressToReplace)
+    encodedSafeAddressReplacement = encodeParameter("address", safeAddressReplacement).replace("0x", "");
+  } else {
+    if (!safeAddressToReplace && safeAddressReplacement) {
+      console.warn("no safeAddressToReplace", safeAddressToReplace)
+    }
+    if (!safeAddressReplacement && safeAddressToReplace) {
+      console.warn("no safeAddressReplacement", safeAddressReplacement)
+    }
+  }
   return details.composable.map((method: Record<string, any>) => [
     method.remoteContractAddress,
     method.functionSignatures,
-    method.encodedFunctionSignatureWithInputs,
+    method.encodedFunctionSignatureWithInputs.replace(encodedSafeAddressToReplace, encodedSafeAddressReplacement),
     parseInt(method.normalizationDecimals) || 0,
     method.isReturnArray,
     parseInt(method.returnValIndex) || 0,

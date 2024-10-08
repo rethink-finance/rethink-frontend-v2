@@ -2,10 +2,10 @@
   <div class="main_card">
     <div class="header">
       <div class="header__title-col">
-        <div class="header__title">
+        <div class="header__title subtitle_white">
           {{ title }}
         </div>
-        <div class="header__sub-title">
+        <div class="header__sub-title" v-if="subtitle">
           {{ subtitle }}
         </div>
       </div>
@@ -49,23 +49,16 @@ export default {
 
   @include sm {
     flex-direction: row;
-    align-items: center;
   }
 
   &__title-col {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-  }
-
-  &__title {
-    font-size: $text-md;
-    color: $color-white;
-    font-weight: 700;
+    gap: 16px;
   }
 
   &__sub-title {
-    font-size: $text-sm;
+    font-size: 14px;
     color: $color-text-irrelevant;
     font-weight: 500;
   }

@@ -74,12 +74,16 @@ export default {
   display: flex;
   flex-direction: row;
   justify-content: center;
-  gap: 1.5rem;
+  gap: 50px;
 }
 
 .dropdown {
   position: relative;
   display: inline-block;
+
+  .v-btn{
+    padding:0;
+  }
 }
 
 .dropdown-menu {

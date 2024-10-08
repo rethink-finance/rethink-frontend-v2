@@ -15,26 +15,40 @@
       </div>
     </UiHeader>
 
-    <div class="main_card">
-      <div>
-        <strong>Popular Methods</strong>
+    <UiHeader>
+      <div class="main_header__title">
+        <v-text-field
+          v-model="search"
+          label="Search"
+          prepend-inner-icon="mdi-magnify"
+          variant="outlined"
+          hide-details
+          single-line
+          class="search"
+        />
       </div>
-      <div v-if="loadingAllNavMethods" class="mt-4">
-        <v-skeleton-loader type="table-row" />
-        <v-skeleton-loader type="table-row" />
-        <v-skeleton-loader type="table-row" />
-        <v-skeleton-loader type="table-row" />
+      <div class="subtitle_steel_blue mb-0">
+        {{ selectedMethodHashes.length }} selected
       </div>
-      <FundNavMethodsTable
-        v-else
-        :methods="uniqueNavMethods"
-        :used-methods="fundStore.fundManagedNAVMethods"
-        selectable
-        show-simulated-nav
-        idx="addFromLibrary"
-        @selected-changed="onSelectionChanged"
-      />
+    </UiHeader>
+
+
+    <div v-if="loadingAllNavMethods" class="mt-4">
+      <v-skeleton-loader type="table-row" />
+      <v-skeleton-loader type="table-row" />
+      <v-skeleton-loader type="table-row" />
+      <v-skeleton-loader type="table-row" />
     </div>
+    <FundNavMethodsTable
+      v-else
+      :methods="uniqueNavMethods"
+      :used-methods="fundStore.fundManagedNAVMethods"
+      selectable
+      :search="search"
+      show-simulated-nav
+      idx="addFromLibrary"
+      @selected-changed="onSelectionChanged"
+    />
   </div>
 </template>
 
@@ -43,8 +57,8 @@
 import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 
-import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useFundsStore } from "~/store/funds.store";
+import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
 const fundsStore = useFundsStore();
@@ -53,6 +67,7 @@ const router = useRouter();
 
 const loadingAllNavMethods = ref(false);
 const selectedMethodHashes = ref<string[]>([]);
+const search = ref("");
 
 const { selectedFundSlug } = toRefs(fundStore);
 const { allNavMethods } = toRefs(fundsStore);
@@ -83,9 +98,8 @@ onMounted(async () => {
   if (!allNavMethods.value.length) {
     loadingAllNavMethods.value = true;
     const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays()
-    const fundAddresses: string[] = fundsInfoArrays[0];
     // Fetch all possible NAV methods for all funds
-    await fundsStore.fetchAllNavMethods(fundAddresses);
+    await fundsStore.fetchAllNavMethods(fundsInfoArrays);
     loadingAllNavMethods.value = false;
   }
 });
@@ -113,4 +127,7 @@ const addMethods = () => {
 </script>
 
 <style scoped lang="scss">
+.search{
+  width: 300px;
+}
 </style>

@@ -20,10 +20,10 @@
                 Proposal Title
               </v-label>
               <div class="proposal_title_field__char_limit">
-                <v-label>
-                  MAX 150
-                </v-label>
-                <v-icon icon="mdi-circle-outline" size="15" />
+                <ui-char-limit
+                  :char-limit="150"
+                  :char-number="proposal.title"
+                />
               </div>
             </div>
           </v-row>
@@ -52,7 +52,6 @@
                     v-model="proposal.allowManagerToUpdateNav"
                     color="primary"
                     hide-details
-                    inset
                   />
                 </div>
                 <div class="d-inline-block">
@@ -64,7 +63,7 @@
                   </div>
                 </div>
               </div>
-              <div class="management__card--no-margin">
+              <div class="management__card">
                 <div class="management__row">
                   <div>
                     Collect management fees upon NAV proposal execution
@@ -73,7 +72,6 @@
                     v-model="proposal.collectManagementFees"
                     color="primary"
                     hide-details
-                    inset
                   />
                 </div>
               </div>
@@ -86,7 +84,6 @@
                     v-model="proposal.processWithdraw"
                     color="primary"
                     hide-details
-                    inset
                   />
                 </div>
               </div>
@@ -95,21 +92,22 @@
 
           <!-- Proposal Description -->
           <v-row>
-            <v-label class="label_required proposal_description">
+            <v-label class="label_required mb-2">
               Proposal Description
             </v-label>
           </v-row>
-          <v-textarea
-            v-model="proposal.description"
-            class="mb-6"
-            :placeholder="`Type here`"
-            hide-details
-            required
-          />
+          <v-row class="mb-6">
+            <v-textarea
+              v-model="proposal.description"
+              :placeholder="`Type here`"
+              hide-details
+              required
+            />
+          </v-row>
 
-          <v-row class="proposal_description d-flex flex-grow-1 justify-space-between align-center">
+          <v-row class="proposal_description d-flex flex-grow-1 justify-space-between align-center mb-2">
             <v-label class="label_required">
-              NAV Methods
+              Proposal Methods
             </v-label>
           </v-row>
           <v-row class="mb-4">
@@ -562,85 +560,106 @@ const createProposal = async () => {
     },
     null, 2),
   )
+
+  const proposalData = [
+    targetAddresses,
+    gasValues,
+    calldatas,
+    JSON.stringify({
+      title: proposal.value.title,
+      description: proposal.value.description,
+    }),
+  ];
+  const [gasPrice] = await web3Store.estimateGas(
+    {
+      from: fundStore.activeAccountAddress,
+      to: fundStore.fundGovernorContract.options.address,
+      data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
+    },
+  );
   // ADD encoded entries for OIV permissions
   try {
-    await fundStore.fundGovernorContract.methods.propose(
-      targetAddresses,
-      gasValues,
-      calldatas,
-      JSON.stringify({
-        title: proposal.value.title,
-        description: proposal.value.description,
-      }),
-    ).send({
-      from: fundStore.activeAccountAddress,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
+    await web3Store.callWithRetry(() =>
+      fundStore.fundGovernorContract.methods.propose(...proposalData).send({
+        from: fundStore.activeAccountAddress,
+        maxPriorityFeePerGas: gasPrice,
+      }).on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
 
-      clearDraft();
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
         clearDraft();
-        toastStore.successToast(
-          "Register the proposal transactions was successful. " +
-          "You can now vote on the proposal in the governance page.",
-        );
-      } else {
-        toastStore.errorToast(
-          "The register proposal transaction has failed. Please contact the Rethink Finance support.",
-        );
-      }
-      loading.value = false;
-    }).on("error", (error: any) => {
-      console.error(error);
-      loading.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-    });
+      }).on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          clearDraft();
+          toastStore.successToast(
+            "Register the proposal transactions was successful. " +
+            "You can now vote on the proposal in the governance page.",
+          );
+        } else {
+          toastStore.errorToast(
+            "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loading.value = false;
+      }).on("error", (error: any) => {
+        console.error(error);
+        loading.value = false;
+        toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+      }),
+    )
   } catch (error: any) {
     loading.value = false;
     toastStore.errorToast(error.message);
   }
 
+  const proposalData2 = [
+    [navExecutorAddr].concat(roleModTargets),
+    [0].concat(roleModGasValues),
+    [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
+    JSON.stringify({
+      title: proposal.value.title,
+      description: proposal.value.description,
+    }),
+  ];
+  const [gasPrice2] = await web3Store.estimateGas(
+    {
+      from: fundStore.activeAccountAddress,
+      to: fundStore.fundGovernorContract.options.address,
+      data: fundStore.fundGovernorContract.methods.propose(...proposalData2).encodeABI(),
+    },
+  );
   // Permissions for non gov nav updates
   try {
-    await fundStore.fundGovernorContract.methods.propose(
-      [navExecutorAddr].concat(roleModTargets),
-      [0].concat(roleModGasValues),
-      [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
-      JSON.stringify({
-        title: proposal.value.title,
-        description: proposal.value.description,
-      }),
-    ).send({
-      from: fundStore.activeAccountAddress,
-      maxPriorityFeePerGas: undefined,
-      maxFeePerGas: undefined,
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
+    await web3Store.callWithRetry(() =>
+      fundStore.fundGovernorContract.methods.propose(...proposalData2).send({
+        from: fundStore.activeAccountAddress,
+        maxPriorityFeePerGas: gasPrice2,
+      }).on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
 
-      clearDraft();
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
         clearDraft();
-        toastStore.successToast(
-          "Requesting future NAV permissions transactions was successful. " +
-          "You can now vote on the proposal in the governance page.",
-        );
-      } else {
-        toastStore.errorToast(
-          "The register proposal transaction has failed. Please contact the Rethink Finance support.",
-        );
-      }
-      loading.value = false;
-    }).on("error", (error: any) => {
-      console.error(error);
-      loading.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-    });
+      }).on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          clearDraft();
+          toastStore.successToast(
+            "Requesting future NAV permissions transactions was successful. " +
+            "You can now vote on the proposal in the governance page.",
+          );
+        } else {
+          toastStore.errorToast(
+            "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loading.value = false;
+      }).on("error", (error: any) => {
+        console.error(error);
+        loading.value = false;
+        toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+      }),
+    )
   } catch (error: any) {
     loading.value = false;
     toastStore.errorToast(error.message);
@@ -710,15 +729,16 @@ const saveProposalDraft = () => {
 
 <style scoped lang="scss">
 .main_header__subtitle {
-  color: $color-subtitle;
+  color: $color-steel-blue;
   font-weight: 500;
 }
 
 .header {
   display: flex;
   flex-direction: row;
-  align-items: baseline;
+  align-items: center;
   gap: .62rem;
+  min-height: 40px;
 }
 .proposal_title_field {
   width: 100%;
@@ -730,7 +750,7 @@ const saveProposalDraft = () => {
   &__char_limit {
     display: flex;
     flex-direction: row;
-    color: $color-subtitle;
+    color: $color-steel-blue;
     font-size: $text-sm;
     font-weight: 400;
     align-items: center;
@@ -770,7 +790,7 @@ const saveProposalDraft = () => {
     gap: .25rem;
     padding: .25rem;
     background-color: $color-background-button;
-    color: $color-subtitle;
+    color: $color-steel-blue;
     font-weight: 700;
     font-size: $text-sm;
     text-transform: uppercase;

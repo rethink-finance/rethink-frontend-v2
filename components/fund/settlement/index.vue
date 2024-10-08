@@ -1,7 +1,7 @@
 <template>
   <div class="fund_settlement">
     <div class="card_header">
-      <div class="card_header__title">
+      <div class="card_header__title subtitle_white">
         Manage Deposits
       </div>
       <div class="fund_settlement__buttons">
@@ -51,6 +51,10 @@ export default {
       type: Object as PropType<IFund>,
       default: () => {},
     },
+    shouldUserDelegate: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -82,7 +86,12 @@ export default {
     },
     openDelegateDialog() {
       console.log("openDelegateDialog");
-      this.isDelegateDialogOpen = true;
+      console.log("this.shouldUserDelegate: ", this.shouldUserDelegate);
+
+      // only open the dialog if shouldUserDelegate is true
+      if (this.shouldUserDelegate) {
+        this.isDelegateDialogOpen = true;
+      }
     },
   },
 };
@@ -96,13 +105,17 @@ export default {
     gap: 1rem;
     margin: auto 0;
   }
+  // TODO: this should be in the base classes, generalized for all buttons like this.
   button {
-    color: $color-secondary !important;
-    &.button-active {
-      color: $color-primary !important;
+    color: $color-white !important;
+    border-color: $color-steel-blue !important;
+    &.button-active,
+    &.button-active:hover {
+      background: unset !important;
+      color: $color-white !important;
     }
     &.button-inactive {
-      color: $color-inactive !important;
+      opacity: 0.32;
     }
   }
   &__card_boxes {
@@ -118,15 +131,11 @@ export default {
       flex-direction: row;
     }
 
-    &__title{
-      font-size: 1rem;
-      font-weight: bold;
-      color: $color-subtitle;
-      line-height: 1;
+    &__title {
       margin-bottom: 0.75rem;
 
-      @include sm{
-        margin-bottom: 0
+      @include sm {
+        margin-bottom: 0;
       }
     }
   }

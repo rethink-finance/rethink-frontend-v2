@@ -4,25 +4,34 @@
       <div class="main_header__title">
         Fund Settings Proposal
 
-        <Icon
-          icon="material-symbols:info-outline"
-          :class="'main_header__info-icon'"
-          width="1.5rem"
-          @click="handleInfoClick"
-        />
+        <UiTooltipClick
+          location="right"
+          :hide-after="6000"
+        >
+          <Icon
+            icon="material-symbols:info-outline"
+            :class="'main_header__info-icon'"
+            width="1.5rem"
+          />
 
-        <div :class="`info-box-v1 ${isInfoVisible ? 'visible' : ''}`">
-          Update Fund Settings on need!
-          <a
-            class="info-box-v1__link"
-            href="https://docs.rethink.finance/rethink.finance"
-            target="_blank"
-          >Learn More <Icon
-            icon="maki:arrow"
-            color="primary"
-            width="1rem"
-          /></a>
-        </div>
+          <template #tooltip>
+            <div class="tooltip__content">
+              Update Fund Settings on need!
+              <a
+                class="tooltip__link"
+                href="https://docs.rethink.finance/rethink.finance"
+                target="_blank"
+              >
+                Learn More
+                <Icon
+                  icon="maki:arrow"
+                  color="primary"
+                  width="1rem"
+                />
+              </a>
+            </div>
+          </template>
+        </UiTooltipClick>
       </div>
 
       <div class="buttons_container">
@@ -64,19 +73,22 @@
           :key="index"
           class="section main_card"
         >
-          <div class="section__title">
+          <div class="section__title subtitle_white">
             {{ section.name }}
 
             <UiTooltipClick
               v-if="section.info"
-              :tooltip-text="section.info"
-              :hide-after="3000"
+              :hide-after="8000"
             >
               <Icon
                 icon="material-symbols:info-outline"
                 class="section__info-icon"
                 width="1.5rem"
               />
+
+              <template #tooltip>
+                {{ section.info }}
+              </template>
             </UiTooltipClick>
 
             <div
@@ -197,7 +209,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
   {
     title: "Fund Setting Proposal",
-    disabled: false,
+    disabled: true,
     to: `/details/${selectedFundSlug.value}/governance/fund-settings`,
   },
 ];
@@ -206,7 +218,6 @@ const loading = ref(false);
 const activeStep = ref(proposalSteps[0]);
 const form = ref(null);
 const formIsValid = ref(false);
-const isInfoVisible = ref(false);
 const isWhitelistToggled = ref(true);
 
 const updateSettingsABI = GovernableFund.abi.find(
@@ -334,9 +345,6 @@ const isLastStep = computed(() => {
   return activeStep.value === proposalSteps[proposalSteps.length - 1];
 });
 
-const handleInfoClick = () => {
-  isInfoVisible.value = !isInfoVisible.value;
-};
 
 const handleButtonClick = () => {
   isLastStep.value ? submit() : nextStep();
@@ -386,50 +394,61 @@ const submit = async () => {
       ),
     );
 
+    const proposalData = [
+      targetAddresses,
+      gasValues,
+      calldatas,
+      JSON.stringify({
+        title: proposal.value.proposalTitle,
+        description: proposal.value.proposalDescription,
+      }),
+    ];
+    const [gasPrice] = await web3Store.estimateGas(
+      {
+        from: fundStore.activeAccountAddress,
+        to: fundStore.fundGovernorContract.options.address,
+        data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
+      },
+    );
     try {
-      await fundStore.fundGovernorContract.methods
-        .propose(
-          targetAddresses,
-          gasValues,
-          calldatas,
-          JSON.stringify({
-            title: proposal.value.proposalTitle,
-            description: proposal.value.proposalDescription,
-          }),
-        )
-        .send({
-          from: fundStore.activeAccountAddress,
-        })
-        .on("transactionHash", (hash: string) => {
-          console.log("tx hash: " + hash);
-          toastStore.addToast(
-            "The proposal transaction has been submitted. Please wait for it to be confirmed.",
-          );
+      await web3Store.callWithRetry(() =>
+        fundStore.fundGovernorContract.methods
+          .propose(...proposalData)
+          .send({
+            from: fundStore.activeAccountAddress,
+            maxPriorityFeePerGas: gasPrice,
+          })
+          .on("transactionHash", (hash: string) => {
+            console.log("tx hash: " + hash);
+            toastStore.addToast(
+              "The proposal transaction has been submitted. Please wait for it to be confirmed.",
+            );
 
-          router.push(`/details/${selectedFundSlug.value}/governance`);
-        })
-        .on("receipt", (receipt: any) => {
-          console.log("receipt: ", receipt);
-          if (receipt.status) {
-            toastStore.successToast(
-              "Register the proposal transactions was successful. " +
-                "You can now vote on the proposal in the governance page.",
-            );
             router.push(`/details/${selectedFundSlug.value}/governance`);
-          } else {
+          })
+          .on("receipt", (receipt: any) => {
+            console.log("receipt: ", receipt);
+            if (receipt.status) {
+              toastStore.successToast(
+                "Register the proposal transactions was successful. " +
+                  "You can now vote on the proposal in the governance page.",
+              );
+              router.push(`/details/${selectedFundSlug.value}/governance`);
+            } else {
+              toastStore.errorToast(
+                "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+              );
+            }
+            loading.value = false;
+          })
+          .on("error", (error: any) => {
+            console.error(error);
+            loading.value = false;
             toastStore.errorToast(
-              "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+              "There has been an error. Please contact the Rethink Finance support.",
             );
-          }
-          loading.value = false;
-        })
-        .on("error", (error: any) => {
-          console.error(error);
-          loading.value = false;
-          toastStore.errorToast(
-            "There has been an error. Please contact the Rethink Finance support.",
-          );
-        });
+          }),
+      )
     } catch (error: any) {
       loading.value = false;
       toastStore.errorToast(error.message);
@@ -700,12 +719,12 @@ onBeforeUnmount(() => {
     flex-wrap: wrap;
     align-items: center;
     align-content: center;
-    gap: 10px;
+    gap: 20px;
   }
   &__info-icon {
     cursor: pointer;
     display: flex;
-    color: $color-disabled;
+    color: $color-text-irrelevant;
   }
 }
 .buttons_container {
@@ -729,10 +748,6 @@ onBeforeUnmount(() => {
     align-items: center;
     padding: 12px;
     margin-bottom: 15px;
-
-    font-size: 16px;
-    font-weight: 700;
-    color: $color-white;
   }
   &__info-icon {
     cursor: pointer;
@@ -755,42 +770,23 @@ onBeforeUnmount(() => {
     color: var(--color-success);
   }
 }
-
-.info-box-v1 {
-  display: flex;
-  gap: 40px;
-
-  padding: 12px;
-  border-radius: 4px;
-  background: linear-gradient(0deg, #111c35, #111c35),
-    linear-gradient(0deg, rgba(246, 249, 255, 0.08), rgba(246, 249, 255, 0.08));
-  box-shadow: 0px 0px 6px 0px #1f5fff29;
-
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  color: $color-text-irrelevant;
-
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-
-  &.visible {
-    opacity: 1;
+.section-whitelist {
+  display: none;
+  &.toggle__on {
+    display: block;
   }
-
+}
+.tooltip{
+  &__content{
+    display: flex;
+    gap: 40px;
+  }
   &__link {
     display: flex;
     gap: 10px;
     align-items: center;
     justify-content: center;
     color: $color-primary;
-  }
-}
-
-.section-whitelist {
-  display: none;
-  &.toggle__on {
-    display: block;
   }
 }
 </style>
