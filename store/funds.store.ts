@@ -305,25 +305,30 @@ export const useFundsStore = defineStore({
       }
     },
     calculateCumulativeReturnPercent(dataNAVs: Record<string, any>, index: number): number {
-      // calculate cumulativeReturnPercent
-      // totalNAV() - _totalDepositBal  / _totalDepositBal
-      let cumulativeReturnPercent = 0;
-      const totalDepositBal = dataNAVs.totalDepositBal[index] || BigInt("0");
-      const totalNAV = dataNAVs.totalNav[index] || BigInt("0");
+      try{
+        // calculate cumulativeReturnPercent
+        // totalNAV() - _totalDepositBal  / _totalDepositBal
+        let cumulativeReturnPercent = 0;
+        const totalDepositBal = dataNAVs.totalDepositBal[index] || BigInt("0");
+        const totalNAV = dataNAVs.totalNav[index] || BigInt("0");
 
-      if (totalNAV > BigInt(0) && totalDepositBal > BigInt(0)) {
-        const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index])
-        const fixedTotalNAV = FixedNumber.fromValue(totalNAV, baseTokenDecimals);
-        const fixedTotalDepositBal = FixedNumber.fromValue(totalDepositBal, baseTokenDecimals);
-        
-        // cumulativeReturnPercent = (totalNAV - totalDepositBal) / totalDepositBal
-        const cumulativeReturn = fixedTotalNAV
-          .sub(fixedTotalDepositBal)
-          .div(fixedTotalDepositBal);
+        if (totalNAV > BigInt(0) && totalDepositBal > BigInt(0)) {
+          const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index])
+          const fixedTotalNAV = FixedNumber.fromValue(totalNAV, baseTokenDecimals);
+          const fixedTotalDepositBal = FixedNumber.fromValue(totalDepositBal, baseTokenDecimals);
+          
+          // cumulativeReturnPercent = (totalNAV - totalDepositBal) / totalDepositBal
+          const cumulativeReturn = fixedTotalNAV
+            .sub(fixedTotalDepositBal)
+            .div(fixedTotalDepositBal);
 
-        cumulativeReturnPercent = cumulativeReturn.toUnsafeFloat();
+          cumulativeReturnPercent = cumulativeReturn.toUnsafeFloat();
+        }
+        return cumulativeReturnPercent;
+      } catch (error) {
+        console.error("Error calculating cumulativeReturnPercent: ", error);
+        return 0;
       }
-      return cumulativeReturnPercent;
     },
     async fetchFundsInfoArrays() {
       const fundFactoryContract = this.fundFactoryContract;
