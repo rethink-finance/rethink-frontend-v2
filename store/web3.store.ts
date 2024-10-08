@@ -81,6 +81,22 @@ export const useWeb3Store = defineStore({
           "https://api.stateless.solutions/ethereum/v1/demo",
         ],
       },
+      "0x2105": {
+        chainId: "0x2105",
+        chainName: "Base",
+        chainShort: "base",
+        rpcUrl: "https://mainnet.base.org",
+        rpcUrls: [
+          "https://mainnet.base.org",
+          "https://base.llamarpc.com",
+          "https://base-mainnet.public.blastapi.io",
+          "https://1rpc.io/base",
+          "https://gateway.tenderly.co/public/base",
+          "https://base.drpc.org",
+          "https://base.meowrpc.com",
+          "https://base.rpc.subquery.network/public",
+        ],
+      },
     },
     cachedTokens: {
       "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063": {
