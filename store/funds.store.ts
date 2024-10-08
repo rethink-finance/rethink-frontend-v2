@@ -205,8 +205,9 @@ export const useFundsStore = defineStore({
           const totalNAV = dataNAVs.totalNav[index] || BigInt("0");
 
           if (totalNAV > BigInt(0) && totalDepositBal > BigInt(0)) {
-            const fixedTotalNAV = FixedNumber.fromValue(totalNAV, 18);
-            const fixedTotalDepositBal = FixedNumber.fromValue(totalDepositBal, 18);
+            const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index])
+            const fixedTotalNAV = FixedNumber.fromValue(totalNAV, baseTokenDecimals);
+            const fixedTotalDepositBal = FixedNumber.fromValue(totalDepositBal, baseTokenDecimals);
             
             // cumulativeReturnPercent = (totalNAV - totalDepositBal) / totalDepositBal
             const cumulativeReturn = fixedTotalNAV
