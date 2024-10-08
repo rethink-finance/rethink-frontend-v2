@@ -252,7 +252,7 @@ const hasProposalExecuted = computed(() => {
 });
 
 const hasAccountVotedAlready = computed(() => {
-  return governanceProposalStore.hasAccountVoted(props.proposal.proposalId) ?? true;
+  return governanceProposalStore.hasAccountVoted(props.proposal.proposalId) ?? false;
 });
 
 const isVoteDialogOpen = ref(false);
