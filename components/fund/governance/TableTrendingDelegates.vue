@@ -5,6 +5,7 @@
     :headers="headers"
     :items="items"
     items-per-page="-1"
+    :loading="loading"
   >
     <template #[`item.delegated_members`]="{ item }">
       <div class="data-cell__title">
@@ -48,6 +49,10 @@ export default defineComponent({
       type: Array as () => ITrendingDelegates[],
       default: () => [],
     },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
   },
   data: () => ({
     // bug fix for vuetify table headers property 'align'
@@ -56,12 +61,12 @@ export default defineComponent({
       {
         title: "Delegated Members",
         key: "delegated_members",
-        value: (v: any) => pluralizeWord("member", v.delegated_members),
         sorable: false,
       },
       {
         title: "Delegators",
         key: "delegators",
+        value: (v: any) => pluralizeWord("member", v.delegators),
         sortable: true,
       },
       {
@@ -136,13 +141,14 @@ export default defineComponent({
 .data-cell {
   &__title {
     display: flex;
-    gap: 24px;
+    gap: 8px;
     align-items: center;
     padding-block: 1rem;
   }
   &__text {
     width: 40%;
     max-width: 120px;
+    min-width: 110px;
   }
 }
 
