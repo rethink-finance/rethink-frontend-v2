@@ -57,8 +57,8 @@ export default interface IFund {
   totalNAVWei: bigint;
   totalDepositBalance: bigint;
   cumulativeReturnPercent?: number;
-  monthlyReturnPercent: number; // TODO
-  sharpeRatio: number; // TODO
+  monthlyReturnPercent?: number; // TODO
+  sharpeRatio?: number; // TODO
   positionTypeCounts: IPositionTypeCount[];
 
   // Metadata

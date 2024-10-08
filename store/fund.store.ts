@@ -630,8 +630,8 @@ export const useFundStore = defineStore({
           governanceTokenTotalSupply,
           fundTokenTotalSupply,
           cumulativeReturnPercent: undefined,
-          monthlyReturnPercent: 0,
-          sharpeRatio: 0,
+          monthlyReturnPercent: undefined,
+          sharpeRatio: undefined,
           positionTypeCounts: [] as IPositionTypeCount[],
 
           // My Fund Positions

@@ -225,8 +225,8 @@ export const useFundsStore = defineStore({
             totalNAVWei: dataNAVs.totalNav[index],
             totalDepositBalance: dataNAVs.totalDepositBal[index] || BigInt("0"),
             cumulativeReturnPercent: this.calculateCumulativeReturnPercent(dataNAVs, index),
-            monthlyReturnPercent: 0,
-            sharpeRatio: 0,
+            monthlyReturnPercent: undefined,
+            sharpeRatio: undefined,
             positionTypeCounts: [
               {
                 type: PositionTypesMap[PositionType.Liquid],

@@ -8,7 +8,6 @@ const addresses: IAddresses = addressesJson as IAddresses;
 interface IState {
   web3?: Web3;
   currentRpcIndex: number,
-  maxRetries: number,
   retryDelay: number,
   chainId: string,
   chainName: string;
@@ -34,7 +33,6 @@ export const useWeb3Store = defineStore({
   state: (): IState => ({
     web3: undefined,
     currentRpcIndex: -1,
-    maxRetries: 1,
     retryDelay: 1500,
     chainId: "",
     chainName: "",
@@ -278,7 +276,8 @@ export const useWeb3Store = defineStore({
         return [undefined, undefined];
       }
     },
-    async callWithRetry(method: () => any): Promise<any> {
+    async callWithRetry(method: () => any, maxRetries: number = 1): Promise<any> {
+      // TODO: see the TODO below for the possible upgrade of callWithRetry
       const RPCUrlsLength = this.currentNetworkRPCUrls.length;
       let retries = 0;
       let switchedRPCCount = 0;
@@ -287,7 +286,7 @@ export const useWeb3Store = defineStore({
       if (!method) {
         return method;
       }
-      while (retries < this.maxRetries && switchedRPCCount <= RPCUrlsLength) {
+      while (retries <= maxRetries && switchedRPCCount <= RPCUrlsLength) {
         try {
           return await method();
         } catch (error: any) {
@@ -303,7 +302,7 @@ export const useWeb3Store = defineStore({
           const rpcUrl = (this.web3?.currentProvider as any)?.clientUrl;
           console.error(`RPC error: ${(error as Error).message}`, method, rpcUrl);
           retries++;
-          if (retries >= this.maxRetries) {
+          if (retries > maxRetries) {
             this.switchRpcUrl();
             retries = 0;
             switchedRPCCount++;
