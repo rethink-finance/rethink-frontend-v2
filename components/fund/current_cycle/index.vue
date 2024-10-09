@@ -205,13 +205,14 @@ const deposit = async () => {
   const ABI = [ "function deposit()" ];
   const iface = new ethers.Interface(ABI);
   const encodedFunctionCall = iface.encodeFunctionData("deposit");
-  const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  // const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await web3Store.callWithRetry(() =>
       fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
         from: fundStore.activeAccountAddress,
-        maxPriorityFeePerGas: gasPrice,
+        // maxPriorityFeePerGas: gasPrice,
+        gasPrice: "",
       }).on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
@@ -263,13 +264,14 @@ const redeem = async () => {
   const iface = new ethers.Interface([ "function withdraw()" ]);
   const encodedFunctionCall = iface.encodeFunctionData("withdraw");
   fundStore.fundContract.methods.withdraw().encodeABI()
-  const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  // const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await web3Store.callWithRetry(() =>
       fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
         from: fundStore.activeAccountAddress,
-        maxPriorityFeePerGas: gasPrice,
+        // maxPriorityFeePerGas: gasPrice,
+        gasPrice: "",
       }).on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

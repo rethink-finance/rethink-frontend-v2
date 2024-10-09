@@ -154,19 +154,20 @@ const safeContractBaseTokenBalanceFormatted = computed(() => {
 
 const transfer = async () => {
   isTransferLoading.value = true;
-  const [gasPrice] = await web3Store.estimateGas(
-    {
-      from: fundStore.activeAccountAddress,
-      to: fundStore.fundBaseTokenContract.options.address,
-      data: fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei.value).encodeABI(),
-    },
-  );
+  // const [gasPrice] = await web3Store.estimateGas(
+  //   {
+  //     from: fundStore.activeAccountAddress,
+  //     to: fundStore.fundBaseTokenContract.options.address,
+  //     data: fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei.value).encodeABI(),
+  //   },
+  // );
 
   try {
     await web3Store.callWithRetry(() =>
       fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei.value).send({
         from: fundStore.activeAccountAddress,
-        maxPriorityFeePerGas: gasPrice,
+        // maxPriorityFeePerGas: gasPrice,
+        gasPrice: "",
       }).on("transactionHash", (hash: string) => {
         console.log("tx hash: ", hash);
         toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

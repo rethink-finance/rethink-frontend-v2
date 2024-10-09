@@ -376,11 +376,6 @@ const submit = async () => {
     const gasValues = [0, 0];
     const calldatas = [encodedDataOld, encodedData];
 
-    const proposalDetails = {
-      title: proposal.value.proposalTitle,
-      description: proposal.value.proposalDescription,
-    };
-
     console.log(
       "proposal:",
       JSON.stringify(
@@ -403,20 +398,21 @@ const submit = async () => {
         description: proposal.value.proposalDescription,
       }),
     ];
-    const [gasPrice] = await web3Store.estimateGas(
-      {
-        from: fundStore.activeAccountAddress,
-        to: fundStore.fundGovernorContract.options.address,
-        data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
-      },
-    );
+    // const [gasPrice] = await web3Store.estimateGas(
+    //   {
+    //     from: fundStore.activeAccountAddress,
+    //     to: fundStore.fundGovernorContract.options.address,
+    //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
+    //   },
+    // );
     try {
       await web3Store.callWithRetry(() =>
         fundStore.fundGovernorContract.methods
           .propose(...proposalData)
           .send({
             from: fundStore.activeAccountAddress,
-            maxPriorityFeePerGas: gasPrice,
+            // maxPriorityFeePerGas: gasPrice,
+            gasPrice: "",
           })
           .on("transactionHash", (hash: string) => {
             console.log("tx hash: " + hash);

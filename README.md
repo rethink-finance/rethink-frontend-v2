@@ -132,3 +132,20 @@ Make sure that `.htaccess` file has:
   RewriteRule ^ /index.html [L]
 </IfModule>
 ```
+
+
+### Reader Contract TODO
+
+1) Calculate Cumulative return in the reader contract for each fund. Special case if the totalDepositBal is 0, we must
+take the first NAV update as the start value (TSHN - ShineDAO is such example on Polygon).
+If there is no NAV update yet, cumulative return percent must be 0.
+
+2) Calculate Total NAV like we do in the frontend. There is a special case if there are no NAV
+updates yet, then the total NAV is actually totalDepositBal-
+
+
+### Reader Contract TODO
+1) Until the reader contract cumulative value is implemented:
+   Special case if the totalDepositBal is 0, we must take
+   the first NAV update as the start value (TSHN - ShineDAO is such example on Polygon)
+   If there is no NAV update yet, cumulative return percent must be 0.

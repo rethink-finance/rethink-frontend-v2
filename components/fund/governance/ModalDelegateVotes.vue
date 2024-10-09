@@ -171,19 +171,20 @@ const delegate = async (isMyself = false) => {
       governanceTokenAddress !== nullAddr
     ) {
       try {
-        const [gasPrice] = await web3Store.estimateGas(
-          {
-            from: fundStore.activeAccountAddress,
-            to: fundStore.fundGovernanceTokenContract.options.address,
-            data: fundStore.fundGovernanceTokenContract.methods.delegate(delegateTo).encodeABI(),
-          },
-        );
+        // const [gasPrice] = await web3Store.estimateGas(
+        //   {
+        //     from: fundStore.activeAccountAddress,
+        //     to: fundStore.fundGovernanceTokenContract.options.address,
+        //     data: fundStore.fundGovernanceTokenContract.methods.delegate(delegateTo).encodeABI(),
+        //   },
+        // );
         await web3Store.callWithRetry(() =>
           fundStore.fundGovernanceTokenContract.methods
             .delegate(delegateTo)
             .send({
               from: fundStore.activeAccountAddress,
-              maxPriorityFeePerGas: gasPrice,
+              // maxPriorityFeePerGas: gasPrice,
+              gasPrice: "",
             })
             .on("transactionHash", function (hash: any) {
               console.log("tx hash: " + hash);
@@ -220,20 +221,21 @@ const delegate = async (isMyself = false) => {
         );
       }
     } else {
-      const [gasPrice] = await web3Store.estimateGas(
-        {
-          from: fundStore.activeAccountAddress,
-          to: fundStore.fundContract.options.address,
-          data: fundStore.fundContract.methods.delegate(delegateTo).encodeABI(),
-        },
-      );
+      // const [gasPrice] = await web3Store.estimateGas(
+      //   {
+      //     from: fundStore.activeAccountAddress,
+      //     to: fundStore.fundContract.options.address,
+      //     data: fundStore.fundContract.methods.delegate(delegateTo).encodeABI(),
+      //   },
+      // );
       try {
         await web3Store.callWithRetry(() =>
           fundStore.fundContract.methods
             .delegate(delegateTo)
             .send({
               from: fundStore.activeAccountAddress,
-              maxPriorityFeePerGas: gasPrice,
+              // maxPriorityFeePerGas: gasPrice,
+              gasPrice: "",
             })
             .on("transactionHash", function (hash: any) {
               console.log("tx hash: " + hash);

@@ -84,14 +84,12 @@ const sweepFundContract = async () => {
 
   try {
     const functionSignatureHash = eth.abi.encodeFunctionSignature("sweepTokens()");
-    const iface = new ethers.Interface([ "function sweepTokens()" ]);
-    const encodedFunctionCall = iface.encodeFunctionData("sweepTokens");
-    const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
     await web3Store.callWithRetry(() =>
       fundStore.fundContract.methods.fundFlowsCall(functionSignatureHash).send({
         from: fundStore.activeAccountAddress,
-        maxPriorityFeePerGas: gasPrice,
+        // maxPriorityFeePerGas: gasPrice,
+        gasPrice: "",
       }).on("transactionHash", (hash: string) => {
         console.log("tx hash: ", hash);
         toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

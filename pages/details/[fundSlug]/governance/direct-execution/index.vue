@@ -192,18 +192,19 @@ const submitProposal = async () => {
       description: details?.proposalDescription,
     }),
   ];
-  const [gasPrice] = await web3Store.estimateGas(
-    {
-      from: fundStore.activeAccountAddress,
-      to: fundStore.fundGovernorContract.options.address,
-      data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
-    },
-  );
+  // const [gasPrice] = await web3Store.estimateGas(
+  //   {
+  //     from: fundStore.activeAccountAddress,
+  //     to: fundStore.fundGovernorContract.options.address,
+  //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
+  //   },
+  // );
   try {
     await web3Store.callWithRetry(() =>
       fundStore.fundGovernorContract.methods.propose(...proposalData).send({
         from: fundStore.activeAccountAddress,
-        maxPriorityFeePerGas: gasPrice,
+        // maxPriorityFeePerGas: gasPrice,
+        gasPrice: "",
       }).on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");

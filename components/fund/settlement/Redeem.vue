@@ -172,13 +172,14 @@ const requestRedemption = async () => {
 
   const iface = new ethers.Interface([ "function requestWithdraw(uint256 amount)" ]);
   const encodedFunctionCall = iface.encodeFunctionData("requestWithdraw", [ tokensWei ]);
-  const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  // const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
     await web3Store.callWithRetry(() =>
       fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
         from: fundStore.activeAccountAddress,
-        maxPriorityFeePerGas: gasPrice,
+        // maxPriorityFeePerGas: gasPrice,
+        gasPrice: "",
       }).on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");

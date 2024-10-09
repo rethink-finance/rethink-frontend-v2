@@ -134,8 +134,10 @@ export const useWeb3Store = defineStore({
           decimals: 18,
         },
         icon: getChainIcon("eth"),
-        rpcUrl: "https://mainnet.base.org",
+        rpcUrl: "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
         rpcUrls: [
+          // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
+          "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
           "https://mainnet.base.org",
           "https://base.llamarpc.com",
           "https://base-mainnet.public.blastapi.io",
@@ -295,7 +297,7 @@ export const useWeb3Store = defineStore({
           // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
           // Metamask rejected.
           if ([4001].includes(error?.code) || error?.message?.indexOf("User denied transaction")) {
-            console.log("RPC error is one of known metamask errors", error?.code);
+            console.log("RPC error is one of known metamask errors", error?.code, error?.message);
             throw error;
           }
 
