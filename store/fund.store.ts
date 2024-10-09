@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
@@ -12,7 +12,7 @@ import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
-import { cleanComplexWeb3Data, formatJson, pluralizeWord } from "~/composables/utils";
+import { calculateCumulativeReturnPercent, cleanComplexWeb3Data, formatJson, pluralizeWord } from "~/composables/utils";
 import { useAccountStore } from "~/store/account.store";
 import { useFundsStore } from "~/store/funds.store";
 import { useToastStore } from "~/store/toast.store";
@@ -629,7 +629,7 @@ export const useFundStore = defineStore({
           totalDepositBalance: fundTotalDepositBalance || BigInt("0"),
           governanceTokenTotalSupply,
           fundTokenTotalSupply,
-          cumulativeReturnPercent: undefined,
+          cumulativeReturnPercent: calculateCumulativeReturnPercent(fundTotalDepositBalance, fundTotalNAV, baseTokenDecimals),
           monthlyReturnPercent: undefined,
           sharpeRatio: undefined,
           positionTypeCounts: [] as IPositionTypeCount[],

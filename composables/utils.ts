@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+import { ethers, FixedNumber } from "ethers";
 import type { PositionType } from "~/types/enums/position_type";
 import { PositionTypesMap } from "~/types/enums/position_type";
 import type { IIcon } from "~/types/network";
@@ -148,4 +148,38 @@ export const getPositionType = (positionType: PositionType) => {
 
 export const trimTrailingSlash = (str: string) => {
   return str.endsWith("/") ? str.slice(0, -1) : str;
+};
+
+
+/**
+ * Calculates the cumulative return percentage.
+ *
+ * @param {bigint} totalDepositBal - The total amount of deposits, in base token units.
+ * @param {bigint} totalNAV - The total Net Asset Value (NAV), in base token units.
+ * @param {number} baseTokenDecimals - The number of decimals for the base token.
+ * @returns {number | undefined} - The cumulative return percentage, or undefined if an error occurs.
+ *
+ * The formula used is: 
+ * cumulativeReturnPercent = ((totalNAV - totalDepositBal) / totalDepositBal) * 100
+ */
+export const calculateCumulativeReturnPercent = (totalDepositBal: bigint, totalNAV:bigint, baseTokenDecimals: number ): number | undefined => {
+  try{
+    // totalNAV() - _totalDepositBal  / _totalDepositBal
+    let cumulativeReturnPercent = 0;
+
+    if (totalNAV > BigInt(0) && totalDepositBal > BigInt(0)) {
+      const fixedTotalNAV = FixedNumber.fromValue(totalNAV, baseTokenDecimals);
+      const fixedTotalDepositBal = FixedNumber.fromValue(totalDepositBal, baseTokenDecimals);
+
+      // cumulativeReturnPercent = (totalNAV - totalDepositBal) / totalDepositBal
+      const cumulativeReturn = fixedTotalNAV
+        .sub(fixedTotalDepositBal)
+        .div(fixedTotalDepositBal);
+
+      cumulativeReturnPercent = cumulativeReturn.toUnsafeFloat();
+    }
+    return cumulativeReturnPercent;
+  } catch (error) {
+    return undefined;
+  }
 };

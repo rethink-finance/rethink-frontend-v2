@@ -1,12 +1,12 @@
-import { FixedNumber } from "ethers";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import SafeMultiSendCallOnlyJson from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
+import { calculateCumulativeReturnPercent } from "~/composables/utils";
 import { useFundStore } from "~/store/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
@@ -197,6 +197,9 @@ export const useFundsStore = defineStore({
             excludeFundAddrs[this.web3Store.chainId].includes(address)) {
             return;
           }
+          const totalDepositBalance = dataNAVs.totalDepositBal[index] || BigInt("0");
+          const totalNAVWei = dataNAVs.totalNav[index] || BigInt("0");
+          const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index]);
 
           const fundStartTime = dataNAVs.startTime[index];
           const fund: IFund = {
@@ -218,13 +221,13 @@ export const useFundsStore = defineStore({
             baseToken: {
               address: "",  // Not important here.
               symbol: dataNAVs.fundBaseTokenSymbol[index],
-              decimals: Number(dataNAVs.fundBaseTokenDecimals[index]),
+              decimals: baseTokenDecimals,
             },
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
-            totalNAVWei: dataNAVs.totalNav[index],
-            totalDepositBalance: dataNAVs.totalDepositBal[index] || BigInt("0"),
-            cumulativeReturnPercent: this.calculateCumulativeReturnPercent(dataNAVs, index),
+            totalNAVWei: totalNAVWei,
+            totalDepositBalance: totalDepositBalance,
+            cumulativeReturnPercent: calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals),
             monthlyReturnPercent: undefined,
             sharpeRatio: undefined,
             positionTypeCounts: [
@@ -302,31 +305,6 @@ export const useFundsStore = defineStore({
       } catch (error) {
         console.error("Error calling getFundNavMetaData: ", error, " addresses: ", fundAddresses);
         return funds;
-      }
-    },
-    calculateCumulativeReturnPercent(dataNAVs: Record<string, any>, index: number): number | undefined {
-      try{
-        // totalNAV() - _totalDepositBal  / _totalDepositBal
-        let cumulativeReturnPercent = 0;
-        const totalDepositBal = dataNAVs.totalDepositBal[index] || BigInt("0");
-        const totalNAV = dataNAVs.totalNav[index] || BigInt("0");
-
-        if (totalNAV > BigInt(0) && totalDepositBal > BigInt(0)) {
-          const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index])
-          const fixedTotalNAV = FixedNumber.fromValue(totalNAV, baseTokenDecimals);
-          const fixedTotalDepositBal = FixedNumber.fromValue(totalDepositBal, baseTokenDecimals);
-
-          // cumulativeReturnPercent = (totalNAV - totalDepositBal) / totalDepositBal
-          const cumulativeReturn = fixedTotalNAV
-            .sub(fixedTotalDepositBal)
-            .div(fixedTotalDepositBal);
-
-          cumulativeReturnPercent = cumulativeReturn.toUnsafeFloat();
-        }
-        return cumulativeReturnPercent;
-      } catch (error) {
-        console.error("Error calculating cumulativeReturnPercent: ", error);
-        return undefined;
       }
     },
     async fetchFundsInfoArrays() {
