@@ -8,7 +8,6 @@ const addresses: IAddresses = addressesJson as IAddresses;
 interface IState {
   web3?: Web3;
   currentRpcIndex: number,
-  maxRetries: number,
   retryDelay: number,
   chainId: string,
   chainName: string;
@@ -34,7 +33,6 @@ export const useWeb3Store = defineStore({
   state: (): IState => ({
     web3: undefined,
     currentRpcIndex: -1,
-    maxRetries: 1,
     retryDelay: 1500,
     chainId: "",
     chainName: "",
@@ -51,8 +49,10 @@ export const useWeb3Store = defineStore({
           decimals: 18,
         },
         icon: getChainIcon("matic"),
-        rpcUrl: "https://polygon-pokt.nodies.app",
+        rpcUrl: "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
         rpcUrls: [
+          // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
+          "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
           "https://polygon-rpc.com",
           "https://polygon.drpc.org",
           "https://polygon-pokt.nodies.app",
@@ -70,8 +70,10 @@ export const useWeb3Store = defineStore({
           decimals: 18,
         },
         icon: getChainIcon("arb1"),
-        rpcUrl: "https://arb1.arbitrum.io/rpc",
+        rpcUrl: "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
         rpcUrls: [
+          // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
+          "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
           "https://arb1.arbitrum.io/rpc",      // Max 10k blocks, if auth: more than 1M
           "https://arbitrum.drpc.org",      // Max 10k blocks, if auth: more than 1M
           "https://arbitrum.llamarpc.com",  // Max 10k blocks
@@ -80,22 +82,22 @@ export const useWeb3Store = defineStore({
         ],
         blockExplorerUrls: ["https://arbiscan.io"],
       },
-      "0xfc": {
-        chainId: "0xfc",
-        chainName: "Fraxtal",
-        chainShort: "frax",
-        nativeCurrency: {
-          name: "Frax",
-          symbol: "frxETH",
-          decimals: 18,
-        },
-        icon: getChainIcon("frax"),
-        rpcUrl: "https://rpc.frax.com",
-        rpcUrls: [
-          "https://rpc.frax.com",
-        ],
-        blockExplorerUrls: ["https://fraxscan.com"],
-      },
+      // "0xfc": {
+      //   chainId: "0xfc",
+      //   chainName: "Fraxtal",
+      //   chainShort: "frax",
+      //   nativeCurrency: {
+      //     name: "Frax",
+      //     symbol: "frxETH",
+      //     decimals: 18,
+      //   },
+      //   icon: getChainIcon("frax"),
+      //   rpcUrl: "https://rpc.frax.com",
+      //   rpcUrls: [
+      //     "https://rpc.frax.com",
+      //   ],
+      //   blockExplorerUrls: ["https://fraxscan.com"],
+      // },
       "0x1": {
         chainId: "0x1",
         chainName: "Ethereum",
@@ -106,8 +108,10 @@ export const useWeb3Store = defineStore({
           decimals: 18,
         },
         icon: getChainIcon("eth"),
-        rpcUrl: "https://rpc.ankr.com/eth",
+        rpcUrl: "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
         rpcUrls: [
+          // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
+          "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
           "https://eth.drpc.org",
           "https://endpoints.omniatech.io/v1/eth/mainnet/public",
           "https://ethereum.blockpi.network/v1/rpc/public",
@@ -272,7 +276,8 @@ export const useWeb3Store = defineStore({
         return [undefined, undefined];
       }
     },
-    async callWithRetry(method: () => any): Promise<any> {
+    async callWithRetry(method: () => any, maxRetries: number = 1): Promise<any> {
+      // TODO: see the TODO below for the possible upgrade of callWithRetry
       const RPCUrlsLength = this.currentNetworkRPCUrls.length;
       let retries = 0;
       let switchedRPCCount = 0;
@@ -281,7 +286,7 @@ export const useWeb3Store = defineStore({
       if (!method) {
         return method;
       }
-      while (retries < this.maxRetries && switchedRPCCount <= RPCUrlsLength) {
+      while (retries <= maxRetries && switchedRPCCount <= RPCUrlsLength) {
         try {
           return await method();
         } catch (error: any) {
@@ -297,7 +302,7 @@ export const useWeb3Store = defineStore({
           const rpcUrl = (this.web3?.currentProvider as any)?.clientUrl;
           console.error(`RPC error: ${(error as Error).message}`, method, rpcUrl);
           retries++;
-          if (retries >= this.maxRetries) {
+          if (retries > maxRetries) {
             this.switchRpcUrl();
             retries = 0;
             switchedRPCCount++;
@@ -317,6 +322,7 @@ export const useWeb3Store = defineStore({
       if (!this.web3) {
         this.web3 = new Web3(newRpcUrl);
       } else {
+        console.log("set new provider to RPC url", newRpcUrl);
         this.web3?.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
       }
 

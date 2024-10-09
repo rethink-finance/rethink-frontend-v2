@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
@@ -227,8 +227,8 @@ export const useFundsStore = defineStore({
             totalNAVWei: dataNAVs.totalNav[index],
             totalDepositBalance: dataNAVs.totalDepositBal[index] || BigInt("0"),
             cumulativeReturnPercent: this.calculateCumulativeReturnPercent(dataNAVs, index),
-            monthlyReturnPercent: 0,
-            sharpeRatio: 0,
+            monthlyReturnPercent: undefined,
+            sharpeRatio: undefined,
             positionTypeCounts: [
               {
                 type: PositionTypesMap[PositionType.Liquid],
@@ -306,9 +306,8 @@ export const useFundsStore = defineStore({
         return funds;
       }
     },
-    calculateCumulativeReturnPercent(dataNAVs: Record<string, any>, index: number): number {
+    calculateCumulativeReturnPercent(dataNAVs: Record<string, any>, index: number): number | undefined {
       try{
-        // calculate cumulativeReturnPercent
         // totalNAV() - _totalDepositBal  / _totalDepositBal
         let cumulativeReturnPercent = 0;
         const totalDepositBal = dataNAVs.totalDepositBal[index] || BigInt("0");
@@ -318,7 +317,7 @@ export const useFundsStore = defineStore({
           const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index])
           const fixedTotalNAV = FixedNumber.fromValue(totalNAV, baseTokenDecimals);
           const fixedTotalDepositBal = FixedNumber.fromValue(totalDepositBal, baseTokenDecimals);
-          
+
           // cumulativeReturnPercent = (totalNAV - totalDepositBal) / totalDepositBal
           const cumulativeReturn = fixedTotalNAV
             .sub(fixedTotalDepositBal)
@@ -329,7 +328,7 @@ export const useFundsStore = defineStore({
         return cumulativeReturnPercent;
       } catch (error) {
         console.error("Error calculating cumulativeReturnPercent: ", error);
-        return 0;
+        return undefined;
       }
     },
     async fetchFundsInfoArrays() {
