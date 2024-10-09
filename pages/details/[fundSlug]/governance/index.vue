@@ -215,6 +215,7 @@ const fetchTrendingDelegates = async () => {
     const endBlock = BigInt(0);
     let chunkSize = 1000n;
     const minChunkSize = 1000n;
+    let waitTimeAfterError = 100;
     let trendingDelegatesEvents: any[] = [];
 
     while (fromBlock > endBlock && shouldFetchTrendingDelegates.value) {
@@ -247,8 +248,13 @@ const fetchTrendingDelegates = async () => {
         // double the chunk size for the next iteration
         chunkSize *= 2n;
         console.log("Fetched and doubling chunkSize to: ", chunkSize);
+        waitTimeAfterError = Math.max(100, waitTimeAfterError / 2);
 
         fromBlock = toBlock - 1n; // prepare for the next range
+
+        await new Promise((resolve) =>
+          setTimeout(resolve, waitTimeAfterError),
+        );
       } catch (error: any) {
         console.error("Error fetching events: ", error);
 
@@ -258,6 +264,12 @@ const fetchTrendingDelegates = async () => {
           chunkSize = minChunkSize;
         }
         console.log("Error encountered, reducing chunkSize to: ", chunkSize);
+        // Wait max 10 seconds.
+        waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
+
+        await new Promise((resolve) =>
+          setTimeout(resolve, waitTimeAfterError),
+        );
       }
     }
     loadingTrendingDelegate.value = false;
