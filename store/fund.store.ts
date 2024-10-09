@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
@@ -1087,10 +1087,13 @@ export const useFundStore = defineStore({
         console.log("activeAccountAddress is not set.")
         return
       }
+      console.warn("FETCH userFundDelegateAddress")
 
       this.userFundDelegateAddress = await this.callWithRetry(() =>
         this.fundContract.methods.delegates(this.activeAccountAddress).call(),
       );
+      console.warn("FETCH userFundDelegateAddress", this.userFundDelegateAddress)
+
       return this.userFundDelegateAddress;
     },
     /**
@@ -1305,20 +1308,21 @@ export const useFundStore = defineStore({
           this.loadingUpdateNav = false;
           return;
         }
-        const [gasPrice, gasEstimate] = await this.web3Store.estimateGas(
-          {
-            from: this.activeAccountAddress,
-            to: this.fundContract.options.address,
-            data: this.fundContract.methods.executeNAVUpdate(navExecutorAddr).encodeABI(),
-          },
-        );
+        // const [gasPrice, gasEstimate] = await this.web3Store.estimateGas(
+        //   {
+        //     from: this.activeAccountAddress,
+        //     to: this.fundContract.options.address,
+        //     data: this.fundContract.methods.executeNAVUpdate(navExecutorAddr).encodeABI(),
+        //   },
+        // );
 
         return await this.callWithRetry(() =>
           this.fundContract.methods
             .executeNAVUpdate(navExecutorAddr)
             .send({
               from: this.activeAccountAddress,
-              maxPriorityFeePerGas: gasPrice,
+              // maxPriorityFeePerGas: gasPrice,
+              gasPrice: "",
             })
             .on("transactionHash", (hash: any) => {
               console.log("tx hash: " + hash);

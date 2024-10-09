@@ -570,19 +570,20 @@ const createProposal = async () => {
       description: proposal.value.description,
     }),
   ];
-  const [gasPrice] = await web3Store.estimateGas(
-    {
-      from: fundStore.activeAccountAddress,
-      to: fundStore.fundGovernorContract.options.address,
-      data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
-    },
-  );
+  // const [gasPrice] = await web3Store.estimateGas(
+  //   {
+  //     from: fundStore.activeAccountAddress,
+  //     to: fundStore.fundGovernorContract.options.address,
+  //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
+  //   },
+  // );
   // ADD encoded entries for OIV permissions
   try {
     await web3Store.callWithRetry(() =>
       fundStore.fundGovernorContract.methods.propose(...proposalData).send({
         from: fundStore.activeAccountAddress,
-        maxPriorityFeePerGas: gasPrice,
+        // maxPriorityFeePerGas: gasPrice,
+        gasPrice: "",
       }).on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
@@ -622,19 +623,20 @@ const createProposal = async () => {
       description: proposal.value.description,
     }),
   ];
-  const [gasPrice2] = await web3Store.estimateGas(
-    {
-      from: fundStore.activeAccountAddress,
-      to: fundStore.fundGovernorContract.options.address,
-      data: fundStore.fundGovernorContract.methods.propose(...proposalData2).encodeABI(),
-    },
-  );
+  // const [gasPrice2] = await web3Store.estimateGas(
+  //   {
+  //     from: fundStore.activeAccountAddress,
+  //     to: fundStore.fundGovernorContract.options.address,
+  //     data: fundStore.fundGovernorContract.methods.propose(...proposalData2).encodeABI(),
+  //   },
+  // );
   // Permissions for non gov nav updates
   try {
     await web3Store.callWithRetry(() =>
       fundStore.fundGovernorContract.methods.propose(...proposalData2).send({
         from: fundStore.activeAccountAddress,
-        maxPriorityFeePerGas: gasPrice2,
+        // maxPriorityFeePerGas: gasPrice,
+        gasPrice: "",
       }).on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");

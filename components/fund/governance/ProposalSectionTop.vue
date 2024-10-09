@@ -264,20 +264,21 @@ const copyText = (text: string) => {
 const submitVote = async () => {
   loadingSubmitVote.value = true;
   console.log("cast vote", props.proposal.proposalId, selectedVoteOption.value)
-  const [gasPrice] = await web3Store.estimateGas(
-    {
-      from: fundStore.activeAccountAddress,
-      to: fundStore.fundGovernorContract.options.address,
-      data: fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).encodeABI(),
-    },
-  );
+  // const [gasPrice] = await web3Store.estimateGas(
+  //   {
+  //     from: fundStore.activeAccountAddress,
+  //     to: fundStore.fundGovernorContract.options.address,
+  //     data: fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).encodeABI(),
+  //   },
+  // );
 
   try {
     await web3Store.callWithRetry(() =>
       fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).send(
         {
           from: fundStore.activeAccountAddress,
-          maxPriorityFeePerGas: gasPrice,
+          // maxPriorityFeePerGas: gasPrice,
+          gasPrice: "",
         },
       ).on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
@@ -324,19 +325,20 @@ const executeProposal = async () => {
     props.proposal.calldatas,
     props.proposal.descriptionHash,
   ];
-  const [gasPrice] = await web3Store.estimateGas(
-    {
-      from: fundStore.activeAccountAddress,
-      to: fundStore.fundGovernorContract.options.address,
-      data: fundStore.fundGovernorContract.methods.execute(...trxData).encodeABI(),
-    },
-  );
+  // const [gasPrice] = await web3Store.estimateGas(
+  //   {
+  //     from: fundStore.activeAccountAddress,
+  //     to: fundStore.fundGovernorContract.options.address,
+  //     data: fundStore.fundGovernorContract.methods.execute(...trxData).encodeABI(),
+  //   },
+  // );
   try {
     await web3Store.callWithRetry(() =>
       fundStore.fundGovernorContract.methods.execute(...trxData).send(
         {
           from: fundStore.activeAccountAddress,
-          maxPriorityFeePerGas: gasPrice,
+          // maxPriorityFeePerGas: gasPrice,
+          gasPrice: "",
         },
       ).on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
