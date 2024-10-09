@@ -66,6 +66,7 @@ const excludeFundAddrs = {
   ],
   "0xfc": [],
   "0x1": [],
+  "0x2105": [],
 } as Record<string, string[]>;
 
 /*
@@ -89,6 +90,7 @@ const excludeNAVDetailsHashes = {
   "0xa4b1": [],
   "0xfc": [],
   "0x1": [],
+  "0x2105": [],
 } as IExcludeNAVDetailsHashes;
 
 interface IState {
