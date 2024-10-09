@@ -1,6 +1,6 @@
 <template>
   <v-data-table
-    v-if="items.length"
+    v-if="items.length || loading"
     class="table-trending-delegates main_table"
     :headers="headers"
     :items="items"
@@ -33,7 +33,7 @@
       <!-- Leave this slot empty to hide pagination controls -->
     </template>
   </v-data-table>
-  <div v-else class="nav_entries__no_data">
+  <div v-else-if="items.length === 0 && !loading" class="nav_entries__no_data">
     No Governance Activity details available.
   </div>
 </template>
