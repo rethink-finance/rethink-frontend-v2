@@ -1166,17 +1166,20 @@ export const useFundStore = defineStore({
       // GovernableFundStorage.sol
       const userRequestAddress = getAddressMappingStorageKeyAtIndex(this.activeAccountAddress, slotId)
       const userRequestTimestampAddress = incrementStorageKey(userRequestAddress)
-
+      console.log("[FETCH DEPOSIT/REDEMPTION REQUEST] fetch AMOUNT", fundTransactionType, this.fund?.address, userRequestAddress)
       try {
         const amount = await this.callWithRetry(() =>
           this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestAddress),
         );
+        console.log("[FETCH DEPOSIT/REDEMPTION REQUEST] AMOUNT", fundTransactionType, this.fund?.address, userRequestAddress, amount)
         let amountWei: string | bigint = ethers.stripZerosLeft(amount);
         amountWei = amountWei === "0x" ? 0n : BigInt(amountWei);
 
+        console.log("[FETCH DEPOSIT/REDEMPTION REQUEST] fetch TS", fundTransactionType, this.fund?.address, userRequestTimestampAddress)
         const ts = await this.callWithRetry(() =>
           this.web3Store.web3.eth.getStorageAt(this.fund?.address, userRequestTimestampAddress),
         );
+        console.warn("[FETCH DEPOSIT/REDEMPTION REQUEST] TS", fundTransactionType, this.fund?.address, userRequestTimestampAddress, ts)
         let timestamp: string | number = ethers.stripZerosLeft(ts);
         timestamp = timestamp === "0x" ? 0 : Number(timestamp);
 
