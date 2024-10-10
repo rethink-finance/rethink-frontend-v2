@@ -41,11 +41,22 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div
-          class="data_bar__title"
-          :class="numberColorClass(fund.cumulativeReturnPercent)"
-        >
-          {{ formatPercent(fund.cumulativeReturnPercent, true) || "N/A" }}
+        <div class="data_bar__title" :class="{'justify-center': fundStore.loadingNavUpdates}">
+          <v-progress-circular
+            v-if="fundStore.loadingNavUpdates"
+            class="d-flex"
+            size="18"
+            width="2"
+            indeterminate
+          />
+          <template v-else>
+            <div
+              class="data_bar__title"
+              :class="numberColorClass(fundStore.fundLastNAVUpdate?.timestamp ? fund.cumulativeReturnPercent  : 0)"
+            >
+              {{ formatPercent(fundStore.fundLastNAVUpdate?.timestamp ? fund.cumulativeReturnPercent  : 0, true) || "N/A" }}
+            </div>
+          </template>
         </div>
         <div class="data_bar__subtitle">
           Cumulative
