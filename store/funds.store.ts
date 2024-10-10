@@ -384,7 +384,7 @@ export const useFundsStore = defineStore({
             governanceTokenTotalSupply: BigInt("0"),
             totalNAVWei: fundLastNavUpdate?.timestamp ? totalNAVWei : totalDepositBalance,
             totalDepositBalance: totalDepositBalance,
-            cumulativeReturnPercent: calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals),
+            cumulativeReturnPercent: fundLastNavUpdate?.timestamp ? calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals) : 0,
             monthlyReturnPercent: undefined,
             sharpeRatio: undefined,
             positionTypeCounts: [
