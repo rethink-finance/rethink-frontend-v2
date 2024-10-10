@@ -2,17 +2,21 @@ import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import addressesJson from "~/assets/contracts/addresses.json";
+import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
+import NavCalculator from "~/assets/contracts/NAVCalculator.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import SafeMultiSendCallOnlyJson from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { calculateCumulativeReturnPercent } from "~/composables/utils";
+import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type { IContractAddresses } from "~/types/addresses";
-import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
+import { PositionType, PositionTypesMap, PositionTypeToNAVCacheMethod } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
+import type { INAVParts } from "~/types/fund";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
@@ -111,6 +115,9 @@ export const useFundsStore = defineStore({
     navMethodDetailsHashToFundAddress: {} as Record<string, string>,
   }),
   getters: {
+    accountStore(): any {
+      return useAccountStore();
+    },
     fundStore(): any {
       return useFundStore();
     },
@@ -134,6 +141,10 @@ export const useFundsStore = defineStore({
     rethinkReaderContract(): Contract {
       const contractAddress = addresses[RethinkReaderContractName][this.web3Store.chainId];
       return new this.web3.eth.Contract(RethinkReader.abi, contractAddress)
+    },
+    // @ts-expect-error: we should extend the return type as Contract<...>
+    navCalculatorContract(): Contract {
+      return new this.web3.eth.Contract(NavCalculator.abi, this.web3Store.NAVCalculatorBeaconProxyAddress)
     },
     safeMultiSendCallOnlyToAddress(): string {
       return SafeMultiSendCallOnlyAddresses[parseInt(this.web3Store.chainId).toString()]
@@ -175,6 +186,146 @@ export const useFundsStore = defineStore({
        */
       console.error("not implemented");
     },
+    // TODO: this is pretty much the same function as in the fund.store.ts, we can generalize it by passing the contract and fundAddress as f-args
+    async fetchNavParts(navUpdatesLen: number, fundAddress:string): Promise<(INAVParts | undefined)[]> {
+      // Important to know: nav update indices start with 1, not with 0.
+      const promises: Promise<any>[] = Array.from(
+        { length: navUpdatesLen },
+        (_, index) =>
+          this.accountStore.requestConcurrencyLimit(() => this.callWithRetry(
+            () => this.navCalculatorContract.methods.getNAVParts(
+              fundAddress, index + 1,
+            ).call(),
+          )),
+      );
+
+      const navPartsPromises = await Promise.allSettled(promises);
+      const parsedNavParts: (INAVParts | undefined)[] = [];
+      navPartsPromises.forEach((navPartsResult, index) => {
+        if (navPartsResult.status === "fulfilled") {
+          const navParts: Record<string, any> = navPartsResult.value;
+          parsedNavParts.push({
+            baseAssetOIVBal: navParts.baseAssetOIVBal,
+            baseAssetSafeBal: navParts.baseAssetSafeBal,
+            feeBal: navParts.feeBal,
+            totalNAV: navParts.totalNAV,
+          } as INAVParts)
+        } else {
+          parsedNavParts.push(undefined);
+          console.error(`Failed to fetch NAV parts ${index}:`, navPartsResult.reason);
+        }
+      });
+
+      return parsedNavParts;
+    },
+    // TODO: this is pretty much the same function as in the fund.store.ts, we can generalize it by passing the contract and fundAddress as f-args
+    async updateNavMethodPastNavValue(navMethodIndex: number, navMethod: INAVMethod, fundAddress:string) {
+      // NOTE: Important to know, that this currently only works for the methods of the last NAV update.
+      // Fetch NAV method cached past value.
+      const calculatorMethod = PositionTypeToNAVCacheMethod[navMethod.positionType]
+
+      navMethod.pastNavValue = undefined;
+      navMethod.pastNavValueFormatted = undefined;
+      navMethod.pastNavValueLoading = true;
+      navMethod.pastNavValueError = false;
+      try {
+        const navCacheResult = await this.callWithRetry(() =>
+          this.navCalculatorContract.methods[calculatorMethod](fundAddress, navMethodIndex).call(),
+        );
+        const pastNavValue = navCacheResult.reduce(
+          (acc: bigint, val: bigint) => acc + val,
+          0n,
+        );
+        navMethod.pastNavValue = pastNavValue;
+        navMethod.pastNavValueFormatted = this.fundStore.formatBaseTokenValue(pastNavValue);
+      } catch (error) {
+        navMethod.pastNavValueError = true;
+        console.error(`Failed to fetch NAV method last NAV value ${navMethodIndex}:`, navMethod, error);
+      }
+      navMethod.pastNavValueLoading = false;
+    },
+    // TODO: this is pretty much the same function as in the fund.store.ts, we can generalize it by passing the contract and fundAddress as f-args
+    async parseFundNAVUpdates(dataNAV: any, fundAddress: string): Promise<INAVUpdate[]> {
+      const navUpdates = [] as INAVUpdate[];
+      const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundAddress);
+      // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable), they should all
+      // have the same length, so we just use the liquid key.
+      const navUpdatesLen = dataNAV[PositionType.Liquid].length;
+      const fundNavUpdateTimes = await this.callWithRetry(() =>
+        fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call(),
+      );
+
+      // Get a list of NAV parts (total NAV, fees, OIV balance, safe balance) for each NAV update.
+      const navParts = await this.fetchNavParts(navUpdatesLen, fundAddress);
+
+      for (let i= 0; i < navUpdatesLen; i++) {
+        const navTimestamp = Number(fundNavUpdateTimes[i] * 1000n);
+        navUpdates.push(
+          {
+            // NAV update indices start from 1, not from 0.
+            index: i + 1,
+            // If the datetime of the NAV update is available format it, otherwise just use the index (e.g. #2).
+            date: fundNavUpdateTimes[i] ? formatDate(new Date(navTimestamp)) : `#${(i+1).toString()}}`,
+            timestamp: navTimestamp,
+            navParts: navParts[i],
+            totalNAV: navParts[i]?.totalNAV,
+            entries: [],
+          },
+        )
+      }
+
+      // Fetch NAV JSON entries for each NAV update.
+      const promises: Promise<any>[] = Array.from(
+        { length: navUpdatesLen },
+        (_, index) =>
+          this.accountStore.requestConcurrencyLimit(
+            () => this.callWithRetry(
+              () => fundContract.methods.getNavEntry(index + 1).call(),
+            ),
+          ),
+      );
+
+      // Each NAV update has more entries.
+      // Parse and store them to the NAV update entries.
+      const navUpdatePromises = await Promise.allSettled(promises);
+
+      // Process results
+      navUpdatePromises.forEach((navUpdateResult, navUpdateIndex) => {
+        if (navUpdateResult.status === "fulfilled") {
+          const navMethods: Record<string, any>[] = navUpdateResult.value;
+          // console.log("navMethods: ", navMethods);
+
+          for (const [navMethodIndex, navMethod] of navMethods.entries()) {
+            navUpdates[navUpdateIndex].entries.push(this.fundStore.parseNAVMethod(navMethodIndex, navMethod))
+          }
+        } else {
+          console.error(`Failed to fetch NAV entry ${navUpdateIndex + 1}:`, navUpdateResult.reason);
+        }
+      });
+
+      // console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
+      // TODO use this code when reader contract is fixed
+      // Fetch NAV JSON entries for each NAV update.
+      // const navUpdates: Record<string, any>[][] = dataNAV.encodedNavUpdate.map(decodeNavUpdateEntry);
+      //
+      // // Process results
+      // for (const [navUpdateIndex, navMethods] of navUpdates.entries()) {
+      //   // TODO remove this if when reader contract is fixed.
+      //   if (!navMethods.length) continue
+      //   for (const [navMethodIndex, navMethod] of navMethods.entries()) {
+      //     const parsedNavMethod = this.parseNAVMethod(navMethodIndex, navMethod);
+      //     // TODO this is not ok
+      //     // parsedNavMethod.pastNavValue = dataNAV[parsedNavMethod.positionType][navUpdateIndex]
+      //     navUpdates[navUpdateIndex].entries.push(parsedNavMethod)
+      //   }
+      // }
+      
+      const lastNavUpdateNavMethods = navUpdates[navUpdates.length - 1]?.entries ?? [];
+      lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
+        this.updateNavMethodPastNavValue(navMethodIndex, navMethod, fundAddress);
+      });
+      return navUpdates;
+    },
     /**
      * Fetch funds and their metadata and NAV data.
      * This will return funds with just enough data to populate the discover table.
@@ -193,16 +344,37 @@ export const useFundsStore = defineStore({
           ).call(),
         );
 
+        const allFundsNavData = await this.callWithRetry(() =>
+          this.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call(),
+        );
+
+        const allFundsNAVUpdates = [] as INAVUpdate[][];
+        for (const [fundIndex, fundNavData] of allFundsNavData.entries()) { 
+          if (!fundNavData.encodedNavUpdate?.length) {
+            allFundsNAVUpdates.push([]);
+            continue;
+          }
+
+          const navUpdates = await this.parseFundNAVUpdates(fundNavData, fundAddresses[fundIndex]);
+          allFundsNAVUpdates.push(navUpdates);
+          
+        }
+
+        console.log("allFundsNAVUpdates: ", allFundsNAVUpdates);
+
         fundAddresses.forEach((address, index) => {
           if (
             excludeTestFunds &&
             excludeFundAddrs[this.web3Store.chainId].includes(address)) {
             return;
           }
-          const totalDepositBalance = dataNAVs.totalDepositBal[index] || BigInt("0");
-          const totalNAVWei = dataNAVs.totalNav[index] || BigInt("0");
+          const totalDepositBalance = dataNAVs.totalDepositBal[index] || 0n;
+          const totalNAVWei = dataNAVs.totalNav[index] || 0n;
           const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index]);
 
+          const fundNAVUpdates = allFundsNAVUpdates[index]
+          const fundLastNavUpdate = fundNAVUpdates[fundNAVUpdates?.length - 1];
+          
           const fundStartTime = dataNAVs.startTime[index];
           const fund: IFund = {
             chainName: this.web3Store.chainName,
@@ -227,7 +399,7 @@ export const useFundsStore = defineStore({
             },
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
-            totalNAVWei: totalNAVWei,
+            totalNAVWei: fundLastNavUpdate?.timestamp ? totalNAVWei : totalDepositBalance,
             totalDepositBalance: totalDepositBalance,
             cumulativeReturnPercent: calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals),
             monthlyReturnPercent: undefined,
@@ -289,7 +461,7 @@ export const useFundsStore = defineStore({
             fundContractBaseTokenBalance: BigInt(0),
 
             // NAV Updates
-            navUpdates: [] as INAVUpdate[],
+            navUpdates: fundNAVUpdates,
           };
 
           const metaDataJson = dataNAVs.fundMetadata[index];
