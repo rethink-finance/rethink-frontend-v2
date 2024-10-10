@@ -331,50 +331,33 @@ export const useFundsStore = defineStore({
      * This will return funds with just enough data to populate the discover table.
      * More data can be fetched from fundSettings later if needed, or added to the reader contract.
      */
-    async fetchFundsMetadata(fundAddresses: string[], fundsInfo: any): Promise<IFund[]> {
+    async fetchFundsMetadata(fundAddresses: string[], fundsInfo: any) {
       const funds: IFund[] = [];
 
       try {
-        // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
-        //  not used in the contract code, so I have set it to 0. Change this part in the future
-        //  if the contract changes.
-        const dataNAVs: Record<string, any[]> = await this.callWithRetry(() =>
-          this.rethinkReaderContract.methods.getFundNavMetaData(
-            fundAddresses, 0,
-          ).call(),
-        );
+        // Fetch all fund NAV metadata and NAV data in parallel
+        const [dataNAVs, allFundsNavData] = await Promise.all([
+          // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
+          //  not used in the contract code, so I have set it to 0. Change this part in the future
+          //  if the contract changes.
+          this.callWithRetry(() => this.rethinkReaderContract.methods.getFundNavMetaData(fundAddresses, 0).call()),
+          this.callWithRetry(() => this.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call())
+        ]);
 
-        const allFundsNavData = await this.callWithRetry(() =>
-          this.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call(),
-        );
 
-        const allFundsNAVUpdates = [] as INAVUpdate[][];
-        for (const [fundIndex, fundNavData] of allFundsNavData.entries()) { 
-          if (!fundNavData.encodedNavUpdate?.length) {
-            allFundsNAVUpdates.push([]);
-            continue;
-          }
-
-          const navUpdates = await this.parseFundNAVUpdates(fundNavData, fundAddresses[fundIndex]);
-          allFundsNAVUpdates.push(navUpdates);
-          
-        }
-
-        console.log("allFundsNAVUpdates: ", allFundsNAVUpdates);
-
-        fundAddresses.forEach((address, index) => {
+        for (const [index, address] of fundAddresses.entries()) {
           if (
             excludeTestFunds &&
             excludeFundAddrs[this.web3Store.chainId].includes(address)) {
-            return;
+            continue;
           }
           const totalDepositBalance = dataNAVs.totalDepositBal[index] || 0n;
           const totalNAVWei = dataNAVs.totalNav[index] || 0n;
           const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index]);
 
-          const fundNAVUpdates = allFundsNAVUpdates[index]
+          const fundNAVUpdates = await this.parseFundNAVUpdates(allFundsNavData[index], address);
           const fundLastNavUpdate = fundNAVUpdates[fundNAVUpdates?.length - 1];
-          
+
           const fundStartTime = dataNAVs.startTime[index];
           const fund: IFund = {
             chainName: this.web3Store.chainName,
@@ -473,12 +456,10 @@ export const useFundsStore = defineStore({
             fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
             fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
           }
-          funds.push(fund);
-        })
-        return funds;
+          this.funds = [...this.funds, fund];
+        }
       } catch (error) {
         console.error("Error calling getFundNavMetaData: ", error, " addresses: ", fundAddresses);
-        return funds;
       }
     },
     async fetchFundsInfoArrays() {
@@ -504,10 +485,7 @@ export const useFundsStore = defineStore({
       const fundsInfo = Object.fromEntries(fundAddresses.map((address, index) => [address, fundsInfoArrays[1][index]]));
 
       const funds = await this.fetchFundsMetadata(fundAddresses, fundsInfo);
-      console.log("All funds: ", funds);
 
-      // Using the spread operator to append each element
-      this.funds.push(...funds);
 
       // Fetch all possible NAV methods for all funds
       this.fetchAllNavMethods(fundsInfoArrays);
