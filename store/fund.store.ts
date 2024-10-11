@@ -932,6 +932,8 @@ export const useFundStore = defineStore({
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable), they should all
       // have the same length, so we just use the liquid key.
       const navUpdatesLen = dataNAV[PositionType.Liquid].length;
+      console.warn("navUpdatesLen ", navUpdatesLen);
+
       const fundNavUpdateTimes = await this.callWithRetry(() =>
         this.fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call(),
       );
