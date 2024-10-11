@@ -78,7 +78,7 @@
             </template>
           </v-tooltip>
         </v-btn>
-        <UiNotification v-else-if="hasAccountVotedAlready" class="notification">
+        <UiNotification v-else-if="hasAccountVotedAlready && isProposalActive" class="notification">
           You have voted on this proposal.
         </UiNotification>
 
@@ -287,6 +287,12 @@ const submitVote = async () => {
         console.log("receipt: ", receipt);
         if (receipt.status) {
           toastStore.successToast("Vote successful.");
+
+          // update has voted
+          if (fundStore.activeAccountAddress !== undefined && props.proposal.proposalId) {
+            governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId] ??= {};
+            governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][fundStore.activeAccountAddress] = true;
+          }
         } else {
           toastStore.errorToast(
             "The vote transaction has failed. Please contact the Rethink Finance support.",
@@ -379,22 +385,16 @@ const voteOptionIcon = (voteType: number) => {
 }
 
 
-watch(() => props.proposal.proposalId, (newProposalId) => {
-  if (fundStore.activeAccountAddress === undefined || !newProposalId) {
+const fetchHasVoted = () => {
+  if (fundStore.activeAccountAddress === undefined || !props.proposal.proposalId) {
     return;
   }
+  props.proposal.hasVotedLoading = true;
 
   const activeAccountAddress = fundStore.activeAccountAddress;
-
   governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId] ??= {};
 
-  // Do not fetch the hasVoted again if we already know the account has voted.
-  if (governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][activeAccountAddress]) {
-    return;
-  }
 
-  // Fetch voting status for the specific proposal
-  props.proposal.hasVotedLoading = true;
   web3Store.callWithRetry(() =>
     fundStore.fundGovernorContract.methods.hasVoted(props.proposal.proposalId, activeAccountAddress).call(),
   ).then((hasVoted: boolean) => {
@@ -402,7 +402,15 @@ watch(() => props.proposal.proposalId, (newProposalId) => {
   }).finally(() => {
     props.proposal.hasVotedLoading = false;
   });
+}
+
+watch(() => props.proposal.proposalId, (newProposalId) => {
+  fetchHasVoted();
 }, { immediate: true });
+
+onMounted(() => {
+  fetchHasVoted();
+});
 
 </script>
 
