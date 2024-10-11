@@ -172,9 +172,9 @@
 </template>
 
 <script setup lang="ts">
-import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { formatPercent } from "~/composables/formatters";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 // fund store
 import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
@@ -243,6 +243,7 @@ const governanceProposalStore = useGovernanceProposalsStore();
 const proposalFetched = ref(false);
 
 const proposal = computed(():IGovernanceProposal | undefined => {
+  // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
   const proposal = governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
 
   if (!proposalFetched.value && proposal?.createdBlockNumber) {
