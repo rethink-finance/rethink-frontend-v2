@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
-import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
+import { Contract, Web3 } from "web3";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
@@ -394,7 +394,7 @@ export const useFundStore = defineStore({
         );
         console.log("fund NAV: ", dataNAV)
         this.fund.positionTypeCounts = this.parseFundPositionTypeCounts(dataNAV);
-        this.fund.navUpdates = await this.parseFundNAVUpdates(dataNAV);
+        this.fund.navUpdates = await this.parseFundNAVUpdates(dataNAV, this.fund.address, this.fundContract);
       } catch (error) {
         console.error("Error calling getNAVDataForFund: ", error, "fund: ", this.fund.address);
       }
@@ -743,14 +743,14 @@ export const useFundStore = defineStore({
         detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
       } as INAVMethod
     },
-    async fetchNavParts(navUpdatesLen: number): Promise<(INAVParts | undefined)[]> {
+    async fetchNavParts(navUpdatesLen: number, fundAddress: string): Promise<(INAVParts | undefined)[]> {
       // Important to know: nav update indices start with 1, not with 0.
       const promises: Promise<any>[] = Array.from(
         { length: navUpdatesLen },
         (_, index) =>
           this.accountStore.requestConcurrencyLimit(() => this.callWithRetry(
             () => this.navCalculatorContract.methods.getNAVParts(
-              this.selectedFundAddress, index + 1,
+              fundAddress, index + 1,
             ).call(),
           )),
       );
@@ -902,7 +902,7 @@ export const useFundStore = defineStore({
         navEntry.isNavSimulationLoading = false;
       }
     },
-    async updateNavMethodPastNavValue(navMethodIndex: number, navMethod: INAVMethod) {
+    async updateNavMethodPastNavValue(navMethodIndex: number, navMethod: INAVMethod, fundAddress: string) {
       // NOTE: Important to know, that this currently only works for the methods of the last NAV update.
       // Fetch NAV method cached past value.
       const calculatorMethod = PositionTypeToNAVCacheMethod[navMethod.positionType]
@@ -913,7 +913,7 @@ export const useFundStore = defineStore({
       navMethod.pastNavValueError = false;
       try {
         const navCacheResult = await this.callWithRetry(() =>
-          this.navCalculatorContract.methods[calculatorMethod](this.selectedFundAddress, navMethodIndex).call(),
+          this.navCalculatorContract.methods[calculatorMethod](fundAddress, navMethodIndex).call(),
         );
         const pastNavValue = navCacheResult.reduce(
           (acc: bigint, val: bigint) => acc + val,
@@ -927,18 +927,18 @@ export const useFundStore = defineStore({
       }
       navMethod.pastNavValueLoading = false;
     },
-    async parseFundNAVUpdates(dataNAV: any): Promise<INAVUpdate[]> {
+    async parseFundNAVUpdates(dataNAV: any, fundAddress: string, fundContract: any): Promise<INAVUpdate[]> {
       const navUpdates = [] as INAVUpdate[];
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable), they should all
       // have the same length, so we just use the liquid key.
       const navUpdatesLen = dataNAV[PositionType.Liquid].length;
       const fundNavUpdateTimes = await this.callWithRetry(() =>
-        this.fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call(),
+        fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call(),
       );
       console.warn("dataNAV ", dataNAV);
 
       // Get a list of NAV parts (total NAV, fees, OIV balance, safe balance) for each NAV update.
-      const navParts = await this.fetchNavParts(navUpdatesLen);
+      const navParts = await this.fetchNavParts(navUpdatesLen, fundAddress);
 
       for (let i= 0; i < navUpdatesLen; i++) {
         const navTimestamp = Number(fundNavUpdateTimes[i] * 1000n);
@@ -962,7 +962,7 @@ export const useFundStore = defineStore({
         (_, index) =>
           this.accountStore.requestConcurrencyLimit(
             () => this.callWithRetry(
-              () => this.fundContract.methods.getNavEntry(index + 1).call(),
+              () => fundContract.methods.getNavEntry(index + 1).call(),
             ),
           ),
       );
@@ -1005,7 +1005,7 @@ export const useFundStore = defineStore({
       const lastNavUpdateNavMethods = navUpdates[navUpdates.length - 1]?.entries ?? [];
       console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
       lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
-        this.updateNavMethodPastNavValue(navMethodIndex, navMethod);
+        this.updateNavMethodPastNavValue(navMethodIndex, navMethod, fundAddress);
       });
       return navUpdates;
     },
