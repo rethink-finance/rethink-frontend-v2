@@ -296,7 +296,7 @@ export const useWeb3Store = defineStore({
           // Check Metamask errors:
           // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
           // Metamask rejected.
-          if ([4001].includes(error?.code) || error?.message?.indexOf("User denied transaction")) {
+          if ([4001].includes(error?.code) || error?.message?.indexOf("User denied transaction") >= 0) {
             console.log("RPC error is one of known metamask errors", error?.code, error?.message);
             throw error;
           }
