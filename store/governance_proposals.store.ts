@@ -1,8 +1,8 @@
-import GovernableFund from "assets/contracts/GovernableFund.json";
 import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
 import { eth, Web3 } from "web3";
+import GovernableFund from "assets/contracts/GovernableFund.json";
 import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
@@ -395,41 +395,56 @@ export const useGovernanceProposalsStore = defineStore({
       console.log("use the current web3");
       return this.fundStore.web3 as Web3;
     },
-    async setVoteStartEndTimestamp(proposal: IGovernanceProposal) {
-      const web3 = this.getWeb3InstanceByChainId();
-
-      // get the latest block
-      const currentBlock = await web3.eth.getBlock("latest");
-      const currentBlockNumber = Number(currentBlock.number);
-      const currentBlockTimestamp = Number(currentBlock.timestamp);
-      console.log("currentBlock: ", currentBlock);
-
-      // if the voteEnd is in the past, we can fetch the block number
-      if (Number(proposal.voteEnd) <= currentBlockNumber) {
-        console.log("fetch blockEnd");
-        const blockEnd = await web3.eth.getBlock(proposal.voteEnd);
-        console.log("blockEnd: ", blockEnd);
-        proposal.voteEndTimestamp = blockEnd?.timestamp.toString();
-      } else {
-        // if the voteEnd is in the future, we have to estimate the timestamp
-        console.log("estimate blockEnd");
-        const estimatedEndTimestamp = await this.estimateTimestampFromBlockNumber(currentBlockNumber, currentBlockTimestamp, Number(proposal.voteEnd));
-        console.log("estimatedEndTimestamp: ", estimatedEndTimestamp);
-        proposal.voteEndTimestamp = estimatedEndTimestamp.toString();
+    async setProposalVoteStartEndTimestamp(proposal: IGovernanceProposal) {
+      // If the clock mode is block number, we have to check a timestamp for the block number.
+      if (this.fundStore.fund?.clockMode?.mode === ClockMode.Timestamp) {
+        proposal.voteStartTimestamp = proposal.voteStart;
+        proposal.voteEndTimestamp = proposal.voteEnd;
+        return
       }
+      if (this.fundStore.fund?.clockMode?.mode !== ClockMode.BlockNumber) {
+        proposal.voteEndTimestamp = undefined;
+        proposal.voteStartTimestamp = undefined;
+        return
+      }
+      try {
+        const web3 = this.getWeb3InstanceByChainId();
 
-      // if the voteStart is in the past, we can fetch the block number
-      if(Number(proposal.voteStart) <= currentBlockNumber) {
-        console.log("fetch blockStart");
-        const blockStart = await web3.eth.getBlock(proposal.voteStart);
-        console.log("blockStart: ", blockStart);
-        proposal.voteStartTimestamp = blockStart?.timestamp.toString();
-      } else{
-        // if the voteStart is in the future, we have to estimate the timestamp
-        console.log("estimate blockStart");
-        const estimatedStartTimestamp = await this.estimateTimestampFromBlockNumber(currentBlockNumber,currentBlockTimestamp, Number(proposal.voteStart));
-        console.log("estimatedStartTimestamp: ", estimatedStartTimestamp);
-        proposal.voteStartTimestamp = estimatedStartTimestamp.toString();
+        // get the latest block
+        const currentBlock = await web3.eth.getBlock("latest");
+        const currentBlockNumber = Number(currentBlock.number);
+        const currentBlockTimestamp = Number(currentBlock.timestamp);
+        console.log("currentBlock: ", currentBlock);
+
+        // if the voteEnd is in the past, we can fetch the block number
+        if (Number(proposal.voteEnd) <= currentBlockNumber) {
+          console.log("fetch blockEnd");
+          const blockEnd = await web3.eth.getBlock(proposal.voteEnd);
+          console.log("blockEnd: ", blockEnd);
+          proposal.voteEndTimestamp = blockEnd?.timestamp.toString();
+        } else {
+          // if the voteEnd is in the future, we have to estimate the timestamp
+          console.log("estimate blockEnd");
+          const estimatedEndTimestamp = await this.estimateTimestampFromBlockNumber(currentBlockNumber, currentBlockTimestamp, Number(proposal.voteEnd));
+          console.log("estimatedEndTimestamp: ", estimatedEndTimestamp);
+          proposal.voteEndTimestamp = estimatedEndTimestamp.toString();
+        }
+
+        // if the voteStart is in the past, we can fetch the block number
+        if (Number(proposal.voteStart) <= currentBlockNumber) {
+          console.log("fetch blockStart");
+          const blockStart = await web3.eth.getBlock(proposal.voteStart);
+          console.log("blockStart: ", blockStart);
+          proposal.voteStartTimestamp = blockStart?.timestamp.toString();
+        } else{
+          // if the voteStart is in the future, we have to estimate the timestamp
+          console.log("estimate blockStart");
+          const estimatedStartTimestamp = await this.estimateTimestampFromBlockNumber(currentBlockNumber,currentBlockTimestamp, Number(proposal.voteStart));
+          console.log("estimatedStartTimestamp: ", estimatedStartTimestamp);
+          proposal.voteStartTimestamp = estimatedStartTimestamp.toString();
+        }
+      } catch (error: any) {
+        console.error("failed fetching proposal vote start end timestamps for ", proposal);
       }
     },
     async parseProposalCreatedEvents(events: any[]) {
@@ -470,19 +485,7 @@ export const useGovernanceProposalsStore = defineStore({
 
         console.log("proposal: ", proposal);
 
-        // If the clock mode is block number, we have to check a timestamp for the block number.
-        if(this.fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber) {
-          try {
-            await this.setVoteStartEndTimestamp(proposal);
-          } catch (error: any) {
-            console.error("failed fetching proposal vote start end timestamps for ", proposal);
-            proposal.voteEndTimestamp = undefined;
-            proposal.voteStartTimestamp = undefined;
-          }
-        } else{
-          proposal.voteStartTimestamp = proposal.voteStart;
-          proposal.voteEndTimestamp = proposal.voteEnd;
-        }
+        await this.setProposalVoteStartEndTimestamp(proposal);
         console.log("proposal:" , proposal)
 
         const votes = await this.callWithRetry(() =>

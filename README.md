@@ -141,7 +141,7 @@ take the first NAV update as the start value (TSHN - ShineDAO is such example on
 If there is no NAV update yet, cumulative return percent must be 0.
 
 2) Calculate Total NAV like we do in the frontend. There is a special case if there are no NAV
-updates yet, then the total NAV is actually totalDepositBal-
+updates yet, then the total NAV is actually totalDepositBal.
 
 
 ### Reader Contract TODO

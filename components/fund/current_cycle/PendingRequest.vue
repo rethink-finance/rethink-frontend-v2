@@ -148,7 +148,10 @@ const cancelPendingRequest = async () => {
         isLoadingCancelRequest.value = false;
         hideCancelButton();
       }).on("error", (error: any) => {
-        handleError(error);
+        console.error(error);
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
       }),
     )
   } catch (error: any) {
@@ -156,7 +159,7 @@ const cancelPendingRequest = async () => {
   }
 }
 
-const handleError = (error: any) => {
+const handleError = (error: any, refreshData: boolean=true) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
   isLoadingCancelRequest.value = false;
@@ -165,7 +168,9 @@ const handleError = (error: any) => {
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
-    fundStore.fetchUserFundDepositRedemptionRequests();
+    if (refreshData) {
+      fundStore.fetchUserFundDepositRedemptionRequests();
+    }
   }
 }
 </script>
