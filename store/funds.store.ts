@@ -1,7 +1,8 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import addressesJson from "~/assets/contracts/addresses.json";
+import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
 import SafeMultiSendCallOnlyJson from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
@@ -14,7 +15,6 @@ import type { IContractAddresses } from "~/types/addresses";
 import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type INAVMethod from "~/types/nav_method";
-import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 
@@ -180,28 +180,33 @@ export const useFundsStore = defineStore({
      * This will return funds with just enough data to populate the discover table.
      * More data can be fetched from fundSettings later if needed, or added to the reader contract.
      */
-    async fetchFundsMetadata(fundAddresses: string[], fundsInfo: any): Promise<IFund[]> {
+    async fetchFundsMetadata(fundAddresses: string[], fundsInfo: any) {
       const funds: IFund[] = [];
 
       try {
-        // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
-        //  not used in the contract code, so I have set it to 0. Change this part in the future
-        //  if the contract changes.
-        const dataNAVs: Record<string, any[]> = await this.callWithRetry(() =>
-          this.rethinkReaderContract.methods.getFundNavMetaData(
-            fundAddresses, 0,
-          ).call(),
-        );
+        // Fetch all fund NAV metadata and NAV data in parallel
+        const [dataNAVs, allFundsNavData] = await Promise.all([
+          // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
+          //  not used in the contract code, so I have set it to 0. Change this part in the future
+          //  if the contract changes.
+          this.callWithRetry(() => this.rethinkReaderContract.methods.getFundNavMetaData(fundAddresses, 0).call()),
+          this.callWithRetry(() => this.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call())
+        ]);
 
-        fundAddresses.forEach((address, index) => {
+
+        for (const [index, address] of fundAddresses.entries()) {
           if (
             excludeTestFunds &&
             excludeFundAddrs[this.web3Store.chainId].includes(address)) {
-            return;
+            continue;
           }
-          const totalDepositBalance = dataNAVs.totalDepositBal[index] || BigInt("0");
-          const totalNAVWei = dataNAVs.totalNav[index] || BigInt("0");
+          const totalDepositBalance = dataNAVs.totalDepositBal[index] || 0n;
+          const totalNAVWei = dataNAVs.totalNav[index] || 0n;
           const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index]);
+
+          const fundContract = new this.web3.eth.Contract(GovernableFund.abi, address);
+          const fundNAVUpdates = await this.fundStore.parseFundNAVUpdates(allFundsNavData[index], address, fundContract);
+          const fundLastNavUpdate = fundNAVUpdates[fundNAVUpdates?.length - 1];
 
           const fundStartTime = dataNAVs.startTime[index];
           const fund: IFund = {
@@ -227,9 +232,9 @@ export const useFundsStore = defineStore({
             },
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
-            totalNAVWei,
-            totalDepositBalance,
-            cumulativeReturnPercent: calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals),
+            totalNAVWei: fundLastNavUpdate?.timestamp ? totalNAVWei : totalDepositBalance,
+            totalDepositBalance: totalDepositBalance,
+            cumulativeReturnPercent: fundLastNavUpdate?.timestamp ? calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals) : 0,
             monthlyReturnPercent: undefined,
             sharpeRatio: undefined,
             positionTypeCounts: [
@@ -289,7 +294,7 @@ export const useFundsStore = defineStore({
             fundContractBaseTokenBalance: BigInt(0),
 
             // NAV Updates
-            navUpdates: [] as INAVUpdate[],
+            navUpdates: fundNAVUpdates,
           };
 
           const metaDataJson = dataNAVs.fundMetadata[index];
@@ -301,12 +306,10 @@ export const useFundsStore = defineStore({
             fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
             fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
           }
-          funds.push(fund);
-        })
-        return funds;
+          this.funds = [...this.funds, fund];
+        }
       } catch (error) {
         console.error("Error calling getFundNavMetaData: ", error, " addresses: ", fundAddresses);
-        return funds;
       }
     },
     async fetchFundsInfoArrays() {
@@ -332,10 +335,7 @@ export const useFundsStore = defineStore({
       const fundsInfo = Object.fromEntries(fundAddresses.map((address, index) => [address, fundsInfoArrays[1][index]]));
 
       const funds = await this.fetchFundsMetadata(fundAddresses, fundsInfo);
-      console.log("All funds: ", funds);
 
-      // Using the spread operator to append each element
-      this.funds.push(...funds);
 
       // Fetch all possible NAV methods for all funds
       this.fetchAllNavMethods(fundsInfoArrays);
