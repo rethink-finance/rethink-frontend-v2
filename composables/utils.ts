@@ -166,7 +166,11 @@ export const trimTrailingSlash = (str: string) => {
  * The formula used is:
  * cumulativeReturnPercent = ((totalNAV - totalDepositBal) / totalDepositBal) * 100
  */
-export const calculateCumulativeReturnPercent = (totalDepositBal: bigint, totalNAV:bigint, baseTokenDecimals: number ): number | undefined => {
+export const calculateCumulativeReturnPercent = (
+  totalDepositBal: bigint,
+  totalNAV:bigint,
+  baseTokenDecimals: number,
+): number | undefined => {
   try{
     // totalNAV() - _totalDepositBal  / _totalDepositBal
     let cumulativeReturnPercent = 0;

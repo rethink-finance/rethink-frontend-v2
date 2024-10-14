@@ -1,6 +1,6 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -91,7 +91,9 @@ const excludeNAVDetailsHashes = {
   "0xa4b1": [],
   "0xfc": [],
   "0x1": [],
-  "0x2105": [],
+  "0x2105": [
+    "0x4226e636db1dbaa1da860ce7df92d151aaea7f23934b94a21bc75d2c1d6233ee",
+  ],
 } as IExcludeNAVDetailsHashes;
 
 interface IState {
@@ -229,8 +231,8 @@ export const useFundsStore = defineStore({
             },
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
-            totalNAVWei: totalNAVWei,
-            totalDepositBalance: totalDepositBalance,
+            totalNAVWei,
+            totalDepositBalance,
             cumulativeReturnPercent: calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals),
             monthlyReturnPercent: undefined,
             sharpeRatio: undefined,
@@ -334,7 +336,7 @@ export const useFundsStore = defineStore({
       const fundAddresses: string[] = fundsInfoArrays[0];
       const fundsInfo = Object.fromEntries(fundAddresses.map((address, index) => [address, fundsInfoArrays[1][index]]));
 
-      const funds = await this.fetchFundsMetadata(fundAddresses, fundsInfo);      
+      const funds = await this.fetchFundsMetadata(fundAddresses, fundsInfo);
       this.funds = funds;
       console.log("All Funds: ", funds);
 
@@ -361,14 +363,14 @@ export const useFundsStore = defineStore({
             const fundContract = new this.web3.eth.Contract(GovernableFund.abi, address);
             const fundNAVUpdates = await this.fundStore.parseFundNAVUpdates(allFundsNavData[index], address, fundContract);
             const fundLastNavUpdate = fundNAVUpdates[fundNAVUpdates?.length - 1];
-            
+
             // Update the fund with the NAV updates.
             const fund = this.funds.find((fund: IFund) => fund.address === address);
             if (fund) {
               const baseTokenDecimals = fund.baseToken.decimals;
               const cumulativeReturnPercent = fundLastNavUpdate?.timestamp ? calculateCumulativeReturnPercent(fund.totalDepositBalance, fund.totalNAVWei, baseTokenDecimals) : 0;
               const totalNAVWei = fundLastNavUpdate?.timestamp ? fund.totalNAVWei : fund.totalDepositBalance;
-          
+
               fund.totalNAVWei = totalNAVWei;
               fund.cumulativeReturnPercent = cumulativeReturnPercent;
               fund.navUpdates = fundNAVUpdates;
@@ -386,7 +388,7 @@ export const useFundsStore = defineStore({
         }
       } catch (error) {
         console.error("Error fetching fund NAV updates: ", error);
-      } 
+      }
     },
     /**
      * Fetches all NAV methods
