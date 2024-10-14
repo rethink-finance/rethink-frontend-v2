@@ -1,6 +1,6 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
 import RethinkReader from "~/assets/contracts/RethinkReader.json";
@@ -227,8 +227,8 @@ export const useFundsStore = defineStore({
             },
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
-            totalNAVWei: totalNAVWei,
-            totalDepositBalance: totalDepositBalance,
+            totalNAVWei,
+            totalDepositBalance,
             cumulativeReturnPercent: calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals),
             monthlyReturnPercent: undefined,
             sharpeRatio: undefined,

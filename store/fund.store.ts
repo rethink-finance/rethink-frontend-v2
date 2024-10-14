@@ -459,8 +459,8 @@ export const useFundStore = defineStore({
           () => this.fetchUserFundShareValue(),
           () => this.fetchUserFundAllowance(),
           () => this.fetchUserFundDepositRedemptionRequests(),
-        ].map((fn: () => Promise<any>) => this.accountStore.requestConcurrencyLimit(
-          () => this.callWithRetry(fn)),
+        ].map(
+          (fn: () => Promise<any>) => this.accountStore.requestConcurrencyLimit(fn),
         ),
       );
 
@@ -1127,6 +1127,10 @@ export const useFundStore = defineStore({
 
       if (!this.activeAccountAddress) return console.error("Active account not found");
 
+      if (!this.fund?.fundTokenTotalSupply) {
+        // No tokens have been minted yet. No deposits have been made yet.
+        return this.userFundShareValue
+      }
       let balanceWei = BigInt("0");
       try {
         balanceWei = await this.callWithRetry(() =>
