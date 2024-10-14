@@ -1,6 +1,6 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -91,11 +91,14 @@ const excludeNAVDetailsHashes = {
   "0xa4b1": [],
   "0xfc": [],
   "0x1": [],
-  "0x2105": [],
+  "0x2105": [
+    "0x4226e636db1dbaa1da860ce7df92d151aaea7f23934b94a21bc75d2c1d6233ee",
+  ],
 } as IExcludeNAVDetailsHashes;
 
 interface IState {
   funds: IFund[];
+  fundNAVUpdates: Record<string, INAVUpdate[]>,
   // All original NAV methods.
   allNavMethods: INAVMethod[],
   uniqueNavMethods: INAVMethod[],
@@ -107,6 +110,7 @@ export const useFundsStore = defineStore({
   id: "funds",
   state: (): IState => ({
     funds: [] as IFund[],
+    fundNAVUpdates: {} as Record<string, INAVUpdate[]>,
     allNavMethods: [] as INAVMethod[],
     uniqueNavMethods: [] as INAVMethod[],
     navMethodDetailsHashToFundAddress: {} as Record<string, string>,
@@ -144,38 +148,6 @@ export const useFundsStore = defineStore({
     callWithRetry(method: any): any {
       return this.web3Store.callWithRetry(method);
     },
-    batchFetchFundSettings() {
-      /** @dev: I tried many, many things to make this BatchRequest work with web3 4.x, this is the closest I came.
-       * https://docs.web3js.org/guides/web3_upgrade_guide/x/#web3-batchrequest
-       *       const batch = new this.web3.BatchRequest();
-       *       // Define the request for getFundSettings
-       *       const con = new this.web3.eth.Contract(GovernableFund.abi, this.selectedFundAddress);
-       *       const getFundSettingsRequest: any = {
-       *         jsonrpc: "2.0",
-       *         id: 1,
-       *         method: "eth_call",
-       *         params: [{
-       *           to: this.selectedFundAddress,
-       *           data: con.methods.getFundSettings().encodeABI(),
-       *         }, "latest"],
-       *       };
-       *
-       *       // Add the request to the batch and capture the promise
-       *       const getFundSettingsPromise = batch.add(getFundSettingsRequest);
-       *
-       *       // Execute the batch
-       *       const rep = batch.execute();
-       *       console.log("rep: ", rep);
-       *
-       *       // Handle the promise
-       *       getFundSettingsPromise.then((response: any) => {
-       *         console.log(response);
-       *       }).catch((error: any) => {
-       *         console.error("Error fetching getFundSettings:", error);
-       *       });
-       */
-      console.error("not implemented");
-    },
     /**
      * Fetch funds and their metadata and NAV data.
      * This will return funds with just enough data to populate the discover table.
@@ -195,15 +167,9 @@ export const useFundsStore = defineStore({
         );
 
         for (const [index, address] of fundAddresses.entries()) {
-          if (
-            excludeTestFunds &&
-            excludeFundAddrs[this.web3Store.chainId].includes(address)) {
-            continue;
-          }
           const totalDepositBalance = dataNAVs.totalDepositBal[index] || 0n;
           const totalNAVWei = dataNAVs.totalNav[index] || 0n;
           const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index]);
-
 
           const fundStartTime = dataNAVs.startTime[index];
           const fund: IFund = {
@@ -229,8 +195,8 @@ export const useFundsStore = defineStore({
             },
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
-            totalNAVWei: totalNAVWei,
-            totalDepositBalance: totalDepositBalance,
+            totalNAVWei,
+            totalDepositBalance,
             cumulativeReturnPercent: calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals),
             monthlyReturnPercent: undefined,
             sharpeRatio: undefined,
@@ -331,62 +297,64 @@ export const useFundsStore = defineStore({
       this.funds = [];
 
       const fundsInfoArrays = await this.fetchFundsInfoArrays();
-      const fundAddresses: string[] = fundsInfoArrays[0];
-      const fundsInfo = Object.fromEntries(fundAddresses.map((address, index) => [address, fundsInfoArrays[1][index]]));
+      const fundAddresses: string[] = [];
+      const filteredFundsInfoArrays: any[] = [[], []];
+      const fundsInfo : Record<string, any> = {};
 
-      const funds = await this.fetchFundsMetadata(fundAddresses, fundsInfo);      
+      for (let i = 0; i < fundsInfoArrays[0].length; i++) {
+        const fundAddress = fundsInfoArrays[0][i];
+        const fundInfo = fundsInfoArrays[1][i];
+        if (
+          excludeTestFunds &&
+          excludeFundAddrs[this.web3Store.chainId].includes(fundAddress)) {
+          continue;
+        }
+        filteredFundsInfoArrays[0].push(fundAddress)
+        filteredFundsInfoArrays[1].push(fundInfo)
+        fundsInfo[fundAddress] = fundInfo;
+        fundAddresses.push(fundAddress)
+      }
+      console.log("fundsInfoArrays: ", toRaw(fundsInfoArrays));
+      console.log("filteredFundsInfoArrays: ", filteredFundsInfoArrays);
+
+      const funds = await this.fetchFundsMetadata(fundAddresses, fundsInfo);
       this.funds = funds;
       console.log("All Funds: ", funds);
 
-      // Fetch NAV updates for all funds
-      this.fetchFundNavUpdates(fundAddresses);
+      // Fetch all possible NAV methods for all funds.
+      await this.fetchAllNavMethods(filteredFundsInfoArrays);
 
-      // Fetch all possible NAV methods for all funds
-      this.fetchAllNavMethods(fundsInfoArrays);
+      // Calculate Fund Performance metrics like cumulative returns, sharpe ratio...
+      this.calculateFundPerformanceMetrics();
     },
-    async fetchFundNavUpdates(fundAddresses: string[]) {
+    calculateFundPerformanceMetrics() {
       try {
-        const allFundsNavData = await this.callWithRetry(() =>
-          this.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call(),
-        );
-
-        for (const [index, address] of fundAddresses.entries()) {
+        for (const fund of this.funds) {
           try {
-            if (
-              excludeTestFunds &&
-              excludeFundAddrs[this.web3Store.chainId].includes(address)) {
-              continue;
-            }
-
-            const fundContract = new this.web3.eth.Contract(GovernableFund.abi, address);
-            const fundNAVUpdates = await this.fundStore.parseFundNAVUpdates(allFundsNavData[index], address, fundContract);
+            const fundNAVUpdates = this.fundNAVUpdates[fund.address];
             const fundLastNavUpdate = fundNAVUpdates[fundNAVUpdates?.length - 1];
-            
+            const fundLastNavUpdateExists = fundLastNavUpdate?.timestamp;
+
             // Update the fund with the NAV updates.
-            const fund = this.funds.find((fund: IFund) => fund.address === address);
             if (fund) {
               const baseTokenDecimals = fund.baseToken.decimals;
-              const cumulativeReturnPercent = fundLastNavUpdate?.timestamp ? calculateCumulativeReturnPercent(fund.totalDepositBalance, fund.totalNAVWei, baseTokenDecimals) : 0;
-              const totalNAVWei = fundLastNavUpdate?.timestamp ? fund.totalNAVWei : fund.totalDepositBalance;
-          
-              fund.totalNAVWei = totalNAVWei;
+              const cumulativeReturnPercent = fundLastNavUpdateExists ?
+                calculateCumulativeReturnPercent(fund.totalDepositBalance, fund.totalNAVWei, baseTokenDecimals) :
+                0;
+
+              fund.totalNAVWei = fundLastNavUpdateExists ? fund.totalNAVWei : fund.totalDepositBalance;
               fund.cumulativeReturnPercent = cumulativeReturnPercent;
               fund.navUpdates = fundNAVUpdates;
               fund.isNavUpdatesLoading = false;
             }
           } catch (error) {
-            console.error("Error fetching fund NAV updates: ", error);
-
-            // in case of error, set isNavUpdatesLoading to false to stop loading spinner
-            const fund = this.funds.find((fund: IFund) => fund.address === address);
-            if (fund) {
-              fund.isNavUpdatesLoading = false;
-            }
+            console.error("Error calculating fund performance metrics: ", fund, error);
+            fund.isNavUpdatesLoading = false;
           }
         }
       } catch (error) {
         console.error("Error fetching fund NAV updates: ", error);
-      } 
+      }
     },
     /**
      * Fetches all NAV methods
@@ -403,7 +371,15 @@ export const useFundsStore = defineStore({
       // console.log("allFundsNavData: ", allFundsNavData);
       console.log("Fetch all NAV methods");
       for (const [fundIndex, fundNavData] of allFundsNavData.entries()) {
+        const fundAddress = fundAddresses[fundIndex];
+        this.fundNAVUpdates[fundAddress] = [];
         if (!fundNavData.encodedNavUpdate?.length) continue;
+
+        const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundAddress);
+        this.fundNAVUpdates[fundAddress] = await this.fundStore.parseFundNAVUpdates(
+          allFundsNavData[fundIndex],
+          fundAddress, fundContract,
+        );
 
         for (const [navUpdateIndex, encodedNavUpdate] of fundNavData.encodedNavUpdate.entries()) {
           try {
@@ -428,7 +404,6 @@ export const useFundsStore = defineStore({
 
               // Set the past NAV update fund address to the original fund address
               // the entry was created on.
-              const fundAddress = fundAddresses[fundIndex];
               parsedNavMethod.pastNAVUpdateEntryFundAddress = fundAddress;
               parsedNavMethod.pastNAVUpdateEntrySafeAddress = fundsInfoArrays[1][fundIndex].safe;
               allMethods.push(parsedNavMethod);
