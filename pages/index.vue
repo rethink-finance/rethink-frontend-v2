@@ -1,6 +1,8 @@
 <template>
   <div class="discover">
-    <h3 class="main_title">Rethink Finance | Run Funds On-Chain</h3>
+    <h3 class="main_title">
+      Rethink Finance | Run Funds On-Chain
+    </h3>
     <div v-if="fetchFundsError" class="w-100 d-flex justify-center flex-column">
       <h3>Oops, something went wrong while getting funds data</h3>
       <span>
@@ -35,7 +37,7 @@ const fetchFunds = async () => {
   }
   loadingFunds.value = false;
 }
-onMounted(async () => fetchFunds());
+onMounted(() => fetchFunds());
 
 
 watch(() => web3Store.chainId, () => {
