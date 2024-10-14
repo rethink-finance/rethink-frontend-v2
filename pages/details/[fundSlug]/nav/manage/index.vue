@@ -5,7 +5,6 @@
         Manage NAV Methods
       </div>
       <div>
-        
         <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/newMethod`">
           <v-btn class="text-secondary me-4" variant="outlined">
             Define New Method
@@ -49,6 +48,7 @@
         show-base-token-balances
         show-simulated-nav
         idx="nav/manage/index"
+        :loading="loadingNavUpdates"
       />
     </div>
   </div>
@@ -61,12 +61,12 @@ import { useToastStore } from "~/store/toast.store";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 
-
 const {
   selectedFundSlug,
   selectedFundAddress,
   fundManagedNAVMethods,
   fundLastNAVUpdateMethods,
+  loadingNavUpdates,
 } = toRefs(useFundStore());
 
 const toastStore = useToastStore();
@@ -76,7 +76,7 @@ const changesNumber = computed(() => {
   const changedMethods = Object.values(fundManagedNAVMethods.value).filter(
     (method) => {
       return method.deleted || method.isNew;
-    }
+    },
   )
 
   return changedMethods.length;

@@ -1,6 +1,6 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -190,9 +190,8 @@ export const useFundsStore = defineStore({
           //  not used in the contract code, so I have set it to 0. Change this part in the future
           //  if the contract changes.
           this.callWithRetry(() => this.rethinkReaderContract.methods.getFundNavMetaData(fundAddresses, 0).call()),
-          this.callWithRetry(() => this.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call())
+          this.callWithRetry(() => this.rethinkReaderContract.methods.bulkGetNavData(fundAddresses).call()),
         ]);
-
 
         for (const [index, address] of fundAddresses.entries()) {
           if (
@@ -233,7 +232,7 @@ export const useFundsStore = defineStore({
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
             totalNAVWei: fundLastNavUpdate?.timestamp ? totalNAVWei : totalDepositBalance,
-            totalDepositBalance: totalDepositBalance,
+            totalDepositBalance,
             cumulativeReturnPercent: fundLastNavUpdate?.timestamp ? calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals) : 0,
             monthlyReturnPercent: undefined,
             sharpeRatio: undefined,

@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
@@ -1250,20 +1250,21 @@ export const useFundStore = defineStore({
       return roleModAddress;
     },
     mergeNAVMethodsFromLocalStorage() {
-      let navUpdateEntries = getLocalStorageItem("navUpdateEntries");
+      // TODO should do cached in local storage separately by chain: navUpdateEntries
+      // TODO: this code is not the best, generally now only "deleted" property can change for each NAV method,
+      //   and they way mutation happen here is not good, losing reactive references?
+      const localStorageNAVUpdateEntries = getLocalStorageItem("navUpdateEntries");
       // if there are no NAV methods in local storage, save them
 
-      if (!navUpdateEntries || !this.selectedFundAddress || !navUpdateEntries[this.selectedFundAddress]) {
-        console.log("MERGE NAV methods from LOCAL STORAGE", this.fundManagedNAVMethods);
-        navUpdateEntries = {
-          ...navUpdateEntries,
-          [this.selectedFundAddress]: this.fundManagedNAVMethods,
-        };
-        setLocalStorageItem("navUpdateEntries", navUpdateEntries);
+      if (!localStorageNAVUpdateEntries[this.selectedFundAddress]?.length) {
+        // Merge NAV method changes from localStorage to the current fundManagedNAVMethods.
+        localStorageNAVUpdateEntries[this.selectedFundAddress] = this.fundManagedNAVMethods;
+        setLocalStorageItem("navUpdateEntries", localStorageNAVUpdateEntries);
       }
 
       // if there are NAV methods in local storage, assign them to the fundManagedNAVMethods.
-      this.fundManagedNAVMethods = navUpdateEntries[this.selectedFundAddress] || [];
+      this.fundManagedNAVMethods = localStorageNAVUpdateEntries[this.selectedFundAddress] || [];
+      this.refreshSimulateNAVCounter++;
     },
     async estimateGasFundFlowsCall(encodedFunctionCall: any) {
       return await this.web3Store.estimateGas(

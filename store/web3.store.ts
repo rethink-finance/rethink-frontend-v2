@@ -284,7 +284,7 @@ export const useWeb3Store = defineStore({
       let retries = 0;
       let switchedRPCCount = 0;
 
-      console.log("callWithRetry");
+      // console.log("callWithRetry");
       if (!method) {
         return method;
       }

@@ -144,8 +144,10 @@ If there is no NAV update yet, cumulative return percent must be 0.
 updates yet, then the total NAV is actually totalDepositBal.
 
 
-### Reader Contract TODO
+### Frontend TODO
 1) Until the reader contract cumulative value is implemented:
    Special case if the totalDepositBal is 0, we must take
    the first NAV update as the start value (TSHN - ShineDAO is such example on Polygon)
    If there is no NAV update yet, cumulative return percent must be 0.
+2) NAV methods don't have a unique ID, so we get it by hashing the details JSON, would be good if this would be 
+done in the contract already?
