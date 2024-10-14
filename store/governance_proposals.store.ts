@@ -402,7 +402,7 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.voteEndTimestamp = proposal.voteEnd;
         return
       }
-      if (this.fundStore.fund?.clockMode?.mode !== ClockMode.Timestamp) {
+      if (this.fundStore.fund?.clockMode?.mode !== ClockMode.BlockNumber) {
         proposal.voteEndTimestamp = undefined;
         proposal.voteStartTimestamp = undefined;
         return
