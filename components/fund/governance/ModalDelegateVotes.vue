@@ -206,7 +206,7 @@ const delegate = async (isMyself = false) => {
               loadingDelegates.value = false;
             })
             .on("error", function (error: any) {
-              console.log(error);
+              console.error(error);
               loadingDelegates.value = false;
               toastStore.errorToast(
                 "There has been an error. Please contact the Rethink Finance support.",

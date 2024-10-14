@@ -176,7 +176,7 @@ const tokensWei = computed( () => {
   return ethers.parseUnits(tokenValue.value || "0", fund.value?.baseToken.decimals)
 })
 
-const handleError = (error: any) => {
+const handleError = (error: any, refreshData: boolean=true) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
   loadingRequestDeposit.value = false;
@@ -186,7 +186,9 @@ const handleError = (error: any) => {
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
-    fundStore.fetchUserBalances();
+    if (refreshData) {
+      fundStore.fetchUserBalances();
+    }
   }
 }
 
@@ -246,7 +248,7 @@ const requestDeposit = async () => {
         }
         loadingRequestDeposit.value = false;
       }).on("error", (error: any) => {
-        handleError(error);
+        handleError(error, false);
       }),
     );
   } catch (error: any) {
@@ -303,7 +305,7 @@ const approveAllowance = async () => {
         }
         loadingApproveAllowance.value = false;
       }).on("error", (error: any) => {
-        handleError(error);
+        handleError(error, false);
       }),
     )
   } catch (error: any) {

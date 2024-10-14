@@ -234,7 +234,10 @@ const deposit = async () => {
         loadingDeposit.value = false;
       }).on("error", (error: any) => {
         loadingDeposit.value = false;
-        handleError(error);
+        console.error(error);
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
       }),
     )
   } catch (error: any) {
@@ -291,17 +294,17 @@ const redeem = async () => {
 
         loadingRedemption.value = false;
       }).on("error", (error: any) => {
-        loadingRedemption.value = false;
         handleError(error);
       }),
     )
   } catch (error: any) {
-    loadingRedemption.value = false;
     handleError(error);
   }
 }
 
 const handleError = (error: any) => {
+  loadingRedemption.value = false;
+
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
   if ([4001, 100].includes(error?.code)) {

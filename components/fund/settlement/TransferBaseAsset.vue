@@ -193,6 +193,7 @@ const transfer = async () => {
 };
 
 const handleError = (error: any) => {
+  isTransferLoading.value = false;
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
   if ([4001, 100].includes(error?.code)) {
@@ -201,7 +202,6 @@ const handleError = (error: any) => {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
   }
-  isTransferLoading.value = false;
 }
 </script>
 
