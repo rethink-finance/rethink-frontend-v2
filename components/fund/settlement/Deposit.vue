@@ -95,7 +95,7 @@ import { useWeb3Store } from "~/store/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
 
-
+const emit = defineEmits(["deposit-success"]);
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
@@ -242,6 +242,9 @@ const requestDeposit = async () => {
             timestamp: Date.now(),
             type: FundTransactionType.Deposit,
           }
+
+          // deposit-success event is emitted to open the delegate dialog.
+          emit("deposit-success");
         } else {
           toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
           fundStore.fetchUserBalances();
