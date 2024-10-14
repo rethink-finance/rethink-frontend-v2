@@ -356,7 +356,12 @@ async function getVotingPowerAndImpact(delegatedAddress: string) {
 
     return {
       votingPower:
-        commify(votingPower) + " " + fundStore.fund?.governanceToken.symbol,
+      formatTokenValue(
+        votingPower,
+        fundStore?.fund?.governanceToken.decimals,
+        false,
+        true,
+      ) + " " + fundStore.fund?.governanceToken.symbol,
       impact: impact.toFixed(0) + "%",
     };
   } catch (error: any) {
