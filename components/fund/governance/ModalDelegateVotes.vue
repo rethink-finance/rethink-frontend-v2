@@ -101,7 +101,7 @@ import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 
 defineProps({ modelValue: Boolean });
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue", "delegate-success"]);
 
 const fundStore = useFundStore();
 const toastStore = useToastStore();
@@ -198,6 +198,9 @@ const delegate = async (isMyself = false) => {
                 toastStore.successToast(
                   "Delegation of Governance Tokens Succeeded",
                 );
+                 emit("delegate-success");
+                 closeDelegateDialog();
+                 if (delegateTo) fundStore.userFundDelegateAddress = delegateTo;
               } else {
                 toastStore.errorToast(
                   "The delegateTo tx has failed. Please contact the Rethink Finance support.",
@@ -249,6 +252,9 @@ const delegate = async (isMyself = false) => {
                 toastStore.successToast(
                   "Delegation of Governance Tokens Succeeded",
                 );
+                emit("delegate-success");
+                closeDelegateDialog();
+                if (delegateTo) fundStore.userFundDelegateAddress = delegateTo;
               } else {
                 toastStore.errorToast(
                   "The delegateTo tx has failed. Please contact the Rethink Finance support.",

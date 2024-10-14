@@ -72,7 +72,7 @@
       />
     </UiMainCard>
 
-    <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" />
+    <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" @delegate-success="handleDelegateSuccess" />
 
     <UiConfirmDialog
       v-model="confirmDialog"
@@ -784,6 +784,15 @@ const startFetch = async () => {
     await fetchProposals(currentBlock, 0);
   }
 };
+
+const  handleDelegateSuccess = async () => {
+  loadingTrendingDelegate.value = true;
+  // await 2000ms before fetching
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  fetchTrendingDelegates();
+  // fundStore.fetchUserFundDelegateAddress();
+};
+
 </script>
 
 <style scoped lang="scss">
