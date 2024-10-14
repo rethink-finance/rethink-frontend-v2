@@ -133,7 +133,7 @@ export const useWeb3Store = defineStore({
           symbol: "ETH",
           decimals: 18,
         },
-        icon: getChainIcon("eth"),
+        icon: getChainIcon("base"),
         rpcUrl: "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
         rpcUrls: [
           // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
@@ -278,31 +278,47 @@ export const useWeb3Store = defineStore({
         return [undefined, undefined];
       }
     },
-    async callWithRetry(method: () => any, maxRetries: number = 1): Promise<any> {
+    async callWithRetry(method: () => any, maxRetries: number = 1, extraIgnorableErrorCodes?: any[]): Promise<any> {
       // TODO: see the TODO below for the possible upgrade of callWithRetry
       const RPCUrlsLength = this.currentNetworkRPCUrls.length;
       let retries = 0;
       let switchedRPCCount = 0;
+      // Save chain ID the method was called with. So that we can ignore retries if the chain was changed.
+      const methodChainId = toRaw(this.chainId);
 
       // console.log("callWithRetry");
       if (!method) {
         return method;
       }
       while (retries <= maxRetries && switchedRPCCount <= RPCUrlsLength) {
+        if (methodChainId !== toRaw(this.chainId)) {
+          throw new Error(`Chain changed from ${methodChainId} to ${toRaw(this.chainId)}`);
+        }
         try {
           return await method();
         } catch (error: any) {
-          console.error("RPC error", error);
+          const ignorableErrorCodes = [4001];
+          // If user passed additional error codes that we don't want to retry, add them to ignorableErrorCodes.
+          // For example sometimes we know that method may fail with internal RPC error (-32603) and it's not RPC's
+          // fault, and we just want it to fail, instead of endlessly repeating it and switching RPC URL. Can happen
+          // when simulating NAV method with wrong parameters.
+          if (extraIgnorableErrorCodes?.length) {
+            ignorableErrorCodes.push(...extraIgnorableErrorCodes);
+          }
+
+          // Get a list of error codes. Use innerError to catch Metamask exception codes.
+          const errorCodes = new Set([error?.code, error?.innerError?.code]);
+
           // Check Metamask errors:
           // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
           // Metamask rejected.
-          if ([4001].includes(error?.code) || error?.message?.indexOf("User denied transaction") >= 0) {
+          if (ignorableErrorCodes.some(code => errorCodes.has(code)) || error?.message?.indexOf("User denied transaction") >= 0) {
             console.log("RPC error is one of known metamask errors", error?.code, error?.message);
             throw error;
           }
 
           const rpcUrl = (this.web3?.currentProvider as any)?.clientUrl;
-          console.error(`RPC error: ${(error as Error).message}`, method, rpcUrl);
+          console.error("RPC error:", errorCodes, error?.message, method, rpcUrl);
           retries++;
           if (retries > maxRetries) {
             this.switchRpcUrl();

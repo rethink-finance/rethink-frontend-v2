@@ -456,7 +456,11 @@ const createProposal = async () => {
     }
 
     pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(navEntryDetails[navEntry.positionType]);
-
+    // Stringify description, if it is not yet stringified.
+    let descriptionJsonString = navEntryDetails.description;
+    if (typeof descriptionJsonString === "object" && descriptionJsonString !== null) {
+      descriptionJsonString = JSON.stringify(navEntryDetails.description);
+    }
     navUpdateEntries.push(
       [
         parseInt(navEntryDetails.entryType),
@@ -467,7 +471,7 @@ const createProposal = async () => {
         navEntryDetails.isPastNAVUpdate,
         pastNAVUpdateIndex,
         parseInt(navEntryDetails.pastNAVUpdateEntryIndex),
-        JSON.stringify(navEntryDetails.description),
+        descriptionJsonString,
       ],
     )
   }

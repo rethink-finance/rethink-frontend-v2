@@ -131,6 +131,10 @@ const chainIconMap: Record<string, IIcon> = {
     name: "token-branded:eth",
     size: "2rem",
   },
+  base: {
+    name: "token-branded:base",
+    size: "2rem",
+  },
 };
 
 export const getChainIcon = (chainShort: string) => {
@@ -159,7 +163,7 @@ export const trimTrailingSlash = (str: string) => {
  * @param {number} baseTokenDecimals - The number of decimals for the base token.
  * @returns {number | undefined} - The cumulative return percentage, or undefined if an error occurs.
  *
- * The formula used is: 
+ * The formula used is:
  * cumulativeReturnPercent = ((totalNAV - totalDepositBal) / totalDepositBal) * 100
  */
 export const calculateCumulativeReturnPercent = (totalDepositBal: bigint, totalNAV:bigint, baseTokenDecimals: number ): number | undefined => {

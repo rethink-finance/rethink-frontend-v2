@@ -335,8 +335,8 @@ export const useFundStore = defineStore({
   },
   actions: {
     // Proxy method to make callWithRetry accessible as this.callWithRetry
-    callWithRetry(method: any): any {
-      return this.web3Store.callWithRetry(method);
+    callWithRetry(method: () => any, maxRetries: number = 1, extraIgnorableErrorCodes?: any[]): any {
+      return this.web3Store.callWithRetry(method, maxRetries, extraIgnorableErrorCodes);
     },
     /**
      * Fetches all needed fund data..
@@ -801,6 +801,10 @@ export const useFundStore = defineStore({
           this.accountStore.requestConcurrencyLimit(
             () => this.callWithRetry(
               () => this.simulateNAVMethodValue(navEntry),
+              1,
+              // Do not retry internal errors (probably invalid NAV method), better to fail on 1st try.
+              // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
+              [-32603],
             ),
           ),
         );
@@ -883,8 +887,10 @@ export const useFundStore = defineStore({
             this.navCalculatorContract.methods[
               navCalculationMethod
             ](...callData).call(),
+          5,
+          [-32603],  // Do not retry internal errors (probably invalid NAV method)
           );
-          // console.log("simulated value: ", simulatedVal);
+          console.warn("simulated value: ", simulatedVal);
 
           navEntry.simulatedNavFormatted = this.formatBaseTokenValue(simulatedVal);
           navEntry.simulatedNav = simulatedVal;
@@ -899,6 +905,7 @@ export const useFundStore = defineStore({
           );
         }
       } finally {
+        console.log("finish simulate", navEntry)
         navEntry.isNavSimulationLoading = false;
       }
     },

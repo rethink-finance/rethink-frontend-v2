@@ -151,3 +151,9 @@ updates yet, then the total NAV is actually totalDepositBal.
    If there is no NAV update yet, cumulative return percent must be 0.
 2) NAV methods don't have a unique ID, so we get it by hashing the details JSON, would be good if this would be 
 done in the contract already?
+3) Rename all variable names: navEntry to navMethod
+4) callWithRetry --> when switching chain, cancel all pending callWithRetry
+
+### Frontend Tests TODO
+1) When creating NAV proposal check that all types match, especially that the navMethod.details is correct, especially
+the description (should be a string, not an object).

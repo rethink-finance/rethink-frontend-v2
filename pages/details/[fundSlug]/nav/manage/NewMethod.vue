@@ -36,175 +36,177 @@
 
     <div class="main_card">
       <v-form ref="form" v-model="formIsValid">
-          <v-row>
+        <v-row>
+          <v-col>
+            <strong>Define Position Method</strong>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col
+            cols="12"
+            sm="6"
+          >
+            <v-label class="label_required mb-2">
+              Position Name
+            </v-label>
+            <v-text-field
+              v-model="navEntry.positionName"
+              placeholder="E.g. WETH"
+              :rules="rules"
+              required
+            />
+          </v-col>
+          <v-col
+            cols="12"
+            sm="6"
+          >
+            <v-label class="label_required mb-2">
+              Valuation Source
+            </v-label>
+            <v-text-field
+              v-model="navEntry.valuationSource"
+              placeholder="E.g. Uniswap ETH/USDC"
+              :rules="rules"
+              required
+            />
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col
+            cols="12"
+            sm="6"
+          >
+            <v-label class="mb-2">
+              Position Type
+            </v-label>
+            <div class="toggle_buttons">
+              <v-btn-toggle v-model="navEntry.positionType" group>
+                <v-btn
+                  v-for="positionType in creatablePositionTypes"
+                  :key="positionType.key"
+                  :value="positionType.key"
+                  variant="outlined"
+                >
+                  {{ positionType.name }}
+                </v-btn>
+              </v-btn-toggle>
+            </div>
+          </v-col>
+          <v-col
+            v-if="valuationTypes.length"
+            cols="12"
+            sm="6"
+          >
+            <v-label class="mb-2">
+              Valuation Type
+            </v-label>
+            <div class="toggle_buttons">
+              <v-btn-toggle v-model="navEntry.valuationType" group>
+                <v-btn
+                  v-for="valuationType in valuationTypes"
+                  :key="valuationType.key"
+                  :value="valuationType.key"
+                  variant="outlined"
+                >
+                  {{ valuationType.name }}
+                </v-btn>
+              </v-btn-toggle>
+            </div>
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-10">
+          <v-col>
+            <strong>Method Details</strong>
+          </v-col>
+        </v-row>
+        <v-row>
+          <template v-if="navEntry.positionType === PositionType.Composable">
             <v-col>
-              <strong>Define Position Method</strong>
-            </v-col>
-          </v-row>
-          <v-row>
-            <v-col
-              cols="12"
-              sm="6"
-            >
-              <v-label class="label_required mb-2">
-                Position Name
-              </v-label>
-              <v-text-field
-                v-model="navEntry.positionName"
-                placeholder="E.g. WETH"
-                :rules="rules"
-                required
-              />
-            </v-col>
-            <v-col
-              cols="12"
-              sm="6"
-            >
-              <v-label class="label_required mb-2">
-                Valuation Source
-              </v-label>
-              <v-text-field
-                v-model="navEntry.valuationSource"
-                placeholder="E.g. Uniswap ETH/USDC"
-                :rules="rules"
-                required
-              />
-            </v-col>
-          </v-row>
+              <v-expansion-panels v-model="expandedPanels">
+                <v-expansion-panel
+                  v-for="(method, index) in navEntry.details[navEntry.positionType]"
+                  :key="index"
+                  eager
+                >
+                  <v-expansion-panel-title static>
+                    <div class="method_details_title">
+                      <span>
+                        <strong class="me-1">{{ index + 1 }})</strong> METHOD DETAILS
+                      </span>
+                      <UiTextBadge
+                        class="method_details_status"
+                        :class="{'method_details_status--valid': method.isValid}"
+                      >
+                        <template v-if="method.isValid">
+                          Provided
+                          <Icon icon="octicon:check-circle-16" height="1.2rem" width="1.2rem" />
+                        </template>
+                        <template v-else>
+                          Incomplete
+                          <Icon icon="pajamas:error" height="1.2rem" width="1.2rem" />
+                        </template>
+                      </UiTextBadge>
 
-          <v-row>
-            <v-col
-              cols="12"
-              sm="6"
-            >
-              <v-label class="mb-2">
-                Position Type
-              </v-label>
-              <div class="toggle_buttons">
-                <v-btn-toggle v-model="navEntry.positionType" group>
-                  <v-btn
-                    v-for="positionType in creatablePositionTypes"
-                    :key="positionType.key"
-                    :value="positionType.key"
-                    variant="outlined"
-                  >
-                    {{ positionType.name }}
-                  </v-btn>
-                </v-btn-toggle>
-              </div>
-            </v-col>
-            <v-col
-              v-if="valuationTypes.length"
-              cols="12"
-              sm="6"
-            >
-              <v-label class="mb-2"> Valuation Type </v-label>
-              <div class="toggle_buttons">
-                <v-btn-toggle v-model="navEntry.valuationType" group>
-                  <v-btn
-                    v-for="valuationType in valuationTypes"
-                    :key="valuationType.key"
-                    :value="valuationType.key"
-                    variant="outlined"
-                  >
-                    {{ valuationType.name }}
-                  </v-btn>
-                </v-btn-toggle>
-              </div>
-            </v-col>
-          </v-row>
-
-          <v-row class="mt-10">
-            <v-col>
-              <strong>Method Details</strong>
-            </v-col>
-          </v-row>
-          <v-row>
-            <template v-if="navEntry.positionType === PositionType.Composable">
-              <v-col>
-                <v-expansion-panels v-model="expandedPanels">
-                  <v-expansion-panel
-                    v-for="(method, index) in navEntry.details[navEntry.positionType]"
-                    :key="index"
-                    eager
-                  >
-                    <v-expansion-panel-title static>
-                      <div class="method_details_title">
-                        <span>
-                          <strong class="me-1">{{ index + 1 }})</strong> METHOD DETAILS
-                        </span>
-                        <UiTextBadge
-                          class="method_details_status"
-                          :class="{'method_details_status--valid': method.isValid}"
-                        >
-                          <template v-if="method.isValid">
-                            Provided
-                            <Icon icon="octicon:check-circle-16" height="1.2rem" width="1.2rem" />
-                          </template>
-                          <template v-else>
-                            Incomplete
-                            <Icon icon="pajamas:error" height="1.2rem" width="1.2rem" />
-                          </template>
-                        </UiTextBadge>
-
-                        <UiDetailsButton small @click.stop="deleteMethod(index)">
-                          <v-icon
-                            icon="mdi-delete"
-                            color="error"
-                          />
-                        </UiDetailsButton>
-                      </div>
-                    </v-expansion-panel-title>
-                    <v-expansion-panel-text>
-                        <FundNavMethodDetails
-                          v-model="navEntry.details[navEntry.positionType][index]"
-                          :position-type="navEntry.positionType"
-                          :valuation-type="navEntry.valuationType"
+                      <UiDetailsButton small @click.stop="deleteMethod(index)">
+                        <v-icon
+                          icon="mdi-delete"
+                          color="error"
                         />
-                    </v-expansion-panel-text>
-                  </v-expansion-panel>
-                </v-expansion-panels>
-              </v-col>
-            </template>
-
-            <template v-else>
-              <FundNavMethodDetails
-                v-model="navEntry.details[navEntry.positionType][0]"
-                :position-type="navEntry.positionType"
-                :valuation-type="navEntry.valuationType"
-              />
-            </template>
-          </v-row>
-          <!-- Add Position Details if the selected position type is composable. -->
-          <v-row v-if="navEntry.positionType === PositionType.Composable">
-            <v-col class="text-center">
-              <v-btn
-                class="text-secondary"
-                variant="outlined"
-                @click="addMethodDetails"
-              >
-                <template #append>
-                  <Icon
-                    icon="octicon:plus-circle-16"
-                    height="1.2rem"
-                    width="1.2rem"
-                  />
-                </template>
-                Add Method Details
-              </v-btn>
+                      </UiDetailsButton>
+                    </div>
+                  </v-expansion-panel-title>
+                  <v-expansion-panel-text>
+                    <FundNavMethodDetails
+                      v-model="navEntry.details[navEntry.positionType][index]"
+                      :position-type="navEntry.positionType"
+                      :valuation-type="navEntry.valuationType"
+                    />
+                  </v-expansion-panel-text>
+                </v-expansion-panel>
+              </v-expansion-panels>
             </v-col>
-          </v-row>
+          </template>
 
-          <v-row class="mt-4">
-            <v-col class="text-end">
-              <v-btn
-                :disabled="!formIsValid || !areAllMethodDetailsValid"
-                @click="addMethod"
-              >
-                Add Method
-              </v-btn>
-            </v-col>
-          </v-row>
+          <template v-else>
+            <FundNavMethodDetails
+              v-model="navEntry.details[navEntry.positionType][0]"
+              :position-type="navEntry.positionType"
+              :valuation-type="navEntry.valuationType"
+            />
+          </template>
+        </v-row>
+        <!-- Add Position Details if the selected position type is composable. -->
+        <v-row v-if="navEntry.positionType === PositionType.Composable">
+          <v-col class="text-center">
+            <v-btn
+              class="text-secondary"
+              variant="outlined"
+              @click="addMethodDetails"
+            >
+              <template #append>
+                <Icon
+                  icon="octicon:plus-circle-16"
+                  height="1.2rem"
+                  width="1.2rem"
+                />
+              </template>
+              Add Method Details
+            </v-btn>
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-4">
+          <v-col class="text-end">
+            <v-btn
+              :disabled="!formIsValid || !areAllMethodDetailsValid"
+              @click="addMethod"
+            >
+              Add Method
+            </v-btn>
+          </v-col>
+        </v-row>
       </v-form>
 
       <div class="buttons_container">
@@ -388,10 +390,10 @@ const addMethod = () => {
   newNavEntry.details.pastNAVUpdateEntryIndex = 0;
   newNavEntry.details.entryType = PositionTypeToNAVEntryTypeMap[navEntry.value.positionType];
   newNavEntry.details.valuationType = navEntry.value.valuationType; // TODO convert also?
-  newNavEntry.details.description = {
+  newNavEntry.details.description = JSON.stringify({
     positionName: navEntry.value.positionName,
     valuationSource: navEntry.value.valuationSource,
-  };
+  });
 
   // TODO add additional check that all methods have the same pastNAVUpdateIndex
   // Iterate over all NAV entry methods.
@@ -454,8 +456,8 @@ const addMethod = () => {
 
 <style scoped lang="scss">
 .main_header {
-  min-height: 40px;  
- 
+  min-height: 40px;
+
   &__title {
     display: flex;
     align-items: center;

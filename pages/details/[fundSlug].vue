@@ -93,7 +93,7 @@ const router = useRouter();
 const loading = ref(true);
 // fund address is always in the third position of the route
 // e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
-const [chainId, tokenSymbol, fundAddress] = route.path.split("/")[2].split("-");
+const [fundChainId, tokenSymbol, fundAddress] = route.path.split("/")[2].split("-");
 
 onUnmounted(() => {
   fundStore.fund = {} as IFund;
@@ -174,19 +174,19 @@ const switchNetwork = async (chainId: string) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // check if we are on correct chainId
+  if (fundChainId !== web3Store.chainId) {
+    await switchNetwork(fundChainId);
+  }
   fetchFund();
   setBreadcrumbItems([]);
 
-  // check if we are on correct chainId
-  if (chainId !== web3Store.chainId) {
-    switchNetwork(chainId);
-  }
 
 });
 const fund = computed(() => fundStore.fund as IFund);
 const fundDetailsRoute = computed(
-  () => `/details/${chainId}-${tokenSymbol}-${fundAddress}`,
+  () => `/details/${fundChainId}-${tokenSymbol}-${fundAddress}`,
 );
 
 // show icon + title in the breadcrumb for the fund
