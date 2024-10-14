@@ -26,29 +26,41 @@
       />
     </template>
 
+    <template #item.totalNAVWei="{ item }">
+      <div :class="{'justify-center': item.isNavUpdatesLoading}">
+          <v-progress-circular
+            v-if="item.isNavUpdatesLoading"
+            size="18"
+            width="2"
+            indeterminate
+          />
+          <template v-else>
+            {{ formatNumberShort(Number(formatTokenValue(item.totalNAVWei, item.baseToken.decimals, false))) 
+              + " " + item.baseToken.symbol 
+            }}
+          </template>
+        </div>
+    </template>
+
     <!-- cumulative -->
     <template #item.cumulativeReturnPercent="{ item }">
-      <div :class="numberColorClass(item.cumulativeReturnPercent)">
-        {{ formatPercent(item.cumulativeReturnPercent, true) }}
+      <div :class="{'justify-center': item.isNavUpdatesLoading}">
+        <v-progress-circular
+            v-if="item.isNavUpdatesLoading"
+            size="18"
+            width="2"
+            indeterminate
+          />
+          <div v-else :class="numberColorClass(item.cumulativeReturnPercent)">
+            {{ formatPercent(item.cumulativeReturnPercent, true) }}
+          </div>
       </div>
     </template>
 
     <template #item.positionTypeCounts="{ item }">
       <PositionTypesBar :position-type-counts="item.positionTypeCounts ?? []" />
     </template>
-
-    <!-- LOADER SKELETON -->
-    <template #[`body.append`]>
-      <tr v-if="items.length && loading">
-        <td
-          v-for="header in headers.length"
-          :key="header"
-          class="loading_skeleton"
-        >
-          <v-skeleton-loader type="text" class="skeleton" />
-        </td>
-      </tr>
-    </template>
+    
     <template #bottom>
       <!-- Leave this slot empty to hide pagination controls -->
     </template>
@@ -61,7 +73,7 @@
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue/dist/iconify.js";
-import { formatPercent } from "~/composables/formatters";
+import { formatNumberShort, formatPercent, formatTokenValue } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { useWeb3Store } from "~/store/web3.store";
 import type IFund from "~/types/fund";
@@ -102,12 +114,6 @@ const headers: any = computed(() => {
     {
       title: "AUM",
       key: "totalNAVWei",
-      value: (v: IFund) =>
-        formatNumberShort(
-          Number(formatTokenValue(v.totalNAVWei, v.baseToken.decimals, false))
-        ) +
-        " " +
-        v.baseToken.symbol,
       align: "end",
     },
     {
