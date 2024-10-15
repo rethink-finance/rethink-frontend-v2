@@ -307,6 +307,13 @@ const formatCalldata = (calldata: any) => {
   }
 }
 
+// TODO move to the interface file of IProposalVoteSubmission when created
+const voteSubmissionMap: Record<number, string> = {
+  0: "Rejected",
+  1: "Approved",
+  2: "Abstained",
+};
+
 const fetchProposalVoteSubmissions = async () => {
   loadingProposalVoteSubmissions.value = true;
   try {
@@ -319,6 +326,8 @@ const fetchProposalVoteSubmissions = async () => {
     let chunkSize = 1000n;
     const minChunkSize = 1000n;
     let waitTimeAfterError = 1000;
+    // TODO define proposal submission interface
+    // TODO remove this proposalVoteSubmissionsEvents and just use proposalVoteSubmissions.value
     let proposalVoteSubmissionsEvents: any[] = [];
 
     while (fromBlock > endBlock && shouldFetchProposalVoteSubmissions.value) {
@@ -337,7 +346,7 @@ const fetchProposalVoteSubmissions = async () => {
           toBlock: Number(fromBlock),
         });
 
-
+        // TODO no need to iterate all the time over all these events, just sort and filter eventsVS
         proposalVoteSubmissionsEvents = proposalVoteSubmissionsEvents.concat(eventsVS).sort((a, b) => {
           return Number(a.blockNumber) - Number(b.blockNumber);
         }).filter((event) => {
@@ -347,18 +356,14 @@ const fetchProposalVoteSubmissions = async () => {
         console.log("VS - eventsVS: ", eventsVS);
         console.log("VS - proposalVoteSubmissionsEvents: ", proposalVoteSubmissionsEvents);
 
+        // TODO append to proposalVoteSubmissions.value instead of parsing all events every time.
+        // TODO save block timestamp to the proposal vote submission
         proposalVoteSubmissions.value = proposalVoteSubmissionsEvents.map((event) => {
           const { voter, support, weight, reason } = event?.returnValues;
 
-          const submissionMap: Record<number, string> = {
-            0: "Rejected",
-            1: "Approved",
-            2: "Abstained",
-          };
-
           const myVote = fundStore?.activeAccountAddress?.toLowerCase() === voter?.toLowerCase();
           if(myVote) {
-            activeUserVoteSubmission.value = submissionMap[Number(support)];
+            activeUserVoteSubmission.value = voteSubmissionMap[Number(support)];
           }
 
           console.log("activeAccountAddress", fundStore?.activeAccountAddress?.toLowerCase());
@@ -368,7 +373,7 @@ const fetchProposalVoteSubmissions = async () => {
             proposalId,
             proposer: voter,
             my_vote: myVote,
-            submission_status: submissionMap[Number(support)],
+            submission_status: voteSubmissionMap[Number(support)],
             quorumVotes: formatTokenValue(
               weight,
               fundStore?.fund?.governanceToken.decimals,
