@@ -15,7 +15,6 @@
           :options="createProposalDropdownOptions"
           label="Create Proposal"
           @update:selected="selectOption"
-          @click="startFetch"
         />
       </template>
       <template #tools>
@@ -72,7 +71,10 @@
       />
     </UiMainCard>
 
-    <FundGovernanceModalDelegateVotes v-model="isDelegateDialogOpen" @delegate-success="handleDelegateSuccess" />
+    <FundGovernanceModalDelegateVotes
+      v-model="isDelegateDialogOpen"
+      @delegate-success="handleDelegateSuccess"
+    />
 
     <UiConfirmDialog
       v-model="confirmDialog"
@@ -474,14 +476,15 @@ const fetchProposals = async (
   }
   loadingProposals.value = true;
 
-  // TODO arbitrum1 RPCs can take ranges of more blocks, like 1M, polygon cries if we use more than 3k
-  // It looks like this range is arbitrary, specific to RPC, so we should try and guess it and increase exponentially
-  // until they block us, and then we decrease it.
+  // It looks like the block fetching range is arbitrary, specific to RPC, so we should try and guess it and
+  // increase exponentially until they block us, and then we decrease it.
   // some RPCs can take more than 1M in arbitrum if logged in
   // let chunkSize = 1000000;
   const INITIAL_CHUNK_SIZE = 1500;
+  const INITIAL_WAIT_TIME_AFTER_ERROR = 1000;
+  const MAX_WAIT_TIME_AFTER_ERROR = 10000;
   let chunkSize = INITIAL_CHUNK_SIZE;
-  let waitTimeAfterError = 1000;
+  let waitTimeAfterError = INITIAL_WAIT_TIME_AFTER_ERROR;
 
   // TODO we can do batch requests for example 10x3000
   // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
@@ -536,11 +539,11 @@ const fetchProposals = async (
 
           chunkSize *= 2;
           console.log("new chunkSize: ", chunkSize);
-          waitTimeAfterError = Math.max(1000, waitTimeAfterError / 2);
+          waitTimeAfterError = Math.max(INITIAL_WAIT_TIME_AFTER_ERROR, waitTimeAfterError / 2);
           break;
         } catch (error: any) {
           // Wait max 10 seconds.
-          waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
+          waitTimeAfterError = Math.min(MAX_WAIT_TIME_AFTER_ERROR, waitTimeAfterError * 2);
           console.error(
             "getPastEvents",
             fromBlock,
@@ -559,7 +562,7 @@ const fetchProposals = async (
           }
           if (chunkSize <= INITIAL_CHUNK_SIZE) {
             console.log("[PROPOSAL FETCH] switch to another RPC")
-            waitTimeAfterError = 1000;
+            waitTimeAfterError = INITIAL_WAIT_TIME_AFTER_ERROR;
             web3Store.switchRpcUrl();
           }
           await new Promise((resolve) =>
@@ -634,11 +637,11 @@ const fetchProposals = async (
           // All good, we can try increasing the chunk size by 2 to fetch bigger event ranges at once.
           chunkSize *= 2;
           console.log("new chunkSize: ", chunkSize);
-          waitTimeAfterError = Math.max(1000, waitTimeAfterError / 2);
+          waitTimeAfterError = Math.max(INITIAL_WAIT_TIME_AFTER_ERROR, waitTimeAfterError / 2);
           break;
         } catch (error: any) {
           // Wait max 10 seconds.
-          waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
+          waitTimeAfterError = Math.min(MAX_WAIT_TIME_AFTER_ERROR, waitTimeAfterError * 2);
           console.error(
             "getPastEvents",
             fromBlock,
@@ -657,7 +660,7 @@ const fetchProposals = async (
           }
           if (chunkSize <= INITIAL_CHUNK_SIZE) {
             console.log("[PROPOSAL FETCH] switch to another RPC")
-            waitTimeAfterError = 1000;
+            waitTimeAfterError = INITIAL_WAIT_TIME_AFTER_ERROR;
             web3Store.switchRpcUrl();
           }
           await new Promise((resolve) =>
@@ -701,7 +704,7 @@ const fetchProposals = async (
 // TODO iterate over all already fetched proposals that are still votable and update their state (createdBlockNumber).
 onMounted(() => {
   fetchTrendingDelegates();
-  startFetch();
+  startFetchingFundProposals();
 });
 onBeforeUnmount(() => {
   console.log("Component is being unmounted, stopping the fetch");
@@ -711,7 +714,9 @@ onBeforeUnmount(() => {
   loadingTrendingDelegate.value = false;
 });
 
-const startFetch = async () => {
+const startFetchingFundProposals = async () => {
+  console.warn("STAAAART governance proposal events for fund: ", fund.address);
+
   if (shouldFetchProposals.value) {
     console.log("stop fetching");
     shouldFetchProposals.value = false;
