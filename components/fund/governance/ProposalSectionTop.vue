@@ -19,10 +19,10 @@
           />
         </div>
 
-        <div class="section-top__meta-row submission_status" v-if="loadingProposalsVotesSubmissions || activeUserVoteSubmission">
+        <div v-if="loadingProposalVoteSubmissions || activeUserVoteSubmission" class="section-top__meta-row submission_status">
           Your Vote:
           <v-progress-circular
-            v-if="loadingProposalsVotesSubmissions && !activeUserVoteSubmission"
+            v-if="loadingProposalVoteSubmissions && !activeUserVoteSubmission"
             class="d-flex"
             size="18"
             width="2"
@@ -232,7 +232,7 @@ const props = defineProps({
     type: String,
     default: "",
   },
-  loadingProposalsVotesSubmissions: {
+  loadingProposalVoteSubmissions: {
     type: Boolean,
     default: false,
   },

@@ -2,8 +2,8 @@
   <div v-if="proposal?.proposalId" class="proposal-detail">
     <FundGovernanceProposalSectionTop
       :proposal="proposal"
-      :activeUserVoteSubmission="activeUserVoteSubmission"
-      :loadingProposalsVotesSubmissions="loadingProposalsVotesSubmissions"
+      :active-user-vote-submission="activeUserVoteSubmission"
+      :loading-proposal-vote-submissions="loadingProposalVoteSubmissions"
       @vote-success="handleVoteSuccess"
     />
 
@@ -20,7 +20,7 @@
             value="voteSubmissions"
             class="section-bottom__tab"
           >
-            Votes Submissions
+            Vote Submissions
           </v-tab>
         </v-tabs>
 
@@ -115,9 +115,9 @@
           </template>
 
           <template v-else-if="selectedTab === 'voteSubmissions'">
-            <FundGovernanceTableProposalsVotesSubmissions
-              :items="proposalsVotesSubmissions"
-              :loading="loadingProposalsVotesSubmissions"
+            <FundGovernanceTableProposalVoteSubmissions
+              :items="proposalVoteSubmissions"
+              :loading="loadingProposalVoteSubmissions"
             />
           </template>
         </v-card-text>
@@ -175,10 +175,9 @@
 </template>
 
 <script setup lang="ts">
+import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { formatPercent } from "~/composables/formatters";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
-// fund store
 import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { useWeb3Store } from "~/store/web3.store";
@@ -220,7 +219,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-const proposalsVotesSubmissions = ref <{
+const proposalVoteSubmissions = ref <{
   proposalId: string;
   proposer: string;
   my_vote: boolean;
@@ -231,8 +230,8 @@ const proposalsVotesSubmissions = ref <{
 const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
 const proposalFetched = ref(false);
-const loadingProposalsVotesSubmissions = ref(false);
-const shouldFetchProposalVotesSubmissions = ref(true);
+const loadingProposalVoteSubmissions = ref(false);
+const shouldFetchProposalVoteSubmissions = ref(true);
 const activeUserVoteSubmission = ref("");
 
 const proposal = computed(():IGovernanceProposal | undefined => {
@@ -308,22 +307,21 @@ const formatCalldata = (calldata: any) => {
   }
 }
 
-const fetchProposalsVotesSubmissions = async () => {
-  loadingProposalsVotesSubmissions.value = true;
+const fetchProposalVoteSubmissions = async () => {
+  loadingProposalVoteSubmissions.value = true;
   try {
     const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
     const proposalBlock = proposal.value?.createdBlockNumber ?? 0;
     const proposalId = proposal.value?.proposalId ?? "";
-
 
     let fromBlock = BigInt(currentBlock);
     const endBlock = BigInt(proposalBlock);
     let chunkSize = 1000n;
     const minChunkSize = 1000n;
     let waitTimeAfterError = 1000;
-    let proposalsVotesSubmissionsEvents: any[] = [];
+    let proposalVoteSubmissionsEvents: any[] = [];
 
-    while (fromBlock > endBlock && shouldFetchProposalVotesSubmissions.value) {
+    while (fromBlock > endBlock && shouldFetchProposalVoteSubmissions.value) {
       let toBlock = fromBlock - chunkSize + 1n;
 
       if (toBlock < endBlock) {
@@ -340,16 +338,16 @@ const fetchProposalsVotesSubmissions = async () => {
         });
 
 
-        proposalsVotesSubmissionsEvents = proposalsVotesSubmissionsEvents.concat(eventsVS).sort((a, b) => {
+        proposalVoteSubmissionsEvents = proposalVoteSubmissionsEvents.concat(eventsVS).sort((a, b) => {
           return Number(a.blockNumber) - Number(b.blockNumber);
         }).filter((event) => {
           return Number(event?.returnValues?.proposalId) === Number(proposalId);
         });
 
         console.log("VS - eventsVS: ", eventsVS);
-        console.log("VS - proposalsVotesSubmissionsEvents: ", proposalsVotesSubmissionsEvents);
+        console.log("VS - proposalVoteSubmissionsEvents: ", proposalVoteSubmissionsEvents);
 
-        proposalsVotesSubmissions.value = proposalsVotesSubmissionsEvents.map((event) => {
+        proposalVoteSubmissions.value = proposalVoteSubmissionsEvents.map((event) => {
           const { voter, support, weight, reason } = event?.returnValues;
 
           const submissionMap: Record<number, string> = {
@@ -360,21 +358,23 @@ const fetchProposalsVotesSubmissions = async () => {
 
           const myVote = fundStore?.activeAccountAddress?.toLowerCase() === voter?.toLowerCase();
           if(myVote) {
-            activeUserVoteSubmission.value = submissionMap[Number(support)];  
+            activeUserVoteSubmission.value = submissionMap[Number(support)];
           }
-         
+
           console.log("activeAccountAddress", fundStore?.activeAccountAddress?.toLowerCase());
           console.log("voter", voter?.toLowerCase());
-          
+
           return {
-            proposalId: proposalId,
+            proposalId,
             proposer: voter,
             my_vote: myVote,
             submission_status: submissionMap[Number(support)],
-            quorumVotes:  formatTokenValue(weight, fundStore?.fund?.governanceToken.decimals, false, true) 
-                          + " " +
-                          fundStore.fund?.governanceToken.symbol,
-            
+            quorumVotes: formatTokenValue(
+              weight,
+              fundStore?.fund?.governanceToken.decimals,
+              false,
+              true,
+            ) + " " + fundStore.fund?.governanceToken.symbol,
           };
         });
 
@@ -402,26 +402,26 @@ const fetchProposalsVotesSubmissions = async () => {
       }
     }
 
-    loadingProposalsVotesSubmissions.value = false;
+    loadingProposalVoteSubmissions.value = false;
     console.log("All VoteCast events fetched");
   } catch(e: any) {
     console.error("Error fetching proposals votes submissions", e);
-    loadingProposalsVotesSubmissions.value = false;
+    loadingProposalVoteSubmissions.value = false;
   }
 }
 
 // when the user vote, refetch the votes submissions
 const handleVoteSuccess = async () => {
-  shouldFetchProposalVotesSubmissions.value = true;
-  loadingProposalsVotesSubmissions.value = true;
+  shouldFetchProposalVoteSubmissions.value = true;
+  loadingProposalVoteSubmissions.value = true;
   // await 2000ms before fetching
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
-  fetchProposalsVotesSubmissions();
+  fetchProposalVoteSubmissions();
 }
 
 onMounted(async () => {
-  fetchProposalsVotesSubmissions();
+  fetchProposalVoteSubmissions();
   emit("updateBreadcrumbs", breadcrumbItems);
 
   // fetch block proposals based on createdBlockNumber
@@ -443,7 +443,7 @@ onMounted(async () => {
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
-  shouldFetchProposalVotesSubmissions.value = false;
+  shouldFetchProposalVoteSubmissions.value = false;
 });
 </script>
 

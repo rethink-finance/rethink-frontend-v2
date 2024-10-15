@@ -48,17 +48,13 @@
     </template>
   </v-data-table>
   <div v-else class="table-votes-submissions__no_data">
-    No Proposals Votes Submissions
+    No Proposal Vote Submissions
   </div>
 </template>
 
 <script setup lang="ts">
 // types
 import { truncateAddress } from "~/composables/addressUtils";
-import { useAccountStore } from "~/store/account.store";
-import type IGovernanceProposal from "~/types/governance_proposal";
-
-const accountStore = useAccountStore();
 
 // defined icons for submission_status
 const icons = {
