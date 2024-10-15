@@ -365,9 +365,7 @@ const fetchProposalVoteSubmissions = async () => {
           if(myVote) {
             activeUserVoteSubmission.value = voteSubmissionMap[Number(support)];
           }
-
-          console.log("activeAccountAddress", fundStore?.activeAccountAddress?.toLowerCase());
-          console.log("voter", voter?.toLowerCase());
+          console.log("VS - voter", voter?.toLowerCase(), "weight", weight);
 
           return {
             proposalId,
