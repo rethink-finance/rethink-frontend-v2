@@ -17,16 +17,30 @@
             :value="calldataTag"
             class="section-top__tag"
           />
-          <!--          <div class="section-top__submission">-->
-          <!--            <Icon-->
-          <!--              :icon="icons[submission as keyof typeof icons]"-->
-          <!--              width="0.9rem"-->
-          <!--              class="section-top__submission-icon"-->
-          <!--            />-->
-          <!--            <div class="section-top__submission-text">-->
-          <!--              {{ submission }}-->
-          <!--            </div>-->
-          <!--          </div>-->
+        </div>
+
+        <div class="section-top__meta-row submission_status" v-if="loadingProposalsVotesSubmissions || activeUserVoteSubmission">
+          Your Vote:
+          <v-progress-circular
+            v-if="loadingProposalsVotesSubmissions && !activeUserVoteSubmission"
+            class="d-flex"
+            size="18"
+            width="2"
+            indeterminate
+          />
+          <div v-else-if="activeUserVoteSubmission" class="submission_status">
+            <Icon
+              :icon="icons[activeUserVoteSubmission as keyof typeof icons]"
+              width="1.4rem"
+              :class="`icon--${activeUserVoteSubmission.toLowerCase()}`"
+            />
+            <div class="submission_status__text">
+              {{ activeUserVoteSubmission }}
+            </div>
+          </div>
+        </div>
+        <div v-else class="section-top__meta-row submission_status">
+          You have not voted on this proposal.
         </div>
 
         <div class="section-top__meta-row">
@@ -50,7 +64,7 @@
 
               <template #tooltip>
                 <div class="tooltip__content">
-                  <span>Copied to clipboard {{ item.value }}</span>
+                  <span>Copied to clipboard</span>
                 </div>
               </template>
             </ui-tooltip-click>
@@ -171,7 +185,7 @@
 
           <v-btn
             class="di-card__submit-button"
-            :disabled="!selectedVoteOption"
+            :disabled="selectedVoteOption === -1"
             :loading="loadingSubmitVote"
             @click="submitVote"
           >
@@ -200,10 +214,27 @@ import {
 } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
 
+const emit = defineEmits(["vote-success"]);
+
+// defined icons for submission_status
+const icons = {
+  Abstained: "material-symbols:question-mark",
+  Rejected: "material-symbols:close",
+  Approved: "material-symbols:done",
+};
+
 const props = defineProps({
   proposal: {
     type: Object as PropType<IGovernanceProposal>,
     default: () => {},
+  },
+  activeUserVoteSubmission: {
+    type: String,
+    default: "",
+  },
+  loadingProposalsVotesSubmissions: {
+    type: Boolean,
+    default: false,
   },
 });
 const web3Store = useWeb3Store();
@@ -256,7 +287,7 @@ const hasAccountVotedAlready = computed(() => {
 });
 
 const isVoteDialogOpen = ref(false);
-const selectedVoteOption = ref<number>();
+const selectedVoteOption = ref<number>(-1);
 const copyText = (text: string) => {
   navigator.clipboard.writeText(text);
 }
@@ -293,6 +324,8 @@ const submitVote = async () => {
             governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId] ??= {};
             governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][fundStore.activeAccountAddress] = true;
           }
+          // emit success event to refetch vote submissions
+          emit("vote-success", selectedVoteOption.value);
         } else {
           toastStore.errorToast(
             "The vote transaction has failed. Please contact the Rethink Finance support.",
@@ -583,6 +616,23 @@ onMounted(() => {
     }
   }
 }
+
+.submission_status {
+  display: flex;
+  align-items: center;
+  color: $color-steel-blue;
+  gap: 0.25rem !important;
+}
+.icon--abstained {
+  color: $color-warning;
+}
+.icon--rejected {
+  color: $color-error;
+}
+.icon--approved {
+  color: $color-success;
+}
+
 .buttons-container{
   display: flex;
   flex-direction: column;

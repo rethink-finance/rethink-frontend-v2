@@ -2,6 +2,9 @@
   <div v-if="proposal?.proposalId" class="proposal-detail">
     <FundGovernanceProposalSectionTop
       :proposal="proposal"
+      :activeUserVoteSubmission="activeUserVoteSubmission"
+      :loadingProposalsVotesSubmissions="loadingProposalsVotesSubmissions"
+      @vote-success="handleVoteSuccess"
     />
 
     <div class="section-bottom">
@@ -114,7 +117,7 @@
           <template v-else-if="selectedTab === 'voteSubmissions'">
             <FundGovernanceTableProposalsVotesSubmissions
               :items="proposalsVotesSubmissions"
-              :loading="false"
+              :loading="loadingProposalsVotesSubmissions"
             />
           </template>
         </v-card-text>
@@ -217,30 +220,20 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-const proposalsVotesSubmissions: Partial<IGovernanceProposal>[] = [
-  {
-    proposalId: "75jfh475hqc",
-    proposer: "0x1f98dgfgF984",
-    // submission_status: "Abstained", // TODO fix
-    quorumVotes: BigInt(2500000),
-  },
-  {
-    proposalId: "75jfh475hqc",
-    proposer: "0x1f98dgfgF984",
-    // submission_status: "Abstained", // TODO fix
-    quorumVotes: BigInt(150000),
-  },
-  {
-    proposalId: "75jfh475hqc",
-    proposer: "0x1f98dgfgF984",
-    // submission_status: "Abstained", // TODO fix
-    quorumVotes: BigInt(800000),
-  },
-];
+const proposalsVotesSubmissions = ref <{
+  proposalId: string;
+  proposer: string;
+  my_vote: boolean;
+  submission_status: string;
+  quorumVotes: string;
+}[]>([]);
 
 const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
 const proposalFetched = ref(false);
+const loadingProposalsVotesSubmissions = ref(false);
+const shouldFetchProposalVotesSubmissions = ref(true);
+const activeUserVoteSubmission = ref("");
 
 const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
@@ -315,7 +308,120 @@ const formatCalldata = (calldata: any) => {
   }
 }
 
+const fetchProposalsVotesSubmissions = async () => {
+  loadingProposalsVotesSubmissions.value = true;
+  try {
+    const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
+    const proposalBlock = proposal.value?.createdBlockNumber ?? 0;
+    const proposalId = proposal.value?.proposalId ?? "";
+
+
+    let fromBlock = BigInt(currentBlock);
+    const endBlock = BigInt(proposalBlock);
+    let chunkSize = 1000n;
+    const minChunkSize = 1000n;
+    let waitTimeAfterError = 1000;
+    let proposalsVotesSubmissionsEvents: any[] = [];
+
+    while (fromBlock > endBlock && shouldFetchProposalVotesSubmissions.value) {
+      let toBlock = fromBlock - chunkSize + 1n;
+
+      if (toBlock < endBlock) {
+        toBlock = endBlock;
+      }
+
+      console.log("VS - chunkSize: ", chunkSize);
+      console.log("VS - Fetching events from: ", fromBlock, " to: ", toBlock);
+
+      try {
+        const eventsVS = await fundStore.fundGovernorContract.getPastEvents("VoteCast", {
+          fromBlock: Number(toBlock),
+          toBlock: Number(fromBlock),
+        });
+
+
+        proposalsVotesSubmissionsEvents = proposalsVotesSubmissionsEvents.concat(eventsVS).sort((a, b) => {
+          return Number(a.blockNumber) - Number(b.blockNumber);
+        }).filter((event) => {
+          return Number(event?.returnValues?.proposalId) === Number(proposalId);
+        });
+
+        console.log("VS - eventsVS: ", eventsVS);
+        console.log("VS - proposalsVotesSubmissionsEvents: ", proposalsVotesSubmissionsEvents);
+
+        proposalsVotesSubmissions.value = proposalsVotesSubmissionsEvents.map((event) => {
+          const { voter, support, weight, reason } = event?.returnValues;
+
+          const submissionMap: Record<number, string> = {
+            0: "Rejected",
+            1: "Approved",
+            2: "Abstained",
+          };
+
+          const myVote = fundStore?.activeAccountAddress?.toLowerCase() === voter?.toLowerCase();
+          if(myVote) {
+            activeUserVoteSubmission.value = submissionMap[Number(support)];  
+          }
+         
+          console.log("activeAccountAddress", fundStore?.activeAccountAddress?.toLowerCase());
+          console.log("voter", voter?.toLowerCase());
+          
+          return {
+            proposalId: proposalId,
+            proposer: voter,
+            my_vote: myVote,
+            submission_status: submissionMap[Number(support)],
+            quorumVotes:  formatTokenValue(weight, fundStore?.fund?.governanceToken.decimals, false, true) 
+                          + " " +
+                          fundStore.fund?.governanceToken.symbol,
+            
+          };
+        });
+
+        // double the chunk size
+        chunkSize *= 2n;
+        console.log("VS - chunkSize doubled: ", chunkSize);
+        waitTimeAfterError = Math.max(100, waitTimeAfterError / 2);
+
+        fromBlock = toBlock - 1n; // move to the next block
+
+        await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
+      } catch (error) {
+        console.error("Error fetching proposals votes submissions", error);
+
+        // if fetching fails, reduce the chunk size
+        chunkSize /= 2n;
+        if (chunkSize < minChunkSize) {
+          chunkSize = minChunkSize;
+        }
+
+        console.log("VS - chunkSize reduced: ", chunkSize);
+        waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
+
+        await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
+      }
+    }
+
+    loadingProposalsVotesSubmissions.value = false;
+    console.log("All VoteCast events fetched");
+  } catch(e: any) {
+    console.error("Error fetching proposals votes submissions", e);
+    loadingProposalsVotesSubmissions.value = false;
+  }
+}
+
+// when the user vote, refetch the votes submissions
+const handleVoteSuccess = async () => {
+  shouldFetchProposalVotesSubmissions.value = true;
+  loadingProposalsVotesSubmissions.value = true;
+  // await 2000ms before fetching
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+
+  fetchProposalsVotesSubmissions();
+}
+
 onMounted(async () => {
+  fetchProposalsVotesSubmissions();
   emit("updateBreadcrumbs", breadcrumbItems);
 
   // fetch block proposals based on createdBlockNumber
@@ -337,6 +443,7 @@ onMounted(async () => {
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
+  shouldFetchProposalVotesSubmissions.value = false;
 });
 </script>
 
