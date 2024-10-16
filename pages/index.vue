@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="jsx">
-import { useFundsStore } from "~/store/funds.store";
+import { useFundsStore } from "~/store/funds/funds.store";
 import { useWeb3Store } from "~/store/web3.store";
 
 const loadingFunds = ref(true);

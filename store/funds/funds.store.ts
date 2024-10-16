@@ -1,11 +1,14 @@
-// eslint-disable-next-line import/order
-import defaultAvatar from "@/assets/images/default_avatar.webp";
+
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+
+import { fetchFundsMetadataAction } from "./actions/fetchFundsMetadata.action";
+
 import addressesJson from "~/assets/contracts/addresses.json";
-import GovernableFund from "~/assets/contracts/GovernableFund";
-import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory";
-import RethinkReader from "~/assets/contracts/RethinkReader";
+import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { GovernableFundFactory } from "~/assets/contracts/GovernableFundFactory";
+import { RethinkReader } from "~/assets/contracts/RethinkReader";
+
 import SafeMultiSendCallOnlyJson from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { calculateCumulativeReturnPercent } from "~/composables/utils";
@@ -13,13 +16,8 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type { IContractAddresses } from "~/types/addresses";
-import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
-import type IFundMetaData from "~/types/fund_meta_data";
 import type INAVMethod from "~/types/nav_method";
-import type INAVUpdate from "~/types/nav_update";
-import type IPositionTypeCount from "~/types/position_type";
-import type IToken from "~/types/token";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -185,136 +183,17 @@ export const useFundsStore = defineStore({
      * This will return funds with just enough data to populate the discover table.
      * More data can be fetched from fundSettings later if needed, or added to the reader contract.
      */
-    async fetchFundsMetadata(fundAddresses: string[], fundsInfo: any): Promise<IFund[]> {
-      const funds: IFund[] = [];
-
+    async fetchFundsMetadata(fundAddresses: string[], fundsInfo: any) {
       try {
-        // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
-        //  not used in the contract code, so I have set it to 0. Change this part in the future
-        //  if the contract changes.
-        const dataNAVs: IFundMetaData[] = await this.callWithRetry(() =>
-          this.rethinkReaderContract.methods.getFundNavMetaData(
-            fundAddresses,
-          ).call(),
+        return await fetchFundsMetadataAction(
+          fundAddresses,
+          fundsInfo,
+          excludeTestFunds,
+          excludeFundAddrs,
         );
-
-        for (const [index, address] of fundAddresses.entries()) {
-          const dataNAV: IFundMetaData = dataNAVs[index];
-          if (
-            excludeTestFunds &&
-            excludeFundAddrs[this.web3Store.chainId].includes(address)) {
-            continue;
-          }
-          const totalDepositBalance = dataNAV.totalDepositBal || 0n;
-          const totalNAVWei = dataNAV.totalNav || 0n;
-          const baseTokenDecimals = Number(dataNAV.fundBaseTokenDecimals);
-
-
-          const fundStartTime = dataNAV.startTime;
-          const fund: IFund = {
-            chainName: this.web3Store.chainName,
-            chainShort: this.web3Store.chainShort,
-            address,
-            title: dataNAV.fundName || "N/A",
-            description: "N/A",
-            safeAddress: "",
-            governorAddress: "",
-            photoUrl: defaultAvatar,
-            inceptionDate: fundStartTime ? formatDate(new Date(Number(fundStartTime) * 1000)) : "",
-            fundToken: {
-              symbol: fundsInfo[address].fundSymbol,
-              address,
-              decimals: -1,
-            } as IToken,
-            fundTokenTotalSupply: BigInt("0"),
-            baseToken: {
-              address: "",  // Not important here.
-              symbol: dataNAV.fundBaseTokenSymbol,
-              decimals: baseTokenDecimals,
-            },
-            governanceToken: {} as IToken,  // Not important here, for now.
-            governanceTokenTotalSupply: BigInt("0"),
-            totalNAVWei,
-            totalDepositBalance,
-            cumulativeReturnPercent: Number(dataNAV.cumulativeReturn),
-            monthlyReturnPercent: undefined,
-            sharpeRatio: undefined,
-            positionTypeCounts: [
-              {
-                type: PositionTypesMap[PositionType.Liquid],
-                count: Number(dataNAV.liquidLen || 0),
-              },
-              {
-                type: PositionTypesMap[PositionType.Composable],
-                count: Number(dataNAV.composableLen || 0),
-              },
-              {
-                type: PositionTypesMap[PositionType.NFT],
-                count: Number(dataNAV.nftLen || 0),
-              },
-              {
-                type: PositionTypesMap[PositionType.Illiquid],
-                count: Number(dataNAV.illiquidLen || 0),
-              },
-            ] as IPositionTypeCount[],
-
-            // My Fund Positions
-            netDeposits: "",
-            // Overview fields
-            isWhitelistedDeposits: true,
-            allowedDepositAddresses: [],
-            allowedManagerAddresses: [],
-            plannedSettlementPeriod: "",
-            minLiquidAssetShare: "",
-
-            // Governance
-            votingDelay: "",
-            votingPeriod: "",
-            proposalThreshold: "",
-            quorumVotes: 0n,
-            quorumVotesFormatted: "0",
-            quorumNumerator: BigInt(0),
-            quorumDenominator: BigInt(0),
-            quorumPercentage: "N/A",
-            lateQuorum: "",
-
-            // Fees
-            depositFee: "",
-            depositFeeAddress: "",
-            withdrawFee: "",
-            withdrawFeeAddress: "",
-            managementPeriod: "",
-            managementFee: "",
-            managementFeeAddress: "",
-            performancePeriod: "",
-            performanceFee: "",
-            performanceFeeAddress: "",
-            performaceHurdleRateBps: "",
-            feeCollectors: [],
-            feeBalance: BigInt(0),  // in base token
-            safeContractBaseTokenBalance: BigInt(0),
-            fundContractBaseTokenBalance: BigInt(0),
-
-            // NAV Updates
-            navUpdates: [] as INAVUpdate[],
-            isNavUpdatesLoading: true,
-          };
-
-          const metaDataJson = dataNAV.fundMetadata;
-          // Process metadata if available
-          if (metaDataJson) {
-            const metaData = JSON.parse(metaDataJson);
-            fund.description = metaData.description;
-            fund.photoUrl = metaData.photoUrl || defaultAvatar;
-            fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
-            fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
-          }
-          funds.push(fund);
-        }
-        return funds;
       } catch (error) {
-        console.error("Error calling getFundNavMetaData: ", error, " addresses: ", fundAddresses);
-        return funds;
+        console.error("Error fetching funds metadata:", error);
+        throw error;
       }
     },
     async fetchFundsInfoArrays() {

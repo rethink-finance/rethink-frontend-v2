@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { Web3 } from "web3";
 
 import { fetchFundMetadataAction } from "./actions/fetchFundMetadata.action";
+import { fetchUserBalancesAction } from "./actions/fetchUserBalances.action";
 import { simulateNAVMethodValueAction } from "./actions/simulateNAVMethodValue.action";
 
 import addressesJson from "~/assets/contracts/addresses.json";
@@ -17,7 +18,7 @@ import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
 import { cleanComplexWeb3Data, formatJson } from "~/composables/utils";
 import { useAccountStore } from "~/store/account.store";
-import { useFundsStore } from "~/store/funds.store";
+import { useFundsStore } from "~/store/funds/funds.store";
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
@@ -442,31 +443,12 @@ export const useFundStore = defineStore({
       } as IClockMode;
     },
     async fetchUserBalances() {
-      if (
-        !this.activeAccountAddress ||
-        !this.fund?.fundToken?.address ||
-        !this.fund?.baseToken?.address ||
-        !this.fund?.governanceToken?.address ||
-        !this.fund?.address
-      ) return;
-      this.loadingUserBalances = true;
-
-      const promises = await Promise.allSettled(
-        [
-          () => this.fetchUserBaseTokenBalance(),
-          () => this.fetchUserFundTokenBalance(),
-          () => this.fetchUserGovernanceTokenBalance(),
-          () => this.fetchUserFundDelegateAddress(),
-          () => this.fetchUserFundShareValue(),
-          () => this.fetchUserFundAllowance(),
-          () => this.fetchUserFundDepositRedemptionRequests(),
-        ].map(
-          (fn: () => Promise<any>) => this.accountStore.requestConcurrencyLimit(fn),
-        ),
-      );
-
-      this.loadingUserBalances = false;
-      return promises
+      try {
+        return await fetchUserBalancesAction();
+      }catch (error) {
+        console.error("Failed fetching user balances: ", error);
+        throw error;
+      }
     },
     fetchFundPendingDepositRedemptionBalance(): void {
       if (!this.fund) return;
@@ -518,8 +500,7 @@ export const useFundStore = defineStore({
      */
     async fetchFundMetadata(fundSettings: IFundSettings): Promise<IFund> {
       try {
-        const fund = await fetchFundMetadataAction(fundSettings);
-        return fund;
+        return await fetchFundMetadataAction(fundSettings);
       } catch (error) {
         console.error("Error loading fund metadata: ", error);
         throw error;
