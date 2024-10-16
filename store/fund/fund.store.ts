@@ -73,7 +73,7 @@ interface IState {
   loadingUpdateNav: boolean,
 }
 
-
+// combine funds and fund store and map address => fund state; why only store one fund details at a time
 export const useFundStore = defineStore({
   id: "fund",
   state: (): IState => ({

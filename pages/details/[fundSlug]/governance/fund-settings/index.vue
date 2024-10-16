@@ -170,21 +170,21 @@
 </template>
 
 <script setup lang="ts">
-import GovernableFund from "~/assets/contracts/GovernableFund";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
+import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import {
-  FundSettingProposalFieldsMap,
-  ProposalStep,
-  ProposalStepMap,
-  type IField,
-  type IProposal,
-  type IStepperSection,
-  type IWhitelist,
+FundSettingProposalFieldsMap,
+ProposalStep,
+ProposalStepMap,
+type IField,
+type IProposal,
+type IStepperSection,
+type IWhitelist,
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
@@ -221,7 +221,7 @@ const formIsValid = ref(false);
 const isWhitelistToggled = ref(true);
 
 const updateSettingsABI = GovernableFund.abi.find(
-  (func) => func.name === "updateSettings" && func.type === "function",
+  (func: any) => func.name === "updateSettings" && func.type === "function",
 );
 
 // TODO: implement undo changes that will reset form with initial values

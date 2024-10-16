@@ -7,7 +7,6 @@ import type INAVUpdate from "~/types/nav_update";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ERC20 } from "~/assets/contracts/ERC20";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
-import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import { ClockMode } from "~/types/enums/clock_mode";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
@@ -17,11 +16,8 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
   const fundBaseTokenContract = new fundStore.web3.eth.Contract(ERC20, fundSettings.baseToken);
   const fundTokenContract = new fundStore.web3.eth.Contract(ERC20, fundSettings.fundAddress);
   const governanceTokenContract = new fundStore.web3.eth.Contract(ERC20, fundSettings.governanceToken);
-  const rethinkFundGovernorContract = new fundStore.web3.eth.Contract(
-    RethinkFundGovernor.abi,
-    fundSettings.governor,
-  );
 
+  const rethinkReaderContract = fundStore.rethinkReaderContract;
   // GovernableFund contract to get totalNAV.
   const fundContract = new fundStore.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
 
@@ -34,25 +30,49 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
         () => fundContract.methods.fundMetadata().call(),
         () => fundContract.methods._feeBal().call(),
         () => fundBaseTokenContract.methods.balanceOf(fundSettings.safe).call(),
-        () => fundBaseTokenContract.methods.balanceOf(fundSettings.fundAddress).call(),
-        () => fundStore.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken),
-        () => fundStore.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken),
-        () => fundStore.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken),
-        () => fundStore.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken),
-        () => governanceTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
-        () => fundStore.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken),
-        () => fundTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
+        () =>
+          fundBaseTokenContract.methods
+            .balanceOf(fundSettings.fundAddress)
+            .call(),
+        () =>
+          fundStore.web3Store.getTokenInfo(
+            fundBaseTokenContract,
+            "symbol",
+            fundSettings.baseToken,
+          ),
+        () =>
+          fundStore.web3Store.getTokenInfo(
+            fundBaseTokenContract,
+            "decimals",
+            fundSettings.baseToken,
+          ),
+        () =>
+          fundStore.web3Store.getTokenInfo(
+            governanceTokenContract,
+            "symbol",
+            fundSettings.governanceToken,
+          ),
+        () =>
+          fundStore.web3Store.getTokenInfo(
+            governanceTokenContract,
+            "decimals",
+            fundSettings.governanceToken,
+          ),
+        () => governanceTokenContract.methods.totalSupply().call(), // Get un-cached total supply.
+        () =>
+          fundStore.web3Store.getTokenInfo(
+            fundTokenContract,
+            "decimals",
+            fundSettings.governanceToken,
+          ),
+        () => fundTokenContract.methods.totalSupply().call(), // Get un-cached total supply.
         () => fundContract.methods.totalNAV().call(),
         () => fundContract.methods._totalDepositBal().call(),
-        () => rethinkFundGovernorContract.methods.votingDelay().call(),
-        () => rethinkFundGovernorContract.methods.votingPeriod().call(),
-        () => rethinkFundGovernorContract.methods.proposalThreshold().call(),
-        () => rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call(),
-        () => rethinkFundGovernorContract.methods.quorumNumerator().call(),
-        () => rethinkFundGovernorContract.methods.quorumDenominator().call(),
-        () => rethinkFundGovernorContract.methods.CLOCK_MODE().call(),
-      ].map((fn: () => Promise<any>) => fundStore.accountStore.requestConcurrencyLimit(
-        () => fundStore.callWithRetry(fn)),
+        () => rethinkReaderContract.methods.getGovernanceInfo(fundSettings.governor).call(),
+      ].map((fn: () => Promise<any>) =>
+        fundStore.accountStore.requestConcurrencyLimit(() =>
+          fundStore.callWithRetry(fn),
+        ),
       ),
     );
 
@@ -71,13 +91,7 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       fundTokenTotalSupply,
       fundTotalNAV,
       fundTotalDepositBalance,
-      fundVotingDelay,
-      fundVotingPeriod,
-      fundProposalThreshold,
-      fundLateQuorum,
-      quorumNumerator,
-      quorumDenominator,
-      clockModeString,
+      governanceInfo,
     ]: any[] = results.map((result, index) => {
       if (result.status === "fulfilled") {
         return result.value
@@ -85,6 +99,16 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       console.error("Failed fetching fund data value for: ", index, result)
       return undefined
     });
+
+    const {
+      fundVotingDelay,
+      fundVotingPeriod,
+      fundProposalThreshold,
+      fundLateQuorum,
+      quorumNumerator,
+      quorumDenominator,
+      clockModeString,
+    } = governanceInfo;
 
     const clockMode = fundStore.parseClockMode(clockModeString);
     console.log("clockMode: ", clockMode);

@@ -2,8 +2,8 @@ import { ethers } from "ethers";
 import { defineStore } from "pinia";
 import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
 import { eth, Web3 } from "web3";
-import GovernableFund from "~/assets/contracts/GovernableFund";
-import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor";
+import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 import { cleanComplexWeb3Data } from "~/composables/utils";
@@ -599,9 +599,9 @@ export const useGovernanceProposalsStore = defineStore({
   },
 });
 
-const proposalCreatedEventInputs = RethinkFundGovernor.abi.find(
-  event => event.name === "ProposalCreated" && event.type === "event",
-)?.inputs ?? [];
+const proposalCreatedEventInputs = (RethinkFundGovernor.abi.find(
+  (event: any) => event.name === "ProposalCreated" && event.type === "event",
+) as any)?.inputs ?? [];
 
 /**
  * Extract all function signatures from GovernableFund ABI

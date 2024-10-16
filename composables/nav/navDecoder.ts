@@ -1,10 +1,9 @@
-import { type AbiInput } from "web3";
-import { Web3 } from "web3";
-import GovernableFund from "~/assets/contracts/GovernableFund";
+import { Web3, type AbiInput } from "web3";
+import { GovernableFund } from "~/assets/contracts/GovernableFund";
 
-export const getNavEntryFunctionABI: AbiInput[] = GovernableFund.abi.find(
-  func => func.name === "getNavEntry" && func.type === "function",
-)?.outputs || [];
+export const getNavEntryFunctionABI: AbiInput[] = (GovernableFund.abi.find(
+  (func:any) => func.name === "getNavEntry" && func.type === "function",
+) as any )?.outputs || [];
 
 const web3 = new Web3();
 

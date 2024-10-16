@@ -173,10 +173,12 @@
 </template>
 
 <script setup lang="ts">
+
 import type { AbiFunctionFragment } from "web3";
-import GovernableFund from "~/assets/contracts/GovernableFund";
-import NAVExecutor from "~/assets/contracts/NAVExecutor";
+
 import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
+import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { NAVExecutor } from "~/assets/contracts/NAVExecutor";
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toast.store";
@@ -184,7 +186,6 @@ import { useWeb3Store } from "~/store/web3.store";
 import { PositionType } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
@@ -236,10 +237,10 @@ onBeforeUnmount(() => {
 });
 
 const newEntriesCount = computed(() => {
-  return fundManagedNAVMethods.value.filter(method => method.isNew).length ?? 0;
+  return fundManagedNAVMethods.value.filter((method: any) => method.isNew).length ?? 0;
 });
 const deletedEntriesCount = computed(() => {
-  return fundManagedNAVMethods.value.filter(method => method.deleted).length ?? 0;
+  return fundManagedNAVMethods.value.filter((method: any) => method.deleted).length ?? 0;
 });
 const fundLastNAVUpdateDate = computed(() => {
   if (!fundLastNAVUpdate.value) return "N/A";
@@ -247,14 +248,14 @@ const fundLastNAVUpdateDate = computed(() => {
 })
 
 const updateNavABI = GovernableFund.abi.find(
-  func => func.name === "updateNav" && func.type === "function",
+  (func: any) => func.name === "updateNav" && func.type === "function",
 );
 const collectFeesABI = GovernableFund.abi.find(
-  func => func.name === "collectFees" && func.type === "function",
+  (func: any) => func.name === "collectFees" && func.type === "function",
 );
 
 const storeNAVDataABI = NAVExecutor.abi.find(
-  func => func.name === "storeNAVData" && func.type === "function",
+  (func: any) => func.name === "storeNAVData" && func.type === "function",
 );
 
 
@@ -271,7 +272,7 @@ const getMethodsPastNAVUpdateIndex = (methods: Record<string, any>[]) => {
  *    generates a NAV permission.
  * 3)
  */
-const generateNAVPermission = (encodedNavUpdateEntries: string) =>  {
+const generateNAVPermission = () =>  {
   // Default NAV entry permission
   const navEntryPermission: Record<string, any> = {
     "value": [
@@ -493,7 +494,7 @@ const createProposal = async () => {
   let roleModTargets = [];
   let roleModGasValues = [];
   if (proposal.value.allowManagerToUpdateNav) {
-    const navPermissionEntries = generateNAVPermission(encodedNavUpdateEntries);
+    const navPermissionEntries = generateNAVPermission();
     console.log("navPermission: ", JSON.stringify(navPermissionEntries, null, 2));
     [encodedRoleModEntries, roleModTargets, roleModGasValues] = await encodeRoleModEntries(navPermissionEntries);
     console.log("encodedRoleModEntries: ", encodedRoleModEntries);
@@ -713,6 +714,7 @@ const saveDraft = () => {
   }
 };
 
+/**
 const saveProposalDraft = () => {
   try {
     const fundProposalDrafts = getLocalStorageItem("fundProposalDrafts", {});
@@ -730,6 +732,7 @@ const saveProposalDraft = () => {
     toastStore.errorToast("Failed to save fund proposal draft");
   }
 };
+ */
 
 </script>
 
