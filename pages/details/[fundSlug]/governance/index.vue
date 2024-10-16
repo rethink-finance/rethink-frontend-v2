@@ -68,6 +68,7 @@
       <FundGovernanceTableTrendingDelegates
         :items="trendingDelegates"
         :loading="loadingTrendingDelegate"
+        @row-click="handleRowClick"
       />
     </UiMainCard>
 
@@ -75,6 +76,32 @@
       v-model="isDelegateDialogOpen"
       @delegate-success="handleDelegateSuccess"
     />
+
+    <UiConfirmDialog
+      v-model="delegatorsDialog"
+      title="Delegators"
+      confirm-text=""
+      cancel-text="Close"
+      class="confirm_dialog"
+      max-width="800px"
+      @cancel="closeDelegatorsDialog"
+    >
+      <div class="mb-10">
+        <div class="title">Delegated Member:</div> {{ activeRow?.delegatedMember }}
+      </div>
+      <div>
+        <div class="title">Delegators:</div>
+        <ul>
+          <li v-for="delegator in activeRow?.delegators" :key="delegator" class="delegator-item">
+            {{ delegator }}
+            <FundGovernanceProposalStateChip
+              v-if="activeRow?.delegatedMember === delegator"
+              value="Self Delegated"
+            />
+          </li>
+        </ul>
+      </div>
+    </UiConfirmDialog>
 
     <UiConfirmDialog
       v-model="confirmDialog"
@@ -213,6 +240,7 @@ const fetchTrendingDelegates = async () => {
     const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
     console.log("currentBlock trending delegates:", currentBlock);
 
+    // let fromBlock = BigInt(21094239);
     let fromBlock = BigInt(currentBlock);
     const endBlock = BigInt(0);
     let chunkSize = 1000n;
@@ -231,7 +259,7 @@ const fetchTrendingDelegates = async () => {
 
       try {
         // fetch DelegateChanged events
-        const eventsDC = await fundStore.fundContract.getPastEvents(
+        const eventsDC = await fundStore.fundGovernanceTokenContract.getPastEvents(
           "DelegateChanged",
           {
             fromBlock: Number(toBlock),
@@ -241,11 +269,13 @@ const fetchTrendingDelegates = async () => {
 
         trendingDelegatesEvents = trendingDelegatesEvents
           .concat(eventsDC)
-          .sort((a, b) => Number(b.blockNumber) - Number(a.blockNumber));
 
         trendingDelegates.value = await parseTrendingDelegateEvents(
           trendingDelegatesEvents,
         );
+
+        console.log("Fetched DelegateChanged events: ", trendingDelegatesEvents);
+
 
         // double the chunk size for the next iteration
         chunkSize *= 2n;
@@ -289,7 +319,18 @@ const parseTrendingDelegateEvents = async (eventsDelegateChanged: any[]) => {
       { delegator: Set<string>; event: Set<any> }
     > = {};
 
-    eventsDelegateChanged.forEach((event) => {
+    // events has to be sorted by blockNumber because we want to show the most recent delegation
+    const sortedEvents = eventsDelegateChanged.sort(
+      (a, b) => Number(b.blockNumber) - Number(a.blockNumber),
+    );
+
+    sortedEvents.forEach((event) => {
+      // we need to ignore the DelegateChanged events where the delegator is the same as fund address
+      // because those comes from our try to automatically self delegate in the BE
+      if (event.returnValues.delegator.toLowerCase() === fundStore.fund?.address.toLowerCase()) {
+        return;
+      }
+
       const delegator = event.returnValues.delegator; // the one who delegates
       const delegatedMember = event.returnValues.toDelegate; // the member being delegated
 
@@ -314,6 +355,7 @@ const parseTrendingDelegateEvents = async (eventsDelegateChanged: any[]) => {
 
     // prepare the trending delegates
     const delegates: ITrendingDelegates[] = [];
+    const symbol = fundStore.fund?.governanceToken.symbol ?? ""
 
     await Promise.all(
       Object.entries(delegationsMap).map(
@@ -322,12 +364,13 @@ const parseTrendingDelegateEvents = async (eventsDelegateChanged: any[]) => {
             await getVotingPowerAndImpact(delegatedMember);
 
           const output = {
-            delegated_members: delegatedMember,
-            delegators: delegatorsSet.delegator.size,
+            delegatedMember: delegatedMember,
+            delegators: Array.from(delegatorsSet.delegator),
+            delegatorsEvents: Array.from(delegatorsSet.event),
             impact: impact ?? "0%",
-            voting_power:
-              votingPower ?? "0 " + fundStore.fund?.governanceToken.symbol,
-          };
+            votingPower:
+              votingPower ?? "0 " + symbol,
+          } as ITrendingDelegates;
 
           if (delegatorsSet.delegator.size >= 1) {
             delegates.push(output);
@@ -339,7 +382,17 @@ const parseTrendingDelegateEvents = async (eventsDelegateChanged: any[]) => {
     console.log("delegationsMap: ", delegationsMap);
     console.log("trendingDelegates: ", trendingDelegates);
 
-    return delegates as ITrendingDelegates[];
+    // sort by voting power
+    const sortedDelegates = delegates.sort(
+      (a, b) => {
+        const votingPowerA = Number(a.votingPower.replace(symbol, ""));
+        const votingPowerB = Number(b.votingPower.replace(symbol, ""));
+
+        return votingPowerB - votingPowerA;
+      }
+    );
+
+    return sortedDelegates as ITrendingDelegates[];
   } catch (error: any) {
     console.error("Error parsing trending delegates: ", error);
     return [];
@@ -374,6 +427,20 @@ async function getVotingPowerAndImpact(delegatedAddress: string) {
     };
   }
 }
+
+const handleRowClick = (item: ITrendingDelegates) => {
+  activeRow.value = item;
+  openDelegatorsDialog();
+};
+
+const delegatorsDialog = ref(false);
+const activeRow = ref<ITrendingDelegates | null>(null);
+const openDelegatorsDialog = () => {
+  delegatorsDialog.value = true;
+};
+const closeDelegatorsDialog = () => {
+  delegatorsDialog.value = false;
+};
 
 type DropdownOption = {
   click: () => void;
@@ -790,8 +857,9 @@ const startFetchingFundProposals = async () => {
   }
 };
 
-const  handleDelegateSuccess = async () => {
+const handleDelegateSuccess = async () => {
   loadingTrendingDelegate.value = true;
+  trendingDelegates.value = [];
   // await 2000ms before fetching
   await new Promise((resolve) => setTimeout(resolve, 2000));
   fetchTrendingDelegates();
@@ -875,5 +943,19 @@ const  handleDelegateSuccess = async () => {
 
 .confirm_dialog {
   max-width: unset;
+}
+
+.delegator-item{
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.title{
+  font-weight: 700;
+  color: $color-white;
+  margin-bottom: 0.5rem;
 }
 </style>
