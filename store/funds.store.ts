@@ -1,19 +1,21 @@
+// eslint-disable-next-line import/order
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import addressesJson from "~/assets/contracts/addresses.json";
-import GovernableFund from "~/assets/contracts/GovernableFund.json";
-import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
-import RethinkReader from "~/assets/contracts/RethinkReader.json";
+import GovernableFund from "~/assets/contracts/GovernableFund";
+import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory";
+import RethinkReader from "~/assets/contracts/RethinkReader";
 import SafeMultiSendCallOnlyJson from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { calculateCumulativeReturnPercent } from "~/composables/utils";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IAddresses from "~/types/addresses";
 import type { IContractAddresses } from "~/types/addresses";
 import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
+import type IFundMetaData from "~/types/fund_meta_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
@@ -190,29 +192,30 @@ export const useFundsStore = defineStore({
         // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
         //  not used in the contract code, so I have set it to 0. Change this part in the future
         //  if the contract changes.
-        const dataNAVs: Record<string, any[]> = await this.callWithRetry(() =>
+        const dataNAVs: IFundMetaData[] = await this.callWithRetry(() =>
           this.rethinkReaderContract.methods.getFundNavMetaData(
-            fundAddresses, 0,
+            fundAddresses,
           ).call(),
         );
 
         for (const [index, address] of fundAddresses.entries()) {
+          const dataNAV: IFundMetaData = dataNAVs[index];
           if (
             excludeTestFunds &&
             excludeFundAddrs[this.web3Store.chainId].includes(address)) {
             continue;
           }
-          const totalDepositBalance = dataNAVs.totalDepositBal[index] || 0n;
-          const totalNAVWei = dataNAVs.totalNav[index] || 0n;
-          const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index]);
+          const totalDepositBalance = dataNAV.totalDepositBal || 0n;
+          const totalNAVWei = dataNAV.totalNav || 0n;
+          const baseTokenDecimals = Number(dataNAV.fundBaseTokenDecimals);
 
 
-          const fundStartTime = dataNAVs.startTime[index];
+          const fundStartTime = dataNAV.startTime;
           const fund: IFund = {
             chainName: this.web3Store.chainName,
             chainShort: this.web3Store.chainShort,
             address,
-            title: dataNAVs.fundName[index] || "N/A",
+            title: dataNAV.fundName || "N/A",
             description: "N/A",
             safeAddress: "",
             governorAddress: "",
@@ -226,32 +229,32 @@ export const useFundsStore = defineStore({
             fundTokenTotalSupply: BigInt("0"),
             baseToken: {
               address: "",  // Not important here.
-              symbol: dataNAVs.fundBaseTokenSymbol[index],
+              symbol: dataNAV.fundBaseTokenSymbol,
               decimals: baseTokenDecimals,
             },
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
             totalNAVWei,
             totalDepositBalance,
-            cumulativeReturnPercent: calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals),
+            cumulativeReturnPercent: Number(dataNAV.cumulativeReturn),
             monthlyReturnPercent: undefined,
             sharpeRatio: undefined,
             positionTypeCounts: [
               {
                 type: PositionTypesMap[PositionType.Liquid],
-                count: Number(dataNAVs.liquidLen[index] || 0),
+                count: Number(dataNAV.liquidLen || 0),
               },
               {
                 type: PositionTypesMap[PositionType.Composable],
-                count: Number(dataNAVs.composableLen[index] || 0),
+                count: Number(dataNAV.composableLen || 0),
               },
               {
                 type: PositionTypesMap[PositionType.NFT],
-                count: Number(dataNAVs.nftLen[index] || 0),
+                count: Number(dataNAV.nftLen || 0),
               },
               {
                 type: PositionTypesMap[PositionType.Illiquid],
-                count: Number(dataNAVs.illiquidLen[index] || 0),
+                count: Number(dataNAV.illiquidLen || 0),
               },
             ] as IPositionTypeCount[],
 
@@ -297,7 +300,7 @@ export const useFundsStore = defineStore({
             isNavUpdatesLoading: true,
           };
 
-          const metaDataJson = dataNAVs.fundMetadata[index];
+          const metaDataJson = dataNAV.fundMetadata;
           // Process metadata if available
           if (metaDataJson) {
             const metaData = JSON.parse(metaDataJson);

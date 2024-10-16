@@ -76,7 +76,7 @@
 
 <script lang="ts">
 import { numberColorClass } from "~/composables/numberColorClass";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import type IFund from "~/types/fund";
 
 export default {

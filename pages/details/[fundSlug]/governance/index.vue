@@ -104,7 +104,7 @@ import type IFund from "~/types/fund";
 
 // components
 import { useAccountStore } from "~/store/account.store";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";

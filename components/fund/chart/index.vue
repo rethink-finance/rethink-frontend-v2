@@ -33,7 +33,7 @@ import type { PropType } from "vue";
 import { ethers } from "ethers";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 
 export default {
   props: {

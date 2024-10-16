@@ -80,7 +80,7 @@
 <script setup lang="ts">
 import { ethers } from "ethers";
 import type IToken from "~/types/token";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 
 type RuleFunction = (...args: any[]) => boolean | string;
 type RulesArray = RuleFunction[];

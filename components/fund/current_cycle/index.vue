@@ -82,7 +82,7 @@
 <script setup lang="ts">
 import { ethers, FixedNumber } from "ethers";
 import { computed, ref } from "vue";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import type IFund from "~/types/fund";
 

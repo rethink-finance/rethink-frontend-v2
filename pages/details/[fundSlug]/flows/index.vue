@@ -386,7 +386,7 @@ import {
   formatTokenValue,
   roundToSignificantDecimals,
 } from "~/composables/formatters";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();

@@ -174,11 +174,11 @@
 
 <script setup lang="ts">
 import type { AbiFunctionFragment } from "web3";
-import GovernableFund from "assets/contracts/GovernableFund.json";
-import NAVExecutor from "assets/contracts/NAVExecutor.json";
+import GovernableFund from "~/assets/contracts/GovernableFund";
+import NAVExecutor from "~/assets/contracts/NAVExecutor";
 import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import { useAccountStore } from "~/store/account.store";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { useWeb3Store } from "~/store/web3.store";
 import { PositionType } from "~/types/enums/position_type";

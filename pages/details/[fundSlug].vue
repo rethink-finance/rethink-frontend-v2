@@ -79,7 +79,7 @@
 
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account.store";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import { useWeb3Store } from "~/store/web3.store";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";

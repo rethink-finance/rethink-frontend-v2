@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import { truncateAddress , isZeroAddress } from "~/composables/addressUtils";
 import type IFund from "~/types/fund";
 const fundStore = useFundStore();

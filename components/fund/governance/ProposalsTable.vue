@@ -128,7 +128,7 @@
 <script setup lang="ts">
 // types
 import { useAccountStore } from "~/store/account.store";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { ProposalState } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";

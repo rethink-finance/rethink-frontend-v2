@@ -1,18 +1,21 @@
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
-import ERC20 from "~/assets/contracts/ERC20.json";
-import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
-import GovernableFund from "~/assets/contracts/GovernableFund.json";
-import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
-import NavCalculator from "~/assets/contracts/NAVCalculator.json";
-import RethinkFundGovernor from "~/assets/contracts/RethinkFundGovernor.json";
-import RethinkReader from "~/assets/contracts/RethinkReader.json";
+
+import { fetchFundMetadataAction } from "./actions/fetchFundMetadata.action";
+import { simulateNAVMethodValueAction } from "./actions/simulateNAVMethodValue.action";
+
 import addressesJson from "~/assets/contracts/addresses.json";
+import { ERC20 } from "~/assets/contracts/ERC20";
+import { ERC20Votes } from "~/assets/contracts/ERC20Votes";
+import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { GovernableFundFactory } from "~/assets/contracts/GovernableFundFactory";
+import { NAVCalculator } from "~/assets/contracts/NAVCalculator";
+import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
+import { RethinkReader } from "~/assets/contracts/RethinkReader";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
-import { calculateCumulativeReturnPercent, cleanComplexWeb3Data, formatJson, pluralizeWord } from "~/composables/utils";
+import { cleanComplexWeb3Data, formatJson } from "~/composables/utils";
 import { useAccountStore } from "~/store/account.store";
 import { useFundsStore } from "~/store/funds.store";
 import { useToastStore } from "~/store/toast.store";
@@ -29,7 +32,6 @@ import {
   PositionType,
   PositionTypes,
   PositionTypeToNAVCacheMethod,
-  PositionTypeToNAVCalculationMethod,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type { INAVParts } from "~/types/fund";
@@ -38,7 +40,6 @@ import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
-import type IToken from "~/types/token";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -310,7 +311,7 @@ export const useFundStore = defineStore({
     },
     // @ts-expect-error: we should extend the return type as Contract<...>
     navCalculatorContract(): Contract {
-      return new this.web3.eth.Contract(NavCalculator.abi, this.web3Store.NAVCalculatorBeaconProxyAddress)
+      return new this.web3.eth.Contract(NAVCalculator.abi, this.web3Store.NAVCalculatorBeaconProxyAddress)
     },
     // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
     fundContract(): Contract {
@@ -516,183 +517,12 @@ export const useFundStore = defineStore({
      * - fundMetadata
      */
     async fetchFundMetadata(fundSettings: IFundSettings): Promise<IFund> {
-      // @dev: would be better to just have this available in the FundSettings data.
-      // Fetch base, fund and governance ERC20 token symbol and decimals.
-      const fundBaseTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.baseToken);
-      const fundTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.fundAddress);
-      const governanceTokenContract = new this.web3.eth.Contract(ERC20, fundSettings.governanceToken);
-      const rethinkFundGovernorContract = new this.web3.eth.Contract(
-        RethinkFundGovernor.abi,
-        fundSettings.governor,
-      );
-
-      // GovernableFund contract to get totalNAV.
-      const fundContract = new this.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
-
       try {
-        // Fetch all token symbols, decimals and values.
-        // TODO move all these metadata calls to one ReaderContract method.
-        const results = await Promise.allSettled(
-          [
-            () => fundContract.methods.getFundStartTime().call(),
-            () => fundContract.methods.fundMetadata().call(),
-            () => fundContract.methods._feeBal().call(),
-            () => fundBaseTokenContract.methods.balanceOf(fundSettings.safe).call(),
-            () => fundBaseTokenContract.methods.balanceOf(fundSettings.fundAddress).call(),
-            () => this.web3Store.getTokenInfo(fundBaseTokenContract, "symbol", fundSettings.baseToken),
-            () => this.web3Store.getTokenInfo(fundBaseTokenContract, "decimals", fundSettings.baseToken),
-            () => this.web3Store.getTokenInfo(governanceTokenContract, "symbol", fundSettings.governanceToken),
-            () => this.web3Store.getTokenInfo(governanceTokenContract, "decimals", fundSettings.governanceToken),
-            () => governanceTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
-            () => this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken),
-            () => fundTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
-            () => fundContract.methods.totalNAV().call(),
-            () => fundContract.methods._totalDepositBal().call(),
-            () => rethinkFundGovernorContract.methods.votingDelay().call(),
-            () => rethinkFundGovernorContract.methods.votingPeriod().call(),
-            () => rethinkFundGovernorContract.methods.proposalThreshold().call(),
-            () => rethinkFundGovernorContract.methods.lateQuorumVoteExtension().call(),
-            () => rethinkFundGovernorContract.methods.quorumNumerator().call(),
-            () => rethinkFundGovernorContract.methods.quorumDenominator().call(),
-            () => rethinkFundGovernorContract.methods.CLOCK_MODE().call(),
-          ].map((fn: () => Promise<any>) => this.accountStore.requestConcurrencyLimit(
-            () => this.callWithRetry(fn)),
-          ),
-        );
-
-        const [
-          fundStartTime,
-          metaDataJson,
-          feeBalance,
-          safeContractBaseTokenBalance,
-          fundContractBaseTokenBalance,
-          baseTokenSymbol,
-          baseTokenDecimals,
-          governanceTokenSymbol,
-          governanceTokenDecimals,
-          governanceTokenTotalSupply,
-          fundTokenDecimals,
-          fundTokenTotalSupply,
-          fundTotalNAV,
-          fundTotalDepositBalance,
-          fundVotingDelay,
-          fundVotingPeriod,
-          fundProposalThreshold,
-          fundLateQuorum,
-          quorumNumerator,
-          quorumDenominator,
-          clockModeString,
-        ]: any[] = results.map((result, index) => {
-          if (result.status === "fulfilled") {
-            return result.value
-          }
-          console.error("Failed fetching fund data value for: ", index, result)
-          return undefined
-        });
-
-        const clockMode = this.parseClockMode(clockModeString);
-        console.log("clockMode: ", clockMode);
-        console.log("fundSettings: ", fundSettings)
-        const quorumVotes: bigint = governanceTokenTotalSupply as bigint * quorumNumerator as bigint / quorumDenominator as bigint;
-        const votingUnit = clockMode.mode === ClockMode.BlockNumber ? "block" : "second";
-
-        const fund: IFund = {
-          // Original fund settings
-          originalFundSettings: fundSettings,
-
-          chainName: this.web3Store.chainName,
-          chainShort: this.web3Store.chainShort,
-          address: fundSettings.fundAddress || "",
-          title: fundSettings.fundName || "N/A",
-          clockMode,
-          description: "N/A",
-          safeAddress: fundSettings.safe || "",
-          governorAddress: fundSettings.governor || "",
-          photoUrl: defaultAvatar,
-          inceptionDate: fundStartTime ? formatDate(new Date(Number(fundStartTime) * 1000)) : "",
-          fundToken: {
-            symbol: fundSettings.fundSymbol,
-            address: fundSettings.fundAddress,
-            decimals: Number(fundTokenDecimals) ?? 18,
-          } as IToken,
-          baseToken: {
-            symbol: baseTokenSymbol ?? "",
-            address: fundSettings.baseToken,
-            decimals: Number(baseTokenDecimals) ?? 18,
-          } as IToken,
-          governanceToken: {
-            symbol: governanceTokenSymbol ?? "",
-            address: fundSettings.governanceToken,
-            decimals: Number(governanceTokenDecimals) ?? 18,
-          } as IToken,
-          totalNAVWei: fundTotalNAV || BigInt("0"),
-          totalDepositBalance: fundTotalDepositBalance || BigInt("0"),
-          governanceTokenTotalSupply,
-          fundTokenTotalSupply,
-          cumulativeReturnPercent: calculateCumulativeReturnPercent(fundTotalDepositBalance, fundTotalNAV, baseTokenDecimals),
-          monthlyReturnPercent: undefined,
-          sharpeRatio: undefined,
-          positionTypeCounts: [] as IPositionTypeCount[],
-
-          // My Fund Positions
-          netDeposits: "",
-
-          // Overview fields
-          isWhitelistedDeposits: fundSettings.isWhitelistedDeposits,
-          allowedDepositAddresses: fundSettings.allowedDepositAddrs,
-          allowedManagerAddresses: fundSettings.allowedManagers,
-          plannedSettlementPeriod: "",
-          minLiquidAssetShare: "",
-
-          // Governance
-          votingDelay: pluralizeWord(votingUnit, fundVotingDelay),
-          votingPeriod: pluralizeWord(votingUnit, fundVotingPeriod),
-          proposalThreshold: (!fundProposalThreshold && fundProposalThreshold !== 0n) ? "N/A" : `${commify(fundProposalThreshold)} ${governanceTokenSymbol || "votes"}`,
-          quorumVotes,
-          quorumVotesFormatted: formatTokenValue(quorumVotes, governanceTokenDecimals),
-          quorumNumerator,
-          quorumDenominator,
-          quorumPercentage: formatPercent(
-            quorumDenominator ? Number(quorumNumerator) / Number(quorumDenominator) : 0,
-            false,
-            "N/A",
-          ),
-          lateQuorum: pluralizeWord(votingUnit, fundLateQuorum),
-
-          // Fees
-          depositFee: fundSettings.depositFee.toString(),
-          depositFeeAddress: fundSettings.feeCollectors[0],
-          withdrawFee: fundSettings.withdrawFee.toString(),
-          withdrawFeeAddress: fundSettings.feeCollectors[1],
-          managementPeriod: fundSettings.managementPeriod.toString(),
-          managementFee: fundSettings.managementFee.toString(),
-          managementFeeAddress: fundSettings.feeCollectors[2],
-          performancePeriod: fundSettings.performancePeriod.toString(),
-          performanceFee: fundSettings.performanceFee.toString(),
-          performanceFeeAddress: fundSettings.feeCollectors[3],
-          performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
-          feeCollectors: fundSettings.feeCollectors,
-          feeBalance: feeBalance * -1n, // Fees should be negative
-          safeContractBaseTokenBalance,
-          fundContractBaseTokenBalance,
-
-          // NAV Updates
-          navUpdates: [] as INAVUpdate[],
-        } as IFund;
-
-        // Process metadata if available
-        if (metaDataJson) {
-          const metaData = JSON.parse(metaDataJson);
-          fund.description = metaData.description;
-          fund.photoUrl = metaData.photoUrl || defaultAvatar;
-          fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
-          fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
-        }
-
+        const fund = await fetchFundMetadataAction(fundSettings);
         return fund;
       } catch (error) {
-        console.error("Error in promises: ", error, "fund: ", fundSettings);
-        return {} as IFund; // Return an empty or default object in case of error
+        console.error("Error loading fund metadata: ", error);
+        throw error;
       }
     },
     parseFundPositionTypeCounts(dataNAV: any): IPositionTypeCount[] {
@@ -814,99 +644,11 @@ export const useFundStore = defineStore({
       console.log("[CURRENT NAV] SIMULATE DONE:", this.isNavSimulationLoading, settled)
     },
     async simulateNAVMethodValue(navEntry: INAVMethod) {
-      if (!this.web3Store.web3 || !navEntry.detailsHash || navEntry.isNavSimulationLoading) return;
-      const baseDecimals = this.fund?.baseToken.decimals;
-      if (!baseDecimals) {
-        console.error("simulateNAVMethodValue error, no fund base decimals.")
-        return;
-      }
-
       try {
-        navEntry.isNavSimulationLoading = true;
-        navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
-        if (!navEntry.pastNAVUpdateEntryFundAddress) {
-          navEntry.pastNAVUpdateEntryFundAddress =
-            this.fundsStore.navMethodDetailsHashToFundAddress[
-              navEntry.detailsHash ?? ""
-            ];
-        }
-        if (!navEntry.pastNAVUpdateEntryFundAddress) {
-          // If there is no pastNAVUpdateEntryFundAddress the simulation will fail later.
-          // A missing pastNAVUpdateEntryFundAddress can mean two things:
-          //   1) A proposal is not approved yet and so its methods are not yet in the allNavMethods
-          //     -> that means the method was created on this fund, so we take address of this fund.
-          //  2) There was some difference when hashing details on INAVMethod detailsHash.
-          //    -> it will be hard to detect this, NAV simulation will fail, and we will take a look what happened.
-          //    -> We have a bigger problem if it won't fail, we should mark the address somewhere in the table.
-          //
-          // Here we take solution 1), as we assume that the method was not yet added to allMethods
-          navEntry.pastNAVUpdateEntryFundAddress = this.fund?.address;
-          navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
-        }
-
-        const callData : any[] = [];
-        if (navEntry.positionType === PositionType.Liquid) {
-          callData.push(prepNAVMethodLiquid(navEntry.details));
-          callData.push(this.fund?.safeAddress);
-        } else if (navEntry.positionType === PositionType.Illiquid) {
-          callData.push(prepNAVMethodIlliquid(navEntry.details, baseDecimals));
-          callData.push(this.fund?.safeAddress);
-        } else if (navEntry.positionType === PositionType.NFT) {
-          callData.push(prepNAVMethodNFT(navEntry.details));
-          // callData.push(this.fundStore.fund?.safeAddress);
-        } else if (navEntry.positionType === PositionType.Composable) {
-          callData.push(prepNAVMethodComposable(
-            navEntry.details,
-            navEntry.pastNAVUpdateEntrySafeAddress,
-            this.fund?.safeAddress,
-          ));
-        }
-
-        callData.push(
-          ...[
-            this.fund?.address, // fund
-            0, // navEntryIndex
-            false, // isPastNAVUpdate -- set to false to simulate on current fund.
-            parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
-            parseInt(navEntry.details.pastNAVUpdateEntryIndex), // pastNAVUpdateEntryIndex
-            navEntry.pastNAVUpdateEntryFundAddress, // pastNAVUpdateEntryFundAddress
-          ],
-        );
-
-        // console.log("json: ", JSON.stringify(callData, null, 2))
-        const navCalculationMethod =
-          PositionTypeToNAVCalculationMethod[navEntry.positionType];
-        navEntry.simulatedNavFormatted = "N/A";
-        navEntry.simulatedNav = 0n;
-
-        console.log("simulateNAVMethodValue isNavSimulationLoading:", this.isNavSimulationLoading)
-        console.log("navCalculationMethod:", navCalculationMethod)
-        console.log("callData:", callData)
-        try {
-          const simulatedVal: bigint = await this.callWithRetry(() =>
-            this.navCalculatorContract.methods[
-              navCalculationMethod
-            ](...callData).call(),
-          5,
-          [-32603],  // Do not retry internal errors (probably invalid NAV method)
-          );
-          console.warn("simulated value: ", simulatedVal);
-
-          navEntry.simulatedNavFormatted = this.formatBaseTokenValue(simulatedVal);
-          navEntry.simulatedNav = simulatedVal;
-          navEntry.isSimulatedNavError = false;
-        } catch (error: any) {
-          navEntry.isSimulatedNavError = true;
-          console.error(
-            "simulateNAVMethodValue: Failed simulating value for entry, check if there was some difference " +
-            "when hashing details on INAVMethod detailsHash: ",
-            navEntry,
-            error,
-          );
-        }
-      } finally {
-        console.log("finish simulate", navEntry)
-        navEntry.isNavSimulationLoading = false;
+        await simulateNAVMethodValueAction(navEntry);
+      } catch (error) {
+        console.error("Error simulateNAVMethodValueAction: ", error);
+        throw error;
       }
     },
     async updateNavMethodPastNavValue(navMethodIndex: number, navMethod: INAVMethod, fundAddress: string) {

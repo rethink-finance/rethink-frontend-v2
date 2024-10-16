@@ -99,7 +99,7 @@
 import { formatPercent } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass";
 import { capitalizeFirst } from "~/composables/utils";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import type IFund from "~/types/fund";
 const fundStore = useFundStore();
 
