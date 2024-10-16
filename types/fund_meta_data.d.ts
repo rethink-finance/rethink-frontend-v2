@@ -1,16 +1,24 @@
 
 
 export default interface IFundMetaData {
-    startTime: bigint;                   
-    totalNav: bigint;                  
-    totalDepositBal: bigint;            
-    cumulativeReturn: bigint;            
-    illiquidLen: bigint;                
-    liquidLen: bigint;                   
-    nftLen: bigint;                      
-    composableLen: bigint;             
-    fundBaseTokenDecimals: bigint;      
-    fundMetadata: string;               
-    fundName: string;                    
-    fundBaseTokenSymbol: string;         
+  cumulativeReturn: bigint;
+  startTime: bigint;
+  totalNav: bigint;
+  totalDepositBal: bigint;
+  feeBalance: bigint;
+  illiquidLen: bigint;
+  liquidLen: bigint;
+  nftLen: bigint;
+  composableLen: bigint;
+  fundTokenDecimals: bigint;
+  fundBaseTokenDecimals: bigint;
+  fundTokenSupply: bigint;
+  fundBaseTokenSupply: bigint;
+  fundGovernanceTokenSupply: bigint;
+  safeContractBaseTokenBalance: bigint;
+  fundContractBaseTokenBalance: bigint;
+  fundMetadata: string;
+  fundName: string;
+  fundBaseTokenSymbol: string;
+  fundGovernanceTokenSymbol: string;
 }

@@ -25,7 +25,7 @@ export async function fetchFundsMetadataAction(
     //  if the contract changes.
     const dataNAVs: IFundMetaData[] = await fundsStore.callWithRetry(() =>
       fundsStore.rethinkReaderContract.methods
-        .getFundNavMetaData(fundAddresses)
+        .getFundsNavMetaData(fundAddresses)
         .call(),
     );
 

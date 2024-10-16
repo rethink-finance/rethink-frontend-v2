@@ -5,70 +5,25 @@ import type IFundSettings from "~/types/fund_settings";
 import type INAVUpdate from "~/types/nav_update";
 
 import defaultAvatar from "@/assets/images/default_avatar.webp";
-import { ERC20 } from "~/assets/contracts/ERC20";
-import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { ClockMode } from "~/types/enums/clock_mode";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 
 export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Promise<IFund> => {
   const fundStore = useFundStore();
-  const fundBaseTokenContract = new fundStore.web3.eth.Contract(ERC20, fundSettings.baseToken);
-  const fundTokenContract = new fundStore.web3.eth.Contract(ERC20, fundSettings.fundAddress);
-  const governanceTokenContract = new fundStore.web3.eth.Contract(ERC20, fundSettings.governanceToken);
-
   const rethinkReaderContract = fundStore.rethinkReaderContract;
-  // GovernableFund contract to get totalNAV.
-  const fundContract = new fundStore.web3.eth.Contract(GovernableFund.abi, fundSettings.fundAddress);
 
   try {
-    // Fetch all token symbols, decimals and values.
-    // TODO move all these metadata calls to one ReaderContract method.
     const results = await Promise.allSettled(
       [
-        () => fundContract.methods.getFundStartTime().call(),
-        () => fundContract.methods.fundMetadata().call(),
-        () => fundContract.methods._feeBal().call(),
-        () => fundBaseTokenContract.methods.balanceOf(fundSettings.safe).call(),
         () =>
-          fundBaseTokenContract.methods
-            .balanceOf(fundSettings.fundAddress)
+          rethinkReaderContract.methods
+            .getFundNavMetaData(fundSettings.fundAddress)
             .call(),
         () =>
-          fundStore.web3Store.getTokenInfo(
-            fundBaseTokenContract,
-            "symbol",
-            fundSettings.baseToken,
-          ),
-        () =>
-          fundStore.web3Store.getTokenInfo(
-            fundBaseTokenContract,
-            "decimals",
-            fundSettings.baseToken,
-          ),
-        () =>
-          fundStore.web3Store.getTokenInfo(
-            governanceTokenContract,
-            "symbol",
-            fundSettings.governanceToken,
-          ),
-        () =>
-          fundStore.web3Store.getTokenInfo(
-            governanceTokenContract,
-            "decimals",
-            fundSettings.governanceToken,
-          ),
-        () => governanceTokenContract.methods.totalSupply().call(), // Get un-cached total supply.
-        () =>
-          fundStore.web3Store.getTokenInfo(
-            fundTokenContract,
-            "decimals",
-            fundSettings.governanceToken,
-          ),
-        () => fundTokenContract.methods.totalSupply().call(), // Get un-cached total supply.
-        () => fundContract.methods.totalNAV().call(),
-        () => fundContract.methods._totalDepositBal().call(),
-        () => rethinkReaderContract.methods.getGovernanceInfo(fundSettings.governor).call(),
+          rethinkReaderContract.methods
+            .getGovernanceInfo(fundSettings.governor)
+            .call(),
       ].map((fn: () => Promise<any>) =>
         fundStore.accountStore.requestConcurrencyLimit(() =>
           fundStore.callWithRetry(fn),
@@ -77,28 +32,39 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
     );
 
     const [
-      fundStartTime,
-      metaDataJson,
-      feeBalance,
-      safeContractBaseTokenBalance,
-      fundContractBaseTokenBalance,
-      baseTokenSymbol,
-      baseTokenDecimals,
-      governanceTokenSymbol,
-      governanceTokenDecimals,
-      governanceTokenTotalSupply,
-      fundTokenDecimals,
-      fundTokenTotalSupply,
-      fundTotalNAV,
-      fundTotalDepositBalance,
+      fundNavMetaData,
       governanceInfo,
     ]: any[] = results.map((result, index) => {
       if (result.status === "fulfilled") {
-        return result.value
+        return result.value;
       }
-      console.error("Failed fetching fund data value for: ", index, result)
-      return undefined
+      console.error("Failed fetching fund data value for: ", index, result);
+      return undefined;
     });
+
+    const {
+      cumulativeReturn,
+      startTime,
+      totalNav,
+      totalDepositBal,
+      feeBalance,
+      illiquidLen, // eslint-disable-line @typescript-eslint/no-unused-vars
+      liquidLen, // eslint-disable-line @typescript-eslint/no-unused-vars
+      nftLen, // eslint-disable-line @typescript-eslint/no-unused-vars
+      composableLen, // eslint-disable-line @typescript-eslint/no-unused-vars
+      fundTokenDecimals,
+      fundBaseTokenDecimals,
+      fundGovernanceTokenDecimals,
+      fundTokenSupply,
+      fundBaseTokenSupply, // eslint-disable-line @typescript-eslint/no-unused-vars
+      fundGovernanceTokenSupply,
+      safeContractBaseTokenBalance,
+      fundContractBaseTokenBalance,
+      fundMetadata,
+      fundName, // eslint-disable-line @typescript-eslint/no-unused-vars
+      fundBaseTokenSymbol,
+      fundGovernanceTokenSymbol,
+    } = fundNavMetaData;
 
     const {
       fundVotingDelay,
@@ -113,7 +79,8 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
     const clockMode = fundStore.parseClockMode(clockModeString);
     console.log("clockMode: ", clockMode);
     console.log("fundSettings: ", fundSettings)
-    const quorumVotes: bigint = governanceTokenTotalSupply as bigint * quorumNumerator as bigint / quorumDenominator as bigint;
+    const quorumVotes: bigint = ((((fundGovernanceTokenSupply as bigint) *
+      quorumNumerator) as bigint) / quorumDenominator) as bigint;
     const votingUnit = clockMode.mode === ClockMode.BlockNumber ? "block" : "second";
 
     const fund: IFund = {
@@ -129,27 +96,29 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       safeAddress: fundSettings.safe || "",
       governorAddress: fundSettings.governor || "",
       photoUrl: defaultAvatar,
-      inceptionDate: fundStartTime ? formatDate(new Date(Number(fundStartTime) * 1000)) : "",
+      inceptionDate: startTime
+        ? formatDate(new Date(Number(startTime) * 1000))
+        : "",
       fundToken: {
         symbol: fundSettings.fundSymbol,
         address: fundSettings.fundAddress,
         decimals: Number(fundTokenDecimals) ?? 18,
       } as IToken,
       baseToken: {
-        symbol: baseTokenSymbol ?? "",
+        symbol: fundBaseTokenSymbol ?? "",
         address: fundSettings.baseToken,
-        decimals: Number(baseTokenDecimals) ?? 18,
+        decimals: Number(fundBaseTokenDecimals) ?? 18,
       } as IToken,
       governanceToken: {
-        symbol: governanceTokenSymbol ?? "",
+        symbol: fundGovernanceTokenSymbol ?? "",
         address: fundSettings.governanceToken,
-        decimals: Number(governanceTokenDecimals) ?? 18,
+        decimals: Number(fundGovernanceTokenDecimals) ?? 18,
       } as IToken,
-      totalNAVWei: fundTotalNAV || BigInt("0"),
-      totalDepositBalance: fundTotalDepositBalance || BigInt("0"),
-      governanceTokenTotalSupply,
-      fundTokenTotalSupply,
-      cumulativeReturnPercent: calculateCumulativeReturnPercent(fundTotalDepositBalance, fundTotalNAV, baseTokenDecimals),
+      totalNAVWei: totalNav || BigInt("0"),
+      totalDepositBalance: totalDepositBal || BigInt("0"),
+      governanceTokenTotalSupply: fundGovernanceTokenSupply,
+      fundTokenTotalSupply: fundTokenSupply,
+      cumulativeReturnPercent: cumulativeReturn,
       monthlyReturnPercent: undefined,
       sharpeRatio: undefined,
       positionTypeCounts: [] as IPositionTypeCount[],
@@ -167,13 +136,21 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       // Governance
       votingDelay: pluralizeWord(votingUnit, fundVotingDelay),
       votingPeriod: pluralizeWord(votingUnit, fundVotingPeriod),
-      proposalThreshold: (!fundProposalThreshold && fundProposalThreshold !== 0n) ? "N/A" : `${commify(fundProposalThreshold)} ${governanceTokenSymbol || "votes"}`,
+      proposalThreshold:
+        !fundProposalThreshold && fundProposalThreshold !== 0n
+          ? "N/A"
+          : `${commify(fundProposalThreshold)} ${fundGovernanceTokenSymbol || "votes"}`,
       quorumVotes,
-      quorumVotesFormatted: formatTokenValue(quorumVotes, governanceTokenDecimals),
+      quorumVotesFormatted: formatTokenValue(
+        quorumVotes,
+        fundGovernanceTokenDecimals,
+      ),
       quorumNumerator,
       quorumDenominator,
       quorumPercentage: formatPercent(
-        quorumDenominator ? Number(quorumNumerator) / Number(quorumDenominator) : 0,
+        quorumDenominator
+          ? Number(quorumNumerator) / Number(quorumDenominator)
+          : 0,
         false,
         "N/A",
       ),
@@ -201,8 +178,8 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
     } as IFund;
 
     // Process metadata if available
-    if (metaDataJson) {
-      const metaData = JSON.parse(metaDataJson);
+    if (fundMetadata) {
+      const metaData = JSON.parse(fundMetadata);
       fund.description = metaData.description;
       fund.photoUrl = metaData.photoUrl || defaultAvatar;
       fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
