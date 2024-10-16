@@ -91,8 +91,10 @@ const excludeNAVDetailsHashes = {
   "0xa4b1": [],
   "0xfc": [],
   "0x1": [],
+  // Base
   "0x2105": [
     "0x4226e636db1dbaa1da860ce7df92d151aaea7f23934b94a21bc75d2c1d6233ee",
+    "0x50a4f3bc878614729c8dc9365a4ad9ea717e089870d706459c85e1f8fb89ac94",
   ],
 } as IExcludeNAVDetailsHashes;
 
