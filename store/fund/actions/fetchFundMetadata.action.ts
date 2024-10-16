@@ -67,21 +67,22 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
     } = fundNavMetaData;
 
     const {
-      fundVotingDelay,
-      fundVotingPeriod,
-      fundProposalThreshold,
-      fundLateQuorum,
+      votingDelay,
+      votingPeriod,
+      proposalThreshold,
+      lateQuorumVoteExtension,
       quorumNumerator,
       quorumDenominator,
-      clockModeString,
+      clockMode,
     } = governanceInfo;
 
-    const clockMode = fundStore.parseClockMode(clockModeString);
-    console.log("clockMode: ", clockMode);
+    const parsedClockMode = fundStore.parseClockMode(clockMode);
+    console.log("parsedClockMode: ", parsedClockMode);
     console.log("fundSettings: ", fundSettings)
     const quorumVotes: bigint = ((((fundGovernanceTokenSupply as bigint) *
       quorumNumerator) as bigint) / quorumDenominator) as bigint;
-    const votingUnit = clockMode.mode === ClockMode.BlockNumber ? "block" : "second";
+    const votingUnit =
+      parsedClockMode.mode === ClockMode.BlockNumber ? "block" : "second";
 
     const fund: IFund = {
       // Original fund settings
@@ -91,7 +92,7 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       chainShort: fundStore.web3Store.chainShort,
       address: fundSettings.fundAddress || "",
       title: fundSettings.fundName || "N/A",
-      clockMode,
+      clockMode: parsedClockMode,
       description: "N/A",
       safeAddress: fundSettings.safe || "",
       governorAddress: fundSettings.governor || "",
@@ -134,12 +135,12 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       minLiquidAssetShare: "",
 
       // Governance
-      votingDelay: pluralizeWord(votingUnit, fundVotingDelay),
-      votingPeriod: pluralizeWord(votingUnit, fundVotingPeriod),
+      votingDelay: pluralizeWord(votingUnit, votingDelay),
+      votingPeriod: pluralizeWord(votingUnit, votingPeriod),
       proposalThreshold:
-        !fundProposalThreshold && fundProposalThreshold !== 0n
+        !proposalThreshold && proposalThreshold !== 0n
           ? "N/A"
-          : `${commify(fundProposalThreshold)} ${fundGovernanceTokenSymbol || "votes"}`,
+          : `${commify(proposalThreshold)} ${fundGovernanceTokenSymbol || "votes"}`,
       quorumVotes,
       quorumVotesFormatted: formatTokenValue(
         quorumVotes,
@@ -154,7 +155,7 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
         false,
         "N/A",
       ),
-      lateQuorum: pluralizeWord(votingUnit, fundLateQuorum),
+      lateQuorum: pluralizeWord(votingUnit, lateQuorumVoteExtension),
 
       // Fees
       depositFee: fundSettings.depositFee.toString(),
