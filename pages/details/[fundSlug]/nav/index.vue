@@ -30,7 +30,7 @@
           <v-btn
             :disabled="loadingUpdateNav"
             class="bg-primary text-secondary"
-            @click="accountStore.isConnected ? fundStore.updateNAV() : null"
+            @click="accountStore.isConnected ? fundStore.postUpdateNAV() : null"
           >
             <template #prepend>
               <v-progress-circular
@@ -117,7 +117,7 @@ const fundLastNAVUpdateDate = computed(() => {
 
 const fundTotalNAVFormatted = computed(() => {
   if (!fundStore.fundTotalNAV) return "N/A";
-  return fundStore.formatBaseTokenValue(fundStore.fundTotalNAV)
+  return fundStore.getFormattedBaseTokenValue(fundStore.fundTotalNAV)
 });
 
 // return fund with reversed navUpdates array to show the latest updates first

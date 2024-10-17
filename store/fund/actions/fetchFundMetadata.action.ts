@@ -119,7 +119,7 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       totalDepositBalance: totalDepositBal || BigInt("0"),
       governanceTokenTotalSupply: fundGovernanceTokenSupply,
       fundTokenTotalSupply: fundTokenSupply,
-      cumulativeReturnPercent: cumulativeReturn,
+      cumulativeReturnPercent: Number(cumulativeReturn),
       monthlyReturnPercent: undefined,
       sharpeRatio: undefined,
       positionTypeCounts: [] as IPositionTypeCount[],

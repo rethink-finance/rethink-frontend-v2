@@ -4,7 +4,7 @@ import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/
 import type INAVMethod from "~/types/nav_method";
 
 
-export const simulateNAVMethodValueAction = async (navEntry: INAVMethod): Promise<void> => {
+export const fetchSimulatedNAVMethodValueAction = async (navEntry: INAVMethod): Promise<void> => {
   const fundStore = useFundStore();
 
   if (!fundStore.web3Store.web3) {
@@ -98,7 +98,7 @@ export const simulateNAVMethodValueAction = async (navEntry: INAVMethod): Promis
       );
       console.warn("simulated value: ", simulatedVal);
 
-      navEntry.simulatedNavFormatted = fundStore.formatBaseTokenValue(simulatedVal);
+      navEntry.simulatedNavFormatted = fundStore.getFormattedBaseTokenValue(simulatedVal);
       navEntry.simulatedNav = simulatedVal;
       navEntry.isSimulatedNavError = false;
     } catch (error: any) {

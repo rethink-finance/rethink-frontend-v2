@@ -12,7 +12,6 @@ export const fetchUserBalancesAction = async (
     !fundStore.fund?.address
   )
     return;
-  fundStore.loadingUserBalances = true;
 
   const promises = await Promise.allSettled(
     [
@@ -28,6 +27,5 @@ export const fetchUserBalancesAction = async (
     ),
   );
 
-  fundStore.loadingUserBalances = false;
   return promises;
 };
