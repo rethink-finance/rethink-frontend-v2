@@ -1,0 +1,1 @@
+import{_ as e,e as t,f as c}from"./BRiit42J.js";const n={},o={class:"d-flex",style:{width:"100%","flex-direction":"column"}};function s(r,_){return c(),t("div",o," Create ")}const d=e(n,[["render",s]]);export{d as default};

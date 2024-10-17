@@ -1,0 +1,1 @@
+import{_ as t,f as n,e as o,cO as s}from"./BRiit42J.js";const c={},_={class:"main_header"};function r(e,a){return n(),o("div",_,[s(e.$slots,"default")])}const f=t(c,[["render",r]]);export{f as default};
