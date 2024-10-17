@@ -19,27 +19,28 @@
           />
         </div>
 
-        <div v-if="loadingProposalVoteSubmissions || activeUserVoteSubmission" class="section-top__meta-row submission_status">
+        <!-- TODO: move this into component that will show status, date, voting power -->
+        <div v-if="loadingProposalVoteSubmissions || activeUserVoteSubmission?.proposer" class="section-top__meta-row vote_submission">
           Your Vote:
           <v-progress-circular
-            v-if="loadingProposalVoteSubmissions && !activeUserVoteSubmission"
+            v-if="loadingProposalVoteSubmissions && !activeUserVoteSubmission?.proposer"
             class="d-flex"
             size="18"
             width="2"
             indeterminate
           />
-          <div v-else-if="activeUserVoteSubmission" class="submission_status">
+          <div v-else-if="activeUserVoteSubmission?.proposer" class="vote_submission">
             <Icon
-              :icon="icons[activeUserVoteSubmission as keyof typeof icons]"
+              :icon="VoteTypeIcon[activeUserVoteSubmission.submission_status as VoteType]"
               width="1.4rem"
-              :class="`icon--${activeUserVoteSubmission.toLowerCase()}`"
+              :class="`icon--${VoteTypeClass[activeUserVoteSubmission.submission_status as VoteType]}`"
             />
-            <div class="submission_status__text">
-              {{ activeUserVoteSubmission }}
+            <div class="vote_submission__text">
+              {{ activeUserVoteSubmission?.submission_status }}
             </div>
           </div>
         </div>
-        <div v-else class="section-top__meta-row submission_status">
+        <div v-else class="section-top__meta-row vote_submission">
           You have not voted on this proposal.
         </div>
 
@@ -213,15 +214,10 @@ import {
   VoteTypeNumberMapping,
 } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import type IProposalVoteSubmission from "~/types/vote_submission";
 
 const emit = defineEmits(["vote-success"]);
 
-// defined icons for submission_status
-const icons = {
-  Abstained: "material-symbols:question-mark",
-  Rejected: "material-symbols:close",
-  Approved: "material-symbols:done",
-};
 
 const props = defineProps({
   proposal: {
@@ -229,8 +225,8 @@ const props = defineProps({
     default: () => {},
   },
   activeUserVoteSubmission: {
-    type: String,
-    default: "",
+    type: Object as PropType<IProposalVoteSubmission> | undefined,
+    default: () => {}
   },
   loadingProposalVoteSubmissions: {
     type: Boolean,
@@ -617,20 +613,22 @@ onMounted(() => {
   }
 }
 
-.submission_status {
+.vote_submission {
   display: flex;
   align-items: center;
   color: $color-steel-blue;
   gap: 0.25rem !important;
 }
-.icon--abstained {
-  color: $color-warning;
-}
-.icon--rejected {
-  color: $color-error;
-}
-.icon--approved {
-  color: $color-success;
+.icon{
+  &--abstain {
+    color: $color-warning;
+  }
+  &--against {
+    color: $color-error;
+  }
+  &--for {
+    color: $color-success;
+  }
 }
 
 .buttons-container{

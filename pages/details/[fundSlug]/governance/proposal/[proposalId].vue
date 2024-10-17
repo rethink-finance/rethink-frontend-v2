@@ -175,15 +175,17 @@
 </template>
 
 <script setup lang="ts">
-import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { formatPercent } from "~/composables/formatters";
-import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
 import { useWeb3Store } from "~/store/web3.store";
+import { VoteTypeMapping } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
+import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import type IProposalVoteSubmission from "~/types/vote_submission";
+import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -219,20 +221,14 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-const proposalVoteSubmissions = ref <{
-  proposalId: string;
-  proposer: string;
-  my_vote: boolean;
-  submission_status: string;
-  quorumVotes: string;
-}[]>([]);
 
 const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
 const proposalFetched = ref(false);
 const loadingProposalVoteSubmissions = ref(false);
 const shouldFetchProposalVoteSubmissions = ref(true);
-const activeUserVoteSubmission = ref("");
+const proposalVoteSubmissions = ref <IProposalVoteSubmission[]> ([]);
+const activeUserVoteSubmission = ref<IProposalVoteSubmission>();
 
 const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
@@ -307,13 +303,6 @@ const formatCalldata = (calldata: any) => {
   }
 }
 
-// TODO move to the interface file of IProposalVoteSubmission when created
-const voteSubmissionMap: Record<number, string> = {
-  0: "Rejected",
-  1: "Approved",
-  2: "Abstained",
-};
-
 const fetchProposalVoteSubmissions = async () => {
   loadingProposalVoteSubmissions.value = true;
   try {
@@ -326,9 +315,6 @@ const fetchProposalVoteSubmissions = async () => {
     let chunkSize = 1000n;
     const minChunkSize = 1000n;
     let waitTimeAfterError = 1000;
-    // TODO define proposal submission interface
-    // TODO remove this proposalVoteSubmissionsEvents and just use proposalVoteSubmissions.value
-    let proposalVoteSubmissionsEvents: any[] = [];
 
     while (fromBlock > endBlock && shouldFetchProposalVoteSubmissions.value) {
       let toBlock = fromBlock - chunkSize + 1n;
@@ -346,47 +332,58 @@ const fetchProposalVoteSubmissions = async () => {
           toBlock: Number(fromBlock),
         });
 
-        // TODO no need to iterate all the time over all these events, just sort and filter eventsVS
-        proposalVoteSubmissionsEvents = proposalVoteSubmissionsEvents.concat(eventsVS).sort((a, b) => {
-          return Number(a.blockNumber) - Number(b.blockNumber);
-        }).filter((event) => {
-          return Number(event?.returnValues?.proposalId) === Number(proposalId);
+        // sort new chunk of events by block number
+        const sortedEventsVS = eventsVS.sort(
+          (a:any, b:any) => Number(a.blockNumber) - Number(b.blockNumber)
+        ).filter((event:any) => {
+          // filter events by proposalId 
+          return (
+            Number(event?.returnValues?.proposalId) === Number(proposalId)
+          );
         });
 
         console.log("VS - eventsVS: ", eventsVS);
-        console.log("VS - proposalVoteSubmissionsEvents: ", proposalVoteSubmissionsEvents);
 
-        // TODO append to proposalVoteSubmissions.value instead of parsing all events every time.
-        // TODO save block timestamp to the proposal vote submission
-        proposalVoteSubmissions.value = proposalVoteSubmissionsEvents.map((event) => {
+        // append new events to the existing list of proposalVoteSubmissions
+        for (const event of sortedEventsVS) {
           const { voter, support, weight, reason } = event?.returnValues;
-
+          
+          // fetch block details to get the timestamp
+          const blockVoteCast = await fundStore.web3.eth.getBlock( event?.blockNumber);
+          const voteTimestamp = blockVoteCast?.timestamp ? new Date(Number(blockVoteCast?.timestamp) * 1000) : null;
           const myVote = fundStore?.activeAccountAddress?.toLowerCase() === voter?.toLowerCase();
-          if(myVote) {
-            activeUserVoteSubmission.value = voteSubmissionMap[Number(support)];
-          }
-          console.log("VS - voter", voter?.toLowerCase(), "weight", weight);
-
-          return {
+                    
+          const newVote = {
             proposalId,
             proposer: voter,
             my_vote: myVote,
-            submission_status: voteSubmissionMap[Number(support)],
-            quorumVotes: formatTokenValue(
-              weight,
-              fundStore?.fund?.governanceToken.decimals,
-              false,
-              true,
-            ) + " " + fundStore.fund?.governanceToken.symbol,
-          };
-        });
+            submission_status: VoteTypeMapping[Number(support) as keyof typeof VoteTypeMapping],
+            quorumVotes:
+              formatTokenValue(
+                weight,
+                fundStore?.fund?.governanceToken.decimals,
+                false,
+                true
+              ) + " " + fundStore.fund?.governanceToken.symbol,
+            date: voteTimestamp ? formatDateToLocaleString(voteTimestamp) : "N/A",
+          }
+
+          // append new submission to proposalVoteSubmissions
+          proposalVoteSubmissions.value.push(newVote);
+
+          if (myVote) {
+            activeUserVoteSubmission.value = newVote;
+          }
+        }
+
+        console.log("VS - proposalVoteSubmissions: ", proposalVoteSubmissions.value);
 
         // double the chunk size
         chunkSize *= 2n;
         console.log("VS - chunkSize doubled: ", chunkSize);
         waitTimeAfterError = Math.max(100, waitTimeAfterError / 2);
 
-        fromBlock = toBlock - 1n; // move to the next block
+        fromBlock = toBlock - 1n; // prepare for next block chunk
 
         await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
       } catch (error) {
@@ -407,11 +404,11 @@ const fetchProposalVoteSubmissions = async () => {
 
     loadingProposalVoteSubmissions.value = false;
     console.log("All VoteCast events fetched");
-  } catch(e: any) {
+  } catch (e: any) {
     console.error("Error fetching proposals votes submissions", e);
     loadingProposalVoteSubmissions.value = false;
   }
-}
+};
 
 // when the user vote, refetch the votes submissions
 const handleVoteSuccess = async () => {

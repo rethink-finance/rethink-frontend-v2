@@ -22,9 +22,9 @@
     <template #[`item.submission_status`]="{ item }">
       <div class="submission_status">
         <Icon
-          :icon="icons[item.submission_status as keyof typeof icons]"
+          :icon="VoteTypeIcon[item.submission_status as VoteType]"
           width="1.4rem"
-          :class="`icon--${item.submission_status.toLowerCase()}`"
+          :class="`icon--${VoteTypeClass[item.submission_status as VoteType]}`"
         />
         <div class="submission_status__text">
           {{ item.submission_status }}
@@ -55,17 +55,12 @@
 <script setup lang="ts">
 // types
 import { truncateAddress } from "~/composables/addressUtils";
-
-// defined icons for submission_status
-const icons = {
-  Abstained: "material-symbols:question-mark",
-  Rejected: "material-symbols:close",
-  Approved: "material-symbols:done",
-};
+import { VoteType, VoteTypeClass, VoteTypeIcon } from "~/types/enums/governance_proposal";
+import type IProposalVoteSubmission from "~/types/vote_submission";
 
 defineProps({
   items: {
-    type: Array as () => { proposer: string; submission_status: string, quorumVotes: string, my_vote: boolean }[],
+    type: Array as () => IProposalVoteSubmission[],
     default: () => [],
   },
   loading: {
@@ -78,6 +73,11 @@ const headers = computed(() => {
   const headers: any[] = [
     { title: "Members Wallet", key: "proposer", sortable: true },
   ];
+  headers.push({
+    title: "Date",
+    key: "date",
+    sortable: true,
+  })
   headers.push({
     title: "Submission",
     key: "submission_status",
@@ -130,13 +130,15 @@ const headers = computed(() => {
     margin-left: 0.5rem;
   }
 }
-.icon--abstained {
-  color: $color-warning;
-}
-.icon--rejected {
-  color: $color-error;
-}
-.icon--approved {
-  color: $color-success;
+.icon{
+  &--abstain {
+    color: $color-warning;
+  }
+  &--against {
+    color: $color-error;
+  }
+  &--for {
+    color: $color-success;
+  }
 }
 </style>
