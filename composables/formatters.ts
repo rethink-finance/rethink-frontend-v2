@@ -23,12 +23,12 @@ export const formatDate = (date: Date) => {
  * @param {Date} date - The Date object to be formatted.
  * @returns {string} The formatted date string.
  */
-export const formatDateLong = (date: Date) => {
+export const formatDateLong = (date: Date, includeDayName = true) => {
   if(!date) return "";
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const dayName = days[date.getUTCDay()];
+  const dayName = includeDayName ? `${days[date.getUTCDay()]} ` : "";
   const monthName = months[date.getUTCMonth()];
   const day = date.getUTCDate();
   const year = date.getUTCFullYear(); // Full year
@@ -38,7 +38,7 @@ export const formatDateLong = (date: Date) => {
   hour = hour % 12;
   hour = hour || 12; // the hour '0' should be '12'
 
-  return `${dayName} ${monthName} ${day}, ${year}, ${hour}:${minutes} ${ampm}`;
+  return `${dayName}${monthName} ${day}, ${year}, ${hour}:${minutes} ${ampm}`;
 }
 
 /**

@@ -17,16 +17,31 @@
             :value="calldataTag"
             class="section-top__tag"
           />
-          <!--          <div class="section-top__submission">-->
-          <!--            <Icon-->
-          <!--              :icon="icons[submission as keyof typeof icons]"-->
-          <!--              width="0.9rem"-->
-          <!--              class="section-top__submission-icon"-->
-          <!--            />-->
-          <!--            <div class="section-top__submission-text">-->
-          <!--              {{ submission }}-->
-          <!--            </div>-->
-          <!--          </div>-->
+        </div>
+
+        <!-- TODO: move this into component that will show status, date, voting power -->
+        <div v-if="loadingProposalVoteSubmissions || activeUserVoteSubmission?.proposer" class="section-top__meta-row vote_submission">
+          Your Vote:
+          <v-progress-circular
+            v-if="loadingProposalVoteSubmissions && !activeUserVoteSubmission?.proposer"
+            class="d-flex"
+            size="18"
+            width="2"
+            indeterminate
+          />
+          <div v-else-if="activeUserVoteSubmission?.proposer" class="vote_submission">
+            <Icon
+              :icon="VoteTypeIcon[activeUserVoteSubmission.submission_status as VoteType]"
+              width="1.4rem"
+              :class="`icon--${VoteTypeClass[activeUserVoteSubmission.submission_status as VoteType]}`"
+            />
+            <div class="vote_submission__text">
+              {{ activeUserVoteSubmission?.submission_status }}
+            </div>
+          </div>
+        </div>
+        <div v-else class="section-top__meta-row vote_submission">
+          You have not voted on this proposal.
         </div>
 
         <div class="section-top__meta-row">
@@ -50,7 +65,7 @@
 
               <template #tooltip>
                 <div class="tooltip__content">
-                  <span>Copied to clipboard {{ item.value }}</span>
+                  <span>Copied to clipboard</span>
                 </div>
               </template>
             </ui-tooltip-click>
@@ -171,7 +186,7 @@
 
           <v-btn
             class="di-card__submit-button"
-            :disabled="!selectedVoteOption"
+            :disabled="selectedVoteOption === -1"
             :loading="loadingSubmitVote"
             @click="submitVote"
           >
@@ -199,11 +214,23 @@ import {
   VoteTypeNumberMapping,
 } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import type IProposalVoteSubmission from "~/types/vote_submission";
+
+const emit = defineEmits(["vote-success"]);
+
 
 const props = defineProps({
   proposal: {
     type: Object as PropType<IGovernanceProposal>,
     default: () => {},
+  },
+  activeUserVoteSubmission: {
+    type: Object as PropType<IProposalVoteSubmission> | undefined,
+    default: () => {}
+  },
+  loadingProposalVoteSubmissions: {
+    type: Boolean,
+    default: false,
   },
 });
 const web3Store = useWeb3Store();
@@ -256,7 +283,7 @@ const hasAccountVotedAlready = computed(() => {
 });
 
 const isVoteDialogOpen = ref(false);
-const selectedVoteOption = ref<number>();
+const selectedVoteOption = ref<number>(-1);
 const copyText = (text: string) => {
   navigator.clipboard.writeText(text);
 }
@@ -293,6 +320,8 @@ const submitVote = async () => {
             governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId] ??= {};
             governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][fundStore.activeAccountAddress] = true;
           }
+          // emit success event to refetch vote submissions
+          emit("vote-success", selectedVoteOption.value);
         } else {
           toastStore.errorToast(
             "The vote transaction has failed. Please contact the Rethink Finance support.",
@@ -583,6 +612,25 @@ onMounted(() => {
     }
   }
 }
+
+.vote_submission {
+  display: flex;
+  align-items: center;
+  color: $color-steel-blue;
+  gap: 0.25rem !important;
+}
+.icon{
+  &--abstain {
+    color: $color-warning;
+  }
+  &--against {
+    color: $color-error;
+  }
+  &--for {
+    color: $color-success;
+  }
+}
+
 .buttons-container{
   display: flex;
   flex-direction: column;
