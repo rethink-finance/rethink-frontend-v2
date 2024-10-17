@@ -343,15 +343,8 @@ const generateNAVPermission = (encodedNavUpdateEntries: string) =>  {
         "internalType": "address",
         "name": "targetAddress",
       },
-      {
-        "idx": 2,
-        "isArray": false,
-        "data": "1",
-        "internalType": "enum ExecutionOptions",
-        "name": "options",
-      },
     ],
-    "valueMethodIdx": 0,
+    "valueMethodIdx": 24,
   }
 
 
