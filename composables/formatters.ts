@@ -28,7 +28,7 @@ export const formatDateLong = (date: Date, includeDayName = true) => {
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const dayName = includeDayName ? days[date.getUTCDay()] : "";
+  const dayName = includeDayName ? `${days[date.getUTCDay()]} ` : "";
   const monthName = months[date.getUTCMonth()];
   const day = date.getUTCDate();
   const year = date.getUTCFullYear(); // Full year
@@ -38,7 +38,7 @@ export const formatDateLong = (date: Date, includeDayName = true) => {
   hour = hour % 12;
   hour = hour || 12; // the hour '0' should be '12'
 
-  return `${dayName} ${monthName} ${day}, ${year}, ${hour}:${minutes} ${ampm}`;
+  return `${dayName}${monthName} ${day}, ${year}, ${hour}:${minutes} ${ampm}`;
 }
 
 /**
