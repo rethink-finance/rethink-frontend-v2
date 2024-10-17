@@ -4,10 +4,12 @@ import { Web3 } from "web3";
 
 import { useActionState } from "../actionState.store";
 import { useToastStore } from "../toasts/toast.store";
+import { fetchFundDataAction } from "./actions/fetchFundData.action";
 import { fetchFundMetadataAction } from "./actions/fetchFundMetadata.action";
 import { fetchFundNAVUpdatesAction } from "./actions/fetchFundNAVUpdates.action";
 import { fetchSimulatedNAVMethodValueAction } from "./actions/fetchSimulatedNAVMethodValue.action";
 import { fetchUserBalancesAction } from "./actions/fetchUserBalances.action";
+import { fetchUserFundDelegateAddressAction } from "./actions/fetchUserFundDelegateAddress.action";
 import { postUpdateNAVAction } from "./actions/postUpdateNav.action";
 
 import addressesJson from "~/assets/contracts/addresses.json";
@@ -454,18 +456,6 @@ export const useFundStore = defineStore({
     /**
      * Fetches all needed fund data..
      */
-    async getFund(fundAddress: string) {
-      this.selectedFundAddress = fundAddress;
-      this.fund = undefined;
-      this.fundManagedNAVMethods = [];
-
-      try {
-        this.fund = (await this.fetchFundData()) as IFund;
-        console.log("fund: ", toRaw(this.fund));
-      } catch (e) {
-        console.error(`Failed fetching fund ${fundAddress} -> `, e);
-      }
-    },
     /**
      * Fetches multiple fund data:
      * - getFundSettings
@@ -475,31 +465,29 @@ export const useFundStore = defineStore({
      * @dev: would be better to separate fundSettings from (startTime & metadata), as sometimes we already
      *   have the fund settings from the discovery page.
      */
-    async fetchFundData(): Promise<IFund> {
-      // Fetch inception date
-      const settingsData = await this.callWithRetry(() =>
-        this.fundContract.methods.getFundSettings().call(),
-      );
-      // TODO these 2 things can be fetched all at once async and even better along with other fund metadata, not here.
-      const performancePeriod = await this.callWithRetry(() =>
-        this.fundContract.methods.feePerformancePeriod().call(),
-      );
-      const managementPeriod = await this.callWithRetry(() =>
-        this.fundContract.methods.feeManagePeriod().call(),
-      );
-
-      // Adding properties to the existing settingsData object
-      settingsData.performancePeriod = performancePeriod;
-      settingsData.managementPeriod = managementPeriod;
-
-      // Process the fund settings with a method assumed to be available in the current scope
-      const fundSettings: IFundSettings = this.parseFundSettings(settingsData);
-
-      return await this.fetchFundMetadata(fundSettings);
+    async fetchFundData(fundAddress: string): Promise<IFund> {
+      return await useActionState("fetchFundDataAction", async () => {
+        return await fetchFundDataAction(fundAddress);
+      });
     },
     async fetchFundNAVUpdates(): Promise<void> {
-      return await useActionState(async () => {
+      return await useActionState("fetchFundNAVUpdatesAction", async () => {
         return await fetchFundNAVUpdatesAction();
+      });
+    },
+    async fetchUserBalances() {
+      return await useActionState("fetchUserBalancesAction", async () => {
+        await fetchUserBalancesAction();
+      });
+    },
+    /**
+     * Fetches multiple fund metadata such as:
+     * - getFundStartTime
+     * - fundMetadata
+     */
+    async fetchFundMetadata(fundSettings: IFundSettings): Promise<IFund> {
+      return await useActionState("fetchFundMetadataAction", async () => {
+        return await fetchFundMetadataAction(fundSettings);
       });
     },
     parseFundSettings(fundData: any) {
@@ -540,11 +528,7 @@ export const useFundStore = defineStore({
         ...(from ? { from } : {}),
       } as IClockMode;
     },
-    async fetchUserBalances() {
-      return await useActionState(async () => {
-        await fetchUserBalancesAction();
-      });
-    },
+
     fetchFundPendingDepositRedemptionBalance(): void {
       if (!this.fund) return;
       this.fund.pendingDepositBalanceError = false;
@@ -597,19 +581,7 @@ export const useFundStore = defineStore({
           }
         });
     },
-    /**
-     * Fetches multiple fund metadata such as:
-     * - getFundStartTime
-     * - fundMetadata
-     */
-    async fetchFundMetadata(fundSettings: IFundSettings): Promise<IFund> {
-      try {
-        return await fetchFundMetadataAction(fundSettings);
-      } catch (error) {
-        console.error("Error loading fund metadata: ", error);
-        throw error;
-      }
-    },
+
     parseFundPositionTypeCounts(dataNAV: any): IPositionTypeCount[] {
       const positionTypeCounts = [];
 
@@ -968,26 +940,9 @@ export const useFundStore = defineStore({
      * Fetch connected user's wallet fund delegate address.
      */
     async fetchUserFundDelegateAddress() {
-      this.userFundDelegateAddress = "";
-      if (!this.fund?.governanceToken?.address) {
-        console.log("Fund governanceToken.address is not set.");
-        return;
-      }
-      if (!this.activeAccountAddress) {
-        console.log("activeAccountAddress is not set.");
-        return;
-      }
-      console.warn("FETCH userFundDelegateAddress");
-
-      this.userFundDelegateAddress = await this.callWithRetry(() =>
-        this.fundContract.methods.delegates(this.activeAccountAddress).call(),
-      );
-      console.warn(
-        "FETCH userFundDelegateAddress",
-        this.userFundDelegateAddress,
-      );
-
-      return this.userFundDelegateAddress;
+      return await useActionState("fetchUserFundDelegateAddressAction", async () => {
+        return await fetchUserFundDelegateAddressAction();
+      });
     },
     /**
      * Fetch connected user's fund allowance.
@@ -1208,8 +1163,8 @@ export const useFundStore = defineStore({
       });
     },
     async postUpdateNAV(): Promise<any> {
-      return await useActionState(async () => {
-        await postUpdateNAVAction();
+      return await useActionState("postUpdateNAVAction", async () => {
+        return await postUpdateNAVAction();
       });
     },
   },

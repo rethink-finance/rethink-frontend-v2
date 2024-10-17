@@ -1,5 +1,5 @@
 <template>
-  <div v-if="loading" class="w-100">
+  <div v-if="isLoadingFetchFundData" class="w-100">
     <!-- TODO Create better skeletons in the future. -->
     <v-skeleton-loader type="card" />
     <v-skeleton-loader type="card" />
@@ -79,8 +79,10 @@
 
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
+import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
@@ -88,18 +90,29 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
+const actionStateStore = useActionStateStore();
 const route = useRoute();
 const router = useRouter();
-const loading = ref(true);
 // fund address is always in the third position of the route
 // e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
 const [fundChainId, tokenSymbol, fundAddress] = route.path.split("/")[2].split("-");
+
+onMounted(async () => {
+  // check if we are on correct chainId
+  if (fundChainId !== web3Store.chainId) {
+    await switchNetwork(fundChainId);
+  }
+  fetchFund();
+  setBreadcrumbItems([]);
+});
 
 onUnmounted(() => {
   fundStore.fund = {} as IFund;
   fundStore.selectedFundAddress = "";
   setBreadcrumbItems([]);
 });
+
+const fund = computed(() => fundStore.fund as IFund);
 
 const breadcrumbItems = ref<BreadcrumbItem[]>([]);
 const setBreadcrumbItems = (items: BreadcrumbItem[]) => {
@@ -111,20 +124,15 @@ const fetchFund = async () => {
     console.error("No fund address provided in the route.");
     return;
   }
-
-  loading.value = true;
   try {
-    await fundStore.getFund(fundAddress);
+    await fundStore.fetchFundData(fundAddress);
   } catch (e) {
     console.error("Failed fetching fund -> ", e);
   }
-  loading.value = false;
-
-  fundStore.fetchFundNAVUpdates();
-  fundStore.fetchUserBalances();
-  fundStore.fetchFundPendingDepositRedemptionBalance();
 };
 
+const isLoadingFetchFundData = computed(() => actionStateStore.isActionState("fetchFundDataAction", ActionState.Loading));
+console.log("isLoadingFetchFundData",isLoadingFetchFundData)
 // TODO: two watchers ? can we combine them?
 watch(
   () => web3Store.chainId,
@@ -174,17 +182,7 @@ const switchNetwork = async (chainId: string) => {
   }
 }
 
-onMounted(async () => {
-  // check if we are on correct chainId
-  if (fundChainId !== web3Store.chainId) {
-    await switchNetwork(fundChainId);
-  }
-  fetchFund();
-  setBreadcrumbItems([]);
 
-
-});
-const fund = computed(() => fundStore.fund as IFund);
 const fundDetailsRoute = computed(
   () => `/details/${fundChainId}-${tokenSymbol}-${fundAddress}`,
 );

@@ -12,6 +12,11 @@ export const useActionStateStore = defineStore("actionState", {
         return state.loadingStates[key] === stateToCheck;
       };
     },
+    getActionState: (state) => {
+      return (key: string): ActionState | undefined => {
+        return state.loadingStates[key];
+      };
+    },
   },
 
   actions: {
@@ -22,10 +27,10 @@ export const useActionStateStore = defineStore("actionState", {
 });
 
 export async function useActionState(
+  actionName: string,
   action: () => Promise<any>,
 ): Promise<any> {
   const actionStateStore = useActionStateStore();
-  const actionName = action.name;
   actionStateStore.setActionState(actionName, ActionState.Loading);
   try {
     const result = await action();

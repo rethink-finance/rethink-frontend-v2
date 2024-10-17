@@ -6,6 +6,7 @@ import { useActionState } from "../actionState.store";
 import { calculateFundPerformanceMetricsAction } from "./actions/calculateFundPerformanceMetrics.action";
 import { fetchAllNavMethodsAction } from "./actions/fetchAllNavMethods.action";
 import { fetchFundsAction } from "./actions/fetchFunds.action";
+import { fetchFundsInfoArraysAction } from "./actions/fetchFundsInfoArrays.action";
 import { fetchFundsMetadataAction } from "./actions/fetchFundsMetadata.action";
 
 import addressesJson from "~/assets/contracts/addresses.json";
@@ -93,50 +94,40 @@ export const useFundsStore = defineStore({
     callWithRetry(method: any): any {
       return this.web3Store.callWithRetry(method);
     },
+    async fetchFundsInfoArrays() {
+      return await useActionState("fetchFundsInfoArraysAction", async () => {
+        return await fetchFundsInfoArraysAction();
+      });
+    },
+    /**
+     * Fetches all funds data from the GovernableFundFactory.
+     */
+    async fetchFunds() {
+      return await useActionState("fetchFundsAction", async () => {
+        return await fetchFundsAction(excludeTestFunds);
+      });
+    },
     /**
      * Fetch funds and their metadata and NAV data.
      * This will return funds with just enough data to populate the discover table.
      * More data can be fetched from fundSettings later if needed, or added to the reader contract.
      */
     async fetchFundsMetadata(fundAddresses: string[], fundsInfo: any) {
-      return await useActionState(async () => {
+      return await useActionState("fetchFundsMetadataAction", async () => {
         return await fetchFundsMetadataAction(fundAddresses, fundsInfo);
       });
     },
-    async fetchFundsInfoArrays() {
-      const fundFactoryContract = this.fundFactoryContract;
-      const fundsLength = await this.callWithRetry(() =>
-        fundFactoryContract.methods.registeredFundsLength().call(),
-      );
-
-      return await this.callWithRetry(() =>
-        fundFactoryContract.methods.registeredFundsData(0, fundsLength).call(),
-      );
-    },
-    /**
-     * Fetches all funds data from the GovernableFundFactory.
-     */
-    async fetchFunds() {
-      return await useActionState(async () => {
-        return await fetchFundsAction(excludeTestFunds);
-      });
-    },
-
-    async calculateFundPerformanceMetrics() {
-      return await useActionState(async () => {
-        return await calculateFundPerformanceMetricsAction();
-      });
-    },
-
-    /**
-     * Fetches all NAV methods
-     */
     async fetchAllNavMethods(fundsInfoArrays: any[]) {
-      return await useActionState(async () => {
+      return await useActionState("fetchAllNavMethodsAction", async () => {
         return await fetchAllNavMethodsAction(
           fundsInfoArrays,
           excludeNAVDetails,
         );
+      });
+    },
+    async calculateFundPerformanceMetrics() {
+      return await useActionState("calculateFundPerformanceMetricsAction", async () => {
+        return await calculateFundPerformanceMetricsAction();
       });
     },
   },
