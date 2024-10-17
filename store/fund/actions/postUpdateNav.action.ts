@@ -4,7 +4,6 @@ export const postUpdateNAVAction = async (
 ): Promise<any> => {
   const fundStore = useFundStore();
 
-  fundStore.loadingUpdateNav = true;
   try {
     const navExecutorAddr = fundStore.web3Store.NAVExecutorBeaconProxyAddress;
 
@@ -12,7 +11,6 @@ export const postUpdateNAVAction = async (
       fundStore.toastStore.errorToast(
         "The NAV Executor address is not available for this network. Please contact the Rethink Finance support.",
       );
-      fundStore.loadingUpdateNav = false;
       return;
     }
     // const [gasPrice, gasEstimate] = await this.web3Store.estimateGas(
@@ -48,21 +46,20 @@ export const postUpdateNAVAction = async (
               "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
             );
           }
-          fundStore.loadingUpdateNav = false;
         })
         .on("error", (error: any) => {
           console.log(error);
-          fundStore.loadingUpdateNav = false;
           fundStore.toastStore.errorToast(
             "There has been an error. Please contact the Rethink Finance support.",
           );
+          throw error;
         }),
     );
   } catch (error) {
     console.error("Error updating NAV: ", error);
-    fundStore.loadingUpdateNav = false;
     fundStore.toastStore.errorToast(
       "There has been an error. Please contact the Rethink Finance support.",
     );
+    throw error;
   }
 }

@@ -347,13 +347,13 @@
               <template #activator="{ props }">
                 <v-btn
                   v-bind="props"
-                  :disabled="!isUsingZodiacPilotExtension || loadingUpdateNav"
+                  :disabled="!isUsingZodiacPilotExtension || isLoadingPostUpdateNAV"
                   class="bg-primary text-secondary"
                   @click="fundStore.postUpdateNAV()"
                 >
                   <template #prepend>
                     <v-progress-circular
-                      v-if="loadingUpdateNav"
+                      v-if="isLoadingPostUpdateNAV"
                       class="d-flex"
                       size="20"
                       width="3"
@@ -386,10 +386,12 @@ import {
 formatTokenValue,
 roundToSignificantDecimals,
 } from "~/composables/formatters";
+import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();
+const actionStateStore = useActionStateStore();
 
 const fund = useAttrs().fund as IFund;
 const {
@@ -398,7 +400,6 @@ const {
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
   isNavSimulationLoading,
-  loadingUpdateNav,
 } = toRefs(fundStore);
 
 const customSimulatedNAVValue = ref("");
@@ -624,6 +625,10 @@ watch(
   },
   { immediate: true },
 );
+
+const isLoadingPostUpdateNAV = computed(() => {
+  return actionStateStore.isActionState("postUpdateNAV", ActionState.Loading);
+});
 </script>
 
 <style scoped lang="scss">

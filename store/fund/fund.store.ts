@@ -69,8 +69,7 @@ interface IState {
   // Loading flags
   loadingNavUpdates: boolean;
   isNavSimulationLoading: boolean;
-  loadingUserFundDepositRedemptionRequests: boolean;
-  loadingUpdateNav: boolean;
+  loadingUserFundDepositRedemptionRequests: boolean
 }
 
 // combine funds and fund store and map address => fund state; why only store one fund details at a time
@@ -94,7 +93,6 @@ export const useFundStore = defineStore({
     loadingNavUpdates: false,
     isNavSimulationLoading: false,
     loadingUserFundDepositRedemptionRequests: false,
-    loadingUpdateNav: false,
   }),
   getters: {
     accountStore(): any {
