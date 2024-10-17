@@ -103,11 +103,11 @@
 import type IFund from "~/types/fund";
 
 // components
-import { useAccountStore } from "~/store/account.store";
+import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
-import { useToastStore } from "~/store/toast.store";
-import { useWeb3Store } from "~/store/web3.store";
+import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import { ProposalState } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";

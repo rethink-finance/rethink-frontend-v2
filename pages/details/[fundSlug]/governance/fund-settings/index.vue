@@ -173,10 +173,10 @@
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
-import { useAccountStore } from "~/store/account.store";
+import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useToastStore } from "~/store/toast.store";
-import { useWeb3Store } from "~/store/web3.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import {
 FundSettingProposalFieldsMap,
 ProposalStep,

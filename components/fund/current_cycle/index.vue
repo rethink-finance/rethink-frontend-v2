@@ -83,11 +83,11 @@
 import { ethers, FixedNumber } from "ethers";
 import { computed, ref } from "vue";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useToastStore } from "~/store/toast.store";
+import { useToastStore } from "~/store/toasts/toast.store";
 import type IFund from "~/types/fund";
 
-import { useAccountStore } from "~/store/account.store";
-import { useWeb3Store } from "~/store/web3.store";
+import { useAccountStore } from "~/store/account/account.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 const emit = defineEmits(["deposit-success"]);
 
 const web3Store = useWeb3Store();

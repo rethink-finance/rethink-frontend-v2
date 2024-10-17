@@ -52,7 +52,7 @@
 <script setup lang="ts">
 // types
 import { truncateAddress } from "~/composables/addressUtils";
-import { useAccountStore } from "~/store/account.store";
+import { useAccountStore } from "~/store/account/account.store";
 import type IGovernanceProposal from "~/types/governance_proposal";
 
 const accountStore = useAccountStore();

@@ -221,8 +221,8 @@
 <script lang="ts">
 import { useFundStore } from "~/store/fund/fund.store";
 import { useFundsStore } from "~/store/funds/funds.store";
-import { useToastStore } from "~/store/toast.store";
-import { useWeb3Store } from "~/store/web3.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import { PositionType } from "~/types/enums/position_type";
 import type { INAVParts } from "~/types/fund";
 import type INAVMethod from "~/types/nav_method";

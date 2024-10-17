@@ -3,8 +3,8 @@ import type { LimitFunction } from "p-limit";
 import pLimit from "p-limit";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import { useWeb3Store } from "~/store/web3.store";
-import { useToastStore } from "~/store/toast.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 interface IState {
   web3Onboard?: any;

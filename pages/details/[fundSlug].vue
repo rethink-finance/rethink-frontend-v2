@@ -78,9 +78,9 @@
 </template>
 
 <script lang="ts" setup>
-import { useAccountStore } from "~/store/account.store";
+import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useWeb3Store } from "~/store/web3.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";

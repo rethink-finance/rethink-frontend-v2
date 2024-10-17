@@ -56,8 +56,8 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { prepRoleModEntryInput } from "~/composables/parseNavMethodDetails";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useToastStore } from "~/store/toast.store";
-import { useWeb3Store } from "~/store/web3.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);

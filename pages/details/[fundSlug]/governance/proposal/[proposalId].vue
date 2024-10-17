@@ -177,8 +177,8 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 // fund store
 import { useFundStore } from "~/store/fund/fund.store";
-import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
-import { useWeb3Store } from "~/store/web3.store";
+import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";

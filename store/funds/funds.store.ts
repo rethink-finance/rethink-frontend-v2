@@ -14,7 +14,7 @@ import SafeMultiSendCallOnlyJson from "~/assets/contracts/safe/SafeMultiSendCall
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { calculateCumulativeReturnPercent } from "~/composables/utils";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useWeb3Store } from "~/store/web3.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import type IAddresses from "~/types/addresses";
 import type { IContractAddresses } from "~/types/addresses";
 import type IFund from "~/types/fund";

@@ -181,7 +181,7 @@
 </template>
 
 <script setup lang="ts">
-import { useToastStore } from "~/store/toast.store";
+import { useToastStore } from "~/store/toasts/toast.store";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 const toastStore = useToastStore();
 

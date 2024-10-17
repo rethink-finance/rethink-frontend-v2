@@ -55,7 +55,7 @@
 <script setup lang="ts">
 // import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useToastStore } from "~/store/toast.store";
+import { useToastStore } from "~/store/toasts/toast.store";
 
 import { useFundsStore } from "~/store/funds/funds.store";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
