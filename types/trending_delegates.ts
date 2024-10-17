@@ -1,6 +1,7 @@
 export default interface ITrendingDelegates {
-  delegated_members: string;
-  delegators: number;
+  delegatedMember: string;
+  delegators: string[];
+  delegatorsEvents: any[];
   impact: string;
-  voting_power: string;
+  votingPower: string;
 }

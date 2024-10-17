@@ -196,7 +196,7 @@ export const useGovernanceProposalsStore = defineStore({
       const functionAbiInputs = functionAbi?.function?.inputs as AbiInput[]
 
       try {
-        let decoded = this.fundStore.web3.eth.abi.decodeParameters(functionAbiInputs, encodedParameters);
+        let decoded = eth.abi.decodeParameters(functionAbiInputs, encodedParameters);
         decoded = cleanComplexWeb3Data(decoded);
         // console.log("decoded data: ", functionAbi.contractName, functionAbi.function.name, decoded);
         return {
