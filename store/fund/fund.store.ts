@@ -10,8 +10,14 @@ import { fetchFundNAVUpdatesAction } from "./actions/fetchFundNAVUpdates.action"
 import { fetchSimulateCurrentNAVAction } from "./actions/fetchSimulateCurrentNAV.action";
 import { fetchSimulatedNAVMethodValueAction } from "./actions/fetchSimulatedNAVMethodValue.action";
 import { fetchUserBalancesAction } from "./actions/fetchUserBalances.action";
+import { fetchUserBaseTokenBalanceAction } from "./actions/fetchUserBaseTokenBalance.action";
+import { fetchUserFundAllowanceAction } from "./actions/fetchUserFundAllowance.action";
 import { fetchUserFundDelegateAddressAction } from "./actions/fetchUserFundDelegateAddress.action";
 import { fetchUserFundDepositRedemptionRequestsAction } from "./actions/fetchUserFundDepositRedemptionRequests.action";
+import { fetchUserFundShareValueAction } from "./actions/fetchUserFundShareValue.action";
+import { fetchUserFundTokenBalanceAction } from "./actions/fetchUserFundTokenBalance.action";
+import { fetchUserFundTransactionRequestAction } from "./actions/fetchUserFundTransactionRequest.action";
+import { fetchUserGovernanceTokenBalanceAction } from "./actions/fetchUserGovernanceTokenBalance.action";
 import { postUpdateNAVAction } from "./actions/postUpdateNav.action";
 
 import addressesJson from "~/assets/contracts/addresses.json";
@@ -32,7 +38,6 @@ import type IClockMode from "~/types/clock_mode";
 import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import {
   FundTransactionType,
-  FundTransactionTypeStorageSlotIdxMap,
 } from "~/types/enums/fund_transaction_type";
 import {
   NAVEntryTypeToPositionTypeMap,
@@ -43,12 +48,10 @@ import {
 import type IFund from "~/types/fund";
 import type { INAVParts } from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
-
-
+import type IUserBalances from "~/types/user_balances";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -58,14 +61,7 @@ const RethinkReaderContractName = "RethinkReader";
 
 interface IState {
   fund?: IFund;
-  userBaseTokenBalance: bigint;
-  userFundTokenBalance: bigint;
-  userGovernanceTokenBalance: bigint;
-  userFundAllowance: bigint;
-  userFundDelegateAddress: string;
-  userFundShareValue: bigint;
-  userDepositRequest?: IFundTransactionRequest;
-  userRedemptionRequest?: IFundTransactionRequest;
+  userBalances: IUserBalances;
   selectedFundAddress: string;
   // Fund NAV methods that user can manage and change, delete, add...
   fundManagedNAVMethods: INAVMethod[];
@@ -79,14 +75,16 @@ export const useFundStore = defineStore({
   id: "fund",
   state: (): IState => ({
     fund: undefined,
-    userBaseTokenBalance: BigInt("0"),
-    userFundTokenBalance: BigInt("0"),
-    userGovernanceTokenBalance: BigInt("0"),
-    userFundAllowance: BigInt("0"),
-    userFundShareValue: BigInt("0"),
-    userFundDelegateAddress: "",
-    userDepositRequest: undefined,
-    userRedemptionRequest: undefined,
+    userBalances: {
+      baseTokenBalance: 0n,
+      fundTokenBalance: 0n,
+      governanceTokenBalance: 0n,
+      fundAllowance: 0n,
+      fundShareValue: 0n,
+      fundDelegateAddress: "",
+      depositRequest: undefined,
+      redemptionRequest: undefined,
+    },
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
@@ -182,13 +180,14 @@ export const useFundStore = defineStore({
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
       if (this.fundLastNAVUpdate?.timestamp)
-        return this.userFundShareValue || 0n;
+        return this.userBalances.fundShareValue || 0n;
 
       // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
       const fundTokenTotalSupply = this.fund?.fundTokenTotalSupply || 0n;
       if (!fundTokenTotalSupply) return 0n;
       return (
-        (this.fundTotalNAV * this.userFundTokenBalance) / fundTokenTotalSupply
+        (this.fundTotalNAV * this.userBalances.fundTokenBalance) /
+        fundTokenTotalSupply
       );
     },
     fundTotalNAV(): bigint {
@@ -237,14 +236,15 @@ export const useFundStore = defineStore({
       return this.fundLastNAVUpdate?.entries || [];
     },
     userDepositRequestExists(): boolean {
-      return (this.userDepositRequest?.amount || 0) > 0;
+      return (this.userBalances.depositRequest?.amount || 0) > 0;
     },
     userRedemptionRequestExists(): boolean {
-      return (this.userRedemptionRequest?.amount || 0) > 0;
+      return (this.userBalances.redemptionRequest?.amount || 0) > 0;
     },
     userFundSuggestedAllowance(): bigint {
-      const userBaseTokenBalance = this.userBaseTokenBalance || 0n;
-      const userDepositRequestAmount = this.userDepositRequest?.amount || 0n;
+      const userBaseTokenBalance = this.userBalances.baseTokenBalance || 0n;
+      const userDepositRequestAmount =
+        this.userBalances.depositRequest?.amount || 0n;
       return userBaseTokenBalance + userDepositRequestAmount;
     },
     userFundSuggestedAllowanceFormatted(): string {
@@ -268,8 +268,8 @@ export const useFundStore = defineStore({
       const nullAddress = "0x0000000000000000000000000000000000000000";
       // User should delegate if he has no delegate address set.
       return (
-        this.userFundDelegateAddress === nullAddress ||
-        !this.userFundDelegateAddress
+        this.userBalances.fundDelegateAddress === nullAddress ||
+        !this.userBalances.fundDelegateAddress
       );
     },
     shouldUserRequestDeposit(): boolean {
@@ -280,7 +280,8 @@ export const useFundStore = defineStore({
       // User deposit request exists and allowance is bigger.
       return (
         this.userDepositRequestExists &&
-        this.userFundAllowance < (this.userDepositRequest?.amount || 0n)
+        this.userBalances.fundAllowance <
+          (this.userBalances.depositRequest?.amount || 0n)
       );
     },
     canUserProcessDeposit(): boolean {
@@ -293,13 +294,14 @@ export const useFundStore = defineStore({
       if (
         !this.canUserProcessDeposit ||
         !this.fundLastNAVUpdate?.timestamp ||
-        !this.userDepositRequest?.timestamp
+        !this.userBalances.depositRequest?.timestamp
       )
         return false;
       // User deposit request exists and is valid, but there has to be at least 1 NAV update
       // made after the deposit was requested.
       return (
-        this.userDepositRequest.timestamp < this.fundLastNAVUpdate?.timestamp
+        this.userBalances.depositRequest.timestamp <
+        this.fundLastNAVUpdate?.timestamp
       );
     },
     shouldUserWaitSettlementOrCancelRedemption(): boolean {
@@ -307,13 +309,14 @@ export const useFundStore = defineStore({
       // There is no need to wait until the next settlement.
       if (
         !this.fundLastNAVUpdate?.timestamp ||
-        !this.userRedemptionRequest?.timestamp
+        !this.userBalances.redemptionRequest?.timestamp
       )
         return false;
       // User redemption request exists and is valid, but there has to be at least 1 NAV update
       // made after the redemption was requested.
       return (
-        this.userRedemptionRequest.timestamp < this.fundLastNAVUpdate?.timestamp
+        this.userBalances.redemptionRequest.timestamp <
+        this.fundLastNAVUpdate?.timestamp
       );
     },
     totalCurrentSimulatedNAV(): bigint {
@@ -676,9 +679,13 @@ export const useFundStore = defineStore({
       return parsedNavParts;
     },
     async simulateCurrentNAV(): Promise<void> {
-      return await useActionState("fetchSimulateCurrentNAVAction", async () => {
-        return await fetchSimulateCurrentNAVAction();
-      },true);
+      return await useActionState(
+        "fetchSimulateCurrentNAVAction",
+        async () => {
+          return await fetchSimulateCurrentNAVAction();
+        },
+        true,
+      );
     },
     async fetchSimulatedNAVMethodValue(navEntry: INAVMethod) {
       return await useActionState(
@@ -825,139 +832,47 @@ export const useFundStore = defineStore({
       });
       return navUpdates;
     },
-    /**
-     * Fetches connected user's wallet balance of the fund base/denomination token.
-     */
     async fetchUserBaseTokenBalance() {
-      this.userBaseTokenBalance = BigInt("0");
-
-      if (!this.fund?.baseToken?.address) {
-        console.log("Fund baseToken.address is not set.");
-        return;
-      }
-      if (!this.activeAccountAddress) {
-        console.log("activeAccountAddress is not set.");
-        return;
-      }
-      this.userBaseTokenBalance = await this.callWithRetry(() =>
-        this.fundBaseTokenContract.methods
-          .balanceOf(this.activeAccountAddress)
-          .call(),
+      return await useActionState(
+        "fetchUserBaseTokenBalanceAction",
+        async () => {
+          return await fetchUserBaseTokenBalanceAction();
+        },
       );
-
-      console.log(
-        `user base token balance of ${this.fund?.baseToken?.symbol} is ${this.userBaseTokenBalance}`,
-      );
-      return this.userBaseTokenBalance;
     },
-    /**
-     * Fetch connected user's wallet balance of the fund token.
-     */
     async fetchUserFundTokenBalance() {
-      this.userFundTokenBalance = BigInt("0");
-
-      if (!this.fund?.fundToken?.address) {
-        console.log("Fund fundToken.address is not set.");
-        return;
-      }
-      if (!this.activeAccountAddress) {
-        console.log("activeAccountAddress is not set.");
-        return;
-      }
-      this.userFundTokenBalance = await this.callWithRetry(() =>
-        this.fundContract.methods.balanceOf(this.activeAccountAddress).call(),
+      return await useActionState(
+        "fetchUserFundTokenBalanceAction",
+        async () => {
+          return await fetchUserFundTokenBalanceAction();
+        },
       );
-
-      console.log(
-        `user fund token balance of ${this.fund?.fundToken?.symbol} is ${this.userFundTokenBalance}`,
-      );
-      return this.userFundTokenBalance;
     },
-    /**
-     * Fetch connected user's wallet balance of the fund governance token.
-     */
     async fetchUserGovernanceTokenBalance() {
-      this.userGovernanceTokenBalance = BigInt("0");
-
-      if (!this.fund?.governanceToken?.address) {
-        console.log("Fund governanceToken.address is not set.");
-        return;
-      }
-      if (!this.activeAccountAddress) {
-        console.log("activeAccountAddress is not set.");
-        return;
-      }
-      this.userGovernanceTokenBalance = await this.callWithRetry(() =>
-        this.fundGovernanceTokenContract.methods
-          .balanceOf(this.activeAccountAddress)
-          .call(),
+      return await useActionState(
+        "fetchUserGovernanceTokenBalanceAction",
+        async () => {
+          return await fetchUserGovernanceTokenBalanceAction();
+        },
       );
-
-      console.log(
-        `user governance token balance is ${this.userGovernanceTokenBalance} ${this.fund?.fundToken?.symbol}`,
-      );
-      return this.userGovernanceTokenBalance;
     },
-    /**
-     * Fetch connected user's wallet fund delegate address.
-     */
     async fetchUserFundDelegateAddress() {
-      return await useActionState("fetchUserFundDelegateAddressAction", async () => {
-        return await fetchUserFundDelegateAddressAction();
+      return await useActionState(
+        "fetchUserFundDelegateAddressAction",
+        async () => {
+          return await fetchUserFundDelegateAddressAction();
+        },
+      );
+    },
+    async fetchUserFundAllowance() {
+      return await useActionState("fetchUserFundAllowanceAction", async () => {
+        return await fetchUserFundAllowanceAction();
       });
     },
-    /**
-     * Fetch connected user's fund allowance.
-     * Amount of tokens the fund is allowed to act with (transfer/deposit/withdraw...).
-     */
-    async fetchUserFundAllowance() {
-      this.userFundAllowance = BigInt("0");
-      if (!this.fund?.baseToken?.address) {
-        console.log("Fund baseToken.address is not set.");
-        return;
-      }
-      if (!this.activeAccountAddress)
-        return console.error("Active account not found");
-
-      this.userFundAllowance = await this.callWithRetry(() =>
-        this.fundBaseTokenContract.methods
-          .allowance(this.activeAccountAddress, this.selectedFundAddress)
-          .call(),
-      );
-
-      console.log(
-        `user fund allowance of ${this.fund?.baseToken?.symbol} is ${this.userFundAllowance}`,
-      );
-      return this.userFundAllowance;
-    },
-    /**
-     * Fetch user's fund share value (denominated in base token).
-     */
     async fetchUserFundShareValue() {
-      this.userFundShareValue = BigInt("0");
-
-      if (!this.activeAccountAddress)
-        return console.error("Active account not found");
-
-      if (!this.fund?.fundTokenTotalSupply) {
-        // No tokens have been minted yet. No deposits have been made yet.
-        return this.userFundShareValue;
-      }
-      let balanceWei = BigInt("0");
-      try {
-        balanceWei = await this.callWithRetry(() =>
-          this.fundContract.methods.valueOf(this.activeAccountAddress).call(),
-        );
-      } catch (e) {
-        console.error(
-          "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ",
-          e,
-        );
-      }
-      console.log("balanceWei user fund share value:", balanceWei);
-
-      this.userFundShareValue = balanceWei;
-      return this.userFundShareValue;
+      return await useActionState("fetchUserFundShareValueAction", async () => {
+        return await fetchUserFundShareValueAction();
+      });
     },
     async fetchUserFundDepositRedemptionRequests() {
       return await useActionState(
@@ -970,57 +885,14 @@ export const useFundStore = defineStore({
     async fetchUserFundTransactionRequest(
       fundTransactionType: FundTransactionType,
     ) {
-      if (!this.activeAccountAddress) return undefined;
-      if (!this.fund?.address) return undefined;
-      const slotId = FundTransactionTypeStorageSlotIdxMap[fundTransactionType];
-
-      // GovernableFundStorage.sol
-      const userRequestAddress = getAddressMappingStorageKeyAtIndex(
-        this.activeAccountAddress,
-        slotId,
+      return await useActionState(
+        "fetchUserFundTransactionRequestAction",
+        async () => {
+          return await fetchUserFundTransactionRequestAction(
+            fundTransactionType,
+          );
+        },
       );
-      const userRequestTimestampAddress =
-        incrementStorageKey(userRequestAddress);
-      console.log("[FETCH REQUEST] AMOUNT", fundTransactionType);
-      try {
-        const amount = await this.callWithRetry(() =>
-          this.web3Store.web3.eth.getStorageAt(
-            this.fund?.address,
-            userRequestAddress,
-          ),
-        );
-        console.log(
-          "[FETCH REQUEST] AMOUNT fetched",
-          fundTransactionType,
-          amount,
-        );
-        let amountWei: string | bigint = ethers.stripZerosLeft(amount);
-        amountWei = amountWei === "0x" ? 0n : BigInt(amountWei);
-
-        console.log("[FETCH REQUEST] fetch TS", fundTransactionType);
-        const ts = await this.callWithRetry(() =>
-          this.web3Store.web3.eth.getStorageAt(
-            this.fund?.address,
-            userRequestTimestampAddress,
-          ),
-        );
-        console.warn("[FETCH REQUEST] TS", fundTransactionType, ts);
-        let timestamp: string | number = ethers.stripZerosLeft(ts);
-        timestamp = timestamp === "0x" ? 0 : Number(timestamp);
-
-        return {
-          amount: amountWei,
-          timestamp,
-          type: fundTransactionType,
-        } as IFundTransactionRequest;
-      } catch (e) {
-        console.error(
-          `Failed fetching deposit/withdrawal request ${this.fund?.address} slot: ${slotId}. -> `,
-          e,
-        );
-      }
-
-      return undefined;
     },
     async fetchFundContractBaseTokenBalance() {
       if (!this.activeAccountAddress) return;

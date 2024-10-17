@@ -1,6 +1,6 @@
 import { useFundsStore } from "../funds.store";
 
-export async function calculateFundPerformanceMetricsAction(
+export async function calculateFundsPerformanceMetricsAction(
 ): Promise<any> {
   const fundsStore = await useFundsStore();
 

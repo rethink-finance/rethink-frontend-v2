@@ -34,9 +34,11 @@ export const fetchFundDataAction = async (
     const fund: IFund = await fundStore.fetchFundMetadata(fundSettings);
 
     fundStore.fund = fund;
+
     fundStore.fetchFundNAVUpdates();
     fundStore.fetchUserBalances();
     fundStore.fetchFundPendingDepositRedemptionBalance();
+
     return fund;
   } catch (e) {
     console.error(`Failed fetching fund data for ${fundAddress}`, e);

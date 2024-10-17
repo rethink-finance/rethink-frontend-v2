@@ -38,5 +38,5 @@ export async function fetchFundsAction(excludeTestFunds: boolean): Promise<any> 
   await fundsStore.fetchAllNavMethods(filteredFundsInfoArrays);
 
   // Calculate Fund Performance metrics like cumulative returns, sharpe ratio...
-  fundsStore.calculateFundPerformanceMetrics();
+  fundsStore.calculateFundsPerformanceMetrics();
 }

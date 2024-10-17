@@ -45,12 +45,12 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       fundBaseTokenDecimals,
       fundGovernanceTokenDecimals,
       fundTokenSupply,
-      fundBaseTokenSupply, // eslint-disable-line @typescript-eslint/no-unused-vars
+      // fundBaseTokenSupply,
       fundGovernanceTokenSupply,
       safeContractBaseTokenBalance,
       fundContractBaseTokenBalance,
       fundMetadata,
-      fundName, // eslint-disable-line @typescript-eslint/no-unused-vars
+      // fundName,
       fundBaseTokenSymbol,
       fundGovernanceTokenSymbol,
       fundGovernanceData,

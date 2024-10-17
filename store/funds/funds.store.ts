@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 import { Web3 } from "web3";
 
 import { useActionState } from "../actionState.store";
-import { calculateFundPerformanceMetricsAction } from "./actions/calculateFundPerformanceMetrics.action";
+import { calculateFundsPerformanceMetricsAction } from "./actions/calculateFundsPerformanceMetrics.action";
 import { fetchAllNavMethodsAction } from "./actions/fetchAllNavMethods.action";
 import { fetchFundsAction } from "./actions/fetchFunds.action";
 import { fetchFundsInfoArraysAction } from "./actions/fetchFundsInfoArrays.action";
@@ -125,9 +125,9 @@ export const useFundsStore = defineStore({
         );
       });
     },
-    async calculateFundPerformanceMetrics() {
-      return await useActionState("calculateFundPerformanceMetricsAction", async () => {
-        return await calculateFundPerformanceMetricsAction();
+    async calculateFundsPerformanceMetrics() {
+      return await useActionState("calculateFundsPerformanceMetricsAction", async () => {
+        return await calculateFundsPerformanceMetricsAction();
       });
     },
   },
