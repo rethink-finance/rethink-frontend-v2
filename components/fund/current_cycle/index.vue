@@ -44,7 +44,7 @@
     <div v-if="!accountStore.isConnected" class="fund_settlement__no_pending_requests">
       Connect your wallet to view deposit or redemption requests.
     </div>
-    <div v-else-if="loadingUserFundDepositRedemptionRequests">
+    <div v-else-if="isLoadingFetchUserFundDepositRedemptionRequestsAction">
       <v-skeleton-loader type="list-item-two-line" />
       <v-skeleton-loader type="list-item-two-line" />
     </div>
@@ -87,11 +87,14 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import type IFund from "~/types/fund";
 
 import { useAccountStore } from "~/store/account/account.store";
+import { useActionStateStore } from "~/store/actionState.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { ActionState } from "~/types/enums/action_state";
 const emit = defineEmits(["deposit-success"]);
 
 const web3Store = useWeb3Store();
 const toastStore = useToastStore()
+const actionStateStore = useActionStateStore();
 const fundStore = useFundStore()
 const accountStore = useAccountStore();
 const {
@@ -105,8 +108,9 @@ const {
   shouldUserWaitSettlementOrCancelRedemption,
   userDepositRequestExists,
   userRedemptionRequestExists,
-  loadingUserFundDepositRedemptionRequests,
 } = toRefs(fundStore);
+
+const isLoadingFetchUserFundDepositRedemptionRequestsAction = computed (() => actionStateStore.isActionState("fetchUserFundDepositRedemptionRequests", ActionState.Loading));
 
 defineProps({
   fund: {

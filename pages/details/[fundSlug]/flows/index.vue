@@ -116,7 +116,9 @@
           <div class="data_bar__item">
             <div class="data_bar__title">
               <v-progress-circular
-                v-if="isLoadingFetchFundNAVUpdatesAction || isNavSimulationLoading"
+                v-if="isLoadingFetchFundNAVUpdatesAction ||
+                  isLoadingFetchSimulatedNAVMethodValueAction ||
+                  isLoadingFetchSimulateCurrentNAVAction"
                 class="d-flex"
                 size="18"
                 width="2"
@@ -217,7 +219,9 @@
                 <div class="pending_redemptions_estimate">
                   ≈
                   <v-progress-circular
-                    v-if="isLoadingFetchFundNAVUpdatesAction || isNavSimulationLoading"
+                    v-if="isLoadingFetchFundNAVUpdatesAction ||
+                      isLoadingFetchSimulatedNAVMethodValueAction ||
+                      isLoadingFetchSimulateCurrentNAVAction"
                     class="d-flex"
                     size="18"
                     width="2"
@@ -259,7 +263,11 @@
           <div class="data_bar__item">
             <div class="data_bar__title">
               <v-progress-circular
-                v-if="isLoadingFetchFundNAVUpdatesAction || isNavSimulationLoading"
+                v-if="
+                  isLoadingFetchFundNAVUpdatesAction ||
+                    isLoadingFetchSimulatedNAVMethodValueAction ||
+                    isLoadingFetchSimulateCurrentNAVAction
+                "
                 class="d-flex"
                 size="18"
                 width="2"
@@ -382,10 +390,7 @@
 
 <script setup lang="ts">
 import { ethers, FixedNumber } from "ethers";
-import {
-formatTokenValue,
-roundToSignificantDecimals,
-} from "~/composables/formatters";
+import { formatTokenValue, roundToSignificantDecimals } from "~/composables/formatters";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";
@@ -400,7 +405,6 @@ const {
   totalCurrentSimulatedNAV,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
-  isNavSimulationLoading,
 } = toRefs(fundStore);
 
 const customSimulatedNAVValue = ref("");
@@ -632,6 +636,12 @@ const isLoadingPostUpdateNAV = computed(() => {
 });
 const isLoadingFetchFundNAVUpdatesAction = computed(() => {
   return actionStateStore.isActionState("fetchFundNAVUpdatesAction", ActionState.Loading);
+});
+const isLoadingFetchSimulateCurrentNAVAction = computed(() => {
+  return actionStateStore.isActionState("fetchSimulateCurrentNAVAction", ActionState.Loading);
+});
+const isLoadingFetchSimulatedNAVMethodValueAction = computed(() => {
+  return actionStateStore.isActionState("fetchSimulatedNAVMethodValueAction", ActionState.Loading);
 });
 </script>
 

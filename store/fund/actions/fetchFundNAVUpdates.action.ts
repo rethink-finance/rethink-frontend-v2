@@ -4,20 +4,24 @@ export const fetchFundNAVUpdatesAction = async (): Promise<any> => {
   const fundStore = useFundStore();
 
   if (!fundStore.fund) return;
+
   try {
-    const dataNAV = await fundStore.callWithRetry(() =>
+
+    const fundNAVData = await fundStore.callWithRetry(() =>
       fundStore.rethinkReaderContract.methods
-        .getNAVDataForFund(fundStore.fund?.address)
+        .getFundNAVData(fundStore.fund?.address)
         .call(),
     );
-    console.log("fund NAV: ", dataNAV);
+
     fundStore.fund.positionTypeCounts =
-      fundStore.parseFundPositionTypeCounts(dataNAV);
+      fundStore.parseFundPositionTypeCounts(fundNAVData);
+
     fundStore.fund.navUpdates = await fundStore.parseFundNAVUpdates(
-      dataNAV,
+      fundNAVData,
       fundStore.fund.address,
       fundStore.fundContract,
     );
+
   } catch (error) {
     console.error(
       "Error calling getNAVDataForFund: ",

@@ -15,7 +15,7 @@ export async function fetchAllNavMethodsAction(
 
   const allFundsNavData = await fundsStore.callWithRetry(() =>
     fundsStore.rethinkReaderContract.methods
-      .bulkGetNavData(fundAddresses)
+      .getFundsNAVData(fundAddresses)
       .call(),
   );
   const allMethods: INAVMethod[] = [];

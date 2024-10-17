@@ -1,10 +1,16 @@
+
 import { useFundStore } from "../fund.store";
 
-import { PositionType, PositionTypeToNAVCalculationMethod } from "~/types/enums/position_type";
+
+import {
+  PositionType,
+  PositionTypeToNAVCalculationMethod,
+} from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
 
-
-export const fetchSimulatedNAVMethodValueAction = async (navEntry: INAVMethod): Promise<void> => {
+export const fetchSimulatedNAVMethodValueAction = async (
+  navEntry: INAVMethod,
+): Promise<void> => {
   const fundStore = useFundStore();
 
   if (!fundStore.web3Store.web3) {
@@ -15,10 +21,6 @@ export const fetchSimulatedNAVMethodValueAction = async (navEntry: INAVMethod): 
     console.error("No detailsHash provided in navEntry.");
     return;
   }
-  if (navEntry.isNavSimulationLoading) {
-    console.warn("NAV simulation is already in progress.");
-    return;
-  }
 
   const baseDecimals = fundStore.fund?.baseToken.decimals;
   if (!baseDecimals) {
@@ -27,14 +29,13 @@ export const fetchSimulatedNAVMethodValueAction = async (navEntry: INAVMethod): 
   }
 
   try {
-    navEntry.isNavSimulationLoading = true;
     navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
 
     if (!navEntry.pastNAVUpdateEntryFundAddress) {
       navEntry.pastNAVUpdateEntryFundAddress =
-            fundStore.fundsStore.navMethodDetailsHashToFundAddress[
-              navEntry.detailsHash ?? ""
-            ];
+        fundStore.fundsStore.navMethodDetailsHashToFundAddress[
+          navEntry.detailsHash ?? ""
+        ];
     }
     if (!navEntry.pastNAVUpdateEntryFundAddress) {
       // If there is no pastNAVUpdateEntryFundAddress the simulation will fail later.
@@ -50,7 +51,7 @@ export const fetchSimulatedNAVMethodValueAction = async (navEntry: INAVMethod): 
       navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
     }
 
-    const callData : any[] = [];
+    const callData: any[] = [];
     if (navEntry.positionType === PositionType.Liquid) {
       callData.push(prepNAVMethodLiquid(navEntry.details));
       callData.push(fundStore.fund?.safeAddress);
@@ -61,11 +62,13 @@ export const fetchSimulatedNAVMethodValueAction = async (navEntry: INAVMethod): 
       callData.push(prepNAVMethodNFT(navEntry.details));
       // callData.push(this.fundStore.fund?.safeAddress);
     } else if (navEntry.positionType === PositionType.Composable) {
-      callData.push(prepNAVMethodComposable(
-        navEntry.details,
-        navEntry.pastNAVUpdateEntrySafeAddress,
-        fundStore.fund?.safeAddress,
-      ));
+      callData.push(
+        prepNAVMethodComposable(
+          navEntry.details,
+          navEntry.pastNAVUpdateEntrySafeAddress,
+          fundStore.fund?.safeAddress,
+        ),
+      );
     }
 
     callData.push(
@@ -81,37 +84,37 @@ export const fetchSimulatedNAVMethodValueAction = async (navEntry: INAVMethod): 
 
     // console.log("json: ", JSON.stringify(callData, null, 2))
     const navCalculationMethod =
-          PositionTypeToNAVCalculationMethod[navEntry.positionType];
+      PositionTypeToNAVCalculationMethod[navEntry.positionType];
     navEntry.simulatedNavFormatted = "N/A";
     navEntry.simulatedNav = 0n;
 
-    console.log("simulateNAVMethodValue isNavSimulationLoading:", fundStore.isNavSimulationLoading)
-    console.log("navCalculationMethod:", navCalculationMethod)
-    console.log("callData:", callData)
+    console.log("navCalculationMethod:", navCalculationMethod);
+    console.log("callData:", callData);
     try {
-      const simulatedVal: bigint = await fundStore.callWithRetry(() =>
-        fundStore.navCalculatorContract.methods[
-          navCalculationMethod
-        ](...callData).call(),
-      5,
-      [-32603],  // Do not retry internal errors (probably invalid NAV method)
+      const simulatedVal: bigint = await fundStore.callWithRetry(
+        () =>
+          fundStore.navCalculatorContract.methods[navCalculationMethod](
+            ...callData,
+          ).call(),
+        5,
+        [-32603], // Do not retry internal errors (probably invalid NAV method)
       );
       console.warn("simulated value: ", simulatedVal);
 
-      navEntry.simulatedNavFormatted = fundStore.getFormattedBaseTokenValue(simulatedVal);
+      navEntry.simulatedNavFormatted =
+        fundStore.getFormattedBaseTokenValue(simulatedVal);
       navEntry.simulatedNav = simulatedVal;
       navEntry.isSimulatedNavError = false;
     } catch (error: any) {
       navEntry.isSimulatedNavError = true;
       console.error(
         "simulateNAVMethodValue: Failed simulating value for entry, check if there was some difference " +
-            "when hashing details on INAVMethod detailsHash: ",
+          "when hashing details on INAVMethod detailsHash: ",
         navEntry,
         error,
       );
     }
-  } finally {
-    console.log("finish simulate", navEntry)
-    navEntry.isNavSimulationLoading = false;
+  } catch (error: any) {
+    console.error("simulateNAVMethodValue error: ", error);
   }
-}
+};

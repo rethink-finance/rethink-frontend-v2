@@ -7,9 +7,11 @@ import { useToastStore } from "../toasts/toast.store";
 import { fetchFundDataAction } from "./actions/fetchFundData.action";
 import { fetchFundMetadataAction } from "./actions/fetchFundMetadata.action";
 import { fetchFundNAVUpdatesAction } from "./actions/fetchFundNAVUpdates.action";
+import { fetchSimulateCurrentNAVAction } from "./actions/fetchSimulateCurrentNAV.action";
 import { fetchSimulatedNAVMethodValueAction } from "./actions/fetchSimulatedNAVMethodValue.action";
 import { fetchUserBalancesAction } from "./actions/fetchUserBalances.action";
 import { fetchUserFundDelegateAddressAction } from "./actions/fetchUserFundDelegateAddress.action";
+import { fetchUserFundDepositRedemptionRequestsAction } from "./actions/fetchUserFundDepositRedemptionRequests.action";
 import { postUpdateNAVAction } from "./actions/postUpdateNav.action";
 
 import addressesJson from "~/assets/contracts/addresses.json";
@@ -46,6 +48,8 @@ import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 
+
+
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
 
@@ -68,9 +72,6 @@ interface IState {
   // Cached roleMod addresses for each fund.
   fundRoleModAddress: Record<string, string>;
   refreshSimulateNAVCounter: number;
-  // Loading flags
-  isNavSimulationLoading: boolean;
-  loadingUserFundDepositRedemptionRequests: boolean
 }
 
 // combine funds and fund store and map address => fund state; why only store one fund details at a time
@@ -90,9 +91,6 @@ export const useFundStore = defineStore({
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
     refreshSimulateNAVCounter: 0,
-    // Loading flags
-    isNavSimulationLoading: false,
-    loadingUserFundDepositRedemptionRequests: false,
   }),
   getters: {
     accountStore(): any {
@@ -678,54 +676,18 @@ export const useFundStore = defineStore({
       return parsedNavParts;
     },
     async simulateCurrentNAV(): Promise<void> {
-      /**
-       * Simulate NAV for the fund last NAV update.
-       */
-      if (!this.web3Store.web3 || this.isNavSimulationLoading) return;
-      this.isNavSimulationLoading = true;
-
-      if (!this.fundsStore.allNavMethods?.length) {
-        const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
-
-        // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
-        // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
-        // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
-        console.log("[CURRENT NAV] simulate fetch all nav methods");
-        await this.fundsStore.fetchAllNavMethods(fundsInfoArrays);
-      }
-      console.log("[CURRENT NAV] START SIMULATE:");
-
-      // Simulate all at once as many promises instead of one by one.
-      const promises = [];
-
-      for (const navEntry of this.fundLastNAVUpdateMethods) {
-        promises.push(
-          this.accountStore.requestConcurrencyLimit(() =>
-            this.callWithRetry(
-              () => this.fetchSimulatedNAVMethodValue(navEntry),
-              1,
-              // Do not retry internal errors (probably invalid NAV method), better to fail on 1st try.
-              // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
-              [-32603],
-            ),
-          ),
-        );
-      }
-      const settled = await Promise.allSettled(promises);
-      this.isNavSimulationLoading = false;
-      console.log(
-        "[CURRENT NAV] SIMULATE DONE:",
-        this.isNavSimulationLoading,
-        settled,
-      );
+      return await useActionState("fetchSimulateCurrentNAVAction", async () => {
+        return await fetchSimulateCurrentNAVAction();
+      },true);
     },
     async fetchSimulatedNAVMethodValue(navEntry: INAVMethod) {
-      try {
-        await fetchSimulatedNAVMethodValueAction(navEntry);
-      } catch (error) {
-        console.error("Error fetchSimulatedNAVMethodValueAction: ", error);
-        throw error;
-      }
+      return await useActionState(
+        "fetchSimulatedNAVMethodValueAction",
+        async () => {
+          return await fetchSimulatedNAVMethodValueAction(navEntry);
+        },
+        true,
+      );
     },
     async updateNavMethodPastNavValue(
       navMethodIndex: number,
@@ -998,36 +960,12 @@ export const useFundStore = defineStore({
       return this.userFundShareValue;
     },
     async fetchUserFundDepositRedemptionRequests() {
-      if (!this.activeAccountAddress)
-        return console.error("Active account not found");
-      if (!this.fund?.address) return "";
-      this.loadingUserFundDepositRedemptionRequests = true;
-      const [depositRequestResult, redemptionRequestResult] =
-        await Promise.allSettled(
-          [
-            () =>
-              this.fetchUserFundTransactionRequest(FundTransactionType.Deposit),
-            () =>
-              this.fetchUserFundTransactionRequest(
-                FundTransactionType.Redemption,
-              ),
-          ].map((fn) => this.accountStore.requestConcurrencyLimit(fn)),
-        );
-
-      // Extract the results or handle errors
-      // TODO also if not fulfilled set that it had error and display error in place of the failed request
-      const depositRequest =
-        depositRequestResult.status === "fulfilled"
-          ? depositRequestResult.value
-          : undefined;
-      const redemptionRequest =
-        redemptionRequestResult.status === "fulfilled"
-          ? redemptionRequestResult.value
-          : undefined;
-      this.userDepositRequest = depositRequest;
-      this.userRedemptionRequest = redemptionRequest;
-
-      this.loadingUserFundDepositRedemptionRequests = false;
+      return await useActionState(
+        "fetchUserFundDepositRedemptionRequestsAction",
+        async () => {
+          return await fetchUserFundDepositRedemptionRequestsAction();
+        },
+      );
     },
     async fetchUserFundTransactionRequest(
       fundTransactionType: FundTransactionType,

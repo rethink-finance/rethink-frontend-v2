@@ -18,11 +18,7 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       [
         () =>
           rethinkReaderContract.methods
-            .getFundNavMetaData(fundSettings.fundAddress)
-            .call(),
-        () =>
-          rethinkReaderContract.methods
-            .getGovernanceInfo(fundSettings.governor)
+            .getFundMetaData(fundSettings.fundAddress)
             .call(),
       ].map((fn: () => Promise<any>) =>
         fundStore.accountStore.requestConcurrencyLimit(() =>
@@ -33,7 +29,6 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
 
     const [
       fundNavMetaData,
-      governanceInfo,
     ]: any[] = results.map((result, index) => {
       if (result.status === "fulfilled") {
         return result.value;
@@ -43,15 +38,9 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
     });
 
     const {
-      cumulativeReturn,
       startTime,
-      totalNav,
       totalDepositBal,
       feeBalance,
-      illiquidLen, // eslint-disable-line @typescript-eslint/no-unused-vars
-      liquidLen, // eslint-disable-line @typescript-eslint/no-unused-vars
-      nftLen, // eslint-disable-line @typescript-eslint/no-unused-vars
-      composableLen, // eslint-disable-line @typescript-eslint/no-unused-vars
       fundTokenDecimals,
       fundBaseTokenDecimals,
       fundGovernanceTokenDecimals,
@@ -64,6 +53,7 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       fundName, // eslint-disable-line @typescript-eslint/no-unused-vars
       fundBaseTokenSymbol,
       fundGovernanceTokenSymbol,
+      fundGovernanceData,
     } = fundNavMetaData;
 
     const {
@@ -74,7 +64,7 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       quorumNumerator,
       quorumDenominator,
       clockMode,
-    } = governanceInfo;
+    } = fundGovernanceData;
 
     const parsedClockMode = fundStore.parseClockMode(clockMode);
     console.log("parsedClockMode: ", parsedClockMode);
@@ -115,11 +105,11 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
         address: fundSettings.governanceToken,
         decimals: Number(fundGovernanceTokenDecimals) ?? 18,
       } as IToken,
-      totalNAVWei: totalNav || BigInt("0"),
+      totalNAVWei: BigInt("0"),
       totalDepositBalance: totalDepositBal || BigInt("0"),
       governanceTokenTotalSupply: fundGovernanceTokenSupply,
       fundTokenTotalSupply: fundTokenSupply,
-      cumulativeReturnPercent: Number(cumulativeReturn) / 100,
+      cumulativeReturnPercent: 0,
       monthlyReturnPercent: undefined,
       sharpeRatio: undefined,
       positionTypeCounts: [] as IPositionTypeCount[],

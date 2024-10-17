@@ -29,8 +29,13 @@ export const useActionStateStore = defineStore("actionState", {
 export async function useActionState(
   actionName: string,
   action: () => Promise<any>,
+  restricted: boolean = false,
 ): Promise<any> {
   const actionStateStore = useActionStateStore();
+  if (restricted && actionStateStore.isActionState(actionName, ActionState.Loading)) {
+    console.warn(`Action "${actionName}" is already in progress.`);
+    return;
+  }
   actionStateStore.setActionState(actionName, ActionState.Loading);
   try {
     const result = await action();
@@ -42,3 +47,4 @@ export async function useActionState(
     throw error;
   }
 }
+

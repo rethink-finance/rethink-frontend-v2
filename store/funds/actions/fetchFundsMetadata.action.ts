@@ -20,7 +20,7 @@ export async function fetchFundsMetadataAction(
   try {
     const dataNAVs: IFundMetaData[] = await fundsStore.callWithRetry(() =>
       fundsStore.rethinkReaderContract.methods
-        .getFundsNavMetaData(fundAddresses)
+        .getFundsMetaData(fundAddresses)
         .call(),
     );
 
