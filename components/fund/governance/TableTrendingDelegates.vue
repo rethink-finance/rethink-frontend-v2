@@ -4,20 +4,21 @@
     class="table-trending-delegates main_table"
     :headers="headers"
     :items="items"
+    :loading="loading && items.length === 0"
+    loading-text="Loading Trending Delegates"
     items-per-page="-1"
-    :loading="loading"
   >
-    <template #[`item.delegated_members`]="{ item }">
+  <template #[`item.delegatedMember`]="{ item }">
       <div class="data-cell__title">
         <div class="data-cell__text">
-          {{ truncateAddress(item.delegated_members) }}
+          {{ truncateAddress(item.delegatedMember) }}
         </div>
         <ui-tooltip-click location="right">
           <Icon
             icon="clarity:copy-line"
             class="copy-icon"
             width="1rem"
-            @click="copyText(item.delegated_members)"
+            @click="copyText(item.delegatedMember)"
           />
 
           <template #tooltip>
@@ -27,6 +28,20 @@
           </template>
         </ui-tooltip-click>
       </div>
+    </template>
+
+    <template #[`item.delegators`]="{ item }">
+      <div @click="handleRowClick(item)" class="data-cell__delegators">
+        {{ pluralizeWord("member", item.delegators.length) }}
+      </div>
+    </template>
+
+    <template #[`body.append`]>
+      <tr v-if="items.length && loading">
+        <td v-for="header in headers">
+          <v-skeleton-loader type="text" />
+        </td>
+      </tr>
     </template>
 
     <template #bottom>
@@ -40,6 +55,7 @@
 
 <script lang="ts">
 import { truncateAddress } from "~/composables/addressUtils";
+import { pluralizeWord } from "~/composables/utils";
 import type ITrendingDelegates from "~/types/trending_delegates";
 
 export default defineComponent({
@@ -60,13 +76,13 @@ export default defineComponent({
     headers: ref([
       {
         title: "Delegated Members",
-        key: "delegated_members",
+        key: "delegatedMember",
         sorable: false,
       },
       {
         title: "Delegators",
         key: "delegators",
-        value: (v: any) => pluralizeWord("member", v.delegators),
+        align: "center",
         sortable: true,
       },
       {
@@ -77,7 +93,7 @@ export default defineComponent({
       },
       {
         title: "Voting Power",
-        key: "voting_power",
+        key: "votingPower",
         sortable: true,
         align: "end",
       },
@@ -85,8 +101,12 @@ export default defineComponent({
   }),
   methods: {
     truncateAddress,
+    pluralizeWord,
     copyText(text: string) {
       navigator.clipboard.writeText(text);
+    },
+    handleRowClick(item: ITrendingDelegates) {
+      this.$emit("row-click", item);
     },
   },
 });
@@ -149,6 +169,15 @@ export default defineComponent({
     width: 40%;
     max-width: 120px;
     min-width: 110px;
+  }
+
+  &__delegators {
+    cursor: pointer;
+    text-align: center;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 

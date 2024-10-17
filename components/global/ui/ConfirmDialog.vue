@@ -42,6 +42,7 @@
             </v-btn>
 
             <v-btn
+              v-if="confirmText"
               class="di_card__submit-button"
               color="primary"
               @click="confirm()"
