@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
+import { ethers, FixedNumber } from "ethers";
 import { ref } from "vue";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IToken from "~/types/token";
@@ -59,6 +59,7 @@ import { useFundStore } from "~/store/fund.store";
 import { useToastStore } from "~/store/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import { useWeb3Store } from "~/store/web3.store";
+import { roundToSignificantDecimals } from "~/composables/formatters";
 
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
@@ -87,8 +88,8 @@ const props = defineProps({
     },
   },
   exchangeRate: {
-    type: Number,
-    default: 0,
+    type: FixedNumber,
+    default: FixedNumber.fromValue(0),
   },
 });
 
@@ -97,9 +98,10 @@ const fundTransactionRequestAmountFormatted = computed(() => {
 });
 const claimableTokenValue = computed(() => {
   if (!props.exchangeRate) return 0
-  const rate = BigInt(Math.round(props.exchangeRate * 1000));
-  const value = props.fundTransactionRequest.amount * rate;
-  return formatTokenValue(value / BigInt(1000), props.token0.decimals, false);
+  console.log("exchangeRate:", props.exchangeRate)
+  const amount = ethers.formatUnits(props.fundTransactionRequest.amount, props.token0.decimals);
+  const value = props.exchangeRate.mul(FixedNumber.fromString(amount));
+  return roundToSignificantDecimals(value.toString(), 3);
 });
 
 const isLoadingCancelRequest = ref(false);
