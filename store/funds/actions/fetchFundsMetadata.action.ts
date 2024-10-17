@@ -13,16 +13,11 @@ import type IToken from "~/types/token";
 export async function fetchFundsMetadataAction(
   fundAddresses: string[],
   fundsInfo: any,
-  excludeTestFunds: boolean,
-  excludeFundAddrs: any,
 ): Promise<IFund[]> {
   const fundsStore = await useFundsStore();
 
   const funds: IFund[] = [];
   try {
-    // @dev NOTE: the second parameter to getFundNavMetaData is navEntryIndex, but it is currently
-    //  not used in the contract code, so I have set it to 0. Change this part in the future
-    //  if the contract changes.
     const dataNAVs: IFundMetaData[] = await fundsStore.callWithRetry(() =>
       fundsStore.rethinkReaderContract.methods
         .getFundsNavMetaData(fundAddresses)
@@ -31,12 +26,7 @@ export async function fetchFundsMetadataAction(
 
     for (const [index, address] of fundAddresses.entries()) {
       const dataNAV: IFundMetaData = dataNAVs[index];
-      if (
-        excludeTestFunds &&
-        excludeFundAddrs[fundsStore.web3Store.chainId].includes(address)
-      ) {
-        continue;
-      }
+
       const totalDepositBalance = dataNAV.totalDepositBal || 0n;
       const totalNAVWei = dataNAV.totalNav || 0n;
       const baseTokenDecimals = Number(dataNAV.fundBaseTokenDecimals);
