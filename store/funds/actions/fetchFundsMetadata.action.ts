@@ -59,7 +59,7 @@ export async function fetchFundsMetadataAction(
         governanceTokenTotalSupply: BigInt("0"),
         totalNAVWei,
         totalDepositBalance,
-        cumulativeReturnPercent: Number(dataNAV.cumulativeReturn),
+        cumulativeReturnPercent: Number(dataNAV.cumulativeReturn) / 100,
         monthlyReturnPercent: undefined,
         sharpeRatio: undefined,
         positionTypeCounts: [

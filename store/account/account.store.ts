@@ -2,8 +2,10 @@ import type { Account, WalletState } from "@web3-onboard/core/dist/types";
 import type { LimitFunction } from "p-limit";
 import pLimit from "p-limit";
 import { defineStore } from "pinia";
+
 import { Web3 } from "web3";
-import { useToastStore } from "~/store/toasts/toast.store";
+import { useToastStore } from "../toasts/toast.store";
+
 import { useWeb3Store } from "~/store/web3/web3.store";
 
 interface IState {

@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { Web3 } from "web3";
 
 import { useActionState } from "../actionState.store";
+import { useToastStore } from "../toasts/toast.store";
 import { fetchFundMetadataAction } from "./actions/fetchFundMetadata.action";
 import { fetchSimulatedNAVMethodValueAction } from "./actions/fetchSimulatedNAVMethodValue.action";
 import { fetchUserBalancesAction } from "./actions/fetchUserBalances.action";
@@ -21,7 +22,6 @@ import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
 import { cleanComplexWeb3Data, formatJson } from "~/composables/utils";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
-import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
