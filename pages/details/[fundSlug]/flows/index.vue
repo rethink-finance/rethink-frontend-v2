@@ -388,6 +388,7 @@ roundToSignificantDecimals,
 } from "~/composables/formatters";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
+import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();
