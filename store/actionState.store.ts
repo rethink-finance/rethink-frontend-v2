@@ -40,7 +40,5 @@ export async function useActionState(
     console.error(`Error in action "${actionName}":`, error);
     actionStateStore.setActionState(actionName, ActionState.Error);
     throw error;
-  } finally {
-    actionStateStore.setActionState(actionName, ActionState.Idle);
   }
 }

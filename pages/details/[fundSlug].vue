@@ -132,6 +132,7 @@ const fetchFund = async () => {
 };
 
 const isLoadingFetchFundData = computed(() => actionStateStore.isActionState("fetchFundDataAction", ActionState.Loading));
+
 console.log("isLoadingFetchFundData",isLoadingFetchFundData)
 // TODO: two watchers ? can we combine them?
 watch(
