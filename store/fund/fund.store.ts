@@ -5,6 +5,7 @@ import { Web3 } from "web3";
 import { useActionState } from "../actionState.store";
 import { useToastStore } from "../toasts/toast.store";
 import { fetchFundMetadataAction } from "./actions/fetchFundMetadata.action";
+import { fetchFundNAVUpdatesAction } from "./actions/fetchFundNAVUpdates.action";
 import { fetchSimulatedNAVMethodValueAction } from "./actions/fetchSimulatedNAVMethodValue.action";
 import { fetchUserBalancesAction } from "./actions/fetchUserBalances.action";
 import { postUpdateNAVAction } from "./actions/postUpdateNav.action";
@@ -18,7 +19,6 @@ import { NAVCalculator } from "~/assets/contracts/NAVCalculator";
 import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import { RethinkReader } from "~/assets/contracts/RethinkReader";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
-import { parseBigInt, stringifyBigInt } from "~/composables/localStorage";
 import { cleanComplexWeb3Data, formatJson } from "~/composables/utils";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
@@ -67,7 +67,6 @@ interface IState {
   fundRoleModAddress: Record<string, string>;
   refreshSimulateNAVCounter: number;
   // Loading flags
-  loadingNavUpdates: boolean;
   isNavSimulationLoading: boolean;
   loadingUserFundDepositRedemptionRequests: boolean
 }
@@ -90,7 +89,6 @@ export const useFundStore = defineStore({
     fundRoleModAddress: {},
     refreshSimulateNAVCounter: 0,
     // Loading flags
-    loadingNavUpdates: false,
     isNavSimulationLoading: false,
     loadingUserFundDepositRedemptionRequests: false,
   }),
@@ -500,40 +498,9 @@ export const useFundStore = defineStore({
       return await this.fetchFundMetadata(fundSettings);
     },
     async fetchFundNAVUpdates(): Promise<void> {
-      if (!this.fund) return;
-      this.loadingNavUpdates = true;
-
-      try {
-        const dataNAV = await this.callWithRetry(() =>
-          this.rethinkReaderContract.methods
-            .getNAVDataForFund(this.fund?.address)
-            .call(),
-        );
-        console.log("fund NAV: ", dataNAV);
-        this.fund.positionTypeCounts =
-          this.parseFundPositionTypeCounts(dataNAV);
-        this.fund.navUpdates = await this.parseFundNAVUpdates(
-          dataNAV,
-          this.fund.address,
-          this.fundContract,
-        );
-      } catch (error) {
-        console.error(
-          "Error calling getNAVDataForFund: ",
-          error,
-          "fund: ",
-          this.fund.address,
-        );
-      }
-
-      this.fundManagedNAVMethods = JSON.parse(
-        JSON.stringify(this.fundLastNAVUpdateMethods, stringifyBigInt),
-        parseBigInt,
-      );
-      console.log("fundManagedNAVMethods: ", toRaw(this.fundManagedNAVMethods));
-      this.mergeNAVMethodsFromLocalStorage();
-
-      this.loadingNavUpdates = false;
+      return await useActionState(async () => {
+        return await fetchFundNAVUpdatesAction();
+      });
     },
     parseFundSettings(fundData: any) {
       const fundSettings: Partial<IFundSettings> = {};

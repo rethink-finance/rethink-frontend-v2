@@ -1,6 +1,6 @@
 <template>
   <div class="details main_grid main_grid--full-width">
-    <template v-if="fundStore.loadingNavUpdates">
+    <template v-if="isLoadingFetchFundNAVUpdatesActionState">
       <v-skeleton-loader v-for="i in 3" :key="i" type="list-item" />
     </template>
 
@@ -31,7 +31,9 @@
 </template>
 
 <script lang="ts">
+import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
+import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
 
@@ -45,8 +47,14 @@ export default defineComponent({
   },
   setup() {
     const fundStore = useFundStore();
+    const actionStateStore = useActionStateStore();
     const { getFormattedBaseTokenValue } = toRefs(fundStore);
-    return { fundStore, getFormattedBaseTokenValue };
+    return { fundStore, actionStateStore, getFormattedBaseTokenValue };
+  },
+  computed:{
+    isLoadingFetchFundNAVUpdatesActionState(): boolean {
+      return this.actionStateStore.isActionState("fetchFundNAVUpdatesAction", ActionState.Loading);
+    },
   },
   methods: {
     navUpdateTotalNav(navUpdate: INAVUpdate) {

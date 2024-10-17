@@ -16,9 +16,9 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': fundStore.loadingNavUpdates}">
+        <div class="data_bar__title" :class="{'justify-center': isLoadingFetchFundNAVUpdatesActionState}">
           <v-progress-circular
-            v-if="fundStore.loadingNavUpdates"
+            v-if="isLoadingFetchFundNAVUpdatesActionState"
             class="d-flex"
             size="18"
             width="2"
@@ -41,9 +41,9 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': fundStore.loadingNavUpdates}">
+        <div class="data_bar__title" :class="{'justify-center': isLoadingFetchFundNAVUpdatesActionState}">
           <v-progress-circular
-            v-if="fundStore.loadingNavUpdates"
+            v-if="isLoadingFetchFundNAVUpdatesActionState"
             class="d-flex"
             size="18"
             width="2"
@@ -99,9 +99,15 @@
 import { formatPercent } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass";
 import { capitalizeFirst } from "~/composables/utils";
+import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
+import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 const fundStore = useFundStore();
+const actionStateStore = useActionStateStore();
+
+const isLoadingFetchFundNAVUpdatesActionState =
+  computed(() => actionStateStore.isActionState("fetchFundNAVUpdatesAction", ActionState.Loading));
 
 const props = defineProps({
   fund: {

@@ -29,7 +29,7 @@
         <div class="data_bar__item">
           <div class="data_bar__title">
             <v-progress-circular
-              v-if="fundStore.loadingNavUpdates"
+              v-if="isLoadingFetchFundNAVUpdatesAction"
               class="d-flex"
               size="18"
               width="2"
@@ -116,7 +116,7 @@
           <div class="data_bar__item">
             <div class="data_bar__title">
               <v-progress-circular
-                v-if="fundStore.loadingNavUpdates || isNavSimulationLoading"
+                v-if="isLoadingFetchFundNAVUpdatesAction || isNavSimulationLoading"
                 class="d-flex"
                 size="18"
                 width="2"
@@ -217,7 +217,7 @@
                 <div class="pending_redemptions_estimate">
                   ≈
                   <v-progress-circular
-                    v-if="fundStore.loadingNavUpdates || isNavSimulationLoading"
+                    v-if="isLoadingFetchFundNAVUpdatesAction || isNavSimulationLoading"
                     class="d-flex"
                     size="18"
                     width="2"
@@ -259,7 +259,7 @@
           <div class="data_bar__item">
             <div class="data_bar__title">
               <v-progress-circular
-                v-if="fundStore.loadingNavUpdates || isNavSimulationLoading"
+                v-if="isLoadingFetchFundNAVUpdatesAction || isNavSimulationLoading"
                 class="d-flex"
                 size="18"
                 width="2"
@@ -628,7 +628,10 @@ watch(
 );
 
 const isLoadingPostUpdateNAV = computed(() => {
-  return actionStateStore.isActionState("postUpdateNAV", ActionState.Loading);
+  return actionStateStore.isActionState("postUpdateNAVAction", ActionState.Loading);
+});
+const isLoadingFetchFundNAVUpdatesAction = computed(() => {
+  return actionStateStore.isActionState("fetchFundNAVUpdatesAction", ActionState.Loading);
 });
 </script>
 

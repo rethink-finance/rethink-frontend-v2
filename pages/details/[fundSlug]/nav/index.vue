@@ -3,7 +3,7 @@
     <UiHeader>
       <div>
         <div class="main_header__title">
-          <v-skeleton-loader v-if="fundStore.loadingNavUpdates" type="text" class="total_nav_skeleton" />
+          <v-skeleton-loader v-if="isLoadingFetchFundNAVUpdatesAction" type="text" class="total_nav_skeleton" />
           <template v-else>
             {{ fundTotalNAVFormatted }}
           </template>
@@ -12,7 +12,7 @@
           <div>
             Last updated on
           </div>
-          <v-skeleton-loader v-if="fundStore.loadingNavUpdates" type="text" class="last_nav_update_skeleton" />
+          <v-skeleton-loader v-if="isLoadingFetchFundNAVUpdatesAction" type="text" class="last_nav_update_skeleton" />
           <strong v-else class="ms-2">{{ fundLastNAVUpdateDate }}</strong>
         </div>
       </div>
@@ -72,7 +72,7 @@
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
         <FundNavMethodsTable
           :methods="fundLastNAVUpdateMethods"
-          :loading="fundStore.loadingNavUpdates"
+          :loading="isLoadingFetchFundNAVUpdatesAction"
           :nav-parts="fundLastNAVUpdate?.navParts"
           show-summary-row
           show-last-nav-update-value
@@ -134,7 +134,10 @@ const reversedFundNavUpdates = computed(() => {
 });
 
 const isLoadingPostUpdateNAV = computed(() => {
-  return actionStateStore.isActionState("postUpdateNAV", ActionState.Loading);
+  return actionStateStore.isActionState("postUpdateNAVAction", ActionState.Loading);
+});
+const isLoadingFetchFundNAVUpdatesAction = computed(() => {
+  return actionStateStore.isActionState("fetchFundNAVUpdatesAction", ActionState.Loading);
 });
 </script>
 
