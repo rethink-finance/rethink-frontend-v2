@@ -349,7 +349,7 @@
                   v-bind="props"
                   :disabled="!isUsingZodiacPilotExtension || loadingUpdateNav"
                   class="bg-primary text-secondary"
-                  @click="fundStore.updateNAV()"
+                  @click="fundStore.postUpdateNAV()"
                 >
                   <template #prepend>
                     <v-progress-circular
@@ -383,8 +383,8 @@
 <script setup lang="ts">
 import { ethers, FixedNumber } from "ethers";
 import {
-  formatTokenValue,
-  roundToSignificantDecimals,
+formatTokenValue,
+roundToSignificantDecimals,
 } from "~/composables/formatters";
 import { useFundStore } from "~/store/fund/fund.store";
 import type IFund from "~/types/fund";
@@ -456,7 +456,7 @@ const pendingDepositBalanceFormatted = computed(() => {
 });
 const totalCurrentSimulatedNAVFormatted = computed(() => {
   if (!totalCurrentSimulatedNAV.value) return "0";
-  return fundStore.formatBaseTokenValue(totalCurrentSimulatedNAV.value);
+  return fundStore.getFormattedBaseTokenValue(totalCurrentSimulatedNAV.value);
 });
 const pendingRedemptionBalanceFormatted = computed(() => {
   if (!fund?.pendingRedemptionBalance) return "0";

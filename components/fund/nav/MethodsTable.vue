@@ -288,8 +288,8 @@ export default defineComponent({
     const fundsStore = useFundsStore();
     const web3Store = useWeb3Store();
     const toastStore = useToastStore();
-    const { formatBaseTokenValue } = toRefs(fundStore);
-    return { fundStore, fundsStore, web3Store, toastStore, formatBaseTokenValue }
+    const { getFormattedBaseTokenValue } = toRefs(fundStore);
+    return { fundStore, fundsStore, web3Store, toastStore, getFormattedBaseTokenValue }
   },
   data: () => ({
     expanded: [],
@@ -353,10 +353,10 @@ export default defineComponent({
         (fund?.fundContractBaseTokenBalance || 0n) +
         (fund?.safeContractBaseTokenBalance || 0n) +
         (fund?.feeBalance || 0n);
-      return this.formatBaseTokenValue(totalNAV);
+      return this.getFormattedBaseTokenValue(totalNAV);
     },
     formattedTotalLastNAV() {
-      return this.formatBaseTokenValue(this.navParts?.totalNAV || 0n);
+      return this.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
@@ -370,13 +370,13 @@ export default defineComponent({
       )
     },
     formattedFundContractBaseTokenBalance() {
-      return this.formatBaseTokenValue(this.fundStore.fund?.fundContractBaseTokenBalance);
+      return this.getFormattedBaseTokenValue(this.fundStore.fund?.fundContractBaseTokenBalance);
     },
     formattedSafeContractBaseTokenBalance() {
-      return this.formatBaseTokenValue(this.fundStore.fund?.safeContractBaseTokenBalance);
+      return this.getFormattedBaseTokenValue(this.fundStore.fund?.safeContractBaseTokenBalance);
     },
     formattedFeeBalance() {
-      return this.formatBaseTokenValue(this.fundStore.fund?.feeBalance);
+      return this.getFormattedBaseTokenValue(this.fundStore.fund?.feeBalance);
     },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
@@ -390,7 +390,7 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
-          pastNavValueFormatted: this.formatBaseTokenValue(this.navParts?.baseAssetOIVBal),
+          pastNavValueFormatted: this.getFormattedBaseTokenValue(this.navParts?.baseAssetOIVBal),
           simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-1",
@@ -403,7 +403,7 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetSafeBal,
-          pastNavValueFormatted: this.formatBaseTokenValue(this.navParts?.baseAssetSafeBal),
+          pastNavValueFormatted: this.getFormattedBaseTokenValue(this.navParts?.baseAssetSafeBal),
           simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-2",
@@ -416,7 +416,7 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.feeBal,
-          pastNavValueFormatted: this.formatBaseTokenValue(this.navParts?.feeBal),
+          pastNavValueFormatted: this.getFormattedBaseTokenValue(this.navParts?.feeBal),
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
           detailsHash: "-3",
@@ -474,7 +474,7 @@ export default defineComponent({
       const promises = [];
 
       for (const navEntry of this.methods) {
-        promises.push(this.fundStore.simulateNAVMethodValue(navEntry));
+        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(navEntry));
       }
       const settled = await Promise.allSettled(promises);
       this.isNavSimulationLoading = false;

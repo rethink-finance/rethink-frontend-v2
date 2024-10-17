@@ -92,7 +92,7 @@ export default {
   setup() {
     const fundStore = useFundStore();
     const actionStateStore = useActionStateStore();
-    return { fundStore };
+    return { fundStore, actionStateStore };
   },
   computed: {
     fundBaseToken() {
