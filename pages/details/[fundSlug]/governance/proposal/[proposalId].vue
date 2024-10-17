@@ -365,7 +365,7 @@ const fetchProposalVoteSubmissions = async () => {
                 false,
                 true
               ) + " " + fundStore.fund?.governanceToken.symbol,
-            date: voteTimestamp ? formatDateToLocaleString(voteTimestamp) : "N/A",
+            date: voteTimestamp ? formatDateLong(voteTimestamp, false) : "N/A",
           }
 
           // append new submission to proposalVoteSubmissions
