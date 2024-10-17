@@ -55,10 +55,10 @@ import { ethers } from "ethers";
 import { ref } from "vue";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IToken from "~/types/token";
-import { useFundStore } from "~/store/fund.store";
-import { useToastStore } from "~/store/toast.store";
+import { useFundStore } from "~/store/fund/fund.store";
+import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
-import { useWeb3Store } from "~/store/web3.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();

@@ -30,7 +30,7 @@
 // types
 import type IFund from "~/types/fund";
 // components
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 
 const router = useRouter();
 const fundStore = useFundStore();

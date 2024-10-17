@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { useOnboard } from "@web3-onboard/vue";
-import { useAccountStore } from "~/store/account.store";
+import { useAccountStore } from "~/store/account/account.store";
 
 const accountStore = useAccountStore();
 

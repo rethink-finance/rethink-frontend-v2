@@ -125,8 +125,8 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { useAccountStore } from "~/store/account.store";
-import { useToastStore } from "~/store/toast.store";
+import { useAccountStore } from "~/store/account/account.store";
+import { useToastStore } from "~/store/toasts/toast.store";
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 

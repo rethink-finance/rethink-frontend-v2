@@ -141,9 +141,9 @@
 </template>
 
 <script lang="ts" setup>
-import { useAccountStore } from "~/store/account.store";
-import { useToastStore } from "~/store/toast.store";
-import { useWeb3Store } from "~/store/web3.store";
+import { useAccountStore } from "~/store/account/account.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import type INetwork from "~/types/network";
 import type IRoute from "~/types/route";
 const accountStore = useAccountStore();
