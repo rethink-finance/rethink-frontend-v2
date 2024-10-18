@@ -28,12 +28,12 @@ export async function fetchFundsAction(excludeTestFunds: boolean): Promise<any> 
   console.log("fundsInfoArrays: ", toRaw(fundsInfoArrays));
   console.log("filteredFundsInfoArrays: ", filteredFundsInfoArrays);
 
-  const funds = await fundsStore.fetchFundsMetadata(fundAddresses, fundsInfo);
+  const funds = await fundsStore.fetchFundsMetaData(fundAddresses, fundsInfo);
   fundsStore.funds = funds;
   console.log("All Funds: ", funds);
 
   // Fetch all possible NAV methods for all funds.
-  await fundsStore.fetchAllNavMethods(filteredFundsInfoArrays);
+  await fundsStore.fetchFundsNAVData(filteredFundsInfoArrays);
 
   // Calculate Fund Performance metrics like cumulative returns, sharpe ratio...
   fundsStore.calculateFundsPerformanceMetrics();

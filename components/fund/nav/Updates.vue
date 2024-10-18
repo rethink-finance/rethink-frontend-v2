@@ -53,7 +53,7 @@ export default defineComponent({
   },
   computed:{
     isLoadingFetchFundNAVUpdatesActionState(): boolean {
-      return this.actionStateStore.isActionState("fetchFundNAVUpdatesAction", ActionState.Loading);
+      return this.actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
     },
   },
   methods: {

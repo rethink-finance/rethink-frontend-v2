@@ -4,10 +4,10 @@ import { Web3 } from "web3";
 
 import { useActionState } from "../actionState.store";
 import { calculateFundsPerformanceMetricsAction } from "./actions/calculateFundsPerformanceMetrics.action";
-import { fetchAllNavMethodsAction } from "./actions/fetchAllNavMethods.action";
 import { fetchFundsAction } from "./actions/fetchFunds.action";
 import { fetchFundsInfoArraysAction } from "./actions/fetchFundsInfoArrays.action";
-import { fetchFundsMetadataAction } from "./actions/fetchFundsMetadata.action";
+import { fetchFundsMetaDataAction } from "./actions/fetchFundsMetaData.action";
+import { fetchFundsNAVDataAction } from "./actions/fetchFundsNAVData.action";
 
 import addressesJson from "~/assets/contracts/addresses.json";
 import { GovernableFundFactory } from "~/assets/contracts/GovernableFundFactory";
@@ -112,14 +112,14 @@ export const useFundsStore = defineStore({
      * This will return funds with just enough data to populate the discover table.
      * More data can be fetched from fundSettings later if needed, or added to the reader contract.
      */
-    async fetchFundsMetadata(fundAddresses: string[], fundsInfo: any) {
-      return await useActionState("fetchFundsMetadataAction", async () => {
-        return await fetchFundsMetadataAction(fundAddresses, fundsInfo);
+    async fetchFundsMetaData(fundAddresses: string[], fundsInfo: any) {
+      return await useActionState("fetchFundsMetaDataAction", async () => {
+        return await fetchFundsMetaDataAction(fundAddresses, fundsInfo);
       });
     },
-    async fetchAllNavMethods(fundsInfoArrays: any[]) {
-      return await useActionState("fetchAllNavMethodsAction", async () => {
-        return await fetchAllNavMethodsAction(
+    async fetchFundsNAVData(fundsInfoArrays: any[]) {
+      return await useActionState("fetchFundsNAVDataAction", async () => {
+        return await fetchFundsNAVDataAction(
           fundsInfoArrays,
           excludeNAVDetails,
         );

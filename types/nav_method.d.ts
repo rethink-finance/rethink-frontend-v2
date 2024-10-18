@@ -33,7 +33,7 @@ export default interface INAVMethod {
   valuationSource: string,
   positionType: PositionType,
 
-  // pastNAVUpdateEntryFundAddress is original if it was found in fetchAllNavMethods
+  // pastNAVUpdateEntryFundAddress is original if it was found in fetchFundsNAVData
   foundMatchingPastNAVUpdateEntryFundAddress?: boolean,
   pastNAVUpdateEntryFundAddress?: string,
   pastNAVUpdateEntrySafeAddress?: string,

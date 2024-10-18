@@ -13,10 +13,14 @@ export const fetchFundDataAction = async (
 
   try {
 
-    const fund: IFund = await fundStore.fetchFundMetadata(fundAddress);
-    fundStore.fetchFundNAVUpdates();
-    fundStore.fetchFundPendingDepositRedemptionBalance();
+    const fund: IFund = await fundStore.fetchFundMetaData(fundAddress);
+
+    await fundStore.fetchFundNAVData();
+
+    fundStore.calculateFundPerformanceMetrics();
     fundStore.fetchUserFundData(fundAddress);
+
+    fundStore.fetchFundPendingDepositRedemptionBalance();
     fundStore.fetchUserFundDepositRedemptionRequests();
 
     return fund;

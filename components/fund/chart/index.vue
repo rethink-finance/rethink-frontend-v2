@@ -59,7 +59,7 @@ export default {
       ];
     },
     isLoadingFetchFundNAVUpdatesActionState(): boolean {
-      return this.actionStateStore.isActionState("fetchFundNAVUpdatesAction", ActionState.Loading);
+      return this.actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
     },
     totalNAVItems(): bigint[] {
       return this.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n) || [];

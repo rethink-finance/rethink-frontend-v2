@@ -9,7 +9,7 @@ import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 
-export async function fetchFundsMetadataAction(
+export async function fetchFundsMetaDataAction(
   fundAddresses: string[],
   fundsInfo: any,
 ): Promise<IFund[]> {

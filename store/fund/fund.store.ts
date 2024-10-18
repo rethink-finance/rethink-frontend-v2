@@ -4,9 +4,10 @@ import { Web3 } from "web3";
 
 import { useActionState } from "../actionState.store";
 import { useToastStore } from "../toasts/toast.store";
+import { calculateFundPerformanceMetricsAction } from "./actions/calculateFundPerformanceMetrics.action";
 import { fetchFundDataAction } from "./actions/fetchFundData.action";
-import { fetchFundMetadataAction } from "./actions/fetchFundMetadata.action";
-import { fetchFundNAVUpdatesAction } from "./actions/fetchFundNAVUpdates.action";
+import { fetchFundMetaDataAction } from "./actions/fetchFundMetaData.action";
+import { fetchFundNAVDataAction } from "./actions/fetchFundNAVData.action";
 import { fetchSimulateCurrentNAVAction } from "./actions/fetchSimulateCurrentNAV.action";
 import { fetchSimulatedNAVMethodValueAction } from "./actions/fetchSimulatedNAVMethodValue.action";
 import { fetchUserBaseTokenBalanceAction } from "./actions/fetchUserBaseTokenBalance.action";
@@ -246,8 +247,7 @@ export const useFundStore = defineStore({
     },
     userFundSuggestedAllowance(): bigint {
       const userBaseTokenBalance = this.fundUserData.baseTokenBalance || 0n;
-      const userDepositRequestAmount =
-        this.userDepositRequest?.amount || 0n;
+      const userDepositRequestAmount = this.userDepositRequest?.amount || 0n;
       return userBaseTokenBalance + userDepositRequestAmount;
     },
     userFundSuggestedAllowanceFormatted(): string {
@@ -303,8 +303,7 @@ export const useFundStore = defineStore({
       // User deposit request exists and is valid, but there has to be at least 1 NAV update
       // made after the deposit was requested.
       return (
-        this.userDepositRequest.timestamp <
-        this.fundLastNAVUpdate?.timestamp
+        this.userDepositRequest.timestamp < this.fundLastNAVUpdate?.timestamp
       );
     },
     shouldUserWaitSettlementOrCancelRedemption(): boolean {
@@ -318,8 +317,7 @@ export const useFundStore = defineStore({
       // User redemption request exists and is valid, but there has to be at least 1 NAV update
       // made after the redemption was requested.
       return (
-        this.userRedemptionRequest.timestamp <
-        this.fundLastNAVUpdate?.timestamp
+        this.userRedemptionRequest.timestamp < this.fundLastNAVUpdate?.timestamp
       );
     },
     totalCurrentSimulatedNAV(): bigint {
@@ -474,9 +472,9 @@ export const useFundStore = defineStore({
         return await fetchFundDataAction(fundAddress);
       });
     },
-    async fetchFundNAVUpdates(): Promise<void> {
-      return await useActionState("fetchFundNAVUpdatesAction", async () => {
-        return await fetchFundNAVUpdatesAction();
+    async fetchFundNAVData(): Promise<void> {
+      return await useActionState("fetchFundNAVDataAction", async () => {
+        return await fetchFundNAVDataAction();
       });
     },
     async fetchUserFundData(fundAddress: string) {
@@ -489,9 +487,9 @@ export const useFundStore = defineStore({
      * - getFundStartTime
      * - fundMetadata
      */
-    async fetchFundMetadata(fundAddress: string): Promise<IFund> {
-      return await useActionState("fetchFundMetadataAction", async () => {
-        return await fetchFundMetadataAction(fundAddress);
+    async fetchFundMetaData(fundAddress: string): Promise<IFund> {
+      return await useActionState("fetchFundMetaDataAction", async () => {
+        return await fetchFundMetaDataAction(fundAddress);
       });
     },
     parseFundSettings(fundData: any) {
@@ -600,7 +598,6 @@ export const useFundStore = defineStore({
           count: lastNAVUpdate?.length || 0,
         });
       }
-
       return positionTypeCounts;
     },
     parseNAVMethod(
@@ -687,7 +684,6 @@ export const useFundStore = defineStore({
         async () => {
           return await fetchSimulateCurrentNAVAction();
         },
-        true,
       );
     },
     async fetchSimulatedNAVMethodValue(navEntry: INAVMethod) {
@@ -696,7 +692,6 @@ export const useFundStore = defineStore({
         async () => {
           return await fetchSimulatedNAVMethodValueAction(navEntry);
         },
-        true,
       );
     },
     async updateNavMethodPastNavValue(
@@ -738,20 +733,18 @@ export const useFundStore = defineStore({
       navMethod.pastNavValueLoading = false;
     },
     async parseFundNAVUpdates(
-      dataNAV: any,
+      fundNAVData: any,
       fundAddress: string,
       fundContract: any,
     ): Promise<INAVUpdate[]> {
       const navUpdates = [] as INAVUpdate[];
       // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable), they should all
       // have the same length, so we just use the liquid key.
-      const navUpdatesLen = dataNAV[PositionType.Liquid].length;
+      const navUpdatesLen = fundNAVData[PositionType.Liquid].length;
       console.warn("navUpdatesLen ", navUpdatesLen);
 
-      const fundNavUpdateTimes = await this.callWithRetry(() =>
-        fundContract.methods.getNavUpdateTime(1, navUpdatesLen + 1).call(),
-      );
-      console.warn("dataNAV ", dataNAV);
+      const fundNavUpdateTimes = fundNAVData.updateTimes;
+      console.warn("dataNAV ", fundNAVData);
 
       // Get a list of NAV parts (total NAV, fees, OIV balance, safe balance) for each NAV update.
       const navParts = await this.fetchNavParts(navUpdatesLen, fundAddress);
@@ -979,6 +972,14 @@ export const useFundStore = defineStore({
       return await useActionState("postUpdateNAVAction", async () => {
         return await postUpdateNAVAction();
       });
+    },
+    async calculateFundPerformanceMetrics() {
+      return await useActionState(
+        "calculateFundPerformanceMetricsAction",
+        async () => {
+          return await calculateFundPerformanceMetricsAction();
+        },
+      );
     },
   },
 });

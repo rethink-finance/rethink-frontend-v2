@@ -1,6 +1,6 @@
 import { useFundStore } from "../fund.store";
 
-export const fetchFundNAVUpdatesAction = async (): Promise<any> => {
+export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
 
   if (!fundStore.fund) return;
@@ -12,6 +12,8 @@ export const fetchFundNAVUpdatesAction = async (): Promise<any> => {
         .getFundNAVData(fundStore.fund?.address)
         .call(),
     );
+
+    fundStore.fund.totalNAVWei = fundNAVData.totalNav || 0n;
 
     fundStore.fund.positionTypeCounts =
       fundStore.parseFundPositionTypeCounts(fundNAVData);

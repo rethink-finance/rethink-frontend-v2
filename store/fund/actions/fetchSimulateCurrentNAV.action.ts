@@ -9,10 +9,10 @@ export const fetchSimulateCurrentNAVAction = async (): Promise<void> => {
     const fundsInfoArrays = await fundStore.fundsStore.fetchFundsInfoArrays();
 
     // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
-    // and make sure it is fetched before checking here with fundsStore.fetchAllNavMethods, and then we
+    // and make sure it is fetched before checking here with fundsStore.fetchFundsNAVData, and then we
     // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
     console.log("[CURRENT NAV] simulate fetch all nav methods");
-    await fundStore.fundsStore.fetchAllNavMethods(fundsInfoArrays);
+    await fundStore.fundsStore.fetchFundsNAVData(fundsInfoArrays);
   }
   console.log("[CURRENT NAV] START SIMULATE:");
 

@@ -635,7 +635,7 @@ const isLoadingPostUpdateNAV = computed(() => {
   return actionStateStore.isActionState("postUpdateNAVAction", ActionState.Loading);
 });
 const isLoadingFetchFundNAVUpdatesAction = computed(() => {
-  return actionStateStore.isActionState("fetchFundNAVUpdatesAction", ActionState.Loading);
+  return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
 });
 const isLoadingFetchSimulateCurrentNAVAction = computed(() => {
   return actionStateStore.isActionState("fetchSimulateCurrentNAVAction", ActionState.Loading);

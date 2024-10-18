@@ -6,10 +6,9 @@ import type INAVUpdate from "~/types/nav_update";
 
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ClockMode } from "~/types/enums/clock_mode";
-import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 
-export const fetchFundMetadataAction = async (fundAddress: string): Promise<IFund> => {
+export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFund> => {
   const fundStore = useFundStore();
   const rethinkReaderContract = fundStore.rethinkReaderContract;
 
@@ -81,7 +80,7 @@ export const fetchFundMetadataAction = async (fundAddress: string): Promise<IFun
     const fund: IFund = {
       // Original fund settings
       originalFundSettings: parsedFundSettings,
-
+      totalNAVWei: 0n,
       chainName: fundStore.web3Store.chainName,
       chainShort: fundStore.web3Store.chainShort,
       address: parsedFundSettings.fundAddress || "",
@@ -109,14 +108,9 @@ export const fetchFundMetadataAction = async (fundAddress: string): Promise<IFun
         address: parsedFundSettings.governanceToken,
         decimals: Number(fundGovernanceTokenDecimals) ?? 18,
       } as IToken,
-      totalNAVWei: BigInt("0"),
       totalDepositBalance: totalDepositBal || BigInt("0"),
       governanceTokenTotalSupply: fundGovernanceTokenSupply,
       fundTokenTotalSupply: fundTokenSupply,
-      cumulativeReturnPercent: 0,
-      monthlyReturnPercent: undefined,
-      sharpeRatio: undefined,
-      positionTypeCounts: [] as IPositionTypeCount[],
 
       // My Fund Positions
       netDeposits: "",

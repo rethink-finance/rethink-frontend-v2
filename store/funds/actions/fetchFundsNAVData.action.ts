@@ -7,7 +7,7 @@ import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
 import type IPositionTypeCount from "~/types/position_type";
 
-export async function fetchAllNavMethodsAction(
+export async function fetchFundsNAVDataAction(
   fundsInfoArrays: any[],
   excludeNAVDetails: boolean,
 ): Promise<any> {
@@ -80,8 +80,8 @@ async function processFundNavData(
         count: Number(fundNavData.illiquidLen || 0),
       },
     ] as IPositionTypeCount[];
+    fund.totalNAVWei = fundNavData.totalNav || 0n;
   }
-  fund.totalNAVWei = fundNavData.totalNav || 0n;
   fundsStore.fundNAVUpdates[fundAddress] = [];
 
   if (!fundNavData.encodedNavUpdate?.length) return;

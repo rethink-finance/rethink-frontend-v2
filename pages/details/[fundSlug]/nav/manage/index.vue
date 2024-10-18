@@ -74,7 +74,7 @@ const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
 
 const isLoadingFetchFundNAVUpdatesAction = computed(() => {
-  return actionStateStore.isActionState("fetchFundNAVUpdatesAction", ActionState.Loading);
+  return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
 });
 
 const changesNumber = computed(() => {

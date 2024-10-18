@@ -107,7 +107,7 @@ const fundStore = useFundStore();
 const actionStateStore = useActionStateStore();
 
 const isLoadingFetchFundNAVUpdatesActionState =
-  computed(() => actionStateStore.isActionState("fetchFundNAVUpdatesAction", ActionState.Loading));
+  computed(() => actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading));
 
 const props = defineProps({
   fund: {
