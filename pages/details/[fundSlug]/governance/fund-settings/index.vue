@@ -420,8 +420,6 @@ const submit = async () => {
             toastStore.addToast(
               "The proposal transaction has been submitted. Please wait for it to be confirmed.",
             );
-
-            router.push(`/details/${selectedFundSlug.value}/governance`);
           })
           .on("receipt", (receipt: any) => {
             console.log("receipt: ", receipt);
@@ -429,7 +427,7 @@ const submit = async () => {
               toastStore.successToast(
                 "Register the proposal transactions was successful. " +
                   "You can now vote on the proposal in the governance page.",
-              );
+              );              
               router.push(`/details/${selectedFundSlug.value}/governance`);
             } else {
               toastStore.errorToast(
