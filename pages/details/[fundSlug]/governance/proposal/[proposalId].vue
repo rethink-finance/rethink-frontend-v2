@@ -175,6 +175,8 @@
 </template>
 
 <script setup lang="ts">
+import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
+
 import { formatPercent } from "~/composables/formatters";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
@@ -185,7 +187,6 @@ import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import type IProposalVoteSubmission from "~/types/vote_submission";
-import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -334,9 +335,9 @@ const fetchProposalVoteSubmissions = async () => {
 
         // sort new chunk of events by block number
         const sortedEventsVS = eventsVS.sort(
-          (a:any, b:any) => Number(a.blockNumber) - Number(b.blockNumber)
+          (a:any, b:any) => Number(a.blockNumber) - Number(b.blockNumber),
         ).filter((event:any) => {
-          // filter events by proposalId 
+          // filter events by proposalId
           return (
             Number(event?.returnValues?.proposalId) === Number(proposalId)
           );
@@ -347,12 +348,12 @@ const fetchProposalVoteSubmissions = async () => {
         // append new events to the existing list of proposalVoteSubmissions
         for (const event of sortedEventsVS) {
           const { voter, support, weight, reason } = event?.returnValues;
-          
+
           // fetch block details to get the timestamp
           const blockVoteCast = await fundStore.web3.eth.getBlock( event?.blockNumber);
           const voteTimestamp = blockVoteCast?.timestamp ? new Date(Number(blockVoteCast?.timestamp) * 1000) : null;
           const myVote = fundStore?.activeAccountAddress?.toLowerCase() === voter?.toLowerCase();
-                    
+
           const newVote = {
             proposalId,
             proposer: voter,
@@ -363,7 +364,7 @@ const fetchProposalVoteSubmissions = async () => {
                 weight,
                 fundStore?.fund?.governanceToken.decimals,
                 false,
-                true
+                true,
               ) + " " + fundStore.fund?.governanceToken.symbol,
             date: voteTimestamp ? formatDateToLocaleString(voteTimestamp, false) : "N/A",
           }
