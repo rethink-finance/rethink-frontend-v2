@@ -1,15 +1,12 @@
+import type IFundGovernanceData from "./fund_governance_data";
 
 
 export default interface IFundMetaData {
-  cumulativeReturn: bigint;
   startTime: bigint;
-  totalNav: bigint;
   totalDepositBal: bigint;
   feeBalance: bigint;
-  illiquidLen: bigint;
-  liquidLen: bigint;
-  nftLen: bigint;
-  composableLen: bigint;
+  feePerformancePeriod: bigint;
+  feeManagePeriod: bigint;
   fundTokenDecimals: bigint;
   fundBaseTokenDecimals: bigint;
   fundTokenSupply: bigint;
@@ -21,4 +18,6 @@ export default interface IFundMetaData {
   fundName: string;
   fundBaseTokenSymbol: string;
   fundGovernanceTokenSymbol: string;
+  fundGovernanceData: IFundGovernanceData;
+  fundSettings: any;
 }

@@ -1,6 +1,5 @@
 import { useFundsStore } from "../funds.store";
 
-import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 
@@ -18,25 +17,24 @@ export async function fetchFundsMetadataAction(
 
   const funds: IFund[] = [];
   try {
-    const dataNAVs: IFundMetaData[] = await fundsStore.callWithRetry(() =>
+    const fundsMetaData: IFundMetaData[] = await fundsStore.callWithRetry(() =>
       fundsStore.rethinkReaderContract.methods
         .getFundsMetaData(fundAddresses)
         .call(),
     );
 
     for (const [index, address] of fundAddresses.entries()) {
-      const dataNAV: IFundMetaData = dataNAVs[index];
+      const fundMetaData: IFundMetaData = fundsMetaData[index];
 
-      const totalDepositBalance = dataNAV.totalDepositBal || 0n;
-      const totalNAVWei = dataNAV.totalNav || 0n;
-      const baseTokenDecimals = Number(dataNAV.fundBaseTokenDecimals);
+      const totalDepositBalance = fundMetaData.totalDepositBal || 0n;
+      const baseTokenDecimals = Number(fundMetaData.fundBaseTokenDecimals);
 
-      const fundStartTime = dataNAV.startTime;
+      const fundStartTime = fundMetaData.startTime;
       const fund: IFund = {
         chainName: fundsStore.web3Store.chainName,
         chainShort: fundsStore.web3Store.chainShort,
         address,
-        title: dataNAV.fundName || "N/A",
+        title: fundMetaData.fundName || "N/A",
         description: "N/A",
         safeAddress: "",
         governorAddress: "",
@@ -52,34 +50,17 @@ export async function fetchFundsMetadataAction(
         fundTokenTotalSupply: BigInt("0"),
         baseToken: {
           address: "", // Not important here.
-          symbol: dataNAV.fundBaseTokenSymbol,
+          symbol: fundMetaData.fundBaseTokenSymbol,
           decimals: baseTokenDecimals,
         },
         governanceToken: {} as IToken, // Not important here, for now.
         governanceTokenTotalSupply: BigInt("0"),
-        totalNAVWei,
         totalDepositBalance,
-        cumulativeReturnPercent: Number(dataNAV.cumulativeReturn) / 100,
+        totalNAVWei: 0n,
+        cumulativeReturnPercent: undefined,
         monthlyReturnPercent: undefined,
         sharpeRatio: undefined,
-        positionTypeCounts: [
-          {
-            type: PositionTypesMap[PositionType.Liquid],
-            count: Number(dataNAV.liquidLen || 0),
-          },
-          {
-            type: PositionTypesMap[PositionType.Composable],
-            count: Number(dataNAV.composableLen || 0),
-          },
-          {
-            type: PositionTypesMap[PositionType.NFT],
-            count: Number(dataNAV.nftLen || 0),
-          },
-          {
-            type: PositionTypesMap[PositionType.Illiquid],
-            count: Number(dataNAV.illiquidLen || 0),
-          },
-        ] as IPositionTypeCount[],
+        positionTypeCounts: [] as IPositionTypeCount[],
 
         // My Fund Positions
         netDeposits: "",
@@ -123,7 +104,7 @@ export async function fetchFundsMetadataAction(
         isNavUpdatesLoading: true,
       };
 
-      const metaDataJson = dataNAV.fundMetadata;
+      const metaDataJson = fundMetaData.fundMetadata;
       // Process metadata if available
       if (metaDataJson) {
         const metaData = JSON.parse(metaDataJson);

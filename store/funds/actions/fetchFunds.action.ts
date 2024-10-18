@@ -4,8 +4,6 @@ import { useFundsStore } from "../funds.store";
 export async function fetchFundsAction(excludeTestFunds: boolean): Promise<any> {
   const fundsStore = await useFundsStore();
 
-  console.log("fetchFunds");
-  // Reset funds as we will populate them with new data.
   fundsStore.funds = [];
 
   const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays();

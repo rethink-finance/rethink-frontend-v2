@@ -8,6 +8,7 @@ export const fetchUserFundDataAction = async (
   const activeAccountAddress = fundStore.activeAccountAddress;
   if (!activeAccountAddress || !rethinkReaderContract) return;
 
+  console.log("debug", fundAddress, activeAccountAddress);
   const results = await Promise.allSettled(
     [
       () =>
@@ -40,9 +41,10 @@ export const fetchUserFundDataAction = async (
 
   fundStore.fundUserData.baseTokenBalance = BigInt(baseTokenBalance);
   fundStore.fundUserData.fundTokenBalance = BigInt(fundTokenBalance);
-  fundStore.fundUserData.governanceTokenBalance = BigInt(governanceTokenBalance);
+  fundStore.fundUserData.governanceTokenBalance = BigInt(
+    governanceTokenBalance,
+  );
   fundStore.fundUserData.fundAllowance = BigInt(fundAllowance);
   fundStore.fundUserData.fundShareValue = BigInt(fundShareValue);
   fundStore.fundUserData.fundDelegateAddress = fundDelegateAddress;
-
 };
