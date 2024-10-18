@@ -54,6 +54,7 @@ import {
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
+import { useRouter } from "vue-router";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import SafeMultiSendCallOnly from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
 import { useFundStore } from "~/store/fund.store";
@@ -65,6 +66,7 @@ import { useWeb3Store } from "~/store/web3.store";
 const emit = defineEmits(["updateBreadcrumbs"]);
 const loading = ref(false);
 
+const router = useRouter();
 const fundStore = useFundStore();
 const fundsStore = useFundsStore();
 const web3Store = useWeb3Store();
@@ -215,6 +217,7 @@ const submitProposal = async () => {
             "The proposal transactions was successful. " +
             "You can now vote on the proposal in the governance page.",
           );
+          router.push(`/details/${selectedFundSlug.value}/governance`);
         } else {
           toastStore.errorToast(
             "The proposal transaction has failed. Please contact the Rethink Finance support.",

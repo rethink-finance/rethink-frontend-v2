@@ -106,7 +106,16 @@
     </template>
 
     <!-- LOADER SKELETON -->
-    <template #[`body.append`]>
+    <!-- Conditionally render the loading skeleton at the beginning or end -->
+    <template v-if="loadingVariant === 'prepend'" #[`body.prepend`]>
+      <tr v-if="items.length && loading">
+        <td>1</td>
+        <td v-for="header in headers.length - 1" :key="header">
+          <v-skeleton-loader type="text" class="table_governance__skeleton_loader" />
+        </td>
+      </tr>
+    </template>
+    <template v-if="loadingVariant === 'append'" #[`body.append`]>
       <tr v-if="items.length && loading">
         <td>
           {{ items.length + 1 }}
@@ -130,9 +139,9 @@
 import { useAccountStore } from "~/store/account.store";
 import { useFundStore } from "~/store/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
+import { useWeb3Store } from "~/store/web3.store";
 import { ProposalState } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
-import { useWeb3Store } from "~/store/web3.store";
 
 const router = useRouter();
 const web3Store = useWeb3Store();
@@ -157,6 +166,10 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false,
+  },
+  loadingVariant: {
+    type: String,
+    default: "append", // append, prepend
   },
 });
 
