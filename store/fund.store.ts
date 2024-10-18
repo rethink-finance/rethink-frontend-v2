@@ -607,7 +607,7 @@ export const useFundStore = defineStore({
         const quorumVotes: bigint = governanceTokenTotalSupply as bigint * quorumNumerator as bigint / quorumDenominator as bigint;
         const votingUnit = clockMode.mode === ClockMode.BlockNumber ? "block" : "second";
         
-          const fund: IFund = {
+        const fund: IFund = {
           // Original fund settings
           originalFundSettings: fundSettings,
 
