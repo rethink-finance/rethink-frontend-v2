@@ -51,7 +51,7 @@ export async function fetchFundsNAVDataAction(
 }
 
 async function processFundNavData(
-  fundNavData: any, // the type of FundNavData
+  fundNAVData: any, // the type of FundNavData
   fundAddress: string,
   fundIndex: number,
   fundsStore: any,
@@ -65,43 +65,51 @@ async function processFundNavData(
     fund.positionTypeCounts = [
       {
         type: PositionTypesMap[PositionType.Liquid],
-        count: Number(fundNavData.liquidLen || 0),
+        count: Number(fundNAVData.liquidLen || 0),
       },
       {
         type: PositionTypesMap[PositionType.Composable],
-        count: Number(fundNavData.composableLen || 0),
+        count: Number(fundNAVData.composableLen || 0),
       },
       {
         type: PositionTypesMap[PositionType.NFT],
-        count: Number(fundNavData.nftLen || 0),
+        count: Number(fundNAVData.nftLen || 0),
       },
       {
         type: PositionTypesMap[PositionType.Illiquid],
-        count: Number(fundNavData.illiquidLen || 0),
+        count: Number(fundNAVData.illiquidLen || 0),
       },
     ] as IPositionTypeCount[];
-    fund.totalNAVWei = fundNavData.totalNav || 0n;
   }
   fundsStore.fundNAVUpdates[fundAddress] = [];
 
-  if (!fundNavData.encodedNavUpdate?.length) return;
+  if (!fundNAVData.encodedNavUpdate?.length) return;
 
   const fundContract = new fundsStore.web3.eth.Contract(
     GovernableFund.abi,
     fundAddress,
   );
 
-  fundsStore.fundNAVUpdates[fundAddress] =
+  const navUpdates =
     await fundsStore.fundStore.parseFundNAVUpdates(
-      fundNavData,
+      fundNAVData,
       fundAddress,
       fundContract,
     );
 
+  fundsStore.fundNAVUpdates[fundAddress] = navUpdates;
+
+  if(fund){
+    fund.totalNAVWei = navUpdates.length
+      ? fundNAVData.totalNav || 0n
+      : fund.totalDepositBalance || 0n;
+  }
+
+
   for (const [
     navUpdateIndex,
     encodedNavUpdate,
-  ] of fundNavData.encodedNavUpdate.entries()) {
+  ] of fundNAVData.encodedNavUpdate.entries()) {
     try {
       // Decode NAV update methods data.
       const navMethods: Record<string, any>[] =

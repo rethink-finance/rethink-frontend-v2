@@ -19,6 +19,7 @@ import { fetchUserFundShareValueAction } from "./actions/fetchUserFundShareValue
 import { fetchUserFundTokenBalanceAction } from "./actions/fetchUserFundTokenBalance.action";
 import { fetchUserFundTransactionRequestAction } from "./actions/fetchUserFundTransactionRequest.action";
 import { fetchUserGovernanceTokenBalanceAction } from "./actions/fetchUserGovernanceTokenBalance.action";
+import { parseFundNAVUpdatesAction } from "./actions/parseFundNAVUpdates.action";
 import { postUpdateNAVAction } from "./actions/postUpdateNav.action";
 
 import addressesJson from "~/assets/contracts/addresses.json";
@@ -42,7 +43,6 @@ import {
 } from "~/types/enums/fund_transaction_type";
 import {
   NAVEntryTypeToPositionTypeMap,
-  PositionType,
   PositionTypes,
   PositionTypeToNAVCacheMethod,
 } from "~/types/enums/position_type";
@@ -737,96 +737,9 @@ export const useFundStore = defineStore({
       fundAddress: string,
       fundContract: any,
     ): Promise<INAVUpdate[]> {
-      const navUpdates = [] as INAVUpdate[];
-      // Get number of NAV updates for each NAV type (liquid, illiquid, nft, composable), they should all
-      // have the same length, so we just use the liquid key.
-      const navUpdatesLen = fundNAVData[PositionType.Liquid].length;
-      console.warn("navUpdatesLen ", navUpdatesLen);
-
-      const fundNavUpdateTimes = fundNAVData.updateTimes;
-      console.warn("dataNAV ", fundNAVData);
-
-      // Get a list of NAV parts (total NAV, fees, OIV balance, safe balance) for each NAV update.
-      const navParts = await this.fetchNavParts(navUpdatesLen, fundAddress);
-
-      for (let i = 0; i < navUpdatesLen; i++) {
-        const navTimestamp = Number(fundNavUpdateTimes[i] * 1000n);
-        navUpdates.push({
-          // NAV update indices start from 1, not from 0.
-          index: i + 1,
-          // If the datetime of the NAV update is available format it, otherwise just use the index (e.g. #2).
-          date: fundNavUpdateTimes[i]
-            ? formatDate(new Date(navTimestamp))
-            : `#${(i + 1).toString()}}`,
-          timestamp: navTimestamp,
-          navParts: navParts[i],
-          totalNAV: navParts[i]?.totalNAV,
-          entries: [],
-        });
-      }
-
-      // Fetch NAV JSON entries for each NAV update.
-      const promises: Promise<any>[] = Array.from(
-        { length: navUpdatesLen },
-        (_, index) =>
-          this.accountStore.requestConcurrencyLimit(() =>
-            this.callWithRetry(() =>
-              fundContract.methods.getNavEntry(index + 1).call(),
-            ),
-          ),
-      );
-
-      // Each NAV update has more entries.
-      // Parse and store them to the NAV update entries.
-      const navUpdatePromises = await Promise.allSettled(promises);
-
-      // Process results
-      navUpdatePromises.forEach((navUpdateResult, navUpdateIndex) => {
-        if (navUpdateResult.status === "fulfilled") {
-          const navMethods: Record<string, any>[] = navUpdateResult.value;
-          // console.log("navMethods: ", navMethods);
-
-          for (const [navMethodIndex, navMethod] of navMethods.entries()) {
-            navUpdates[navUpdateIndex].entries.push(
-              this.parseNAVMethod(navMethodIndex, navMethod),
-            );
-          }
-        } else {
-          console.error(
-            `Failed to fetch NAV entry ${navUpdateIndex + 1}:`,
-            navUpdateResult.reason,
-          );
-        }
+      return await useActionState("parseFundNAVUpdatesAction", async () => {
+        return await parseFundNAVUpdatesAction(fundNAVData, fundAddress, fundContract);
       });
-
-      // console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
-      // TODO use this code when reader contract is fixed
-      // Fetch NAV JSON entries for each NAV update.
-      // const navUpdates: Record<string, any>[][] = dataNAV.encodedNavUpdate.map(decodeNavUpdateEntry);
-      //
-      // // Process results
-      // for (const [navUpdateIndex, navMethods] of navUpdates.entries()) {
-      //   // TODO remove this if when reader contract is fixed.
-      //   if (!navMethods.length) continue
-      //   for (const [navMethodIndex, navMethod] of navMethods.entries()) {
-      //     const parsedNavMethod = this.parseNAVMethod(navMethodIndex, navMethod);
-      //     // TODO this is not ok
-      //     // parsedNavMethod.pastNavValue = dataNAV[parsedNavMethod.positionType][navUpdateIndex]
-      //     navUpdates[navUpdateIndex].entries.push(parsedNavMethod)
-      //   }
-      // }
-      console.warn("navUpdates: ", navUpdates, navUpdatesLen);
-      const lastNavUpdateNavMethods =
-        navUpdates[navUpdates.length - 1]?.entries ?? [];
-      console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
-      lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
-        this.updateNavMethodPastNavValue(
-          navMethodIndex,
-          navMethod,
-          fundAddress,
-        );
-      });
-      return navUpdates;
     },
     async fetchUserBaseTokenBalance() {
       return await useActionState(

@@ -13,16 +13,19 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
         .call(),
     );
 
-    fundStore.fund.totalNAVWei = fundNAVData.totalNav || 0n;
 
     fundStore.fund.positionTypeCounts =
       fundStore.parseFundPositionTypeCounts(fundNAVData);
 
-    fundStore.fund.navUpdates = await fundStore.parseFundNAVUpdates(
+    const navUpdates = await fundStore.parseFundNAVUpdates(
       fundNAVData,
       fundStore.fund.address,
       fundStore.fundContract,
     );
+    fundStore.fund.totalNAVWei = navUpdates.length
+      ? fundNAVData.totalNav || 0n
+      : fundStore.fund.totalDepositBalance || 0n;
+    fundStore.fund.navUpdates = navUpdates;
 
   } catch (error) {
     console.error(
