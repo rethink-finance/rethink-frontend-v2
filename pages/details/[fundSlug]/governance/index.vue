@@ -40,6 +40,7 @@
       <FundGovernanceProposalsTable
         :items="governanceProposals"
         :loading="loadingProposals"
+        :loading-variant="loadingProposalsVariant"
       />
     </UiMainCard>
 
@@ -122,6 +123,7 @@
         v-if="updateSettingsProposals.length > 1"
         :items="updateSettingsProposals"
         :loading="loadingProposals"
+        :loading-variant="loadingProposalsVariant"
         style="margin-top: 2rem"
       />
     </UiConfirmDialog>
@@ -140,7 +142,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import { ProposalState } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
-import type ITrendingDelegates from "~/types/trending_delegates";
+import type ITrendingDelegate from "~/types/trending_delegate";
 const router = useRouter();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
@@ -217,7 +219,7 @@ const shouldFetchProposals = ref(false);
 const shouldFetchTrendingDelegates = ref(true);
 
 // trending delegates
-const trendingDelegates = ref<ITrendingDelegates[]>([]);
+const trendingDelegates = ref<ITrendingDelegate[]>([]);
 
 const totalVotingPower = computed(() => {
   return fundStore?.fund?.fundTokenTotalSupply || 0;
@@ -240,13 +242,15 @@ const fetchTrendingDelegates = async () => {
     const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
     console.log("currentBlock trending delegates:", currentBlock);
 
-    // let fromBlock = BigInt(21094239);
     let fromBlock = BigInt(currentBlock);
     const endBlock = BigInt(0);
     let chunkSize = 1000n;
     const minChunkSize = 1000n;
     let waitTimeAfterError = 100;
-    let trendingDelegatesEvents: any[] = [];
+
+    // store the latest parsed delegator addresses
+    const processedDelegators: Set<string> = new Set();
+    const symbol = fundStore.fund?.governanceToken.symbol ?? "";
 
     while (fromBlock > endBlock && shouldFetchTrendingDelegates.value) {
       let toBlock = fromBlock - chunkSize + 1n;
@@ -264,17 +268,24 @@ const fetchTrendingDelegates = async () => {
           {
             fromBlock: Number(toBlock),
             toBlock: Number(fromBlock),
-          },
+          }
         );
 
-        trendingDelegatesEvents = trendingDelegatesEvents
-          .concat(eventsDC)
-
-        trendingDelegates.value = await parseTrendingDelegateEvents(
-          trendingDelegatesEvents,
+        // process only the new chunk of events
+        const newTrendingDelegates = await parseNewChunkDelegateEvents(
+          eventsDC, // new events chunk
+          processedDelegators // already processed delegators
         );
 
-        console.log("Fetched DelegateChanged events: ", trendingDelegatesEvents);
+        // we need to sort the trending delegates by voting power
+        trendingDelegates.value = trendingDelegates.value.concat(newTrendingDelegates).sort((a, b) => {
+          const votingPowerA = Number(a.votingPower.replace(symbol, ""));
+          const votingPowerB = Number(b.votingPower.replace(symbol, ""));
+
+          return votingPowerB - votingPowerA;
+        });
+
+        console.log("Fetched DelegateChanged events: ", newTrendingDelegates);
 
 
         // double the chunk size for the next iteration
@@ -312,32 +323,39 @@ const fetchTrendingDelegates = async () => {
   }
 };
 
-const parseTrendingDelegateEvents = async (eventsDelegateChanged: any[]) => {
+// // process and parse only the new chunk of events
+// // we want to show only the most recent events, so if the delegator already exists in the trending delegates list we skip it
+const parseNewChunkDelegateEvents = async (
+  newChunkEvents: any[],
+  processedDelegators: Set<string>
+) => {
   try {
     const delegationsMap: Record<
       string,
       { delegator: Set<string>; event: Set<any> }
     > = {};
 
-    // events has to be sorted by blockNumber because we want to show the most recent delegation
-    const sortedEvents = eventsDelegateChanged.sort(
-      (a, b) => Number(b.blockNumber) - Number(a.blockNumber),
+    // sort new events by blockNumber so we handle the most recent first
+    const sortedEvents = newChunkEvents.sort(
+      (a, b) => Number(b.blockNumber) - Number(a.blockNumber)
     );
 
     sortedEvents.forEach((event) => {
-      // we need to ignore the DelegateChanged events where the delegator is the same as fund address
-      // because those comes from our try to automatically self delegate in the BE
-      if (event.returnValues.delegator.toLowerCase() === fundStore.fund?.address.toLowerCase()) {
+      const delegator = event.returnValues.delegator.toLowerCase();
+      const delegatedMember = event.returnValues.toDelegate.toLowerCase();
+
+      // 1. we need to ignore the DelegateChanged events where the delegator is the same as fund address
+      //    because those come from our try to automatically self delegate in the BE
+      // 2. skip already processed delegators as well
+      if (
+        delegator === fundStore.fund?.address.toLowerCase() ||
+        processedDelegators.has(delegator)
+      ) {
         return;
       }
 
-      const delegator = event.returnValues.delegator; // the one who delegates
-      const delegatedMember = event.returnValues.toDelegate; // the member being delegated
-
-      // only add delegator if it's not already in the set or if its not already in any other set
-      const shouldAddDelegator = Object.values(delegationsMap).every(
-        (delegatorsSet) => !delegatorsSet.delegator.has(delegator),
-      );
+      // add the delegator to the processed list to avoid reprocessing
+      processedDelegators.add(delegator);
 
       // if the member is not yet in the map, add them
       if (!delegationsMap[delegatedMember]) {
@@ -347,15 +365,13 @@ const parseTrendingDelegateEvents = async (eventsDelegateChanged: any[]) => {
         };
       }
 
-      if (shouldAddDelegator) {
-        delegationsMap[delegatedMember].delegator.add(delegator);
-        delegationsMap[delegatedMember].event.add(event);
-      }
+      delegationsMap[delegatedMember].delegator.add(delegator);
+      delegationsMap[delegatedMember].event.add(event);
     });
 
-    // prepare the trending delegates
-    const delegates: ITrendingDelegates[] = [];
-    const symbol = fundStore.fund?.governanceToken.symbol ?? ""
+    // process and parse the new chunk of events
+    const newDelegates: ITrendingDelegate[] = [];
+    const symbol = fundStore.fund?.governanceToken.symbol ?? "";
 
     await Promise.all(
       Object.entries(delegationsMap).map(
@@ -363,36 +379,40 @@ const parseTrendingDelegateEvents = async (eventsDelegateChanged: any[]) => {
           const { votingPower, impact } =
             await getVotingPowerAndImpact(delegatedMember);
 
-          const output = {
-            delegatedMember: delegatedMember,
-            delegators: Array.from(delegatorsSet.delegator),
-            delegatorsEvents: Array.from(delegatorsSet.event),
-            impact: impact ?? "0%",
-            votingPower:
-              votingPower ?? "0 " + symbol,
-          } as ITrendingDelegates;
+          // check if the delegate already exists in trendingDelegates.value
+          const existingDelegate = trendingDelegates.value.find(
+            (delegate) => delegate.delegatedMember === delegatedMember
+          );
 
-          if (delegatorsSet.delegator.size >= 1) {
-            delegates.push(output);
+          if (existingDelegate) {
+            // if the delegate exists, merge new delegators and events
+            existingDelegate.delegators = [
+              ...new Set([...existingDelegate.delegators, ...Array.from(delegatorsSet.delegator)]),
+            ];
+            existingDelegate.delegatorsEvents = [
+              ...new Set([...existingDelegate.delegatorsEvents, ...Array.from(delegatorsSet.event)]),
+            ];
+          } else {
+            // otherwise, create a new delegate entry
+            const output = {
+              delegatedMember: delegatedMember,
+              delegators: Array.from(delegatorsSet.delegator),
+              delegatorsEvents: Array.from(delegatorsSet.event),
+              impact: impact ?? "0%",
+              votingPower: votingPower ?? "0 " + symbol,
+            } as ITrendingDelegate;
+
+            if (delegatorsSet.delegator.size >= 1) {
+              newDelegates.push(output);
+            }
           }
-        },
-      ),
+        }
+      )
     );
 
-    console.log("delegationsMap: ", delegationsMap);
-    console.log("trendingDelegates: ", trendingDelegates);
-
-    // sort by voting power
-    const sortedDelegates = delegates.sort(
-      (a, b) => {
-        const votingPowerA = Number(a.votingPower.replace(symbol, ""));
-        const votingPowerB = Number(b.votingPower.replace(symbol, ""));
-
-        return votingPowerB - votingPowerA;
-      }
-    );
-
-    return sortedDelegates as ITrendingDelegates[];
+    // return the new trending delegates
+    return newDelegates;
+    
   } catch (error: any) {
     console.error("Error parsing trending delegates: ", error);
     return [];
@@ -428,13 +448,13 @@ async function getVotingPowerAndImpact(delegatedAddress: string) {
   }
 }
 
-const handleRowClick = (item: ITrendingDelegates) => {
+const handleRowClick = (item: ITrendingDelegate) => {
   activeRow.value = item;
   openDelegatorsDialog();
 };
 
 const delegatorsDialog = ref(false);
-const activeRow = ref<ITrendingDelegates | null>(null);
+const activeRow = ref<ITrendingDelegate | null>(null);
 const openDelegatorsDialog = () => {
   delegatorsDialog.value = true;
 };
@@ -518,6 +538,7 @@ const selectOption = (option: string) => {
 
 const fund = useAttrs().fund as IFund;
 const loadingProposals = ref(false);
+const loadingProposalsVariant = ref("append" as "append" | "prepend");
 
 // delegate dialog
 const isDelegateDialogOpen = ref(false);
@@ -530,6 +551,8 @@ const openDelegateDialog = () => {
 const fetchProposals = async (
   rangeStartBlock: number,
   rangeEndBlock: number,
+  // show loading skeleton at the top or bottom of the table
+  loadingVariant = "append" as "append" | "prepend",
 ) => {
   if (!fundStore.fund?.governanceToken.decimals) {
     console.error("No fund governance token decimals found.");
@@ -542,6 +565,7 @@ const fetchProposals = async (
     return;
   }
   loadingProposals.value = true;
+  loadingProposalsVariant.value = loadingVariant;
 
   // It looks like the block fetching range is arbitrary, specific to RPC, so we should try and guess it and
   // increase exponentially until they block us, and then we decrease it.
@@ -784,12 +808,12 @@ onBeforeUnmount(() => {
 const startFetchingFundProposals = async () => {
   console.warn("STAAAART governance proposal events for fund: ", fund.address);
 
-  if (shouldFetchProposals.value) {
-    console.log("stop fetching");
-    shouldFetchProposals.value = false;
-    loadingProposals.value = false;
-    return;
-  }
+  // if (shouldFetchProposals.value) {
+  //   console.log("stop fetching");
+  //   shouldFetchProposals.value = false;
+  //   loadingProposals.value = false;
+  //   return;
+  // }
   console.log("\n\n__________");
   console.log("fetch governance proposal events for fund: ", fund.address);
   shouldFetchProposals.value = true;
@@ -827,13 +851,15 @@ const startFetchingFundProposals = async () => {
   ) {
     console.log(
       "fetch from last fetched block to current block",
-      currentBlock - 1,
+      currentBlock,
       mostRecentFetchedBlock,
     );
     // From smallest to biggest.
     // But only if current block is bigger than most recent already fetched block.
-    if (currentBlock - 1 > mostRecentFetchedBlock) {
-      await fetchProposals(mostRecentFetchedBlock + 1, currentBlock - 1);
+    if (currentBlock > mostRecentFetchedBlock) {
+      // show loading skeleton at the top of the table (prepend)
+      // when fetching proposals from the most recent fetched block to the current block 
+      await fetchProposals(mostRecentFetchedBlock + 1, currentBlock, "prepend");
     }
 
     // fetch from the already fetched the oldest block number to hardcoded limit oldest date.

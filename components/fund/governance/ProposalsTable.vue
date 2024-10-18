@@ -106,7 +106,16 @@
     </template>
 
     <!-- LOADER SKELETON -->
-    <template #[`body.append`]>
+    <!-- Conditionally render the loading skeleton at the beginning or end -->
+    <template v-if="loadingVariant === 'prepend'" #[`body.prepend`]>
+      <tr v-if="items.length && loading">
+        <td>1</td>
+        <td v-for="header in headers.length - 1" :key="header">
+          <v-skeleton-loader type="text" class="table_governance__skeleton_loader" />
+        </td>
+      </tr>
+    </template>
+    <template v-if="loadingVariant === 'append'" #[`body.append`]>
       <tr v-if="items.length && loading">
         <td>
           {{ items.length + 1 }}
@@ -157,6 +166,10 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false,
+  },
+  loadingVariant: {
+    type: String,
+    default: "append", // append, prepend
   },
 });
 

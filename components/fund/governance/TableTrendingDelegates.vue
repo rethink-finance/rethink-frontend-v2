@@ -49,20 +49,20 @@
     </template>
   </v-data-table>
   <div v-else-if="items.length === 0 && !loading" class="nav_entries__no_data">
-    No Governance Activity details available.
+    No trending delegates found
   </div>
 </template>
 
 <script lang="ts">
 import { truncateAddress } from "~/composables/addressUtils";
 import { pluralizeWord } from "~/composables/utils";
-import type ITrendingDelegates from "~/types/trending_delegates";
+import type ITrendingDelegate from "~/types/trending_delegate";
 
 export default defineComponent({
   name: "TableTrengingDelegates",
   props: {
     items: {
-      type: Array as () => ITrendingDelegates[],
+      type: Array as () => ITrendingDelegate[],
       default: () => [],
     },
     loading: {
@@ -105,7 +105,7 @@ export default defineComponent({
     copyText(text: string) {
       navigator.clipboard.writeText(text);
     },
-    handleRowClick(item: ITrendingDelegates) {
+    handleRowClick(item: ITrendingDelegate) {
       this.$emit("row-click", item);
     },
   },

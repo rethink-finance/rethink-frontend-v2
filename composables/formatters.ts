@@ -51,19 +51,24 @@ export const formatDateLong = (date: Date) => {
  * @returns {string} The formatted date string in the format "Day Mon dd, yyyy, hh:mm am/pm"
  *                   or according to the provided locale's default format.
  */
-export const formatDateToLocaleString = (date: Date) => {
+export const formatDateToLocaleString = (date: Date, includeWeekday = true) => {
   if (!date) return "";
 
   // TODO: we can add a locale parameter to this function to allow for custom locale formatting.
-  return date.toLocaleString("en-US", {
-    weekday: "short",   // e.g., "Mon"
+  const options: Intl.DateTimeFormatOptions = {
     year: "numeric",    // e.g., "2023"
     month: "short",     // e.g., "Jan"
     day: "numeric",     // e.g., "5"
     hour: "numeric",    // e.g., "5 PM"
     minute: "2-digit",  // e.g., "05"
     hour12: false,        // 12-hour clock, "AM/PM"
-  });
+  };
+
+  if (includeWeekday) {
+    options.weekday = "short"; // e.g., "Mon"
+  }
+
+  return date.toLocaleString("en-US", options);
 }
 
 /**

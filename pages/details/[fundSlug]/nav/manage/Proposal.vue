@@ -174,9 +174,10 @@
 
 <script setup lang="ts">
 
-import type { AbiFunctionFragment } from "web3";
 
 import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
+import { useRouter } from "vue-router";
+import type { AbiFunctionFragment } from "web3";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { NAVExecutor } from "~/assets/contracts/NAVExecutor";
 import { useAccountStore } from "~/store/account/account.store";
@@ -186,6 +187,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import { PositionType } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+const router = useRouter();
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
@@ -595,6 +597,7 @@ const createProposal = async () => {
             "Register the proposal transactions was successful. " +
             "You can now vote on the proposal in the governance page.",
           );
+          router.push(`/details/${selectedFundSlug.value}/governance`);
         } else {
           toastStore.errorToast(
             "The register proposal transaction has failed. Please contact the Rethink Finance support.",

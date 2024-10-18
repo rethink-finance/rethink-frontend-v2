@@ -2,6 +2,9 @@
   <div v-if="proposal?.proposalId" class="proposal-detail">
     <FundGovernanceProposalSectionTop
       :proposal="proposal"
+      :active-user-vote-submission="activeUserVoteSubmission"
+      :loading-proposal-vote-submissions="loadingProposalVoteSubmissions"
+      @vote-success="handleVoteSuccess"
     />
 
     <div class="section-bottom">
@@ -17,7 +20,7 @@
             value="voteSubmissions"
             class="section-bottom__tab"
           >
-            Votes Submissions
+            Vote Submissions
           </v-tab>
         </v-tabs>
 
@@ -112,9 +115,9 @@
           </template>
 
           <template v-else-if="selectedTab === 'voteSubmissions'">
-            <FundGovernanceTableProposalsVotesSubmissions
-              :items="proposalsVotesSubmissions"
-              :loading="false"
+            <FundGovernanceTableProposalVoteSubmissions
+              :items="proposalVoteSubmissions"
+              :loading="loadingProposalVoteSubmissions"
             />
           </template>
         </v-card-text>
@@ -173,15 +176,16 @@
 
 <script setup lang="ts">
 import { formatPercent } from "~/composables/formatters";
-import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
-// fund store
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { VoteTypeMapping } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
+import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import type IProposalVoteSubmission from "~/types/vote_submission";
+import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -217,30 +221,14 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-const proposalsVotesSubmissions: Partial<IGovernanceProposal>[] = [
-  {
-    proposalId: "75jfh475hqc",
-    proposer: "0x1f98dgfgF984",
-    // submission_status: "Abstained", // TODO fix
-    quorumVotes: BigInt(2500000),
-  },
-  {
-    proposalId: "75jfh475hqc",
-    proposer: "0x1f98dgfgF984",
-    // submission_status: "Abstained", // TODO fix
-    quorumVotes: BigInt(150000),
-  },
-  {
-    proposalId: "75jfh475hqc",
-    proposer: "0x1f98dgfgF984",
-    // submission_status: "Abstained", // TODO fix
-    quorumVotes: BigInt(800000),
-  },
-];
 
 const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
 const proposalFetched = ref(false);
+const loadingProposalVoteSubmissions = ref(false);
+const shouldFetchProposalVoteSubmissions = ref(true);
+const proposalVoteSubmissions = ref <IProposalVoteSubmission[]> ([]);
+const activeUserVoteSubmission = ref<IProposalVoteSubmission>();
 
 const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
@@ -315,7 +303,125 @@ const formatCalldata = (calldata: any) => {
   }
 }
 
+const fetchProposalVoteSubmissions = async () => {
+  loadingProposalVoteSubmissions.value = true;
+  try {
+    const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
+    const proposalBlock = proposal.value?.createdBlockNumber ?? 0;
+    const proposalId = proposal.value?.proposalId ?? "";
+
+    let fromBlock = BigInt(currentBlock);
+    const endBlock = BigInt(proposalBlock);
+    let chunkSize = 1000n;
+    const minChunkSize = 1000n;
+    let waitTimeAfterError = 1000;
+
+    while (fromBlock > endBlock && shouldFetchProposalVoteSubmissions.value) {
+      let toBlock = fromBlock - chunkSize + 1n;
+
+      if (toBlock < endBlock) {
+        toBlock = endBlock;
+      }
+
+      console.log("VS - chunkSize: ", chunkSize);
+      console.log("VS - Fetching events from: ", fromBlock, " to: ", toBlock);
+
+      try {
+        const eventsVS = await fundStore.fundGovernorContract.getPastEvents("VoteCast", {
+          fromBlock: Number(toBlock),
+          toBlock: Number(fromBlock),
+        });
+
+        // sort new chunk of events by block number
+        const sortedEventsVS = eventsVS.sort(
+          (a:any, b:any) => Number(a.blockNumber) - Number(b.blockNumber)
+        ).filter((event:any) => {
+          // filter events by proposalId 
+          return (
+            Number(event?.returnValues?.proposalId) === Number(proposalId)
+          );
+        });
+
+        console.log("VS - eventsVS: ", eventsVS);
+
+        // append new events to the existing list of proposalVoteSubmissions
+        for (const event of sortedEventsVS) {
+          const { voter, support, weight, reason } = event?.returnValues;
+          
+          // fetch block details to get the timestamp
+          const blockVoteCast = await fundStore.web3.eth.getBlock( event?.blockNumber);
+          const voteTimestamp = blockVoteCast?.timestamp ? new Date(Number(blockVoteCast?.timestamp) * 1000) : null;
+          const myVote = fundStore?.activeAccountAddress?.toLowerCase() === voter?.toLowerCase();
+                    
+          const newVote = {
+            proposalId,
+            proposer: voter,
+            my_vote: myVote,
+            submission_status: VoteTypeMapping[Number(support) as keyof typeof VoteTypeMapping],
+            quorumVotes:
+              formatTokenValue(
+                weight,
+                fundStore?.fund?.governanceToken.decimals,
+                false,
+                true
+              ) + " " + fundStore.fund?.governanceToken.symbol,
+            date: voteTimestamp ? formatDateToLocaleString(voteTimestamp, false) : "N/A",
+          }
+
+          // append new submission to proposalVoteSubmissions
+          proposalVoteSubmissions.value.push(newVote);
+
+          if (myVote) {
+            activeUserVoteSubmission.value = newVote;
+          }
+        }
+
+        console.log("VS - proposalVoteSubmissions: ", proposalVoteSubmissions.value);
+
+        // double the chunk size
+        chunkSize *= 2n;
+        console.log("VS - chunkSize doubled: ", chunkSize);
+        waitTimeAfterError = Math.max(100, waitTimeAfterError / 2);
+
+        fromBlock = toBlock - 1n; // prepare for next block chunk
+
+        await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
+      } catch (error) {
+        console.error("Error fetching proposals votes submissions", error);
+
+        // if fetching fails, reduce the chunk size
+        chunkSize /= 2n;
+        if (chunkSize < minChunkSize) {
+          chunkSize = minChunkSize;
+        }
+
+        console.log("VS - chunkSize reduced: ", chunkSize);
+        waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
+
+        await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
+      }
+    }
+
+    loadingProposalVoteSubmissions.value = false;
+    console.log("All VoteCast events fetched");
+  } catch (e: any) {
+    console.error("Error fetching proposals votes submissions", e);
+    loadingProposalVoteSubmissions.value = false;
+  }
+};
+
+// when the user vote, refetch the votes submissions
+const handleVoteSuccess = async () => {
+  shouldFetchProposalVoteSubmissions.value = true;
+  loadingProposalVoteSubmissions.value = true;
+  // await 2000ms before fetching
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+
+  fetchProposalVoteSubmissions();
+}
+
 onMounted(async () => {
+  fetchProposalVoteSubmissions();
   emit("updateBreadcrumbs", breadcrumbItems);
 
   // fetch block proposals based on createdBlockNumber
@@ -337,6 +443,7 @@ onMounted(async () => {
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
+  shouldFetchProposalVoteSubmissions.value = false;
 });
 </script>
 
