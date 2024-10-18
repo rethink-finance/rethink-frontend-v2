@@ -44,10 +44,8 @@ import {
 import {
   NAVEntryTypeToPositionTypeMap,
   PositionTypes,
-  PositionTypeToNAVCacheMethod,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
-import type { INAVParts } from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IFundUserData from "~/types/fund_user_data";
@@ -638,46 +636,6 @@ export const useFundStore = defineStore({
         detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
       } as INAVMethod;
     },
-    async fetchNavParts(
-      navUpdatesLen: number,
-      fundAddress: string,
-    ): Promise<(INAVParts | undefined)[]> {
-      // Important to know: nav update indices start with 1, not with 0.
-      const promises: Promise<any>[] = Array.from(
-        { length: navUpdatesLen },
-        (_, index) =>
-          this.accountStore.requestConcurrencyLimit(() =>
-            this.callWithRetry(() =>
-              this.navCalculatorContract.methods
-                .getNAVParts(fundAddress, index + 1)
-                .call(),
-            ),
-          ),
-      );
-
-      const navPartsPromises = await Promise.allSettled(promises);
-      const parsedNavParts: (INAVParts | undefined)[] = [];
-      navPartsPromises.forEach((navPartsResult, index) => {
-        if (navPartsResult.status === "fulfilled") {
-          const navParts: Record<string, any> = navPartsResult.value;
-          parsedNavParts.push({
-            baseAssetOIVBal: navParts.baseAssetOIVBal,
-            baseAssetSafeBal: navParts.baseAssetSafeBal,
-            feeBal: navParts.feeBal,
-            totalNAV: navParts.totalNAV,
-          } as INAVParts);
-        } else {
-          parsedNavParts.push(undefined);
-          console.error(
-            `Failed to fetch NAV parts ${index}:`,
-            navPartsResult.reason,
-          );
-        }
-      });
-      console.log("NAV parts", parsedNavParts);
-
-      return parsedNavParts;
-    },
     async simulateCurrentNAV(): Promise<void> {
       return await useActionState(
         "fetchSimulateCurrentNAVAction",
@@ -694,50 +652,11 @@ export const useFundStore = defineStore({
         },
       );
     },
-    async updateNavMethodPastNavValue(
-      navMethodIndex: number,
-      navMethod: INAVMethod,
-      fundAddress: string,
-    ) {
-      // NOTE: Important to know, that this currently only works for the methods of the last NAV update.
-      // Fetch NAV method cached past value.
-      const calculatorMethod =
-        PositionTypeToNAVCacheMethod[navMethod.positionType];
-
-      navMethod.pastNavValue = undefined;
-      navMethod.pastNavValueFormatted = undefined;
-      navMethod.pastNavValueLoading = true;
-      navMethod.pastNavValueError = false;
-      try {
-        const navCacheResult = await this.callWithRetry(() =>
-          this.navCalculatorContract.methods[calculatorMethod](
-            fundAddress,
-            navMethodIndex,
-          ).call(),
-        );
-        const pastNavValue = navCacheResult.reduce(
-          (acc: bigint, val: bigint) => acc + val,
-          0n,
-        );
-        navMethod.pastNavValue = pastNavValue;
-        navMethod.pastNavValueFormatted =
-          this.getFormattedBaseTokenValue(pastNavValue);
-      } catch (error) {
-        navMethod.pastNavValueError = true;
-        console.error(
-          `Failed to fetch NAV method last NAV value ${navMethodIndex}:`,
-          navMethod,
-          error,
-        );
-      }
-      navMethod.pastNavValueLoading = false;
-    },
     async parseFundNAVUpdates(
       fundNAVData: any,
-      fundAddress: string,
     ): Promise<INAVUpdate[]> {
       return await useActionState("parseFundNAVUpdatesAction", async () => {
-        return await parseFundNAVUpdatesAction(fundNAVData, fundAddress);
+        return await parseFundNAVUpdatesAction(fundNAVData);
       });
     },
     async fetchUserBaseTokenBalance() {

@@ -5,21 +5,17 @@ import {
   decodeNavUpdateEntry,
 } from "~/composables/nav/navDecoder";
 
-import type { INAVParts } from "~/types/fund";
 
 import type IFundNavData from "~/types/fund_nav_data";
+import type INAVParts from "~/types/nav_parts";
 import type INAVUpdate from "~/types/nav_update";
 
 export const parseFundNAVUpdatesAction = async (
   fundNAVData: IFundNavData,
-  fundAddress: string,
 ): Promise<any> => {
   const fundStore = await useFundStore();
-  const navUpdates = [] as INAVUpdate[];
 
-  const navUpdatesLen = fundNAVData.updateTimes.length;
-  const fundNavUpdateTimes = fundNAVData.updateTimes;
-
+  // Decode and parse navParts
   const navParts: (INAVParts | undefined)[] = [];
   fundNAVData.encodedNavParts.forEach((encodedNavPart) => {
     const decodedNavPart: Record<string, any> = decodeNavPart(encodedNavPart);
@@ -31,6 +27,10 @@ export const parseFundNAVUpdatesAction = async (
     } as INAVParts);
   });
 
+  // Create navUpdates array
+  const navUpdates = [] as INAVUpdate[];
+  const navUpdatesLen = fundNAVData.updateTimes.length;
+  const fundNavUpdateTimes = fundNAVData.updateTimes;
   for (let i = 0; i < navUpdatesLen; i++) {
     const navTimestamp = Number(fundNavUpdateTimes[i] * 1000n);
     navUpdates.push({
@@ -45,41 +45,24 @@ export const parseFundNAVUpdatesAction = async (
     });
   }
 
+  // Parse NAV methods and populate entries and pastNavValues for the last update
   fundNAVData.encodedNavUpdate.forEach((navEntry, navEntryIndex) => {
     const navMethods: Record<string, any>[] = decodeNavUpdateEntry(navEntry);
     for (const [navMethodIndex, navMethod] of navMethods.entries()) {
-      navUpdates[navEntryIndex].entries.push(
-        fundStore.parseNAVMethod(navMethodIndex, navMethod),
-      );
+
+      const parsedNavMethod = fundStore.parseNAVMethod(navMethodIndex, navMethod);
+      if (navEntryIndex === navUpdatesLen - 1){
+        parsedNavMethod.pastNavValueFormatted = undefined;
+        parsedNavMethod.pastNavValue = fundNAVData[
+          parsedNavMethod.positionType
+        ][navEntryIndex].reduce((acc: bigint, val: bigint) => acc + val, 0n);
+        parsedNavMethod.pastNavValueFormatted = fundStore.getFormattedBaseTokenValue(
+          parsedNavMethod.pastNavValue,
+        );
+      }
+      navUpdates[navEntryIndex].entries.push(parsedNavMethod);
     }
   });
 
-  // console.log("fundNavUpdateTimes ", fundNavUpdateTimes);
-  // TODO use this code when reader contract is fixed
-  // Fetch NAV JSON entries for each NAV update.
-  // const navUpdates: Record<string, any>[][] = dataNAV.encodedNavUpdate.map(decodeNavUpdateEntry);
-  //
-  // // Process results
-  // for (const [navUpdateIndex, navMethods] of navUpdates.entries()) {
-  //   // TODO remove this if when reader contract is fixed.
-  //   if (!navMethods.length) continue
-  //   for (const [navMethodIndex, navMethod] of navMethods.entries()) {
-  //     const parsedNavMethod = this.parseNAVMethod(navMethodIndex, navMethod);
-  //     // TODO this is not ok
-  //     // parsedNavMethod.pastNavValue = dataNAV[parsedNavMethod.positionType][navUpdateIndex]
-  //     navUpdates[navUpdateIndex].entries.push(parsedNavMethod)
-  //   }
-  // }
-  console.warn("navUpdates: ", navUpdates, navUpdatesLen);
-  const lastNavUpdateNavMethods =
-    navUpdates[navUpdates.length - 1]?.entries ?? [];
-  console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
-  lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
-    fundStore.updateNavMethodPastNavValue(
-      navMethodIndex,
-      navMethod,
-      fundAddress,
-    );
-  });
   return navUpdates;
 };

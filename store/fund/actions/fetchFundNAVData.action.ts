@@ -19,7 +19,6 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
 
     const navUpdates = await fundStore.parseFundNAVUpdates(
       fundNAVData,
-      fundStore.fund.address,
     );
     fundStore.fund.totalNAVWei = navUpdates.length
       ? fundNAVData.totalNav || 0n
