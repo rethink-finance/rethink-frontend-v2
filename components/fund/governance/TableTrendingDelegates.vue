@@ -49,7 +49,7 @@
     </template>
   </v-data-table>
   <div v-else-if="items.length === 0 && !loading" class="nav_entries__no_data">
-    No Governance Activity details available.
+    No trending delegates found
   </div>
 </template>
 

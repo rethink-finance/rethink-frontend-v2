@@ -40,6 +40,7 @@
       <FundGovernanceProposalsTable
         :items="governanceProposals"
         :loading="loadingProposals"
+        :loading-variant="loadingProposalsVariant"
       />
     </UiMainCard>
 
@@ -122,6 +123,7 @@
         v-if="updateSettingsProposals.length > 1"
         :items="updateSettingsProposals"
         :loading="loadingProposals"
+        :loading-variant="loadingProposalsVariant"
         style="margin-top: 2rem"
       />
     </UiConfirmDialog>
@@ -518,6 +520,7 @@ const selectOption = (option: string) => {
 
 const fund = useAttrs().fund as IFund;
 const loadingProposals = ref(false);
+const loadingProposalsVariant = ref("append" as "append" | "prepend");
 
 // delegate dialog
 const isDelegateDialogOpen = ref(false);
@@ -530,6 +533,8 @@ const openDelegateDialog = () => {
 const fetchProposals = async (
   rangeStartBlock: number,
   rangeEndBlock: number,
+  // show loading skeleton at the top or bottom of the table
+  loadingVariant = "append" as "append" | "prepend",
 ) => {
   if (!fundStore.fund?.governanceToken.decimals) {
     console.error("No fund governance token decimals found.");
@@ -542,6 +547,7 @@ const fetchProposals = async (
     return;
   }
   loadingProposals.value = true;
+  loadingProposalsVariant.value = loadingVariant;
 
   // It looks like the block fetching range is arbitrary, specific to RPC, so we should try and guess it and
   // increase exponentially until they block us, and then we decrease it.
@@ -784,12 +790,12 @@ onBeforeUnmount(() => {
 const startFetchingFundProposals = async () => {
   console.warn("STAAAART governance proposal events for fund: ", fund.address);
 
-  if (shouldFetchProposals.value) {
-    console.log("stop fetching");
-    shouldFetchProposals.value = false;
-    loadingProposals.value = false;
-    return;
-  }
+  // if (shouldFetchProposals.value) {
+  //   console.log("stop fetching");
+  //   shouldFetchProposals.value = false;
+  //   loadingProposals.value = false;
+  //   return;
+  // }
   console.log("\n\n__________");
   console.log("fetch governance proposal events for fund: ", fund.address);
   shouldFetchProposals.value = true;
@@ -827,13 +833,15 @@ const startFetchingFundProposals = async () => {
   ) {
     console.log(
       "fetch from last fetched block to current block",
-      currentBlock - 1,
+      currentBlock,
       mostRecentFetchedBlock,
     );
     // From smallest to biggest.
     // But only if current block is bigger than most recent already fetched block.
-    if (currentBlock - 1 > mostRecentFetchedBlock) {
-      await fetchProposals(mostRecentFetchedBlock + 1, currentBlock - 1);
+    if (currentBlock > mostRecentFetchedBlock) {
+      // show loading skeleton at the top of the table (prepend)
+      // when fetching proposals from the most recent fetched block to the current block 
+      await fetchProposals(mostRecentFetchedBlock + 1, currentBlock, "prepend");
     }
 
     // fetch from the already fetched the oldest block number to hardcoded limit oldest date.
