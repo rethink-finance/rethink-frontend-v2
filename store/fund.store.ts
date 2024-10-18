@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
@@ -192,10 +192,20 @@ export const useFundStore = defineStore({
        * But if there are no NAV updates yet, we should take _totalDepositBal instead to get a correct value.
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
-      if (this.fundLastNAVUpdate?.timestamp) return this.fund?.totalNAVWei || 0n;
+      if (this.fundLastNAVUpdate?.timestamp) return this.fundLastNAVUpdate?.totalNAV || 0n;
 
       // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
       return this.fund?.totalDepositBalance || 0n;
+    },
+    fundCumulativeReturnPercent(): number | undefined {
+      if (this.fund && this.fund.totalDepositBalance && this.fundTotalNAV) {
+        return calculateCumulativeReturnPercent(
+          this.fund.totalDepositBalance,
+          this.fundTotalNAV,
+          this.fund.baseToken.decimals
+        );
+      }
+      return undefined; 
     },
     fundTotalNAVFormattedShort(): string {
       if (!this.fund?.address) return "N/A";
@@ -395,6 +405,7 @@ export const useFundStore = defineStore({
         console.log("fund NAV: ", dataNAV)
         this.fund.positionTypeCounts = this.parseFundPositionTypeCounts(dataNAV);
         this.fund.navUpdates = await this.parseFundNAVUpdates(dataNAV, this.fund.address, this.fundContract);
+        this.fund.cumulativeReturnPercent = calculateCumulativeReturnPercent(this.fund.totalDepositBalance, this.fundTotalNAV, this.fund.baseToken.decimals);
       } catch (error) {
         console.error("Error calling getNAVDataForFund: ", error, "fund: ", this.fund.address);
       }
@@ -595,8 +606,8 @@ export const useFundStore = defineStore({
         console.log("fundSettings: ", fundSettings)
         const quorumVotes: bigint = governanceTokenTotalSupply as bigint * quorumNumerator as bigint / quorumDenominator as bigint;
         const votingUnit = clockMode.mode === ClockMode.BlockNumber ? "block" : "second";
-
-        const fund: IFund = {
+        
+          const fund: IFund = {
           // Original fund settings
           originalFundSettings: fundSettings,
 
@@ -629,7 +640,7 @@ export const useFundStore = defineStore({
           totalDepositBalance: fundTotalDepositBalance || BigInt("0"),
           governanceTokenTotalSupply,
           fundTokenTotalSupply,
-          cumulativeReturnPercent: calculateCumulativeReturnPercent(fundTotalDepositBalance, fundTotalNAV, baseTokenDecimals),
+          cumulativeReturnPercent: undefined,
           monthlyReturnPercent: undefined,
           sharpeRatio: undefined,
           positionTypeCounts: [] as IPositionTypeCount[],

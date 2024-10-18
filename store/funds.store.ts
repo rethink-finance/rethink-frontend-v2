@@ -1,6 +1,6 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import addressesJson from "~/assets/contracts/addresses.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
 import GovernableFundFactory from "~/assets/contracts/GovernableFundFactory.json";
@@ -233,9 +233,9 @@ export const useFundsStore = defineStore({
             },
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
-            totalNAVWei,
+            totalNAVWei: undefined,
             totalDepositBalance,
-            cumulativeReturnPercent: calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals),
+            cumulativeReturnPercent: undefined,
             monthlyReturnPercent: undefined,
             sharpeRatio: undefined,
             positionTypeCounts: [
@@ -370,9 +370,9 @@ export const useFundsStore = defineStore({
             const fund = this.funds.find((fund: IFund) => fund.address === address);
             if (fund) {
               const baseTokenDecimals = fund.baseToken.decimals;
-              const cumulativeReturnPercent = fundLastNavUpdate?.timestamp ? calculateCumulativeReturnPercent(fund.totalDepositBalance, fund.totalNAVWei, baseTokenDecimals) : 0;
-              const totalNAVWei = fundLastNavUpdate?.timestamp ? fund.totalNAVWei : fund.totalDepositBalance;
-
+              const cumulativeReturnPercent = fundLastNavUpdate?.timestamp ? calculateCumulativeReturnPercent(fund.totalDepositBalance, fundLastNavUpdate?.totalNAV, baseTokenDecimals) : 0;
+              const totalNAVWei = fundLastNavUpdate?.timestamp ? fundLastNavUpdate?.totalNAV : fund.totalDepositBalance;
+              
               fund.totalNAVWei = totalNAVWei;
               fund.cumulativeReturnPercent = cumulativeReturnPercent;
               fund.navUpdates = fundNAVUpdates;
