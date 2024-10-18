@@ -120,50 +120,48 @@ export const useFundStore = defineStore({
       // The connected wallet address is the same as custody (safe address).
       return this.activeAccountAddress === this.fund?.safeAddress;
     },
-    baseToFundTokenExchangeRate(): number {
-      if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals) return 0;
+    baseToFundTokenExchangeRate(): FixedNumber {
+      if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals) return FixedNumber.fromString("0");
 
-      // If there was no NAV update yet, the exchange rate is 1:1
+      // If there was any NAV update already, we use it to calculate the exchange rate.
+      // If there was no NAV update yet, the exchange rate is 1:1.
       if (!this.fundLastNAVUpdate) {
-        if (!this.fund?.baseToken || !this.fund?.fundToken) return 0;
+        if (!this.fund?.baseToken || !this.fund?.fundToken) return FixedNumber.fromString("0");
         // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
-        // If decimals are the same, exchange rate will be 10^0 -> 1
-        const decimalDiff = Number(this.fund?.fundToken.decimals) - Number(this.fund?.baseToken.decimals)
-        return 10 ** -decimalDiff;
+        if (this.fund?.fundToken.decimals === this.fund?.baseToken.decimals) return FixedNumber.fromString("1")
+        // If decimals are not the same, we have to calculate it.
+        const decimalDiff = Number(this.fund?.fundToken.decimals) - Number(this.fund?.baseToken.decimals);
+        // For example:
+        // Base Token: USDC has 6 decimals
+        // Fund Token: ETH has 18 decimals
+        // 18 - 6 = 12
+        // '1000000000000' for 1e12
+        let exp = FixedNumber.fromString("1" + "0".repeat(Math.abs(decimalDiff)));
+
+        if (decimalDiff >= 0) {
+          exp = FixedNumber.fromString("1").div(exp);
+        }
+        // This is now defined as ratio of 1 FUND token / x BASE tokens
+        return exp;
       }
-      if (!this.fund.totalNAVWei || !this.fund?.fundTokenTotalSupply) return 0;
+      if (!this.fundLastNAVUpdate.totalNAV || !this.fund?.fundTokenTotalSupply) return FixedNumber.fromString("0");
 
       // Create FixedNumber instances
       const totalNAV = FixedNumber.fromString(
-        ethers.formatUnits(this.fund.totalNAVWei, this.fund.baseToken.decimals),
+        ethers.formatUnits(this.fundLastNAVUpdate.totalNAV, this.fund.baseToken.decimals),
       );
+      // TODO get the fundTokenTotalSupply total supply from the last NAV update also!
       const fundTokenTotalSupply = FixedNumber.fromString(
         ethers.formatUnits(this.fund.fundTokenTotalSupply, this.fund.fundToken.decimals),
       );
 
       // Perform the division
-      return Number(totalNAV.div(fundTokenTotalSupply));
+      return fundTokenTotalSupply.div(totalNAV);
     },
-    fundToBaseTokenExchangeRate(): number {
-      if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals) return 0;
+    fundToBaseTokenExchangeRate(): FixedNumber {
+      if (this.baseToFundTokenExchangeRate.eq(FixedNumber.fromString("0"))) return this.baseToFundTokenExchangeRate;
 
-      // If there was no NAV update yet, the exchange rate is 1:1
-      // if (!this.fundLastNAVUpdate) {
-      //   if (!this.fund?.baseToken || !this.fund?.fundToken) return 0;
-      //   // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
-      //   // If decimals are the same, exchange rate will be 10^0 -> 1
-      //   const decimalDiff = Number(this.fund?.fundToken.decimals) - Number(this.fund?.baseToken.decimals)
-      //   return 10 ** decimalDiff;
-      // }
-      if (!this.fund?.totalNAVWei || !this.fund.fundTokenTotalSupply) return 0;
-
-      const totalNAV = FixedNumber.fromString(
-        ethers.formatUnits(this.fund.totalNAVWei, this.fund.baseToken.decimals),
-      );
-      const fundTokenTotalSupply = FixedNumber.fromString(
-        ethers.formatUnits(this.fund.fundTokenTotalSupply, this.fund.fundToken.decimals),
-      );
-      return Number(fundTokenTotalSupply.div(totalNAV));
+      return FixedNumber.fromString("1").div(this.baseToFundTokenExchangeRate);
     },
     userCurrentValue(): bigint {
       /**
@@ -192,6 +190,7 @@ export const useFundStore = defineStore({
        * But if there are no NAV updates yet, we should take _totalDepositBal instead to get a correct value.
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
+      console.warn("last NAV", this.fundLastNAVUpdate);
       if (this.fundLastNAVUpdate?.timestamp) return this.fund?.totalNAVWei || 0n;
 
       // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
