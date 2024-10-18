@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();

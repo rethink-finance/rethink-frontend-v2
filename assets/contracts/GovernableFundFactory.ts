@@ -1,9 +1,9 @@
-{
+export const GovernableFundFactory = {
   "abi": [
     {
       "inputs": [],
       "stateMutability": "nonpayable",
-      "type": "constructor"
+      "type": "constructor",
     },
     {
       "anonymous": false,
@@ -12,11 +12,11 @@
           "indexed": false,
           "internalType": "uint8",
           "name": "version",
-          "type": "uint8"
-        }
+          "type": "uint8",
+        },
       ],
       "name": "Initialized",
-      "type": "event"
+      "type": "event",
     },
     {
       "inputs": [
@@ -25,292 +25,292 @@
             {
               "internalType": "uint256",
               "name": "depositFee",
-              "type": "uint256"
+              "type": "uint256",
             },
             {
               "internalType": "uint256",
               "name": "withdrawFee",
-              "type": "uint256"
+              "type": "uint256",
             },
             {
               "internalType": "uint256",
               "name": "performanceFee",
-              "type": "uint256"
+              "type": "uint256",
             },
             {
               "internalType": "uint256",
               "name": "managementFee",
-              "type": "uint256"
+              "type": "uint256",
             },
             {
               "internalType": "uint256",
               "name": "performaceHurdleRateBps",
-              "type": "uint256"
+              "type": "uint256",
             },
             {
               "internalType": "address",
               "name": "baseToken",
-              "type": "address"
+              "type": "address",
             },
             {
               "internalType": "address",
               "name": "safe",
-              "type": "address"
+              "type": "address",
             },
             {
               "internalType": "bool",
               "name": "isExternalGovTokenInUse",
-              "type": "bool"
+              "type": "bool",
             },
             {
               "internalType": "bool",
               "name": "isWhitelistedDeposits",
-              "type": "bool"
+              "type": "bool",
             },
             {
               "internalType": "address[]",
               "name": "allowedDepositAddrs",
-              "type": "address[]"
+              "type": "address[]",
             },
             {
               "internalType": "address[]",
               "name": "allowedManagers",
-              "type": "address[]"
+              "type": "address[]",
             },
             {
               "internalType": "address",
               "name": "governanceToken",
-              "type": "address"
+              "type": "address",
             },
             {
               "internalType": "address",
               "name": "fundAddress",
-              "type": "address"
+              "type": "address",
             },
             {
               "internalType": "address",
               "name": "governor",
-              "type": "address"
+              "type": "address",
             },
             {
               "internalType": "string",
               "name": "fundName",
-              "type": "string"
+              "type": "string",
             },
             {
               "internalType": "string",
               "name": "fundSymbol",
-              "type": "string"
-            }
+              "type": "string",
+            },
           ],
           "internalType": "struct IGovernableFund.Settings",
           "name": "fundSettings",
-          "type": "tuple"
-        }
+          "type": "tuple",
+        },
       ],
       "name": "createFund",
       "outputs": [
         {
           "internalType": "address",
           "name": "",
-          "type": "address"
-        }
+          "type": "address",
+        },
       ],
       "stateMutability": "nonpayable",
-      "type": "function"
+      "type": "function",
     },
     {
       "inputs": [
         {
           "internalType": "address",
           "name": "governor",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "fund",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "safeProxyFactory",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "safeSingleton",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "safeFallbackHandler",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "wrappedTokenFactory",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "navCalculatorAddress",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "zodiacRolesModifierModule",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "fundDelgateCallFlowSingletonAddress",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "fundDelgateCallNavSingletonAddress",
-          "type": "address"
-        }
+          "type": "address",
+        },
       ],
       "name": "initialize",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
+      "type": "function",
     },
     {
       "inputs": [
         {
           "internalType": "uint256",
           "name": "start",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "uint256",
           "name": "end",
-          "type": "uint256"
-        }
+          "type": "uint256",
+        },
       ],
       "name": "registeredFunds",
       "outputs": [
         {
           "internalType": "address[]",
           "name": "",
-          "type": "address[]"
-        }
+          "type": "address[]",
+        },
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
     },
     {
       "inputs": [
         {
           "internalType": "uint256",
           "name": "start",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "uint256",
           "name": "end",
-          "type": "uint256"
-        }
+          "type": "uint256",
+        },
       ],
       "name": "registeredFundsData",
       "outputs": [
         {
           "internalType": "address[]",
           "name": "",
-          "type": "address[]"
+          "type": "address[]",
         },
         {
           "components": [
             {
               "internalType": "uint256",
               "name": "depositFee",
-              "type": "uint256"
+              "type": "uint256",
             },
             {
               "internalType": "uint256",
               "name": "withdrawFee",
-              "type": "uint256"
+              "type": "uint256",
             },
             {
               "internalType": "uint256",
               "name": "performanceFee",
-              "type": "uint256"
+              "type": "uint256",
             },
             {
               "internalType": "uint256",
               "name": "managementFee",
-              "type": "uint256"
+              "type": "uint256",
             },
             {
               "internalType": "uint256",
               "name": "performaceHurdleRateBps",
-              "type": "uint256"
+              "type": "uint256",
             },
             {
               "internalType": "address",
               "name": "baseToken",
-              "type": "address"
+              "type": "address",
             },
             {
               "internalType": "address",
               "name": "safe",
-              "type": "address"
+              "type": "address",
             },
             {
               "internalType": "bool",
               "name": "isExternalGovTokenInUse",
-              "type": "bool"
+              "type": "bool",
             },
             {
               "internalType": "bool",
               "name": "isWhitelistedDeposits",
-              "type": "bool"
+              "type": "bool",
             },
             {
               "internalType": "address[]",
               "name": "allowedDepositAddrs",
-              "type": "address[]"
+              "type": "address[]",
             },
             {
               "internalType": "address[]",
               "name": "allowedManagers",
-              "type": "address[]"
+              "type": "address[]",
             },
             {
               "internalType": "address",
               "name": "governanceToken",
-              "type": "address"
+              "type": "address",
             },
             {
               "internalType": "address",
               "name": "fundAddress",
-              "type": "address"
+              "type": "address",
             },
             {
               "internalType": "address",
               "name": "governor",
-              "type": "address"
+              "type": "address",
             },
             {
               "internalType": "string",
               "name": "fundName",
-              "type": "string"
+              "type": "string",
             },
             {
               "internalType": "string",
               "name": "fundSymbol",
-              "type": "string"
-            }
+              "type": "string",
+            },
           ],
           "internalType": "struct IGovernableFund.Settings[]",
           "name": "",
-          "type": "tuple[]"
-        }
+          "type": "tuple[]",
+        },
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
     },
     {
       "inputs": [],
@@ -319,11 +319,11 @@
         {
           "internalType": "uint256",
           "name": "",
-          "type": "uint256"
-        }
+          "type": "uint256",
+        },
       ],
       "stateMutability": "view",
-      "type": "function"
-    }
-  ]
-}
+      "type": "function",
+    },
+  ],
+} as const;

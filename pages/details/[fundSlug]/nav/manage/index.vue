@@ -48,15 +48,17 @@
         show-base-token-balances
         show-simulated-nav
         idx="nav/manage/index"
-        :loading="loadingNavUpdates"
+        :loading="isLoadingFetchFundNAVUpdatesAction"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useFundStore } from "~/store/fund.store";
-import { useToastStore } from "~/store/toast.store";
+import { useActionStateStore } from "~/store/actionState.store";
+import { useFundStore } from "~/store/fund/fund.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { ActionState } from "~/types/enums/action_state";
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -66,10 +68,14 @@ const {
   selectedFundAddress,
   fundManagedNAVMethods,
   fundLastNAVUpdateMethods,
-  loadingNavUpdates,
 } = toRefs(useFundStore());
 
 const toastStore = useToastStore();
+const actionStateStore = useActionStateStore();
+
+const isLoadingFetchFundNAVUpdatesAction = computed(() => {
+  return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
+});
 
 const changesNumber = computed(() => {
   // check how many methods are deleted and added

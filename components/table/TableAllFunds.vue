@@ -75,7 +75,7 @@
 import { Icon } from "@iconify/vue/dist/iconify.js";
 import { formatNumberShort, formatPercent, formatTokenValue } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
-import { useWeb3Store } from "~/store/web3.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
 import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
 import FundNameCell from "./components/FundNameCell.vue";
