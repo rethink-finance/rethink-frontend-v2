@@ -23,12 +23,12 @@ export const formatDate = (date: Date) => {
  * @param {Date} date - The Date object to be formatted.
  * @returns {string} The formatted date string.
  */
-export const formatDateLong = (date: Date, includeDayName = true) => {
+export const formatDateLong = (date: Date) => {
   if(!date) return "";
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const dayName = includeDayName ? `${days[date.getUTCDay()]} ` : "";
+  const dayName = days[date.getUTCDay()];
   const monthName = months[date.getUTCMonth()];
   const day = date.getUTCDate();
   const year = date.getUTCFullYear(); // Full year
@@ -38,7 +38,7 @@ export const formatDateLong = (date: Date, includeDayName = true) => {
   hour = hour % 12;
   hour = hour || 12; // the hour '0' should be '12'
 
-  return `${dayName}${monthName} ${day}, ${year}, ${hour}:${minutes} ${ampm}`;
+  return `${dayName} ${monthName} ${day}, ${year}, ${hour}:${minutes} ${ampm}`;
 }
 
 /**
@@ -51,19 +51,24 @@ export const formatDateLong = (date: Date, includeDayName = true) => {
  * @returns {string} The formatted date string in the format "Day Mon dd, yyyy, hh:mm am/pm"
  *                   or according to the provided locale's default format.
  */
-export const formatDateToLocaleString = (date: Date) => {
+export const formatDateToLocaleString = (date: Date, includeWeekday = true) => {
   if (!date) return "";
 
   // TODO: we can add a locale parameter to this function to allow for custom locale formatting.
-  return date.toLocaleString("en-US", {
-    weekday: "short",   // e.g., "Mon"
+  const options: Intl.DateTimeFormatOptions = {
     year: "numeric",    // e.g., "2023"
     month: "short",     // e.g., "Jan"
     day: "numeric",     // e.g., "5"
     hour: "numeric",    // e.g., "5 PM"
     minute: "2-digit",  // e.g., "05"
     hour12: false,        // 12-hour clock, "AM/PM"
-  });
+  };
+
+  if (includeWeekday) {
+    options.weekday = "short"; // e.g., "Mon"
+  }
+
+  return date.toLocaleString("en-US", options);
 }
 
 /**
