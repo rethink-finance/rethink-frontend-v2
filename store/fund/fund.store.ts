@@ -735,10 +735,9 @@ export const useFundStore = defineStore({
     async parseFundNAVUpdates(
       fundNAVData: any,
       fundAddress: string,
-      fundContract: any,
     ): Promise<INAVUpdate[]> {
       return await useActionState("parseFundNAVUpdatesAction", async () => {
-        return await parseFundNAVUpdatesAction(fundNAVData, fundAddress, fundContract);
+        return await parseFundNAVUpdatesAction(fundNAVData, fundAddress);
       });
     },
     async fetchUserBaseTokenBalance() {

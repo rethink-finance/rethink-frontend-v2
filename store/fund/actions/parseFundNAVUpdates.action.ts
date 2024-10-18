@@ -1,11 +1,13 @@
 import { useFundStore } from "../fund.store";
 
+import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
+
+import type IFundNavData from "~/types/fund_nav_data";
 import type INAVUpdate from "~/types/nav_update";
 
 export const parseFundNAVUpdatesAction = async (
-  fundNAVData: any,
+  fundNAVData: IFundNavData,
   fundAddress: string,
-  fundContract: any,
 ): Promise<any> => {
   const fundStore = await useFundStore();
   const navUpdates = [] as INAVUpdate[];
@@ -29,36 +31,11 @@ export const parseFundNAVUpdatesAction = async (
     });
   }
 
-  // Fetch NAV JSON entries for each NAV update.
-  const promises: Promise<any>[] = Array.from(
-    { length: navUpdatesLen },
-    (_, index) =>
-      fundStore.accountStore.requestConcurrencyLimit(() =>
-        fundStore.callWithRetry(() =>
-          fundContract.methods.getNavEntry(index + 1).call(),
-        ),
-      ),
-  );
-
-  // Each NAV update has more entries.
-  // Parse and store them to the NAV update entries.
-  const navUpdatePromises = await Promise.allSettled(promises);
-
-  // Process results
-  navUpdatePromises.forEach((navUpdateResult, navUpdateIndex) => {
-    if (navUpdateResult.status === "fulfilled") {
-      const navMethods: Record<string, any>[] = navUpdateResult.value;
-      // console.log("navMethods: ", navMethods);
-
-      for (const [navMethodIndex, navMethod] of navMethods.entries()) {
-        navUpdates[navUpdateIndex].entries.push(
-          fundStore.parseNAVMethod(navMethodIndex, navMethod),
-        );
-      }
-    } else {
-      console.error(
-        `Failed to fetch NAV entry ${navUpdateIndex + 1}:`,
-        navUpdateResult.reason,
+  fundNAVData.encodedNavUpdate.forEach((navEntry, navEntryIndex) => {
+    const navMethods: Record<string, any>[] = decodeNavUpdateEntry(navEntry);
+    for (const [navMethodIndex, navMethod] of navMethods.entries()) {
+      navUpdates[navEntryIndex].entries.push(
+        fundStore.parseNAVMethod(navMethodIndex, navMethod),
       );
     }
   });
