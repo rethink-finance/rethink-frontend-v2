@@ -458,6 +458,7 @@ export default defineComponent({
       if (!this.showSimulatedNav || !this.web3Store.web3 || this.isNavSimulationLoading) return;
       this.isNavSimulationLoading = true;
       console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
+      /**
       if (!this.fundsStore.allNavMethods?.length) {
         const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
 
@@ -467,7 +468,7 @@ export default defineComponent({
         console.log("simulate fetch all nav methods")
         await this.fundsStore.fetchFundsNAVData(fundsInfoArrays);
       }
-
+      */
       // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
       // Otherwise, take managed methods, that user can change.
       // Simulate all at once as many promises instead of one by one.
