@@ -6,22 +6,28 @@
     hover
     :items="items"
     :loading="loading && items.length === 0"
-    loading-text="Loading Activity"
+    loading-text="Loading Votes"
     items-per-page="-1"
   >
     <!-- BODY -->
     <template #[`item.proposer`]="{ item }">
-      {{ truncateAddress(item.proposer) }}
+      <div class="members_wallet">
+        {{ truncateAddress(item.proposer) }}
+        <FundGovernanceProposalStateChip
+          v-if="item.my_vote"
+          value="This is you"
+        />
+      </div>
     </template>
     <template #[`item.submission_status`]="{ item }">
       <div class="submission_status">
         <Icon
-          :icon="icons[item.state as keyof typeof icons]"
+          :icon="VoteTypeIcon[item.submission_status as VoteType]"
           width="1.4rem"
-          class="submission_status__icon"
+          :class="`icon--${VoteTypeClass[item.submission_status as VoteType]}`"
         />
         <div class="submission_status__text">
-          {{ item.state }}
+          {{ item.submission_status }}
         </div>
       </div>
     </template>
@@ -29,10 +35,7 @@
     <!-- LOADER SKELETON -->
     <template #[`body.append`]>
       <tr v-if="items.length && loading">
-        <td>
-          {{ items.length + 1 }}
-        </td>
-        <td v-for="header in headers.length - 1" :key="header">
+        <td v-for="header in headers" :key="header">
           <v-skeleton-loader
             type="text"
             class="table-votes-submissions__skeleton_loader"
@@ -45,30 +48,19 @@
     </template>
   </v-data-table>
   <div v-else class="table-votes-submissions__no_data">
-    No Proposals Votes Submissions
+    No Proposal Vote Submissions
   </div>
 </template>
 
 <script setup lang="ts">
 // types
 import { truncateAddress } from "~/composables/addressUtils";
-import { useAccountStore } from "~/store/account/account.store";
-import type IGovernanceProposal from "~/types/governance_proposal";
-
-const accountStore = useAccountStore();
-
-// defined icons for submission_status
-const icons = {
-  Pending: "material-symbols:timer-outline",
-  Missed: "material-symbols:priority-high",
-  Abstained: "material-symbols:question-mark",
-  Rejected: "material-symbols:close",
-  Approved: "material-symbols:done",
-};
+import { VoteType, VoteTypeClass, VoteTypeIcon } from "~/types/enums/governance_proposal";
+import type IProposalVoteSubmission from "~/types/vote_submission";
 
 defineProps({
   items: {
-    type: Array as () => Partial<IGovernanceProposal>[],
+    type: Array as () => IProposalVoteSubmission[],
     default: () => [],
   },
   loading: {
@@ -81,16 +73,19 @@ const headers = computed(() => {
   const headers: any[] = [
     { title: "Members Wallet", key: "proposer", sortable: true },
   ];
-  if (accountStore.isConnected) {
-    headers.push({
-      title: "Submission",
-      key: "submission_status",
-      sortable: true,
-    });
-  }
+  headers.push({
+    title: "Date",
+    key: "date",
+    sortable: true,
+  })
+  headers.push({
+    title: "Submission",
+    key: "submission_status",
+    sortable: true,
+  });
   headers.push({
     title: "Voting Power",
-    key: "quorum",
+    key: "quorumVotes",
     sortable: true,
     align: "end",
   })
@@ -120,6 +115,12 @@ const headers = computed(() => {
   }
 }
 
+.members_wallet {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .submission_status {
   display: flex;
   align-items: center;
@@ -127,6 +128,17 @@ const headers = computed(() => {
 
   &__text {
     margin-left: 0.5rem;
+  }
+}
+.icon{
+  &--abstain {
+    color: $color-warning;
+  }
+  &--against {
+    color: $color-error;
+  }
+  &--for {
+    color: $color-success;
   }
 }
 </style>

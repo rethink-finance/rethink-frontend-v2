@@ -347,7 +347,7 @@ const fetchProposalVoteSubmissions = async () => {
 
         // append new events to the existing list of proposalVoteSubmissions
         for (const event of sortedEventsVS) {
-          const { voter, support, weight, reason } = event?.returnValues;
+          const { voter, support, weight } = event?.returnValues; // reason is not used
 
           // fetch block details to get the timestamp
           const blockVoteCast = await fundStore.web3.eth.getBlock( event?.blockNumber);
