@@ -8,7 +8,6 @@ export const fetchUserFundDataAction = async (
   const activeAccountAddress = fundStore.activeAccountAddress;
   if (!activeAccountAddress || !rethinkReaderContract) return;
 
-  console.log("debug", fundAddress, activeAccountAddress);
   const results = await Promise.allSettled(
     [
       () =>

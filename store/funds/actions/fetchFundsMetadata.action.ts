@@ -56,7 +56,6 @@ export async function fetchFundsMetadataAction(
         governanceToken: {} as IToken, // Not important here, for now.
         governanceTokenTotalSupply: BigInt("0"),
         totalDepositBalance,
-        totalNAVWei: 0n,
         cumulativeReturnPercent: undefined,
         monthlyReturnPercent: undefined,
         sharpeRatio: undefined,
