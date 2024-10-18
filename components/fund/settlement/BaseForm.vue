@@ -162,8 +162,14 @@ const exchangeRateText = computed((): string => {
 const calculatedToken1Value = computed(() => {
   if (!tokenValue.value) return "0"
   if (!props.exchangeRate || !tokenValue.value || !props.token0.decimals) return "N/A"
-  const value = props.exchangeRate.mul(FixedNumber.fromValue(tokenValue.value));
-  return trimTrailingZeros(value.toString());
+
+  try {
+    const value = props.exchangeRate.mul(FixedNumber.fromString(tokenValue.value.toString()));
+    return trimTrailingZeros(value.toString());
+  } catch (error: any) {
+    console.error("error calculatedToken1Value", error);
+    return "0";
+  }
 });
 const noNavUpdateToken1Value = computed(() => {
   if (!props?.token0?.decimals || !props?.token1?.decimals) return "--";
