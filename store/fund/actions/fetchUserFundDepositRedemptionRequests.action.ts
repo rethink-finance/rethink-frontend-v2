@@ -33,6 +33,6 @@ export const fetchUserFundDepositRedemptionRequestsAction =
       redemptionRequestResult.status === "fulfilled"
         ? redemptionRequestResult.value
         : undefined;
-    fundStore.userBalances.depositRequest = depositRequest;
-    fundStore.userBalances.redemptionRequest = redemptionRequest;
+    fundStore.userDepositRequest = depositRequest;
+    fundStore.userRedemptionRequest = redemptionRequest;
   };

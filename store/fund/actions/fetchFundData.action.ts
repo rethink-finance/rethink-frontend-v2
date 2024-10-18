@@ -1,7 +1,6 @@
 import { useFundStore } from "../fund.store";
 
 import type IFund from "~/types/fund";
-import type IFundSettings from "~/types/fund_settings";
 
 export const fetchFundDataAction = async (
   fundAddress: string,
@@ -13,31 +12,12 @@ export const fetchFundDataAction = async (
   fundStore.fundManagedNAVMethods = [];
 
   try {
-    const [settingsData, performancePeriod, managementPeriod] =
-      await Promise.all([
-        fundStore.callWithRetry(() =>
-          fundStore.fundContract.methods.getFundSettings().call(),
-        ),
-        fundStore.callWithRetry(() =>
-          fundStore.fundContract.methods.feePerformancePeriod().call(),
-        ),
-        fundStore.callWithRetry(() =>
-          fundStore.fundContract.methods.feeManagePeriod().call(),
-        ),
-      ]);
 
-    settingsData.performancePeriod = performancePeriod;
-    settingsData.managementPeriod = managementPeriod;
-
-    const fundSettings: IFundSettings =
-      fundStore.parseFundSettings(settingsData);
-    const fund: IFund = await fundStore.fetchFundMetadata(fundSettings);
-
-    fundStore.fund = fund;
-
+    const fund: IFund = await fundStore.fetchFundMetadata(fundAddress);
     fundStore.fetchFundNAVUpdates();
-    fundStore.fetchUserBalances();
     fundStore.fetchFundPendingDepositRedemptionBalance();
+    fundStore.fetchUserFundData(fundAddress);
+    fundStore.fetchUserFundDepositRedemptionRequests();
 
     return fund;
   } catch (e) {

@@ -47,10 +47,9 @@
 
 <script setup lang="ts">
 import { eth } from "web3";
-import { ethers } from "ethers";
+import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 
 const web3Store = useWeb3Store();
@@ -102,7 +101,7 @@ const sweepFundContract = async () => {
           fundStore.fetchFundContractBaseTokenBalance();
         } else {
           toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
-          fundStore.fetchUserBalances();
+          fundStore.fetchUserFundData(fundStore.selectedFundAddress);
         }
         isSweepLoading.value = false;
       }).on("error", (error: any) => {

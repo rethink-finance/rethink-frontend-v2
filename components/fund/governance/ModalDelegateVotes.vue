@@ -122,13 +122,13 @@ const isDelegatedAddressValid = computed(() => {
 
 const hasDelegatedToYourself = computed(() => {
   return (
-    fundStore?.userFundDelegateAddress.toLowerCase() ===
+    fundStore?.fundUserData.fundDelegateAddress.toLowerCase() ===
     fundStore.activeAccountAddress
   );
 });
 
 const parsedDelegateMessage = computed(() => {
-  const delegateAddress = fundStore?.userFundDelegateAddress;
+  const delegateAddress = fundStore?.fundUserData.fundDelegateAddress;
   console.log("delegateAddress: ", delegateAddress);
   let output = `You have delegated to ${delegateAddress}`;
 
@@ -200,7 +200,7 @@ const delegate = async (isMyself = false) => {
             );
             emit("delegate-success");
             closeDelegateDialog();
-            if (delegateTo) fundStore.userFundDelegateAddress = delegateTo;
+            if (delegateTo) fundStore.fundUserData.fundDelegateAddress = delegateTo;
           } else {
             toastStore.errorToast(
               "The delegateTo tx has failed. Please contact the Rethink Finance support.",

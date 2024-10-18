@@ -4,8 +4,8 @@
     v-model="tokenValue"
     :token0="fund.baseToken"
     :token1="fund.fundToken"
-    :token0-user-balance="fundStore.userBaseTokenBalance"
-    :token1-user-balance="fundStore.userFundTokenBalance"
+    :token0-user-balance="fundStore.fundUserData.baseTokenBalance"
+    :token1-user-balance="fundStore.fundUserData.fundTokenBalance"
     :exchange-rate="fundStore.baseToFundTokenExchangeRate"
   >
     <template #buttons>
@@ -135,10 +135,10 @@ const rules = [
     }
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
 
-    console.log("[DEPOSIT] check user base token balance wei: ", valueWei, fundStore.userBaseTokenBalance);
+    console.log("[DEPOSIT] check user base token balance wei: ", valueWei, fundStore.fundUserData.baseTokenBalance);
     // This condition is only valid for Request Deposit, we don't check this condition for Approve.
-    if (!userDepositRequestExists.value && fundStore.userBaseTokenBalance < valueWei) {
-      const userBaseTokenBalanceFormatted = formatTokenValue(fundStore.userBaseTokenBalance, fund.value.baseToken.decimals);
+    if (!userDepositRequestExists.value && fundStore.fundUserData.baseTokenBalance < valueWei) {
+      const userBaseTokenBalanceFormatted = formatTokenValue(fundStore.fundUserData.baseTokenBalance, fund.value.baseToken.decimals);
       return {
         message: `Your ${fund.value.baseToken.symbol} balance is too low: ${userBaseTokenBalanceFormatted}.`,
         display: true,
@@ -187,7 +187,7 @@ const handleError = (error: any, refreshData: boolean=true) => {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
     if (refreshData) {
-      fundStore.fetchUserBalances();
+      fundStore.fetchUserFundData(fundStore.selectedFundAddress);
     }
   }
 }
@@ -247,7 +247,7 @@ const requestDeposit = async () => {
           emit("deposit-success");
         } else {
           toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
-          fundStore.fetchUserBalances();
+          fundStore.fetchUserFundData(fundStore.selectedFundAddress);
         }
         loadingRequestDeposit.value = false;
       }).on("error", (error: any) => {
@@ -302,7 +302,7 @@ const approveAllowance = async () => {
           toastStore.successToast("The approval was successful. You can make the deposit now.");
 
           // Refresh allowance value.
-          fundStore.userFundAllowance = allowanceValue;
+          fundStore.fundUserData.fundAllowance = allowanceValue;
         } else {
           toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
         }

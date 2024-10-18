@@ -3,7 +3,7 @@ import { useFundStore } from "../fund.store";
 export const fetchUserFundDelegateAddressAction = async (): Promise<any> => {
   const fundStore = useFundStore();
 
-  fundStore.userFundDelegateAddress = "";
+  fundStore.fundUserData.fundDelegateAddress = "";
   if (!fundStore.fund?.governanceToken?.address) {
     console.log("Fund governanceToken.address is not set.");
     return;
@@ -14,15 +14,16 @@ export const fetchUserFundDelegateAddressAction = async (): Promise<any> => {
   }
   console.warn("FETCH userFundDelegateAddress");
 
-  fundStore.userFundDelegateAddress = await fundStore.callWithRetry(() =>
-    fundStore.fundContract.methods
-      .delegates(fundStore.activeAccountAddress)
-      .call(),
+  fundStore.fundUserData.fundDelegateAddress = await fundStore.callWithRetry(
+    () =>
+      fundStore.fundContract.methods
+        .delegates(fundStore.activeAccountAddress)
+        .call(),
   );
   console.warn(
     "FETCH userFundDelegateAddress",
-    fundStore.userFundDelegateAddress,
+    fundStore.fundUserData.fundDelegateAddress,
   );
 
-  return fundStore.userFundDelegateAddress;
+  return fundStore.fundUserData.fundDelegateAddress;
 };

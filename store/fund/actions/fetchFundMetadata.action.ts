@@ -9,17 +9,14 @@ import { ClockMode } from "~/types/enums/clock_mode";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 
-export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Promise<IFund> => {
+export const fetchFundMetadataAction = async (fundAddress: string): Promise<IFund> => {
   const fundStore = useFundStore();
   const rethinkReaderContract = fundStore.rethinkReaderContract;
 
   try {
     const results = await Promise.allSettled(
       [
-        () =>
-          rethinkReaderContract.methods
-            .getFundMetaData(fundSettings.fundAddress)
-            .call(),
+        () => rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
       ].map((fn: () => Promise<any>) =>
         fundStore.accountStore.requestConcurrencyLimit(() =>
           fundStore.callWithRetry(fn),
@@ -27,9 +24,7 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       ),
     );
 
-    const [
-      fundNavMetaData,
-    ]: any[] = results.map((result, index) => {
+    const [fundNavMetaData]: any[] = results.map((result, index) => {
       if (result.status === "fulfilled") {
         return result.value;
       }
@@ -41,6 +36,8 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       startTime,
       totalDepositBal,
       feeBalance,
+      feePerformancePeriod,
+      feeManagePeriod,
       fundTokenDecimals,
       fundBaseTokenDecimals,
       fundGovernanceTokenDecimals,
@@ -54,6 +51,7 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       fundBaseTokenSymbol,
       fundGovernanceTokenSymbol,
       fundGovernanceData,
+      fundSettings,
     } = fundNavMetaData;
 
     const {
@@ -66,9 +64,15 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       clockMode,
     } = fundGovernanceData;
 
+    fundSettings.performancePeriod = feePerformancePeriod;
+    fundSettings.managementPeriod = feeManagePeriod;
+
+    const parsedFundSettings: IFundSettings =
+      fundStore.parseFundSettings(fundSettings);
+
     const parsedClockMode = fundStore.parseClockMode(clockMode);
     console.log("parsedClockMode: ", parsedClockMode);
-    console.log("fundSettings: ", fundSettings)
+    console.log("parsedFundSettings: ", parsedFundSettings);
     const quorumVotes: bigint = ((((fundGovernanceTokenSupply as bigint) *
       quorumNumerator) as bigint) / quorumDenominator) as bigint;
     const votingUnit =
@@ -76,33 +80,33 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
 
     const fund: IFund = {
       // Original fund settings
-      originalFundSettings: fundSettings,
+      originalFundSettings: parsedFundSettings,
 
       chainName: fundStore.web3Store.chainName,
       chainShort: fundStore.web3Store.chainShort,
-      address: fundSettings.fundAddress || "",
-      title: fundSettings.fundName || "N/A",
+      address: parsedFundSettings.fundAddress || "",
+      title: parsedFundSettings.fundName || "N/A",
       clockMode: parsedClockMode,
       description: "N/A",
-      safeAddress: fundSettings.safe || "",
-      governorAddress: fundSettings.governor || "",
+      safeAddress: parsedFundSettings.safe || "",
+      governorAddress: parsedFundSettings.governor || "",
       photoUrl: defaultAvatar,
       inceptionDate: startTime
         ? formatDate(new Date(Number(startTime) * 1000))
         : "",
       fundToken: {
-        symbol: fundSettings.fundSymbol,
-        address: fundSettings.fundAddress,
+        symbol: parsedFundSettings.fundSymbol,
+        address: parsedFundSettings.fundAddress,
         decimals: Number(fundTokenDecimals) ?? 18,
       } as IToken,
       baseToken: {
         symbol: fundBaseTokenSymbol ?? "",
-        address: fundSettings.baseToken,
+        address: parsedFundSettings.baseToken,
         decimals: Number(fundBaseTokenDecimals) ?? 18,
       } as IToken,
       governanceToken: {
         symbol: fundGovernanceTokenSymbol ?? "",
-        address: fundSettings.governanceToken,
+        address: parsedFundSettings.governanceToken,
         decimals: Number(fundGovernanceTokenDecimals) ?? 18,
       } as IToken,
       totalNAVWei: BigInt("0"),
@@ -118,9 +122,9 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       netDeposits: "",
 
       // Overview fields
-      isWhitelistedDeposits: fundSettings.isWhitelistedDeposits,
-      allowedDepositAddresses: fundSettings.allowedDepositAddrs,
-      allowedManagerAddresses: fundSettings.allowedManagers,
+      isWhitelistedDeposits: parsedFundSettings.isWhitelistedDeposits,
+      allowedDepositAddresses: parsedFundSettings.allowedDepositAddrs,
+      allowedManagerAddresses: parsedFundSettings.allowedManagers,
       plannedSettlementPeriod: "",
       minLiquidAssetShare: "",
 
@@ -148,18 +152,18 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       lateQuorum: pluralizeWord(votingUnit, lateQuorumVoteExtension),
 
       // Fees
-      depositFee: fundSettings.depositFee.toString(),
-      depositFeeAddress: fundSettings.feeCollectors[0],
-      withdrawFee: fundSettings.withdrawFee.toString(),
-      withdrawFeeAddress: fundSettings.feeCollectors[1],
-      managementPeriod: fundSettings.managementPeriod.toString(),
-      managementFee: fundSettings.managementFee.toString(),
-      managementFeeAddress: fundSettings.feeCollectors[2],
-      performancePeriod: fundSettings.performancePeriod.toString(),
-      performanceFee: fundSettings.performanceFee.toString(),
-      performanceFeeAddress: fundSettings.feeCollectors[3],
-      performaceHurdleRateBps: fundSettings.performaceHurdleRateBps,
-      feeCollectors: fundSettings.feeCollectors,
+      depositFee: parsedFundSettings.depositFee.toString(),
+      depositFeeAddress: parsedFundSettings.feeCollectors[0],
+      withdrawFee: parsedFundSettings.withdrawFee.toString(),
+      withdrawFeeAddress: parsedFundSettings.feeCollectors[1],
+      managementPeriod: parsedFundSettings.managementPeriod.toString(),
+      managementFee: parsedFundSettings.managementFee.toString(),
+      managementFeeAddress: parsedFundSettings.feeCollectors[2],
+      performancePeriod: parsedFundSettings.performancePeriod.toString(),
+      performanceFee: parsedFundSettings.performanceFee.toString(),
+      performanceFeeAddress: parsedFundSettings.feeCollectors[3],
+      performaceHurdleRateBps: parsedFundSettings.performaceHurdleRateBps,
+      feeCollectors: parsedFundSettings.feeCollectors,
       feeBalance: feeBalance * -1n, // Fees should be negative
       safeContractBaseTokenBalance,
       fundContractBaseTokenBalance,
@@ -176,10 +180,10 @@ export const fetchFundMetadataAction = async (fundSettings: IFundSettings): Prom
       fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
       fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
     }
-
+    fundStore.fund = fund;
     return fund;
   } catch (error) {
-    console.error("Error in promises: ", error, "fund: ", fundSettings);
+    console.error("Error in promises: ", error, "fund: ", fundAddress);
     return {} as IFund; // Return an empty or default object in case of error
   }
 };

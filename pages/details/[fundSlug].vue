@@ -153,7 +153,7 @@ watch(
   () => accountStore.connectedWallet,
   (wallet: any) => {
     console.warn("CONNECTED WALLET CHANGE, refresh user balances", wallet)
-    fundStore.fetchUserBalances();
+    fundStore.fetchUserFundData(fundAddress);
   },
 );
 // Watch for route changes to reset the breadcrumbs

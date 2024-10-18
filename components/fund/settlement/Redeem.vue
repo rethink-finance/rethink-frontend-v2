@@ -4,8 +4,8 @@
     v-model="tokenValue"
     :token0="fund.fundToken"
     :token1="fund.baseToken"
-    :token0-user-balance="fundStore.userFundTokenBalance"
-    :token1-user-balance="fundStore.userBaseTokenBalance"
+    :token0-user-balance="fundStore.fundUserData.fundTokenBalance"
+    :token1-user-balance="fundStore.fundUserData.baseTokenBalance"
     :exchange-rate="fundStore.fundToBaseTokenExchangeRate"
   >
     <template #buttons>
@@ -76,9 +76,9 @@ import { ethers } from "ethers";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
-import { useWeb3Store } from "~/store/web3/web3.store";
 
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
@@ -114,9 +114,9 @@ const rules = [
     }
     if (valueWei <= 0) return { message: "Value must be positive.", display: false }
 
-    console.log("[REDEEM] check user fund token balance wei: ", valueWei, fundStore.userFundTokenBalance);
-    if (fundStore.userFundTokenBalance < valueWei) {
-      const userFundTokenBalanceFormatted = formatTokenValue(fundStore.userFundTokenBalance, fund.value.fundToken.decimals);
+    console.log("[REDEEM] check user fund token balance wei: ", valueWei, fundStore.fundUserData.fundTokenBalance);
+    if (fundStore.fundUserData.fundTokenBalance < valueWei) {
+      const userFundTokenBalanceFormatted = formatTokenValue(fundStore.fundUserData.fundTokenBalance, fund.value.fundToken.decimals);
       return {
         message: `Your ${fund.value.fundToken.symbol} balance is too low: ${userFundTokenBalanceFormatted}.`,
         display: true,
@@ -151,7 +151,7 @@ const handleError = (error: any, refreshData: boolean=true) => {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);
     if (refreshData) {
-      fundStore.fetchUserBalances();
+      fundStore.fetchUserFundData(fundStore.selectedFundAddress);
     }
   }
 }

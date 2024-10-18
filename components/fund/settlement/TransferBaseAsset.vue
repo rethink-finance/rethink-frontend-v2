@@ -180,7 +180,7 @@ const transfer = async () => {
           fundStore.fetchFundContractBaseTokenBalance();
         } else {
           toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
-          fundStore.fetchUserBalances();
+          fundStore.fetchUserFundData(fundStore.selectedFundAddress);;
         }
         isTransferLoading.value = false;
       }).on("error", (error: any) => {

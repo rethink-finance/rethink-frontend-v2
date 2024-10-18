@@ -53,12 +53,12 @@
 <script setup lang="ts">
 import { ethers } from "ethers";
 import { ref } from "vue";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
-import type IToken from "~/types/token";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { FundTransactionType } from "~/types/enums/fund_transaction_type";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
+import type IToken from "~/types/token";
 
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();

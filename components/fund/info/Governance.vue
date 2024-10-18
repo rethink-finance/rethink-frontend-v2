@@ -3,14 +3,14 @@
     <UiDataBar title="Governance">
       <div class="data_bar__item">
         <div class="data_bar__title">
-          <template v-if="isZeroAddress(fundStore.userFundDelegateAddress)">
+          <template v-if="isZeroAddress(fundStore.fundUserData.fundDelegateAddress)">
             N/A
           </template>
           <template v-else>
             <v-tooltip activator="parent" location="bottom">
-              {{ fundStore.userFundDelegateAddress }}
+              {{ fundStore.fundUserData.fundDelegateAddress }}
             </v-tooltip>
-            {{ truncateAddress(fundStore.userFundDelegateAddress) }}
+            {{ truncateAddress(fundStore.fundUserData.fundDelegateAddress) }}
           </template>
         </div>
         <div class="data_bar__subtitle">
@@ -42,8 +42,8 @@
 </template>
 
 <script setup lang="ts">
+import { isZeroAddress, truncateAddress } from "~/composables/addressUtils";
 import { useFundStore } from "~/store/fund/fund.store";
-import { truncateAddress , isZeroAddress } from "~/composables/addressUtils";
 import type IFund from "~/types/fund";
 const fundStore = useFundStore();
 
@@ -58,7 +58,7 @@ const props = defineProps({
 
 const userGovernanceTokenBalanceFormatted = computed(() => {
   return formatTokenValue(
-    fundStore.userGovernanceTokenBalance,
+    fundStore.fundUserData.governanceTokenBalance,
     props.fund?.governanceToken.decimals,
     false,
     true,

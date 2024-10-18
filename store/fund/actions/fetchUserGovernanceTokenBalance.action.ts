@@ -3,7 +3,7 @@ import { useFundStore } from "../fund.store";
 export const fetchUserGovernanceTokenBalanceAction = async (): Promise<any> => {
   const fundStore = useFundStore();
 
-  fundStore.userBalances.governanceTokenBalance = BigInt("0");
+  fundStore.fundUserData.governanceTokenBalance = BigInt("0");
 
   if (!fundStore.fund?.governanceToken?.address) {
     console.log("Fund governanceToken.address is not set.");
@@ -13,7 +13,7 @@ export const fetchUserGovernanceTokenBalanceAction = async (): Promise<any> => {
     console.log("activeAccountAddress is not set.");
     return;
   }
-  fundStore.userBalances.governanceTokenBalance = await fundStore.callWithRetry(
+  fundStore.fundUserData.governanceTokenBalance = await fundStore.callWithRetry(
     () =>
       fundStore.fundGovernanceTokenContract.methods
         .balanceOf(fundStore.activeAccountAddress)
@@ -21,7 +21,7 @@ export const fetchUserGovernanceTokenBalanceAction = async (): Promise<any> => {
   );
 
   console.log(
-    `user governance token balance is ${fundStore.userBalances.governanceTokenBalance} ${fundStore.fund?.fundToken?.symbol}`,
+    `user governance token balance is ${fundStore.fundUserData.governanceTokenBalance} ${fundStore.fund?.fundToken?.symbol}`,
   );
-  return fundStore.userBalances.governanceTokenBalance;
+  return fundStore.fundUserData.governanceTokenBalance;
 };

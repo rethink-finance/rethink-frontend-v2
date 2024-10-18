@@ -2,14 +2,14 @@ import { useFundStore } from "../fund.store";
 
 export const fetchUserFundShareValueAction = async (): Promise<any> => {
   const fundStore = useFundStore();
-  fundStore.userBalances.fundShareValue = BigInt("0");
+  fundStore.fundUserData.fundShareValue = BigInt("0");
 
   if (!fundStore.activeAccountAddress)
     return console.error("Active account not found");
 
   if (!fundStore.fund?.fundTokenTotalSupply) {
     // No tokens have been minted yet. No deposits have been made yet.
-    return fundStore.userBalances.fundShareValue;
+    return fundStore.fundUserData.fundShareValue;
   }
   let balanceWei = BigInt("0");
   try {
@@ -24,6 +24,6 @@ export const fetchUserFundShareValueAction = async (): Promise<any> => {
   }
   console.log("balanceWei user fund share value:", balanceWei);
 
-  fundStore.userBalances.fundShareValue = balanceWei;
-  return fundStore.userBalances.fundShareValue;
+  fundStore.fundUserData.fundShareValue = balanceWei;
+  return fundStore.fundUserData.fundShareValue;
 };

@@ -103,11 +103,11 @@ export default {
     },
     userFundTokenBalanceFormatted() {
       if (!this.fundToken) return "N/A";
-      return this.fundStore.getFormattedFundTokenValue(this.fundStore.userFundTokenBalance, false, true);
+      return this.fundStore.getFormattedFundTokenValue(this.fundStore.fundUserData.fundTokenBalance, false, true);
     },
     userFundAllowanceFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      return this.fundStore.getFormattedBaseTokenValue(this.fundStore.userFundAllowance, false, true);
+      return this.fundStore.getFormattedBaseTokenValue(this.fundStore.fundUserData.fundAllowance, false, true);
     },
     userCurrentValueFormatted() {
       if (!this.fundBaseToken) return "N/A";

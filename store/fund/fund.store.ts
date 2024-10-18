@@ -9,9 +9,9 @@ import { fetchFundMetadataAction } from "./actions/fetchFundMetadata.action";
 import { fetchFundNAVUpdatesAction } from "./actions/fetchFundNAVUpdates.action";
 import { fetchSimulateCurrentNAVAction } from "./actions/fetchSimulateCurrentNAV.action";
 import { fetchSimulatedNAVMethodValueAction } from "./actions/fetchSimulatedNAVMethodValue.action";
-import { fetchUserBalancesAction } from "./actions/fetchUserBalances.action";
 import { fetchUserBaseTokenBalanceAction } from "./actions/fetchUserBaseTokenBalance.action";
 import { fetchUserFundAllowanceAction } from "./actions/fetchUserFundAllowance.action";
+import { fetchUserFundDataAction } from "./actions/fetchUserFundData.action";
 import { fetchUserFundDelegateAddressAction } from "./actions/fetchUserFundDelegateAddress.action";
 import { fetchUserFundDepositRedemptionRequestsAction } from "./actions/fetchUserFundDepositRedemptionRequests.action";
 import { fetchUserFundShareValueAction } from "./actions/fetchUserFundShareValue.action";
@@ -48,10 +48,11 @@ import {
 import type IFund from "~/types/fund";
 import type { INAVParts } from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
+import type IFundTransactionRequest from "~/types/fund_transaction_request";
+import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
-import type IUserBalances from "~/types/user_balances";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -61,7 +62,9 @@ const RethinkReaderContractName = "RethinkReader";
 
 interface IState {
   fund?: IFund;
-  userBalances: IUserBalances;
+  fundUserData: IFundUserData;
+  userDepositRequest?: IFundTransactionRequest;
+  userRedemptionRequest?: IFundTransactionRequest;
   selectedFundAddress: string;
   // Fund NAV methods that user can manage and change, delete, add...
   fundManagedNAVMethods: INAVMethod[];
@@ -75,16 +78,16 @@ export const useFundStore = defineStore({
   id: "fund",
   state: (): IState => ({
     fund: undefined,
-    userBalances: {
+    fundUserData: {
       baseTokenBalance: 0n,
       fundTokenBalance: 0n,
       governanceTokenBalance: 0n,
       fundAllowance: 0n,
       fundShareValue: 0n,
       fundDelegateAddress: "",
-      depositRequest: undefined,
-      redemptionRequest: undefined,
     },
+    userDepositRequest: undefined,
+    userRedemptionRequest: undefined,
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
@@ -180,13 +183,13 @@ export const useFundStore = defineStore({
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
       if (this.fundLastNAVUpdate?.timestamp)
-        return this.userBalances.fundShareValue || 0n;
+        return this.fundUserData.fundShareValue || 0n;
 
       // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
       const fundTokenTotalSupply = this.fund?.fundTokenTotalSupply || 0n;
       if (!fundTokenTotalSupply) return 0n;
       return (
-        (this.fundTotalNAV * this.userBalances.fundTokenBalance) /
+        (this.fundTotalNAV * this.fundUserData.fundTokenBalance) /
         fundTokenTotalSupply
       );
     },
@@ -236,15 +239,15 @@ export const useFundStore = defineStore({
       return this.fundLastNAVUpdate?.entries || [];
     },
     userDepositRequestExists(): boolean {
-      return (this.userBalances.depositRequest?.amount || 0) > 0;
+      return (this.userDepositRequest?.amount || 0) > 0;
     },
     userRedemptionRequestExists(): boolean {
-      return (this.userBalances.redemptionRequest?.amount || 0) > 0;
+      return (this.userRedemptionRequest?.amount || 0) > 0;
     },
     userFundSuggestedAllowance(): bigint {
-      const userBaseTokenBalance = this.userBalances.baseTokenBalance || 0n;
+      const userBaseTokenBalance = this.fundUserData.baseTokenBalance || 0n;
       const userDepositRequestAmount =
-        this.userBalances.depositRequest?.amount || 0n;
+        this.userDepositRequest?.amount || 0n;
       return userBaseTokenBalance + userDepositRequestAmount;
     },
     userFundSuggestedAllowanceFormatted(): string {
@@ -268,8 +271,8 @@ export const useFundStore = defineStore({
       const nullAddress = "0x0000000000000000000000000000000000000000";
       // User should delegate if he has no delegate address set.
       return (
-        this.userBalances.fundDelegateAddress === nullAddress ||
-        !this.userBalances.fundDelegateAddress
+        this.fundUserData.fundDelegateAddress === nullAddress ||
+        !this.fundUserData.fundDelegateAddress
       );
     },
     shouldUserRequestDeposit(): boolean {
@@ -280,8 +283,8 @@ export const useFundStore = defineStore({
       // User deposit request exists and allowance is bigger.
       return (
         this.userDepositRequestExists &&
-        this.userBalances.fundAllowance <
-          (this.userBalances.depositRequest?.amount || 0n)
+        this.fundUserData.fundAllowance <
+          (this.userDepositRequest?.amount || 0n)
       );
     },
     canUserProcessDeposit(): boolean {
@@ -294,13 +297,13 @@ export const useFundStore = defineStore({
       if (
         !this.canUserProcessDeposit ||
         !this.fundLastNAVUpdate?.timestamp ||
-        !this.userBalances.depositRequest?.timestamp
+        !this.userDepositRequest?.timestamp
       )
         return false;
       // User deposit request exists and is valid, but there has to be at least 1 NAV update
       // made after the deposit was requested.
       return (
-        this.userBalances.depositRequest.timestamp <
+        this.userDepositRequest.timestamp <
         this.fundLastNAVUpdate?.timestamp
       );
     },
@@ -309,13 +312,13 @@ export const useFundStore = defineStore({
       // There is no need to wait until the next settlement.
       if (
         !this.fundLastNAVUpdate?.timestamp ||
-        !this.userBalances.redemptionRequest?.timestamp
+        !this.userRedemptionRequest?.timestamp
       )
         return false;
       // User redemption request exists and is valid, but there has to be at least 1 NAV update
       // made after the redemption was requested.
       return (
-        this.userBalances.redemptionRequest.timestamp <
+        this.userRedemptionRequest.timestamp <
         this.fundLastNAVUpdate?.timestamp
       );
     },
@@ -476,9 +479,9 @@ export const useFundStore = defineStore({
         return await fetchFundNAVUpdatesAction();
       });
     },
-    async fetchUserBalances() {
-      return await useActionState("fetchUserBalancesAction", async () => {
-        await fetchUserBalancesAction();
+    async fetchUserFundData(fundAddress: string) {
+      return await useActionState("fetchUserFundDataAction", async () => {
+        await fetchUserFundDataAction(fundAddress);
       });
     },
     /**
@@ -486,9 +489,9 @@ export const useFundStore = defineStore({
      * - getFundStartTime
      * - fundMetadata
      */
-    async fetchFundMetadata(fundSettings: IFundSettings): Promise<IFund> {
+    async fetchFundMetadata(fundAddress: string): Promise<IFund> {
       return await useActionState("fetchFundMetadataAction", async () => {
-        return await fetchFundMetadataAction(fundSettings);
+        return await fetchFundMetadataAction(fundAddress);
       });
     },
     parseFundSettings(fundData: any) {

@@ -98,8 +98,7 @@ const actionStateStore = useActionStateStore();
 const fundStore = useFundStore()
 const accountStore = useAccountStore();
 const {
-  userFundAllowance,
-  userFundTokenBalance,
+  fundUserData,
   userDepositRequest,
   userRedemptionRequest,
   baseToFundTokenExchangeRate,
@@ -147,7 +146,7 @@ const depositDisabledTooltipText = computed(() => {
   if (!userDepositRequestExists.value) {
     return "There is no deposit request."
   }
-  if (userFundAllowance.value < (userDepositRequest?.value?.amount || 0n)) {
+  if (fundUserData.value.fundAllowance < (userDepositRequest?.value?.amount || 0n)) {
     return "Not enough allowance to process the deposit request."
   }
   if (shouldUserWaitSettlementOrCancelDeposit.value) {
@@ -164,7 +163,7 @@ const redemptionDisabledTooltipText = computed(() => {
   if (!userRedemptionRequestExists.value) {
     return "There is no redemption request."
   }
-  if (userFundTokenBalance.value < redemptionRequestAmount) {
+  if (fundUserData.value.fundTokenBalance < redemptionRequestAmount) {
     return "Not enough fund tokens to process the redemptions request."
   }
   if (shouldUserWaitSettlementOrCancelRedemption.value) {
@@ -224,7 +223,7 @@ const deposit = async () => {
         console.log("receipt: ", receipt);
 
         // Refresh user balances & allowance & refresh pending requests.
-        fundStore.fetchUserBalances();
+        fundStore.fetchUserFundData(fundStore.selectedFundAddress);
 
         if (receipt.status) {
           toastStore.successToast("Your deposit was successful.");
@@ -286,7 +285,7 @@ const redeem = async () => {
         console.log("receipt: ", receipt);
 
         // Refresh user balances & allowance.
-        fundStore.fetchUserBalances();
+        fundStore.fetchUserFundData(fundStore.selectedFundAddress);
 
         if (receipt.status) {
           toastStore.successToast(

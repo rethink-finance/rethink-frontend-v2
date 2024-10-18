@@ -3,7 +3,7 @@ import { useFundStore } from "../fund.store";
 export const fetchUserFundTokenBalanceAction = async (): Promise<any> => {
   const fundStore = useFundStore();
 
-  fundStore.userBalances.fundTokenBalance = BigInt("0");
+  fundStore.fundUserData.fundTokenBalance = BigInt("0");
 
   if (!fundStore.fund?.fundToken?.address) {
     console.log("Fund fundToken.address is not set.");
@@ -13,14 +13,14 @@ export const fetchUserFundTokenBalanceAction = async (): Promise<any> => {
     console.log("activeAccountAddress is not set.");
     return;
   }
-  fundStore.userBalances.fundTokenBalance = await fundStore.callWithRetry(() =>
+  fundStore.fundUserData.fundTokenBalance = await fundStore.callWithRetry(() =>
     fundStore.fundContract.methods
       .balanceOf(fundStore.activeAccountAddress)
       .call(),
   );
 
   console.log(
-    `user fund token balance of ${fundStore.fund?.fundToken?.symbol} is ${fundStore.userBalances.fundTokenBalance}`,
+    `user fund token balance of ${fundStore.fund?.fundToken?.symbol} is ${fundStore.fundUserData.fundTokenBalance}`,
   );
-  return fundStore.userBalances.fundTokenBalance;
+  return fundStore.fundUserData.fundTokenBalance;
 };
