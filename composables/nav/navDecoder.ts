@@ -1,5 +1,6 @@
 import { Web3, type AbiInput } from "web3";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { NAVCalculator } from "~/assets/contracts/NAVCalculator";
 
 export const getNavUpdateEntryFunctionABI: AbiInput[] = (GovernableFund.abi.find(
   (func:any) => func.name === "getNavEntry" && func.type === "function",
@@ -8,7 +9,7 @@ export const getNavUpdateEntryFunctionABI: AbiInput[] = (GovernableFund.abi.find
 
 export const getNavPartsFunctionABI: AbiInput[] =
   (
-    GovernableFund.abi.find(
+    NAVCalculator.abi.find(
       (func: any) => func.name === "getNAVParts" && func.type === "function",
     ) as any
   )?.outputs || [];
@@ -22,7 +23,7 @@ export const decodeNavUpdateEntry = (encodedNavUpdate: string):Record<string, an
   )[0] as any[];
 }
 
-export const decodeNavParts = (
+export const decodeNavPart = (
   encodedNavUpdate: string,
 ): Record<string, any>[] => {
   return web3.eth.abi.decodeParameters(

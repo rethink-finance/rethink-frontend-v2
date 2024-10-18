@@ -1,6 +1,11 @@
 import { useFundStore } from "../fund.store";
 
-import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
+import {
+  decodeNavPart,
+  decodeNavUpdateEntry,
+} from "~/composables/nav/navDecoder";
+
+import type { INAVParts } from "~/types/fund";
 
 import type IFundNavData from "~/types/fund_nav_data";
 import type INAVUpdate from "~/types/nav_update";
@@ -15,7 +20,16 @@ export const parseFundNAVUpdatesAction = async (
   const navUpdatesLen = fundNAVData.updateTimes.length;
   const fundNavUpdateTimes = fundNAVData.updateTimes;
 
-  const navParts = await fundStore.fetchNavParts(navUpdatesLen, fundAddress);
+  const navParts: (INAVParts | undefined)[] = [];
+  fundNAVData.encodedNavParts.forEach((encodedNavPart) => {
+    const decodedNavPart: Record<string, any> = decodeNavPart(encodedNavPart);
+    navParts.push({
+      baseAssetOIVBal: decodedNavPart.baseAssetOIVBal,
+      baseAssetSafeBal: decodedNavPart.baseAssetSafeBal,
+      feeBal: decodedNavPart.feeBal,
+      totalNAV: decodedNavPart.totalNAV,
+    } as INAVParts);
+  });
 
   for (let i = 0; i < navUpdatesLen; i++) {
     const navTimestamp = Number(fundNavUpdateTimes[i] * 1000n);
