@@ -6,7 +6,7 @@ import { useActionState } from "../actionState.store";
 import { calculateFundsPerformanceMetricsAction } from "./actions/calculateFundsPerformanceMetrics.action";
 import { fetchFundsAction } from "./actions/fetchFunds.action";
 import { fetchFundsInfoArraysAction } from "./actions/fetchFundsInfoArrays.action";
-import { fetchFundsMetaDataAction } from "./actions/fetchFundsMetaData.action";
+import { fetchFundsMetaDataAction } from "./actions/fetchFundsMetadata.action";
 import { fetchFundsNAVDataAction } from "./actions/fetchFundsNAVData.action";
 
 import addressesJson from "~/assets/contracts/addresses.json";

@@ -6,7 +6,7 @@ import { useActionState } from "../actionState.store";
 import { useToastStore } from "../toasts/toast.store";
 import { calculateFundPerformanceMetricsAction } from "./actions/calculateFundPerformanceMetrics.action";
 import { fetchFundDataAction } from "./actions/fetchFundData.action";
-import { fetchFundMetaDataAction } from "./actions/fetchFundMetaData.action";
+import { fetchFundMetaDataAction } from "./actions/fetchFundMetadata.action";
 import { fetchFundNAVDataAction } from "./actions/fetchFundNAVData.action";
 import { fetchSimulateCurrentNAVAction } from "./actions/fetchSimulateCurrentNAV.action";
 import { fetchSimulatedNAVMethodValueAction } from "./actions/fetchSimulatedNAVMethodValue.action";
