@@ -11,7 +11,7 @@
   >
     <template #[`header.approval`]="{ column }">
       <!-- HEADERS -->
-      <div class="table_governance__header_cell">
+      <div class="table_governance__header_cell justify-end">
         {{ column.title }}
         <span class="d-flex align-center ms-1">
           <Icon icon="octicon:question-16" width="1rem" />
@@ -23,7 +23,7 @@
       </div>
     </template>
     <template #[`header.participation`]="{ column }">
-      <div class="d-flex justify-center">
+      <div class="table_governance__header_cell justify-end">
         {{ column.title }}
         <span class="d-flex align-center ms-1">
           <Icon icon="octicon:question-16" width="1rem" />
@@ -60,34 +60,36 @@
         </td>
         <td>{{ item.createdDatetimeFormatted }}</td>
         <td v-if="accountStore.isConnected">
-          <div v-if="item.hasVotedLoading">
-            <v-progress-circular
-              indeterminate
-              color="gray"
-              size="16"
-              width="2"
-            />
-          </div>
-          <div v-else-if="governanceProposalStore.hasAccountVoted(item.proposalId) === undefined">
-            N/A
-          </div>
-          <div v-else>
-            <Icon
-              v-if="governanceProposalStore.hasAccountVoted(item.proposalId)"
-              icon="weui:done-filled"
-              width="1rem"
-              height="1rem"
-              color="var(--color-success)"
-            />
-            <icon
-              v-else
-              icon="mingcute:close-fill"
-              color="var(--color-error)"
-            />
+          <div class="table_governance__voted_cell">
+            <div v-if="item.hasVotedLoading">
+              <v-progress-circular
+                indeterminate
+                color="gray"
+                size="16"
+                width="2"
+              />
+            </div>
+            <div v-else-if="governanceProposalStore.hasAccountVoted(item.proposalId) === undefined">
+              N/A
+            </div>
+            <div v-else>
+              <Icon
+                v-if="governanceProposalStore.hasAccountVoted(item.proposalId)"
+                icon="weui:done-filled"
+                width="1rem"
+                height="1rem"
+                color="var(--color-success)"
+              />
+              <icon
+                v-else
+                icon="mingcute:close-fill"
+                color="var(--color-error)"
+              />
+            </div>
           </div>
         </td>
         <td>
-          <div>
+          <div class="d-flex justify-end">
             {{ item.approvalFormatted }}
             <v-tooltip activator="parent" location="bottom">
               {{ item.forVotesFormatted }} of {{ item.quorumVotesFormatted }}
@@ -95,7 +97,7 @@
           </div>
         </td>
         <td>
-          <div>
+          <div class="d-flex justify-end">
             {{ item.participationFormatted }}
             <v-tooltip activator="parent" location="bottom">
               {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }}
@@ -224,12 +226,11 @@ const headers = computed(() => {
   }
 
   headers.push(...[
-    { title: "Approval", key: "approval", sortable: true, align: "center" },
+    { title: "Approval", key: "approval", sortable: true },
     {
       title: "Participation",
       key: "participation",
       sortable: true,
-      align: "center",
     },
   ]);
 
@@ -284,6 +285,13 @@ const rowClick = (_:any, item: any) => {
     align-items: center;
     gap: 8px;
   }
+  &__voted_cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    // move the voted cell because of the icon in the header
+    margin-right: 21px; 
+  }
 }
 
 .proposal {
@@ -312,12 +320,4 @@ const rowClick = (_:any, item: any) => {
   }
 }
 
-.submission_status {
-  display: flex;
-  align-items: center;
-
-  &__text {
-    margin-left: 0.5rem;
-  }
-}
 </style>
