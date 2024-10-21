@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
@@ -1098,7 +1098,7 @@ export const useFundStore = defineStore({
       console.warn("FETCH userFundDelegateAddress")
 
       this.userFundDelegateAddress = await this.callWithRetry(() =>
-        this.fundContract.methods.delegates(this.activeAccountAddress).call(),
+      this.fundGovernanceTokenContract.methods.delegates(this.activeAccountAddress).call(),
       );
       console.warn("FETCH userFundDelegateAddress", this.userFundDelegateAddress)
 
