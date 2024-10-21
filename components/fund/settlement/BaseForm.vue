@@ -78,7 +78,8 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
+import { ethers, FixedNumber } from "ethers";
+import type { PropType } from "vue";
 import type IToken from "~/types/token";
 import { useFundStore } from "~/store/fund.store";
 
@@ -109,8 +110,8 @@ const props = defineProps({
     default: BigInt("0"),
   },
   exchangeRate: {
-    type: Number,
-    default: 0,
+    type: FixedNumber,
+    default: FixedNumber.fromValue(0),
   },
   rules: {
     type: Array as PropType<RulesArray>,
@@ -159,9 +160,16 @@ const exchangeRateText = computed((): string => {
 });
 
 const calculatedToken1Value = computed(() => {
-  if (!props.exchangeRate) return "N/A"
-  // Continue to use your trimTrailingZeros utility function as needed
-  return trimTrailingZeros((Number(tokenValue.value) * props.exchangeRate).toFixed(18));
+  if (!tokenValue.value) return "0"
+  if (!props.exchangeRate || !tokenValue.value || !props.token0.decimals) return "N/A"
+
+  try {
+    const value = props.exchangeRate.mul(FixedNumber.fromString(tokenValue.value.toString()));
+    return trimTrailingZeros(value.toString());
+  } catch (error: any) {
+    console.error("error calculatedToken1Value", error);
+    return "0";
+  }
 });
 const noNavUpdateToken1Value = computed(() => {
   if (!props?.token0?.decimals || !props?.token1?.decimals) return "--";
