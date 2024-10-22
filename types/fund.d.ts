@@ -54,7 +54,7 @@ export default interface IFund {
   baseToken: IToken;
   governanceToken: IToken;
   governanceTokenTotalSupply: bigint;
-  totalNAVWei: bigint;
+  lastNAVUpdateTotalNAV?: bigint;
   totalDepositBalance: bigint;
   cumulativeReturnPercent?: number;
   monthlyReturnPercent?: number; // TODO

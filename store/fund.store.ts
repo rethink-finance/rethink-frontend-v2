@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
@@ -187,14 +187,24 @@ export const useFundStore = defineStore({
        * + IERC20(FundSettings.baseToken).balanceOf(FundSettings.safe)
        * - _feeBal
        *
+       * Total NAV is the NAV value of the last NAV update.
        * But if there are no NAV updates yet, we should take _totalDepositBal instead to get a correct value.
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
-      console.warn("last NAV", this.fundLastNAVUpdate);
-      if (this.fundLastNAVUpdate?.timestamp) return this.fund?.totalNAVWei || 0n;
+      if (this.fundLastNAVUpdate?.timestamp) return this.fundLastNAVUpdate?.totalNAV || 0n;
 
       // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
       return this.fund?.totalDepositBalance || 0n;
+    },
+    fundCumulativeReturnPercent(): number | undefined {
+      if (this.fund && this.fund.totalDepositBalance && this.fundTotalNAV) {
+        return calculateCumulativeReturnPercent(
+          this.fund.totalDepositBalance,
+          this.fundTotalNAV,
+          this.fund.baseToken.decimals,
+        );
+      }
+      return undefined;
     },
     fundTotalNAVFormattedShort(): string {
       if (!this.fund?.address) return "N/A";
@@ -394,6 +404,7 @@ export const useFundStore = defineStore({
         console.log("fund NAV: ", dataNAV)
         this.fund.positionTypeCounts = this.parseFundPositionTypeCounts(dataNAV);
         this.fund.navUpdates = await this.parseFundNAVUpdates(dataNAV, this.fund.address, this.fundContract);
+        this.fund.cumulativeReturnPercent = calculateCumulativeReturnPercent(this.fund.totalDepositBalance, this.fundTotalNAV, this.fund.baseToken.decimals);
       } catch (error) {
         console.error("Error calling getNAVDataForFund: ", error, "fund: ", this.fund.address);
       }
@@ -545,7 +556,6 @@ export const useFundStore = defineStore({
             () => governanceTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
             () => this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken),
             () => fundTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
-            () => fundContract.methods.totalNAV().call(),
             () => fundContract.methods._totalDepositBal().call(),
             () => rethinkFundGovernorContract.methods.votingDelay().call(),
             () => rethinkFundGovernorContract.methods.votingPeriod().call(),
@@ -572,7 +582,6 @@ export const useFundStore = defineStore({
           governanceTokenTotalSupply,
           fundTokenDecimals,
           fundTokenTotalSupply,
-          fundTotalNAV,
           fundTotalDepositBalance,
           fundVotingDelay,
           fundVotingPeriod,
@@ -624,11 +633,11 @@ export const useFundStore = defineStore({
             address: fundSettings.governanceToken,
             decimals: Number(governanceTokenDecimals) ?? 18,
           } as IToken,
-          totalNAVWei: fundTotalNAV || BigInt("0"),
+          lastNAVUpdateTotalNAV: undefined,
           totalDepositBalance: fundTotalDepositBalance || BigInt("0"),
           governanceTokenTotalSupply,
           fundTokenTotalSupply,
-          cumulativeReturnPercent: calculateCumulativeReturnPercent(fundTotalDepositBalance, fundTotalNAV, baseTokenDecimals),
+          cumulativeReturnPercent: undefined,
           monthlyReturnPercent: undefined,
           sharpeRatio: undefined,
           positionTypeCounts: [] as IPositionTypeCount[],
@@ -1098,7 +1107,7 @@ export const useFundStore = defineStore({
       console.warn("FETCH userFundDelegateAddress")
 
       this.userFundDelegateAddress = await this.callWithRetry(() =>
-      this.fundGovernanceTokenContract.methods.delegates(this.activeAccountAddress).call(),
+        this.fundGovernanceTokenContract.methods.delegates(this.activeAccountAddress).call(),
       );
       console.warn("FETCH userFundDelegateAddress", this.userFundDelegateAddress)
 

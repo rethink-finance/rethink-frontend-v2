@@ -205,7 +205,6 @@ export const useFundsStore = defineStore({
             continue;
           }
           const totalDepositBalance = dataNAVs.totalDepositBal[index] || 0n;
-          const totalNAVWei = dataNAVs.totalNav[index] || 0n;
           const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index]);
 
 
@@ -233,9 +232,9 @@ export const useFundsStore = defineStore({
             },
             governanceToken: {} as IToken,  // Not important here, for now.
             governanceTokenTotalSupply: BigInt("0"),
-            totalNAVWei,
+            lastNAVUpdateTotalNAV: undefined,
             totalDepositBalance,
-            cumulativeReturnPercent: calculateCumulativeReturnPercent(totalDepositBalance, totalNAVWei, baseTokenDecimals),
+            cumulativeReturnPercent: undefined,
             monthlyReturnPercent: undefined,
             sharpeRatio: undefined,
             positionTypeCounts: [
@@ -370,10 +369,10 @@ export const useFundsStore = defineStore({
             const fund = this.funds.find((fund: IFund) => fund.address === address);
             if (fund) {
               const baseTokenDecimals = fund.baseToken.decimals;
-              const cumulativeReturnPercent = fundLastNavUpdate?.timestamp ? calculateCumulativeReturnPercent(fund.totalDepositBalance, fund.totalNAVWei, baseTokenDecimals) : 0;
-              const totalNAVWei = fundLastNavUpdate?.timestamp ? fund.totalNAVWei : fund.totalDepositBalance;
+              const cumulativeReturnPercent = fundLastNavUpdate?.timestamp ? calculateCumulativeReturnPercent(fund.totalDepositBalance, fundLastNavUpdate?.totalNAV, baseTokenDecimals) : 0;
+              const lastNAVUpdateTotalNAV = fundLastNavUpdate?.timestamp ? fundLastNavUpdate?.totalNAV : fund.totalDepositBalance;
 
-              fund.totalNAVWei = totalNAVWei;
+              fund.lastNAVUpdateTotalNAV = lastNAVUpdateTotalNAV;
               fund.cumulativeReturnPercent = cumulativeReturnPercent;
               fund.navUpdates = fundNAVUpdates;
               fund.isNavUpdatesLoading = false;
