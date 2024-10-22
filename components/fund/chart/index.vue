@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!fundStore.loadingNavUpdates" class="chart">
+  <div v-if="!isLoadingFetchFundNAVUpdatesActionState" class="chart">
     <div class="chart__toolbar">
       <div>
         <FundChartTypeSelector
@@ -31,7 +31,9 @@
 <script lang="ts">
 import { ethers } from "ethers";
 import type { PropType } from "vue";
-import { useFundStore } from "~/store/fund.store";
+import { useActionStateStore } from "~/store/actionState.store";
+import { useFundStore } from "~/store/fund/fund.store";
+import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
 
@@ -44,7 +46,8 @@ export default {
   },
   setup() {
     const fundStore = useFundStore();
-    return { fundStore }
+    const actionStateStore = useActionStateStore();
+    return { fundStore, actionStateStore }
   },
   computed: {
     series() {
@@ -54,6 +57,9 @@ export default {
           data: this.chartItems,
         },
       ];
+    },
+    isLoadingFetchFundNAVUpdatesActionState(): boolean {
+      return this.actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
     },
     totalNAVItems(): bigint[] {
       return this.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n) || [];

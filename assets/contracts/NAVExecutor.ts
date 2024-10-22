@@ -1,42 +1,42 @@
-{
+export const NAVExecutor = {
   "abi": [
     {
       "inputs": [
         {
           "internalType": "address",
           "name": "oiv",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "bytes",
           "name": "data",
-          "type": "bytes"
-        }
+          "type": "bytes",
+        },
       ],
       "name": "storeNAVData",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
+      "type": "function",
     },
     {
       "inputs": [
         {
           "internalType": "address",
           "name": "oiv",
-          "type": "address"
-        }
+          "type": "address",
+        },
       ],
       "name": "getNAVData",
       "outputs": [
         {
           "internalType": "bytes",
           "name": "",
-          "type": "bytes"
-        }
+          "type": "bytes",
+        },
       ],
       "stateMutability": "view",
       "type": "function",
-      "constant": true
-    }
-  ]
-}
+      "constant": true,
+    },
+  ],
+} as const;

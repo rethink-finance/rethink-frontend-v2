@@ -1,4 +1,4 @@
-[
+export const ERC20 = [
   {
     "constant": true,
     "inputs":
@@ -8,12 +8,12 @@
     [
       {
         "name": "",
-        "type": "string"
-      }
+        "type": "string",
+      },
     ],
     "payable": false,
     "stateMutability": "view",
-    "type": "function"
+    "type": "function",
   },
   {
     "constant": false,
@@ -21,24 +21,24 @@
     [
       {
         "name": "_spender",
-        "type": "address"
+        "type": "address",
       },
       {
         "name": "_value",
-        "type": "uint256"
-      }
+        "type": "uint256",
+      },
     ],
     "name": "approve",
     "outputs":
     [
       {
         "name": "success",
-        "type": "bool"
-      }
+        "type": "bool",
+      },
     ],
     "payable": false,
     "stateMutability": "nonpayable",
-    "type": "function"
+    "type": "function",
   },
   {
     "constant": true,
@@ -49,12 +49,12 @@
     [
       {
         "name": "",
-        "type": "uint256"
-      }
+        "type": "uint256",
+      },
     ],
     "payable": false,
     "stateMutability": "view",
-    "type": "function"
+    "type": "function",
   },
   {
     "constant": false,
@@ -62,28 +62,28 @@
     [
       {
         "name": "_from",
-        "type": "address"
+        "type": "address",
       },
       {
         "name": "_to",
-        "type": "address"
+        "type": "address",
       },
       {
         "name": "_value",
-        "type": "uint256"
-      }
+        "type": "uint256",
+      },
     ],
     "name": "transferFrom",
     "outputs":
     [
       {
         "name": "success",
-        "type": "bool"
-      }
+        "type": "bool",
+      },
     ],
     "payable": false,
     "stateMutability": "nonpayable",
-    "type": "function"
+    "type": "function",
   },
   {
     "constant": true,
@@ -94,12 +94,12 @@
     [
       {
         "name": "",
-        "type": "uint8"
-      }
+        "type": "uint8",
+      },
     ],
     "payable": false,
     "stateMutability": "view",
-    "type": "function"
+    "type": "function",
   },
   {
     "constant": false,
@@ -107,20 +107,20 @@
     [
       {
         "name": "_value",
-        "type": "uint256"
-      }
+        "type": "uint256",
+      },
     ],
     "name": "burn",
     "outputs":
     [
       {
         "name": "success",
-        "type": "bool"
-      }
+        "type": "bool",
+      },
     ],
     "payable": false,
     "stateMutability": "nonpayable",
-    "type": "function"
+    "type": "function",
   },
   {
     "constant": true,
@@ -128,20 +128,20 @@
     [
       {
         "name": "",
-        "type": "address"
-      }
+        "type": "address",
+      },
     ],
     "name": "balanceOf",
     "outputs":
     [
       {
         "name": "",
-        "type": "uint256"
-      }
+        "type": "uint256",
+      },
     ],
     "payable": false,
     "stateMutability": "view",
-    "type": "function"
+    "type": "function",
   },
   {
     "constant": false,
@@ -149,24 +149,24 @@
     [
       {
         "name": "_from",
-        "type": "address"
+        "type": "address",
       },
       {
         "name": "_value",
-        "type": "uint256"
-      }
+        "type": "uint256",
+      },
     ],
     "name": "burnFrom",
     "outputs":
     [
       {
         "name": "success",
-        "type": "bool"
-      }
+        "type": "bool",
+      },
     ],
     "payable": false,
     "stateMutability": "nonpayable",
-    "type": "function"
+    "type": "function",
   },
   {
     "constant": true,
@@ -177,12 +177,12 @@
     [
       {
         "name": "",
-        "type": "string"
-      }
+        "type": "string",
+      },
     ],
     "payable": false,
     "stateMutability": "view",
-    "type": "function"
+    "type": "function",
   },
   {
     "constant": false,
@@ -190,19 +190,19 @@
     [
       {
         "name": "_to",
-        "type": "address"
+        "type": "address",
       },
       {
         "name": "_value",
-        "type": "uint256"
-      }
+        "type": "uint256",
+      },
     ],
     "name": "transfer",
     "outputs":
     [],
     "payable": false,
     "stateMutability": "nonpayable",
-    "type": "function"
+    "type": "function",
   },
   {
     "constant": false,
@@ -210,28 +210,28 @@
     [
       {
         "name": "_spender",
-        "type": "address"
+        "type": "address",
       },
       {
         "name": "_value",
-        "type": "uint256"
+        "type": "uint256",
       },
       {
         "name": "_extraData",
-        "type": "bytes"
-      }
+        "type": "bytes",
+      },
     ],
     "name": "approveAndCall",
     "outputs":
     [
       {
         "name": "success",
-        "type": "bool"
-      }
+        "type": "bool",
+      },
     ],
     "payable": false,
     "stateMutability": "nonpayable",
-    "type": "function"
+    "type": "function",
   },
   {
     "constant": true,
@@ -239,44 +239,44 @@
     [
       {
         "name": "",
-        "type": "address"
+        "type": "address",
       },
       {
         "name": "",
-        "type": "address"
-      }
+        "type": "address",
+      },
     ],
     "name": "allowance",
     "outputs":
     [
       {
         "name": "",
-        "type": "uint256"
-      }
+        "type": "uint256",
+      },
     ],
     "payable": false,
     "stateMutability": "view",
-    "type": "function"
+    "type": "function",
   },
   {
     "inputs":
     [
       {
         "name": "initialSupply",
-        "type": "uint256"
+        "type": "uint256",
       },
       {
         "name": "tokenName",
-        "type": "string"
+        "type": "string",
       },
       {
         "name": "tokenSymbol",
-        "type": "string"
-      }
+        "type": "string",
+      },
     ],
     "payable": false,
     "stateMutability": "nonpayable",
-    "type": "constructor"
+    "type": "constructor",
   },
   {
     "anonymous": false,
@@ -285,21 +285,21 @@
       {
         "indexed": true,
         "name": "from",
-        "type": "address"
+        "type": "address",
       },
       {
         "indexed": true,
         "name": "to",
-        "type": "address"
+        "type": "address",
       },
       {
         "indexed": false,
         "name": "value",
-        "type": "uint256"
-      }
+        "type": "uint256",
+      },
     ],
     "name": "Transfer",
-    "type": "event"
+    "type": "event",
   },
   {
     "anonymous": false,
@@ -308,15 +308,15 @@
       {
         "indexed": true,
         "name": "from",
-        "type": "address"
+        "type": "address",
       },
       {
         "indexed": false,
         "name": "value",
-        "type": "uint256"
-      }
+        "type": "uint256",
+      },
     ],
     "name": "Burn",
-    "type": "event"
-  }
-]
+    "type": "event",
+  },
+] as const;

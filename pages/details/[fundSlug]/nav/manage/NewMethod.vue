@@ -219,8 +219,8 @@
 <script setup lang="ts">
 import { ethers } from "ethers";
 import { useRouter } from "vue-router";
-import { useFundStore } from "~/store/fund.store";
-import { useToastStore } from "~/store/toast.store";
+import { useFundStore } from "~/store/fund/fund.store";
+import { useToastStore } from "~/store/toasts/toast.store";
 import {
   defaultInputTypeValue, InputType,
   PositionType, PositionTypeKeys,

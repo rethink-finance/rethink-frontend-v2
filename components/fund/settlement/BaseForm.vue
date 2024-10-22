@@ -81,7 +81,7 @@
 import { ethers, FixedNumber } from "ethers";
 import type { PropType } from "vue";
 import type IToken from "~/types/token";
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 
 type RuleFunction = (...args: any[]) => boolean | string;
 type RulesArray = RuleFunction[];

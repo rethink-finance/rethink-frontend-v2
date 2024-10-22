@@ -29,7 +29,7 @@
         <div class="data_bar__item">
           <div class="data_bar__title">
             <v-progress-circular
-              v-if="fundStore.loadingNavUpdates"
+              v-if="isLoadingFetchFundNAVUpdatesAction"
               class="d-flex"
               size="18"
               width="2"
@@ -116,7 +116,9 @@
           <div class="data_bar__item">
             <div class="data_bar__title">
               <v-progress-circular
-                v-if="fundStore.loadingNavUpdates || isNavSimulationLoading"
+                v-if="isLoadingFetchFundNAVUpdatesAction ||
+                  isLoadingFetchSimulatedNAVMethodValueAction ||
+                  isLoadingFetchSimulateCurrentNAVAction"
                 class="d-flex"
                 size="18"
                 width="2"
@@ -217,7 +219,9 @@
                 <div class="pending_redemptions_estimate">
                   ≈
                   <v-progress-circular
-                    v-if="fundStore.loadingNavUpdates || isNavSimulationLoading"
+                    v-if="isLoadingFetchFundNAVUpdatesAction ||
+                      isLoadingFetchSimulatedNAVMethodValueAction ||
+                      isLoadingFetchSimulateCurrentNAVAction"
                     class="d-flex"
                     size="18"
                     width="2"
@@ -259,7 +263,11 @@
           <div class="data_bar__item">
             <div class="data_bar__title">
               <v-progress-circular
-                v-if="fundStore.loadingNavUpdates || isNavSimulationLoading"
+                v-if="
+                  isLoadingFetchFundNAVUpdatesAction ||
+                    isLoadingFetchSimulatedNAVMethodValueAction ||
+                    isLoadingFetchSimulateCurrentNAVAction
+                "
                 class="d-flex"
                 size="18"
                 width="2"
@@ -347,13 +355,13 @@
               <template #activator="{ props }">
                 <v-btn
                   v-bind="props"
-                  :disabled="!isUsingZodiacPilotExtension || loadingUpdateNav"
+                  :disabled="!isUsingZodiacPilotExtension || isLoadingPostUpdateNAV"
                   class="bg-primary text-secondary"
-                  @click="fundStore.updateNAV()"
+                  @click="fundStore.postUpdateNAV()"
                 >
                   <template #prepend>
                     <v-progress-circular
-                      v-if="loadingUpdateNav"
+                      v-if="isLoadingPostUpdateNAV"
                       class="d-flex"
                       size="20"
                       width="3"
@@ -382,14 +390,14 @@
 
 <script setup lang="ts">
 import { ethers, FixedNumber } from "ethers";
-import {
-  formatTokenValue,
-  roundToSignificantDecimals,
-} from "~/composables/formatters";
-import { useFundStore } from "~/store/fund.store";
+import { formatTokenValue, roundToSignificantDecimals } from "~/composables/formatters";
+import { useActionStateStore } from "~/store/actionState.store";
+import { useFundStore } from "~/store/fund/fund.store";
+import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();
+const actionStateStore = useActionStateStore();
 
 const fund = useAttrs().fund as IFund;
 const {
@@ -397,8 +405,6 @@ const {
   totalCurrentSimulatedNAV,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
-  isNavSimulationLoading,
-  loadingUpdateNav,
 } = toRefs(fundStore);
 
 const customSimulatedNAVValue = ref("");
@@ -456,7 +462,7 @@ const pendingDepositBalanceFormatted = computed(() => {
 });
 const totalCurrentSimulatedNAVFormatted = computed(() => {
   if (!totalCurrentSimulatedNAV.value) return "0";
-  return fundStore.formatBaseTokenValue(totalCurrentSimulatedNAV.value);
+  return fundStore.getFormattedBaseTokenValue(totalCurrentSimulatedNAV.value);
 });
 const pendingRedemptionBalanceFormatted = computed(() => {
   if (!fund?.pendingRedemptionBalance) return "0";
@@ -624,6 +630,19 @@ watch(
   },
   { immediate: true },
 );
+
+const isLoadingPostUpdateNAV = computed(() => {
+  return actionStateStore.isActionState("postUpdateNAVAction", ActionState.Loading);
+});
+const isLoadingFetchFundNAVUpdatesAction = computed(() => {
+  return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
+});
+const isLoadingFetchSimulateCurrentNAVAction = computed(() => {
+  return actionStateStore.isActionState("fetchSimulateCurrentNAVAction", ActionState.Loading);
+});
+const isLoadingFetchSimulatedNAVMethodValueAction = computed(() => {
+  return actionStateStore.isActionState("fetchSimulatedNAVMethodValueAction", ActionState.Loading);
+});
 </script>
 
 <style scoped lang="scss">
