@@ -1,7 +1,7 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
@@ -187,6 +187,7 @@ export const useFundStore = defineStore({
        * + IERC20(FundSettings.baseToken).balanceOf(FundSettings.safe)
        * - _feeBal
        *
+       * Total NAV is the NAV value of the last NAV update.
        * But if there are no NAV updates yet, we should take _totalDepositBal instead to get a correct value.
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
@@ -200,10 +201,10 @@ export const useFundStore = defineStore({
         return calculateCumulativeReturnPercent(
           this.fund.totalDepositBalance,
           this.fundTotalNAV,
-          this.fund.baseToken.decimals
+          this.fund.baseToken.decimals,
         );
       }
-      return undefined; 
+      return undefined;
     },
     fundTotalNAVFormattedShort(): string {
       if (!this.fund?.address) return "N/A";
@@ -555,7 +556,6 @@ export const useFundStore = defineStore({
             () => governanceTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
             () => this.web3Store.getTokenInfo(fundTokenContract, "decimals", fundSettings.governanceToken),
             () => fundTokenContract.methods.totalSupply().call(),  // Get un-cached total supply.
-            () => fundContract.methods.totalNAV().call(),
             () => fundContract.methods._totalDepositBal().call(),
             () => rethinkFundGovernorContract.methods.votingDelay().call(),
             () => rethinkFundGovernorContract.methods.votingPeriod().call(),
@@ -582,7 +582,6 @@ export const useFundStore = defineStore({
           governanceTokenTotalSupply,
           fundTokenDecimals,
           fundTokenTotalSupply,
-          fundTotalNAV,
           fundTotalDepositBalance,
           fundVotingDelay,
           fundVotingPeriod,
@@ -634,7 +633,7 @@ export const useFundStore = defineStore({
             address: fundSettings.governanceToken,
             decimals: Number(governanceTokenDecimals) ?? 18,
           } as IToken,
-          totalNAVWei: fundTotalNAV || BigInt("0"),
+          lastNAVUpdateTotalNAV: undefined,
           totalDepositBalance: fundTotalDepositBalance || BigInt("0"),
           governanceTokenTotalSupply,
           fundTokenTotalSupply,
@@ -1108,7 +1107,7 @@ export const useFundStore = defineStore({
       console.warn("FETCH userFundDelegateAddress")
 
       this.userFundDelegateAddress = await this.callWithRetry(() =>
-      this.fundGovernanceTokenContract.methods.delegates(this.activeAccountAddress).call(),
+        this.fundGovernanceTokenContract.methods.delegates(this.activeAccountAddress).call(),
       );
       console.warn("FETCH userFundDelegateAddress", this.userFundDelegateAddress)
 
