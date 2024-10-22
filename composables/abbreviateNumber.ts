@@ -6,7 +6,7 @@ import { trimTrailingZeros } from "~/composables/formatters";
  * console.log(formatNumber(1025000)); // Outputs: "1.0M"
  * console.log(formatNumber(1300000000)); // Outputs: "1.3B"
  */
-export const abbreviateNumber = (value: any) => {
+export const abbreviateNumber = (value: any, toFixed = 1): string => {
   const num = parseFloat(value);
   if (isNaN(num)) {
     return value; // Return as is if not a valid number
@@ -26,5 +26,5 @@ export const abbreviateNumber = (value: any) => {
   }
 
   // Round to 1 decimal and cut trailing zeros.
-  return trimTrailingZeros(roundedValue.toFixed(1)) + abbreviation;
+  return trimTrailingZeros(roundedValue.toFixed(toFixed)) + abbreviation;
 }

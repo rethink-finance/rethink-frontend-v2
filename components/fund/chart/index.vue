@@ -29,11 +29,11 @@
   </div>
 </template>
 <script lang="ts">
-import type { PropType } from "vue";
 import { ethers } from "ethers";
+import type { PropType } from "vue";
+import { useFundStore } from "~/store/fund.store";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
-import { useFundStore } from "~/store/fund.store";
 
 export default {
   props: {
@@ -129,7 +129,7 @@ export default {
             },
             offsetX: 0,
             formatter: (value: number) => {
-              return abbreviateNumber(value);
+              return abbreviateNumber(value, 3);
             },
           },
           axisBorder: {

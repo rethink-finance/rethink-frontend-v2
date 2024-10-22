@@ -1108,7 +1108,7 @@ export const useFundStore = defineStore({
       console.warn("FETCH userFundDelegateAddress")
 
       this.userFundDelegateAddress = await this.callWithRetry(() =>
-        this.fundContract.methods.delegates(this.activeAccountAddress).call(),
+      this.fundGovernanceTokenContract.methods.delegates(this.activeAccountAddress).call(),
       );
       console.warn("FETCH userFundDelegateAddress", this.userFundDelegateAddress)
 
