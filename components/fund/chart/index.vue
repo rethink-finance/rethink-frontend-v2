@@ -135,7 +135,7 @@ export default {
             },
             offsetX: 0,
             formatter: (value: number) => {
-              return abbreviateNumber(value);
+              return abbreviateNumber(value, 3);
             },
           },
           axisBorder: {

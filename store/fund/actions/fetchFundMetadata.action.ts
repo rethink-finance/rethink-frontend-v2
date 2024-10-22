@@ -80,7 +80,7 @@ export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFun
     const fund: IFund = {
       // Original fund settings
       originalFundSettings: parsedFundSettings,
-      totalNAVWei: 0n,
+      lastNAVUpdateTotalNAV: undefined,
       chainName: fundStore.web3Store.chainName,
       chainShort: fundStore.web3Store.chainShort,
       address: parsedFundSettings.fundAddress || "",

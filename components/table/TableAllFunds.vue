@@ -22,45 +22,46 @@
       <Icon
         :icon="icon(item.chainShort).name"
         :width="icon(item.chainShort).size"
+        :color="icon(item.chainShort)?.color"
         class="mr-2"
       />
     </template>
 
-    <template #item.totalNAVWei="{ item }">
+    <template #item.lastNAVUpdateTotalNAV="{ item }">
       <div :class="{'justify-center': item.isNavUpdatesLoading}">
-          <v-progress-circular
-            v-if="item.isNavUpdatesLoading"
-            size="18"
-            width="2"
-            indeterminate
-          />
-          <template v-else>
-            {{ formatNumberShort(Number(formatTokenValue(item.totalNAVWei, item.baseToken.decimals, false))) 
-              + " " + item.baseToken.symbol 
-            }}
-          </template>
-        </div>
+        <v-progress-circular
+          v-if="item.isNavUpdatesLoading"
+          size="18"
+          width="2"
+          indeterminate
+        />
+        <template v-else>
+          {{ formatNumberShort(formatTokenValue(item.lastNAVUpdateTotalNAV, item.baseToken.decimals, false))
+            + " " + item.baseToken.symbol
+          }}
+        </template>
+      </div>
     </template>
 
     <!-- cumulative -->
     <template #item.cumulativeReturnPercent="{ item }">
       <div :class="{'justify-center': item.isNavUpdatesLoading}">
         <v-progress-circular
-            v-if="item.isNavUpdatesLoading"
-            size="18"
-            width="2"
-            indeterminate
-          />
-          <div v-else :class="numberColorClass(item.cumulativeReturnPercent)">
-            {{ formatPercent(item.cumulativeReturnPercent, true) }}
-          </div>
+          v-if="item.isNavUpdatesLoading"
+          size="18"
+          width="2"
+          indeterminate
+        />
+        <div v-else :class="numberColorClass(item.cumulativeReturnPercent)">
+          {{ formatPercent(item.cumulativeReturnPercent, true) }}
+        </div>
       </div>
     </template>
 
     <template #item.positionTypeCounts="{ item }">
       <PositionTypesBar :position-type-counts="item.positionTypeCounts ?? []" />
     </template>
-    
+
     <template #bottom>
       <!-- Leave this slot empty to hide pagination controls -->
     </template>
@@ -73,12 +74,12 @@
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue/dist/iconify.js";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 import { formatNumberShort, formatPercent, formatTokenValue } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 
 const web3Store = useWeb3Store();
 const router = useRouter();
@@ -113,7 +114,7 @@ const headers: any = computed(() => {
     },
     {
       title: "AUM",
-      key: "totalNAVWei",
+      key: "lastNAVUpdateTotalNAV",
       align: "end",
     },
     {
@@ -160,13 +161,14 @@ const icon = (chainShort: string) => {
   return {
     name: icon.name,
     size: icon.size,
+    color: icon.color,
   };
 };
 
 const navigateFundDetails = (event: any, row: any) => {
   const chainId = web3Store.chainId;
   router.push(
-    `/details/${chainId}-${row.item.fundToken.symbol}-${row.item.address}`
+    `/details/${chainId}-${row.item.fundToken.symbol}-${row.item.address}`,
   );
 };
 </script>

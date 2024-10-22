@@ -2,7 +2,7 @@ import { useFundStore } from "../fund.store";
 
 
 export async function calculateFundPerformanceMetricsAction(): Promise<any> {
-  const fundStore = await useFundStore();
+  const fundStore = useFundStore();
 
   try {
     if (!fundStore.fund) {
@@ -18,15 +18,15 @@ export async function calculateFundPerformanceMetricsAction(): Promise<any> {
       if (fund) {
         const baseTokenDecimals = fund.baseToken.decimals;
         const cumulativeReturnPercent = fundLastNavUpdateExists
-          ? await calculateCumulativeReturnPercent(
+          ? calculateCumulativeReturnPercent(
             fund.totalDepositBalance,
-            fund.totalNAVWei || 0n,
+            fund.lastNAVUpdateTotalNAV || 0n,
             baseTokenDecimals,
           )
           : 0;
 
-        fund.totalNAVWei = fundLastNavUpdateExists
-          ? fund.totalNAVWei
+        fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists
+          ? fund.lastNAVUpdateTotalNAV
           : fund.totalDepositBalance;
         fund.cumulativeReturnPercent = cumulativeReturnPercent;
         fund.navUpdates = fundNAVUpdates;

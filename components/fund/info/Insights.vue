@@ -7,6 +7,7 @@
             :icon="fundChainIcon.name"
             :width="fundChainIcon.size"
             :height="fundChainIcon.size"
+            :color="fundChainIcon.color"
             class="mr-2"
           />
           {{ capitalizeFirst(fund.chainName) || "N/A" }}
@@ -52,9 +53,9 @@
           <template v-else>
             <div
               class="data_bar__title"
-              :class="numberColorClass(fundStore.fundLastNAVUpdate?.timestamp ? fund.cumulativeReturnPercent  : 0)"
+              :class="numberColorClass(fundStore.fundLastNAVUpdate?.timestamp ? fundStore.fundCumulativeReturnPercent : 0)"
             >
-              {{ formatPercent(fundStore.fundLastNAVUpdate?.timestamp ? fund.cumulativeReturnPercent  : 0, true) || "N/A" }}
+              {{ formatPercent(fundStore.fundLastNAVUpdate?.timestamp ? fundStore.fundCumulativeReturnPercent  : 0, true) || "N/A" }}
             </div>
           </template>
         </div>

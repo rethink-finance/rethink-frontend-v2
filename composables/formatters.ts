@@ -101,12 +101,12 @@ export const trimTrailingZeros = (value: string) => {
   return value.replace(/\.?0*$/, "");
 }
 
-export const formatNumberShort = (number?: number) => {
+export const formatNumberShort = (number?: number | bigint | string) => {
   // Formats into abbreviations with 2 decimal points, for example: 1.5K, 5.32M
   // Convert to uppercase.
   // Remove trailing ".00";
-  if (number == undefined) return "N/A";
-  return numeral(number).format("0.00a").toUpperCase().replace(/\.00(?=[KMBT])/g, "");
+  if (number === undefined || number === null) return "N/A";
+  return numeral(Number(number)).format("0.00a").toUpperCase().replace(/\.00(?=[KMBT])/g, "");
 }
 
 export const commify = (value: string | number | bigint) => {

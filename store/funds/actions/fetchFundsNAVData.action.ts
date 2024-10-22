@@ -100,7 +100,7 @@ async function processFundNavData(
   fundsStore.fundNAVUpdates[fundAddress] = navUpdates;
 
   if(fund){
-    fund.totalNAVWei = navUpdates.length
+    fund.lastNAVUpdateTotalNAV = navUpdates.length
       ? fundNAVData.totalNav || 0n
       : fund.totalDepositBalance || 0n;
   }

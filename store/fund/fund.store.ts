@@ -131,11 +131,11 @@ export const useFundStore = defineStore({
           Number(this.fund?.baseToken.decimals);
         return 10 ** -decimalDiff;
       }
-      if (!this.fund.totalNAVWei || !this.fund?.fundTokenTotalSupply) return 0;
+      if (!this.fund.lastNAVUpdateTotalNAV || !this.fund?.fundTokenTotalSupply) return 0;
 
       // Create FixedNumber instances
       const totalNAV = FixedNumber.fromString(
-        ethers.formatUnits(this.fund.totalNAVWei, this.fund.baseToken.decimals),
+        ethers.formatUnits(this.fund.lastNAVUpdateTotalNAV, this.fund.baseToken.decimals),
       );
       const fundTokenTotalSupply = FixedNumber.fromString(
         ethers.formatUnits(
@@ -159,10 +159,10 @@ export const useFundStore = defineStore({
       //   const decimalDiff = Number(this.fund?.fundToken.decimals) - Number(this.fund?.baseToken.decimals)
       //   return 10 ** decimalDiff;
       // }
-      if (!this.fund?.totalNAVWei || !this.fund.fundTokenTotalSupply) return 0;
+      if (!this.fund?.lastNAVUpdateTotalNAV || !this.fund.fundTokenTotalSupply) return 0;
 
       const totalNAV = FixedNumber.fromString(
-        ethers.formatUnits(this.fund.totalNAVWei, this.fund.baseToken.decimals),
+        ethers.formatUnits(this.fund.lastNAVUpdateTotalNAV, this.fund.baseToken.decimals),
       );
       const fundTokenTotalSupply = FixedNumber.fromString(
         ethers.formatUnits(
@@ -204,7 +204,7 @@ export const useFundStore = defineStore({
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
       if (this.fundLastNAVUpdate?.timestamp)
-        return this.fund?.totalNAVWei || 0n;
+        return this.fund?.lastNAVUpdateTotalNAV || 0n;
 
       // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
       return this.fund?.totalDepositBalance || 0n;

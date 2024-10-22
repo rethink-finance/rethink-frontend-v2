@@ -4,7 +4,12 @@ import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 import type IFundSettings from "./fund_settings";
 
-
+export interface INAVParts {
+  baseAssetOIVBal: bigint;
+  baseAssetSafeBal: bigint;
+  feeBal: bigint;
+  totalNAV: bigint;
+}
 
 /**
  * Example API response data of getFundSettings:
@@ -49,7 +54,7 @@ export default interface IFund {
   baseToken: IToken;
   governanceToken: IToken;
   governanceTokenTotalSupply: bigint;
-  totalNAVWei?: bigint;
+  lastNAVUpdateTotalNAV?: bigint;
   totalDepositBalance: bigint;
   cumulativeReturnPercent?: number;
   monthlyReturnPercent?: number; // TODO

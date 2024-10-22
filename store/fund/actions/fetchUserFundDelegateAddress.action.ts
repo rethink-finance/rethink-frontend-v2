@@ -16,7 +16,7 @@ export const fetchUserFundDelegateAddressAction = async (): Promise<any> => {
 
   fundStore.fundUserData.fundDelegateAddress = await fundStore.callWithRetry(
     () =>
-      fundStore.fundContract.methods
+      fundStore.fundGovernanceTokenContract.methods
         .delegates(fundStore.activeAccountAddress)
         .call(),
   );

@@ -63,6 +63,7 @@
               <template #selection="{ item }">
                 <Icon
                   :icon="item.raw.icon.name"
+                  :color="item.raw.icon.color"
                   class="select_item__icon mr-2"
                 />
                 <v-list-item-title>
@@ -77,6 +78,7 @@
                 >
                   <Icon
                     :icon="item.raw.icon.name"
+                    :color="item.raw.icon.color"
                     class="select_item__icon"
                   />
                   <div>

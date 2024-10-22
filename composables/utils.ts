@@ -132,8 +132,9 @@ const chainIconMap: Record<string, IIcon> = {
     size: "2rem",
   },
   base: {
-    name: "token-branded:base",
+    name: "token:base",
     size: "2rem",
+    color: "#0052ff",
   },
 };
 
