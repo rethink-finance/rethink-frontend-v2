@@ -388,8 +388,8 @@ export const useFundStore = defineStore({
           shouldCommify: boolean = true,
           shouldroundToSignificantDecimals: boolean = false,
         ): string => {
-          const baseSymbol = state.fund?.baseToken.symbol;
-          const baseDecimals = state.fund?.baseToken.decimals;
+          const baseSymbol = state.fund?.baseToken?.symbol;
+          const baseDecimals = state.fund?.baseToken?.decimals;
           if (!baseDecimals) {
             return value;
           }
@@ -453,30 +453,22 @@ export const useFundStore = defineStore({
      * @dev: would be better to separate fundSettings from (startTime & metadata), as sometimes we already
      *   have the fund settings from the discovery page.
      */
-    async fetchFundData(fundAddress: string): Promise<IFund> {
-      return await useActionState("fetchFundDataAction", async () => {
-        return await fetchFundDataAction(fundAddress);
-      });
+    fetchFundData(fundAddress: string): Promise<IFund> {
+      return useActionState("fetchFundDataAction",  () => fetchFundDataAction(fundAddress));
     },
-    async fetchFundNAVData(): Promise<void> {
-      return await useActionState("fetchFundNAVDataAction", async () => {
-        return await fetchFundNAVDataAction();
-      });
+    fetchFundNAVData(): Promise<void> {
+      return useActionState("fetchFundNAVDataAction",  () => fetchFundNAVDataAction());
     },
-    async fetchUserFundData(fundAddress: string) {
-      return await useActionState("fetchUserFundDataAction", async () => {
-        await fetchUserFundDataAction(fundAddress);
-      });
+    fetchUserFundData(fundAddress: string) {
+      return useActionState("fetchUserFundDataAction",  () => fetchUserFundDataAction(fundAddress));
     },
     /**
      * Fetches multiple fund metadata such as:
      * - getFundStartTime
      * - fundMetadata
      */
-    async fetchFundMetaData(fundAddress: string): Promise<IFund> {
-      return await useActionState("fetchFundMetaDataAction", async () => {
-        return await fetchFundMetaDataAction(fundAddress);
-      });
+    fetchFundMetaData(fundAddress: string): Promise<IFund> {
+      return useActionState("fetchFundMetaDataAction",  () => fetchFundMetaDataAction(fundAddress));
     },
     parseFundSettings(fundData: any) {
       const fundSettings: Partial<IFundSettings> = {};
@@ -624,89 +616,75 @@ export const useFundStore = defineStore({
         detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
       } as INAVMethod;
     },
-    async simulateCurrentNAV(): Promise<void> {
-      return await useActionState(
+    simulateCurrentNAV(): Promise<void> {
+      return useActionState(
         "fetchSimulateCurrentNAVAction",
-        async () => {
-          return await fetchSimulateCurrentNAVAction();
-        },
+        () => fetchSimulateCurrentNAVAction(),
       );
     },
-    async fetchSimulatedNAVMethodValue(navEntry: INAVMethod) {
-      return await useActionState(
+    fetchSimulatedNAVMethodValue(navEntry: INAVMethod) {
+      return useActionState(
         "fetchSimulatedNAVMethodValueAction",
-        async () => {
-          return await fetchSimulatedNAVMethodValueAction(navEntry);
-        },
+        () => fetchSimulatedNAVMethodValueAction(navEntry),
       );
     },
-    async parseFundNAVUpdates(
+    parseFundNAVUpdates(
       fundNAVData: any,
     ): Promise<INAVUpdate[]> {
-      return await useActionState("parseFundNAVUpdatesAction", async () => {
-        return await parseFundNAVUpdatesAction(fundNAVData);
-      });
+      console.log("parseFundNavUpdates jopo")
+      return useActionState(
+        "parseFundNAVUpdatesAction",
+        () => parseFundNAVUpdatesAction(fundNAVData),
+      );
     },
-    async fetchUserBaseTokenBalance() {
-      return await useActionState(
+    fetchUserBaseTokenBalance() {
+      return useActionState(
         "fetchUserBaseTokenBalanceAction",
-        async () => {
-          return await fetchUserBaseTokenBalanceAction();
-        },
+        () => fetchUserBaseTokenBalanceAction(),
       );
     },
-    async fetchUserFundTokenBalance() {
-      return await useActionState(
+    fetchUserFundTokenBalance() {
+      return useActionState(
         "fetchUserFundTokenBalanceAction",
-        async () => {
-          return await fetchUserFundTokenBalanceAction();
-        },
+        () => fetchUserFundTokenBalanceAction(),
       );
     },
-    async fetchUserGovernanceTokenBalance() {
-      return await useActionState(
+    fetchUserGovernanceTokenBalance() {
+      return useActionState(
         "fetchUserGovernanceTokenBalanceAction",
-        async () => {
-          return await fetchUserGovernanceTokenBalanceAction();
-        },
+        () => fetchUserGovernanceTokenBalanceAction(),
       );
     },
-    async fetchUserFundDelegateAddress() {
-      return await useActionState(
+    fetchUserFundDelegateAddress() {
+      return useActionState(
         "fetchUserFundDelegateAddressAction",
-        async () => {
-          return await fetchUserFundDelegateAddressAction();
-        },
+        () => fetchUserFundDelegateAddressAction(),
       );
     },
-    async fetchUserFundAllowance() {
-      return await useActionState("fetchUserFundAllowanceAction", async () => {
-        return await fetchUserFundAllowanceAction();
-      });
+    fetchUserFundAllowance() {
+      return useActionState(
+        "fetchUserFundAllowanceAction",
+        () => fetchUserFundAllowanceAction(),
+      );
     },
-    async fetchUserFundShareValue() {
-      return await useActionState("fetchUserFundShareValueAction", async () => {
-        return await fetchUserFundShareValueAction();
-      });
+    fetchUserFundShareValue() {
+      return useActionState(
+        "fetchUserFundShareValueAction",
+        () => fetchUserFundShareValueAction(),
+      );
     },
-    async fetchUserFundDepositRedemptionRequests() {
-      return await useActionState(
+    fetchUserFundDepositRedemptionRequests() {
+      return useActionState(
         "fetchUserFundDepositRedemptionRequestsAction",
-        async () => {
-          return await fetchUserFundDepositRedemptionRequestsAction();
-        },
+        () => fetchUserFundDepositRedemptionRequestsAction(),
       );
     },
-    async fetchUserFundTransactionRequest(
+    fetchUserFundTransactionRequest(
       fundTransactionType: FundTransactionType,
     ) {
-      return await useActionState(
+      return useActionState(
         "fetchUserFundTransactionRequestAction",
-        async () => {
-          return await fetchUserFundTransactionRequestAction(
-            fundTransactionType,
-          );
-        },
+        () => fetchUserFundTransactionRequestAction(fundTransactionType),
       );
     },
     async fetchFundContractBaseTokenBalance() {
@@ -787,17 +765,16 @@ export const useFundStore = defineStore({
           .encodeABI(),
       });
     },
-    async postUpdateNAV(): Promise<any> {
-      return await useActionState("postUpdateNAVAction", async () => {
-        return await postUpdateNAVAction();
-      });
+    postUpdateNAV(): Promise<any> {
+      return useActionState(
+        "postUpdateNAVAction",
+        () => postUpdateNAVAction(),
+      );
     },
-    async calculateFundPerformanceMetrics() {
-      return await useActionState(
+    calculateFundPerformanceMetrics() {
+      return useActionState(
         "calculateFundPerformanceMetricsAction",
-        async () => {
-          return await calculateFundPerformanceMetricsAction();
-        },
+        () => calculateFundPerformanceMetricsAction(),
       );
     },
   },

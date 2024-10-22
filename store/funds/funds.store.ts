@@ -94,41 +94,40 @@ export const useFundsStore = defineStore({
     callWithRetry(method: any): any {
       return this.web3Store.callWithRetry(method);
     },
-    async fetchFundsInfoArrays() {
-      return await useActionState("fetchFundsInfoArraysAction", async () => {
-        return await fetchFundsInfoArraysAction();
-      });
+    fetchFundsInfoArrays() {
+      return useActionState("fetchFundsInfoArraysAction", () => fetchFundsInfoArraysAction());
     },
     /**
      * Fetches all funds data from the GovernableFundFactory.
      */
-    async fetchFunds() {
-      return await useActionState("fetchFundsAction", async () => {
-        return await fetchFundsAction(excludeTestFunds);
-      });
+    fetchFunds() {
+      return useActionState("fetchFundsAction", () => fetchFundsAction(excludeTestFunds));
     },
     /**
      * Fetch funds and their metadata and NAV data.
      * This will return funds with just enough data to populate the discover table.
      * More data can be fetched from fundSettings later if needed, or added to the reader contract.
      */
-    async fetchFundsMetaData(fundAddresses: string[], fundsInfo: any) {
-      return await useActionState("fetchFundsMetaDataAction", async () => {
-        return await fetchFundsMetaDataAction(fundAddresses, fundsInfo);
-      });
+    fetchFundsMetaData(fundAddresses: string[], fundsInfo: any) {
+      return useActionState(
+        "fetchFundsMetaDataAction",
+        () => fetchFundsMetaDataAction(fundAddresses, fundsInfo),
+      );
     },
-    async fetchFundsNAVData(fundsInfoArrays: any[]) {
-      return await useActionState("fetchFundsNAVDataAction", async () => {
-        return await fetchFundsNAVDataAction(
+    fetchFundsNAVData(fundsInfoArrays: any[]) {
+      return useActionState(
+        "fetchFundsNAVDataAction",
+        () => fetchFundsNAVDataAction(
           fundsInfoArrays,
           excludeNAVDetails,
-        );
-      });
+        ),
+      );
     },
-    async calculateFundsPerformanceMetrics() {
-      return await useActionState("calculateFundsPerformanceMetricsAction", async () => {
-        return await calculateFundsPerformanceMetricsAction();
-      });
+    calculateFundsPerformanceMetrics() {
+      return useActionState(
+        "calculateFundsPerformanceMetricsAction",
+        () => calculateFundsPerformanceMetricsAction(),
+      );
     },
   },
 });
