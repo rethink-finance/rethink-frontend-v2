@@ -114,7 +114,7 @@ const headers: any = computed(() => {
     },
     {
       title: "AUM",
-      key: "totalNAVWei",
+      key: "lastNAVUpdateTotalNAV",
       align: "end",
     },
     {

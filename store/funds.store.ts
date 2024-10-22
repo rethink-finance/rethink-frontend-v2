@@ -205,7 +205,6 @@ export const useFundsStore = defineStore({
             continue;
           }
           const totalDepositBalance = dataNAVs.totalDepositBal[index] || 0n;
-          const lastNAVUpdateTotalNAV = dataNAVs.totalNav[index] || 0n;
           const baseTokenDecimals = Number(dataNAVs.fundBaseTokenDecimals[index]);
 
 
