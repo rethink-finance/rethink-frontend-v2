@@ -13,6 +13,7 @@ export default interface INetwork {
 export interface IIcon {
   name: string,
   size: string,
+  color?: string,
 }
 export interface INativeCurrency {
   name: string,

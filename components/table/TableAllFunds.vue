@@ -22,6 +22,7 @@
       <Icon
         :icon="icon(item.chainShort).name"
         :width="icon(item.chainShort).size"
+        :color="icon(item.chainShort)?.color"
         class="mr-2"
       />
     </template>
@@ -160,6 +161,7 @@ const icon = (chainShort: string) => {
   return {
     name: icon.name,
     size: icon.size,
+    color: icon.color,
   };
 };
 

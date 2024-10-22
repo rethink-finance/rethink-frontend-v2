@@ -7,6 +7,7 @@
             :icon="fundChainIcon.name"
             :width="fundChainIcon.size"
             :height="fundChainIcon.size"
+            :color="fundChainIcon.color"
             class="mr-2"
           />
           {{ capitalizeFirst(fund.chainName) || "N/A" }}
