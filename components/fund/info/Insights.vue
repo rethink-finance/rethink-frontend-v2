@@ -53,9 +53,9 @@
           <template v-else>
             <div
               class="data_bar__title"
-              :class="numberColorClass(fundStore.fundLastNAVUpdate?.timestamp ? fundStore.fundCumulativeReturnPercent : 0)"
+              :class="numberColorClass(fund?.cumulativeReturnPercent || 0)"
             >
-              {{ formatPercent(fundStore.fundLastNAVUpdate?.timestamp ? fundStore.fundCumulativeReturnPercent  : 0, true) || "N/A" }}
+              {{ formatPercent(fund?.cumulativeReturnPercent || 0, true) || "N/A" }}
             </div>
           </template>
         </div>
