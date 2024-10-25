@@ -1,7 +1,7 @@
+import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
-import defaultAvatar from "@/assets/images/default_avatar.webp";
 import ERC20 from "~/assets/contracts/ERC20.json";
 import ERC20Votes from "~/assets/contracts/ERC20Votes.json";
 import GovernableFund from "~/assets/contracts/GovernableFund.json";
@@ -118,7 +118,7 @@ export const useFundStore = defineStore({
     isUsingZodiacPilotExtension(): boolean {
       // Check if user is using Zodiac Pilot extension.
       // The connected wallet address is the same as custody (safe address).
-      return this.activeAccountAddress === this.fund?.safeAddress;
+      return this.activeAccountAddress?.toLowerCase() === this.fund?.safeAddress.toLowerCase();
     },
     baseToFundTokenExchangeRate(): FixedNumber {
       if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals) return FixedNumber.fromString("0");
