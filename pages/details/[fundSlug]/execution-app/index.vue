@@ -17,14 +17,13 @@
             />
           </template>
           <div v-else>
-            Switch to the Zodiac Pilot extension to complete the transfer and
-            settle flows.
+            Switch to the Zodiac Pilot extension to activate the execution app
           </div>
         </div>
       </div>
     </UiHeader>
 
-    <div class="main_card">
+    <div :class="`main_card ${!isUsingZodiacPilotExtension ? 'disabled' : ''}`">
       <UiHeader>
         <div class="main_header__title">
           Transfer
@@ -93,22 +92,36 @@
             </v-col>
           </v-row>
           <v-row>
-            <v-col class="d-flex justify-end">
-              <v-btn
-                :disabled="!formTransferIsValid"
-                @click="handleTransfer"
-                color="primary"
-                variant="outlined"
+            <v-col class="btn-submit">
+              <v-tooltip
+                activator="parent"
+                location="bottom"
+                :disabled="isUsingZodiacPilotExtension"
               >
-                Transfer
-              </v-btn>
+                <template #activator="{ props }">
+                  <v-btn
+                    :disabled="
+                      !formTransferIsValid || !isUsingZodiacPilotExtension
+                    "
+                    @click="handleTransfer"
+                    color="primary"
+                    variant="outlined"
+                  >
+                    Transfer
+                  </v-btn>
+                </template>
+                <template #default>
+                  Switch to the Zodiac Pilot Extension to Update NAV and Settle
+                  Flows.
+                </template>
+              </v-tooltip>
             </v-col>
           </v-row>
         </v-form>
       </div>
     </div>
 
-    <div class="main_card">
+    <div :class="`main_card ${!isUsingZodiacPilotExtension ? 'disabled' : ''}`">
       <UiHeader>
         <div class="main_header__title">
           Submit Raw TXN
@@ -165,16 +178,30 @@
             </v-col>
           </v-row>
           <v-row>
-            <v-col class="d-flex justify-end">
-              <v-btn
-                :disabled="!formSubmitRawTXNIsValid"
-                @click="handleSubmitRawTXN"
-                color="primary"
-                variant="outlined"
-                :loading="loadingSubmitRawTXN"
+            <v-col class="btn-submit">
+              <v-tooltip
+                activator="parent"
+                location="bottom"
+                :disabled="isUsingZodiacPilotExtension"
               >
-                Submit
-              </v-btn>
+                <template #activator="{ props }">
+                  <v-btn
+                    :disabled="
+                      !formSubmitRawTXNIsValid || !isUsingZodiacPilotExtension
+                    "
+                    @click="handleSubmitRawTXN"
+                    color="primary"
+                    variant="outlined"
+                    :loading="loadingSubmitRawTXN"
+                  >
+                    Submit
+                  </v-btn>
+                </template>
+                <template #default>
+                  Switch to the Zodiac Pilot Extension to Update NAV and Settle
+                  Flows.
+                </template>
+              </v-tooltip>
             </v-col>
           </v-row>
         </v-form>
@@ -453,10 +480,15 @@ watch(
   gap: 0.6rem;
 }
 
-.main_card:not(.main_grid) {
+.main_card {
   display: flex;
   flex-direction: column;
   gap: 32px;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
 }
 
 // main header style
@@ -490,5 +522,11 @@ watch(
 }
 .available_balance {
   white-space: wrap;
+}
+.btn-submit {
+  display: flex;
+  justify-content: flex-end;
+  max-width: fit-content;
+  margin-left: auto;
 }
 </style>
