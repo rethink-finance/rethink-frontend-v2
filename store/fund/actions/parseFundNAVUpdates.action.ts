@@ -46,6 +46,7 @@ export const parseFundNAVUpdatesAction = async (
   }
 
   // Parse NAV methods and populate entries and pastNavValues for the last update
+  console.warn("FUND NAV ", fundNAVData)
   fundNAVData.encodedNavUpdate.forEach((navEntry, navEntryIndex) => {
     const navMethods: Record<string, any>[] = decodeNavUpdateEntry(navEntry);
     for (const [navMethodIndex, navMethod] of navMethods.entries()) {

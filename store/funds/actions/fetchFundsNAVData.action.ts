@@ -98,13 +98,13 @@ async function processFundNavData(
     );
 
   fundsStore.fundNAVUpdates[fundAddress] = navUpdates;
+  const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
-  if(fund){
+  if (fund) {
     fund.lastNAVUpdateTotalNAV = navUpdates.length
-      ? fundNAVData.totalNav || 0n
+      ? lastNavUpdate.totalNAV || 0n
       : fund.totalDepositBalance || 0n;
   }
-
 
   for (const [
     navUpdateIndex,

@@ -191,6 +191,7 @@ export const useFundStore = defineStore({
        * But if there are no NAV updates yet, we should take _totalDepositBal instead to get a correct value.
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
+      console.warn("HEHEHEHEHE", this.fundLastNAVUpdate?.timestamp, this.fund?.lastNAVUpdateTotalNAV)
       if (this.fundLastNAVUpdate?.timestamp)
         return this.fund?.lastNAVUpdateTotalNAV || 0n;
 
@@ -220,6 +221,7 @@ export const useFundStore = defineStore({
     },
     fundLastNAVUpdate(state: IState): INAVUpdate | undefined {
       if (!state.fund?.navUpdates?.length) return undefined;
+      console.warn("fundLastNAVUpdate", state.fund?.navUpdates[state.fund?.navUpdates?.length - 1])
       return state.fund?.navUpdates[state.fund?.navUpdates?.length - 1];
     },
     fundLastNAVUpdateMethods(): INAVMethod[] {

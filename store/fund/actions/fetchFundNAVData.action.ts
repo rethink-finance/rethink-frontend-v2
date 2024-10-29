@@ -6,13 +6,11 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
   if (!fundStore.fund) return;
 
   try {
-
     const fundNAVData = await fundStore.callWithRetry(() =>
       fundStore.rethinkReaderContract.methods
         .getFundNAVData(fundStore.fund?.address)
         .call(),
     );
-
 
     fundStore.fund.positionTypeCounts =
       fundStore.parseFundPositionTypeCounts(fundNAVData);
@@ -20,8 +18,11 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     const navUpdates = await fundStore.parseFundNAVUpdates(
       fundNAVData,
     );
+    const lastNavUpdate = navUpdates[navUpdates.length - 1];
+
+    console.warn("lastNAVUpdateTotalNAV", navUpdates.length, fundNAVData, navUpdates)
     fundStore.fund.lastNAVUpdateTotalNAV = navUpdates.length
-      ? fundNAVData.totalNav || 0n
+      ? lastNavUpdate.totalNAV || 0n
       : fundStore.fund.totalDepositBalance || 0n;
     fundStore.fund.navUpdates = navUpdates;
 
