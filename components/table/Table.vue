@@ -112,7 +112,7 @@ import {
   useVueTable,
 } from "@tanstack/vue-table";
 import { onMounted, ref, watch } from "vue";
-import { useWeb3Store } from "~/store/web3.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 const web3Store = useWeb3Store();
 const router = useRouter();

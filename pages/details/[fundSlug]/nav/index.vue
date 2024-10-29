@@ -3,7 +3,7 @@
     <UiHeader>
       <div>
         <div class="main_header__title">
-          <v-skeleton-loader v-if="fundStore.loadingNavUpdates" type="text" class="total_nav_skeleton" />
+          <v-skeleton-loader v-if="isLoadingFetchFundNAVUpdatesAction" type="text" class="total_nav_skeleton" />
           <template v-else>
             {{ fundTotalNAVFormatted }}
           </template>
@@ -12,7 +12,7 @@
           <div>
             Last updated on
           </div>
-          <v-skeleton-loader v-if="fundStore.loadingNavUpdates" type="text" class="last_nav_update_skeleton" />
+          <v-skeleton-loader v-if="isLoadingFetchFundNAVUpdatesAction" type="text" class="last_nav_update_skeleton" />
           <strong v-else class="ms-2">{{ fundLastNAVUpdateDate }}</strong>
         </div>
       </div>
@@ -28,13 +28,13 @@
           :show-tooltip="!accountStore.isConnected"
         >
           <v-btn
-            :disabled="loadingUpdateNav"
+            :disabled="isLoadingPostUpdateNAV"
             class="bg-primary text-secondary"
-            @click="accountStore.isConnected ? fundStore.updateNAV() : null"
+            @click="accountStore.isConnected ? fundStore.postUpdateNAV() : null"
           >
             <template #prepend>
               <v-progress-circular
-                v-if="loadingUpdateNav"
+                v-if="isLoadingPostUpdateNAV"
                 class="d-flex"
                 size="20"
                 width="3"
@@ -72,7 +72,7 @@
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
         <FundNavMethodsTable
           :methods="fundLastNAVUpdateMethods"
-          :loading="fundStore.loadingNavUpdates"
+          :loading="isLoadingFetchFundNAVUpdatesAction"
           :nav-parts="fundLastNAVUpdate?.navParts"
           show-summary-row
           show-last-nav-update-value
@@ -95,19 +95,21 @@
 </template>
 
 <script setup lang="ts">
-import { useAccountStore } from "~/store/account.store";
-import { useFundStore } from "~/store/fund.store";
+import { useAccountStore } from "~/store/account/account.store";
+import { useActionStateStore } from "~/store/actionState.store";
+import { useFundStore } from "~/store/fund/fund.store";
+import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
+const actionStateStore = useActionStateStore();
 
 const fund = useAttrs().fund as IFund;
 const {
   selectedFundSlug,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
-  loadingUpdateNav,
 } = toRefs(useFundStore());
 
 const fundLastNAVUpdateDate = computed(() => {
@@ -117,7 +119,7 @@ const fundLastNAVUpdateDate = computed(() => {
 
 const fundTotalNAVFormatted = computed(() => {
   if (!fundStore.fundTotalNAV) return "N/A";
-  return fundStore.formatBaseTokenValue(fundStore.fundTotalNAV)
+  return fundStore.getFormattedBaseTokenValue(fundStore.fundTotalNAV)
 });
 
 // return fund with reversed navUpdates array to show the latest updates first
@@ -129,6 +131,13 @@ const reversedFundNavUpdates = computed(() => {
     // Create a shallow copy of the navUpdates array and reverse it
     navUpdates: fund.navUpdates.slice().reverse(),
   };
+});
+
+const isLoadingPostUpdateNAV = computed(() => {
+  return actionStateStore.isActionState("postUpdateNAVAction", ActionState.Loading);
+});
+const isLoadingFetchFundNAVUpdatesAction = computed(() => {
+  return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
 });
 </script>
 

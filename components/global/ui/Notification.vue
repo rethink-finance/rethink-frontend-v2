@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { useFundStore } from "~/store/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 
 const { fund } = toRefs(useFundStore());
 </script>

@@ -16,7 +16,7 @@
 </template>
 
 <script lang="ts">
-import { useToastStore } from "~/store/toast.store";
+import { useToastStore } from "~/store/toasts/toast.store";
 
 export default {
   name: "CopyButton",

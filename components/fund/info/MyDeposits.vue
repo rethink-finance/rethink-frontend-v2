@@ -20,9 +20,9 @@
       <!--        </div>-->
       <!--      </div>-->
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': fundStore.loadingUserBalances}">
+        <div class="data_bar__title" :class="{'justify-center': isLoadingUserBalances}">
           <v-progress-circular
-            v-if="fundStore.loadingUserBalances"
+            v-if="isLoadingUserBalances"
             class="d-flex"
             size="18"
             width="2"
@@ -37,9 +37,9 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': fundStore.loadingUserBalances}">
+        <div class="data_bar__title" :class="{'justify-center': isLoadingUserBalances}">
           <v-progress-circular
-            v-if="fundStore.loadingUserBalances"
+            v-if="isLoadingUserBalances"
             class="d-flex"
             size="18"
             width="2"
@@ -54,9 +54,9 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': fundStore.loadingUserBalances}">
+        <div class="data_bar__title" :class="{'justify-center': isLoadingUserBalances}">
           <v-progress-circular
-            v-if="fundStore.loadingUserBalances"
+            v-if="isLoadingUserBalances"
             class="d-flex"
             size="18"
             width="2"
@@ -76,7 +76,9 @@
 
 <script lang="ts">
 import { numberColorClass } from "~/composables/numberColorClass";
-import { useFundStore } from "~/store/fund.store";
+import { useActionStateStore } from "~/store/actionState.store";
+import { useFundStore } from "~/store/fund/fund.store";
+import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 
 export default {
@@ -89,7 +91,8 @@ export default {
   },
   setup() {
     const fundStore = useFundStore();
-    return { fundStore };
+    const actionStateStore = useActionStateStore();
+    return { fundStore, actionStateStore };
   },
   computed: {
     fundBaseToken() {
@@ -100,15 +103,18 @@ export default {
     },
     userFundTokenBalanceFormatted() {
       if (!this.fundToken) return "N/A";
-      return this.fundStore.formatFundTokenValue(this.fundStore.userFundTokenBalance, false, true);
+      return this.fundStore.getFormattedFundTokenValue(this.fundStore.fundUserData.fundTokenBalance, false, true);
     },
     userFundAllowanceFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      return this.fundStore.formatBaseTokenValue(this.fundStore.userFundAllowance, false, true);
+      return this.fundStore.getFormattedBaseTokenValue(this.fundStore.fundUserData.fundAllowance, false, true);
     },
     userCurrentValueFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      return this.fundStore.formatBaseTokenValue(this.fundStore.userCurrentValue, false, true);
+      return this.fundStore.getFormattedBaseTokenValue(this.fundStore.userCurrentValue, false, true);
+    },
+    isLoadingUserBalances() {
+      return this.actionStateStore.isActionState("fetchUserBalancesAction", ActionState.Loading);
     },
   },
   methods: { numberColorClass },

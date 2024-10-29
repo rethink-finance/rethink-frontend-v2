@@ -12,7 +12,7 @@
 </template>
 
 <script lang="ts">
-import { useAccountStore } from "~/store/account.store";
+import { useAccountStore } from "~/store/account/account.store";
 import type IFund from "~/types/fund";
 
 export default {

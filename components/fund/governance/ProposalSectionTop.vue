@@ -201,11 +201,11 @@
 <script setup lang="ts">
 // toast
 import { truncateAddress } from "~/composables/addressUtils";
-import { useAccountStore } from "~/store/account.store";
-import { useFundStore } from "~/store/fund.store";
-import { useGovernanceProposalsStore } from "~/store/governance_proposals.store";
-import { useToastStore } from "~/store/toast.store";
-import { useWeb3Store } from "~/store/web3.store";
+import { useAccountStore } from "~/store/account/account.store";
+import { useFundStore } from "~/store/fund/fund.store";
+import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import {
   ProposalState,
   VoteType,

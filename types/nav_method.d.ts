@@ -33,7 +33,7 @@ export default interface INAVMethod {
   valuationSource: string,
   positionType: PositionType,
 
-  // pastNAVUpdateEntryFundAddress is original if it was found in fetchAllNavMethods
+  // pastNAVUpdateEntryFundAddress is original if it was found in fetchFundsNAVData
   foundMatchingPastNAVUpdateEntryFundAddress?: boolean,
   pastNAVUpdateEntryFundAddress?: string,
   pastNAVUpdateEntrySafeAddress?: string,
@@ -56,7 +56,6 @@ export default interface INAVMethod {
   simulatedNav?: bigint,  // THis is only used in the frontend, when simulating NAV methods.
   isSimulatedNavError?: boolean,
   simulatedNavFormatted?: string,
-  isNavSimulationLoading?: boolean,
   // THis is only used in the frontend, as methods don't have any IDs, we hash their contents to compare them.
   // Hash is generated from the detailsJson.
   detailsHash?: string,

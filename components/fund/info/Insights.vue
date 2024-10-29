@@ -17,9 +17,9 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': fundStore.loadingNavUpdates}">
+        <div class="data_bar__title" :class="{'justify-center': isLoadingFetchFundNAVUpdatesActionState}">
           <v-progress-circular
-            v-if="fundStore.loadingNavUpdates"
+            v-if="isLoadingFetchFundNAVUpdatesActionState"
             class="d-flex"
             size="18"
             width="2"
@@ -42,9 +42,9 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': fundStore.loadingNavUpdates}">
+        <div class="data_bar__title" :class="{'justify-center': isLoadingFetchFundNAVUpdatesActionState}">
           <v-progress-circular
-            v-if="fundStore.loadingNavUpdates"
+            v-if="isLoadingFetchFundNAVUpdatesActionState"
             class="d-flex"
             size="18"
             width="2"
@@ -53,9 +53,9 @@
           <template v-else>
             <div
               class="data_bar__title"
-              :class="numberColorClass(fundStore.fundLastNAVUpdate?.timestamp ? fundStore.fundCumulativeReturnPercent : 0)"
+              :class="numberColorClass(fund?.cumulativeReturnPercent || 0)"
             >
-              {{ formatPercent(fundStore.fundLastNAVUpdate?.timestamp ? fundStore.fundCumulativeReturnPercent  : 0, true) || "N/A" }}
+              {{ formatPercent(fund?.cumulativeReturnPercent || 0, true) || "N/A" }}
             </div>
           </template>
         </div>
@@ -100,9 +100,15 @@
 import { formatPercent } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass";
 import { capitalizeFirst } from "~/composables/utils";
-import { useFundStore } from "~/store/fund.store";
+import { useActionStateStore } from "~/store/actionState.store";
+import { useFundStore } from "~/store/fund/fund.store";
+import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 const fundStore = useFundStore();
+const actionStateStore = useActionStateStore();
+
+const isLoadingFetchFundNAVUpdatesActionState =
+  computed(() => actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading));
 
 const props = defineProps({
   fund: {
