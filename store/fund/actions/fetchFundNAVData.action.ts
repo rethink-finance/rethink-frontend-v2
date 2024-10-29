@@ -20,7 +20,6 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     );
     const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
-    console.warn("lastNAVUpdateTotalNAV", navUpdates.length, fundNAVData, navUpdates)
     fundStore.fund.lastNAVUpdateTotalNAV = navUpdates.length
       ? lastNavUpdate.totalNAV || 0n
       : fundStore.fund.totalDepositBalance || 0n;
