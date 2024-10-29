@@ -155,10 +155,9 @@
               <v-text-field
                 v-model="submitRawTXNEntry.amountValue"
                 placeholder="E.g. 10"
-                :rules="[rules.required]"
+                :rules="[rules.required, rules.isNonNegativeNumber]"
                 required
               />
-              <!-- :rules="[rules.required, rules.isPositiveNumber]" -->
             </v-col>
           </v-row>
           <v-row>
@@ -221,7 +220,7 @@ const userBaseTokenBalanceFormatted = computed(() => {
 const rules = {
   required: formRules.required,
   isValidAddress: formRules.isValidAddress,
-  isPositiveNumber: formRules.isPositiveNumber,
+  isNonNegativeNumber: formRules.isNonNegativeNumber,
 
   enoughBalance: (value: string) => {
     if (!fundStore.fund) return "Fund data is missing.";
