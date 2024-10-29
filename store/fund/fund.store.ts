@@ -115,7 +115,7 @@ export const useFundStore = defineStore({
     isUsingZodiacPilotExtension(): boolean {
       // Check if user is using Zodiac Pilot extension.
       // The connected wallet address is the same as custody (safe address).
-      return this.activeAccountAddress === this.fund?.safeAddress;
+      return this.activeAccountAddress?.toLowerCase() === this.fund?.safeAddress.toLowerCase();
     },
     baseToFundTokenExchangeRate(): FixedNumber {
       if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals) return FixedNumber.fromString("0");

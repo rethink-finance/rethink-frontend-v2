@@ -234,6 +234,12 @@ const routes: IRoute[] = [
     title: "Flows",
     text:"",
   },
+  {
+    to: `${fundDetailsRoute.value}/execution-app`,
+    exactMatch: true,
+    title: "Execution App",
+    text:"",
+  },
 ];
 
 const isPathActive = (path: string = "", exactMatch = true) =>
