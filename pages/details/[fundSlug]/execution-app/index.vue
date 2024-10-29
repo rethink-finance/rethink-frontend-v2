@@ -6,7 +6,7 @@
           <img
             src="@/assets/images/zodiac_pilot.svg"
             class="img_zodiac_pilot"
-          >
+          />
           <template v-if="isUsingZodiacPilotExtension">
             <div>Connected to the Zodiac Pilot</div>
             <Icon
@@ -53,9 +53,7 @@
         <v-form ref="form" v-model="formTransferIsValid">
           <v-row>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2">
-                To
-              </v-label>
+              <v-label class="label_required mb-2"> To </v-label>
               <v-text-field
                 v-model="transferEntry.to"
                 placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -63,8 +61,7 @@
                 required
               />
             </v-col>
-            <!-- TODO impelement input token address -->
-            <!-- <v-col cols="12" sm="4">
+            <v-col cols="12" sm="4">
               <v-label class="label_required mb-2">
                 Input Token Address
               </v-label>
@@ -74,21 +71,24 @@
                 :rules="[rules.required, rules.isValidAddress]"
                 required
               />
-            </v-col> -->
+            </v-col>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2">
-                Amount
-              </v-label>
+              <v-label class="label_required mb-2"> Amount </v-label>
               <v-text-field
                 v-model="transferEntry.depositValue"
                 placeholder="E.g. 10"
                 :rules="[rules.required, rules.enoughBalance]"
                 required
               />
-              <v-label>
+              <v-label
+                v-if="
+                  inputTokenDetais.formattedBalance && inputTokenDetais.symbol
+                "
+                class="available_balance"
+              >
                 Available Balance:
-                {{ userBaseTokenBalanceFormatted }}
-                {{ fundStore.fund?.baseToken?.symbol }}
+                {{ inputTokenDetais.formattedBalance }}
+                {{ inputTokenDetais.symbol }}
               </v-label>
             </v-col>
           </v-row>
@@ -96,9 +96,9 @@
             <v-col class="d-flex justify-end">
               <v-btn
                 :disabled="!formTransferIsValid"
+                @click="handleTransfer"
                 color="primary"
                 variant="outlined"
-                @click="handleTransfer"
               >
                 Transfer
               </v-btn>
@@ -137,9 +137,7 @@
         <v-form ref="form" v-model="formSubmitRawTXNIsValid">
           <v-row>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2">
-                To
-              </v-label>
+              <v-label class="label_required mb-2"> To </v-label>
               <v-text-field
                 v-model="submitRawTXNEntry.contractAddress"
                 placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -148,9 +146,7 @@
               />
             </v-col>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2">
-                Submit (Calldata)
-              </v-label>
+              <v-label class="label_required mb-2"> Submit (Calldata) </v-label>
               <v-text-field
                 v-model="submitRawTXNEntry.txData"
                 placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -159,9 +155,7 @@
               />
             </v-col>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2">
-                Amount
-              </v-label>
+              <v-label class="label_required mb-2"> Amount </v-label>
               <v-text-field
                 v-model="submitRawTXNEntry.amountValue"
                 placeholder="E.g. 10"
@@ -174,10 +168,10 @@
             <v-col class="d-flex justify-end">
               <v-btn
                 :disabled="!formSubmitRawTXNIsValid"
+                @click="handleSubmitRawTXN"
                 color="primary"
                 variant="outlined"
                 :loading="loadingSubmitRawTXN"
-                @click="handleSubmitRawTXN"
               >
                 Submit
               </v-btn>
@@ -190,11 +184,12 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
-import type IFund from "~/types/fund";
-import { useFundStore } from "~/store/fund/fund.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import { useToastStore } from "~/store/toasts/toast.store";
+import { ethers } from 'ethers';
+import { ERC20 } from '~/assets/contracts/ERC20';
+import { useFundStore } from '~/store/fund/fund.store';
+import { useToastStore } from '~/store/toasts/toast.store';
+import { useWeb3Store } from '~/store/web3/web3.store';
+import type IFund from '~/types/fund';
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
@@ -206,25 +201,17 @@ const { isUsingZodiacPilotExtension } = toRefs(fundStore);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({
-  contractAddress: "",
-  txData: "",
-  amountValue: "",
+  contractAddress: '',
+  txData: '',
+  amountValue: '',
 });
 
 const loadingTransfer = ref(false);
 const formTransferIsValid = ref(false);
 const transferEntry = reactive({
-  to: "",
-  // inputTokenAddress: "",
-  depositValue: "",
-});
-
-const userBaseTokenBalanceFormatted = computed(() => {
-  return formatTokenValue(
-    fundStore.fundUserData?.baseTokenBalance,
-    fundStore.fund?.baseToken.decimals,
-    false,
-  );
+  to: '',
+  inputTokenAddress: '',
+  depositValue: '',
 });
 
 const rules = {
@@ -233,75 +220,74 @@ const rules = {
   isNonNegativeNumber: formRules.isNonNegativeNumber,
 
   enoughBalance: (value: string) => {
-    if (!fundStore.fund) return "Fund data is missing.";
+    if (!inputTokenDetais.value.name)
+      return 'Please enter valid token address first.';
 
     let valueWei;
     try {
-      valueWei = ethers.parseUnits(value, fundStore.fund?.baseToken.decimals);
+      valueWei = ethers.parseUnits(value, inputTokenDetais.value.decimals);
     } catch {
-      return `Make sure the value has max ${fundStore.fund?.baseToken.decimals} decimals.`;
+      return `Make sure the value has max ${inputTokenDetais.value.decimals} decimals.`;
     }
 
-    if (valueWei <= 0) return "Value must be positive.";
+    if (valueWei <= 0) return 'Value must be positive.';
 
-    console.log("decimals: ", fundStore.fund.baseToken.decimals);
-    console.log("valueWei: ", valueWei);
-    console.log("userBaseTokenBalance: ", fundStore.fundUserData?.baseTokenBalance);
+    console.log('decimals: ', inputTokenDetais.value.decimals);
+    console.log('valueWei: ', valueWei);
+    console.log('userBaseTokenBalance: ', inputTokenDetais.value.balance);
     console.log(
-      "valueWei > userBaseTokenBalance: ",
-      valueWei > fundStore.fundUserData?.baseTokenBalance,
+      'valueWei > userBaseTokenBalance: ',
+      valueWei > inputTokenDetais.value.balance,
     );
 
-    if (fundStore.fundUserData?.baseTokenBalance < valueWei) {
+    if (inputTokenDetais.value.balance < valueWei) {
       const userBaseTokenBalanceFormatted = formatTokenValue(
-        fundStore.fundUserData?.baseTokenBalance,
-        fundStore.fund.baseToken.decimals,
+        inputTokenDetais.value.balance,
+        inputTokenDetais.value.decimals,
         false,
       );
-      return `Your ${fundStore.fund.baseToken.symbol} balance is too low: ${userBaseTokenBalanceFormatted}.`;
+      return `Your ${inputTokenDetais.value.symbol} balance is too low: ${userBaseTokenBalanceFormatted}.`;
     }
 
     return true;
   },
 };
 
-// TODO: if we want to input a custom token address for transfer
-// we need to adjust this function
 const handleTransfer = async () => {
   loadingTransfer.value = true;
 
-  const decimals = fundStore.fund?.baseToken.decimals;
-  const tokensWei = ethers.parseUnits(transferEntry.depositValue, decimals);
+  const decimals = inputTokenDetais.value.decimals;
+  let tokensWei = ethers.parseUnits(transferEntry.depositValue, decimals);
 
   // call the transfer method
-  await fundStore.fundBaseTokenContract.methods
+  await inputTokenContract.value.methods
     .transfer(transferEntry.to, tokensWei)
     .send({
       from: fundStore.activeAccountAddress,
       gas: 200000,
     })
-    .on("transactionHash", (hash: any) => {
-      console.log("tx hash: " + hash);
+    .on('transactionHash', (hash: any) => {
+      console.log('tx hash: ' + hash);
       toastStore.addToast(
-        "The transaction has been submitted. Please wait for it to be confirmed.",
+        'The transaction has been submitted. Please wait for it to be confirmed.',
       );
     })
-    .on("receipt", (receipt: any) => {
+    .on('receipt', (receipt: any) => {
       console.log(receipt);
       if (receipt.status) {
-        toastStore.successToast("The transfer was successfull.");
+        toastStore.successToast('The transfer was successfull.');
       } else {
         toastStore.errorToast(
-          "The transaction has failed. Please contact the Rethink Finance support.",
+          'The transaction has failed. Please contact the Rethink Finance support.',
         );
       }
       loadingTransfer.value = false;
     })
-    .on("error", (error: any) => {
-      console.log("error: ", error);
+    .on('error', (error: any) => {
+      console.log('error: ', error);
       loadingTransfer.value = false;
       toastStore.errorToast(
-        "There has been an error. Please contact the Rethink Finance support.",
+        'There has been an error. Please contact the Rethink Finance support.',
       );
     });
 };
@@ -310,13 +296,13 @@ const handleSubmitRawTXN = async () => {
   try {
     loadingSubmitRawTXN.value = true;
 
-    console.log("to:", submitRawTXNEntry.contractAddress);
-    console.log("data:", submitRawTXNEntry.txData);
-    console.log("from:", fundStore.activeAccountAddress);
-    console.log("value:", parseInt(submitRawTXNEntry.amountValue));
+    console.log('to:', submitRawTXNEntry.contractAddress);
+    console.log('data:', submitRawTXNEntry.txData);
+    console.log('from:', fundStore.activeAccountAddress);
+    console.log('value:', parseInt(submitRawTXNEntry.amountValue));
 
     if (!web3Store.web3) {
-      toastStore.errorToast("Web3 is not initialized. Please try again later.");
+      toastStore.errorToast('Web3 is not initialized. Please try again later.');
       return;
     }
 
@@ -325,34 +311,34 @@ const handleSubmitRawTXN = async () => {
         to: submitRawTXNEntry.contractAddress,
         data: submitRawTXNEntry.txData,
         from: fundStore.activeAccountAddress,
-        maxPriorityFeePerGas: "",
-        maxFeePerGas: "",
+        maxPriorityFeePerGas: '',
+        maxFeePerGas: '',
         value: parseInt(submitRawTXNEntry.amountValue),
       })
-      .on("transactionHash", (hash: string) => {
-        console.log("tx hash: " + hash);
+      .on('transactionHash', (hash: string) => {
+        console.log('tx hash: ' + hash);
         toastStore.addToast(
-          "The transaction has been submitted. Please wait for it to be confirmed.",
+          'The transaction has been submitted. Please wait for it to be confirmed.',
         );
       })
-      .on("receipt", (receipt: any) => {
-        console.log("receipt: ", receipt);
+      .on('receipt', (receipt: any) => {
+        console.log('receipt: ', receipt);
 
         if (receipt.status) {
-          toastStore.successToast("The transaction was successfull.");
+          toastStore.successToast('The transaction was successfull.');
         } else {
           toastStore.errorToast(
-            "The transaction has failed. Please contact the Rethink Finance support.",
+            'The transaction has failed. Please contact the Rethink Finance support.',
           );
         }
 
         loadingSubmitRawTXN.value = false;
       })
-      .on("error", (error: any) => {
+      .on('error', (error: any) => {
         loadingSubmitRawTXN.value = false;
         console.log(error);
         toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support.",
+          'There has been an error. Please contact the Rethink Finance support.',
         );
       });
   } catch (error: any) {
@@ -361,14 +347,97 @@ const handleSubmitRawTXN = async () => {
 
     if (error?.data?.message) {
       toastStore.errorToast(error.data.message, 15000);
-
+      return;
     } else {
       toastStore.errorToast(
-        "There has been an error. Please contact the Rethink Finance support.",
+        'There has been an error. Please contact the Rethink Finance support.',
       );
     }
   }
 };
+
+const inputTokenContract = ref();
+const inputTokenDetais = ref({
+  name: '',
+  symbol: '',
+  decimals: 0,
+  balance: 0n,
+  formattedBalance: '',
+});
+
+// fetch entered token details
+const fetchTokenDetails = async () => {
+  if (!transferEntry.inputTokenAddress) return;
+  if (!web3Store.web3) return;
+  // e.g. for testing inputTokenAddresses (POLYGON):
+  // 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 DAI
+  // 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359 USDC
+  // 0x7ceb23fd6bc0add59e62ac25578270cff1b9f619 WETH
+  // 0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6 WBTC
+
+  try {
+    const tokenContract = new web3Store.web3.eth.Contract(
+      ERC20,
+      transferEntry.inputTokenAddress,
+    );
+
+    inputTokenContract.value = tokenContract;
+
+    const name = (await tokenContract.methods.name().call()) as string;
+    const symbol = (await tokenContract.methods.symbol().call()) as string;
+    const decimals = (await tokenContract.methods.decimals().call()) as bigint;
+    const balance = (await tokenContract.methods
+      .balanceOf(fundStore.activeAccountAddress)
+      .call()) as bigint;
+
+    const formattedBalance = formatTokenValue(balance, Number(decimals), false);
+
+    console.log('name: ', name);
+    console.log('symbol: ', symbol);
+    console.log('decimals: ', decimals);
+    console.log('balance: ', balance);
+    console.log('formattedBalance: ', formattedBalance);
+
+    // set the token details
+    inputTokenDetais.value = {
+      name,
+      symbol,
+      decimals: Number(decimals),
+      balance: balance,
+      formattedBalance,
+    };
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+// check if the inputTokenAddress is valid
+const validateInputTokenAddress = computed(() => {
+  const requiredValid =
+    rules.required(transferEntry.inputTokenAddress) === true;
+  const addressValid =
+    rules.isValidAddress(transferEntry.inputTokenAddress) === true;
+
+  return requiredValid && addressValid;
+});
+
+// watch the inputTokenAddress and fetch token details if it is valid
+watch(
+  () => transferEntry.inputTokenAddress,
+  async (newVal) => {
+    if (validateInputTokenAddress.value) {
+      await fetchTokenDetails();
+    } else {
+      inputTokenDetais.value = {
+        name: '',
+        symbol: '',
+        decimals: 0,
+        balance: 0n,
+        formattedBalance: '',
+      };
+    }
+  },
+);
 </script>
 
 <style scoped lang="scss">
@@ -418,5 +487,8 @@ const handleSubmitRawTXN = async () => {
     justify-content: center;
     color: $color-primary;
   }
+}
+.available_balance {
+  white-space: wrap;
 }
 </style>
