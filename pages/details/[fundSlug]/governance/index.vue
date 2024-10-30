@@ -88,10 +88,14 @@
       @cancel="closeDelegatorsDialog"
     >
       <div class="mb-10">
-        <div class="title">Delegated Member:</div> {{ activeRow?.delegatedMember }}
+        <div class="title">
+          Delegated Member:
+        </div> {{ activeRow?.delegatedMember }}
       </div>
       <div>
-        <div class="title">Delegators:</div>
+        <div class="title">
+          Delegators:
+        </div>
         <ul>
           <li v-for="delegator in activeRow?.delegators" :key="delegator" class="delegator-item">
             {{ delegator }}
@@ -268,13 +272,13 @@ const fetchTrendingDelegates = async () => {
           {
             fromBlock: Number(toBlock),
             toBlock: Number(fromBlock),
-          }
+          },
         );
 
         // process only the new chunk of events
         const newTrendingDelegates = await parseNewChunkDelegateEvents(
           eventsDC, // new events chunk
-          processedDelegators // already processed delegators
+          processedDelegators, // already processed delegators
         );
 
         // we need to sort the trending delegates by voting power
@@ -327,7 +331,7 @@ const fetchTrendingDelegates = async () => {
 // // we want to show only the most recent events, so if the delegator already exists in the trending delegates list we skip it
 const parseNewChunkDelegateEvents = async (
   newChunkEvents: any[],
-  processedDelegators: Set<string>
+  processedDelegators: Set<string>,
 ) => {
   try {
     const delegationsMap: Record<
@@ -337,7 +341,7 @@ const parseNewChunkDelegateEvents = async (
 
     // sort new events by blockNumber so we handle the most recent first
     const sortedEvents = newChunkEvents.sort(
-      (a, b) => Number(b.blockNumber) - Number(a.blockNumber)
+      (a, b) => Number(b.blockNumber) - Number(a.blockNumber),
     );
 
     sortedEvents.forEach((event) => {
@@ -381,7 +385,7 @@ const parseNewChunkDelegateEvents = async (
 
           // check if the delegate already exists in trendingDelegates.value
           const existingDelegate = trendingDelegates.value.find(
-            (delegate) => delegate.delegatedMember === delegatedMember
+            (delegate) => delegate.delegatedMember === delegatedMember,
           );
 
           if (existingDelegate) {
@@ -395,7 +399,7 @@ const parseNewChunkDelegateEvents = async (
           } else {
             // otherwise, create a new delegate entry
             const output = {
-              delegatedMember: delegatedMember,
+              delegatedMember,
               delegators: Array.from(delegatorsSet.delegator),
               delegatorsEvents: Array.from(delegatorsSet.event),
               impact: impact ?? "0%",
@@ -406,13 +410,13 @@ const parseNewChunkDelegateEvents = async (
               newDelegates.push(output);
             }
           }
-        }
-      )
+        },
+      ),
     );
 
     // return the new trending delegates
     return newDelegates;
-    
+
   } catch (error: any) {
     console.error("Error parsing trending delegates: ", error);
     return [];
@@ -793,10 +797,12 @@ const fetchProposals = async (
 };
 
 // TODO iterate over all already fetched proposals that are still votable and update their state (createdBlockNumber).
-onMounted(() => {
+onMounted(async () => {
   fetchTrendingDelegates();
-  startFetchingFundProposals();
+  // startFetchingFundProposals();
+  await governanceProposalStore.fetchGovernanceProposals();
 });
+
 onBeforeUnmount(() => {
   console.log("Component is being unmounted, stopping the fetch");
   shouldFetchProposals.value = false;
@@ -858,7 +864,7 @@ const startFetchingFundProposals = async () => {
     // But only if current block is bigger than most recent already fetched block.
     if (currentBlock > mostRecentFetchedBlock) {
       // show loading skeleton at the top of the table (prepend)
-      // when fetching proposals from the most recent fetched block to the current block 
+      // when fetching proposals from the most recent fetched block to the current block
       await fetchProposals(mostRecentFetchedBlock + 1, currentBlock, "prepend");
     }
 

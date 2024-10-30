@@ -5,6 +5,7 @@ import { FETCH_GOVERNANCE_PROPOSALS } from "./queries";
 
 import type ISubgraphGovernanceProposal from "~/types/subgraph_governance_proposal";
 
+
 export interface GovernorProposalsResponse {
   proposals: ISubgraphGovernanceProposal[];
 }

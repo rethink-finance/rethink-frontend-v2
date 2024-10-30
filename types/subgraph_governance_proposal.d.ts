@@ -1,5 +1,3 @@
-
-
 export default interface ISubgraphGovernanceProposal {
   id: string;
   proposalId: number;
@@ -10,3 +8,4 @@ export default interface ISubgraphGovernanceProposal {
   queued: boolean;
   executed: boolean;
 }
+

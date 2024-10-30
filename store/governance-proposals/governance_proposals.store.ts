@@ -23,6 +23,8 @@ import { ClockMode } from "~/types/enums/clock_mode";
 import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { _mapSubgraphProposalToProposal } from "~/types/helpers/mappers";
+import type ISubgraphGovernanceProposal from "~/types/subgraph_governance_proposal";
 
 interface IState {
   /* Example fund proposals.
@@ -103,6 +105,16 @@ export const useGovernanceProposalsStore = defineStore({
       this.fundProposals[chainId][fundAddress] ??= {};
       this.fundProposals[chainId][fundAddress][proposal.proposalId] =
         cleanComplexWeb3Data(proposal);
+      setLocalStorageItem("fundProposals", this.fundProposals);
+    },
+    storeSubgraphProposal(
+      chainId: string,
+      fundAddress: string,
+      proposal: ISubgraphGovernanceProposal,
+    ): void {
+      this.fundProposals[chainId] ??= {};
+      this.fundProposals[chainId][fundAddress] ??= {};
+      this.fundProposals[chainId][fundAddress][proposal.proposalId] = _mapSubgraphProposalToProposal(proposal);
       setLocalStorageItem("fundProposals", this.fundProposals);
     },
     getProposals(chainId: string, fundAddress?: string): IGovernanceProposal[] {
