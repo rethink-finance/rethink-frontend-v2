@@ -12,6 +12,27 @@ export const FETCH_GOVERNANCE_PROPOSALS = gql`
       canceled
       queued
       executed
+      proposalCanceled {
+        timestamp
+      }
+      proposalCreated {
+        timestamp
+      }
+      proposalExecuted {
+        timestamp
+      }
+      proposalQueued {
+        timestamp
+      }
+      calls {
+        calldata
+        index
+        signature
+        value
+        target {
+          id
+        }
+      }
     }
   }
 `;

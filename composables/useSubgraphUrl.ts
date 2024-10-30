@@ -14,5 +14,5 @@ export function useSubgraphUrl(chainId: string): string {
     throw new Error(`Subgraph slug not defined for chainId: ${chainId}`);
   }
 
-  return `${baseUrl}/${userId}/${subgraphSlug}/${version}`;
+  return `${baseUrl}${userId}/${subgraphSlug}/${version}`;
 }
