@@ -23,9 +23,7 @@ export const formRules: Record<string, any> = {
     );
   },
   notSameAs: (otherValues: any[], customErrorMsg?: string) => (value: any) => {
-    const errorMsg = customErrorMsg
-      ? customErrorMsg
-      : "This value is not allowed.";
+    const errorMsg = customErrorMsg || "This value is not allowed.";
 
     return !otherValues.includes(value) || errorMsg;
   },
