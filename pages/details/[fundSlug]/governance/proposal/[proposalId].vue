@@ -389,7 +389,6 @@ const fetchProposalVoteSubmissions = async () => {
         await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
       } catch (error) {
         console.error("Error fetching proposals votes submissions", error);
-
         // if fetching fails, reduce the chunk size
         chunkSize /= 2n;
         if (chunkSize < minChunkSize) {
@@ -422,16 +421,19 @@ const handleVoteSuccess = async () => {
 }
 
 onMounted(async () => {
-  fetchProposalVoteSubmissions();
+  // TODO fix quorumValue
+  fetchProposalVoteSubmissions(); // TODO replace with subgraph fetch voteCasts or update adding timestamp to receipt
   emit("updateBreadcrumbs", breadcrumbItems);
 
   // fetch block proposals based on createdBlockNumber
   loadingProposal.value = true;
   try {
-    await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
+    await governanceProposalStore.fetchGovernanceProposal(proposalId);
+
+    // await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
 
     if(proposal.value && !proposal.value?.executedBlockNumber) {
-      await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
+      // await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
     }
   } catch {}
   loadingProposal.value = false;

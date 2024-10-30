@@ -23,7 +23,6 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   const fetchedProposals = await fetchSubgraphGovernorProposals(client.value, {
     governorAddress: fundStore.fund?.governorAddress, // Replace with actual address
   });
-  console.log("fetchSubgraphGovernorProposals:raw", fetchedProposals);
   const roleModAddress = await fundStore.getRoleModAddress();
 
 
@@ -76,6 +75,5 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
     );
     return mappedProposal;
   });
-  console.log("fetchSubgraphGovernorProposals:mapped", processedProposals);
   return processedProposals;
 };

@@ -7,8 +7,8 @@ import { eth, Web3 } from "web3";
 
 import { useActionState } from "../actionState.store";
 import { useToastStore } from "../toasts/toast.store";
+import { fetchGovernanceProposalAction } from "./actions/fetchGovernanceProposal.action";
 import { fetchGovernanceProposalsAction } from "./actions/fetchGovernanceProposals.action";
-
 
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
@@ -196,6 +196,12 @@ export const useGovernanceProposalsStore = defineStore({
       return useActionState(
         "fetchGovernanceProposalsAction",
         async () => await fetchGovernanceProposalsAction(),
+      );
+    },
+    fetchGovernanceProposal(proposalId: string) {
+      return useActionState(
+        "fetchGovernanceProposalAction",
+        async () => await fetchGovernanceProposalAction(proposalId),
       );
     },
     decodeProposalCreatedEvent(
