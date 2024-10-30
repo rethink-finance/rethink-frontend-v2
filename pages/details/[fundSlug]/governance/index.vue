@@ -39,7 +39,7 @@
       </template>
       <FundGovernanceProposalsTable
         :items="governanceProposals"
-        :loading="loadingProposals"
+        :loading="isFetchingProposals"
         :loading-variant="loadingProposalsVariant"
       />
     </UiMainCard>
@@ -126,7 +126,7 @@
       <FundGovernanceProposalsTable
         v-if="updateSettingsProposals.length > 1"
         :items="updateSettingsProposals"
-        :loading="loadingProposals"
+        :loading="isFetchingProposals"
         :loading-variant="loadingProposalsVariant"
         style="margin-top: 2rem"
       />
@@ -139,10 +139,12 @@ import type IFund from "~/types/fund";
 
 // components
 import { useAccountStore } from "~/store/account/account.store";
+import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { ActionState } from "~/types/enums/action_state";
 import { ProposalState } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
@@ -152,6 +154,7 @@ const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
+const actionStateStore = useActionStateStore();
 const governanceProposalStore = useGovernanceProposalsStore();
 
 const confirmDialog = ref(false);
@@ -799,7 +802,6 @@ const fetchProposals = async (
 // TODO iterate over all already fetched proposals that are still votable and update their state (createdBlockNumber).
 onMounted(async () => {
   fetchTrendingDelegates();
-  // startFetchingFundProposals();
   await governanceProposalStore.fetchGovernanceProposals();
 });
 
@@ -898,6 +900,17 @@ const handleDelegateSuccess = async () => {
   // fundStore.fetchUserFundDelegateAddress();
 };
 
+const isFetchingProposals = computed(() => {
+  const actionStates = actionStateStore.getActionState("fetchGovernanceProposalsAction");
+
+  if(!actionStates) return false;
+
+  const isLoadingState = actionStates.includes(ActionState.Loading);
+  const hasNeverLoaded = !actionStates.includes(ActionState.Success) &&
+                        !actionStates.includes(ActionState.Error);
+
+  return isLoadingState || hasNeverLoaded;
+});
 </script>
 
 <style scoped lang="scss">

@@ -9,6 +9,10 @@ import type ISubgraphGovernanceProposal from "../subgraph_governance_proposal";
 export function _mapSubgraphProposalToProposal(
   proposal: ISubgraphGovernanceProposal,
   decodeProposalCallData: (calldata: string) => any,
+  totalSupply: number,
+  decimals: number,
+  quorumNumerator: bigint,
+  quorumDenominator: bigint,
   roleModAddress?: string,
   safeAddress?: string,
 ): IGovernanceProposal {
@@ -44,7 +48,10 @@ export function _mapSubgraphProposalToProposal(
       calldataTypes.push(ProposalCalldataType.NAV_UPDATE);
     } else if (safeAddress && targets[i] === safeAddress.toLocaleLowerCase()) {
       calldataTypes.push(ProposalCalldataType.DIRECT_EXECUTION);
-    } else if (roleModAddress && targets[i] === roleModAddress.toLocaleLowerCase()) {
+    } else if (
+      roleModAddress &&
+      targets[i] === roleModAddress.toLocaleLowerCase()
+    ) {
       calldataTypes.push(ProposalCalldataType.PERMISSIONS);
     } else if (calldataDecoded?.functionName === "updateSettings") {
       calldataTypes.push(ProposalCalldataType.FUND_SETTINGS);
@@ -60,6 +67,45 @@ export function _mapSubgraphProposalToProposal(
       ),
     ),
   ];
+
+  // Calculate total votes and approval rate
+  const receipts = proposal.receipts || [];
+
+
+  // Safely convert to BigInt with fallbacks
+  const forVotes = receipts
+    .filter((r) => r.support.support === 1)
+    .reduce((sum, r) => sum + BigInt(r.weight), BigInt(0));
+
+  const againstVotes = receipts
+    .filter((r) => r.support.support === 0)
+    .reduce((sum, r) => sum + BigInt(r.weight), BigInt(0));
+
+  const abstainVotes = receipts
+    .filter((r) => r.support.support === 2)
+    .reduce((sum, r) => sum + BigInt(r.weight), BigInt(0));
+
+  const totalWeight = forVotes + againstVotes + abstainVotes;
+
+  // Convert to numbers for percentage calculations
+  const totalWeightNumber = Number(totalWeight);
+  const forVotesNumber = Number(forVotes);
+  const totalSupplyNumber = Number(totalSupply || 0);
+  const quorumVotes =
+  (BigInt(totalSupply) * BigInt(quorumNumerator)) / BigInt(quorumDenominator);
+  // Calculate rates
+  const approvalRate =
+    quorumVotes === BigInt(0) && forVotesNumber > 0
+      ? 100 // If quorum is 0 and there are FOR votes, approval is 100%
+      : quorumVotes > BigInt(0)
+        ? Math.min((forVotesNumber / Number(quorumVotes)) * 100, 100) // Cap at 100%
+        : 0;
+
+  const participationRate =
+    totalSupplyNumber > 0
+      ? Math.min((totalWeightNumber / totalSupplyNumber) * 100, 100) // Cap at 100%
+      : 0;
+
   return {
     proposalId: proposal.proposalId.toString(),
     proposer: "", // Placeholder, as `proposer` isn’t provided in ISubgraphGovernanceProposal
@@ -77,8 +123,8 @@ export function _mapSubgraphProposalToProposal(
     createdDatetimeFormatted: proposal.proposalCreated?.[0]?.timestamp
       ? new Date(
         Number(proposal.proposalCreated[0].timestamp) * 1000,
-      ).toISOString()
-      : new Date().toISOString(),
+      ).toDateString()
+      : new Date().toDateString(),
 
     targets,
     values,
@@ -90,24 +136,32 @@ export function _mapSubgraphProposalToProposal(
     calldataTags,
     state: ProposalState.Pending, // Assuming default state
 
-    createdBlockNumber: BigInt(0),
-    executedBlockNumber: BigInt(0),
+    createdBlockNumber: BigInt(
+      proposal.proposalCreated?.[0]?.transaction?.blockNumber ?? "0",
+    ),
+    executedBlockNumber: BigInt(
+      proposal.proposalExecuted?.[0]?.transaction?.blockNumber ?? "0",
+    ),
 
-    approval: 0,
-    approvalFormatted: "0%",
-    participation: 0,
-    participationFormatted: "0%",
-    quorumVotes: BigInt(0),
-    quorumVotesFormatted: "0",
-    forVotes: BigInt(0),
-    forVotesFormatted: "0",
-    abstainVotes: BigInt(0),
-    abstainVotesFormatted: "0",
-    againstVotes: BigInt(0),
-    againstVotesFormatted: "0",
-    totalVotes: BigInt(0),
-    totalVotesFormatted: "0",
-    totalSupply: BigInt(0),
-    totalSupplyFormatted: "0",
+    approval: approvalRate,
+    approvalFormatted: `${parseFloat(approvalRate.toFixed(2))}%`,
+    participation: participationRate,
+    participationFormatted: `${parseFloat(participationRate.toFixed(2))}%`,
+    quorumVotes,
+    quorumVotesFormatted: formatTokenValue(quorumVotes, decimals, false),
+    forVotes,
+    forVotesFormatted: formatTokenValue(forVotes, decimals, false),
+    againstVotes,
+    againstVotesFormatted: formatTokenValue(againstVotes, decimals, false),
+    abstainVotes,
+    abstainVotesFormatted: formatTokenValue(abstainVotes, decimals, false),
+    totalVotes: totalWeight,
+    totalVotesFormatted: formatTokenValue(BigInt(totalWeight), decimals, false),
+    totalSupply: BigInt(totalSupply),
+    totalSupplyFormatted: formatTokenValue(
+      BigInt(totalSupply),
+      decimals,
+      false,
+    ),
   };
 }

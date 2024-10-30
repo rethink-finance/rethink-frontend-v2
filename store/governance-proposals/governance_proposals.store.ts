@@ -192,8 +192,8 @@ export const useGovernanceProposalsStore = defineStore({
         cleanComplexWeb3Data(this.fundProposalsBlockFetchedRanges),
       );
     },
-    async fetchGovernanceProposals() {
-      return await useActionState(
+    fetchGovernanceProposals() {
+      return useActionState(
         "fetchGovernanceProposalsAction",
         async () => await fetchGovernanceProposalsAction(),
       );

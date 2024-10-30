@@ -9,15 +9,27 @@ export default interface ISubgraphGovernanceProposal {
   executed: boolean;
   proposalCanceled: Array<{
     timestamp: string;
+    transaction: {
+      blockNumber: number;
+    };
   }>;
   proposalCreated: Array<{
     timestamp: string;
+    transaction: {
+      blockNumber: number;
+    };
   }>;
   proposalExecuted: Array<{
     timestamp: string;
+    transaction: {
+      blockNumber: number;
+    };
   }>;
   proposalQueued: Array<{
     timestamp: string;
+    transaction: {
+      blockNumber: number;
+    };
   }>;
   calls: Array<{
     calldata: string;
@@ -27,5 +39,15 @@ export default interface ISubgraphGovernanceProposal {
     target: {
       id: string;
     };
+  }>;
+  receipts: Array<{
+    id: string;
+    voter: {
+      id: string;
+    };
+    support: {
+      support: number;
+    };
+    weight: string;
   }>;
 }

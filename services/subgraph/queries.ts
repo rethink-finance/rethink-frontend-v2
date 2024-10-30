@@ -14,15 +14,27 @@ export const FETCH_GOVERNANCE_PROPOSALS = gql`
       executed
       proposalCanceled {
         timestamp
+        transaction {
+          blockNumber
+        }
       }
       proposalCreated {
         timestamp
+        transaction {
+          blockNumber
+        }
       }
       proposalExecuted {
         timestamp
+        transaction {
+          blockNumber
+        }
       }
       proposalQueued {
         timestamp
+        transaction {
+          blockNumber
+        }
       }
       calls {
         calldata
@@ -32,6 +44,16 @@ export const FETCH_GOVERNANCE_PROPOSALS = gql`
         target {
           id
         }
+      }
+      receipts {
+        id
+        voter {
+          id
+        }
+        support {
+          support
+        }
+        weight
       }
     }
   }
