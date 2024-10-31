@@ -40,7 +40,7 @@ export const fetchGovernanceProposalAction = async (
       fundStore.fundGovernorContract.methods.quorumNumerator(timepoint).call(),
     ),
     governanceProposalStore.callWithRetry(() =>
-      fundStore.fundGovernorContract.methods
+      fundStore.fundGovernanceTokenContract.methods
         .totalSupply()
         .call({ blockNumber }),
     ),

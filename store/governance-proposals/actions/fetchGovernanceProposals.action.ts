@@ -53,12 +53,16 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
     await Promise.all(
       uniquePoints.map(async ({ timepoint, blockNumber }) => {
         const [quorumNumerator, totalSupply] = await Promise.all([
-          fundStore.fundGovernorContract.methods
-            .quorumNumerator(timepoint)
-            .call(), // TODO
-          fundStore.fundGovernorContract.methods
-            .totalSupply()
-            .call({ blockNumber }), // TODO
+          governanceProposalStore.callWithRetry(() =>
+            fundStore.fundGovernorContract.methods
+              .quorumNumerator(timepoint)
+              .call(), // TODO
+          ),
+          governanceProposalStore.callWithRetry(() =>
+            fundStore.fundGovernanceTokenContract.methods
+              .totalSupply()
+              .call({ blockNumber }), // TODO
+          ),
         ]);
         return [
           JSON.stringify({ timepoint, blockNumber }),
