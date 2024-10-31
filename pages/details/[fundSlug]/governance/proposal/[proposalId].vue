@@ -163,7 +163,7 @@
     </div>
   </div>
   <v-progress-circular
-    v-else-if="loadingProposal"
+    v-else-if="isLoadingProposal"
     class="loading_spinner"
     size="50"
     width="3"
@@ -177,10 +177,13 @@
 <script setup lang="ts">
 import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 
+import { useActionStateStore } from "~/store/actionState.store";
+
 import { formatPercent } from "~/composables/formatters";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { ActionState } from "~/types/enums/action_state";
 import { VoteTypeMapping } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
@@ -197,7 +200,7 @@ const proposalSlug = route.params.proposalId as string;
 const [createdBlockNumber, proposalId] = proposalSlug.split("-") as [bigint, string];
 const fundSlug = route.params.fundSlug as string;
 const showRawCalldatas = ref(false);
-const loadingProposal = ref(false);
+
 const allMethods = ref<INAVMethod[][]>([]);
 console.log("proposal", proposalId);
 console.log("fundSlug", fundSlug);
@@ -225,7 +228,8 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
-const proposalFetched = ref(false);
+const actionStateStore = useActionStateStore();
+// const proposalFetched = ref(false);
 const loadingProposalVoteSubmissions = ref(false);
 const shouldFetchProposalVoteSubmissions = ref(true);
 const proposalVoteSubmissions = ref <IProposalVoteSubmission[]> ([]);
@@ -234,12 +238,15 @@ const activeUserVoteSubmission = ref<IProposalVoteSubmission>();
 const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
   const proposal = governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
+  if(!proposal) return undefined;
 
+  /**
   if (!proposalFetched.value && proposal?.createdBlockNumber) {
     // Refetch it to update it, maybe it came from local storage.
     governanceProposalStore.fetchBlockProposals(proposal.createdBlockNumber);
     proposalFetched.value = true;
   }
+  */
 
   // TODO: remove this after BE whitelists are fixed
   // first index is a default fund settings
@@ -426,7 +433,6 @@ onMounted(async () => {
   emit("updateBreadcrumbs", breadcrumbItems);
 
   // fetch block proposals based on createdBlockNumber
-  loadingProposal.value = true;
   try {
     await governanceProposalStore.fetchGovernanceProposal(proposalId);
 
@@ -436,7 +442,6 @@ onMounted(async () => {
       // await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
     }
   } catch {}
-  loadingProposal.value = false;
 
   if (proposal.value) {
     allMethods.value = proposal.value?.calldatasDecoded?.map((calldata) => {
@@ -447,6 +452,20 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
   shouldFetchProposalVoteSubmissions.value = false;
+});
+
+const isLoadingProposal = computed(() => {
+  const actionStates = actionStateStore.getActionState(
+    "fetchGovernanceProposalAction",
+  );
+
+  if (!actionStates) return false;
+
+  const isLoadingState = actionStates.includes(ActionState.Loading);
+  const hasNeverLoaded = !actionStates.includes(ActionState.Success) &&
+                        !actionStates.includes(ActionState.Error);
+
+  return isLoadingState || hasNeverLoaded;
 });
 </script>
 

@@ -165,9 +165,9 @@ export function _mapSubgraphProposalToProposal(
       proposal.proposalExecuted?.[0]?.transaction?.blockNumber ?? "0",
     ),
 
-    approval: approvalRate,
+    approval: approvalRate / 100,
     approvalFormatted: `${parseFloat(approvalRate.toFixed(2))}%`,
-    participation: participationRate,
+    participation: participationRate / 100,
     participationFormatted: `${parseFloat(participationRate.toFixed(2))}%`,
     quorumVotes,
     quorumVotesFormatted: formatTokenValue(quorumVotes, decimals, false),
