@@ -2,6 +2,7 @@
 
 export default interface IFundNavData {
   latestIndex: bigint;
+  totalNav: bigint;
   illiquidLen: bigint;
   liquidLen: bigint;
   nftLen: bigint;

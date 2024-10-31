@@ -88,8 +88,8 @@ export const fetchSimulatedNAVMethodValueAction = async (
     navEntry.simulatedNavFormatted = "N/A";
     navEntry.simulatedNav = 0n;
 
-    // console.log("navCalculationMethod:", navCalculationMethod);
-    // console.log("callData:", callData);
+    console.log("navCalculationMethod:", navCalculationMethod);
+    console.log("callData:", callData);
     try {
       const simulatedVal: bigint = await fundStore.callWithRetry(
         () =>
