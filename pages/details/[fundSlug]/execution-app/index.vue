@@ -6,7 +6,7 @@
           <img
             src="@/assets/images/zodiac_pilot.svg"
             class="img_zodiac_pilot"
-          />
+          >
           <template v-if="isUsingZodiacPilotExtension">
             <div>Connected to the Zodiac Pilot</div>
             <Icon
@@ -52,7 +52,9 @@
         <v-form ref="form" v-model="formTransferIsValid">
           <v-row>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2"> To </v-label>
+              <v-label class="label_required mb-2">
+                To
+              </v-label>
               <v-text-field
                 v-model="transferEntry.to"
                 placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -72,7 +74,9 @@
               />
             </v-col>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2"> Amount </v-label>
+              <v-label class="label_required mb-2">
+                Amount
+              </v-label>
               <v-text-field
                 v-model="transferEntry.depositValue"
                 placeholder="E.g. 10"
@@ -103,9 +107,9 @@
                     :disabled="
                       !formTransferIsValid || !isUsingZodiacPilotExtension
                     "
-                    @click="handleTransfer"
                     color="primary"
                     variant="outlined"
+                    @click="handleTransfer"
                   >
                     Transfer
                   </v-btn>
@@ -150,7 +154,9 @@
         <v-form ref="form" v-model="formSubmitRawTXNIsValid">
           <v-row>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2"> To </v-label>
+              <v-label class="label_required mb-2">
+                To
+              </v-label>
               <v-text-field
                 v-model="submitRawTXNEntry.contractAddress"
                 placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -159,7 +165,9 @@
               />
             </v-col>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2"> Submit (Calldata) </v-label>
+              <v-label class="label_required mb-2">
+                Submit (Calldata)
+              </v-label>
               <v-text-field
                 v-model="submitRawTXNEntry.txData"
                 placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -168,7 +176,9 @@
               />
             </v-col>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2"> Amount </v-label>
+              <v-label class="label_required mb-2">
+                Amount
+              </v-label>
               <v-text-field
                 v-model="submitRawTXNEntry.amountValue"
                 placeholder="E.g. 10"
@@ -189,10 +199,10 @@
                     :disabled="
                       !formSubmitRawTXNIsValid || !isUsingZodiacPilotExtension
                     "
-                    @click="handleSubmitRawTXN"
                     color="primary"
                     variant="outlined"
                     :loading="loadingSubmitRawTXN"
+                    @click="handleSubmitRawTXN"
                   >
                     Submit
                   </v-btn>
@@ -211,12 +221,12 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from 'ethers';
-import { ERC20 } from '~/assets/contracts/ERC20';
-import { useFundStore } from '~/store/fund/fund.store';
-import { useToastStore } from '~/store/toasts/toast.store';
-import { useWeb3Store } from '~/store/web3/web3.store';
-import type IFund from '~/types/fund';
+import { ethers } from "ethers";
+import { ERC20 } from "~/assets/contracts/ERC20";
+import { useFundStore } from "~/store/fund/fund.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
@@ -228,17 +238,17 @@ const { isUsingZodiacPilotExtension } = toRefs(fundStore);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({
-  contractAddress: '',
-  txData: '',
-  amountValue: '',
+  contractAddress: "",
+  txData: "",
+  amountValue: "",
 });
 
 const loadingTransfer = ref(false);
 const formTransferIsValid = ref(false);
 const transferEntry = reactive({
-  to: '',
-  inputTokenAddress: '',
-  depositValue: '',
+  to: "",
+  inputTokenAddress: "",
+  depositValue: "",
 });
 
 const rules = {
@@ -248,7 +258,7 @@ const rules = {
 
   enoughBalance: (value: string) => {
     if (!inputTokenDetais.value.name)
-      return 'Please enter valid token address first.';
+      return "Please enter valid token address first.";
 
     let valueWei;
     try {
@@ -257,13 +267,13 @@ const rules = {
       return `Make sure the value has max ${inputTokenDetais.value.decimals} decimals.`;
     }
 
-    if (valueWei <= 0) return 'Value must be positive.';
+    if (valueWei <= 0) return "Value must be positive.";
 
-    console.log('decimals: ', inputTokenDetais.value.decimals);
-    console.log('valueWei: ', valueWei);
-    console.log('userBaseTokenBalance: ', inputTokenDetais.value.balance);
+    console.log("decimals: ", inputTokenDetais.value.decimals);
+    console.log("valueWei: ", valueWei);
+    console.log("userBaseTokenBalance: ", inputTokenDetais.value.balance);
     console.log(
-      'valueWei > userBaseTokenBalance: ',
+      "valueWei > userBaseTokenBalance: ",
       valueWei > inputTokenDetais.value.balance,
     );
 
@@ -284,7 +294,7 @@ const handleTransfer = async () => {
   loadingTransfer.value = true;
 
   const decimals = inputTokenDetais.value.decimals;
-  let tokensWei = ethers.parseUnits(transferEntry.depositValue, decimals);
+  const tokensWei = ethers.parseUnits(transferEntry.depositValue, decimals);
 
   // call the transfer method
   await inputTokenContract.value.methods
@@ -293,28 +303,28 @@ const handleTransfer = async () => {
       from: fundStore.activeAccountAddress,
       gas: 200000,
     })
-    .on('transactionHash', (hash: any) => {
-      console.log('tx hash: ' + hash);
+    .on("transactionHash", (hash: any) => {
+      console.log("tx hash: " + hash);
       toastStore.addToast(
-        'The transaction has been submitted. Please wait for it to be confirmed.',
+        "The transaction has been submitted. Please wait for it to be confirmed.",
       );
     })
-    .on('receipt', (receipt: any) => {
+    .on("receipt", (receipt: any) => {
       console.log(receipt);
       if (receipt.status) {
-        toastStore.successToast('The transfer was successfull.');
+        toastStore.successToast("The transfer was successfull.");
       } else {
         toastStore.errorToast(
-          'The transaction has failed. Please contact the Rethink Finance support.',
+          "The transaction has failed. Please contact the Rethink Finance support.",
         );
       }
       loadingTransfer.value = false;
     })
-    .on('error', (error: any) => {
-      console.log('error: ', error);
+    .on("error", (error: any) => {
+      console.log("error: ", error);
       loadingTransfer.value = false;
       toastStore.errorToast(
-        'There has been an error. Please contact the Rethink Finance support.',
+        "There has been an error. Please contact the Rethink Finance support.",
       );
     });
 };
@@ -323,13 +333,13 @@ const handleSubmitRawTXN = async () => {
   try {
     loadingSubmitRawTXN.value = true;
 
-    console.log('to:', submitRawTXNEntry.contractAddress);
-    console.log('data:', submitRawTXNEntry.txData);
-    console.log('from:', fundStore.activeAccountAddress);
-    console.log('value:', parseInt(submitRawTXNEntry.amountValue));
+    console.log("to:", submitRawTXNEntry.contractAddress);
+    console.log("data:", submitRawTXNEntry.txData);
+    console.log("from:", fundStore.activeAccountAddress);
+    console.log("value:", parseInt(submitRawTXNEntry.amountValue));
 
     if (!web3Store.web3) {
-      toastStore.errorToast('Web3 is not initialized. Please try again later.');
+      toastStore.errorToast("Web3 is not initialized. Please try again later.");
       return;
     }
 
@@ -338,34 +348,34 @@ const handleSubmitRawTXN = async () => {
         to: submitRawTXNEntry.contractAddress,
         data: submitRawTXNEntry.txData,
         from: fundStore.activeAccountAddress,
-        maxPriorityFeePerGas: '',
-        maxFeePerGas: '',
+        maxPriorityFeePerGas: "",
+        maxFeePerGas: "",
         value: parseInt(submitRawTXNEntry.amountValue),
       })
-      .on('transactionHash', (hash: string) => {
-        console.log('tx hash: ' + hash);
+      .on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
         toastStore.addToast(
-          'The transaction has been submitted. Please wait for it to be confirmed.',
+          "The transaction has been submitted. Please wait for it to be confirmed.",
         );
       })
-      .on('receipt', (receipt: any) => {
-        console.log('receipt: ', receipt);
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
 
         if (receipt.status) {
-          toastStore.successToast('The transaction was successfull.');
+          toastStore.successToast("The transaction was successfull.");
         } else {
           toastStore.errorToast(
-            'The transaction has failed. Please contact the Rethink Finance support.',
+            "The transaction has failed. Please contact the Rethink Finance support.",
           );
         }
 
         loadingSubmitRawTXN.value = false;
       })
-      .on('error', (error: any) => {
+      .on("error", (error: any) => {
         loadingSubmitRawTXN.value = false;
         console.log(error);
         toastStore.errorToast(
-          'There has been an error. Please contact the Rethink Finance support.',
+          "There has been an error. Please contact the Rethink Finance support.",
         );
       });
   } catch (error: any) {
@@ -374,10 +384,10 @@ const handleSubmitRawTXN = async () => {
 
     if (error?.data?.message) {
       toastStore.errorToast(error.data.message, 15000);
-      return;
+
     } else {
       toastStore.errorToast(
-        'There has been an error. Please contact the Rethink Finance support.',
+        "There has been an error. Please contact the Rethink Finance support.",
       );
     }
   }
@@ -385,11 +395,11 @@ const handleSubmitRawTXN = async () => {
 
 const inputTokenContract = ref();
 const inputTokenDetais = ref({
-  name: '',
-  symbol: '',
+  name: "",
+  symbol: "",
   decimals: 0,
   balance: 0n,
-  formattedBalance: '',
+  formattedBalance: "",
 });
 
 // fetch entered token details
@@ -419,18 +429,18 @@ const fetchTokenDetails = async () => {
 
     const formattedBalance = formatTokenValue(balance, Number(decimals), false);
 
-    console.log('name: ', name);
-    console.log('symbol: ', symbol);
-    console.log('decimals: ', decimals);
-    console.log('balance: ', balance);
-    console.log('formattedBalance: ', formattedBalance);
+    console.log("name: ", name);
+    console.log("symbol: ", symbol);
+    console.log("decimals: ", decimals);
+    console.log("balance: ", balance);
+    console.log("formattedBalance: ", formattedBalance);
 
     // set the token details
     inputTokenDetais.value = {
       name,
       symbol,
       decimals: Number(decimals),
-      balance: balance,
+      balance,
       formattedBalance,
     };
   } catch (error) {
@@ -456,11 +466,11 @@ watch(
       await fetchTokenDetails();
     } else {
       inputTokenDetais.value = {
-        name: '',
-        symbol: '',
+        name: "",
+        symbol: "",
         decimals: 0,
         balance: 0n,
-        formattedBalance: '',
+        formattedBalance: "",
       };
     }
   },
