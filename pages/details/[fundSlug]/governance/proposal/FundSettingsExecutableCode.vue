@@ -92,7 +92,7 @@ const proposalFundSettings = ref<Partial<IProposal>>({
 // helper function to generate fields
 function generateFields(
   section: IStepperSection,
-  proposal: Partial<IProposal>
+  proposal: Partial<IProposal>,
 ) {
   return FundSettingProposalFieldsMap[section.key]?.map((field) => {
     if (field?.isToggleable) {
@@ -179,7 +179,7 @@ watch(
   (newValue) => {
     populateProposalData();
   },
-  { immediate: true }
+  { immediate: true },
 );
 </script>
 

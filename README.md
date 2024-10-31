@@ -155,7 +155,7 @@ No need to refetch them again. Also go to finish WIP in branch:  fix/calculate_f
 done in the contract already?
 3) Rename all variable names: navEntry to navMethod
 4) callWithRetry --> when switching chain, cancel all pending callWithRetry
-
+5) instead of `ethers.keccak256(ethers.toUtf8Bytes(proposal.description))` ... use `ethers.id(proposal.description)`
 ### Frontend Tests TODO
 1) When creating NAV proposal check that all types match, especially that the navMethod.details is correct, especially
 the description (should be a string, not an object).

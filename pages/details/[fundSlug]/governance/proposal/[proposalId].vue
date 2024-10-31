@@ -43,7 +43,7 @@
             </div>
             <template v-else>
               <div
-                v-for="(calldata, index) in proposal.calldatasDecoded"
+                v-for="(calldata, index) in filteredProposalCalldatasDecoded"
                 :key="index"
                 class="mb-6"
               >
@@ -82,7 +82,7 @@
                   </template>
                   <template #body>
                     <template v-if="!toggledRawProposalCalldatas[index]">
-                      <template v-if="proposal?.calldataTypes[index] === ProposalCalldataType.NAV_UPDATE">
+                      <template v-if="calldata?.calldataType === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
                           :methods="allMethods[index]"
                           show-summary-row
@@ -91,10 +91,10 @@
                           idx="[proposalId]"
                         />
                       </template>
-                      <template v-else-if="proposal?.calldataTypes[index] === ProposalCalldataType.FUND_SETTINGS">
+                      <template v-else-if="calldata?.calldataType === ProposalCalldataType.FUND_SETTINGS">
                         <!-- Show fund setting UI -->
                         <FundSettingsExecutableCode
-                          :calldata-decoded="proposal?.calldatasDecoded?.[index]?.calldataDecoded"
+                          :calldata-decoded="calldata?.calldataDecoded"
                         />
                       </template>
                       <template v-else>
@@ -242,32 +242,38 @@ const proposal = computed(():IGovernanceProposal | undefined => {
     proposalFetched.value = true;
   }
 
-  // TODO: remove this after BE whitelists are fixed
-  // first index is a default fund settings
-  const firstIndex = proposal?.calldataTypes?.indexOf(
+  return proposal;
+})
+
+const filteredProposalCalldatasDecoded = computed(() => {
+  // TODO: remove this after Contract whitelists are fixed
+  // This is done now because we have to submit 2 fund settings to change whitelist,
+  // first one just sends the same whitelist as it was to reset it, and the secnod one has new whitelist addresses.
+
+  // first index is a default fund settings just meant to reset the whitelist (sending existing whitelist)
+  const firstIndex = proposal.value?.calldataTypes?.indexOf(
     ProposalCalldataType.FUND_SETTINGS,
   ) ?? -1;
   // last index is a final fund settings
-  const lastIndex = proposal?.calldataTypes?.lastIndexOf(
+  const lastIndex = proposal.value?.calldataTypes?.lastIndexOf(
     ProposalCalldataType.FUND_SETTINGS,
   ) ?? -1;
 
   console.log("firstIndex", firstIndex);
   console.log("lastIndex", lastIndex);
 
-  // remove default fund settings from proposal
-  if (firstIndex !== lastIndex && firstIndex !== -1) {
-    console.log("removing default fund settings");
-    proposal?.targets?.splice(firstIndex, 1);
-    proposal?.values?.splice(firstIndex, 1);
-    proposal?.signatures?.splice(firstIndex, 1);
-    proposal?.calldatas?.splice(firstIndex, 1);
-    proposal?.calldatasDecoded?.splice(firstIndex, 1);
+  const calldatasDecoded = proposal.value?.calldatasDecoded;
+  // remove default fund settings from proposal (the one it is resetting the whitelist, no need to show it here, it's a hack)
+  if (calldatasDecoded?.length && firstIndex !== lastIndex && firstIndex !== -1) {
+    console.log("removing default fund settings by index", firstIndex, firstIndex + 1);
+    console.log("calldatasDecoded index", calldatasDecoded);
+    const filteredCalldatas = [...calldatasDecoded.slice(0, firstIndex), ...calldatasDecoded.slice(firstIndex + 1)];
+    console.log("calldatasDecoded index filtered", filteredCalldatas);
+    return filteredCalldatas;
   }
 
-  return proposal;
+  return calldatasDecoded;
 })
-
 const parseNavEntries = (calldataDecoded: any): INAVMethod[] => {
   console.log("calldataDecoded", calldataDecoded);
   const navMethods = [];
@@ -431,7 +437,7 @@ onMounted(async () => {
   try {
     await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
 
-    if(proposal.value && !proposal.value?.executedBlockNumber) {
+    if (proposal.value && !proposal.value?.executedBlockNumber) {
       await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
     }
   } catch {}

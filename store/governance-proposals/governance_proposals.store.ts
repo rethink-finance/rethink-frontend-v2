@@ -172,7 +172,7 @@ export const useGovernanceProposalsStore = defineStore({
       const proposal = cleanComplexWeb3Data(decodedEvent) as IGovernanceProposal;
 
       try {
-        proposal.descriptionHash = ethers.keccak256(ethers.toUtf8Bytes(proposal.description));
+        proposal.descriptionHash = ethers.id(proposal.description);
         const parsedDescription = JSON.parse(proposal.description);
         proposal.title = parsedDescription.title;
         proposal.description = parsedDescription.description;
@@ -182,7 +182,7 @@ export const useGovernanceProposalsStore = defineStore({
       console.log("event decoded");
       return proposal
     },
-    decodeProposalCallData(calldata: string): Record<any, any> | undefined{
+    decodeProposalCallData(roleModAddress: string, calldata: string, targetAddress: string): Record<any, any> | undefined {
       // Iterate over each method in ABI to find a match
       const signature = calldata.slice(0, 10);
       const encodedParameters = calldata.slice(10);
@@ -199,9 +199,24 @@ export const useGovernanceProposalsStore = defineStore({
         let decoded = eth.abi.decodeParameters(functionAbiInputs, encodedParameters);
         decoded = cleanComplexWeb3Data(decoded);
         // console.log("decoded data: ", functionAbi.contractName, functionAbi.function.name, decoded);
+
+        let calldataType = ProposalCalldataType.UNDEFINED;
+        const functionName = functionAbi.function.name;
+
+        if (functionName === "updateNav") {
+          calldataType = ProposalCalldataType.NAV_UPDATE;
+        } else if (targetAddress === this.fundStore.fund?.safeAddress) {
+          calldataType = ProposalCalldataType.DIRECT_EXECUTION;
+        } else if (targetAddress === roleModAddress) {
+          calldataType = ProposalCalldataType.PERMISSIONS;
+        } else if(functionName === "updateSettings") {
+          calldataType = ProposalCalldataType.FUND_SETTINGS;
+        }
+
         return {
-          functionName: functionAbi.function.name,
+          functionName,
           contractName: functionAbi.contractName,
+          calldataType,
           calldataDecoded: decoded,
           calldata,
         };
@@ -462,7 +477,6 @@ export const useGovernanceProposalsStore = defineStore({
         this.toastStore.errorToast("Fund clock mode is unknown.")
         return
       }
-      const roleModAddress = await this.fundStore.getRoleModAddress();
 
       for (const event of events) {
         console.log("event");
@@ -574,27 +588,19 @@ export const useGovernanceProposalsStore = defineStore({
 
         proposal.calldatasDecoded = [];
         proposal.calldataTypes = [];
+        const roleModAddress = await this.fundStore.getRoleModAddress();
 
         proposal.calldatas.forEach((calldata, i) => {
-          const calldataDecoded = this.decodeProposalCallData(calldata);
+          const calldataDecoded = this.decodeProposalCallData(roleModAddress, calldata, proposal.targets[i]);
+          console.log("PROPOSAL calldataDecoded", calldataDecoded)
+          console.log("PROPOSAL proposal", proposal)
+          proposal.calldataTypes.push(calldataDecoded?.calldataType);
           proposal.calldatasDecoded.push(calldataDecoded);
-
-          if (calldataDecoded?.functionName === "updateNav") {
-            proposal.calldataTypes.push(ProposalCalldataType.NAV_UPDATE);
-          } else if (proposal.targets[i] === this.fundStore.fund?.safeAddress) {
-            proposal.calldataTypes.push(ProposalCalldataType.DIRECT_EXECUTION);
-          } else if (proposal.targets[i] === roleModAddress) {
-            proposal.calldataTypes.push(ProposalCalldataType.PERMISSIONS);
-          } else if(calldataDecoded?.functionName === "updateSettings") {
-            proposal.calldataTypes.push(ProposalCalldataType.FUND_SETTINGS);
-          } else {
-            proposal.calldataTypes.push(ProposalCalldataType.UNDEFINED);
-          }
         });
         proposal.calldataTags = [...new Set(proposal.calldataTypes.filter(
           calldataType => calldataType !== ProposalCalldataType.UNDEFINED,
         ))];
-
+        console.warn("STORE PROPOSAL", proposal);
         this.storeProposal(this.web3Store.chainId, this.fundStore.fund?.address, proposal)
       }
     },
