@@ -12,6 +12,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
         .call(),
     );
 
+    // TODO this is wrong, should use position types from the last nav update after it is parsed in the next lines
     fundStore.fund.positionTypeCounts =
       fundStore.parseFundPositionTypeCounts(fundNAVData);
 

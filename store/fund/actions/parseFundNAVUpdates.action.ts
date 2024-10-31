@@ -80,7 +80,6 @@ const updateNavMethodPastNavValue = async (
   const calculatorMethod = PositionTypeToNAVCacheMethod[navMethod.positionType]
 
   navMethod.pastNavValue = undefined;
-  navMethod.pastNavValueFormatted = undefined;
   navMethod.pastNavValueLoading = true;
   navMethod.pastNavValueError = false;
 
@@ -88,12 +87,10 @@ const updateNavMethodPastNavValue = async (
     const navCacheResult = await fundStore.callWithRetry(() =>
       fundStore.navCalculatorContract.methods[calculatorMethod](fundAddress, navMethodIndex).call(),
     );
-    const pastNavValue = navCacheResult.reduce(
+    navMethod.pastNavValue = navCacheResult.reduce(
       (acc: bigint, val: bigint) => acc + val,
       0n,
     );
-    navMethod.pastNavValue = pastNavValue;
-    navMethod.pastNavValueFormatted = fundStore.getFormattedBaseTokenValue(pastNavValue);
   } catch (error) {
     navMethod.pastNavValueError = true;
     console.error(`Failed to fetch NAV method last NAV value ${navMethodIndex}:`, navMethod, error);

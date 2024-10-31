@@ -61,6 +61,7 @@ async function processFundNavData(
   allMethods: INAVMethod[],
 ) {
   const fund = fundsStore.funds[fundIndex];
+  // TODO this is wrong, take position types from last NAV update after it is parsed
   if (fund) {
     // Populate the positionTypeCounts array
     fund.positionTypeCounts = [
