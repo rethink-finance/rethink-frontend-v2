@@ -105,6 +105,31 @@ export const useGovernanceProposalsStore = defineStore({
         cleanComplexWeb3Data(proposal);
       setLocalStorageItem("fundProposals", this.fundProposals);
     },
+    storeProposals(
+      chainId: string,
+      fundAddress: string,
+      proposals: IGovernanceProposal[],
+    ): void {
+      if (!chainId) {
+        console.error("Cannot store proposals: chainId is required");
+        return;
+      }
+
+      if (!fundAddress) {
+        console.error("Cannot store proposals: fundAddress is required");
+        return;
+      }
+
+      this.fundProposals[chainId] ??= {};
+      this.fundProposals[chainId][fundAddress] ??= {};
+
+      proposals.forEach((proposal) => {
+        this.fundProposals[chainId][fundAddress][proposal.proposalId] =
+          cleanComplexWeb3Data(proposal);
+      });
+
+      setLocalStorageItem("fundProposals", this.fundProposals);
+    },
     getProposals(chainId: string, fundAddress?: string): IGovernanceProposal[] {
       if (!fundAddress) return [];
 

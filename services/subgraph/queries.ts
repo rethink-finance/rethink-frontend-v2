@@ -12,6 +12,9 @@ export const FETCH_GOVERNANCE_PROPOSALS = gql`
       canceled
       queued
       executed
+      proposer {
+        id
+      }
       proposalCanceled {
         timestamp
         transaction {
@@ -72,6 +75,9 @@ export const FETCH_GOVERNANCE_PROPOSAL = gql`
       canceled
       queued
       executed
+      proposer {
+        id
+      }
       proposalCanceled {
         timestamp
         transaction {

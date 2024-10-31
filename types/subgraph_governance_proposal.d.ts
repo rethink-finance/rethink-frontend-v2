@@ -7,6 +7,9 @@ export default interface ISubgraphGovernanceProposal {
   canceled: boolean;
   queued: boolean;
   executed: boolean;
+  proposer: {
+    id: string;
+  };
   proposalCanceled: Array<{
     timestamp: string;
     transaction: {
