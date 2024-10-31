@@ -31,7 +31,6 @@ import { NAVCalculator } from "~/assets/contracts/NAVCalculator";
 import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import { RethinkReader } from "~/assets/contracts/RethinkReader";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
-import { cleanComplexWeb3Data, formatJson } from "~/composables/utils";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -42,7 +41,6 @@ import {
   FundTransactionType,
 } from "~/types/enums/fund_transaction_type";
 import {
-  NAVEntryTypeToPositionTypeMap,
   PositionTypes,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
@@ -191,7 +189,6 @@ export const useFundStore = defineStore({
        * But if there are no NAV updates yet, we should take _totalDepositBal instead to get a correct value.
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
-      console.warn("HEHEHEHEHE", this.fundLastNAVUpdate?.timestamp, this.fund?.lastNAVUpdateTotalNAV)
       if (this.fundLastNAVUpdate?.timestamp)
         return this.fund?.lastNAVUpdateTotalNAV || 0n;
 
@@ -580,44 +577,6 @@ export const useFundStore = defineStore({
       }
       return positionTypeCounts;
     },
-    parseNAVMethod(
-      index: number,
-      navMethodData: Record<string, any>,
-    ): INAVMethod {
-      let description;
-      const positionType =
-        NAVEntryTypeToPositionTypeMap[navMethodData.entryType];
-
-      try {
-        if (navMethodData.description === "") {
-          description = {};
-        } else {
-          description = JSON.parse(navMethodData.description ?? "{}");
-        }
-      } catch (error) {
-        // Handle the error or rethrow it
-        console.warn(
-          "Failed to parse NAV entry JSON description string: ",
-          error,
-        );
-      }
-
-      // console.log("DETAILS raw 0 ", JSON.stringify(navMethodData, stringifyBigInt, 2))
-      const details = cleanComplexWeb3Data(navMethodData);
-      // console.log("DETAILS cleaned 1 ", JSON.stringify(details, null, 2))
-      const detailsJson = formatJson(details);
-      // console.log("DETAILS json 2 ", detailsJson)
-
-      return {
-        index,
-        positionType,
-        positionName: description?.positionName,
-        valuationSource: description?.valuationSource,
-        details,
-        detailsJson,
-        detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
-      } as INAVMethod;
-    },
     simulateCurrentNAV(): Promise<void> {
       return useActionState(
         "fetchSimulateCurrentNAVAction",
@@ -632,11 +591,12 @@ export const useFundStore = defineStore({
     },
     parseFundNAVUpdates(
       fundNAVData: any,
+      fundAddress: string,
     ): Promise<INAVUpdate[]> {
       console.log("parseFundNavUpdates jopo")
       return useActionState(
         "parseFundNAVUpdatesAction",
-        () => parseFundNAVUpdatesAction(fundNAVData),
+        () => parseFundNAVUpdatesAction(fundNAVData, fundAddress),
       );
     },
     fetchUserBaseTokenBalance() {

@@ -17,6 +17,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
 
     const navUpdates = await fundStore.parseFundNAVUpdates(
       fundNAVData,
+      fundStore.selectedFundAddress,
     );
     const lastNavUpdate = navUpdates[navUpdates.length - 1];
 

@@ -6,6 +6,7 @@ import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
 import type IPositionTypeCount from "~/types/position_type";
+import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 
 export async function fetchFundsNAVDataAction(
   fundsInfoArrays: any[],
@@ -120,7 +121,7 @@ async function processFundNavData(
         if (navMethod.isPastNAVUpdate || navMethod.pastNAVUpdateIndex !== 0n) {
           continue;
         }
-        const parsedNavMethod: INAVMethod = fundsStore.fundStore.parseNAVMethod(
+        const parsedNavMethod: INAVMethod = parseNAVMethod(
           navMethodIndex,
           navMethod,
         );

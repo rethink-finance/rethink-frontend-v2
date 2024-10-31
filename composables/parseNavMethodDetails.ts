@@ -1,5 +1,8 @@
 import { ethers } from "ethers";
 import { encodeParameter } from "web3-eth-abi";
+import type INAVMethod from "~/types/nav_method";
+import { NAVEntryTypeToPositionTypeMap } from "~/types/enums/position_type";
+import { cleanComplexWeb3Data, formatJson } from "~/composables/utils";
 
 /**
  * Position Type Methods preparing data from actual Object to an array of values that are ready to be encoded.
@@ -139,4 +142,41 @@ export const prepRoleModEntryInput = (value: any) => {
     }
     return value.data === "true";
   }
+}
+
+
+export const parseNAVMethod = (index: number, navMethodData: Record<string, any>): INAVMethod => {
+  let description;
+  const positionType =
+    NAVEntryTypeToPositionTypeMap[navMethodData.entryType];
+
+  try {
+    if (navMethodData.description === "") {
+      description = {};
+    } else {
+      description = JSON.parse(navMethodData.description ?? "{}");
+    }
+  } catch (error) {
+    // Handle the error or rethrow it
+    console.warn(
+      "Failed to parse NAV entry JSON description string: ",
+      error,
+    );
+  }
+
+  // console.log("DETAILS raw 0 ", JSON.stringify(navMethodData, stringifyBigInt, 2))
+  const details = cleanComplexWeb3Data(navMethodData);
+  // console.log("DETAILS cleaned 1 ", JSON.stringify(details, null, 2))
+  const detailsJson = formatJson(details);
+  // console.log("DETAILS json 2 ", detailsJson)
+
+  return {
+    index,
+    positionType,
+    positionName: description?.positionName,
+    valuationSource: description?.valuationSource,
+    details,
+    detailsJson,
+    detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
+  } as INAVMethod;
 }
