@@ -259,17 +259,11 @@ const filteredProposalCalldatasDecoded = computed(() => {
     ProposalCalldataType.FUND_SETTINGS,
   ) ?? -1;
 
-  console.log("firstIndex", firstIndex);
-  console.log("lastIndex", lastIndex);
-
   const calldatasDecoded = proposal.value?.calldatasDecoded;
   // remove default fund settings from proposal (the one it is resetting the whitelist, no need to show it here, it's a hack)
   if (calldatasDecoded?.length && firstIndex !== lastIndex && firstIndex !== -1) {
-    console.log("removing default fund settings by index", firstIndex, firstIndex + 1);
-    console.log("calldatasDecoded index", calldatasDecoded);
-    const filteredCalldatas = [...calldatasDecoded.slice(0, firstIndex), ...calldatasDecoded.slice(firstIndex + 1)];
-    console.log("calldatasDecoded index filtered", filteredCalldatas);
-    return filteredCalldatas;
+    console.debug("removing default fund settings by index", firstIndex);
+    return [...calldatasDecoded.slice(0, firstIndex), ...calldatasDecoded.slice(firstIndex + 1)];
   }
 
   return calldatasDecoded;
@@ -306,7 +300,7 @@ const formatCalldata = (calldata: any) => {
   try {
     return JSON.stringify(calldata, null, 2)
   } catch {
-    console.warn("failed");
+    console.warn("failed to format calldata", calldata);
     return calldata;
   }
 }
@@ -331,8 +325,8 @@ const fetchProposalVoteSubmissions = async () => {
         toBlock = endBlock;
       }
 
-      console.log("VS - chunkSize: ", chunkSize);
-      console.log("VS - Fetching events from: ", fromBlock, " to: ", toBlock);
+      console.debug("VS - chunkSize: ", chunkSize);
+      console.debug("VS - Fetching events from: ", fromBlock, " to: ", toBlock);
 
       try {
         const eventsVS = await fundStore.fundGovernorContract.getPastEvents("VoteCast", {
@@ -350,7 +344,7 @@ const fetchProposalVoteSubmissions = async () => {
           );
         });
 
-        console.log("VS - eventsVS: ", eventsVS);
+        console.debug("VS - eventsVS: ", eventsVS);
 
         // append new events to the existing list of proposalVoteSubmissions
         for (const event of sortedEventsVS) {
@@ -384,11 +378,11 @@ const fetchProposalVoteSubmissions = async () => {
           }
         }
 
-        console.log("VS - proposalVoteSubmissions: ", proposalVoteSubmissions.value);
+        console.debug("VS - proposalVoteSubmissions: ", proposalVoteSubmissions.value);
 
         // double the chunk size
         chunkSize *= 2n;
-        console.log("VS - chunkSize doubled: ", chunkSize);
+        console.debug("VS - chunkSize doubled: ", chunkSize);
         waitTimeAfterError = Math.max(100, waitTimeAfterError / 2);
 
         fromBlock = toBlock - 1n; // prepare for next block chunk
@@ -403,7 +397,7 @@ const fetchProposalVoteSubmissions = async () => {
           chunkSize = minChunkSize;
         }
 
-        console.log("VS - chunkSize reduced: ", chunkSize);
+        console.debug("VS - chunkSize reduced: ", chunkSize);
         waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
 
         await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
@@ -411,7 +405,7 @@ const fetchProposalVoteSubmissions = async () => {
     }
 
     loadingProposalVoteSubmissions.value = false;
-    console.log("All VoteCast events fetched");
+    console.debug("All VoteCast events fetched");
   } catch (e: any) {
     console.error("Error fetching proposals votes submissions", e);
     loadingProposalVoteSubmissions.value = false;
