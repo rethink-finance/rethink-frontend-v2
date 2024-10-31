@@ -39,7 +39,6 @@ export default interface INAVMethod {
   pastNAVUpdateEntrySafeAddress?: string,
   // NAV value of that NAV method (if it was already executed in the past)
   pastNavValue?: bigint,
-  pastNavValueFormatted?: string,
   pastNavValueLoading?: boolean,
   pastNavValueError?: boolean,
 

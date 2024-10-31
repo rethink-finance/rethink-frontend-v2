@@ -187,6 +187,7 @@ import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import type IProposalVoteSubmission from "~/types/vote_submission";
+import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -271,7 +272,7 @@ const parseNavEntries = (calldataDecoded: any): INAVMethod[] => {
   console.log("calldataDecoded", calldataDecoded);
   const navMethods = [];
   for (const [index, navMethod] of (calldataDecoded?.navUpdateData ?? []).entries()) {
-    navMethods.push(fundStore.parseNAVMethod(index, navMethod));
+    navMethods.push(parseNAVMethod(index, navMethod));
   }
   return navMethods
 }
