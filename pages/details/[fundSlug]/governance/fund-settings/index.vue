@@ -178,13 +178,13 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import {
-FundSettingProposalFieldsMap,
-ProposalStep,
-ProposalStepMap,
-type IField,
-type IProposal,
-type IStepperSection,
-type IWhitelist,
+  FundSettingProposalFieldsMap,
+  ProposalStep,
+  ProposalStepMap,
+  type IField,
+  type IProposal,
+  type IStepperSection,
+  type IWhitelist,
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
@@ -216,7 +216,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const loading = ref(false);
 const activeStep = ref(proposalSteps[0]);
-const form = ref(null);
+const form = ref();
 const formIsValid = ref(false);
 const isWhitelistToggled = ref(true);
 
@@ -311,8 +311,8 @@ const proposalEntry = ref([
   },
 ]);
 
-const checkIfAllFieldsValid = () => {
-  const output = proposalEntry.value.every((step) => {
+const getStepValidityArray = () => {
+  const output = proposalEntry.value.map((step) => {
     return step.sections.every((section) => {
       return section.fields.every((field) => {
         if (field?.isToggleable) {
@@ -352,53 +352,58 @@ const handleButtonClick = () => {
 
 const submit = async () => {
   if (!web3Store.web3) return;
-  loading.value = true;
-  formIsValid.value = checkIfAllFieldsValid();
+
+  // trigger form validation to show errors
+  const valid = form.value?.validate();
+  // check if every step is valid
+  formIsValid.value = getStepValidityArray().every((step) => step === true);
 
   if (formIsValid.value) {
-    const formattedProposal = formatProposalData(proposal.value);
-    console.log("formattedProposal: ", formattedProposal);
+    try {
+      loading.value = true;
+      const formattedProposal = formatProposalData(proposal.value);
+      console.log("formattedProposal: ", formattedProposal);
 
-    // TODO: we will delete this old proposal after we change how whitelist works in the backend
-    const formattedProposalOld = formatProposalDataOld();
-    console.log("formattedProposalOld: ", formattedProposalOld);
+      // TODO: we will delete this old proposal after we change how whitelist works in the backend
+      const formattedProposalOld = formatProposalDataOld();
+      console.log("formattedProposalOld: ", formattedProposalOld);
 
-    const encodedData = web3Store.web3.eth.abi.encodeFunctionCall(
-      updateSettingsABI as AbiFunctionFragment,
-      formattedProposal,
-    );
+      const encodedData = web3Store.web3.eth.abi.encodeFunctionCall(
+        updateSettingsABI as AbiFunctionFragment,
+        formattedProposal,
+      );
 
-    const encodedDataOld = web3Store.web3.eth.abi.encodeFunctionCall(
-      updateSettingsABI as AbiFunctionFragment,
-      formattedProposalOld,
-    );
+      const encodedDataOld = web3Store.web3.eth.abi.encodeFunctionCall(
+        updateSettingsABI as AbiFunctionFragment,
+        formattedProposalOld,
+      );
 
-    const targetAddresses = [fund.address, fund.address];
-    const gasValues = [0, 0];
-    const calldatas = [encodedDataOld, encodedData];
+      const targetAddresses = [fund.address, fund.address];
+      const gasValues = [0, 0];
+      const calldatas = [encodedDataOld, encodedData];
 
-    console.log(
-      "proposal:",
-      JSON.stringify(
-        {
-          targetAddresses,
-          gasValues,
-          calldatas,
-        },
-        null,
-        2,
-      ),
-    );
+      console.log(
+        "proposal:",
+        JSON.stringify(
+          {
+            targetAddresses,
+            gasValues,
+            calldatas,
+          },
+          null,
+          2,
+        ),
+      );
 
-    const proposalData = [
-      targetAddresses,
-      gasValues,
-      calldatas,
-      JSON.stringify({
-        title: proposal.value.proposalTitle,
-        description: proposal.value.proposalDescription,
-      }),
-    ];
+      const proposalData = [
+        targetAddresses,
+        gasValues,
+        calldatas,
+        JSON.stringify({
+          title: proposal.value.proposalTitle,
+          description: proposal.value.proposalDescription,
+        }),
+      ];
     // const [gasPrice] = await web3Store.estimateGas(
     //   {
     //     from: fundStore.activeAccountAddress,
@@ -406,7 +411,6 @@ const submit = async () => {
     //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
     //   },
     // );
-    try {
       await web3Store.callWithRetry(() =>
         fundStore.fundGovernorContract.methods
           .propose(...proposalData)
@@ -597,6 +601,15 @@ const prevStep = () => {
 
 const nextStep = () => {
   if (activeStep.value === proposalSteps[proposalSteps.length - 1]) {
+    return;
+  }
+  // trigger form validation to show errors
+  const valid = form.value?.validate();
+  // check if step is valid before moving to the next step
+  const stepIndex = proposalSteps.indexOf(activeStep.value);
+  const stepValidityArray = getStepValidityArray();
+  if (!stepValidityArray[stepIndex]) {
+    toastStore.warningToast("Please fill all the required fields");
     return;
   }
 
