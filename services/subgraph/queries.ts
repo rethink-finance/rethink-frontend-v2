@@ -147,9 +147,9 @@ export const FETCH_DELEGATES = gql`
       weight(where: { value_gt: 0, account_not: null }) {
         account {
           id
-          delegationFrom {
-            id
+          delegationFrom(where: { contract_: { id: $votingContract } }) {
             delegator {
+              id
               voteWeigth(where: { contract_: { id: $votingContract } }) {
                 value
               }

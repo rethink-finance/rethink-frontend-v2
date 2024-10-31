@@ -31,5 +31,6 @@ export const fetchDelegatesAction = async (): Promise<any> => {
     governanceProposalStore.fundStore.fund?.address,
     processedDelegates,
   );
+  console.log("processedDelegates: ", processedDelegates);
   return fetchedDelegates;
 };

@@ -203,10 +203,11 @@ export function _mapSubgraphFetchDelegatesToDelegates(
 
   return response.weight.map((weightData) => {
     // Safely map delegators with optional chaining
-    const delegators: IDelegator[] = weightData.account?.delegationFrom?.map(d => ({
-      address: d.id || "",
-      weight: d.delegator?.voteWeigth?.[0]?.value || "0",
-    })) || [];
+    const delegators: IDelegator[] =
+      weightData.account?.delegationFrom?.map((d) => ({
+        address: d.delegator.id || "",
+        weight: d.delegator?.voteWeigth?.[0]?.value || "0",
+      })) || [];
 
     const votingPowerPercent =
       totalSupply !== "0"

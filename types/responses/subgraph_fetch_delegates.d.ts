@@ -1,21 +1,21 @@
 
 export default interface ISubgraphFetchDelegatesResponse {
-    id: string;
-    totalWeight: {
-      value: string;
-    };
-    weight: Array<{
-      account: {
-        id: string;
-        delegationFrom: Array<{
+  id: string;
+  totalWeight: {
+    value: string;
+  };
+  weight: Array<{
+    account: {
+      id: string;
+      delegationFrom: Array<{
+        delegator: {
           id: string;
-          delegator: {
-            voteWeigth: Array<{
-              value: string;
-            }>;
-          };
-        }>;
-      };
-      value: string;
+          voteWeigth: Array<{
+            value: string;
+          }>;
+        };
+      }>;
+    };
+    value: string;
   }>;
 }
