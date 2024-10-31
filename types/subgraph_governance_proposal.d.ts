@@ -52,5 +52,11 @@ export default interface ISubgraphGovernanceProposal {
       support: number;
     };
     weight: string;
+    voteCasts: Array<{
+      transaction: {
+        timestamp: string;
+        blockNumber: number;
+      };
+    }>;
   }>;
 }

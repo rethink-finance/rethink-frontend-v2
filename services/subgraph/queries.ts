@@ -57,6 +57,12 @@ export const FETCH_GOVERNANCE_PROPOSALS = gql`
           support
         }
         weight
+        voteCasts {
+          transaction {
+            timestamp
+            blockNumber
+          }
+        }
       }
     }
   }
@@ -120,6 +126,37 @@ export const FETCH_GOVERNANCE_PROPOSAL = gql`
           support
         }
         weight
+        voteCasts {
+          transaction {
+            timestamp
+            blockNumber
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const FETCH_DELEGATES = gql`
+  query FetchDelegates($votingContract: String!) {
+    votingContract(id: $votingContract) {
+      id
+      totalWeight {
+        value
+      }
+      weight(where: { value_gt: 0, account_not: null }) {
+        account {
+          id
+          delegationFrom {
+            id
+            delegator {
+              voteWeigth(where: { contract_: { id: $votingContract } }) {
+                value
+              }
+            }
+          }
+        }
+        value
       }
     }
   }

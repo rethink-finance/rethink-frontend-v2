@@ -1,9 +1,12 @@
 // helpers/mappers.ts
 
 import { ethers } from "ethers";
+import type IDelegate from "../delegate";
+import type IDelegator from "../delegator";
 import { ProposalState } from "../enums/governance_proposal";
 import { ProposalCalldataType } from "../enums/proposal_calldata_type";
 import type IGovernanceProposal from "../governance_proposal";
+import type ISubgraphFetchDelegatesResponse from "../responses/subgraph_fetch_delegates";
 import type ISubgraphGovernanceProposal from "../subgraph_governance_proposal";
 
 export function _mapSubgraphProposalToProposal(
@@ -186,4 +189,36 @@ export function _mapSubgraphProposalToProposal(
       false,
     ),
   };
+}
+
+export function _mapSubgraphFetchDelegatesToDelegates(
+  response: ISubgraphFetchDelegatesResponse,
+  decimals: number,
+): IDelegate[] {
+  if (!response?.weight) {
+    return [];
+  }
+
+  const totalSupply = response.totalWeight?.value || "0";
+
+  return response.weight.map((weightData) => {
+    // Safely map delegators with optional chaining
+    const delegators: IDelegator[] = weightData.account?.delegationFrom?.map(d => ({
+      address: d.id || "",
+      weight: d.delegator?.voteWeigth?.[0]?.value || "0",
+    })) || [];
+
+    const votingPowerPercent =
+      totalSupply !== "0"
+        ? ((Number(weightData.value || 0) / Number(totalSupply)) * 100).toFixed(2)
+        : "0";
+
+    return {
+      address: weightData.account?.id || "",
+      delegators,
+      delegatorCount: delegators.length,
+      votingPower: formatTokenValue(BigInt(weightData.value || "0"), decimals, false),
+      votingPowerPercent: `${votingPowerPercent}%`,
+    };
+  });
 }

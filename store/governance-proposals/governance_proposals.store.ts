@@ -7,6 +7,7 @@ import { eth, Web3 } from "web3";
 
 import { useActionState } from "../actionState.store";
 import { useToastStore } from "../toasts/toast.store";
+import { fetchDelegatesAction } from "./actions/fetchDelegates.action";
 import { fetchGovernanceProposalAction } from "./actions/fetchGovernanceProposal.action";
 import { fetchGovernanceProposalsAction } from "./actions/fetchGovernanceProposals.action";
 
@@ -19,6 +20,7 @@ import { useFundStore } from "~/store/fund/fund.store";
 
 
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type IDelegate from "~/types/delegate";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
@@ -37,7 +39,11 @@ interface IState {
       }
     }
   */
-  fundProposals: Record<string, Record<string, Record<string, IGovernanceProposal>>>;
+  fundProposals: Record<
+    string,
+    Record<string, Record<string, IGovernanceProposal>>
+  >;
+  fundDelegates: Record<string, Record<string, Record<string, IDelegate>>>;
   /* Example from what to what range block history events were already fetched..
   {
     // Chain ID
@@ -51,13 +57,14 @@ interface IState {
   }
   */
   fundProposalsBlockFetchedRanges: Record<string, Record<string, number[]>>;
-  connectedAccountProposalsHasVoted: Record<string, Record<string, boolean>>,
+  connectedAccountProposalsHasVoted: Record<string, Record<string, boolean>>;
 }
 
 export const useGovernanceProposalsStore = defineStore({
   id: "governanceProposalStore",
   state: (): IState => ({
     fundProposals: getLocalStorageItem("fundProposals", {}) ?? {},
+    fundDelegates: getLocalStorageItem("fundDelegates", {}) ?? {},
     fundProposalsBlockFetchedRanges:
       getLocalStorageItem("fundProposalsBlockFetchedRanges", {}) ?? {},
     connectedAccountProposalsHasVoted: {},
@@ -130,6 +137,31 @@ export const useGovernanceProposalsStore = defineStore({
 
       setLocalStorageItem("fundProposals", this.fundProposals);
     },
+    storeDelegates(
+      chainId: string,
+      fundAddress: string,
+      delegates: IDelegate[],
+    ): void {
+      if (!chainId) {
+        console.error("Cannot store delegates: chainId is required");
+        return;
+      }
+
+      if (!fundAddress) {
+        console.error("Cannot store delegates: fundAddress is required");
+        return;
+      }
+
+      this.fundDelegates[chainId] ??= {};
+      this.fundDelegates[chainId][fundAddress] ??= {};
+
+      delegates.forEach((delegate) => {
+        this.fundDelegates[chainId][fundAddress][delegate.address] =
+          cleanComplexWeb3Data(delegate);
+      });
+
+      setLocalStorageItem("fundDelegates", this.fundDelegates);
+    },
     getProposals(chainId: string, fundAddress?: string): IGovernanceProposal[] {
       if (!fundAddress) return [];
 
@@ -155,6 +187,32 @@ export const useGovernanceProposalsStore = defineStore({
       if (!fundData) return undefined;
 
       return fundData[proposalId];
+    },
+    getDelegates(chainId: string, fundAddress?: string): IDelegate[] {
+      if (!fundAddress) return [];
+
+      const chainData = this.fundDelegates?.[chainId];
+      if (!chainData) return [];
+
+      const fundData = chainData[fundAddress];
+      if (!fundData) return [];
+
+      return Object.values(this.fundDelegates[chainId][fundAddress]);
+    },
+    getDelegate(
+      chainId: string,
+      fundAddress?: string,
+      delegateAddress?: string,
+    ): IDelegate | undefined {
+      if (!fundAddress || !delegateAddress) return undefined;
+
+      const chainData = this.fundDelegates?.[chainId];
+      if (!chainData) return undefined;
+
+      const fundData = chainData[fundAddress];
+      if (!fundData) return undefined;
+
+      return this.fundDelegates?.[chainId]?.[fundAddress]?.[delegateAddress];
     },
     hasAccountVoted(proposalId: string): boolean | undefined {
       const activeAccountAddress = this.fundStore.activeAccountAddress;
@@ -215,6 +273,12 @@ export const useGovernanceProposalsStore = defineStore({
       setLocalStorageItem(
         "fundProposalsBlockFetchedRanges",
         cleanComplexWeb3Data(this.fundProposalsBlockFetchedRanges),
+      );
+    },
+    fetchDelegates() {
+      return useActionState(
+        "fetchDelegatesAction",
+        async () => await fetchDelegatesAction(),
       );
     },
     fetchGovernanceProposals() {

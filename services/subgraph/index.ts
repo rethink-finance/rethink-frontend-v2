@@ -1,8 +1,9 @@
 // services/subgraph/index.ts
 import { ApolloClient } from "@apollo/client/core";
 
-import { FETCH_GOVERNANCE_PROPOSAL, FETCH_GOVERNANCE_PROPOSALS } from "./queries";
+import { FETCH_DELEGATES, FETCH_GOVERNANCE_PROPOSAL, FETCH_GOVERNANCE_PROPOSALS } from "./queries";
 
+import type ISubgraphFetchDelegatesResponse from "~/types/responses/subgraph_fetch_delegates";
 import type ISubgraphGovernanceProposal from "~/types/subgraph_governance_proposal";
 
 
@@ -11,7 +12,7 @@ export interface GovernorProposalsResponse {
 }
 
 export const fetchSubgraphGovernorProposals = async (
-  client: ApolloClient<any>, // No need for NormalizedCacheObject
+  client: ApolloClient<any>,
   values: {
     governorAddress: string;
   },
@@ -39,7 +40,7 @@ export interface GovernorProposalResponse {
 }
 
 export const fetchSubgraphGovernorProposal = async (
-  client: ApolloClient<any>, // No need for NormalizedCacheObject
+  client: ApolloClient<any>,
   values: {
     governorAddress: string;
     proposalId: string;
@@ -62,6 +63,33 @@ export const fetchSubgraphGovernorProposal = async (
     return data.proposals[0];
   } catch (error) {
     console.error("Error fetching governor proposal:", error);
+    throw error;
+  }
+};
+
+export interface DelegateResponse {
+  votingContract: ISubgraphFetchDelegatesResponse;
+}
+
+export const fetchSubgraphDelegates = async (
+  client: ApolloClient<any>,
+  values: {
+    votingContract: string;
+  },
+): Promise<ISubgraphFetchDelegatesResponse> => {
+  try {
+    const { data } = await client.query<DelegateResponse>({
+      query: FETCH_DELEGATES,
+      variables: { votingContract: values.votingContract },
+    });
+    console.log("data: ", data);
+    if (!data || !data.votingContract) {
+      throw new Error("Received no data or events!");
+    }
+
+    return data.votingContract;
+  } catch (error) {
+    console.error("Error fetching subgraph delegates response:", error);
     throw error;
   }
 };
