@@ -68,7 +68,7 @@
       </template>
       <FundGovernanceTableTrendingDelegates
         :items="trendingDelegates"
-        :loading="loadingTrendingDelegate"
+        :loading="isFetchingDelegates"
         @row-click="handleRowClick"
       />
     </UiMainCard>
@@ -254,7 +254,7 @@ const trendingDelegatesSubtitle = computed(() => {
   return trendingDelegates.value.length + " Delegated Wallets";
 });
 
-const loadingTrendingDelegate = ref(false);
+// const loadingTrendingDelegate = ref(false);
 
 /**
 const fetchTrendingDelegates = async () => {
@@ -827,8 +827,8 @@ onBeforeUnmount(() => {
   console.log("Component is being unmounted, stopping the fetch");
   shouldFetchProposals.value = false;
   shouldFetchTrendingDelegates.value = false;
-  loadingProposals.value = false;
-  loadingTrendingDelegate.value = false;
+  // loadingProposals.value = false;
+  // loadingTrendingDelegate.value = false;
 });
 
 /**
@@ -911,7 +911,7 @@ const startFetchingFundProposals = async () => {
 };
  */
 const handleDelegateSuccess = async () => {
-  loadingTrendingDelegate.value = true;
+  // loadingTrendingDelegate.value = true;
   // await 2000ms before fetching
   await new Promise((resolve) => setTimeout(resolve, 2000));
   // fetchTrendingDelegates();
@@ -920,6 +920,18 @@ const handleDelegateSuccess = async () => {
 
 const isFetchingProposals = computed(() => {
   const actionStates = actionStateStore.getActionState("fetchGovernanceProposalsAction");
+
+  if(!actionStates) return false;
+
+  const isLoadingState = actionStates.includes(ActionState.Loading);
+  const hasNeverLoaded = !actionStates.includes(ActionState.Success) &&
+                        !actionStates.includes(ActionState.Error);
+
+  return isLoadingState || hasNeverLoaded;
+});
+
+const isFetchingDelegates = computed(() => {
+  const actionStates = actionStateStore.getActionState("fetchDelegatesAction");
 
   if(!actionStates) return false;
 

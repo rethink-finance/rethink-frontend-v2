@@ -16,15 +16,8 @@ export const useBlockTime = () => {
     Number(currentBlock.timestamp) - Number(previousBlock.timestamp);
     const blockDiff = Number(currentBlock.number) - Number(previousBlock.number);
 
-    // Calculate average time per block in seconds
     const averageBlockTime = (timeDiff) / blockDiff;
 
-
-    console.log("debug: Block time calculation:", {
-      timeDiff,
-      blockDiff,
-      averageBlockTime,
-    });
 
     const context: BlockTimeContext = {
       currentBlock: Number(currentBlock.number),
@@ -48,10 +41,6 @@ export const useBlockTime = () => {
       averageBlockTime,
     } = context;
 
-    console.log("debug: Timestamp calculation:", {
-      targetBlock,
-      currentBlock,
-    });
     if (targetBlock <= currentBlock) {
       try {
         const block = await web3Instance.eth.getBlock(targetBlock);
@@ -63,13 +52,6 @@ export const useBlockTime = () => {
     }
     const blockDiff = targetBlock - currentBlock;
 
-    console.log("debug: Timestamp calculation:", {
-      targetBlock,
-      currentBlock,
-      blockDiff,
-      averageBlockTime,
-      currentBlockTimestamp,
-    });
     const secondsUntilTarget = blockDiff * averageBlockTime;
 
 

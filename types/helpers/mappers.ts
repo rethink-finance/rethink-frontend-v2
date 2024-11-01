@@ -31,11 +31,9 @@ export async function _mapSubgraphProposalToProposal(
   let voteStartTimestamp: number | undefined;
   let voteEndTimestamp: number | undefined;
   if (clockMode === ClockMode.Timestamp) {
-    console.log("debug: Using timestamp for vote start and end");
     voteStartTimestamp = proposal.voteStart;
     voteEndTimestamp = proposal.voteEnd;
   } else if (clockMode === ClockMode.BlockNumber) {
-    console.log("debug: Using block number for vote start and end");
     voteStartTimestamp = await getTimestampForBlock(
       Number(proposal.voteStart),
       blockTimeContext,
@@ -44,13 +42,9 @@ export async function _mapSubgraphProposalToProposal(
       Number(proposal.voteEnd),
       blockTimeContext,
     );
-    console.log("debug: Got timestamps:", {
-      start: voteStartTimestamp,
-      end: voteEndTimestamp,
-    });
   } else {
-    voteStartTimestamp = undefined;
-    voteEndTimestamp = undefined;
+    voteStartTimestamp = 0;
+    voteEndTimestamp = 0;
   }
 
   const parseDescription = (descriptionStr: string) => {
@@ -141,7 +135,6 @@ export async function _mapSubgraphProposalToProposal(
   // Derive state
   let state: ProposalState;
   const now = Math.floor(Date.now() / 1000);
-  console.log("debug", voteStartTimestamp, voteEndTimestamp, now);
 
   if (proposal.proposalCanceled?.[0]?.timestamp) {
     state = ProposalState.Canceled;
