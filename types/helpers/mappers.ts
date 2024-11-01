@@ -1,24 +1,58 @@
 // helpers/mappers.ts
 
 import { ethers } from "ethers";
+import type BlockTimeContext from "../block_time_context";
 import type IDelegate from "../delegate";
 import type IDelegator from "../delegator";
+import { ClockMode } from "../enums/clock_mode";
 import { ProposalState } from "../enums/governance_proposal";
 import { ProposalCalldataType } from "../enums/proposal_calldata_type";
 import type IGovernanceProposal from "../governance_proposal";
 import type ISubgraphFetchDelegatesResponse from "../responses/subgraph_fetch_delegates";
 import type ISubgraphGovernanceProposal from "../subgraph_governance_proposal";
+import type ITrendingDelegate from "../trending_delegate";
 
-export function _mapSubgraphProposalToProposal(
+export async function _mapSubgraphProposalToProposal(
   proposal: ISubgraphGovernanceProposal,
   decodeProposalCallData: (calldata: string) => any,
   totalSupply: number,
+  blockTimeContext: BlockTimeContext,
   decimals: number,
   quorumNumerator: bigint,
   quorumDenominator: bigint,
+  getTimestampForBlock: (
+    targetBlock: number,
+    context: BlockTimeContext,
+  ) => Promise<number>,
+  clockMode: ClockMode,
   roleModAddress?: string,
   safeAddress?: string,
-): IGovernanceProposal {
+): Promise<Promise<IGovernanceProposal>> {
+  let voteStartTimestamp: number | undefined;
+  let voteEndTimestamp: number | undefined;
+  if (clockMode === ClockMode.Timestamp) {
+    console.log("debug: Using timestamp for vote start and end");
+    voteStartTimestamp = proposal.voteStart;
+    voteEndTimestamp = proposal.voteEnd;
+  } else if (clockMode === ClockMode.BlockNumber) {
+    console.log("debug: Using block number for vote start and end");
+    voteStartTimestamp = await getTimestampForBlock(
+      Number(proposal.voteStart),
+      blockTimeContext,
+    );
+    voteEndTimestamp = await getTimestampForBlock(
+      Number(proposal.voteEnd),
+      blockTimeContext,
+    );
+    console.log("debug: Got timestamps:", {
+      start: voteStartTimestamp,
+      end: voteEndTimestamp,
+    });
+  } else {
+    voteStartTimestamp = undefined;
+    voteEndTimestamp = undefined;
+  }
+
   const parseDescription = (descriptionStr: string) => {
     try {
       const parsed = JSON.parse(descriptionStr);
@@ -107,6 +141,7 @@ export function _mapSubgraphProposalToProposal(
   // Derive state
   let state: ProposalState;
   const now = Math.floor(Date.now() / 1000);
+  console.log("debug", voteStartTimestamp, voteEndTimestamp, now);
 
   if (proposal.proposalCanceled?.[0]?.timestamp) {
     state = ProposalState.Canceled;
@@ -114,14 +149,14 @@ export function _mapSubgraphProposalToProposal(
     state = ProposalState.Executed;
   } else if (proposal.proposalQueued?.[0]?.timestamp) {
     state = ProposalState.Queued;
-  } else if (now < Number(proposal.voteStart)) {
+  } else if (now < Number(voteStartTimestamp)) {
     state = ProposalState.Pending;
   } else if (
-    now >= Number(proposal.voteStart) &&
-    now < Number(proposal.voteEnd)
+    now >= Number(voteStartTimestamp) &&
+    now < Number(voteEndTimestamp)
   ) {
     state = ProposalState.Active;
-  } else if (now >= Number(proposal.voteEnd)) {
+  } else if (now >= Number(voteEndTimestamp)) {
     const quorumReached = totalWeight >= quorumVotes;
 
     state =
@@ -139,8 +174,8 @@ export function _mapSubgraphProposalToProposal(
     description: parsedDescription.description,
     voteStart: proposal.voteStart.toString(),
     voteEnd: proposal.voteEnd.toString(),
-    voteStartTimestamp: proposal.voteStart.toString(),
-    voteEndTimestamp: proposal.voteEnd.toString(),
+    voteStartTimestamp: voteStartTimestamp?.toString(),
+    voteEndTimestamp: voteEndTimestamp?.toString(),
 
     createdTimestamp: Number(proposal.proposalCreated?.[0]?.timestamp),
     executedTimestamp: Number(proposal.proposalExecuted?.[0]?.timestamp),
@@ -222,4 +257,16 @@ export function _mapSubgraphFetchDelegatesToDelegates(
       votingPowerPercent: `${votingPowerPercent}%`,
     };
   });
+}
+
+export function _mapDelegatesToTrendingDelegates(
+  delegates: IDelegate[],
+): ITrendingDelegate[] {
+  return delegates.map((delegate) => ({
+    delegatedMember: delegate.address,
+    delegators: delegate.delegators.map((d) => d.address),
+    delegatorsEvents: [], // Empty array since we don't have this data
+    impact: delegate.votingPowerPercent, // Using votingPowerPercent as impact
+    votingPower: delegate.votingPower,
+  }));
 }

@@ -19,6 +19,12 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
     throw new Error("Governor address not found");
   }
 
+  const { initializeBlockTimeContext, getTimestampForBlock } = useBlockTime();
+  const blockTimeContext = await initializeBlockTimeContext(
+    governanceProposalStore.getWeb3InstanceByChainId(),
+  );
+
+
   const roleModAddress = await fundStore.getRoleModAddress(); // TODO replace with fetchGovernableFund
 
   const quorumDenominator = await governanceProposalStore.callWithRetry(() =>
@@ -82,19 +88,24 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
         governanceProposalStore,
       ),
       totalSupply,
+      blockTimeContext,
       fundStore.fund?.governanceToken?.decimals || 18,
       quorumNumerator,
       quorumDenominator,
+      getTimestampForBlock,
+      fundStore.fund?.clockMode?.mode as ClockMode,
       roleModAddress,
       fundStore.fund?.safeAddress,
     );
   });
 
+  const mappedProposals = await Promise.all(processedProposals);
+
   governanceProposalStore.storeProposals(
     governanceProposalStore.web3Store.chainId,
     governanceProposalStore.fundStore.fund?.address,
-    processedProposals,
+    mappedProposals,
   );
 
-  return processedProposals;
+  return mappedProposals;
 };

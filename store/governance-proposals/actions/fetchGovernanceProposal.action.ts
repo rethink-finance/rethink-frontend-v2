@@ -24,6 +24,11 @@ export const fetchGovernanceProposalAction = async (
     proposalId,
   });
 
+  const { initializeBlockTimeContext, getTimestampForBlock } = useBlockTime();
+  const blockTimeContext = await initializeBlockTimeContext(
+    governanceProposalStore.getWeb3InstanceByChainId(),
+  );
+
   const roleModAddress = await fundStore.getRoleModAddress();
   const quorumDenominator = await governanceProposalStore.callWithRetry(() =>
     fundStore.fundGovernorContract.methods.quorumDenominator().call(),
@@ -46,15 +51,18 @@ export const fetchGovernanceProposalAction = async (
     ),
   ]);
 
-  const mappedProposal = _mapSubgraphProposalToProposal(
+  const mappedProposal = await _mapSubgraphProposalToProposal(
     proposal,
     governanceProposalStore.decodeProposalCallData.bind(
       governanceProposalStore,
     ),
     totalSupply,
+    blockTimeContext,
     fundStore.fund?.governanceToken.decimals ?? 0,
     quorumNumerator,
     quorumDenominator,
+    getTimestampForBlock,
+    fundStore.fund?.clockMode?.mode as ClockMode,
     roleModAddress,
     fundStore.fund?.safeAddress,
   );

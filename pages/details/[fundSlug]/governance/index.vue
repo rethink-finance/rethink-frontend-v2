@@ -142,17 +142,17 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
-import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
 import { ProposalState } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { _mapDelegatesToTrendingDelegates } from "~/types/helpers/mappers";
 import type ITrendingDelegate from "~/types/trending_delegate";
+
 const router = useRouter();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
-const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 const actionStateStore = useActionStateStore();
 const governanceProposalStore = useGovernanceProposalsStore();
@@ -226,11 +226,24 @@ const shouldFetchProposals = ref(false);
 const shouldFetchTrendingDelegates = ref(true);
 
 // trending delegates
-const trendingDelegates = ref<ITrendingDelegate[]>([]);
+const trendingDelegates = computed(() => {
+  const delegates = governanceProposalStore.getDelegates(
+    web3Store.chainId,
+    fundStore.fund?.address,
+  );
+  delegates.sort((a, b) => {
+    const votingPowerA = Number(a.votingPower.replace(fundStore.fund?.governanceToken.symbol || "", ""));
+    const votingPowerB = Number(b.votingPower.replace(fundStore.fund?.governanceToken.symbol || "", ""));
+    return votingPowerB - votingPowerA;
+  });
+  return _mapDelegatesToTrendingDelegates(delegates);
+});
 
+/**
 const totalVotingPower = computed(() => {
   return fundStore?.fund?.fundTokenTotalSupply || 0;
 });
+ */
 
 // subtitle for trending delegates
 const trendingDelegatesSubtitle = computed(() => {
@@ -243,6 +256,7 @@ const trendingDelegatesSubtitle = computed(() => {
 
 const loadingTrendingDelegate = ref(false);
 
+/**
 const fetchTrendingDelegates = async () => {
   try {
     loadingTrendingDelegate.value = true;
@@ -329,6 +343,7 @@ const fetchTrendingDelegates = async () => {
     loadingTrendingDelegate.value = false;
   }
 };
+
 
 // // process and parse only the new chunk of events
 // // we want to show only the most recent events, so if the delegator already exists in the trending delegates list we skip it
@@ -454,6 +469,7 @@ async function getVotingPowerAndImpact(delegatedAddress: string) {
     };
   }
 }
+ */
 
 const handleRowClick = (item: ITrendingDelegate) => {
   activeRow.value = item;
@@ -555,6 +571,7 @@ const openDelegateDialog = () => {
   isDelegateDialogOpen.value = true;
 };
 
+/**
 const fetchProposals = async (
   rangeStartBlock: number,
   rangeEndBlock: number,
@@ -798,7 +815,7 @@ const fetchProposals = async (
 
   loadingProposals.value = false;
 };
-
+ */
 // TODO iterate over all already fetched proposals that are still votable and update their state (createdBlockNumber).
 onMounted(async () => {
   // fetchTrendingDelegates();
@@ -814,6 +831,7 @@ onBeforeUnmount(() => {
   loadingTrendingDelegate.value = false;
 });
 
+/**
 const startFetchingFundProposals = async () => {
   console.warn("STAAAART governance proposal events for fund: ", fund.address);
 
@@ -891,13 +909,12 @@ const startFetchingFundProposals = async () => {
     await fetchProposals(currentBlock, 0);
   }
 };
-
+ */
 const handleDelegateSuccess = async () => {
   loadingTrendingDelegate.value = true;
-  trendingDelegates.value = [];
   // await 2000ms before fetching
   await new Promise((resolve) => setTimeout(resolve, 2000));
-  fetchTrendingDelegates();
+  // fetchTrendingDelegates();
   // fundStore.fetchUserFundDelegateAddress();
 };
 
