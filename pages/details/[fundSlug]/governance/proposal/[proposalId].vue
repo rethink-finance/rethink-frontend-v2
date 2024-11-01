@@ -3,7 +3,7 @@
     <FundGovernanceProposalSectionTop
       :proposal="proposal"
       :active-user-vote-submission="activeUserVoteSubmission"
-      :loading-proposal-vote-submissions="loadingProposalVoteSubmissions"
+      :loading-proposal-vote-submissions="isLoadingProposal"
       @vote-success="handleVoteSuccess"
     />
 
@@ -117,7 +117,7 @@
           <template v-else-if="selectedTab === 'voteSubmissions'">
             <FundGovernanceTableProposalVoteSubmissions
               :items="proposalVoteSubmissions"
-              :loading="loadingProposalVoteSubmissions"
+              :loading="isLoadingProposal"
             />
           </template>
         </v-card-text>
@@ -184,12 +184,10 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
-import { VoteTypeMapping } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import type IProposalVoteSubmission from "~/types/vote_submission";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -230,10 +228,20 @@ const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
 const actionStateStore = useActionStateStore();
 // const proposalFetched = ref(false);
-const loadingProposalVoteSubmissions = ref(false);
 const shouldFetchProposalVoteSubmissions = ref(true);
-const proposalVoteSubmissions = ref <IProposalVoteSubmission[]> ([]);
-const activeUserVoteSubmission = ref<IProposalVoteSubmission>();
+
+const proposalVoteSubmissions = computed(() =>
+  proposal.value?.voteSubmissions,
+);
+
+const activeUserVoteSubmission = computed(() => {
+  const activeAddress = fundStore.activeAccountAddress?.toLowerCase();
+  return activeAddress ?
+    proposalVoteSubmissions.value?.find(
+      sub => sub.proposer.toLowerCase() === activeAddress,
+    ) :
+    undefined;
+});
 
 const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
@@ -310,7 +318,7 @@ const formatCalldata = (calldata: any) => {
     return calldata;
   }
 }
-
+/**
 const fetchProposalVoteSubmissions = async () => {
   loadingProposalVoteSubmissions.value = true;
   try {
@@ -416,20 +424,18 @@ const fetchProposalVoteSubmissions = async () => {
     loadingProposalVoteSubmissions.value = false;
   }
 };
-
+ */
 // when the user vote, refetch the votes submissions
 const handleVoteSuccess = async () => {
   shouldFetchProposalVoteSubmissions.value = true;
-  loadingProposalVoteSubmissions.value = true;
   // await 2000ms before fetching
   await new Promise((resolve) => setTimeout(resolve, 2000));
-
-  fetchProposalVoteSubmissions();
+  await governanceProposalStore.fetchGovernanceProposal(proposalId);
+  // fetchProposalVoteSubmissions();
 }
 
 onMounted(async () => {
-  // TODO fix quorumValue
-  fetchProposalVoteSubmissions(); // TODO replace with subgraph fetch voteCasts or update adding timestamp to receipt
+  // fetchProposalVoteSubmissions();
   emit("updateBreadcrumbs", breadcrumbItems);
 
   // fetch block proposals based on createdBlockNumber

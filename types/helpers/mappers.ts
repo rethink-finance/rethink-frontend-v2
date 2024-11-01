@@ -5,12 +5,13 @@ import type BlockTimeContext from "../block_time_context";
 import type IDelegate from "../delegate";
 import type IDelegator from "../delegator";
 import { ClockMode } from "../enums/clock_mode";
-import { ProposalState } from "../enums/governance_proposal";
+import { ProposalState, VoteTypeFromNumber } from "../enums/governance_proposal";
 import { ProposalCalldataType } from "../enums/proposal_calldata_type";
 import type IGovernanceProposal from "../governance_proposal";
 import type ISubgraphFetchDelegatesResponse from "../responses/subgraph_fetch_delegates";
 import type ISubgraphGovernanceProposal from "../subgraph_governance_proposal";
 import type ITrendingDelegate from "../trending_delegate";
+import type IProposalVoteSubmission from "../vote_submission";
 
 export async function _mapSubgraphProposalToProposal(
   proposal: ISubgraphGovernanceProposal,
@@ -160,6 +161,24 @@ export async function _mapSubgraphProposalToProposal(
     state = ProposalState.Pending;
   }
 
+  // map vote submissions
+  const voteSubmissions =
+    (proposal.receipts ?? []).map(
+      (receipt) =>
+        ({
+          proposalId: proposal.proposalId.toString(),
+          proposer: receipt.voter.id,
+          my_vote: false,
+          submission_status: VoteTypeFromNumber[receipt.support.support],
+          quorumVotes: formatTokenValue(BigInt(receipt.weight)  , decimals, false, true),
+          date: formatDateToLocaleString(
+            new Date(Number(receipt.voteCasts[0].transaction.timestamp) * 1000),
+            false,
+          ),
+          blockNumber: receipt.voteCasts[0].transaction.blockNumber,
+        }) as IProposalVoteSubmission,
+    );
+
   return {
     proposalId: proposal.proposalId.toString(),
     proposer: proposal.proposer.id,
@@ -216,6 +235,7 @@ export async function _mapSubgraphProposalToProposal(
       decimals,
       false,
     ),
+    voteSubmissions,
   };
 }
 

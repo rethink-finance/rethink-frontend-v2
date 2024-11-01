@@ -42,59 +42,62 @@
  */
 import { ProposalState } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
+import type IProposalVoteSubmission from "./vote_submission";
 
 
 export default interface IGovernanceProposal {
-  proposalId: string,
-  proposer: string,
-  title: string,
-  description: string,
-  voteStart: string,
-  voteEnd: string,
-  voteStartTimestamp?: string,
-  voteEndTimestamp?: string,
-  hasVotedLoading?: boolean,
+  proposalId: string;
+  proposer: string;
+  title: string;
+  description: string;
+  voteStart: string;
+  voteEnd: string;
+  voteStartTimestamp?: string;
+  voteEndTimestamp?: string;
+  hasVotedLoading?: boolean;
 
   // Original event data
-  targets: string[],
-  values: string[],
-  signatures: string[],
-  calldatas: string[],
-  descriptionHash: string,
-  calldatasDecoded: (Record<string, any> | undefined)[],
-  calldataTypes: (ProposalCalldataType | undefined)[],
+  targets: string[];
+  values: string[];
+  signatures: string[];
+  calldatas: string[];
+  descriptionHash: string;
+  calldatasDecoded: (Record<string, any> | undefined)[];
+  calldataTypes: (ProposalCalldataType | undefined)[];
   // Calldata Tags are just unique calldataTypes without the undefined type.
-  calldataTags: ProposalCalldataTypes[],
+  calldataTags: ProposalCalldataTypes[];
 
   // Called from the "state" function (IGovernorUpgradeable.ProposalState)
-  state: ProposalState,
+  state: ProposalState;
 
   // Created timestamp is fetched from the event's block timestamp.
-  createdTimestamp: number,
-  createdBlockNumber: bigint,
-  createdDatetimeFormatted: string,
+  createdTimestamp: number;
+  createdBlockNumber: bigint;
+  createdDatetimeFormatted: string;
 
   // Executed timestamp is fetched from the event's block timestamp.
-  executedTimestamp: number,
-  executedBlockNumber: bigint,
+  executedTimestamp: number;
+  executedBlockNumber: bigint;
 
   // Frontend fields:
-  approval: number,
-  approvalFormatted: string, // e.g. "40%"
-  participation: number, // e.g. 0.1
-  participationFormatted: string, // e.g. "10%"
+  approval: number;
+  approvalFormatted: string; // e.g. "40%"
+  participation: number; // e.g. 0.1
+  participationFormatted: string; // e.g. "10%"
   // Quorum in time when the proposal aws created.
-  quorumVotes: bigint, // e.g. 50k
-  quorumVotesFormatted: string, // e.g. 50k
-  forVotes: bigint,
-  forVotesFormatted: string, // e.g. 50k
-  abstainVotes: bigint,
-  abstainVotesFormatted: string, // e.g. 50k
-  againstVotes: bigint,
-  againstVotesFormatted: string, // e.g. 50k
-  totalVotes: bigint,
-  totalVotesFormatted: string,
+  quorumVotes: bigint; // e.g. 50k
+  quorumVotesFormatted: string; // e.g. 50k
+  forVotes: bigint;
+  forVotesFormatted: string; // e.g. 50k
+  abstainVotes: bigint;
+  abstainVotesFormatted: string; // e.g. 50k
+  againstVotes: bigint;
+  againstVotesFormatted: string; // e.g. 50k
+  totalVotes: bigint;
+  totalVotesFormatted: string;
   // Total supply of the governance token when the proposal aws created.
-  totalSupply: bigint,
-  totalSupplyFormatted: string,
+  totalSupply: bigint;
+  totalSupplyFormatted: string;
+
+  voteSubmissions?: IProposalVoteSubmission[];
 }

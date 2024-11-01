@@ -560,7 +560,7 @@ const selectOption = (option: string) => {
 };
 
 const fund = useAttrs().fund as IFund;
-const loadingProposals = ref(false);
+// const loadingProposals = ref(false);
 const loadingProposalsVariant = ref("append" as "append" | "prepend");
 
 // delegate dialog
