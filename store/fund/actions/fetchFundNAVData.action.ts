@@ -1,4 +1,5 @@
 import { useFundStore } from "../fund.store";
+import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
@@ -12,15 +13,14 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
         .call(),
     );
 
-    // TODO this is wrong, should use position types from the last nav update after it is parsed in the next lines
-    fundStore.fund.positionTypeCounts =
-      fundStore.parseFundPositionTypeCounts(fundNAVData);
-
     const navUpdates = await fundStore.parseFundNAVUpdates(
       fundNAVData,
       fundStore.selectedFundAddress,
     );
     const lastNavUpdate = navUpdates[navUpdates.length - 1];
+
+    fundStore.fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(lastNavUpdate?.entries);
+    console.warn("NAV data positionTypeCounts", fundStore.fund.positionTypeCounts);
 
     fundStore.fund.lastNAVUpdateTotalNAV = navUpdates.length
       ? lastNavUpdate.totalNAV || 0n
@@ -45,5 +45,4 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     toRaw(fundStore.fundManagedNAVMethods),
   );
   fundStore.mergeNAVMethodsFromLocalStorage();
-
 };

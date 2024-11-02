@@ -41,7 +41,7 @@ import {
   FundTransactionType,
 } from "~/types/enums/fund_transaction_type";
 import {
-  PositionTypes,
+  PositionType, PositionTypeKeys, PositionTypesMap,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
@@ -560,23 +560,6 @@ export const useFundStore = defineStore({
           }
         });
     },
-
-    parseFundPositionTypeCounts(dataNAV: any): IPositionTypeCount[] {
-      const positionTypeCounts = [];
-
-      for (const positionType of PositionTypes) {
-        const positionTypeData = dataNAV[positionType.key];
-        // Get the last array for each NAV position type. The last array represents
-        // the latest NAV update for each position type (liquid, nft, composable, illiquid).
-        const lastIndex = positionTypeData?.length || 0;
-        const lastNAVUpdate = positionTypeData[lastIndex - 1];
-        positionTypeCounts.push({
-          type: positionType,
-          count: lastNAVUpdate?.length || 0,
-        });
-      }
-      return positionTypeCounts;
-    },
     simulateCurrentNAV(): Promise<void> {
       return useActionState(
         "fetchSimulateCurrentNAVAction",
@@ -593,7 +576,6 @@ export const useFundStore = defineStore({
       fundNAVData: any,
       fundAddress: string,
     ): Promise<INAVUpdate[]> {
-      console.log("parseFundNavUpdates jopo")
       return useActionState(
         "parseFundNAVUpdatesAction",
         () => parseFundNAVUpdatesAction(fundNAVData, fundAddress),

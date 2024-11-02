@@ -412,7 +412,7 @@ const parseNewChunkDelegateEvents = async (
 
     // return the new trending delegates
     return newDelegates;
-    
+
   } catch (error: any) {
     console.error("Error parsing trending delegates: ", error);
     return [];
@@ -577,7 +577,6 @@ const fetchProposals = async (
   let chunkSize = INITIAL_CHUNK_SIZE;
   let waitTimeAfterError = INITIAL_WAIT_TIME_AFTER_ERROR;
 
-  // TODO we can do batch requests for example 10x3000
   // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
   // We fetch from the most recent to least recent block number.
   const targetDate = new Date("2024-04-01T00:00:00Z");
@@ -858,7 +857,7 @@ const startFetchingFundProposals = async () => {
     // But only if current block is bigger than most recent already fetched block.
     if (currentBlock > mostRecentFetchedBlock) {
       // show loading skeleton at the top of the table (prepend)
-      // when fetching proposals from the most recent fetched block to the current block 
+      // when fetching proposals from the most recent fetched block to the current block
       await fetchProposals(mostRecentFetchedBlock + 1, currentBlock, "prepend");
     }
 
