@@ -384,12 +384,11 @@ const addMethod = () => {
 
   // Set default fields that are required for each entry.
   // All methods details have this data.
-  // TODO check if we need to convert any field to number by map like entryType
   newNavEntry.details.isPastNAVUpdate = false;
   newNavEntry.details.pastNAVUpdateIndex = 0;
   newNavEntry.details.pastNAVUpdateEntryIndex = 0;
   newNavEntry.details.entryType = PositionTypeToNAVEntryTypeMap[navEntry.value.positionType];
-  newNavEntry.details.valuationType = navEntry.value.valuationType; // TODO convert also?
+  newNavEntry.details.valuationType = navEntry.value.valuationType;
   newNavEntry.details.description = JSON.stringify({
     positionName: navEntry.value.positionName,
     valuationSource: navEntry.value.valuationSource,

@@ -41,7 +41,7 @@ import {
   FundTransactionType,
 } from "~/types/enums/fund_transaction_type";
 import {
-  PositionTypes,
+  PositionType, PositionTypeKeys,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
@@ -560,22 +560,34 @@ export const useFundStore = defineStore({
           }
         });
     },
+    parseFundPositionTypeCounts(navMethods?: INAVMethod[]): IPositionTypeCount[] {
+      /**
+       * Counts occurrences of each position type in the provided NAV methods.
+       * Example response:
+       * [
+       *   { type: PositionType.Liquid, count: 2 },
+       *   { type: PositionType.Composable, count: 0 },
+       *   { type: PositionType.NFT, count: 1 },
+       *   { type: PositionType.Illiquid, count: 0 }
+       * ]
+       */
+      const counts =  PositionTypeKeys.reduce((acc, positionType) => {
+        acc[positionType] = 0;
+        return acc;
+      }, {} as Record<PositionType, number>);
 
-    parseFundPositionTypeCounts(dataNAV: any): IPositionTypeCount[] {
-      const positionTypeCounts = [];
-
-      for (const positionType of PositionTypes) {
-        const positionTypeData = dataNAV[positionType.key];
-        // Get the last array for each NAV position type. The last array represents
-        // the latest NAV update for each position type (liquid, nft, composable, illiquid).
-        const lastIndex = positionTypeData?.length || 0;
-        const lastNAVUpdate = positionTypeData[lastIndex - 1];
-        positionTypeCounts.push({
-          type: positionType,
-          count: lastNAVUpdate?.length || 0,
-        });
+      if (navMethods) {
+        for (const navMethod of navMethods) {
+          counts[navMethod.positionType] += 1;
+        }
       }
-      return positionTypeCounts;
+
+      return PositionTypeKeys.map(positionType => {
+        return {
+          type: positionType,
+          count: counts[positionType],
+        }
+      })
     },
     simulateCurrentNAV(): Promise<void> {
       return useActionState(
@@ -593,7 +605,6 @@ export const useFundStore = defineStore({
       fundNAVData: any,
       fundAddress: string,
     ): Promise<INAVUpdate[]> {
-      console.log("parseFundNavUpdates jopo")
       return useActionState(
         "parseFundNAVUpdatesAction",
         () => parseFundNAVUpdatesAction(fundNAVData, fundAddress),
