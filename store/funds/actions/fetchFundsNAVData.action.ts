@@ -7,6 +7,7 @@ import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
 import type IPositionTypeCount from "~/types/position_type";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
+import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 
 export async function fetchFundsNAVDataAction(
   fundsInfoArrays: any[],
@@ -61,28 +62,6 @@ async function processFundNavData(
   allMethods: INAVMethod[],
 ) {
   const fund = fundsStore.funds[fundIndex];
-  // TODO this is wrong, take position types from last NAV update after it is parsed
-  if (fund) {
-    // Populate the positionTypeCounts array
-    fund.positionTypeCounts = [
-      {
-        type: PositionTypesMap[PositionType.Liquid],
-        count: Number(fundNAVData.liquidLen || 0),
-      },
-      {
-        type: PositionTypesMap[PositionType.Composable],
-        count: Number(fundNAVData.composableLen || 0),
-      },
-      {
-        type: PositionTypesMap[PositionType.NFT],
-        count: Number(fundNAVData.nftLen || 0),
-      },
-      {
-        type: PositionTypesMap[PositionType.Illiquid],
-        count: Number(fundNAVData.illiquidLen || 0),
-      },
-    ] as IPositionTypeCount[];
-  }
   fundsStore.fundNAVUpdates[fundAddress] = [];
 
   if (!fundNAVData.encodedNavUpdate?.length) return;
@@ -101,6 +80,8 @@ async function processFundNavData(
 
   fundsStore.fundNAVUpdates[fundAddress] = navUpdates;
   const lastNavUpdate = navUpdates[navUpdates.length - 1];
+  fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(lastNavUpdate?.entries);
+  console.warn("NAV data positionTypeCounts", fund.positionTypeCounts);
 
   if (fund) {
     fund.lastNAVUpdateTotalNAV = navUpdates.length
