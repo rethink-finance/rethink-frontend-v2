@@ -41,7 +41,7 @@ import {
   FundTransactionType,
 } from "~/types/enums/fund_transaction_type";
 import {
-  PositionType, PositionTypeKeys,
+  PositionType, PositionTypeKeys, PositionTypesMap,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
@@ -584,7 +584,7 @@ export const useFundStore = defineStore({
 
       return PositionTypeKeys.map(positionType => {
         return {
-          type: positionType,
+          type: PositionTypesMap[positionType],
           count: counts[positionType],
         }
       })
