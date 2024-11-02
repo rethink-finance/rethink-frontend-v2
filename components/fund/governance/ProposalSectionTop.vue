@@ -226,7 +226,7 @@ const props = defineProps({
   },
   activeUserVoteSubmission: {
     type: Object as PropType<IProposalVoteSubmission> | undefined,
-    default: () => {}
+    default: () => {},
   },
   loadingProposalVoteSubmissions: {
     type: Boolean,
