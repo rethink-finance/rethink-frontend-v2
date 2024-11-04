@@ -222,7 +222,7 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
-import { FMT_BYTES, FMT_NUMBER } from "web3";
+import { DEFAULT_RETURN_FORMAT } from "web3";
 import { ERC20 } from "~/assets/contracts/ERC20";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -345,7 +345,7 @@ const submitRawTXN = async () => {
     }
 
     // TODO this next line can be removed probably?
-    web3Store.web3.config.ignoreGasPricing = true;
+    // web3Store.web3.config.ignoreGasPricing = true;
     await web3Store.web3.eth.sendTransaction({
       to: submitRawTXNEntry.contractAddress,
       data: submitRawTXNEntry.txData,
@@ -354,12 +354,8 @@ const submitRawTXN = async () => {
       maxFeePerGas: "",
       value: parseInt(submitRawTXNEntry.amountValue),
     },
+    DEFAULT_RETURN_FORMAT,
     {
-      bytes: FMT_BYTES.HEX,
-      number: FMT_NUMBER.BIGINT,
-    },
-    {
-      // TODO make this default setting?
       // Disable revert check
       checkRevertBeforeSending: false,
     },
