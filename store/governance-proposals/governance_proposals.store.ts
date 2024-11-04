@@ -78,7 +78,7 @@ export const useGovernanceProposalsStore = defineStore({
         this.fundProposals[chainId] = {};
       }
       this.fundProposals[chainId][fundAddress] = {};
-      this.fundProposalsBlockFetchedRanges[chainId] = {};
+      this.fundProposalsBlockFetchedRanges[chainId][fundAddress] = [];
       setLocalStorageItem("fundProposals", {});
       setLocalStorageItem("fundProposalsBlockFetchedRanges",  {});
     },
