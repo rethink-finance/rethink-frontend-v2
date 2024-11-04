@@ -819,8 +819,10 @@ const fetchProposals = async (
 // TODO iterate over all already fetched proposals that are still votable and update their state (createdBlockNumber).
 onMounted(async () => {
   // fetchTrendingDelegates();
-  await governanceProposalStore.fetchDelegates();
-  await governanceProposalStore.fetchGovernanceProposals();
+  await Promise.all([
+    governanceProposalStore.fetchGovernanceProposals(),
+    governanceProposalStore.fetchDelegates(),
+  ]);
 });
 
 onBeforeUnmount(() => {
