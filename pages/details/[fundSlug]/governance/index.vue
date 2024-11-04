@@ -115,7 +115,7 @@
       :cancel-text="
         updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to Proposal'
       "
-      message="You can create a new one or check the ongoing activity first!"
+      message="There is already an active fund settings proposal. Are you sure you want to create a new one?"
       class="confirm_dialog"
       :max-width="updateSettingsProposals.length > 1 ? 'unset' : '600px'"
       @confirm="handleNavigateToCreateProposal"
@@ -135,7 +135,6 @@
 </template>
 
 <script setup lang="ts">
-import type IFund from "~/types/fund";
 
 // components
 import { useAccountStore } from "~/store/account/account.store";
