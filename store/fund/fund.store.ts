@@ -434,6 +434,21 @@ export const useFundStore = defineStore({
         },
   },
   actions: {
+    resetFundData() {
+      this.fund = undefined;
+      this.userDepositRequest = undefined;
+      this.userRedemptionRequest = undefined;
+      this.fundManagedNAVMethods = [];
+      this.fundRoleModAddress = {};
+      this.fundUserData = {
+        baseTokenBalance: 0n,
+        fundTokenBalance: 0n,
+        governanceTokenBalance: 0n,
+        fundAllowance: 0n,
+        fundShareValue: 0n,
+        fundDelegateAddress: "",
+      };
+    },
     // Proxy method to make callWithRetry accessible as this.callWithRetry
     callWithRetry(
       method: () => any,
@@ -685,26 +700,6 @@ export const useFundStore = defineStore({
       roleModAddress = safeModules[0][1];
       this.fundRoleModAddress[this.fund?.address ?? ""] = roleModAddress;
       return roleModAddress;
-    },
-    mergeNAVMethodsFromLocalStorage() {
-      // TODO should do cached in local storage separately by chain: navUpdateEntries
-      // TODO: this code is not the best, generally now only "deleted" property can change for each NAV method,
-      //   and they way mutation happen here is not good, losing reactive references?
-      const localStorageNAVUpdateEntries =
-        getLocalStorageItem("navUpdateEntries");
-      // if there are no NAV methods in local storage, save them
-
-      if (!localStorageNAVUpdateEntries[this.selectedFundAddress]?.length) {
-        // Merge NAV method changes from localStorage to the current fundManagedNAVMethods.
-        localStorageNAVUpdateEntries[this.selectedFundAddress] =
-          this.fundManagedNAVMethods;
-        setLocalStorageItem("navUpdateEntries", localStorageNAVUpdateEntries);
-      }
-
-      // if there are NAV methods in local storage, assign them to the fundManagedNAVMethods.
-      this.fundManagedNAVMethods =
-        localStorageNAVUpdateEntries[this.selectedFundAddress] || [];
-      this.refreshSimulateNAVCounter++;
     },
     async estimateGasFundFlowsCall(encodedFunctionCall: any) {
       return await this.web3Store.estimateGas({

@@ -9,7 +9,7 @@
         class="fund_settlement__buttons"
       >
         <v-tooltip
-          :disabled="!(depositDisabledTooltipText || redemptionDisabledTooltipText)"
+          :disabled="!!(depositDisabledTooltipText || redemptionDisabledTooltipText)"
           activator="parent"
           location="bottom"
         >
