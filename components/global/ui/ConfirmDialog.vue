@@ -86,6 +86,8 @@ const confirm = () => {
   margin: 0 auto;
   padding: 40px;
   width: 100%;
+  max-height: 95vh;
+  overflow: auto;
 
   background-color: $color-bg-toast;
   box-shadow: 0px 0px 16px 0px $color-box-shadow;

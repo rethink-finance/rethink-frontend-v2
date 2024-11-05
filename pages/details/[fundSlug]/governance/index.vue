@@ -111,16 +111,16 @@
     <UiConfirmDialog
       v-model="confirmDialog"
       title="Heads Up!"
-      confirm-text="Continue"
+      confirm-text="Create a New Proposal"
       :cancel-text="
-        updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to Proposal'
+        updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to existing proposal'
       "
       message="There is already an active fund settings proposal. Are you sure you want to create a new one?"
       class="confirm_dialog"
       :max-width="updateSettingsProposals.length > 1 ? 'unset' : '600px'"
       @confirm="handleNavigateToCreateProposal"
       @cancel="
-        updateSettingsProposals.length > 1 ? null : handleGoToFProposal()
+        updateSettingsProposals.length > 1 ? null : handleGoToProposal()
       "
     >
       <FundGovernanceProposalsTable
@@ -167,7 +167,11 @@ const governanceProposals = computed(() => {
   // set updateSettingsProposals to proposals that have updateSettings calldata
   updateSettingsProposals.value = proposals.filter((proposal) => {
     return proposal.calldataTags?.some(
-      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS,
+      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS
+    ) && (
+      proposal.state === ProposalState.Active || 
+      proposal.state === ProposalState.Pending || 
+      proposal.state === ProposalState.Queued
     );
   });
 
@@ -510,7 +514,7 @@ const handleNavigateToCreateProposal = () => {
     `/details/${fundStore.selectedFundSlug}/governance/fund-settings`,
   );
 };
-const handleGoToFProposal = () => {
+const handleGoToProposal = () => {
   const { createdBlockNumber, proposalId } = updateSettingsProposals.value[0];
 
   if (!createdBlockNumber || !proposalId) {
