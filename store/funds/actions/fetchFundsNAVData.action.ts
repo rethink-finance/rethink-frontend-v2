@@ -81,7 +81,6 @@ async function processFundNavData(
 
   if (fund) {
     fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(lastNavUpdate?.entries);
-    console.warn("NAV data positionTypeCounts", fund.positionTypeCounts);
 
     fund.lastNAVUpdateTotalNAV = navUpdates.length
       ? lastNavUpdate.totalNAV || 0n

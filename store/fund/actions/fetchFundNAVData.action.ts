@@ -21,7 +21,6 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
     fundStore.fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(lastNavUpdate?.entries);
-    console.warn("NAV data positionTypeCounts", fundStore.fund.positionTypeCounts);
 
     fundStore.fund.lastNAVUpdateTotalNAV = navUpdates.length
       ? lastNavUpdate.totalNAV || 0n

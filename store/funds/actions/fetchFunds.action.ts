@@ -1,10 +1,13 @@
 import { excludedFundAddresses } from "../config/excludedFundAddresses.config";
 import { useFundsStore } from "../funds.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export async function fetchFundsAction(excludeTestFunds: boolean): Promise<any> {
-  const fundsStore = await useFundsStore();
+  const fundsStore = useFundsStore();
+  const web3Store = useWeb3Store();
+  const chainId = web3Store.chainId;
 
-  fundsStore.funds = [];
+  fundsStore.chainFunds[chainId] = [];
 
   const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays();
   const fundAddresses: string[] = [];
@@ -29,7 +32,7 @@ export async function fetchFundsAction(excludeTestFunds: boolean): Promise<any> 
   console.log("filteredFundsInfoArrays: ", filteredFundsInfoArrays);
 
   const funds = await fundsStore.fetchFundsMetaData(fundAddresses, fundsInfo);
-  fundsStore.funds = funds;
+  fundsStore.chainFunds[chainId] = funds;
   console.log("All Funds: ", funds);
 
   // Fetch all possible NAV methods for all funds.
