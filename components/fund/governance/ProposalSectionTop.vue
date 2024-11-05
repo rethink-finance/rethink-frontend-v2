@@ -300,42 +300,40 @@ const submitVote = async () => {
   // );
 
   try {
-    await web3Store.callWithRetry(() =>
-      fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).send(
-        {
-          from: fundStore.activeAccountAddress,
-          // maxPriorityFeePerGas: gasPrice,
-          gasPrice: "",
-        },
-      ).on("transactionHash", (hash: string) => {
-        console.log("tx hash: " + hash);
-        toastStore.addToast("Your vote has been submitted. Please wait for it to be confirmed.");
-      }).on("receipt", (receipt: any) => {
-        console.log("receipt: ", receipt);
-        if (receipt.status) {
-          toastStore.successToast("Vote successful.");
+    await fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).send(
+      {
+        from: fundStore.activeAccountAddress,
+        // maxPriorityFeePerGas: gasPrice,
+        gasPrice: "",
+      },
+    ).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("Your vote has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
+      if (receipt.status) {
+        toastStore.successToast("Vote successful.");
 
-          // update has voted
-          if (fundStore.activeAccountAddress !== undefined && props.proposal.proposalId) {
-            governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId] ??= {};
-            governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][fundStore.activeAccountAddress] = true;
-          }
-          // emit success event to refetch vote submissions
-          emit("vote-success", selectedVoteOption.value);
-        } else {
-          toastStore.errorToast(
-            "The vote transaction has failed. Please contact the Rethink Finance support.",
-          );
+        // update has voted
+        if (fundStore.activeAccountAddress !== undefined && props.proposal.proposalId) {
+          governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId] ??= {};
+          governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][fundStore.activeAccountAddress] = true;
         }
-        loadingSubmitVote.value = false;
-        closeVoteDialog();
-      }).on("error", (error: any) => {
-        console.error(error);
-        loadingSubmitVote.value = false;
-        toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-        closeVoteDialog();
-      }),
-    )
+        // emit success event to refetch vote submissions
+        emit("vote-success", selectedVoteOption.value);
+      } else {
+        toastStore.errorToast(
+          "The vote transaction has failed. Please contact the Rethink Finance support.",
+        );
+      }
+      loadingSubmitVote.value = false;
+      closeVoteDialog();
+    }).on("error", (error: any) => {
+      console.error(error);
+      loadingSubmitVote.value = false;
+      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+      closeVoteDialog();
+    })
   } catch {
     loadingSubmitVote.value = false;
   }
@@ -368,32 +366,30 @@ const executeProposal = async () => {
   //   },
   // );
   try {
-    await web3Store.callWithRetry(() =>
-      fundStore.fundGovernorContract.methods.execute(...trxData).send(
-        {
-          from: fundStore.activeAccountAddress,
-          // maxPriorityFeePerGas: gasPrice,
-          gasPrice: "",
-        },
-      ).on("transactionHash", (hash: string) => {
-        console.log("tx hash: " + hash);
-        toastStore.addToast("Proposal execution has been submitted. Please wait for it to be confirmed.");
-      }).on("receipt", (receipt: any) => {
-        console.log("receipt: ", receipt);
-        if (receipt.status) {
-          toastStore.successToast("Proposal execution successful.");
-        } else {
-          toastStore.errorToast(
-            "Proposal execution transaction has failed. Please contact the Rethink Finance support.",
-          );
-        }
-        loadingExecuteProposal.value = false;
-      }).on("error", (error: any) => {
-        console.error(error);
-        loadingExecuteProposal.value = false;
-        toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-      }),
-    )
+    await fundStore.fundGovernorContract.methods.execute(...trxData).send(
+      {
+        from: fundStore.activeAccountAddress,
+        // maxPriorityFeePerGas: gasPrice,
+        gasPrice: "",
+      },
+    ).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("Proposal execution has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
+      if (receipt.status) {
+        toastStore.successToast("Proposal execution successful.");
+      } else {
+        toastStore.errorToast(
+          "Proposal execution transaction has failed. Please contact the Rethink Finance support.",
+        );
+      }
+      loadingExecuteProposal.value = false;
+    }).on("error", (error: any) => {
+      console.error(error);
+      loadingExecuteProposal.value = false;
+      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    })
   } catch (error: any) {
     console.error("Error here proposal: ", error);
     loadingExecuteProposal.value = false;

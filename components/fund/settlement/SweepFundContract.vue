@@ -84,30 +84,28 @@ const sweepFundContract = async () => {
   try {
     const functionSignatureHash = eth.abi.encodeFunctionSignature("sweepTokens()");
 
-    await web3Store.callWithRetry(() =>
-      fundStore.fundContract.methods.fundFlowsCall(functionSignatureHash).send({
-        from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
-        gasPrice: "",
-      }).on("transactionHash", (hash: string) => {
-        console.log("tx hash: ", hash);
-        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-      }).on("receipt", (receipt: any) => {
-        console.log("receipt :", receipt);
-        if (receipt.status) {
-          toastStore.successToast("Fund contract sweep was successful.");
-          // Refresh balances
-          // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
-          fundStore.fetchFundContractBaseTokenBalance();
-        } else {
-          toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
-          fundStore.fetchUserFundData(fundStore.selectedFundAddress);
-        }
-        isSweepLoading.value = false;
-      }).on("error", (error: any) => {
-        handleError(error);
-      }),
-    )
+    await fundStore.fundContract.methods.fundFlowsCall(functionSignatureHash).send({
+      from: fundStore.activeAccountAddress,
+      // maxPriorityFeePerGas: gasPrice,
+      gasPrice: "",
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: ", hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt :", receipt);
+      if (receipt.status) {
+        toastStore.successToast("Fund contract sweep was successful.");
+        // Refresh balances
+        // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
+        fundStore.fetchFundContractBaseTokenBalance();
+      } else {
+        toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
+        fundStore.fetchUserFundData(fundStore.selectedFundAddress);
+      }
+      isSweepLoading.value = false;
+    }).on("error", (error: any) => {
+      handleError(error);
+    })
   } catch (error: any) {
     handleError(error);
   }

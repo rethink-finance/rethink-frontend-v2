@@ -121,41 +121,39 @@ const cancelPendingRequest = async () => {
   // const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
-    await web3Store.callWithRetry(() =>
-      fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-        from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
-        gasPrice: "",
-      }).on("transactionHash", (hash: string) => {
-        console.log("tx hash: " + hash);
-        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-      }).on("receipt", (receipt: any) => {
-        console.log("receipt: ", receipt);
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+      from: fundStore.activeAccountAddress,
+      // maxPriorityFeePerGas: gasPrice,
+      gasPrice: "",
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
 
-        if (receipt.status) {
-          toastStore.successToast(
-            `Cancellation of a ${props.fundTransactionRequest.type} request was successful.`,
-          );
-          if (isDepositRequest) {
-            fundStore.userDepositRequest = undefined;
-          } else {
-            fundStore.userRedemptionRequest = undefined;
-          }
-        } else {
-          fundStore.fetchUserFundDepositRedemptionRequests();
-          toastStore.errorToast(
-            "Your deposit request has failed. Please contact the Rethink Finance support.",
-          );
-        }
-        isLoadingCancelRequest.value = false;
-        hideCancelButton();
-      }).on("error", (error: any) => {
-        console.error(error);
-        toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support.",
+      if (receipt.status) {
+        toastStore.successToast(
+          `Cancellation of a ${props.fundTransactionRequest.type} request was successful.`,
         );
-      }),
-    )
+        if (isDepositRequest) {
+          fundStore.userDepositRequest = undefined;
+        } else {
+          fundStore.userRedemptionRequest = undefined;
+        }
+      } else {
+        fundStore.fetchUserFundDepositRedemptionRequests();
+        toastStore.errorToast(
+          "Your deposit request has failed. Please contact the Rethink Finance support.",
+        );
+      }
+      isLoadingCancelRequest.value = false;
+      hideCancelButton();
+    }).on("error", (error: any) => {
+      console.error(error);
+      toastStore.errorToast(
+        "There has been an error. Please contact the Rethink Finance support.",
+      );
+    })
   } catch (error: any) {
     handleError(error);
   }

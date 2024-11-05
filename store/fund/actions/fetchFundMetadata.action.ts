@@ -13,23 +13,9 @@ export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFun
   const rethinkReaderContract = fundStore.rethinkReaderContract;
 
   try {
-    const results = await Promise.allSettled(
-      [
-        () => rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
-      ].map((fn: () => Promise<any>) =>
-        fundStore.accountStore.requestConcurrencyLimit(() =>
-          fundStore.callWithRetry(fn),
-        ),
-      ),
+    const fundNavMetaData = await fundStore.callWithRetry(
+      () => rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
     );
-
-    const [fundNavMetaData]: any[] = results.map((result, index) => {
-      if (result.status === "fulfilled") {
-        return result.value;
-      }
-      console.error("Failed fetching fund data value for: ", index, result);
-      return undefined;
-    });
 
     const {
       startTime,

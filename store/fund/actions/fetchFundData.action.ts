@@ -12,7 +12,6 @@ export const fetchFundDataAction = async (
   fundStore.fundManagedNAVMethods = [];
 
   try {
-
     const fund: IFund = await fundStore.fetchFundMetaData(fundAddress);
 
     await fundStore.fetchFundNAVData();

@@ -178,44 +178,42 @@ const delegate = async (isMyself = false) => {
       contract = fundStore.fundGovernanceTokenContract;
     }
 
-    await web3Store.callWithRetry(() =>
-      contract.methods
-        .delegate(delegateTo)
-        .send({
-          from: fundStore.activeAccountAddress,
-          // maxPriorityFeePerGas: gasPrice,
-          gasPrice: "",
-        })
-        .on("transactionHash", function (hash: any) {
-          console.log("tx hash: " + hash);
-          toastStore.addToast(
-            "The transaction has been submitted. Please wait for it to be confirmed.",
+    await contract.methods
+      .delegate(delegateTo)
+      .send({
+        from: fundStore.activeAccountAddress,
+        // maxPriorityFeePerGas: gasPrice,
+        gasPrice: "",
+      })
+      .on("transactionHash", function (hash: any) {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The transaction has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", function (receipt: any) {
+        console.log(receipt);
+        if (receipt.status) {
+          toastStore.successToast(
+            "Delegation of Governance Tokens Succeeded",
           );
-        })
-        .on("receipt", function (receipt: any) {
-          console.log(receipt);
-          if (receipt.status) {
-            toastStore.successToast(
-              "Delegation of Governance Tokens Succeeded",
-            );
-            emit("delegate-success");
-            closeDelegateDialog();
-            if (delegateTo) fundStore.fundUserData.fundDelegateAddress = delegateTo;
-          } else {
-            toastStore.errorToast(
-              "The delegateTo tx has failed. Please contact the Rethink Finance support.",
-            );
-          }
-          loadingDelegates.value = false;
-        })
-        .on("error", function (error: any) {
-          console.error(error);
-          loadingDelegates.value = false;
+          emit("delegate-success");
+          closeDelegateDialog();
+          if (delegateTo) fundStore.fundUserData.fundDelegateAddress = delegateTo;
+        } else {
           toastStore.errorToast(
-            "There has been an error. Please contact the Rethink Finance support.",
+            "The delegateTo tx has failed. Please contact the Rethink Finance support.",
           );
-        }),
-    )
+        }
+        loadingDelegates.value = false;
+      })
+      .on("error", function (error: any) {
+        console.error(error);
+        loadingDelegates.value = false;
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      })
   } catch (error) {
     console.error("Error delegating to external gov token: ", error);
     loadingDelegates.value = false;

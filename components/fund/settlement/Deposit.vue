@@ -220,40 +220,38 @@ const requestDeposit = async () => {
   console.warn("connectedWallet", accountStore?.connectedWallet)
 
   try {
-    await web3Store.callWithRetry(() =>
-      fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-        from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
-        gasPrice: "",
-      }).on("transactionHash", (hash: string) => {
-        console.log("tx hash: ", hash);
-        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-      }).on("receipt", (receipt: any) => {
-        console.log("receipt :", receipt);
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+      from: fundStore.activeAccountAddress,
+      // maxPriorityFeePerGas: gasPrice,
+      gasPrice: "",
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: ", hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt :", receipt);
 
-        if (receipt.status) {
-          toastStore.successToast("Your deposit request was successful.");
-          // Set form token value to user's current balance + current deposit request value so that
-          // he can approve it without inputting the value himself, for better UX.
-          // TODO takes 15-20 sec for node to sync .. fix
-          // await fundStore.fetchUserBalances();
-          fundStore.userDepositRequest = {
-            amount: tokensWei.value,
-            timestamp: Date.now(),
-            type: FundTransactionType.Deposit,
-          }
-
-          // deposit-success event is emitted to open the delegate dialog.
-          emit("deposit-success");
-        } else {
-          toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
-          fundStore.fetchUserFundData(fundStore.selectedFundAddress);
+      if (receipt.status) {
+        toastStore.successToast("Your deposit request was successful.");
+        // Set form token value to user's current balance + current deposit request value so that
+        // he can approve it without inputting the value himself, for better UX.
+        // TODO takes 15-20 sec for node to sync .. fix
+        // await fundStore.fetchUserBalances();
+        fundStore.userDepositRequest = {
+          amount: tokensWei.value,
+          timestamp: Date.now(),
+          type: FundTransactionType.Deposit,
         }
-        loadingRequestDeposit.value = false;
-      }).on("error", (error: any) => {
-        handleError(error, false);
-      }),
-    );
+
+        // deposit-success event is emitted to open the delegate dialog.
+        emit("deposit-success");
+      } else {
+        toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
+        fundStore.fetchUserFundData(fundStore.selectedFundAddress);
+      }
+      loadingRequestDeposit.value = false;
+    }).on("error", (error: any) => {
+      handleError(error, false);
+    })
   } catch (error: any) {
     handleError(error);
   }
@@ -287,30 +285,28 @@ const approveAllowance = async () => {
 
   try {
     // call the approval method
-    await web3Store.callWithRetry(() =>
-      fundStore.fundBaseTokenContract.methods.approve(fund.value?.address, tokensWei.value).send({
-        from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
-        gasPrice: "",
-      }).on("transactionHash", (hash: string) => {
-        console.log("tx hash: " + hash);
-        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-      }).on("receipt", (receipt: any) => {
-        console.log("receipt :", receipt);
+    await fundStore.fundBaseTokenContract.methods.approve(fund.value?.address, tokensWei.value).send({
+      from: fundStore.activeAccountAddress,
+      // maxPriorityFeePerGas: gasPrice,
+      gasPrice: "",
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt :", receipt);
 
-        if (receipt.status) {
-          toastStore.successToast("The approval was successful. You can make the deposit now.");
+      if (receipt.status) {
+        toastStore.successToast("The approval was successful. You can make the deposit now.");
 
-          // Refresh allowance value.
-          fundStore.fundUserData.fundAllowance = allowanceValue;
-        } else {
-          toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-        }
-        loadingApproveAllowance.value = false;
-      }).on("error", (error: any) => {
-        handleError(error, false);
-      }),
-    )
+        // Refresh allowance value.
+        fundStore.fundUserData.fundAllowance = allowanceValue;
+      } else {
+        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
+      }
+      loadingApproveAllowance.value = false;
+    }).on("error", (error: any) => {
+      handleError(error, false);
+    })
   } catch (error: any) {
     handleError(error);
   }
