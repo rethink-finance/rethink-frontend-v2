@@ -33,7 +33,6 @@ const RethinkReaderContractName = "RethinkReader";
 // excludeTestFunds: false
 // to local storage.
 const excludeTestFunds = getLocalStorageItem("excludeTestFunds", true);
-const excludeNAVDetails = true;
 
 interface IState {
   funds: IFund[];
@@ -119,7 +118,6 @@ export const useFundsStore = defineStore({
         "fetchFundsNAVDataAction",
         () => fetchFundsNAVDataAction(
           fundsInfoArrays,
-          excludeNAVDetails,
         ),
       );
     },
