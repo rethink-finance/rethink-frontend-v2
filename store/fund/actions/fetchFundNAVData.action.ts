@@ -4,13 +4,14 @@ import type INAVMethod from "~/types/nav_method";
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
+  const fund = fundStore.fund;
 
-  if (!fundStore.fund) return;
+  if (!fund?.address) return;
 
   try {
     const fundNAVData = await fundStore.callWithRetry(() =>
       fundStore.rethinkReaderContract.methods
-        .getFundNAVData(fundStore.fund?.address)
+        .getFundNAVData(fund?.address)
         .call(),
     );
 
@@ -20,19 +21,19 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     );
     const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
-    fundStore.fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(lastNavUpdate?.entries);
+    fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(lastNavUpdate?.entries);
 
-    fundStore.fund.lastNAVUpdateTotalNAV = navUpdates.length
+    fund.lastNAVUpdateTotalNAV = navUpdates.length
       ? lastNavUpdate.totalNAV || 0n
-      : fundStore.fund.totalDepositBalance || 0n;
-    fundStore.fund.navUpdates = navUpdates;
+      : fund.totalDepositBalance || 0n;
+    fund.navUpdates = navUpdates;
 
   } catch (error) {
     console.error(
       "Error calling getNAVDataForFund: ",
       error,
       "fund: ",
-      fundStore.fund.address,
+      fund?.address,
     );
   }
 
