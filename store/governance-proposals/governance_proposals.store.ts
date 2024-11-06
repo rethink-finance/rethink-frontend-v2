@@ -267,19 +267,19 @@ export const useGovernanceProposalsStore = defineStore({
     fetchDelegates() {
       return useActionState(
         "fetchDelegatesAction",
-        async () => await fetchDelegatesAction(),
+        () => fetchDelegatesAction(),
       );
     },
     fetchGovernanceProposals() {
       return useActionState(
         "fetchGovernanceProposalsAction",
-        async () => await fetchGovernanceProposalsAction(),
+        () => fetchGovernanceProposalsAction(),
       );
     },
     fetchGovernanceProposal(proposalId: string) {
       return useActionState(
         "fetchGovernanceProposalAction",
-        async () => await fetchGovernanceProposalAction(proposalId),
+        () => fetchGovernanceProposalAction(proposalId),
       );
     },
     decodeProposalCreatedEvent(
