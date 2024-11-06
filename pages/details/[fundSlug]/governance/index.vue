@@ -513,6 +513,7 @@ const handleNavigateToCreateProposal = () => {
   router.push(
     `/details/${fundStore.selectedFundSlug}/governance/fund-settings`,
   );
+  confirmDialog.value = false;
 };
 const handleGoToProposal = () => {
   const { createdBlockNumber, proposalId } = updateSettingsProposals.value[0];
