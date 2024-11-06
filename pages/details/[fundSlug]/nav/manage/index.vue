@@ -68,9 +68,9 @@
     >
       <v-textarea
         v-model="rawMethods"
-        label="Raw Method"
+        label="Raw Methods"
         outlined
-        placeholder="Enter the raw method here"
+        placeholder="Enter the raw methods here"
         rows="20"
         class="raw-method-textarea"
       ></v-textarea>
