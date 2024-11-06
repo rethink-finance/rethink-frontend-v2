@@ -29,7 +29,6 @@ const isErrorFetchFundsData = computed(() => actionStateStore.isActionState("fet
 
 onMounted(async () => await fundsStore.fetchFunds());
 
-
 watch(() => web3Store.chainId, async () => {
   await fundsStore.fetchFunds()
 });

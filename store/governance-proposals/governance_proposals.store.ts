@@ -1,9 +1,7 @@
 import { ethers } from "ethers";
 import { defineStore } from "pinia";
-import type { AbiFunctionFragment, AbiInput, EventLog } from "web3";
+import type { EventLog } from "web3";
 import { eth, Web3 } from "web3";
-
-
 
 import { useActionState } from "../actionState.store";
 import { useToastStore } from "../toasts/toast.store";
@@ -11,10 +9,7 @@ import { fetchDelegatesAction } from "./actions/fetchDelegates.action";
 import { fetchGovernanceProposalAction } from "./actions/fetchGovernanceProposal.action";
 import { fetchGovernanceProposalsAction } from "./actions/fetchGovernanceProposals.action";
 
-import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
-import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
-import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 import { cleanComplexWeb3Data } from "~/composables/utils";
 import { useFundStore } from "~/store/fund/fund.store";
 
@@ -25,6 +20,7 @@ import { ClockMode } from "~/types/enums/clock_mode";
 import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { decodeProposalCallData } from "~/composables/proposal/decodeProposalCallData";
 
 interface IState {
   /* Example fund proposals.
@@ -39,10 +35,7 @@ interface IState {
       }
     }
   */
-  fundProposals: Record<
-    string,
-    Record<string, Record<string, IGovernanceProposal>>
-  >;
+  fundProposals: Record<string, Record<string, Record<string, IGovernanceProposal>>>;
   fundDelegates: Record<string, Record<string, Record<string, IDelegate>>>;
   /* Example from what to what range block history events were already fetched..
   {
@@ -88,18 +81,17 @@ export const useGovernanceProposalsStore = defineStore({
       if (!fundAddress) return;
 
       const chainData = this.fundProposals?.[chainId];
-      console.log(
-        "this.fundProposals: ",
-        this.fundProposals,
-        typeof this.fundProposals,
-      );
-      if (!chainData) {
+      console.debug("this.fundProposals: ", this.fundProposals, typeof this.fundProposals)
+      if (!(chainData)) {
         this.fundProposals[chainId] = {};
       }
       this.fundProposals[chainId][fundAddress] = {};
-      this.fundProposalsBlockFetchedRanges[chainId] = {};
-      setLocalStorageItem("fundProposals", {});
-      setLocalStorageItem("fundProposalsBlockFetchedRanges", {});
+      if (!this.fundProposalsBlockFetchedRanges[chainId]) {
+        this.fundProposalsBlockFetchedRanges[chainId] = {};
+      }
+      this.fundProposalsBlockFetchedRanges[chainId][fundAddress] = [];
+      setLocalStorageItem("fundProposals", this.fundProposals);
+      setLocalStorageItem("fundProposalsBlockFetchedRanges",  this.fundProposalsBlockFetchedRanges);
     },
     storeProposal(
       chainId: string,
@@ -221,9 +213,7 @@ export const useGovernanceProposalsStore = defineStore({
         // This means that we don't know, vote status was not fetched yet or had some troubles fetching it.
         return undefined;
       }
-      return this.connectedAccountProposalsHasVoted?.[proposalId]?.[
-        activeAccountAddress
-      ];
+      return this.connectedAccountProposalsHasVoted?.[proposalId]?.[activeAccountAddress];
     },
     getFundProposalsBlockFetchedRanges(
       chainId: string,
@@ -247,8 +237,7 @@ export const useGovernanceProposalsStore = defineStore({
     ): void {
       this.fundProposalsBlockFetchedRanges[chainId] ??= {};
       this.fundProposalsBlockFetchedRanges[chainId][fundAddress] ??= [];
-      const currentRange =
-        this.fundProposalsBlockFetchedRanges[chainId][fundAddress];
+      const currentRange = this.fundProposalsBlockFetchedRanges[chainId][fundAddress];
 
       if (currentRange.length) {
         let currentMostRecentBlock = currentRange[0];
@@ -305,73 +294,28 @@ export const useGovernanceProposalsStore = defineStore({
         event.raw?.data ?? "",
         topics.slice(1),
       );
-      const proposal = cleanComplexWeb3Data(
-        decodedEvent,
-      ) as IGovernanceProposal;
+      const proposal = cleanComplexWeb3Data(decodedEvent) as IGovernanceProposal;
 
       try {
-        proposal.descriptionHash = ethers.keccak256(
-          ethers.toUtf8Bytes(proposal.description),
-        );
+        proposal.descriptionHash = ethers.id(proposal.description);
         const parsedDescription = JSON.parse(proposal.description);
         proposal.title = parsedDescription.title;
         proposal.description = parsedDescription.description;
       } catch {
         proposal.title = proposal.description;
       }
-      console.log("event decoded");
-      return proposal;
-    },
-    decodeProposalCallData(calldata: string): Record<any, any> | undefined {
-      // Iterate over each method in ABI to find a match
-      const signature = calldata.slice(0, 10);
-      const encodedParameters = calldata.slice(10);
-      const functionAbi = functionSignaturesMap[signature];
-      // console.log("decode signature: ", signature, " ABI ", functionAbi);
-
-      if (!functionAbi?.function?.name) {
-        console.warn(
-          "No existing function signature found in the GovernableFund ABI for ",
-          signature,
-          functionAbi,
-        );
-        return undefined;
-      }
-      const functionAbiInputs = functionAbi?.function?.inputs as AbiInput[];
-
-      try {
-        let decoded = eth.abi.decodeParameters(
-          functionAbiInputs,
-          encodedParameters,
-        );
-        decoded = cleanComplexWeb3Data(decoded);
-        // console.log("decoded data: ", functionAbi.contractName, functionAbi.function.name, decoded);
-        return {
-          functionName: functionAbi.function.name,
-          contractName: functionAbi.contractName,
-          calldataDecoded: decoded,
-          calldata,
-        };
-      } catch (error: any) {
-        console.error("error while decoding signature: ", signature, error);
-      }
-      console.error(
-        "FAILED decoding signature: ",
-        signature,
-        functionSignaturesMap[signature],
-      );
-
-      return undefined;
+      console.debug("event decoded");
+      return proposal
     },
     async fetchBlockProposals(blockNumber: bigint) {
-      console.log("fetchBlockProposals:", blockNumber);
+      console.debug("fetchBlockProposals:", blockNumber);
       const proposalCreatedEvents = await this.callWithRetry(() =>
         this.fundStore.fundGovernorContract.getPastEvents("ProposalCreated", {
           fromBlock: blockNumber,
           toBlock: blockNumber,
         }),
       );
-      console.log("fetchBlockProposals events:", proposalCreatedEvents);
+      console.debug("fetchBlockProposals events:", proposalCreatedEvents);
       await this.parseProposalCreatedEvents(proposalCreatedEvents);
     },
     async proposalExecutedBlockNumber(proposal: IGovernanceProposal) {
@@ -398,20 +342,19 @@ export const useGovernanceProposalsStore = defineStore({
               fromBlock + chunkSize - 1n > endBlock
                 ? endBlock
                 : fromBlock + chunkSize - 1n;
-            console.log(`Fetching events from ${fromBlock} to ${toBlock}`);
+            console.debug(`Fetching events from ${fromBlock} to ${toBlock}`);
 
-            const events =
-              await this.fundStore.fundGovernorContract.getPastEvents(
-                "ProposalExecuted",
-                {
-                  fromBlock: Number(fromBlock),
-                  toBlock: Number(toBlock),
-                },
-              );
+            const events = await this.fundStore.fundGovernorContract.getPastEvents(
+              "ProposalExecuted",
+              {
+                fromBlock: Number(fromBlock),
+                toBlock: Number(toBlock),
+              },
+            );
 
             proposalExecutedEvents = proposalExecutedEvents.concat(events);
 
-            console.log("proposalExecutedEvents: ", proposalExecutedEvents);
+            console.debug("proposalExecutedEvents: ", proposalExecutedEvents);
 
             // find the correct executed event for the proposal and break the loop
             if (proposalExecutedEvents.length > 0) {
@@ -421,7 +364,7 @@ export const useGovernanceProposalsStore = defineStore({
                   proposal.proposalId,
               );
 
-              console.log("proposal executed event: ", executedEvent);
+              console.debug("proposal executed event: ", executedEvent);
 
               if (executedEvent) {
                 const blockExecuted = await this.fundStore.web3.eth.getBlock(
@@ -431,7 +374,7 @@ export const useGovernanceProposalsStore = defineStore({
                 proposal.executedTimestamp = Number(blockExecuted.timestamp);
                 proposal.executedBlockNumber = executedEvent.blockNumber;
                 // store proposal
-                console.log("proposal with executed data:", proposal);
+                console.debug("proposal with executed data:", proposal);
                 this.storeProposal(
                   this.web3Store.chainId,
                   this.fundStore.fund?.address,
@@ -453,8 +396,8 @@ export const useGovernanceProposalsStore = defineStore({
       const currentBlockNumber = Number(currentBlock.number);
       const currentBlockTimestamp = Number(currentBlock.timestamp);
 
-      console.log(`Current block number: ${currentBlockNumber}`);
-      console.log(`Current block timestamp: ${currentBlockTimestamp}`);
+      console.debug(`Current block number: ${currentBlockNumber}`);
+      console.debug(`Current block timestamp: ${currentBlockTimestamp}`);
 
       const oneHourInSeconds = 3600;
       const targetTimestamp = currentBlockTimestamp - oneHourInSeconds;
@@ -481,10 +424,7 @@ export const useGovernanceProposalsStore = defineStore({
 
         // check if the block is close enough to the target timestamp.
         // Target timestamp is approximately 1 hour ago from the current block timestamp.
-        if (
-          Math.abs(blockTimestamp - targetTimestamp) <
-          oneHourInSeconds / 10
-        ) {
+        if (Math.abs(blockTimestamp - targetTimestamp) < oneHourInSeconds / 10) {
           targetBlock = block;
           break;
         }
@@ -496,12 +436,9 @@ export const useGovernanceProposalsStore = defineStore({
       }
 
       // calculate how many blocks are produced in the last hour
-      const blocksPerHour =
-        (currentBlockNumber - Number(targetBlock.number)) /
-        ((currentBlockTimestamp - Number(targetBlock.timestamp)) /
-          oneHourInSeconds);
+      const blocksPerHour = (currentBlockNumber - Number(targetBlock.number)) / ((currentBlockTimestamp - Number(targetBlock.timestamp)) / oneHourInSeconds);
 
-      console.log(`Blocks per hour rate: ${blocksPerHour}`);
+      console.debug(`Blocks per hour rate: ${blocksPerHour}`);
       return blocksPerHour;
     },
     async estimateTimestampFromBlockNumber(
@@ -530,13 +467,11 @@ export const useGovernanceProposalsStore = defineStore({
 
       // if the chainIdMapKey is found, use the rpcUrl from the chainIdMap
       if (chainIdMapKey) {
-        console.log("chainIdMapKey: ", chainIdMapKey);
-        return new Web3(
-          this.web3Store.networksMap[chainIdMapKey].rpcUrl,
-        ) as Web3;
+        console.debug("chainIdMapKey: ", chainIdMapKey);
+        return new Web3(this.web3Store.networksMap[chainIdMapKey].rpcUrl) as Web3;
       }
       // if the chainIdMapKey is not found, use the current web3
-      console.log("use the current web3");
+      console.debug("use the current web3");
       return this.fundStore.web3 as Web3;
     },
     async setProposalVoteStartEndTimestamp(proposal: IGovernanceProposal) {
@@ -558,13 +493,13 @@ export const useGovernanceProposalsStore = defineStore({
         const currentBlock = await web3.eth.getBlock("latest");
         const currentBlockNumber = Number(currentBlock.number);
         const currentBlockTimestamp = Number(currentBlock.timestamp);
-        console.log("currentBlock: ", currentBlock);
+        console.debug("currentBlock: ", currentBlock);
 
         // if the voteEnd is in the past, we can fetch the block number
         if (Number(proposal.voteEnd) <= currentBlockNumber) {
-          console.log("fetch blockEnd");
+          console.debug("fetch blockEnd");
           const blockEnd = await web3.eth.getBlock(proposal.voteEnd);
-          console.log("blockEnd: ", blockEnd);
+          console.debug("blockEnd: ", blockEnd);
           proposal.voteEndTimestamp = blockEnd?.timestamp.toString();
         } else {
           // if the voteEnd is in the future, we have to estimate the timestamp
@@ -581,20 +516,20 @@ export const useGovernanceProposalsStore = defineStore({
 
         // if the voteStart is in the past, we can fetch the block number
         if (Number(proposal.voteStart) <= currentBlockNumber) {
-          console.log("fetch blockStart");
+          console.debug("fetch blockStart");
           const blockStart = await web3.eth.getBlock(proposal.voteStart);
-          console.log("blockStart: ", blockStart);
+          console.debug("blockStart: ", blockStart);
           proposal.voteStartTimestamp = blockStart?.timestamp.toString();
         } else {
           // if the voteStart is in the future, we have to estimate the timestamp
-          console.log("estimate blockStart");
+          console.debug("estimate blockStart");
           const estimatedStartTimestamp =
             await this.estimateTimestampFromBlockNumber(
               currentBlockNumber,
               currentBlockTimestamp,
               Number(proposal.voteStart),
             );
-          console.log("estimatedStartTimestamp: ", estimatedStartTimestamp);
+          console.debug("estimatedStartTimestamp: ", estimatedStartTimestamp);
           proposal.voteStartTimestamp = estimatedStartTimestamp.toString();
         }
       } catch (error: any) {
@@ -606,22 +541,22 @@ export const useGovernanceProposalsStore = defineStore({
     },
     async parseProposalCreatedEvents(events: any[]) {
       if (!events?.length) return;
+      const fund = this.fundStore.fund;
 
-      if (!this.fundStore.fund?.governanceToken.decimals) {
+      if (!fund?.governanceToken.decimals) {
         console.error("No fund governance token decimals found.");
         this.toastStore.errorToast("No fund governance token decimals found.");
         return;
       }
-      if (!this.fundStore.fund.clockMode?.mode) {
+      if (!fund.clockMode?.mode) {
         console.error("Fund clock mode is unknown.");
         this.toastStore.errorToast("Fund clock mode is unknown.");
         return;
       }
-      const roleModAddress = await this.fundStore.getRoleModAddress();
 
       for (const event of events) {
-        console.log("event");
-        console.log(event);
+        console.debug("event");
+        console.debug(event);
         const proposal = this.decodeProposalCreatedEvent(event);
         if (!proposal) continue;
 
@@ -633,10 +568,9 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.createdBlockNumber = event.blockNumber;
 
         // keep track of the proposal executed timestamp and block number if the proposal is executed
-        const executedProposal =
-          this.fundProposals?.[this.web3Store.chainId]?.[
-            this.fundStore.fund?.address
-          ]?.[proposal.proposalId];
+        const executedProposal = this.fundProposals?.[this.web3Store.chainId]?.[
+          fund?.address
+        ]?.[proposal.proposalId];
         proposal.executedTimestamp = executedProposal?.executedTimestamp;
         proposal.executedBlockNumber = executedProposal?.executedBlockNumber;
 
@@ -647,19 +581,19 @@ export const useGovernanceProposalsStore = defineStore({
         );
         proposal.state = ProposalStateMapping[proposalState];
 
-        console.log("proposal: ", proposal);
+        console.debug("proposal: ", proposal);
 
         await this.setProposalVoteStartEndTimestamp(proposal);
-        console.log("proposal:", proposal);
+        console.debug("proposal:" , proposal);
 
         const votes = await this.callWithRetry(() =>
           this.fundStore.fundGovernorContract.methods
             .proposalVotes(proposal.proposalId)
             .call(),
         );
-        console.log("proposal votes: ", votes);
+        console.debug("proposal votes: ", votes);
 
-        console.log(
+        console.debug(
           "get total supply at blockNumber: ",
           proposal.createdBlockNumber,
         );
@@ -674,7 +608,7 @@ export const useGovernanceProposalsStore = defineStore({
           proposal.totalSupply = totalSupply;
           proposal.totalSupplyFormatted = formatTokenValue(
             totalSupply,
-            this.fundStore.fund?.governanceToken?.decimals,
+            fund?.governanceToken?.decimals,
             false,
           );
         } catch (error: any) {
@@ -683,7 +617,7 @@ export const useGovernanceProposalsStore = defineStore({
           proposal.totalSupplyFormatted = "N/A";
         }
 
-        console.log(
+        console.debug(
           "proposal created blockNumber ",
           proposal.createdBlockNumber,
           " timestamp ",
@@ -695,7 +629,7 @@ export const useGovernanceProposalsStore = defineStore({
           // - timestamp: use proposal created timestamp
           // - blocknumber: use proposal created block number
           const timePoint =
-            this.fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber
+            fund?.clockMode?.mode === ClockMode.BlockNumber
               ? proposal.createdBlockNumber
               : proposal.createdTimestamp;
 
@@ -707,7 +641,7 @@ export const useGovernanceProposalsStore = defineStore({
           proposal.quorumVotes = quorumWhenProposalCreated;
           proposal.quorumVotesFormatted = formatTokenValue(
             quorumWhenProposalCreated,
-            this.fundStore.fund?.governanceToken?.decimals,
+            fund?.governanceToken?.decimals,
             false,
           );
         } catch (e: any) {
@@ -715,14 +649,13 @@ export const useGovernanceProposalsStore = defineStore({
           proposal.quorumVotesFormatted = "N/A";
         }
 
-        console.log("parse votes", votes);
+        console.debug("parse votes", votes);
         if (votes) {
-          const totalVotes =
-            votes.forVotes + votes.abstainVotes + votes.againstVotes;
+          const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
           proposal.totalVotes = totalVotes;
           proposal.totalVotesFormatted = formatTokenValue(
             totalVotes,
-            this.fundStore.fund?.governanceToken.decimals,
+            fund?.governanceToken.decimals,
             false,
           );
           proposal.forVotes = votes.forVotes;
@@ -730,17 +663,17 @@ export const useGovernanceProposalsStore = defineStore({
           proposal.againstVotes = votes.againstVotes;
           proposal.forVotesFormatted = formatTokenValue(
             votes.forVotes,
-            this.fundStore.fund?.governanceToken.decimals,
+            fund?.governanceToken.decimals,
             false,
           );
           proposal.abstainVotesFormatted = formatTokenValue(
             votes.abstainVotes,
-            this.fundStore.fund?.governanceToken.decimals,
+            fund?.governanceToken.decimals,
             false,
           );
           proposal.againstVotesFormatted = formatTokenValue(
             votes.againstVotes,
-            this.fundStore.fund?.governanceToken.decimals,
+            fund?.governanceToken.decimals,
             false,
           );
           console.log("proposal votes", proposal);
@@ -783,34 +716,24 @@ export const useGovernanceProposalsStore = defineStore({
 
         proposal.calldatasDecoded = [];
         proposal.calldataTypes = [];
+        const roleModAddress = await this.fundStore.getRoleModAddress();
 
         proposal.calldatas.forEach((calldata, i) => {
-          const calldataDecoded = this.decodeProposalCallData(calldata);
+          const calldataDecoded = decodeProposalCallData(roleModAddress, calldata, proposal.targets[i], fund?.safeAddress);
+          proposal.calldataTypes.push(calldataDecoded?.calldataType);
           proposal.calldatasDecoded.push(calldataDecoded);
-
-          if (calldataDecoded?.functionName === "updateNav") {
-            proposal.calldataTypes.push(ProposalCalldataType.NAV_UPDATE);
-          } else if (proposal.targets[i] === this.fundStore.fund?.safeAddress) {
-            proposal.calldataTypes.push(ProposalCalldataType.DIRECT_EXECUTION);
-          } else if (proposal.targets[i] === roleModAddress) {
-            proposal.calldataTypes.push(ProposalCalldataType.PERMISSIONS);
-          } else if (calldataDecoded?.functionName === "updateSettings") {
-            proposal.calldataTypes.push(ProposalCalldataType.FUND_SETTINGS);
-          } else {
-            proposal.calldataTypes.push(ProposalCalldataType.UNDEFINED);
-          }
         });
         proposal.calldataTags = [
           ...new Set(
             proposal.calldataTypes.filter(
-              (calldataType) => calldataType !== ProposalCalldataType.UNDEFINED,
+              (calldataType) =>
+                calldataType !== ProposalCalldataType.UNDEFINED,
             ),
           ),
         ];
-
         this.storeProposal(
           this.web3Store.chainId,
-          this.fundStore.fund?.address,
+          fund?.address,
           proposal,
         );
       }
@@ -822,38 +745,3 @@ const proposalCreatedEventInputs = (RethinkFundGovernor.abi.find(
   (event: any) => event.name === "ProposalCreated" && event.type === "event",
 ) as any)?.inputs ?? [];
 
-/**
- * Extract all function signatures from GovernableFund ABI
- * Iterate over all functions in GovernableFund ABI and generate a map of functionSignatureHash as key
- * and ABI function fragment as value. This will be used when decoding proposal call datas.
- */
-const functionSignaturesMap: Record<string, any> = {};
-
-// Iterate over different ABIs to extract function signatures that will later be used
-// to decode proposal call data.
-const contractsToExtractFunctionSignatures = [
-  {
-    abi: GovernableFund.abi,
-    name: "GovernableFund",
-  },
-  {
-    abi: GnosisSafeL2JSON.abi,
-    name: "GnosisSafeL2",
-  },
-  {
-    abi: ZodiacRoles.abi,
-    name: "ZodiacRoles",
-  },
-];
-
-contractsToExtractFunctionSignatures.forEach(contract => {
-  contract.abi.forEach(item => {
-    if (item.type === "function") {
-      const functionSignatureHash = eth.abi.encodeFunctionSignature(item as AbiFunctionFragment);
-      functionSignaturesMap[functionSignatureHash] = {
-        function: item,
-        contractName: contract.name,
-      };
-    }
-  });
-});

@@ -18,7 +18,7 @@
   >
 
     <!-- template for header simulated  -->
-    <template #[`header.pastNavValueFormatted`]>
+    <template #[`header.pastNavValue`]>
       Last NAV Update
       <div v-if="showSummaryRow && showLastNavUpdateValue" class="text-right">
         {{ formattedTotalLastNAV }}
@@ -73,7 +73,7 @@
         :disabled="item.deleted || item.isAlreadyUsed"
       />
     </template>
-    <template #[`item.pastNavValueFormatted`]="{ value, item }">
+    <template #[`item.pastNavValue`]="{ value, item }">
       <div :class="`item-simulated-nav ${item.pastNavValueError ? 'item-simulated-nav--error' : ''}`">
         <div v-if="item.pastNavValueLoading">
           <v-progress-circular
@@ -84,7 +84,7 @@
           />
         </div>
         <div v-else>
-          {{ value ?? "-" }}
+          {{ value ? getFormattedBaseTokenValue(value) : "-" }}
         </div>
         <div
           v-if="item.pastNavValueError"
@@ -311,7 +311,7 @@ export default defineComponent({
         headers.push(
           {
             title: "Last NAV Update Value",
-            key: "pastNavValueFormatted",
+            key: "pastNavValue",
             align: "end",
             sortable: false,
             width: "160px",
@@ -390,7 +390,6 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
-          pastNavValueFormatted: this.getFormattedBaseTokenValue(this.navParts?.baseAssetOIVBal),
           simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-1",
@@ -403,7 +402,6 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetSafeBal,
-          pastNavValueFormatted: this.getFormattedBaseTokenValue(this.navParts?.baseAssetSafeBal),
           simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-2",
@@ -416,7 +414,6 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.feeBal,
-          pastNavValueFormatted: this.getFormattedBaseTokenValue(this.navParts?.feeBal),
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
           detailsHash: "-3",

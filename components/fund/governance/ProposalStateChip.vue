@@ -16,7 +16,7 @@ const props = defineProps({
 });
 
 const proposalStateClass = computed(() => {
-  return `proposal_state_${props.value.toLowerCase()}`
+  return `proposal_state_${props.value?.toLowerCase() ?? "undefined"}`
 });
 </script>
 

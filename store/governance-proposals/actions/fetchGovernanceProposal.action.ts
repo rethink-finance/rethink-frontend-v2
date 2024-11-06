@@ -53,9 +53,6 @@ export const fetchGovernanceProposalAction = async (
 
   const mappedProposal = await _mapSubgraphProposalToProposal(
     proposal,
-    governanceProposalStore.decodeProposalCallData.bind(
-      governanceProposalStore,
-    ),
     totalSupply,
     blockTimeContext,
     fundStore.fund?.governanceToken.decimals ?? 0,
@@ -63,8 +60,8 @@ export const fetchGovernanceProposalAction = async (
     quorumDenominator,
     getTimestampForBlock,
     fundStore.fund?.clockMode?.mode as ClockMode,
-    roleModAddress,
-    fundStore.fund?.safeAddress,
+    roleModAddress ?? "",
+    fundStore.fund?.safeAddress ?? "",
   );
 
   governanceProposalStore.storeProposals(

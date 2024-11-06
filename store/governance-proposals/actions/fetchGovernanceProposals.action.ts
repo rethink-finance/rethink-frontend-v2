@@ -5,17 +5,20 @@ import { fetchSubgraphGovernorProposals } from "~/services/subgraph";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { _mapSubgraphProposalToProposal } from "~/types/helpers/mappers";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   const governanceProposalStore = useGovernanceProposalsStore();
   const fundStore = useFundStore();
+  const web3Store = useWeb3Store();
   const nuxtApp = useNuxtApp();
   const client = nuxtApp.$apolloClient as Ref<ApolloClient<any>>;
+  const fund = fundStore.fund;
 
   if (!client) {
     throw new Error("Apollo client not found");
   }
-  if (!fundStore.fund?.governorAddress) {
+  if (!fund?.governorAddress) {
     throw new Error("Governor address not found");
   }
 
@@ -32,13 +35,13 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   ); // TODO
 
   const fetchedProposals = await fetchSubgraphGovernorProposals(client.value, {
-    governorAddress: fundStore.fund?.governorAddress,
+    governorAddress: fund?.governorAddress,
   });
 
   const proposalsWithPoints = fetchedProposals.map((proposal) => ({
     proposal,
     timepoint:
-      fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber
+      fund?.clockMode?.mode === ClockMode.BlockNumber
         ? proposal.proposalCreated?.[0]?.transaction?.blockNumber
         : proposal.proposalCreated?.[0]?.timestamp,
     blockNumber: proposal.proposalCreated?.[0]?.transaction?.blockNumber,
@@ -84,26 +87,23 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
 
     return _mapSubgraphProposalToProposal(
       proposal,
-      governanceProposalStore.decodeProposalCallData.bind(
-        governanceProposalStore,
-      ),
       totalSupply,
       blockTimeContext,
-      fundStore.fund?.governanceToken?.decimals || 18,
+      fund?.governanceToken?.decimals || 18,
       quorumNumerator,
       quorumDenominator,
       getTimestampForBlock,
-      fundStore.fund?.clockMode?.mode as ClockMode,
-      roleModAddress,
-      fundStore.fund?.safeAddress,
+      fund?.clockMode?.mode as ClockMode,
+      roleModAddress ?? "",
+      fund?.safeAddress ?? "",
     );
   });
 
   const mappedProposals = await Promise.all(processedProposals);
 
   governanceProposalStore.storeProposals(
-    governanceProposalStore.web3Store.chainId,
-    governanceProposalStore.fundStore.fund?.address,
+    web3Store.chainId,
+    fund?.address,
     mappedProposals,
   );
 

@@ -33,10 +33,10 @@ const RethinkReaderContractName = "RethinkReader";
 // excludeTestFunds: false
 // to local storage.
 const excludeTestFunds = getLocalStorageItem("excludeTestFunds", true);
-const excludeNAVDetails = true;
 
 interface IState {
-  funds: IFund[];
+  // chainFunds[chainId] = [fund1, fund2...]
+  chainFunds: Record<string, IFund[]>;
   fundNAVUpdates: Record<string, INAVUpdate[]>;
   // All original NAV methods.
   allNavMethods: INAVMethod[];
@@ -48,13 +48,17 @@ interface IState {
 export const useFundsStore = defineStore({
   id: "funds",
   state: (): IState => ({
-    funds: [] as IFund[],
+    chainFunds: {} as Record<string, IFund[]>,
     fundNAVUpdates: {} as Record<string, INAVUpdate[]>,
     allNavMethods: [] as INAVMethod[],
     uniqueNavMethods: [] as INAVMethod[],
     navMethodDetailsHashToFundAddress: {} as Record<string, string>,
   }),
   getters: {
+    funds(): IFund[] {
+      // Return funds of the selected network/chain.
+      return this.chainFunds[this.web3Store?.chainId] ?? [];
+    },
     fundStore(): any {
       return useFundStore();
     },
@@ -119,7 +123,6 @@ export const useFundsStore = defineStore({
         "fetchFundsNAVDataAction",
         () => fetchFundsNAVDataAction(
           fundsInfoArrays,
-          excludeNAVDetails,
         ),
       );
     },

@@ -31,7 +31,6 @@ import { NAVCalculator } from "~/assets/contracts/NAVCalculator";
 import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import { RethinkReader } from "~/assets/contracts/RethinkReader";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
-import { cleanComplexWeb3Data, formatJson } from "~/composables/utils";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -42,8 +41,7 @@ import {
   FundTransactionType,
 } from "~/types/enums/fund_transaction_type";
 import {
-  NAVEntryTypeToPositionTypeMap,
-  PositionTypes,
+  PositionType, PositionTypeKeys, PositionTypesMap,
 } from "~/types/enums/position_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
@@ -191,7 +189,6 @@ export const useFundStore = defineStore({
        * But if there are no NAV updates yet, we should take _totalDepositBal instead to get a correct value.
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
-      console.warn("HEHEHEHEHE", this.fundLastNAVUpdate?.timestamp, this.fund?.lastNAVUpdateTotalNAV)
       if (this.fundLastNAVUpdate?.timestamp)
         return this.fund?.lastNAVUpdateTotalNAV || 0n;
 
@@ -282,16 +279,22 @@ export const useFundStore = defineStore({
     shouldUserWaitSettlementOrCancelDeposit(): boolean {
       // If there was no NAV update yet, the user can process deposit request.
       // There is no need to wait until the next settlement.
+      console.log(
+        `Should process deposit: fundLastNAVUpdate.timestamp: ${this.fundLastNAVUpdate?.timestamp} 
+        userDepositRequest.timestamp ${this.userDepositRequest?.timestamp}`,
+      )
       if (
         !this.canUserProcessDeposit ||
         !this.fundLastNAVUpdate?.timestamp ||
         !this.userDepositRequest?.timestamp
-      )
+      ) {
         return false;
+      }
       // User deposit request exists and is valid, but there has to be at least 1 NAV update
-      // made after the deposit was requested.
+      // made after the deposit was requested. If the time of the last NAV update is not bigger than user's request
+      // timestamp, user should wait for next NAV update.
       return (
-        this.userDepositRequest.timestamp < this.fundLastNAVUpdate?.timestamp
+        this.userDepositRequest.timestamp >= this.fundLastNAVUpdate?.timestamp
       );
     },
     shouldUserWaitSettlementOrCancelRedemption(): boolean {
@@ -431,6 +434,21 @@ export const useFundStore = defineStore({
         },
   },
   actions: {
+    resetFundData() {
+      this.fund = undefined;
+      this.userDepositRequest = undefined;
+      this.userRedemptionRequest = undefined;
+      this.fundManagedNAVMethods = [];
+      this.fundRoleModAddress = {};
+      this.fundUserData = {
+        baseTokenBalance: 0n,
+        fundTokenBalance: 0n,
+        governanceTokenBalance: 0n,
+        fundAllowance: 0n,
+        fundShareValue: 0n,
+        fundDelegateAddress: "",
+      };
+    },
     // Proxy method to make callWithRetry accessible as this.callWithRetry
     callWithRetry(
       method: () => any,
@@ -563,61 +581,6 @@ export const useFundStore = defineStore({
           }
         });
     },
-
-    parseFundPositionTypeCounts(dataNAV: any): IPositionTypeCount[] {
-      const positionTypeCounts = [];
-
-      for (const positionType of PositionTypes) {
-        const positionTypeData = dataNAV[positionType.key];
-        // Get the last array for each NAV position type. The last array represents
-        // the latest NAV update for each position type (liquid, nft, composable, illiquid).
-        const lastIndex = positionTypeData?.length || 0;
-        const lastNAVUpdate = positionTypeData[lastIndex - 1];
-        positionTypeCounts.push({
-          type: positionType,
-          count: lastNAVUpdate?.length || 0,
-        });
-      }
-      return positionTypeCounts;
-    },
-    parseNAVMethod(
-      index: number,
-      navMethodData: Record<string, any>,
-    ): INAVMethod {
-      let description;
-      const positionType =
-        NAVEntryTypeToPositionTypeMap[navMethodData.entryType];
-
-      try {
-        if (navMethodData.description === "") {
-          description = {};
-        } else {
-          description = JSON.parse(navMethodData.description ?? "{}");
-        }
-      } catch (error) {
-        // Handle the error or rethrow it
-        console.warn(
-          "Failed to parse NAV entry JSON description string: ",
-          error,
-        );
-      }
-
-      // console.log("DETAILS raw 0 ", JSON.stringify(navMethodData, stringifyBigInt, 2))
-      const details = cleanComplexWeb3Data(navMethodData);
-      // console.log("DETAILS cleaned 1 ", JSON.stringify(details, null, 2))
-      const detailsJson = formatJson(details);
-      // console.log("DETAILS json 2 ", detailsJson)
-
-      return {
-        index,
-        positionType,
-        positionName: description?.positionName,
-        valuationSource: description?.valuationSource,
-        details,
-        detailsJson,
-        detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
-      } as INAVMethod;
-    },
     simulateCurrentNAV(): Promise<void> {
       return useActionState(
         "fetchSimulateCurrentNAVAction",
@@ -632,11 +595,11 @@ export const useFundStore = defineStore({
     },
     parseFundNAVUpdates(
       fundNAVData: any,
+      fundAddress: string,
     ): Promise<INAVUpdate[]> {
-      console.log("parseFundNavUpdates jopo")
       return useActionState(
         "parseFundNAVUpdatesAction",
-        () => parseFundNAVUpdatesAction(fundNAVData),
+        () => parseFundNAVUpdatesAction(fundNAVData, fundAddress),
       );
     },
     fetchUserBaseTokenBalance() {
@@ -737,26 +700,6 @@ export const useFundStore = defineStore({
       roleModAddress = safeModules[0][1];
       this.fundRoleModAddress[this.fund?.address ?? ""] = roleModAddress;
       return roleModAddress;
-    },
-    mergeNAVMethodsFromLocalStorage() {
-      // TODO should do cached in local storage separately by chain: navUpdateEntries
-      // TODO: this code is not the best, generally now only "deleted" property can change for each NAV method,
-      //   and they way mutation happen here is not good, losing reactive references?
-      const localStorageNAVUpdateEntries =
-        getLocalStorageItem("navUpdateEntries");
-      // if there are no NAV methods in local storage, save them
-
-      if (!localStorageNAVUpdateEntries[this.selectedFundAddress]?.length) {
-        // Merge NAV method changes from localStorage to the current fundManagedNAVMethods.
-        localStorageNAVUpdateEntries[this.selectedFundAddress] =
-          this.fundManagedNAVMethods;
-        setLocalStorageItem("navUpdateEntries", localStorageNAVUpdateEntries);
-      }
-
-      // if there are NAV methods in local storage, assign them to the fundManagedNAVMethods.
-      this.fundManagedNAVMethods =
-        localStorageNAVUpdateEntries[this.selectedFundAddress] || [];
-      this.refreshSimulateNAVCounter++;
     },
     async estimateGasFundFlowsCall(encodedFunctionCall: any) {
       return await this.web3Store.estimateGas({

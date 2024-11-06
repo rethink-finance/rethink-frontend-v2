@@ -43,7 +43,7 @@
             </div>
             <template v-else>
               <div
-                v-for="(calldata, index) in proposal.calldatasDecoded"
+                v-for="(calldata, index) in filteredProposalCalldatasDecoded"
                 :key="index"
                 class="mb-6"
               >
@@ -82,7 +82,7 @@
                   </template>
                   <template #body>
                     <template v-if="!toggledRawProposalCalldatas[index]">
-                      <template v-if="proposal?.calldataTypes[index] === ProposalCalldataType.NAV_UPDATE">
+                      <template v-if="calldata?.calldataType === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
                           :methods="allMethods[index]"
                           show-summary-row
@@ -91,10 +91,10 @@
                           idx="[proposalId]"
                         />
                       </template>
-                      <template v-else-if="proposal?.calldataTypes[index] === ProposalCalldataType.FUND_SETTINGS">
+                      <template v-else-if="calldata?.calldataType === ProposalCalldataType.FUND_SETTINGS">
                         <!-- Show fund setting UI -->
                         <FundSettingsExecutableCode
-                          :calldata-decoded="proposal?.calldatasDecoded?.[index]?.calldataDecoded"
+                          :calldata-decoded="calldata?.calldataDecoded"
                         />
                       </template>
                       <template v-else>
@@ -188,6 +188,8 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import type IProposalVoteSubmission from "~/types/vote_submission";
+import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -246,7 +248,7 @@ const activeUserVoteSubmission = computed(() => {
 const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
   const proposal = governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
-  if(!proposal) return undefined;
+  if (!proposal) return undefined;
 
   /**
   if (!proposalFetched.value && proposal?.createdBlockNumber) {
@@ -256,37 +258,38 @@ const proposal = computed(():IGovernanceProposal | undefined => {
   }
   */
 
-  // TODO: remove this after BE whitelists are fixed
-  // first index is a default fund settings
-  const firstIndex = proposal?.calldataTypes?.indexOf(
+  return proposal;
+})
+
+const filteredProposalCalldatasDecoded = computed(() => {
+  // TODO: remove this after Contract whitelists are fixed
+  // This is done now because we have to submit 2 fund settings to change whitelist,
+  // first one just sends the same whitelist as it was to reset it, and the secnod one has new whitelist addresses.
+
+  // first index is a default fund settings just meant to reset the whitelist (sending existing whitelist)
+  const firstIndex = proposal.value?.calldataTypes?.indexOf(
     ProposalCalldataType.FUND_SETTINGS,
   ) ?? -1;
   // last index is a final fund settings
-  const lastIndex = proposal?.calldataTypes?.lastIndexOf(
+  const lastIndex = proposal.value?.calldataTypes?.lastIndexOf(
     ProposalCalldataType.FUND_SETTINGS,
   ) ?? -1;
 
-  console.log("firstIndex", firstIndex);
-  console.log("lastIndex", lastIndex);
-
-  // remove default fund settings from proposal
-  if (firstIndex !== lastIndex && firstIndex !== -1) {
-    console.log("removing default fund settings");
-    proposal?.targets?.splice(firstIndex, 1);
-    proposal?.values?.splice(firstIndex, 1);
-    proposal?.signatures?.splice(firstIndex, 1);
-    proposal?.calldatas?.splice(firstIndex, 1);
-    proposal?.calldatasDecoded?.splice(firstIndex, 1);
+  const calldatasDecoded = proposal.value?.calldatasDecoded;
+  // remove default fund settings from proposal (the one it is resetting the whitelist, no need to show it here, it's a hack)
+  if (calldatasDecoded?.length && firstIndex !== lastIndex && firstIndex !== -1) {
+    console.debug("removing default fund settings by index", firstIndex);
+    return [...calldatasDecoded.slice(0, firstIndex), ...calldatasDecoded.slice(firstIndex + 1)];
   }
 
-  return proposal;
+  return calldatasDecoded;
 })
 
 const parseNavEntries = (calldataDecoded: any): INAVMethod[] => {
   console.log("calldataDecoded", calldataDecoded);
   const navMethods = [];
   for (const [index, navMethod] of (calldataDecoded?.navUpdateData ?? []).entries()) {
-    navMethods.push(fundStore.parseNAVMethod(index, navMethod));
+    navMethods.push(parseNAVMethod(index, navMethod));
   }
   return navMethods
 }
@@ -314,7 +317,7 @@ const formatCalldata = (calldata: any) => {
   try {
     return JSON.stringify(calldata, null, 2)
   } catch {
-    console.warn("failed");
+    console.warn("failed to format calldata", calldata);
     return calldata;
   }
 }
@@ -339,8 +342,8 @@ const fetchProposalVoteSubmissions = async () => {
         toBlock = endBlock;
       }
 
-      console.log("VS - chunkSize: ", chunkSize);
-      console.log("VS - Fetching events from: ", fromBlock, " to: ", toBlock);
+      console.debug("VS - chunkSize: ", chunkSize);
+      console.debug("VS - Fetching events from: ", fromBlock, " to: ", toBlock);
 
       try {
         const eventsVS = await fundStore.fundGovernorContract.getPastEvents("VoteCast", {
@@ -358,7 +361,7 @@ const fetchProposalVoteSubmissions = async () => {
           );
         });
 
-        console.log("VS - eventsVS: ", eventsVS);
+        console.debug("VS - eventsVS: ", eventsVS);
 
         // append new events to the existing list of proposalVoteSubmissions
         for (const event of sortedEventsVS) {
@@ -392,11 +395,11 @@ const fetchProposalVoteSubmissions = async () => {
           }
         }
 
-        console.log("VS - proposalVoteSubmissions: ", proposalVoteSubmissions.value);
+        console.debug("VS - proposalVoteSubmissions: ", proposalVoteSubmissions.value);
 
         // double the chunk size
         chunkSize *= 2n;
-        console.log("VS - chunkSize doubled: ", chunkSize);
+        console.debug("VS - chunkSize doubled: ", chunkSize);
         waitTimeAfterError = Math.max(100, waitTimeAfterError / 2);
 
         fromBlock = toBlock - 1n; // prepare for next block chunk
@@ -410,7 +413,7 @@ const fetchProposalVoteSubmissions = async () => {
           chunkSize = minChunkSize;
         }
 
-        console.log("VS - chunkSize reduced: ", chunkSize);
+        console.debug("VS - chunkSize reduced: ", chunkSize);
         waitTimeAfterError = Math.min(10000, waitTimeAfterError * 2);
 
         await new Promise((resolve) => setTimeout(resolve, waitTimeAfterError));
@@ -418,7 +421,7 @@ const fetchProposalVoteSubmissions = async () => {
     }
 
     loadingProposalVoteSubmissions.value = false;
-    console.log("All VoteCast events fetched");
+    console.debug("All VoteCast events fetched");
   } catch (e: any) {
     console.error("Error fetching proposals votes submissions", e);
     loadingProposalVoteSubmissions.value = false;
@@ -444,7 +447,7 @@ onMounted(async () => {
 
     // await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
 
-    if(proposal.value && !proposal.value?.executedBlockNumber) {
+    if (proposal.value && !proposal.value?.executedBlockNumber) {
       // await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
     }
   } catch {}

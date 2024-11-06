@@ -2,7 +2,7 @@
   <div class="page-governance">
     <UiDataRowCard title="Governance Settings" class="data_row_card">
       <template #body>
-        <FundOverviewGovernance :fund="fund" />
+        <FundOverviewGovernance :fund="fundStore.fund" />
       </template>
     </UiDataRowCard>
 
@@ -111,16 +111,16 @@
     <UiConfirmDialog
       v-model="confirmDialog"
       title="Heads Up!"
-      confirm-text="Continue"
+      confirm-text="Create a New Proposal"
       :cancel-text="
-        updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to Proposal'
+        updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to existing proposal'
       "
-      message="You can create a new one or check the ongoing activity first!"
+      message="There is already an active fund settings proposal. Are you sure you want to create a new one?"
       class="confirm_dialog"
       :max-width="updateSettingsProposals.length > 1 ? 'unset' : '600px'"
       @confirm="handleNavigateToCreateProposal"
       @cancel="
-        updateSettingsProposals.length > 1 ? null : handleGoToFProposal()
+        updateSettingsProposals.length > 1 ? null : handleGoToProposal()
       "
     >
       <FundGovernanceProposalsTable
@@ -135,8 +135,6 @@
 </template>
 
 <script setup lang="ts">
-import type IFund from "~/types/fund";
-
 // components
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
@@ -171,7 +169,11 @@ const governanceProposals = computed(() => {
   // set updateSettingsProposals to proposals that have updateSettings calldata
   updateSettingsProposals.value = proposals.filter((proposal) => {
     return proposal.calldataTags?.some(
-      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS,
+      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS
+    ) && (
+      proposal.state === ProposalState.Active ||
+      proposal.state === ProposalState.Pending ||
+      proposal.state === ProposalState.Queued
     );
   });
 
@@ -530,7 +532,7 @@ const handleNavigateToCreateProposal = () => {
     `/details/${fundStore.selectedFundSlug}/governance/fund-settings`,
   );
 };
-const handleGoToFProposal = () => {
+const handleGoToProposal = () => {
   const { createdBlockNumber, proposalId } = updateSettingsProposals.value[0];
 
   if (!createdBlockNumber || !proposalId) {
@@ -559,8 +561,7 @@ const selectOption = (option: string) => {
   }
 };
 
-const fund = useAttrs().fund as IFund;
-// const loadingProposals = ref(false);
+const loadingProposals = ref(false);
 const loadingProposalsVariant = ref("append" as "append" | "prepend");
 
 // delegate dialog
@@ -578,12 +579,16 @@ const fetchProposals = async (
   // show loading skeleton at the top or bottom of the table
   loadingVariant = "append" as "append" | "prepend",
 ) => {
-  if (!fundStore.fund?.governanceToken.decimals) {
+  const fund = fundStore.fund;
+  const fundAddress = fund?.address;
+  if (!fundAddress) return;
+
+  if (!fund?.governanceToken.decimals) {
     console.error("No fund governance token decimals found.");
     toastStore.errorToast("No fund governance token decimals found.");
     return;
   }
-  if (!fundStore.fund.clockMode?.mode) {
+  if (!fund.clockMode?.mode) {
     console.error("Fund clock mode is unknown.");
     toastStore.errorToast("Fund clock mode is unknown.");
     return;
@@ -601,7 +606,6 @@ const fetchProposals = async (
   let chunkSize = INITIAL_CHUNK_SIZE;
   let waitTimeAfterError = INITIAL_WAIT_TIME_AFTER_ERROR;
 
-  // TODO we can do batch requests for example 10x3000
   // We have to fetch events in ranges, as we can't fetch all events at once because of RPC limits.
   // We fetch from the most recent to least recent block number.
   const targetDate = new Date("2024-04-01T00:00:00Z");
@@ -698,7 +702,7 @@ const fetchProposals = async (
       );
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
         web3Store.chainId,
-        fundStore.fund?.address,
+        fundAddress,
         toBlock,
         fromBlock,
       );
@@ -789,7 +793,7 @@ const fetchProposals = async (
       }
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
         web3Store.chainId,
-        fundStore.fund?.address,
+        fundAddress,
         toBlock,
         fromBlock,
       );
@@ -835,7 +839,9 @@ onBeforeUnmount(() => {
 
 /**
 const startFetchingFundProposals = async () => {
-  console.warn("STAAAART governance proposal events for fund: ", fund.address);
+  const fundAddress = fundStore.fund?.address;
+  console.warn("STAAAART governance proposal events for fund: ", fundAddress);
+  if (!fundAddress) return;
 
   // if (shouldFetchProposals.value) {
   //   console.log("stop fetching");
@@ -844,7 +850,7 @@ const startFetchingFundProposals = async () => {
   //   return;
   // }
   console.log("\n\n__________");
-  console.log("fetch governance proposal events for fund: ", fund.address);
+  console.log("fetch governance proposal events for fund: ", fundAddress);
   shouldFetchProposals.value = true;
 
   loadingProposals.value = true;
@@ -865,7 +871,7 @@ const startFetchingFundProposals = async () => {
   const [mostRecentFetchedBlock, oldestFetchedBlock] =
     governanceProposalStore.getFundProposalsBlockFetchedRanges(
       web3Store.chainId,
-      fundStore.fund?.address,
+      fundAddress,
     );
   console.log(
     "mostRecentFetchedBlock: ",

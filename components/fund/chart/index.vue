@@ -129,6 +129,12 @@ export default {
           colors: ["var(--color-primary)"],
         },
         yaxis: {
+          // Set dynamic min and max values with a small buffer (5%) to ensure minor fluctuations
+          // in NAV data do not appear overly exaggerated on the chart. This helps in providing a
+          // more accurate visual representation when NAV values change slightly between updates.
+          min: Math.min(...this.chartItems) * 0.95,
+          max: Math.max(...this.chartItems) * 1.05,
+          forceNiceScale: true,
           labels: {
             style: {
               colors: "var(--color-light-subtitle)",

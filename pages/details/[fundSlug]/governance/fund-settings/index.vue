@@ -172,23 +172,23 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
+import SectionWhitelist from "./SectionWhitelist.vue";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import {
-FundSettingProposalFieldsMap,
-ProposalStep,
-ProposalStepMap,
-type IField,
-type IProposal,
-type IStepperSection,
-type IWhitelist,
+  FundSettingProposalFieldsMap,
+  ProposalStep,
+  ProposalStepMap,
+  type IField,
+  type IProposal,
+  type IStepperSection,
+  type IWhitelist,
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import SectionWhitelist from "./SectionWhitelist.vue";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
@@ -216,7 +216,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const loading = ref(false);
 const activeStep = ref(proposalSteps[0]);
-const form = ref(null);
+const form = ref();
 const formIsValid = ref(false);
 const isWhitelistToggled = ref(true);
 
@@ -311,8 +311,8 @@ const proposalEntry = ref([
   },
 ]);
 
-const checkIfAllFieldsValid = () => {
-  const output = proposalEntry.value.every((step) => {
+const getStepValidityArray = () => {
+  const output = proposalEntry.value.map((step) => {
     return step.sections.every((section) => {
       return section.fields.every((field) => {
         if (field?.isToggleable) {
@@ -352,98 +352,100 @@ const handleButtonClick = () => {
 
 const submit = async () => {
   if (!web3Store.web3) return;
-  loading.value = true;
-  formIsValid.value = checkIfAllFieldsValid();
+
+  // trigger form validation to show errors
+  const valid = form.value?.validate();
+  // check if every step is valid
+  formIsValid.value = getStepValidityArray().every((step) => step === true);
 
   if (formIsValid.value) {
-    const formattedProposal = formatProposalData(proposal.value);
-    console.log("formattedProposal: ", formattedProposal);
-
-    // TODO: we will delete this old proposal after we change how whitelist works in the backend
-    const formattedProposalOld = formatProposalDataOld();
-    console.log("formattedProposalOld: ", formattedProposalOld);
-
-    const encodedData = web3Store.web3.eth.abi.encodeFunctionCall(
-      updateSettingsABI as AbiFunctionFragment,
-      formattedProposal,
-    );
-
-    const encodedDataOld = web3Store.web3.eth.abi.encodeFunctionCall(
-      updateSettingsABI as AbiFunctionFragment,
-      formattedProposalOld,
-    );
-
-    const targetAddresses = [fund.address, fund.address];
-    const gasValues = [0, 0];
-    const calldatas = [encodedDataOld, encodedData];
-
-    console.log(
-      "proposal:",
-      JSON.stringify(
-        {
-          targetAddresses,
-          gasValues,
-          calldatas,
-        },
-        null,
-        2,
-      ),
-    );
-
-    const proposalData = [
-      targetAddresses,
-      gasValues,
-      calldatas,
-      JSON.stringify({
-        title: proposal.value.proposalTitle,
-        description: proposal.value.proposalDescription,
-      }),
-    ];
-    // const [gasPrice] = await web3Store.estimateGas(
-    //   {
-    //     from: fundStore.activeAccountAddress,
-    //     to: fundStore.fundGovernorContract.options.address,
-    //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
-    //   },
-    // );
     try {
-      await web3Store.callWithRetry(() =>
-        fundStore.fundGovernorContract.methods
-          .propose(...proposalData)
-          .send({
-            from: fundStore.activeAccountAddress,
-            // maxPriorityFeePerGas: gasPrice,
-            gasPrice: "",
-          })
-          .on("transactionHash", (hash: string) => {
-            console.log("tx hash: " + hash);
-            toastStore.addToast(
-              "The proposal transaction has been submitted. Please wait for it to be confirmed.",
-            );
-          })
-          .on("receipt", (receipt: any) => {
-            console.log("receipt: ", receipt);
-            if (receipt.status) {
-              toastStore.successToast(
-                "Register the proposal transactions was successful. " +
+      loading.value = true;
+      const formattedProposal = formatProposalData(proposal.value);
+      console.log("formattedProposal: ", formattedProposal);
+
+      // TODO: we will delete this old proposal after we change how whitelist works in the backend
+      const formattedProposalOld = formatProposalDataOld();
+      console.log("formattedProposalOld: ", formattedProposalOld);
+
+      const encodedData = web3Store.web3.eth.abi.encodeFunctionCall(
+        updateSettingsABI as AbiFunctionFragment,
+        formattedProposal,
+      );
+
+      const encodedDataOld = web3Store.web3.eth.abi.encodeFunctionCall(
+        updateSettingsABI as AbiFunctionFragment,
+        formattedProposalOld,
+      );
+
+      const targetAddresses = [fund.address, fund.address];
+      const gasValues = [0, 0];
+      const calldatas = [encodedDataOld, encodedData];
+
+      console.log(
+        "proposal:",
+        JSON.stringify(
+          {
+            targetAddresses,
+            gasValues,
+            calldatas,
+          },
+          null,
+          2,
+        ),
+      );
+
+      const proposalData = [
+        targetAddresses,
+        gasValues,
+        calldatas,
+        JSON.stringify({
+          title: proposal.value.proposalTitle,
+          description: proposal.value.proposalDescription,
+        }),
+      ];
+      // const [gasPrice] = await web3Store.estimateGas(
+      //   {
+      //     from: fundStore.activeAccountAddress,
+      //     to: fundStore.fundGovernorContract.options.address,
+      //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
+      //   },
+      // );
+      await fundStore.fundGovernorContract.methods
+        .propose(...proposalData)
+        .send({
+          from: fundStore.activeAccountAddress,
+          // maxPriorityFeePerGas: gasPrice,
+          gasPrice: "",
+        })
+        .on("transactionHash", (hash: string) => {
+          console.log("tx hash: " + hash);
+          toastStore.addToast(
+            "The proposal transaction has been submitted. Please wait for it to be confirmed.",
+          );
+        })
+        .on("receipt", (receipt: any) => {
+          console.log("receipt: ", receipt);
+          if (receipt.status) {
+            toastStore.successToast(
+              "Register the proposal transactions was successful. " +
                   "You can now vote on the proposal in the governance page.",
-              );              
-              router.push(`/details/${selectedFundSlug.value}/governance`);
-            } else {
-              toastStore.errorToast(
-                "The register proposal transaction has failed. Please contact the Rethink Finance support.",
-              );
-            }
-            loading.value = false;
-          })
-          .on("error", (error: any) => {
-            console.error(error);
-            loading.value = false;
-            toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support.",
             );
-          }),
-      )
+            router.push(`/details/${selectedFundSlug.value}/governance`);
+          } else {
+            toastStore.errorToast(
+              "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+            );
+          }
+          loading.value = false;
+        })
+        .on("error", (error: any) => {
+          console.error(error);
+          loading.value = false;
+          toastStore.errorToast(
+            "There has been an error. Please contact the Rethink Finance support.",
+          );
+        })
     } catch (error: any) {
       loading.value = false;
       toastStore.errorToast(error.message);
@@ -597,6 +599,15 @@ const prevStep = () => {
 
 const nextStep = () => {
   if (activeStep.value === proposalSteps[proposalSteps.length - 1]) {
+    return;
+  }
+  // trigger form validation to show errors
+  const valid = form.value?.validate();
+  // check if step is valid before moving to the next step
+  const stepIndex = proposalSteps.indexOf(activeStep.value);
+  const stepValidityArray = getStepValidityArray();
+  if (!stepValidityArray[stepIndex]) {
+    toastStore.warningToast("Please fill all the required fields");
     return;
   }
 

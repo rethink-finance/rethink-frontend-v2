@@ -186,7 +186,6 @@ const getRowClass = (item: IGovernanceProposal) => {
   ];
 };
 
-// TODO to fetch status of all votes of all users we again have to iterate over all events and check VoteCast event
 watch([() => props.items, () => fundStore.activeAccountAddress], () => {
   if (fundStore.activeAccountAddress === undefined) {
     return
@@ -290,7 +289,7 @@ const rowClick = (_:any, item: any) => {
     justify-content: center;
     align-items: center;
     // move the voted cell because of the icon in the header
-    margin-right: 21px; 
+    margin-right: 21px;
   }
 }
 

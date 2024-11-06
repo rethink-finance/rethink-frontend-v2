@@ -7,12 +7,10 @@ export const fetchFundDataAction = async (
 ): Promise<IFund> => {
   const fundStore = useFundStore();
 
+  fundStore.resetFundData();
   fundStore.selectedFundAddress = fundAddress;
-  fundStore.fund = undefined;
-  fundStore.fundManagedNAVMethods = [];
 
   try {
-
     const fund: IFund = await fundStore.fetchFundMetaData(fundAddress);
 
     await fundStore.fetchFundNAVData();

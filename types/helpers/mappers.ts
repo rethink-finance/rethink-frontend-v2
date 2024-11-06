@@ -12,10 +12,10 @@ import type ISubgraphFetchDelegatesResponse from "../responses/subgraph_fetch_de
 import type ISubgraphGovernanceProposal from "../subgraph_governance_proposal";
 import type ITrendingDelegate from "../trending_delegate";
 import type IProposalVoteSubmission from "../vote_submission";
+import { decodeProposalCallData } from "~/composables/proposal/decodeProposalCallData";
 
 export async function _mapSubgraphProposalToProposal(
   proposal: ISubgraphGovernanceProposal,
-  decodeProposalCallData: (calldata: string) => any,
   totalSupply: number,
   blockTimeContext: BlockTimeContext,
   decimals: number,
@@ -26,8 +26,8 @@ export async function _mapSubgraphProposalToProposal(
     context: BlockTimeContext,
   ) => Promise<number>,
   clockMode: ClockMode,
-  roleModAddress?: string,
-  safeAddress?: string,
+  roleModAddress: string,
+  safeAddress: string,
 ): Promise<Promise<IGovernanceProposal>> {
   let voteStartTimestamp: number | undefined;
   let voteEndTimestamp: number | undefined;
@@ -68,27 +68,12 @@ export async function _mapSubgraphProposalToProposal(
   const signatures = proposal.calls.map((call) => call.signature);
   const targets = proposal.calls.map((call) => call.target.id);
   const calldatasDecoded: any[] = [];
-
   const calldataTypes: ProposalCalldataType[] = [];
 
   calldatas.forEach((calldata, i) => {
-    const calldataDecoded = decodeProposalCallData(calldata);
+    const calldataDecoded = decodeProposalCallData(roleModAddress, calldata, targets[i], safeAddress);
     calldatasDecoded.push(calldataDecoded);
-
-    if (calldataDecoded?.functionName === "updateNav") {
-      calldataTypes.push(ProposalCalldataType.NAV_UPDATE);
-    } else if (safeAddress && targets[i] === safeAddress.toLocaleLowerCase()) {
-      calldataTypes.push(ProposalCalldataType.DIRECT_EXECUTION);
-    } else if (
-      roleModAddress &&
-      targets[i] === roleModAddress.toLocaleLowerCase()
-    ) {
-      calldataTypes.push(ProposalCalldataType.PERMISSIONS);
-    } else if (calldataDecoded?.functionName === "updateSettings") {
-      calldataTypes.push(ProposalCalldataType.FUND_SETTINGS);
-    } else {
-      calldataTypes.push(ProposalCalldataType.UNDEFINED);
-    }
+    calldataTypes.push(calldataDecoded?.calldataType);
   });
 
   const calldataTags = [
