@@ -22,7 +22,7 @@
           variant="outlined"
           @click="addRawDialog = true"
         >
-          Add Raw Method
+          Add Raw
         </v-btn>
         <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/proposal`">
           <v-btn class="bg-primary text-secondary">
@@ -60,9 +60,9 @@
 
     <UiConfirmDialog
       v-model="addRawDialog"
-      title="Add Raw Method"
+      title="Add Raw Methods"
       max-width="80%"
-      confirm-text="Add Methods"
+      confirm-text="Load"
       @confirm="addRawMethods"
       message="Please enter the raw methods JSON below"
     >
