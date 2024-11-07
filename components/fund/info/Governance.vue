@@ -10,7 +10,7 @@
             <v-tooltip activator="parent" location="bottom">
               {{ fundStore.fundUserData.fundDelegateAddress }}
             </v-tooltip>
-            {{ truncateAddress(fundStore.fundUserData.fundDelegateAddress) }}
+            {{ parsedDelegatingToAddress }}
           </template>
         </div>
         <div class="data_bar__subtitle">
@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { isZeroAddress, truncateAddress } from "~/composables/addressUtils";
+import { isZeroAddress } from "~/composables/addressUtils";
 import { useFundStore } from "~/store/fund/fund.store";
 import type IFund from "~/types/fund";
 const fundStore = useFundStore();
@@ -63,6 +63,15 @@ const userGovernanceTokenBalanceFormatted = computed(() => {
     false,
     true,
   );
+});
+
+const parsedDelegatingToAddress = computed(() => {
+  // check if the user delegated to himself
+  if (fundStore.fundUserData.fundDelegateAddress.toLowerCase() === fundStore?.activeAccountAddress?.toLowerCase()) {
+    return "Myself";
+  }
+  
+  return truncateAddress(fundStore.fundUserData.fundDelegateAddress);
 });
 </script>
 
