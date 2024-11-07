@@ -1,5 +1,5 @@
-import type { IPositionType } from "~/types/position_type";
 import { ValuationType } from "~/types/enums/valuation_type";
+import type { IPositionType } from "~/types/position_type";
 
 export enum PositionType {
   Liquid = "liquid",
@@ -39,6 +39,18 @@ export const NAVEntryTypeToPositionTypeMap: Record<number, PositionType> = {
   1: PositionType.Illiquid, // NAVIlliquidUpdateType
   2: PositionType.NFT, // NAVNFTUpdateType
   3: PositionType.Composable, // NAVComposableUpdateType
+}
+export const NAVEntryTypeStringToPositionTypeMap: Record<string, PositionType> = {
+  NAVLiquidUpdateType: PositionType.Liquid,
+  NAVIlliquidUpdateType: PositionType.Illiquid,
+  NAVNFTUpdateType: PositionType.NFT,
+  NAVComposableUpdateType: PositionType.Composable,
+}
+export const NAVEntryTypeStringToNAVEntryTypeMap: Record<string, number> = {
+  NAVLiquidUpdateType: 0,
+  NAVIlliquidUpdateType: 1,
+  NAVNFTUpdateType: 2,
+  NAVComposableUpdateType: 3,
 }
 export const PositionTypeToNAVEntryTypeMap: Record<PositionType, number> = {
   [PositionType.Liquid]: 0, // NAVLiquidUpdateType

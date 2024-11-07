@@ -28,7 +28,7 @@
 
         <div class="di_card__content">
           <div class="di_card__text" >
-            <span v-html="message"></span>
+            <div class="mb-2" v-html="message" />
             <slot /> <!-- This is where the content will be injected --> 
           </div>
 
@@ -76,7 +76,6 @@ const cancel = () => {
   emit("cancel");
 };
 const confirm = () => {
-  emit("update:modelValue", false);
   emit("confirm");
 };
 </script>

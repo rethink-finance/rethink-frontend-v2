@@ -383,8 +383,9 @@ const handleAddNewAddressList = () => {
     });
 
     emit("update-items", [...output]);
-
+    
     newAddress.value = "";
+    confirmDialog.value = false;
     toastStore.successToast("Address list added to whitelist");
     isAddAddressListActive.value = false;
   } catch (e) {
