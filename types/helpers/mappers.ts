@@ -1,6 +1,7 @@
 // helpers/mappers.ts
 
 import { ethers } from "ethers";
+import { decodeProposalCallData } from "~/composables/proposal/decodeProposalCallData";
 import type BlockTimeContext from "../block_time_context";
 import type IDelegate from "../delegate";
 import type IDelegator from "../delegator";
@@ -12,7 +13,6 @@ import type ISubgraphFetchDelegatesResponse from "../responses/subgraph_fetch_de
 import type ISubgraphGovernanceProposal from "../subgraph_governance_proposal";
 import type ITrendingDelegate from "../trending_delegate";
 import type IProposalVoteSubmission from "../vote_submission";
-import { decodeProposalCallData } from "~/composables/proposal/decodeProposalCallData";
 
 export async function _mapSubgraphProposalToProposal(
   proposal: ISubgraphGovernanceProposal,
@@ -106,12 +106,10 @@ export async function _mapSubgraphProposalToProposal(
   const quorumVotes =
     (BigInt(totalSupply) * BigInt(quorumNumerator)) / BigInt(quorumDenominator);
 
-  const approvalRate =
-    quorumVotes === BigInt(0) && forVotesNumber > 0
-      ? 100
-      : quorumVotes > BigInt(0)
-        ? Math.min((forVotesNumber / Number(quorumVotes)) * 100, 100)
-        : 0;
+    const approvalRate =
+    totalWeight > BigInt(0)
+      ? Math.min((forVotesNumber / totalWeightNumber) * 100, 100)
+      : 0;
 
   const participationRate =
     totalSupplyNumber > 0

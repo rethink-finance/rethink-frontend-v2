@@ -18,7 +18,7 @@
         </span>
         <v-tooltip activator="parent" location="top">
           Calculated as: <br>
-          <strong>votes for / required quorum votes</strong><br>
+          <strong>votes for / total casted votes</strong><br>
         </v-tooltip>
       </div>
     </template>
@@ -92,7 +92,7 @@
           <div class="d-flex justify-end">
             {{ item.approvalFormatted }}
             <v-tooltip activator="parent" location="bottom">
-              {{ item.forVotesFormatted }} of {{ item.quorumVotesFormatted }}
+              {{ item.forVotesFormatted }} of {{ item.totalVotesFormatted }}
             </v-tooltip>
           </div>
         </td>
@@ -141,9 +141,9 @@
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import { ProposalState } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
-import { useWeb3Store } from "~/store/web3/web3.store";
 
 const router = useRouter();
 const web3Store = useWeb3Store();

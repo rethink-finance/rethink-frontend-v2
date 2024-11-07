@@ -136,7 +136,7 @@
                 :value="proposal?.approval"
                 :format-function="formatPercent"
                 subtext="Approval"
-                :tooltip-text="`${ proposal.forVotesFormatted } of ${ proposal.quorumVotesFormatted }`"
+                :tooltip-text="`${ proposal.forVotesFormatted } of ${ proposal.totalVotesFormatted }`"
               />
               <FundGovernanceProgressInsight
                 title="Participation Rate"
@@ -180,6 +180,7 @@ import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { useActionStateStore } from "~/store/actionState.store";
 
 import { formatPercent } from "~/composables/formatters";
+import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -188,8 +189,6 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import type IProposalVoteSubmission from "~/types/vote_submission";
-import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
