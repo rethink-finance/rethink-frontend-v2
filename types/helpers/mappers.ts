@@ -79,7 +79,7 @@ export async function _mapSubgraphProposalToProposal(
   const calldataTags = [
     ...new Set(
       calldataTypes.filter(
-        (calldataType) => calldataType !== ProposalCalldataType.UNDEFINED,
+        (calldataType) => calldataType !== ProposalCalldataType.UNDEFINED && calldataType !== undefined,
       ),
     ),
   ];
