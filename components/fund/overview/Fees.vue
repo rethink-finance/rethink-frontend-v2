@@ -11,7 +11,7 @@
     />
     <UiDataRowCard
       :title="formatFee(fund?.performanceFee)"
-      subtitle="Profit Management Fee"
+      subtitle="Performance Fee"
       :title2="formatAddress(fund?.performanceFeeAddress)"
       subtitle2="Distributed to"
       :grow-column2="true"
