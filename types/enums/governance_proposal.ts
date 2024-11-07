@@ -18,6 +18,12 @@ export enum VoteType {
   For = "Approve",
   Abstain = "Abstain"
 }
+
+export const VoteTypeFromNumber: Record<number, VoteType> = {
+  0: VoteType.Against,
+  1: VoteType.For,
+  2: VoteType.Abstain,
+};
 //
 // export enum Rounding {
 //   Floor = "Floor",

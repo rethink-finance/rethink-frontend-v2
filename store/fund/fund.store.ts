@@ -473,7 +473,7 @@ export const useFundStore = defineStore({
      * @dev: would be better to separate fundSettings from (startTime & metadata), as sometimes we already
      *   have the fund settings from the discovery page.
      */
-    fetchFundData(fundAddress: string): Promise<IFund> {
+    fetchFundData(fundAddress: string): Promise<void> {
       return useActionState("fetchFundDataAction",  () => fetchFundDataAction(fundAddress));
     },
     fetchFundNAVData(): Promise<void> {
