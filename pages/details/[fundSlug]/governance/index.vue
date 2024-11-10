@@ -68,6 +68,7 @@
       </template>
       <FundGovernanceTableTrendingDelegates
         :items="trendingDelegates"
+        :active-account-address="fundStore.activeAccountAddress"
         :loading="isFetchingDelegates"
         @row-click="handleRowClick"
       />

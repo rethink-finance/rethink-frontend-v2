@@ -14,13 +14,13 @@ import { cleanComplexWeb3Data } from "~/composables/utils";
 import { useFundStore } from "~/store/fund/fund.store";
 
 
+import { decodeProposalCallData } from "~/composables/proposal/decodeProposalCallData";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IDelegate from "~/types/delegate";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
-import { decodeProposalCallData } from "~/composables/proposal/decodeProposalCallData";
 
 interface IState {
   /* Example fund proposals.
@@ -727,7 +727,7 @@ export const useGovernanceProposalsStore = defineStore({
           ...new Set(
             proposal.calldataTypes.filter(
               (calldataType) =>
-                calldataType !== ProposalCalldataType.UNDEFINED,
+                calldataType !== ProposalCalldataType.UNDEFINED && calldataType !== undefined,
             ),
           ),
         ];
