@@ -9,7 +9,7 @@
         class="fund_settlement__buttons"
       >
         <v-tooltip
-          :disabled="!!(depositDisabledTooltipText || redemptionDisabledTooltipText)"
+          :disabled="!(depositDisabledTooltipText || redemptionDisabledTooltipText)"
           activator="parent"
           location="bottom"
         >
@@ -175,12 +175,19 @@ const redemptionDisabledTooltipText = computed(() => {
   const fundContractBaseTokenBalance = fundStore.fund?.fundContractBaseTokenBalance || 0n;
   // Get the last NAV update exchange rate.
   const lastNAVExchangeRate = FixedNumber.fromString(fundStore.fundToBaseTokenExchangeRate.toString());
-  const redemptionRequestAmountFN = FixedNumber.fromValue(redemptionRequestAmount);
-  const fundContractBaseTokenBalanceFN = FixedNumber.fromString(
-    ethers.formatUnits(fundContractBaseTokenBalance, fundStore.fund?.fundToken.decimals),
+  const redemptionRequestAmountFN = FixedNumber.fromString(
+    ethers.formatUnits(redemptionRequestAmount, fundStore.fund?.fundToken.decimals),
   );
-  const redemptionRequestAmountInBaseFN = redemptionRequestAmountFN.mul(lastNAVExchangeRate);
+  const redemptionRequestAmountInBaseFN = lastNAVExchangeRate.mul(redemptionRequestAmountFN);
+  const fundContractBaseTokenBalanceFN = FixedNumber.fromString(
+    ethers.formatUnits(fundContractBaseTokenBalance, fundStore.fund?.baseToken.decimals),
+  );
+  console.log("NSS lastNAVExchangeRate", lastNAVExchangeRate.toString())
+  console.log("NSS redemptionRequestAmountFN", redemptionRequestAmountFN.toString());
+  console.log("NSS redemptionRequestAmountInBaseFN", redemptionRequestAmountInBaseFN.toString());
+  console.log("NSS fundContractBaseTokenBalanceFN", fundContractBaseTokenBalanceFN.toString())
   if (fundContractBaseTokenBalanceFN.lt(redemptionRequestAmountInBaseFN)) {
+    // Check if there is enough base token liquidity to perform withdrawal.
     return "Not enough liquidity in the fund contract."
   }
   if (!fundStore.isUserWalletWhitelisted) {

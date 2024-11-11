@@ -46,7 +46,7 @@ export const createDelegateBySigMessage = (
     ],
   };
 
-  const primaryType = "Delegation(address delegatee,uint256 nonce,uint256 expiry)";
+  const primaryType = "Delegation";
   const domain = { name: "VotesUpgradeable", chainId, verifyingContract: compAddress };
   const message = { delegatee, nonce: Number(nonce), expiry: Number(expiry) };
   return { types, primaryType, domain, message } as Eip712TypedData;

@@ -104,8 +104,7 @@ const rules = [
     if (!fund.value) return { message: "Fund data is missing.", display: true }
     let valueWei;
     try {
-      console.log("value", value);
-      valueWei = ethers.parseUnits(value || "0", fund.value?.baseToken.decimals);
+      valueWei = ethers.parseUnits(value || "0", fund.value?.fundToken.decimals);
     } catch {
       return {
         message: `Make sure the value has max ${fund.value?.fundToken.decimals} decimals.`,
