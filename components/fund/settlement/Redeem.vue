@@ -108,7 +108,7 @@ const rules = [
       valueWei = ethers.parseUnits(value || "0", fund.value?.baseToken.decimals);
     } catch {
       return {
-        message: `Make sure the value has max ${fund.value?.baseToken.decimals} decimals.`,
+        message: `Make sure the value has max ${fund.value?.fundToken.decimals} decimals.`,
         display: false,
       }
     }
