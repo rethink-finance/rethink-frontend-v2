@@ -94,6 +94,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
+import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 
 const emit = defineEmits(["deposit-success"]);
 const toastStore = useToastStore();
@@ -210,19 +211,18 @@ const requestDeposit = async () => {
 
   console.log("Request deposit tokensWei: ", tokensWei.value, "from : ", fundStore.activeAccountAddress);
 
-  const ABI = [ "function requestDeposit(uint256 amount)" ];
-  const iface = new ethers.Interface(ABI);
-  const encodedFunctionCall = iface.encodeFunctionData("requestDeposit", [ tokensWei.value ]);
-  // const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
-
+  const encodedFunctionCall = encodeFundFlowsCallFunctionData("requestDeposit", [ tokensWei.value ]);
   console.log("isConnectedWalletUsingLedger:", accountStore.isConnectedWalletUsingLedger);
   console.log("contract:", fundStore.fundContract);
   console.warn("connectedWallet", accountStore?.connectedWallet)
+  // Prepare the transaction data
+  const transactionData = fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).encodeABI();
 
+  // Print the transaction calldata
+  console.warn("Transaction Calldata:", transactionData);
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
       gasPrice: "",
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: ", hash);
@@ -275,19 +275,11 @@ const approveAllowance = async () => {
 
   console.log("Approve allowance tokensWei: ", tokensWei.value, "from : ", fundStore.activeAccountAddress);
   const allowanceValue = tokensWei.value;
-  // const [gasPrice] = await web3Store.estimateGas(
-  //   {
-  //     from: fundStore.activeAccountAddress,
-  //     to: fundStore.fundBaseTokenContract.options.address,
-  //     data: fundStore.fundBaseTokenContract.methods.approve(fund.value.address, tokensWei.value).encodeABI(),
-  //   },
-  // );
 
   try {
     // call the approval method
     await fundStore.fundBaseTokenContract.methods.approve(fund.value?.address, tokensWei.value).send({
       from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
       gasPrice: "",
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);

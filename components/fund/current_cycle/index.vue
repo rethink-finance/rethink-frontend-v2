@@ -90,6 +90,7 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
+import { createDelegateBySigMessage, encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 const emit = defineEmits(["deposit-success"]);
 
 const web3Store = useWeb3Store();
@@ -188,6 +189,56 @@ const redemptionDisabledTooltipText = computed(() => {
   return ""
 });
 
+const signDepositAndDelegateBySigTransaction = async () => {
+  const expiry = Math.floor(Date.now() / 1000) + 3600; // expiry 1 hour from now;
+  const nonce = await fundStore.fundGovernanceTokenContract.methods.nonces(fundStore.activeAccountAddress).call();
+  console.log("nonce ", nonce);
+  // Create the EIP-712 message
+  const { types, domain, message, primaryType } = createDelegateBySigMessage(
+    fundStore.fund?.governanceToken.address,
+    fundStore.activeAccountAddress,
+    expiry,
+    parseInt(web3Store.chainId, 16),
+    nonce,
+  )
+
+  let signature;
+
+  try {
+    const dataToSign = {
+      types,
+      domain,
+      primaryType,
+      message,
+    };
+    console.warn("createDelegateBySigMessage", JSON.stringify(dataToSign, null, 2))
+
+    // Sign the EIP-712 message
+    console.log("dataToSign", dataToSign);
+    const hexSignature = await web3Store?.web3?.eth.signTypedData(fundStore.activeAccountAddress ?? "", dataToSign);
+    console.log("hexSignature:", hexSignature);
+    signature = ethers.Signature.from(hexSignature);
+    console.log("v:", signature.v);
+    console.log("r:", signature.r);
+    console.log("s:", signature.s);
+  } catch (error) {
+    console.error("Error signing message:", error);
+    return
+  }
+
+  // If user has not delegated to himself yet, just use the depositAndDelegateBySig
+  return encodeFundFlowsCallFunctionData(
+    "depositAndDelegateBySig",
+    [
+      fundStore.activeAccountAddress, // delegatee, delegate to self first
+      nonce, // nonce
+      expiry, // expiry
+      signature.v, // v
+      signature.r, // r
+      signature.s, // s
+    ],
+  );
+}
 const deposit = async () => {
   if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to deposit tokens to the fund.")
@@ -205,15 +256,30 @@ const deposit = async () => {
   loadingDeposit.value = true;
   console.log("Deposit tokensWei: ", userDepositRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
 
-  const ABI = [ "function deposit()" ];
-  const iface = new ethers.Interface(ABI);
-  const encodedFunctionCall = iface.encodeFunctionData("deposit");
-  // const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  let encodedFunctionCall;
 
+  const nullAddress = "0x0000000000000000000000000000000000000000";
+  console.log("fundUserData.fundDelegateAddress", fundStore.fundUserData?.fundDelegateAddress, nullAddress, fundStore.fundUserData?.fundDelegateAddress===nullAddress)
+  if (fundStore.fundUserData?.fundDelegateAddress === nullAddress) {
+    // If the user has not delegated to anyone, delegate to himself after deposit.
+    // Use a combination of deposit + delegate to himself in one transaction.
+    // Metamask will popup twice, first to sign the delegate trx then to submit the depositAndDelegateBySig trx.
+    let delegateBySigData;
+    try {
+      encodedFunctionCall = await signDepositAndDelegateBySigTransaction();
+      console.warn("signed delegateBySigData", delegateBySigData)
+    } catch (error: any) {
+      console.error("failed signing delegate by sig data", error)
+    }
+  } else {
+    console.log("just deposit ok")
+    // Just deposit.
+    encodedFunctionCall = encodeFundFlowsCallFunctionData("deposit");
+  }
+  console.log("SEND IT BABY")
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
       gasPrice: "",
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
@@ -265,15 +331,11 @@ const redeem = async () => {
   loadingRedemption.value = true;
   console.log("[REDEEM] tokensWei: ", userRedemptionRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
 
-  const iface = new ethers.Interface([ "function withdraw()" ]);
-  const encodedFunctionCall = iface.encodeFunctionData("withdraw");
-  fundStore.fundContract.methods.withdraw().encodeABI()
-  // const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  const encodedFunctionCall = encodeFundFlowsCallFunctionData("withdraw");
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
       gasPrice: "",
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);

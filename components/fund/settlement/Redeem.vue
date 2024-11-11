@@ -76,11 +76,10 @@ import { ethers } from "ethers";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
+import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 
-const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
@@ -105,6 +104,7 @@ const rules = [
     if (!fund.value) return { message: "Fund data is missing.", display: true }
     let valueWei;
     try {
+      console.log("value", value);
       valueWei = ethers.parseUnits(value || "0", fund.value?.baseToken.decimals);
     } catch {
       return {
@@ -128,6 +128,9 @@ const rules = [
 
 const isRequestRedeemDisabled = computed(() => {
   // Disable redeem button if any of rules is false.
+  if (errorMessages.value.length > 0) {
+    console.log("request redeem errors", errorMessages.value)
+  }
   return errorMessages.value.length > 0 || loadingRequestRedeem.value  || !fundStore.isUserWalletWhitelisted;
 });
 
@@ -171,15 +174,11 @@ const requestRedemption = async () => {
 
   const tokensWei = ethers.parseUnits(tokenValue.value || "0", fund.value.fundToken.decimals)
   console.log("[REDEEM] tokensWei: ", tokensWei, "from : ", fundStore.activeAccountAddress);
-
-  const iface = new ethers.Interface([ "function requestWithdraw(uint256 amount)" ]);
-  const encodedFunctionCall = iface.encodeFunctionData("requestWithdraw", [ tokensWei ]);
-  // const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  const encodedFunctionCall = encodeFundFlowsCallFunctionData("requestWithdraw", [ tokensWei ]);
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
       gasPrice: "",
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);
