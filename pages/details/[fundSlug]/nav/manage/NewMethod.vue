@@ -81,7 +81,7 @@
               Position Type
             </v-label>
             <div class="toggle_buttons">
-              <v-btn-toggle v-model="navEntry.positionType" group>
+              <v-btn-toggle v-model="navEntry.positionType" group mandatory>
                 <v-btn
                   v-for="positionType in creatablePositionTypes"
                   :key="positionType.key"
@@ -102,7 +102,7 @@
               Valuation Type
             </v-label>
             <div class="toggle_buttons">
-              <v-btn-toggle v-model="navEntry.valuationType" group>
+              <v-btn-toggle v-model="navEntry.valuationType" group mandatory>
                 <v-btn
                   v-for="valuationType in valuationTypes"
                   :key="valuationType.key"
