@@ -57,18 +57,20 @@
           <div v-if="showApproveAllowanceWarning" class="d-flex align-center">
             <Icon
               icon="zondicons:exclamation-outline"
-              class="text-warning me-1"
+              class="text-warning me-2"
               height="1.2rem"
               width="1.2rem"
             />
-            Approve at least
-            <strong
-              class="set_approve_allowance_button mx-1"
-              @click="setTokenValueToDepositRequestAmount"
-            >
-              {{ depositRequestAmountFormatted }} {{ fundStore?.fund?.baseToken.symbol }}
-            </strong>
-            to process the deposit request.
+            <span>
+              Approve at least
+              <strong
+                class="set_approve_allowance_button mx-1"
+                @click="setTokenValueToDepositRequestAmount"
+              >
+                {{ depositRequestAmountFormatted }} {{ fundStore?.fund?.baseToken.symbol }}
+              </strong>
+              to process the deposit request.
+            </span>
           </div>
         </div>
         <div v-if="visibleErrorMessages && tokenValueChanged" class="text-red mt-4 text-center">
