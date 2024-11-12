@@ -225,7 +225,7 @@ const signDepositAndDelegateBySigTransaction = async () => {
 
   const expiry = Math.floor(Date.now() / 1000) + 3600; // expiry 1 hour from now;
   // Create the EIP-712 message
-  const { types, domain, message, primaryType } = createDelegateBySigMessage(
+  const dataToSign = createDelegateBySigMessage(
     activeAccountAddress,
     expiry,
     nonce,
@@ -234,17 +234,10 @@ const signDepositAndDelegateBySigTransaction = async () => {
     domainData.chainId,
     domainData.version,
   )
-
+  console.log("dataToSign", JSON.stringify(dataToSign, null, 2))
   let signature;
 
   try {
-    const dataToSign = {
-      types,
-      domain,
-      primaryType,
-      message,
-    };
-    console.warn("createDelegateBySigMessage", JSON.stringify(dataToSign, null, 2))
     const hexSignature = await web3Store?.web3?.eth.signTypedData(activeAccountAddress ?? "", dataToSign);
     signature = ethers.Signature.from(hexSignature);
   } catch (error) {
