@@ -253,10 +253,9 @@ export const useFundStore = defineStore({
       );
     },
     shouldUserDelegate(): boolean {
-      const nullAddress = "0x0000000000000000000000000000000000000000";
       // User should delegate if he has no delegate address set.
       return (
-        this.fundUserData.fundDelegateAddress === nullAddress ||
+        this.fundUserData.fundDelegateAddress === ethers.ZeroAddress ||
         !this.fundUserData.fundDelegateAddress
       );
     },

@@ -47,6 +47,7 @@
 <script setup lang="ts">
 import type { AbiFunctionFragment } from "web3";
 import { useRouter } from "vue-router";
+import { ethers } from "ethers";
 import {
   DirectExecutionFieldsMap,
   ExecutionStep,
@@ -162,8 +163,8 @@ const submitProposal = async () => {
       parseInt(trx.gasToSendWithTransaction),// safeTxGas
       0,// baseGas
       0,// gasPrice
-      "0x0000000000000000000000000000000000000000",// gasToken
-      "0x0000000000000000000000000000000000000000",// refundReceiver
+      ethers.ZeroAddress,// gasToken
+      ethers.ZeroAddress,// refundReceiver
       signature,
     ];
     const filteredFinalTxData = web3Store.web3.eth.abi.encodeFunctionCall(execTransactionABI, formatSafeTxInput);

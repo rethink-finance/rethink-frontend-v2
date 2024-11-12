@@ -328,7 +328,8 @@
                 {{
                   formatTokenValue(
                     fund.fundContractBaseTokenBalance,
-                    fund.baseToken.decimals
+                    fund.baseToken.decimals,
+                    false
                   )
                 }}
                 {{ fund.baseToken.symbol }}
