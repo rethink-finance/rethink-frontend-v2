@@ -182,10 +182,10 @@ const redemptionDisabledTooltipText = computed(() => {
   const fundContractBaseTokenBalanceFN = FixedNumber.fromString(
     ethers.formatUnits(fundContractBaseTokenBalance, fundStore.fund?.baseToken.decimals),
   );
-  console.log("NSS lastNAVExchangeRate", lastNAVExchangeRate.toString())
-  console.log("NSS redemptionRequestAmountFN", redemptionRequestAmountFN.toString());
-  console.log("NSS redemptionRequestAmountInBaseFN", redemptionRequestAmountInBaseFN.toString());
-  console.log("NSS fundContractBaseTokenBalanceFN", fundContractBaseTokenBalanceFN.toString())
+  // console.log("NSS lastNAVExchangeRate", lastNAVExchangeRate.toString())
+  // console.log("NSS redemptionRequestAmountFN", redemptionRequestAmountFN.toString());
+  // console.log("NSS redemptionRequestAmountInBaseFN", redemptionRequestAmountInBaseFN.toString());
+  // console.log("NSS fundContractBaseTokenBalanceFN", fundContractBaseTokenBalanceFN.toString())
   if (fundContractBaseTokenBalanceFN.lt(redemptionRequestAmountInBaseFN)) {
     // Check if there is enough base token liquidity to perform withdrawal.
     return "Not enough liquidity in the fund contract."
@@ -301,7 +301,7 @@ const deposit = async () => {
     // Just deposit.
     encodedFunctionCall = encodeFundFlowsCallFunctionData("deposit");
   }
-  console.log("SEND IT BABY")
+
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,

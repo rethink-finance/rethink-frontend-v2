@@ -26,7 +26,14 @@
         </div>
 
         <div class="di-card__content">
-          <div v-if="!delegateToSomeoneElse || delegateToSomeoneElse && fundStore?.shouldUserDelegate" class="di-card" v-html="parsedDelegateMessage" />
+          <div
+            v-if="
+              !delegateToSomeoneElse ||
+              (delegateToSomeoneElse && fundStore?.shouldUserDelegate)
+            "
+            class="di-card"
+            v-html="parsedDelegateMessage"
+          />
 
           <div v-if="!delegateToSomeoneElse" class="di-card__button-container">
             <v-btn
@@ -49,6 +56,7 @@
             </v-btn>
 
             <v-btn
+              v-if="!fundStore?.shouldUserDelegate"
               :disabled="loadingDelegates"
               class="di-card__submit-button"
               variant="outlined"
