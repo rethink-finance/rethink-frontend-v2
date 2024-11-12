@@ -172,6 +172,7 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
+import { ethers } from "ethers";
 import SectionWhitelist from "./SectionWhitelist.vue";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account/account.store";
@@ -480,14 +481,12 @@ const formatProposalData = (proposal: IProposal) => {
     .flat();
 
   console.log("toggledOffFields: ", toggledOffFields);
-  const nullAddress = "0x0000000000000000000000000000000000000000";
-
   // 1. if whitelist is toggled on, get the whitelist addresses and filter out the deleted ones
   // 2. if whitelist is toggled off, set the whitelist to an empty array (this will toggle off currently whitelisted addresses in the backend)
   //    because we are sending two calldatas to the backend(the first one is the old proposal and the second one is the new proposal)
   //    old proposal will toggle off currently whitelisted addresses, and the new proposal will be an empty array which means that there will be no whitelisted addresses
   let whitelistValue = [] as string[];
-  if (isWhitelistToggled.value === true) {
+  if (isWhitelistToggled.value) {
     whitelistValue = whitelist.value
       .filter((item) => !item.deleted)
       .map((item) => item.address);
@@ -523,16 +522,16 @@ const formatProposalData = (proposal: IProposal) => {
     fundSymbol: proposal.tokenSymbol,
     feeCollectors: [
       toggledOffFields.includes("depositFeeRecipientAddress")
-        ? nullAddress
+        ? ethers.ZeroAddress
         : proposal.depositFeeRecipientAddress,
       toggledOffFields.includes("redemptionFeeRecipientAddress")
-        ? nullAddress
+        ? ethers.ZeroAddress
         : proposal.redemptionFeeRecipientAddress,
       toggledOffFields.includes("managementFeeRecipientAddress")
-        ? nullAddress
+        ? ethers.ZeroAddress
         : proposal.managementFeeRecipientAddress,
       toggledOffFields.includes("profitManagemnetFeeRecipientAddress")
-        ? nullAddress
+        ? ethers.ZeroAddress
         : proposal.profitManagemnetFeeRecipientAddress,
     ],
   };

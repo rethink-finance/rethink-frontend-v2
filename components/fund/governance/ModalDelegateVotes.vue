@@ -96,6 +96,7 @@
 
 <script setup lang="ts">
 // components
+import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -153,15 +154,13 @@ const delegate = async (isMyself = false) => {
   try {
     loadingDelegates.value = true;
 
-    const nullAddr = "0x0000000000000000000000000000000000000000";
-
     const delegateTo = isMyself
       ? fundStore.activeAccountAddress
       : delegateAddress.value;
     const governanceTokenAddress = fundStore.fund?.governanceToken.address;
     const fundAddress = fundStore.fund?.address;
 
-    if(fundAddress === nullAddr) {
+    if (fundAddress === ethers.ZeroAddress) {
       toastStore.errorToast(
         "The fund address is not available. Please contact the Rethink Finance support.",
       );
@@ -172,7 +171,7 @@ const delegate = async (isMyself = false) => {
 
     if (
       governanceTokenAddress !== fundAddress &&
-      governanceTokenAddress !== nullAddr
+      governanceTokenAddress !== ethers.ZeroAddress
     ) {
       // external gov token
       contract = fundStore.fundGovernanceTokenContract;

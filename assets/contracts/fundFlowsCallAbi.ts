@@ -25,17 +25,22 @@ export const encodeFundFlowsCallFunctionData = (functionName: string, data?: any
 }
 
 export const createDelegateBySigMessage = (
-  compAddress?: string,
-  delegatee?: string,
-  expiry: number = 10e9,
-  chainId: number = 1,
-  nonce: number = 0,
+  delegatee: string,
+  expiry: number | bigint = 10e9,
+  nonce: number | bigint = 0,
+  name: string,
+  verifyingContract: string,
+  chainId: number | bigint = 1,
+  version: string = "1",
 ): Eip712TypedData => {
   // Create data to be signed as the EIP-712 message
   // https://medium.com/compound-finance/delegation-and-voting-with-eip-712-signatures-a636c9dfec5e
+  // A procedure for hashing and signing of typed structured data as opposed to just bytestrings.
+  // https://eips.ethereum.org/EIPS/eip-712
   const types = {
     EIP712Domain: [
       { name: "name", type: "string" },
+      { name: "version", type: "string" },
       { name: "chainId", type: "uint256" },
       { name: "verifyingContract", type: "address" },
     ],
@@ -47,7 +52,12 @@ export const createDelegateBySigMessage = (
   };
 
   const primaryType = "Delegation";
-  const domain = { name: "VotesUpgradeable", chainId, verifyingContract: compAddress };
+  const domain = {
+    name,
+    chainId: Number(chainId),
+    version,
+    verifyingContract,
+  };
   const message = { delegatee, nonce: Number(nonce), expiry: Number(expiry) };
   return { types, primaryType, domain, message } as Eip712TypedData;
 };

@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ethers, FixedNumber } from "ethers";
+import { ethers, FixedNumber, TypedDataEncoder } from "ethers";
 import { computed, ref } from "vue";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -197,16 +197,42 @@ const redemptionDisabledTooltipText = computed(() => {
 });
 
 const signDepositAndDelegateBySigTransaction = async () => {
+  const activeAccountAddress = fundStore.activeAccountAddress ?? "";
+  if (!activeAccountAddress) {
+    toastStore.errorToast("No active account, try re-authenticating.");
+    return;
+  }
+  // Get contract domain data (name, verifyingContract, chainId, version) that
+  // will be used to create the EIP-712 message.
+  const [domainDataResult, nonceResult] =
+    await Promise.allSettled(
+      [
+        () => fundStore.fundGovernanceTokenContract.methods.eip712Domain().call(),
+        () => fundStore.fundGovernanceTokenContract.methods.nonces(activeAccountAddress).call(),
+      ].map((fn) => accountStore.requestConcurrencyLimit(() =>
+        fundStore.callWithRetry(fn),
+      )),
+    );
+  const domainData =
+    domainDataResult.status === "fulfilled"
+      ? domainDataResult.value
+      : undefined;
+  const nonce =
+    nonceResult.status === "fulfilled"
+      ? nonceResult.value
+      : undefined;
+  console.log("depositAndDelegateBySig domain data ", domainData);
+
   const expiry = Math.floor(Date.now() / 1000) + 3600; // expiry 1 hour from now;
-  const nonce = await fundStore.fundGovernanceTokenContract.methods.nonces(fundStore.activeAccountAddress).call();
-  console.log("nonce ", nonce);
   // Create the EIP-712 message
   const { types, domain, message, primaryType } = createDelegateBySigMessage(
-    fundStore.fund?.governanceToken.address,
-    fundStore.activeAccountAddress,
+    activeAccountAddress,
     expiry,
-    parseInt(web3Store.chainId, 16),
     nonce,
+    domainData.name,
+    domainData.verifyingContract,
+    domainData.chainId,
+    domainData.version,
   )
 
   let signature;
@@ -219,15 +245,8 @@ const signDepositAndDelegateBySigTransaction = async () => {
       message,
     };
     console.warn("createDelegateBySigMessage", JSON.stringify(dataToSign, null, 2))
-
-    // Sign the EIP-712 message
-    console.log("dataToSign", dataToSign);
-    const hexSignature = await web3Store?.web3?.eth.signTypedData(fundStore.activeAccountAddress ?? "", dataToSign);
-    console.log("hexSignature:", hexSignature);
+    const hexSignature = await web3Store?.web3?.eth.signTypedData(activeAccountAddress ?? "", dataToSign);
     signature = ethers.Signature.from(hexSignature);
-    console.log("v:", signature.v);
-    console.log("r:", signature.r);
-    console.log("s:", signature.s);
   } catch (error) {
     console.error("Error signing message:", error);
     return
@@ -237,7 +256,7 @@ const signDepositAndDelegateBySigTransaction = async () => {
   return encodeFundFlowsCallFunctionData(
     "depositAndDelegateBySig",
     [
-      fundStore.activeAccountAddress, // delegatee, delegate to self first
+      activeAccountAddress, // delegatee, delegate to self first
       nonce, // nonce
       expiry, // expiry
       signature.v, // v
@@ -246,6 +265,7 @@ const signDepositAndDelegateBySigTransaction = async () => {
     ],
   );
 }
+
 const deposit = async () => {
   if (!fundStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to deposit tokens to the fund.")
@@ -259,15 +279,11 @@ const deposit = async () => {
     toastStore.errorToast("Deposit request data is missing.")
     return;
   }
-  console.log("DEPOSIT");
+  console.log("DEPOSIT tokensWei: ", userDepositRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
   loadingDeposit.value = true;
-  console.log("Deposit tokensWei: ", userDepositRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
-
   let encodedFunctionCall;
 
-  const nullAddress = "0x0000000000000000000000000000000000000000";
-  console.log("fundUserData.fundDelegateAddress", fundStore.fundUserData?.fundDelegateAddress, nullAddress, fundStore.fundUserData?.fundDelegateAddress===nullAddress)
-  if (fundStore.fundUserData?.fundDelegateAddress === nullAddress) {
+  if (fundStore.fundUserData?.fundDelegateAddress === ethers.ZeroAddress) {
     // If the user has not delegated to anyone, delegate to himself after deposit.
     // Use a combination of deposit + delegate to himself in one transaction.
     // Metamask will popup twice, first to sign the delegate trx then to submit the depositAndDelegateBySig trx.
@@ -277,9 +293,11 @@ const deposit = async () => {
       console.warn("signed delegateBySigData", delegateBySigData)
     } catch (error: any) {
       console.error("failed signing delegate by sig data", error)
+
+      // Only use the deposit call as a fallback, and delegate to self later.
+      encodedFunctionCall = encodeFundFlowsCallFunctionData("deposit");
     }
   } else {
-    console.log("just deposit ok")
     // Just deposit.
     encodedFunctionCall = encodeFundFlowsCallFunctionData("deposit");
   }
