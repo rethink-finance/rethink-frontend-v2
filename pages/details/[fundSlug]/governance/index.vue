@@ -446,9 +446,10 @@ const parseNewChunkDelegateEvents = async (
 
 async function getVotingPowerAndImpact(delegatedAddress: string) {
   try {
-    const votingPower = await fundStore.fundGovernanceTokenContract.methods
-      .getVotes(delegatedAddress)
-      .call();
+    let votingPower = 0n;
+    votingPower = await web3Store.callWithRetry(() =>
+      fundStore.fundGovernanceTokenContract.methods.getVotes(delegatedAddress).call()
+    );
 
     const totalFundSupply = Number(fundStore?.fund?.fundTokenTotalSupply || 0);
     // delegatedMemberVotingPower * 100 / totalFundSupply
