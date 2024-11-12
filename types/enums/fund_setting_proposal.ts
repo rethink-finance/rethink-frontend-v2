@@ -248,7 +248,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       isToggleOn: true,
       fields: [
         {
-          label: "Profit Management Fee (%)",
+          label: "Performance Fee (%)",
           key: "profitManagemnetFee",
           type: InputType.Number,
           placeholder: "E.g. 0",
@@ -265,7 +265,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           isEditable: true,
         },
         {
-          label: "Profit Management Fee Period (Days)",
+          label: "Performance Fee Period (Days)",
           key: "profitManagementFeePeriod",
           type: InputType.Number,
           placeholder: "E.g. 0",

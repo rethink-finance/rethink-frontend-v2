@@ -1,5 +1,5 @@
-import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
+import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -35,6 +35,9 @@ export default defineNuxtConfig({
     public: {
       WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
       BASE_DOMAIN: process.env.BASE_DOMAIN,
+      GRAPH_BASE_URL: process.env.GRAPH_BASE_URL,
+      GRAPH_USERID: process.env.GRAPH_USERID,
+      GRAPH_VERSION: process.env.GRAPH_VERSION,
     },
   },
   routeRules: {
@@ -101,6 +104,7 @@ export default defineNuxtConfig({
     "plugins/apexcharts.client.ts",
     "plugins/numeral.ts",
     "plugins/web3-onboard.ts",
+    "plugins/apollo.ts",
   ],
   nitro: {
     prerender: {

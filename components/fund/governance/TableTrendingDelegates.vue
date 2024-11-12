@@ -11,7 +11,7 @@
   <template #[`item.delegatedMember`]="{ item }">
       <div class="data-cell__title">
         <div class="data-cell__text">
-          {{ truncateAddress(item.delegatedMember) }}
+          {{ parsedDelegatingToAddress(item.delegatedMember) }}
         </div>
         <ui-tooltip-click location="right">
           <Icon
@@ -65,6 +65,10 @@ export default defineComponent({
       type: Array as () => ITrendingDelegate[],
       default: () => [],
     },
+    activeAccountAddress: {
+      type: String,
+      default: "",
+    },
     loading: {
       type: Boolean,
       default: false,
@@ -107,6 +111,14 @@ export default defineComponent({
     },
     handleRowClick(item: ITrendingDelegate) {
       this.$emit("row-click", item);
+    },
+    parsedDelegatingToAddress(delegatedMember: string) {
+      // check if the user delegated to himself
+      if (delegatedMember?.toLowerCase() === this.activeAccountAddress?.toLowerCase()) {
+        return "Myself";
+      }
+
+      return truncateAddress(delegatedMember);
     },
   },
 });

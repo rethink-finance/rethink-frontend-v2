@@ -3,15 +3,15 @@ import { useFundsStore } from "../funds.store";
 
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
-import { PositionType, PositionTypesMap } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
-import type IPositionTypeCount from "~/types/position_type";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 
+// Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
+const excludeNAVDetails: boolean = true;
+
 export async function fetchFundsNAVDataAction(
   fundsInfoArrays: any[],
-  excludeNAVDetails: boolean,
 ): Promise<any> {
   const fundsStore = await useFundsStore();
   const fundAddresses: string[] = fundsInfoArrays[0];
@@ -34,7 +34,6 @@ export async function fetchFundsNAVDataAction(
       fundIndex,
       fundsStore,
       fundsInfoArrays,
-      excludeNAVDetails,
       allMethods,
     );
   }
@@ -58,7 +57,6 @@ async function processFundNavData(
   fundIndex: number,
   fundsStore: any,
   fundsInfoArrays: any[],
-  excludeNAVDetails: boolean,
   allMethods: INAVMethod[],
 ) {
   const fund = fundsStore.funds[fundIndex];
@@ -80,10 +78,10 @@ async function processFundNavData(
 
   fundsStore.fundNAVUpdates[fundAddress] = navUpdates;
   const lastNavUpdate = navUpdates[navUpdates.length - 1];
-  fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(lastNavUpdate?.entries);
-  console.warn("NAV data positionTypeCounts", fund.positionTypeCounts);
 
   if (fund) {
+    fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(lastNavUpdate?.entries);
+
     fund.lastNAVUpdateTotalNAV = navUpdates.length
       ? lastNavUpdate.totalNAV || 0n
       : fund.totalDepositBalance || 0n;

@@ -43,7 +43,7 @@ export const fetchUserFundTransactionRequestAction = async (
     );
     console.warn("[FETCH REQUEST] TS", fundTransactionType, ts);
     let timestamp: string | number = ethers.stripZerosLeft(ts);
-    timestamp = timestamp === "0x" ? 0 : Number(timestamp);
+    timestamp = timestamp === "0x" ? 0 : Number(timestamp) * 1000;
 
     return {
       amount: amountWei,

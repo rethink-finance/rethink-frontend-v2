@@ -7,29 +7,16 @@ import type INAVUpdate from "~/types/nav_update";
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ClockMode } from "~/types/enums/clock_mode";
 import type IToken from "~/types/token";
+import { ERC20 } from "assets/contracts/ERC20";
 
 export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFund> => {
   const fundStore = useFundStore();
   const rethinkReaderContract = fundStore.rethinkReaderContract;
 
   try {
-    const results = await Promise.allSettled(
-      [
-        () => rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
-      ].map((fn: () => Promise<any>) =>
-        fundStore.accountStore.requestConcurrencyLimit(() =>
-          fundStore.callWithRetry(fn),
-        ),
-      ),
+    const fundNavMetaData = await fundStore.callWithRetry(
+      () => rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
     );
-
-    const [fundNavMetaData]: any[] = results.map((result, index) => {
-      if (result.status === "fulfilled") {
-        return result.value;
-      }
-      console.error("Failed fetching fund data value for: ", index, result);
-      return undefined;
-    });
 
     const {
       startTime,
@@ -72,7 +59,17 @@ export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFun
     const parsedClockMode = fundStore.parseClockMode(clockMode);
     console.log("parsedClockMode: ", parsedClockMode);
     console.log("parsedFundSettings: ", parsedFundSettings);
-    const quorumVotes: bigint = ((((fundGovernanceTokenSupply as bigint) *
+    console.log("fundGovernanceTokenSupply: ", fundGovernanceTokenSupply);
+
+    // TODO fundGovernanceTokenSupply is wrong from reader contract, until it is fixed and redeployed there
+    //   manually fetch governance token total supply here. Then remove this line.
+    const fundGovernanceTokenContract = new fundStore.web3.eth.Contract(ERC20, parsedFundSettings.governanceToken);
+    const fundGovernanceTokenSupplyFixed = await fundGovernanceTokenContract.methods
+      .totalSupply()
+      .call();
+    console.log("fundGovernanceTokenSupplyFixed: ", fundGovernanceTokenSupplyFixed);
+
+    const quorumVotes: bigint = ((((fundGovernanceTokenSupplyFixed as bigint) *
       quorumNumerator) as bigint) / quorumDenominator) as bigint;
     const votingUnit =
       parsedClockMode.mode === ClockMode.BlockNumber ? "block" : "second";
@@ -109,7 +106,7 @@ export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFun
         decimals: Number(fundGovernanceTokenDecimals) ?? 18,
       } as IToken,
       totalDepositBalance: totalDepositBal || BigInt("0"),
-      governanceTokenTotalSupply: fundGovernanceTokenSupply,
+      governanceTokenTotalSupply: fundGovernanceTokenSupplyFixed,
       fundTokenTotalSupply: fundTokenSupply,
 
       // My Fund Positions

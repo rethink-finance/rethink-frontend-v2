@@ -172,6 +172,7 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
+import SectionWhitelist from "./SectionWhitelist.vue";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
@@ -188,7 +189,6 @@ import {
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import SectionWhitelist from "./SectionWhitelist.vue";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
@@ -404,50 +404,48 @@ const submit = async () => {
           description: proposal.value.proposalDescription,
         }),
       ];
-    // const [gasPrice] = await web3Store.estimateGas(
-    //   {
-    //     from: fundStore.activeAccountAddress,
-    //     to: fundStore.fundGovernorContract.options.address,
-    //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
-    //   },
-    // );
-      await web3Store.callWithRetry(() =>
-        fundStore.fundGovernorContract.methods
-          .propose(...proposalData)
-          .send({
-            from: fundStore.activeAccountAddress,
-            // maxPriorityFeePerGas: gasPrice,
-            gasPrice: "",
-          })
-          .on("transactionHash", (hash: string) => {
-            console.log("tx hash: " + hash);
-            toastStore.addToast(
-              "The proposal transaction has been submitted. Please wait for it to be confirmed.",
-            );
-          })
-          .on("receipt", (receipt: any) => {
-            console.log("receipt: ", receipt);
-            if (receipt.status) {
-              toastStore.successToast(
-                "Register the proposal transactions was successful. " +
+      // const [gasPrice] = await web3Store.estimateGas(
+      //   {
+      //     from: fundStore.activeAccountAddress,
+      //     to: fundStore.fundGovernorContract.options.address,
+      //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
+      //   },
+      // );
+      await fundStore.fundGovernorContract.methods
+        .propose(...proposalData)
+        .send({
+          from: fundStore.activeAccountAddress,
+          // maxPriorityFeePerGas: gasPrice,
+          gasPrice: "",
+        })
+        .on("transactionHash", (hash: string) => {
+          console.log("tx hash: " + hash);
+          toastStore.addToast(
+            "The proposal transaction has been submitted. Please wait for it to be confirmed.",
+          );
+        })
+        .on("receipt", (receipt: any) => {
+          console.log("receipt: ", receipt);
+          if (receipt.status) {
+            toastStore.successToast(
+              "Register the proposal transactions was successful. " +
                   "You can now vote on the proposal in the governance page.",
-              );              
-              router.push(`/details/${selectedFundSlug.value}/governance`);
-            } else {
-              toastStore.errorToast(
-                "The register proposal transaction has failed. Please contact the Rethink Finance support.",
-              );
-            }
-            loading.value = false;
-          })
-          .on("error", (error: any) => {
-            console.error(error);
-            loading.value = false;
-            toastStore.errorToast(
-              "There has been an error. Please contact the Rethink Finance support.",
             );
-          }),
-      )
+            router.push(`/details/${selectedFundSlug.value}/governance`);
+          } else {
+            toastStore.errorToast(
+              "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+            );
+          }
+          loading.value = false;
+        })
+        .on("error", (error: any) => {
+          console.error(error);
+          loading.value = false;
+          toastStore.errorToast(
+            "There has been an error. Please contact the Rethink Finance support.",
+          );
+        })
     } catch (error: any) {
       loading.value = false;
       toastStore.errorToast(error.message);

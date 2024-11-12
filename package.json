@@ -44,6 +44,7 @@
     "vuetify": "^3.4.10"
   },
   "dependencies": {
+    "@apollo/client": "^3.11.8",
     "@mdi/font": "^7.3.67",
     "@nuxt/typescript-runtime": "^3.0.2",
     "@safe-global/safe-apps-provider": "^0.18.3",
@@ -60,6 +61,7 @@
     "apexcharts": "^3.47.0",
     "esbuild": "^0.20.2",
     "ethers": "^6.10.0",
+    "graphql": "^16.9.0",
     "h3": "^1.10.0",
     "nitropack": "^2.8.1",
     "numeral": "^2.0.6",

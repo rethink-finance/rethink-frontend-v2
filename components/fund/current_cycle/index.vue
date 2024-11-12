@@ -174,12 +174,19 @@ const redemptionDisabledTooltipText = computed(() => {
   const fundContractBaseTokenBalance = fundStore.fund?.fundContractBaseTokenBalance || 0n;
   // Get the last NAV update exchange rate.
   const lastNAVExchangeRate = FixedNumber.fromString(fundStore.fundToBaseTokenExchangeRate.toString());
-  const redemptionRequestAmountFN = FixedNumber.fromValue(redemptionRequestAmount);
-  const fundContractBaseTokenBalanceFN = FixedNumber.fromString(
-    ethers.formatUnits(fundContractBaseTokenBalance, fundStore.fund?.fundToken.decimals),
+  const redemptionRequestAmountFN = FixedNumber.fromString(
+    ethers.formatUnits(redemptionRequestAmount, fundStore.fund?.fundToken.decimals),
   );
-  const redemptionRequestAmountInBaseFN = redemptionRequestAmountFN.mul(lastNAVExchangeRate);
+  const redemptionRequestAmountInBaseFN = lastNAVExchangeRate.mul(redemptionRequestAmountFN);
+  const fundContractBaseTokenBalanceFN = FixedNumber.fromString(
+    ethers.formatUnits(fundContractBaseTokenBalance, fundStore.fund?.baseToken.decimals),
+  );
+  // console.log("NSS lastNAVExchangeRate", lastNAVExchangeRate.toString())
+  // console.log("NSS redemptionRequestAmountFN", redemptionRequestAmountFN.toString());
+  // console.log("NSS redemptionRequestAmountInBaseFN", redemptionRequestAmountInBaseFN.toString());
+  // console.log("NSS fundContractBaseTokenBalanceFN", fundContractBaseTokenBalanceFN.toString())
   if (fundContractBaseTokenBalanceFN.lt(redemptionRequestAmountInBaseFN)) {
+    // Check if there is enough base token liquidity to perform withdrawal.
     return "Not enough liquidity in the fund contract."
   }
   if (!fundStore.isUserWalletWhitelisted) {
@@ -211,38 +218,36 @@ const deposit = async () => {
   // const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
-    await web3Store.callWithRetry(() =>
-      fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-        from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
-        gasPrice: "",
-      }).on("transactionHash", (hash: string) => {
-        console.log("tx hash: " + hash);
-        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-      }).on("receipt", (receipt: any) => {
-        console.log("receipt: ", receipt);
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+      from: fundStore.activeAccountAddress,
+      // maxPriorityFeePerGas: gasPrice,
+      gasPrice: "",
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
 
-        // Refresh user balances & allowance & refresh pending requests.
-        fundStore.fetchUserFundData(fundStore.selectedFundAddress);
+      // Refresh user balances & allowance & refresh pending requests.
+      fundStore.fetchUserFundData(fundStore.selectedFundAddress);
 
-        if (receipt.status) {
-          toastStore.successToast("Your deposit was successful.");
+      if (receipt.status) {
+        toastStore.successToast("Your deposit was successful.");
 
-          // emit event to open the delegate votes modal
-          emit("deposit-success");
-        } else {
-          toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-        }
+        // emit event to open the delegate votes modal
+        emit("deposit-success");
+      } else {
+        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
+      }
 
-        loadingDeposit.value = false;
-      }).on("error", (error: any) => {
-        loadingDeposit.value = false;
-        console.error(error);
-        toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support.",
-        );
-      }),
-    )
+      loadingDeposit.value = false;
+    }).on("error", (error: any) => {
+      loadingDeposit.value = false;
+      console.error(error);
+      toastStore.errorToast(
+        "There has been an error. Please contact the Rethink Finance support.",
+      );
+    })
   } catch (error: any) {
     loadingDeposit.value = false;
     handleError(error);
@@ -273,33 +278,31 @@ const redeem = async () => {
   // const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
 
   try {
-    await web3Store.callWithRetry(() =>
-      fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-        from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
-        gasPrice: "",
-      }).on("transactionHash", (hash: string) => {
-        console.log("tx hash: " + hash);
-        toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-      }).on("receipt", (receipt: any) => {
-        console.log("receipt: ", receipt);
+    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
+      from: fundStore.activeAccountAddress,
+      // maxPriorityFeePerGas: gasPrice,
+      gasPrice: "",
+    }).on("transactionHash", (hash: string) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
 
-        // Refresh user balances & allowance.
-        fundStore.fetchUserFundData(fundStore.selectedFundAddress);
+      // Refresh user balances & allowance.
+      fundStore.fetchUserFundData(fundStore.selectedFundAddress);
 
-        if (receipt.status) {
-          toastStore.successToast(
-            "Your redemption was successful. It may take 10 seconds or more for values to update.",
-          );
-        } else {
-          toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-        }
+      if (receipt.status) {
+        toastStore.successToast(
+          "Your redemption was successful. It may take 10 seconds or more for values to update.",
+        );
+      } else {
+        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
+      }
 
-        loadingRedemption.value = false;
-      }).on("error", (error: any) => {
-        handleError(error);
-      }),
-    )
+      loadingRedemption.value = false;
+    }).on("error", (error: any) => {
+      handleError(error);
+    })
   } catch (error: any) {
     handleError(error);
   }
