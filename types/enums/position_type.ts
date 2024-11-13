@@ -1,3 +1,4 @@
+import { ethers } from "ethers";
 import { ValuationType } from "~/types/enums/valuation_type";
 import type { IPositionType } from "~/types/position_type";
 
@@ -397,7 +398,7 @@ export const PositionTypeValuationTypeDefaultFieldsMap: PositionTypeValuationTyp
     [ValuationType.DEXPair]: [
       {
         key: "aggregatorAddress",
-        value: "0x0000000000000000000000000000000000000000",
+        value: ethers.ZeroAddress,
       },
       {
         key: "functionSignatureWithEncodedInputs",
@@ -423,7 +424,7 @@ export const PositionTypeValuationTypeDefaultFieldsMap: PositionTypeValuationTyp
     [ValuationType.Aggregator]: [
       {
         key: "aggregatorAddress",
-        value: "0x0000000000000000000000000000000000000000",
+        value: ethers.ZeroAddress,
       },
       {
         key: "functionSignatureWithEncodedInputs",

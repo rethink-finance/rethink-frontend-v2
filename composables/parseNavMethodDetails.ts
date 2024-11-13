@@ -9,11 +9,11 @@ import { cleanComplexWeb3Data, formatJson } from "~/composables/utils";
  **/
 export const prepNAVMethodLiquid = (details: Record<string, any>): any[] => {
   return details.liquid.map((method: Record<string, any>) => [
-    method.tokenPair || "0x0000000000000000000000000000000000000000",
+    method.tokenPair || ethers.ZeroAddress,
     method.aggregatorAddress || "",
     method.functionSignatureWithEncodedInputs || "0x",
     method.assetTokenAddress || "",
-    method.nonAssetTokenAddress || "0x0000000000000000000000000000000000000000",
+    method.nonAssetTokenAddress || ethers.ZeroAddress,
     method.isReturnArray || false,
     parseInt(method.returnLength) || 0,
     parseInt(method.returnIndex) || 0,

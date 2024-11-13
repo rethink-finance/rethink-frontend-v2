@@ -17,7 +17,7 @@
             Add From Library
           </v-btn>
         </nuxt-link>
-       <v-btn
+        <v-btn
           class="text-secondary me-4"
           variant="outlined"
           @click="addRawDialog = true"
@@ -63,8 +63,8 @@
       title="Add Raw Methods"
       max-width="80%"
       confirm-text="Load"
-      @confirm="addRawMethods"
       message="Please enter the raw methods JSON below"
+      @confirm="addRawMethods"
     >
       <v-textarea
         v-model="rawMethods"
@@ -73,7 +73,7 @@
         placeholder="Enter the raw methods here"
         rows="20"
         class="raw-method-textarea"
-      ></v-textarea>
+      />
     </UiConfirmDialog>
   </div>
 </template>
@@ -112,7 +112,6 @@ const addRawMethods = () => {
       return value;
     });
     const lastIndex = fundManagedNAVMethods.value.length - 1;
-    const nullAddress = "0x0000000000000000000000000000000000000000";
 
     parsedMethod?.map((method: any, index: number) => {
       const newIndex = lastIndex + index + 1;
@@ -134,17 +133,17 @@ const addRawMethods = () => {
       const newEntry = {
         index: newIndex,
         isNew: true,
-        details: details,
+        details,
         detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
-        detailsJson: detailsJson,
+        detailsJson,
         foundMatchingPastNAVUpdateEntryFundAddress: method?.foundMatchingPastNAVUpdateEntryFundAddress || false,
         isSimulatedNavError: method?.isSimulatedNavError || false,
-        pastNAVUpdateEntryFundAddress: method?.pastNAVUpdateEntryFundAddress || nullAddress,
+        pastNAVUpdateEntryFundAddress: method?.pastNAVUpdateEntryFundAddress || ethers.ZeroAddress,
         positionName: method?.description?.positionName || "",
         positionType: NAVEntryTypeStringToPositionTypeMap[method?.entryType] || "",
         simulatedNav: method?.simulatedNav || 0n,
         simulatedNavFormatted: method?.simulatedNavFormatted || "0 USDC",
-        valuationSource: method?.description?.valuationSource || "",  
+        valuationSource: method?.description?.valuationSource || "",
       } as INAVMethod;
 
       // add the new entry to the fundManagedNAVMethods
@@ -160,7 +159,7 @@ const addRawMethods = () => {
     toastStore.errorToast("Failed to add raw method. Invalid JSON format.");
   }
 };
-  
+
 const isLoadingFetchFundNAVUpdatesAction = computed(() => {
   return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
 });

@@ -28,7 +28,7 @@
     </template>
 
     <template #item.lastNAVUpdateTotalNAV="{ item }">
-      <div :class="{'justify-center': item.isNavUpdatesLoading}">
+      <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
         <v-progress-circular
           v-if="item.isNavUpdatesLoading"
           size="18"
@@ -36,8 +36,16 @@
           indeterminate
         />
         <template v-else>
-          {{ formatNumberShort(formatTokenValue(item.lastNAVUpdateTotalNAV, item.baseToken.decimals, false))
-            + " " + item.baseToken.symbol
+          {{
+            formatNumberShort(
+              formatTokenValue(
+                item.lastNAVUpdateTotalNAV,
+                item.baseToken.decimals,
+                false,
+              ),
+            ) +
+            " " +
+            item.baseToken.symbol
           }}
         </template>
       </div>
@@ -45,7 +53,7 @@
 
     <!-- cumulative -->
     <template #item.cumulativeReturnPercent="{ item }">
-      <div :class="{'justify-center': item.isNavUpdatesLoading}">
+      <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
         <v-progress-circular
           v-if="item.isNavUpdatesLoading"
           size="18"
@@ -76,7 +84,11 @@
 import { Icon } from "@iconify/vue/dist/iconify.js";
 import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
 import FundNameCell from "./components/FundNameCell.vue";
-import { formatNumberShort, formatPercent, formatTokenValue } from "~/composables/formatters";
+import {
+  formatNumberShort,
+  formatPercent,
+  formatTokenValue,
+} from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
@@ -95,66 +107,62 @@ const props = defineProps({
   },
 });
 
-const headers: any = computed(() => {
-  const headers = [
-    {
-      title: "Fund Name",
-      key: "name",
-      sortable: false,
-      width: 200,
-      maxWidth: 300,
-      minWidth: 200,
-    },
-    {
-      title: "Chain",
-      key: "chainShort",
-      width: 62,
-      maxWidth: 62,
-      align: "end",
-    },
-    {
-      title: "AUM",
-      key: "lastNAVUpdateTotalNAV",
-      align: "end",
-    },
-    {
-      title: "Inception",
-      key: "inceptionDate",
-      value: (v: IFund) => v.inceptionDate,
-      align: "end",
-    },
-    {
-      title: "Cumulative",
-      key: "cumulativeReturnPercent",
-      maxWidth: 100,
-      value: (v: IFund) => formatPercent(v.cumulativeReturnPercent, true),
-      align: "end",
-    },
-    {
-      title: "Monthly",
-      key: "monthlyReturnPercent",
-      maxWidth: 100,
-      value: (v: IFund) => formatPercent(v.monthlyReturnPercent, true),
-      align: "end",
-    },
-    {
-      title: "Sharpe Ratio",
-      key: "sharpeRatio",
-      maxWidth: 100,
-      value: (v: IFund) => v.sharpeRatio || "N/A",
-      align: "end",
-    },
-    {
-      title: "Position Types",
-      key: "positionTypeCounts",
-      width: 128,
-      maxWidth: 158,
-      align: "end",
-    },
-  ];
-
-  return headers;
-});
+const headers: any = computed(() => [
+  {
+    title: "Fund Name",
+    key: "name",
+    sortable: false,
+    width: 200,
+    maxWidth: 300,
+    minWidth: 200,
+  },
+  {
+    title: "Chain",
+    key: "chainShort",
+    width: 62,
+    maxWidth: 62,
+    align: "end",
+  },
+  {
+    title: "AUM",
+    key: "lastNAVUpdateTotalNAV",
+    align: "end",
+  },
+  {
+    title: "Inception",
+    key: "inceptionDate",
+    value: (v: IFund) => v.inceptionDate,
+    align: "end",
+  },
+  {
+    title: "Cumulative",
+    key: "cumulativeReturnPercent",
+    maxWidth: 100,
+    value: (v: IFund) => formatPercent(v.cumulativeReturnPercent, true),
+    align: "end",
+  },
+  // {
+  //   title: "Monthly",
+  //   key: "monthlyReturnPercent",
+  //   maxWidth: 100,
+  //   value: (v: IFund) => formatPercent(v.monthlyReturnPercent, true),
+  //   align: "end",
+  // },
+  {
+    title: "Sharpe Ratio",
+    key: "sharpeRatio",
+    maxWidth: 100,
+    value: (v: IFund) => v.sharpeRatio || "N/A",
+    align: "end",
+  },
+  {
+    title: "Position Types",
+    key: "positionTypeCounts",
+    width: 128,
+    maxWidth: 158,
+    align: "end",
+  },
+]);
 
 const icon = (chainShort: string) => {
   const icon = getChainIcon(chainShort);
