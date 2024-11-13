@@ -37,6 +37,19 @@ export const fetchUserFundDataAction = async (
     fundShareValue,
     fundDelegateAddress,
   } = fundUserData;
+  // TODO fundDelegateAddress has a bug if the governanceToken is different than the fundToken.
+  //  if that's true, just manually fetch the delegate here instead of taking it from the reader, and remove this
+  //  quickfix when it is changed in the reader contract to take the correct one
+  if (fundStore.fund?.address !== fundStore.fund?.governanceToken.address) {
+    fundStore.fundUserData.fundDelegateAddress = await fundStore.callWithRetry(
+      () =>
+        fundStore.fundGovernanceTokenContract.methods
+          .delegates(fundStore.activeAccountAddress)
+          .call(),
+    );
+  } else {
+    fundStore.fundUserData.fundDelegateAddress = fundDelegateAddress;
+  }
 
   fundStore.fundUserData.baseTokenBalance = BigInt(baseTokenBalance);
   fundStore.fundUserData.fundTokenBalance = BigInt(fundTokenBalance);
@@ -45,5 +58,4 @@ export const fetchUserFundDataAction = async (
   );
   fundStore.fundUserData.fundAllowance = BigInt(fundAllowance);
   fundStore.fundUserData.fundShareValue = BigInt(fundShareValue);
-  fundStore.fundUserData.fundDelegateAddress = fundDelegateAddress;
 };
