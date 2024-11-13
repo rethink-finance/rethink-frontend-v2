@@ -10,10 +10,12 @@ import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMet
 // Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
 const excludeNAVDetails: boolean = true;
 
+// TODO rename to fetchAllNavMethodsAction
 export async function fetchFundsNAVDataAction(
+  chainId: string,
   fundsInfoArrays: any[],
 ): Promise<any> {
-  const fundsStore = await useFundsStore();
+  const fundsStore = useFundsStore();
   const fundAddresses: string[] = fundsInfoArrays[0];
 
   const allFundsNavData = await fundsStore.callWithRetry(() =>
@@ -29,6 +31,7 @@ export async function fetchFundsNAVDataAction(
   for (const [fundIndex, fundNavData] of allFundsNavData.entries()) {
     const fundAddress = fundAddresses[fundIndex];
     await processFundNavData(
+      chainId,
       fundNavData,
       fundAddress,
       fundIndex,
@@ -52,6 +55,7 @@ export async function fetchFundsNAVDataAction(
 }
 
 async function processFundNavData(
+  chainId: string, // the type of FundNavData
   fundNAVData: any, // the type of FundNavData
   fundAddress: string,
   fundIndex: number,
@@ -59,8 +63,9 @@ async function processFundNavData(
   fundsInfoArrays: any[],
   allMethods: INAVMethod[],
 ) {
-  const fund = fundsStore.funds[fundIndex];
-  fundsStore.fundNAVUpdates[fundAddress] = [];
+  const fund = fundsStore.chainFunds[chainId][fundIndex];
+  console.warn("wap", fundsStore.chainFundNAVUpdates);
+  fundsStore.chainFundNAVUpdates[chainId][fundAddress] = [];
 
   if (!fundNAVData.encodedNavUpdate?.length) return;
 
@@ -69,18 +74,19 @@ async function processFundNavData(
     fundAddress,
   );
 
-  const navUpdates =
-    await fundsStore.fundStore.parseFundNAVUpdates(
-      fundNAVData,
-      fundAddress,
-      fundContract,
-    );
+  const navUpdates = await fundsStore.fundStore.parseFundNAVUpdates(
+    fundNAVData,
+    fundAddress,
+    fundContract,
+  );
 
-  fundsStore.fundNAVUpdates[fundAddress] = navUpdates;
+  fundsStore.chainFundNAVUpdates[chainId][fundAddress] = navUpdates;
   const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
   if (fund) {
-    fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(lastNavUpdate?.entries);
+    fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
+      lastNavUpdate?.entries,
+    );
 
     fund.lastNAVUpdateTotalNAV = navUpdates.length
       ? lastNavUpdate.totalNAV || 0n

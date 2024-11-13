@@ -1,9 +1,7 @@
 <template>
   <div class="add_from_library">
     <UiHeader>
-      <div class="main_header__title">
-        Add From Library
-      </div>
+      <div class="main_header__title">Add From Library</div>
       <div>
         <v-btn
           class="bg-primary text-secondary"
@@ -31,7 +29,6 @@
         {{ selectedMethodHashes.length }} selected
       </div>
     </UiHeader>
-
 
     <div v-if="loadingAllNavMethods" class="mt-4">
       <v-skeleton-loader type="table-row" />
@@ -73,7 +70,6 @@ const { selectedFundSlug } = toRefs(fundStore);
 const { allNavMethods } = toRefs(fundsStore);
 const { uniqueNavMethods } = toRefs(fundsStore);
 
-
 const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "NAV Methods",
@@ -97,9 +93,11 @@ onMounted(async () => {
 
   if (!allNavMethods.value.length) {
     loadingAllNavMethods.value = true;
-    const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays()
+    const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays(
+      fundStore.fundChainId,
+    );
     // Fetch all possible NAV methods for all funds
-    await fundsStore.fetchFundsNAVData(fundsInfoArrays);
+    await fundsStore.fetchFundsNAVData(fundStore.fundChainId, fundsInfoArrays);
     loadingAllNavMethods.value = false;
   }
 });
@@ -109,11 +107,13 @@ onBeforeUnmount(() => {
 
 const onSelectionChanged = (hashes: string[]) => {
   selectedMethodHashes.value = hashes;
-}
+};
 
 const addMethods = () => {
   // // Add newly defined method to fund managed methods.
-  const methods = uniqueNavMethods.value.filter(method => selectedMethodHashes.value.includes(method.detailsHash || ""));
+  const methods = uniqueNavMethods.value.filter((method) =>
+    selectedMethodHashes.value.includes(method.detailsHash || ""),
+  );
 
   for (const method of methods) {
     method.isNew = true;
@@ -122,12 +122,12 @@ const addMethods = () => {
 
   // Redirect back to Manage methods page.
   router.push(`/details/${selectedFundSlug.value}/nav/manage`);
-  toastStore.addToast("Methods added successfully.")
-}
+  toastStore.addToast("Methods added successfully.");
+};
 </script>
 
 <style scoped lang="scss">
-.search{
+.search {
   width: 300px;
 }
 </style>

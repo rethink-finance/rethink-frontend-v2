@@ -11,10 +11,7 @@
       @fields-changed="contractMethodChanged"
     >
       <template #subtitle>
-        <UiTooltipClick
-          location="right"
-          :hide-after="6000"
-        >
+        <UiTooltipClick location="right" :hide-after="6000">
           <Icon
             icon="material-symbols:info-outline"
             class="info-icon"
@@ -30,11 +27,7 @@
                 target="_blank"
               >
                 Learn More
-                <Icon
-                  icon="maki:arrow"
-                  color="primary"
-                  width="1rem"
-                />
+                <Icon icon="maki:arrow" color="primary" width="1rem" />
               </a>
             </div>
           </template>
@@ -49,7 +42,8 @@ import { useRouter } from "vue-router";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
-  DelegatedStepMap, proposalRoleModMethodAbiMap,
+  DelegatedStepMap,
+  proposalRoleModMethodAbiMap,
   proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
 
@@ -82,7 +76,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-const defaultMethod = formatInputToObject(proposalRoleModMethodStepsMap.scopeFunction);
+const defaultMethod = formatInputToObject(
+  proposalRoleModMethodStepsMap.scopeFunction,
+);
 
 const delegatedEntry = ref([
   {
@@ -207,8 +203,12 @@ const contractMethodChanged = (
 };
 
 const submitProposal = async () => {
-  const transactions = delegatedEntry.value.find(step => step.stepName === DelegatedStep.Setup)?.steps as any[];
-  const details = delegatedEntry.value.find(step => step.stepName === DelegatedStep.Details)?.steps[0];
+  const transactions = delegatedEntry.value.find(
+    (step) => step.stepName === DelegatedStep.Setup,
+  )?.steps as any[];
+  const details = delegatedEntry.value.find(
+    (step) => step.stepName === DelegatedStep.Details,
+  )?.steps[0];
   if (!web3Store.web3 || !details || !transactions?.length) return;
 
   const roleModAddress = await fundStore.getRoleModAddress();
@@ -226,24 +226,26 @@ const submitProposal = async () => {
     const trx = transactions[i];
     // Make sure function parameters are in the correct order, take them from function ABI and copy from the trx data
     // that was filled from the form inputs. Then prepare data, parsing/casting to correct types.
-    const roleModFunctionData = proposalRoleModMethodStepsMap[trx.contractMethod].filter(
-      (method: any) => method.key !== "contractMethod",
-    ).map(
-      (method: any) => prepRoleModEntryInput(
-        {
+    const roleModFunctionData = proposalRoleModMethodStepsMap[
+      trx.contractMethod
+    ]
+      .filter((method: any) => method.key !== "contractMethod")
+      .map((method: any) =>
+        prepRoleModEntryInput({
           ...method,
           data: trx[method.key],
-        },
-      ),
-    )
+        }),
+      );
     const encodedRoleModFunction = web3Store.web3?.eth.abi.encodeFunctionCall(
-      proposalRoleModMethodAbiMap[trx.contractMethod], roleModFunctionData,
+      proposalRoleModMethodAbiMap[trx.contractMethod],
+      roleModFunctionData,
     );
     encodedRoleModEntries.push(encodedRoleModFunction);
     targets.push(roleModAddress);
-    gasValues.push(0)
+    gasValues.push(0);
   }
-  console.log("propose:",
+  console.log(
+    "propose:",
     JSON.stringify(
       [
         targets,
@@ -253,7 +255,10 @@ const submitProposal = async () => {
           title: details?.proposalTitle,
           description: details?.proposalDescription,
         }),
-      ], null, 2),
+      ],
+      null,
+      2,
+    ),
   );
   loading.value = true;
 
@@ -266,40 +271,42 @@ const submitProposal = async () => {
       description: details?.proposalDescription,
     }),
   ];
-  // const [gasPrice] = await web3Store.estimateGas(
-  //   {
-  //     from: fundStore.activeAccountAddress,
-  //     to: fundStore.fundGovernorContract.options.address,
-  //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
-  //   },
-  // );
+
   try {
-    await fundStore.fundGovernorContract.methods.propose(...proposalData).send({
-      from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
-      gasPrice: "",
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
-        toastStore.successToast(
-          "Register the proposal transactions was successful. " +
-            "You can now vote on the proposal in the governance page.",
+    await fundStore.fundGovernorContract.methods
+      .propose(...proposalData)
+      .send({
+        from: fundStore.activeAccountAddress,
+        gasPrice: "",
+      })
+      .on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The proposal transaction has been submitted. Please wait for it to be confirmed.",
         );
-        router.push(`/details/${selectedFundSlug.value}/governance`);
-      } else {
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          toastStore.successToast(
+            "Register the proposal transactions was successful. " +
+              "You can now vote on the proposal in the governance page.",
+          );
+          router.push(`/details/${selectedFundSlug.value}/governance`);
+        } else {
+          toastStore.errorToast(
+            "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loading.value = false;
+      })
+      .on("error", (error: any) => {
+        console.error(error);
+        loading.value = false;
         toastStore.errorToast(
-          "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+          "There has been an error. Please contact the Rethink Finance support.",
         );
-      }
-      loading.value = false;
-    }).on("error", (error: any) => {
-      console.error(error);
-      loading.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-    })
+      });
   } catch (error: any) {
     loading.value = false;
     toastStore.errorToast(error.message);
@@ -312,8 +319,8 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.tooltip{
-  &__content{
+.tooltip {
+  &__content {
     display: flex;
     gap: 40px;
   }

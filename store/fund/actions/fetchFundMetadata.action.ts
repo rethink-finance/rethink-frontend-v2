@@ -9,13 +9,15 @@ import { ClockMode } from "~/types/enums/clock_mode";
 import type IToken from "~/types/token";
 import { ERC20 } from "assets/contracts/ERC20";
 
-export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFund> => {
+export const fetchFundMetaDataAction = async (
+  fundAddress: string,
+): Promise<IFund> => {
   const fundStore = useFundStore();
   const rethinkReaderContract = fundStore.rethinkReaderContract;
 
   try {
-    const fundNavMetaData = await fundStore.callWithRetry(
-      () => rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
+    const fundNavMetaData = await fundStore.callWithRetry(() =>
+      rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
     );
 
     const {
@@ -63,11 +65,16 @@ export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFun
 
     // TODO fundGovernanceTokenSupply is wrong from reader contract, until it is fixed and redeployed there
     //   manually fetch governance token total supply here. Then remove this line.
-    const fundGovernanceTokenContract = new fundStore.web3.eth.Contract(ERC20, parsedFundSettings.governanceToken);
-    const fundGovernanceTokenSupplyFixed = await fundGovernanceTokenContract.methods
-      .totalSupply()
-      .call();
-    console.log("fundGovernanceTokenSupplyFixed: ", fundGovernanceTokenSupplyFixed);
+    const fundGovernanceTokenContract = new fundStore.web3.eth.Contract(
+      ERC20,
+      parsedFundSettings.governanceToken,
+    );
+    const fundGovernanceTokenSupplyFixed =
+      await fundGovernanceTokenContract.methods.totalSupply().call();
+    console.log(
+      "fundGovernanceTokenSupplyFixed: ",
+      fundGovernanceTokenSupplyFixed,
+    );
 
     const quorumVotes: bigint = ((((fundGovernanceTokenSupplyFixed as bigint) *
       quorumNumerator) as bigint) / quorumDenominator) as bigint;
@@ -78,6 +85,7 @@ export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFun
       // Original fund settings
       originalFundSettings: parsedFundSettings,
       lastNAVUpdateTotalNAV: undefined,
+      chainId: fundStore.web3Store.chainId,
       chainName: fundStore.web3Store.chainName,
       chainShort: fundStore.web3Store.chainShort,
       address: parsedFundSettings.fundAddress || "",

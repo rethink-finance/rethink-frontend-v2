@@ -1,18 +1,21 @@
 import { useFundStore } from "../fund.store";
 
-export const fetchSimulateCurrentNAVAction = async (): Promise<void> => {
+export const fetchSimulateCurrentNAVAction = async (
+  chainId: string,
+): Promise<void> => {
   const fundStore = useFundStore();
 
   if (!fundStore.web3Store.web3) return;
 
   if (!fundStore.fundsStore.allNavMethods?.length) {
-    const fundsInfoArrays = await fundStore.fundsStore.fetchFundsInfoArrays();
+    const fundsInfoArrays =
+      await fundStore.fundsStore.fetchFundsInfoArrays(chainId);
 
     // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
     // and make sure it is fetched before checking here with fundsStore.fetchFundsNAVData, and then we
     // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
     console.log("[CURRENT NAV] simulate fetch all nav methods");
-    await fundStore.fundsStore.fetchFundsNAVData(fundsInfoArrays);
+    await fundStore.fundsStore.fetchFundsNAVData(chainId, fundsInfoArrays);
   }
   console.log("[CURRENT NAV] START SIMULATE:");
 

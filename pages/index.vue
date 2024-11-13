@@ -1,15 +1,19 @@
 <template>
   <div class="discover">
-    <h3 class="main_title">
-      Rethink Finance | Run Funds On-Chain
-    </h3>
-    <div v-if="isErrorFetchFundsData" class="w-100 d-flex justify-center flex-column">
+    <h3 class="main_title">Rethink Finance | Run Funds On-Chain</h3>
+    <div
+      v-if="isErrorFetchFundsData"
+      class="w-100 d-flex justify-center flex-column"
+    >
       <h3>Oops, something went wrong while getting funds data</h3>
       <span>
-        Maybe the current RPC (<a :href="web3Store.currentRPC">{{ web3Store.currentRPC }}</a>) is down?
+        Maybe the current RPC (<a :href="web3Store.currentRPC">{{
+          web3Store.currentRPC
+        }}</a
+        >) is down?
       </span>
     </div>
-    <TableAllFunds v-else :loading="isLoadingFetchFundsData" :items="funds"  />
+    <TableAllFunds v-else :loading="isLoadingFetchFundsData" :items="funds" />
   </div>
 </template>
 
@@ -24,14 +28,14 @@ const fundsStore = useFundsStore();
 const actionStateStore = useActionStateStore();
 const web3Store = useWeb3Store();
 
-const isLoadingFetchFundsData = computed(() => actionStateStore.isActionState("fetchFundsAction", ActionState.Loading));
-const isErrorFetchFundsData = computed(() => actionStateStore.isActionState("fetchFundsAction", ActionState.Error));
+const isLoadingFetchFundsData = computed(() =>
+  actionStateStore.isActionState("fetchFundsAction", ActionState.Loading),
+);
+const isErrorFetchFundsData = computed(() =>
+  actionStateStore.isActionState("fetchFundsAction", ActionState.Error),
+);
 
 onMounted(async () => await fundsStore.fetchFunds());
-
-watch(() => web3Store.chainId, async () => {
-  await fundsStore.fetchFunds()
-});
 </script>
 
 <style lang="scss">

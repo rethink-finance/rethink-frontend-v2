@@ -2,9 +2,7 @@
   <div>
     <UiHeader>
       <div class="header">
-        <div class="main_header__title">
-          Create NAV Proposal
-        </div>
+        <div class="main_header__title">Create NAV Proposal</div>
         <div class="main_header__subtitle">
           Last NAV update date: <strong>{{ fundLastNAVUpdateDate }}</strong>
         </div>
@@ -16,9 +14,7 @@
           <!-- Proposal Title -->
           <v-row>
             <div class="proposal_title_field">
-              <v-label class="label_required">
-                Proposal Title
-              </v-label>
+              <v-label class="label_required"> Proposal Title </v-label>
               <div class="proposal_title_field__char_limit">
                 <ui-char-limit
                   :char-limit="150"
@@ -37,9 +33,7 @@
 
           <!-- Management -->
           <v-row>
-            <v-label class="label_required">
-              Management
-            </v-label>
+            <v-label class="label_required"> Management </v-label>
           </v-row>
           <v-row class="mb-6">
             <div class="management">
@@ -58,16 +52,15 @@
                   <div class="management__info">
                     <v-icon color="primary" icon="mdi-alert-circle-outline" />
                     <div>
-                      All previous manager permissions related to NAV will be revoked.
+                      All previous manager permissions related to NAV will be
+                      revoked.
                     </div>
                   </div>
                 </div>
               </div>
               <div class="management__card">
                 <div class="management__row">
-                  <div>
-                    Collect management fees upon NAV proposal execution
-                  </div>
+                  <div>Collect management fees upon NAV proposal execution</div>
                   <v-switch
                     v-model="proposal.collectManagementFees"
                     color="primary"
@@ -77,9 +70,7 @@
               </div>
               <div class="management__card--no-margin">
                 <div class="management__row">
-                  <div>
-                    Process withdraws after NAV update
-                  </div>
+                  <div>Process withdraws after NAV update</div>
                   <v-switch
                     v-model="proposal.processWithdraw"
                     color="primary"
@@ -105,20 +96,20 @@
             />
           </v-row>
 
-          <v-row class="proposal_description d-flex flex-grow-1 justify-space-between align-center mb-2">
-            <v-label class="label_required">
-              Proposal Methods
-            </v-label>
+          <v-row
+            class="proposal_description d-flex flex-grow-1 justify-space-between align-center mb-2"
+          >
+            <v-label class="label_required"> Proposal Methods </v-label>
           </v-row>
           <v-row class="mb-4">
             <v-expansion-panels>
               <v-expansion-panel eager>
                 <v-expansion-panel-title static>
-                  <div class="d-flex flex-grow-1 justify-space-between align-center me-4">
+                  <div
+                    class="d-flex flex-grow-1 justify-space-between align-center me-4"
+                  >
                     <div class="nav_methods_title">
-                      <div>
-                        •
-                      </div>
+                      <div>•</div>
                       <div v-if="newEntriesCount" class="text-success">
                         {{ newEntriesCount }} New
                       </div>
@@ -173,8 +164,6 @@
 </template>
 
 <script setup lang="ts">
-
-
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
 import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
@@ -208,7 +197,7 @@ const proposal = ref({
   collectManagementFees: false,
   processWithdraw: false,
   description: "",
-})
+});
 const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "NAV Methods",
@@ -239,15 +228,21 @@ onBeforeUnmount(() => {
 });
 
 const newEntriesCount = computed(() => {
-  return fundManagedNAVMethods.value.filter((method: any) => method.isNew).length ?? 0;
+  return (
+    fundManagedNAVMethods.value.filter((method: any) => method.isNew).length ??
+    0
+  );
 });
 const deletedEntriesCount = computed(() => {
-  return fundManagedNAVMethods.value.filter((method: any) => method.deleted).length ?? 0;
+  return (
+    fundManagedNAVMethods.value.filter((method: any) => method.deleted)
+      .length ?? 0
+  );
 });
 const fundLastNAVUpdateDate = computed(() => {
   if (!fundLastNAVUpdate.value) return "N/A";
   return fundLastNAVUpdate.value.date ?? "N/A";
-})
+});
 
 const updateNavABI = GovernableFund.abi.find(
   (func: any) => func.name === "updateNav" && func.type === "function",
@@ -260,10 +255,12 @@ const storeNAVDataABI = NAVExecutor.abi.find(
   (func: any) => func.name === "storeNAVData" && func.type === "function",
 );
 
-
 const getMethodsPastNAVUpdateIndex = (methods: Record<string, any>[]) => {
-  return methods.find(method => "pastNAVUpdateIndex" in method)?.pastNAVUpdateIndex ?? 0;
-}
+  return (
+    methods.find((method) => "pastNAVUpdateIndex" in method)
+      ?.pastNAVUpdateIndex ?? 0
+  );
+};
 
 /**
  * Creating a new proposal flow:
@@ -274,82 +271,81 @@ const getMethodsPastNAVUpdateIndex = (methods: Record<string, any>[]) => {
  *    generates a NAV permission.
  * 3)
  */
-const generateNAVPermission = () =>  {
+const generateNAVPermission = () => {
   // Default NAV entry permission
   const navEntryPermission: Record<string, any> = {
-    "value": [
+    value: [
       {
-        "isArray": false,
-        "data": "1",
-        "internalType": "uint16",
-        "name": "role",
+        isArray: false,
+        data: "1",
+        internalType: "uint16",
+        name: "role",
       },
       {
-        "isArray": false,
-        "data": null,
-        "internalType": "address",
-        "name": "targetAddress",
+        isArray: false,
+        data: null,
+        internalType: "address",
+        name: "targetAddress",
       },
       {
-        "isArray": false,
-        "data": null,
-        "internalType": "bytes4",
-        "name": "functionSig",
+        isArray: false,
+        data: null,
+        internalType: "bytes4",
+        name: "functionSig",
       },
       {
-        "isArray": true,
-        "data": [],
-        "internalType": "bool[]",
-        "name": "isParamScoped",
+        isArray: true,
+        data: [],
+        internalType: "bool[]",
+        name: "isParamScoped",
       },
       {
-        "isArray": true,
-        "data": [],
-        "internalType": "enum ParameterType[]",
-        "name": "paramType",
+        isArray: true,
+        data: [],
+        internalType: "enum ParameterType[]",
+        name: "paramType",
       },
       {
-        "isArray": true,
-        "data": [],
-        "internalType": "enum Comparison[]",
-        "name": "paramComp",
+        isArray: true,
+        data: [],
+        internalType: "enum Comparison[]",
+        name: "paramComp",
       },
       {
-        "isArray": true,
-        "data": [],
-        "internalType": "bytes[]",
-        "name": "compValue",
+        isArray: true,
+        data: [],
+        internalType: "bytes[]",
+        name: "compValue",
       },
       {
-        "isArray": false,
-        "data": "1",
-        "internalType": "enum ExecutionOptions",
-        "name": "options",
+        isArray: false,
+        data: "1",
+        internalType: "enum ExecutionOptions",
+        name: "options",
       },
     ],
-    "valueMethodIdx": 19,
-  }
+    valueMethodIdx: 19,
+  };
 
   const recalcNavEntryPermission: Record<string, any> = {
-    "value": [
+    value: [
       {
-        "idx": 0,
-        "isArray": false,
-        "data": "1", // TODO: ASSUMES ROLE ID OF 1, BUT COULD BE ANY OTHER ID, NEED A WAY TO POPULATE IT SMARTLY
-        "internalType": "uint16",
-        "name": "role",
+        idx: 0,
+        isArray: false,
+        data: "1", // TODO: ASSUMES ROLE ID OF 1, BUT COULD BE ANY OTHER ID, NEED A WAY TO POPULATE IT SMARTLY
+        internalType: "uint16",
+        name: "role",
       },
       {
-        "idx": 1,
-        "isArray": false,
-        "data": null,
-        "internalType": "address",
-        "name": "targetAddress",
+        idx: 1,
+        isArray: false,
+        data: null,
+        internalType: "address",
+        name: "targetAddress",
       },
     ],
-    "valueMethodIdx": 24,
-  }
-
+    valueMethodIdx: 24,
+  };
 
   // Target address is fund contract
   navEntryPermission.value[1].data = fundStore.fund?.address;
@@ -374,13 +370,17 @@ const generateNAVPermission = () =>  {
   navEntryPermission.value[6].data = navWords;
 
   return [navEntryPermission, recalcNavEntryPermission];
-}
+};
 
-const encodeRoleModEntries = async (proposalEntries: any[]): Promise<[any[], any[], any[]]> => {
+const encodeRoleModEntries = async (
+  proposalEntries: any[],
+): Promise<[any[], any[], any[]]> => {
   if (!web3Store.web3) return [[], [], []];
 
   loading.value = true;
-  const proposalRoleModMethods = ZodiacRoles.abi.filter((val) => (val.type === "function"));
+  const proposalRoleModMethods = ZodiacRoles.abi.filter(
+    (val) => val.type === "function",
+  );
   const roleModAddress = await fundStore.getRoleModAddress();
   console.log("roleModAddress: ", roleModAddress);
 
@@ -389,11 +389,15 @@ const encodeRoleModEntries = async (proposalEntries: any[]): Promise<[any[], any
   const targets = [];
   const gasValues = [];
 
-  for(let i = 0; i < proposalEntries.length; i++) {
-    const roleModFunctionABI = proposalRoleModMethods[proposalEntries[i].valueMethodIdx];
-    console.log("roleModFunctionABI: ", JSON.stringify(roleModFunctionABI, null, 2))
+  for (let i = 0; i < proposalEntries.length; i++) {
+    const roleModFunctionABI =
+      proposalRoleModMethods[proposalEntries[i].valueMethodIdx];
+    console.log(
+      "roleModFunctionABI: ",
+      JSON.stringify(roleModFunctionABI, null, 2),
+    );
     const roleModFunctionData = [];
-    for (let j = 0; j< proposalEntries[i].value.length; j++) {
+    for (let j = 0; j < proposalEntries[i].value.length; j++) {
       /*
         {
           "isArray": false,
@@ -402,20 +406,26 @@ const encodeRoleModEntries = async (proposalEntries: any[]): Promise<[any[], any
           "name": "module"
         },
       */
-      roleModFunctionData.push(prepRoleModEntryInput(proposalEntries[i].value[j]));
+      roleModFunctionData.push(
+        prepRoleModEntryInput(proposalEntries[i].value[j]),
+      );
     }
     const encodedRoleModFunction = web3Store.web3.eth.abi.encodeFunctionCall(
       roleModFunctionABI as AbiFunctionFragment,
       roleModFunctionData,
     );
-    console.log("roleModFunctionData: ", i,  JSON.stringify(roleModFunctionData, null, 2))
+    console.log(
+      "roleModFunctionData: ",
+      i,
+      JSON.stringify(roleModFunctionData, null, 2),
+    );
     encodedRoleModEntries.push(encodedRoleModFunction);
     targets.push(roleModAddress);
-    gasValues.push(0)
+    gasValues.push(0);
   }
 
-  return [encodedRoleModEntries, targets, gasValues]
-}
+  return [encodedRoleModEntries, targets, gasValues];
+};
 
 const createProposal = async () => {
   if (!web3Store.web3) return;
@@ -430,46 +440,56 @@ const createProposal = async () => {
     const navEntryDetails = JSON.parse(JSON.stringify(navEntry.details));
 
     if (navEntry.pastNAVUpdateEntryFundAddress) {
-      pastNavUpdateEntryAddresses.push(navEntry.pastNAVUpdateEntryFundAddress)
+      pastNavUpdateEntryAddresses.push(navEntry.pastNAVUpdateEntryFundAddress);
     }
 
     let pastNAVUpdateIndex = 0;
 
     const baseDecimals = fundStore.fund?.baseToken.decimals;
     if (!baseDecimals) {
-      toastStore.errorToast("Failed preparing NAV Illiquid method, fund base token decimals are not known.")
-      throw new Error("Failed preparing NAV Illiquid method, base decimals are not known.")
+      toastStore.errorToast(
+        "Failed preparing NAV Illiquid method, fund base token decimals are not known.",
+      );
+      throw new Error(
+        "Failed preparing NAV Illiquid method, base decimals are not known.",
+      );
     }
 
     if (navEntry.positionType === PositionType.Liquid) {
       navEntryDetails.liquid = prepNAVMethodLiquid(navEntryDetails);
     } else if (navEntry.positionType === PositionType.Illiquid) {
-      navEntryDetails.illiquid = prepNAVMethodIlliquid(navEntryDetails, baseDecimals);
+      navEntryDetails.illiquid = prepNAVMethodIlliquid(
+        navEntryDetails,
+        baseDecimals,
+      );
     } else if (navEntry.positionType === PositionType.NFT) {
       navEntryDetails.nft = prepNAVMethodNFT(navEntryDetails);
     } else if (navEntry.positionType === PositionType.Composable) {
       navEntryDetails.composable = prepNAVMethodComposable(navEntryDetails);
     }
 
-    pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(navEntryDetails[navEntry.positionType]);
+    pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(
+      navEntryDetails[navEntry.positionType],
+    );
     // Stringify description, if it is not yet stringified.
     let descriptionJsonString = navEntryDetails.description;
-    if (typeof descriptionJsonString === "object" && descriptionJsonString !== null) {
+    if (
+      typeof descriptionJsonString === "object" &&
+      descriptionJsonString !== null
+    ) {
       descriptionJsonString = JSON.stringify(navEntryDetails.description);
     }
-    navUpdateEntries.push(
-      [
-        parseInt(navEntryDetails.entryType),
-        toRaw(navEntryDetails.liquid),
-        toRaw(navEntryDetails.illiquid),
-        toRaw(navEntryDetails.nft),
-        toRaw(navEntryDetails.composable),
-        navEntryDetails.isPastNAVUpdate,
-        pastNAVUpdateIndex,
-        parseInt(navEntryDetails.pastNAVUpdateEntryIndex),
-        descriptionJsonString,
-      ],
-    )
+    navUpdateEntries.push([
+      parseInt(navEntryDetails.entryType),
+      toRaw(navEntryDetails.liquid),
+      toRaw(navEntryDetails.illiquid),
+      toRaw(navEntryDetails.nft),
+      toRaw(navEntryDetails.composable),
+      navEntryDetails.isPastNAVUpdate,
+      pastNAVUpdateIndex,
+      parseInt(navEntryDetails.pastNAVUpdateEntryIndex),
+      descriptionJsonString,
+    ]);
   }
   console.log("navUpdateEntries: ", navUpdateEntries);
   console.log("pastNavUpdateEntryAddresses: ", pastNavUpdateEntryAddresses);
@@ -483,24 +503,29 @@ const createProposal = async () => {
       proposal.value.processWithdraw,
     ],
   );
-  console.log("encodedNavUpdateEntries: ", encodedNavUpdateEntries)
+  console.log("encodedNavUpdateEntries: ", encodedNavUpdateEntries);
 
   let encodedRoleModEntries = [];
   let roleModTargets = [];
   let roleModGasValues = [];
   if (proposal.value.allowManagerToUpdateNav) {
     const navPermissionEntries = generateNAVPermission();
-    console.log("navPermission: ", JSON.stringify(navPermissionEntries, null, 2));
-    [encodedRoleModEntries, roleModTargets, roleModGasValues] = await encodeRoleModEntries(navPermissionEntries);
+    console.log(
+      "navPermission: ",
+      JSON.stringify(navPermissionEntries, null, 2),
+    );
+    [encodedRoleModEntries, roleModTargets, roleModGasValues] =
+      await encodeRoleModEntries(navPermissionEntries);
     console.log("encodedRoleModEntries: ", encodedRoleModEntries);
     console.log("roleModTargets: ", roleModTargets);
     console.log("roleModGasValues: ", roleModGasValues);
   }
-  const encodedDataStoreNAVDataNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
-    storeNAVDataABI as AbiFunctionFragment, [fundStore.fund?.address, encodedNavUpdateEntries],
-  );
+  const encodedDataStoreNAVDataNavUpdateEntries =
+    web3Store.web3.eth.abi.encodeFunctionCall(
+      storeNAVDataABI as AbiFunctionFragment,
+      [fundStore.fund?.address, encodedNavUpdateEntries],
+    );
   const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress;
-
 
   /*
   function propose(
@@ -510,31 +535,34 @@ const createProposal = async () => {
     string memory description
   )
   */
-  const encodedCollectFlowFeesAbiJSON = web3Store.web3.eth.abi.encodeFunctionCall(
-    collectFeesABI as AbiFunctionFragment, [0],
-  );
-  const encodedCollectManagerFeesAbiJSON = web3Store.web3.eth.abi.encodeFunctionCall(
-    collectFeesABI as AbiFunctionFragment, [2],
-  );
-  const encodedCollectPerformanceFeesAbiJSON = web3Store.web3.eth.abi.encodeFunctionCall(
-    collectFeesABI as AbiFunctionFragment, [3],
-  );
+  const encodedCollectFlowFeesAbiJSON =
+    web3Store.web3.eth.abi.encodeFunctionCall(
+      collectFeesABI as AbiFunctionFragment,
+      [0],
+    );
+  const encodedCollectManagerFeesAbiJSON =
+    web3Store.web3.eth.abi.encodeFunctionCall(
+      collectFeesABI as AbiFunctionFragment,
+      [2],
+    );
+  const encodedCollectPerformanceFeesAbiJSON =
+    web3Store.web3.eth.abi.encodeFunctionCall(
+      collectFeesABI as AbiFunctionFragment,
+      [3],
+    );
 
   // Propose NAV update for fund (target: fund addr, payloadL bytes)
-  console.log("Active Account: ", fundStore.activeAccountAddress)
+  console.log("Active Account: ", fundStore.activeAccountAddress);
   loading.value = true;
   const targetAddresses = [
     fundStore.fund?.address, // encodedNavUpdateEntries
     fundStore.fund?.address, // encodedCollectFlowFeesAbiJSON
-  ]
+  ];
   const gasValues = [
-    0,  // encodedNavUpdateEntries
-    0,  // encodedCollectFlowFeesAbiJSON
-  ]
-  const calldatas = [
-    encodedNavUpdateEntries,
-    encodedCollectFlowFeesAbiJSON,
-  ]
+    0, // encodedNavUpdateEntries
+    0, // encodedCollectFlowFeesAbiJSON
+  ];
+  const calldatas = [encodedNavUpdateEntries, encodedCollectFlowFeesAbiJSON];
 
   // Conditionally include collect Management fees.
   if (proposal.value.collectManagementFees) {
@@ -543,23 +571,29 @@ const createProposal = async () => {
     calldatas.push(encodedCollectManagerFeesAbiJSON);
   }
 
-  targetAddresses.push(...[
-    fundStore.fund?.address, // encodedCollectPerformanceFeesAbiJSON
-  ]);
-  gasValues.push(...[
-    0,  // encodedCollectPerformanceFeesAbiJSON
-  ]);
-  calldatas.push(...[
-    encodedCollectPerformanceFeesAbiJSON,
-  ]);
-  console.log("proposal:",
-    JSON.stringify({
-      targetAddresses,
-      gasValues,
-      calldatas,
-    },
-    null, 2),
-  )
+  targetAddresses.push(
+    ...[
+      fundStore.fund?.address, // encodedCollectPerformanceFeesAbiJSON
+    ],
+  );
+  gasValues.push(
+    ...[
+      0, // encodedCollectPerformanceFeesAbiJSON
+    ],
+  );
+  calldatas.push(...[encodedCollectPerformanceFeesAbiJSON]);
+  console.log(
+    "proposal:",
+    JSON.stringify(
+      {
+        targetAddresses,
+        gasValues,
+        calldatas,
+      },
+      null,
+      2,
+    ),
+  );
 
   const proposalData = [
     targetAddresses,
@@ -570,44 +604,46 @@ const createProposal = async () => {
       description: proposal.value.description,
     }),
   ];
-  // const [gasPrice] = await web3Store.estimateGas(
-  //   {
-  //     from: fundStore.activeAccountAddress,
-  //     to: fundStore.fundGovernorContract.options.address,
-  //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
-  //   },
-  // );
+
   // ADD encoded entries for OIV permissions
   try {
-    await fundStore.fundGovernorContract.methods.propose(...proposalData).send({
-      from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
-      gasPrice: "",
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
+    await fundStore.fundGovernorContract.methods
+      .propose(...proposalData)
+      .send({
+        from: fundStore.activeAccountAddress,
+        gasPrice: "",
+      })
+      .on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The proposal transaction has been submitted. Please wait for it to be confirmed.",
+        );
 
-      clearDraft();
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
         clearDraft();
-        toastStore.successToast(
-          "Register the proposal transactions was successful. " +
-            "You can now vote on the proposal in the governance page.",
-        );
-        router.push(`/details/${selectedFundSlug.value}/governance`);
-      } else {
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          clearDraft();
+          toastStore.successToast(
+            "Register the proposal transactions was successful. " +
+              "You can now vote on the proposal in the governance page.",
+          );
+          router.push(`/details/${selectedFundSlug.value}/governance`);
+        } else {
+          toastStore.errorToast(
+            "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loading.value = false;
+      })
+      .on("error", (error: any) => {
+        console.error(error);
+        loading.value = false;
         toastStore.errorToast(
-          "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+          "There has been an error. Please contact the Rethink Finance support.",
         );
-      }
-      loading.value = false;
-    }).on("error", (error: any) => {
-      console.error(error);
-      loading.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-    })
+      });
   } catch (error: any) {
     loading.value = false;
     toastStore.errorToast(error.message);
@@ -622,48 +658,50 @@ const createProposal = async () => {
       description: proposal.value.description,
     }),
   ];
-  // const [gasPrice2] = await web3Store.estimateGas(
-  //   {
-  //     from: fundStore.activeAccountAddress,
-  //     to: fundStore.fundGovernorContract.options.address,
-  //     data: fundStore.fundGovernorContract.methods.propose(...proposalData2).encodeABI(),
-  //   },
-  // );
+
   // Permissions for non gov nav updates
   try {
-    await fundStore.fundGovernorContract.methods.propose(...proposalData2).send({
-      from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
-      gasPrice: "",
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
+    await fundStore.fundGovernorContract.methods
+      .propose(...proposalData2)
+      .send({
+        from: fundStore.activeAccountAddress,
+        gasPrice: "",
+      })
+      .on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The proposal transaction has been submitted. Please wait for it to be confirmed.",
+        );
 
-      clearDraft();
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
         clearDraft();
-        toastStore.successToast(
-          "Requesting future NAV permissions transactions was successful. " +
-            "You can now vote on the proposal in the governance page.",
-        );
-      } else {
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          clearDraft();
+          toastStore.successToast(
+            "Requesting future NAV permissions transactions was successful. " +
+              "You can now vote on the proposal in the governance page.",
+          );
+        } else {
+          toastStore.errorToast(
+            "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loading.value = false;
+      })
+      .on("error", (error: any) => {
+        console.error(error);
+        loading.value = false;
         toastStore.errorToast(
-          "The register proposal transaction has failed. Please contact the Rethink Finance support.",
+          "There has been an error. Please contact the Rethink Finance support.",
         );
-      }
-      loading.value = false;
-    }).on("error", (error: any) => {
-      console.error(error);
-      loading.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-    })
+      });
   } catch (error: any) {
     loading.value = false;
     toastStore.errorToast(error.message);
   }
-}
+};
 
 watch(
   fundManagedNAVMethods,
@@ -675,7 +713,10 @@ watch(
 
 const clearDraft = () => {
   try {
-    fundManagedNAVMethods.value =  JSON.parse(JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt), parseBigInt);
+    fundManagedNAVMethods.value = JSON.parse(
+      JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt),
+      parseBigInt,
+    );
     // reset the local storage as well
     const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
     // navUpdateEntries[selectedFundAddress.value] = fundManagedNAVMethods.value;
@@ -725,7 +766,6 @@ const saveProposalDraft = () => {
   }
 };
  */
-
 </script>
 
 <style scoped lang="scss">
@@ -738,7 +778,7 @@ const saveProposalDraft = () => {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: .62rem;
+  gap: 0.62rem;
   min-height: 40px;
 }
 .proposal_title_field {
@@ -746,7 +786,7 @@ const saveProposalDraft = () => {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  margin-bottom: .69rem;
+  margin-bottom: 0.69rem;
 
   &__char_limit {
     display: flex;
@@ -755,7 +795,7 @@ const saveProposalDraft = () => {
     font-size: $text-sm;
     font-weight: 400;
     align-items: center;
-    gap: .25rem;
+    gap: 0.25rem;
   }
 }
 .management {
@@ -763,21 +803,21 @@ const saveProposalDraft = () => {
   display: flex;
   flex-direction: column;
   @include borderGray;
-  padding: .5rem;
-  margin: .69rem 0;
+  padding: 0.5rem;
+  margin: 0.69rem 0;
 
   &__card {
     width: 100%;
-    padding: .88rem .5rem;
+    padding: 0.88rem 0.5rem;
     border-radius: 0.25rem;
     background: $color-badge-navy;
-    margin-bottom: .12rem;
+    margin-bottom: 0.12rem;
     font-size: $text-md;
     font-weight: 400;
 
     &--no-margin {
       width: 100%;
-      padding: .88rem .5rem;
+      padding: 0.88rem 0.5rem;
       border-radius: 0.25rem;
       background: $color-badge-navy;
       font-size: $text-md;
@@ -788,8 +828,8 @@ const saveProposalDraft = () => {
     @include borderGray;
     display: flex;
     flex-direction: row;
-    gap: .25rem;
-    padding: .25rem;
+    gap: 0.25rem;
+    padding: 0.25rem;
     background-color: $color-background-button;
     color: $color-steel-blue;
     font-weight: 700;
@@ -805,11 +845,11 @@ const saveProposalDraft = () => {
 }
 
 .nav_methods_title {
-    display: flex;
-    flex-direction: row;
-    gap: .5rem;
-    font-weight: 500;
-    font-size: $text-sm;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  font-weight: 500;
+  font-size: $text-sm;
 }
 
 .action_buttons {

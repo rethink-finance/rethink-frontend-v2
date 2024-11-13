@@ -37,24 +37,17 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import type IAddresses from "~/types/addresses";
 import type IClockMode from "~/types/clock_mode";
 import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
-import {
-  FundTransactionType,
-} from "~/types/enums/fund_transaction_type";
-import {
-  PositionType, PositionTypeKeys, PositionTypesMap,
-} from "~/types/enums/position_type";
+import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
-import type IPositionTypeCount from "~/types/position_type";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
 
-const GovernableFundFactoryContractName = "GovernableFundFactoryBeaconProxy";
 const RethinkReaderContractName = "RethinkReader";
 
 interface IState {
@@ -110,28 +103,41 @@ export const useFundStore = defineStore({
       console.warn("fundStore.web3 changed", this.web3Store.web3);
       return this.web3Store.web3;
     },
+    fundChainId(): string {
+      return this.fund?.chainId ?? "";
+    },
     isUsingZodiacPilotExtension(): boolean {
       // Check if user is using Zodiac Pilot extension.
       // The connected wallet address is the same as custody (safe address).
-      return this.activeAccountAddress?.toLowerCase() === this.fund?.safeAddress.toLowerCase();
+      return (
+        this.activeAccountAddress?.toLowerCase() ===
+        this.fund?.safeAddress.toLowerCase()
+      );
     },
     baseToFundTokenExchangeRate(): FixedNumber {
-      if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals) return FixedNumber.fromString("0");
+      if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals)
+        return FixedNumber.fromString("0");
 
       // If there was any NAV update already, we use it to calculate the exchange rate.
       // If there was no NAV update yet, the exchange rate is 1:1.
       if (!this.fundLastNAVUpdate) {
-        if (!this.fund?.baseToken || !this.fund?.fundToken) return FixedNumber.fromString("0");
+        if (!this.fund?.baseToken || !this.fund?.fundToken)
+          return FixedNumber.fromString("0");
         // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
-        if (this.fund?.fundToken.decimals === this.fund?.baseToken.decimals) return FixedNumber.fromString("1")
+        if (this.fund?.fundToken.decimals === this.fund?.baseToken.decimals)
+          return FixedNumber.fromString("1");
         // If decimals are not the same, we have to calculate it.
-        const decimalDiff = Number(this.fund?.fundToken.decimals) - Number(this.fund?.baseToken.decimals);
+        const decimalDiff =
+          Number(this.fund?.fundToken.decimals) -
+          Number(this.fund?.baseToken.decimals);
         // For example:
         // Base Token: USDC has 6 decimals
         // Fund Token: ETH has 18 decimals
         // 18 - 6 = 12
         // '1000000000000' for 1e12
-        let exp = FixedNumber.fromString("1" + "0".repeat(Math.abs(decimalDiff)));
+        let exp = FixedNumber.fromString(
+          "1" + "0".repeat(Math.abs(decimalDiff)),
+        );
 
         if (decimalDiff >= 0) {
           exp = FixedNumber.fromString("1").div(exp);
@@ -139,22 +145,30 @@ export const useFundStore = defineStore({
         // This is now defined as ratio of 1 FUND token / x BASE tokens
         return exp;
       }
-      if (!this.fundLastNAVUpdate.totalNAV || !this.fund?.fundTokenTotalSupply) return FixedNumber.fromString("0");
+      if (!this.fundLastNAVUpdate.totalNAV || !this.fund?.fundTokenTotalSupply)
+        return FixedNumber.fromString("0");
 
       // Create FixedNumber instances
       const totalNAV = FixedNumber.fromString(
-        ethers.formatUnits(this.fundLastNAVUpdate.totalNAV, this.fund.baseToken.decimals),
+        ethers.formatUnits(
+          this.fundLastNAVUpdate.totalNAV,
+          this.fund.baseToken.decimals,
+        ),
       );
       // TODO get the fundTokenTotalSupply total supply from the last NAV update also!
       const fundTokenTotalSupply = FixedNumber.fromString(
-        ethers.formatUnits(this.fund.fundTokenTotalSupply, this.fund.fundToken.decimals),
+        ethers.formatUnits(
+          this.fund.fundTokenTotalSupply,
+          this.fund.fundToken.decimals,
+        ),
       );
 
       // Perform the division
       return fundTokenTotalSupply.div(totalNAV);
     },
     fundToBaseTokenExchangeRate(): FixedNumber {
-      if (this.baseToFundTokenExchangeRate.eq(FixedNumber.fromString("0"))) return this.baseToFundTokenExchangeRate;
+      if (this.baseToFundTokenExchangeRate.eq(FixedNumber.fromString("0")))
+        return this.baseToFundTokenExchangeRate;
 
       return FixedNumber.fromString("1").div(this.baseToFundTokenExchangeRate);
     },
@@ -218,7 +232,10 @@ export const useFundStore = defineStore({
     },
     fundLastNAVUpdate(state: IState): INAVUpdate | undefined {
       if (!state.fund?.navUpdates?.length) return undefined;
-      console.warn("fundLastNAVUpdate", state.fund?.navUpdates[state.fund?.navUpdates?.length - 1])
+      console.warn(
+        "fundLastNAVUpdate",
+        state.fund?.navUpdates[state.fund?.navUpdates?.length - 1],
+      );
       return state.fund?.navUpdates[state.fund?.navUpdates?.length - 1];
     },
     fundLastNAVUpdateMethods(): INAVMethod[] {
@@ -281,7 +298,7 @@ export const useFundStore = defineStore({
       console.log(
         `Should process deposit: fundLastNAVUpdate.timestamp: ${this.fundLastNAVUpdate?.timestamp} 
         userDepositRequest.timestamp ${this.userDepositRequest?.timestamp}`,
-      )
+      );
       if (
         !this.canUserProcessDeposit ||
         !this.fundLastNAVUpdate?.timestamp ||
@@ -329,17 +346,6 @@ export const useFundStore = defineStore({
     /**
      * Contracts
      */
-    // @ts-expect-error: we should extend the return type as Contract<GovernableFundFactory> but
-    // for now we don't have types for each contract made, should be done using typechain or some
-    // other type generator from abi.
-    fundFactoryContract(): Contract {
-      const contractAddress =
-        addresses[GovernableFundFactoryContractName][this.web3Store.chainId];
-      return new this.web3.eth.Contract(
-        GovernableFundFactory.abi,
-        contractAddress,
-      );
-    },
     // @ts-expect-error: we should extend the return type as Contract<...>
     rethinkReaderContract(): Contract {
       const contractAddress =
@@ -387,50 +393,50 @@ export const useFundStore = defineStore({
     },
     getFormattedBaseTokenValue:
       (state) =>
-        (
-          value: any,
-          shouldCommify: boolean = true,
-          shouldroundToSignificantDecimals: boolean = false,
-        ): string => {
-          const baseSymbol = state.fund?.baseToken?.symbol;
-          const baseDecimals = state.fund?.baseToken?.decimals;
-          if (!baseDecimals) {
-            return value;
-          }
+      (
+        value: any,
+        shouldCommify: boolean = true,
+        shouldroundToSignificantDecimals: boolean = false,
+      ): string => {
+        const baseSymbol = state.fund?.baseToken?.symbol;
+        const baseDecimals = state.fund?.baseToken?.decimals;
+        if (!baseDecimals) {
+          return value;
+        }
 
-          const valueFormatted = value
-            ? formatTokenValue(
+        const valueFormatted = value
+          ? formatTokenValue(
               value,
               baseDecimals,
               shouldCommify,
               shouldroundToSignificantDecimals,
             )
-            : "0";
-          return valueFormatted + " " + baseSymbol;
-        },
+          : "0";
+        return valueFormatted + " " + baseSymbol;
+      },
     getFormattedFundTokenValue:
       (state) =>
-        (
-          value: any,
-          shouldCommify: boolean = true,
-          shouldroundToSignificantDecimals: boolean = false,
-        ): string => {
-          const fundSymbol = state.fund?.fundToken.symbol;
-          const fundDecimals = state.fund?.fundToken.decimals;
-          if (!fundDecimals) {
-            return value;
-          }
+      (
+        value: any,
+        shouldCommify: boolean = true,
+        shouldroundToSignificantDecimals: boolean = false,
+      ): string => {
+        const fundSymbol = state.fund?.fundToken.symbol;
+        const fundDecimals = state.fund?.fundToken.decimals;
+        if (!fundDecimals) {
+          return value;
+        }
 
-          const valueFormatted = value
-            ? formatTokenValue(
+        const valueFormatted = value
+          ? formatTokenValue(
               value,
               fundDecimals,
               shouldCommify,
               shouldroundToSignificantDecimals,
             )
-            : "0";
-          return valueFormatted + " " + fundSymbol;
-        },
+          : "0";
+        return valueFormatted + " " + fundSymbol;
+      },
   },
   actions: {
     resetFundData() {
@@ -473,13 +479,19 @@ export const useFundStore = defineStore({
      *   have the fund settings from the discovery page.
      */
     fetchFundData(fundAddress: string): Promise<void> {
-      return useActionState("fetchFundDataAction",  () => fetchFundDataAction(fundAddress));
+      return useActionState("fetchFundDataAction", () =>
+        fetchFundDataAction(fundAddress),
+      );
     },
     fetchFundNAVData(): Promise<void> {
-      return useActionState("fetchFundNAVDataAction",  () => fetchFundNAVDataAction());
+      return useActionState("fetchFundNAVDataAction", () =>
+        fetchFundNAVDataAction(),
+      );
     },
     fetchUserFundData(fundAddress: string) {
-      return useActionState("fetchUserFundDataAction",  () => fetchUserFundDataAction(fundAddress));
+      return useActionState("fetchUserFundDataAction", () =>
+        fetchUserFundDataAction(fundAddress),
+      );
     },
     /**
      * Fetches multiple fund metadata such as:
@@ -487,7 +499,9 @@ export const useFundStore = defineStore({
      * - fundMetadata
      */
     fetchFundMetaData(fundAddress: string): Promise<IFund> {
-      return useActionState("fetchFundMetaDataAction",  () => fetchFundMetaDataAction(fundAddress));
+      return useActionState("fetchFundMetaDataAction", () =>
+        fetchFundMetaDataAction(fundAddress),
+      );
     },
     parseFundSettings(fundData: any) {
       const fundSettings: Partial<IFundSettings> = {};
@@ -581,60 +595,51 @@ export const useFundStore = defineStore({
         });
     },
     simulateCurrentNAV(): Promise<void> {
-      return useActionState(
-        "fetchSimulateCurrentNAVAction",
-        () => fetchSimulateCurrentNAVAction(),
+      return useActionState("fetchSimulateCurrentNAVAction", () =>
+        fetchSimulateCurrentNAVAction(this.fundChainId),
       );
     },
     fetchSimulatedNAVMethodValue(navEntry: INAVMethod) {
-      return useActionState(
-        "fetchSimulatedNAVMethodValueAction",
-        () => fetchSimulatedNAVMethodValueAction(navEntry),
+      return useActionState("fetchSimulatedNAVMethodValueAction", () =>
+        fetchSimulatedNAVMethodValueAction(navEntry),
       );
     },
     parseFundNAVUpdates(
       fundNAVData: any,
       fundAddress: string,
     ): Promise<INAVUpdate[]> {
-      return useActionState(
-        "parseFundNAVUpdatesAction",
-        () => parseFundNAVUpdatesAction(fundNAVData, fundAddress),
+      return useActionState("parseFundNAVUpdatesAction", () =>
+        parseFundNAVUpdatesAction(fundNAVData, fundAddress),
       );
     },
     fetchUserBaseTokenBalance() {
-      return useActionState(
-        "fetchUserBaseTokenBalanceAction",
-        () => fetchUserBaseTokenBalanceAction(),
+      return useActionState("fetchUserBaseTokenBalanceAction", () =>
+        fetchUserBaseTokenBalanceAction(),
       );
     },
     fetchUserFundTokenBalance() {
-      return useActionState(
-        "fetchUserFundTokenBalanceAction",
-        () => fetchUserFundTokenBalanceAction(),
+      return useActionState("fetchUserFundTokenBalanceAction", () =>
+        fetchUserFundTokenBalanceAction(),
       );
     },
     fetchUserGovernanceTokenBalance() {
-      return useActionState(
-        "fetchUserGovernanceTokenBalanceAction",
-        () => fetchUserGovernanceTokenBalanceAction(),
+      return useActionState("fetchUserGovernanceTokenBalanceAction", () =>
+        fetchUserGovernanceTokenBalanceAction(),
       );
     },
     fetchUserFundDelegateAddress() {
-      return useActionState(
-        "fetchUserFundDelegateAddressAction",
-        () => fetchUserFundDelegateAddressAction(),
+      return useActionState("fetchUserFundDelegateAddressAction", () =>
+        fetchUserFundDelegateAddressAction(),
       );
     },
     fetchUserFundAllowance() {
-      return useActionState(
-        "fetchUserFundAllowanceAction",
-        () => fetchUserFundAllowanceAction(),
+      return useActionState("fetchUserFundAllowanceAction", () =>
+        fetchUserFundAllowanceAction(),
       );
     },
     fetchUserFundShareValue() {
-      return useActionState(
-        "fetchUserFundShareValueAction",
-        () => fetchUserFundShareValueAction(),
+      return useActionState("fetchUserFundShareValueAction", () =>
+        fetchUserFundShareValueAction(),
       );
     },
     fetchUserFundDepositRedemptionRequests() {
@@ -643,12 +648,9 @@ export const useFundStore = defineStore({
         () => fetchUserFundDepositRedemptionRequestsAction(),
       );
     },
-    fetchUserFundTransactionRequest(
-      fundTransactionType: FundTransactionType,
-    ) {
-      return useActionState(
-        "fetchUserFundTransactionRequestAction",
-        () => fetchUserFundTransactionRequestAction(fundTransactionType),
+    fetchUserFundTransactionRequest(fundTransactionType: FundTransactionType) {
+      return useActionState("fetchUserFundTransactionRequestAction", () =>
+        fetchUserFundTransactionRequestAction(fundTransactionType),
       );
     },
     async fetchFundContractBaseTokenBalance() {
@@ -700,28 +702,13 @@ export const useFundStore = defineStore({
       this.fundRoleModAddress[this.fund?.address ?? ""] = roleModAddress;
       return roleModAddress;
     },
-    async estimateGasFundFlowsCall(encodedFunctionCall: any) {
-      return await this.web3Store.estimateGas({
-        from: this.activeAccountAddress,
-        to: this.fundContract.options.address,
-        data: this.fundContract.methods
-          .fundFlowsCall(encodedFunctionCall)
-          .encodeABI(),
-      });
-    },
     postUpdateNAV(): Promise<any> {
-      return useActionState(
-        "postUpdateNAVAction",
-        () => postUpdateNAVAction(),
-      );
+      return useActionState("postUpdateNAVAction", () => postUpdateNAVAction());
     },
     calculateFundPerformanceMetrics() {
-      return useActionState(
-        "calculateFundPerformanceMetricsAction",
-        () => calculateFundPerformanceMetricsAction(),
+      return useActionState("calculateFundPerformanceMetricsAction", () =>
+        calculateFundPerformanceMetricsAction(),
       );
     },
   },
 });
-
-

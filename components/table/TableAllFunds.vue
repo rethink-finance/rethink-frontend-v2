@@ -187,7 +187,6 @@ const navigateFundDetails = (event: any, row: any) => {
   border-color: $color-bg-transparent;
   // add table max height
   :deep(.v-table__wrapper) {
-    max-height: 500px;
     @include customScrollbar;
 
     .v-data-table__tr {

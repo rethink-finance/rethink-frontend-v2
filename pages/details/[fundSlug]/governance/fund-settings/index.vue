@@ -4,10 +4,7 @@
       <div class="main_header__title">
         Fund Settings Proposal
 
-        <UiTooltipClick
-          location="right"
-          :hide-after="6000"
-        >
+        <UiTooltipClick location="right" :hide-after="6000">
           <Icon
             icon="material-symbols:info-outline"
             :class="'main_header__info-icon'"
@@ -23,11 +20,7 @@
                 target="_blank"
               >
                 Learn More
-                <Icon
-                  icon="maki:arrow"
-                  color="primary"
-                  width="1rem"
-                />
+                <Icon icon="maki:arrow" color="primary" width="1rem" />
               </a>
             </div>
           </template>
@@ -76,10 +69,7 @@
           <div class="section__title subtitle_white">
             {{ section.name }}
 
-            <UiTooltipClick
-              v-if="section.info"
-              :hide-after="8000"
-            >
+            <UiTooltipClick v-if="section.info" :hide-after="8000">
               <Icon
                 icon="material-symbols:info-outline"
                 class="section__info-icon"
@@ -285,7 +275,6 @@ function generateFields(section: IStepperSection, proposal: IProposal) {
       ...fieldTyped,
       value: proposal[fieldTyped.key] as string,
     } as IField;
-
   });
 }
 
@@ -330,7 +319,6 @@ const getStepValidityArray = () => {
             return rule(field.value) === true;
           }) ?? true
         );
-
       });
     });
   });
@@ -345,7 +333,6 @@ const showPrevStep = computed(() => {
 const isLastStep = computed(() => {
   return activeStep.value === proposalSteps[proposalSteps.length - 1];
 });
-
 
 const handleButtonClick = () => {
   isLastStep.value ? submit() : nextStep();
@@ -405,18 +392,11 @@ const submit = async () => {
           description: proposal.value.proposalDescription,
         }),
       ];
-      // const [gasPrice] = await web3Store.estimateGas(
-      //   {
-      //     from: fundStore.activeAccountAddress,
-      //     to: fundStore.fundGovernorContract.options.address,
-      //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
-      //   },
-      // );
+
       await fundStore.fundGovernorContract.methods
         .propose(...proposalData)
         .send({
           from: fundStore.activeAccountAddress,
-          // maxPriorityFeePerGas: gasPrice,
           gasPrice: "",
         })
         .on("transactionHash", (hash: string) => {
@@ -430,7 +410,7 @@ const submit = async () => {
           if (receipt.status) {
             toastStore.successToast(
               "Register the proposal transactions was successful. " +
-                  "You can now vote on the proposal in the governance page.",
+                "You can now vote on the proposal in the governance page.",
             );
             router.push(`/details/${selectedFundSlug.value}/governance`);
           } else {
@@ -446,7 +426,7 @@ const submit = async () => {
           toastStore.errorToast(
             "There has been an error. Please contact the Rethink Finance support.",
           );
-        })
+        });
     } catch (error: any) {
       loading.value = false;
       toastStore.errorToast(error.message);
@@ -781,8 +761,8 @@ onBeforeUnmount(() => {
     display: block;
   }
 }
-.tooltip{
-  &__content{
+.tooltip {
+  &__content {
     display: flex;
     gap: 40px;
   }

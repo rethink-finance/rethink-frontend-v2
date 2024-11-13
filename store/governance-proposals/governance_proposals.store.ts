@@ -13,14 +13,17 @@ import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import { cleanComplexWeb3Data } from "~/composables/utils";
 import { useFundStore } from "~/store/fund/fund.store";
 
-
 import { decodeProposalCallData } from "~/composables/proposal/decodeProposalCallData";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IDelegate from "~/types/delegate";
 import { ClockMode } from "~/types/enums/clock_mode";
-import { ProposalState, ProposalStateMapping } from "~/types/enums/governance_proposal";
+import {
+  ProposalState,
+  ProposalStateMapping,
+} from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { networksMap } from "~/store/web3/networksMap";
 
 interface IState {
   /* Example fund proposals.
@@ -35,7 +38,10 @@ interface IState {
       }
     }
   */
-  fundProposals: Record<string, Record<string, Record<string, IGovernanceProposal>>>;
+  fundProposals: Record<
+    string,
+    Record<string, Record<string, IGovernanceProposal>>
+  >;
   fundDelegates: Record<string, Record<string, Record<string, IDelegate>>>;
   /* Example from what to what range block history events were already fetched..
   {
@@ -81,8 +87,12 @@ export const useGovernanceProposalsStore = defineStore({
       if (!fundAddress) return;
 
       const chainData = this.fundProposals?.[chainId];
-      console.debug("this.fundProposals: ", this.fundProposals, typeof this.fundProposals)
-      if (!(chainData)) {
+      console.debug(
+        "this.fundProposals: ",
+        this.fundProposals,
+        typeof this.fundProposals,
+      );
+      if (!chainData) {
         this.fundProposals[chainId] = {};
       }
       this.fundProposals[chainId][fundAddress] = {};
@@ -91,7 +101,10 @@ export const useGovernanceProposalsStore = defineStore({
       }
       this.fundProposalsBlockFetchedRanges[chainId][fundAddress] = [];
       setLocalStorageItem("fundProposals", this.fundProposals);
-      setLocalStorageItem("fundProposalsBlockFetchedRanges",  this.fundProposalsBlockFetchedRanges);
+      setLocalStorageItem(
+        "fundProposalsBlockFetchedRanges",
+        this.fundProposalsBlockFetchedRanges,
+      );
     },
     storeProposal(
       chainId: string,
@@ -213,7 +226,9 @@ export const useGovernanceProposalsStore = defineStore({
         // This means that we don't know, vote status was not fetched yet or had some troubles fetching it.
         return undefined;
       }
-      return this.connectedAccountProposalsHasVoted?.[proposalId]?.[activeAccountAddress];
+      return this.connectedAccountProposalsHasVoted?.[proposalId]?.[
+        activeAccountAddress
+      ];
     },
     getFundProposalsBlockFetchedRanges(
       chainId: string,
@@ -237,7 +252,8 @@ export const useGovernanceProposalsStore = defineStore({
     ): void {
       this.fundProposalsBlockFetchedRanges[chainId] ??= {};
       this.fundProposalsBlockFetchedRanges[chainId][fundAddress] ??= [];
-      const currentRange = this.fundProposalsBlockFetchedRanges[chainId][fundAddress];
+      const currentRange =
+        this.fundProposalsBlockFetchedRanges[chainId][fundAddress];
 
       if (currentRange.length) {
         let currentMostRecentBlock = currentRange[0];
@@ -265,21 +281,18 @@ export const useGovernanceProposalsStore = defineStore({
       );
     },
     fetchDelegates() {
-      return useActionState(
-        "fetchDelegatesAction",
-        () => fetchDelegatesAction(),
+      return useActionState("fetchDelegatesAction", () =>
+        fetchDelegatesAction(),
       );
     },
     fetchGovernanceProposals() {
-      return useActionState(
-        "fetchGovernanceProposalsAction",
-        () => fetchGovernanceProposalsAction(),
+      return useActionState("fetchGovernanceProposalsAction", () =>
+        fetchGovernanceProposalsAction(),
       );
     },
     fetchGovernanceProposal(proposalId: string) {
-      return useActionState(
-        "fetchGovernanceProposalAction",
-        () => fetchGovernanceProposalAction(proposalId),
+      return useActionState("fetchGovernanceProposalAction", () =>
+        fetchGovernanceProposalAction(proposalId),
       );
     },
     decodeProposalCreatedEvent(
@@ -294,7 +307,9 @@ export const useGovernanceProposalsStore = defineStore({
         event.raw?.data ?? "",
         topics.slice(1),
       );
-      const proposal = cleanComplexWeb3Data(decodedEvent) as IGovernanceProposal;
+      const proposal = cleanComplexWeb3Data(
+        decodedEvent,
+      ) as IGovernanceProposal;
 
       try {
         proposal.descriptionHash = ethers.id(proposal.description);
@@ -305,7 +320,7 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.title = proposal.description;
       }
       console.debug("event decoded");
-      return proposal
+      return proposal;
     },
     async fetchBlockProposals(blockNumber: bigint) {
       console.debug("fetchBlockProposals:", blockNumber);
@@ -344,13 +359,14 @@ export const useGovernanceProposalsStore = defineStore({
                 : fromBlock + chunkSize - 1n;
             console.debug(`Fetching events from ${fromBlock} to ${toBlock}`);
 
-            const events = await this.fundStore.fundGovernorContract.getPastEvents(
-              "ProposalExecuted",
-              {
-                fromBlock: Number(fromBlock),
-                toBlock: Number(toBlock),
-              },
-            );
+            const events =
+              await this.fundStore.fundGovernorContract.getPastEvents(
+                "ProposalExecuted",
+                {
+                  fromBlock: Number(fromBlock),
+                  toBlock: Number(toBlock),
+                },
+              );
 
             proposalExecutedEvents = proposalExecutedEvents.concat(events);
 
@@ -424,7 +440,10 @@ export const useGovernanceProposalsStore = defineStore({
 
         // check if the block is close enough to the target timestamp.
         // Target timestamp is approximately 1 hour ago from the current block timestamp.
-        if (Math.abs(blockTimestamp - targetTimestamp) < oneHourInSeconds / 10) {
+        if (
+          Math.abs(blockTimestamp - targetTimestamp) <
+          oneHourInSeconds / 10
+        ) {
           targetBlock = block;
           break;
         }
@@ -436,7 +455,10 @@ export const useGovernanceProposalsStore = defineStore({
       }
 
       // calculate how many blocks are produced in the last hour
-      const blocksPerHour = (currentBlockNumber - Number(targetBlock.number)) / ((currentBlockTimestamp - Number(targetBlock.timestamp)) / oneHourInSeconds);
+      const blocksPerHour =
+        (currentBlockNumber - Number(targetBlock.number)) /
+        ((currentBlockTimestamp - Number(targetBlock.timestamp)) /
+          oneHourInSeconds);
 
       console.debug(`Blocks per hour rate: ${blocksPerHour}`);
       return blocksPerHour;
@@ -468,7 +490,7 @@ export const useGovernanceProposalsStore = defineStore({
       // if the chainIdMapKey is found, use the rpcUrl from the chainIdMap
       if (chainIdMapKey) {
         console.debug("chainIdMapKey: ", chainIdMapKey);
-        return new Web3(this.web3Store.networksMap[chainIdMapKey].rpcUrl) as Web3;
+        return new Web3(networksMap[chainIdMapKey].rpcUrl) as Web3;
       }
       // if the chainIdMapKey is not found, use the current web3
       console.debug("use the current web3");
@@ -568,9 +590,10 @@ export const useGovernanceProposalsStore = defineStore({
         proposal.createdBlockNumber = event.blockNumber;
 
         // keep track of the proposal executed timestamp and block number if the proposal is executed
-        const executedProposal = this.fundProposals?.[this.web3Store.chainId]?.[
-          fund?.address
-        ]?.[proposal.proposalId];
+        const executedProposal =
+          this.fundProposals?.[this.web3Store.chainId]?.[fund?.address]?.[
+            proposal.proposalId
+          ];
         proposal.executedTimestamp = executedProposal?.executedTimestamp;
         proposal.executedBlockNumber = executedProposal?.executedBlockNumber;
 
@@ -584,7 +607,7 @@ export const useGovernanceProposalsStore = defineStore({
         console.debug("proposal: ", proposal);
 
         await this.setProposalVoteStartEndTimestamp(proposal);
-        console.debug("proposal:" , proposal);
+        console.debug("proposal:", proposal);
 
         const votes = await this.callWithRetry(() =>
           this.fundStore.fundGovernorContract.methods
@@ -651,7 +674,8 @@ export const useGovernanceProposalsStore = defineStore({
 
         console.debug("parse votes", votes);
         if (votes) {
-          const totalVotes = votes.forVotes + votes.abstainVotes + votes.againstVotes;
+          const totalVotes =
+            votes.forVotes + votes.abstainVotes + votes.againstVotes;
           proposal.totalVotes = totalVotes;
           proposal.totalVotesFormatted = formatTokenValue(
             totalVotes,
@@ -719,7 +743,12 @@ export const useGovernanceProposalsStore = defineStore({
         const roleModAddress = await this.fundStore.getRoleModAddress();
 
         proposal.calldatas.forEach((calldata, i) => {
-          const calldataDecoded = decodeProposalCallData(roleModAddress, calldata, proposal.targets[i], fund?.safeAddress);
+          const calldataDecoded = decodeProposalCallData(
+            roleModAddress,
+            calldata,
+            proposal.targets[i],
+            fund?.safeAddress,
+          );
           proposal.calldataTypes.push(calldataDecoded?.calldataType);
           proposal.calldatasDecoded.push(calldataDecoded);
         });
@@ -727,21 +756,21 @@ export const useGovernanceProposalsStore = defineStore({
           ...new Set(
             proposal.calldataTypes.filter(
               (calldataType) =>
-                calldataType !== ProposalCalldataType.UNDEFINED && calldataType !== undefined,
+                calldataType !== ProposalCalldataType.UNDEFINED &&
+                calldataType !== undefined,
             ),
           ),
         ];
-        this.storeProposal(
-          this.web3Store.chainId,
-          fund?.address,
-          proposal,
-        );
+        this.storeProposal(this.web3Store.chainId, fund?.address, proposal);
       }
     },
   },
 });
 
-const proposalCreatedEventInputs = (RethinkFundGovernor.abi.find(
-  (event: any) => event.name === "ProposalCreated" && event.type === "event",
-) as any)?.inputs ?? [];
-
+const proposalCreatedEventInputs =
+  (
+    RethinkFundGovernor.abi.find(
+      (event: any) =>
+        event.name === "ProposalCreated" && event.type === "event",
+    ) as any
+  )?.inputs ?? [];

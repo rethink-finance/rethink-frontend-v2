@@ -11,10 +11,7 @@
       :is-submit-loading="loading"
     >
       <template #subtitle>
-        <UiTooltipClick
-          location="right"
-          :hide-after="6000"
-        >
+        <UiTooltipClick location="right" :hide-after="6000">
           <Icon
             icon="material-symbols:info-outline"
             class="info-icon"
@@ -30,11 +27,7 @@
                 target="_blank"
               >
                 Learn More
-                <Icon
-                  icon="maki:arrow"
-                  color="primary"
-                  width="1rem"
-                />
+                <Icon icon="maki:arrow" color="primary" width="1rem" />
               </a>
             </div>
           </template>
@@ -132,8 +125,12 @@ const executionEntry = ref([
 const fieldsMap = ref(DirectExecutionFieldsMap);
 
 const submitProposal = async () => {
-  const transactions = executionEntry.value.find(step => step.stepName === ExecutionStep.Setup)?.steps as any[];
-  const details = executionEntry.value.find(step => step.stepName === ExecutionStep.Details)?.steps[0];
+  const transactions = executionEntry.value.find(
+    (step) => step.stepName === ExecutionStep.Setup,
+  )?.steps as any[];
+  const details = executionEntry.value.find(
+    (step) => step.stepName === ExecutionStep.Details,
+  )?.steps[0];
   if (!web3Store.web3 || !details || !transactions?.length) return;
 
   console.log(toRaw(transactions));
@@ -149,31 +146,42 @@ const submitProposal = async () => {
   // execTransaction function
   const execTransactionABI = GnosisSafeL2JSON.abi[29] as AbiFunctionFragment;
 
-  const signature = "0x000000000000000000000000" + fundStore.fund?.governorAddress.slice(2) + "0000000000000000000000000000000000000000000000000000000000000000" + "01";
+  const signature =
+    "0x000000000000000000000000" +
+    fundStore.fund?.governorAddress.slice(2) +
+    "0000000000000000000000000000000000000000000000000000000000000000" +
+    "01";
   for (const i in transactions) {
     const trx = transactions[i];
     console.log("tx:", i, trx);
-    const filteredTxData = web3Store.web3.eth.abi.encodeFunctionCall(multisendAbiJSON, [trx.rawTxData]);
+    const filteredTxData = web3Store.web3.eth.abi.encodeFunctionCall(
+      multisendAbiJSON,
+      [trx.rawTxData],
+    );
 
     const formatSafeTxInput = [
-      trx.addressOfContractInteraction,// MultiSendCallOnly
-      0,// value
-      filteredTxData,// data
-      parseInt(trx.operation),// operation
-      parseInt(trx.gasToSendWithTransaction),// safeTxGas
-      0,// baseGas
-      0,// gasPrice
-      ethers.ZeroAddress,// gasToken
-      ethers.ZeroAddress,// refundReceiver
+      trx.addressOfContractInteraction, // MultiSendCallOnly
+      0, // value
+      filteredTxData, // data
+      parseInt(trx.operation), // operation
+      parseInt(trx.gasToSendWithTransaction), // safeTxGas
+      0, // baseGas
+      0, // gasPrice
+      ethers.ZeroAddress, // gasToken
+      ethers.ZeroAddress, // refundReceiver
       signature,
     ];
-    const filteredFinalTxData = web3Store.web3.eth.abi.encodeFunctionCall(execTransactionABI, formatSafeTxInput);
+    const filteredFinalTxData = web3Store.web3.eth.abi.encodeFunctionCall(
+      execTransactionABI,
+      formatSafeTxInput,
+    );
 
     processedTxs.push(filteredFinalTxData);
     targets.push(fundStore.fund?.safeAddress);
     gasValues.push(0);
   }
-  console.log("propose:",
+  console.log(
+    "propose:",
     JSON.stringify(
       [
         targets,
@@ -183,7 +191,10 @@ const submitProposal = async () => {
           title: details?.proposalTitle,
           description: details?.proposalDescription,
         }),
-      ], null, 2),
+      ],
+      null,
+      2,
+    ),
   );
   loading.value = true;
   const proposalData = [
@@ -195,40 +206,42 @@ const submitProposal = async () => {
       description: details?.proposalDescription,
     }),
   ];
-  // const [gasPrice] = await web3Store.estimateGas(
-  //   {
-  //     from: fundStore.activeAccountAddress,
-  //     to: fundStore.fundGovernorContract.options.address,
-  //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
-  //   },
-  // );
+
   try {
-    await fundStore.fundGovernorContract.methods.propose(...proposalData).send({
-      from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
-      gasPrice: "",
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The proposal transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
-        toastStore.successToast(
-          "The proposal transactions was successful. " +
-            "You can now vote on the proposal in the governance page.",
+    await fundStore.fundGovernorContract.methods
+      .propose(...proposalData)
+      .send({
+        from: fundStore.activeAccountAddress,
+        gasPrice: "",
+      })
+      .on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The proposal transaction has been submitted. Please wait for it to be confirmed.",
         );
-        router.push(`/details/${selectedFundSlug.value}/governance`);
-      } else {
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          toastStore.successToast(
+            "The proposal transactions was successful. " +
+              "You can now vote on the proposal in the governance page.",
+          );
+          router.push(`/details/${selectedFundSlug.value}/governance`);
+        } else {
+          toastStore.errorToast(
+            "The proposal transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loading.value = false;
+      })
+      .on("error", (error: any) => {
+        console.error(error);
+        loading.value = false;
         toastStore.errorToast(
-          "The proposal transaction has failed. Please contact the Rethink Finance support.",
+          "There has been an error. Please contact the Rethink Finance support.",
         );
-      }
-      loading.value = false;
-    }).on("error", (error: any) => {
-      console.error(error);
-      loading.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-    })
+      });
   } catch (error: any) {
     loading.value = false;
     toastStore.errorToast(error.message);
@@ -241,8 +254,8 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.tooltip{
-  &__content{
+.tooltip {
+  &__content {
     display: flex;
     gap: 40px;
   }

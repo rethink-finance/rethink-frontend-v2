@@ -1,43 +1,58 @@
 import { excludedFundAddresses } from "../config/excludedFundAddresses.config";
 import { useFundsStore } from "../funds.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import { chainIds } from "~/store/web3/networksMap";
+// You can see test funds by storing:
+// excludeTestFunds: false
+// to local storage.
+const excludeTestFunds = getLocalStorageItem("excludeTestFunds", true);
 
-export async function fetchFundsAction(excludeTestFunds: boolean): Promise<any> {
+export async function fetchFundsAction(): Promise<void> {
   const fundsStore = useFundsStore();
-  const web3Store = useWeb3Store();
-  const chainId = web3Store.chainId;
 
-  fundsStore.chainFunds[chainId] = [];
+  // Loop through all available chains
+  for (const chainId of chainIds) {
+    // Reset the funds array for the current chain
+    fundsStore.chainFunds[chainId] = [];
 
-  const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays();
-  const fundAddresses: string[] = [];
-  const filteredFundsInfoArrays: any[] = [[], []];
-  const fundsInfo: Record<string, any> = {};
+    // Fetch the funds info arrays
+    const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays(chainId);
+    const fundAddresses: string[] = [];
+    const filteredFundsInfoArrays: any[] = [[], []];
+    const fundsInfo: Record<string, any> = {};
 
-  for (let i = 0; i < fundsInfoArrays[0].length; i++) {
-    const fundAddress = fundsInfoArrays[0][i];
-    const fundInfo = fundsInfoArrays[1][i];
-    if (
-      excludeTestFunds &&
-      excludedFundAddresses[fundsStore.web3Store.chainId].includes(fundAddress)
-    ) {
-      continue;
+    // Filter out excluded test funds if necessary
+    for (let i = 0; i < fundsInfoArrays[0].length; i++) {
+      const fundAddress = fundsInfoArrays[0][i];
+      const fundInfo = fundsInfoArrays[1][i];
+      if (
+        excludeTestFunds &&
+        excludedFundAddresses[chainId]?.includes(fundAddress)
+      ) {
+        continue;
+      }
+      filteredFundsInfoArrays[0].push(fundAddress);
+      filteredFundsInfoArrays[1].push(fundInfo);
+      fundsInfo[fundAddress] = fundInfo;
+      fundAddresses.push(fundAddress);
     }
-    filteredFundsInfoArrays[0].push(fundAddress);
-    filteredFundsInfoArrays[1].push(fundInfo);
-    fundsInfo[fundAddress] = fundInfo;
-    fundAddresses.push(fundAddress);
+
+    console.log(`Chain ${chainId} - Filtered Funds: `, filteredFundsInfoArrays);
+
+    // Fetch metadata for the filtered funds
+    const funds = await fundsStore.fetchFundsMetaData(
+      chainId,
+      fundAddresses,
+      fundsInfo,
+    );
+    fundsStore.chainFunds[chainId] = funds;
+    console.log(`Chain ${chainId} - Funds Metadata: `, funds);
+
+    // Fetch NAV data for the filtered funds
+    await fundsStore.fetchFundsNAVData(chainId, filteredFundsInfoArrays);
+
+    // Calculate performance metrics for the funds
+    fundsStore.calculateFundsPerformanceMetrics();
+
+    console.log(`Funds fetched for chain: ${chainId}`);
   }
-  console.log("fundsInfoArrays: ", toRaw(fundsInfoArrays));
-  console.log("filteredFundsInfoArrays: ", filteredFundsInfoArrays);
-
-  const funds = await fundsStore.fetchFundsMetaData(fundAddresses, fundsInfo);
-  fundsStore.chainFunds[chainId] = funds;
-  console.log("All Funds: ", funds);
-
-  // Fetch all possible NAV methods for all funds.
-  await fundsStore.fetchFundsNAVData(filteredFundsInfoArrays);
-
-  // Calculate Fund Performance metrics like cumulative returns, sharpe ratio...
-  fundsStore.calculateFundsPerformanceMetrics();
 }

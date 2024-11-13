@@ -1,7 +1,6 @@
 import { useFundStore } from "../fund.store";
 
-export const postUpdateNAVAction = async (
-): Promise<any> => {
+export const postUpdateNAVAction = async (): Promise<any> => {
   const fundStore = useFundStore();
 
   try {
@@ -13,19 +12,11 @@ export const postUpdateNAVAction = async (
       );
       return;
     }
-    // const [gasPrice, gasEstimate] = await this.web3Store.estimateGas(
-    //   {
-    //     from: this.activeAccountAddress,
-    //     to: this.fundContract.options.address,
-    //     data: this.fundContract.methods.executeNAVUpdate(navExecutorAddr).encodeABI(),
-    //   },
-    // );
 
     return await fundStore.fundContract.methods
       .executeNAVUpdate(navExecutorAddr)
       .send({
         from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
         gasPrice: "",
       })
       .on("transactionHash", (hash: any) => {
@@ -52,7 +43,7 @@ export const postUpdateNAVAction = async (
           "There has been an error. Please contact the Rethink Finance support.",
         );
         throw error;
-      })
+      });
   } catch (error) {
     console.error("Error updating NAV: ", error);
     fundStore.toastStore.errorToast(
@@ -60,4 +51,4 @@ export const postUpdateNAVAction = async (
     );
     throw error;
   }
-}
+};
