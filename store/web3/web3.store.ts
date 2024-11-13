@@ -7,6 +7,7 @@ import { networksMap } from "~/store/web3/networksMap";
 import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
 import { RethinkReader } from "assets/contracts/RethinkReader";
 import { CustomContract } from "~/store/web3/contract";
+import { NAVCalculator } from "assets/contracts/NAVCalculator";
 const addresses: IAddresses = addressesJson as IAddresses;
 
 interface IState {
@@ -80,9 +81,6 @@ export const useWeb3Store = defineStore({
     currentNetwork(): INetwork {
       return networksMap[this.chainId];
     },
-    NAVCalculatorBeaconProxyAddress(): string {
-      return addresses.NAVCalculatorBeaconProxy[this.chainId];
-    },
     NAVExecutorBeaconProxyAddress(): string {
       return addresses.NAVExecutorBeaconProxy[this.chainId];
     },
@@ -115,6 +113,11 @@ export const useWeb3Store = defineStore({
           rethinkReaderContract: new CustomContract(
             RethinkReader.abi,
             addresses.RethinkReader[chainId],
+            network.rpcUrls,
+          ),
+          navCalculatorContract: new CustomContract(
+            NAVCalculator.abi,
+            addresses.NAVCalculatorBeaconProxy[chainId],
             network.rpcUrls,
           ),
         };

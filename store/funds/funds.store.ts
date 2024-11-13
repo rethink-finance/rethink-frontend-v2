@@ -129,9 +129,9 @@ export const useFundsStore = defineStore({
         fetchFundsNAVDataAction(chainId, fundsInfoArrays),
       );
     },
-    calculateFundsPerformanceMetrics() {
+    calculateFundsPerformanceMetrics(chainId: string) {
       return useActionState("calculateFundsPerformanceMetricsAction", () =>
-        calculateFundsPerformanceMetricsAction(),
+        calculateFundsPerformanceMetricsAction(chainId),
       );
     },
   },

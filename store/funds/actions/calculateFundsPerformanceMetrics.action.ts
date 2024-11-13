@@ -1,14 +1,13 @@
 import { useFundsStore } from "../funds.store";
 
-export async function calculateFundsPerformanceMetricsAction(): Promise<any> {
+export async function calculateFundsPerformanceMetricsAction(
+  chainId: string,
+): Promise<any> {
   const fundsStore = useFundsStore();
+  console.log("start calculateFundsPerformanceMetricsAction ", chainId);
 
   try {
-    if (!Array.isArray(fundsStore.funds)) {
-      console.error("Error: this.funds is not an array");
-      return;
-    }
-    for (const fund of fundsStore.funds) {
+    for (const fund of fundsStore.chainFunds[chainId]) {
       try {
         const fundNAVUpdates =
           fundsStore.chainFundNAVUpdates[fund.chainId][fund.address];

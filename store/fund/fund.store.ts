@@ -605,11 +605,12 @@ export const useFundStore = defineStore({
       );
     },
     parseFundNAVUpdates(
+      chainId: string,
       fundNAVData: any,
       fundAddress: string,
     ): Promise<INAVUpdate[]> {
       return useActionState("parseFundNAVUpdatesAction", () =>
-        parseFundNAVUpdatesAction(fundNAVData, fundAddress),
+        parseFundNAVUpdatesAction(chainId, fundNAVData, fundAddress),
       );
     },
     fetchUserBaseTokenBalance() {

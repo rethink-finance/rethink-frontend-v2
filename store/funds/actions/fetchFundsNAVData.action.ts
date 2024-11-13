@@ -6,6 +6,7 @@ import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import type INAVMethod from "~/types/nav_method";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 // Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
 const excludeNAVDetails: boolean = true;
@@ -15,14 +16,19 @@ export async function fetchFundsNAVDataAction(
   chainId: string,
   fundsInfoArrays: any[],
 ): Promise<any> {
+  console.log("start calculating fund nav data ", chainId);
   const fundsStore = useFundsStore();
+  const web3Store = useWeb3Store();
   const fundAddresses: string[] = fundsInfoArrays[0];
 
-  const allFundsNavData = await fundsStore.callWithRetry(() =>
-    fundsStore.rethinkReaderContract.methods
-      .getFundsNAVData(fundAddresses)
-      .call(),
-  );
+  const rethinkReaderContract =
+    web3Store.contracts[chainId]?.rethinkReaderContract;
+  if (!rethinkReaderContract) {
+    throw new Error(`No reader contract found for chainId: ${chainId}`);
+  }
+  const allFundsNavData = await rethinkReaderContract.methods
+    .getFundsNAVData(fundAddresses)
+    .call();
 
   const allMethods: INAVMethod[] = [];
   fundsStore.navMethodDetailsHashToFundAddress = {};
@@ -52,6 +58,7 @@ export async function fetchFundsNAVDataAction(
 
   fundsStore.allNavMethods = allMethods;
   fundsStore.uniqueNavMethods = uniqueMethods;
+  console.log("done calculating fund nav data ", chainId);
 }
 
 async function processFundNavData(
@@ -64,7 +71,6 @@ async function processFundNavData(
   allMethods: INAVMethod[],
 ) {
   const fund = fundsStore.chainFunds[chainId][fundIndex];
-  console.warn("wap", fundsStore.chainFundNAVUpdates);
   fundsStore.chainFundNAVUpdates[chainId][fundAddress] = [];
 
   if (!fundNAVData.encodedNavUpdate?.length) return;
@@ -75,6 +81,7 @@ async function processFundNavData(
   );
 
   const navUpdates = await fundsStore.fundStore.parseFundNAVUpdates(
+    chainId,
     fundNAVData,
     fundAddress,
     fundContract,
