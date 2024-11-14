@@ -130,13 +130,11 @@
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
       <UiDetailsButton
         v-if="item.detailsJson"
-        :text="item.valuationSource === 'Rethink' ? 'Raw' : 'Details'"
+        :text="isMethodEditable(item) ? 'Details' : 'Raw'"
         :active="isExpanded(internalItem)"
         :disabled="item.deleted || item.isAlreadyUsed"
         @click.stop="toggleExpand(internalItem)"
-        @click.native="
-          item.valuationSource === 'Rethink' ? null : setNavEntry(item)
-        "
+        @click.native="isMethodEditable(item) ? setNavEntry(item) : null"
       />
     </template>
 
@@ -207,7 +205,7 @@
 
             <!-- form goes here -->
             <v-form
-              v-if="item.valuationSource !== 'Rethink'"
+              v-if="isMethodEditable(item)"
               ref="form"
               v-model="formIsValid"
             >
@@ -252,9 +250,8 @@
                         :key="positionType.key"
                         :value="positionType.key"
                         variant="outlined"
-                        @click.native="resetMethods"
+                        @click.native="resetMethods(true)"
                       >
-
                         {{ positionType.name }}
                       </v-btn>
                     </v-btn-toggle>
@@ -275,7 +272,7 @@
                         :key="valuationType.key"
                         :value="valuationType.key"
                         variant="outlined"
-                        @click.native="resetMethods"
+                        @click.native="resetMethods()"
                       >
                         {{ valuationType.name }}
                       </v-btn>
@@ -392,12 +389,8 @@
               </v-row>
             </v-form>
 
-            <div class="nav_entries__json">
-              {{
-                item.valuationSource === 'Rethink'
-                  ? item?.detailsJson
-                  : navEntry?.detailsJson
-              }}
+            <div v-else class="nav_entries__json">
+              {{ item.detailsJson }}
             </div>
           </div>
         </td>
@@ -760,6 +753,12 @@ export default defineComponent({
 
       return "";
     },
+    // only alow edit if the method is not rethink position and not one of the predefined positions
+    isMethodEditable(navEntry: INAVMethod) {
+      const isManageNavMethodsPage = this.idx === "nav/manage/index";
+      const positionName = ["Fund Balance", "Safe Balance", "Fees Balance"];
+      return isManageNavMethodsPage && navEntry.valuationSource !== "Rethink" && !positionName.includes(navEntry.positionName);
+    },
     deleteMethod(method: INAVMethod, toggle = true) {
       // If method is new, we can just remove it from the methods array.
       // If it is not new, we will mark it as deleted.
@@ -793,18 +792,23 @@ export default defineComponent({
         ),
       );
     },
-    resetMethods() {
-      const isComposable = this.navEntry?.positionType === PositionType.Composable;
-      // fallback if there is no valuation type
-      // const valuationType = isComposable ? "undefined" : this.defineValuationType(this.navEntry) as ValuationType;
+    resetMethods(isPositionTypeChange = false) {
+      let valuationType = this.navEntry?.valuationType;
 
-      console.log("RESET METHODS: ", this.navEntry);
+      if (isPositionTypeChange) {
+        valuationType = this.defineValuationType(this.navEntry) as ValuationType;
+      }
+
+      if(valuationType === this.originalNavEntry?.valuationType){
+        this.setNavEntry(this.originalNavEntry);
+        return;
+      }
 
       const tmpNavEntry = {
         positionName: this.navEntry?.positionName,
         valuationSource: this.navEntry?.valuationSource,
         positionType: this.navEntry?.positionType,
-        valuationType: isComposable ? "undefined" : this.navEntry?.valuationType,
+        valuationType,
         details: {},
         detailsJson: "{}",
       } as INAVMethod;
@@ -816,7 +820,7 @@ export default defineComponent({
       tmpNavEntry.details[this.navEntry.positionType].push(
         this.getNewMethodDetails(
           this.navEntry?.positionType,
-          this.navEntry?.valuationType,
+          valuationType,
         ),
       );
 
@@ -928,9 +932,6 @@ export default defineComponent({
         this.fundStore.fundManagedNAVMethods.push(newNavEntry);
         // we need to delete the method from the navEntry
 
-        console.log("NEW NAV ENTRY: ", newNavEntry);
-        console.log("this.navEntry: ", this.navEntry);
-        console.log("originalNavEntry: ", this.originalNavEntry);
 
         if (this.hasChanged()) {
           // remove original method from the all methods
@@ -973,11 +974,8 @@ export default defineComponent({
       if (valuationType) {
         this.navEntry.valuationType = valuationType;
         this.originalNavEntry.valuationType = valuationType;
-      } else{
-        // trigger
       }
 
-      console.log("navEntry: ", this.navEntry);
     },
     hasChanged() {
       const editedNavDeepCopy = JSON.parse(JSON.stringify(this.navEntry,stringifyBigInt), parseBigInt);
@@ -988,8 +986,6 @@ export default defineComponent({
 
       const originalNavStringify = JSON.stringify(this.originalNavEntry, stringifyBigInt);
       const editedNavStringify = JSON.stringify(editedNavDeepCopy, stringifyBigInt);
-      // console.log("originalNavStringify: ", originalNavStringify);
-      // console.log("editedNavStringify: ", editedNavStringify);
 
       return originalNavStringify !== editedNavStringify;
     },
@@ -1005,10 +1001,10 @@ export default defineComponent({
 
       // let valuationType;
 
-      console.log("defineValuationType: ", method);
       switch (method.positionType) {
         case PositionType.Liquid: {
-          const { tokenPair, aggregatorAddress } = method?.details?.liquid[0];
+          const tokenPair = method?.details?.liquid?.[0]?.tokenPair;
+          const aggregatorAddress = method?.details?.liquid?.[0]?.aggregatorAddress;
 
           if (tokenPair) {
             return ValuationType.DEXPair;
@@ -1058,7 +1054,7 @@ export default defineComponent({
     },
     getNewMethodDetails(
       positionType: PositionType,
-      valuationType: ValuationType,
+      valuationType: ValuationType | undefined,
     ) {
       const newDetails: Record<string, any> = {
         isValid: false,
@@ -1208,5 +1204,9 @@ export default defineComponent({
       opacity: 1;
     }
   }
+}
+
+.text-end{
+  margin-bottom: 20px;
 }
 </style>
