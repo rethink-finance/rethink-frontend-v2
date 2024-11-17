@@ -8,18 +8,29 @@ import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ClockMode } from "~/types/enums/clock_mode";
 import type IToken from "~/types/token";
 import { ERC20 } from "assets/contracts/ERC20";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import { parseFundSettings } from "~/composables/fund/parseFundSettings";
+import { parseClockMode } from "~/composables/fund/parseClockMode";
 
 export const fetchFundMetaDataAction = async (
+  fundChainId: string,
   fundAddress: string,
 ): Promise<IFund> => {
+  const web3Store = useWeb3Store();
   const fundStore = useFundStore();
-  const rethinkReaderContract = fundStore.rethinkReaderContract;
-
+  const rethinkReaderContract =
+    web3Store.contracts[fundChainId]?.rethinkReaderContract;
   try {
-    const fundNavMetaData = await fundStore.callWithRetry(() =>
-      rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
+    console.log(
+      "fundNavMetaData000",
+      fundAddress,
+      fundChainId,
+      rethinkReaderContract,
     );
-
+    const fundNavMetaData = await rethinkReaderContract.methods
+      .getFundMetaData(fundAddress)
+      .call();
+    console.log("fundNavMetaData", fundNavMetaData);
     const {
       startTime,
       totalDepositBal,
@@ -55,10 +66,8 @@ export const fetchFundMetaDataAction = async (
     fundSettings.performancePeriod = feePerformancePeriod;
     fundSettings.managementPeriod = feeManagePeriod;
 
-    const parsedFundSettings: IFundSettings =
-      fundStore.parseFundSettings(fundSettings);
-
-    const parsedClockMode = fundStore.parseClockMode(clockMode);
+    const parsedFundSettings: IFundSettings = parseFundSettings(fundSettings);
+    const parsedClockMode = parseClockMode(clockMode);
     console.log("parsedClockMode: ", parsedClockMode);
     console.log("parsedFundSettings: ", parsedFundSettings);
     console.log("fundGovernanceTokenSupply: ", fundGovernanceTokenSupply);

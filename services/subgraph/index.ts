@@ -1,11 +1,14 @@
 // services/subgraph/index.ts
 import { ApolloClient } from "@apollo/client/core";
 
-import { FETCH_DELEGATES, FETCH_GOVERNANCE_PROPOSAL, FETCH_GOVERNANCE_PROPOSALS } from "./queries";
+import {
+  FETCH_DELEGATES,
+  FETCH_GOVERNANCE_PROPOSAL,
+  FETCH_GOVERNANCE_PROPOSALS,
+} from "./queries";
 
 import type ISubgraphFetchDelegatesResponse from "~/types/responses/subgraph_fetch_delegates";
 import type ISubgraphGovernanceProposal from "~/types/subgraph_governance_proposal";
-
 
 export interface GovernorProposalsResponse {
   proposals: ISubgraphGovernanceProposal[];
@@ -77,6 +80,8 @@ export const fetchSubgraphDelegates = async (
     votingContract: string;
   },
 ): Promise<ISubgraphFetchDelegatesResponse> => {
+  console.warn("client :", client);
+  console.warn("Voting contract:", values);
   try {
     const { data } = await client.query<DelegateResponse>({
       query: FETCH_DELEGATES,

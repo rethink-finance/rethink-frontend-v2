@@ -202,7 +202,10 @@ const transfer = async () => {
           toastStore.errorToast(
             "Your deposit request has failed. Please contact the Rethink Finance support.",
           );
-          fundStore.fetchUserFundData(fundStore.selectedFundAddress);
+          fundStore.fetchUserFundData(
+            fundStore.selectedFundChain,
+            fundStore.selectedFundAddress,
+          );
         }
         isTransferLoading.value = false;
       })

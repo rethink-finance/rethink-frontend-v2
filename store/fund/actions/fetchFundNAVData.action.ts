@@ -1,19 +1,21 @@
 import { useFundStore } from "../fund.store";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 import type INAVMethod from "~/types/nav_method";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
+  const web3Store = useWeb3Store();
   const fund = fundStore.fund;
 
   if (!fund?.address) return;
 
+  const rethinkReaderContract =
+    web3Store.contracts[fund.chainId]?.rethinkReaderContract;
   try {
-    const fundNAVData = await fundStore.callWithRetry(() =>
-      fundStore.rethinkReaderContract.methods
-        .getFundNAVData(fund?.address)
-        .call(),
-    );
+    const fundNAVData = await rethinkReaderContract.methods
+      .getFundNAVData(fund?.address)
+      .call();
 
     const navUpdates = await fundStore.parseFundNAVUpdates(
       fund.chainId,

@@ -15,12 +15,14 @@ export const fetchDelegatesAction = async (): Promise<any> => {
   if (!client) {
     throw new Error("Apollo client not found");
   }
-  if (!fundStore.fund?.governanceToken?.address) {
+  const votingContractAddress = unref(fundStore.fund?.governanceToken?.address);
+
+  if (!votingContractAddress) {
     throw new Error("Governor token address not found");
   }
 
   const fetchedDelegates = await fetchSubgraphDelegates(client.value, {
-    votingContract: fundStore.fund?.governanceToken?.address,
+    votingContract: votingContractAddress,
   });
   const processedDelegates = _mapSubgraphFetchDelegatesToDelegates(
     fetchedDelegates,

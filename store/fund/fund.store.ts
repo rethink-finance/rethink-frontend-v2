@@ -2,6 +2,7 @@ import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
 
+import type { ContractAbi } from "web3-types";
 import { useActionState } from "../actionState.store";
 import { useToastStore } from "../toasts/toast.store";
 import { calculateFundPerformanceMetricsAction } from "./actions/calculateFundPerformanceMetrics.action";
@@ -44,6 +45,7 @@ import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
+import { CustomContract } from "~/store/web3/contract";
 
 // Since the direct import won't infer the custom type, we cast it here.:
 const addresses: IAddresses = addressesJson as IAddresses;
@@ -55,6 +57,7 @@ interface IState {
   fundUserData: IFundUserData;
   userDepositRequest?: IFundTransactionRequest;
   userRedemptionRequest?: IFundTransactionRequest;
+  selectedFundChain: string;
   selectedFundAddress: string;
   // Fund NAV methods that user can manage and change, delete, add...
   fundManagedNAVMethods: INAVMethod[];
@@ -78,6 +81,7 @@ export const useFundStore = defineStore({
     },
     userDepositRequest: undefined,
     userRedemptionRequest: undefined,
+    selectedFundChain: "",
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundRoleModAddress: {},
@@ -346,47 +350,50 @@ export const useFundStore = defineStore({
     /**
      * Contracts
      */
-    // @ts-expect-error: we should extend the return type as Contract<...>
-    rethinkReaderContract(): Contract {
-      const contractAddress =
-        addresses[RethinkReaderContractName][this.web3Store.chainId];
-      return new this.web3.eth.Contract(RethinkReader.abi, contractAddress);
-    },
-    // @ts-expect-error: we should extend the return type as Contract<...>
+    // @ts-expect-error: we should extend the return type as Contract<...>...
     navCalculatorContract(): Contract {
-      return new this.web3.eth.Contract(
+      return this.web3Store.getCustomContract(
+        this.fundChainId,
         NAVCalculator.abi,
         this.web3Store.NAVCalculatorBeaconProxyAddress,
       );
     },
-    // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
+    // @ts-expect-error: we should extend the return type as Contract<...>...
     fundContract(): Contract {
-      return new this.web3.eth.Contract(
+      return this.web3Store.getCustomContract(
+        this.fundChainId,
         GovernableFund.abi,
         this.selectedFundAddress,
       );
     },
-    // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
+    // @ts-expect-error: we should extend the return type as Contract<...>...
     fundSafeContract(): Contract {
-      return new this.web3.eth.Contract(
+      return this.web3Store.getCustomContract(
+        this.fundChainId,
         GnosisSafeL2JSON.abi,
         this.fund?.safeAddress,
       );
     },
-    // @ts-expect-error: we should extend the return type as Contract<GovernableFund>...
+    // @ts-expect-error: we should extend the return type as Contract<...>...
     fundGovernorContract(): Contract {
-      return new this.web3.eth.Contract(
+      return this.web3Store.getCustomContract(
+        this.fundChainId,
         RethinkFundGovernor.abi,
         this.fund?.governorAddress,
       );
     },
-    // @ts-expect-error: we should extend the return type ...
+    // @ts-expect-error: we should extend the return type as Contract<...>...
     fundBaseTokenContract(): Contract {
-      return new this.web3.eth.Contract(ERC20, this.fund?.baseToken?.address);
+      return this.web3Store.getCustomContract(
+        this.fundChainId,
+        ERC20,
+        this.fund?.baseToken?.address,
+      );
     },
     // @ts-expect-error: we should extend the return type as Contract<...>...
     fundGovernanceTokenContract(): Contract {
-      return new this.web3.eth.Contract(
+      return this.web3Store.getCustomContract(
+        this.fundChainId,
         ERC20Votes.abi,
         this.fund?.governanceToken.address,
       );
@@ -396,7 +403,7 @@ export const useFundStore = defineStore({
       (
         value: any,
         shouldCommify: boolean = true,
-        shouldroundToSignificantDecimals: boolean = false,
+        shouldRoundToSignificantDecimals: boolean = false,
       ): string => {
         const baseSymbol = state.fund?.baseToken?.symbol;
         const baseDecimals = state.fund?.baseToken?.decimals;
@@ -409,7 +416,7 @@ export const useFundStore = defineStore({
               value,
               baseDecimals,
               shouldCommify,
-              shouldroundToSignificantDecimals,
+              shouldRoundToSignificantDecimals,
             )
           : "0";
         return valueFormatted + " " + baseSymbol;
@@ -419,7 +426,7 @@ export const useFundStore = defineStore({
       (
         value: any,
         shouldCommify: boolean = true,
-        shouldroundToSignificantDecimals: boolean = false,
+        shouldRoundToSignificantDecimals: boolean = false,
       ): string => {
         const fundSymbol = state.fund?.fundToken.symbol;
         const fundDecimals = state.fund?.fundToken.decimals;
@@ -432,7 +439,7 @@ export const useFundStore = defineStore({
               value,
               fundDecimals,
               shouldCommify,
-              shouldroundToSignificantDecimals,
+              shouldRoundToSignificantDecimals,
             )
           : "0";
         return valueFormatted + " " + fundSymbol;
@@ -478,9 +485,9 @@ export const useFundStore = defineStore({
      * @dev: would be better to separate fundSettings from (startTime & metadata), as sometimes we already
      *   have the fund settings from the discovery page.
      */
-    fetchFundData(fundAddress: string): Promise<void> {
+    fetchFundData(fundChainId: string, fundAddress: string): Promise<void> {
       return useActionState("fetchFundDataAction", () =>
-        fetchFundDataAction(fundAddress),
+        fetchFundDataAction(fundChainId, fundAddress),
       );
     },
     fetchFundNAVData(): Promise<void> {
@@ -488,9 +495,9 @@ export const useFundStore = defineStore({
         fetchFundNAVDataAction(),
       );
     },
-    fetchUserFundData(fundAddress: string) {
+    fetchUserFundData(chainId: string, fundAddress: string) {
       return useActionState("fetchUserFundDataAction", () =>
-        fetchUserFundDataAction(fundAddress),
+        fetchUserFundDataAction(chainId, fundAddress),
       );
     },
     /**
@@ -498,50 +505,14 @@ export const useFundStore = defineStore({
      * - getFundStartTime
      * - fundMetadata
      */
-    fetchFundMetaData(fundAddress: string): Promise<IFund> {
+    fetchFundMetaData(
+      fundChainId: string,
+      fundAddress: string,
+    ): Promise<IFund> {
       return useActionState("fetchFundMetaDataAction", () =>
-        fetchFundMetaDataAction(fundAddress),
+        fetchFundMetaDataAction(fundChainId, fundAddress),
       );
     },
-    parseFundSettings(fundData: any) {
-      const fundSettings: Partial<IFundSettings> = {};
-
-      // Directly iterate over the fund details object's entries.
-      Object.entries(fundData).forEach(([key, value]) => {
-        // Assume that every key in quantity corresponds to a valid key in IFundSettings.
-        const detailKey = key as keyof IFundSettings;
-
-        // Convert bigint values to strings, otherwise assign the value directly.
-        // This approach skips checking if detailKey is explicitly part of fundSettings
-        // since fundSettings is typed as Partial<IFundSettings> and initialized accordingly.
-        fundSettings[detailKey] =
-          typeof value === "bigint" ? value.toString() : value;
-      });
-
-      return fundSettings as IFundSettings;
-    },
-    parseClockMode(clockModeString: string): IClockMode {
-      // Example clockModeString:
-      //   - "mode=blocknumber&from=default"
-      //   - "mode=timestamp"
-      const params = new URLSearchParams(clockModeString);
-      const mode = (params.get("mode") as ClockMode) || "";
-      const from = params.get("from");
-
-      if (!(mode in ClockModeMap)) {
-        console.error(
-          "Fund clock mode is not in valid options: ",
-          mode,
-          clockModeString,
-        );
-      }
-
-      return {
-        mode: ClockModeMap[mode],
-        ...(from ? { from } : {}),
-      } as IClockMode;
-    },
-
     fetchFundPendingDepositRedemptionBalance(): void {
       if (!this.fund) return;
       this.fund.pendingDepositBalanceError = false;

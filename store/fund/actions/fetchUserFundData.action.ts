@@ -1,33 +1,21 @@
 import { useFundStore } from "../fund.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export const fetchUserFundDataAction = async (
+  fundChainId: string,
   fundAddress: string,
 ): Promise<any> => {
   const fundStore = useFundStore();
-  const rethinkReaderContract = fundStore.rethinkReaderContract;
+  const web3Store = useWeb3Store();
+
+  const rethinkReaderContract =
+    web3Store.contracts[fundChainId]?.rethinkReaderContract;
   const activeAccountAddress = fundStore.activeAccountAddress;
   if (!activeAccountAddress || !rethinkReaderContract) return;
 
-  const results = await Promise.allSettled(
-    [
-      () =>
-        rethinkReaderContract.methods
-          .getFundUserData(fundAddress, activeAccountAddress)
-          .call(),
-    ].map((fn: () => Promise<any>) =>
-      fundStore.accountStore.requestConcurrencyLimit(() =>
-        fundStore.callWithRetry(fn),
-      ),
-    ),
-  );
-
-  const [fundUserData]: any[] = results.map((result, index) => {
-    if (result.status === "fulfilled") {
-      return result.value;
-    }
-    console.error("Failed fetching fund user data value for: ", index, result);
-    return undefined;
-  });
+  const fundUserData = await rethinkReaderContract.methods
+    .getFundUserData(fundAddress, activeAccountAddress)
+    .call();
 
   const {
     baseTokenBalance,

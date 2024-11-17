@@ -174,9 +174,8 @@ const icon = (chainShort: string) => {
 };
 
 const navigateFundDetails = (event: any, row: any) => {
-  const chainId = web3Store.chainId;
   router.push(
-    `/details/${chainId}-${row.item.fundToken.symbol}-${row.item.address}`,
+    `/details/${row.item.chainId}-${row.item.fundToken.symbol}-${row.item.address}`,
   );
 };
 </script>

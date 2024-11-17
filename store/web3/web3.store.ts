@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
+import type { ContractAbi } from "web3-types";
 import addressesJson from "~/assets/contracts/addresses.json";
 import type IAddresses from "~/types/addresses";
 import type INetwork from "~/types/network";
@@ -126,6 +127,15 @@ export const useWeb3Store = defineStore({
     },
   },
   actions: {
+    getCustomContract(
+      chainId: string,
+      abi: any,
+      address: string,
+    ): CustomContract<ContractAbi> {
+      const network = networksMap[chainId];
+      const rpcUrls = network.rpcUrls || [];
+      return new CustomContract(abi, address, rpcUrls);
+    },
     /**
      * Fetches specified information (e.g., 'symbol', 'decimals') about a token from a smart contract.
      * If the information is cached, it returns the cached value to avoid unnecessary blockchain calls.

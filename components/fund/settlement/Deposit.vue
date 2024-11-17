@@ -221,7 +221,10 @@ const handleError = (error: any, refreshData: boolean = true) => {
     );
     console.error(error);
     if (refreshData) {
-      fundStore.fetchUserFundData(fundStore.selectedFundAddress);
+      fundStore.fetchUserFundData(
+        fundStore.selectedFundChain,
+        fundStore.selectedFundAddress,
+      );
     }
   }
 };
@@ -300,7 +303,10 @@ const requestDeposit = async () => {
           toastStore.errorToast(
             "Your deposit request has failed. Please contact the Rethink Finance support.",
           );
-          fundStore.fetchUserFundData(fundStore.selectedFundAddress);
+          fundStore.fetchUserFundData(
+            fundStore.selectedFundChain,
+            fundStore.selectedFundAddress,
+          );
         }
         loadingRequestDeposit.value = false;
       })

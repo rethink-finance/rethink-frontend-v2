@@ -13,7 +13,7 @@
         >) is down?
       </span>
     </div>
-    <TableAllFunds v-else :loading="isLoadingFetchFundsData" :items="funds" />
+    <TableFunds v-else :loading="isLoadingFetchFundsData" :items="funds" />
   </div>
 </template>
 

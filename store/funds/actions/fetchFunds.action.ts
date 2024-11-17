@@ -55,4 +55,6 @@ export async function fetchFundsAction(): Promise<void> {
 
     console.log(`Funds fetched for chain: ${chainId}`);
   }
+
+  console.warn("ALL FUNDS FETCHED: ", fundsStore.chainFunds);
 }
