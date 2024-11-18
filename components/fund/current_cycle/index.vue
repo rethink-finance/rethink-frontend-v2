@@ -229,7 +229,7 @@ const redemptionDisabledTooltipText = computed(() => {
 });
 
 const signDepositAndDelegateBySigTransaction = async () => {
-  const activeAccountAddress = fundStore.activeAccountAddress ?? "";
+  const activeAccountAddress = accountStore.activeAccountAddress ?? "";
   if (!activeAccountAddress) {
     toastStore.errorToast("No active account, try re-authenticating.");
     return;
@@ -292,7 +292,7 @@ const signDepositAndDelegateBySigTransaction = async () => {
 };
 
 const deposit = async () => {
-  if (!fundStore.activeAccountAddress) {
+  if (!accountStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to deposit tokens to the fund.");
     return;
   }
@@ -308,7 +308,7 @@ const deposit = async () => {
     "DEPOSIT tokensWei: ",
     userDepositRequest?.value?.amount,
     "from : ",
-    fundStore.activeAccountAddress,
+    accountStore.activeAccountAddress,
   );
   loadingDeposit.value = true;
   let encodedFunctionCall;
@@ -336,7 +336,7 @@ const deposit = async () => {
     await fundStore.fundContract.methods
       .fundFlowsCall(encodedFunctionCall)
       .send({
-        from: fundStore.activeAccountAddress,
+        from: accountStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {
@@ -381,7 +381,7 @@ const deposit = async () => {
 };
 
 const redeem = async () => {
-  if (!fundStore.activeAccountAddress) {
+  if (!accountStore.activeAccountAddress) {
     toastStore.errorToast(
       "Connect your wallet to redeem tokens from the fund.",
     );
@@ -401,7 +401,7 @@ const redeem = async () => {
     "[REDEEM] tokensWei: ",
     userRedemptionRequest?.value?.amount,
     "from : ",
-    fundStore.activeAccountAddress,
+    accountStore.activeAccountAddress,
   );
 
   const encodedFunctionCall = encodeFundFlowsCallFunctionData("withdraw");
@@ -410,7 +410,7 @@ const redeem = async () => {
     await fundStore.fundContract.methods
       .fundFlowsCall(encodedFunctionCall)
       .send({
-        from: fundStore.activeAccountAddress,
+        from: accountStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {

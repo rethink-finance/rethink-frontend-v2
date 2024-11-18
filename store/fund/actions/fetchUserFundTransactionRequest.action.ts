@@ -6,19 +6,21 @@ import {
   type FundTransactionType,
 } from "~/types/enums/fund_transaction_type";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
+import { useAccountStore } from "~/store/account/account.store";
 
 export const fetchUserFundTransactionRequestAction = async (
   fundTransactionType: FundTransactionType,
 ): Promise<any> => {
   const fundStore = useFundStore();
+  const accountStore = useAccountStore();
 
-  if (!fundStore.activeAccountAddress) return undefined;
+  if (!accountStore.activeAccountAddress) return undefined;
   if (!fundStore.fund?.address) return undefined;
   const slotId = FundTransactionTypeStorageSlotIdxMap[fundTransactionType];
 
   // GovernableFundStorage.sol
   const userRequestAddress = getAddressMappingStorageKeyAtIndex(
-    fundStore.activeAccountAddress,
+    accountStore.activeAccountAddress,
     slotId,
   );
   const userRequestTimestampAddress = incrementStorageKey(userRequestAddress);

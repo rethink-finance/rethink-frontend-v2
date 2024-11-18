@@ -6,7 +6,7 @@
           <img
             src="@/assets/images/zodiac_pilot.svg"
             class="img_zodiac_pilot"
-          >
+          />
           <template v-if="isUsingZodiacPilotExtension">
             <div>Connected to the Zodiac Pilot</div>
             <Icon
@@ -52,9 +52,7 @@
         <v-form ref="form" v-model="formTransferIsValid">
           <v-row>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2">
-                To
-              </v-label>
+              <v-label class="label_required mb-2"> To </v-label>
               <v-text-field
                 v-model="transferEntry.to"
                 placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -74,9 +72,7 @@
               />
             </v-col>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2">
-                Amount
-              </v-label>
+              <v-label class="label_required mb-2"> Amount </v-label>
               <v-text-field
                 v-model="transferEntry.depositValue"
                 placeholder="E.g. 10"
@@ -154,9 +150,7 @@
         <v-form ref="form" v-model="formSubmitRawTXNIsValid">
           <v-row>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2">
-                To
-              </v-label>
+              <v-label class="label_required mb-2"> To </v-label>
               <v-text-field
                 v-model="submitRawTXNEntry.contractAddress"
                 placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -165,9 +159,7 @@
               />
             </v-col>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2">
-                Submit (Calldata)
-              </v-label>
+              <v-label class="label_required mb-2"> Submit (Calldata) </v-label>
               <v-text-field
                 v-model="submitRawTXNEntry.txData"
                 placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -176,9 +168,7 @@
               />
             </v-col>
             <v-col cols="12" sm="4">
-              <v-label class="label_required mb-2">
-                Amount
-              </v-label>
+              <v-label class="label_required mb-2"> Amount </v-label>
               <v-text-field
                 v-model="submitRawTXNEntry.amountValue"
                 placeholder="E.g. 10"
@@ -227,13 +217,13 @@ import { ERC20 } from "~/assets/contracts/ERC20";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import type IFund from "~/types/fund";
+import { useAccountStore } from "~/store/account/account.store";
 
+const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 
-const fund = useAttrs().fund as IFund;
 const { isUsingZodiacPilotExtension } = toRefs(fundStore);
 
 const loadingSubmitRawTXN = ref(false);
@@ -301,7 +291,7 @@ const handleTransfer = async () => {
   await inputTokenContract.value.methods
     .transfer(transferEntry.to, tokensWei)
     .send({
-      from: fundStore.activeAccountAddress,
+      from: accountStore.activeAccountAddress,
       gas: 200000,
     })
     .on("transactionHash", (hash: any) => {
@@ -336,7 +326,7 @@ const submitRawTXN = async () => {
 
     console.log("to:", submitRawTXNEntry.contractAddress);
     console.log("data:", submitRawTXNEntry.txData);
-    console.log("from:", fundStore.activeAccountAddress);
+    console.log("from:", accountStore.activeAccountAddress);
     console.log("value:", parseInt(submitRawTXNEntry.amountValue));
 
     if (!web3Store.web3) {
@@ -346,20 +336,22 @@ const submitRawTXN = async () => {
 
     // TODO this next line can be removed probably?
     // web3Store.web3.config.ignoreGasPricing = true;
-    await web3Store.web3.eth.sendTransaction({
-      to: submitRawTXNEntry.contractAddress,
-      data: submitRawTXNEntry.txData,
-      from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: "",
-      maxFeePerGas: "",
-      value: parseInt(submitRawTXNEntry.amountValue),
-    },
-    DEFAULT_RETURN_FORMAT,
-    {
-      // Disable revert check
-      checkRevertBeforeSending: false,
-    },
-    )
+    await web3Store.web3.eth
+      .sendTransaction(
+        {
+          to: submitRawTXNEntry.contractAddress,
+          data: submitRawTXNEntry.txData,
+          from: accountStore.activeAccountAddress,
+          // maxPriorityFeePerGas: "",
+          maxFeePerGas: "",
+          value: parseInt(submitRawTXNEntry.amountValue),
+        },
+        DEFAULT_RETURN_FORMAT,
+        {
+          // Disable revert check
+          checkRevertBeforeSending: false,
+        },
+      )
       .on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
@@ -392,7 +384,6 @@ const submitRawTXN = async () => {
 
     if (error?.data?.message) {
       toastStore.errorToast(error.data.message, 15000);
-
     } else {
       toastStore.errorToast(
         "There has been an error. Please contact the Rethink Finance support.",
@@ -432,7 +423,7 @@ const fetchTokenDetails = async () => {
     const symbol = (await tokenContract.methods.symbol().call()) as string;
     const decimals = (await tokenContract.methods.decimals().call()) as bigint;
     const balance = (await tokenContract.methods
-      .balanceOf(fundStore.activeAccountAddress)
+      .balanceOf(accountStore.activeAccountAddress)
       .call()) as bigint;
 
     const formattedBalance = formatTokenValue(balance, Number(decimals), false);

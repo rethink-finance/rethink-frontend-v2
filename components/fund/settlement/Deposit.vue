@@ -234,7 +234,7 @@ const handleError = (error: any, refreshData: boolean = true) => {
  * https://docs.web3js.org/guides/wallet/transactions#sending-a-transaction-and-listening-to-the-events
  */
 const requestDeposit = async () => {
-  if (!fundStore.activeAccountAddress) {
+  if (!accountStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to request deposit.");
     return;
   }
@@ -249,7 +249,7 @@ const requestDeposit = async () => {
     "Request deposit tokensWei: ",
     tokensWei.value,
     "from : ",
-    fundStore.activeAccountAddress,
+    accountStore.activeAccountAddress,
   );
 
   const encodedFunctionCall = encodeFundFlowsCallFunctionData(
@@ -273,7 +273,7 @@ const requestDeposit = async () => {
     await fundStore.fundContract.methods
       .fundFlowsCall(encodedFunctionCall)
       .send({
-        from: fundStore.activeAccountAddress,
+        from: accountStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {
@@ -323,7 +323,7 @@ const setTokenValueToDepositRequestAmount = () => {
 };
 
 const approveAllowance = async () => {
-  if (!fundStore.activeAccountAddress) {
+  if (!accountStore.activeAccountAddress) {
     toastStore.errorToast("Connect your wallet to approve allowance.");
     return;
   }
@@ -338,7 +338,7 @@ const approveAllowance = async () => {
     "Approve allowance tokensWei: ",
     tokensWei.value,
     "from : ",
-    fundStore.activeAccountAddress,
+    accountStore.activeAccountAddress,
   );
   const allowanceValue = tokensWei.value;
 
@@ -347,7 +347,7 @@ const approveAllowance = async () => {
     await fundStore.fundBaseTokenContract.methods
       .approve(fund.value?.address, tokensWei.value)
       .send({
-        from: fundStore.activeAccountAddress,
+        from: accountStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {

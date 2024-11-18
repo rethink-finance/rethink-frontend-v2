@@ -1,14 +1,16 @@
 import { useFundStore } from "../fund.store";
+import { useAccountStore } from "~/store/account/account.store";
 
 export const fetchUserFundDelegateAddressAction = async (): Promise<any> => {
   const fundStore = useFundStore();
+  const accountStore = useAccountStore();
 
   fundStore.fundUserData.fundDelegateAddress = "";
   if (!fundStore.fund?.governanceToken?.address) {
     console.log("Fund governanceToken.address is not set.");
     return;
   }
-  if (!fundStore.activeAccountAddress) {
+  if (!accountStore.activeAccountAddress) {
     console.log("activeAccountAddress is not set.");
     return;
   }
@@ -16,7 +18,7 @@ export const fetchUserFundDelegateAddressAction = async (): Promise<any> => {
 
   fundStore.fundUserData.fundDelegateAddress =
     await fundStore.fundGovernanceTokenContract.methods
-      .delegates(fundStore.activeAccountAddress)
+      .delegates(accountStore.activeAccountAddress)
       .call();
   console.warn(
     "FETCH userFundDelegateAddress",

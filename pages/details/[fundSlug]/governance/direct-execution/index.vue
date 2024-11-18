@@ -55,12 +55,14 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useFundsStore } from "~/store/funds/funds.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { useAccountStore } from "~/store/account/account.store";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 const loading = ref(false);
 
 const router = useRouter();
+const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const fundsStore = useFundsStore();
 const web3Store = useWeb3Store();
@@ -211,7 +213,7 @@ const submitProposal = async () => {
     await fundStore.fundGovernorContract.methods
       .propose(...proposalData)
       .send({
-        from: fundStore.activeAccountAddress,
+        from: accountStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {

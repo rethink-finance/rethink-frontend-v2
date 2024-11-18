@@ -1,10 +1,12 @@
 import { useFundStore } from "../fund.store";
+import { useAccountStore } from "~/store/account/account.store";
 
 export const fetchUserFundShareValueAction = async (): Promise<any> => {
   const fundStore = useFundStore();
+  const accountStore = useAccountStore();
   fundStore.fundUserData.fundShareValue = BigInt("0");
 
-  if (!fundStore.activeAccountAddress)
+  if (!accountStore.activeAccountAddress)
     return console.error("Active account not found");
 
   if (!fundStore.fund?.fundTokenTotalSupply) {
@@ -14,7 +16,7 @@ export const fetchUserFundShareValueAction = async (): Promise<any> => {
   let balanceWei = BigInt("0");
   try {
     balanceWei = await fundStore.fundContract.methods
-      .valueOf(fundStore.activeAccountAddress)
+      .valueOf(accountStore.activeAccountAddress)
       .call();
   } catch (e) {
     console.error(

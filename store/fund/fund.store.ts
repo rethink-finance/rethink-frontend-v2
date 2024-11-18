@@ -2,7 +2,6 @@ import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
 import { Web3 } from "web3";
 
-import type { ContractAbi } from "web3-types";
 import { useActionState } from "../actionState.store";
 import { useToastStore } from "../toasts/toast.store";
 import { calculateFundPerformanceMetricsAction } from "./actions/calculateFundPerformanceMetrics.action";
@@ -23,24 +22,17 @@ import { fetchUserGovernanceTokenBalanceAction } from "./actions/fetchUserGovern
 import { parseFundNAVUpdatesAction } from "./actions/parseFundNAVUpdates.action";
 import { postUpdateNAVAction } from "./actions/postUpdateNav.action";
 
-import addressesJson from "~/assets/contracts/addresses.json";
 import { ERC20 } from "~/assets/contracts/ERC20";
 import { ERC20Votes } from "~/assets/contracts/ERC20Votes";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
-import { GovernableFundFactory } from "~/assets/contracts/GovernableFundFactory";
 import { NAVCalculator } from "~/assets/contracts/NAVCalculator";
 import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
-import { RethinkReader } from "~/assets/contracts/RethinkReader";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import type IAddresses from "~/types/addresses";
-import type IClockMode from "~/types/clock_mode";
-import { ClockMode, ClockModeMap } from "~/types/enums/clock_mode";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFund from "~/types/fund";
-import type IFundSettings from "~/types/fund_settings";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
@@ -85,9 +77,6 @@ export const useFundStore = defineStore({
     accountStore(): any {
       return useAccountStore();
     },
-    activeAccountAddress(): string | undefined {
-      return this.accountStore.activeAccount?.address;
-    },
     web3Store(): any {
       return useWeb3Store();
     },
@@ -108,7 +97,7 @@ export const useFundStore = defineStore({
       // Check if user is using Zodiac Pilot extension.
       // The connected wallet address is the same as custody (safe address).
       return (
-        this.activeAccountAddress?.toLowerCase() ===
+        this.accountStore.activeAccountAddress ===
         this.fund?.safeAddress.toLowerCase()
       );
     },
@@ -264,7 +253,7 @@ export const useFundStore = defineStore({
         this.fund?.allowedDepositAddresses || []
       ).map((address: string) => address.toLowerCase());
       return fundAllowedDepositAddresses.includes(
-        this.activeAccountAddress?.toLowerCase() || "",
+        this.accountStore.activeAccountAddress || "",
       );
     },
     shouldUserDelegate(): boolean {
@@ -620,7 +609,7 @@ export const useFundStore = defineStore({
       );
     },
     async fetchFundContractBaseTokenBalance() {
-      if (!this.activeAccountAddress) return;
+      if (!this.accountStore.activeAccountAddress) return;
       if (!this.fund?.address) return;
 
       this.fund.fundContractBaseTokenBalanceLoading = true;

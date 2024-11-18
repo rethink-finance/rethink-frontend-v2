@@ -9,9 +9,7 @@
     >
       <div class="main_card di-card">
         <div class="di-card__header-container">
-          <div class="di-card__header">
-            Delegate
-          </div>
+          <div class="di-card__header">Delegate</div>
 
           <Icon
             icon="material-symbols:close"
@@ -67,9 +65,7 @@
           </div>
 
           <div v-else class="di-card__someone-else-container">
-            <v-label class="di-card__label label_required">
-              Address
-            </v-label>
+            <v-label class="di-card__label label_required"> Address </v-label>
             <v-text-field
               v-model="delegateAddress"
               placeholder="Enter the address of the delegate"
@@ -107,14 +103,14 @@
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import { useAccountStore } from "~/store/account/account.store";
 
 defineProps({ modelValue: Boolean });
 const emit = defineEmits(["update:modelValue", "delegate-success"]);
 
 const fundStore = useFundStore();
 const toastStore = useToastStore();
-const web3Store = useWeb3Store();
+const accountStore = useAccountStore();
 
 // delegate dialog
 const loadingDelegates = ref(false);
@@ -132,7 +128,7 @@ const isDelegatedAddressValid = computed(() => {
 const hasDelegatedToYourself = computed(() => {
   return (
     fundStore?.fundUserData.fundDelegateAddress.toLowerCase() ===
-    fundStore.activeAccountAddress
+    accountStore.activeAccountAddress
   );
 });
 
@@ -144,7 +140,9 @@ const parsedDelegateMessage = computed(() => {
   if (fundStore?.shouldUserDelegate) {
     output =
       "You have not delegated to anyone yet.<br><br><strong>NOTE: </strong>You must always delegate to yourself first, even if you want to delegate to someone else!";
-  } else if (delegateAddress.toLowerCase() === fundStore.activeAccountAddress) {
+  } else if (
+    delegateAddress.toLowerCase() === accountStore.activeAccountAddress
+  ) {
     output = "You have delegated to yourself.";
   }
 
@@ -163,7 +161,7 @@ const delegate = async (isMyself = false) => {
     loadingDelegates.value = true;
 
     const delegateTo = isMyself
-      ? fundStore.activeAccountAddress
+      ? accountStore.activeAccountAddress
       : delegateAddress.value;
     const governanceTokenAddress = fundStore.fund?.governanceToken.address;
     const fundAddress = fundStore.fund?.address;
@@ -188,7 +186,7 @@ const delegate = async (isMyself = false) => {
     await contract.methods
       .delegate(delegateTo)
       .send({
-        from: fundStore.activeAccountAddress,
+        from: accountStore.activeAccountAddress,
         // maxPriorityFeePerGas: gasPrice,
         gasPrice: "",
       })
@@ -201,12 +199,11 @@ const delegate = async (isMyself = false) => {
       .on("receipt", function (receipt: any) {
         console.log(receipt);
         if (receipt.status) {
-          toastStore.successToast(
-            "Delegation of Governance Tokens Succeeded",
-          );
+          toastStore.successToast("Delegation of Governance Tokens Succeeded");
           emit("delegate-success");
           closeDelegateDialog();
-          if (delegateTo) fundStore.fundUserData.fundDelegateAddress = delegateTo;
+          if (delegateTo)
+            fundStore.fundUserData.fundDelegateAddress = delegateTo;
         } else {
           toastStore.errorToast(
             "The delegateTo tx has failed. Please contact the Rethink Finance support.",
@@ -220,7 +217,7 @@ const delegate = async (isMyself = false) => {
         toastStore.errorToast(
           "There has been an error. Please contact the Rethink Finance support.",
         );
-      })
+      });
   } catch (error) {
     console.error("Error delegating to external gov token: ", error);
     loadingDelegates.value = false;

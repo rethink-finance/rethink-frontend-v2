@@ -552,7 +552,7 @@ const createProposal = async () => {
     );
 
   // Propose NAV update for fund (target: fund addr, payloadL bytes)
-  console.log("Active Account: ", fundStore.activeAccountAddress);
+  console.log("Active Account: ", accountStore.activeAccountAddress);
   loading.value = true;
   const targetAddresses = [
     fundStore.fund?.address, // encodedNavUpdateEntries
@@ -610,7 +610,7 @@ const createProposal = async () => {
     await fundStore.fundGovernorContract.methods
       .propose(...proposalData)
       .send({
-        from: fundStore.activeAccountAddress,
+        from: accountStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {
@@ -664,7 +664,7 @@ const createProposal = async () => {
     await fundStore.fundGovernorContract.methods
       .propose(...proposalData2)
       .send({
-        from: fundStore.activeAccountAddress,
+        from: accountStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {

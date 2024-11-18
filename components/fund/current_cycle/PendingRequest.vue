@@ -40,9 +40,7 @@
       </v-btn>
     </div>
     <div class="pending_request__header pending_request__header--bg-light">
-      <div>
-        Claimable
-      </div>
+      <div>Claimable</div>
       <div class="pending_request__available_token">
         {{ claimableTokenValue }} {{ token1?.symbol }}
       </div>
@@ -60,17 +58,19 @@ import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IToken from "~/types/token";
 import { roundToSignificantDecimals } from "~/composables/formatters";
 import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
+import { useAccountStore } from "~/store/account/account.store";
 
 const fundStore = useFundStore();
+const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const showCancelButton = ref(false);
 
 const toggleCancelButton = () => {
   showCancelButton.value = !showCancelButton.value;
-}
+};
 const hideCancelButton = () => {
   showCancelButton.value = false;
-}
+};
 const props = defineProps({
   fundTransactionRequest: {
     type: Object as PropType<IFundTransactionRequest>,
@@ -78,13 +78,11 @@ const props = defineProps({
   },
   token0: {
     type: Object as PropType<IToken>,
-    default: () => {
-    },
+    default: () => {},
   },
   token1: {
     type: Object as PropType<IToken>,
-    default: () => {
-    },
+    default: () => {},
   },
   exchangeRate: {
     type: FixedNumber,
@@ -93,12 +91,19 @@ const props = defineProps({
 });
 
 const fundTransactionRequestAmountFormatted = computed(() => {
-  return formatTokenValue(props.fundTransactionRequest.amount, props.token0.decimals, false);
+  return formatTokenValue(
+    props.fundTransactionRequest.amount,
+    props.token0.decimals,
+    false,
+  );
 });
 const claimableTokenValue = computed(() => {
-  if (!props.exchangeRate) return 0
-  console.log("exchangeRate:", props.exchangeRate)
-  const amount = ethers.formatUnits(props.fundTransactionRequest.amount, props.token0.decimals);
+  if (!props.exchangeRate) return 0;
+  console.log("exchangeRate:", props.exchangeRate);
+  const amount = ethers.formatUnits(
+    props.fundTransactionRequest.amount,
+    props.token0.decimals,
+  );
   const value = props.exchangeRate.mul(FixedNumber.fromString(amount));
   return roundToSignificantDecimals(value.toString(), 3);
 });
@@ -106,71 +111,81 @@ const claimableTokenValue = computed(() => {
 const isLoadingCancelRequest = ref(false);
 
 const cancelPendingRequest = async () => {
-  if (!fundStore.activeAccountAddress) {
-    toastStore.errorToast("Connect your wallet to cancel the deposit.")
+  if (!accountStore.activeAccountAddress) {
+    toastStore.errorToast("Connect your wallet to cancel the deposit.");
     return;
   }
-  const isDepositRequest = props.fundTransactionRequest.type === FundTransactionType.Deposit;
+  const isDepositRequest =
+    props.fundTransactionRequest.type === FundTransactionType.Deposit;
   console.log(`Cancel ${props.fundTransactionRequest.type} Request`);
   isLoadingCancelRequest.value = true;
 
   const encodedFunctionCall = encodeFundFlowsCallFunctionData(
     "revokeDepositWithrawal",
-    [ isDepositRequest ],
+    [isDepositRequest],
   );
 
   try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: fundStore.activeAccountAddress,
-      gasPrice: "",
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
+    await fundStore.fundContract.methods
+      .fundFlowsCall(encodedFunctionCall)
+      .send({
+        from: accountStore.activeAccountAddress,
+        gasPrice: "",
+      })
+      .on("transactionHash", (hash: string) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The transaction has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
 
-      if (receipt.status) {
-        toastStore.successToast(
-          `Cancellation of a ${props.fundTransactionRequest.type} request was successful.`,
-        );
-        if (isDepositRequest) {
-          fundStore.userDepositRequest = undefined;
+        if (receipt.status) {
+          toastStore.successToast(
+            `Cancellation of a ${props.fundTransactionRequest.type} request was successful.`,
+          );
+          if (isDepositRequest) {
+            fundStore.userDepositRequest = undefined;
+          } else {
+            fundStore.userRedemptionRequest = undefined;
+          }
         } else {
-          fundStore.userRedemptionRequest = undefined;
+          fundStore.fetchUserFundDepositRedemptionRequests();
+          toastStore.errorToast(
+            "Your deposit request has failed. Please contact the Rethink Finance support.",
+          );
         }
-      } else {
-        fundStore.fetchUserFundDepositRedemptionRequests();
+        isLoadingCancelRequest.value = false;
+        hideCancelButton();
+      })
+      .on("error", (error: any) => {
+        console.error(error);
         toastStore.errorToast(
-          "Your deposit request has failed. Please contact the Rethink Finance support.",
+          "There has been an error. Please contact the Rethink Finance support.",
         );
-      }
-      isLoadingCancelRequest.value = false;
-      hideCancelButton();
-    }).on("error", (error: any) => {
-      console.error(error);
-      toastStore.errorToast(
-        "There has been an error. Please contact the Rethink Finance support.",
-      );
-    })
+      });
   } catch (error: any) {
     handleError(error);
   }
-}
+};
 
-const handleError = (error: any, refreshData: boolean=true) => {
+const handleError = (error: any, refreshData: boolean = true) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
   isLoadingCancelRequest.value = false;
   if ([4001, 100].includes(error?.code)) {
-    toastStore.addToast("Transaction was rejected.")
+    toastStore.addToast("Transaction was rejected.");
   } else {
-    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    toastStore.errorToast(
+      "There has been an error. Please contact the Rethink Finance support.",
+    );
     console.error(error);
     if (refreshData) {
       fundStore.fetchUserFundDepositRedemptionRequests();
     }
   }
-}
+};
 </script>
 
 <style lang="scss" scoped>

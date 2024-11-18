@@ -81,10 +81,10 @@
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import { useAccountStore } from "~/store/account/account.store";
 const toastStore = useToastStore();
 const fundStore = useFundStore();
-const web3Store = useWeb3Store();
+const accountStore = useAccountStore();
 
 const { isUsingZodiacPilotExtension } = toRefs(fundStore);
 
@@ -182,7 +182,7 @@ const transfer = async () => {
     await fundStore.fundBaseTokenContract.methods
       .transfer(fundStore?.fund?.address, tokensWei.value)
       .send({
-        from: fundStore.activeAccountAddress,
+        from: accountStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {

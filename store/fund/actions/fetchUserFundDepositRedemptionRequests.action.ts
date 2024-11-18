@@ -1,12 +1,14 @@
 import { useFundStore } from "../fund.store";
 
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
+import { useAccountStore } from "~/store/account/account.store";
 
 export const fetchUserFundDepositRedemptionRequestsAction =
   async (): Promise<any> => {
     const fundStore = useFundStore();
+    const accountStore = useAccountStore();
 
-    if (!fundStore.activeAccountAddress)
+    if (!accountStore.activeAccountAddress)
       return console.error("Active account not found");
     if (!fundStore.fund?.address) return "";
     const [depositRequestResult, redemptionRequestResult] =

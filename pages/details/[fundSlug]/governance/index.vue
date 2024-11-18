@@ -32,9 +32,7 @@
           <div class="tools__val">
             {{ proposalsSuccessRate }}
           </div>
-          <div class="tools__subtext">
-            Success Rate
-          </div>
+          <div class="tools__subtext">Success Rate</div>
         </div>
       </template>
       <FundGovernanceProposalsTable
@@ -68,7 +66,7 @@
       </template>
       <FundGovernanceTableTrendingDelegates
         :items="trendingDelegates"
-        :active-account-address="fundStore.activeAccountAddress"
+        :active-account-address="accountStore.activeAccountAddress"
         :loading="isFetchingDelegates"
         @row-click="handleRowClick"
       />
@@ -89,16 +87,17 @@
       @cancel="closeDelegatorsDialog"
     >
       <div class="mb-10">
-        <div class="title">
-          Delegated Member:
-        </div> {{ activeRow?.delegatedMember }}
+        <div class="title">Delegated Member:</div>
+        {{ activeRow?.delegatedMember }}
       </div>
       <div>
-        <div class="title">
-          Delegators:
-        </div>
+        <div class="title">Delegators:</div>
         <ul>
-          <li v-for="delegator in activeRow?.delegators" :key="delegator" class="delegator-item">
+          <li
+            v-for="delegator in activeRow?.delegators"
+            :key="delegator"
+            class="delegator-item"
+          >
             {{ delegator }}
             <FundGovernanceProposalStateChip
               v-if="activeRow?.delegatedMember === delegator"
@@ -114,15 +113,15 @@
       title="Heads Up!"
       confirm-text="Create a New Proposal"
       :cancel-text="
-        updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to existing proposal'
+        updateSettingsProposals.length > 1
+          ? 'Cancel'
+          : 'Go to existing proposal'
       "
       message="There is already an active fund settings proposal. Are you sure you want to create a new one?"
       class="confirm_dialog"
       :max-width="updateSettingsProposals.length > 1 ? 'unset' : '600px'"
       @confirm="handleNavigateToCreateProposal"
-      @cancel="
-        updateSettingsProposals.length > 1 ? null : handleGoToProposal()
-      "
+      @cancel="updateSettingsProposals.length > 1 ? null : handleGoToProposal()"
     >
       <FundGovernanceProposalsTable
         v-if="updateSettingsProposals.length > 1"
@@ -169,12 +168,13 @@ const governanceProposals = computed(() => {
 
   // set updateSettingsProposals to proposals that have updateSettings calldata
   updateSettingsProposals.value = proposals.filter((proposal) => {
-    return proposal.calldataTags?.some(
-      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS
-    ) && (
-      proposal.state === ProposalState.Active ||
-      proposal.state === ProposalState.Pending ||
-      proposal.state === ProposalState.Queued
+    return (
+      proposal.calldataTags?.some(
+        (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS,
+      ) &&
+      (proposal.state === ProposalState.Active ||
+        proposal.state === ProposalState.Pending ||
+        proposal.state === ProposalState.Queued)
     );
   });
 
@@ -235,8 +235,12 @@ const trendingDelegates = computed(() => {
     fundStore.fund?.address,
   );
   delegates.sort((a, b) => {
-    const votingPowerA = Number(a.votingPower.replace(fundStore.fund?.governanceToken.symbol || "", ""));
-    const votingPowerB = Number(b.votingPower.replace(fundStore.fund?.governanceToken.symbol || "", ""));
+    const votingPowerA = Number(
+      a.votingPower.replace(fundStore.fund?.governanceToken.symbol || "", ""),
+    );
+    const votingPowerB = Number(
+      b.votingPower.replace(fundStore.fund?.governanceToken.symbol || "", ""),
+    );
     return votingPowerB - votingPowerA;
   });
   return _mapDelegatesToTrendingDelegates(delegates);
@@ -930,13 +934,16 @@ const handleDelegateSuccess = async () => {
 };
 
 const isFetchingProposals = computed(() => {
-  const actionStates = actionStateStore.getActionState("fetchGovernanceProposalsAction");
+  const actionStates = actionStateStore.getActionState(
+    "fetchGovernanceProposalsAction",
+  );
 
-  if(!actionStates) return false;
+  if (!actionStates) return false;
 
   const isLoadingState = actionStates.includes(ActionState.Loading);
-  const hasNeverLoaded = !actionStates.includes(ActionState.Success) &&
-                        !actionStates.includes(ActionState.Error);
+  const hasNeverLoaded =
+    !actionStates.includes(ActionState.Success) &&
+    !actionStates.includes(ActionState.Error);
 
   return isLoadingState || hasNeverLoaded;
 });
@@ -944,11 +951,12 @@ const isFetchingProposals = computed(() => {
 const isFetchingDelegates = computed(() => {
   const actionStates = actionStateStore.getActionState("fetchDelegatesAction");
 
-  if(!actionStates) return false;
+  if (!actionStates) return false;
 
   const isLoadingState = actionStates.includes(ActionState.Loading);
-  const hasNeverLoaded = !actionStates.includes(ActionState.Success) &&
-                        !actionStates.includes(ActionState.Error);
+  const hasNeverLoaded =
+    !actionStates.includes(ActionState.Success) &&
+    !actionStates.includes(ActionState.Error);
 
   return isLoadingState || hasNeverLoaded;
 });
@@ -1031,7 +1039,7 @@ const isFetchingDelegates = computed(() => {
   max-width: unset;
 }
 
-.delegator-item{
+.delegator-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1039,7 +1047,7 @@ const isFetchingDelegates = computed(() => {
   margin-bottom: 0.25rem;
 }
 
-.title{
+.title {
   font-weight: 700;
   color: $color-white;
   margin-bottom: 0.5rem;

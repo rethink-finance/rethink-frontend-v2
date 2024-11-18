@@ -326,7 +326,7 @@ const submitVote = async () => {
     await fundStore.fundGovernorContract.methods
       .castVote(props.proposal.proposalId, selectedVoteOption.value)
       .send({
-        from: fundStore.activeAccountAddress,
+        from: accountStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {
@@ -342,7 +342,7 @@ const submitVote = async () => {
 
           // update has voted
           if (
-            fundStore.activeAccountAddress !== undefined &&
+            accountStore.activeAccountAddress !== undefined &&
             props.proposal.proposalId
           ) {
             governanceProposalStore.connectedAccountProposalsHasVoted[
@@ -350,7 +350,7 @@ const submitVote = async () => {
             ] ??= {};
             governanceProposalStore.connectedAccountProposalsHasVoted[
               props.proposal.proposalId
-            ][fundStore.activeAccountAddress] = true;
+            ][accountStore.activeAccountAddress] = true;
           }
           // emit success event to refetch vote submissions
           emit("vote-success", selectedVoteOption.value);
@@ -402,7 +402,7 @@ const executeProposal = async () => {
     await fundStore.fundGovernorContract.methods
       .execute(...trxData)
       .send({
-        from: fundStore.activeAccountAddress,
+        from: accountStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {
@@ -453,14 +453,14 @@ const voteOptionIcon = (voteType: number) => {
 
 const fetchHasVoted = () => {
   if (
-    fundStore.activeAccountAddress === undefined ||
+    accountStore.activeAccountAddress === undefined ||
     !props.proposal.proposalId
   ) {
     return;
   }
   props.proposal.hasVotedLoading = true;
 
-  const activeAccountAddress = fundStore.activeAccountAddress;
+  const activeAccountAddress = accountStore.activeAccountAddress;
   governanceProposalStore.connectedAccountProposalsHasVoted[
     props.proposal.proposalId
   ] ??= {};
