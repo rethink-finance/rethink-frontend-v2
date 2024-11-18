@@ -396,7 +396,7 @@ const submit = async () => {
       await fundStore.fundGovernorContract.methods
         .propose(...proposalData)
         .send({
-          from: accountStore.activeAccountAddress,
+          from: fundStore.activeAccountAddress,
           gasPrice: "",
         })
         .on("transactionHash", (hash: string) => {

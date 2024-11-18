@@ -3,9 +3,7 @@
     <UiDataBar title="Governance">
       <div class="data_bar__item">
         <div class="data_bar__title">
-          <template
-            v-if="isZeroAddress(fundStore.fundUserData.fundDelegateAddress)"
-          >
+          <template v-if="isZeroAddress(fundStore.fundUserData.fundDelegateAddress)">
             N/A
           </template>
           <template v-else>
@@ -15,14 +13,18 @@
             {{ parsedDelegatingToAddress }}
           </template>
         </div>
-        <div class="data_bar__subtitle">Delegating To</div>
+        <div class="data_bar__subtitle">
+          Delegating To
+        </div>
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
           {{ userGovernanceTokenBalanceFormatted }}
           {{ fund.governanceToken.symbol }}
         </div>
-        <div class="data_bar__subtitle">Voting Power</div>
+        <div class="data_bar__subtitle">
+          Voting Power
+        </div>
       </div>
       <div class="data_bar__item">
         <v-btn
@@ -43,9 +45,7 @@
 import { isZeroAddress } from "~/composables/addressUtils";
 import { useFundStore } from "~/store/fund/fund.store";
 import type IFund from "~/types/fund";
-import { useAccountStore } from "~/store/account/account.store";
 const fundStore = useFundStore();
-const accountStore = useAccountStore();
 
 const isDelegateDialogOpen = ref(false);
 
@@ -67,13 +67,10 @@ const userGovernanceTokenBalanceFormatted = computed(() => {
 
 const parsedDelegatingToAddress = computed(() => {
   // check if the user delegated to himself
-  if (
-    fundStore.fundUserData.fundDelegateAddress.toLowerCase() ===
-    accountStore.activeAccountAddress
-  ) {
+  if (fundStore.fundUserData.fundDelegateAddress.toLowerCase() === fundStore?.activeAccountAddress?.toLowerCase()) {
     return "Myself";
   }
-
+  
   return truncateAddress(fundStore.fundUserData.fundDelegateAddress);
 });
 </script>

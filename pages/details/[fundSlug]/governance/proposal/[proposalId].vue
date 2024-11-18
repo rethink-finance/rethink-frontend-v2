@@ -16,7 +16,10 @@
           <v-tab value="executableCode" class="section-bottom__tab">
             Executable Code
           </v-tab>
-          <v-tab value="voteSubmissions" class="section-bottom__tab">
+          <v-tab
+            value="voteSubmissions"
+            class="section-bottom__tab"
+          >
             Vote Submissions
           </v-tab>
         </v-tabs>
@@ -46,25 +49,26 @@
               >
                 <strong class="text-primary">{{ index }}#</strong>
                 <div>
-                  <strong>Contract:</strong>
-                  {{ calldata?.contractName ?? "N/A" }}
+                  <strong>Contract:</strong> {{ calldata?.contractName ?? "N/A" }}
                 </div>
                 <div>
-                  <strong>Function:</strong>
-                  {{ calldata?.functionName ?? "N/A" }}
+                  <strong>Function:</strong> {{ calldata?.functionName ?? "N/A" }}
                 </div>
                 <div>
-                  <strong>Target:</strong>
-                  {{ proposal?.targets?.[index] ?? "N/A" }}
+                  <strong>Target:</strong> {{ proposal?.targets?.[index] ?? "N/A" }}
                 </div>
                 <div>
-                  <strong>Value:</strong>
-                  {{ proposal?.values?.[index] ?? "N/A" }}
+                  <strong>Value:</strong> {{ proposal?.values?.[index] ?? "N/A" }}
                 </div>
-                <UiDataRowCard :grow-column1="true" is-expanded>
+                <UiDataRowCard
+                  :grow-column1="true"
+                  is-expanded
+                >
                   <template #title>
                     <div class="d-flex align-center justify-space-between">
-                      <div>Calldata</div>
+                      <div>
+                        Calldata
+                      </div>
                       <div>
                         <v-switch
                           v-model="toggledRawProposalCalldatas[index]"
@@ -78,12 +82,7 @@
                   </template>
                   <template #body>
                     <template v-if="!toggledRawProposalCalldatas[index]">
-                      <template
-                        v-if="
-                          calldata?.calldataType ===
-                          ProposalCalldataType.NAV_UPDATE
-                        "
-                      >
+                      <template v-if="calldata?.calldataType === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
                           :methods="allMethods[index]"
                           show-summary-row
@@ -92,12 +91,7 @@
                           idx="[proposalId]"
                         />
                       </template>
-                      <template
-                        v-else-if="
-                          calldata?.calldataType ===
-                          ProposalCalldataType.FUND_SETTINGS
-                        "
-                      >
+                      <template v-else-if="calldata?.calldataType === ProposalCalldataType.FUND_SETTINGS">
                         <!-- Show fund setting UI -->
                         <FundSettingsExecutableCode
                           :calldata-decoded="calldata?.calldataDecoded"
@@ -130,7 +124,11 @@
       </div>
 
       <div class="section-bottom--right">
-        <UiDataRowCard title="Outcome" class="data_row_card" is-expanded>
+        <UiDataRowCard
+          title="Outcome"
+          class="data_row_card"
+          is-expanded
+        >
           <template #body>
             <div class="section-bottom__outcome">
               <FundGovernanceProgressInsight
@@ -138,21 +136,27 @@
                 :value="proposal?.approval"
                 :format-function="formatPercent"
                 subtext="Approval"
-                :tooltip-text="`${proposal.forVotesFormatted} of ${proposal.totalVotesFormatted}`"
+                :tooltip-text="`${ proposal.forVotesFormatted } of ${ proposal.totalVotesFormatted }`"
               />
               <FundGovernanceProgressInsight
                 title="Participation Rate"
                 :value="proposal?.participation"
                 :format-function="formatPercent"
                 subtext="Support"
-                :tooltip-text="`${proposal.totalVotesFormatted} of ${proposal.totalSupplyFormatted}`"
+                :tooltip-text="`${ proposal.totalVotesFormatted } of ${ proposal.totalSupplyFormatted }`"
               />
             </div>
           </template>
         </UiDataRowCard>
-        <UiDataRowCard title="Roadmap" class="data_row_card" is-expanded>
+        <UiDataRowCard
+          title="Roadmap"
+          class="data_row_card"
+          is-expanded
+        >
           <template #body>
-            <FundGovernanceProposalRoadmap :proposal="proposal" />
+            <FundGovernanceProposalRoadmap
+              :proposal="proposal"
+            />
           </template>
         </UiDataRowCard>
       </div>
@@ -185,20 +189,14 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import { useAccountStore } from "~/store/account/account.store";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
-const accountStore = useAccountStore();
-
 const route = useRoute();
 const proposalSlug = route.params.proposalId as string;
-const [createdBlockNumber, proposalId] = proposalSlug.split("-") as [
-  bigint,
-  string,
-];
+const [createdBlockNumber, proposalId] = proposalSlug.split("-") as [bigint, string];
 const fundSlug = route.params.fundSlug as string;
 const showRawCalldatas = ref(false);
 
@@ -209,10 +207,8 @@ console.log("fundSlug", fundSlug);
 const toggledRawProposalCalldatas = ref<Record<number, boolean>>({});
 
 const toggleRawProposalCalldata = (index: number) => {
-  toggledRawProposalCalldatas.value[index] = !(
-    toggledRawProposalCalldatas.value[index] ?? false
-  );
-};
+  toggledRawProposalCalldatas.value[index] = !(toggledRawProposalCalldatas.value[index] ?? false);
+}
 
 const { selectedFundSlug } = toRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
@@ -228,30 +224,29 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
+
 const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
 const actionStateStore = useActionStateStore();
 // const proposalFetched = ref(false);
 const shouldFetchProposalVoteSubmissions = ref(true);
 
-const proposalVoteSubmissions = computed(() => proposal.value?.voteSubmissions);
+const proposalVoteSubmissions = computed(() =>
+  proposal.value?.voteSubmissions,
+);
 
 const activeUserVoteSubmission = computed(() => {
-  const activeAddress = accountStore.activeAccountAddress;
-  return activeAddress
-    ? proposalVoteSubmissions.value?.find(
-        (sub) => sub.proposer.toLowerCase() === activeAddress,
-      )
-    : undefined;
+  const activeAddress = fundStore.activeAccountAddress?.toLowerCase();
+  return activeAddress ?
+    proposalVoteSubmissions.value?.find(
+      sub => sub.proposer.toLowerCase() === activeAddress,
+    ) :
+    undefined;
 });
 
-const proposal = computed((): IGovernanceProposal | undefined => {
+const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
-  const proposal = governanceProposalStore.getProposal(
-    web3Store.chainId,
-    fundStore.fund?.address,
-    proposalId,
-  );
+  const proposal = governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
   if (!proposal) return undefined;
 
   /**
@@ -263,7 +258,7 @@ const proposal = computed((): IGovernanceProposal | undefined => {
   */
 
   return proposal;
-});
+})
 
 const filteredProposalCalldatasDecoded = computed(() => {
   // TODO: remove this after Contract whitelists are fixed
@@ -271,43 +266,32 @@ const filteredProposalCalldatasDecoded = computed(() => {
   // first one just sends the same whitelist as it was to reset it, and the secnod one has new whitelist addresses.
 
   // first index is a default fund settings just meant to reset the whitelist (sending existing whitelist)
-  const firstIndex =
-    proposal.value?.calldataTypes?.indexOf(
-      ProposalCalldataType.FUND_SETTINGS,
-    ) ?? -1;
+  const firstIndex = proposal.value?.calldataTypes?.indexOf(
+    ProposalCalldataType.FUND_SETTINGS,
+  ) ?? -1;
   // last index is a final fund settings
-  const lastIndex =
-    proposal.value?.calldataTypes?.lastIndexOf(
-      ProposalCalldataType.FUND_SETTINGS,
-    ) ?? -1;
+  const lastIndex = proposal.value?.calldataTypes?.lastIndexOf(
+    ProposalCalldataType.FUND_SETTINGS,
+  ) ?? -1;
 
   const calldatasDecoded = proposal.value?.calldatasDecoded;
   // remove default fund settings from proposal (the one it is resetting the whitelist, no need to show it here, it's a hack)
-  if (
-    calldatasDecoded?.length &&
-    firstIndex !== lastIndex &&
-    firstIndex !== -1
-  ) {
+  if (calldatasDecoded?.length && firstIndex !== lastIndex && firstIndex !== -1) {
     console.debug("removing default fund settings by index", firstIndex);
-    return [
-      ...calldatasDecoded.slice(0, firstIndex),
-      ...calldatasDecoded.slice(firstIndex + 1),
-    ];
+    return [...calldatasDecoded.slice(0, firstIndex), ...calldatasDecoded.slice(firstIndex + 1)];
   }
 
   return calldatasDecoded;
-});
+})
 
 const parseNavEntries = (calldataDecoded: any): INAVMethod[] => {
   console.log("calldataDecoded", calldataDecoded);
   const navMethods = [];
-  for (const [index, navMethod] of (
-    calldataDecoded?.navUpdateData ?? []
-  ).entries()) {
+  for (const [index, navMethod] of (calldataDecoded?.navUpdateData ?? []).entries()) {
     navMethods.push(parseNAVMethod(index, navMethod));
   }
-  return navMethods;
-};
+  return navMethods
+}
 
 const rawProposalData = computed(() => {
   return {
@@ -315,28 +299,27 @@ const rawProposalData = computed(() => {
     values: proposal.value?.values ?? [],
     signatures: proposal.value?.signatures ?? [],
     calldatas: proposal.value?.calldatas ?? [],
-  };
-});
+  }
+})
 watch(
-  () => proposal.value,
-  (newProposal: IGovernanceProposal | undefined) => {
+  () => proposal.value, (newProposal: IGovernanceProposal | undefined) => {
     if (!newProposal) return;
 
     newProposal.calldatas.forEach((_, index) => {
       toggledRawProposalCalldatas.value[index] = false;
-    });
+    })
   },
   { immediate: true },
 );
 
 const formatCalldata = (calldata: any) => {
   try {
-    return JSON.stringify(calldata, null, 2);
+    return JSON.stringify(calldata, null, 2)
   } catch {
     console.warn("failed to format calldata", calldata);
     return calldata;
   }
-};
+}
 /**
 const fetchProposalVoteSubmissions = async () => {
   loadingProposalVoteSubmissions.value = true;
@@ -386,7 +369,7 @@ const fetchProposalVoteSubmissions = async () => {
           // fetch block details to get the timestamp
           const blockVoteCast = await fundStore.web3.eth.getBlock( event?.blockNumber);
           const voteTimestamp = blockVoteCast?.timestamp ? new Date(Number(blockVoteCast?.timestamp) * 1000) : null;
-          const myVote = accountStore.activeAccountAddress === voter?.toLowerCase();
+          const myVote = fundStore?.activeAccountAddress?.toLowerCase() === voter?.toLowerCase();
 
           const newVote = {
             proposalId,
@@ -451,7 +434,7 @@ const handleVoteSuccess = async () => {
   await new Promise((resolve) => setTimeout(resolve, 2000));
   await governanceProposalStore.fetchGovernanceProposal(proposalId);
   // fetchProposalVoteSubmissions();
-};
+}
 
 onMounted(async () => {
   // fetchProposalVoteSubmissions();
@@ -469,10 +452,9 @@ onMounted(async () => {
   } catch {}
 
   if (proposal.value) {
-    allMethods.value =
-      proposal.value?.calldatasDecoded?.map((calldata) => {
-        return parseNavEntries(calldata?.calldataDecoded);
-      }) ?? [];
+    allMethods.value = proposal.value?.calldatasDecoded?.map((calldata) => {
+      return parseNavEntries(calldata?.calldataDecoded);
+    }) ?? [];
   }
 });
 onBeforeUnmount(() => {
@@ -488,9 +470,8 @@ const isLoadingProposal = computed(() => {
   if (!actionStates) return false;
 
   const isLoadingState = actionStates.includes(ActionState.Loading);
-  const hasNeverLoaded =
-    !actionStates.includes(ActionState.Success) &&
-    !actionStates.includes(ActionState.Error);
+  const hasNeverLoaded = !actionStates.includes(ActionState.Success) &&
+                        !actionStates.includes(ActionState.Error);
 
   return isLoadingState || hasNeverLoaded;
 });

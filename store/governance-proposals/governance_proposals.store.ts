@@ -24,7 +24,6 @@ import {
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import { networksMap } from "~/store/web3/networksMap";
-import { useAccountStore } from "~/store/account/account.store";
 
 interface IState {
   /* Example fund proposals.
@@ -70,9 +69,6 @@ export const useGovernanceProposalsStore = defineStore({
     connectedAccountProposalsHasVoted: {},
   }),
   getters: {
-    accountStore(): any {
-      return useAccountStore();
-    },
     fundStore(): any {
       return useFundStore();
     },
@@ -224,7 +220,7 @@ export const useGovernanceProposalsStore = defineStore({
       return this.fundDelegates?.[chainId]?.[fundAddress]?.[delegateAddress];
     },
     hasAccountVoted(proposalId: string): boolean | undefined {
-      const activeAccountAddress = this.accountStore.activeAccountAddress;
+      const activeAccountAddress = this.fundStore.activeAccountAddress;
       if (!activeAccountAddress) return false;
       if (this.connectedAccountProposalsHasVoted?.[proposalId] === undefined) {
         // This means that we don't know, vote status was not fetched yet or had some troubles fetching it.

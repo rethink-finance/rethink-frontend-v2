@@ -199,12 +199,12 @@ const getRowClass = (item: IGovernanceProposal) => {
 };
 
 watch(
-  [() => props.items, () => accountStore.activeAccountAddress],
+  [() => props.items, () => fundStore.activeAccountAddress],
   () => {
-    if (accountStore.activeAccountAddress === undefined) {
+    if (fundStore.activeAccountAddress === undefined) {
       return;
     }
-    const activeAccountAddress = accountStore.activeAccountAddress;
+    const activeAccountAddress = fundStore.activeAccountAddress;
 
     for (const proposal of props.items) {
       governanceProposalStore.connectedAccountProposalsHasVoted[

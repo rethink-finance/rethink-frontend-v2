@@ -186,7 +186,7 @@ const handleError = (error: any, refreshData: boolean = true) => {
 };
 
 const requestRedemption = async () => {
-  if (!accountStore.activeAccountAddress) {
+  if (!fundStore.activeAccountAddress) {
     toastStore.errorToast(
       "Connect your wallet to redeem tokens from the fund.",
     );
@@ -207,7 +207,7 @@ const requestRedemption = async () => {
     "[REDEEM] tokensWei: ",
     tokensWei,
     "from : ",
-    accountStore.activeAccountAddress,
+    fundStore.activeAccountAddress,
   );
   const encodedFunctionCall = encodeFundFlowsCallFunctionData(
     "requestWithdraw",
@@ -218,7 +218,7 @@ const requestRedemption = async () => {
     await fundStore.fundContract.methods
       .fundFlowsCall(encodedFunctionCall)
       .send({
-        from: accountStore.activeAccountAddress,
+        from: fundStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {

@@ -1,6 +1,5 @@
 import { useFundStore } from "../fund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { useAccountStore } from "~/store/account/account.store";
 
 export const fetchUserFundDataAction = async (
   fundChainId: string,
@@ -8,11 +7,10 @@ export const fetchUserFundDataAction = async (
 ): Promise<any> => {
   const fundStore = useFundStore();
   const web3Store = useWeb3Store();
-  const accountStore = useAccountStore();
 
   const rethinkReaderContract =
     web3Store.contracts[fundChainId]?.rethinkReaderContract;
-  const activeAccountAddress = accountStore.activeAccountAddress;
+  const activeAccountAddress = fundStore.activeAccountAddress;
   if (!activeAccountAddress || !rethinkReaderContract) return;
 
   const fundUserData = await rethinkReaderContract.methods
@@ -33,7 +31,7 @@ export const fetchUserFundDataAction = async (
   if (fundStore.fund?.address !== fundStore.fund?.governanceToken.address) {
     fundStore.fundUserData.fundDelegateAddress =
       await fundStore.fundGovernanceTokenContract.methods
-        .delegates(accountStore.activeAccountAddress)
+        .delegates(fundStore.activeAccountAddress)
         .call();
   } else {
     fundStore.fundUserData.fundDelegateAddress = fundDelegateAddress;

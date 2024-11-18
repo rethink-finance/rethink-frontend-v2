@@ -1,9 +1,7 @@
 import { useFundStore } from "../fund.store";
-import { useAccountStore } from "~/store/account/account.store";
 
 export const postUpdateNAVAction = async (): Promise<any> => {
   const fundStore = useFundStore();
-  const accountStore = useAccountStore();
 
   try {
     const navExecutorAddr = fundStore.web3Store.NAVExecutorBeaconProxyAddress;
@@ -18,7 +16,7 @@ export const postUpdateNAVAction = async (): Promise<any> => {
     return await fundStore.fundContract.methods
       .executeNAVUpdate(navExecutorAddr)
       .send({
-        from: accountStore.activeAccountAddress,
+        from: fundStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: any) => {

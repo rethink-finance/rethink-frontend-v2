@@ -53,14 +53,12 @@ import { prepRoleModEntryInput } from "~/composables/parseNavMethodDetails";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { useAccountStore } from "~/store/account/account.store";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 const loading = ref(false);
 
 const router = useRouter();
-const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
@@ -278,7 +276,7 @@ const submitProposal = async () => {
     await fundStore.fundGovernorContract.methods
       .propose(...proposalData)
       .send({
-        from: accountStore.activeAccountAddress,
+        from: fundStore.activeAccountAddress,
         gasPrice: "",
       })
       .on("transactionHash", (hash: string) => {

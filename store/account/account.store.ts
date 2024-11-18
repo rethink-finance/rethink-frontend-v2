@@ -51,9 +51,6 @@ export const useAccountStore = defineStore("accounts", {
     activeAccount(): Account | undefined {
       return this.web3Onboard?.connectedWallet?.accounts[0];
     },
-    activeAccountAddress(): string | undefined {
-      return this.activeAccount?.address?.toLowerCase();
-    },
     isConnectedWalletUsingLedger(): boolean {
       if (!this.connectedWallet?.label) return false;
       console.log("Connected wallet label:", this.connectedWallet?.label);
