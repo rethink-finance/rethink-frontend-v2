@@ -1095,10 +1095,6 @@ export default defineComponent({
     background: $color-badge-navy;
   }
   &__details {
-    font-family: monospace;
-    white-space: pre-wrap;
-    word-break: break-all;
-    font-size: $text-sm;
     padding: 1rem 5rem;
     background-color: $color-badge-navy;
     &:not(:last-of-type) {
