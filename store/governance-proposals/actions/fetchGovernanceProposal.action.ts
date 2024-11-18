@@ -30,9 +30,9 @@ export const fetchGovernanceProposalAction = async (
   );
 
   const roleModAddress = await fundStore.getRoleModAddress();
-  const quorumDenominator = await fundStore.fundGovernorContract.methods
-    .quorumDenominator()
-    .call();
+  const quorumDenominator = await governanceProposalStore.callWithRetry(() =>
+    fundStore.fundGovernorContract.methods.quorumDenominator().call(),
+  );
 
   const timepoint =
     fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber
@@ -41,10 +41,14 @@ export const fetchGovernanceProposalAction = async (
   const blockNumber = proposal.proposalCreated?.[0]?.transaction?.blockNumber;
 
   const [quorumNumerator, totalSupply] = await Promise.all([
-    fundStore.fundGovernorContract.methods.quorumNumerator(timepoint).call(),
-    fundStore.fundGovernanceTokenContract.methods
-      .totalSupply()
-      .call({ blockNumber }),
+    governanceProposalStore.callWithRetry(() =>
+      fundStore.fundGovernorContract.methods.quorumNumerator(timepoint).call(),
+    ),
+    governanceProposalStore.callWithRetry(() =>
+      fundStore.fundGovernanceTokenContract.methods
+        .totalSupply()
+        .call({ blockNumber }),
+    ),
   ]);
 
   const mappedProposal = await _mapSubgraphProposalToProposal(

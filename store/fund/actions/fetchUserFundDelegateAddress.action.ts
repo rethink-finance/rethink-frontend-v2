@@ -14,10 +14,12 @@ export const fetchUserFundDelegateAddressAction = async (): Promise<any> => {
   }
   console.warn("FETCH userFundDelegateAddress");
 
-  fundStore.fundUserData.fundDelegateAddress =
-    await fundStore.fundGovernanceTokenContract.methods
-      .delegates(fundStore.activeAccountAddress)
-      .call();
+  fundStore.fundUserData.fundDelegateAddress = await fundStore.callWithRetry(
+    () =>
+      fundStore.fundGovernanceTokenContract.methods
+        .delegates(fundStore.activeAccountAddress)
+        .call(),
+  );
   console.warn(
     "FETCH userFundDelegateAddress",
     fundStore.fundUserData.fundDelegateAddress,

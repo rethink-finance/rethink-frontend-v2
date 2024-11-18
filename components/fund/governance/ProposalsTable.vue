@@ -17,8 +17,8 @@
           <Icon icon="octicon:question-16" width="1rem" />
         </span>
         <v-tooltip activator="parent" location="top">
-          Calculated as: <br />
-          <strong>votes for / total casted votes</strong><br />
+          Calculated as: <br>
+          <strong>votes for / total casted votes</strong><br>
         </v-tooltip>
       </div>
     </template>
@@ -29,7 +29,7 @@
           <Icon icon="octicon:question-16" width="1rem" />
         </span>
         <v-tooltip activator="parent" location="top">
-          Calculated as: <br />
+          Calculated as: <br>
           <strong>total votes / total supply</strong>
         </v-tooltip>
       </div>
@@ -38,9 +38,7 @@
     <!-- BODY -->
     <template #item="{ item, index }">
       <tr :class="getRowClass(item)" @click="rowClick($event, item)">
-        <td>
-          <strong>{{ index + 1 }}</strong>
-        </td>
+        <td><strong>{{ index + 1 }}</strong></td>
         <td>
           <div class="proposal__title">
             <div class="proposal__title__text">
@@ -71,12 +69,7 @@
                 width="2"
               />
             </div>
-            <div
-              v-else-if="
-                governanceProposalStore.hasAccountVoted(item.proposalId) ===
-                undefined
-              "
-            >
+            <div v-else-if="governanceProposalStore.hasAccountVoted(item.proposalId) === undefined">
               N/A
             </div>
             <div v-else>
@@ -120,10 +113,7 @@
       <tr v-if="items.length && loading">
         <td>1</td>
         <td v-for="header in headers.length - 1" :key="header">
-          <v-skeleton-loader
-            type="text"
-            class="table_governance__skeleton_loader"
-          />
+          <v-skeleton-loader type="text" class="table_governance__skeleton_loader" />
         </td>
       </tr>
     </template>
@@ -133,10 +123,7 @@
           {{ items.length + 1 }}
         </td>
         <td v-for="header in headers.length - 1" :key="header">
-          <v-skeleton-loader
-            type="text"
-            class="table_governance__skeleton_loader"
-          />
+          <v-skeleton-loader type="text" class="table_governance__skeleton_loader" />
         </td>
       </tr>
     </template>
@@ -188,53 +175,43 @@ const props = defineProps({
   },
 });
 
-const getRowClass = (item: IGovernanceProposal) => {
-  const hasVoted =
-    governanceProposalStore.hasAccountVoted(item?.proposalId) ?? false;
-  const isActionRequired =
-    (item.state === ProposalState.Active && !hasVoted) ||
-    item.state === ProposalState.Pending;
 
-  return ["v-data-table__row", { "row-active": isActionRequired }];
+const getRowClass = (item: IGovernanceProposal) => {
+  const hasVoted = governanceProposalStore.hasAccountVoted(item?.proposalId) ?? false;
+  const isActionRequired = item.state === ProposalState.Active && !hasVoted || item.state === ProposalState.Pending;
+
+  return [
+    "v-data-table__row",
+    { "row-active": isActionRequired },
+  ];
 };
 
-watch(
-  [() => props.items, () => fundStore.activeAccountAddress],
-  () => {
-    if (fundStore.activeAccountAddress === undefined) {
-      return;
-    }
-    const activeAccountAddress = fundStore.activeAccountAddress;
+watch([() => props.items, () => fundStore.activeAccountAddress], () => {
+  if (fundStore.activeAccountAddress === undefined) {
+    return
+  }
+  const activeAccountAddress = fundStore.activeAccountAddress;
 
-    for (const proposal of props.items) {
-      governanceProposalStore.connectedAccountProposalsHasVoted[
-        proposal.proposalId
-      ] ??= {};
-      // Do not fetch the hasVoted again if we already know he has voted.
-      if (
-        governanceProposalStore.connectedAccountProposalsHasVoted[
-          proposal.proposalId
-        ][activeAccountAddress]
-      )
-        continue;
+  for (const proposal of props.items) {
+    governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId] ??= {};
+    // Do not fetch the hasVoted again if we already know he has voted.
+    if (governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress]) continue;
 
-      // console.log("get votes for ", proposal.proposalId);
-      proposal.hasVotedLoading = true;
-      fundStore.fundGovernorContract.methods
-        .hasVoted(proposal.proposalId, activeAccountAddress)
-        .call()
-        .then((hasVoted: boolean) => {
-          // console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)
-          governanceProposalStore.connectedAccountProposalsHasVoted[
-            proposal.proposalId
-          ][activeAccountAddress] = hasVoted;
-        })
-        .finally(() => {
-          proposal.hasVotedLoading = false;
-        });
-    }
-  },
-  { immediate: true },
+    // console.log("get votes for ", proposal.proposalId);
+    proposal.hasVotedLoading = true;
+    web3Store.callWithRetry(() =>
+      fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call(),
+    ).then(
+      (hasVoted: boolean) => {
+        // console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)
+        governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress] = hasVoted;
+      },
+    ).finally(() => {
+      proposal.hasVotedLoading = false;
+    });
+  }
+},
+{ immediate: true },
 );
 
 const headers = computed(() => {
@@ -244,30 +221,23 @@ const headers = computed(() => {
     { title: "Created", key: "createdDatetime", sortable: true },
   ];
   if (accountStore.isConnected) {
-    headers.push({
-      title: "Voted",
-      key: "submission_status",
-      sortable: true,
-      align: "center",
-    });
+    headers.push({ title: "Voted", key: "submission_status", sortable: true, align: "center" });
   }
 
-  headers.push(
-    ...[
-      { title: "Approval", key: "approval", sortable: true },
-      {
-        title: "Participation",
-        key: "participation",
-        sortable: true,
-      },
-    ],
-  );
+  headers.push(...[
+    { title: "Approval", key: "approval", sortable: true },
+    {
+      title: "Participation",
+      key: "participation",
+      sortable: true,
+    },
+  ]);
 
   return headers;
 });
 
 // navigate to proposal detail page
-const rowClick = (_: any, item: any) => {
+const rowClick = (_:any, item: any) => {
   const { createdBlockNumber, proposalId } = item;
   router.push(`governance/proposal/${createdBlockNumber}-${proposalId}`);
 };
@@ -275,6 +245,7 @@ const rowClick = (_: any, item: any) => {
 
 <style lang="scss" scoped>
 .table_governance {
+
   @include borderGray;
   border-color: $color-bg-transparent;
   // add table max height
@@ -285,9 +256,7 @@ const rowClick = (_: any, item: any) => {
   }
   .v-data-table__row {
     cursor: pointer;
-    transition:
-      background-color 0.3s ease,
-      box-shadow 0.3s ease;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
     color: $color-steel-blue;
 
     &.row-active {
@@ -310,7 +279,7 @@ const rowClick = (_: any, item: any) => {
     margin: 0;
   }
 
-  &__header_cell {
+  &__header_cell{
     display: flex;
     align-items: center;
     gap: 8px;
@@ -327,6 +296,7 @@ const rowClick = (_: any, item: any) => {
 .proposal {
   &__title {
     padding-block: 0.5rem;
+
   }
   &__title__text {
     max-width: 400px;
@@ -348,4 +318,5 @@ const rowClick = (_: any, item: any) => {
     margin-right: 0.5rem;
   }
 }
+
 </style>

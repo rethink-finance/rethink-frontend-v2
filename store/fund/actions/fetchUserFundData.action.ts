@@ -29,10 +29,12 @@ export const fetchUserFundDataAction = async (
   //  if that's true, just manually fetch the delegate here instead of taking it from the reader, and remove this
   //  quickfix when it is changed in the reader contract to take the correct one
   if (fundStore.fund?.address !== fundStore.fund?.governanceToken.address) {
-    fundStore.fundUserData.fundDelegateAddress =
-      await fundStore.fundGovernanceTokenContract.methods
-        .delegates(fundStore.activeAccountAddress)
-        .call();
+    fundStore.fundUserData.fundDelegateAddress = await fundStore.callWithRetry(
+      () =>
+        fundStore.fundGovernanceTokenContract.methods
+          .delegates(fundStore.activeAccountAddress)
+          .call(),
+    );
   } else {
     fundStore.fundUserData.fundDelegateAddress = fundDelegateAddress;
   }

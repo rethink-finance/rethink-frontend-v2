@@ -96,6 +96,9 @@ export const useFundsStore = defineStore({
     },
   },
   actions: {
+    callWithRetry(method: any): any {
+      return this.web3Store.callWithRetry(method);
+    },
     fetchFundsInfoArrays(chainId: string) {
       return useActionState("fetchFundsInfoArraysAction", () =>
         fetchFundsInfoArraysAction(chainId),

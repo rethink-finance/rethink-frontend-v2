@@ -13,9 +13,9 @@ export const fetchUserFundShareValueAction = async (): Promise<any> => {
   }
   let balanceWei = BigInt("0");
   try {
-    balanceWei = await fundStore.fundContract.methods
-      .valueOf(fundStore.activeAccountAddress)
-      .call();
+    balanceWei = await fundStore.callWithRetry(() =>
+      fundStore.fundContract.methods.valueOf(fundStore.activeAccountAddress).call(),
+    );
   } catch (e) {
     console.error(
       "The total fund balance is probably 0, which is why MetaMask may be showing the 'Internal JSON-RPC... division by 0' error. -> ",

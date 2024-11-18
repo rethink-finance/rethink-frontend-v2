@@ -51,7 +51,6 @@ export class CustomContract<Abi extends ContractAbi> extends Contract<Abi> {
 
     while (retries < this.maxRetries) {
       try {
-        console.log("custom callWithRetry", methodCall, retries);
         return await methodCall();
       } catch (error: any) {
         console.error(`Error in call: ${error.message}`);

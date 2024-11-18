@@ -12,10 +12,11 @@ export const fetchUserBaseTokenBalanceAction = async (): Promise<any> => {
     console.log("activeAccountAddress is not set.");
     return;
   }
-  fundStore.fundUserData.baseTokenBalance =
-    await fundStore.fundBaseTokenContract.methods
+  fundStore.fundUserData.baseTokenBalance = await fundStore.callWithRetry(() =>
+    fundStore.fundBaseTokenContract.methods
       .balanceOf(fundStore.activeAccountAddress)
-      .call();
+      .call(),
+  );
 
   console.log(
     `user base token balance of ${fundStore.fund?.baseToken?.symbol} is ${fundStore.fundUserData.baseTokenBalance}`,

@@ -465,9 +465,12 @@ const fetchHasVoted = () => {
     props.proposal.proposalId
   ] ??= {};
 
-  fundStore.fundGovernorContract.methods
-    .hasVoted(props.proposal.proposalId, activeAccountAddress)
-    .call()
+  web3Store
+    .callWithRetry(() =>
+      fundStore.fundGovernorContract.methods
+        .hasVoted(props.proposal.proposalId, activeAccountAddress)
+        .call(),
+    )
     .then((hasVoted: boolean) => {
       governanceProposalStore.connectedAccountProposalsHasVoted[
         props.proposal.proposalId
