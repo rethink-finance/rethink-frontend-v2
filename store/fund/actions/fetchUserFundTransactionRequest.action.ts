@@ -24,22 +24,18 @@ export const fetchUserFundTransactionRequestAction = async (
   const userRequestTimestampAddress = incrementStorageKey(userRequestAddress);
   console.log("[FETCH REQUEST] AMOUNT", fundTransactionType);
   try {
-    const amount = await fundStore.callWithRetry(() =>
-      fundStore.web3Store.web3.eth.getStorageAt(
-        fundStore.fund?.address,
-        userRequestAddress,
-      ),
+    const amount = await fundStore.web3Store.web3.eth.getStorageAt(
+      fundStore.fund?.address,
+      userRequestAddress,
     );
     console.log("[FETCH REQUEST] AMOUNT fetched", fundTransactionType, amount);
     let amountWei: string | bigint = ethers.stripZerosLeft(amount);
     amountWei = amountWei === "0x" ? 0n : BigInt(amountWei);
 
     console.log("[FETCH REQUEST] fetch TS", fundTransactionType);
-    const ts = await fundStore.callWithRetry(() =>
-      fundStore.web3Store.web3.eth.getStorageAt(
-        fundStore.fund?.address,
-        userRequestTimestampAddress,
-      ),
+    const ts = await fundStore.web3Store.web3.eth.getStorageAt(
+      fundStore.fund?.address,
+      userRequestTimestampAddress,
     );
     console.warn("[FETCH REQUEST] TS", fundTransactionType, ts);
     let timestamp: string | number = ethers.stripZerosLeft(ts);

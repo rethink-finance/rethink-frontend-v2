@@ -13,11 +13,9 @@ export const fetchUserFundTokenBalanceAction = async (): Promise<any> => {
     console.log("activeAccountAddress is not set.");
     return;
   }
-  fundStore.fundUserData.fundTokenBalance = await fundStore.callWithRetry(() =>
-    fundStore.fundContract.methods
-      .balanceOf(fundStore.activeAccountAddress)
-      .call(),
-  );
+  fundStore.fundUserData.fundTokenBalance = await fundStore.fundContract.methods
+    .balanceOf(fundStore.activeAccountAddress)
+    .call();
 
   console.log(
     `user fund token balance of ${fundStore.fund?.fundToken?.symbol} is ${fundStore.fundUserData.fundTokenBalance}`,

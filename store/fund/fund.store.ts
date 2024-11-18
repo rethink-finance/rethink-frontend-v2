@@ -45,12 +45,6 @@ import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
-import { CustomContract } from "~/store/web3/contract";
-
-// Since the direct import won't infer the custom type, we cast it here.:
-const addresses: IAddresses = addressesJson as IAddresses;
-
-const RethinkReaderContractName = "RethinkReader";
 
 interface IState {
   fund?: IFund;
@@ -520,9 +514,9 @@ export const useFundStore = defineStore({
       this.fund.pendingDepositBalanceLoading = true;
       this.fund.pendingRedemptionBalanceLoading = true;
 
-      this.callWithRetry(() =>
-        this.fundContract.methods.getCurrentPendingDepositBal().call(),
-      )
+      this.fundContract.methods
+        .getCurrentPendingDepositBal()
+        .call()
         .then((value: any) => {
           if (this.fund) {
             this.fund.pendingDepositBalance = value;
@@ -542,9 +536,9 @@ export const useFundStore = defineStore({
             this.fund.pendingDepositBalanceLoading = false;
           }
         });
-      this.callWithRetry(() =>
-        this.fundContract.methods.getCurrentPendingWithdrawalBal().call(),
-      )
+      this.fundContract.methods
+        .getCurrentPendingWithdrawalBal()
+        .call()
         .then((value: any) => {
           if (this.fund) {
             this.fund.pendingRedemptionBalance = value;
@@ -632,11 +626,9 @@ export const useFundStore = defineStore({
       this.fund.fundContractBaseTokenBalanceLoading = true;
       let balanceWei = BigInt("0");
       try {
-        balanceWei = await this.callWithRetry(() =>
-          this.fundBaseTokenContract.methods
-            .balanceOf(this.fund?.address)
-            .call(),
-        );
+        balanceWei = await this.fundBaseTokenContract.methods
+          .balanceOf(this.fund?.address)
+          .call();
         this.fund.fundContractBaseTokenBalanceError = false;
       } catch (e) {
         this.fund.fundContractBaseTokenBalanceError = true;
@@ -665,11 +657,9 @@ export const useFundStore = defineStore({
         uint256 pageSize
       )
        */
-      const safeModules = await this.callWithRetry(() =>
-        this.fundSafeContract.methods
-          .getModulesPaginated(startAddress, 10)
-          .call(),
-      );
+      const safeModules = await this.fundSafeContract.methods
+        .getModulesPaginated(startAddress, 10)
+        .call();
       roleModAddress = safeModules[0][1];
       this.fundRoleModAddress[this.fund?.address ?? ""] = roleModAddress;
       return roleModAddress;

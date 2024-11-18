@@ -13,12 +13,10 @@ export const fetchUserGovernanceTokenBalanceAction = async (): Promise<any> => {
     console.log("activeAccountAddress is not set.");
     return;
   }
-  fundStore.fundUserData.governanceTokenBalance = await fundStore.callWithRetry(
-    () =>
-      fundStore.fundGovernanceTokenContract.methods
-        .balanceOf(fundStore.activeAccountAddress)
-        .call(),
-  );
+  fundStore.fundUserData.governanceTokenBalance =
+    await fundStore.fundGovernanceTokenContract.methods
+      .balanceOf(fundStore.activeAccountAddress)
+      .call();
 
   console.log(
     `user governance token balance is ${fundStore.fundUserData.governanceTokenBalance} ${fundStore.fund?.fundToken?.symbol}`,
