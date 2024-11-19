@@ -99,7 +99,12 @@
                       </template>
                       <template v-else>
                         <div class="code_block">
-                          {{ formatCalldata(calldata?.calldataDecoded) }}
+                          <template v-if="calldata?.calldataDecoded">
+                            {{ formatCalldata(calldata?.calldataDecoded) }}
+                          </template>
+                          <template v-else>
+                            Calldata could not be decoded. Check raw data.
+                          </template>
                         </div>
                       </template>
                     </template>
@@ -183,7 +188,6 @@ import { formatPercent } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
@@ -192,7 +196,6 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
-const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const route = useRoute();
 const proposalSlug = route.params.proposalId as string;

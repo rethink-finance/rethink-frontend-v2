@@ -18,6 +18,13 @@ export const decodeProposalCallData = (
   const signature = calldata.slice(0, 10);
   const encodedParameters = calldata.slice(10);
   const functionAbi = functionSignaturesMap[signature];
+  const defaultDecodedCalldata = {
+    functionName: undefined,
+    contractName: undefined,
+    calldataType: undefined,
+    calldataDecoded: undefined,
+    calldata,
+  };
   console.log("sig", signature, functionAbi)
 
   if (!functionAbi?.function?.name) {
@@ -26,7 +33,7 @@ export const decodeProposalCallData = (
       signature,
       functionAbi,
     );
-    return undefined;
+    return defaultDecodedCalldata;
   }
   const functionAbiInputs = functionAbi?.function?.inputs as AbiInput[];
 
@@ -67,7 +74,7 @@ export const decodeProposalCallData = (
     functionSignaturesMap[signature],
   );
 
-  return undefined;
+  return defaultDecodedCalldata;
 };
 
 /**
@@ -92,10 +99,10 @@ const contractsToExtractFunctionSignatures = [
     abi: ZodiacRoles.abi,
     name: "ZodiacRoles",
   },
-  // {
-  //   abi: NAVExecutor.abi,
-  //   name: "NAVExecutor",
-  // },
+  {
+    abi: NAVExecutor.abi,
+    name: "NAVExecutor",
+  },
 ];
 
 contractsToExtractFunctionSignatures.forEach(contract => {
