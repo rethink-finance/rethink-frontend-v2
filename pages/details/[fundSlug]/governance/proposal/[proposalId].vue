@@ -246,7 +246,7 @@ const activeUserVoteSubmission = computed(() => {
 
 const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
-  const proposal = governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
+  const proposal = governanceProposalStore.getProposal(fundStore.fundChainId, fundStore.fundAddress, proposalId);
   if (!proposal) return undefined;
 
   /**
@@ -446,10 +446,11 @@ onMounted(async () => {
 
     // await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
 
-    if (proposal.value && !proposal.value?.executedBlockNumber) {
-      // await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
-    }
+    // if (proposal.value && !proposal.value?.executedBlockNumber) {
+    //    await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
+    // }
   } catch {}
+  console.log("gov prop fetched", proposal.value)
 
   if (proposal.value) {
     allMethods.value = proposal.value?.calldatasDecoded?.map((calldata) => {

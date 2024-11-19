@@ -1,4 +1,3 @@
-import type { ApolloClient } from "@apollo/client";
 import { useGovernanceProposalsStore } from "../governance_proposals.store";
 
 import { fetchSubgraphGovernorProposal } from "~/services/subgraph";
@@ -27,7 +26,6 @@ export const fetchGovernanceProposalAction = async (
       governorAddress: fund?.governorAddress,
       proposalId,
     });
-
   const { initializeBlockTimeContext, getTimestampForBlock } = useBlockTime();
   const blockTimeContext = await initializeBlockTimeContext(
     governanceProposalStore.getWeb3InstanceByChainId(),
@@ -74,10 +72,10 @@ export const fetchGovernanceProposalAction = async (
     fund?.safeAddress ?? "",
   );
 
-  governanceProposalStore.storeProposals(
+  governanceProposalStore.storeProposal(
     fund?.chainId,
     fund?.address,
-    [mappedProposal],
+    mappedProposal,
   );
 
   return mappedProposal;

@@ -1,5 +1,3 @@
-import type { ApolloClient } from "@apollo/client";
-
 import { useGovernanceProposalsStore } from "../governance_proposals.store";
 
 import { fetchSubgraphDelegates } from "~/services/subgraph";
