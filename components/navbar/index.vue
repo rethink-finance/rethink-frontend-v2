@@ -51,6 +51,7 @@
         <ClientOnly>
           <div class="d-flex">
             <v-select
+              v-if="accountStore.isConnected"
               v-model="selectedChainId"
               class="select_network"
               density="compact"
@@ -144,7 +145,6 @@
 
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
-import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type INetwork from "~/types/network";
 import type IRoute from "~/types/route";
