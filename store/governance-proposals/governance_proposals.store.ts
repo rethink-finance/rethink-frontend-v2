@@ -397,7 +397,7 @@ export const useGovernanceProposalsStore = defineStore({
                 // store proposal
                 console.debug("proposal with executed data:", proposal);
                 this.storeProposal(
-                  this.web3Store.chainId,
+                  this.fundStore.fund?.chainId,
                   this.fundStore.fund?.address,
                   proposal,
                 );
@@ -596,7 +596,7 @@ export const useGovernanceProposalsStore = defineStore({
 
         // keep track of the proposal executed timestamp and block number if the proposal is executed
         const executedProposal =
-          this.fundProposals?.[this.web3Store.chainId]?.[fund?.address]?.[
+          this.fundProposals?.[fund.chainId]?.[fund?.address]?.[
             proposal.proposalId
           ];
         proposal.executedTimestamp = executedProposal?.executedTimestamp;
@@ -774,7 +774,11 @@ export const useGovernanceProposalsStore = defineStore({
             ),
           ),
         ];
-        this.storeProposal(this.web3Store.chainId, fund?.address, proposal);
+        this.storeProposal(
+          fund?.chainId,
+          fund?.address,
+          proposal,
+        );
       }
     },
   },

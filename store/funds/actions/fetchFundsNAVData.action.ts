@@ -124,7 +124,7 @@ async function processFundNavData(
         if (
           excludeNAVDetails &&
           parsedNavMethod.detailsHash &&
-          excludeNAVDetailsHashes[fundsStore.web3Store.chainId].includes(
+          excludeNAVDetailsHashes[chainId].includes(
             parsedNavMethod.detailsHash,
           )
         ) {
