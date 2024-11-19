@@ -70,12 +70,14 @@ async function processFundNavData(
   fundsInfoArrays: any[],
   allMethods: INAVMethod[],
 ) {
+  const web3Store = useWeb3Store();
+
   const fund = fundsStore.chainFunds[chainId][fundIndex];
   fundsStore.chainFundNAVUpdates[chainId][fundAddress] = [];
 
   if (!fundNAVData.encodedNavUpdate?.length) return;
-
-  const fundContract = new fundsStore.web3.eth.Contract(
+  const fundContract = web3Store.getCustomContract(
+    chainId,
     GovernableFund.abi,
     fundAddress,
   );

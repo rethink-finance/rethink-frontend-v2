@@ -3,13 +3,17 @@ import { Web3 } from "web3";
 import type { ContractAbi } from "web3-types";
 import addressesJson from "~/assets/contracts/addresses.json";
 import type IAddresses from "~/types/addresses";
+import type { IContractAddresses } from "~/types/addresses";
 import type INetwork from "~/types/network";
 import { networksMap } from "~/store/web3/networksMap";
 import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
 import { RethinkReader } from "assets/contracts/RethinkReader";
 import { CustomContract } from "~/store/web3/contract";
 import { NAVCalculator } from "assets/contracts/NAVCalculator";
+import SafeMultiSendCallOnlyJson from "assets/contracts/safe/SafeMultiSendCallOnly.json";
 const addresses: IAddresses = addressesJson as IAddresses;
+const SafeMultiSendCallOnlyAddresses: IContractAddresses =
+  SafeMultiSendCallOnlyJson.networkAddresses as IContractAddresses;
 
 interface IState {
   web3?: Web3;
@@ -21,6 +25,8 @@ interface IState {
   cachedTokens: Record<string, any>;
   // Determines what RPC url is used for each chain.
   chainSelectedRpcUrl: Record<string, string>;
+  chainSelectedRpcIndex: Record<string, number>;
+  chainProviders: Record<string, Web3>;
 }
 
 const removeDuplicates = (arr: any[]) => {
@@ -38,8 +44,17 @@ export const useWeb3Store = defineStore({
   id: "web3store",
   state: (): IState => {
     const chainSelectedRpcUrl: Record<string, string> = {};
+    const chainSelectedRpcIndex: Record<string, number> = {};
     for (const chainId in networksMap) {
       chainSelectedRpcUrl[chainId] = networksMap[chainId]?.rpcUrls[0];
+      chainSelectedRpcIndex[chainId] = 0;
+    }
+    const chainProviders: Record<string, Web3> = {};
+
+    // Initialize providers map by iterating over all networks and use the
+    // selected chain's RPC url to init the provider.
+    for (const chainId in networksMap) {
+      chainProviders[chainId] = new Web3(chainSelectedRpcUrl[chainId]);
     }
 
     return {
@@ -49,7 +64,9 @@ export const useWeb3Store = defineStore({
       chainId: "",
       chainName: "",
       chainShort: "",
+      chainProviders,
       chainSelectedRpcUrl,
+      chainSelectedRpcIndex,
       cachedTokens: {
         "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063": {
           symbol: "DAI",
@@ -85,23 +102,12 @@ export const useWeb3Store = defineStore({
     NAVExecutorBeaconProxyAddress(): string {
       return addresses.NAVExecutorBeaconProxy[this.chainId];
     },
-    providers(): Record<string, Web3> {
-      const providersMap: Record<string, Web3> = {};
-
-      // Initialize providers map by iterating over all networks and use the
-      // selected chain's RPC url to init the provider.
-      for (const chainId in networksMap) {
-        providersMap[chainId] = new Web3(this.chainSelectedRpcUrl[chainId]);
-      }
-
-      return providersMap;
-    },
     contracts(): Record<string, any> {
       const contractsMap: Record<string, any> = {};
 
       for (const network of this.networks) {
         const chainId = network.chainId;
-        const provider = this.providers[chainId];
+        const provider = this.chainProviders[chainId];
         if (!provider) continue;
 
         // Initialize contracts if addresses are available
@@ -127,47 +133,22 @@ export const useWeb3Store = defineStore({
     },
   },
   actions: {
+    safeMultiSendCallOnlyToAddress(chainId: string): string {
+      return SafeMultiSendCallOnlyAddresses[
+        parseInt(chainId).toString()
+      ];
+    },
+    networkRpcUrls(chainId: string): string[] {
+      const network = networksMap[chainId];
+      return removeDuplicates([network.rpcUrl, ...(network.rpcUrls || [])]);
+    },
     getCustomContract(
       chainId: string,
       abi: any,
       address: string,
     ): CustomContract<ContractAbi> {
-      const network = networksMap[chainId];
-      const rpcUrls = network.rpcUrls || [];
+      const rpcUrls = this.networkRpcUrls(chainId);
       return new CustomContract(abi, address, rpcUrls);
-    },
-    /**
-     * Fetches specified information (e.g., 'symbol', 'decimals') about a token from a smart contract.
-     * If the information is cached, it returns the cached value to avoid unnecessary blockchain calls.
-     * Otherwise, it fetches the information using the specified contract method, caches it, and returns it.
-     *
-     * @param {Object} tokenContract - The web3 contract instance of the token.
-     * @param {string} tokenAddress - The address of the token contract.
-     * @param {string} infoType - The type of information to fetch from the token contract ('symbol' or 'decimals').
-     * @returns {Promise<string|number>} - A promise that resolves with the token information (either a string for the symbol or a number for the decimals).
-     */
-    async getTokenInfo<T>(
-      tokenContract: any,
-      infoType: string,
-      tokenAddress?: string,
-    ): Promise<T | undefined> {
-      if (!tokenAddress) return undefined;
-
-      // Check if the cached value already exists.
-      if (
-        this.cachedTokens[tokenAddress] &&
-        this.cachedTokens[tokenAddress][infoType]
-      ) {
-        return this.cachedTokens[tokenAddress][infoType];
-      }
-
-      // It does not exist, fetch it from the contract method.
-      const value = await this.callWithRetry(() =>
-        tokenContract.methods[infoType]().call(),
-      );
-      this.cachedTokens[tokenAddress] = this.cachedTokens[tokenAddress] || {};
-      this.cachedTokens[tokenAddress][infoType] = value;
-      return value;
     },
     async init(chainId?: string, web3Provider?: any): Promise<void> {
       console.log("INIT: ", chainId, web3Provider);
@@ -195,24 +176,29 @@ export const useWeb3Store = defineStore({
       } else {
         console.warn("[INIT] NO NEW web3provider");
         // Handle connecting to a working RPC
-        this.switchRpcUrl();
-        await this.checkConnection();
+        this.switchRpcUrl(chainId);
+        await this.checkConnection(chainId);
       }
 
       localStorage.setItem("lastUsedChainId", chainId.toString());
       console.log(`init web3 chain: ${this.chainId} on ${this.currentRPC}`);
       console.log("----------------\n");
     },
-    async checkConnection() {
-      return await this.callWithRetry(() => this?.web3?.eth.getBlockNumber());
+    async checkConnection(chainId: string) {
+      const web3Provider = this.chainProviders[chainId];
+      return await this.callWithRetry(
+        chainId,
+        () => web3Provider?.eth.getBlockNumber(),
+      );
     },
     async callWithRetry(
+      chainId: string,
       method: () => any,
       maxRetries: number = 1,
       extraIgnorableErrorCodes?: any[],
     ): Promise<any> {
       // TODO: see the TODO below for the possible upgrade of callWithRetry
-      const RPCUrlsLength = this.currentNetworkRPCUrls.length;
+      const RPCUrlsLength = this.networkRpcUrls(chainId).length;
       let retries = 0;
       let switchedRPCCount = 0;
       // Save chain ID the method was called with. So that we can ignore retries if the chain was changed.
@@ -258,7 +244,7 @@ export const useWeb3Store = defineStore({
             throw error;
           }
 
-          const rpcUrl = (this.web3?.currentProvider as any)?.clientUrl;
+          const rpcUrl = (this.chainProviders[chainId] as any)?.clientUrl;
           console.error(
             "RPC error:",
             errorCodes,
@@ -268,7 +254,7 @@ export const useWeb3Store = defineStore({
           );
           retries++;
           if (retries > maxRetries) {
-            this.switchRpcUrl();
+            this.switchRpcUrl(chainId);
             retries = 0;
             switchedRPCCount++;
           }
@@ -277,17 +263,19 @@ export const useWeb3Store = defineStore({
       }
       throw new Error("Max retries reached for all RPC URLs");
     },
-    switchRpcUrl(): void {
-      if (!this.chainId) return;
-      const rpcUrls = this.currentNetworkRPCUrls;
-      this.currentRpcIndex = (this.currentRpcIndex + 1) % rpcUrls.length;
-      const newRpcUrl = rpcUrls[this.currentRpcIndex];
-      console.log(`Switching to RPC URL: ${newRpcUrl}`, this.currentRpcIndex);
-      console.log(this.web3);
-      if (!this.web3) {
+    switchRpcUrl(chainId: string): void {
+      if (!chainId) return;
+      const rpcUrls = this.networkRpcUrls(chainId);
+      this.chainSelectedRpcIndex[chainId] = (this.chainSelectedRpcIndex[chainId] + 1) % rpcUrls.length;
+      const newRpcUrl = rpcUrls[this.chainSelectedRpcIndex[chainId]];
+      console.log(`Switching to RPC URL: ${newRpcUrl}`, this.chainSelectedRpcIndex[chainId]);
+
+      const chainProvider = this.chainProviders[chainId];
+
+      if (!chainProvider) {
         this.web3 = new Web3(newRpcUrl);
       } else {
-        console.log("set new provider to RPC url", newRpcUrl);
+        console.log("set new provider on chain", chainId, " to RPC url", newRpcUrl);
         this.web3?.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
       }
     },

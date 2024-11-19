@@ -41,6 +41,7 @@
 import type { AbiFunctionFragment } from "web3";
 import { useRouter } from "vue-router";
 import { ethers } from "ethers";
+import { encodeFunctionCall } from "web3-eth-abi";
 import {
   DirectExecutionFieldsMap,
   ExecutionStep,
@@ -52,7 +53,6 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import SafeMultiSendCallOnly from "~/assets/contracts/safe/SafeMultiSendCallOnly.json";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useFundsStore } from "~/store/funds/funds.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 
@@ -62,7 +62,6 @@ const loading = ref(false);
 
 const router = useRouter();
 const fundStore = useFundStore();
-const fundsStore = useFundsStore();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const { selectedFundSlug } = toRefs(fundStore);
@@ -136,7 +135,7 @@ const submitProposal = async () => {
   console.log(toRaw(transactions));
   console.log(toRaw(details));
 
-  const to = fundsStore.safeMultiSendCallOnlyToAddress;
+  const to = web3Store.safeMultiSendCallOnlyToAddress(fundStore.fundChainId);
   console.log("to address: ", to);
   const multisendAbiJSON = SafeMultiSendCallOnly.abi[0];
   const processedTxs = [];
@@ -154,7 +153,7 @@ const submitProposal = async () => {
   for (const i in transactions) {
     const trx = transactions[i];
     console.log("tx:", i, trx);
-    const filteredTxData = web3Store.web3.eth.abi.encodeFunctionCall(
+    const filteredTxData = encodeFunctionCall(
       multisendAbiJSON,
       [trx.rawTxData],
     );
@@ -171,7 +170,7 @@ const submitProposal = async () => {
       ethers.ZeroAddress, // refundReceiver
       signature,
     ];
-    const filteredFinalTxData = web3Store.web3.eth.abi.encodeFunctionCall(
+    const filteredFinalTxData = encodeFunctionCall(
       execTransactionABI,
       formatSafeTxInput,
     );

@@ -170,7 +170,7 @@ const governanceProposals = computed(() => {
   // set updateSettingsProposals to proposals that have updateSettings calldata
   updateSettingsProposals.value = proposals.filter((proposal) => {
     return proposal.calldataTags?.some(
-      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS
+      (calldata) => calldata === ProposalCalldataType.FUND_SETTINGS,
     ) && (
       proposal.state === ProposalState.Active ||
       proposal.state === ProposalState.Pending ||
@@ -446,6 +446,7 @@ const parseNewChunkDelegateEvents = async (
 
 async function getVotingPowerAndImpact(delegatedAddress: string) {
   try {
+    // TODO add chainId to callWithRetry if you uncomment this code
     let votingPower = 0n;
     votingPower = await web3Store.callWithRetry(() =>
       fundStore.fundGovernanceTokenContract.methods.getVotes(delegatedAddress).call()

@@ -101,7 +101,7 @@ export const useAccountStore = defineStore("accounts", {
 
         // Test connection, outer catch block will except exception.
         try {
-          await this.web3Store.checkConnection();
+          await this.web3Store.checkConnection(chainId);
         } catch (e: any) {
           this.toastStore.errorToast(
             "Looks like there are RPC connection problems.",

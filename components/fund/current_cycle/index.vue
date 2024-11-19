@@ -1,7 +1,9 @@
 <template>
   <div class="fund_settlement">
     <div class="card_header">
-      <div class="card_header__title subtitle_white">Pending Requests</div>
+      <div class="card_header__title subtitle_white">
+        Pending Requests
+      </div>
       <div
         v-if="userDepositRequestExists || userRedemptionRequestExists"
         class="fund_settlement__buttons"
@@ -34,7 +36,7 @@
           <template v-if="userDepositRequestExists">
             {{ depositDisabledTooltipText }}
           </template>
-          <br v-if="userDepositRequestExists && userRedemptionRequestExists" />
+          <br v-if="userDepositRequestExists && userRedemptionRequestExists">
           <template v-if="userRedemptionRequestExists">
             {{ redemptionDisabledTooltipText }}
           </template>
@@ -78,11 +80,11 @@
       Cycle of
       <span class="text-primary">{{
         fund?.plannedSettlementPeriod || "N/A"
-      }}</span
-      >. You can learn more about how settlements work
-      <a href="https://docs.rethink.finance/rethink.finance" target="_blank"
-        >here</a
-      >.
+      }}</span>. You can learn more about how settlements work
+      <a
+        href="https://docs.rethink.finance/rethink.finance"
+        target="_blank"
+      >here</a>.
     </UiNotification>
   </div>
 </template>
@@ -230,6 +232,7 @@ const redemptionDisabledTooltipText = computed(() => {
 
 const signDepositAndDelegateBySigTransaction = async () => {
   const activeAccountAddress = fundStore.activeAccountAddress ?? "";
+  const fundChainId = fundStore.fundChainId;
   if (!activeAccountAddress) {
     toastStore.errorToast("No active account, try re-authenticating.");
     return;
@@ -244,7 +247,7 @@ const signDepositAndDelegateBySigTransaction = async () => {
           .nonces(activeAccountAddress)
           .call(),
     ].map((fn) =>
-      accountStore.requestConcurrencyLimit(() => fundStore.callWithRetry(fn)),
+      accountStore.requestConcurrencyLimit(() => web3Store.callWithRetry(fundChainId, fn)),
     ),
   );
   const domainData =
@@ -270,7 +273,8 @@ const signDepositAndDelegateBySigTransaction = async () => {
   let signature;
 
   try {
-    const hexSignature = await web3Store?.web3?.eth.signTypedData(
+    const web3Provider = web3Store.chainProviders[fundStore.fundChainId];
+    const hexSignature = await web3Provider?.eth.signTypedData(
       activeAccountAddress ?? "",
       dataToSign,
     );

@@ -163,6 +163,7 @@
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
 import { ethers } from "ethers";
+import { encodeFunctionCall } from "web3-eth-abi";
 import SectionWhitelist from "./SectionWhitelist.vue";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account/account.store";
@@ -356,12 +357,12 @@ const submit = async () => {
       const formattedProposalOld = formatProposalDataOld();
       console.log("formattedProposalOld: ", formattedProposalOld);
 
-      const encodedData = web3Store.web3.eth.abi.encodeFunctionCall(
+      const encodedData = encodeFunctionCall(
         updateSettingsABI as AbiFunctionFragment,
         formattedProposal,
       );
 
-      const encodedDataOld = web3Store.web3.eth.abi.encodeFunctionCall(
+      const encodedDataOld = encodeFunctionCall(
         updateSettingsABI as AbiFunctionFragment,
         formattedProposalOld,
       );

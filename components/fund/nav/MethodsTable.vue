@@ -470,9 +470,11 @@ export default defineComponent({
       // Otherwise, take managed methods, that user can change.
       // Simulate all at once as many promises instead of one by one.
       const promises = [];
+      const fundChainId = this.fundStore.fund?.chainId ?? "";
+      const fundAddress = this.fundStore.fund?.address ?? "";
 
       for (const navEntry of this.methods) {
-        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(navEntry));
+        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(fundChainId, fundAddress, navEntry));
       }
       const settled = await Promise.allSettled(promises);
       this.isNavSimulationLoading = false;

@@ -344,9 +344,8 @@ const submitRawTXN = async () => {
       return;
     }
 
-    // TODO this next line can be removed probably?
-    // web3Store.web3.config.ignoreGasPricing = true;
-    await web3Store.web3.eth.sendTransaction({
+    const web3Provider = web3Store.chainProviders[fundStore.fundChainId];
+    await web3Provider.eth.sendTransaction({
       to: submitRawTXNEntry.contractAddress,
       data: submitRawTXNEntry.txData,
       from: fundStore.activeAccountAddress,
@@ -421,7 +420,8 @@ const fetchTokenDetails = async () => {
   // 0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6 WBTC
 
   try {
-    const tokenContract = new web3Store.web3.eth.Contract(
+    const tokenContract = web3Store.getCustomContract(
+      fundStore.fundChainId,
       ERC20,
       transferEntry.inputTokenAddress,
     );

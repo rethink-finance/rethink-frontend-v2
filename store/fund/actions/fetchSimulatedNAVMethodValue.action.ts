@@ -7,14 +7,22 @@ import {
   PositionTypeToNAVCalculationMethod,
 } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import { useFundsStore } from "~/store/funds/funds.store";
 
 export const fetchSimulatedNAVMethodValueAction = async (
+  fundChainId: string,
+  fundAddress: string,
   navEntry: INAVMethod,
 ): Promise<void> => {
   const fundStore = useFundStore();
+  const fundsStore = useFundsStore();
+  const web3Store = useWeb3Store();
+  const fund = fundStore.chainFunds?.[fundChainId]?.[fundAddress];
+  const baseDecimals = fund?.baseToken.decimals;
 
-  if (!fundStore.web3Store.web3) {
-    console.error("Web3 instance is not available.");
+  if (!fund) {
+    console.error("Fund instance is not available.");
     return;
   }
   if (!navEntry.detailsHash) {
@@ -22,18 +30,19 @@ export const fetchSimulatedNAVMethodValueAction = async (
     return;
   }
 
-  const baseDecimals = fundStore.fund?.baseToken.decimals;
   if (!baseDecimals) {
     console.error("simulateNAVMethodValue error: No fund base decimals.");
     return;
   }
+  const navCalculatorContract =
+    web3Store.contracts[fundChainId]?.navCalculatorContract;
 
   try {
     navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
 
     if (!navEntry.pastNAVUpdateEntryFundAddress) {
       navEntry.pastNAVUpdateEntryFundAddress =
-        fundStore.fundsStore.navMethodDetailsHashToFundAddress[
+        fundsStore.navMethodDetailsHashToFundAddress[
           navEntry.detailsHash ?? ""
         ];
     }
@@ -91,9 +100,10 @@ export const fetchSimulatedNAVMethodValueAction = async (
     // console.log("navCalculationMethod:", navCalculationMethod);
     // console.log("callData:", callData);
     try {
-      const simulatedVal: bigint = await fundStore.callWithRetry(
+      const simulatedVal: bigint = await web3Store.callWithRetry(
+        fundChainId,
         () =>
-          fundStore.navCalculatorContract.methods[navCalculationMethod](
+          navCalculatorContract.methods[navCalculationMethod](
             ...callData,
           ).call(),
         5,

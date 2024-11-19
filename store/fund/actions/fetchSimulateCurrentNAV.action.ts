@@ -1,21 +1,27 @@
 import { useFundStore } from "../fund.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import { useAccountStore } from "~/store/account/account.store";
+import { useFundsStore } from "~/store/funds/funds.store";
 
 export const fetchSimulateCurrentNAVAction = async (
-  chainId: string,
+  fundChainId: string,
+  fundAddress: string,
 ): Promise<void> => {
   const fundStore = useFundStore();
+  const fundsStore = useFundsStore();
+  const web3Store = useWeb3Store();
+  const accountStore = useAccountStore();
 
-  if (!fundStore.web3Store.web3) return;
+  if (!web3Store.web3) return;
 
-  if (!fundStore.fundsStore.allNavMethods?.length) {
-    const fundsInfoArrays =
-      await fundStore.fundsStore.fetchFundsInfoArrays(chainId);
+  if (!fundsStore.allNavMethods?.length) {
+    const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays(fundChainId);
 
     // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
     // and make sure it is fetched before checking here with fundsStore.fetchFundsNAVData, and then we
     // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
     console.log("[CURRENT NAV] simulate fetch all nav methods");
-    await fundStore.fundsStore.fetchFundsNAVData(chainId, fundsInfoArrays);
+    await fundsStore.fetchFundsNAVData(fundChainId, fundsInfoArrays);
   }
   console.log("[CURRENT NAV] START SIMULATE:");
 
@@ -24,9 +30,10 @@ export const fetchSimulateCurrentNAVAction = async (
 
   for (const navEntry of fundStore.fundLastNAVUpdateMethods) {
     promises.push(
-      fundStore.accountStore.requestConcurrencyLimit(() =>
-        fundStore.callWithRetry(
-          () => fundStore.fetchSimulatedNAVMethodValue(navEntry),
+      accountStore.requestConcurrencyLimit(() =>
+        web3Store.callWithRetry(
+          fundChainId,
+          () => fundStore.fetchSimulatedNAVMethodValue(fundChainId, fundAddress, navEntry),
           1,
           // Do not retry internal errors (probably invalid NAV method), better to fail on 1st try.
           // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts

@@ -15,7 +15,8 @@ export const fetchDelegatesAction = async (): Promise<any> => {
   if (!client) {
     throw new Error("Apollo client not found");
   }
-  const votingContractAddress = unref(fundStore.fund?.governanceToken?.address);
+  const fund = unref(fundStore.fund);
+  const votingContractAddress = fund?.governanceToken?.address;
 
   if (!votingContractAddress) {
     throw new Error("Governor token address not found");
@@ -26,11 +27,11 @@ export const fetchDelegatesAction = async (): Promise<any> => {
   });
   const processedDelegates = _mapSubgraphFetchDelegatesToDelegates(
     fetchedDelegates,
-    fundStore.fund?.governanceToken?.decimals || 18,
+    fund?.governanceToken?.decimals || 18,
   );
   governanceProposalStore.storeDelegates(
-    governanceProposalStore.web3Store.chainId,
-    governanceProposalStore.fundStore.fund?.address,
+    fund?.chainId,
+    fund?.address,
     processedDelegates,
   );
   console.log("processedDelegates: ", processedDelegates);

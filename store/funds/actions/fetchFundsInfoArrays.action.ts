@@ -12,10 +12,14 @@ export async function fetchFundsInfoArraysAction(
     throw new Error(`No fund factory contract found for chainId: ${chainId}`);
   }
 
-  const fundsLength = await web3Store.callWithRetry(() =>
-    fundFactoryContract.methods.registeredFundsLength().call(),
+  const fundsLength = await web3Store.callWithRetry(
+    chainId,
+    () =>
+      fundFactoryContract.methods.registeredFundsLength().call(),
   );
-  return await web3Store.callWithRetry(() =>
-    fundFactoryContract.methods.registeredFundsData(0, fundsLength).call(),
+  return await web3Store.callWithRetry(
+    chainId,
+    () =>
+      fundFactoryContract.methods.registeredFundsData(0, fundsLength).call(),
   );
 }

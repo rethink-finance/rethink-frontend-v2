@@ -5,14 +5,17 @@ import { fetchSubgraphGovernorProposal } from "~/services/subgraph";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { _mapSubgraphProposalToProposal } from "~/types/helpers/mappers";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export const fetchGovernanceProposalAction = async (
   proposalId: string,
 ): Promise<any> => {
   const governanceProposalStore = useGovernanceProposalsStore();
+  const web3Store = useWeb3Store();
   const fundStore = useFundStore();
   const nuxtApp = useNuxtApp();
   const client = nuxtApp.$apolloClient as Ref<ApolloClient<any>>;
+  const fundChainId = fundStore.fundChainId;
 
   if (!client) throw new Error("Apollo client not found");
   if (!fundStore.fund?.governorAddress)
@@ -30,8 +33,10 @@ export const fetchGovernanceProposalAction = async (
   );
 
   const roleModAddress = await fundStore.getRoleModAddress();
-  const quorumDenominator = await governanceProposalStore.callWithRetry(() =>
-    fundStore.fundGovernorContract.methods.quorumDenominator().call(),
+  const quorumDenominator = await web3Store.callWithRetry(
+    fundChainId,
+    () =>
+      fundStore.fundGovernorContract.methods.quorumDenominator().call(),
   );
 
   const timepoint =
@@ -41,13 +46,17 @@ export const fetchGovernanceProposalAction = async (
   const blockNumber = proposal.proposalCreated?.[0]?.transaction?.blockNumber;
 
   const [quorumNumerator, totalSupply] = await Promise.all([
-    governanceProposalStore.callWithRetry(() =>
-      fundStore.fundGovernorContract.methods.quorumNumerator(timepoint).call(),
+    web3Store.callWithRetry(
+      fundChainId,
+      () =>
+        fundStore.fundGovernorContract.methods.quorumNumerator(timepoint).call(),
     ),
-    governanceProposalStore.callWithRetry(() =>
-      fundStore.fundGovernanceTokenContract.methods
-        .totalSupply()
-        .call({ blockNumber }),
+    web3Store.callWithRetry(
+      fundChainId,
+      () =>
+        fundStore.fundGovernanceTokenContract.methods
+          .totalSupply()
+          .call({ blockNumber }),
     ),
   ]);
 

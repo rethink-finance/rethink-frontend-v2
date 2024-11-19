@@ -27,9 +27,12 @@ export const fetchFundMetaDataAction = async (
       fundChainId,
       rethinkReaderContract,
     );
-    const fundNavMetaData = await rethinkReaderContract.methods
-      .getFundMetaData(fundAddress)
-      .call();
+
+    const fundNavMetaData = await web3Store.callWithRetry(
+      fundChainId,
+      () =>
+        rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
+    );
     console.log("fundNavMetaData", fundNavMetaData);
     const {
       startTime,
@@ -65,6 +68,7 @@ export const fetchFundMetaDataAction = async (
 
     fundSettings.performancePeriod = feePerformancePeriod;
     fundSettings.managementPeriod = feeManagePeriod;
+    console.warn("fundSettings: ", fundSettings);
 
     const parsedFundSettings: IFundSettings = parseFundSettings(fundSettings);
     const parsedClockMode = parseClockMode(clockMode);
@@ -74,12 +78,16 @@ export const fetchFundMetaDataAction = async (
 
     // TODO fundGovernanceTokenSupply is wrong from reader contract, until it is fixed and redeployed there
     //   manually fetch governance token total supply here. Then remove this line.
-    const fundGovernanceTokenContract = new fundStore.web3.eth.Contract(
+    const fundGovernanceTokenContract = web3Store.getCustomContract(
+      fundChainId,
       ERC20,
-      parsedFundSettings.governanceToken,
+      parsedFundSettings?.governanceToken ?? "",
     );
     const fundGovernanceTokenSupplyFixed =
-      await fundGovernanceTokenContract.methods.totalSupply().call();
+      await web3Store.callWithRetry(
+        fundChainId,
+        () => fundGovernanceTokenContract.methods.totalSupply().call(),
+      );
     console.log(
       "fundGovernanceTokenSupplyFixed: ",
       fundGovernanceTokenSupplyFixed,
@@ -188,7 +196,7 @@ export const fetchFundMetaDataAction = async (
       fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
       fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
     }
-    fundStore.fund = fund;
+    fundStore.chainFunds[fundChainId][fundAddress] = fund;
     return fund;
   } catch (error) {
     console.error("Error in promises: ", error, "fund: ", fundAddress);

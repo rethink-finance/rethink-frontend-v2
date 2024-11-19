@@ -14,6 +14,7 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   const nuxtApp = useNuxtApp();
   const client = nuxtApp.$apolloClient as Ref<ApolloClient<any>>;
   const fund = fundStore.fund;
+  const fundChainId = fundStore.fundChainId;
 
   if (!client) {
     throw new Error("Apollo client not found");
@@ -27,11 +28,12 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
     governanceProposalStore.getWeb3InstanceByChainId(),
   );
 
-
   const roleModAddress = await fundStore.getRoleModAddress(); // TODO replace with fetchGovernableFund
 
-  const quorumDenominator = await governanceProposalStore.callWithRetry(() =>
-    fundStore.fundGovernorContract.methods.quorumDenominator().call(),
+  const quorumDenominator = await web3Store.callWithRetry(
+    fundChainId,
+    () =>
+      fundStore.fundGovernorContract.methods.quorumDenominator().call(),
   ); // TODO
 
   const fetchedProposals = await fetchSubgraphGovernorProposals(client.value, {
@@ -62,15 +64,19 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
     await Promise.all(
       uniquePoints.map(async ({ timepoint, blockNumber }) => {
         const [quorumNumerator, totalSupply] = await Promise.all([
-          governanceProposalStore.callWithRetry(() =>
-            fundStore.fundGovernorContract.methods
-              .quorumNumerator(timepoint)
-              .call(), // TODO
+          web3Store.callWithRetry(
+            fundChainId,
+            () =>
+              fundStore.fundGovernorContract.methods
+                .quorumNumerator(timepoint)
+                .call(), // TODO
           ),
-          governanceProposalStore.callWithRetry(() =>
-            fundStore.fundGovernanceTokenContract.methods
-              .totalSupply()
-              .call({ blockNumber }), // TODO
+          web3Store.callWithRetry(
+            fundChainId,
+            () =>
+              fundStore.fundGovernanceTokenContract.methods
+                .totalSupply()
+                .call({ blockNumber }), // TODO
           ),
         ]);
         return [

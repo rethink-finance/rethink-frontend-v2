@@ -30,7 +30,7 @@
           <v-progress-circular
             v-if="
               loadingProposalVoteSubmissions &&
-              !activeUserVoteSubmission?.proposer
+                !activeUserVoteSubmission?.proposer
             "
             class="d-flex"
             size="18"
@@ -143,7 +143,9 @@
       >
         <div class="main_card di-card">
           <div class="di-card__header-container">
-            <div class="di-card__header">Vote Submission</div>
+            <div class="di-card__header">
+              Vote Submission
+            </div>
 
             <Icon
               :icon="VoteTypeIcon[VoteType.Against]"
@@ -452,6 +454,7 @@ const voteOptionIcon = (voteType: number) => {
 };
 
 const fetchHasVoted = () => {
+  const fundChainId = fundStore.fundChainId;
   if (
     fundStore.activeAccountAddress === undefined ||
     !props.proposal.proposalId
@@ -466,10 +469,12 @@ const fetchHasVoted = () => {
   ] ??= {};
 
   web3Store
-    .callWithRetry(() =>
-      fundStore.fundGovernorContract.methods
-        .hasVoted(props.proposal.proposalId, activeAccountAddress)
-        .call(),
+    .callWithRetry(
+      fundChainId,
+      () =>
+        fundStore.fundGovernorContract.methods
+          .hasVoted(props.proposal.proposalId, activeAccountAddress)
+          .call(),
     )
     .then((hasVoted: boolean) => {
       governanceProposalStore.connectedAccountProposalsHasVoted[

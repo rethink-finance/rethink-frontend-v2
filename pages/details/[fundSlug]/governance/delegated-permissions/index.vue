@@ -39,6 +39,7 @@
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
+import { encodeFunctionCall } from "web3-eth-abi";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
@@ -236,7 +237,7 @@ const submitProposal = async () => {
           data: trx[method.key],
         }),
       );
-    const encodedRoleModFunction = web3Store.web3?.eth.abi.encodeFunctionCall(
+    const encodedRoleModFunction = encodeFunctionCall(
       proposalRoleModMethodAbiMap[trx.contractMethod],
       roleModFunctionData,
     );

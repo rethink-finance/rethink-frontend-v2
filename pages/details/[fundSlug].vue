@@ -12,7 +12,7 @@
           :src="fund.photoUrl"
           class="fund_name__avatar_img"
           alt="fund cover image"
-        />
+        >
       </v-avatar>
       <div class="fund_name__title">
         <p>
@@ -63,9 +63,11 @@
     <v-progress-circular indeterminate />
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
-    <h2 class="mb-2">Fund not found</h2>
+    <h2 class="mb-2">
+      Fund not found
+    </h2>
     <p class="text-center">
-      Are you sure you are on the right network? <br />
+      Are you sure you are on the right network? <br>
       Try switching to a different network.
     </p>
   </div>
@@ -99,7 +101,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  fundStore.fund = {} as IFund;
   fundStore.selectedFundAddress = "";
   setBreadcrumbItems([]);
 });
@@ -160,14 +161,6 @@ watch(
   },
 );
 
-const switchNetwork = async (chainId: string) => {
-  try {
-    await accountStore.switchNetwork(chainId);
-  } catch (error: any) {
-    // Redirect to the home page if the user cancels the network switch
-    router.push("/");
-  }
-};
 
 const fundDetailsRoute = computed(
   () => `/details/${fundChainId}-${tokenSymbol}-${fundAddress}`,

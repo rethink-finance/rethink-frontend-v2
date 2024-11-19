@@ -2,7 +2,9 @@
   <div>
     <UiHeader>
       <div class="header">
-        <div class="main_header__title">Create NAV Proposal</div>
+        <div class="main_header__title">
+          Create NAV Proposal
+        </div>
         <div class="main_header__subtitle">
           Last NAV update date: <strong>{{ fundLastNAVUpdateDate }}</strong>
         </div>
@@ -14,7 +16,9 @@
           <!-- Proposal Title -->
           <v-row>
             <div class="proposal_title_field">
-              <v-label class="label_required"> Proposal Title </v-label>
+              <v-label class="label_required">
+                Proposal Title
+              </v-label>
               <div class="proposal_title_field__char_limit">
                 <ui-char-limit
                   :char-limit="150"
@@ -33,7 +37,9 @@
 
           <!-- Management -->
           <v-row>
-            <v-label class="label_required"> Management </v-label>
+            <v-label class="label_required">
+              Management
+            </v-label>
           </v-row>
           <v-row class="mb-6">
             <div class="management">
@@ -99,7 +105,9 @@
           <v-row
             class="proposal_description d-flex flex-grow-1 justify-space-between align-center mb-2"
           >
-            <v-label class="label_required"> Proposal Methods </v-label>
+            <v-label class="label_required">
+              Proposal Methods
+            </v-label>
           </v-row>
           <v-row class="mb-4">
             <v-expansion-panels>
@@ -166,6 +174,7 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
+import { encodeFunctionCall } from "web3-eth-abi";
 import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { NAVExecutor } from "~/assets/contracts/NAVExecutor";
@@ -410,7 +419,7 @@ const encodeRoleModEntries = async (
         prepRoleModEntryInput(proposalEntries[i].value[j]),
       );
     }
-    const encodedRoleModFunction = web3Store.web3.eth.abi.encodeFunctionCall(
+    const encodedRoleModFunction = encodeFunctionCall(
       roleModFunctionABI as AbiFunctionFragment,
       roleModFunctionData,
     );
@@ -495,7 +504,7 @@ const createProposal = async () => {
   console.log("pastNavUpdateEntryAddresses: ", pastNavUpdateEntryAddresses);
   console.log("collectManagementFees: ", proposal.value.collectManagementFees);
   console.log("processWithdraw: ", proposal.value.processWithdraw);
-  const encodedNavUpdateEntries = web3Store.web3.eth.abi.encodeFunctionCall(
+  const encodedNavUpdateEntries = encodeFunctionCall(
     updateNavABI as AbiFunctionFragment,
     [
       navUpdateEntries,
@@ -521,7 +530,7 @@ const createProposal = async () => {
     console.log("roleModGasValues: ", roleModGasValues);
   }
   const encodedDataStoreNAVDataNavUpdateEntries =
-    web3Store.web3.eth.abi.encodeFunctionCall(
+    encodeFunctionCall(
       storeNAVDataABI as AbiFunctionFragment,
       [fundStore.fund?.address, encodedNavUpdateEntries],
     );
@@ -536,17 +545,17 @@ const createProposal = async () => {
   )
   */
   const encodedCollectFlowFeesAbiJSON =
-    web3Store.web3.eth.abi.encodeFunctionCall(
+    encodeFunctionCall(
       collectFeesABI as AbiFunctionFragment,
       [0],
     );
   const encodedCollectManagerFeesAbiJSON =
-    web3Store.web3.eth.abi.encodeFunctionCall(
+    encodeFunctionCall(
       collectFeesABI as AbiFunctionFragment,
       [2],
     );
   const encodedCollectPerformanceFeesAbiJSON =
-    web3Store.web3.eth.abi.encodeFunctionCall(
+    encodeFunctionCall(
       collectFeesABI as AbiFunctionFragment,
       [3],
     );
