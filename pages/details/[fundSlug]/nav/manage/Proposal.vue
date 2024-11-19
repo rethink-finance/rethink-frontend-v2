@@ -618,8 +618,8 @@ const createProposal = async () => {
     [0].concat(roleModGasValues),
     [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
     JSON.stringify({
-      title: proposal.value.title,
-      description: proposal.value.description,
+      title: "Allow Manager to Keep Updating - " + proposal.value.title,
+      description: "Allow Manager to keep updating NAV based on the methods in the " + proposal.value.title ".\nAll previous manager permissions related to NAV will be revoked".,
     }),
   ];
   // const [gasPrice2] = await web3Store.estimateGas(
