@@ -2,7 +2,7 @@
   <div>
     <UiHeader>
       <div class="main_header__title">
-        Fund Settings Proposal
+        OIV Settings Proposal
 
         <UiTooltipClick location="right" :hide-after="6000">
           <Icon
@@ -13,7 +13,7 @@
 
           <template #tooltip>
             <div class="tooltip__content">
-              Update Fund Settings on need!
+              Update OIV Settings on need!
               <a
                 class="tooltip__link"
                 href="https://docs.rethink.finance/rethink.finance"
@@ -147,9 +147,9 @@
             <div v-else>
               <UiInfoBox
                 class="info-box"
-                info="Whitelist is disabled. This means that anyone can deposit into the fund. <br>
+                info="Whitelist is disabled. This means that anyone can deposit into the OIV. <br>
                       If you want to enable the whitelist, please toggle the switch above. <br>
-                      Whitelist is a list of addresses that are allowed to deposit into the fund."
+                      Whitelist is a list of addresses that are allowed to deposit into the OIV."
               />
             </div>
           </div>
@@ -160,9 +160,9 @@
 </template>
 
 <script setup lang="ts">
+import { ethers } from "ethers";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
-import { ethers } from "ethers";
 import { encodeFunctionCall } from "web3-eth-abi";
 import SectionWhitelist from "./SectionWhitelist.vue";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
@@ -493,9 +493,7 @@ const formatProposalData = (proposal: IProposal) => {
     managementFee: toggledOffFields.includes("managementFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.managementFee)),
-    performaceHurdleRateBps: toggledOffFields.includes("hurdleRate")
-      ? 0
-      : parseInt(fromPercentageToBps(proposal.hurdleRate)),
+    performaceHurdleRateBps: 0, // note from Rok to always submit 0 here
     baseToken: proposal.denominationAsset,
     allowedDepositAddrs: whitelistValue,
     governanceToken: proposal.governanceToken,

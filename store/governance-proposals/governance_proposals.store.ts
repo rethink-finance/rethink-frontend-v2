@@ -571,13 +571,13 @@ export const useGovernanceProposalsStore = defineStore({
       const fund = this.fundStore.fund;
 
       if (!fund?.governanceToken.decimals) {
-        console.error("No fund governance token decimals found.");
-        this.toastStore.errorToast("No fund governance token decimals found.");
+        console.error("No OIV governance token decimals found.");
+        this.toastStore.errorToast("No OIV governance token decimals found.");
         return;
       }
       if (!fund.clockMode?.mode) {
-        console.error("Fund clock mode is unknown.");
-        this.toastStore.errorToast("Fund clock mode is unknown.");
+        console.error("OIV clock mode is unknown.");
+        this.toastStore.errorToast("OIV clock mode is unknown.");
         return;
       }
 

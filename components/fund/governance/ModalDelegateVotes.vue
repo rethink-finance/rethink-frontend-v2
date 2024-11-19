@@ -29,7 +29,7 @@
           <div
             v-if="
               !delegateToSomeoneElse ||
-              (delegateToSomeoneElse && fundStore?.shouldUserDelegate)
+                (delegateToSomeoneElse && fundStore?.shouldUserDelegate)
             "
             class="di-card"
             v-html="parsedDelegateMessage"
@@ -170,7 +170,7 @@ const delegate = async (isMyself = false) => {
 
     if (fundAddress === ethers.ZeroAddress) {
       toastStore.errorToast(
-        "The fund address is not available. Please contact the Rethink Finance support.",
+        "The OIV address is not available. Please contact the Rethink Finance support.",
       );
       return;
     }

@@ -74,13 +74,13 @@
 </template>
 
 <script setup lang="ts">
+import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { ethers } from "ethers";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
-import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
@@ -187,13 +187,11 @@ const handleError = (error: any, refreshData: boolean = true) => {
 
 const requestRedemption = async () => {
   if (!fundStore.activeAccountAddress) {
-    toastStore.errorToast(
-      "Connect your wallet to redeem tokens from the fund.",
-    );
+    toastStore.errorToast("Connect your wallet to redeem tokens from the OIV.")
     return;
   }
   if (!fund.value) {
-    toastStore.errorToast("Fund data is missing.");
+    toastStore.errorToast("OIV data is missing.")
     return;
   }
   console.log("[REQUEST REDEMPTION]");
@@ -270,7 +268,7 @@ const buttons = ref([
         return "Redemption request already exists. To change it, you first have to cancel the existing one.";
       }
       if (!fundStore.isUserWalletWhitelisted) {
-        return "Your wallet address is not whitelisted to allow deposits into this fund.";
+        return "Your wallet address is not whitelisted to allow deposits into this OIV."
       }
       return "";
     }),

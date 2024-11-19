@@ -386,7 +386,7 @@ export default defineComponent({
 
       if (this.showBaseTokenBalances) {
         methods.push({
-          positionName: "Fund Balance",
+          positionName: "OIV Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,

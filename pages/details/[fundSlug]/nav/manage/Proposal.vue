@@ -456,12 +456,8 @@ const createProposal = async () => {
 
     const baseDecimals = fundStore.fund?.baseToken.decimals;
     if (!baseDecimals) {
-      toastStore.errorToast(
-        "Failed preparing NAV Illiquid method, fund base token decimals are not known.",
-      );
-      throw new Error(
-        "Failed preparing NAV Illiquid method, base decimals are not known.",
-      );
+      toastStore.errorToast("Failed preparing NAV Illiquid method, OIV base token decimals are not known.")
+      throw new Error("Failed preparing NAV Illiquid method, base decimals are not known.")
     }
 
     if (navEntry.positionType === PositionType.Liquid) {
@@ -663,8 +659,8 @@ const createProposal = async () => {
     [0].concat(roleModGasValues),
     [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
     JSON.stringify({
-      title: proposal.value.title,
-      description: proposal.value.description,
+      title: "Allow Manager to Keep Updating - " + proposal.value.title,
+      description: "Allow Manager to keep updating NAV based on the methods in the " + proposal.value.title + ".\n All previous manager permissions related to NAV will be revoked.",
     }),
   ];
 
