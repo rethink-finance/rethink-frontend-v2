@@ -55,13 +55,12 @@ import { ethers, FixedNumber } from "ethers";
 import { ref } from "vue";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IToken from "~/types/token";
 import { roundToSignificantDecimals } from "~/composables/formatters";
+import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 
-const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const showCancelButton = ref(false);
@@ -115,15 +114,14 @@ const cancelPendingRequest = async () => {
   console.log(`Cancel ${props.fundTransactionRequest.type} Request`);
   isLoadingCancelRequest.value = true;
 
-  const ABI = [ "function revokeDepositWithrawal(bool isDeposit)" ];
-  const iface = new ethers.Interface(ABI);
-  const encodedFunctionCall = iface.encodeFunctionData("revokeDepositWithrawal", [ isDepositRequest ]);
-  // const [gasPrice] = await fundStore.estimateGasFundFlowsCall(encodedFunctionCall);
+  const encodedFunctionCall = encodeFundFlowsCallFunctionData(
+    "revokeDepositWithrawal",
+    [ isDepositRequest ],
+  );
 
   try {
     await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
       from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
       gasPrice: "",
     }).on("transactionHash", (hash: string) => {
       console.log("tx hash: " + hash);

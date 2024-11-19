@@ -61,7 +61,6 @@ export const parseFundNAVUpdatesAction = (
   const lastNavUpdateNavMethods = navUpdates[navUpdates.length - 1]?.entries ?? [];
   console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
   lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
-    console.log("NAV method", navMethod);
     updateNavMethodPastNavValue(fundAddress, navMethodIndex, navMethod);
   });
 
