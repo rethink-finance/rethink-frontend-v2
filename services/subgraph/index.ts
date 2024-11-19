@@ -15,18 +15,24 @@ export interface GovernorProposalsResponse {
 }
 
 export const fetchSubgraphGovernorProposals = async (
-  client: ApolloClient<any>,
+  chainId: string,
   values: {
     governorAddress: string;
   },
 ): Promise<ISubgraphGovernanceProposal[]> => {
+  const client = useNuxtApp().$getApolloClient(chainId) as ApolloClient<any>;
+
+  if (!client) {
+    throw new Error("Apollo client not found");
+  }
+
   try {
     const { data } = await client.query<GovernorProposalsResponse>({
       query: FETCH_GOVERNANCE_PROPOSALS,
       variables: { governorAddress: values.governorAddress },
       fetchPolicy: "network-only", // Adjust based on caching needs
     });
-
+    console.log("fetched data of proposals", data);
     if (!data || !data.proposals) {
       throw new Error("Received no data or events!");
     }
@@ -43,12 +49,18 @@ export interface GovernorProposalResponse {
 }
 
 export const fetchSubgraphGovernorProposal = async (
-  client: ApolloClient<any>,
+  chainId: string,
   values: {
     governorAddress: string;
     proposalId: string;
   },
 ): Promise<ISubgraphGovernanceProposal> => {
+  const client = useNuxtApp().$getApolloClient(chainId) as ApolloClient<any>;
+
+  if (!client) {
+    throw new Error("Apollo client not found");
+  }
+
   try {
     const { data } = await client.query<GovernorProposalResponse>({
       query: FETCH_GOVERNANCE_PROPOSAL,
@@ -75,19 +87,22 @@ export interface DelegateResponse {
 }
 
 export const fetchSubgraphDelegates = async (
-  client: ApolloClient<any>,
+  chainId: string,
   values: {
     votingContract: string;
   },
 ): Promise<ISubgraphFetchDelegatesResponse> => {
-  console.warn("client :", client);
-  console.warn("Voting contract:", values);
+  const client = useNuxtApp().$getApolloClient(chainId) as ApolloClient<any>;
+
+  if (!client) {
+    throw new Error("Apollo client not found");
+  }
   try {
     const { data } = await client.query<DelegateResponse>({
       query: FETCH_DELEGATES,
       variables: { votingContract: values.votingContract },
     });
-    console.log("data: ", data);
+    console.log("fetchSubgraphDelegates data: ", data);
     if (!data || !data.votingContract) {
       throw new Error("Received no data or events!");
     }

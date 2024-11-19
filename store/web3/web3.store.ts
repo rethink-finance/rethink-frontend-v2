@@ -27,6 +27,7 @@ interface IState {
   chainSelectedRpcUrl: Record<string, string>;
   chainSelectedRpcIndex: Record<string, number>;
   chainProviders: Record<string, Web3>;
+  chainContracts: Record<string, any>;
 }
 
 const removeDuplicates = (arr: any[]) => {
@@ -45,18 +46,34 @@ export const useWeb3Store = defineStore({
   state: (): IState => {
     const chainSelectedRpcUrl: Record<string, string> = {};
     const chainSelectedRpcIndex: Record<string, number> = {};
-    for (const chainId in networksMap) {
+    const chainProviders: Record<string, Web3> = {};
+    const chainContracts: Record<string, any> = {};
+
+    for (const network of Object.values(networksMap)) {
+      const chainId = network.chainId;
       chainSelectedRpcUrl[chainId] = networksMap[chainId]?.rpcUrls[0];
       chainSelectedRpcIndex[chainId] = 0;
-    }
-    const chainProviders: Record<string, Web3> = {};
+      // Initialize providers map by iterating over all networks and use the
+      // selected chain's RPC url to init the provider.
+      const provider = new Web3(chainSelectedRpcUrl[chainId]);
+      chainProviders[chainId] = provider;
 
-    // Initialize providers map by iterating over all networks and use the
-    // selected chain's RPC url to init the provider.
-    for (const chainId in networksMap) {
-      chainProviders[chainId] = new Web3(chainSelectedRpcUrl[chainId]);
+      // Initialize contracts if addresses are available
+      chainContracts[chainId] = {
+        fundFactoryContract: new provider.eth.Contract(
+          GovernableFundFactory.abi,
+          addresses.GovernableFundFactoryBeaconProxy[chainId],
+        ),
+        rethinkReaderContract: new provider.eth.Contract(
+          RethinkReader.abi,
+          addresses.RethinkReader[chainId],
+        ),
+        navCalculatorContract: new provider.eth.Contract(
+          NAVCalculator.abi,
+          addresses.NAVCalculatorBeaconProxy[chainId],
+        ),
+      };
     }
-
     return {
       web3: undefined,
       currentRpcIndex: -1,
@@ -65,6 +82,7 @@ export const useWeb3Store = defineStore({
       chainName: "",
       chainShort: "",
       chainProviders,
+      chainContracts,
       chainSelectedRpcUrl,
       chainSelectedRpcIndex,
       cachedTokens: {
@@ -101,35 +119,6 @@ export const useWeb3Store = defineStore({
     },
     NAVExecutorBeaconProxyAddress(): string {
       return addresses.NAVExecutorBeaconProxy[this.chainId];
-    },
-    contracts(): Record<string, any> {
-      const contractsMap: Record<string, any> = {};
-
-      for (const network of this.networks) {
-        const chainId = network.chainId;
-        const provider = this.chainProviders[chainId];
-        if (!provider) continue;
-
-        // Initialize contracts if addresses are available
-        contractsMap[chainId] = {
-          fundFactoryContract: new CustomContract(
-            GovernableFundFactory.abi,
-            addresses.GovernableFundFactoryBeaconProxy[chainId],
-            network.rpcUrls,
-          ),
-          rethinkReaderContract: new CustomContract(
-            RethinkReader.abi,
-            addresses.RethinkReader[chainId],
-            network.rpcUrls,
-          ),
-          navCalculatorContract: new CustomContract(
-            NAVCalculator.abi,
-            addresses.NAVCalculatorBeaconProxy[chainId],
-            network.rpcUrls,
-          ),
-        };
-      }
-      return contractsMap;
     },
   },
   actions: {

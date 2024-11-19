@@ -11,6 +11,7 @@ import { ERC20 } from "assets/contracts/ERC20";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { parseFundSettings } from "~/composables/fund/parseFundSettings";
 import { parseClockMode } from "~/composables/fund/parseClockMode";
+import { networksMap } from "~/store/web3/networksMap";
 
 export const fetchFundMetaDataAction = async (
   fundChainId: string,
@@ -19,7 +20,7 @@ export const fetchFundMetaDataAction = async (
   const web3Store = useWeb3Store();
   const fundStore = useFundStore();
   const rethinkReaderContract =
-    web3Store.contracts[fundChainId]?.rethinkReaderContract;
+    web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
   try {
     console.log(
       "fundNavMetaData000",
@@ -98,13 +99,14 @@ export const fetchFundMetaDataAction = async (
     const votingUnit =
       parsedClockMode.mode === ClockMode.BlockNumber ? "block" : "second";
 
+    const fundNetwork = networksMap[fundChainId];
     const fund: IFund = {
       // Original fund settings
       originalFundSettings: parsedFundSettings,
       lastNAVUpdateTotalNAV: undefined,
-      chainId: fundStore.web3Store.chainId,
-      chainName: fundStore.web3Store.chainName,
-      chainShort: fundStore.web3Store.chainShort,
+      chainId: fundChainId,
+      chainName: fundNetwork.chainName,
+      chainShort: fundNetwork.chainShort,
       address: parsedFundSettings.fundAddress || "",
       title: parsedFundSettings.fundName || "N/A",
       clockMode: parsedClockMode,

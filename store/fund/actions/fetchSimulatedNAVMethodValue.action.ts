@@ -35,7 +35,7 @@ export const fetchSimulatedNAVMethodValueAction = async (
     return;
   }
   const navCalculatorContract =
-    web3Store.contracts[fundChainId]?.navCalculatorContract;
+    web3Store.chainContracts[fundChainId]?.navCalculatorContract;
 
   try {
     navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;

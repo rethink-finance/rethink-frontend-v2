@@ -60,7 +60,7 @@ export const parseFundNAVUpdatesAction = (
     navUpdates[navUpdates.length - 1]?.entries ?? [];
   console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
   const navCalculatorContract =
-    useWeb3Store().contracts[chainId]?.navCalculatorContract;
+    useWeb3Store().chainContracts[chainId]?.navCalculatorContract;
   if (!navCalculatorContract) {
     throw new Error(`No navCalculatorContract found for chainId: ${chainId}`);
   }

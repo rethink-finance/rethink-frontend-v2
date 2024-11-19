@@ -9,7 +9,7 @@ export const fetchUserFundDataAction = async (
   const web3Store = useWeb3Store();
 
   const rethinkReaderContract =
-    web3Store.contracts[fundChainId]?.rethinkReaderContract;
+    web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
   const activeAccountAddress = fundStore.activeAccountAddress;
   if (!activeAccountAddress || !rethinkReaderContract) return;
 

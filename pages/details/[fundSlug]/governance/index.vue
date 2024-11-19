@@ -141,7 +141,6 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
 import { ProposalState } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
@@ -152,7 +151,6 @@ import type ITrendingDelegate from "~/types/trending_delegate";
 const router = useRouter();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
-const web3Store = useWeb3Store();
 const actionStateStore = useActionStateStore();
 const governanceProposalStore = useGovernanceProposalsStore();
 
@@ -163,9 +161,10 @@ const { shouldUserDelegate } = toRefs(fundStore);
 // dummy data governance activity
 const governanceProposals = computed(() => {
   const proposals = governanceProposalStore.getProposals(
-    web3Store.chainId,
-    fundStore.fund?.address,
+    fundStore.fundChainId,
+    fundStore.fundAddress,
   );
+  console.log("fetched proposals in view", fundStore.fundChainId, fundStore.fundAddress, proposals)
 
   // set updateSettingsProposals to proposals that have updateSettings calldata
   updateSettingsProposals.value = proposals.filter((proposal) => {
@@ -231,8 +230,8 @@ const shouldFetchTrendingDelegates = ref(true);
 // trending delegates
 const trendingDelegates = computed(() => {
   const delegates = governanceProposalStore.getDelegates(
-    web3Store.chainId,
-    fundStore.fund?.address,
+    fundStore.fundChainId,
+    fundStore.fundAddress,
   );
   delegates.sort((a, b) => {
     const votingPowerA = Number(a.votingPower.replace(fundStore.fund?.governanceToken.symbol || "", ""));
@@ -373,7 +372,7 @@ const parseNewChunkDelegateEvents = async (
       //    because those come from our try to automatically self delegate in the BE
       // 2. skip already processed delegators as well
       if (
-        delegator === fundStore.fund?.address.toLowerCase() ||
+        delegator === fundStore.fundAddress.toLowerCase() ||
         processedDelegators.has(delegator)
       ) {
         return;
@@ -705,7 +704,7 @@ const fetchProposals = async (
         fromBlock,
       );
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
-        web3Store.chainId,
+        fundStore.fundChainId,
         fundAddress,
         toBlock,
         fromBlock,
@@ -796,7 +795,7 @@ const fetchProposals = async (
         await governanceProposalStore.parseProposalCreatedEvents(chunkEvents);
       }
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
-        web3Store.chainId,
+        fundStore.fundChainId,
         fundAddress,
         toBlock,
         fromBlock,
@@ -843,7 +842,7 @@ onBeforeUnmount(() => {
 
 /**
 const startFetchingFundProposals = async () => {
-  const fundAddress = fundStore.fund?.address;
+  const fundAddress = fundStore.fundAddress;
   console.warn("STAAAART governance proposal events for fund: ", fundAddress);
   if (!fundAddress) return;
 
@@ -874,7 +873,7 @@ const startFetchingFundProposals = async () => {
 
   const [mostRecentFetchedBlock, oldestFetchedBlock] =
     governanceProposalStore.getFundProposalsBlockFetchedRanges(
-      web3Store.chainId,
+      fundStore.fundChainId,
       fundAddress,
     );
   console.log(
@@ -914,8 +913,8 @@ const startFetchingFundProposals = async () => {
   } else {
     // Fetch all history.
     governanceProposalStore.resetProposals(
-      web3Store.chainId,
-      fundStore.fund?.address,
+      fundStore.fundChainId,
+      fundStore.fundAddress,
     );
     console.log("fetch all blocks");
     await fetchProposals(currentBlock, 0);

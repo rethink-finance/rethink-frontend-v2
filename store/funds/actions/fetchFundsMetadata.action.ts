@@ -17,7 +17,7 @@ export async function fetchFundsMetaDataAction(
 
   const funds: IFund[] = [];
   const rethinkReaderContract =
-    web3Store.contracts[chainId]?.rethinkReaderContract;
+    web3Store.chainContracts[chainId]?.rethinkReaderContract;
   if (!rethinkReaderContract) {
     throw new Error(`No reader contract found for chainId: ${chainId}`);
   }

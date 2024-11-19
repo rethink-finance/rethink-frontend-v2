@@ -9,22 +9,23 @@ import { _mapSubgraphFetchDelegatesToDelegates } from "~/types/helpers/mappers";
 export const fetchDelegatesAction = async (): Promise<any> => {
   const fundStore = useFundStore();
   const governanceProposalStore = useGovernanceProposalsStore();
-  const nuxtApp = useNuxtApp();
-  const client = nuxtApp.$apolloClient as Ref<ApolloClient<any>>;
 
-  if (!client) {
-    throw new Error("Apollo client not found");
-  }
   const fund = unref(fundStore.fund);
+  if (!fund) {
+    return;
+  }
   const votingContractAddress = fund?.governanceToken?.address;
 
   if (!votingContractAddress) {
     throw new Error("Governor token address not found");
   }
 
-  const fetchedDelegates = await fetchSubgraphDelegates(client.value, {
-    votingContract: votingContractAddress,
-  });
+  const fetchedDelegates = await fetchSubgraphDelegates(
+    fund.chainId,
+    {
+      votingContract: votingContractAddress,
+    },
+  );
   const processedDelegates = _mapSubgraphFetchDelegatesToDelegates(
     fetchedDelegates,
     fund?.governanceToken?.decimals || 18,

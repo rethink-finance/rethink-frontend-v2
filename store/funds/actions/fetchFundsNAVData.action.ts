@@ -22,7 +22,7 @@ export async function fetchFundsNAVDataAction(
   const fundAddresses: string[] = fundsInfoArrays[0];
 
   const rethinkReaderContract =
-    web3Store.contracts[chainId]?.rethinkReaderContract;
+    web3Store.chainContracts[chainId]?.rethinkReaderContract;
   if (!rethinkReaderContract) {
     throw new Error(`No reader contract found for chainId: ${chainId}`);
   }

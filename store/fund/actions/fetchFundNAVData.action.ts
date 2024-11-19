@@ -11,7 +11,8 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
   if (!fund?.address) return;
 
   const rethinkReaderContract =
-    web3Store.contracts[fund.chainId]?.rethinkReaderContract;
+    web3Store.chainContracts[fund.chainId]?.rethinkReaderContract;
+
   try {
     const fundNAVData = await web3Store.callWithRetry(
       fund.chainId,
