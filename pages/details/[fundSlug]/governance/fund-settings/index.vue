@@ -170,10 +170,9 @@
 </template>
 
 <script setup lang="ts">
+import { ethers } from "ethers";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
-import { ethers } from "ethers";
-import SectionWhitelist from "./SectionWhitelist.vue";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
@@ -190,6 +189,7 @@ import {
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import SectionWhitelist from "./SectionWhitelist.vue";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
@@ -512,9 +512,7 @@ const formatProposalData = (proposal: IProposal) => {
     managementFee: toggledOffFields.includes("managementFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.managementFee)),
-    performaceHurdleRateBps: toggledOffFields.includes("hurdleRate")
-      ? 0
-      : parseInt(fromPercentageToBps(proposal.hurdleRate)),
+    performaceHurdleRateBps: 0, // note from Rok to always submit 0 here
     baseToken: proposal.denominationAsset,
     allowedDepositAddrs: whitelistValue,
     governanceToken: proposal.governanceToken,
