@@ -98,7 +98,7 @@ onMounted(async () => {
   if (!allNavMethods.value.length) {
     loadingAllNavMethods.value = true;
     const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays()
-    // Fetch all possible NAV methods for all funds
+    // Fetch all possible NAV methods for all OIVs
     await fundsStore.fetchFundsNAVData(fundsInfoArrays);
     loadingAllNavMethods.value = false;
   }

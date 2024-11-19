@@ -175,9 +175,9 @@
 <script setup lang="ts">
 
 
+import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
-import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { NAVExecutor } from "~/assets/contracts/NAVExecutor";
 import { useAccountStore } from "~/store/account/account.store";
@@ -437,7 +437,7 @@ const createProposal = async () => {
 
     const baseDecimals = fundStore.fund?.baseToken.decimals;
     if (!baseDecimals) {
-      toastStore.errorToast("Failed preparing NAV Illiquid method, fund base token decimals are not known.")
+      toastStore.errorToast("Failed preparing NAV Illiquid method, OIV base token decimals are not known.")
       throw new Error("Failed preparing NAV Illiquid method, base decimals are not known.")
     }
 

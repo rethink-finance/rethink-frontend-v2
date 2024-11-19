@@ -68,7 +68,7 @@
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
     <h2 class="mb-2">
-      Fund not found
+      OIV not found
     </h2>
     <p class="text-center">
       Are you sure you are on the right network? <br>

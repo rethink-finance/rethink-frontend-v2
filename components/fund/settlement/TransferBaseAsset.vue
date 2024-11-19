@@ -3,10 +3,10 @@
     <div class="transfer__content">
       <div class="transfer__header">
         <div class="transfer__title">
-          Transfer Base Asset to the Fund Contract
+          Transfer Base Asset to the OIV Contract
         </div>
         <div class="transfer__subtitle">
-          Transfer any base asset amount from the custody to the fund contract.
+          Transfer any base asset amount from the custody to the OIV contract.
         </div>
       </div>
       <div class="transfer__token">
@@ -55,7 +55,7 @@
                     indeterminate
                   />
                 </template>
-                Transfer To Fund
+                Transfer To OIV
               </v-btn>
             </template>
             <template #default>

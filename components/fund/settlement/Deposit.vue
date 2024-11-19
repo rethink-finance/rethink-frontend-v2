@@ -92,6 +92,7 @@
 </template>
 
 <script setup lang="ts">
+import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { ethers } from "ethers";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
@@ -99,7 +100,6 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
-import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 
 const emit = defineEmits(["deposit-success"]);
 const toastStore = useToastStore();
@@ -395,7 +395,7 @@ const buttons = ref([
         return "Deposit request already exists. To change it, you first have to cancel the existing one.";
       }
       if (!fundStore.isUserWalletWhitelisted) {
-        return "Your wallet address is not whitelisted to allow deposits into this fund.";
+        return "Your wallet address is not whitelisted to allow deposits into this OIV.";
       }
       return "";
     }),

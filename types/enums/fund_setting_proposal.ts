@@ -127,10 +127,10 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       cols: 12,
     },
     {
-      label: "Fund DAO Name",
+      label: "OIV DAO Name",
       key: "fundDAOName",
       type: InputType.Text,
-      placeholder: "E.g. Fund DAO Name",
+      placeholder: "E.g. OIV DAO Name",
       rules: [formRules.required],
       isEditable: false,
       cols: 6,

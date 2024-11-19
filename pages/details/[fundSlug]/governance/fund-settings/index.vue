@@ -2,7 +2,7 @@
   <div>
     <UiHeader>
       <div class="main_header__title">
-        Fund Settings Proposal
+        OIV Settings Proposal
 
         <UiTooltipClick
           location="right"
@@ -16,7 +16,7 @@
 
           <template #tooltip>
             <div class="tooltip__content">
-              Update Fund Settings on need!
+              Update OIV Settings on need!
               <a
                 class="tooltip__link"
                 href="https://docs.rethink.finance/rethink.finance"
@@ -157,9 +157,9 @@
             <div v-else>
               <UiInfoBox
                 class="info-box"
-                info="Whitelist is disabled. This means that anyone can deposit into the fund. <br>
+                info="Whitelist is disabled. This means that anyone can deposit into the OIV. <br>
                       If you want to enable the whitelist, please toggle the switch above. <br>
-                      Whitelist is a list of addresses that are allowed to deposit into the fund."
+                      Whitelist is a list of addresses that are allowed to deposit into the OIV."
               />
             </div>
           </div>

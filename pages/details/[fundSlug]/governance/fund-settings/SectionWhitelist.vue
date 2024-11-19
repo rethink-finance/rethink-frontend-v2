@@ -9,31 +9,33 @@
           variant="outlined"
           hide-details
           single-line
-        ></v-text-field>
+        />
 
         <v-btn
           color="#ffffff"
-          @click="toggleAddAddressList"
           variant="text"
           :class="{ 'v-btn--active': isAddAddressListActive }"
+          @click="toggleAddAddressList"
         >
           Add Address List +
         </v-btn>
 
         <v-btn
           color="#ffffff"
-          @click="toggleAddAddress"
           variant="text"
           :class="{ 'v-btn--active': isAddAddressActive }"
+          @click="toggleAddAddress"
         >
           Add Address +
         </v-btn>
       </div>
 
-      <div class="header__new-address" v-if="isAddAddressActive">
+      <div v-if="isAddAddressActive" class="header__new-address">
         <v-col cols="12">
           <v-label class="row-title">
-            <div class="label_required row-title__title">Enter New Address</div>
+            <div class="label_required row-title__title">
+              Enter New Address
+            </div>
           </v-label>
 
           <v-text-field
@@ -43,18 +45,18 @@
             single-line
             :rules="singleAddressRules"
             @keydown.enter="isSingleAddressValid ? handleAddNewAddress() : null"
-          ></v-text-field>
+          />
 
           <div class="header__actions">
-            <v-btn color="red" @click="toggleAddAddress" variant="text">
+            <v-btn color="red" variant="text" @click="toggleAddAddress">
               Cancel
             </v-btn>
 
             <v-btn
               color="#ffffff"
-              @click="handleAddNewAddress"
               variant="outlined"
               :disabled="!isSingleAddressValid"
+              @click="handleAddNewAddress"
             >
               Add Address
             </v-btn>
@@ -64,10 +66,12 @@
     </div>
 
     <!-- Bulk add -->
-    <div class="header__new-address" v-if="isAddAddressListActive">
+    <div v-if="isAddAddressListActive" class="header__new-address">
       <v-col cols="12">
         <v-label class="row-title">
-          <div class="label_required row-title__title">Enter New Addresses</div>
+          <div class="label_required row-title__title">
+            Enter New Addresses
+          </div>
         </v-label>
 
         <v-textarea
@@ -76,19 +80,18 @@
           variant="outlined"
           single-line
           :error-messages="parsedBulkAddressErrors"
-        >
-        </v-textarea>
+        />
 
         <div class="header__actions">
-          <v-btn color="red" @click="toggleAddAddressList" variant="text">
+          <v-btn color="red" variant="text" @click="toggleAddAddressList">
             Cancel
           </v-btn>
 
           <v-btn
             color="#ffffff"
-            @click="openConfirmDialog"
             variant="outlined"
             :disabled="!isBulkAddressValid"
+            @click="openConfirmDialog"
           >
             Add New Address List
           </v-btn>
@@ -99,7 +102,7 @@
       <UiConfirmDialog
         v-model="confirmDialog"
         title="Heads Up!"
-        confirmText="Add Address List"
+        confirm-text="Add Address List"
         message="By proceeding with <strong>'Add Address List'</strong>, all the previous addresses will be removed!"
         @confirm="handleAddNewAddressList"
       />
@@ -127,13 +130,15 @@
         <div class="address">
           <span class="address__text">{{ item.address }}</span>
 
-          <div class="address__state" v-if="item.deleted || item.isNew">
-            <span v-if="item.deleted" class="address__state__deleted"
-              >Removed</span
-            >
-            <span v-else-if="item.isNew" class="address__state__new"
-              >Added</span
-            >
+          <div v-if="item.deleted || item.isNew" class="address__state">
+            <span
+              v-if="item.deleted"
+              class="address__state__deleted"
+            >Removed</span>
+            <span
+              v-else-if="item.isNew"
+              class="address__state__new"
+            >Added</span>
           </div>
         </div>
       </template>
@@ -141,7 +146,9 @@
       <template #[`item.delete`]="{ item }">
         <UiDetailsButton small @click.stop="deleteAddress(item)">
           <v-tooltip v-if="item.deleted" activator="parent" location="bottom">
-            <template #default> Undo Delete </template>
+            <template #default>
+              Undo Delete
+            </template>
             <template #activator="{ props }">
               <v-icon
                 class="icon_delete"
@@ -153,7 +160,9 @@
           </v-tooltip>
 
           <v-tooltip v-else activator="parent" location="bottom">
-            <template #default> Delete Address </template>
+            <template #default>
+              Delete Address
+            </template>
             <template #activator="{ props }">
               <v-icon
                 class="icon_delete"
@@ -167,15 +176,15 @@
       </template>
 
       <template #bottom>
-        <v-pagination v-model="page" :length="pages"></v-pagination>
+        <v-pagination v-model="page" :length="pages" />
       </template>
     </v-data-table>
 
     <div v-else class="section_whitelist__no_data">
       Currently there are no addresses in the whitelist.
-      <br />
-      This means that all addresses are allowed to participate in the fund.
-      <br />
+      <br>
+      This means that all addresses are allowed to participate in the OIV.
+      <br>
     </div>
   </div>
 </template>
@@ -212,7 +221,7 @@ const singleAddressRules = computed(() => [
   formRules.required,
   formRules.notSameAs(
     props.items.map((i) => i.address),
-    "This address is already in the whitelist"
+    "This address is already in the whitelist",
   ),
 ]);
 
@@ -229,12 +238,12 @@ const bulkAddressRules = computed(() => {
       acc[address] = (acc[address] || 0) + 1;
       return acc;
     },
-    {}
+    {},
   );
 
   // Filter the addresses to include only those appearing 2 or more times
   const addressList = addressArray.filter(
-    (address: string) => addressCount[address] >= 2
+    (address: string) => addressCount[address] >= 2,
   );
 
   // Return validation rules
@@ -243,7 +252,7 @@ const bulkAddressRules = computed(() => {
     formRules.required,
     formRules.notSameAs(
       addressList,
-      "This address is already in the whitelist"
+      "This address is already in the whitelist",
     ),
   ];
 });
@@ -281,7 +290,7 @@ const methodProps = ({ item }: { item: IWhitelist }) => {
 
 const isSingleAddressValid = computed(() => {
   const output = singleAddressRules.value.every(
-    (rule) => rule(newAddress.value) === true
+    (rule) => rule(newAddress.value) === true,
   );
 
   return output;
@@ -383,7 +392,7 @@ const handleAddNewAddressList = () => {
     });
 
     emit("update-items", [...output]);
-    
+
     newAddress.value = "";
     confirmDialog.value = false;
     toastStore.successToast("Address list added to whitelist");

@@ -6,7 +6,7 @@
     hover
     :items="items"
     :loading="loading && items.length === 0"
-    loading-text="Loading Funds"
+    loading-text="Loading OIVs"
     items-per-page="-1"
     @click:row="navigateFundDetails"
   >
@@ -44,8 +44,8 @@
                 false,
               ),
             ) +
-            " " +
-            item.baseToken.symbol
+              " " +
+              item.baseToken.symbol
           }}
         </template>
       </div>
@@ -76,14 +76,12 @@
   </v-data-table>
 
   <div v-else-if="items.length === 0 && !loading" class="nav_entries__no_data">
-    No Funds available.
+    No OIVs available.
   </div>
 </template>
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue/dist/iconify.js";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatNumberShort,
   formatPercent,
@@ -92,6 +90,8 @@ import {
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 
 const web3Store = useWeb3Store();
 const router = useRouter();
@@ -109,7 +109,7 @@ const props = defineProps({
 
 const headers: any = computed(() => [
   {
-    title: "Fund Name",
+    title: "OIV Name",
     key: "name",
     sortable: false,
     width: 200,
