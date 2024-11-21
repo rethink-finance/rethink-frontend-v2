@@ -12,7 +12,7 @@ import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
 
 export const parseFundNAVUpdatesAction = (
-  chainId: string,
+  fundChainId: string,
   fundNAVData: IFundNavData,
   fundAddress: string,
 ): Promise<any> => {
@@ -29,7 +29,7 @@ export const parseFundNAVUpdatesAction = (
   });
 
   // Create navUpdates array
-  const navUpdates = [] as INAVUpdate[];
+  const navUpdates = reactive([] as INAVUpdate[]);
   const navUpdatesLen = fundNAVData.updateTimes.length;
   const fundNavUpdateTimes = fundNAVData.updateTimes;
   for (let i = 0; i < navUpdatesLen; i++) {
@@ -59,15 +59,10 @@ export const parseFundNAVUpdatesAction = (
   const lastNavUpdateNavMethods =
     navUpdates[navUpdates.length - 1]?.entries ?? [];
   console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
-  const navCalculatorContract =
-    useWeb3Store().chainContracts[chainId]?.navCalculatorContract;
-  if (!navCalculatorContract) {
-    throw new Error(`No navCalculatorContract found for chainId: ${chainId}`);
-  }
 
   lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
     updateNavMethodPastNavValue(
-      navCalculatorContract,
+      fundChainId,
       fundAddress,
       navMethodIndex,
       navMethod,
@@ -78,11 +73,18 @@ export const parseFundNAVUpdatesAction = (
 };
 
 const updateNavMethodPastNavValue = async (
-  navCalculatorContract: any,
+  fundChainId: string,
   fundAddress: string,
   navMethodIndex: number,
   navMethod: INAVMethod,
 ) => {
+  const web3Store = useWeb3Store();
+  const navCalculatorContract =
+    web3Store.chainContracts[fundChainId]?.navCalculatorContract;
+  if (!navCalculatorContract) {
+    throw new Error(`No navCalculatorContract found for chainId: ${fundChainId}`);
+  }
+
   // NOTE: Important to know, that this currently only works for the methods of the last NAV update.
   // Fetch NAV method cached past value.
   const calculatorMethod = PositionTypeToNAVCacheMethod[navMethod.positionType];

@@ -452,7 +452,7 @@ export default defineComponent({
       navigator.clipboard.writeText(data);
     },
     async simulateNAV() {
-      if (!this.showSimulatedNav || !this.web3Store.web3 || this.isNavSimulationLoading) return;
+      if (!this.showSimulatedNav || this.isNavSimulationLoading) return;
       this.isNavSimulationLoading = true;
       console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
       /**

@@ -56,33 +56,33 @@ export const fetchSimulatedNAVMethodValueAction = async (
       //    -> We have a bigger problem if it won't fail, we should mark the address somewhere in the table.
       //
       // Here we take solution 1), as we assume that the method was not yet added to allMethods
-      navEntry.pastNAVUpdateEntryFundAddress = fundStore.fund?.address;
+      navEntry.pastNAVUpdateEntryFundAddress = fundAddress;
       navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
     }
 
     const callData: any[] = [];
     if (navEntry.positionType === PositionType.Liquid) {
       callData.push(prepNAVMethodLiquid(navEntry.details));
-      callData.push(fundStore.fund?.safeAddress);
+      callData.push(fund?.safeAddress);
     } else if (navEntry.positionType === PositionType.Illiquid) {
       callData.push(prepNAVMethodIlliquid(navEntry.details, baseDecimals));
-      callData.push(fundStore.fund?.safeAddress);
+      callData.push(fund?.safeAddress);
     } else if (navEntry.positionType === PositionType.NFT) {
       callData.push(prepNAVMethodNFT(navEntry.details));
-      // callData.push(this.fundStore.fund?.safeAddress);
+      // callData.push(this.fund?.safeAddress);
     } else if (navEntry.positionType === PositionType.Composable) {
       callData.push(
         prepNAVMethodComposable(
           navEntry.details,
           navEntry.pastNAVUpdateEntrySafeAddress,
-          fundStore.fund?.safeAddress,
+          fund?.safeAddress,
         ),
       );
     }
 
     callData.push(
       ...[
-        fundStore.fund?.address, // fund
+        fundAddress, // fund
         0, // navEntryIndex
         false, // isPastNAVUpdate -- set to false to simulate on current fund.
         parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
