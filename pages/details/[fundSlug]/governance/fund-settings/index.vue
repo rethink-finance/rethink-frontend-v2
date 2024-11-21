@@ -173,6 +173,7 @@
 import { ethers } from "ethers";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
+import SectionWhitelist from "./SectionWhitelist.vue";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
@@ -189,7 +190,6 @@ import {
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import SectionWhitelist from "./SectionWhitelist.vue";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
@@ -486,6 +486,7 @@ const formatProposalData = (proposal: IProposal) => {
   //    because we are sending two calldatas to the backend(the first one is the old proposal and the second one is the new proposal)
   //    old proposal will toggle off currently whitelisted addresses, and the new proposal will be an empty array which means that there will be no whitelisted addresses
   let whitelistValue = [] as string[];
+  // TODO even if it is not true, it should always send addresses
   if (isWhitelistToggled.value) {
     whitelistValue = whitelist.value
       .filter((item) => !item.deleted)
@@ -495,11 +496,12 @@ const formatProposalData = (proposal: IProposal) => {
   const fundSettings = {
     safe: originalFundSettings?.safe, // did not change
     isExternalGovTokenInUse: originalFundSettings?.isExternalGovTokenInUse, // did not change
-    isWhitelistedDeposits: originalFundSettings?.isWhitelistedDeposits, // did not change
     allowedManagers: originalFundSettings?.allowedManagers, // did not change
     fundAddress: originalFundSettings?.fundAddress, // did not change
     governor: originalFundSettings?.governor, // did not change
 
+    // Take the toggle Whitelist
+    isWhitelistedDeposits: proposal.value.isWhitelistedDeposits,
     depositFee: toggledOffFields.includes("depositFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.depositFee)),
@@ -660,6 +662,7 @@ const populateProposal = () => {
     proposalDescription: "",
     // Whitelist
     whitelist: "",
+    isWhitelistedDeposits: fundDeepCopy?.isWhitelistedDeposits,
   };
 
   whitelist.value = fundDeepCopy?.allowedDepositAddresses?.map(

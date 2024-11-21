@@ -40,6 +40,7 @@ export interface IProposal {
   proposalTitle: string;
   proposalDescription: string;
   whitelist: string;
+  isWhitelistedDeposits: boolean;
 }
 
 export interface IWhitelist {
