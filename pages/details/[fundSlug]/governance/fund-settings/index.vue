@@ -249,6 +249,7 @@ const proposal = ref<IProposal>({
   hurdleRate: "",
   // Whitelist
   whitelist: "",
+  isWhitelistedDeposits: false,
   // Management
   plannedSettlementPeriod: "",
   minLiquidAssetShare: "",
@@ -501,7 +502,7 @@ const formatProposalData = (proposal: IProposal) => {
     governor: originalFundSettings?.governor, // did not change
 
     // Take the toggle Whitelist
-    isWhitelistedDeposits: proposal.value.isWhitelistedDeposits,
+    isWhitelistedDeposits: proposal.isWhitelistedDeposits,
     depositFee: toggledOffFields.includes("depositFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.depositFee)),
