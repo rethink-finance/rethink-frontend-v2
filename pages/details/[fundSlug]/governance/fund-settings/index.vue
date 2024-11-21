@@ -96,7 +96,7 @@
               class="toggleable_group__toggle"
             >
               <v-switch
-                v-model="isWhitelistToggled"
+                v-model="proposal.isWhitelistedDeposits"
                 color="primary"
                 hide-details
               />
