@@ -150,7 +150,7 @@
           </div>
           <div v-else>
             <SectionWhitelist
-              v-if="isWhitelistToggled"
+              v-if="proposal.isWhitelistedDeposits"
               :items="whitelist"
               @update-items="whitelist = $event"
             />
@@ -219,7 +219,6 @@ const loading = ref(false);
 const activeStep = ref(proposalSteps[0]);
 const form = ref();
 const formIsValid = ref(false);
-const isWhitelistToggled = ref(true);
 
 const updateSettingsABI = GovernableFund.abi.find(
   (func: any) => func.name === "updateSettings" && func.type === "function",
@@ -487,8 +486,7 @@ const formatProposalData = (proposal: IProposal) => {
   //    because we are sending two calldatas to the backend(the first one is the old proposal and the second one is the new proposal)
   //    old proposal will toggle off currently whitelisted addresses, and the new proposal will be an empty array which means that there will be no whitelisted addresses
   let whitelistValue = [] as string[];
-  // TODO even if it is not true, it should always send addresses
-  if (isWhitelistToggled.value) {
+  if (proposal.isWhitelistedDeposits) {
     whitelistValue = whitelist.value
       .filter((item) => !item.deleted)
       .map((item) => item.address);
