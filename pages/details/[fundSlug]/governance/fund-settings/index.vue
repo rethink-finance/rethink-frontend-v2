@@ -680,14 +680,12 @@ const populateProposal = () => {
 };
 
 const isFieldModified = (key: keyof IProposal) => {
-  const output = proposal.value[key] !== proposalInitial[key];
-
-  return output;
+  return proposal.value[key] !== proposalInitial[key];
 };
 
 watch(
   proposal,
-  (newValue, oldValue) => {
+  (newValue) => {
     proposalEntry.value.forEach((step) => {
       step.sections.forEach((section) => {
         section.fields.forEach((field) => {

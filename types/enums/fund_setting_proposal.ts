@@ -64,7 +64,7 @@ export interface IField {
   isToggleOn?: boolean;
   fields?: IField[];
   title?: string;
-  value?: string;
+  value?: string | boolean;
 }
 
 export interface IFieldGroup {
