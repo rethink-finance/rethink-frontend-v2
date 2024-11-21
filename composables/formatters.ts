@@ -111,11 +111,10 @@ export const formatNumberShort = (number?: number | bigint | string) => {
 
 export const commify = (value: string | number | bigint) => {
   value = value.toString();
-  const DECIMAL_PLACES_ROUNDING = 2;
 
   const match = value.match(/^(-?)([0-9]*)(\.?)([0-9]*)$/);
   if (!match || (!match[2] && !match[4])) {
-    throw new Error(`bad formatted number: ${ JSON.stringify(value) }`);
+    throw new Error(`bad formatted number: ${JSON.stringify(value)}`);
   }
 
   const neg = match[1];
@@ -123,24 +122,19 @@ export const commify = (value: string | number | bigint) => {
   let frac = "";
 
   if (match[4]) {
-    const fracMatch = match[4].match(/^(.*?)0*$/);
-    if (fracMatch && fracMatch[1]) {
-      frac = fracMatch[1];
-      const asDecimal = parseFloat("0." + frac);
+    const fracDigits = match[4];
+    const asDecimal = parseFloat("0." + fracDigits);
 
-      // Round fraction to 3 decimals.
-      // Shift, round, and shift back
-      const rounded = Math.round(asDecimal * 1000) / 1000;
+    // Retain the first 3 significant digits
+    const significantDigits = Number(asDecimal.toPrecision(3));
 
-      // Convert to string and ensure it retains three decimal places.
-      // Split and take only the decimal part.
-      frac = rounded.toFixed(DECIMAL_PLACES_ROUNDING).split(".")[1];
-    }
+    // Convert to string, remove "0." prefix
+    frac = significantDigits.toString().split(".")[1] || "";
   }
 
-  let commifiedValue = `${ neg }${ whole }`;
+  let commifiedValue = `${neg}${whole}`;
   if (frac) {
-    commifiedValue += `.${ frac }`
+    commifiedValue += `.${frac}`;
   }
   return commifiedValue;
 }
@@ -151,7 +145,7 @@ export const commify = (value: string | number | bigint) => {
  * @param value The value to format, either a number or a bigint.
  * @param decimals The number of decimals the token has.
  * @param shouldCommify Add commas like: "10000" -> "10,000".
- * @param shouldroundToSignificantDecimals Round to first 3 non-zero digits after the decimal point.".
+ * @param shouldRoundToSignificantDecimals Round to first 3 non-zero digits after the decimal point.".
  * @returns The formatted token value with a fixed precision of 3 decimal places.
  */
 
@@ -159,14 +153,14 @@ export const formatTokenValue = (
   value?: bigint,
   decimals?: number,
   shouldCommify = true,
-  shouldroundToSignificantDecimals = false,
+  shouldRoundToSignificantDecimals = false,
 ): string => {
   if (!value || !decimals) return "0";
 
   try {
     if (Number(value) === 0) return "0";
     let formattedValue = ethers.formatUnits(value, decimals);
-    if (shouldroundToSignificantDecimals) {
+    if (shouldRoundToSignificantDecimals) {
       formattedValue = roundToSignificantDecimals(formattedValue, 3);
     }
 

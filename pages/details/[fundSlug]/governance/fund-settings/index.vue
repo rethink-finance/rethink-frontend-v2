@@ -86,7 +86,7 @@
               class="toggleable_group__toggle"
             >
               <v-switch
-                v-model="isWhitelistToggled"
+                v-model="proposal.isWhitelistedDeposits"
                 color="primary"
                 hide-details
               />
@@ -140,7 +140,7 @@
           </div>
           <div v-else>
             <SectionWhitelist
-              v-if="isWhitelistToggled"
+              v-if="proposal.isWhitelistedDeposits"
               :items="whitelist"
               @update-items="whitelist = $event"
             />
@@ -210,7 +210,6 @@ const loading = ref(false);
 const activeStep = ref(proposalSteps[0]);
 const form = ref();
 const formIsValid = ref(false);
-const isWhitelistToggled = ref(true);
 
 const updateSettingsABI = GovernableFund.abi.find(
   (func: any) => func.name === "updateSettings" && func.type === "function",
@@ -240,6 +239,7 @@ const proposal = ref<IProposal>({
   hurdleRate: "",
   // Whitelist
   whitelist: "",
+  isWhitelistedDeposits: false,
   // Management
   plannedSettlementPeriod: "",
   minLiquidAssetShare: "",
@@ -466,21 +466,26 @@ const formatProposalData = (proposal: IProposal) => {
   // 2. if whitelist is toggled off, set the whitelist to an empty array (this will toggle off currently whitelisted addresses in the backend)
   //    because we are sending two calldatas to the backend(the first one is the old proposal and the second one is the new proposal)
   //    old proposal will toggle off currently whitelisted addresses, and the new proposal will be an empty array which means that there will be no whitelisted addresses
-  let whitelistValue = [] as string[];
-  if (isWhitelistToggled.value) {
-    whitelistValue = whitelist.value
+  let allowedDepositors = [] as string[];
+  if (proposal.isWhitelistedDeposits) {
+    allowedDepositors = whitelist.value
       .filter((item) => !item.deleted)
       .map((item) => item.address);
+  }
+
+  let isWhitelistedDeposits = proposal.isWhitelistedDeposits;
+  // Disable the isWhitelistedDeposits if there are no addresses so that everyone can deposit.
+  if (!allowedDepositors?.length) {
+    isWhitelistedDeposits = false;
   }
 
   const fundSettings = {
     safe: originalFundSettings?.safe, // did not change
     isExternalGovTokenInUse: originalFundSettings?.isExternalGovTokenInUse, // did not change
-    isWhitelistedDeposits: originalFundSettings?.isWhitelistedDeposits, // did not change
     allowedManagers: originalFundSettings?.allowedManagers, // did not change
     fundAddress: originalFundSettings?.fundAddress, // did not change
     governor: originalFundSettings?.governor, // did not change
-
+    isWhitelistedDeposits,
     depositFee: toggledOffFields.includes("depositFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.depositFee)),
@@ -495,7 +500,7 @@ const formatProposalData = (proposal: IProposal) => {
       : parseInt(fromPercentageToBps(proposal.managementFee)),
     performaceHurdleRateBps: 0, // note from Rok to always submit 0 here
     baseToken: proposal.denominationAsset,
-    allowedDepositAddrs: whitelistValue,
+    allowedDepositAddrs: allowedDepositors,
     governanceToken: proposal.governanceToken,
     fundName: proposal.fundDAOName,
     fundSymbol: proposal.tokenSymbol,
@@ -641,6 +646,7 @@ const populateProposal = () => {
     proposalDescription: "",
     // Whitelist
     whitelist: "",
+    isWhitelistedDeposits: fundDeepCopy?.isWhitelistedDeposits,
   };
 
   whitelist.value = fundDeepCopy?.allowedDepositAddresses?.map(
@@ -659,14 +665,12 @@ const populateProposal = () => {
 };
 
 const isFieldModified = (key: keyof IProposal) => {
-  const output = proposal.value[key] !== proposalInitial[key];
-
-  return output;
+  return proposal.value[key] !== proposalInitial[key];
 };
 
 watch(
   proposal,
-  (newValue, oldValue) => {
+  (newValue) => {
     proposalEntry.value.forEach((step) => {
       step.sections.forEach((section) => {
         section.fields.forEach((field) => {

@@ -40,6 +40,7 @@ export interface IProposal {
   proposalTitle: string;
   proposalDescription: string;
   whitelist: string;
+  isWhitelistedDeposits: boolean;
 }
 
 export interface IWhitelist {
@@ -63,7 +64,7 @@ export interface IField {
   isToggleOn?: boolean;
   fields?: IField[];
   title?: string;
-  value?: string;
+  value?: string | boolean;
 }
 
 export interface IFieldGroup {
