@@ -485,11 +485,17 @@ const formatProposalData = (proposal: IProposal) => {
   // 2. if whitelist is toggled off, set the whitelist to an empty array (this will toggle off currently whitelisted addresses in the backend)
   //    because we are sending two calldatas to the backend(the first one is the old proposal and the second one is the new proposal)
   //    old proposal will toggle off currently whitelisted addresses, and the new proposal will be an empty array which means that there will be no whitelisted addresses
-  let whitelistValue = [] as string[];
+  let allowedDepositors = [] as string[];
   if (proposal.isWhitelistedDeposits) {
-    whitelistValue = whitelist.value
+    allowedDepositors = whitelist.value
       .filter((item) => !item.deleted)
       .map((item) => item.address);
+  }
+
+  let isWhitelistedDeposits = proposal.isWhitelistedDeposits;
+  // Disable the isWhitelistedDeposits if there are no addresses so that everyone can deposit.
+  if (!allowedDepositors?.length) {
+    isWhitelistedDeposits = false;
   }
 
   const fundSettings = {
@@ -498,9 +504,7 @@ const formatProposalData = (proposal: IProposal) => {
     allowedManagers: originalFundSettings?.allowedManagers, // did not change
     fundAddress: originalFundSettings?.fundAddress, // did not change
     governor: originalFundSettings?.governor, // did not change
-
-    // Take the toggle Whitelist
-    isWhitelistedDeposits: proposal.isWhitelistedDeposits,
+    isWhitelistedDeposits,
     depositFee: toggledOffFields.includes("depositFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.depositFee)),
@@ -515,7 +519,7 @@ const formatProposalData = (proposal: IProposal) => {
       : parseInt(fromPercentageToBps(proposal.managementFee)),
     performaceHurdleRateBps: 0, // note from Rok to always submit 0 here
     baseToken: proposal.denominationAsset,
-    allowedDepositAddrs: whitelistValue,
+    allowedDepositAddrs: allowedDepositors,
     governanceToken: proposal.governanceToken,
     fundName: proposal.fundDAOName,
     fundSymbol: proposal.tokenSymbol,
