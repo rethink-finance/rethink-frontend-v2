@@ -37,13 +37,11 @@
         />
         <template v-else>
           {{
-            formatNumberShort(
-              formatTokenValue(
-                item.lastNAVUpdateTotalNAV,
-                item.baseToken.decimals,
-                false,
-              ),
-            ) +
+            formatTokenValue(
+              item.lastNAVUpdateTotalNAV,
+              item.baseToken.decimals,
+            )
+              +
               " " +
               item.baseToken.symbol
           }}
@@ -82,16 +80,15 @@
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue/dist/iconify.js";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 import {
-  formatNumberShort,
   formatPercent,
   formatTokenValue,
 } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 
 const web3Store = useWeb3Store();
 const router = useRouter();
