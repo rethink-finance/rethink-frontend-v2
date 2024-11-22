@@ -101,13 +101,35 @@ export const trimTrailingZeros = (value: string) => {
   return value.replace(/\.?0*$/, "");
 }
 
-export const formatNumberShort = (number?: number | bigint | string) => {
+export const formatNumberShort = (number?: number | bigint | string | null) => {
   // Formats into abbreviations with 2 decimal points, for example: 1.5K, 5.32M
   // Convert to uppercase.
   // Remove trailing ".00";
-  if (number === undefined || number === null) return "N/A";
-  return numeral(Number(number)).format("0.00a").toUpperCase().replace(/\.00(?=[KMBT])/g, "");
-}
+  try {
+    if (number === undefined || number === null || isNaN(Number(number))) return "N/A";
+
+    const numericValue = Number(number);
+
+    // Handle exact zero as a special case
+    if (numericValue === 0) {
+      return "0";
+    }
+
+    // Format the number with two decimal places and abbreviation
+    let formatted = numeral(numericValue).format("0.00a").toUpperCase();
+
+    // Handle cases like '1.00' -> '1' (whole numbers without abbreviations)
+    formatted = formatted.replace(/\.00$/, "");
+
+    // Remove unnecessary ".0" from abbreviations like '1.0T' -> '1T'
+    formatted = formatted.replace(/(\.\d)0(?=[KMBT])/g, "$1"); // Handles decimals like 1.50K -> 1.5K
+    formatted = formatted.replace(/\.0(?=[KMBT])/g, "");       // Handles exact whole numbers like 1.0T -> 1T
+    return formatted;
+  } catch (error: any) {
+    console.error("failed formatNumberShort ", number, error);
+    return number;
+  }
+};
 
 export const commify = (value: string | number | bigint) => {
   value = value.toString();
