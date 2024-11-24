@@ -181,16 +181,26 @@ export const useFundStore = defineStore({
        * in the fund GovernableFund.sol contract is not updated yet, (_nav is zero).
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
-      if (this.fundLastNAVUpdate?.timestamp)
+      const PRECISION_FACTOR = BigInt(10 ** 18); // Convert to bigint
+
+      // If any NAV update exists, we can just return the totalNAV value from the fund contract.
+      if (this.fundLastNAVUpdate?.timestamp) {
         return this.fundUserData.fundShareValue || 0n;
+      }
 
       // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
       const fundTokenTotalSupply = this.fund?.fundTokenTotalSupply || 0n;
       if (!fundTokenTotalSupply) return 0n;
-      return (
-        (this.fundTotalNAV * this.fundUserData.fundTokenBalance) /
-        fundTokenTotalSupply
-      );
+
+      // Scale up the numerator to preserve precision
+      const scaledNumerator =
+        BigInt(this.fundTotalNAV) * BigInt(this.fundUserData.fundTokenBalance) * PRECISION_FACTOR;
+
+      // Perform division and scale back down
+      const preciseValue = scaledNumerator / fundTokenTotalSupply;
+
+      // Return as bigint
+      return preciseValue / PRECISION_FACTOR;
     },
     fundTotalNAV(): bigint {
       /**
@@ -388,25 +398,6 @@ export const useFundStore = defineStore({
         this.fund?.governanceToken.address,
       );
     },
-  },
-  actions: {
-    resetFundData(fundChainId: string, fundAddress: string) {
-      // TODO use chainId of the fund and reset it in the chainFunds
-      this.chainFunds[fundChainId][fundAddress] = undefined;
-
-      this.userDepositRequest = undefined;
-      this.userRedemptionRequest = undefined;
-      this.fundManagedNAVMethods = [];
-      this.fundRoleModAddress = {};
-      this.fundUserData = {
-        baseTokenBalance: 0n,
-        fundTokenBalance: 0n,
-        governanceTokenBalance: 0n,
-        fundAllowance: 0n,
-        fundShareValue: 0n,
-        fundDelegateAddress: "",
-      };
-    },
     getFormattedBaseTokenValue(
       value: any,
       shouldCommify: boolean = true,
@@ -448,6 +439,25 @@ export const useFundStore = defineStore({
         )
         : "0";
       return valueFormatted + " " + fundSymbol;
+    },
+  },
+  actions: {
+    resetFundData(fundChainId: string, fundAddress: string) {
+      // TODO use chainId of the fund and reset it in the chainFunds
+      this.chainFunds[fundChainId][fundAddress] = undefined;
+
+      this.userDepositRequest = undefined;
+      this.userRedemptionRequest = undefined;
+      this.fundManagedNAVMethods = [];
+      this.fundRoleModAddress = {};
+      this.fundUserData = {
+        baseTokenBalance: 0n,
+        fundTokenBalance: 0n,
+        governanceTokenBalance: 0n,
+        fundAllowance: 0n,
+        fundShareValue: 0n,
+        fundDelegateAddress: "",
+      };
     },
     /**
      * Fetches all needed fund data..

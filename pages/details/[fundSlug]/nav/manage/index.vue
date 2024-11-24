@@ -166,9 +166,9 @@ const isLoadingFetchFundNAVUpdatesAction = computed(() => {
 
 const changesNumber = computed(() => {
   // check how many methods are deleted and added
-  const changedMethods = Object.values(fundManagedNAVMethods.value).filter(
-    (method) => {
-      return method.deleted || method.isNew;
+  const changedMethods = fundManagedNAVMethods.value.filter(
+    (method: INAVMethod) => {
+      return method?.deleted || method?.isNew;
     },
   )
 
