@@ -168,7 +168,7 @@ const changesNumber = computed(() => {
   // check how many methods are deleted and added
   const changedMethods = fundManagedNAVMethods.value.filter(
     (method: INAVMethod) => {
-      return method?.deleted || method?.isNew;
+      return method.deleted || method.isNew;
     },
   )
 

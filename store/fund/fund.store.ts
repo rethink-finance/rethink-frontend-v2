@@ -181,26 +181,16 @@ export const useFundStore = defineStore({
        * in the fund GovernableFund.sol contract is not updated yet, (_nav is zero).
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
-      const PRECISION_FACTOR = BigInt(10 ** 18); // Convert to bigint
-
-      // If any NAV update exists, we can just return the totalNAV value from the fund contract.
-      if (this.fundLastNAVUpdate?.timestamp) {
+      if (this.fundLastNAVUpdate?.timestamp)
         return this.fundUserData.fundShareValue || 0n;
-      }
 
       // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
       const fundTokenTotalSupply = this.fund?.fundTokenTotalSupply || 0n;
       if (!fundTokenTotalSupply) return 0n;
-
-      // Scale up the numerator to preserve precision
-      const scaledNumerator =
-        BigInt(this.fundTotalNAV) * BigInt(this.fundUserData.fundTokenBalance) * PRECISION_FACTOR;
-
-      // Perform division and scale back down
-      const preciseValue = scaledNumerator / fundTokenTotalSupply;
-
-      // Return as bigint
-      return preciseValue / PRECISION_FACTOR;
+      return (
+        (this.fundTotalNAV * this.fundUserData.fundTokenBalance) /
+        fundTokenTotalSupply
+      );
     },
     fundTotalNAV(): bigint {
       /**
@@ -289,7 +279,7 @@ export const useFundStore = defineStore({
       return (
         this.userDepositRequestExists &&
         this.fundUserData.fundAllowance <
-          (this.userDepositRequest?.amount || 0n)
+        (this.userDepositRequest?.amount || 0n)
       );
     },
     canUserProcessDeposit(): boolean {
@@ -347,6 +337,54 @@ export const useFundStore = defineStore({
         (this.fund?.feeBalance || 0n)
       );
     },
+    getFormattedBaseTokenValue:
+      (state: IState) =>
+        (
+          value: any,
+          shouldCommify: boolean = true,
+          shouldroundToSignificantDecimals: boolean = false,
+        ): string => {
+          const fund = state.chainFunds?.[state.selectedFundChain]?.[state.selectedFundAddress];
+          const baseSymbol = fund?.baseToken?.symbol;
+          const baseDecimals = fund?.baseToken?.decimals;
+          if (!baseDecimals) {
+            return value;
+          }
+
+          const valueFormatted = value
+            ? formatTokenValue(
+              value,
+              baseDecimals,
+              shouldCommify,
+              shouldroundToSignificantDecimals,
+            )
+            : "0";
+          return valueFormatted + " " + baseSymbol;
+        },
+    getFormattedFundTokenValue:
+      (state: IState) =>
+        (
+          value: any,
+          shouldCommify: boolean = true,
+          shouldroundToSignificantDecimals: boolean = false,
+        ): string => {
+          const fund = state.chainFunds?.[state.selectedFundChain]?.[state.selectedFundAddress];
+          const fundSymbol = fund?.fundToken.symbol;
+          const fundDecimals = fund?.fundToken.decimals;
+          if (!fundDecimals) {
+            return value;
+          }
+
+          const valueFormatted = value
+            ? formatTokenValue(
+              value,
+              fundDecimals,
+              shouldCommify,
+              shouldroundToSignificantDecimals,
+            )
+            : "0";
+          return valueFormatted + " " + fundSymbol;
+        },
     /**
      * Contracts
      */
@@ -397,48 +435,6 @@ export const useFundStore = defineStore({
         ERC20Votes.abi,
         this.fund?.governanceToken.address,
       );
-    },
-    getFormattedBaseTokenValue(
-      value: any,
-      shouldCommify: boolean = true,
-      shouldRoundToSignificantDecimals: boolean = false,
-    ): string {
-      const baseSymbol = this.fund?.baseToken?.symbol;
-      const baseDecimals = this.fund?.baseToken?.decimals;
-      if (!baseDecimals) {
-        return value;
-      }
-
-      const valueFormatted = value
-        ? formatTokenValue(
-          value,
-          baseDecimals,
-          shouldCommify,
-          shouldRoundToSignificantDecimals,
-        )
-        : "0";
-      return valueFormatted + " " + baseSymbol;
-    },
-    getFormattedFundTokenValue(
-      value: any,
-      shouldCommify: boolean = true,
-      shouldRoundToSignificantDecimals: boolean = false,
-    ): string {
-      const fundSymbol = this.fund?.fundToken.symbol;
-      const fundDecimals = this.fund?.fundToken.decimals;
-      if (!fundDecimals) {
-        return value;
-      }
-
-      const valueFormatted = value
-        ? formatTokenValue(
-          value,
-          fundDecimals,
-          shouldCommify,
-          shouldRoundToSignificantDecimals,
-        )
-        : "0";
-      return valueFormatted + " " + fundSymbol;
     },
   },
   actions: {

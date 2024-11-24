@@ -103,15 +103,15 @@ export default {
     },
     userFundTokenBalanceFormatted() {
       if (!this.fundToken) return "N/A";
-      return this.fundStore.getFormattedFundTokenValue(this.fundStore.fundUserData.fundTokenBalance, false, true);
+      return this.fundStore.getFormattedFundTokenValue(this.fundStore.fundUserData.fundTokenBalance);
     },
     userFundAllowanceFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      return this.fundStore.getFormattedBaseTokenValue(this.fundStore.fundUserData.fundAllowance, false, true);
+      return this.fundStore.getFormattedBaseTokenValue(this.fundStore.fundUserData.fundAllowance);
     },
     userCurrentValueFormatted() {
       if (!this.fundBaseToken) return "N/A";
-      return this.fundStore.getFormattedBaseTokenValue(this.fundStore.userCurrentValue, false, true);
+      return this.fundStore.getFormattedBaseTokenValue(this.fundStore.userCurrentValue);
     },
     isLoadingUserBalances() {
       return this.actionStateStore.isActionState("fetchUserBalancesAction", ActionState.Loading);
