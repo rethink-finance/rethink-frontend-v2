@@ -325,12 +325,8 @@ const submitVote = async () => {
   loadingSubmitVote.value = true;
   console.log("cast vote", props.proposal.proposalId, selectedVoteOption.value);
   try {
-    await fundStore.fundGovernorContract.methods
-      .castVote(props.proposal.proposalId, selectedVoteOption.value)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
+    await fundStore.fundGovernorContract
+      .send("castVote", {}, props.proposal.proposalId, selectedVoteOption.value)
       .on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
@@ -401,12 +397,8 @@ const executeProposal = async () => {
   ];
 
   try {
-    await fundStore.fundGovernorContract.methods
-      .execute(...trxData)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
+    await fundStore.fundGovernorContract
+      .send("execute", {}, ...trxData)
       .on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(

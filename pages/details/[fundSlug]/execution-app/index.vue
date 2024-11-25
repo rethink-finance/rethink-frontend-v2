@@ -298,12 +298,8 @@ const handleTransfer = async () => {
   const tokensWei = ethers.parseUnits(transferEntry.depositValue, decimals);
 
   // call the transfer method
-  await inputTokenContract.value.methods
-    .transfer(transferEntry.to, tokensWei)
-    .send({
-      from: fundStore.activeAccountAddress,
-      gas: 200000,
-    })
+  await inputTokenContract.value
+    .send("transfer", {}, transferEntry.to, tokensWei)
     .on("transactionHash", (hash: any) => {
       console.log("tx hash: " + hash);
       toastStore.addToast(

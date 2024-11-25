@@ -262,20 +262,10 @@ const requestDeposit = async () => {
   );
   console.log("contract:", fundStore.fundContract);
   console.warn("connectedWallet", accountStore?.connectedWallet);
-  // Prepare the transaction data
-  const transactionData = fundStore.fundContract.methods
-    .fundFlowsCall(encodedFunctionCall)
-    .encodeABI();
 
-  // Print the transaction calldata
-  console.warn("Transaction Calldata:", transactionData);
   try {
-    await fundStore.fundContract.methods
-      .fundFlowsCall(encodedFunctionCall)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
+    await fundStore.fundContract
+      .send("fundFlowsCall", {}, encodedFunctionCall)
       .on("transactionHash", (hash: string) => {
         console.log("tx hash: ", hash);
         toastStore.addToast(
@@ -344,12 +334,8 @@ const approveAllowance = async () => {
 
   try {
     // call the approval method
-    await fundStore.fundBaseTokenContract.methods
-      .approve(fund.value?.address, tokensWei.value)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
+    await fundStore.fundBaseTokenContract
+      .send("approve", {}, fund.value?.address, tokensWei.value)
       .on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(

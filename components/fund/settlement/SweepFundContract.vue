@@ -92,13 +92,8 @@ const sweepFundContract = async () => {
     const functionSignatureHash =
       eth.abi.encodeFunctionSignature("sweepTokens()");
 
-    await fundStore.fundContract.methods
-      .fundFlowsCall(functionSignatureHash)
-      .send({
-        from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
-        gasPrice: "",
-      })
+    await fundStore.fundContract
+      .send("fundFlowsCall", {}, functionSignatureHash)
       .on("transactionHash", (hash: string) => {
         console.log("tx hash: ", hash);
         toastStore.addToast(

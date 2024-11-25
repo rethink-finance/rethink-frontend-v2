@@ -15,12 +15,8 @@ export const postUpdateNAVAction = async (): Promise<any> => {
       return;
     }
 
-    return await fundStore.fundContract.methods
-      .executeNAVUpdate(navExecutorAddr)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
+    return await fundStore.fundContract
+      .send("executeNAVUpdate", {}, navExecutorAddr)
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         fundStore.toastStore.warningToast(

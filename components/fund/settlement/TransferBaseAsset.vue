@@ -179,12 +179,8 @@ const transfer = async () => {
   isTransferLoading.value = true;
 
   try {
-    await fundStore.fundBaseTokenContract.methods
-      .transfer(fundStore?.fund?.address, tokensWei.value)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
+    await fundStore.fundBaseTokenContract
+      .send("transfer", {}, fundStore?.fundAddress, tokensWei.value)
       .on("transactionHash", (hash: string) => {
         console.log("tx hash: ", hash);
         toastStore.addToast(

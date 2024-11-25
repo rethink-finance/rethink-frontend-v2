@@ -207,12 +207,8 @@ const submitProposal = async () => {
   ];
 
   try {
-    await fundStore.fundGovernorContract.methods
-      .propose(...proposalData)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
+    await fundStore.fundGovernorContract
+      .send("propose", {}, ...proposalData)
       .on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(

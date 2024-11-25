@@ -608,12 +608,8 @@ const createProposal = async () => {
 
   // ADD encoded entries for OIV permissions
   try {
-    await fundStore.fundGovernorContract.methods
-      .propose(...proposalData)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
+    await fundStore.fundGovernorContract
+      .send("propose", {}, ...proposalData)
       .on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
@@ -662,12 +658,8 @@ const createProposal = async () => {
 
   // Permissions for non gov nav updates
   try {
-    await fundStore.fundGovernorContract.methods
-      .propose(...proposalData2)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
+    await fundStore.fundGovernorContract
+      .send("propose", {}, ...proposalData2)
       .on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(

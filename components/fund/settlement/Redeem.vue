@@ -213,12 +213,8 @@ const requestRedemption = async () => {
   );
 
   try {
-    await fundStore.fundContract.methods
-      .fundFlowsCall(encodedFunctionCall)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
+    await fundStore.fundContract
+      .send("fundFlowsCall", {}, encodedFunctionCall)
       .on("transactionHash", (hash: string) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(

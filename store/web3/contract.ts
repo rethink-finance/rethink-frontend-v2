@@ -11,10 +11,12 @@ export type ContractMethodWithCall = {
 
 // Define a reusable type for contract methods with 'send'
 export type ContractMethodWithSend = {
-  send: (
-    options: any,
-    ...args: any[]
-  ) => Web3PromiEvent<TransactionReceipt, any>;
+  (...args: any[]): {
+    send: (
+      options: any,
+      ...args: any[]
+    ) => Web3PromiEvent<TransactionReceipt, any>;
+  };
 };
 
 export class CustomContract<Abi extends ContractAbi> extends Contract<Abi> {
@@ -84,7 +86,7 @@ export class CustomContract<Abi extends ContractAbi> extends Contract<Abi> {
   send(
     methodName: string,
     options: ContractOptions,
-    ...args: any[]
+    ...calldataArgs: any[]
   ): Promise<any> {
     const accountStore = useAccountStore();
     const userProvider = accountStore.connectedWallet?.provider;
@@ -98,6 +100,7 @@ export class CustomContract<Abi extends ContractAbi> extends Contract<Abi> {
 
     // Check if the user's provider is available
     if (userProvider) {
+      console.warn("user provdided provider")
       // Use the user's provider to create a new Web3 instance and contract
       const web3WithUserProvider = new Web3(userProvider);
       const contractWithUserProvider = new web3WithUserProvider.eth.Contract(
@@ -109,14 +112,21 @@ export class CustomContract<Abi extends ContractAbi> extends Contract<Abi> {
       const userMethodWithSend = contractWithUserProvider.methods[
         methodName
       ] as unknown as ContractMethodWithSend;
+      console.warn("methods", contractWithUserProvider.methods)
+      console.warn("options", options)
+      console.warn("calldataArgs", calldataArgs)
 
-      // Return the PromiEvent from the send method using the user's provider
-      return userMethodWithSend.send(
-        { ...options, from: options.from },
-        ...args,
+      // Explicitly include the calldata
+      return userMethodWithSend(...calldataArgs).send(
+        { ...options,
+          from: accountStore.activeAccountAddress,
+          gasPrice: "",
+        },
       );
     }
+    console.warn("user DID NOT  provide provider")
+
     // Default logic: use the existing contract instance and shared Web3 provider
-    return method.send({ ...options, from: options.from }, ...args);
+    return method(...calldataArgs).send({ ...options, from: options.from });
   }
 }
