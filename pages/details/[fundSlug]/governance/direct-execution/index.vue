@@ -130,7 +130,7 @@ const submitProposal = async () => {
   const details = executionEntry.value.find(
     (step) => step.stepName === ExecutionStep.Details,
   )?.steps[0];
-  if (!web3Store.web3 || !details || !transactions?.length) return;
+  if (!details || !transactions?.length) return;
 
   console.log(toRaw(transactions));
   console.log(toRaw(details));

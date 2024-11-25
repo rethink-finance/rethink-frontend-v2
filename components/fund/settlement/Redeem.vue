@@ -74,8 +74,8 @@
 </template>
 
 <script setup lang="ts">
-import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { ethers } from "ethers";
+import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -234,7 +234,7 @@ const requestRedemption = async () => {
           toastStore.successToast(
             "Your withdrawal request was successful. It may take 10 seconds or more for values to update.",
           );
-          fundStore.userRedemptionRequest = {
+          fundStore.fundUserData.redemptionRequest = {
             amount: tokensWei,
             timestamp: Date.now(),
             type: FundTransactionType.Redemption,

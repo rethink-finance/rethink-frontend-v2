@@ -16,7 +16,6 @@ const SafeMultiSendCallOnlyAddresses: IContractAddresses =
   SafeMultiSendCallOnlyJson.networkAddresses as IContractAddresses;
 
 interface IState {
-  web3?: Web3;
   currentRpcIndex: number;
   retryDelay: number;
   chainId: string;
@@ -75,7 +74,6 @@ export const useWeb3Store = defineStore({
       };
     }
     return {
-      web3: undefined,
       currentRpcIndex: -1,
       retryDelay: 1500,
       chainId: "",
@@ -101,27 +99,11 @@ export const useWeb3Store = defineStore({
     networks(): INetwork[] {
       return Object.values(networksMap);
     },
-    currentNetworkRPCUrls(): string[] {
-      const network = networksMap[this.chainId];
-      return removeDuplicates([network.rpcUrl, ...(network.rpcUrls || [])]);
-    },
-    currentRPC(): string {
-      const currentProvider: any = this.web3?.provider;
-
-      // Check if the provider has a 'host' attribute (HTTP Provider)
-      if (currentProvider?.clientUrl) {
-        return currentProvider.clientUrl;
-      }
-      return "";
-    },
-    currentNetwork(): INetwork {
-      return networksMap[this.chainId];
-    },
-    NAVExecutorBeaconProxyAddress(): string {
-      return addresses.NAVExecutorBeaconProxy[this.chainId];
-    },
   },
   actions: {
+    NAVExecutorBeaconProxyAddress(chainId: string): string {
+      return addresses.NAVExecutorBeaconProxy[chainId];
+    },
     safeMultiSendCallOnlyToAddress(chainId: string): string {
       return SafeMultiSendCallOnlyAddresses[
         parseInt(chainId).toString()
@@ -136,49 +118,9 @@ export const useWeb3Store = defineStore({
       abi: any,
       address: string,
     ): CustomContract<ContractAbi> {
+      // TODO modify this function to just return normal contract, CustomContract has no effect.
       const rpcUrls = this.networkRpcUrls(chainId);
       return new CustomContract(abi, address, rpcUrls);
-    },
-    async init(chainId?: string, web3Provider?: any): Promise<void> {
-      console.log("INIT: ", chainId, web3Provider);
-      if (!chainId) {
-        // Check if there exists last used chainId in the local storage.
-        // It also needs to be a valid chainId.
-        const lastUsedChainId = localStorage.getItem("lastUsedChainId");
-        if (lastUsedChainId && lastUsedChainId in networksMap) {
-          chainId = lastUsedChainId;
-        } else {
-          // Otherwise, return the default chainId.
-          chainId = this.networks[0]?.chainId || "";
-        }
-      }
-
-      const network: INetwork = networksMap[chainId];
-      this.chainName = network.chainName ?? "";
-      this.chainShort = network.chainShort ?? "";
-      // Lastly set chainId, as we sometimes use watcher on chainId to reload other pages.
-      this.chainId = chainId;
-
-      if (web3Provider) {
-        console.warn("[INIT] has new web3provider", web3Provider);
-        this.web3 = web3Provider;
-      } else {
-        console.warn("[INIT] NO NEW web3provider");
-        // Handle connecting to a working RPC
-        this.switchRpcUrl(chainId);
-        await this.checkConnection(chainId);
-      }
-
-      localStorage.setItem("lastUsedChainId", chainId.toString());
-      console.log(`init web3 chain: ${this.chainId} on ${this.currentRPC}`);
-      console.log("----------------\n");
-    },
-    async checkConnection(chainId: string) {
-      const web3Provider = this.chainProviders[chainId];
-      return await this.callWithRetry(
-        chainId,
-        () => web3Provider?.eth.getBlockNumber(),
-      );
     },
     async callWithRetry(
       chainId: string,
@@ -190,19 +132,12 @@ export const useWeb3Store = defineStore({
       const RPCUrlsLength = this.networkRpcUrls(chainId).length;
       let retries = 0;
       let switchedRPCCount = 0;
-      // Save chain ID the method was called with. So that we can ignore retries if the chain was changed.
-      const methodChainId = toRaw(this.chainId);
 
       // console.log("callWithRetry");
       if (!method) {
         return method;
       }
       while (retries <= maxRetries && switchedRPCCount <= RPCUrlsLength) {
-        if (methodChainId !== toRaw(this.chainId)) {
-          throw new Error(
-            `Chain changed from ${methodChainId} to ${toRaw(this.chainId)}`,
-          );
-        }
         try {
           return await method();
         } catch (error: any) {
@@ -262,10 +197,10 @@ export const useWeb3Store = defineStore({
       const chainProvider = this.chainProviders[chainId];
 
       if (!chainProvider) {
-        this.web3 = new Web3(newRpcUrl);
+        this.chainProviders[chainId] = new Web3(newRpcUrl);
       } else {
         console.log("set new provider on chain", chainId, " to RPC url", newRpcUrl);
-        this.web3?.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
+        chainProvider.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
       }
     },
     delay(ms: number): Promise<void> {
@@ -274,56 +209,3 @@ export const useWeb3Store = defineStore({
   },
 });
 
-/**
- * Possible upgrade of callWithRetry would be creating a custom provider, so there will be no need to call any other
- * method such as callWithRetry, but it can be used as is and internal logic of switching RPCs can be done inside
- * this custom provider.
- * Small Problem: if we are using already initialized provider passed from Metamask or something, we have to get the
- * url from it and maybe some other settings also?
- * TODO: pass chainId also to the provider
- * TODO: override call method also
- *
- * Example:
- *
- * class CustomWeb3Provider extends Web3.providers.HttpProvider {
- *   constructor(url, options = { suppressErrors: false, maxRetries: 3, fallbackNode: null }) {
- *     super(url);  // Call the parent constructor (HttpProvider)
- *     this.options = options;  // Store custom options
- *     this.retryCount = 0;     // Initialize retry counter
- *   }
- *
- *   // Override the send() method to add custom logic
- *   send(payload, callback) {
- *     const handleSend = (retryCount = 0) => {
- *       super.send(payload, (error, result) => {
- *         if (error) {
- *           // Handle retries if maxRetries is set
- *           if (retryCount < this.options.maxRetries) {
- *             console.warn(`Retrying... (${retryCount + 1}/${this.options.maxRetries})`);
- *             return handleSend(retryCount + 1); // Retry transaction
- *           }
- *
- *           // Handle fallback node if provided and retries exhausted
- *           if (this.options.fallbackNode && retryCount >= this.options.maxRetries) {
- *             console.warn('Switching to fallback node:', this.options.fallbackNode);
- *             this.setProvider(new Web3.providers.HttpProvider(this.options.fallbackNode));  // Switch to fallback node
- *             return handleSend(0);  // Reset retry counter and try again
- *           }
- *
- *           // Error suppression logic
- *           if (this.options.suppressErrors) {
- *             console.warn('Error suppressed:', error.message);  // Log as warning, suppress console.error
- *             callback(null, null);  // Suppress the error in the callback
- *           } else {
- *             callback(error, null);  // Return the error if not suppressed
- *           }
- *         } else {
- *           callback(null, result);  // Pass result if no error
- *         }
- *       });
- *     };
- *
- *     handleSend();  // Initiate the send process with retry logic
- *   }
- * }
- */

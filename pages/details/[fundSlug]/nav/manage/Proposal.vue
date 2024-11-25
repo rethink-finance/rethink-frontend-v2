@@ -357,13 +357,13 @@ const generateNAVPermission = () => {
   };
 
   // Target address is fund contract
-  navEntryPermission.value[1].data = fundStore.fund?.address;
+  navEntryPermission.value[1].data = fundStore.fundAddress;
   // again, need to set target addr for scope target
-  recalcNavEntryPermission.value[1].data = fundStore.fund?.address;
+  recalcNavEntryPermission.value[1].data = fundStore.fundAddress;
 
   // functionSig
   navEntryPermission.value[2].data = "0xa61f5814";
-  const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress;
+  const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress(fundStore.selectedFundChain);
   console.log(navExecutorAddr);
   const navWords = ["0x000000000000000000000000" + navExecutorAddr.slice(2)];
   const navIsScoped = [true];
@@ -384,8 +384,6 @@ const generateNAVPermission = () => {
 const encodeRoleModEntries = async (
   proposalEntries: any[],
 ): Promise<[any[], any[], any[]]> => {
-  if (!web3Store.web3) return [[], [], []];
-
   loading.value = true;
   const proposalRoleModMethods = ZodiacRoles.abi.filter(
     (val) => val.type === "function",
@@ -437,8 +435,6 @@ const encodeRoleModEntries = async (
 };
 
 const createProposal = async () => {
-  if (!web3Store.web3) return;
-
   const navUpdateEntries = [];
   const pastNavUpdateEntryAddresses: any[] = [];
 
@@ -528,9 +524,9 @@ const createProposal = async () => {
   const encodedDataStoreNAVDataNavUpdateEntries =
     encodeFunctionCall(
       storeNAVDataABI as AbiFunctionFragment,
-      [fundStore.fund?.address, encodedNavUpdateEntries],
+      [fundStore.fundAddress, encodedNavUpdateEntries],
     );
-  const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress;
+  const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress(fundStore.fundChainId);
 
   /*
   function propose(
@@ -560,8 +556,8 @@ const createProposal = async () => {
   console.log("Active Account: ", fundStore.activeAccountAddress);
   loading.value = true;
   const targetAddresses = [
-    fundStore.fund?.address, // encodedNavUpdateEntries
-    fundStore.fund?.address, // encodedCollectFlowFeesAbiJSON
+    fundStore.fundAddress, // encodedNavUpdateEntries
+    fundStore.fundAddress, // encodedCollectFlowFeesAbiJSON
   ];
   const gasValues = [
     0, // encodedNavUpdateEntries
@@ -571,14 +567,14 @@ const createProposal = async () => {
 
   // Conditionally include collect Management fees.
   if (proposal.value.collectManagementFees) {
-    targetAddresses.push(fundStore.fund?.address);
+    targetAddresses.push(fundStore.fundAddress);
     gasValues.push(0);
     calldatas.push(encodedCollectManagerFeesAbiJSON);
   }
 
   targetAddresses.push(
     ...[
-      fundStore.fund?.address, // encodedCollectPerformanceFeesAbiJSON
+      fundStore.fundAddress, // encodedCollectPerformanceFeesAbiJSON
     ],
   );
   gasValues.push(

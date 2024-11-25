@@ -1,10 +1,12 @@
 import { useFundStore } from "../fund.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export const postUpdateNAVAction = async (): Promise<any> => {
+  const web3Store = useWeb3Store();
   const fundStore = useFundStore();
 
   try {
-    const navExecutorAddr = fundStore.web3Store.NAVExecutorBeaconProxyAddress;
+    const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress(fundStore.selectedFundChain);
 
     if (!navExecutorAddr) {
       fundStore.toastStore.errorToast(

@@ -210,7 +210,7 @@ const submitProposal = async () => {
   const details = delegatedEntry.value.find(
     (step) => step.stepName === DelegatedStep.Details,
   )?.steps[0];
-  if (!web3Store.web3 || !details || !transactions?.length) return;
+  if (!details || !transactions?.length) return;
 
   const roleModAddress = await fundStore.getRoleModAddress();
 

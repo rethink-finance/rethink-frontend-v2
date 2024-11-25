@@ -6,9 +6,9 @@ export const fetchUserFundDepositRedemptionRequestsAction =
   async (): Promise<any> => {
     const fundStore = useFundStore();
 
-    if (!fundStore.activeAccountAddress)
-      return console.error("Active account not found");
-    if (!fundStore.fund?.address) return "";
+    if (!fundStore.activeAccountAddress) return console.error("Active account not found");
+    if (!fundStore.selectedFundAddress) return "";
+    console.log("fetchUserFundDepositRedemptionRequestsAction start")
     const [depositRequestResult, redemptionRequestResult] =
       await Promise.allSettled(
         [
@@ -33,6 +33,8 @@ export const fetchUserFundDepositRedemptionRequestsAction =
       redemptionRequestResult.status === "fulfilled"
         ? redemptionRequestResult.value
         : undefined;
-    fundStore.userDepositRequest = depositRequest;
-    fundStore.userRedemptionRequest = redemptionRequest;
+
+    console.log("fetchUserFundDepositRedemptionRequestsAction done", depositRequest)
+    fundStore.fundUserData.depositRequest = depositRequest;
+    fundStore.fundUserData.redemptionRequest = redemptionRequest;
   };

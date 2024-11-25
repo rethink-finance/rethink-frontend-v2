@@ -1,6 +1,5 @@
 import { ethers, FixedNumber } from "ethers";
 import { defineStore } from "pinia";
-import { Web3 } from "web3";
 
 import { useActionState } from "../actionState.store";
 import { useToastStore } from "../toasts/toast.store";
@@ -43,7 +42,6 @@ interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
   chainFunds: Record<string, Record<string, IFund | undefined>>;
   fundUserData: IFundUserData;
-  userDepositRequest?: IFundTransactionRequest;
   userRedemptionRequest?: IFundTransactionRequest;
   selectedFundChain: string;
   selectedFundAddress: string;
@@ -54,6 +52,17 @@ interface IState {
   refreshSimulateNAVCounter: number;
 }
 
+const DEFAULT_FUND_USER_DATA: IFundUserData = {
+  baseTokenBalance: 0n,
+  fundTokenBalance: 0n,
+  governanceTokenBalance: 0n,
+  fundAllowance: 0n,
+  fundShareValue: 0n,
+  fundDelegateAddress: "",
+  depositRequest: undefined,
+  redemptionRequest: undefined,
+};
+
 // combine funds and fund store and map address => fund state; why only store one fund details at a time
 export const useFundStore = defineStore({
   id: "fund",
@@ -61,16 +70,7 @@ export const useFundStore = defineStore({
     chainFunds: Object.fromEntries(
       Object.keys(networksMap).map((chainId) => [chainId, {}]),
     ) as Record<string, Record<string, IFund | undefined>>,
-    fundUserData: {
-      baseTokenBalance: 0n,
-      fundTokenBalance: 0n,
-      governanceTokenBalance: 0n,
-      fundAllowance: 0n,
-      fundShareValue: 0n,
-      fundDelegateAddress: "",
-    },
-    userDepositRequest: undefined,
-    userRedemptionRequest: undefined,
+    fundUserData: structuredClone(DEFAULT_FUND_USER_DATA),
     selectedFundChain: "",
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
@@ -92,10 +92,6 @@ export const useFundStore = defineStore({
     },
     toastStore(): any {
       return useToastStore();
-    },
-    web3(): Web3 {
-      console.warn("fundStore.web3 changed", this.web3Store.web3);
-      return this.web3Store.web3;
     },
     fundChainId(): string {
       return this.fund?.chainId ?? "";
@@ -172,6 +168,12 @@ export const useFundStore = defineStore({
 
       return FixedNumber.fromString("1").div(this.baseToFundTokenExchangeRate);
     },
+    userDepositRequest(): IFundTransactionRequest  | undefined{
+      return this.fundUserData.depositRequest;
+    },
+    userRedemptionRequest(): IFundTransactionRequest | undefined {
+      return this.fundUserData.redemptionRequest;
+    },
     userCurrentValue(): bigint {
       /**
        * User current value (in base currency) is calculated as:
@@ -182,13 +184,13 @@ export const useFundStore = defineStore({
        */
       // If any NAV update exists, we can just return the totalNAV value from the fund contract.
       if (this.fundLastNAVUpdate?.timestamp)
-        return this.fundUserData.fundShareValue || 0n;
+        return this.fundUserData?.fundShareValue || 0n;
 
       // There was no NAV update yet, we have to calculate the NAV with the totalDepositBalance.
       const fundTokenTotalSupply = this.fund?.fundTokenTotalSupply || 0n;
       if (!fundTokenTotalSupply) return 0n;
       return (
-        (this.fundTotalNAV * this.fundUserData.fundTokenBalance) /
+        (this.fundTotalNAV * this.fundUserData?.fundTokenBalance || 0n) /
         fundTokenTotalSupply
       );
     },
@@ -214,9 +216,8 @@ export const useFundStore = defineStore({
       return this.getFormattedBaseTokenValue(this.fundTotalNAV)
     },
     selectedFundSlug(): string {
-      const chainId = this.web3Store?.chainId || "";
       return (
-        chainId +
+        (this.fundChainId || "") +
         "-" +
         (this.fund?.fundToken.symbol || "") +
         "-" +
@@ -236,14 +237,14 @@ export const useFundStore = defineStore({
       return this.fundLastNAVUpdate?.entries || [];
     },
     userDepositRequestExists(): boolean {
-      return (this.userDepositRequest?.amount || 0) > 0;
+      return (this.fundUserData.depositRequest?.amount || 0) > 0;
     },
     userRedemptionRequestExists(): boolean {
-      return (this.userRedemptionRequest?.amount || 0) > 0;
+      return (this.fundUserData.redemptionRequest?.amount || 0) > 0;
     },
     userFundSuggestedAllowance(): bigint {
-      const userBaseTokenBalance = this.fundUserData.baseTokenBalance || 0n;
-      const userDepositRequestAmount = this.userDepositRequest?.amount || 0n;
+      const userBaseTokenBalance = this.fundUserData?.baseTokenBalance || 0n;
+      const userDepositRequestAmount = this.fundUserData.depositRequest?.amount || 0n;
       return userBaseTokenBalance + userDepositRequestAmount;
     },
     userFundSuggestedAllowanceFormatted(): string {
@@ -266,8 +267,8 @@ export const useFundStore = defineStore({
     shouldUserDelegate(): boolean {
       // User should delegate if he has no delegate address set.
       return (
-        this.fundUserData.fundDelegateAddress === ethers.ZeroAddress ||
-        !this.fundUserData.fundDelegateAddress
+        this.fundUserData?.fundDelegateAddress === ethers.ZeroAddress ||
+        !this.fundUserData?.fundDelegateAddress
       );
     },
     shouldUserRequestDeposit(): boolean {
@@ -278,8 +279,8 @@ export const useFundStore = defineStore({
       // User deposit request exists and allowance is bigger.
       return (
         this.userDepositRequestExists &&
-        this.fundUserData.fundAllowance <
-        (this.userDepositRequest?.amount || 0n)
+        (this.fundUserData?.fundAllowance || 0n) <
+        (this.fundUserData.depositRequest?.amount || 0n)
       );
     },
     canUserProcessDeposit(): boolean {
@@ -291,12 +292,12 @@ export const useFundStore = defineStore({
       // There is no need to wait until the next settlement.
       console.log(
         `Should process deposit: fundLastNAVUpdate.timestamp: ${this.fundLastNAVUpdate?.timestamp} 
-        userDepositRequest.timestamp ${this.userDepositRequest?.timestamp}`,
+        userDepositRequest.timestamp ${this.fundUserData.depositRequest?.timestamp}`,
       );
       if (
         !this.canUserProcessDeposit ||
         !this.fundLastNAVUpdate?.timestamp ||
-        !this.userDepositRequest?.timestamp
+        !this.fundUserData.depositRequest?.timestamp
       ) {
         return false;
       }
@@ -304,7 +305,7 @@ export const useFundStore = defineStore({
       // made after the deposit was requested. If the time of the last NAV update is not bigger than user's request
       // timestamp, user should wait for next NAV update.
       return (
-        this.userDepositRequest.timestamp >= this.fundLastNAVUpdate?.timestamp
+        this.fundUserData.depositRequest.timestamp >= this.fundLastNAVUpdate?.timestamp
       );
     },
     shouldUserWaitSettlementOrCancelRedemption(): boolean {
@@ -312,13 +313,13 @@ export const useFundStore = defineStore({
       // There is no need to wait until the next settlement.
       if (
         !this.fundLastNAVUpdate?.timestamp ||
-        !this.userRedemptionRequest?.timestamp
+        !this.fundUserData.redemptionRequest?.timestamp
       )
         return false;
       // User redemption request exists and is valid, but there has to be at least 1 NAV update
       // made after the redemption was requested.
       return (
-        this.userRedemptionRequest.timestamp < this.fundLastNAVUpdate?.timestamp
+        this.fundUserData.redemptionRequest.timestamp < this.fundLastNAVUpdate?.timestamp
       );
     },
     totalCurrentSimulatedNAV(): bigint {
@@ -439,21 +440,13 @@ export const useFundStore = defineStore({
   },
   actions: {
     resetFundData(fundChainId: string, fundAddress: string) {
-      // TODO use chainId of the fund and reset it in the chainFunds
       this.chainFunds[fundChainId][fundAddress] = undefined;
 
-      this.userDepositRequest = undefined;
-      this.userRedemptionRequest = undefined;
+      this.fundUserData.depositRequest = undefined;
+      this.fundUserData.redemptionRequest = undefined;
       this.fundManagedNAVMethods = [];
       this.fundRoleModAddress = {};
-      this.fundUserData = {
-        baseTokenBalance: 0n,
-        fundTokenBalance: 0n,
-        governanceTokenBalance: 0n,
-        fundAllowance: 0n,
-        fundShareValue: 0n,
-        fundDelegateAddress: "",
-      };
+      this.fundUserData = structuredClone(DEFAULT_FUND_USER_DATA);
     },
     /**
      * Fetches all needed fund data..

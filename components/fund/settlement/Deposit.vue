@@ -92,8 +92,8 @@
 </template>
 
 <script setup lang="ts">
-import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { ethers } from "ethers";
+import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -291,7 +291,7 @@ const requestDeposit = async () => {
           // he can approve it without inputting the value himself, for better UX.
           // TODO takes 15-20 sec for node to sync .. fix
           // await fundStore.fetchUserBalances();
-          fundStore.userDepositRequest = {
+          fundStore.fundUserData.depositRequest = {
             amount: tokensWei.value,
             timestamp: Date.now(),
             type: FundTransactionType.Deposit,

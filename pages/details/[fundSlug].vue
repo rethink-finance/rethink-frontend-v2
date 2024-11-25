@@ -130,13 +130,6 @@ const isLoadingFetchFundData = computed(() =>
 console.log("isLoadingFetchFundData", isLoadingFetchFundData.value);
 
 watch(
-  () => web3Store.web3,
-  (newWeb3: any) => {
-    console.warn("WEB3 changed:", newWeb3);
-  },
-);
-
-watch(
   () => accountStore.connectedWallet,
   (wallet: any) => {
     console.warn("CONNECTED WALLET CHANGE, refresh user balances", wallet);

@@ -134,9 +134,9 @@ const cancelPendingRequest = async () => {
           `Cancellation of a ${props.fundTransactionRequest.type} request was successful.`,
         );
         if (isDepositRequest) {
-          fundStore.userDepositRequest = undefined;
+          fundStore.fundUserData.depositRequest = undefined;
         } else {
-          fundStore.userRedemptionRequest = undefined;
+          fundStore.fundUserData.redemptionRequest = undefined;
         }
       } else {
         fundStore.fetchUserFundDepositRedemptionRequests();

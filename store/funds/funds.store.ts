@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import { Web3 } from "web3";
 
 import { useActionState } from "../actionState.store";
 import { calculateFundsPerformanceMetricsAction } from "./actions/calculateFundsPerformanceMetrics.action";
@@ -50,9 +49,6 @@ export const useFundsStore = defineStore({
     },
     web3Store(): any {
       return useWeb3Store();
-    },
-    web3(): Web3 {
-      return this.web3Store.web3;
     },
   },
   actions: {

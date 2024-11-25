@@ -12,8 +12,6 @@ export const fetchSimulateCurrentNAVAction = async (
   const web3Store = useWeb3Store();
   const accountStore = useAccountStore();
 
-  if (!web3Store.web3) return;
-
   if (!fundsStore.allNavMethods?.length) {
     const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays(fundChainId);
 

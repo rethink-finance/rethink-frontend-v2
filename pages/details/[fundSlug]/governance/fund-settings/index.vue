@@ -340,12 +340,10 @@ const handleButtonClick = () => {
 };
 
 const submit = async () => {
-  if (!web3Store.web3) return;
-
   // trigger form validation to show errors
   const valid = form.value?.validate();
   // check if every step is valid
-  formIsValid.value = getStepValidityArray().every((step) => step === true);
+  formIsValid.value = getStepValidityArray().every((step) => step);
 
   if (formIsValid.value) {
     try {

@@ -339,11 +339,6 @@ const submitRawTXN = async () => {
     console.log("from:", fundStore.activeAccountAddress);
     console.log("value:", parseInt(submitRawTXNEntry.amountValue));
 
-    if (!web3Store.web3) {
-      toastStore.errorToast("Web3 is not initialized. Please try again later.");
-      return;
-    }
-
     const web3Provider = web3Store.chainProviders[fundStore.fundChainId];
     await web3Provider.eth.sendTransaction({
       to: submitRawTXNEntry.contractAddress,
@@ -412,7 +407,6 @@ const inputTokenDetais = ref({
 // fetch entered token details
 const fetchTokenDetails = async () => {
   if (!transferEntry.inputTokenAddress) return;
-  if (!web3Store.web3) return;
   // e.g. for testing inputTokenAddresses (POLYGON):
   // 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 DAI
   // 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359 USDC

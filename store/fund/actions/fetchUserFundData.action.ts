@@ -8,6 +8,9 @@ export const fetchUserFundDataAction = async (
   const fundStore = useFundStore();
   const web3Store = useWeb3Store();
 
+  // Fetch user deposit & redemption requests async, no need to wait for it to finish.
+  fundStore.fetchUserFundDepositRedemptionRequests();
+
   const rethinkReaderContract =
     web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
   const activeAccountAddress = fundStore.activeAccountAddress;

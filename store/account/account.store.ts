@@ -10,12 +10,14 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import { networksMap } from "~/store/web3/networksMap";
 
 interface IState {
+  web3?: Web3;
   web3Onboard?: any;
   isSwitchingNetworks: boolean;
 }
 
 export const useAccountStore = defineStore("accounts", {
   state: (): IState => ({
+    web3: undefined,
     web3Onboard: undefined as any | undefined,
     isSwitchingNetworks: false,
   }),
@@ -56,6 +58,15 @@ export const useAccountStore = defineStore("accounts", {
       console.log("Connected wallet label:", this.connectedWallet?.label);
       return this.connectedWallet.label === "Ledger";
     },
+    currentRPC(): string {
+      const currentProvider: any = this.web3?.provider;
+
+      // Check if the provider has a 'host' attribute (HTTP Provider)
+      if (currentProvider?.clientUrl) {
+        return currentProvider.clientUrl;
+      }
+      return "";
+    },
   },
   actions: {
     async setAlreadyConnectedWallet() {
@@ -86,6 +97,9 @@ export const useAccountStore = defineStore("accounts", {
         ],
       });
     },
+    checkConnection() {
+      return this.web3?.eth.getBlockNumber();
+    },
     async switchNetwork(chainId: string) {
       this.isSwitchingNetworks = true;
       let errorToThrow;
@@ -96,12 +110,12 @@ export const useAccountStore = defineStore("accounts", {
           await this.setActiveChain(chainId);
         } else {
           // Switch active chain.
-          await this.web3Store.init(chainId);
+          // await this.init(chainId);
         }
 
         // Test connection, outer catch block will except exception.
         try {
-          await this.web3Store.checkConnection(chainId);
+          await this.checkConnection();
         } catch (e: any) {
           this.toastStore.errorToast(
             "Looks like there are RPC connection problems.",
@@ -155,11 +169,8 @@ export const useAccountStore = defineStore("accounts", {
       if (this.connectedWallet) {
         web3Provider = new Web3(this.connectedWallet.provider);
       }
-      if (web3Provider && web3Provider !== this.web3Store.web3) {
-        console.log("web3Provider", web3Provider);
-        console.log("web3Store.web3", this.web3Store.web3);
-        await this.web3Store.init(chainId, web3Provider);
-      }
+      console.log("accountStore set web3Provider", web3Provider);
+      this.web3 = web3Provider;
     },
     async connectWallet() {
       try {
@@ -189,9 +200,6 @@ export const useAccountStore = defineStore("accounts", {
       if (provider && label) {
         await this.web3Onboard?.disconnectWallet({ label });
       }
-
-      // Reset to default provider in web3Store.
-      await this.web3Store.init();
     },
   },
 });

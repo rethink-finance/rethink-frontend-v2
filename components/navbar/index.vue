@@ -188,12 +188,11 @@ const routes : IRoute[] = [
     color: "var(--color-light-subtitle)",
   },
 ]
-const selectedChainId = ref(web3Store.chainId);
+const selectedChainId = ref(accountStore.connectedWalletChainId);
 const networks: INetwork[] = web3Store.networks;
 
-watch(() => web3Store.chainId, (newVal, oldVal) => {
-  console.log(`Chain ID changed from ${oldVal} to ${newVal}`);
-  // Perform additional actions when chainId changes
+watch(() => accountStore.connectedWalletChainId, (newVal, oldVal) => {
+  console.log(`Connected Wallet Cain ID changed from ${oldVal} to ${newVal}`);
   selectedChainId.value = newVal || "";
 });
 
@@ -202,7 +201,7 @@ const switchNetwork = async (chainId: string) => {
     await accountStore.switchNetwork(chainId)
   } catch (error: any) {
     // Revert the selected value to the previously selected chain.
-    selectedChainId.value = web3Store.chainId;
+    // selectedChainId.value = accountStore.connectedWalletChainId;
   }
 }
 const isPathActive = (path: string = "", exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);

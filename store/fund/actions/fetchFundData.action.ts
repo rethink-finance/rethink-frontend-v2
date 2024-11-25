@@ -17,7 +17,6 @@ export const fetchFundDataAction = async (
     fundStore.fetchUserFundData(fundChainId, fundAddress);
 
     fundStore.fetchFundPendingDepositRedemptionBalance();
-    fundStore.fetchUserFundDepositRedemptionRequests();
   } catch (e) {
     console.error(`Failed fetching fund data for ${fundAddress}`, e);
     throw e;
