@@ -28,8 +28,8 @@ const proposalRoleModMethods = ZodiacRoles.abi.filter(
   (func) => func.type === "function",
 );
 // make a list of choices for the select field out of the methods
-export const roleModMethodChoices = proposalRoleModMethods.map((func) => {
-  return { title: func.name, value: func.name };
+export const roleModMethodChoices = proposalRoleModMethods.map((func,i) => {
+  return { title: func.name, value: func.name, valueMethodIdx: i };
 });
 
 // define select field that will be used in all sub steps
@@ -76,7 +76,7 @@ const parseFuncInputDetails = (input: any) => {
         placeholder = `E.g. 0x${"00".repeat(byteLength)}`;
         rules.push(formRules.isValidByteLength(byteLength));
       }
-      
+
       rules.push(formRules.isValidHexString);
     }
   } else if (boolTypes.some((type) => input.type.includes(type))) {
