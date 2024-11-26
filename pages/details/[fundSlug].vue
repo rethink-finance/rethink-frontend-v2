@@ -32,34 +32,34 @@
       v-if="breadcrumbItems.length === 0"
       class="details_nav_container"
     >
-      <div class="details_nav">
-        <div class="overlay-container" />
-        <nuxt-link
-          v-for="navRoute in computedRoutes"
-          :key="navRoute.to"
-          :to="navRoute.to"
-          class="link"
-        >
-          <v-btn
-            class="nav-link"
-            variant="plain"
-            :active="navRoute.isActive"
-            :color="navRoute.pathColor"
-          >
-            <div :class="{ 'title-box': navRoute.isActive }">
-              {{ navRoute.title }}
-            </div>
-          </v-btn>
-        </nuxt-link>
-      </div>
+      <!--      <div class="details_nav">-->
+      <!--        <div class="overlay-container" />-->
+      <!--        <nuxt-link-->
+      <!--          v-for="navRoute in computedRoutes"-->
+      <!--          :key="navRoute.to"-->
+      <!--          :to="navRoute.to"-->
+      <!--          class="link"-->
+      <!--        >-->
+      <!--          <v-btn-->
+      <!--            class="nav-link"-->
+      <!--            variant="plain"-->
+      <!--            :active="navRoute.isActive"-->
+      <!--            :color="navRoute.pathColor"-->
+      <!--          >-->
+      <!--            <div :class="{ 'title-box': navRoute.isActive }">-->
+      <!--              {{ navRoute.title }}-->
+      <!--            </div>-->
+      <!--          </v-btn>-->
+      <!--        </nuxt-link>-->
+      <!--      </div>-->
 
     </div>
-    <UiBreadcrumbs
-      v-if="breadcrumbItems.length > 0"
-      :items="breadcrumbItems"
-      class="breadcrumbs"
-      :prepend-breadcrumb="prependBreadcrumb"
-    />
+    <!--    <UiBreadcrumbs-->
+    <!--      v-if="breadcrumbItems.length > 0"-->
+    <!--      :items="breadcrumbItems"-->
+    <!--      class="breadcrumbs"-->
+    <!--      :prepend-breadcrumb="prependBreadcrumb"-->
+    <!--    />-->
 
     <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>

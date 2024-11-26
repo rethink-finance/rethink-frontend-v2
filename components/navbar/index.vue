@@ -16,8 +16,8 @@
         no-gutters
         flat
       >
-        <nuxt-link :to="'/'" class="d-flex">
-          <Logo />
+        <nuxt-link href="https://soonami.io/" target="_blank" class="d-flex">
+          <LogoSoonami />
           <v-tooltip activator="parent" location="bottom">
             Go to homepage
           </v-tooltip>
@@ -157,36 +157,36 @@ const currentRoute = ref(route?.path);
 const menuOpen = ref(false);
 
 const routes : IRoute[] = [
-  {
-    to: "/",
-    matchPrefix: "/details",
-    exactMatch: false,
-    title: "Discover",
-    text: "Find the most favorable opportunities",
-  },
-  {
-    to: "/create",
-    exactMatch: true,
-    title: "Create",
-    text: "Coming soon",
-    disabled: true,
-  },
-  {
-    to: "/governance",
-    exactMatch: true,
-    title: "Governance",
-    text: "Coming soon",
-    disabled: true,
-  },
-  {
-    isExternal: true,
-    exactMatch: true,
-    to: "https://docs.rethink.finance",
-    title: "Docs",
-    text: "Delve into the details of the protocol",
-    icon: "mdi:launch",
-    color: "var(--color-light-subtitle)",
-  },
+  // {
+  //   to: "/",
+  //   matchPrefix: "/details",
+  //   exactMatch: false,
+  //   title: "Discover",
+  //   text: "Find the most favorable opportunities",
+  // },
+  // {
+  //   to: "/create",
+  //   exactMatch: true,
+  //   title: "Create",
+  //   text: "Coming soon",
+  //   disabled: true,
+  // },
+  // {
+  //   to: "/governance",
+  //   exactMatch: true,
+  //   title: "Governance",
+  //   text: "Coming soon",
+  //   disabled: true,
+  // },
+  // {
+  //   isExternal: true,
+  //   exactMatch: true,
+  //   to: "https://docs.rethink.finance",
+  //   title: "Docs",
+  //   text: "Delve into the details of the protocol",
+  //   icon: "mdi:launch",
+  //   color: "var(--color-light-subtitle)",
+  // },
 ]
 const selectedChainId = ref(web3Store.chainId);
 const networks: INetwork[] = web3Store.networks;
