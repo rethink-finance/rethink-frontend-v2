@@ -432,7 +432,7 @@ const fetchTokenDetails = async () => {
     const symbol = (await tokenContract.methods.symbol().call()) as string;
     const decimals = (await tokenContract.methods.decimals().call()) as bigint;
     const balance = (await tokenContract.methods
-      .balanceOf(fundStore.activeAccountAddress)
+      .balanceOf(fundStore.activeAccountAddress ?? "")
       .call()) as bigint;
 
     const formattedBalance = formatTokenValue(balance, Number(decimals), false);
