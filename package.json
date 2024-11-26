@@ -51,13 +51,13 @@
     "@safe-global/safe-apps-sdk": "^8.1.0",
     "@tanstack/vue-table": "^8.10.7",
     "@typechain/ethers-v6": "^0.5.1",
-    "@web3-onboard/core": "^2.22.2",
+    "@web3-onboard/core": "^2.23.0",
     "@web3-onboard/enkrypt": "^2.1.1",
     "@web3-onboard/gnosis": "^2.3.2",
-    "@web3-onboard/injected-wallets": "^2.10.11",
+    "@web3-onboard/injected-wallets": "^2.11.2",
     "@web3-onboard/ledger": "^2.7.1",
     "@web3-onboard/vue": "^2.7.12",
-    "@web3-onboard/walletconnect": "^2.5.3",
+    "@web3-onboard/walletconnect": "^2.6.1",
     "apexcharts": "^3.47.0",
     "esbuild": "^0.20.2",
     "ethers": "^6.10.0",
@@ -69,6 +69,6 @@
     "pinia": "^2.1.7",
     "rxjs": "^7.8.1",
     "vue3-apexcharts": "^1.4.4",
-    "web3": "^4.14.0"
+    "web3": "^4.15.0"
   }
 }

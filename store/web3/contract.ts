@@ -22,16 +22,18 @@ export type ContractMethodWithSend = {
 export class CustomContract<Abi extends ContractAbi> extends Contract<Abi> {
   private readonly rpcUrls: string[];
   private currentRpcIndex: number;
+  private readonly initialChainId: string;
   private readonly maxRetries: number;
   private readonly retryDelay: number;
 
-  constructor(abi: any, address: string, rpcUrls: string[], options = {}) {
+  constructor(abi: any, address: string, chainId: string, rpcUrls: string[], options = {}) {
     const initialProvider = new Web3.providers.HttpProvider(rpcUrls[0]);
     super(abi, address, {
       ...options,
       provider: initialProvider,
     });
     this.rpcUrls = rpcUrls;
+    this.initialChainId = chainId;
     this.currentRpcIndex = 0;
     this.maxRetries = 3;
     this.retryDelay = 1000;
@@ -90,43 +92,59 @@ export class CustomContract<Abi extends ContractAbi> extends Contract<Abi> {
   ): Promise<any> {
     const accountStore = useAccountStore();
     const userProvider = accountStore.connectedWallet?.provider;
+
     // Access the contract method
     const method = this.methods[
       methodName
     ] as unknown as ContractMethodWithSend;
+
     if (!method) {
-      throw new Error(`Method ${methodName} not found on contract`);
+      return Promise.reject(new Error(`Method ${methodName} not found on contract`));
     }
 
-    // Check if the user's provider is available
+    // Check for user provider
     if (userProvider) {
-      console.warn("user provdided provider")
-      // Use the user's provider to create a new Web3 instance and contract
+      console.warn("User provided provider detected");
       const web3WithUserProvider = new Web3(userProvider);
       const contractWithUserProvider = new web3WithUserProvider.eth.Contract(
         this.options.jsonInterface,
         this.options?.address,
       );
 
-      // Get the method with the user's provider
-      const userMethodWithSend = contractWithUserProvider.methods[
-        methodName
-      ] as unknown as ContractMethodWithSend;
-      console.warn("methods", contractWithUserProvider.methods)
-      console.warn("options", options)
-      console.warn("calldataArgs", calldataArgs)
+      // Ensure the network is correct, then send the transaction
+      return this.ensureCorrectNetwork()
+        .then(() => {
+          const userMethodWithSend = contractWithUserProvider.methods[
+            methodName
+          ] as unknown as ContractMethodWithSend;
 
-      // Explicitly include the calldata
-      return userMethodWithSend(...calldataArgs).send(
-        { ...options,
-          from: accountStore.activeAccountAddress,
-          gasPrice: "",
-        },
-      );
+          console.warn("Sending transaction with user provider...");
+          return userMethodWithSend(...calldataArgs).send({
+            ...options,
+            from: accountStore.activeAccountAddress,
+            gasPrice: "",
+          });
+        })
+        .catch((error) => {
+          console.error("Error during transaction:", error);
+          throw error;
+        });
     }
-    console.warn("user DID NOT  provide provider")
 
-    // Default logic: use the existing contract instance and shared Web3 provider
     return method(...calldataArgs).send({ ...options, from: options.from });
+  }
+
+  ensureCorrectNetwork(): Promise<void> {
+    /**
+     * Make sure connected wallet is on the same network as the contract provider.
+     * If not, prompt user to change network.
+     */
+    const accountStore = useAccountStore();
+
+    if (this.initialChainId !== accountStore.connectedWalletChainId) {
+      console.warn(`Switching to chain ID: ${this.initialChainId}`);
+      return accountStore.switchNetwork(this.initialChainId);
+    }
+    return Promise.resolve();
   }
 }

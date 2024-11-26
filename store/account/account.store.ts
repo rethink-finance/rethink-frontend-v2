@@ -158,15 +158,21 @@ export const useAccountStore = defineStore("accounts", {
       // If the user is currently on a different
       // network, ask him to switch it.
       if (chainId !== this.connectedWalletChainId) {
-        await this.connectedWallet?.provider?.request({
-          method: "wallet_switchEthereumChain",
-          params: [
-            {
-              chainId,
-            },
-          ],
-        });
+        console.log("REQUEST switch network in accountStore")
+        try {
+          await this.connectedWallet?.provider?.request({
+            method: "wallet_switchEthereumChain",
+            params: [
+              {
+                chainId,
+              },
+            ],
+          });
+        } catch (e: any) {
+          console.error("failed switch request", e);
+        }
       }
+      console.log("REQUEST FINISH switch network in accountStore")
 
       let web3Provider;
       if (this.connectedWallet) {
