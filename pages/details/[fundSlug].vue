@@ -62,6 +62,8 @@
     <!--    />-->
 
     <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
+
+    <FundMoreInfoDisclaimer />
   </div>
   <div v-else-if="accountStore.isSwitchingNetworks" class="w-100 d-flex justify-center">
     <v-progress-circular indeterminate />
