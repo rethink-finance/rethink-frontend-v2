@@ -8,7 +8,7 @@
         target="_blank"
         rel="noopener noreferrer"
       >
-        Rethink.finance
+        rethink.finance
       </a>
     </p>
   </div>

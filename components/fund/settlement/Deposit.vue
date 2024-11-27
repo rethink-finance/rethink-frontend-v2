@@ -92,8 +92,8 @@
 </template>
 
 <script setup lang="ts">
-import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { ethers } from "ethers";
+import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -143,6 +143,10 @@ const rules = [
     }
     if (valueWei <= 0)
       return { message: "Value must be positive.", display: false };
+
+    if (Number(value) < 32) {
+      return { message: "You should deposit at least 32 WETH.", display: true };
+    }
 
     console.log(
       "[DEPOSIT] check user base token balance wei: ",
