@@ -145,7 +145,7 @@ const rules = [
       return { message: "Value must be positive.", display: false };
 
     if (Number(value) < 32) {
-      return { message: "You should deposit at least 32 WETH.", display: true };
+      return { message: "Min. deposit = 32 WETH.", display: true };
     }
 
     console.log(
