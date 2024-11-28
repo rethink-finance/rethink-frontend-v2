@@ -130,11 +130,11 @@
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
       <UiDetailsButton
         v-if="item.detailsJson"
-        :text="isMethodEditable(item) ? 'Details' : 'Raw'"
+        :text="isBaseTokenBalanceMethod(item) ? 'Raw' : 'Details'"
         :active="isExpanded(internalItem)"
         :disabled="item.deleted || item.isAlreadyUsed"
         @click.stop="toggleExpand(internalItem)"
-        @click.native="isMethodEditable(item) ? setNavEntry(item) : null"
+        @click.native="isBaseTokenBalanceMethod(item) ? null : setNavEntry(item)"
       />
     </template>
 
@@ -205,9 +205,10 @@
 
             <!-- form goes here -->
             <v-form
-              v-if="isMethodEditable(item)"
+              v-if="!isBaseTokenBalanceMethod(item)"
               ref="form"
               v-model="formIsValid"
+              :disabled="isMethodEditable(item) === false"
             >
               <v-row>
                 <v-col cols="12" sm="6">
@@ -244,6 +245,7 @@
                       v-model="navEntry.positionType"
                       group
                       mandatory
+                      :disabled="isMethodEditable(item) === false"
                     >
                       <v-btn
                         v-for="positionType in creatablePositionTypes"
@@ -266,6 +268,7 @@
                       v-model="navEntry.valuationType"
                       group
                       mandatory
+                      :disabled="isMethodEditable(item) === false"
                     >
                       <v-btn
                         v-for="valuationType in valuationTypes"
@@ -331,6 +334,7 @@
                             </UiTextBadge>
 
                             <UiDetailsButton
+                              v-if="isMethodEditable(item)"
                               small
                               @click.stop="deleteEditMethod(index)"
                             >
@@ -362,7 +366,7 @@
                 </template>
               </v-row>
 
-              <v-row v-if="navEntry.positionType === PositionType.Composable">
+              <v-row v-if="navEntry.positionType === PositionType.Composable && isMethodEditable(item)">
                 <v-col class="text-center">
                   <v-btn
                     class="text-secondary"
@@ -380,7 +384,7 @@
                   </v-btn>
                 </v-col>
               </v-row>
-              <v-row class="mt-4">
+              <v-row v-if="isMethodEditable(item)" class="mt-4">
                 <v-col class="text-end">
                   <v-btn :disabled="!hasChanged()" @click="editMethod">
                     Edit Method
@@ -756,8 +760,12 @@ export default defineComponent({
     // only alow edit if the method is not rethink position and not one of the predefined positions
     isMethodEditable(navEntry: INAVMethod) {
       const isManageNavMethodsPage = this.idx === "nav/manage/index";
-      const positionName = ["Fund Balance", "Safe Balance", "Fees Balance"];
-      return isManageNavMethodsPage && navEntry.valuationSource !== "Rethink" && !positionName.includes(navEntry.positionName);
+
+      return isManageNavMethodsPage && !this.isBaseTokenBalanceMethod(navEntry);
+    },
+    isBaseTokenBalanceMethod(method: INAVMethod) {
+      const positionName = ["OIV Balance", "Safe Balance", "Fees Balance"];
+      return positionName.includes(method.positionName) && method.valuationSource === "Rethink";
     },
     deleteMethod(method: INAVMethod, toggle = true) {
       // If method is new, we can just remove it from the methods array.
@@ -1079,6 +1087,8 @@ export default defineComponent({
 .nav_entries {
   @include borderGray;
   border-color: $color-bg-transparent;
+  max-width: 1400px;
+  overflow: auto;
 
   :deep(.v-table__wrapper) {
     @include customScrollbar;
@@ -1097,6 +1107,7 @@ export default defineComponent({
   &__details {
     padding: 1rem 5rem;
     background-color: $color-badge-navy;
+    max-width: 1400px;
     &:not(:last-of-type) {
       margin-bottom: 1.5rem;
     }
@@ -1106,6 +1117,8 @@ export default defineComponent({
     background-color: $color-card-background;
     padding: 1.5rem;
     color: $color-primary;
+    white-space: break-spaces;
+    word-wrap: break-word;
   }
   &__no_data {
     text-align: center;
@@ -1187,12 +1200,15 @@ export default defineComponent({
 .toggle_buttons {
   .v-btn-toggle {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
+    height: 100%;
 
     .v-btn {
       opacity: 0.35;
       color: $color-text-irrelevant;
       border-radius: 4px !important;
+      min-height: 48px;
       @include borderGray;
     }
     .v-btn--active {
