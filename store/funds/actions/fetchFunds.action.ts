@@ -9,8 +9,8 @@ const excludeTestFunds = getLocalStorageItem("excludeTestFunds", true);
 export async function fetchFundsAction(): Promise<void> {
   const fundsStore = useFundsStore();
 
-  // Loop through all available chains
-  for (const chainId of chainIds) {
+  // Function to process each chain asynchronously
+  async function processChain(chainId: string): Promise<void> {
     // Reset the funds array for the current chain
     fundsStore.chainFunds[chainId] = [];
 
@@ -47,14 +47,18 @@ export async function fetchFundsAction(): Promise<void> {
     fundsStore.chainFunds[chainId] = funds;
     console.log(`Chain ${chainId} - Funds Metadata: `, funds);
 
-    // Fetch NAV data for the filtered funds
-    fundsStore.fetchFundsNAVData(chainId, filteredFundsInfoArrays).then(
-      // Calculate performance metrics for the funds
-      () => fundsStore.calculateFundsPerformanceMetrics(chainId),
-    );
+    // Fetch NAV data and calculate performance metrics
+    await fundsStore.fetchFundsNAVData(chainId, filteredFundsInfoArrays);
+    await fundsStore.calculateFundsPerformanceMetrics(chainId);
 
     console.log(`Funds fetched for chain: ${chainId}`);
   }
+
+  // Process all chains simultaneously
+  const chainPromises = chainIds.map((chainId) => processChain(chainId));
+
+  // Wait for all chain promises to resolve
+  await Promise.all(chainPromises);
 
   console.warn("ALL FUNDS FETCHED: ", fundsStore.chainFunds);
 }
