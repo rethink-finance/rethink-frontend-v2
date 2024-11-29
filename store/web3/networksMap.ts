@@ -12,8 +12,6 @@ export const networksMap: Record<string, INetwork> = {
       decimals: 18,
     },
     icon: getChainIcon("matic"),
-    rpcUrl:
-      "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
       "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
@@ -34,8 +32,6 @@ export const networksMap: Record<string, INetwork> = {
       decimals: 18,
     },
     icon: getChainIcon("arb1"),
-    rpcUrl:
-      "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
       "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
@@ -57,7 +53,6 @@ export const networksMap: Record<string, INetwork> = {
   //     decimals: 18,
   //   },
   //   icon: getChainIcon("frax"),
-  //   rpcUrl: "https://rpc.frax.com",
   //   rpcUrls: [
   //     "https://rpc.frax.com",
   //   ],
@@ -73,8 +68,6 @@ export const networksMap: Record<string, INetwork> = {
       decimals: 18,
     },
     icon: getChainIcon("eth"),
-    rpcUrl:
-      "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
       "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
@@ -100,8 +93,6 @@ export const networksMap: Record<string, INetwork> = {
       decimals: 18,
     },
     icon: getChainIcon("base"),
-    rpcUrl:
-      "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
       "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",

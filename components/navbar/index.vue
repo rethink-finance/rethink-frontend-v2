@@ -53,6 +53,7 @@
             <v-select
               v-if="accountStore.isConnected"
               v-model="selectedChainId"
+              v-model:menu="isSelectInputActive"
               class="select_network"
               density="compact"
               :bg-color="selectedChainId ? '' : 'error'"
@@ -196,9 +197,11 @@ watch(() => accountStore.connectedWalletChainId, (newVal, oldVal) => {
   selectedChainId.value = newVal || "";
 });
 
+const isSelectInputActive = ref(false);
 const switchNetwork = async (chainId: string) => {
   try {
     await accountStore.switchNetwork(chainId)
+    isSelectInputActive.value = false;
   } catch (error: any) {
     // Revert the selected value to the previously selected chain.
     // selectedChainId.value = accountStore.connectedWalletChainId;

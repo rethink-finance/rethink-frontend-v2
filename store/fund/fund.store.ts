@@ -37,6 +37,7 @@ import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import { networksMap } from "~/store/web3/networksMap";
+import type { CustomContract } from "~/store/web3/customContract";
 
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
@@ -389,48 +390,42 @@ export const useFundStore = defineStore({
     /**
      * Contracts
      */
-    // @ts-expect-error: we should extend the return type as Contract<...>...
-    navCalculatorContract(): Contract {
+    navCalculatorContract(): any {
       return this.web3Store.getCustomContract(
         this.fundChainId,
         NAVCalculator.abi,
         this.web3Store.NAVCalculatorBeaconProxyAddress,
       );
     },
-    // @ts-expect-error: we should extend the return type as Contract<...>...
-    fundContract(): Contract {
+    fundContract(): any {
       return this.web3Store.getCustomContract(
         this.fundChainId,
         GovernableFund.abi,
         this.selectedFundAddress,
       );
     },
-    // @ts-expect-error: we should extend the return type as Contract<...>...
-    fundSafeContract(): Contract {
+    fundSafeContract(): any {
       return this.web3Store.getCustomContract(
         this.fundChainId,
         GnosisSafeL2JSON.abi,
         this.fund?.safeAddress,
       );
     },
-    // @ts-expect-error: we should extend the return type as Contract<...>...
-    fundGovernorContract(): Contract {
+    fundGovernorContract(): any {
       return this.web3Store.getCustomContract(
         this.fundChainId,
         RethinkFundGovernor.abi,
         this.fund?.governorAddress,
       );
     },
-    // @ts-expect-error: we should extend the return type as Contract<...>...
-    fundBaseTokenContract(): Contract {
+    fundBaseTokenContract(): any {
       return this.web3Store.getCustomContract(
         this.fundChainId,
         ERC20,
         this.fund?.baseToken?.address,
       );
     },
-    // @ts-expect-error: we should extend the return type as Contract<...>...
-    fundGovernanceTokenContract(): Contract {
+    fundGovernanceTokenContract(): any {
       return this.web3Store.getCustomContract(
         this.fundChainId,
         ERC20Votes.abi,

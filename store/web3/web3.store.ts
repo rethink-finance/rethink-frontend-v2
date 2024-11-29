@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
-import { Web3 } from "web3";
-import type { ContractAbi } from "web3-types";
+import { type HttpProvider, Web3 } from "web3";
 import addressesJson from "~/assets/contracts/addresses.json";
 import type IAddresses from "~/types/addresses";
 import type { IContractAddresses } from "~/types/addresses";
@@ -111,7 +110,7 @@ export const useWeb3Store = defineStore({
     },
     networkRpcUrls(chainId: string): string[] {
       const network = networksMap[chainId];
-      return removeDuplicates([network.rpcUrl, ...(network.rpcUrls || [])]);
+      return removeDuplicates(network.rpcUrls || []);
     },
     getCustomContract(
       chainId: string,
@@ -119,8 +118,7 @@ export const useWeb3Store = defineStore({
       address: string,
     ): CustomContract {
       // TODO modify this function to just return normal contract, CustomContract has no effect.
-      const rpcUrls = this.networkRpcUrls(chainId);
-      return new CustomContract(abi, address, chainId, rpcUrls);
+      return new CustomContract(abi, address, chainId, this.chainProviders[chainId].provider as HttpProvider);
     },
     async callWithRetry(
       chainId: string,
@@ -134,9 +132,8 @@ export const useWeb3Store = defineStore({
       let switchedRPCCount = 0;
 
       // console.log("callWithRetry");
-      if (!method) {
-        return method;
-      }
+      if (!method) return;
+
       while (retries <= maxRetries && switchedRPCCount <= RPCUrlsLength) {
         try {
           return await method();
@@ -168,13 +165,14 @@ export const useWeb3Store = defineStore({
             throw error;
           }
 
-          const rpcUrl = (this.chainProviders[chainId] as any)?.clientUrl;
+          const rpcUrl = (this.chainProviders[chainId].currentProvider as any)?.clientUrl;
           console.error(
-            "RPC error:",
+            `RPC error ${retries}/${maxRetries}`,
             errorCodes,
             error?.message,
+            "method:",
             method,
-            rpcUrl,
+            `rpcUrl: ${rpcUrl}`,
           );
           retries++;
           if (retries > maxRetries) {
@@ -192,7 +190,7 @@ export const useWeb3Store = defineStore({
       const rpcUrls = this.networkRpcUrls(chainId);
       this.chainSelectedRpcIndex[chainId] = (this.chainSelectedRpcIndex[chainId] + 1) % rpcUrls.length;
       const newRpcUrl = rpcUrls[this.chainSelectedRpcIndex[chainId]];
-      console.log(`Switching to RPC URL: ${newRpcUrl}`, this.chainSelectedRpcIndex[chainId]);
+      console.log(`Switching to RPC URL: ${chainId}: ${newRpcUrl}`, this.chainSelectedRpcIndex[chainId]);
 
       const chainProvider = this.chainProviders[chainId];
 

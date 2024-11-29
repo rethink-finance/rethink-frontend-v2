@@ -8,7 +8,6 @@ export const fetchUserFundDepositRedemptionRequestsAction =
 
     if (!fundStore.activeAccountAddress) return console.error("Active account not found");
     if (!fundStore.selectedFundAddress) return "";
-    console.log("fetchUserFundDepositRedemptionRequestsAction start")
     const [depositRequestResult, redemptionRequestResult] =
       await Promise.allSettled(
         [
@@ -34,7 +33,6 @@ export const fetchUserFundDepositRedemptionRequestsAction =
         ? redemptionRequestResult.value
         : undefined;
 
-    console.log("fetchUserFundDepositRedemptionRequestsAction done", depositRequest)
     fundStore.fundUserData.depositRequest = depositRequest;
     fundStore.fundUserData.redemptionRequest = redemptionRequest;
   };

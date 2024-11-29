@@ -97,7 +97,6 @@ import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallA
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
 
@@ -105,7 +104,6 @@ const emit = defineEmits(["deposit-success"]);
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
-const web3Store = useWeb3Store();
 
 const tokenValue = ref("");
 const tokenValueChanged = ref(false);
