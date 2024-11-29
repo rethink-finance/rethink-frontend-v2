@@ -1,6 +1,5 @@
 import { Web3, Contract, Web3PromiEvent } from "web3";
-import type { ContractOptions } from "web3";
-import type { ContractAbi } from "web3-types";
+import type { ContractMethodSend, PayableCallOptions } from "web3";
 import type { TransactionReceipt } from "viem";
 import { useAccountStore } from "~/store/account/account.store";
 
@@ -19,12 +18,8 @@ export type ContractMethodWithSend = {
   };
 };
 
-export class CustomContract<Abi extends ContractAbi> extends Contract<Abi> {
-  private readonly rpcUrls: string[];
-  private currentRpcIndex: number;
+export class CustomContract extends Contract<any> {
   private readonly initialChainId: string;
-  private readonly maxRetries: number;
-  private readonly retryDelay: number;
 
   constructor(abi: any, address: string, chainId: string, rpcUrls: string[], options = {}) {
     const initialProvider = new Web3.providers.HttpProvider(rpcUrls[0]);
@@ -32,106 +27,56 @@ export class CustomContract<Abi extends ContractAbi> extends Contract<Abi> {
       ...options,
       provider: initialProvider,
     });
-    this.rpcUrls = rpcUrls;
     this.initialChainId = chainId;
-    this.currentRpcIndex = 0;
-    this.maxRetries = 3;
-    this.retryDelay = 1000;
-  }
-
-  private switchRpcUrl(): void {
-    this.currentRpcIndex = (this.currentRpcIndex + 1) % this.rpcUrls.length;
-    const newRpcUrl = this.rpcUrls[this.currentRpcIndex];
-    console.log(`Switching to RPC URL: ${newRpcUrl}`);
-    this.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
   }
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  async callWithRetry(methodCall: () => Promise<any>): Promise<any> {
-    let retries = 0;
-
-    while (retries < this.maxRetries) {
-      try {
-        return await methodCall();
-      } catch (error: any) {
-        console.error(`Error in call: ${error.message}`);
-        retries++;
-
-        if (retries >= this.maxRetries) {
-          console.warn("Max retries reached, switching provider...");
-          this.switchRpcUrl();
-          retries = 0;
-        }
-
-        await this.delay(this.retryDelay);
-      }
-    }
-
-    throw new Error("Max retries reached for all RPC URLs");
-  }
-
-  call(methodName: string, options?: any): any {
-    const method = this.methods[
-      methodName
-    ] as unknown as ContractMethodWithCall;
-    if (!method) {
-      throw new Error(`Method ${methodName} not found on contract`);
-    }
-
-    return this.callWithRetry(() => method.call(options));
-  }
-
   // Override .send() to dynamically fetch the user's provider
   send(
     methodName: string,
-    options: ContractOptions,
+    options: any,
     ...calldataArgs: any[]
-  ): Promise<any> {
+  ): ContractMethodSend {
     const accountStore = useAccountStore();
     const userProvider = accountStore.connectedWallet?.provider;
 
     // Access the contract method
-    const method = this.methods[
-      methodName
-    ] as unknown as ContractMethodWithSend;
+    const method = this.methods[methodName];
 
     if (!method) {
-      return Promise.reject(new Error(`Method ${methodName} not found on contract`));
+      throw new Error(`Method ${methodName} not found on contract`);
     }
 
     // Check for user provider
     if (userProvider) {
       console.warn("User provided provider detected");
+
       const web3WithUserProvider = new Web3(userProvider);
       const contractWithUserProvider = new web3WithUserProvider.eth.Contract(
         this.options.jsonInterface,
         this.options?.address,
       );
 
-      // Ensure the network is correct, then send the transaction
-      return this.ensureCorrectNetwork()
-        .then(() => {
-          const userMethodWithSend = contractWithUserProvider.methods[
-            methodName
-          ] as unknown as ContractMethodWithSend;
+      const userMethodWithSend = contractWithUserProvider.methods[
+        methodName
+      ];
 
-          console.warn("Sending transaction with user provider...");
-          return userMethodWithSend(...calldataArgs).send({
-            from: accountStore.activeAccountAddress,
-            gasPrice: "",
-            ...options,
-          });
-        })
-        .catch((error) => {
-          console.error("Error during transaction:", error);
-          throw error;
-        });
+      // Ensure correct network synchronously using a Promise for the user to handle
+      return this.ensureCorrectNetwork().then(() => {
+        console.warn("Sending transaction with user provider...");
+        return userMethodWithSend(...calldataArgs).send({
+          from: accountStore.activeAccountAddress,
+          gasPrice: "",
+          ...options,
+        } as PayableCallOptions);
+      }) as ContractMethodSend;
     }
 
-    return method(...calldataArgs).send({ ...options, from: options.from });
+    console.warn("Using default provider");
+    return method(...calldataArgs).send({ ...options, from: options.from }) as ContractMethodSend;
   }
 
   ensureCorrectNetwork(): Promise<void> {

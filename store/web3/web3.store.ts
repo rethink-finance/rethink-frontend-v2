@@ -117,7 +117,7 @@ export const useWeb3Store = defineStore({
       chainId: string,
       abi: any,
       address: string,
-    ): CustomContract<ContractAbi> {
+    ): CustomContract {
       // TODO modify this function to just return normal contract, CustomContract has no effect.
       const rpcUrls = this.networkRpcUrls(chainId);
       return new CustomContract(abi, address, chainId, rpcUrls);

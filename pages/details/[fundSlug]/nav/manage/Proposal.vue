@@ -610,7 +610,7 @@ const createProposal = async () => {
   try {
     await fundStore.fundGovernorContract
       .send("propose", {}, ...proposalData)
-      .on("transactionHash", (hash: string) => {
+      .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
           "The proposal transaction has been submitted. Please wait for it to be confirmed.",
@@ -660,7 +660,7 @@ const createProposal = async () => {
   try {
     await fundStore.fundGovernorContract
       .send("propose", {}, ...proposalData2)
-      .on("transactionHash", (hash: string) => {
+      .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
           "The proposal transaction has been submitted. Please wait for it to be confirmed.",

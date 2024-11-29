@@ -266,7 +266,7 @@ const requestDeposit = async () => {
   try {
     await fundStore.fundContract
       .send("fundFlowsCall", {}, encodedFunctionCall)
-      .on("transactionHash", (hash: string) => {
+      .on("transactionHash", (hash: any) => {
         console.log("tx hash: ", hash);
         toastStore.addToast(
           "The transaction has been submitted. Please wait for it to be confirmed.",
@@ -336,7 +336,7 @@ const approveAllowance = async () => {
     // call the approval method
     await fundStore.fundBaseTokenContract
       .send("approve", {}, fund.value?.address, tokensWei.value)
-      .on("transactionHash", (hash: string) => {
+      .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
           "The transaction has been submitted. Please wait for it to be confirmed.",

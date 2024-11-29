@@ -327,7 +327,7 @@ const submitVote = async () => {
   try {
     await fundStore.fundGovernorContract
       .send("castVote", {}, props.proposal.proposalId, selectedVoteOption.value)
-      .on("transactionHash", (hash: string) => {
+      .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
           "Your vote has been submitted. Please wait for it to be confirmed.",
@@ -399,7 +399,7 @@ const executeProposal = async () => {
   try {
     await fundStore.fundGovernorContract
       .send("execute", {}, ...trxData)
-      .on("transactionHash", (hash: string) => {
+      .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
           "Proposal execution has been submitted. Please wait for it to be confirmed.",

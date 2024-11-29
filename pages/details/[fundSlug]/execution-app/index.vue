@@ -350,7 +350,7 @@ const submitRawTXN = async () => {
       checkRevertBeforeSending: false,
     },
     )
-      .on("transactionHash", (hash: string) => {
+      .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
           "The transaction has been submitted. Please wait for it to be confirmed.",

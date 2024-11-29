@@ -10,14 +10,12 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import { networksMap } from "~/store/web3/networksMap";
 
 interface IState {
-  web3?: Web3;
   web3Onboard?: any;
   isSwitchingNetworks: boolean;
 }
 
 export const useAccountStore = defineStore("accounts", {
   state: (): IState => ({
-    web3: undefined,
     web3Onboard: undefined as any | undefined,
     isSwitchingNetworks: false,
   }),
@@ -61,14 +59,12 @@ export const useAccountStore = defineStore("accounts", {
       console.log("Connected wallet label:", this.connectedWallet?.label);
       return this.connectedWallet.label === "Ledger";
     },
-    currentRPC(): string {
-      const currentProvider: any = this.web3?.provider;
-
-      // Check if the provider has a 'host' attribute (HTTP Provider)
-      if (currentProvider?.clientUrl) {
-        return currentProvider.clientUrl;
+    connectedWalletWeb3(): Web3 | undefined {
+      let web3Provider;
+      if (this.connectedWallet) {
+        web3Provider = new Web3(this.connectedWallet.provider);
       }
-      return "";
+      return web3Provider;
     },
   },
   actions: {
@@ -101,7 +97,7 @@ export const useAccountStore = defineStore("accounts", {
       });
     },
     checkConnection() {
-      return this.web3?.eth.getBlockNumber();
+      return this.connectedWalletWeb3?.eth.getBlockNumber();
     },
     async switchNetwork(chainId: string) {
       this.isSwitchingNetworks = true;
@@ -111,9 +107,6 @@ export const useAccountStore = defineStore("accounts", {
         if (this.connectedWallet) {
           // Ask the connected user to switch network.
           await this.setActiveChain(chainId);
-        } else {
-          // Switch active chain.
-          // await this.init(chainId);
         }
 
         // Test connection, outer catch block will except exception.
@@ -125,6 +118,7 @@ export const useAccountStore = defineStore("accounts", {
           );
         }
       } catch (error: any) {
+        console.log("caught error for no network added", error)
         // This error code indicates that the chain has not been added to MetaMask
         if (error.code === 4902) {
           try {
@@ -159,27 +153,16 @@ export const useAccountStore = defineStore("accounts", {
       // network, ask him to switch it.
       if (chainId !== this.connectedWalletChainId) {
         console.log("REQUEST switch network in accountStore")
-        try {
-          await this.connectedWallet?.provider?.request({
-            method: "wallet_switchEthereumChain",
-            params: [
-              {
-                chainId,
-              },
-            ],
-          });
-        } catch (e: any) {
-          console.error("failed switch request", e);
-        }
+        await this.connectedWallet?.provider?.request({
+          method: "wallet_switchEthereumChain",
+          params: [
+            {
+              chainId,
+            },
+          ],
+        });
       }
       console.log("REQUEST FINISH switch network in accountStore")
-
-      let web3Provider;
-      if (this.connectedWallet) {
-        web3Provider = new Web3(this.connectedWallet.provider);
-      }
-      console.log("accountStore set web3Provider", web3Provider);
-      this.web3 = web3Provider;
     },
     async connectWallet() {
       try {
