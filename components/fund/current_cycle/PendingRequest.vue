@@ -120,7 +120,6 @@ const cancelPendingRequest = async () => {
   );
 
   try {
-    console.warn("fund encodedFunctionCall", encodedFunctionCall)
     await fundStore.fundContract
       .send("fundFlowsCall", {}, encodedFunctionCall)
       .on("transactionHash", (hash: string) => {

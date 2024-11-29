@@ -120,9 +120,9 @@ export class CustomContract<Abi extends ContractAbi> extends Contract<Abi> {
 
           console.warn("Sending transaction with user provider...");
           return userMethodWithSend(...calldataArgs).send({
-            ...options,
             from: accountStore.activeAccountAddress,
             gasPrice: "",
+            ...options,
           });
         })
         .catch((error) => {

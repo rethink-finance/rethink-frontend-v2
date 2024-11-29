@@ -8,7 +8,7 @@ import type INetwork from "~/types/network";
 import { networksMap } from "~/store/web3/networksMap";
 import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
 import { RethinkReader } from "assets/contracts/RethinkReader";
-import { CustomContract } from "~/store/web3/contract";
+import { CustomContract } from "~/store/web3/customContract";
 import { NAVCalculator } from "assets/contracts/NAVCalculator";
 import SafeMultiSendCallOnlyJson from "assets/contracts/safe/SafeMultiSendCallOnly.json";
 const addresses: IAddresses = addressesJson as IAddresses;
