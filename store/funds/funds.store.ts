@@ -17,6 +17,7 @@ import { networksMap } from "~/store/web3/networksMap";
 interface IState {
   // chainFunds[chainId] = [fund1, fund2...]
   chainFunds: Record<string, IFund[]>;
+  chainFundsInfoArrays: Record<string, any[]>;
   chainFundNAVUpdates: Record<string, Record<string, INAVUpdate[]>>;
   // All original NAV methods.
   allNavMethods: INAVMethod[];
@@ -29,6 +30,7 @@ export const useFundsStore = defineStore({
   id: "funds",
   state: (): IState => ({
     chainFunds: {} as Record<string, IFund[]>,
+    chainFundsInfoArrays: {} as Record<string, any[]>,
     chainFundNAVUpdates: Object.fromEntries(
       Object.keys(networksMap).map((chainId) => [chainId, {}]),
     ) as Record<string, Record<string, INAVUpdate[]>>,

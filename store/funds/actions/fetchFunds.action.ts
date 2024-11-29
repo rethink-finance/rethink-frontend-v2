@@ -11,11 +11,12 @@ export async function fetchFundsAction(): Promise<void> {
 
   // Function to process each chain asynchronously
   async function processChain(chainId: string): Promise<void> {
-    // Reset the funds array for the current chain
-    fundsStore.chainFunds[chainId] = [];
-
     // Fetch the funds info arrays
-    const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays(chainId);
+    let fundsInfoArrays = fundsStore.chainFundsInfoArrays[chainId];
+    // Only fetch if there are no funds fetched yet.
+    if (!fundsInfoArrays?.length) {
+      fundsInfoArrays = await fundsStore.fetchFundsInfoArrays(chainId);
+    }
     const fundAddresses: string[] = [];
     const filteredFundsInfoArrays: any[] = [[], []];
     const fundsInfo: Record<string, any> = {};
@@ -36,7 +37,14 @@ export async function fetchFundsAction(): Promise<void> {
       fundAddresses.push(fundAddress);
     }
 
-    console.log(`Chain ${chainId} - Filtered Funds: `, filteredFundsInfoArrays);
+    console.debug(`Chain ${chainId} - Filtered Funds: `, filteredFundsInfoArrays);
+    // Save chainFundsInfoArrays to fundsStore to prevent refetching later.
+    fundsStore.chainFundsInfoArrays[chainId] = filteredFundsInfoArrays;
+
+    // If data was fetched already just return and skip re-fetching again.
+    if (fundsStore.chainFunds[chainId]?.length) {
+      return
+    }
 
     // Fetch metadata for the filtered funds
     const funds = await fundsStore.fetchFundsMetaData(
@@ -45,13 +53,12 @@ export async function fetchFundsAction(): Promise<void> {
       fundsInfo,
     );
     fundsStore.chainFunds[chainId] = funds;
-    console.log(`Chain ${chainId} - Funds Metadata: `, funds);
+    console.debug(`Chain ${chainId} - Funds Metadata: `, funds);
 
     // Fetch NAV data and calculate performance metrics
     await fundsStore.fetchFundsNAVData(chainId, filteredFundsInfoArrays);
     await fundsStore.calculateFundsPerformanceMetrics(chainId);
-
-    console.log(`Funds fetched for chain: ${chainId}`);
+    console.debug(`Funds fetched for chain: ${chainId}`);
   }
 
   // Process all chains simultaneously
