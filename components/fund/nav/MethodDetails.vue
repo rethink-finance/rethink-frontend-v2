@@ -66,6 +66,10 @@ const props = defineProps({
     type: String as PropType<ValuationType>,
     default: () => "undefined",
   },
+  validateOnMount: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const methodDetails = computed({
@@ -116,6 +120,12 @@ watch(
   },
   { deep: true },
 );
+
+onMounted(() => {
+  if (props.validateOnMount) {
+    methodDetails.value.isValid = allFieldsValid.value;
+  }
+});
 
 </script>
 

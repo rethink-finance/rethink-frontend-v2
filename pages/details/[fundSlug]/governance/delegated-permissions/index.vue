@@ -8,6 +8,7 @@
       submit-label="Create Proposal"
       :submit-event="submitProposal"
       :is-submit-loading="loading"
+      class="delegated-permission-stepper"
       @fields-changed="contractMethodChanged"
     >
       <template #subtitle>
@@ -32,8 +33,42 @@
             </div>
           </template>
         </UiTooltipClick>
+
+      </template>
+      <template #buttons>
+        <v-btn
+          class="text-secondary me-4"
+          variant="outlined"
+          @click="addRawDialog = true"
+        >
+          Add Raw
+        </v-btn>
       </template>
     </UiStepper>
+
+    <UiConfirmDialog
+      v-model="addRawDialog"
+      title="Add Raw Proposal"
+      max-width="80%"
+      confirm-text="Load"
+      message="Please enter the raw proposal JSON below"
+      @confirm="addRawProposal"
+    >
+      <v-textarea
+        v-model="rawProposal"
+        label="Raw proposal"
+        outlined
+        placeholder="Enter the raw proposal here"
+        rows="20"
+        class="raw-method-textarea"
+      />
+
+      <v-checkbox
+        v-model="keepExistingPermissions"
+        label="Keep existing permissions"
+        class="checkbox-keep-existing-permissions"
+      />
+    </UiConfirmDialog>
   </div>
 </template>
 
@@ -46,11 +81,11 @@ import {
   DelegatedStepMap,
   proposalRoleModMethodAbiMap,
   proposalRoleModMethodStepsMap,
+  roleModMethodChoices,
 } from "~/types/enums/delegated_permission";
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
-import { prepRoleModEntryInput } from "~/composables/parseNavMethodDetails";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -63,6 +98,9 @@ const router = useRouter();
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
+const addRawDialog = ref(false);
+const rawProposal = ref("");
+const keepExistingPermissions = ref(true);
 const { selectedFundSlug } = toRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -122,7 +160,6 @@ function formatInputToObject(input: any) {
   input parameter is an actual function ABI from the RolesFull.json RoleMod contract.
    */
   const result = {} as any;
-  console.log("input: ", input);
 
   input?.forEach((item: any) => {
     const { key, type, isArray } = item;
@@ -167,7 +204,6 @@ const contractMethodChanged = (
   const newInput = formatInputToObject(
     proposalRoleModMethodStepsMap[step.contractMethod],
   );
-  newInput.isValid = false;
 
   const mainStepIndex = delegatedEntry.value.findIndex(
     (entry) => entry.stepName === mainStepName,
@@ -192,6 +228,10 @@ const contractMethodChanged = (
   const hasSameKeys = Object.keys(newInput).every(
     (key) => key in currentInputs,
   );
+  // check if "isValid" key is NOT present in the currentInputs
+  if (!currentInputs.hasOwnProperty("isValid")) {
+    currentInputs.isValid = false;
+  }
   if (hasSameKeys) {
     return;
   }
@@ -310,14 +350,110 @@ const submitProposal = async () => {
   }
 };
 
+const addRawProposal = () => {
+  try {
+    const proposal = JSON.parse(rawProposal.value);
+    if (!proposal) {
+      throw new Error("Invalid JSON");
+    }
+
+    // format new entries from proposal and roleModMethodChoices
+    const newEntries = [] as any[];
+
+    proposal.forEach((entry: any) => {
+      const contractMethod = roleModMethodChoices.find(
+        (choice) => choice.valueMethodIdx === entry.valueMethodIdx,
+      );
+
+      if (!contractMethod?.value) {
+        console.error("Contract method not found");
+        return
+      }
+
+      // we need to define new method entry based on the contractMethod
+      const defaultMethodForEntry = formatInputToObject(proposalRoleModMethodStepsMap[contractMethod.value]);
+      const currentField = fieldsMap.value?.setup?.[defaultMethodForEntry.contractMethod];
+
+      // now we need to populate values from the proposal to the defaultMethodForEntry
+      entry.value.forEach((value: any) => {
+        const valueName = value?.name || "";
+        if (!valueName) {
+          console.error("Value name not found");
+          return;
+        }
+        const valueData = value?.data || "";
+
+        defaultMethodForEntry[valueName] = valueData;
+      });
+
+      const isValid = validateFields(defaultMethodForEntry, currentField);
+      defaultMethodForEntry.isValid = isValid;
+
+      const newEntry = JSON.parse(JSON.stringify(defaultMethodForEntry));
+      newEntries.push(newEntry);
+    });
+
+    const mainStepIndex = delegatedEntry.value.findIndex(
+      (entry) => entry.stepName === DelegatedStep.Setup,
+    );
+    if (mainStepIndex === -1) {
+      console.error("Main step not found");
+      return;
+    }
+
+    if (!keepExistingPermissions.value) {
+      delegatedEntry.value[mainStepIndex].steps = newEntries;
+    } else {
+      delegatedEntry.value[mainStepIndex].steps.push(...newEntries);
+    }
+    addRawDialog.value = false;
+    rawProposal.value = "";
+    toastStore.successToast("Raw proposal added successfully");
+  } catch (e) {
+    console.error(e);
+    toastStore.errorToast("Failed to add raw proposal. Invalid JSON format.");
+  }
+};
+
+// Validation logic
+const validateFields = (entry:any, fields:any) => {
+  let isValid = true;
+
+  fields.forEach((field:any) => {
+    const { key, rules = [] } = field;
+    const value = entry[key];
+
+    rules.forEach((rule:any) => {
+      if (Array.isArray(value)) {
+        isValid = value.every((val) => rule(val) === true);
+      } else {
+        isValid = rule(value) === true;
+      }
+    });
+  });
+
+  return isValid;
+};
+
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
 });
 </script>
 
 <style scoped lang="scss">
-.tooltip {
-  &__content {
+.delegated-permission-stepper{
+  :deep(.main_header__title){
+    width: 100%;
+  }
+}
+.header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 70%;
+}
+.tooltip{
+  &__content{
     display: flex;
     gap: 40px;
   }
@@ -334,5 +470,14 @@ onMounted(() => {
   cursor: pointer;
   display: flex;
   color: $color-text-irrelevant;
+}
+.checkbox-keep-existing-permissions{
+  display: flex;
+  flex-direction: row-reverse;
+
+  :deep(.v-selection-control){
+    flex-direction: row-reverse;
+
+  }
 }
 </style>

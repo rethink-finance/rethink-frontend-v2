@@ -57,13 +57,13 @@
     </template>
 
     <template #[`item.positionName`]="{ value }">
-      {{ value ?? "N/A" }}
+      {{ value ?? 'N/A' }}
     </template>
 
     <template #[`item.valuationSource`]="{ value, item }">
       <Logo v-if="item.isRethinkPosition" small />
       <template v-else>
-        {{ value ?? "N/A" }}
+        {{ value ?? 'N/A' }}
       </template>
     </template>
 
@@ -84,7 +84,7 @@
           />
         </div>
         <div v-else>
-          {{ value ? getFormattedBaseTokenValue(value) : "-" }}
+          {{ value ? getFormattedBaseTokenValue(value) : '-' }}
         </div>
         <div
           v-if="item.pastNavValueError"
@@ -109,7 +109,7 @@
           />
         </div>
         <div v-else>
-          {{ value ?? "-" }}
+          {{ value ?? '-' }}
         </div>
         <div
           v-if="item.pastNAVUpdateEntryFundAddress || item.isSimulatedNavError"
@@ -130,10 +130,11 @@
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
       <UiDetailsButton
         v-if="item.detailsJson"
-        text="Raw"
+        :text="isBaseTokenBalanceMethod(item) ? 'Raw' : 'Details'"
         :active="isExpanded(internalItem)"
         :disabled="item.deleted || item.isAlreadyUsed"
         @click.stop="toggleExpand(internalItem)"
+        @click.native="isBaseTokenBalanceMethod(item) ? null : setNavEntry(item)"
       />
     </template>
 
@@ -187,7 +188,7 @@
       <tr v-if="item.detailsJson" class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
         <td :colspan="columns.length" class="pa-0">
           <div class="nav_entries__details">
-            <div v-if="!item.isRethinkPosition" class="detail_hash" @click="copyText(item.detailsHash)">
+            <div v-if="!item.isRethinkPosition" :class="['detail_hash', {'has-changed': hasChanged()}]" @click="copyText(item.detailsHash)">
               <ui-tooltip-click>
                 Details Hash: {{ item.detailsHash }}
                 <Icon
@@ -201,7 +202,198 @@
                 </template>
               </ui-tooltip-click>
             </div>
-            <div class="nav_entries__json">
+
+            <!-- form goes here -->
+            <v-form
+              v-if="!isBaseTokenBalanceMethod(item)"
+              ref="form"
+              v-model="formIsValid"
+              :disabled="isMethodEditable(item) === false"
+            >
+              <v-row>
+                <v-col cols="12" sm="6">
+                  <v-label class="label_required mb-2">
+                    Position Name
+                  </v-label>
+                  <v-text-field
+                    v-model="navEntry.positionName"
+                    placeholder="E.g. WETH"
+                    :rules="rules"
+                    required
+                  />
+                </v-col>
+                <v-col cols="12" sm="6">
+                  <v-label class="label_required mb-2">
+                    Valuation Source
+                  </v-label>
+                  <v-text-field
+                    v-model="navEntry.valuationSource"
+                    placeholder="E.g. Uniswap ETH/USDC"
+                    :rules="rules"
+                    required
+                  />
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col cols="12" sm="6">
+                  <v-label class="mb-2">
+                    Position Type
+                  </v-label>
+                  <div class="toggle_buttons">
+                    <v-btn-toggle
+                      v-model="navEntry.positionType"
+                      group
+                      mandatory
+                      :disabled="isMethodEditable(item) === false"
+                    >
+                      <v-btn
+                        v-for="positionType in creatablePositionTypes"
+                        :key="positionType.key"
+                        :value="positionType.key"
+                        variant="outlined"
+                        @click.native="resetMethods(true)"
+                      >
+                        {{ positionType.name }}
+                      </v-btn>
+                    </v-btn-toggle>
+                  </div>
+                </v-col>
+                <v-col v-if="valuationTypes.length" cols="12" sm="6">
+                  <v-label class="mb-2">
+                    Valuation Type
+                  </v-label>
+                  <div class="toggle_buttons">
+                    <v-btn-toggle
+                      v-model="navEntry.valuationType"
+                      group
+                      mandatory
+                      :disabled="isMethodEditable(item) === false"
+                    >
+                      <v-btn
+                        v-for="valuationType in valuationTypes"
+                        :key="valuationType.key"
+                        :value="valuationType.key"
+                        variant="outlined"
+                        @click.native="resetMethods()"
+                      >
+                        {{ valuationType.name }}
+                      </v-btn>
+                    </v-btn-toggle>
+                  </div>
+                </v-col>
+              </v-row>
+
+              <v-row class="mt-10">
+                <v-col>
+                  <strong>Method Details</strong>
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <template
+                  v-if="navEntry.positionType === PositionType.Composable"
+                >
+                  <v-col>
+                    <v-expansion-panels v-model="expandedPanels">
+                      <v-expansion-panel
+                        v-for="(method, index) in navEntry.details[
+                          navEntry.positionType
+                        ]"
+                        :key="index"
+                        eager
+                      >
+                        <v-expansion-panel-title static>
+                          <div class="method_details_title">
+                            <span>
+                              <strong class="me-1">{{ index + 1 }})</strong>
+                              METHOD DETAILS
+                            </span>
+                            <UiTextBadge
+                              class="method_details_status"
+                              :class="{
+                                'method_details_status--valid': method.isValid,
+                              }"
+                            >
+                              <template v-if="method.isValid">
+                                Provided
+                                <Icon
+                                  icon="octicon:check-circle-16"
+                                  height="1.2rem"
+                                  width="1.2rem"
+                                />
+                              </template>
+                              <template v-else>
+                                Incomplete
+                                <Icon
+                                  icon="pajamas:error"
+                                  height="1.2rem"
+                                  width="1.2rem"
+                                />
+                              </template>
+                            </UiTextBadge>
+
+                            <UiDetailsButton
+                              v-if="isMethodEditable(item)"
+                              small
+                              @click.stop="deleteEditMethod(index)"
+                            >
+                              <v-icon icon="mdi-delete" color="error" />
+                            </UiDetailsButton>
+                          </div>
+                        </v-expansion-panel-title>
+                        <v-expansion-panel-text>
+                          <FundNavMethodDetails
+                            v-model="
+                              navEntry.details[navEntry.positionType][index]
+                            "
+                            :position-type="navEntry.positionType"
+                            :valuation-type="navEntry.valuationType"
+                            :validate-on-mount="true"
+                          />
+                        </v-expansion-panel-text>
+                      </v-expansion-panel>
+                    </v-expansion-panels>
+                  </v-col>
+                </template>
+
+                <template v-else>
+                  <FundNavMethodDetails
+                    v-model="navEntry.details[navEntry.positionType][0]"
+                    :position-type="navEntry.positionType"
+                    :valuation-type="navEntry.valuationType"
+                  />
+                </template>
+              </v-row>
+
+              <v-row v-if="navEntry.positionType === PositionType.Composable && isMethodEditable(item)">
+                <v-col class="text-center">
+                  <v-btn
+                    class="text-secondary"
+                    variant="outlined"
+                    @click="addEditMethodDetails"
+                  >
+                    <template #append>
+                      <Icon
+                        icon="octicon:plus-circle-16"
+                        height="1.2rem"
+                        width="1.2rem"
+                      />
+                    </template>
+                    Add Method Details
+                  </v-btn>
+                </v-col>
+              </v-row>
+              <v-row v-if="isMethodEditable(item)" class="mt-4">
+                <v-col class="text-end">
+                  <v-btn :disabled="!hasChanged()" @click="editMethod">
+                    Edit Method
+                  </v-btn>
+                </v-col>
+              </v-row>
+            </v-form>
+
+            <div v-else class="nav_entries__json">
               {{ item.detailsJson }}
             </div>
           </div>
@@ -219,11 +411,24 @@
 </template>
 
 <script lang="ts">
+import { ethers } from "ethers";
+import { useRouter } from "vue-router";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useFundsStore } from "~/store/funds/funds.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { PositionType } from "~/types/enums/position_type";
+import {
+  defaultInputTypeValue,
+  InputType,
+  PositionType,
+  PositionTypeKeys,
+  PositionTypes,
+  PositionTypeToNAVEntryTypeMap,
+  PositionTypeToValuationTypesMap,
+  PositionTypeValuationTypeDefaultFieldsMap,
+  PositionTypeValuationTypeFieldsMap,
+} from "~/types/enums/position_type";
+import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import type INAVParts from "~/types/nav_parts";
 
@@ -288,14 +493,67 @@ export default defineComponent({
     const fundsStore = useFundsStore();
     const web3Store = useWeb3Store();
     const toastStore = useToastStore();
-    const { getFormattedBaseTokenValue } = toRefs(fundStore);
-    return { fundStore, fundsStore, web3Store, toastStore, getFormattedBaseTokenValue }
+    const router = useRouter();
+
+    const { getFormattedBaseTokenValue, selectedFundSlug } = toRefs(fundStore);
+    return {
+      router,
+      fundStore,
+      fundsStore,
+      web3Store,
+      toastStore,
+      getFormattedBaseTokenValue,
+      selectedFundSlug,
+      creatablePositionTypes: computed(() =>
+        PositionTypes.filter(
+          (positionType) => positionType.key !== PositionType.NFT,
+        ),
+      ),
+      PositionType,
+    };
   },
-  data: () => ({
-    expanded: [],
-    selected: [],
-    isNavSimulationLoading: false,
-  }),
+  data() {
+    return {
+      expanded: [],
+      selected: [],
+      isNavSimulationLoading: false,
+      form: ref(null),
+      formIsValid: ref(false),
+      originalNavEntry: ref<INAVMethod>({
+        positionName: "",
+        valuationSource: "",
+        positionType: PositionType.Liquid,
+        valuationType: ValuationType.DEXPair,
+        details: {
+          // Init as PositionType.Liquid & ValuationType.DEXPair
+          liquid: [] as Record<string, any>[],
+          illiquid: [],
+          nft: [],
+          composable: [],
+        },
+        detailsJson: "{}",
+      }),
+      navEntry: ref<INAVMethod>({
+        positionName: "",
+        valuationSource: "",
+        positionType: PositionType.Liquid,
+        valuationType: ValuationType.DEXPair,
+        details: {
+          // Init as PositionType.Liquid & ValuationType.DEXPair
+          liquid: [] as Record<string, any>[],
+          illiquid: [],
+          nft: [],
+          composable: [],
+        },
+        detailsJson: "{}",
+      }),
+      rules: [formRules.required],
+      // creatablePositionTypes: PositionTypes.filter(
+      //   (positionType) => positionType.key !== PositionType.NFT,
+      // ),
+      expandedPanels: ref([0]),
+    };
+  },
   computed: {
     headers() {
       // Check:
@@ -341,6 +599,20 @@ export default defineComponent({
 
       return headers;
     },
+    valuationTypes() {
+      return (
+        PositionTypeToValuationTypesMap[this.navEntry?.positionType]?.map(
+          (type) => ValuationTypesMap[type],
+        ) || []
+      );
+    },
+    defaultFields() {
+      return (
+        PositionTypeValuationTypeDefaultFieldsMap[this.navEntry.positionType][
+          this.navEntry.valuationType || "undefined"
+        ] || []
+      );
+    },
     usedMethodHashes(): string[] {
       return this.usedMethods.map(method => method.detailsHash || "");
     },
@@ -362,7 +634,7 @@ export default defineComponent({
       // Sum simulated NAV value of all methods.
       return this.methods.reduce(
         (totalValue: bigint, method: any) => {
-          // Do not count deleted methods to total simulated NAV.
+        // Do not count deleted methods to total simulated NAV.
           const methodSimulatedNav = method.deleted ? 0n : (method.simulatedNav || 0n);
           return totalValue + methodSimulatedNav;
         },
@@ -487,7 +759,17 @@ export default defineComponent({
 
       return "";
     },
-    deleteMethod(method: INAVMethod) {
+    // only alow edit if the method is not rethink position and not one of the predefined positions
+    isMethodEditable(navEntry: INAVMethod) {
+      const isManageNavMethodsPage = this.idx === "nav/manage/index";
+
+      return isManageNavMethodsPage && !this.isBaseTokenBalanceMethod(navEntry);
+    },
+    isBaseTokenBalanceMethod(method: INAVMethod) {
+      const positionName = ["OIV Balance", "Safe Balance", "Fees Balance"];
+      return positionName.includes(method.positionName) && method.valuationSource === "Rethink";
+    },
+    deleteMethod(method: INAVMethod, toggle = true) {
       // If method is new, we can just remove it from the methods array.
       // If it is not new, we will mark it as deleted.
       const methods = [...this.methods]; // Create a shallow copy of the array
@@ -502,11 +784,260 @@ export default defineComponent({
             // Adjust the index to account for the removed item
             i--;
           } else {
-            methods[i] = { ...m, deleted: !m.deleted }; // Toggle the deleted property
+            methods[i].deleted = toggle ? !m.deleted : true;
           }
         }
       }
       this.$emit("update:methods", methods);
+    },
+    deleteEditMethod(index: number) {
+      console.log("remove0 method: ", index);
+      this.navEntry.details[this.navEntry.positionType].splice(index, 1);
+    },
+    addEditMethodDetails() {
+      this.navEntry.details[this.navEntry.positionType].push(
+        this.getNewMethodDetails(
+          this.navEntry?.positionType,
+          this.navEntry?.valuationType,
+        ),
+      );
+    },
+    resetMethods(isPositionTypeChange = false) {
+      let valuationType = this.navEntry?.valuationType;
+
+      if (isPositionTypeChange) {
+        valuationType = this.defineValuationType(this.navEntry) as ValuationType;
+      }
+
+      if(valuationType === this.originalNavEntry?.valuationType){
+        this.setNavEntry(this.originalNavEntry);
+        return;
+      }
+
+      const tmpNavEntry = {
+        positionName: this.navEntry?.positionName,
+        valuationSource: this.navEntry?.valuationSource,
+        positionType: this.navEntry?.positionType,
+        valuationType,
+        details: {},
+        detailsJson: "{}",
+      } as INAVMethod;
+      for (const positionTypeKey of PositionTypeKeys) {
+        tmpNavEntry.details[positionTypeKey] = [];
+      }
+
+      // Init empty details for the selected position type (liquid, illiquid, nft, composable).
+      tmpNavEntry.details[this.navEntry.positionType].push(
+        this.getNewMethodDetails(
+          this.navEntry?.positionType,
+          valuationType,
+        ),
+      );
+
+      tmpNavEntry.detailsJson = formatJson(tmpNavEntry.details);
+
+      this.navEntry = tmpNavEntry;
+    },
+    editMethod() {
+      try {
+        if (!this.formIsValid) {
+          return this.toastStore.warningToast(
+            "Some form fields are not valid.",
+          );
+        }
+
+        const newNavEntry = JSON.parse(
+          JSON.stringify(this.navEntry, stringifyBigInt),
+          parseBigInt,
+        );
+
+        if (this.hasChanged() === false) {
+          return this.toastStore.warningToast("No changes detected.");
+        }
+
+        console.log("New Method: ", newNavEntry);
+
+        // Do not include the pastNAVUpdateEntryFundAddress in the details, as when we fetch entries
+        // they don't include this data and details hash would be broken if we included it.
+        newNavEntry.pastNAVUpdateEntryFundAddress =
+          this.fundStore.fund?.address;
+
+        // Set default fields that are required for each entry.
+        // All methods details have this data.
+        newNavEntry.details.isPastNAVUpdate = false;
+        newNavEntry.details.pastNAVUpdateIndex = 0;
+        newNavEntry.details.pastNAVUpdateEntryIndex = 0;
+        newNavEntry.details.entryType =
+          PositionTypeToNAVEntryTypeMap[this.navEntry.positionType];
+        newNavEntry.details.valuationType = this.navEntry.valuationType;
+        newNavEntry.details.description = JSON.stringify({
+          positionName: this.navEntry.positionName,
+          valuationSource: this.navEntry.valuationSource,
+        });
+
+        // TODO add additional check that all methods have the same pastNAVUpdateIndex
+        // Iterate over all NAV entry methods.
+        // In most cases methods will be only one method, only if the PositionType is Composable, there can be
+        // more than 1 method, and we will create a new NAV entry for each of them, with the same position name...
+        // - NFT (composable) can have more than 1 method, so take all methods in details.
+        // - All other Position Types can only have 1 method, so take the first one (there should only be one).
+        for (const method of newNavEntry.details[newNavEntry.positionType]) {
+          // Set default data for each entry's method's position & valuation type.
+          this.defaultFields.forEach((field) => {
+            if (!(field.key in method)) {
+              method[field.key] = field.value;
+            }
+          });
+
+          if ("pastNAVUpdateIndex" in method) {
+            newNavEntry.details.pastNAVUpdateIndex = method.pastNAVUpdateIndex;
+          }
+
+          if ("otcTxHashes" in method) {
+            try {
+              method.otcTxHashes =
+                method.otcTxHashes
+                  .split(",")
+                  .map(
+                    // Remove leading and trailing whitespace
+                    (hash: string) => hash.trim(),
+                  )
+                  .filter(
+                    // Remove empty strings;
+                    (hash: string) => hash !== "",
+                  ) || [];
+            } catch (error: any) {
+              return this.toastStore.errorToast(
+                "Something went wrong parsing the comma-separated list of TX hashes.",
+              );
+            }
+          }
+
+          // Set other misc dynamic fields related to the current fund, specific for each position & valuation type.
+          if (
+            newNavEntry.positionType === PositionType.Liquid &&
+            newNavEntry.valuationType === ValuationType.DEXPair
+          ) {
+            method.nonAssetTokenAddress =
+              this.fundStore.fund?.baseToken?.address;
+          }
+
+          // Remove unwanted properties that we don't need when submitting the proposal.
+          delete method.isValid;
+          delete method.valuationType;
+        }
+
+        // Mark entry as new, so that it will be green in the table.
+        newNavEntry.isNew = true;
+        delete newNavEntry.details.valuationType;
+        delete newNavEntry.deleted;
+
+        // JSONIFY method details:
+        newNavEntry.detailsJson = formatJson(newNavEntry.details);
+        newNavEntry.detailsHash = ethers.keccak256(
+          ethers.toUtf8Bytes(newNavEntry.detailsJson),
+        );
+
+        // Add newly defined NAV entry to fund managed methods.
+        this.fundStore.fundManagedNAVMethods.push(newNavEntry);
+        // we need to delete the method from the navEntry
+
+
+        if (this.hasChanged()) {
+          // remove original method from the all methods
+          this.deleteMethod(this.originalNavEntry, false);
+        }
+
+        // Redirect back to Manage methods page.
+        this.router.push(`/details/${this.selectedFundSlug}/nav/manage`);
+        this.toastStore.addToast("Method added successfully.");
+      } catch (error: any) {
+        console.error("Error editing method: ", error);
+        this.toastStore.errorToast("Error editing method.");
+      }
+    },
+    setNavEntry(method: INAVMethod) {
+      const valuationType = this.defineValuationType(method);
+
+      // make deep copy of method to avoid changing the original method
+      this.navEntry = JSON.parse(
+        JSON.stringify(method, stringifyBigInt),
+        parseBigInt,
+      );
+      this.navEntry.detailsJson = JSON.stringify(
+        this.navEntry.details,
+        null,
+        2,
+      );
+
+      this.originalNavEntry = JSON.parse(
+        JSON.stringify(method, stringifyBigInt),
+        parseBigInt,
+      );
+      this.originalNavEntry.detailsJson = JSON.stringify(
+        this.originalNavEntry.details,
+        null,
+        2,
+      );
+
+      // only set the valuation type if it's not undefined
+      if (valuationType) {
+        this.navEntry.valuationType = valuationType;
+        this.originalNavEntry.valuationType = valuationType;
+      }
+
+    },
+    hasChanged() {
+      const editedNavDeepCopy = JSON.parse(JSON.stringify(this.navEntry,stringifyBigInt), parseBigInt);
+      // delete isValid from details
+      for (const method of editedNavDeepCopy.details[editedNavDeepCopy.positionType]) {
+        delete method.isValid;
+      }
+
+      const originalNavStringify = JSON.stringify(this.originalNavEntry, stringifyBigInt);
+      const editedNavStringify = JSON.stringify(editedNavDeepCopy, stringifyBigInt);
+
+      return originalNavStringify !== editedNavStringify;
+    },
+    defineValuationType(method: INAVMethod) {
+      // we need to figure out which valuation type is used based on some unique keys used in details
+      // 1. Liquid
+      //   1.1. DEXPair - it needs to have (details.liquid[0].tokenPair)
+      //   1.2. Aggregator - it needs to have (details.liquid[0].aggregatorAddress && !details.liquid[0].tokenPair)
+      // 2. Illiquid
+      //   2.1. ERC-20
+      //   2.2. ERC-721
+      //   2.3. ERC-1155
+
+      // let valuationType;
+
+      switch (method.positionType) {
+        case PositionType.Liquid: {
+          const tokenPair = method?.details?.liquid?.[0]?.tokenPair;
+          const aggregatorAddress = method?.details?.liquid?.[0]?.aggregatorAddress;
+
+          if (tokenPair) {
+            return ValuationType.DEXPair;
+          }
+          if (aggregatorAddress) {
+            return ValuationType.Aggregator;
+          }
+          return ValuationType.DEXPair;
+        }
+        case PositionType.Illiquid: {
+          const nftType = method?.details?.illiquid[0]?.nftType;
+
+          if (nftType === "ERC-721") {
+            return ValuationType.ERC721;
+          }
+          if (nftType === "ERC-1155") {
+            return ValuationType.ERC1155;
+          }
+          return ValuationType.ERC20;
+        }
+        default:
+          return undefined;
+      }
     },
     methodProps(internalItem: any) {
       const props = {
@@ -531,6 +1062,25 @@ export default defineComponent({
     isMethodAlreadyUsed(detailsHash?: string) {
       return this.usedMethodHashes.includes(detailsHash || "")
     },
+    getNewMethodDetails(
+      positionType: PositionType,
+      valuationType: ValuationType | undefined,
+    ) {
+      const newDetails: Record<string, any> = {
+        isValid: false,
+      };
+      const fields =
+        PositionTypeValuationTypeFieldsMap[positionType][
+          valuationType || "undefined"
+        ] || [];
+
+      // let updated = false;
+      fields.forEach((field: any) => {
+        newDetails[field.key] = defaultInputTypeValue[field.type as InputType];
+      });
+
+      return newDetails;
+    },
   },
 })
 </script>
@@ -539,6 +1089,8 @@ export default defineComponent({
 .nav_entries {
   @include borderGray;
   border-color: $color-bg-transparent;
+  max-width: 1400px;
+  overflow: auto;
 
   :deep(.v-table__wrapper) {
     @include customScrollbar;
@@ -555,12 +1107,9 @@ export default defineComponent({
     background: $color-badge-navy;
   }
   &__details {
-    font-family: monospace;
-    white-space: pre-wrap;
-    word-break: break-all;
-    font-size: $text-sm;
     padding: 1rem 5rem;
     background-color: $color-badge-navy;
+    max-width: 1400px;
     &:not(:last-of-type) {
       margin-bottom: 1.5rem;
     }
@@ -570,6 +1119,8 @@ export default defineComponent({
     background-color: $color-card-background;
     padding: 1.5rem;
     color: $color-primary;
+    white-space: break-spaces;
+    word-wrap: break-word;
   }
   &__no_data {
     text-align: center;
@@ -599,6 +1150,10 @@ export default defineComponent({
 .detail_hash{
   cursor: pointer;
   margin-bottom: 30px;
+
+  &.has-changed {
+    color: $color-success;
+  }
 }
 
 .item-simulated-nav {
@@ -608,5 +1163,64 @@ export default defineComponent({
   &--error {
     color: $color-error;
   }
+}
+
+.tooltip {
+  &__content {
+    display: flex;
+    gap: 40px;
+  }
+  &__link {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    color: $color-primary;
+  }
+}
+.info-icon {
+  cursor: pointer;
+  display: flex;
+  color: $color-text-irrelevant;
+}
+.method_details_title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  letter-spacing: 0.02625rem;
+  font-weight: 500;
+  color: $color-text-irrelevant;
+}
+.method_details_status {
+  color: $color-warning;
+
+  &--valid {
+    color: $color-success;
+  }
+}
+// toggle buttons
+.toggle_buttons {
+  .v-btn-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    height: 100%;
+
+    .v-btn {
+      opacity: 0.35;
+      color: $color-text-irrelevant;
+      border-radius: 4px !important;
+      min-height: 48px;
+      @include borderGray;
+    }
+    .v-btn--active {
+      color: $color-white !important;
+      opacity: 1;
+    }
+  }
+}
+
+.text-end{
+  margin-bottom: 20px;
 }
 </style>
