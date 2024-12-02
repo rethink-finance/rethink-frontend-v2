@@ -164,9 +164,9 @@ const headers: any = computed(() => [
 const icon = (chainShort: string) => {
   const icon = getChainIcon(chainShort);
   return {
-    name: icon.name,
-    size: icon.size,
-    color: icon.color,
+    name: icon?.name,
+    size: icon?.size,
+    color: icon?.color,
   };
 };
 

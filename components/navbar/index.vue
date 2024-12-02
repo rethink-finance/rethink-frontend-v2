@@ -64,12 +64,12 @@
             >
               <template #selection="{ item }">
                 <Icon
-                  :icon="item.raw.icon.name"
-                  :color="item.raw.icon.color"
+                  :icon="item.raw.icon?.name ?? 'octicon:question-16'"
+                  :color="item.raw.icon?.color"
                   class="select_item__icon mr-2"
                 />
                 <v-list-item-title>
-                  {{ item.raw.chainName }}
+                  {{ item.raw.chainName ?? item.raw }}
                 </v-list-item-title>
               </template>
               <template #item="{ item }">
@@ -79,8 +79,8 @@
                   @click="switchNetwork(item.raw.chainId)"
                 >
                   <Icon
-                    :icon="item.raw.icon.name"
-                    :color="item.raw.icon.color"
+                    :icon="item.raw.icon?.name"
+                    :color="item.raw.icon?.color"
                     class="select_item__icon"
                   />
                   <div>
