@@ -10,7 +10,7 @@ onMounted(() => {
   //   accountStore.setAlreadyConnectedWallet();
 });
 
-watch(() => accountStore.connectedWallet, () => {
+watch(() => accountStore.connectedWallet?.provider, () => {
   console.log("Watcher: connected wallet changed");
   accountStore.setAlreadyConnectedWallet();
 });

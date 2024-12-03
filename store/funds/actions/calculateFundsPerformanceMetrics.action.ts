@@ -1,17 +1,16 @@
 import { useFundsStore } from "../funds.store";
 
 export async function calculateFundsPerformanceMetricsAction(
+  chainId: string,
 ): Promise<any> {
-  const fundsStore = await useFundsStore();
+  const fundsStore = useFundsStore();
+  console.log("start calculateFundsPerformanceMetricsAction ", chainId);
 
   try {
-    if (!Array.isArray(fundsStore.funds)) {
-      console.error("Error: this.funds is not an array");
-      return;
-    }
-    for (const fund of fundsStore.funds) {
+    for (const fund of fundsStore.chainFunds[chainId]) {
       try {
-        const fundNAVUpdates = fundsStore.fundNAVUpdates[fund.address];
+        const fundNAVUpdates =
+          fundsStore.chainFundNAVUpdates[fund.chainId][fund.address];
         const fundLastNavUpdate = fundNAVUpdates[fundNAVUpdates?.length - 1];
         const fundLastNavUpdateExists = fundLastNavUpdate?.timestamp;
 
@@ -19,10 +18,10 @@ export async function calculateFundsPerformanceMetricsAction(
           const baseTokenDecimals = fund.baseToken.decimals;
           const cumulativeReturnPercent = fundLastNavUpdateExists
             ? await calculateCumulativeReturnPercent(
-              fund.totalDepositBalance,
-              fund.lastNAVUpdateTotalNAV || 0n,
-              baseTokenDecimals,
-            )
+                fund.totalDepositBalance,
+                fund.lastNAVUpdateTotalNAV || 0n,
+                baseTokenDecimals,
+              )
             : 0;
 
           fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists

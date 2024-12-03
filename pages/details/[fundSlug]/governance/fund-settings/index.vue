@@ -4,10 +4,7 @@
       <div class="main_header__title">
         OIV Settings Proposal
 
-        <UiTooltipClick
-          location="right"
-          :hide-after="6000"
-        >
+        <UiTooltipClick location="right" :hide-after="6000">
           <Icon
             icon="material-symbols:info-outline"
             :class="'main_header__info-icon'"
@@ -23,11 +20,7 @@
                 target="_blank"
               >
                 Learn More
-                <Icon
-                  icon="maki:arrow"
-                  color="primary"
-                  width="1rem"
-                />
+                <Icon icon="maki:arrow" color="primary" width="1rem" />
               </a>
             </div>
           </template>
@@ -76,10 +69,7 @@
           <div class="section__title subtitle_white">
             {{ section.name }}
 
-            <UiTooltipClick
-              v-if="section.info"
-              :hide-after="8000"
-            >
+            <UiTooltipClick v-if="section.info" :hide-after="8000">
               <Icon
                 icon="material-symbols:info-outline"
                 class="section__info-icon"
@@ -173,6 +163,7 @@
 import { ethers } from "ethers";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
+import { encodeFunctionCall } from "web3-eth-abi";
 import SectionWhitelist from "./SectionWhitelist.vue";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account/account.store";
@@ -285,7 +276,6 @@ function generateFields(section: IStepperSection, proposal: IProposal) {
       ...fieldTyped,
       value: proposal[fieldTyped.key] as string,
     } as IField;
-
   });
 }
 
@@ -330,7 +320,6 @@ const getStepValidityArray = () => {
             return rule(field.value) === true;
           }) ?? true
         );
-
       });
     });
   });
@@ -346,18 +335,15 @@ const isLastStep = computed(() => {
   return activeStep.value === proposalSteps[proposalSteps.length - 1];
 });
 
-
 const handleButtonClick = () => {
   isLastStep.value ? submit() : nextStep();
 };
 
 const submit = async () => {
-  if (!web3Store.web3) return;
-
   // trigger form validation to show errors
   const valid = form.value?.validate();
   // check if every step is valid
-  formIsValid.value = getStepValidityArray().every((step) => step === true);
+  formIsValid.value = getStepValidityArray().every((step) => step);
 
   if (formIsValid.value) {
     try {
@@ -369,12 +355,12 @@ const submit = async () => {
       const formattedProposalOld = formatProposalDataOld();
       console.log("formattedProposalOld: ", formattedProposalOld);
 
-      const encodedData = web3Store.web3.eth.abi.encodeFunctionCall(
+      const encodedData = encodeFunctionCall(
         updateSettingsABI as AbiFunctionFragment,
         formattedProposal,
       );
 
-      const encodedDataOld = web3Store.web3.eth.abi.encodeFunctionCall(
+      const encodedDataOld = encodeFunctionCall(
         updateSettingsABI as AbiFunctionFragment,
         formattedProposalOld,
       );
@@ -405,21 +391,10 @@ const submit = async () => {
           description: proposal.value.proposalDescription,
         }),
       ];
-      // const [gasPrice] = await web3Store.estimateGas(
-      //   {
-      //     from: fundStore.activeAccountAddress,
-      //     to: fundStore.fundGovernorContract.options.address,
-      //     data: fundStore.fundGovernorContract.methods.propose(...proposalData).encodeABI(),
-      //   },
-      // );
-      await fundStore.fundGovernorContract.methods
-        .propose(...proposalData)
-        .send({
-          from: fundStore.activeAccountAddress,
-          // maxPriorityFeePerGas: gasPrice,
-          gasPrice: "",
-        })
-        .on("transactionHash", (hash: string) => {
+
+      await fundStore.fundGovernorContract
+        .send("propose", {}, ...proposalData)
+        .on("transactionHash", (hash: any) => {
           console.log("tx hash: " + hash);
           toastStore.addToast(
             "The proposal transaction has been submitted. Please wait for it to be confirmed.",
@@ -430,7 +405,7 @@ const submit = async () => {
           if (receipt.status) {
             toastStore.successToast(
               "Register the proposal transactions was successful. " +
-                  "You can now vote on the proposal in the governance page.",
+                "You can now vote on the proposal in the governance page.",
             );
             router.push(`/details/${selectedFundSlug.value}/governance`);
           } else {
@@ -446,7 +421,7 @@ const submit = async () => {
           toastStore.errorToast(
             "There has been an error. Please contact the Rethink Finance support.",
           );
-        })
+        });
     } catch (error: any) {
       loading.value = false;
       toastStore.errorToast(error.message);
@@ -783,8 +758,8 @@ onBeforeUnmount(() => {
     display: block;
   }
 }
-.tooltip{
-  &__content{
+.tooltip {
+  &__content {
     display: flex;
     gap: 40px;
   }

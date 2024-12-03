@@ -191,6 +191,7 @@ watch([() => props.items, () => fundStore.activeAccountAddress], () => {
     return
   }
   const activeAccountAddress = fundStore.activeAccountAddress;
+  const fundChainId = fundStore.fundChainId;
 
   for (const proposal of props.items) {
     governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId] ??= {};
@@ -199,8 +200,9 @@ watch([() => props.items, () => fundStore.activeAccountAddress], () => {
 
     // console.log("get votes for ", proposal.proposalId);
     proposal.hasVotedLoading = true;
-    web3Store.callWithRetry(() =>
-      fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call(),
+    web3Store.callWithRetry(
+      fundChainId, () =>
+        fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call(),
     ).then(
       (hasVoted: boolean) => {
         // console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)

@@ -1,4 +1,5 @@
-import { Web3, type AbiInput } from "web3";
+import { type AbiInput } from "web3";
+import { decodeParameters } from "web3-eth-abi";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { NAVCalculator } from "~/assets/contracts/NAVCalculator";
 
@@ -14,10 +15,8 @@ export const getNavPartsFunctionABI: AbiInput[] =
     ) as any
   )?.outputs || [];
 
-const web3 = new Web3();
-
 export const decodeNavUpdateEntry = (encodedNavUpdate: string):Record<string, any>[] => {
-  return web3.eth.abi.decodeParameters(
+  return decodeParameters(
     getNavUpdateEntryFunctionABI,
     encodedNavUpdate,
   )[0] as any[];
@@ -26,7 +25,7 @@ export const decodeNavUpdateEntry = (encodedNavUpdate: string):Record<string, an
 export const decodeNavPart = (
   encodedNavUpdate: string,
 ): Record<string, any>[] => {
-  return web3.eth.abi.decodeParameters(
+  return decodeParameters(
     getNavPartsFunctionABI,
     encodedNavUpdate,
   )[0] as any[];

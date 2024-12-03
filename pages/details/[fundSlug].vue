@@ -6,10 +6,7 @@
     <v-skeleton-loader type="card" />
   </div>
   <div v-else-if="fund?.address" class="w-100">
-    <div
-      v-if="breadcrumbItems.length === 0"
-      class="fund_name"
-    >
+    <div v-if="breadcrumbItems.length === 0" class="fund_name">
       <v-avatar class="fund_name__avatar" :rounded="false">
         <img
           :src="fund.photoUrl"
@@ -28,10 +25,7 @@
         </p>
       </div>
     </div>
-    <div
-      v-if="breadcrumbItems.length === 0"
-      class="details_nav_container"
-    >
+    <div v-if="breadcrumbItems.length === 0" class="details_nav_container">
       <div class="details_nav">
         <div class="overlay-container" />
         <nuxt-link
@@ -52,7 +46,6 @@
           </v-btn>
         </nuxt-link>
       </div>
-
     </div>
     <UiBreadcrumbs
       v-if="breadcrumbItems.length > 0"
@@ -63,7 +56,10 @@
 
     <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
   </div>
-  <div v-else-if="accountStore.isSwitchingNetworks" class="w-100 d-flex justify-center">
+  <div
+    v-else-if="accountStore.isSwitchingNetworks"
+    class="w-100 d-flex justify-center"
+  >
     <v-progress-circular indeterminate />
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
@@ -95,19 +91,16 @@ const route = useRoute();
 const router = useRouter();
 // fund address is always in the third position of the route
 // e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
-const [fundChainId, tokenSymbol, fundAddress] = route.path.split("/")[2].split("-");
+const [fundChainId, tokenSymbol, fundAddress] = route.path
+  .split("/")[2]
+  .split("-");
 
-onMounted(async () => {
-  // check if we are on correct chainId
-  if (fundChainId !== web3Store.chainId) {
-    await switchNetwork(fundChainId);
-  }
+onMounted(() => {
   fetchFund();
   setBreadcrumbItems([]);
 });
 
 onUnmounted(() => {
-  fundStore.fund = {} as IFund;
   fundStore.selectedFundAddress = "";
   setBreadcrumbItems([]);
 });
@@ -125,35 +118,22 @@ const fetchFund = async () => {
     return;
   }
   try {
-    await fundStore.fetchFundData(fundAddress);
+    await fundStore.fetchFundData(fundChainId, fundAddress);
   } catch (e) {
     console.error("Failed fetching fund -> ", e);
   }
 };
 
-const isLoadingFetchFundData = computed(() => actionStateStore.isActionState("fetchFundDataAction", ActionState.Loading));
-
-console.log("isLoadingFetchFundData",isLoadingFetchFundData)
-// TODO: two watchers ? can we combine them?
-watch(
-  () => web3Store.chainId,
-  () => {
-    fetchFund();
-  },
+const isLoadingFetchFundData = computed(() =>
+  actionStateStore.isActionState("fetchFundDataAction", ActionState.Loading),
 );
-
-watch(
-  () => web3Store.web3,
-  (newWeb3: any) => {
-    console.warn("WEB3 changed:", newWeb3)
-  },
-);
+console.log("isLoadingFetchFundData", isLoadingFetchFundData.value);
 
 watch(
   () => accountStore.connectedWallet,
   (wallet: any) => {
-    console.warn("CONNECTED WALLET CHANGE, refresh user balances", wallet)
-    fundStore.fetchUserFundData(fundAddress);
+    console.warn("CONNECTED WALLET CHANGE, refresh user balances", wallet);
+    fundStore.fetchUserFundData(fundChainId, fundAddress);
   },
 );
 // Watch for route changes to reset the breadcrumbs
@@ -174,15 +154,6 @@ watch(
   },
 );
 
-const switchNetwork = async (chainId: string) => {
-  try {
-    await accountStore.switchNetwork(chainId)
-  } catch (error: any) {
-    // Redirect to the home page if the user cancels the network switch
-    router.push("/");
-  }
-}
-
 
 const fundDetailsRoute = computed(
   () => `/details/${fundChainId}-${tokenSymbol}-${fundAddress}`,
@@ -199,7 +170,6 @@ const prependBreadcrumb = computed(() => {
 
   return output;
 });
-
 
 const routes: IRoute[] = [
   {
@@ -226,19 +196,19 @@ const routes: IRoute[] = [
     to: `${fundDetailsRoute.value}/permissions`,
     exactMatch: true,
     title: "Permissions",
-    text:"",
+    text: "",
   },
   {
     to: `${fundDetailsRoute.value}/flows`,
     exactMatch: true,
     title: "Flows",
-    text:"",
+    text: "",
   },
   {
     to: `${fundDetailsRoute.value}/execution-app`,
     exactMatch: true,
     title: "Execution App",
-    text:"",
+    text: "",
   },
 ];
 
@@ -300,9 +270,9 @@ const computedRoutes = computed(() => {
   }
 }
 
-.link{
-  &:first-of-type{
-    .nav-link{
+.link {
+  &:first-of-type {
+    .nav-link {
       padding-left: 8px;
     }
   }
@@ -374,7 +344,7 @@ const computedRoutes = computed(() => {
   }
 }
 
-.breadcrumbs{
+.breadcrumbs {
   margin-bottom: 32px;
 }
 </style>

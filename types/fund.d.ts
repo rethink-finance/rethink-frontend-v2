@@ -36,6 +36,7 @@ export default interface IFund {
   originalFundSettings?: IFundSettings;
   // chain data is populated from the current network
   // the user has selected when fetching funds.
+  chainId: string;
   chainName: string;
   chainShort: string;
 

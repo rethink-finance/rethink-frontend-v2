@@ -20,18 +20,33 @@
         </div>
 
         <!-- TODO: move this into component that will show status, date, voting power -->
-        <div v-if="loadingProposalVoteSubmissions || activeUserVoteSubmission?.proposer" class="section-top__meta-row vote_submission">
+        <div
+          v-if="
+            loadingProposalVoteSubmissions || activeUserVoteSubmission?.proposer
+          "
+          class="section-top__meta-row vote_submission"
+        >
           Your Vote:
           <v-progress-circular
-            v-if="loadingProposalVoteSubmissions && !activeUserVoteSubmission?.proposer"
+            v-if="
+              loadingProposalVoteSubmissions &&
+                !activeUserVoteSubmission?.proposer
+            "
             class="d-flex"
             size="18"
             width="2"
             indeterminate
           />
-          <div v-else-if="activeUserVoteSubmission?.proposer" class="vote_submission">
+          <div
+            v-else-if="activeUserVoteSubmission?.proposer"
+            class="vote_submission"
+          >
             <Icon
-              :icon="VoteTypeIcon[activeUserVoteSubmission.submission_status as VoteType]"
+              :icon="
+                VoteTypeIcon[
+                  activeUserVoteSubmission.submission_status as VoteType
+                ]
+              "
               width="1.4rem"
               :class="`icon--${VoteTypeClass[activeUserVoteSubmission.submission_status as VoteType]}`"
             />
@@ -53,9 +68,7 @@
             <div class="meta-label">
               {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
             </div>
-            <ui-tooltip-click
-              :hide-after="4000"
-            >
+            <ui-tooltip-click :hide-after="4000">
               <Icon
                 icon="clarity:copy-line"
                 class="section-top__copy-icon"
@@ -93,7 +106,10 @@
             </template>
           </v-tooltip>
         </v-btn>
-        <UiNotification v-else-if="hasAccountVotedAlready && isProposalActive" class="notification">
+        <UiNotification
+          v-else-if="hasAccountVotedAlready && isProposalActive"
+          class="notification"
+        >
           You have voted on this proposal.
         </UiNotification>
 
@@ -165,7 +181,10 @@
             Voting Power: N/A (TODO)
           </div>
 
-          <v-radio-group v-model="selectedVoteOption" class="di-card__radio-group">
+          <v-radio-group
+            v-model="selectedVoteOption"
+            class="di-card__radio-group"
+          >
             <v-radio
               v-for="option in voteOptions"
               :key="option.value"
@@ -209,7 +228,8 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import {
   ProposalState,
   VoteType,
-  VoteTypeClass, VoteTypeIcon,
+  VoteTypeClass,
+  VoteTypeIcon,
   VoteTypeMapping,
   VoteTypeNumberMapping,
 } from "~/types/enums/governance_proposal";
@@ -217,7 +237,6 @@ import type IGovernanceProposal from "~/types/governance_proposal";
 import type IProposalVoteSubmission from "~/types/vote_submission";
 
 const emit = defineEmits(["vote-success"]);
-
 
 const props = defineProps({
   proposal: {
@@ -248,9 +267,21 @@ interface IMetaItem {
 }
 
 const voteOptions: { label: string; value: number; icon: string }[] = [
-  { label: VoteType.For, value: VoteTypeNumberMapping[VoteType.For], icon: VoteTypeIcon[VoteType.For] },
-  { label: VoteType.Against, value: VoteTypeNumberMapping[VoteType.Against], icon: VoteTypeIcon[VoteType.Against] },
-  { label: VoteType.Abstain, value: VoteTypeNumberMapping[VoteType.Abstain], icon: VoteTypeIcon[VoteType.Abstain] },
+  {
+    label: VoteType.For,
+    value: VoteTypeNumberMapping[VoteType.For],
+    icon: VoteTypeIcon[VoteType.For],
+  },
+  {
+    label: VoteType.Against,
+    value: VoteTypeNumberMapping[VoteType.Against],
+    icon: VoteTypeIcon[VoteType.Against],
+  },
+  {
+    label: VoteType.Abstain,
+    value: VoteTypeNumberMapping[VoteType.Abstain],
+    icon: VoteTypeIcon[VoteType.Abstain],
+  },
 ];
 const metaCopyTags = computed((): IMetaItem[] => {
   return [
@@ -279,78 +310,84 @@ const hasProposalExecuted = computed(() => {
 });
 
 const hasAccountVotedAlready = computed(() => {
-  return governanceProposalStore.hasAccountVoted(props.proposal.proposalId) ?? false;
+  return (
+    governanceProposalStore.hasAccountVoted(props.proposal.proposalId) ?? false
+  );
 });
 
 const isVoteDialogOpen = ref(false);
 const selectedVoteOption = ref<number>(-1);
 const copyText = (text: string) => {
   navigator.clipboard.writeText(text);
-}
+};
 
 const submitVote = async () => {
   loadingSubmitVote.value = true;
-  console.log("cast vote", props.proposal.proposalId, selectedVoteOption.value)
-  // const [gasPrice] = await web3Store.estimateGas(
-  //   {
-  //     from: fundStore.activeAccountAddress,
-  //     to: fundStore.fundGovernorContract.options.address,
-  //     data: fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).encodeABI(),
-  //   },
-  // );
-
+  console.log("cast vote", props.proposal.proposalId, selectedVoteOption.value);
   try {
-    await fundStore.fundGovernorContract.methods.castVote(props.proposal.proposalId, selectedVoteOption.value).send(
-      {
-        from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
-        gasPrice: "",
-      },
-    ).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("Your vote has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
-        toastStore.successToast("Vote successful.");
-
-        // update has voted
-        if (fundStore.activeAccountAddress !== undefined && props.proposal.proposalId) {
-          governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId] ??= {};
-          governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][fundStore.activeAccountAddress] = true;
-        }
-        // emit success event to refetch vote submissions
-        emit("vote-success", selectedVoteOption.value);
-      } else {
-        toastStore.errorToast(
-          "The vote transaction has failed. Please contact the Rethink Finance support.",
+    await fundStore.fundGovernorContract
+      .send("castVote", {}, props.proposal.proposalId, selectedVoteOption.value)
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "Your vote has been submitted. Please wait for it to be confirmed.",
         );
-      }
-      loadingSubmitVote.value = false;
-      closeVoteDialog();
-    }).on("error", (error: any) => {
-      console.error(error);
-      loadingSubmitVote.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-      closeVoteDialog();
-    })
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          toastStore.successToast("Vote successful.");
+
+          // update has voted
+          if (
+            fundStore.activeAccountAddress !== undefined &&
+            props.proposal.proposalId
+          ) {
+            governanceProposalStore.connectedAccountProposalsHasVoted[
+              props.proposal.proposalId
+            ] ??= {};
+            governanceProposalStore.connectedAccountProposalsHasVoted[
+              props.proposal.proposalId
+            ][fundStore.activeAccountAddress] = true;
+          }
+          // emit success event to refetch vote submissions
+          emit("vote-success", selectedVoteOption.value);
+        } else {
+          toastStore.errorToast(
+            "The vote transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loadingSubmitVote.value = false;
+        closeVoteDialog();
+      })
+      .on("error", (error: any) => {
+        console.error(error);
+        loadingSubmitVote.value = false;
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+        closeVoteDialog();
+      });
   } catch {
     loadingSubmitVote.value = false;
   }
-}
+};
 
 const executeProposal = async () => {
   loadingExecuteProposal.value = true;
-  console.log("execute Data:",
+  console.log(
+    "execute Data:",
     JSON.stringify(
       [
         props.proposal.targets,
         props.proposal.values,
         props.proposal.calldatas,
         props.proposal.descriptionHash,
-      ], null, 2,
+      ],
+      null,
+      2,
     ),
-  )
+  );
 
   const trxData = [
     props.proposal.targets,
@@ -358,85 +395,100 @@ const executeProposal = async () => {
     props.proposal.calldatas,
     props.proposal.descriptionHash,
   ];
-  // const [gasPrice] = await web3Store.estimateGas(
-  //   {
-  //     from: fundStore.activeAccountAddress,
-  //     to: fundStore.fundGovernorContract.options.address,
-  //     data: fundStore.fundGovernorContract.methods.execute(...trxData).encodeABI(),
-  //   },
-  // );
+
   try {
-    await fundStore.fundGovernorContract.methods.execute(...trxData).send(
-      {
-        from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
-        gasPrice: "",
-      },
-    ).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("Proposal execution has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
-        toastStore.successToast("Proposal execution successful.");
-      } else {
-        toastStore.errorToast(
-          "Proposal execution transaction has failed. Please contact the Rethink Finance support.",
+    await fundStore.fundGovernorContract
+      .send("execute", {}, ...trxData)
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "Proposal execution has been submitted. Please wait for it to be confirmed.",
         );
-      }
-      loadingExecuteProposal.value = false;
-    }).on("error", (error: any) => {
-      console.error(error);
-      loadingExecuteProposal.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
-    })
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          toastStore.successToast("Proposal execution successful.");
+        } else {
+          toastStore.errorToast(
+            "Proposal execution transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loadingExecuteProposal.value = false;
+      })
+      .on("error", (error: any) => {
+        console.error(error);
+        loadingExecuteProposal.value = false;
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      });
   } catch (error: any) {
     console.error("Error here proposal: ", error);
     loadingExecuteProposal.value = false;
   }
-}
+};
 const openVoteDialog = () => {
   isVoteDialogOpen.value = true;
-}
+};
 const closeVoteDialog = () => {
   isVoteDialogOpen.value = false;
-}
+};
 
 const voteOptionIcon = (voteType: number) => {
   return [
     "di-card__radio",
-    { [`di-card__radio--${VoteTypeClass[VoteTypeMapping[voteType]]}`]: voteType === selectedVoteOption.value },
+    {
+      [`di-card__radio--${VoteTypeClass[VoteTypeMapping[voteType]]}`]:
+        voteType === selectedVoteOption.value,
+    },
   ];
-}
-
+};
 
 const fetchHasVoted = () => {
-  if (fundStore.activeAccountAddress === undefined || !props.proposal.proposalId) {
+  const fundChainId = fundStore.fundChainId;
+  if (
+    fundStore.activeAccountAddress === undefined ||
+    !props.proposal.proposalId
+  ) {
     return;
   }
   props.proposal.hasVotedLoading = true;
 
   const activeAccountAddress = fundStore.activeAccountAddress;
-  governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId] ??= {};
+  governanceProposalStore.connectedAccountProposalsHasVoted[
+    props.proposal.proposalId
+  ] ??= {};
 
+  web3Store
+    .callWithRetry(
+      fundChainId,
+      () =>
+        fundStore.fundGovernorContract.methods
+          .hasVoted(props.proposal.proposalId, activeAccountAddress)
+          .call(),
+    )
+    .then((hasVoted: boolean) => {
+      governanceProposalStore.connectedAccountProposalsHasVoted[
+        props.proposal.proposalId
+      ][activeAccountAddress] = hasVoted;
+    })
+    .finally(() => {
+      props.proposal.hasVotedLoading = false;
+    });
+};
 
-  web3Store.callWithRetry(() =>
-    fundStore.fundGovernorContract.methods.hasVoted(props.proposal.proposalId, activeAccountAddress).call(),
-  ).then((hasVoted: boolean) => {
-    governanceProposalStore.connectedAccountProposalsHasVoted[props.proposal.proposalId][activeAccountAddress] = hasVoted;
-  }).finally(() => {
-    props.proposal.hasVotedLoading = false;
-  });
-}
-
-watch(() => props.proposal.proposalId, (newProposalId) => {
-  fetchHasVoted();
-}, { immediate: true });
+watch(
+  () => props.proposal.proposalId,
+  (newProposalId) => {
+    fetchHasVoted();
+  },
+  { immediate: true },
+);
 
 onMounted(() => {
   fetchHasVoted();
 });
-
 </script>
 
 <style scoped lang="scss">
@@ -615,7 +667,7 @@ onMounted(() => {
   color: $color-steel-blue;
   gap: 0.25rem !important;
 }
-.icon{
+.icon {
   &--abstain {
     color: $color-warning;
   }
@@ -627,13 +679,13 @@ onMounted(() => {
   }
 }
 
-.buttons-container{
+.buttons-container {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   justify-content: center;
 }
-.notification{
+.notification {
   margin: 0;
 }
 </style>

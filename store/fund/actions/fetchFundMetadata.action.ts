@@ -8,16 +8,33 @@ import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ClockMode } from "~/types/enums/clock_mode";
 import type IToken from "~/types/token";
 import { ERC20 } from "assets/contracts/ERC20";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import { parseFundSettings } from "~/composables/fund/parseFundSettings";
+import { parseClockMode } from "~/composables/fund/parseClockMode";
+import { networksMap } from "~/store/web3/networksMap";
 
-export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFund> => {
+export const fetchFundMetaDataAction = async (
+  fundChainId: string,
+  fundAddress: string,
+): Promise<IFund> => {
+  const web3Store = useWeb3Store();
   const fundStore = useFundStore();
-  const rethinkReaderContract = fundStore.rethinkReaderContract;
-
+  const rethinkReaderContract =
+    web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
   try {
-    const fundNavMetaData = await fundStore.callWithRetry(
-      () => rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
+    console.log(
+      "fundNavMetaData000",
+      fundAddress,
+      fundChainId,
+      rethinkReaderContract,
     );
 
+    const fundNavMetaData = await web3Store.callWithRetry(
+      fundChainId,
+      () =>
+        rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
+    );
+    console.log("fundNavMetaData", fundNavMetaData);
     const {
       startTime,
       totalDepositBal,
@@ -52,34 +69,44 @@ export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFun
 
     fundSettings.performancePeriod = feePerformancePeriod;
     fundSettings.managementPeriod = feeManagePeriod;
+    console.warn("fundSettings: ", fundSettings);
 
-    const parsedFundSettings: IFundSettings =
-      fundStore.parseFundSettings(fundSettings);
-
-    const parsedClockMode = fundStore.parseClockMode(clockMode);
+    const parsedFundSettings: IFundSettings = parseFundSettings(fundSettings);
+    const parsedClockMode = parseClockMode(clockMode);
     console.log("parsedClockMode: ", parsedClockMode);
     console.log("parsedFundSettings: ", parsedFundSettings);
     console.log("fundGovernanceTokenSupply: ", fundGovernanceTokenSupply);
 
     // TODO fundGovernanceTokenSupply is wrong from reader contract, until it is fixed and redeployed there
     //   manually fetch governance token total supply here. Then remove this line.
-    const fundGovernanceTokenContract = new fundStore.web3.eth.Contract(ERC20, parsedFundSettings.governanceToken);
-    const fundGovernanceTokenSupplyFixed = await fundGovernanceTokenContract.methods
-      .totalSupply()
-      .call();
-    console.log("fundGovernanceTokenSupplyFixed: ", fundGovernanceTokenSupplyFixed);
+    const fundGovernanceTokenContract = web3Store.getCustomContract(
+      fundChainId,
+      ERC20,
+      parsedFundSettings?.governanceToken ?? "",
+    );
+    const fundGovernanceTokenSupplyFixed =
+      await web3Store.callWithRetry(
+        fundChainId,
+        () => fundGovernanceTokenContract.methods.totalSupply().call(),
+      );
+    console.log(
+      "fundGovernanceTokenSupplyFixed: ",
+      fundGovernanceTokenSupplyFixed,
+    );
 
     const quorumVotes: bigint = ((((fundGovernanceTokenSupplyFixed as bigint) *
       quorumNumerator) as bigint) / quorumDenominator) as bigint;
     const votingUnit =
       parsedClockMode.mode === ClockMode.BlockNumber ? "block" : "second";
 
+    const fundNetwork = networksMap[fundChainId];
     const fund: IFund = {
       // Original fund settings
       originalFundSettings: parsedFundSettings,
       lastNAVUpdateTotalNAV: undefined,
-      chainName: fundStore.web3Store.chainName,
-      chainShort: fundStore.web3Store.chainShort,
+      chainId: fundChainId,
+      chainName: fundNetwork.chainName,
+      chainShort: fundNetwork.chainShort,
       address: parsedFundSettings.fundAddress || "",
       title: parsedFundSettings.fundName || "N/A",
       clockMode: parsedClockMode,
@@ -171,7 +198,7 @@ export const fetchFundMetaDataAction = async (fundAddress: string): Promise<IFun
       fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
       fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
     }
-    fundStore.fund = fund;
+    fundStore.chainFunds[fundChainId][fundAddress] = fund;
     return fund;
   } catch (error) {
     console.error("Error in promises: ", error, "fund: ", fundAddress);
