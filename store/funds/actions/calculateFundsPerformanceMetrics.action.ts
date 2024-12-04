@@ -18,10 +18,10 @@ export async function calculateFundsPerformanceMetricsAction(
           const baseTokenDecimals = fund.baseToken.decimals;
           const cumulativeReturnPercent = fundLastNavUpdateExists
             ? await calculateCumulativeReturnPercent(
-                fund.totalDepositBalance,
-                fund.lastNAVUpdateTotalNAV || 0n,
-                baseTokenDecimals,
-              )
+              fund.totalDepositBalance,
+              fund.lastNAVUpdateTotalNAV || 0n,
+              baseTokenDecimals,
+            )
             : 0;
 
           fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists
@@ -30,6 +30,7 @@ export async function calculateFundsPerformanceMetricsAction(
           fund.cumulativeReturnPercent = cumulativeReturnPercent;
           fund.navUpdates = fundNAVUpdates;
           fund.isNavUpdatesLoading = false;
+          fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates);
         }
       } catch (error) {
         console.error(
