@@ -197,14 +197,7 @@ export const useFundStore = defineStore({
     },
     fundTotalNAVFormattedShort(): string {
       if (!this.fund?.address) return "N/A";
-      const totalNAV = Number(
-        formatTokenValue(
-          this.fundTotalNAV,
-          this.fund?.baseToken.decimals,
-          false,
-        ),
-      );
-      return formatNumberShort(totalNAV) + " " + this.fund?.baseToken.symbol;
+      return this.getFormattedBaseTokenValue(this.fundTotalNAV)
     },
     selectedFundSlug(state: IState): string {
       const chainId = this.web3Store?.chainId || "";

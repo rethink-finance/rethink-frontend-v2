@@ -17,8 +17,6 @@
       :grow-column2="true"
       :title3="formatPeriod(fund?.performancePeriod)"
       subtitle3="Fee Period (Days)"
-      :title4="formatFee(fund.performaceHurdleRateBps)"
-      subtitle4="Hurdle Rate"
       class="main_grid__item"
     />
     <UiDataRowCard

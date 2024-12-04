@@ -4,7 +4,7 @@
       Rethink Finance | Run Funds On-Chain
     </h3>
     <div v-if="isErrorFetchFundsData" class="w-100 d-flex justify-center flex-column">
-      <h3>Oops, something went wrong while getting funds data</h3>
+      <h3>Oops, something went wrong while getting OIVs data</h3>
       <span>
         Maybe the current RPC (<a :href="web3Store.currentRPC">{{ web3Store.currentRPC }}</a>) is down?
       </span>

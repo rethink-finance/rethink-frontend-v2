@@ -5,6 +5,7 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { NAVExecutor } from "assets/contracts/NAVExecutor";
 
 
 export const decodeProposalCallData = (
@@ -17,6 +18,14 @@ export const decodeProposalCallData = (
   const signature = calldata.slice(0, 10);
   const encodedParameters = calldata.slice(10);
   const functionAbi = functionSignaturesMap[signature];
+  const defaultDecodedCalldata = {
+    functionName: undefined,
+    contractName: undefined,
+    calldataType: undefined,
+    calldataDecoded: undefined,
+    calldata,
+  };
+  console.log("sig", signature, functionAbi)
 
   if (!functionAbi?.function?.name) {
     console.warn(
@@ -24,7 +33,7 @@ export const decodeProposalCallData = (
       signature,
       functionAbi,
     );
-    return undefined;
+    return defaultDecodedCalldata;
   }
   const functionAbiInputs = functionAbi?.function?.inputs as AbiInput[];
 
@@ -65,7 +74,7 @@ export const decodeProposalCallData = (
     functionSignaturesMap[signature],
   );
 
-  return undefined;
+  return defaultDecodedCalldata;
 };
 
 /**
@@ -89,6 +98,10 @@ const contractsToExtractFunctionSignatures = [
   {
     abi: ZodiacRoles.abi,
     name: "ZodiacRoles",
+  },
+  {
+    abi: NAVExecutor.abi,
+    name: "NAVExecutor",
   },
 ];
 

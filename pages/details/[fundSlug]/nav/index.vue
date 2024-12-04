@@ -23,32 +23,40 @@
           </v-btn>
         </nuxt-link>
 
-        <ui-tooltip-click
-          :hide-after="3000"
-          :show-tooltip="!accountStore.isConnected"
-        >
-          <v-btn
-            :disabled="isLoadingPostUpdateNAV"
-            class="bg-primary text-secondary"
-            @click="accountStore.isConnected ? fundStore.postUpdateNAV() : null"
+
+        <div class="tooltip-wrapper">
+          <v-tooltip
+            activator="parent"
+            location="bottom"
+            :disabled="isUsingZodiacPilotExtension"
           >
-            <template #prepend>
-              <v-progress-circular
-                v-if="isLoadingPostUpdateNAV"
-                class="d-flex"
-                size="20"
-                width="3"
-                indeterminate
-              />
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                :disabled="!isUsingZodiacPilotExtension || isLoadingPostUpdateNAV"
+                class="bg-primary text-secondary"
+                @click="accountStore.isConnected ? fundStore.postUpdateNAV() : null"
+              >
+                <template #prepend>
+                  <v-progress-circular
+                    v-if="isLoadingPostUpdateNAV"
+                    class="d-flex"
+                    size="20"
+                    width="3"
+                    indeterminate
+                  />
+                </template>
+                Update NAV
+              </v-btn>
+
             </template>
-            Update NAV
-          </v-btn>
 
-          <template #tooltip>
-            Connect your wallet to delegate your votes
-          </template>
+            <template #default>
+              Switch to the Zodiac Pilot Extension to Update NAV.
+            </template>
 
-        </ui-tooltip-click>
+          </v-tooltip>
+        </div>
       </div>
     </UiHeader>
 
@@ -107,6 +115,7 @@ const actionStateStore = useActionStateStore();
 
 const fund = useAttrs().fund as IFund;
 const {
+  isUsingZodiacPilotExtension,
   selectedFundSlug,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,

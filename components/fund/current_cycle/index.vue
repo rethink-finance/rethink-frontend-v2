@@ -80,17 +80,17 @@
 </template>
 
 <script setup lang="ts">
-import { ethers, FixedNumber, TypedDataEncoder } from "ethers";
+import { ethers, FixedNumber } from "ethers";
 import { computed, ref } from "vue";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type IFund from "~/types/fund";
 
+import { createDelegateBySigMessage, encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
-import { createDelegateBySigMessage, encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 const emit = defineEmits(["deposit-success"]);
 
 const web3Store = useWeb3Store();
@@ -154,7 +154,7 @@ const depositDisabledTooltipText = computed(() => {
     return "Wait for settlement or cancel the deposit request."
   }
   if (!fundStore.isUserWalletWhitelisted) {
-    return "Your wallet address is not whitelisted to allow deposits into this fund."
+    return "Your wallet address is not whitelisted to allow deposits into this OIV."
   }
   return ""
 });
@@ -165,13 +165,13 @@ const redemptionDisabledTooltipText = computed(() => {
     return "There is no redemption request."
   }
   if (fundUserData.value.fundTokenBalance < redemptionRequestAmount) {
-    return "Not enough fund tokens to process the redemptions request."
+    return "Not enough OIV tokens to process the redemptions request."
   }
   if (shouldUserWaitSettlementOrCancelRedemption.value) {
     return "Wait for settlement or cancel the redemption request."
   }
 
-  // Check if there is even enough liquidity in the fund contract to redeem the requested amount.
+  // Check if there is even enough liquidity in the OIV contract to redeem the requested amount.
   const fundContractBaseTokenBalance = fundStore.fund?.fundContractBaseTokenBalance || 0n;
   // Get the last NAV update exchange rate.
   const lastNAVExchangeRate = FixedNumber.fromString(fundStore.fundToBaseTokenExchangeRate.toString());
@@ -188,10 +188,10 @@ const redemptionDisabledTooltipText = computed(() => {
   // console.log("NSS fundContractBaseTokenBalanceFN", fundContractBaseTokenBalanceFN.toString())
   if (fundContractBaseTokenBalanceFN.lt(redemptionRequestAmountInBaseFN)) {
     // Check if there is enough base token liquidity to perform withdrawal.
-    return "Not enough liquidity in the fund contract."
+    return "Not enough liquidity in the OIV contract."
   }
   if (!fundStore.isUserWalletWhitelisted) {
-    return "Your wallet address is not whitelisted to allow deposits into this fund."
+    return "Your wallet address is not whitelisted to allow deposits into this OIV."
   }
   return ""
 });
@@ -261,11 +261,11 @@ const signDepositAndDelegateBySigTransaction = async () => {
 
 const deposit = async () => {
   if (!fundStore.activeAccountAddress) {
-    toastStore.errorToast("Connect your wallet to deposit tokens to the fund.")
+    toastStore.errorToast("Connect your wallet to deposit tokens to the OIV.")
     return;
   }
   if (!fundStore.fund) {
-    toastStore.errorToast("Fund data is missing.")
+    toastStore.errorToast("OIV data is missing.")
     return;
   }
   if (!userDepositRequest?.value?.amount) {
@@ -334,11 +334,11 @@ const deposit = async () => {
 
 const redeem = async () => {
   if (!fundStore.activeAccountAddress) {
-    toastStore.errorToast("Connect your wallet to redeem tokens from the fund.")
+    toastStore.errorToast("Connect your wallet to redeem tokens from the OIV.")
     return;
   }
   if (!fundStore.fund) {
-    toastStore.errorToast("Fund data is missing.")
+    toastStore.errorToast("OIV data is missing.")
     return;
   }
   if (!userRedemptionRequest?.value?.amount) {

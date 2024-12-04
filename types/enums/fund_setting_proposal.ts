@@ -40,6 +40,7 @@ export interface IProposal {
   proposalTitle: string;
   proposalDescription: string;
   whitelist: string;
+  isWhitelistedDeposits: boolean;
 }
 
 export interface IWhitelist {
@@ -63,7 +64,7 @@ export interface IField {
   isToggleOn?: boolean;
   fields?: IField[];
   title?: string;
-  value?: string;
+  value?: string | boolean;
 }
 
 export interface IFieldGroup {
@@ -127,10 +128,10 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       cols: 12,
     },
     {
-      label: "Fund DAO Name",
+      label: "OIV DAO Name",
       key: "fundDAOName",
       type: InputType.Text,
-      placeholder: "E.g. Fund DAO Name",
+      placeholder: "E.g. OIV DAO Name",
       rules: [formRules.required],
       isEditable: false,
       cols: 6,
@@ -267,16 +268,6 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
         {
           label: "Performance Fee Period (Days)",
           key: "profitManagementFeePeriod",
-          type: InputType.Number,
-          placeholder: "E.g. 0",
-          min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
-          isEditable: true,
-          cols: 12,
-        },
-        {
-          label: "Hurdle Rate (%)",
-          key: "hurdleRate",
           type: InputType.Number,
           placeholder: "E.g. 0",
           min: 0,

@@ -184,29 +184,42 @@ const valueDetails = computed({
   },
 });
 
-const allFieldsValid = computed(() =>
-  props.fields.every((field: any) => {
-    // Get field value.
+// Reusable validation logic
+const validateFields = () => {
+  // Check if the value is valid for all rules.
+  // If there are no rules, the field is valid.
+  return props.fields.every((field: any) => {
     const value = valueDetails.value[field.key];
-
-    // Check if the value is valid for all rules.
-    // If there are no rules, the field is valid.
     return (
       field?.rules?.every((rule: any) => {
         // we need to check if a value is an array
         // if it is, we need to check each value in the array
         if (Array.isArray(value)) {
-          return value.every((val) => {
-            return rule(val) === true;
-          });
+          return value.every((val) => rule(val) === true);
         }
 
         return rule(value) === true;
       }) ?? true
     );
-  }),
+  });
+};
+
+// Initialize validation on mount
+onMounted(() => {
+  valueDetails.value.isValid = validateFields();
+});
+
+// Watch for changes in fields and modelValue
+watch(
+  [() => props.fields, () => props.modelValue],
+  () => {
+    valueDetails.value.isValid = validateFields();
+    emit("validate", valueDetails.value);
+  },
+  { deep: true, immediate: true },
 );
 
+// Methods for adding/removing array fields
 const addNewField = (field: any) => {
   const type = field.type as InputType;
   const defaultValue =
@@ -218,27 +231,10 @@ const addNewField = (field: any) => {
 };
 
 const removeField = (field: any, index: number) => {
-  // don't allow to delete if it's the last item
-  const isLastItem = valueDetails.value[field.key].length === 1;
-  if (isLastItem) {
-    return;
+  if (valueDetails.value[field.key].length > 1) {
+    valueDetails.value[field.key].splice(index, 1);
   }
-
-  // Remove the field at the given index
-  valueDetails.value[field.key].splice(index, 1);
 };
-
-// Check the validity of each field.
-watch(
-  valueDetails,
-  () => {
-    valueDetails.value.isValid = allFieldsValid.value;
-
-    console.log("valueDetails: ", valueDetails.value);
-    emit("validate", valueDetails.value);
-  },
-  { deep: true },
-);
 </script>
 
 <style lang="scss" scoped>

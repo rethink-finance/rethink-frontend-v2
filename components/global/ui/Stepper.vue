@@ -6,25 +6,28 @@
         <slot name="subtitle" />
       </div>
 
-      <v-btn
-        class="button--primary"
-        :type="isLastStep ? 'submit' : 'button'"
-        :loading="isSubmitLoading"
-        @click="handleButtonClick"
-        :disabled="isLastStep && !accountStore.isConnected"
-      >
-        {{ isLastStep ? submitLabel : "Next" }}
-        <v-tooltip
-          v-if="isLastStep && !accountStore.isConnected"
-          :model-value="true"
-          activator="parent"
-          location="top"
-          @update:model-value="true"
+      <div class="buttons">
+        <slot name="buttons" />
+        <v-btn
+          class="button--primary"
+          :type="isLastStep ? 'submit' : 'button'"
+          :loading="isSubmitLoading"
+          :disabled="isLastStep && !accountStore.isConnected"
+          @click="handleButtonClick"
         >
-        <!-- class="tooltip" -->
-          Connect your wallet to create a proposal.
-        </v-tooltip>
-      </v-btn>
+          {{ isLastStep ? submitLabel : "Next" }}
+          <v-tooltip
+            v-if="isLastStep && !accountStore.isConnected"
+            :model-value="true"
+            activator="parent"
+            location="top"
+            @update:model-value="true"
+          >
+            <!-- class="tooltip" -->
+            Connect your wallet to create a proposal.
+          </v-tooltip>
+        </v-btn>
+      </div>
     </UiHeader>
 
     <div class="stepper">
@@ -113,7 +116,7 @@
                 :fields="fields"
                 :title="step.formTitle"
                 :text="step.formText"
-                @validate="validate"
+                @validate="checkIfEveryFieldIsValid"
               />
             </v-row>
           </div>
@@ -291,7 +294,7 @@ const deleteSubstep = (mainStep: any, index: number) => {
 };
 
 // check if all main steps and substeps are valid
-const validate = () => {
+const checkIfEveryFieldIsValid = () => {
   const isValid = props.entry.map((step) => {
     return step.steps.every((substep: any) => {
       return substep.isValid === true;
@@ -365,6 +368,12 @@ const nextStep = () => {
       padding: 20px;
     }
   }
+}
+
+.buttons{
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
 .main-step {
@@ -478,6 +487,7 @@ const nextStep = () => {
     padding: 0.5rem;
     width: 100%;
     background-color: $color-gray-light-transparent;
+    word-break: break-all;
   }
 
   &__add-new-step {

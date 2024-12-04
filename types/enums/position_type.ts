@@ -362,7 +362,7 @@ export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFields
       },
       {
         label: "Return Index",
-        key: "returnIndex",
+        key: "returnValIndex",
         type: InputType.Number,
         min: 0,
         placeholder: "E.g. 1",

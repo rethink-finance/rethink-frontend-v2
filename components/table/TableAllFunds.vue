@@ -6,7 +6,7 @@
     hover
     :items="items"
     :loading="loading && items.length === 0"
-    loading-text="Loading Funds"
+    loading-text="Loading OIVs"
     items-per-page="-1"
     @click:row="navigateFundDetails"
   >
@@ -37,15 +37,13 @@
         />
         <template v-else>
           {{
-            formatNumberShort(
-              formatTokenValue(
-                item.lastNAVUpdateTotalNAV,
-                item.baseToken.decimals,
-                false,
-              ),
-            ) +
-            " " +
-            item.baseToken.symbol
+            formatTokenValue(
+              item.lastNAVUpdateTotalNAV,
+              item.baseToken.decimals,
+            )
+              +
+              " " +
+              item.baseToken.symbol
           }}
         </template>
       </div>
@@ -76,7 +74,7 @@
   </v-data-table>
 
   <div v-else-if="items.length === 0 && !loading" class="nav_entries__no_data">
-    No Funds available.
+    No OIVs available.
   </div>
 </template>
 
@@ -85,7 +83,6 @@ import { Icon } from "@iconify/vue/dist/iconify.js";
 import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
 import FundNameCell from "./components/FundNameCell.vue";
 import {
-  formatNumberShort,
   formatPercent,
   formatTokenValue,
 } from "~/composables/formatters";
@@ -109,7 +106,7 @@ const props = defineProps({
 
 const headers: any = computed(() => [
   {
-    title: "Fund Name",
+    title: "OIV Name",
     key: "name",
     sortable: false,
     width: 200,

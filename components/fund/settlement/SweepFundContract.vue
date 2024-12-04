@@ -6,12 +6,12 @@
           Transfer Base Asset to the Custody Contract
         </div>
         <div class="transfer__subtitle">
-          Transfer any excess base asset amount from the fund contract back to the custody contract.
+          Transfer any excess base asset amount from the OIV contract back to the custody contract.
         </div>
       </div>
 
       <FundSettlementAlert v-if="!isConnected">
-        Connect your wallet to sweep the fund contract.
+        Connect your wallet to sweep the OIV contract.
       </FundSettlementAlert>
       <div class="buttons_container">
         <div>
@@ -32,7 +32,7 @@
                     indeterminate
                   />
                 </template>
-                Sweep Fund Contract
+                Sweep OIV Contract
               </v-btn>
             </template>
             <template #default>
@@ -65,10 +65,10 @@ const isSweepContractDisabled = computed(() => {
 });
 const sweepContractTooltipText = computed(() => {
   if (!isConnected.value) {
-    return "Connect your wallet to sweep the fund contract.";
+    return "Connect your wallet to sweep the OIV contract.";
   } else if (!fundContractBaseTokenBalance.value) {
-    // TODO actually we need to check if there are excess funds to sweep.
-    return "Currently there are no base assets in the fund contract to sweep.";
+    // TODO actually we need to check if there are excess OIVs to sweep.
+    return "Currently there are no base assets in the OIV contract to sweep.";
   }
   return ""
 });
