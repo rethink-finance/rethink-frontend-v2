@@ -1092,9 +1092,7 @@ export default defineComponent({
   overflow: auto;
 
   :deep(.v-table__wrapper) {
-    @include customScrollbar;
-    padding: 0;
-    margin: 0;
+    @include customScrollbar(0);
   }
 
   :deep(.v-data-table__tr) {

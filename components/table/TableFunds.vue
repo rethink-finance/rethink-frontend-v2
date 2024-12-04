@@ -80,8 +80,6 @@
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue/dist/iconify.js";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatPercent,
   formatTokenValue,
@@ -89,6 +87,8 @@ import {
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 
 const web3Store = useWeb3Store();
 const router = useRouter();
@@ -190,7 +190,8 @@ const navigateFundDetails = (event: any, row: any) => {
   border-color: $color-bg-transparent;
   // add table max height
   :deep(.v-table__wrapper) {
-    @include customScrollbar;
+    max-height: 500px;
+    @include customScrollbar(0);
 
     .v-data-table__tr {
       height: 72px;
