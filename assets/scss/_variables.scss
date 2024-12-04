@@ -152,10 +152,11 @@ $default-border-properties: (
   #{$position}: 1px solid $border-color;
 }
 
-@mixin customScrollbar {
+// include offset as a argument
+@mixin customScrollbar($offset: 10px) {
     // offset the scrollbar to the left
-    padding-right: 10px;
-    margin-right: -10px;
+    padding-right: $offset;
+    margin-right: -$offset;
     
     /* Custom scrollbar styles */
     &::-webkit-scrollbar {
