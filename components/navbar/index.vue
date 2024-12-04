@@ -51,7 +51,9 @@
         <ClientOnly>
           <div class="d-flex">
             <v-select
+              v-if="accountStore.isConnected"
               v-model="selectedChainId"
+              v-model:menu="isSelectInputActive"
               class="select_network"
               density="compact"
               :bg-color="selectedChainId ? '' : 'error'"
@@ -62,12 +64,12 @@
             >
               <template #selection="{ item }">
                 <Icon
-                  :icon="item.raw.icon.name"
-                  :color="item.raw.icon.color"
+                  :icon="item.raw.icon?.name ?? 'octicon:question-16'"
+                  :color="item.raw.icon?.color"
                   class="select_item__icon mr-2"
                 />
                 <v-list-item-title>
-                  {{ item.raw.chainName }}
+                  {{ item.raw.chainName ?? item.raw }}
                 </v-list-item-title>
               </template>
               <template #item="{ item }">
@@ -77,8 +79,8 @@
                   @click="switchNetwork(item.raw.chainId)"
                 >
                   <Icon
-                    :icon="item.raw.icon.name"
-                    :color="item.raw.icon.color"
+                    :icon="item.raw.icon?.name"
+                    :color="item.raw.icon?.color"
                     class="select_item__icon"
                   />
                   <div>
@@ -144,7 +146,6 @@
 
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
-import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type INetwork from "~/types/network";
 import type IRoute from "~/types/route";
@@ -188,21 +189,22 @@ const routes : IRoute[] = [
     color: "var(--color-light-subtitle)",
   },
 ]
-const selectedChainId = ref(web3Store.chainId);
+const selectedChainId = ref(accountStore.connectedWalletChainId);
 const networks: INetwork[] = web3Store.networks;
 
-watch(() => web3Store.chainId, (newVal, oldVal) => {
-  console.log(`Chain ID changed from ${oldVal} to ${newVal}`);
-  // Perform additional actions when chainId changes
+watch(() => accountStore.connectedWalletChainId, (newVal, oldVal) => {
+  console.log(`Connected Wallet Cain ID changed from ${oldVal} to ${newVal}`);
   selectedChainId.value = newVal || "";
 });
 
+const isSelectInputActive = ref(false);
 const switchNetwork = async (chainId: string) => {
   try {
     await accountStore.switchNetwork(chainId)
+    isSelectInputActive.value = false;
   } catch (error: any) {
     // Revert the selected value to the previously selected chain.
-    selectedChainId.value = web3Store.chainId;
+    // selectedChainId.value = accountStore.connectedWalletChainId;
   }
 }
 const isPathActive = (path: string = "", exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);

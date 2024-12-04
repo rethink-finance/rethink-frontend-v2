@@ -6,21 +6,29 @@ import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import type INAVMethod from "~/types/nav_method";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 // Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
 const excludeNAVDetails: boolean = true;
 
+// TODO rename to fetchAllNavMethodsAction
 export async function fetchFundsNAVDataAction(
+  chainId: string,
   fundsInfoArrays: any[],
 ): Promise<any> {
-  const fundsStore = await useFundsStore();
+  console.log("start calculating fund nav data ", chainId);
+  const fundsStore = useFundsStore();
+  const web3Store = useWeb3Store();
   const fundAddresses: string[] = fundsInfoArrays[0];
 
-  const allFundsNavData = await fundsStore.callWithRetry(() =>
-    fundsStore.rethinkReaderContract.methods
-      .getFundsNAVData(fundAddresses)
-      .call(),
-  );
+  const rethinkReaderContract =
+    web3Store.chainContracts[chainId]?.rethinkReaderContract;
+  if (!rethinkReaderContract) {
+    throw new Error(`No reader contract found for chainId: ${chainId}`);
+  }
+  const allFundsNavData = await rethinkReaderContract.methods
+    .getFundsNAVData(fundAddresses)
+    .call();
 
   const allMethods: INAVMethod[] = [];
   fundsStore.navMethodDetailsHashToFundAddress = {};
@@ -29,6 +37,7 @@ export async function fetchFundsNAVDataAction(
   for (const [fundIndex, fundNavData] of allFundsNavData.entries()) {
     const fundAddress = fundAddresses[fundIndex];
     await processFundNavData(
+      chainId,
       fundNavData,
       fundAddress,
       fundIndex,
@@ -49,9 +58,11 @@ export async function fetchFundsNAVDataAction(
 
   fundsStore.allNavMethods = allMethods;
   fundsStore.uniqueNavMethods = uniqueMethods;
+  console.log("done calculating fund nav data ", chainId);
 }
 
 async function processFundNavData(
+  chainId: string, // the type of FundNavData
   fundNAVData: any, // the type of FundNavData
   fundAddress: string,
   fundIndex: number,
@@ -59,28 +70,32 @@ async function processFundNavData(
   fundsInfoArrays: any[],
   allMethods: INAVMethod[],
 ) {
-  const fund = fundsStore.funds[fundIndex];
-  fundsStore.fundNAVUpdates[fundAddress] = [];
+  const web3Store = useWeb3Store();
+
+  const fund = fundsStore.chainFunds[chainId][fundIndex];
+  fundsStore.chainFundNAVUpdates[chainId][fundAddress] = [];
 
   if (!fundNAVData.encodedNavUpdate?.length) return;
-
-  const fundContract = new fundsStore.web3.eth.Contract(
+  const fundContract = web3Store.getCustomContract(
+    chainId,
     GovernableFund.abi,
     fundAddress,
   );
 
-  const navUpdates =
-    await fundsStore.fundStore.parseFundNAVUpdates(
-      fundNAVData,
-      fundAddress,
-      fundContract,
-    );
+  const navUpdates = await fundsStore.fundStore.parseFundNAVUpdates(
+    chainId,
+    fundNAVData,
+    fundAddress,
+    fundContract,
+  );
 
-  fundsStore.fundNAVUpdates[fundAddress] = navUpdates;
+  fundsStore.chainFundNAVUpdates[chainId][fundAddress] = navUpdates;
   const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
   if (fund) {
-    fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(lastNavUpdate?.entries);
+    fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
+      lastNavUpdate?.entries,
+    );
 
     fund.lastNAVUpdateTotalNAV = navUpdates.length
       ? lastNavUpdate.totalNAV || 0n
@@ -109,7 +124,7 @@ async function processFundNavData(
         if (
           excludeNAVDetails &&
           parsedNavMethod.detailsHash &&
-          excludeNAVDetailsHashes[fundsStore.web3Store.chainId].includes(
+          excludeNAVDetailsHashes[chainId].includes(
             parsedNavMethod.detailsHash,
           )
         ) {

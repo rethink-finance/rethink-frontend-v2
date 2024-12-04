@@ -192,3 +192,55 @@ export const calculateCumulativeReturnPercent = (
     return undefined;
   }
 };
+
+export const calculateSharpeRatio = (
+  fundNAVUpdates: any,
+): number | undefined => {
+  try {
+    // 1. step: calculate excess returns
+    const excessReturns = calculateExcessReturns(fundNAVUpdates);
+
+    if (excessReturns.length === 0) return undefined;
+
+    // 2. step: calculate standard deviation of excess returns
+    const standardDeviation = calculateStandardDeviation(excessReturns);
+
+    return Number(standardDeviation?.toFixed(2));
+  } catch (error) {
+
+    console.log("Error calculating Sharpe Ratio: ", error);
+    return undefined;
+  }
+}
+
+
+export const calculateStandardDeviation = (values: number[]): number | undefined => {
+  if (values.length === 0) return undefined;
+
+  // Calculate the mean (average)
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+
+  // Calculate the variance
+  const variance =
+    values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / values.length;
+
+  // Return the standard deviation
+  return Math.sqrt(variance);
+};
+
+
+export const calculateExcessReturns = (fundNavUpdates: any): number[] => {
+  const excessReturns: number[] = [];
+
+  for (const navUpdate of fundNavUpdates) {
+    const totalNavAtUpdate = Number(navUpdate?.navParts?.totalNAV) || undefined;
+    const totalDepositBalAtUpdate = Number(navUpdate?.navParts?.baseAssetSafeBal || undefined);
+
+    if (totalNavAtUpdate && totalDepositBalAtUpdate) {
+      const excessReturn = totalNavAtUpdate / totalDepositBalAtUpdate;
+      excessReturns.push(excessReturn);
+    }
+  }
+
+  return excessReturns;
+}

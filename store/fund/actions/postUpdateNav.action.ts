@@ -1,11 +1,12 @@
 import { useFundStore } from "../fund.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
-export const postUpdateNAVAction = async (
-): Promise<any> => {
+export const postUpdateNAVAction = async (): Promise<any> => {
+  const web3Store = useWeb3Store();
   const fundStore = useFundStore();
 
   try {
-    const navExecutorAddr = fundStore.web3Store.NAVExecutorBeaconProxyAddress;
+    const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress(fundStore.selectedFundChain);
 
     if (!navExecutorAddr) {
       fundStore.toastStore.errorToast(
@@ -13,21 +14,9 @@ export const postUpdateNAVAction = async (
       );
       return;
     }
-    // const [gasPrice, gasEstimate] = await this.web3Store.estimateGas(
-    //   {
-    //     from: this.activeAccountAddress,
-    //     to: this.fundContract.options.address,
-    //     data: this.fundContract.methods.executeNAVUpdate(navExecutorAddr).encodeABI(),
-    //   },
-    // );
 
-    return await fundStore.fundContract.methods
-      .executeNAVUpdate(navExecutorAddr)
-      .send({
-        from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
-        gasPrice: "",
-      })
+    return await fundStore.fundContract
+      .send("executeNAVUpdate", {}, navExecutorAddr)
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         fundStore.toastStore.warningToast(
@@ -52,7 +41,7 @@ export const postUpdateNAVAction = async (
           "There has been an error. Please contact the Rethink Finance support.",
         );
         throw error;
-      })
+      });
   } catch (error) {
     console.error("Error updating NAV: ", error);
     fundStore.toastStore.errorToast(
@@ -60,4 +49,4 @@ export const postUpdateNAVAction = async (
     );
     throw error;
   }
-}
+};

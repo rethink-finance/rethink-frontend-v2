@@ -416,10 +416,10 @@ const addMethod = () => {
       try {
         method.otcTxHashes = method.otcTxHashes.split(",").map(
           // Remove leading and trailing whitespace
-          (hash: string) => hash.trim(),
+          (hash: any) => hash.trim(),
         ).filter(
           // Remove empty strings;
-          (hash: string) => hash !== "",
+          (hash: any) => hash !== "",
         ) || [];
       } catch (error: any) {
         return toastStore.errorToast("Something went wrong parsing the comma-separated list of TX hashes.")

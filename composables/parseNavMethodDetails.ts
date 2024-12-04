@@ -28,10 +28,10 @@ export const prepNAVMethodIlliquid = (details: Record<string, any>, baseDecimals
   return details.illiquid.map((method: Record<string, any>) => {
     const trxHashes = method.otcTxHashes?.map(
       // Remove leading and trailing whitespace
-      (hash: string) => hash.trim(),
+      (hash: any) => hash.trim(),
     ).filter(
       // Remove empty strings;
-      (hash: string) => hash !== "",
+      (hash: any) => hash !== "",
     ) || [];
 
     return [

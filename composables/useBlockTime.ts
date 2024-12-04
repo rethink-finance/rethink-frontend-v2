@@ -1,14 +1,14 @@
-import type Web3 from "web3";
+import { type Web3 } from "web3";
 import type BlockTimeContext from "~/types/block_time_context";
 
 export const useBlockTime = () => {
   const blockTimeContext = ref<BlockTimeContext | null>(null);
 
   const initializeBlockTimeContext = async (
-    web3Instance: Web3,
+    web3Provider: Web3,
   ): Promise<BlockTimeContext> => {
-    const currentBlock = await web3Instance.eth.getBlock("latest");
-    const previousBlock = await web3Instance.eth.getBlock(
+    const currentBlock = await web3Provider.eth.getBlock("latest");
+    const previousBlock = await web3Provider.eth.getBlock(
       Number(currentBlock.number) - 1000,
     );
 
@@ -22,7 +22,7 @@ export const useBlockTime = () => {
     const context: BlockTimeContext = {
       currentBlock: Number(currentBlock.number),
       currentBlockTimestamp: Number(currentBlock.timestamp),
-      web3Instance: web3Instance as any,
+      web3Provider: web3Provider as any,
       averageBlockTime,
     };
 
@@ -37,13 +37,13 @@ export const useBlockTime = () => {
     const {
       currentBlock,
       currentBlockTimestamp,
-      web3Instance,
+      web3Provider,
       averageBlockTime,
     } = context;
 
     if (targetBlock <= currentBlock) {
       try {
-        const block = await web3Instance.eth.getBlock(targetBlock);
+        const block = await web3Provider.eth.getBlock(targetBlock);
         return Number(block?.timestamp || 0);
       } catch (error) {
         console.error(`Error fetching block ${targetBlock}:`, error);
@@ -53,8 +53,6 @@ export const useBlockTime = () => {
     const blockDiff = targetBlock - currentBlock;
 
     const secondsUntilTarget = blockDiff * averageBlockTime;
-
-
 
     return currentBlockTimestamp + secondsUntilTarget;
   };

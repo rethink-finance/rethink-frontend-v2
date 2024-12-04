@@ -298,12 +298,8 @@ const handleTransfer = async () => {
   const tokensWei = ethers.parseUnits(transferEntry.depositValue, decimals);
 
   // call the transfer method
-  await inputTokenContract.value.methods
-    .transfer(transferEntry.to, tokensWei)
-    .send({
-      from: fundStore.activeAccountAddress,
-      gas: 200000,
-    })
+  await inputTokenContract.value
+    .send("transfer", {}, transferEntry.to, tokensWei)
     .on("transactionHash", (hash: any) => {
       console.log("tx hash: " + hash);
       toastStore.addToast(
@@ -339,14 +335,8 @@ const submitRawTXN = async () => {
     console.log("from:", fundStore.activeAccountAddress);
     console.log("value:", parseInt(submitRawTXNEntry.amountValue));
 
-    if (!web3Store.web3) {
-      toastStore.errorToast("Web3 is not initialized. Please try again later.");
-      return;
-    }
-
-    // TODO this next line can be removed probably?
-    // web3Store.web3.config.ignoreGasPricing = true;
-    await web3Store.web3.eth.sendTransaction({
+    const web3Provider = web3Store.chainProviders[fundStore.fundChainId];
+    await web3Provider.eth.sendTransaction({
       to: submitRawTXNEntry.contractAddress,
       data: submitRawTXNEntry.txData,
       from: fundStore.activeAccountAddress,
@@ -360,7 +350,7 @@ const submitRawTXN = async () => {
       checkRevertBeforeSending: false,
     },
     )
-      .on("transactionHash", (hash: string) => {
+      .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
           "The transaction has been submitted. Please wait for it to be confirmed.",
@@ -413,7 +403,6 @@ const inputTokenDetais = ref({
 // fetch entered token details
 const fetchTokenDetails = async () => {
   if (!transferEntry.inputTokenAddress) return;
-  if (!web3Store.web3) return;
   // e.g. for testing inputTokenAddresses (POLYGON):
   // 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 DAI
   // 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359 USDC
@@ -421,7 +410,8 @@ const fetchTokenDetails = async () => {
   // 0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6 WBTC
 
   try {
-    const tokenContract = new web3Store.web3.eth.Contract(
+    const tokenContract = web3Store.getCustomContract(
+      fundStore.fundChainId,
       ERC20,
       transferEntry.inputTokenAddress,
     );

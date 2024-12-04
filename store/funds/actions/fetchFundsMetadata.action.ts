@@ -1,6 +1,3 @@
-import { useFundsStore } from "../funds.store";
-
-
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 
 import type IFund from "~/types/fund";
@@ -8,20 +5,28 @@ import type IFundMetaData from "~/types/fund_meta_data";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
+import { networksMap } from "~/store/web3/networksMap";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export async function fetchFundsMetaDataAction(
+  chainId: string,
   fundAddresses: string[],
   fundsInfo: any,
 ): Promise<IFund[]> {
-  const fundsStore = await useFundsStore();
+  const web3Store = useWeb3Store();
 
   const funds: IFund[] = [];
+  const rethinkReaderContract =
+    web3Store.chainContracts[chainId]?.rethinkReaderContract;
+  if (!rethinkReaderContract) {
+    throw new Error(`No reader contract found for chainId: ${chainId}`);
+  }
+  const fundNetwork = networksMap[chainId];
+
   try {
-    const fundsMetaData: IFundMetaData[] = await fundsStore.callWithRetry(() =>
-      fundsStore.rethinkReaderContract.methods
-        .getFundsMetaData(fundAddresses)
-        .call(),
-    );
+    const fundsMetaData: IFundMetaData[] = await rethinkReaderContract.methods
+      .getFundsMetaData(fundAddresses)
+      .call();
 
     for (const [index, address] of fundAddresses.entries()) {
       const fundMetaData: IFundMetaData = fundsMetaData[index];
@@ -30,9 +35,11 @@ export async function fetchFundsMetaDataAction(
       const baseTokenDecimals = Number(fundMetaData.fundBaseTokenDecimals);
 
       const fundStartTime = fundMetaData.startTime;
+
       const fund: IFund = {
-        chainName: fundsStore.web3Store.chainName,
-        chainShort: fundsStore.web3Store.chainShort,
+        chainId,
+        chainName: fundNetwork.chainName,
+        chainShort: fundNetwork.chainShort,
         address,
         title: fundMetaData.fundName || "N/A",
         description: "N/A",
