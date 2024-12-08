@@ -1089,11 +1089,10 @@ export default defineComponent({
 .nav_entries {
   @include borderGray;
   border-color: $color-bg-transparent;
-  max-width: 1400px;
   overflow: auto;
 
   :deep(.v-table__wrapper) {
-    @include customScrollbar;
+    @include customScrollbar(0);
   }
 
   :deep(.v-data-table__tr) {

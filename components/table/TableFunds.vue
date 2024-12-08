@@ -190,18 +190,15 @@ const navigateFundDetails = (event: any, row: any) => {
   border-color: $color-bg-transparent;
   // add table max height
   :deep(.v-table__wrapper) {
-    @include customScrollbar;
+    @include customScrollbar(0);
 
     .v-data-table__tr {
       height: 72px;
       cursor: pointer;
-      transition:
-        background-color 0.3s ease,
-        box-shadow 0.3s ease;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
       color: $color-steel-blue;
       outline: 2px solid #111c35;
       background-color: $color-table-row;
-      color: white;
 
       &:hover {
         background-color: $color-gray-transparent;
