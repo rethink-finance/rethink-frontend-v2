@@ -1,0 +1,1 @@
+var a=(e=>(e.Text="text",e.Textarea="textarea",e.Checkbox="checkbox",e.Number="number",e.Select="select",e.Image="image",e))(a||{});const t={text:"",textarea:"",checkbox:!1,number:"",select:"",image:""};export{t as D,a as I};
