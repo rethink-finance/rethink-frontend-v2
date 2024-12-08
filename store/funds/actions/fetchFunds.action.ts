@@ -56,7 +56,7 @@ export async function fetchFundsAction(): Promise<void> {
     console.debug(`Chain ${chainId} - Funds Metadata: `, funds);
 
     // Fetch NAV data and calculate performance metrics
-    await fundsStore.fetchFundsNAVData(chainId, filteredFundsInfoArrays);
+    await fundsStore.fetchFundsNavMethods(chainId, filteredFundsInfoArrays);
     await fundsStore.calculateFundsPerformanceMetrics(chainId);
     console.debug(`Funds fetched for chain: ${chainId}`);
   }

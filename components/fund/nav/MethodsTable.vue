@@ -732,10 +732,10 @@ export default defineComponent({
         const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
 
         // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
-        // and make sure it is fetched before checking here with fundsStore.fetchFundsNAVData, and then we
+        // and make sure it is fetched before checking here with fundsStore.fetchFundsNavMethods, and then we
         // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
         console.log("simulate fetch all nav methods")
-        await this.fundsStore.fetchFundsNAVData(fundsInfoArrays);
+        await this.fundsStore.fetchFundsNavMethods(fundsInfoArrays);
       }
       */
       // If useLastNavUpdateMethods props is true, take methods of the last NAV update.

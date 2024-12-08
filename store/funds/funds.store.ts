@@ -5,7 +5,7 @@ import { calculateFundsPerformanceMetricsAction } from "./actions/calculateFunds
 import { fetchFundsAction } from "./actions/fetchFunds.action";
 import { fetchFundsInfoArraysAction } from "./actions/fetchFundsInfoArrays.action";
 import { fetchFundsMetaDataAction } from "./actions/fetchFundsMetadata.action";
-import { fetchFundsNAVDataAction } from "./actions/fetchFundsNAVData.action";
+import { fetchFundsNavMethodsAction } from "./actions/fetchFundsNavMethods.action";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
@@ -79,9 +79,9 @@ export const useFundsStore = defineStore({
         fetchFundsMetaDataAction(chainId, fundAddresses, fundsInfo),
       );
     },
-    fetchFundsNAVData(chainId: string, fundsInfoArrays: any[]) {
-      return useActionState("fetchFundsNAVDataAction", () =>
-        fetchFundsNAVDataAction(chainId, fundsInfoArrays),
+    fetchFundsNavMethods(chainId: string, fundsInfoArrays: any[]) {
+      return useActionState("fetchFundsNavMethodsAction", () =>
+        fetchFundsNavMethodsAction(chainId, fundsInfoArrays),
       );
     },
     calculateFundsPerformanceMetrics(chainId: string) {
