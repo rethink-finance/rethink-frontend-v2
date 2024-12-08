@@ -112,9 +112,6 @@ import {
   useVueTable,
 } from "@tanstack/vue-table";
 import { onMounted, ref, watch } from "vue";
-import { useWeb3Store } from "~/store/web3/web3.store";
-
-const web3Store = useWeb3Store();
 const router = useRouter();
 
 const props = defineProps({
@@ -226,9 +223,7 @@ const filterTable = (value: any) => {
 };
 
 const navigateFundDetails = (row: any) => {
-  const chainId = web3Store.chainId;
-  router.push(`/details/${chainId}-${row.original.fundToken.symbol}-${row.original.address}`)
-  
+  router.push(`/details/${row.original.chainId}-${row.original.fundToken.symbol}-${row.original.address}`)
 };
 
 // const gotoPage = (pageIndex: any) => {

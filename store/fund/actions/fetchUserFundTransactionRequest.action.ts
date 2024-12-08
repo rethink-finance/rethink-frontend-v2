@@ -6,14 +6,19 @@ import {
   type FundTransactionType,
 } from "~/types/enums/fund_transaction_type";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export const fetchUserFundTransactionRequestAction = async (
   fundTransactionType: FundTransactionType,
 ): Promise<any> => {
   const fundStore = useFundStore();
+  const web3Store = useWeb3Store();
+  const fundAddress = fundStore.fundAddress;
+  const fundChainId = fundStore.fundChainId;
+  const web3Provider = web3Store.chainProviders[fundChainId];
 
   if (!fundStore.activeAccountAddress) return undefined;
-  if (!fundStore.fund?.address) return undefined;
+  if (!fundAddress) return undefined;
   const slotId = FundTransactionTypeStorageSlotIdxMap[fundTransactionType];
 
   // GovernableFundStorage.sol
@@ -24,22 +29,27 @@ export const fetchUserFundTransactionRequestAction = async (
   const userRequestTimestampAddress = incrementStorageKey(userRequestAddress);
   console.log("[FETCH REQUEST] AMOUNT", fundTransactionType);
   try {
-    const amount = await fundStore.callWithRetry(() =>
-      fundStore.web3Store.web3.eth.getStorageAt(
-        fundStore.fund?.address,
-        userRequestAddress,
-      ),
+    // TODO use correct provider based on chainId
+    const amount = await web3Store.callWithRetry(
+      fundChainId,
+      () =>
+        web3Provider?.eth.getStorageAt(
+          fundAddress,
+          userRequestAddress,
+        ),
     );
     console.log("[FETCH REQUEST] AMOUNT fetched", fundTransactionType, amount);
     let amountWei: string | bigint = ethers.stripZerosLeft(amount);
     amountWei = amountWei === "0x" ? 0n : BigInt(amountWei);
 
     console.log("[FETCH REQUEST] fetch TS", fundTransactionType);
-    const ts = await fundStore.callWithRetry(() =>
-      fundStore.web3Store.web3.eth.getStorageAt(
-        fundStore.fund?.address,
-        userRequestTimestampAddress,
-      ),
+    const ts = await web3Store.callWithRetry(
+      fundChainId,
+      () =>
+        web3Provider?.eth.getStorageAt(
+          fundAddress,
+          userRequestTimestampAddress,
+        ),
     );
     console.warn("[FETCH REQUEST] TS", fundTransactionType, ts);
     let timestamp: string | number = ethers.stripZerosLeft(ts);
@@ -52,7 +62,7 @@ export const fetchUserFundTransactionRequestAction = async (
     } as IFundTransactionRequest;
   } catch (e) {
     console.error(
-      `Failed fetching deposit/withdrawal request ${fundStore.fund?.address} slot: ${slotId}. -> `,
+      `Failed fetching deposit/withdrawal request ${fundAddress} slot: ${slotId}. -> `,
       e,
     );
   }

@@ -724,7 +724,7 @@ export default defineComponent({
       navigator.clipboard.writeText(data);
     },
     async simulateNAV() {
-      if (!this.showSimulatedNav || !this.web3Store.web3 || this.isNavSimulationLoading) return;
+      if (!this.showSimulatedNav || this.isNavSimulationLoading) return;
       this.isNavSimulationLoading = true;
       console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
       /**
@@ -742,9 +742,11 @@ export default defineComponent({
       // Otherwise, take managed methods, that user can change.
       // Simulate all at once as many promises instead of one by one.
       const promises = [];
+      const fundChainId = this.fundStore.fund?.chainId ?? "";
+      const fundAddress = this.fundStore.fund?.address ?? "";
 
       for (const navEntry of this.methods) {
-        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(navEntry));
+        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(fundChainId, fundAddress, navEntry));
       }
       const settled = await Promise.allSettled(promises);
       this.isNavSimulationLoading = false;
@@ -898,11 +900,11 @@ export default defineComponent({
                   .split(",")
                   .map(
                     // Remove leading and trailing whitespace
-                    (hash: string) => hash.trim(),
+                    (hash: any) => hash.trim(),
                   )
                   .filter(
                     // Remove empty strings;
-                    (hash: string) => hash !== "",
+                    (hash: any) => hash !== "",
                   ) || [];
             } catch (error: any) {
               return this.toastStore.errorToast(

@@ -8,7 +8,7 @@
     :loading="loading && items.length === 0"
     loading-text="Loading OIVs"
     items-per-page="-1"
-    @click:row="navigateFundDetails"
+    @mousedown:row="navigateFundDetails"
   >
     <template #item.name="{ item }">
       <FundNameCell
@@ -80,6 +80,8 @@
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue/dist/iconify.js";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatPercent,
   formatTokenValue,
@@ -87,8 +89,6 @@ import {
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 
 const web3Store = useWeb3Store();
 const router = useRouter();
@@ -164,17 +164,23 @@ const headers: any = computed(() => [
 const icon = (chainShort: string) => {
   const icon = getChainIcon(chainShort);
   return {
-    name: icon.name,
-    size: icon.size,
-    color: icon.color,
+    name: icon?.name,
+    size: icon?.size,
+    color: icon?.color,
   };
 };
 
 const navigateFundDetails = (event: any, row: any) => {
-  const chainId = web3Store.chainId;
-  router.push(
-    `/details/${chainId}-${row.item.fundToken.symbol}-${row.item.address}`,
-  );
+  const fundDetailsUrl = `/details/${row.item.chainId}-${row.item.fundToken.symbol}-${row.item.address}`;
+  console.log(event)
+  // Check if the middle mouse button or a modifier key (e.g., Ctrl/Command) is pressed
+  if (event.button === 1 || event.metaKey || event.ctrlKey) {
+    // Allow the default behavior (open in a new tab)
+    window.open(fundDetailsUrl, "_blank");
+  } else {
+    // Normal left-click behavior (navigate)
+    router.push(fundDetailsUrl);
+  }
 };
 </script>
 
@@ -184,19 +190,15 @@ const navigateFundDetails = (event: any, row: any) => {
   border-color: $color-bg-transparent;
   // add table max height
   :deep(.v-table__wrapper) {
-    max-height: 500px;
     @include customScrollbar(0);
 
     .v-data-table__tr {
       height: 72px;
       cursor: pointer;
-      transition:
-        background-color 0.3s ease,
-        box-shadow 0.3s ease;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
       color: $color-steel-blue;
       outline: 2px solid #111c35;
       background-color: $color-table-row;
-      color: white;
 
       &:hover {
         background-color: $color-gray-transparent;

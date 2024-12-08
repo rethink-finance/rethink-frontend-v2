@@ -185,13 +185,8 @@ const delegate = async (isMyself = false) => {
       contract = fundStore.fundGovernanceTokenContract;
     }
 
-    await contract.methods
-      .delegate(delegateTo)
-      .send({
-        from: fundStore.activeAccountAddress,
-        // maxPriorityFeePerGas: gasPrice,
-        gasPrice: "",
-      })
+    await contract
+      .send("delegate", {}, delegateTo)
       .on("transactionHash", function (hash: any) {
         console.log("tx hash: " + hash);
         toastStore.addToast(

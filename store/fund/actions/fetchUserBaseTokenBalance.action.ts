@@ -1,7 +1,9 @@
 import { useFundStore } from "../fund.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export const fetchUserBaseTokenBalanceAction = async (): Promise<any> => {
   const fundStore = useFundStore();
+  const web3Store = useWeb3Store();
   fundStore.fundUserData.baseTokenBalance = BigInt("0");
 
   if (!fundStore.fund?.baseToken?.address) {
@@ -12,10 +14,12 @@ export const fetchUserBaseTokenBalanceAction = async (): Promise<any> => {
     console.log("activeAccountAddress is not set.");
     return;
   }
-  fundStore.fundUserData.baseTokenBalance = await fundStore.callWithRetry(() =>
-    fundStore.fundBaseTokenContract.methods
-      .balanceOf(fundStore.activeAccountAddress)
-      .call(),
+  fundStore.fundUserData.baseTokenBalance = await web3Store.callWithRetry(
+    fundStore.fundChainId,
+    () =>
+      fundStore.fundBaseTokenContract.methods
+        .balanceOf(fundStore.activeAccountAddress)
+        .call(),
   );
 
   console.log(

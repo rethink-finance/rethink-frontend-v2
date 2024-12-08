@@ -7,4 +7,6 @@ export default interface IFundUserData {
   fundAllowance: bigint;
   fundShareValue: bigint;
   fundDelegateAddress: string;
+  depositRequest?: IFundTransactionRequest;
+  redemptionRequest?: IFundTransactionRequest;
 }

@@ -5,7 +5,6 @@ export default interface INetwork {
   chainShort: string,
   nativeCurrency: INativeCurrency,
   icon: IIcon,
-  rpcUrl: string,
   rpcUrls: string[],
   blockExplorerUrls: string[],
 }
