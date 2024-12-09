@@ -18,10 +18,10 @@ export async function calculateFundsPerformanceMetricsAction(
           const baseTokenDecimals = fund.baseToken.decimals;
           const cumulativeReturnPercent = fundLastNavUpdateExists
             ? await calculateCumulativeReturnPercent(
-              fund.totalDepositBalance,
-              fund.lastNAVUpdateTotalNAV || 0n,
-              baseTokenDecimals,
-            )
+                fund.totalDepositBalance,
+                fund.lastNAVUpdateTotalNAV || 0n,
+                baseTokenDecimals,
+              )
             : 0;
 
           fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists

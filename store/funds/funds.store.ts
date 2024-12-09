@@ -1,17 +1,17 @@
 import { defineStore } from "pinia";
 
+import { useFundStore } from "~/store/fund/fund.store";
+import { networksMap } from "~/store/web3/networksMap";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import type IFund from "~/types/fund";
+import type INAVMethod from "~/types/nav_method";
+import type INAVUpdate from "~/types/nav_update";
 import { useActionState } from "../actionState.store";
 import { calculateFundsPerformanceMetricsAction } from "./actions/calculateFundsPerformanceMetrics.action";
 import { fetchFundsAction } from "./actions/fetchFunds.action";
 import { fetchFundsInfoArraysAction } from "./actions/fetchFundsInfoArrays.action";
 import { fetchFundsMetaDataAction } from "./actions/fetchFundsMetadata.action";
-import { fetchFundsNAVDataAction } from "./actions/fetchFundsNAVData.action";
-import { useFundStore } from "~/store/fund/fund.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import type IFund from "~/types/fund";
-import type INAVMethod from "~/types/nav_method";
-import type INAVUpdate from "~/types/nav_update";
-import { networksMap } from "~/store/web3/networksMap";
+import { fetchFundsNavMethodsAction } from "./actions/fetchFundsNavMethods.action";
 
 
 interface IState {
@@ -79,9 +79,9 @@ export const useFundsStore = defineStore({
         fetchFundsMetaDataAction(chainId, fundAddresses, fundsInfo),
       );
     },
-    fetchFundsNAVData(chainId: string, fundsInfoArrays: any[]) {
-      return useActionState("fetchFundsNAVDataAction", () =>
-        fetchFundsNAVDataAction(chainId, fundsInfoArrays),
+    fetchFundsNavMethods(chainId: string, fundsInfoArrays: any[]) {
+      return useActionState("fetchFundsNavMethodsAction", () =>
+        fetchFundsNavMethodsAction(chainId, fundsInfoArrays),
       );
     },
     calculateFundsPerformanceMetrics(chainId: string) {

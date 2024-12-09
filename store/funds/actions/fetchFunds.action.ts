@@ -1,6 +1,6 @@
+import { chainIds } from "~/store/web3/networksMap";
 import { excludedFundAddresses } from "../config/excludedFundAddresses.config";
 import { useFundsStore } from "../funds.store";
-import { chainIds } from "~/store/web3/networksMap";
 // You can see test funds by storing:
 // excludeTestFunds: false
 // to local storage.
@@ -56,7 +56,7 @@ export async function fetchFundsAction(): Promise<void> {
     console.debug(`Chain ${chainId} - Funds Metadata: `, funds);
 
     // Fetch NAV data and calculate performance metrics
-    await fundsStore.fetchFundsNAVData(chainId, filteredFundsInfoArrays);
+    await fundsStore.fetchFundsNavMethods(chainId, filteredFundsInfoArrays);
     await fundsStore.calculateFundsPerformanceMetrics(chainId);
     console.debug(`Funds fetched for chain: ${chainId}`);
   }

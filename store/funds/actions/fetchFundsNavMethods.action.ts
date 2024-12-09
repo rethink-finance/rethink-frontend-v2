@@ -3,16 +3,15 @@ import { useFundsStore } from "../funds.store";
 
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
-import type INAVMethod from "~/types/nav_method";
-import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
+import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type INAVMethod from "~/types/nav_method";
 
 // Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
 const excludeNAVDetails: boolean = true;
 
-// TODO rename to fetchAllNavMethodsAction
-export async function fetchFundsNAVDataAction(
+export async function fetchFundsNavMethodsAction(
   chainId: string,
   fundsInfoArrays: any[],
 ): Promise<any> {
@@ -71,8 +70,7 @@ async function processFundNavData(
   allMethods: INAVMethod[],
 ) {
   const web3Store = useWeb3Store();
-
-  const fund = fundsStore.chainFunds[chainId][fundIndex];
+  console.log("chainFunds", fundsStore.chainFunds)
   fundsStore.chainFundNAVUpdates[chainId][fundAddress] = [];
 
   if (!fundNAVData.encodedNavUpdate?.length) return;
@@ -92,6 +90,7 @@ async function processFundNavData(
   fundsStore.chainFundNAVUpdates[chainId][fundAddress] = navUpdates;
   const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
+  const fund = fundsStore.chainFunds[chainId]?.[fundIndex];
   if (fund) {
     fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
       lastNavUpdate?.entries,

@@ -1,7 +1,9 @@
 <template>
   <div class="add_from_library">
     <UiHeader>
-      <div class="main_header__title">Add From Library</div>
+      <div class="main_header__title">
+        Add From Library
+      </div>
       <div>
         <v-btn
           class="bg-primary text-secondary"
@@ -97,7 +99,7 @@ onMounted(async () => {
       fundStore.fundChainId,
     );
     // Fetch all possible NAV methods for all funds
-    await fundsStore.fetchFundsNAVData(fundStore.fundChainId, fundsInfoArrays);
+    await fundsStore.fetchFundsNavMethods(fundStore.fundChainId, fundsInfoArrays);
     loadingAllNavMethods.value = false;
   }
 });
