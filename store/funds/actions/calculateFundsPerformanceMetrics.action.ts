@@ -30,6 +30,7 @@ export async function calculateFundsPerformanceMetricsAction(
           fund.cumulativeReturnPercent = cumulativeReturnPercent;
           fund.navUpdates = fundNAVUpdates;
           fund.isNavUpdatesLoading = false;
+          fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates);
         }
       } catch (error) {
         console.error(
