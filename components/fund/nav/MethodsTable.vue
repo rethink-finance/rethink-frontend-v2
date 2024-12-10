@@ -15,6 +15,8 @@
     :show-select="selectable"
     items-per-page="-1"
     @input="onSelectionChanged"
+    @update:expanded="onExpandedUpdate"
+    @click:row="onRowClick"
   >
 
     <!-- template for header simulated  -->
@@ -514,7 +516,7 @@ export default defineComponent({
   },
   data() {
     return {
-      expanded: [],
+      expanded: [] as string[],
       selected: [],
       isNavSimulationLoading: false,
       form: ref(null),
@@ -719,6 +721,20 @@ export default defineComponent({
     },
   },
   methods: {
+    /**
+     * Ensures only one row is expanded at a time.
+     */
+    onExpandedUpdate(newExpanded:string) {
+      // if newExpanded has a row, keep only the latest one; otherwise, clear the array
+      this.expanded = newExpanded.length ? [newExpanded[newExpanded.length - 1]] : [];
+    },
+    onRowClick(row: any, item: any) {
+      const internalItem = item?.item || undefined
+
+      if(!internalItem) return
+
+      this.setNavEntry(internalItem); // set navEntry for the clicked row
+    },
     copyText(text: string | undefined) {
       const data = text as string;
       navigator.clipboard.writeText(data);
