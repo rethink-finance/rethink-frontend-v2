@@ -54,8 +54,20 @@ export const decodeProposalCallData = (
       calldataType = ProposalCalldataType.DIRECT_EXECUTION;
     } else if (targetAddressLowerCase === roleModAddress?.toLocaleLowerCase()) {
       calldataType = ProposalCalldataType.PERMISSIONS;
-    } else if(functionName === "updateSettings") {
+    } else if (functionName === "updateSettings") {
       calldataType = ProposalCalldataType.FUND_SETTINGS;
+    } else if (functionName === "storeNAVData") {
+      // storeNAVData has two fields, "oiv" and "data", where "data" is actually NAV methods, so we can try decoding
+      // it even further to show NAV methods table.
+      try {
+        const decodedNavMethods = decodeProposalCallData(roleModAddress, (decoded?.data ?? "") as string, "", "")
+        if (decodedNavMethods?.calldataDecoded) {
+          decoded = decodedNavMethods?.calldataDecoded;
+        }
+        calldataType = ProposalCalldataType.NAV_UPDATE;
+      } catch (e: any) {
+        console.error("Failed decoding storeNAVData NAV methods", calldata, e)
+      }
     }
 
     return {

@@ -43,11 +43,11 @@
             </div>
             <template v-else>
               <div
-                v-for="(calldata, index) in filteredProposalCalldatasDecoded"
-                :key="index"
+                v-for="(calldata, calldataIndex) in filteredProposalCalldatasDecoded"
+                :key="calldataIndex"
                 class="mb-6"
               >
-                <strong class="text-primary">{{ index }}#</strong>
+                <strong class="text-primary">{{ calldataIndex }}#</strong>
                 <div>
                   <strong>Contract:</strong> {{ calldata?.contractName ?? "N/A" }}
                 </div>
@@ -55,10 +55,10 @@
                   <strong>Function:</strong> {{ calldata?.functionName ?? "N/A" }}
                 </div>
                 <div>
-                  <strong>Target:</strong> {{ proposal?.targets?.[index] ?? "N/A" }}
+                  <strong>Target:</strong> {{ proposal?.targets?.[calldataIndex] ?? "N/A" }}
                 </div>
                 <div>
-                  <strong>Value:</strong> {{ proposal?.values?.[index] ?? "N/A" }}
+                  <strong>Value:</strong> {{ proposal?.values?.[calldataIndex] ?? "N/A" }}
                 </div>
                 <UiDataRowCard
                   :grow-column1="true"
@@ -71,20 +71,20 @@
                       </div>
                       <div>
                         <v-switch
-                          v-model="toggledRawProposalCalldatas[index]"
+                          v-model="toggledRawProposalCalldatas[calldataIndex]"
                           label="Raw"
                           color="primary"
                           hide-details
-                          @click.stop="toggleRawProposalCalldata(index)"
+                          @click.stop="toggleRawProposalCalldata(calldataIndex)"
                         />
                       </div>
                     </div>
                   </template>
                   <template #body>
-                    <template v-if="!toggledRawProposalCalldatas[index]">
+                    <template v-if="!toggledRawProposalCalldatas[calldataIndex]">
                       <template v-if="calldata?.calldataType === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
-                          :methods="allMethods[index]"
+                          :methods="allMethods[calldataIndex]"
                           show-summary-row
                           show-simulated-nav
                           show-base-token-balances
@@ -181,7 +181,6 @@
 
 <script setup lang="ts">
 import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
-
 import { useActionStateStore } from "~/store/actionState.store";
 
 import { formatPercent } from "~/composables/formatters";
@@ -193,7 +192,6 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import { useWeb3Store } from "~/store/web3/web3.store";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -288,10 +286,14 @@ const filteredProposalCalldatasDecoded = computed(() => {
   return calldatasDecoded;
 })
 
-const parseNavEntries = (calldataDecoded: any): INAVMethod[] => {
-  console.log("calldataDecoded", calldataDecoded);
+const parseNavEntries = (calldata: any): INAVMethod[] => {
+  console.log("parseNavEntries calldataDecoded", calldata?.calldataDecoded);
+  const calldataDecoded = calldata?.calldataDecoded;
   const navMethods = [];
-  for (const [index, navMethod] of (calldataDecoded?.navUpdateData ?? []).entries()) {
+  const navUpdateData = calldataDecoded?.navUpdateData ?? [];
+
+  // Try parsing NAV methods for this callData, will only work for NAV updates calldata type.
+  for (const [index, navMethod] of navUpdateData.entries()) {
     navMethods.push(parseNAVMethod(index, navMethod));
   }
   return navMethods
@@ -457,8 +459,10 @@ onMounted(async () => {
   console.log("gov prop fetched", proposal.value)
 
   if (proposal.value) {
+    console.warn("proposal.value?.calldatasDecoded", proposal.value?.calldatasDecoded)
     allMethods.value = proposal.value?.calldatasDecoded?.map((calldata) => {
-      return parseNavEntries(calldata?.calldataDecoded);
+      console.warn("parseNavEntries(calldata)", calldata, parseNavEntries(calldata))
+      return parseNavEntries(calldata);
     }) ?? [];
   }
 });
