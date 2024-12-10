@@ -195,7 +195,7 @@ export const calculateCumulativeReturnPercent = (
 
 export const calculateSharpeRatio = (
   fundNAVUpdates: any,
-  totalDepositBal: bigint
+  totalDepositBal: bigint,
 ): number | undefined => {
   try {
     // 1. step: calculate excess returns
@@ -204,20 +204,21 @@ export const calculateSharpeRatio = (
     if (excessReturns.length === 0) return undefined;
 
     // 2. step: calculate standard deviation of excess returns
-    const standardDeviation = calculateStandardDeviation(excessReturns);
+    const sharpeRatio = _calculateSharpeRatio(excessReturns);
 
-    return Number(standardDeviation?.toFixed(2));
+    // TODO bug here, rounds to 2 decimal points, but it should not! rounds small numbers to 0
+    return Number(sharpeRatio?.toFixed(2));
   } catch (error) {
-
-    console.log("Error calculating Sharpe Ratio: ", error);
+    console.error("Error calculating Sharpe Ratio: ", error);
     return undefined;
   }
 }
 
 
-export const calculateStandardDeviation = (values: number[]): number | undefined => {
+export const _calculateSharpeRatio = (values: number[]): number | undefined => {
   if (values.length === 0) return undefined;
 
+  // First calculate standard deviation.
   // Calculate the mean (average)
   const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
 
@@ -225,7 +226,8 @@ export const calculateStandardDeviation = (values: number[]): number | undefined
   const variance =
     values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / values.length;
 
-  // Return the standard deviation
+  // Return the sharpe ratio.
+  // Divide average returns with standard deviation of returns.
   return mean / Math.sqrt(variance);
 };
 
@@ -235,7 +237,7 @@ export const calculateExcessReturns = (fundNavUpdates: any, totalDepositBal: big
 
   for (const navUpdate of fundNavUpdates) {
     const totalNavAtUpdate = Number(navUpdate?.navParts?.totalNAV) || undefined;
-    //const totalDepositBalAtUpdate = Number(navUpdate?.navParts?.baseAssetSafeBal || undefined);
+    // const totalDepositBalAtUpdate = Number(navUpdate?.navParts?.baseAssetSafeBal || undefined);
 
     console.log(totalDepositBal);
     if (totalNavAtUpdate && Number(totalDepositBal) != 0) {
