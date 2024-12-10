@@ -5,7 +5,7 @@
   "scripts": {
     "test": "vitest",
     "build": "npx vitest run && nuxt build",
-    "build_stage": "npx vitest run && BASE_DOMAIN=stage.rethink.finance nuxi generate",
+    "build_stage": "npx vitest run && ENV_EXCLUDE_TEST_FUNDS=false BASE_DOMAIN=stage.rethink.finance nuxi generate",
     "dev": "npx vitest run && nuxt dev",
     "generate": "npx vitest run && nuxt generate",
     "preview": "npx vitest run && nuxt preview",

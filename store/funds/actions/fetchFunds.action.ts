@@ -1,10 +1,9 @@
-import { chainIds } from "~/store/web3/networksMap";
 import { excludedFundAddresses } from "../config/excludedFundAddresses.config";
 import { useFundsStore } from "../funds.store";
+import { chainIds } from "~/store/web3/networksMap";
 // You can see test funds by storing:
 // excludeTestFunds: false
 // to local storage.
-const excludeTestFunds = getLocalStorageItem("excludeTestFunds", true);
 
 export async function fetchFundsAction(): Promise<void> {
   const fundsStore = useFundsStore();
@@ -25,10 +24,7 @@ export async function fetchFundsAction(): Promise<void> {
     for (let i = 0; i < fundsInfoArrays[0].length; i++) {
       const fundAddress = fundsInfoArrays[0][i];
       const fundInfo = fundsInfoArrays[1][i];
-      if (
-        excludeTestFunds &&
-        excludedFundAddresses[chainId]?.includes(fundAddress)
-      ) {
+      if (excludedFundAddresses[chainId]?.includes(fundAddress.toLowerCase())) {
         continue;
       }
       filteredFundsInfoArrays[0].push(fundAddress);
@@ -56,8 +52,17 @@ export async function fetchFundsAction(): Promise<void> {
     console.debug(`Chain ${chainId} - Funds Metadata: `, funds);
 
     // Fetch NAV data and calculate performance metrics
-    await fundsStore.fetchFundsNavMethods(chainId, filteredFundsInfoArrays);
-    await fundsStore.calculateFundsPerformanceMetrics(chainId);
+    try {
+      await fundsStore.fetchFundsNavMethods(chainId, filteredFundsInfoArrays);
+    } catch (error: any) {
+      console.error("Failed fetchFundsNavMethods", chainId, filteredFundsInfoArrays, error);
+      return
+    }
+    try {
+      await fundsStore.calculateFundsPerformanceMetrics(chainId);
+    } catch (error: any) {
+      console.error("Failed calculateFundsPerformanceMetrics", chainId, error);
+    }
     console.debug(`Funds fetched for chain: ${chainId}`);
   }
 
@@ -65,7 +70,7 @@ export async function fetchFundsAction(): Promise<void> {
   const chainPromises = chainIds.map((chainId) => processChain(chainId));
 
   // Wait for all chain promises to resolve
-  await Promise.all(chainPromises);
+  await Promise.allSettled(chainPromises);
 
   console.warn("ALL FUNDS FETCHED: ", fundsStore.chainFunds);
 }

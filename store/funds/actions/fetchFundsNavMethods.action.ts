@@ -70,7 +70,6 @@ async function processFundNavData(
   allMethods: INAVMethod[],
 ) {
   const web3Store = useWeb3Store();
-  console.log("chainFunds", fundsStore.chainFunds)
   fundsStore.chainFundNAVUpdates[chainId][fundAddress] = [];
 
   if (!fundNAVData.encodedNavUpdate?.length) return;
@@ -79,7 +78,6 @@ async function processFundNavData(
     GovernableFund.abi,
     fundAddress,
   );
-
   const navUpdates = await fundsStore.fundStore.parseFundNAVUpdates(
     chainId,
     fundNAVData,
@@ -138,7 +136,7 @@ async function processFundNavData(
         allMethods.push(parsedNavMethod);
         if (parsedNavMethod.detailsHash) {
           fundsStore.navMethodDetailsHashToFundAddress[
-            parsedNavMethod.detailsHash
+            parsedNavMethod.detailsHash as string
           ] = fundAddress;
         } else {
           console.error(

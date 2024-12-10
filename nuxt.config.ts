@@ -38,6 +38,7 @@ export default defineNuxtConfig({
       GRAPH_BASE_URL: process.env.GRAPH_BASE_URL,
       GRAPH_USERID: process.env.GRAPH_USERID,
       GRAPH_VERSION: process.env.GRAPH_VERSION,
+      ENV_EXCLUDE_TEST_FUNDS: process.env.ENV_EXCLUDE_TEST_FUNDS !== "false",  // default value is true
     },
   },
   routeRules: {

@@ -13,6 +13,7 @@ export async function fetchFundsMetaDataAction(
   fundAddresses: string[],
   fundsInfo: any,
 ): Promise<IFund[]> {
+  console.log("process fund fetchFundsMetaDataAction fetchFundsMetaDataAction fetchFundsMetaDataAction ", chainId)
   const web3Store = useWeb3Store();
 
   const funds: IFund[] = [];
@@ -24,9 +25,11 @@ export async function fetchFundsMetaDataAction(
   const fundNetwork = networksMap[chainId];
 
   try {
+    console.log("process fund fundsMetaData", chainId, fundAddresses)
     const fundsMetaData: IFundMetaData[] = await rethinkReaderContract.methods
       .getFundsMetaData(fundAddresses)
       .call();
+    console.log("process fund fundsMetaData done", chainId, "fundsMetaData:", fundsMetaData)
 
     for (const [index, address] of fundAddresses.entries()) {
       const fundMetaData: IFundMetaData = fundsMetaData[index];
@@ -35,7 +38,6 @@ export async function fetchFundsMetaDataAction(
       const baseTokenDecimals = Number(fundMetaData.fundBaseTokenDecimals);
 
       const fundStartTime = fundMetaData.startTime;
-
       const fund: IFund = {
         chainId,
         chainName: fundNetwork.chainName,

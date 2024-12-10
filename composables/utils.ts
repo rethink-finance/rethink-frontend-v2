@@ -239,14 +239,12 @@ export const calculateExcessReturns = (fundNavUpdates: any, totalDepositBal: big
     const totalNavAtUpdate = Number(navUpdate?.navParts?.totalNAV) || undefined;
     // const totalDepositBalAtUpdate = Number(navUpdate?.navParts?.baseAssetSafeBal || undefined);
 
-    console.log(totalDepositBal);
     if (totalNavAtUpdate && Number(totalDepositBal) !== 0) {
 
       const excessReturn = (totalNavAtUpdate - Number(totalDepositBal)) / Number(totalDepositBal);
       excessReturns.push(excessReturn);
     }
   }
-  console.log(excessReturns);
 
   return excessReturns;
 }

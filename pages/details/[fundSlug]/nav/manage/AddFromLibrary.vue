@@ -99,7 +99,11 @@ onMounted(async () => {
       fundStore.fundChainId,
     );
     // Fetch all possible NAV methods for all funds
-    await fundsStore.fetchFundsNavMethods(fundStore.fundChainId, fundsInfoArrays);
+    try {
+      await fundsStore.fetchFundsNavMethods(fundStore.fundChainId, fundsInfoArrays);
+    } catch (e: any) {
+      console.error("Failed fetchFundsNavMethods", e)
+    }
     loadingAllNavMethods.value = false;
   }
 });
