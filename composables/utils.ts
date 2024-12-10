@@ -226,7 +226,7 @@ export const calculateStandardDeviation = (values: number[]): number | undefined
     values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / values.length;
 
   // Return the standard deviation
-  return Math.sqrt(variance);
+  return mean / Math.sqrt(variance);
 };
 
 
@@ -237,7 +237,9 @@ export const calculateExcessReturns = (fundNavUpdates: any, totalDepositBal: big
     const totalNavAtUpdate = Number(navUpdate?.navParts?.totalNAV) || undefined;
     //const totalDepositBalAtUpdate = Number(navUpdate?.navParts?.baseAssetSafeBal || undefined);
 
-    if (totalNavAtUpdate && totalDepositBal && Number(totalDepositBal) != 0) {
+    console.log(totalDepositBal);
+    if (totalNavAtUpdate && Number(totalDepositBal) != 0) {
+
       const excessReturn = (totalNavAtUpdate - Number(totalDepositBal)) / Number(totalDepositBal);
       excessReturns.push(excessReturn);
     }
