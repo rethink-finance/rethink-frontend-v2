@@ -70,6 +70,7 @@ export const fetchGovernanceProposalAction = async (
     fund?.clockMode?.mode as ClockMode,
     roleModAddress ?? "",
     fund?.safeAddress ?? "",
+    fund?.address ?? "",
   );
 
   governanceProposalStore.storeProposal(

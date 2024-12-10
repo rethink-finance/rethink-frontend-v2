@@ -761,6 +761,7 @@ export const useGovernanceProposalsStore = defineStore({
             calldata,
             proposal.targets[i],
             fund?.safeAddress,
+            fund?.address,
           );
           proposal.calldataTypes.push(calldataDecoded?.calldataType);
           proposal.calldatasDecoded.push(calldataDecoded);

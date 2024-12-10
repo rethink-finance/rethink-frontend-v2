@@ -99,6 +99,7 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
       fund?.clockMode?.mode as ClockMode,
       roleModAddress ?? "",
       fund?.safeAddress ?? "",
+      fund?.address ?? "",
     );
   });
 

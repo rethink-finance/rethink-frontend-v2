@@ -28,6 +28,7 @@ export async function _mapSubgraphProposalToProposal(
   clockMode: ClockMode,
   roleModAddress: string,
   safeAddress: string,
+  fundAddress: string,
 ): Promise<Promise<IGovernanceProposal>> {
   let voteStartTimestamp: number | undefined;
   let voteEndTimestamp: number | undefined;
@@ -71,7 +72,7 @@ export async function _mapSubgraphProposalToProposal(
   const calldataTypes: ProposalCalldataType[] = [];
 
   calldatas.forEach((calldata, i) => {
-    const calldataDecoded = decodeProposalCallData(roleModAddress, calldata, targets[i], safeAddress);
+    const calldataDecoded = decodeProposalCallData(roleModAddress, calldata, targets[i], safeAddress, fundAddress);
     calldatasDecoded.push(calldataDecoded);
     calldataTypes.push(calldataDecoded?.calldataType);
   });

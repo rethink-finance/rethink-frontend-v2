@@ -13,6 +13,7 @@ export const decodeProposalCallData = (
   calldata: string,
   targetAddress: string,
   safeAddress: string,
+  fundAddress: string,
 ): Record<any, any> | undefined => {
   // Iterate over each method in ABI to find a match
   const signature = calldata.slice(0, 10);
@@ -60,11 +61,14 @@ export const decodeProposalCallData = (
       // storeNAVData has two fields, "oiv" and "data", where "data" is actually NAV methods, so we can try decoding
       // it even further to show NAV methods table.
       try {
-        const decodedNavMethods = decodeProposalCallData(roleModAddress, (decoded?.data ?? "") as string, "", "")
-        if (decodedNavMethods?.calldataDecoded) {
-          decoded = decodedNavMethods?.calldataDecoded;
+        // Only decode if decoded.oiv address is the same as current fund address.
+        if (fundAddress && decoded?.oiv === fundAddress) {
+          const decodedNavMethods = decodeProposalCallData(roleModAddress, (decoded?.data ?? "") as string, targetAddress, safeAddress, fundAddress)
+          if (decodedNavMethods?.calldataDecoded) {
+            decoded = decodedNavMethods?.calldataDecoded;
+          }
+          calldataType = ProposalCalldataType.NAV_UPDATE;
         }
-        calldataType = ProposalCalldataType.NAV_UPDATE;
       } catch (e: any) {
         console.error("Failed decoding storeNAVData NAV methods", calldata, e)
       }
