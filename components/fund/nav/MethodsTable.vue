@@ -1124,7 +1124,6 @@ export default defineComponent({
   &__details {
     padding: 1rem 5rem;
     background-color: $color-badge-navy;
-    max-width: 1400px;
     &:not(:last-of-type) {
       margin-bottom: 1.5rem;
     }
