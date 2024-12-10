@@ -63,6 +63,7 @@
           Cumulative
         </div>
       </div>
+      <!-- Remove Monthly Return for now -->
       <!-- <div class="data_bar__item">
         <div
           class="data_bar__title"
