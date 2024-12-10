@@ -206,7 +206,7 @@ export const calculateSharpeRatio = (
     // 2. step: calculate standard deviation of excess returns
     const sharpeRatio = _calculateSharpeRatio(excessReturns);
 
-    // TODO bug here, rounds to 2 decimal points, but it should not! rounds small numbers to 0
+    // Round sharpe to 2 decimals.
     return Number(sharpeRatio?.toFixed(2));
   } catch (error) {
     console.error("Error calculating Sharpe Ratio: ", error);
@@ -240,7 +240,7 @@ export const calculateExcessReturns = (fundNavUpdates: any, totalDepositBal: big
     // const totalDepositBalAtUpdate = Number(navUpdate?.navParts?.baseAssetSafeBal || undefined);
 
     console.log(totalDepositBal);
-    if (totalNavAtUpdate && Number(totalDepositBal) != 0) {
+    if (totalNavAtUpdate && Number(totalDepositBal) !== 0) {
 
       const excessReturn = (totalNavAtUpdate - Number(totalDepositBal)) / Number(totalDepositBal);
       excessReturns.push(excessReturn);
