@@ -63,7 +63,7 @@
           Cumulative
         </div>
       </div>
-      <div class="data_bar__item">
+      <!-- <div class="data_bar__item">
         <div
           class="data_bar__title"
           :class="numberColorClass(fund.monthlyReturnPercent)"
@@ -73,7 +73,7 @@
         <div class="data_bar__subtitle">
           Monthly Return
         </div>
-      </div>
+      </div> -->
       <div class="data_bar__item">
         <div class="data_bar__title">
           {{ fund.sharpeRatio ||  "N/A" }}
