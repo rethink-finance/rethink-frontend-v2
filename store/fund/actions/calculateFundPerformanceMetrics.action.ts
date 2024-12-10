@@ -31,7 +31,7 @@ export async function calculateFundPerformanceMetricsAction(): Promise<any> {
         fund.cumulativeReturnPercent = cumulativeReturnPercent;
         fund.navUpdates = fundNAVUpdates;
         fund.isNavUpdatesLoading = false;
-        fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates);
+        fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates, fund.totalDepositBalance);
       }
     } catch (error) {
       console.error(

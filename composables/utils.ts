@@ -195,10 +195,11 @@ export const calculateCumulativeReturnPercent = (
 
 export const calculateSharpeRatio = (
   fundNAVUpdates: any,
+  totalDepositBal: bigint
 ): number | undefined => {
   try {
     // 1. step: calculate excess returns
-    const excessReturns = calculateExcessReturns(fundNAVUpdates);
+    const excessReturns = calculateExcessReturns(fundNAVUpdates, totalDepositBal);
 
     if (excessReturns.length === 0) return undefined;
 
@@ -229,18 +230,19 @@ export const calculateStandardDeviation = (values: number[]): number | undefined
 };
 
 
-export const calculateExcessReturns = (fundNavUpdates: any): number[] => {
+export const calculateExcessReturns = (fundNavUpdates: any, totalDepositBal: bigint): number[] => {
   const excessReturns: number[] = [];
 
   for (const navUpdate of fundNavUpdates) {
     const totalNavAtUpdate = Number(navUpdate?.navParts?.totalNAV) || undefined;
-    const totalDepositBalAtUpdate = Number(navUpdate?.navParts?.baseAssetSafeBal || undefined);
+    //const totalDepositBalAtUpdate = Number(navUpdate?.navParts?.baseAssetSafeBal || undefined);
 
-    if (totalNavAtUpdate && totalDepositBalAtUpdate) {
-      const excessReturn = totalNavAtUpdate / totalDepositBalAtUpdate;
+    if (totalNavAtUpdate && totalDepositBal && Number(totalDepositBal) != 0) {
+      const excessReturn = (totalNavAtUpdate - Number(totalDepositBal)) / Number(totalDepositBal);
       excessReturns.push(excessReturn);
     }
   }
+  console.log(excessReturns);
 
   return excessReturns;
 }
