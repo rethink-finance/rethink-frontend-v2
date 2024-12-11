@@ -1,0 +1,1 @@
+import{_ as e,e as c,f as n}from"./DwEXRU2K.js";const t={},o={class:"d-flex",style:{width:"100%","flex-direction":"column"}};function s(r,_){return n(),c("div",o," Governance ")}const d=e(t,[["render",s]]);export{d as default};
