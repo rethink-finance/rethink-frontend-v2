@@ -22,6 +22,7 @@
       <template #next>
         <div class="buttons">
           <!-- TODO: determine when to show 'Skip' button -->
+          <!-- TODO: determine onClick behavior for 'Skip' button -->
           <v-btn
             v-if="step !== stepperEntry.length"
             variant="text"
