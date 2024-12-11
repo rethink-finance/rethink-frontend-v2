@@ -59,7 +59,6 @@
             v-for="(field, index) in item.fields"
             :key="index"
             :cols="field?.cols ?? 12"
-            style="padding: 0"
           >
             <div v-if="field.isToggleable" class="toggleable_group">
               <div class="toggleable_group__toggle">

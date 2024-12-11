@@ -166,7 +166,7 @@ export const OnboardingFieldsMap: FieldsMapType = {
       placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
       rules: [formRules.isValidAddress, formRules.required],
       isEditable: true,
-      info: "To change Denomination Asset, please contact rok@rethink.finance",
+
     },
     {
       label: "Description",
