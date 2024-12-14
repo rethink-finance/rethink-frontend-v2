@@ -23,21 +23,30 @@
         <div class="buttons">
           <!-- TODO: determine when to show 'Skip' button -->
           <!-- TODO: determine onClick behavior for 'Skip' button -->
-          <v-btn
+          <!-- <v-btn
             v-if="step !== stepperEntry.length"
             variant="text"
             @click="step = stepperEntry.length"
           >
             Skip
-          </v-btn>
+          </v-btn> -->
           <!-- TODO: determine when to show 'Next' button -->
           <v-btn
-            v-if="step !== stepperEntry.length"
+            v-if="showButtonNext"
             @click="step++"
           >
             Next
           </v-btn>
         </div>
+
+        <v-btn
+          v-if="showInitializeButton"
+          color="primary"
+          variant="flat"
+          @click="handleInitialize"
+        >
+          Initialize
+        </v-btn>
       </template>
       <template #prev>
         <v-btn
@@ -79,7 +88,7 @@
                   <UiField
                     v-model="form[subField.key]"
                     :field="subField"
-                    :is-disabled="false"
+                    :is-disabled="!field.isToggleOn"
                   />
                 </v-col>
               </div>
@@ -88,7 +97,6 @@
               <UiField
                 v-model="form[field.key]"
                 :field="field"
-                :is-disabled="false"
               />
             </div>
           </v-col>
@@ -111,7 +119,7 @@
           <SectionWhitelist
             v-if="form.isWhitelistedDeposits"
             :items="whitelist"
-            @update-items="whitelist = $event"
+            @update-items="handleWhitelistChange"
           />
           <div v-else>
             <UiInfoBox
@@ -150,10 +158,25 @@
         </div>
       </v-window-item>
     </v-window>
+
+
+    <UiConfirmDialog
+      v-model="saveChangesDialog"
+      title="Heads Up!"
+      confirm-text="Save"
+      cancel-text="Don't save"
+      message="Do you want to save the changes?"
+      class="confirm_dialog"
+      max-width="600px"
+      @confirm="handleSaveChanges"
+      @cancel="handleCloseSaveChangesDialog"
+    />
   </v-stepper>
 </template>
 
 <script setup lang="ts">
+import { useToastStore } from "~/store/toasts/toast.store";
+
 import SectionWhitelist from "~/pages/details/[fundSlug]/governance/fund-settings/SectionWhitelist.vue";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 import {
@@ -165,6 +188,9 @@ import {
   type IOnboardingStep,
 } from "~/types/enums/stepper_onboarding";
 
+
+const toastStore = useToastStore();
+
 // Props
 // const props = defineProps({
 
@@ -174,6 +200,9 @@ import {
 const step = ref(1);
 // TODO: add validation functionality
 const isCurrentStepValid = ref(true);
+const saveChangesDialog = ref(false);
+// store the resolve/reject functions for the save changes dialog
+let nextRouteResolve: Function | null = null;
 
 const form = ref<IOnboardingForm>({
   // Basics
@@ -214,11 +243,33 @@ const form = ref<IOnboardingForm>({
   // Finalise
 });
 
-
 const whitelist = ref<IWhitelist[]>([]);
 
 
 // Computeds
+const showButtonNext =computed(() => {
+  const item = stepperEntry.value[step.value - 1];
+
+  const steps = [
+    OnboardingSteps.Basics,
+    OnboardingSteps.Fees,
+    OnboardingSteps.Whitelist,
+    OnboardingSteps.Management,
+    OnboardingSteps.Permissions,
+    OnboardingSteps.NavMethods,
+  ];
+
+  return steps.includes(item.key);
+});
+
+const showInitializeButton = computed(() => {
+  const item = stepperEntry.value[step.value - 1];
+
+  if (item.key === OnboardingSteps.Governance) {
+    return true;
+  }
+  return false;
+});
 
 // Methods
 // helper function to generate sections
@@ -229,20 +280,30 @@ const generateSteps = (form: IOnboardingForm) =>{
     info: step?.info ?? "",
     hasRegularFields: step?.hasRegularFields ?? false,
     fields: generateFields(step, form),
-  })) as { name: string; key: OnboardingSteps, fields: IField[]; info?: string; hasRegularFields: boolean }[];
+  })) as IOnboardingStep[];
 }
+
+
 
 // helper function to generate fields
 const generateFields = (step: IOnboardingStep, form: IOnboardingForm) =>{
-  return OnboardingFieldsMap?.[step.key]?.map((field) => {
+  const stepperEntry = getLocalStorageItem("onboardingStepperEntry") || [] as IOnboardingStep[];
+
+  return OnboardingFieldsMap?.[step.key]?.map((field, fieldIndex) => {
     if (field?.isToggleable) {
-      const output = field?.fields?.map((subField) => ({
-        ...subField,
-        value: form[subField?.key] as string,
-      }));
+      const output = field?.fields?.map((subField) => {
+        return {
+          ...subField,
+          value: form[subField?.key] as string,
+        }
+      });
+
+      const stepIndex = findIndexByKey(stepperEntry, step.key);
+      const isToggleOn = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isToggleOn ?? field?.isToggleOn;
 
       return {
         ...field,
+        isToggleOn,
         fields: output,
       };
     }
@@ -254,17 +315,64 @@ const generateFields = (step: IOnboardingStep, form: IOnboardingForm) =>{
   });
 }
 
+const handleWhitelistChange = (items: IWhitelist[]) => {
+  whitelist.value = items;
+};
+
 const submitForm = () => {
   console.log("Form submitted", form.value);
   alert("Form submitted");
 };
 
-const stepperEntry = ref(generateSteps(form.value));
+const handleInitialize = () => {
+  console.log("Initialize button clicked");
+  alert("Initialize button clicked");
+};
+
+const handleStepperEntry = () => {
+  // generate stepper entry from local storage
+  // TODO: here we can load fetched initialized steps as well
+  const lsForm = getLocalStorageItem("onboardingForm") as IOnboardingForm;
+  const lsWhitelist = getLocalStorageItem("onboardingWhitelist") as IWhitelist[];
+
+  // set whitelist from local storage
+  if(lsWhitelist.length > 0){
+    whitelist.value = lsWhitelist;
+  }
+
+  // set form from local storage
+  if(Object.keys(lsForm).length > 0){
+    form.value = lsForm;
+  }
+
+  return generateSteps(form.value);
+};
+
+const handleSaveChanges = () => {
+  setLocalStorageItem("onboardingStepperEntry", stepperEntry.value);
+  setLocalStorageItem("onboardingForm", form.value);
+  setLocalStorageItem("onboardingWhitelist", whitelist.value);
+  toastStore.successToast("Draft saved successfully");
+
+  handleCloseSaveChangesDialog();
+};
+
+const handleCloseSaveChangesDialog = () => {
+  saveChangesDialog.value = false; // close the dialog
+  if (nextRouteResolve) nextRouteResolve(); // continue navigation
+
+};
+
+const stepperEntry = ref(handleStepperEntry());
 
 // Watchers
 
 
 // Lifecycle Hooks
+onBeforeRouteLeave((to, from, next) => {
+  saveChangesDialog.value = true; // show the dialog
+  nextRouteResolve = next; // store the resolve function for later
+});
 </script>
 
 <style scoped lang="scss">

@@ -3,8 +3,9 @@ import { InputType } from "./stepper";
 
 export interface IOnboardingStep {
   name?: string;
-  info?: string;
   key: OnboardingSteps;
+  info?: string;
+  fields?: IField[];
   hasRegularFields: boolean;
 }
 
@@ -137,8 +138,8 @@ export const OnboardingFieldsMap: FieldsMapType = {
       key: "photoUrl",
       type: InputType.Image,
       placeholder: "",
-      isEditable: true,
       rules: [formRules.required],
+      isEditable: true,
       cols: 12,
     },
     {
