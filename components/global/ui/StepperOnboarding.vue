@@ -37,16 +37,17 @@
           >
             Next
           </v-btn>
+          <v-btn
+            v-if="showInitializeButton"
+            color="primary"
+            variant="flat"
+            @click="initializeDialog = true"
+          >
+            Initialize
+          </v-btn>
         </div>
 
-        <v-btn
-          v-if="showInitializeButton"
-          color="primary"
-          variant="flat"
-          @click="handleInitialize"
-        >
-          Initialize
-        </v-btn>
+
       </template>
       <template #prev>
         <v-btn
@@ -171,6 +172,17 @@
       @confirm="handleSaveChanges"
       @cancel="handleCloseSaveChangesDialog"
     />
+
+    <UiConfirmDialog
+      v-model="initializeDialog"
+      title="Heads Up!"
+      confirm-text="Initialize"
+      message="You will not be able to change the OIV settings after you initialize it. Changes will require governance proposal."
+      class="confirm_dialog"
+      max-width="600px"
+      @confirm="handleInitialize"
+      @cancel="initializeDialog = false"
+    />
   </v-stepper>
 </template>
 
@@ -201,6 +213,7 @@ const step = ref(1);
 // TODO: add validation functionality
 const isCurrentStepValid = ref(true);
 const saveChangesDialog = ref(false);
+const initializeDialog = ref(false);
 // store the resolve/reject functions for the save changes dialog
 let nextRouteResolve: Function | null = null;
 
@@ -325,8 +338,61 @@ const submitForm = () => {
 };
 
 const handleInitialize = () => {
-  console.log("Initialize button clicked");
-  alert("Initialize button clicked");
+
+  // await component.getFundFactoryContract.methods.createFund(
+  //         [
+  //           parseInt(component.fund.depositFee),
+  //           parseInt(component.fund.withdrawFee),
+  //           parseInt(component.fund.performanceFee),//performanceFee bps
+  //           parseInt(component.fund.managementFee),
+  //           parseInt(component.fund.performaceHurdleRateBps),//performaceHurdleRateBps bps
+  //           component.fund.baseToken,
+  //           "0x0000000000000000000000000000000000000000",
+  //           false,//false
+  //           false,//false
+  //           component.fund.allowedDepositAddrs.split(",").filter((val) => (val != "") ? true :  false),
+  //           component.fund.allowedManagers.split(",").filter((val) => (val != "") ? true :  false),
+  //           component.fund.governanceToken,
+  //           "0x0000000000000000000000000000000000000000",
+  //           "0x0000000000000000000000000000000000000000",
+  //           component.fund.fundName,
+  //           component.fund.fundSymbol,
+  //           component.fund.feeCollectors.split(",").filter((val) => (val != "") ? true :  false),
+  //         ],
+  //         [
+  //           parseInt(component.governor.quorumFraction),
+  //           parseInt(component.governor.lateQuorum),
+  //           parseInt(component.governor.votingDelay),
+  //           parseInt(component.governor.votingPeriod),
+  //           parseInt(component.governor.proposalThreshold),
+  //         ],
+  //         JSON.stringify(component.fundMetadata),//fundMetadata
+  //         parseInt(component.fee._feePerformancePeriod),
+  //         parseInt(component.fee._feeManagePeriod)
+  //       ).send({
+  //         from: component.getActiveAccount,
+  //         maxPriorityFeePerGas: null,
+  //         maxFeePerGas: null
+  //       }).on('transactionHash', function(hash){
+  //         console.log("tx hash: " + hash);
+  //         component.$toast.info("The transaction has been submitted. Please wait for it to be confirmed.");
+  //       }).on('receipt', function(receipt){
+  //         console.log(receipt);
+  //         if (receipt.status) {
+  //           component.$toast.success("Create Fund transaction was successfull.");
+
+  //         } else {
+  //           component.$toast.error("The Create Fund tx has failed. Please contact the Rethink Finance community for support.");
+  //         }
+  //         component.loading = false;
+
+  //       }).on('error', function(error){
+  //         console.log(error);
+  //         component.loading = false;
+  //         component.$toast.error("There has been an error. Please contact the Rethink Finance community for support.");
+  //       });
+
+  initializeDialog.value = false;
 };
 
 const handleStepperEntry = () => {
