@@ -5,7 +5,7 @@
         <div class="main_header__title">
           <v-skeleton-loader v-if="isLoadingFetchFundNAVUpdatesAction" type="text" class="total_nav_skeleton" />
           <template v-else>
-            {{ fundTotalNAVFormatted }}
+            {{ fundCurrentSimulatedNAVFormatted }}
           </template>
         </div>
         <div class="main_header__subtitle">
@@ -126,9 +126,17 @@ const fundLastNAVUpdateDate = computed(() => {
   return fundLastNAVUpdate.value.date ?? "N/A";
 });
 
-const fundTotalNAVFormatted = computed(() => {
+const fundLastNavUpdateTotalNAVFormatted = computed(() => {
   if (!fundStore.fundTotalNAV) return "N/A";
-  return fundStore.getFormattedBaseTokenValue(fundStore.fundTotalNAV)
+  return fundStore.getFormattedBaseTokenValue(
+    fundStore.fundTotalNAV,
+  )
+});
+const fundCurrentSimulatedNAVFormatted = computed(() => {
+  if (!fundStore.fundTotalNAV) return "N/A";
+  return fundStore.getFormattedBaseTokenValue(
+    fundStore.totalCurrentSimulatedNAV,
+  )
 });
 
 // return fund with reversed navUpdates array to show the latest updates first
