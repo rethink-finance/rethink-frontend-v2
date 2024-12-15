@@ -43,6 +43,15 @@ export const fetchUserFundDataAction = async (
           .delegates(fundStore.activeAccountAddress)
           .call(),
     );
+
+    if (fundDelegateAddress !== fundStore.fundUserData.fundDelegateAddress) {
+      console.error(
+        "[MISMATCH] wrong delegate to address from reader contract",
+        fundDelegateAddress,
+        "should be:",
+        fundStore.fundUserData.fundDelegateAddress,
+      )
+    }
   } else {
     fundStore.fundUserData.fundDelegateAddress = fundDelegateAddress;
   }
