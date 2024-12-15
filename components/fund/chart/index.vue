@@ -181,7 +181,7 @@ export default {
               "<div class='tooltip_row'>" +
               "<div class='label'>Date:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
               "<div class='tooltip_row'>" +
-              "<div class='label'>AUM:</div>" + this.formatWei(this.totalNAVItems[dataPointIndex]) + "</div>" +
+              "<div class='label'>NAV:</div>" + this.formatWei(this.totalNAVItems[dataPointIndex]) + "</div>" +
               "</div>"
           },
         },
