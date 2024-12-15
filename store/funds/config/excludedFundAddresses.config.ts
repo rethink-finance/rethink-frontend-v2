@@ -20,7 +20,7 @@ const rawExcludedFundAddresses = {
     { address: "0xcfD904C4C857784686029995886d627da1aeFbe4", alwaysExclude: false },
     { address: "0xe93CB20Fc113355753B6D237c3949E0452981dC3", alwaysExclude: true }, // TSHN 15. feb
     { address: "0x6edC5f675C5A20e867aeF0633033a17EA256637E", alwaysExclude: true }, // TSHN 16. feb
-    { address: "0x920fdA0F59bDc852eD19e3ad975a808101ea2a29", alwaysExclude: false },
+    { address: "0x920fdA0F59bDc852eD19e3ad975a808101ea2a29", alwaysExclude: true }, // DOCTP 29. feb 24
     { address: "0x1550D564fEBE8c398F3cc398c9ac2a9e89E89A4F", alwaysExclude: false },
     { address: "0x07094Bb5f175A4E6b074e5E79F6439a8A929533B", alwaysExclude: false },
     { address: "0x98F1c2035680E4215cD5726a11279da96C07835F", alwaysExclude: false },

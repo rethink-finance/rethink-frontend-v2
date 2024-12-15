@@ -11,7 +11,7 @@
             :title="buttonLink.title"
             :href="buttonLink.href"
           />
-      </div>
+        </div>
       </template>
 
       <template #tools>
@@ -48,7 +48,7 @@ export default {
     buttonLinks() {
       return [
         {
-          title: "DeBank - AUM",
+          title: "DeBank - NAV",
           href: this.deBankUrl,
         },
         {
@@ -90,7 +90,7 @@ export default {
   gap: 1.5rem;
   flex-direction: column;
   justify-content: space-between;
-  
+
 
   &__header{
     padding: 0;
