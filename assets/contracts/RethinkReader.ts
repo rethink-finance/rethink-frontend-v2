@@ -604,54 +604,9 @@ export const RethinkReader = {
               "type": "uint256",
             },
             {
-              "internalType": "uint256",
-              "name": "totalNav",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "illiquidLen",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "liquidLen",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "nftLen",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "composableLen",
-              "type": "uint256",
-            },
-            {
               "internalType": "uint256[]",
               "name": "updateTimes",
               "type": "uint256[]",
-            },
-            {
-              "internalType": "uint256[][]",
-              "name": "illiquid",
-              "type": "uint256[][]",
-            },
-            {
-              "internalType": "uint256[][]",
-              "name": "liquid",
-              "type": "uint256[][]",
-            },
-            {
-              "internalType": "int256[][]",
-              "name": "nft",
-              "type": "int256[][]",
-            },
-            {
-              "internalType": "int256[][]",
-              "name": "composable",
-              "type": "int256[][]",
             },
             {
               "internalType": "bytes[]",
