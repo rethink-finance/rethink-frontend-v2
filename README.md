@@ -96,7 +96,7 @@ Example library:
 ## Production Build
 Build and deploy to GH pages.
 ```shell
-npx nuxi generate; cd .output/public/; git init; git add -A; git commit -m "deployment to GH Pages"; git push -f git@github.com:rethink-finance/rethink-frontend-v2.git master:gh-pages; cd ../..;
+ENV_EXCLUDE_TEST_FUNDS=true BASE_DOMAIN=rethink.finance npx nuxi generate; cd .output/public/; git init; git add -A; git commit -m "deployment to GH Pages"; git push -f git@github.com:rethink-finance/rethink-frontend-v2.git master:gh-pages; cd ../..;
 ```
 
 
