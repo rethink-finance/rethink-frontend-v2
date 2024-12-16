@@ -27,9 +27,9 @@
         </div>
 
         <div class="di_card__content">
-          <div class="di_card__text" >
+          <div class="di_card__text">
             <div class="mb-2" v-html="message" />
-            <slot /> <!-- This is where the content will be injected --> 
+            <slot /> <!-- This is where the content will be injected -->
           </div>
 
           <div class="di_card__button-container">
@@ -45,6 +45,7 @@
               v-if="confirmText"
               class="di_card__submit-button"
               color="primary"
+              :loading="loading"
               @click="confirm()"
             >
               {{ confirmText }}
@@ -62,6 +63,7 @@ defineProps({
   message: String,
   title: String,
   confirmText: String,
+  loading: Boolean,
   cancelText: String,
   maxWidth: String,
 });

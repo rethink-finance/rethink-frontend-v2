@@ -41,6 +41,7 @@
             v-if="showInitializeButton"
             color="primary"
             variant="flat"
+            :loading="isInitializeLoading"
             @click="initializeDialog = true"
           >
             Initialize
@@ -180,6 +181,7 @@
       message="You will not be able to change the OIV settings after you initialize it. Changes will require governance proposal."
       class="confirm_dialog"
       max-width="600px"
+      :loading="isInitializeLoading"
       @confirm="handleInitialize"
       @cancel="initializeDialog = false"
     />
@@ -187,9 +189,11 @@
 </template>
 
 <script setup lang="ts">
-import { useToastStore } from "~/store/toasts/toast.store";
-
+import { ethers } from "ethers";
 import SectionWhitelist from "~/pages/details/[fundSlug]/governance/fund-settings/SectionWhitelist.vue";
+import { useAccountStore } from "~/store/account/account.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 import {
   OnboardingFieldsMap,
@@ -202,6 +206,9 @@ import {
 
 
 const toastStore = useToastStore();
+const web3Store = useWeb3Store();
+const accountStore = useAccountStore();
+
 
 // Props
 // const props = defineProps({
@@ -214,6 +221,7 @@ const step = ref(1);
 const isCurrentStepValid = ref(true);
 const saveChangesDialog = ref(false);
 const initializeDialog = ref(false);
+const isInitializeLoading = ref(false);
 // store the resolve/reject functions for the save changes dialog
 let nextRouteResolve: Function | null = null;
 
@@ -284,6 +292,25 @@ const showInitializeButton = computed(() => {
   return false;
 });
 
+const toggledOffFields = computed(() => {
+  // check which fields are toggled off, and set them to 0 or null address
+  return stepperEntry.value
+    .map((step) => {
+      return step.fields?.filter((field) => field.isToggleOn === false)
+        .map((field) => {
+          if (field.fields) {
+            return field.fields
+              .filter((subField) => !subField.isToggleOn)
+              .map((subField) => subField.key);
+          }
+          return field.key;
+        });
+    })
+    .flat(2)
+    .flat();
+});
+
+
 // Methods
 // helper function to generate sections
 const generateSteps = (form: IOnboardingForm) =>{
@@ -295,7 +322,6 @@ const generateSteps = (form: IOnboardingForm) =>{
     fields: generateFields(step, form),
   })) as IOnboardingStep[];
 }
-
 
 
 // helper function to generate fields
@@ -337,62 +363,116 @@ const submitForm = () => {
   alert("Form submitted");
 };
 
-const handleInitialize = () => {
 
-  // await component.getFundFactoryContract.methods.createFund(
-  //         [
-  //           parseInt(component.fund.depositFee),
-  //           parseInt(component.fund.withdrawFee),
-  //           parseInt(component.fund.performanceFee),//performanceFee bps
-  //           parseInt(component.fund.managementFee),
-  //           parseInt(component.fund.performaceHurdleRateBps),//performaceHurdleRateBps bps
-  //           component.fund.baseToken,
-  //           "0x0000000000000000000000000000000000000000",
-  //           false,//false
-  //           false,//false
-  //           component.fund.allowedDepositAddrs.split(",").filter((val) => (val != "") ? true :  false),
-  //           component.fund.allowedManagers.split(",").filter((val) => (val != "") ? true :  false),
-  //           component.fund.governanceToken,
-  //           "0x0000000000000000000000000000000000000000",
-  //           "0x0000000000000000000000000000000000000000",
-  //           component.fund.fundName,
-  //           component.fund.fundSymbol,
-  //           component.fund.feeCollectors.split(",").filter((val) => (val != "") ? true :  false),
-  //         ],
-  //         [
-  //           parseInt(component.governor.quorumFraction),
-  //           parseInt(component.governor.lateQuorum),
-  //           parseInt(component.governor.votingDelay),
-  //           parseInt(component.governor.votingPeriod),
-  //           parseInt(component.governor.proposalThreshold),
-  //         ],
-  //         JSON.stringify(component.fundMetadata),//fundMetadata
-  //         parseInt(component.fee._feePerformancePeriod),
-  //         parseInt(component.fee._feeManagePeriod)
-  //       ).send({
-  //         from: component.getActiveAccount,
-  //         maxPriorityFeePerGas: null,
-  //         maxFeePerGas: null
-  //       }).on('transactionHash', function(hash){
-  //         console.log("tx hash: " + hash);
-  //         component.$toast.info("The transaction has been submitted. Please wait for it to be confirmed.");
-  //       }).on('receipt', function(receipt){
-  //         console.log(receipt);
-  //         if (receipt.status) {
-  //           component.$toast.success("Create Fund transaction was successfull.");
+const formatFundMetaData = () => {
+  return {
+    description: form.value.description,
+    photoUrl: form.value.photoUrl,
+    plannedSettlementPeriod: form.value.plannedSettlementPeriod,
+    minLiquidAssetShare: form.value.minLiquidAssetShare,
+  }
+};
 
-  //         } else {
-  //           component.$toast.error("The Create Fund tx has failed. Please contact the Rethink Finance community for support.");
-  //         }
-  //         component.loading = false;
+const getFeeValue = (fee: keyof IOnboardingForm) => {
+  return toggledOffFields.value.includes(fee)
+    ? 0
+    : parseInt(fromPercentageToBps(form.value[fee]));
+};
 
-  //       }).on('error', function(error){
-  //         console.log(error);
-  //         component.loading = false;
-  //         component.$toast.error("There has been an error. Please contact the Rethink Finance community for support.");
-  //       });
+const getFeeCollectors = (fee: keyof IOnboardingForm) => {
+  return toggledOffFields.value.includes(fee)
+    ? ethers.ZeroAddress
+    : form.value[fee];
+};
 
-  initializeDialog.value = false;
+const formatFeeCollectors = () => {
+  return [
+    getFeeCollectors("depositFeeRecipientAddress"),
+    getFeeCollectors("redemptionFeeRecipientAddress"),
+    getFeeCollectors("managementFeeRecipientAddress"),
+    getFeeCollectors("profitManagemnetFeeRecipientAddress"),
+  ]
+};
+
+
+const handleInitialize = async() => {
+  try {
+    isInitializeLoading.value = true;
+    const fundFactoryContract = web3Store.chainContracts?.["0x89"]?.fundFactoryContract;
+
+    let allowedDepositors = [] as string[];
+    if (form.value.isWhitelistedDeposits) {
+      allowedDepositors = whitelist.value
+        .filter((item) => !item.deleted)
+        .map((item) => item.address);
+    }
+    // TODO: add allowedManagers to the form
+    const allowedManagers = [] as string[];
+
+    await fundFactoryContract.methods.createFund(
+      [
+        getFeeValue("depositFee"),// depositFee
+        getFeeValue("redemptionFee"),// redemptionFee
+        getFeeValue("profitManagemnetFee"),// profitManagemnetFee
+        getFeeValue("managementFee"),// managementFee
+        0, // performaceHurdleRateBps - Rok said it should be 0
+        form.value.denominationAsset, // baseToken
+        "0x0000000000000000000000000000000000000000",
+        false,
+        false,
+        allowedDepositors, // allowedDepositAddrs
+        allowedManagers, // allowedManagers
+        form.value.governanceToken, // governanceToken
+        "0x0000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000",
+        form.value.fundDAOName,
+        form.value.tokenSymbol,
+        formatFeeCollectors(),
+      ],
+      [
+        // parseInt(form.value.quorumFraction), // TODO: this is missing from the form
+        0,
+        parseInt(form.value.lateQuorum),
+        parseInt(form.value.votingDelay),
+        parseInt(form.value.votingPeriod),
+        parseInt(form.value.proposalThreshold),
+      ],
+      JSON.stringify(formatFundMetaData()),
+      // parseInt(form.value.feePerformancePeriod), // TODO: this is missing from the form
+      // parseInt(form.value.feeManagePeriod), // TODO: this is missing from the form
+      0,
+      0,
+    ).send({
+      from: accountStore.activeAccountAddress,
+      maxFeePerGas: "",
+    }).on("transactionHash", (hash: any) => {
+      console.log("tx hash: " + hash);
+      toastStore.addToast(
+        "The transaction has been submitted. Please wait for it to be confirmed.",
+      );
+    }).on("receipt", (receipt: any) => {
+      console.log("receipt: ", receipt);
+      if (receipt.status) {
+        toastStore.successToast("Create Fund transaction was successfull.");
+
+      } else {
+        toastStore.errorToast("The Create Fund tx has failed. Please contact the Rethink Finance community for support.");
+      }
+      isInitializeLoading.value = false;
+
+    }).on("error", (error: any) => {
+      console.log(error);
+      isInitializeLoading.value = false;
+      toastStore.errorToast("There has been an error. Please contact the Rethink Finance community for support.");
+    });
+  } catch (error:any) {
+    console.error(error);
+    isInitializeLoading.value = false;
+    toastStore.errorToast("There was an error initializing the OIV");
+
+  }finally {
+    initializeDialog.value = false;
+  }
 };
 
 const handleStepperEntry = () => {
