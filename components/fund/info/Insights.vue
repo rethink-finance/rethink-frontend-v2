@@ -30,7 +30,7 @@
           </template>
         </div>
         <div class="data_bar__subtitle">
-          AUM
+          NAV
         </div>
       </div>
       <div class="data_bar__item">
