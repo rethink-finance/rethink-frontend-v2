@@ -244,7 +244,6 @@ const form = ref<IOnboardingForm>({
   managementFeePeriod: "",
   profitManagemnetFee: "",
   profitManagemnetFeeRecipientAddress: "",
-  profitManagementFeePeriod: "",
   hurdleRate: "",
   // Whitelist
   whitelist: "",
@@ -278,7 +277,6 @@ const showButtonNext =computed(() => {
     OnboardingSteps.Fees,
     OnboardingSteps.Whitelist,
     OnboardingSteps.Management,
-    OnboardingSteps.Governance, // TODO: remove after development
     OnboardingSteps.Permissions,
     OnboardingSteps.NavMethods,
   ];
@@ -434,18 +432,15 @@ const handleInitialize = async() => {
         formatFeeCollectors(),
       ],
       [
-        // parseInt(form.value.quorumFraction), // TODO: this is missing from the form
-        0,
+        parseInt(form.value.quorum), // quorumFraction
         parseInt(form.value.lateQuorum),
         parseInt(form.value.votingDelay),
         parseInt(form.value.votingPeriod),
         parseInt(form.value.proposalThreshold),
       ],
       JSON.stringify(formatFundMetaData()),
-      // parseInt(form.value.feePerformancePeriod), // TODO: this is missing from the form
-      // parseInt(form.value.feeManagePeriod), // TODO: this is missing from the form
-      0,
-      0,
+      0, // feePerformancePeriod, default to 0
+      parseInt(form.value.managementFeePeriod), // feeManagePeriod
     ).send({
       from: accountStore.activeAccountAddress,
       maxFeePerGas: "",

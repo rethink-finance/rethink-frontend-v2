@@ -36,7 +36,6 @@ export interface IOnboardingForm {
   managementFeePeriod: string;
   profitManagemnetFee: string;
   profitManagemnetFeeRecipientAddress: string;
-  profitManagementFeePeriod: string;
   hurdleRate: string;
   plannedSettlementPeriod: string;
   minLiquidAssetShare: string;
@@ -279,16 +278,6 @@ export const OnboardingFieldsMap: FieldsMapType = {
           placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
           rules: [formRules.isValidAddress, formRules.required],
           isEditable: true,
-        },
-        {
-          label: "Performance Fee Period (Days)",
-          key: "profitManagementFeePeriod",
-          type: InputType.Number,
-          placeholder: "E.g. 0",
-          min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
-          isEditable: true,
-          cols: 12,
         },
       ],
     },
