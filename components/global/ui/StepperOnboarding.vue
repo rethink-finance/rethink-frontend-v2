@@ -87,8 +87,9 @@
                   :key="index"
                   :cols="subField?.cols ?? 6"
                 >
+                  <!-- v-model="form[subField.key]" -->
                   <UiField
-                    v-model="form[subField.key]"
+                    v-model="subField.value"
                     :field="subField"
                     :is-disabled="!field.isToggleOn"
                   />
@@ -96,8 +97,9 @@
               </div>
             </div>
             <div v-else>
+              <!-- v-model="form[field.key]" -->
               <UiField
-                v-model="form[field.key]"
+                v-model="field.value"
                 :field="field"
               />
             </div>
@@ -252,7 +254,7 @@ const form = ref<IOnboardingForm>({
   minLiquidAssetShare: "",
   // Governance
   governanceToken: "",
-  quorum: "",
+  quorum: "", // quorumFraction
   votingPeriod: "",
   votingDelay: "",
   proposalThreshold: "",
@@ -276,6 +278,7 @@ const showButtonNext =computed(() => {
     OnboardingSteps.Fees,
     OnboardingSteps.Whitelist,
     OnboardingSteps.Management,
+    OnboardingSteps.Governance, // TODO: remove after development
     OnboardingSteps.Permissions,
     OnboardingSteps.NavMethods,
   ];
@@ -370,6 +373,7 @@ const formatFundMetaData = () => {
     photoUrl: form.value.photoUrl,
     plannedSettlementPeriod: form.value.plannedSettlementPeriod,
     minLiquidAssetShare: form.value.minLiquidAssetShare,
+    // custom fields goes here
   }
 };
 
@@ -512,6 +516,14 @@ const handleCloseSaveChangesDialog = () => {
 const stepperEntry = ref(handleStepperEntry());
 
 // Watchers
+
+watch(stepperEntry.value, (newVal) => {
+  console.log("stepperEntry", newVal);
+});
+
+watch(form.value, (newVal) => {
+  console.log("form", newVal);
+});
 
 
 // Lifecycle Hooks
