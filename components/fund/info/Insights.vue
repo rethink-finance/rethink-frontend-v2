@@ -75,14 +75,16 @@
           Monthly Return
         </div>
       </div> -->
-      <div class="data_bar__item">
+
+      <!-- TODO: show sharpe ratio later -->
+      <!-- <div class="data_bar__item">
         <div class="data_bar__title">
           {{ fund.sharpeRatio ||  "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           Sharpe Ratio
         </div>
-      </div>
+      </div> -->
       <div class="data_bar__item">
         <div class="data_bar__title">
           <FundInfoPositionTypesBar

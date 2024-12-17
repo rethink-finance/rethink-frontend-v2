@@ -80,8 +80,6 @@
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue/dist/iconify.js";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatPercent,
   formatTokenValue,
@@ -89,6 +87,8 @@ import {
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 
 const web3Store = useWeb3Store();
 const router = useRouter();
@@ -145,13 +145,15 @@ const headers: any = computed(() => [
   //   value: (v: IFund) => formatPercent(v.monthlyReturnPercent, true),
   //   align: "end",
   // },
-  {
-    title: "Sharpe Ratio",
-    key: "sharpeRatio",
-    maxWidth: 100,
-    value: (v: IFund) => v.sharpeRatio || "N/A",
-    align: "end",
-  },
+
+  // TODO: show sharpe ratio later
+  // {
+  //   title: "Sharpe Ratio",
+  //   key: "sharpeRatio",
+  //   maxWidth: 100,
+  //   value: (v: IFund) => v.sharpeRatio || "N/A",
+  //   align: "end",
+  // },
   {
     title: "Position Types",
     key: "positionTypeCounts",
