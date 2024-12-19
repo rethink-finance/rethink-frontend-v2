@@ -7,6 +7,7 @@
       :submit-label="submitLabel"
       :submit-event="onSubmit"
       :is-submit-loading="isLoading"
+      :always-show-last-step="alwaysShowLastStep"
       class="delegated-permission-stepper"
       @fields-changed="fieldsChanged"
     >
@@ -75,14 +76,11 @@ import {
   proposalRoleModMethodStepsMap,
   roleModMethodChoices,
 } from "~/types/enums/delegated_permission";
-import { useFundStore } from "~/store/fund/fund.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
 
-const fundStore = useFundStore();
-const web3Store = useWeb3Store();
 const toastStore = useToastStore();
+
 // Props
 const props = defineProps({
   modelValue: { type: Array, required: true }, // Enables v-model for entry
@@ -95,6 +93,10 @@ const props = defineProps({
     default: "Create a Delegated Permission Proposal",
   },
   tooltipLink: { type: String, default: "#" },
+  alwaysShowLastStep: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Emits
@@ -103,6 +105,7 @@ const emit = defineEmits([
   "fieldsChanged",
   "submit",
   "addRaw",
+  "entryUpdated",
 ]);
 
 // Local state bound to v-model
@@ -115,7 +118,6 @@ const keepExistingPermissions = ref(true);
 
 // Methods
 const openAddRawDialog = () => (showAddRawDialog.value = true);
-
 
 const addRawProposal = () => {
   try {
@@ -259,20 +261,16 @@ const fieldsChanged = (mainStepName: any, subStepIndex: any, step: any) => {
   Object.assign(currentInputs, newInput); // add new input to the current inputs
 };
 
-// Watchers
+// TODO this is not a good way to do that but the stepper and StepperFields
+//  should not be implemented like that, mutating props inside but instead they
+//  should be correctly emitting events. But it's a lot of refactor to fix that
+//  now. This should be a v-model somehow, emitting update:modelValue
 watch(
-  () => props.modelValue,
-  (newValue) => {
-    // Sync changes from parent
-    delegatedEntry.value = JSON.parse(JSON.stringify(newValue));
-  },
-);
-
-watch(
-  () => delegatedEntry,
+  () => delegatedEntry.value,
   (newValue) => {
     // Emit changes back to parent
-    emit("update:modelValue", newValue);
+    // emit("update:modelValue", newValue);
+    emit("entryUpdated", newValue);
   },
   { deep: true },
 );

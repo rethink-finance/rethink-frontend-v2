@@ -51,7 +51,7 @@ export interface IOnboardingForm {
   isWhitelistedDeposits: boolean;
   // Permissions
   permissions: string;
-  // Navigation Methods
+  // NAV Methods
   navMethods: string;
   // Finalise
 
@@ -118,7 +118,7 @@ export const OnboardingStepMap: IOnboardingStep[] = [
   },
   {
     key: OnboardingSteps.NavMethods,
-    name: "Navigation Methods",
+    name: "NAV Methods",
     hasRegularFields: false, // this may be a component as well
   },
   {
@@ -370,10 +370,10 @@ export const OnboardingFieldsMap: FieldsMapType = {
   ],
   [OnboardingSteps.NavMethods]: [
     {
-      label: "Navigation Methods",
+      label: "NAV Methods",
       key: "navMethods",
       type: InputType.Textarea,
-      placeholder: "E.g. Navigation Methods",
+      placeholder: "E.g. NAV Methods",
       rules: [formRules.required],
       isEditable: true,
     },

@@ -1,79 +1,11 @@
 <template>
   <div class="delegated-permission">
-    <!--    &lt;!&ndash; Stepper with header &ndash;&gt;-->
-    <!--    <UiStepper-->
-    <!--      :entry="delegatedPermissionsEntry"-->
-    <!--      :fields-map="fieldsMap"-->
-    <!--      title="Delegated Permissions Proposal"-->
-    <!--      submit-label="Create Proposal"-->
-    <!--      :submit-event="submitProposal"-->
-    <!--      :is-submit-loading="loading"-->
-    <!--      class="delegated-permission-stepper"-->
-    <!--      @fields-changed="contractMethodChanged"-->
-    <!--    >-->
-    <!--      <template #subtitle>-->
-    <!--        <UiTooltipClick location="right" :hide-after="6000">-->
-    <!--          <Icon-->
-    <!--            icon="material-symbols:info-outline"-->
-    <!--            class="info-icon"-->
-    <!--            width="1.5rem"-->
-    <!--          />-->
-
-    <!--          <template #tooltip>-->
-    <!--            <div class="tooltip__content">-->
-    <!--              <span>Create a Delegated Permission Proposal</span>-->
-    <!--              <a-->
-    <!--                class="tooltip__link"-->
-    <!--                href="https://docs.rethink.finance/rethink.finance"-->
-    <!--                target="_blank"-->
-    <!--              >-->
-    <!--                Learn More-->
-    <!--                <Icon icon="maki:arrow" color="primary" width="1rem" />-->
-    <!--              </a>-->
-    <!--            </div>-->
-    <!--          </template>-->
-    <!--        </UiTooltipClick>-->
-
-    <!--      </template>-->
-    <!--      <template #buttons>-->
-    <!--        <v-btn-->
-    <!--          class="text-secondary me-4"-->
-    <!--          variant="outlined"-->
-    <!--          @click="addRawDialog = true"-->
-    <!--        >-->
-    <!--          Add Raw-->
-    <!--        </v-btn>-->
-    <!--      </template>-->
-    <!--    </UiStepper>-->
-
-    <!--    <UiConfirmDialog-->
-    <!--      v-model="addRawDialog"-->
-    <!--      title="Add Raw Proposal"-->
-    <!--      max-width="80%"-->
-    <!--      confirm-text="Load"-->
-    <!--      message="Please enter the raw proposal JSON below"-->
-    <!--      @confirm="addRawProposal"-->
-    <!--    >-->
-    <!--      <v-textarea-->
-    <!--        v-model="rawProposal"-->
-    <!--        label="Raw proposal"-->
-    <!--        outlined-->
-    <!--        placeholder="Enter the raw proposal here"-->
-    <!--        rows="20"-->
-    <!--        class="raw-method-textarea"-->
-    <!--      />-->
-
-    <!--      <v-checkbox-->
-    <!--        v-model="keepExistingPermissions"-->
-    <!--        label="Keep existing permissions"-->
-    <!--        class="checkbox-keep-existing-permissions"-->
-    <!--      />-->
-    <!--    </UiConfirmDialog>-->
     <FundGovernanceDelegatedPermissions
       v-model="delegatedPermissionsEntry"
       :fields-map="DelegatedPermissionFieldsMap"
       submit-label="Create Proposal"
       @submit="submitProposal"
+      @entry-updated="entryUpdated"
     />
   </div>
 </template>
@@ -192,7 +124,15 @@ function formatInputToObject(input: any) {
   return result;
 }
 
+// TODO this is not a good way to do that but the stepper and StepperFields
+//  should not be implemented like that, mutating props inside but instead they
+//  should be correctly emitting events. But it's a lot of refactor to fix that
+//  now.
+const entryUpdated = (val: any) => {
+  delegatedPermissionsEntry.value = val;
+}
 const submitProposal = async () => {
+  console.log("submit", delegatedPermissionsEntry.value)
   const transactions = delegatedPermissionsEntry.value.find(
     (step) => step.stepName === DelegatedStep.Setup,
   )?.steps as any[];

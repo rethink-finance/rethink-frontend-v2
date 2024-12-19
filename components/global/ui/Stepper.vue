@@ -168,6 +168,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  alwaysShowLastStep: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // define the form ref
@@ -218,6 +222,7 @@ const fields = computed(
 );
 
 const isLastStep = computed(() => {
+  if (props.alwaysShowLastStep) return true;
   return (
     activeMainStep.value === stepNames[stepNames.length - 1] &&
     activeSubStep.value ===

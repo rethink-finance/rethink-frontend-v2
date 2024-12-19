@@ -2,6 +2,7 @@
   <v-stepper
     ref="stepper"
     v-model="step"
+    editable
     class="stepper-onboarding"
   >
     <v-stepper-header>
@@ -30,13 +31,6 @@
           >
             Skip
           </v-btn> -->
-          <!-- TODO: determine when to show 'Next' button -->
-          <v-btn
-            v-if="showButtonNext"
-            @click="step++"
-          >
-            Next
-          </v-btn>
           <v-btn
             v-if="showInitializeButton"
             color="primary"
@@ -46,9 +40,14 @@
           >
             Initialize
           </v-btn>
+          <!-- TODO: determine when to show 'Next' button -->
+          <v-btn
+            v-if="showButtonNext"
+            @click="step++"
+          >
+            Next
+          </v-btn>
         </div>
-
-
       </template>
       <template #prev>
         <v-btn
@@ -135,16 +134,7 @@
           </div>
         </div>
         <!-- STEP PERMISSIONS -->
-        <div
-          v-if="item.key=== OnboardingSteps.Permissions"
-        >
-          <FundGovernanceDelegatedPermissions
-            v-model="delegatedPermissionsEntry"
-            :fields-map="DelegatedPermissionFieldsMap"
-            submit-label="Store Permissions"
-            @submit="storePermissions"
-          />
-        </div>
+        <OnboardingPermissions v-if="item.key=== OnboardingSteps.Permissions" />
 
         <!-- STEP NAV METHODS -->
         <div
@@ -218,19 +208,16 @@ import {
 } from "~/types/enums/stepper_onboarding";
 import {
   DelegatedPermissionFieldsMap,
-  DelegatedStep,
-  DelegatedStepMap,
-  proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
-import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
-
 
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 
 // Data
-const step = ref(1);
+const delegatedPermissionsRef = ref<any>();
+const step = ref(6);
+
 // TODO: add validation functionality
 const saveChangesDialog = ref(false);
 const initializeDialog = ref(false);
@@ -271,7 +258,7 @@ const form = ref<IOnboardingForm>({
   lateQuorum: "",
   // Permissions
   permissions: "",
-  // Navigation Methods
+  // NAV Methods
   navMethods: "",
   // Finalise
 });
@@ -306,30 +293,7 @@ const showInitializeButton = computed(() => {
   return false;
 });
 
-const defaultMethod = formatInputToObject(
-  proposalRoleModMethodStepsMap.scopeFunction,
-);
-const delegatedPermissionsEntry = ref([
-  {
-    stepName: DelegatedStep.Setup,
-    stepLabel: DelegatedStepMap[DelegatedStep.Setup].name,
-    formTitle: DelegatedStepMap[DelegatedStep.Setup].formTitle,
-    formText: DelegatedStepMap[DelegatedStep.Setup].formText,
 
-    // default value when adding a new sub step
-    stepDefaultValues: JSON.parse(JSON.stringify(defaultMethod)),
-
-    subStepKey: "contractMethod",
-    multipleSteps: true,
-    subStepLabel: "Permission",
-    // default values for the first sub step
-    steps: [defaultMethod],
-  },
-]);
-
-const storePermissions = () => {
-  console.log("storePermissions")
-}
 
 const toggledOffFields = computed(() => {
   // check which fields are toggled off, and set them to 0 or null address
