@@ -138,6 +138,11 @@ const chainIconMap: Record<string, IIcon> = {
   },
 };
 
+export const findIndexByKey = (array: any, keyToFind: string) => {
+  if (!Array.isArray(array)) return -1;
+  return array.findIndex((item: any) => item.key === keyToFind);
+}
+
 export const getChainIcon = (chainShort: string) => {
   return (
     chainIconMap[chainShort] ?? {

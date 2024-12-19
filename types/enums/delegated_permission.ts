@@ -1,5 +1,5 @@
-import type { IStepperStep } from "~/types/stepper";
 import { InputType } from "./stepper";
+import type { IStepperStep } from "~/types/stepper";
 
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 
