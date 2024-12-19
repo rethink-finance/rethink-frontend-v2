@@ -1,15 +1,7 @@
 
 import { InputType } from "./stepper";
 
-export interface IOnboardingStep {
-  name?: string;
-  key: OnboardingSteps;
-  info?: string;
-  fields?: IField[];
-  hasRegularFields: boolean;
-}
-
-export enum OnboardingSteps {
+export enum OnboardingStep {
     Basics = "basics",
     Fees = "fees",
     Whitelist = "whitelist",
@@ -19,7 +11,6 @@ export enum OnboardingSteps {
     NavMethods = "navMethods",
     Finalise = "finalise",
 }
-
 
 export interface IOnboardingForm {
   photoUrl: string;
@@ -50,17 +41,10 @@ export interface IOnboardingForm {
   whitelist: string;
   isWhitelistedDeposits: boolean;
   // Permissions
-  permissions: string;
+  permissions: string; // TODO remove?
   // NAV Methods
   navMethods: string;
   // Finalise
-
-}
-
-export interface IFieldGroup {
-  isToggleable: boolean;
-  isToggleOn: boolean;
-  fields: IField[];
 }
 
 export interface IField {
@@ -81,48 +65,63 @@ export interface IField {
   value?: string | boolean;
 }
 
-export type FieldsMapType = Record<OnboardingSteps, IField[] | IFieldGroup[]>;
+export interface IOnboardingStep {
+  name?: string;
+  key: OnboardingStep;
+  info?: string;
+  fields?: IField[];
+  hasRegularFields: boolean;
+}
+
+export interface IFieldGroup {
+  isToggleable: boolean;
+  isToggleOn: boolean;
+  fields: IField[];
+}
+
+
+export type FieldsMapType = Record<OnboardingStep, IField[] | IFieldGroup[]>;
 
 
 // 1. define OnboardingStepMap with the steps
 export const OnboardingStepMap: IOnboardingStep[] = [
   {
-    key: OnboardingSteps.Basics,
+    key: OnboardingStep.Basics,
     name: "Basics",
     hasRegularFields: true,
   },
   {
-    key: OnboardingSteps.Fees,
+    key: OnboardingStep.Fees,
     name: "Fees",
     hasRegularFields: true,
   },
   {
-    key: OnboardingSteps.Whitelist,
+    key: OnboardingStep.Whitelist,
     name: "Whitelist",
     hasRegularFields: false, // whitelist is a component not a regular field
   },
   {
-    key: OnboardingSteps.Management,
+    key: OnboardingStep.Management,
     name: "Management",
     hasRegularFields: true,
   },
   {
-    key: OnboardingSteps.Governance,
+    key: OnboardingStep.Governance,
     name: "Governance",
     hasRegularFields: true,
   },
   {
-    key: OnboardingSteps.Permissions,
+    key: OnboardingStep.Permissions,
     name: "Permissions",
     hasRegularFields: false, // this is a component not a regular field
   },
   {
-    key: OnboardingSteps.NavMethods,
+    key: OnboardingStep.NavMethods,
     name: "NAV Methods",
     hasRegularFields: false, // this may be a component as well
   },
   {
-    key: OnboardingSteps.Finalise,
+    key: OnboardingStep.Finalise,
     name: "Finalise",
     hasRegularFields: false, // this is last step, no fields here
   },
@@ -131,7 +130,7 @@ export const OnboardingStepMap: IOnboardingStep[] = [
 
 // 2. define the fields for each section
 export const OnboardingFieldsMap: FieldsMapType = {
-  [OnboardingSteps.Basics]: [
+  [OnboardingStep.Basics]: [
     {
       label: "Photo URL",
       key: "photoUrl",
@@ -178,7 +177,7 @@ export const OnboardingFieldsMap: FieldsMapType = {
       isEditable: true,
     },
   ],
-  [OnboardingSteps.Fees]: [
+  [OnboardingStep.Fees]: [
     {
       isToggleable: true,
       isToggleOn: true,
@@ -282,7 +281,7 @@ export const OnboardingFieldsMap: FieldsMapType = {
       ],
     },
   ],
-  [OnboardingSteps.Whitelist]: [
+  [OnboardingStep.Whitelist]: [
     {
       label: "Whitelist",
       key: "whitelist",
@@ -290,7 +289,7 @@ export const OnboardingFieldsMap: FieldsMapType = {
       placeholder: "E.g. 0",
     },
   ],
-  [OnboardingSteps.Management]: [
+  [OnboardingStep.Management]: [
     {
       label: "Planned Settlement Period (Days)",
       key: "plannedSettlementPeriod",
@@ -308,7 +307,7 @@ export const OnboardingFieldsMap: FieldsMapType = {
       isEditable: true,
     },
   ],
-  [OnboardingSteps.Governance]: [
+  [OnboardingStep.Governance]: [
     {
       label: "Governance Token",
       key: "governanceToken",
@@ -358,7 +357,7 @@ export const OnboardingFieldsMap: FieldsMapType = {
       isEditable: true,
     },
   ],
-  [OnboardingSteps.Permissions]: [
+  [OnboardingStep.Permissions]: [
     {
       label: "Permissions",
       key: "permissions",
@@ -368,7 +367,7 @@ export const OnboardingFieldsMap: FieldsMapType = {
       isEditable: true,
     },
   ],
-  [OnboardingSteps.NavMethods]: [
+  [OnboardingStep.NavMethods]: [
     {
       label: "NAV Methods",
       key: "navMethods",
@@ -378,7 +377,7 @@ export const OnboardingFieldsMap: FieldsMapType = {
       isEditable: true,
     },
   ],
-  [OnboardingSteps.Finalise]: [],
+  [OnboardingStep.Finalise]: [],
 
 };
 

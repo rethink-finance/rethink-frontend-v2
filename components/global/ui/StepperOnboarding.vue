@@ -12,6 +12,7 @@
         :step="index + 1"
         :complete="index + 1 < step"
         :value="index + 1"
+        :editable="isStepEditable(item)"
       >
         <template #default>
           <span>{{ item.name }}</span>
@@ -107,7 +108,7 @@
 
         <!-- STEP WHITELIST -->
         <div
-          v-if="item.key=== OnboardingSteps.Whitelist"
+          v-if="item.key=== OnboardingStep.Whitelist"
         >
           <div
             class="toggleable_group__toggle"
@@ -134,17 +135,17 @@
           </div>
         </div>
         <!-- STEP PERMISSIONS -->
-        <OnboardingPermissions v-if="item.key=== OnboardingSteps.Permissions" />
+        <OnboardingPermissions v-if="item.key=== OnboardingStep.Permissions" />
 
         <!-- STEP NAV METHODS -->
         <div
-          v-if="item.key === OnboardingSteps.NavMethods"
+          v-if="item.key === OnboardingStep.NavMethods"
         >
           This might be a component instead of regular fields
         </div>
         <!-- STEP FINALISE -->
         <div
-          v-if="item.key === OnboardingSteps.Finalise"
+          v-if="item.key === OnboardingStep.Finalise"
           class="step step__finalise"
         >
           <p>
@@ -201,21 +202,17 @@ import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 import {
   OnboardingFieldsMap,
   OnboardingStepMap,
-  OnboardingSteps,
+  OnboardingStep,
   type IField,
   type IOnboardingForm,
   type IOnboardingStep,
 } from "~/types/enums/stepper_onboarding";
-import {
-  DelegatedPermissionFieldsMap,
-} from "~/types/enums/delegated_permission";
 
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 
 // Data
-const delegatedPermissionsRef = ref<any>();
 const step = ref(6);
 
 // TODO: add validation functionality
@@ -272,13 +269,13 @@ const showButtonNext = computed(() => {
   console.log("item", stepperEntry.value)
 
   const steps = [
-    OnboardingSteps.Basics,
-    OnboardingSteps.Fees,
-    OnboardingSteps.Whitelist,
-    OnboardingSteps.Management,
-    OnboardingSteps.Governance,  // TODO remove? has to be init first
-    OnboardingSteps.Permissions,
-    OnboardingSteps.NavMethods,
+    OnboardingStep.Basics,
+    OnboardingStep.Fees,
+    OnboardingStep.Whitelist,
+    OnboardingStep.Management,
+    OnboardingStep.Governance,
+    OnboardingStep.Permissions,
+    OnboardingStep.NavMethods,
   ];
 
   return steps.includes(item.key);
@@ -287,12 +284,28 @@ const showButtonNext = computed(() => {
 const showInitializeButton = computed(() => {
   const item = stepperEntry.value[step.value - 1];
 
-  if (item.key === OnboardingSteps.Governance) {
+  if (item.key === OnboardingStep.Governance) {
     return true;
   }
   return false;
 });
 
+
+const fundInitialized = computed(() => {
+  // TODO return true if fund was initialized already
+  return false
+})
+const isStepEditable = (step: IOnboardingStep) => {
+  // Disable some steps if fund was not initialized yet. User cannot change
+  // permissions or NAV methods if fund was not initialized yet.
+  return !(
+    !fundInitialized.value &&
+    [OnboardingStep.Permissions,
+      OnboardingStep.NavMethods,
+      OnboardingStep.Finalise,
+    ].includes(step.key)
+  );
+}
 
 
 const toggledOffFields = computed(() => {
