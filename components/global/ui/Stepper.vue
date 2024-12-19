@@ -104,6 +104,8 @@
       </div>
 
       <div class="main_card stepper__step-content">
+        <slot name="pre-content" />
+
         <v-form ref="form">
           <div
             v-for="(step, index) in entry"

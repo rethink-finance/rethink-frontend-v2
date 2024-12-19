@@ -16,7 +16,7 @@ import { encodeFunctionCall } from "web3-eth-abi";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
-  DelegatedStepMap,
+  DelegatedStepMap, prepPermissionsProposalData,
   proposalRoleModMethodAbiMap,
   proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
@@ -145,35 +145,10 @@ const submitProposal = async () => {
 
   console.log(toRaw(transactions));
   console.log(toRaw(details));
-  const encodedRoleModEntries = [];
-  const targets = [];
-  const gasValues = [];
-  // TODO this code is almost a complete duplicate of prepRoleModEntryInput and can be refactored...
-  //   this version is slightly more dynamic as it gets function ABI by function name, instead of index value, but
-  //   input data types differ.... we have to unify them and use typescript types
-
-  for (let i = 0; i < transactions.length; i++) {
-    const trx = transactions[i];
-    // Make sure function parameters are in the correct order, take them from function ABI and copy from the trx data
-    // that was filled from the form inputs. Then prepare data, parsing/casting to correct types.
-    const roleModFunctionData = proposalRoleModMethodStepsMap[
-      trx.contractMethod
-    ]
-      .filter((method: any) => method.key !== "contractMethod")
-      .map((method: any) =>
-        prepRoleModEntryInput({
-          ...method,
-          data: trx[method.key],
-        }),
-      );
-    const encodedRoleModFunction = encodeFunctionCall(
-      proposalRoleModMethodAbiMap[trx.contractMethod],
-      roleModFunctionData,
-    );
-    encodedRoleModEntries.push(encodedRoleModFunction);
-    targets.push(roleModAddress);
-    gasValues.push(0);
-  }
+  const { encodedRoleModEntries, targets, gasValues } = prepPermissionsProposalData(
+    roleModAddress,
+    transactions,
+  );
   console.log(
     "propose:",
     JSON.stringify(

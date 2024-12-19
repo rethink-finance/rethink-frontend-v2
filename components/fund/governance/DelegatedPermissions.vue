@@ -11,6 +11,9 @@
       class="delegated-permission-stepper"
       @fields-changed="fieldsChanged"
     >
+      <template #pre-content>
+        <slot name="pre-content" />
+      </template>
       <template #subtitle>
         <UiTooltipClick location="right" :hide-after="6000">
           <Icon
@@ -84,6 +87,7 @@ const toastStore = useToastStore();
 // Props
 const props = defineProps({
   modelValue: { type: Array, required: true }, // Enables v-model for entry
+  allowManagerToSendFundsToFundContract: { type: Boolean, default: false },
   title: { type: String, default: "Delegated Permissions Proposal" },
   fieldsMap: { type: Object, default: () => DelegatedPermissionFieldsMap },
   submitLabel: { type: String, default: "Submit" },
@@ -102,6 +106,7 @@ const props = defineProps({
 // Emits
 const emit = defineEmits([
   "update:modelValue",
+  "update:allowManagerToSendFundsToFundContract",
   "fieldsChanged",
   "submit",
   "addRaw",
@@ -115,6 +120,10 @@ const delegatedEntry = ref(JSON.parse(JSON.stringify(props.modelValue)));
 const showAddRawDialog = ref(false);
 const rawProposalInput = ref("");
 const keepExistingPermissions = ref(true);
+
+const toggleAllowManagerToSend = () => {
+  emit("update:allowManagerToSendFundsToFundContract", !props.allowManagerToSendFundsToFundContract);
+};
 
 // Methods
 const openAddRawDialog = () => (showAddRawDialog.value = true);
@@ -147,10 +156,6 @@ const addRawProposal = () => {
       const currentField =
         props.fieldsMap?.setup?.[defaultMethodForEntry.contractMethod];
 
-      console.log("contractMethod.value", contractMethod.value);
-      console.log("currentField", currentField);
-      console.log("currentField", props?.fieldsMap);
-      console.log("defaultMethodForEntry.contractMethod", defaultMethodForEntry.contractMethod);
       // now we need to populate values from the proposal to the defaultMethodForEntry
       entry.value.forEach((value: any) => {
         const valueName = value?.name || "";
@@ -160,8 +165,6 @@ const addRawProposal = () => {
         }
         defaultMethodForEntry[valueName] = value?.data || "";
       });
-      console.log("defaultMethodForEntry", defaultMethodForEntry);
-      console.log("currentField", currentField);
 
       defaultMethodForEntry.isValid = validateFields(
         defaultMethodForEntry,
