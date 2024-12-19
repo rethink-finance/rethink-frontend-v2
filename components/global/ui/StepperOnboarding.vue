@@ -134,6 +134,17 @@
             />
           </div>
         </div>
+        <!-- STEP PERMISSIONS -->
+        <div
+          v-if="item.key=== OnboardingSteps.Permissions"
+        >
+          <FundGovernanceDelegatedPermissions
+            v-model="delegatedPermissionsEntry"
+            :fields-map="DelegatedPermissionFieldsMap"
+            submit-label="Store Permissions"
+            @submit="storePermissions"
+          />
+        </div>
 
         <!-- STEP NAV METHODS -->
         <div
@@ -205,22 +216,22 @@ import {
   type IOnboardingForm,
   type IOnboardingStep,
 } from "~/types/enums/stepper_onboarding";
+import {
+  DelegatedPermissionFieldsMap,
+  DelegatedStep,
+  DelegatedStepMap,
+  proposalRoleModMethodStepsMap,
+} from "~/types/enums/delegated_permission";
+import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
 
 
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 
-
-// Props
-// const props = defineProps({
-
-// })
-
 // Data
 const step = ref(1);
 // TODO: add validation functionality
-const isCurrentStepValid = ref(true);
 const saveChangesDialog = ref(false);
 const initializeDialog = ref(false);
 const isInitializeLoading = ref(false);
@@ -268,15 +279,17 @@ const form = ref<IOnboardingForm>({
 const whitelist = ref<IWhitelist[]>([]);
 
 
-// Computeds
-const showButtonNext =computed(() => {
+// Computed
+const showButtonNext = computed(() => {
   const item = stepperEntry.value[step.value - 1];
+  console.log("item", stepperEntry.value)
 
   const steps = [
     OnboardingSteps.Basics,
     OnboardingSteps.Fees,
     OnboardingSteps.Whitelist,
     OnboardingSteps.Management,
+    OnboardingSteps.Governance,  // TODO remove? has to be init first
     OnboardingSteps.Permissions,
     OnboardingSteps.NavMethods,
   ];
@@ -292,6 +305,31 @@ const showInitializeButton = computed(() => {
   }
   return false;
 });
+
+const defaultMethod = formatInputToObject(
+  proposalRoleModMethodStepsMap.scopeFunction,
+);
+const delegatedPermissionsEntry = ref([
+  {
+    stepName: DelegatedStep.Setup,
+    stepLabel: DelegatedStepMap[DelegatedStep.Setup].name,
+    formTitle: DelegatedStepMap[DelegatedStep.Setup].formTitle,
+    formText: DelegatedStepMap[DelegatedStep.Setup].formText,
+
+    // default value when adding a new sub step
+    stepDefaultValues: JSON.parse(JSON.stringify(defaultMethod)),
+
+    subStepKey: "contractMethod",
+    multipleSteps: true,
+    subStepLabel: "Permission",
+    // default values for the first sub step
+    steps: [defaultMethod],
+  },
+]);
+
+const storePermissions = () => {
+  console.log("storePermissions")
+}
 
 const toggledOffFields = computed(() => {
   // check which fields are toggled off, and set them to 0 or null address
@@ -315,6 +353,7 @@ const toggledOffFields = computed(() => {
 // Methods
 // helper function to generate sections
 const generateSteps = (form: IOnboardingForm) =>{
+  console.log("generate steps", form);
   return OnboardingStepMap?.map((step) => ({
     name: step?.name ?? "",
     key: step?.key ?? "",
@@ -468,25 +507,24 @@ const handleInitialize = async() => {
     console.error(error);
     isInitializeLoading.value = false;
     toastStore.errorToast("There was an error initializing the OIV");
-
-  }finally {
+  } finally {
     initializeDialog.value = false;
   }
 };
 
-const handleStepperEntry = () => {
+const initStepperEntry = () => {
   // generate stepper entry from local storage
   // TODO: here we can load fetched initialized steps as well
   const lsForm = getLocalStorageItem("onboardingForm") as IOnboardingForm;
   const lsWhitelist = getLocalStorageItem("onboardingWhitelist") as IWhitelist[];
 
   // set whitelist from local storage
-  if(lsWhitelist.length > 0){
+  if (lsWhitelist.length > 0){
     whitelist.value = lsWhitelist;
   }
 
   // set form from local storage
-  if(Object.keys(lsForm).length > 0){
+  if (Object.keys(lsForm).length > 0){
     form.value = lsForm;
   }
 
@@ -508,7 +546,7 @@ const handleCloseSaveChangesDialog = () => {
 
 };
 
-const stepperEntry = ref(handleStepperEntry());
+const stepperEntry = ref(initStepperEntry());
 
 // Watchers
 

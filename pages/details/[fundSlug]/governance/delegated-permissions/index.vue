@@ -1,74 +1,80 @@
 <template>
   <div class="delegated-permission">
-    <!-- Stepper with header -->
-    <UiStepper
-      :entry="delegatedEntry"
-      :fields-map="fieldsMap"
-      title="Delegated Permissions Proposal"
+    <!--    &lt;!&ndash; Stepper with header &ndash;&gt;-->
+    <!--    <UiStepper-->
+    <!--      :entry="delegatedPermissionsEntry"-->
+    <!--      :fields-map="fieldsMap"-->
+    <!--      title="Delegated Permissions Proposal"-->
+    <!--      submit-label="Create Proposal"-->
+    <!--      :submit-event="submitProposal"-->
+    <!--      :is-submit-loading="loading"-->
+    <!--      class="delegated-permission-stepper"-->
+    <!--      @fields-changed="contractMethodChanged"-->
+    <!--    >-->
+    <!--      <template #subtitle>-->
+    <!--        <UiTooltipClick location="right" :hide-after="6000">-->
+    <!--          <Icon-->
+    <!--            icon="material-symbols:info-outline"-->
+    <!--            class="info-icon"-->
+    <!--            width="1.5rem"-->
+    <!--          />-->
+
+    <!--          <template #tooltip>-->
+    <!--            <div class="tooltip__content">-->
+    <!--              <span>Create a Delegated Permission Proposal</span>-->
+    <!--              <a-->
+    <!--                class="tooltip__link"-->
+    <!--                href="https://docs.rethink.finance/rethink.finance"-->
+    <!--                target="_blank"-->
+    <!--              >-->
+    <!--                Learn More-->
+    <!--                <Icon icon="maki:arrow" color="primary" width="1rem" />-->
+    <!--              </a>-->
+    <!--            </div>-->
+    <!--          </template>-->
+    <!--        </UiTooltipClick>-->
+
+    <!--      </template>-->
+    <!--      <template #buttons>-->
+    <!--        <v-btn-->
+    <!--          class="text-secondary me-4"-->
+    <!--          variant="outlined"-->
+    <!--          @click="addRawDialog = true"-->
+    <!--        >-->
+    <!--          Add Raw-->
+    <!--        </v-btn>-->
+    <!--      </template>-->
+    <!--    </UiStepper>-->
+
+    <!--    <UiConfirmDialog-->
+    <!--      v-model="addRawDialog"-->
+    <!--      title="Add Raw Proposal"-->
+    <!--      max-width="80%"-->
+    <!--      confirm-text="Load"-->
+    <!--      message="Please enter the raw proposal JSON below"-->
+    <!--      @confirm="addRawProposal"-->
+    <!--    >-->
+    <!--      <v-textarea-->
+    <!--        v-model="rawProposal"-->
+    <!--        label="Raw proposal"-->
+    <!--        outlined-->
+    <!--        placeholder="Enter the raw proposal here"-->
+    <!--        rows="20"-->
+    <!--        class="raw-method-textarea"-->
+    <!--      />-->
+
+    <!--      <v-checkbox-->
+    <!--        v-model="keepExistingPermissions"-->
+    <!--        label="Keep existing permissions"-->
+    <!--        class="checkbox-keep-existing-permissions"-->
+    <!--      />-->
+    <!--    </UiConfirmDialog>-->
+    <FundGovernanceDelegatedPermissions
+      v-model="delegatedPermissionsEntry"
+      :fields-map="DelegatedPermissionFieldsMap"
       submit-label="Create Proposal"
-      :submit-event="submitProposal"
-      :is-submit-loading="loading"
-      class="delegated-permission-stepper"
-      @fields-changed="contractMethodChanged"
-    >
-      <template #subtitle>
-        <UiTooltipClick location="right" :hide-after="6000">
-          <Icon
-            icon="material-symbols:info-outline"
-            class="info-icon"
-            width="1.5rem"
-          />
-
-          <template #tooltip>
-            <div class="tooltip__content">
-              <span>Create a Delegated Permission Proposal</span>
-              <a
-                class="tooltip__link"
-                href="https://docs.rethink.finance/rethink.finance"
-                target="_blank"
-              >
-                Learn More
-                <Icon icon="maki:arrow" color="primary" width="1rem" />
-              </a>
-            </div>
-          </template>
-        </UiTooltipClick>
-
-      </template>
-      <template #buttons>
-        <v-btn
-          class="text-secondary me-4"
-          variant="outlined"
-          @click="addRawDialog = true"
-        >
-          Add Raw
-        </v-btn>
-      </template>
-    </UiStepper>
-
-    <UiConfirmDialog
-      v-model="addRawDialog"
-      title="Add Raw Proposal"
-      max-width="80%"
-      confirm-text="Load"
-      message="Please enter the raw proposal JSON below"
-      @confirm="addRawProposal"
-    >
-      <v-textarea
-        v-model="rawProposal"
-        label="Raw proposal"
-        outlined
-        placeholder="Enter the raw proposal here"
-        rows="20"
-        class="raw-method-textarea"
-      />
-
-      <v-checkbox
-        v-model="keepExistingPermissions"
-        label="Keep existing permissions"
-        class="checkbox-keep-existing-permissions"
-      />
-    </UiConfirmDialog>
+      @submit="submitProposal"
+    />
   </div>
 </template>
 
@@ -81,14 +87,12 @@ import {
   DelegatedStepMap,
   proposalRoleModMethodAbiMap,
   proposalRoleModMethodStepsMap,
-  roleModMethodChoices,
 } from "~/types/enums/delegated_permission";
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -96,11 +100,7 @@ const loading = ref(false);
 
 const router = useRouter();
 const fundStore = useFundStore();
-const web3Store = useWeb3Store();
 const toastStore = useToastStore();
-const addRawDialog = ref(false);
-const rawProposal = ref("");
-const keepExistingPermissions = ref(true);
 const { selectedFundSlug } = toRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -119,7 +119,7 @@ const defaultMethod = formatInputToObject(
   proposalRoleModMethodStepsMap.scopeFunction,
 );
 
-const delegatedEntry = ref([
+const delegatedPermissionsEntry = ref([
   {
     stepName: DelegatedStep.Setup,
     stepLabel: DelegatedStepMap[DelegatedStep.Setup].name,
@@ -152,8 +152,6 @@ const delegatedEntry = ref([
     ],
   },
 ]);
-
-const fieldsMap = ref(DelegatedPermissionFieldsMap);
 
 function formatInputToObject(input: any) {
   /*
@@ -194,60 +192,11 @@ function formatInputToObject(input: any) {
   return result;
 }
 
-// we need to change the inputs based on the contractMethod
-const contractMethodChanged = (
-  mainStepName: any,
-  subStepIndex: any,
-  step: any,
-) => {
-  // we need to formatInputToObject for the new substep inputs based on the contractMethod
-  const newInput = formatInputToObject(
-    proposalRoleModMethodStepsMap[step.contractMethod],
-  );
-
-  const mainStepIndex = delegatedEntry.value.findIndex(
-    (entry) => entry.stepName === mainStepName,
-  );
-  if (mainStepIndex === -1) {
-    console.error("Main step not found");
-    return;
-  }
-
-  const currentInputs = delegatedEntry.value[mainStepIndex].steps[subStepIndex];
-  if (!currentInputs) {
-    console.error("Substep not found");
-    return;
-  }
-
-  const keysToDelete = Object.keys(currentInputs).filter(
-    (key) => key !== "contractMethod",
-  );
-
-  // check if currentInputs has the same keys as newInput
-  // if it does, we don't need to do anything
-  const hasSameKeys = Object.keys(newInput).every(
-    (key) => key in currentInputs,
-  );
-  // check if "isValid" key is NOT present in the currentInputs
-  if (!currentInputs.hasOwnProperty("isValid")) {
-    currentInputs.isValid = false;
-  }
-  if (hasSameKeys) {
-    return;
-  }
-
-  keysToDelete.forEach((key) => {
-    delete currentInputs[key];
-  });
-
-  Object.assign(currentInputs, newInput); // add new input to the current inputs
-};
-
 const submitProposal = async () => {
-  const transactions = delegatedEntry.value.find(
+  const transactions = delegatedPermissionsEntry.value.find(
     (step) => step.stepName === DelegatedStep.Setup,
   )?.steps as any[];
-  const details = delegatedEntry.value.find(
+  const details = delegatedPermissionsEntry.value.find(
     (step) => step.stepName === DelegatedStep.Details,
   )?.steps[0];
   if (!details || !transactions?.length) return;
@@ -348,91 +297,6 @@ const submitProposal = async () => {
     loading.value = false;
     toastStore.errorToast(error.message);
   }
-};
-
-const addRawProposal = () => {
-  try {
-    const proposal = JSON.parse(rawProposal.value);
-    if (!proposal) {
-      throw new Error("Invalid JSON");
-    }
-
-    // format new entries from proposal and roleModMethodChoices
-    const newEntries = [] as any[];
-
-    proposal.forEach((entry: any) => {
-      const contractMethod = roleModMethodChoices.find(
-        (choice) => choice.valueMethodIdx === entry.valueMethodIdx,
-      );
-
-      if (!contractMethod?.value) {
-        console.error("Contract method not found");
-        return
-      }
-
-      // we need to define new method entry based on the contractMethod
-      const defaultMethodForEntry = formatInputToObject(proposalRoleModMethodStepsMap[contractMethod.value]);
-      const currentField = fieldsMap.value?.setup?.[defaultMethodForEntry.contractMethod];
-
-      // now we need to populate values from the proposal to the defaultMethodForEntry
-      entry.value.forEach((value: any) => {
-        const valueName = value?.name || "";
-        if (!valueName) {
-          console.error("Value name not found");
-          return;
-        }
-        const valueData = value?.data || "";
-
-        defaultMethodForEntry[valueName] = valueData;
-      });
-
-      const isValid = validateFields(defaultMethodForEntry, currentField);
-      defaultMethodForEntry.isValid = isValid;
-
-      const newEntry = JSON.parse(JSON.stringify(defaultMethodForEntry));
-      newEntries.push(newEntry);
-    });
-
-    const mainStepIndex = delegatedEntry.value.findIndex(
-      (entry) => entry.stepName === DelegatedStep.Setup,
-    );
-    if (mainStepIndex === -1) {
-      console.error("Main step not found");
-      return;
-    }
-
-    if (!keepExistingPermissions.value) {
-      delegatedEntry.value[mainStepIndex].steps = newEntries;
-    } else {
-      delegatedEntry.value[mainStepIndex].steps.push(...newEntries);
-    }
-    addRawDialog.value = false;
-    rawProposal.value = "";
-    toastStore.successToast("Raw proposal added successfully");
-  } catch (e) {
-    console.error(e);
-    toastStore.errorToast("Failed to add raw proposal. Invalid JSON format.");
-  }
-};
-
-// Validation logic
-const validateFields = (entry:any, fields:any) => {
-  let isValid = true;
-
-  fields.forEach((field:any) => {
-    const { key, rules = [] } = field;
-    const value = entry[key];
-
-    rules.forEach((rule:any) => {
-      if (Array.isArray(value)) {
-        isValid = value.every((val) => rule(val) === true);
-      } else {
-        isValid = rule(value) === true;
-      }
-    });
-  });
-
-  return isValid;
 };
 
 onMounted(() => {

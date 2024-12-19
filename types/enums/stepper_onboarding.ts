@@ -114,7 +114,7 @@ export const OnboardingStepMap: IOnboardingStep[] = [
   {
     key: OnboardingSteps.Permissions,
     name: "Permissions",
-    hasRegularFields: true, // this may be a component as well
+    hasRegularFields: false, // this is a component not a regular field
   },
   {
     key: OnboardingSteps.NavMethods,
