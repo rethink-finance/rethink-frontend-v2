@@ -39,12 +39,6 @@ export interface IOnboardingForm {
   votingDelay: string;
   proposalThreshold: string;
   lateQuorum: string;
-
-  // TODO: remove this
-  // // Whitelist
-  // whitelist: string;
-  // isWhitelistedDeposits: boolean;
-
 }
 
 export interface IField {

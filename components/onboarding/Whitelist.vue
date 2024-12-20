@@ -37,10 +37,14 @@ const emit = defineEmits(["update-items", "update-is-whitelisted-deposits"]);
 // 0x6EC175951624e1E1e6367Fa3dB90a1829E032Ec3
 // 0x0000000000000000000000000000000000000000
 
+const props = defineProps<{
+  lsIsWhitelistedDeposits: boolean;
+  lsWhitelist: IWhitelist[];
+}>();
+
 // Data
 const isWhitelistedDeposits = ref(false)
 const whitelist = ref<IWhitelist[]>([]);
-const isValid = ref(false);
 // Computeds
 
 // Methods
@@ -49,7 +53,6 @@ const handleWhitelistChange = (items: IWhitelist[]) => {
   emit("update-items", whitelist.value);
 };
 
-
 // Watchers
 watch(isWhitelistedDeposits, () => {
   emit("update-is-whitelisted-deposits", isWhitelistedDeposits.value);
@@ -57,6 +60,9 @@ watch(isWhitelistedDeposits, () => {
 
 // Lifecycle Hooks
 onMounted(() => {
+  isWhitelistedDeposits.value = props.lsIsWhitelistedDeposits ?? false;
+  whitelist.value = props.lsWhitelist ?? [];
+
   emit("update-is-whitelisted-deposits", isWhitelistedDeposits.value);
   emit("update-items", whitelist.value);
 });

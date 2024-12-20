@@ -32,9 +32,6 @@
           >
             Skip
           </v-btn> -->
-          <!-- TODO: determine when to show 'Next' button -->
-          <div>Is valid {{ isCurrentStepValid }}</div>
-
           <div class="item">
             <v-tooltip
               activator="parent"
@@ -123,6 +120,8 @@
         <!-- STEP WHITELIST -->
         <OnboardingWhitelist
           v-if="item.key === OnboardingStep.Whitelist"
+          :ls-whitelist="whitelist"
+          :ls-is-whitelisted-deposits="isWhitelistedDeposits"
           @update-items="handleWhitelistChange"
           @update-is-whitelisted-deposits="isWhitelistedDeposits = $event"
         />
@@ -189,9 +188,9 @@
 <script setup lang="ts">
 import { ethers } from "ethers";
 import { useAccountStore } from "~/store/account/account.store";
+import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 import {
@@ -253,12 +252,23 @@ const showButtonNext = computed(() => {
     OnboardingStep.Fees,
     OnboardingStep.Whitelist,
     OnboardingStep.Management,
-    OnboardingStep.Governance,
     OnboardingStep.Permissions,
     OnboardingStep.NavMethods,
   ];
 
-  return steps.includes(item.key);
+  // 1. button next is available steps in "steps" array
+  if(steps.includes(item.key)) {
+    return true;
+  }
+
+  console.log("isFundInitialized", isFundInitialized.value);
+  console.log("item.key === OnboardingStep.Governance", item.key === OnboardingStep.Governance);
+  // 2. button next is available on governance step ONLY IF fund was initialized
+  if (item.key === OnboardingStep.Governance && isFundInitialized.value) {
+    return true;
+  }
+
+  return false;
 });
 
 const showInitializeButton = computed(() => {
@@ -305,43 +315,59 @@ const toggledOffFields = computed(() => {
 const isCurrentStepValid = computed(() => {
   // TODO: here we want to check which step are we on and validate the fields
   // Basics, Fees, Management, Governance is validatet here
-  const validateInitialiseSteps = [
+  const stepWithRegularFields = [
     OnboardingStep.Basics,
     OnboardingStep.Fees,
     OnboardingStep.Management,
     OnboardingStep.Governance,
   ];
 
+  let isCurrentStepValid = false;
+  const currentStep = stepperEntry.value[step.value - 1];
 
-  const item = stepperEntry.value[step.value - 1];
 
-  if (!item.fields) return true;
-
-  const output =  item.fields.every((field) => {
-    if (field.fields) {
+  if(stepWithRegularFields.includes(currentStep.key) && currentStep.fields) {
+    isCurrentStepValid =  currentStep.fields.every((field) => {
+      if (field.fields) {
       // check if its toggled off
-      if (!field.isToggleOn) return true;
+        if (!field.isToggleOn) return true;
 
-      return field.fields.every((subField) => {
-        return subField?.rules?.every((rule) => {
-          if (Array.isArray(subField.value)) {
-            return subField.value.every((val) => rule(val) === true);
-          }
-          return rule(subField.value) === true;
+        return field.fields.every((subField) => {
+          return subField?.rules?.every((rule) => {
+            if (Array.isArray(subField.value)) {
+              return subField.value.every((val) => rule(val) === true);
+            }
+            return rule(subField.value) === true;
+          });
         });
-      });
 
-    }
-    return field?.rules?.every((rule) => {
-      if (Array.isArray(field.value)) {
-        return field.value.every((val) => rule(val) === true);
       }
-      return rule(field.value) === true;
+      return field?.rules?.every((rule) => {
+        if (Array.isArray(field.value)) {
+          return field.value.every((val) => rule(val) === true);
+        }
+        return rule(field.value) === true;
+      });
     });
-  });
+  }
+  // validation for whitelist
+  else if (currentStep.key === OnboardingStep.Whitelist) {
+    if (isWhitelistedDeposits.value) {
+      isCurrentStepValid = whitelist.value.length > 0;
+    } else {
+      isCurrentStepValid = true;
+    }
+  }
+  // validation for permissions
+  else if (currentStep.key === OnboardingStep.Permissions) {
+    isCurrentStepValid = true;
+  }
+  // validation for nav methods
+  else if (currentStep.key === OnboardingStep.NavMethods) {
+    isCurrentStepValid = true;
+  }
 
-  console.log("isCurrentStepValid", output);
-  return output;
+  return isCurrentStepValid;
 });
 
 
@@ -403,7 +429,6 @@ const generateFields = (step: IOnboardingStep) => {
 }
 
 const handleWhitelistChange = (items: IWhitelist[]) => {
-  console.log("ITEMSMSMSM:" , items)
   whitelist.value = items;
 };
 
@@ -559,20 +584,27 @@ const handleInitialize = async() => {
 const initStepperEntry = () => {
   // generate stepper entry from local storage
   // TODO: here we can load fetched initialized steps as well
-  const lsWhitelist = getLocalStorageItem("onboardingWhitelist") as IWhitelist[];
+  const lsWhitelist = getLocalStorageItem("onboardingWhitelist");
+
+  console.log("LS whitelist", lsWhitelist);
 
   // set whitelist from local storage
-  if (lsWhitelist.length > 0){
-    whitelist.value = lsWhitelist;
+  if (lsWhitelist){
+    isWhitelistedDeposits.value = lsWhitelist.isWhitelistedDeposits ?? false;
+    whitelist.value = lsWhitelist.whitelist ?? [];
   }
-
 
   return generateSteps();
 };
 
 const handleSaveChanges = () => {
   setLocalStorageItem("onboardingStepperEntry", stepperEntry.value);
-  setLocalStorageItem("onboardingWhitelist", whitelist.value);
+  // save whitelist data to local storage
+  const whitelistData ={
+    whitelist: whitelist.value,
+    isWhitelistedDeposits: isWhitelistedDeposits.value,
+  }
+  setLocalStorageItem("onboardingWhitelist", whitelistData);
 
   toastStore.successToast("Draft saved successfully");
 
