@@ -149,6 +149,7 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type INetwork from "~/types/network";
 import type IRoute from "~/types/route";
+import { networks } from "~/store/web3/networksMap";
 const accountStore = useAccountStore();
 const web3Store = useWeb3Store();
 
@@ -190,7 +191,6 @@ const routes : IRoute[] = [
   },
 ]
 const selectedChainId = ref(accountStore.connectedWalletChainId);
-const networks: INetwork[] = web3Store.networks;
 
 watch(() => accountStore.connectedWalletChainId, (newVal, oldVal) => {
   console.log(`Connected Wallet Cain ID changed from ${oldVal} to ${newVal}`);

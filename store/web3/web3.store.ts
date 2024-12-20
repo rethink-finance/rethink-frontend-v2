@@ -94,11 +94,6 @@ export const useWeb3Store = defineStore({
       },
     };
   },
-  getters: {
-    networks(): INetwork[] {
-      return Object.values(networksMap);
-    },
-  },
   actions: {
     NAVExecutorBeaconProxyAddress(chainId: string): string {
       return addresses.NAVExecutorBeaconProxy[chainId];

@@ -1,5 +1,7 @@
 
 import { InputType } from "./stepper";
+import { networks, networksMap } from "~/store/web3/networksMap";
+import type INetwork from "~/types/network";
 
 export enum OnboardingStep {
     Basics = "basics",
@@ -13,6 +15,7 @@ export enum OnboardingStep {
 }
 
 export interface IOnboardingForm {
+  chainId: string;
   photoUrl: string;
   fundDAOName: string;
   tokenSymbol: string;
@@ -40,8 +43,6 @@ export interface IOnboardingForm {
   // Whitelist
   whitelist: string;
   isWhitelistedDeposits: boolean;
-  // Permissions
-  permissions: string; // TODO remove?
   // NAV Methods
   navMethods: string;
   // Finalise
@@ -63,6 +64,7 @@ export interface IField {
   fields?: IField[];
   title?: string;
   value?: string | boolean;
+  choices?: any[],
 }
 
 export interface IOnboardingStep {
@@ -79,8 +81,8 @@ export interface IFieldGroup {
   fields: IField[];
 }
 
-
-export type FieldsMapType = Record<OnboardingStep, IField[] | IFieldGroup[]>;
+export type OnboardingStepWithoutPermissions = Exclude<OnboardingStep, "permissions">;
+export type FieldsMapType = Record<OnboardingStepWithoutPermissions, IField[] | IFieldGroup[]>;
 
 
 // 1. define OnboardingStepMap with the steps
@@ -138,7 +140,22 @@ export const OnboardingFieldsMap: FieldsMapType = {
       placeholder: "",
       rules: [formRules.required],
       isEditable: true,
-      cols: 12,
+      cols: 9,
+    },
+    {
+      label: "Chain",
+      key: "chainId",
+      type: InputType.Select,
+      placeholder: "",
+      rules: [formRules.required],
+      isEditable: true,
+      cols: 3,
+      choices: networks.map((network: INetwork) => (
+        {
+          value: network.chainId,
+          title: network.chainName,
+        }
+      )),
     },
     {
       label: "OIV DAO Name",
@@ -357,16 +374,6 @@ export const OnboardingFieldsMap: FieldsMapType = {
       isEditable: true,
     },
   ],
-  [OnboardingStep.Permissions]: [
-    {
-      label: "Permissions",
-      key: "permissions",
-      type: InputType.Textarea,
-      placeholder: "E.g. Permissions",
-      rules: [formRules.required],
-      isEditable: true,
-    },
-  ],
   [OnboardingStep.NavMethods]: [
     {
       label: "NAV Methods",
@@ -378,7 +385,6 @@ export const OnboardingFieldsMap: FieldsMapType = {
     },
   ],
   [OnboardingStep.Finalise]: [],
-
 };
 
 

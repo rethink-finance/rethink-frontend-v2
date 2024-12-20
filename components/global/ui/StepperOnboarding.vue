@@ -205,7 +205,7 @@ import {
   OnboardingStep,
   type IField,
   type IOnboardingForm,
-  type IOnboardingStep,
+  type IOnboardingStep, type OnboardingStepWithoutPermissions,
 } from "~/types/enums/stepper_onboarding";
 
 const toastStore = useToastStore();
@@ -213,7 +213,7 @@ const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 
 // Data
-const step = ref(6);
+const step = ref(1);
 
 // TODO: add validation functionality
 const saveChangesDialog = ref(false);
@@ -224,6 +224,7 @@ let nextRouteResolve: Function | null = null;
 
 const form = ref<IOnboardingForm>({
   // Basics
+  chainId: "0xa4b1",
   photoUrl: "",
   fundDAOName: "",
   tokenSymbol: "",
@@ -253,8 +254,7 @@ const form = ref<IOnboardingForm>({
   votingDelay: "",
   proposalThreshold: "",
   lateQuorum: "",
-  // Permissions
-  permissions: "",
+
   // NAV Methods
   navMethods: "",
   // Finalise
@@ -344,8 +344,11 @@ const generateSteps = (form: IOnboardingForm) =>{
 // helper function to generate fields
 const generateFields = (step: IOnboardingStep, form: IOnboardingForm) =>{
   const stepperEntry = getLocalStorageItem("onboardingStepperEntry") || [] as IOnboardingStep[];
+  const stepKey = step.key as OnboardingStepWithoutPermissions;
 
-  return OnboardingFieldsMap?.[step.key]?.map((field, fieldIndex) => {
+  if (!OnboardingFieldsMap[stepKey]) return [];
+
+  return OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
     if (field?.isToggleable) {
       const output = field?.fields?.map((subField) => {
         return {
@@ -354,7 +357,7 @@ const generateFields = (step: IOnboardingStep, form: IOnboardingForm) =>{
         }
       });
 
-      const stepIndex = findIndexByKey(stepperEntry, step.key);
+      const stepIndex = findIndexByKey(stepperEntry, stepKey);
       const isToggleOn = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isToggleOn ?? field?.isToggleOn;
 
       return {
@@ -414,9 +417,15 @@ const formatFeeCollectors = () => {
 
 
 const handleInitialize = async() => {
+  const fundChainId = form.value.chainId;
   try {
     isInitializeLoading.value = true;
-    const fundFactoryContract = web3Store.chainContracts?.["0x89"]?.fundFactoryContract;
+    const fundFactoryContract = web3Store.chainContracts?.[fundChainId]?.fundFactoryContract;
+    if (!fundFactoryContract) {
+      return toastStore.errorToast(
+        `Cannot create fund on chain ${fundChainId}.`,
+      );
+    }
 
     let allowedDepositors = [] as string[];
     if (form.value.isWhitelistedDeposits) {
@@ -468,7 +477,7 @@ const handleInitialize = async() => {
     }).on("receipt", (receipt: any) => {
       console.log("receipt: ", receipt);
       if (receipt.status) {
-        toastStore.successToast("Create Fund transaction was successfull.");
+        toastStore.successToast("Create Fund transaction was successful.");
 
       } else {
         toastStore.errorToast("The Create Fund tx has failed. Please contact the Rethink Finance community for support.");
@@ -478,7 +487,9 @@ const handleInitialize = async() => {
     }).on("error", (error: any) => {
       console.log(error);
       isInitializeLoading.value = false;
-      toastStore.errorToast("There has been an error. Please contact the Rethink Finance community for support.");
+      toastStore.errorToast(
+        "There has been an error. Please contact the Rethink Finance community for support.",
+      );
     });
   } catch (error:any) {
     console.error(error);

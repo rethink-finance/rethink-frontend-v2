@@ -76,7 +76,8 @@ const delegatedPermissionsEntry = ref([
 ]);
 
 // TODO take from cache & roleModAddress
-const fundContractAddress = "0x00a4dcbbb7eb5d0c4ef33ab9763dde5cd91a4b10";
+const fundAddress = "0x00a4dcbbb7eb5d0c4ef33ab9763dde5cd91a4b10";
+const fundBaseTokenAddress = "0x00a4dcbbb7eb5d0c4ef33ab9763dde5cd91a4b10";
 
 const storePermissions = async () => {
   console.log("storePermissions", delegatedPermissionsEntry.value)
@@ -177,11 +178,11 @@ const storePermissions = async () => {
       proposalRoleModMethodAbiMap.scopeParameter,
       [
         "1", // role
-        "1", // targetAddress TODO fill this @cinque
+        fundBaseTokenAddress, // targetAddress, base token contract address
         "0xa9059cbb", // functionSig
         "0", // paramIndex
         "0", // paramComp
-        fundContractAddress, // compValue, take newly created fund contract address
+        fundAddress, // compValue, newly created fund contract address
       ],
     );
     encodedRoleModEntries.push(encodedRoleModFunction);
