@@ -263,8 +263,6 @@ const showButtonNext = computed(() => {
     return true;
   }
 
-  console.log("isFundInitialized", isFundInitialized.value);
-  console.log("item.key === OnboardingStep.Governance", item.key === OnboardingStep.Governance);
   // 2. button next is available on governance step ONLY IF fund was initialized
   if (item.key === OnboardingStep.Governance && isFundInitialized.value) {
     return true;
@@ -589,7 +587,6 @@ const initStepperEntry = () => {
   // TODO: here we can load fetched initialized steps as well
   const lsWhitelist = getLocalStorageItem("onboardingWhitelist");
 
-  console.log("LS whitelist", lsWhitelist);
 
   // set whitelist from local storage
   if (lsWhitelist){
