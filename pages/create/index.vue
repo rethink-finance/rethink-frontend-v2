@@ -27,7 +27,6 @@
           :step="index + 1"
           :complete="index + 1 < step"
           :value="index + 1"
-          :editable="isStepEditable(item)"
         >
           <template #default>
             <span>{{ item.name }}</span>
@@ -48,6 +47,17 @@
               Skip
             </v-btn> -->
             <div class="item">
+              <v-btn
+                v-if="showInitializeButton"
+                color="primary"
+                :disabled="isFundInitialized"
+                variant="flat"
+                class="me-4"
+                :loading="isInitializeLoading"
+                @click="initializeDialog = true"
+              >
+                Initialize
+              </v-btn>
               <v-tooltip
                 activator="parent"
                 location="bottom"
@@ -67,15 +77,7 @@
                 </template>
               </v-tooltip></div>
 
-            <v-btn
-              v-if="showInitializeButton"
-              color="primary"
-              variant="flat"
-              :loading="isInitializeLoading"
-              @click="initializeDialog = true"
-            >
-              Initialize
-            </v-btn>
+
           </div>
         </template>
         <template #prev>
@@ -89,6 +91,14 @@
       </v-stepper-actions>
 
       <v-window v-model="step">
+        <!-- Add overlay if fund is initialized to prevent editing it. -->
+        <v-overlay
+          :model-value="isFundInitialized && step < 6"
+          class="d-flex justify-center align-center"
+          opacity="0.1"
+          contained
+          persistent
+        />
         <v-window-item
           v-for="(item, stepIndex) in stepperEntry"
           :key="stepIndex"
@@ -304,6 +314,8 @@ const showButtonNext = computed(() => {
 });
 
 const showInitializeButton = computed(() => {
+  if (isFundInitialized.value) return false;
+
   const item = stepperEntry.value[step.value - 1];
 
   if (item.key === OnboardingStep.Governance) {
@@ -312,7 +324,7 @@ const showInitializeButton = computed(() => {
   return false;
 });
 
-const isStepEditable = (step: IOnboardingStep) => {
+const isStepEditable = (step: IOnboardingStep, index: number) => {
   // Disable some steps if fund was not initialized yet. User cannot change
   // permissions or NAV methods if fund was not initialized yet.
   if (isLoadingFetchFundCache.value) return false;
@@ -325,7 +337,6 @@ const isStepEditable = (step: IOnboardingStep) => {
     ].includes(step.key)
   );
 }
-
 
 const toggledOffFields = computed(() => {
   // check which fields are toggled off, and set them to 0 or null address
