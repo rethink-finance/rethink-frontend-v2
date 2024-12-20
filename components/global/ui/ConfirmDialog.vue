@@ -1,60 +1,58 @@
 <template>
-  <div>
-    <v-dialog
-      :model-value="modelValue"
-      scrim="black"
-      opacity="0.3"
-      :max-width="maxWidth ?? '600px'"
-      @update:model-value="closeDelegateDialog"
-    >
-      <div class="main_card di_card">
-        <div class="di_card__header-container">
-          <div class="di_card__header">
-            <Icon
-              icon="material-symbols:info-outline"
-              class="di_card__info-icon"
-              width="1.5rem"
-            />
-            {{ title }}
-          </div>
-
+  <v-dialog
+    :model-value="modelValue"
+    scrim="black"
+    opacity="0.3"
+    :max-width="maxWidth ?? '600px'"
+    @update:model-value="closeDelegateDialog"
+  >
+    <div class="main_card di_card">
+      <div class="di_card__header-container">
+        <div class="di_card__header">
           <Icon
-            icon="material-symbols:close"
-            class="di_card__close-icon"
+            icon="material-symbols:info-outline"
+            class="di_card__info-icon"
             width="1.5rem"
-            @click="closeDelegateDialog()"
           />
+          {{ title }}
         </div>
 
-        <div class="di_card__content">
-          <div class="di_card__text">
-            <div class="mb-2" v-html="message" />
-            <slot /> <!-- This is where the content will be injected -->
-          </div>
+        <Icon
+          icon="material-symbols:close"
+          class="di_card__close-icon"
+          width="1.5rem"
+          @click="closeDelegateDialog()"
+        />
+      </div>
 
-          <div class="di_card__button-container">
-            <v-btn
-              class="di_card__cancel-button"
-              variant="text"
-              @click="cancel()"
-            >
-              {{ cancelText ?? "Cancel" }}
-            </v-btn>
+      <div class="di_card__content">
+        <div class="di_card__text">
+          <div class="mb-2" v-html="message" />
+          <slot /> <!-- This is where the content will be injected -->
+        </div>
 
-            <v-btn
-              v-if="confirmText"
-              class="di_card__submit-button"
-              color="primary"
-              :loading="loading"
-              @click="confirm()"
-            >
-              {{ confirmText }}
-            </v-btn>
-          </div>
+        <div class="di_card__button-container">
+          <v-btn
+            class="di_card__cancel-button"
+            variant="text"
+            @click="cancel()"
+          >
+            {{ cancelText ?? "Cancel" }}
+          </v-btn>
+
+          <v-btn
+            v-if="confirmText"
+            class="di_card__submit-button"
+            color="primary"
+            :loading="loading"
+            @click="confirm()"
+          >
+            {{ confirmText }}
+          </v-btn>
         </div>
       </div>
-    </v-dialog>
-  </div>
+    </div>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
