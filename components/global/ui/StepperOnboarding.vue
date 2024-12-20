@@ -91,6 +91,7 @@
                   v-model="field.isToggleOn"
                   color="primary"
                   hide-details
+                  :disabled="!field.isEditable"
                 />
               </div>
 
@@ -122,6 +123,7 @@
           v-if="item.key === OnboardingStep.Whitelist"
           :ls-whitelist="whitelist"
           :ls-is-whitelisted-deposits="isWhitelistedDeposits"
+          :is-disabled="isFundInitialized"
           @update-items="handleWhitelistChange"
           @update-is-whitelisted-deposits="isWhitelistedDeposits = $event"
         />
@@ -274,7 +276,7 @@ const showButtonNext = computed(() => {
 const showInitializeButton = computed(() => {
   const item = stepperEntry.value[step.value - 1];
 
-  if (item.key === OnboardingStep.Governance) {
+  if (item.key === OnboardingStep.Governance && !isFundInitialized.value) {
     return true;
   }
   return false;
@@ -324,7 +326,6 @@ const isCurrentStepValid = computed(() => {
 
   let isCurrentStepValid = false;
   const currentStep = stepperEntry.value[step.value - 1];
-
 
   if(stepWithRegularFields.includes(currentStep.key) && currentStep.fields) {
     isCurrentStepValid =  currentStep.fields.every((field) => {
@@ -404,6 +405,7 @@ const generateFields = (step: IOnboardingStep) => {
 
         return {
           ...subField,
+          isEditable: isFundInitialized ? false : subField?.isEditable,
           value: subFieldValue,
         }
       });
@@ -423,6 +425,7 @@ const generateFields = (step: IOnboardingStep) => {
 
     return {
       ...fieldTyped,
+      isEditable: isFundInitialized ? false : fieldTyped?.isEditable,
       value: fieldValue,
     } as IField;
   });

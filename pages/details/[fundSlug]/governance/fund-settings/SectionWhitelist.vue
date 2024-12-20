@@ -12,6 +12,7 @@
         />
 
         <v-btn
+          v-if="!isDisabled"
           color="#ffffff"
           variant="text"
           :class="{ 'v-btn--active': isAddAddressListActive }"
@@ -21,6 +22,7 @@
         </v-btn>
 
         <v-btn
+          v-if="!isDisabled"
           color="#ffffff"
           variant="text"
           :class="{ 'v-btn--active': isAddAddressActive }"
@@ -30,7 +32,7 @@
         </v-btn>
       </div>
 
-      <div v-if="isAddAddressActive" class="header__new-address">
+      <div v-if="isAddAddressActive && !isDisabled" class="header__new-address">
         <v-col cols="12">
           <v-label class="row-title">
             <div class="label_required row-title__title">
@@ -66,7 +68,7 @@
     </div>
 
     <!-- Bulk add -->
-    <div v-if="isAddAddressListActive" class="header__new-address">
+    <div v-if="isAddAddressListActive && !isDisabled" class="header__new-address">
       <v-col cols="12">
         <v-label class="row-title">
           <div class="label_required row-title__title">
@@ -143,7 +145,7 @@
         </div>
       </template>
 
-      <template #[`item.delete`]="{ item }">
+      <template v-if="!isDisabled" #[`item.delete`]="{ item }">
         <UiDetailsButton small @click.stop="deleteAddress(item)">
           <v-tooltip v-if="item.deleted" activator="parent" location="bottom">
             <template #default>
@@ -196,6 +198,7 @@ const toastStore = useToastStore();
 
 const props = defineProps<{
   items: IWhitelist[];
+  isDisabled?: boolean;
 }>();
 const emit = defineEmits(["update-items"]);
 

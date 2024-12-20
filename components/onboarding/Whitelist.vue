@@ -9,12 +9,14 @@
         v-model="isWhitelistedDeposits"
         color="primary"
         hide-details
+        :disabled="isDisabled"
       />
     </div>
 
     <SectionWhitelist
       v-if="isWhitelistedDeposits"
       :items="whitelist"
+      :is-disabled="isDisabled"
       @update-items="handleWhitelistChange"
     />
     <div v-else>
@@ -40,6 +42,7 @@ const emit = defineEmits(["update-items", "update-is-whitelisted-deposits"]);
 const props = defineProps<{
   lsIsWhitelistedDeposits: boolean;
   lsWhitelist: IWhitelist[];
+  isDisabled: boolean;
 }>();
 
 // Data
