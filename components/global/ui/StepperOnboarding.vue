@@ -209,7 +209,7 @@ const accountStore = useAccountStore();
 const createFundStore = useCreateFundStore();
 
 // Data
-const { chainId } = toRefs(createFundStore);
+const { chainId, fundInitCache } = toRefs(createFundStore);
 const step = ref(6);
 
 // TODO: add validation functionality
@@ -240,6 +240,11 @@ watch(() => accountStore.activeAccountAddress, async () => {
 });
 
 // Computed
+const isFundInitialized = computed(() => {
+  // Return true if fund was initialized already
+  return !!fundInitCache?.value?.fundContractAddr;
+})
+
 const showButtonNext = computed(() => {
   const item = stepperEntry.value[step.value - 1];
 
@@ -265,16 +270,11 @@ const showInitializeButton = computed(() => {
   return false;
 });
 
-
-const fundInitialized = computed(() => {
-  // TODO return true if fund was initialized already
-  return false
-})
 const isStepEditable = (step: IOnboardingStep) => {
   // Disable some steps if fund was not initialized yet. User cannot change
   // permissions or NAV methods if fund was not initialized yet.
   return !(
-    !fundInitialized.value &&
+    !isFundInitialized.value &&
     [OnboardingStep.Permissions,
       OnboardingStep.NavMethods,
       OnboardingStep.Finalise,
@@ -403,7 +403,6 @@ const generateFields = (step: IOnboardingStep) => {
 }
 
 const handleWhitelistChange = (items: IWhitelist[]) => {
-
   console.log("ITEMSMSMSM:" , items)
   whitelist.value = items;
 };
@@ -414,10 +413,7 @@ const submitForm = () => {
 };
 
 
-
-
 const getFieldByStepAndFieldKey = (stepperEntry: IOnboardingStep[], stepKey:string, fieldKey:string) => {
-
   return stepperEntry
     ?.find(step => step.key === stepKey)?.fields
     ?.flatMap(field => field.fields || field)
@@ -517,40 +513,40 @@ const handleInitialize = async() => {
 
   try {
     isInitializeLoading.value = true;
-    const fundFactoryContract = web3Store.chainContracts?.[fundChainId]?.fundFactoryContract;
+    const fundFactoryContract = web3Store.chainContracts[fundChainId]?.fundFactoryContract;
+
     if (!fundFactoryContract) {
       return toastStore.errorToast(
         `Cannot create fund on chain ${fundChainId}.`,
       );
     }
 
+    const formattedData = formatInitializeData();
+    console.log("SUBMIT formatted data", formattedData);
 
-    await fundFactoryContract.methods.createFund(
-      ...formatInitializeData(),
-    ).send({
-      from: accountStore.activeAccountAddress,
-      maxFeePerGas: "",
-    }).on("transactionHash", (hash: any) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast(
-        "The transaction has been submitted. Please wait for it to be confirmed.",
-      );
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-      if (receipt.status) {
-        toastStore.successToast("Create Fund transaction was successful.");
+    await fundFactoryContract
+      .send("createFund", {}, ...formattedData)
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The transaction has been submitted. Please wait for it to be confirmed.",
+        );
+      }).on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          toastStore.successToast("Create Fund transaction was successful.");
 
-      } else {
-        toastStore.errorToast("The Create Fund tx has failed. Please contact the Rethink Finance community for support.");
-      }
+        } else {
+          toastStore.errorToast("The Create Fund tx has failed. Please contact the Rethink Finance community for support.");
+        }
 
-    }).on("error", (error: any) => {
-      console.log(error);
-      isInitializeLoading.value = false;
-      toastStore.errorToast(
-        "There has been an error. Please contact the Rethink Finance community for support.",
-      );
-    });
+      }).on("error", (error: any) => {
+        console.log(error);
+        isInitializeLoading.value = false;
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance community for support.",
+        );
+      });
   } catch (error:any) {
     console.error(error);
     toastStore.errorToast("There was an error initializing the OIV");
