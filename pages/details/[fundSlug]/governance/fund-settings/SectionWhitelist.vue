@@ -371,6 +371,8 @@ const handleAddNewAddress = () => {
 
     props.items.push(output);
 
+    emit("update-items", [...props.items]);
+
     newAddress.value = "";
     toastStore.successToast("Address added to whitelist");
   } catch (e) {

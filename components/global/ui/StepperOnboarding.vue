@@ -32,6 +32,29 @@
           >
             Skip
           </v-btn> -->
+          <!-- TODO: determine when to show 'Next' button -->
+          <div>Is valid {{ isCurrentStepValid }}</div>
+
+          <div class="item">
+            <v-tooltip
+              activator="parent"
+              location="bottom"
+              :disabled="isCurrentStepValid"
+            >
+              <template #activator="{ props }">
+                <v-btn
+                  v-if="showButtonNext"
+                  :disabled="!isCurrentStepValid"
+                  @click="step++"
+                >
+                  Next
+                </v-btn>
+              </template>
+              <template #default>
+                Please fill out all required fields
+              </template>
+            </v-tooltip></div>
+
           <v-btn
             v-if="showInitializeButton"
             color="primary"
@@ -40,13 +63,6 @@
             @click="initializeDialog = true"
           >
             Initialize
-          </v-btn>
-          <!-- TODO: determine when to show 'Next' button -->
-          <v-btn
-            v-if="showButtonNext"
-            @click="step++"
-          >
-            Next
           </v-btn>
         </div>
       </template>
@@ -83,11 +99,10 @@
 
               <div class="fields">
                 <v-col
-                  v-for="(subField, index) in field.fields"
-                  :key="index"
+                  v-for="(subField, subFieldIndex) in field.fields"
+                  :key="subFieldIndex"
                   :cols="subField?.cols ?? 6"
                 >
-                  <!-- v-model="form[subField.key]" -->
                   <UiField
                     v-model="subField.value"
                     :field="subField"
@@ -97,7 +112,6 @@
               </div>
             </div>
             <div v-else>
-              <!-- v-model="form[field.key]" -->
               <UiField
                 v-model="field.value"
                 :field="field"
@@ -107,33 +121,11 @@
         </div>
 
         <!-- STEP WHITELIST -->
-        <div
-          v-if="item.key=== OnboardingStep.Whitelist"
-        >
-          <div
-            class="toggleable_group__toggle"
-          >
-            <v-switch
-              v-model="form.isWhitelistedDeposits"
-              color="primary"
-              hide-details
-            />
-          </div>
-
-          <SectionWhitelist
-            v-if="form.isWhitelistedDeposits"
-            :items="whitelist"
-            @update-items="handleWhitelistChange"
-          />
-          <div v-else>
-            <UiInfoBox
-              class="info-box"
-              info="Whitelist is disabled. This means that anyone can deposit into the OIV. <br>
-                      If you want to enable the whitelist, please toggle the switch above. <br>
-                      Whitelist is a list of addresses that are allowed to deposit into the OIV."
-            />
-          </div>
-        </div>
+        <OnboardingWhitelist
+          v-if="item.key === OnboardingStep.Whitelist"
+          @update-items="handleWhitelistChange"
+          @update-is-whitelisted-deposits="isWhitelistedDeposits = $event"
+        />
         <!-- STEP PERMISSIONS -->
         <OnboardingPermissions
           v-if="item.key=== OnboardingStep.Permissions"
@@ -197,19 +189,17 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
-import SectionWhitelist from "~/pages/details/[fundSlug]/governance/fund-settings/SectionWhitelist.vue";
 import { useAccountStore } from "~/store/account/account.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 import {
   OnboardingFieldsMap,
-  OnboardingStepMap,
   OnboardingStep,
+  OnboardingStepMap,
   type IField,
   type IOnboardingForm,
-  type IOnboardingStep,
-  type OnboardingStepWithoutPermissions,
+  type IOnboardingStep, type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type { IFundInitCache } from "~/types/fund_settings";
 
@@ -227,45 +217,9 @@ const isInitializeLoading = ref(false);
 // store the resolve/reject functions for the save changes dialog
 let nextRouteResolve: Function | null = null;
 
-const form = ref<IOnboardingForm>({
-  // Basics
-  chainId: "0xa4b1",
-  photoUrl: "",
-  fundDAOName: "",
-  tokenSymbol: "",
-  denominationAsset: "",
-  description: "",
-  // Fees
-  depositFee: "",
-  depositFeeRecipientAddress: "",
-  redemptionFee: "",
-  redemptionFeeRecipientAddress: "",
-  managementFee: "",
-  managementFeeRecipientAddress: "",
-  managementFeePeriod: "",
-  profitManagemnetFee: "",
-  profitManagemnetFeeRecipientAddress: "",
-  hurdleRate: "",
-  // Whitelist
-  whitelist: "",
-  isWhitelistedDeposits: false,
-  // Management
-  plannedSettlementPeriod: "",
-  minLiquidAssetShare: "",
-  // Governance
-  governanceToken: "",
-  quorum: "", // quorumFraction
-  votingPeriod: "",
-  votingDelay: "",
-  proposalThreshold: "",
-  lateQuorum: "",
-
-  // NAV Methods
-  navMethods: "",
-  // Finalise
-});
-
+// whitelist data
 const whitelist = ref<IWhitelist[]>([]);
+const isWhitelistedDeposits = ref(false);
 
 // TODO get this value from localStorage actually
 const chainId = "0xa4b1";
@@ -301,7 +255,6 @@ watch(() => accountStore.activeAccountAddress, async () => {
 // Computed
 const showButtonNext = computed(() => {
   const item = stepperEntry.value[step.value - 1];
-  console.log("item", stepperEntry.value)
 
   const steps = [
     OnboardingStep.Basics,
@@ -362,38 +315,86 @@ const toggledOffFields = computed(() => {
 });
 
 
+const isCurrentStepValid = computed(() => {
+  // TODO: here we want to check which step are we on and validate the fields
+  // Basics, Fees, Management, Governance is validatet here
+  const validateInitialiseSteps = [
+    OnboardingStep.Basics,
+    OnboardingStep.Fees,
+    OnboardingStep.Management,
+    OnboardingStep.Governance,
+  ];
+
+
+  const item = stepperEntry.value[step.value - 1];
+
+  if (!item.fields) return true;
+
+  const output =  item.fields.every((field) => {
+    if (field.fields) {
+      // check if its toggled off
+      if (!field.isToggleOn) return true;
+
+      return field.fields.every((subField) => {
+        return subField?.rules?.every((rule) => {
+          if (Array.isArray(subField.value)) {
+            return subField.value.every((val) => rule(val) === true);
+          }
+          return rule(subField.value) === true;
+        });
+      });
+
+    }
+    return field?.rules?.every((rule) => {
+      if (Array.isArray(field.value)) {
+        return field.value.every((val) => rule(val) === true);
+      }
+      return rule(field.value) === true;
+    });
+  });
+
+  console.log("isCurrentStepValid", output);
+  return output;
+});
+
+
 // Methods
 // helper function to generate sections
-const generateSteps = (form: IOnboardingForm) =>{
-  console.log("generate steps", form);
+const generateSteps = () => {
   return OnboardingStepMap?.map((step) => ({
     name: step?.name ?? "",
     key: step?.key ?? "",
     info: step?.info ?? "",
     hasRegularFields: step?.hasRegularFields ?? false,
-    fields: generateFields(step, form),
+    fields: generateFields(step),
   })) as IOnboardingStep[];
 }
 
 
 // helper function to generate fields
-const generateFields = (step: IOnboardingStep, form: IOnboardingForm) =>{
-  const stepperEntry = getLocalStorageItem("onboardingStepperEntry") || [] as IOnboardingStep[];
-  const stepKey = step.key as OnboardingStepWithoutPermissions;
+const generateFields = (step: IOnboardingStep) => {
+  const lsStepperEntry = getLocalStorageItem("onboardingStepperEntry") || [] as IOnboardingStep[];
+  const stepKey = step.key as OnboardingInitializingSteps;
 
   if (!OnboardingFieldsMap[stepKey]) return [];
 
   return OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
+    const stepIndex = findIndexByKey(lsStepperEntry, stepKey);
+    const isToggleOn = lsStepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isToggleOn ?? field?.isToggleOn;
+
     if (field?.isToggleable) {
-      const output = field?.fields?.map((subField) => {
+      const output = field?.fields?.map((subField, subFieldIndex) => {
+
+        // Try to get the value from local storage, if it doesn't exist, use the default value
+        const lsSubFieldValue = lsStepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.fields?.[subFieldIndex]?.value;
+        const subFieldValue = lsSubFieldValue ?? subField?.value;
+
         return {
           ...subField,
-          value: form[subField?.key] as string,
+          value: subFieldValue,
         }
       });
 
-      const stepIndex = findIndexByKey(stepperEntry, stepKey);
-      const isToggleOn = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isToggleOn ?? field?.isToggleOn;
 
       return {
         ...field,
@@ -402,29 +403,52 @@ const generateFields = (step: IOnboardingStep, form: IOnboardingForm) =>{
       };
     }
     const fieldTyped = field as IField;
+
+    // Try to get the value from local storage, if it doesn't exist, use the default value
+    const lsFieldValue = lsStepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.value;
+    const fieldValue = lsFieldValue ?? fieldTyped?.value;
+
     return {
       ...fieldTyped,
-      value: form[fieldTyped.key] as string,
+      value: fieldValue,
     } as IField;
   });
 }
 
 const handleWhitelistChange = (items: IWhitelist[]) => {
+
+  console.log("ITEMSMSMSM:" , items)
   whitelist.value = items;
 };
 
 const submitForm = () => {
-  console.log("Form submitted", form.value);
+  console.log("Form submitted", stepperEntry.value);
   alert("Form submitted");
 };
 
 
+
+
+const getFieldByStepAndFieldKey = (stepperEntry: IOnboardingStep[], stepKey:string, fieldKey:string) => {
+
+  return stepperEntry
+    ?.find(step => step.key === stepKey)?.fields
+    ?.flatMap(field => field.fields || field)
+    ?.find(field => field.key === fieldKey)?.value || "";
+}
+
+
 const formatFundMetaData = () => {
   return {
-    description: form.value.description,
-    photoUrl: form.value.photoUrl,
-    plannedSettlementPeriod: form.value.plannedSettlementPeriod,
-    minLiquidAssetShare: form.value.minLiquidAssetShare,
+    description: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "description"),
+    photoUrl: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "photoUrl"),
+    plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "plannedSettlementPeriod"),
+    minLiquidAssetShare: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "minLiquidAssetShare"),
+
+    // description: form.value.description,
+    // photoUrl: form.value.photoUrl,
+    // plannedSettlementPeriod: form.value.plannedSettlementPeriod,
+    // minLiquidAssetShare: form.value.minLiquidAssetShare,
     // custom fields goes here
   }
 };
@@ -432,13 +456,13 @@ const formatFundMetaData = () => {
 const getFeeValue = (fee: keyof IOnboardingForm) => {
   return toggledOffFields.value.includes(fee)
     ? 0
-    : parseInt(fromPercentageToBps(form.value[fee]));
+    : parseInt(fromPercentageToBps(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, fee)));
 };
 
 const getFeeCollectors = (fee: keyof IOnboardingForm) => {
   return toggledOffFields.value.includes(fee)
     ? ethers.ZeroAddress
-    : form.value[fee];
+    : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, fee);
 };
 
 const formatFeeCollectors = () => {
@@ -450,9 +474,60 @@ const formatFeeCollectors = () => {
   ]
 };
 
+const allowedDepositors = computed(() => {
+  if (!isWhitelistedDeposits.value) {
+    return [];
+  }
+
+  return whitelist.value
+    .filter((item) => !item.deleted)
+    .map((item) => item.address);
+});
+
+
+
+const formatInitializeData = () => {
+  const output = [
+    [
+      getFeeValue("depositFee"),// depositFee
+      getFeeValue("redemptionFee"),// redemptionFee
+      getFeeValue("profitManagemnetFee"),// profitManagemnetFee
+      getFeeValue("managementFee"),// managementFee
+      0, // performaceHurdleRateBps, default to 0
+      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "denominationAsset"), // baseToken
+      "0x0000000000000000000000000000000000000000",
+      false,
+      false,
+      allowedDepositors.value, // allowedDepositAddrs
+      [], // allowedManagers, default empty array
+      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "governanceToken"), // governanceToken
+      "0x0000000000000000000000000000000000000000",
+      "0x0000000000000000000000000000000000000000",
+      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "fundDAOName"),
+      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "tokenSymbol"),
+      formatFeeCollectors(),
+    ],
+    [
+      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "quorum") as string), // quorumFraction
+      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "lateQuorum") as string),
+      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "votingDelay") as string),
+      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "votingPeriod") as string),
+      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "proposalThreshold") as string),
+    ],
+    JSON.stringify(formatFundMetaData()),
+    0, // feePerformancePeriod, default to 0
+    parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, "managementFeePeriod") as string), // feeManagePeriod
+  ]
+
+  console.log("output", output);
+  return output;
+}
+
 
 const handleInitialize = async() => {
-  const fundChainId = form.value.chainId;
+  // const fundChainId = form.value.chainId;
+  const fundChainId = getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "chainId") as string;
+
   try {
     isInitializeLoading.value = true;
     const fundFactoryContract = web3Store.chainContracts?.[fundChainId]?.fundFactoryContract;
@@ -462,45 +537,9 @@ const handleInitialize = async() => {
       );
     }
 
-    let allowedDepositors = [] as string[];
-    if (form.value.isWhitelistedDeposits) {
-      allowedDepositors = whitelist.value
-        .filter((item) => !item.deleted)
-        .map((item) => item.address);
-    }
-    // TODO: add allowedManagers to the form
-    const allowedManagers = [] as string[];
 
     await fundFactoryContract.methods.createFund(
-      [
-        getFeeValue("depositFee"),// depositFee
-        getFeeValue("redemptionFee"),// redemptionFee
-        getFeeValue("profitManagemnetFee"),// profitManagemnetFee
-        getFeeValue("managementFee"),// managementFee
-        0, // performaceHurdleRateBps - Rok said it should be 0
-        form.value.denominationAsset, // baseToken
-        "0x0000000000000000000000000000000000000000",
-        false,
-        false,
-        allowedDepositors, // allowedDepositAddrs
-        allowedManagers, // allowedManagers
-        form.value.governanceToken, // governanceToken
-        "0x0000000000000000000000000000000000000000",
-        "0x0000000000000000000000000000000000000000",
-        form.value.fundDAOName,
-        form.value.tokenSymbol,
-        formatFeeCollectors(),
-      ],
-      [
-        parseInt(form.value.quorum), // quorumFraction
-        parseInt(form.value.lateQuorum),
-        parseInt(form.value.votingDelay),
-        parseInt(form.value.votingPeriod),
-        parseInt(form.value.proposalThreshold),
-      ],
-      JSON.stringify(formatFundMetaData()),
-      0, // feePerformancePeriod, default to 0
-      parseInt(form.value.managementFeePeriod), // feeManagePeriod
+      ...formatInitializeData(),
     ).send({
       from: accountStore.activeAccountAddress,
       maxFeePerGas: "",
@@ -517,7 +556,6 @@ const handleInitialize = async() => {
       } else {
         toastStore.errorToast("The Create Fund tx has failed. Please contact the Rethink Finance community for support.");
       }
-      isInitializeLoading.value = false;
 
     }).on("error", (error: any) => {
       console.log(error);
@@ -528,17 +566,16 @@ const handleInitialize = async() => {
     });
   } catch (error:any) {
     console.error(error);
-    isInitializeLoading.value = false;
     toastStore.errorToast("There was an error initializing the OIV");
   } finally {
     initializeDialog.value = false;
+    isInitializeLoading.value = false;
   }
 };
 
 const initStepperEntry = () => {
   // generate stepper entry from local storage
   // TODO: here we can load fetched initialized steps as well
-  const lsForm = getLocalStorageItem("onboardingForm") as IOnboardingForm;
   const lsWhitelist = getLocalStorageItem("onboardingWhitelist") as IWhitelist[];
 
   // set whitelist from local storage
@@ -546,18 +583,14 @@ const initStepperEntry = () => {
     whitelist.value = lsWhitelist;
   }
 
-  // set form from local storage
-  if (Object.keys(lsForm).length > 0){
-    form.value = lsForm;
-  }
 
-  return generateSteps(form.value);
+  return generateSteps();
 };
 
 const handleSaveChanges = () => {
   setLocalStorageItem("onboardingStepperEntry", stepperEntry.value);
-  setLocalStorageItem("onboardingForm", form.value);
   setLocalStorageItem("onboardingWhitelist", whitelist.value);
+
   toastStore.successToast("Draft saved successfully");
 
   handleCloseSaveChangesDialog();
@@ -576,11 +609,6 @@ const stepperEntry = ref(initStepperEntry());
 watch(stepperEntry.value, (newVal) => {
   console.log("stepperEntry", newVal);
 });
-
-watch(form.value, (newVal) => {
-  console.log("form", newVal);
-});
-
 
 // Lifecycle Hooks
 onBeforeRouteLeave((to, from, next) => {

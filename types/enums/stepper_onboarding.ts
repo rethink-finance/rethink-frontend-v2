@@ -1,7 +1,7 @@
 
-import { InputType } from "./stepper";
-import { networks, networksMap } from "~/store/web3/networksMap";
+import { networks } from "~/store/web3/networksMap";
 import type INetwork from "~/types/network";
+import { InputType } from "./stepper";
 
 export enum OnboardingStep {
     Basics = "basics",
@@ -40,12 +40,11 @@ export interface IOnboardingForm {
   proposalThreshold: string;
   lateQuorum: string;
 
-  // Whitelist
-  whitelist: string;
-  isWhitelistedDeposits: boolean;
-  // NAV Methods
-  navMethods: string;
-  // Finalise
+  // TODO: remove this
+  // // Whitelist
+  // whitelist: string;
+  // isWhitelistedDeposits: boolean;
+
 }
 
 export interface IField {
@@ -81,8 +80,8 @@ export interface IFieldGroup {
   fields: IField[];
 }
 
-export type OnboardingStepWithoutPermissions = Exclude<OnboardingStep, "permissions">;
-export type FieldsMapType = Record<OnboardingStepWithoutPermissions, IField[] | IFieldGroup[]>;
+export type OnboardingInitializingSteps = Exclude<OnboardingStep, "permissions" | "navMethods" | "whitelist" | "finalise">;
+export type FieldsMapType = Record<OnboardingInitializingSteps, IField[] | IFieldGroup[]>;
 
 
 // 1. define OnboardingStepMap with the steps
@@ -298,14 +297,14 @@ export const OnboardingFieldsMap: FieldsMapType = {
       ],
     },
   ],
-  [OnboardingStep.Whitelist]: [
-    {
-      label: "Whitelist",
-      key: "whitelist",
-      type: InputType.Textarea,
-      placeholder: "E.g. 0",
-    },
-  ],
+  // [OnboardingStep.Whitelist]: [
+  //   {
+  //     label: "Whitelist",
+  //     key: "whitelist",
+  //     type: InputType.Textarea,
+  //     placeholder: "E.g. 0",
+  //   },
+  // ],
   [OnboardingStep.Management]: [
     {
       label: "Planned Settlement Period (Days)",
@@ -374,17 +373,6 @@ export const OnboardingFieldsMap: FieldsMapType = {
       isEditable: true,
     },
   ],
-  [OnboardingStep.NavMethods]: [
-    {
-      label: "NAV Methods",
-      key: "navMethods",
-      type: InputType.Textarea,
-      placeholder: "E.g. NAV Methods",
-      rules: [formRules.required],
-      isEditable: true,
-    },
-  ],
-  [OnboardingStep.Finalise]: [],
 };
 
 
