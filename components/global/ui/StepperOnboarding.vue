@@ -129,7 +129,6 @@
         <!-- STEP PERMISSIONS -->
         <OnboardingPermissions
           v-if="item.key=== OnboardingStep.Permissions"
-          :fund-init-cache="fundInitCache"
         />
 
         <!-- STEP NAV METHODS -->
@@ -192,6 +191,8 @@ import { ethers } from "ethers";
 import { useAccountStore } from "~/store/account/account.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { useCreateFundStore } from "~/store/create-fund/createFund.store";
+
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 import {
   OnboardingFieldsMap,
@@ -201,13 +202,14 @@ import {
   type IOnboardingForm,
   type IOnboardingStep, type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
-import type { IFundInitCache } from "~/types/fund_settings";
 
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
+const createFundStore = useCreateFundStore();
 
 // Data
+const { chainId } = toRefs(createFundStore);
 const step = ref(6);
 
 // TODO: add validation functionality
@@ -221,35 +223,20 @@ let nextRouteResolve: Function | null = null;
 const whitelist = ref<IWhitelist[]>([]);
 const isWhitelistedDeposits = ref(false);
 
-// TODO get this value from localStorage actually
-const chainId = "0xa4b1";
-const fundInitCache = ref<IFundInitCache>();
-
 // Fetch Fund Cache and merge data with localstorage data
-
-const fetchFundCache = async () => {
-  if (!accountStore.activeAccountAddress) {
-    return;
-  }
-  const fundFactoryContract = web3Store.chainContracts[chainId]?.fundFactoryContract;
-
-  fundInitCache.value = await web3Store.callWithRetry(
-    chainId,
-    () =>
-      fundFactoryContract.methods.getFundInitializationCache(
-        accountStore.activeAccountAddress,
-      ).call(),
-  );
-  console.log("fund init cache", fundInitCache);
-  // TODO if no local storage data, use fund cache value?
-}
 onMounted(async () => {
-  await fetchFundCache()
+  if (accountStore.activeAccountAddress) {
+    await createFundStore.fetchFundCacheAction(chainId.value, accountStore.activeAccountAddress);
+    // TODO if no local storage data, use fund cache value?
+  }
 });
 
 watch(() => accountStore.activeAccountAddress, async () => {
   console.log("Watcher: connected wallet changed fetchFundCache");
-  await fetchFundCache()
+  if (accountStore.activeAccountAddress) {
+    await createFundStore.fetchFundCacheAction(chainId.value, accountStore.activeAccountAddress);
+    // TODO if no local storage data, use fund cache value?
+  }
 });
 
 // Computed

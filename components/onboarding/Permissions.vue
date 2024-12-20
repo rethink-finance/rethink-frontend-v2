@@ -7,6 +7,7 @@
     submit-label="Store Permissions"
     title="Permissions"
     :always-show-last-step="true"
+    @entry-updated="entryUpdated"
     @submit="storePermissions"
   >
     <template #pre-content>
@@ -44,20 +45,15 @@ import {
   DelegatedStepMap, prepPermissionsProposalData, proposalRoleModMethodAbiMap,
   proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
-import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
+import { useCreateFundStore } from "~/store/create-fund/createFund.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
-import type { IFundInitCache } from "~/types/fund_settings";
-const fundStore = useFundStore();
+import { GovernableFund } from "assets/contracts/GovernableFund";
+const web3Store = useWeb3Store();
 const toastStore = useToastStore();
-
-const props = defineProps({
-  fundInitCache: {
-    type: Object as PropType<IFundInitCache>,
-    default: () => {
-    },
-  },
-});
+const createFundStore = useCreateFundStore();
+const { chainId, fundInitCache } = toRefs(createFundStore);
 
 const loading = ref(false);
 const allowManagerToSendFundsToFundContract = ref(false);
@@ -83,15 +79,23 @@ const delegatedPermissionsEntry = ref([
   },
 ]);
 
-const storePermissions = async () => {
-  const fundInitCacheSettings = props.fundInitCache?.fundSettings;
-  console.log("storePermissions", delegatedPermissionsEntry.value)
-  console.log("fundInitCacheSettings", fundInitCacheSettings)
+// TODO this is not a good way to do that but the stepper and StepperFields
+//  should not be implemented like that, mutating props inside but instead they
+//  should be correctly emitting events. But it's a lot of refactor to fix that
+//  now.
+const entryUpdated = (val: any) => {
+  delegatedPermissionsEntry.value = val;
+}
 
-  if (!props.fundInitCache?.rolesModifier) {
+const storePermissions = async () => {
+  const fundInitCacheSettings = fundInitCache?.value?.fundSettings;
+  console.log("fundInitCacheSettings", fundInitCacheSettings)
+  console.log("delegatedPermissionsEntry", delegatedPermissionsEntry.value)
+
+  if (!fundInitCache?.value?.rolesModifier) {
     console.error(
       "Something went wrong while storing permissions. " +
-      "Missing fund init cache role modifier address", props.fundInitCache,
+      "Missing fund init cache role modifier address", fundInitCache,
     )
     return toastStore.errorToast(
       "Something went wrong while storing permissions. " +
@@ -99,15 +103,16 @@ const storePermissions = async () => {
     )
   }
 
+  // TODO transactions dont get updated... when imported raw
   const transactions = delegatedPermissionsEntry.value.find(
     (step) => step.stepName === DelegatedStep.Setup,
   )?.steps as any[];
   if (!transactions?.length) return;
   loading.value = true;
 
-  const roleModAddress = props.fundInitCache.rolesModifier;
+  const roleModAddress = fundInitCache?.value?.rolesModifier;
   console.log("roleModAddress", roleModAddress);
-  console.log(toRaw(transactions));
+  console.log("transactions", toRaw(transactions));
 
   const { encodedRoleModEntries, targets, gasValues } = prepPermissionsProposalData(
     roleModAddress,
@@ -140,10 +145,10 @@ const storePermissions = async () => {
   }
    */
   if (allowManagerToSendFundsToFundContract.value) {
-    if (!props.fundInitCache?.fundContractAddr) {
+    if (!fundInitCache?.value?.fundContractAddr) {
       console.error(
         "Something went wrong while generating permissions to allow manager to send funds to fund contract. " +
-        "Missing fundInitCache.fundAddress", props.fundInitCache,
+        "Missing fundInitCache.fundAddress", fundInitCache?.value,
       )
       loading.value = false;
       return toastStore.errorToast(
@@ -154,7 +159,7 @@ const storePermissions = async () => {
     if (!fundInitCacheSettings?.baseToken) {
       console.error(
         "Something went wrong while generating permissions to allow manager to send funds to fund contract. " +
-        "Missing fundInitCache.baseToken", props.fundInitCache,
+        "Missing fundInitCache.baseToken", fundInitCache?.value,
       )
       loading.value = false;
       return toastStore.errorToast(
@@ -164,7 +169,7 @@ const storePermissions = async () => {
     }
     targets.push(roleModAddress);
     gasValues.push(0);
-    const byteEncodedFundAddress = encodeParameter("bytes", props.fundInitCache?.fundContractAddr);
+    const byteEncodedFundAddress = encodeParameter("bytes", fundInitCache?.value?.fundContractAddr);
 
     const encodedRoleModFunction = encodeFunctionCall(
       proposalRoleModMethodAbiMap.scopeParameter,
@@ -188,9 +193,11 @@ const storePermissions = async () => {
     gasValues,
     encodedRoleModEntries,
   ];
+  const fundFactoryContract = web3Store.chainContracts[chainId.value]?.fundFactoryContract;
+
   try {
     console.log("PROPOSAL DATA", proposalData);
-    await fundStore.fundContract
+    await fundFactoryContract
       .send("submitPermissions", {}, ...proposalData)
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);

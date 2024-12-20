@@ -328,6 +328,19 @@ export const GovernableFundFactory = {
     {
       "inputs": [
         {
+          "internalType": "bytes[]",
+          "name": "calldatas",
+          "type": "bytes[]",
+        },
+      ],
+      "name": "submitPermissions",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function",
+    },
+    {
+      "inputs": [
+        {
           "internalType": "address",
           "name": "deployer",
           "type": "address",
