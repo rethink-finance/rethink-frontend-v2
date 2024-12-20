@@ -21,3 +21,9 @@ export default interface IFundSettings {
   fundName: string;
   fundSymbol: string;
 }
+
+export interface IFundInitCache {
+  fundContractAddr: string;
+  rolesModifier: string;
+  fundSettings: IFundSettings;
+}

@@ -325,5 +325,143 @@ export const GovernableFundFactory = {
       "stateMutability": "view",
       "type": "function",
     },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "deployer",
+          "type": "address",
+        },
+      ],
+      "name": "getFundInitializationCache",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "fundContractAddr",
+              "type": "address",
+            },
+            {
+              "internalType": "address",
+              "name": "rolesModifier",
+              "type": "address",
+            },
+            {
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "depositFee",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "withdrawFee",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "performanceFee",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "managementFee",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "performaceHurdleRateBps",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "address",
+                  "name": "baseToken",
+                  "type": "address",
+                },
+                {
+                  "internalType": "address",
+                  "name": "safe",
+                  "type": "address",
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isExternalGovTokenInUse",
+                  "type": "bool",
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isWhitelistedDeposits",
+                  "type": "bool",
+                },
+                {
+                  "internalType": "address[]",
+                  "name": "allowedDepositAddrs",
+                  "type": "address[]",
+                },
+                {
+                  "internalType": "address[]",
+                  "name": "allowedManagers",
+                  "type": "address[]",
+                },
+                {
+                  "internalType": "address",
+                  "name": "governanceToken",
+                  "type": "address",
+                },
+                {
+                  "internalType": "address",
+                  "name": "fundAddress",
+                  "type": "address",
+                },
+                {
+                  "internalType": "address",
+                  "name": "governor",
+                  "type": "address",
+                },
+                {
+                  "internalType": "string",
+                  "name": "fundName",
+                  "type": "string",
+                },
+                {
+                  "internalType": "string",
+                  "name": "fundSymbol",
+                  "type": "string",
+                },
+                {
+                  "internalType": "address[4]",
+                  "name": "feeCollectors",
+                  "type": "address[4]",
+                },
+              ],
+              "internalType": "struct IGovernableFundStorage.Settings",
+              "name": "fundSettings",
+              "type": "tuple",
+            },
+            {
+              "internalType": "string",
+              "name": "_fundMetadata",
+              "type": "string",
+            },
+            {
+              "internalType": "uint256",
+              "name": "_feePerformancePeriod",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "_feeManagePeriod",
+              "type": "uint256",
+            },
+          ],
+          "internalType": "struct GovernableFundFactory.InitializationCache",
+          "name": "",
+          "type": "tuple",
+        },
+      ],
+      "stateMutability": "view",
+      "type": "function",
+    },
   ],
 } as const;

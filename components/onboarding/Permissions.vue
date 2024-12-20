@@ -37,19 +37,27 @@
 </template>
 
 <script setup lang="ts">
-import { encodeFunctionCall } from "web3-eth-abi";
+import { encodeFunctionCall, encodeParameter } from "web3-eth-abi";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
   DelegatedStepMap, prepPermissionsProposalData, proposalRoleModMethodAbiMap,
   proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
-import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
+import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
+import type { IFundInitCache } from "~/types/fund_settings";
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 
+const props = defineProps({
+  fundInitCache: {
+    type: Object as PropType<IFundInitCache>,
+    default: () => {
+    },
+  },
+});
 
 const loading = ref(false);
 const allowManagerToSendFundsToFundContract = ref(false);
@@ -75,19 +83,29 @@ const delegatedPermissionsEntry = ref([
   },
 ]);
 
-// TODO take from cache & roleModAddress
-const fundAddress = "0x00a4dcbbb7eb5d0c4ef33ab9763dde5cd91a4b10";
-const fundBaseTokenAddress = "0x00a4dcbbb7eb5d0c4ef33ab9763dde5cd91a4b10";
-
 const storePermissions = async () => {
+  const fundInitCacheSettings = props.fundInitCache?.fundSettings;
   console.log("storePermissions", delegatedPermissionsEntry.value)
+  console.log("fundInitCacheSettings", fundInitCacheSettings)
+
+  if (!props.fundInitCache?.rolesModifier) {
+    console.error(
+      "Something went wrong while storing permissions. " +
+      "Missing fund init cache role modifier address", props.fundInitCache,
+    )
+    return toastStore.errorToast(
+      "Something went wrong while storing permissions. " +
+      "Missing fund init cache role modifier address.",
+    )
+  }
+
   const transactions = delegatedPermissionsEntry.value.find(
     (step) => step.stepName === DelegatedStep.Setup,
   )?.steps as any[];
   if (!transactions?.length) return;
+  loading.value = true;
 
-  // TODO take cached role mod address that was generated now
-  const roleModAddress = await fundStore.getRoleModAddress();
+  const roleModAddress = props.fundInitCache.rolesModifier;
   console.log("roleModAddress", roleModAddress);
   console.log(toRaw(transactions));
 
@@ -107,59 +125,9 @@ const storePermissions = async () => {
       2,
     ),
   );
-  loading.value = true;
-
-  const proposalData = [
-    targets,
-    gasValues,
-    encodedRoleModEntries,
-  ];
 
   // TODO allowManagerToSendFundsToFundContract permissions
   /*
-    {
-      "inputs": [
-        {
-          "internalType": "uint16",
-          "name": "role",
-          "type": "uint16"
-        },
-        {
-          "internalType": "address",
-          "name": "targetAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes4",
-          "name": "functionSig",
-          "type": "bytes4"
-        },
-        {
-          "internalType": "uint256",
-          "name": "paramIndex",
-          "type": "uint256"
-        },
-        {
-          "internalType": "enum ParameterType",
-          "name": "paramType",
-          "type": "uint8"
-        },
-        {
-          "internalType": "enum Comparison",
-          "name": "paramComp",
-          "type": "uint8"
-        },
-        {
-          "internalType": "bytes",
-          "name": "compValue",
-          "type": "bytes"
-        }
-      ],
-      "name": "scopeParameter",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
     Example:
       {
     "role": "1",
@@ -172,25 +140,56 @@ const storePermissions = async () => {
   }
    */
   if (allowManagerToSendFundsToFundContract.value) {
+    if (!props.fundInitCache?.fundContractAddr) {
+      console.error(
+        "Something went wrong while generating permissions to allow manager to send funds to fund contract. " +
+        "Missing fundInitCache.fundAddress", props.fundInitCache,
+      )
+      loading.value = false;
+      return toastStore.errorToast(
+        "Something went wrong while generating permissions to allow manager to send funds to fund contract." +
+        "Was fund initialized correctly? Missing fund address in fund cache.",
+      )
+    }
+    if (!fundInitCacheSettings?.baseToken) {
+      console.error(
+        "Something went wrong while generating permissions to allow manager to send funds to fund contract. " +
+        "Missing fundInitCache.baseToken", props.fundInitCache,
+      )
+      loading.value = false;
+      return toastStore.errorToast(
+        "Something went wrong while generating permissions to allow manager to send funds to fund contract." +
+        "Was fund initialized correctly? Missing base token address in fund cache.",
+      )
+    }
     targets.push(roleModAddress);
     gasValues.push(0);
+    const byteEncodedFundAddress = encodeParameter("bytes", props.fundInitCache?.fundContractAddr);
+
     const encodedRoleModFunction = encodeFunctionCall(
       proposalRoleModMethodAbiMap.scopeParameter,
       [
         "1", // role
-        fundBaseTokenAddress, // targetAddress, base token contract address
+        fundInitCacheSettings?.baseToken, // targetAddress, base token contract address
         "0xa9059cbb", // functionSig
         "0", // paramIndex
         "0", // paramComp
-        fundAddress, // compValue, newly created fund contract address
+        byteEncodedFundAddress, // compValue, newly created fund contract address
       ],
     );
     encodedRoleModEntries.push(encodedRoleModFunction);
+    // TODO add scopeTarget permission also! with target baseToken
     console.warn("encodedRoleModFunction", encodedRoleModFunction);
   }
   // TODO allowManagerToCollectFees permissions also
 
+  const proposalData = [
+    targets,
+    gasValues,
+    encodedRoleModEntries,
+  ];
   try {
+    console.log("PROPOSAL DATA", proposalData);
     await fundStore.fundContract
       .send("submitPermissions", {}, ...proposalData)
       .on("transactionHash", (hash: any) => {

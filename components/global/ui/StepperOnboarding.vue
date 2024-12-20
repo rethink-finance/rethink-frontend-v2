@@ -135,7 +135,10 @@
           </div>
         </div>
         <!-- STEP PERMISSIONS -->
-        <OnboardingPermissions v-if="item.key=== OnboardingStep.Permissions" />
+        <OnboardingPermissions
+          v-if="item.key=== OnboardingStep.Permissions"
+          :fund-init-cache="fundInitCache"
+        />
 
         <!-- STEP NAV METHODS -->
         <div
@@ -205,15 +208,17 @@ import {
   OnboardingStep,
   type IField,
   type IOnboardingForm,
-  type IOnboardingStep, type OnboardingStepWithoutPermissions,
+  type IOnboardingStep,
+  type OnboardingStepWithoutPermissions,
 } from "~/types/enums/stepper_onboarding";
+import type { IFundInitCache } from "~/types/fund_settings";
 
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 
 // Data
-const step = ref(1);
+const step = ref(6);
 
 // TODO: add validation functionality
 const saveChangesDialog = ref(false);
@@ -262,6 +267,36 @@ const form = ref<IOnboardingForm>({
 
 const whitelist = ref<IWhitelist[]>([]);
 
+// TODO get this value from localStorage actually
+const chainId = "0xa4b1";
+const fundInitCache = ref<IFundInitCache>();
+
+// Fetch Fund Cache and merge data with localstorage data
+
+const fetchFundCache = async () => {
+  if (!accountStore.activeAccountAddress) {
+    return;
+  }
+  const fundFactoryContract = web3Store.chainContracts[chainId]?.fundFactoryContract;
+
+  fundInitCache.value = await web3Store.callWithRetry(
+    chainId,
+    () =>
+      fundFactoryContract.methods.getFundInitializationCache(
+        accountStore.activeAccountAddress,
+      ).call(),
+  );
+  console.log("fund init cache", fundInitCache);
+  // TODO if no local storage data, use fund cache value?
+}
+onMounted(async () => {
+  await fetchFundCache()
+});
+
+watch(() => accountStore.activeAccountAddress, async () => {
+  console.log("Watcher: connected wallet changed fetchFundCache");
+  await fetchFundCache()
+});
 
 // Computed
 const showButtonNext = computed(() => {

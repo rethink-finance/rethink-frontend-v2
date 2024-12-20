@@ -12,12 +12,10 @@
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import { encodeFunctionCall } from "web3-eth-abi";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
   DelegatedStepMap, prepPermissionsProposalData,
-  proposalRoleModMethodAbiMap,
   proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
 
@@ -25,6 +23,7 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 // fund store
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
+import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -84,45 +83,6 @@ const delegatedPermissionsEntry = ref([
     ],
   },
 ]);
-
-function formatInputToObject(input: any) {
-  /*
-  input parameter is an actual function ABI from the RolesFull.json RoleMod contract.
-   */
-  const result = {} as any;
-
-  input?.forEach((item: any) => {
-    const { key, type, isArray } = item;
-    let value;
-
-    // Determine the default value based on the type
-    switch (type) {
-      case "number":
-        value = "";
-        break;
-      case "text":
-        value = "";
-        break;
-      case "select":
-        value = item.defaultValue;
-        break;
-      case "checkbox":
-        value = false;
-        break;
-      default:
-        value = "";
-    }
-
-    // If the field is an array, we need to wrap the value in an array
-    if (isArray) {
-      value = [value];
-    }
-
-    result[key] = value;
-  });
-
-  return result;
-}
 
 // TODO this is not a good way to do that but the stepper and StepperFields
 //  should not be implemented like that, mutating props inside but instead they
