@@ -433,38 +433,36 @@ const isCurrentStepValid = computed(() => {
 
 // Methods
 // helper function to generate sections
-const generateSteps = () => {
+const generateSteps = (stepperEntry: IOnboardingStep[]) => {
   return OnboardingStepMap?.map((step) => ({
     name: step?.name ?? "",
     key: step?.key ?? "",
     info: step?.info ?? "",
     hasRegularFields: step?.hasRegularFields ?? false,
-    fields: generateFields(step),
+    fields: generateFields(step, stepperEntry),
   })) as IOnboardingStep[];
 }
 
 
 // helper function to generate fields
-const generateFields = (step: IOnboardingStep) => {
-  const lsStepperEntry = getLocalStorageItem("onboardingStepperEntry") || [] as IOnboardingStep[];
+const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) => {
   const stepKey = step.key as OnboardingInitializingSteps;
 
   if (!OnboardingFieldsMap[stepKey]) return [];
 
   return OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
-    const stepIndex = findIndexByKey(lsStepperEntry, stepKey);
-    const isToggleOn = lsStepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isToggleOn ?? field?.isToggleOn;
+    const stepIndex = findIndexByKey(stepperEntry, stepKey);
+    const isToggleOn = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isToggleOn ?? field?.isToggleOn;
 
     if (field?.isToggleable) {
       const output = field?.fields?.map((subField, subFieldIndex) => {
 
         // Try to get the value from local storage, if it doesn't exist, use the default value
-        const lsSubFieldValue = lsStepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.fields?.[subFieldIndex]?.value;
-        const subFieldValue = lsSubFieldValue ?? subField?.value;
+        const subFieldValue = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.fields?.[subFieldIndex]?.value;
 
         return {
           ...subField,
-          value: subFieldValue,
+          value: subFieldValue ?? subField?.value,
         }
       });
 
@@ -477,12 +475,11 @@ const generateFields = (step: IOnboardingStep) => {
     const fieldTyped = field as IField;
 
     // Try to get the value from local storage, if it doesn't exist, use the default value
-    const lsFieldValue = lsStepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.value;
-    const fieldValue = lsFieldValue ?? fieldTyped?.value;
+    const fieldValue = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.value;
 
     return {
       ...fieldTyped,
-      value: fieldValue,
+      value: fieldValue ?? fieldTyped?.value,
     } as IField;
   });
 }
@@ -642,6 +639,7 @@ const initStepperEntry = () => {
   // generate stepper entry from local storage
   // TODO: here we can load fetched initialized steps as well
   const lsWhitelist = getLocalStorageItem("onboardingWhitelist");
+  const lsStepperEntry = getLocalStorageItem("onboardingStepperEntry") || [] as IOnboardingStep[];
 
   console.log("LS whitelist", lsWhitelist);
   // set whitelist from local storage
@@ -650,7 +648,11 @@ const initStepperEntry = () => {
     whitelist.value = lsWhitelist.whitelist ?? [];
   }
 
-  return generateSteps();
+  // TODO: for now we only load the local storage steps
+  // 1. here we should load the fetched initialized steps as well, if exist
+  // 2. if fetched initialized step DON'T exist, we should load the local storage steps
+
+  return generateSteps(lsStepperEntry);
 };
 
 const handleSaveChanges = () => {
