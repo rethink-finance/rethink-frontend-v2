@@ -65,13 +65,13 @@ const fetchGovernorData = async (fundChainId: string, governorAddress?: string) 
   ]);
 
   return {
-    quorumNumerator,
-    quorumDenominator,
+    quorumNumerator: Number(quorumNumerator),
+    quorumDenominator: Number(quorumDenominator),
     quorum: formatQuorumPercentage(quorumNumerator, quorumDenominator),
-    votingDelay,
-    votingPeriod,
-    proposalThreshold,
-    lateQuorum,
+    votingDelay: Number(votingDelay),
+    votingPeriod: Number(votingPeriod),
+    proposalThreshold: Number(proposalThreshold),
+    lateQuorum: Number(lateQuorum),
   };
 }
 
