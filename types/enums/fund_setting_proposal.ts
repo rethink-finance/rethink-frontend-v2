@@ -36,14 +36,14 @@ export interface IProposal {
   description: string;
   depositFee: string;
   depositFeeRecipientAddress: string;
-  redemptionFee: string;
-  redemptionFeeRecipientAddress: string;
+  withdrawFee: string;
+  withdrawFeeRecipientAddress: string;
   managementFee: string;
   managementFeeRecipientAddress: string;
   managementFeePeriod: string;
-  profitManagemnetFee: string;
-  profitManagemnetFeeRecipientAddress: string;
-  profitManagementFeePeriod: string;
+  performanceFee: string;
+  performanceFeeRecipientAddress: string;
+  performanceFeePeriod: string;
   hurdleRate: string;
   plannedSettlementPeriod: string;
   minLiquidAssetShare: string;
@@ -68,8 +68,8 @@ export interface IWhitelist {
 export type FieldsMapType = Record<StepSections, IField[] | IFieldGroup[]>;
 
 
-// 1. define ProposalStepMap which maps each proposal step to its corresponding sections
-export const ProposalStepMap: Record<ProposalStep, IFundSettingProposalStep> = {
+// 1. define FundSettingsStepsMap which maps each proposal step to its corresponding sections
+export const FundSettingsStepsMap: Record<ProposalStep, IFundSettingProposalStep> = {
   [ProposalStep.Setup]: {
     key: ProposalStep.Setup,
     sections: [
@@ -94,9 +94,8 @@ export const ProposalStepMap: Record<ProposalStep, IFundSettingProposalStep> = {
   },
 };
 
-// 2. define FundSettingProposalFieldsMap which holds the form fields for each section
-// TODO rename StepSections to StepSection
-export const FundSettingProposalFieldsMap: FieldsMapType = {
+// 2. define FundSettingsStepFieldsMap which holds the form fields for each section
+export const FundSettingsStepFieldsMap: FieldsMapType = {
   [StepSections.Basics]: [
     {
       label: "Photo URL",
@@ -176,7 +175,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       fields: [
         {
           label: "Redemption Fee (%)",
-          key: "redemptionFee",
+          key: "withdrawFee",
           type: InputType.Number,
           placeholder: "E.g. 0",
           min: 0,
@@ -186,7 +185,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
         },
         {
           label: "Recipient Address",
-          key: "redemptionFeeRecipientAddress",
+          key: "withdrawFeeRecipientAddress",
           type: InputType.Text,
           placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
           rules: [formRules.isValidAddress, formRules.required],
@@ -236,7 +235,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
       fields: [
         {
           label: "Performance Fee (%)",
-          key: "profitManagemnetFee",
+          key: "performanceFee",
           type: InputType.Number,
           placeholder: "E.g. 0",
           min: 0,
@@ -246,7 +245,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
         },
         {
           label: "Recipient Address",
-          key: "profitManagemnetFeeRecipientAddress",
+          key: "performanceFeeRecipientAddress",
           type: InputType.Text,
           placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
           rules: [formRules.isValidAddress, formRules.required],
@@ -255,7 +254,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
         },
         {
           label: "Performance Fee Period (Days)",
-          key: "profitManagementFeePeriod",
+          key: "performanceFeePeriod",
           type: InputType.Number,
           placeholder: "E.g. 0",
           min: 0,

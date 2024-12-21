@@ -236,7 +236,7 @@ import { useActionStateStore } from "~/store/actionState.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import type { IField } from "~/types/enums/input_type";
+import type { IField, IFieldGroup } from "~/types/enums/input_type";
 
 import { ActionState } from "~/types/enums/action_state";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
@@ -271,59 +271,70 @@ let nextRouteResolve: Function | null = null;
 const whitelist = ref<IWhitelist[]>([]);
 const isWhitelistedDeposits = ref(false);
 
+const fundSettings = computed<IFundSettings>(() => fundInitCache?.value?.fundSettings || {} as IFundSettings);
+const fundMetadata = computed(() => fundInitCache?.value?.fundMetadata || {});
+const fundGovernorData = computed(() => fundInitCache?.value?.governorData || {});
+
 // Fetch Fund Cache and fill the form data with the fetched fund cache.
+const setFieldValue = (field: IField): void => {
+  if (![InputType.Image, InputType.Textarea, InputType.Select].includes(field.type)) {
+    field.type = InputType.Text;
+  }
+  field.isToggleable = false;
+
+  const fieldKey = field.key as string;
+  console.log("fund settings", fundSettings.value)
+  console.log("fund fundMetadata", fundMetadata.value)
+  // Convert some fields to text fields, as they are all readonly.
+  if (fieldKey in fundSettings.value) {
+    console.log(" field key in settings", fieldKey);
+    field.value = fundSettings.value[fieldKey];
+  } else if (fieldKey in fundMetadata.value) {
+    console.log(" field key in metadata", fieldKey);
+    field.value = fundMetadata.value[fieldKey];
+  } else if (fieldKey in fundGovernorData.value) {
+    console.log(" field key in governorData", fieldKey);
+    field.value = fundGovernorData.value[fieldKey];
+  } else {
+    console.error(" field key missing", field);
+  }
+  // TODO take care of feeCollectors and allowedDepositAddrs (whitelist)
+  // TODO fee mgntmt period
+}
 const fetchFundCache = async () => {
+  // TODO only if there is no fund cache go set data from local storage, not before!
   if (accountStore.activeAccountAddress) {
-    // TODO make use of loading spinner to lock form while fetching data
     await createFundStore.fetchFundCacheAction(chainId.value, accountStore.activeAccountAddress);
-    // TODO fill form data from the fetched fund cache
-    const fundSettings = fundInitCache?.value?.fundSettings || {} as IFundSettings;
-    const fundMetadata = fundInitCache?.value?.fundMetadata || {};
-    const fundGovernorData = fundInitCache?.value?.governorData || {};
 
-
-    // const fundMetadata = fundInitCache?.value?.fundSettings || {};
     console.warn("settings", fundSettings);
-    const mismatch = [];
+    // const mismatch = [];
     for (const step of stepperEntry.value) {
       console.warn("[STEP]", step.name, step.fields);
 
       for (const field of step.fields || []) {
-        const fieldKey = field.key as string;
-
-        console.log("  step field", fieldKey, field.value);
-        console.log("  step field fields?: ", field.fields);
-        // Convert all fields (except image & text area) to text fields, as they are all readonly.
-        if (![InputType.Image, InputType.Textarea].includes(field.type)) {
-          field.type = InputType.Text;
-        }
-
-        if (fieldKey in fundSettings) {
-          console.log(" field key in settings", fieldKey);
-          field.value = fundSettings[fieldKey];
-        } else if (fieldKey in fundMetadata) {
-          console.log(" field key in metadata", fieldKey);
-          field.value = fundMetadata[fieldKey];
-        } else if (fieldKey in fundGovernorData) {
-          console.log(" field key in governorData", fieldKey);
-          field.value = fundGovernorData[fieldKey];
+        if ("fields" in field) {
+          // Field is of type IFieldGroup, has more subfields.
+          // TODO here we only go 2 levels deep, but IField can have infinite levels, do recursion for fields.
+          for (const subField of field.fields || []) {
+            console.log("  step subfield", subField);
+            setFieldValue(subField);
+          }
         } else {
-          console.warn(" field key missing", field);
-          mismatch.push(fieldKey);
+          // Field is a normal field.
+          setFieldValue(field);
+          console.log("  step field", field);
         }
-        // TODO take care of feeCollectors and allowedDepositAddrs (whitelist)
-        // TODO fee mgntmt period
       }
     }
     // TODO set this cached stepperEntry to localStorage
-    console.error(" mismatch", mismatch.length, mismatch);
+    // console.error(" mismatch", mismatch.length, mismatch);
 
   }
 }
 
 const isLoadingFetchFundCache = computed(() =>
   actionStateStore.isActionState(
-    "fetchFundCache",
+    "fetchFundCacheAction",
     ActionState.Loading,
   ),
 );
@@ -580,9 +591,9 @@ const getFeeCollectors = (feeKey: string) => {
 const formatFeeCollectors = () => {
   return [
     getFeeCollectors("depositFeeRecipientAddress"),
-    getFeeCollectors("redemptionFeeRecipientAddress"),
+    getFeeCollectors("withdrawFeeRecipientAddress"),
     getFeeCollectors("managementFeeRecipientAddress"),
-    getFeeCollectors("profitManagemnetFeeRecipientAddress"),
+    getFeeCollectors("performanceFeeRecipientAddress"),
   ]
 };
 
@@ -601,8 +612,8 @@ const formatInitializeData = () => {
   const output = [
     [
       getFeeValue("depositFee"),// depositFee
-      getFeeValue("redemptionFee"),// redemptionFee
-      getFeeValue("profitManagemnetFee"),// profitManagemnetFee
+      getFeeValue("withdrawFee"),// withdrawFee
+      getFeeValue("performanceFee"),// performanceFee
       getFeeValue("managementFee"),// managementFee
       0, // performaceHurdleRateBps, default to 0
       getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "baseToken"), // baseToken

@@ -173,9 +173,9 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import type { IField } from "~/types/enums/input_type";
 
 import {
-  FundSettingProposalFieldsMap,
+  FundSettingsStepFieldsMap,
   ProposalStep,
-  ProposalStepMap,
+  FundSettingsStepsMap,
   type IProposal,
   type IStepperSection,
   type IWhitelist,
@@ -185,7 +185,6 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
-const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const router = useRouter();
@@ -229,14 +228,14 @@ const proposal = ref<IProposal>({
   // Fees
   depositFee: "",
   depositFeeRecipientAddress: "",
-  redemptionFee: "",
-  redemptionFeeRecipientAddress: "",
+  withdrawFee: "",
+  withdrawFeeRecipientAddress: "",
   managementFee: "",
   managementFeeRecipientAddress: "",
   managementFeePeriod: "",
-  profitManagemnetFee: "",
-  profitManagemnetFeeRecipientAddress: "",
-  profitManagementFeePeriod: "",
+  performanceFee: "",
+  performanceFeeRecipientAddress: "",
+  performanceFeePeriod: "",
   hurdleRate: "",
   // Whitelist
   whitelist: "",
@@ -260,7 +259,7 @@ const whitelist = ref<IWhitelist[]>([]);
 
 // helper function to generate fields
 function generateFields(section: IStepperSection, proposal: IProposal) {
-  return FundSettingProposalFieldsMap[section.key]?.map((field) => {
+  return FundSettingsStepFieldsMap[section.key]?.map((field) => {
     if (field?.isToggleable) {
       const output = field?.fields?.map((subField) => ({
         ...subField,
@@ -282,7 +281,7 @@ function generateFields(section: IStepperSection, proposal: IProposal) {
 
 // helper function to generate sections
 function generateSections(step: ProposalStep, proposal: IProposal) {
-  return ProposalStepMap[step]?.sections?.map((section) => ({
+  return FundSettingsStepsMap[step]?.sections?.map((section) => ({
     name: section?.name ?? "",
     info: section?.info,
     fields: generateFields(section, proposal),
@@ -293,12 +292,12 @@ function generateSections(step: ProposalStep, proposal: IProposal) {
 const proposalEntry = ref([
   {
     stepName: ProposalStep.Setup,
-    stepLabel: ProposalStepMap[ProposalStep.Setup]?.name ?? "",
+    stepLabel: FundSettingsStepsMap[ProposalStep.Setup]?.name ?? "",
     sections: generateSections(ProposalStep.Setup, proposal.value),
   },
   {
     stepName: ProposalStep.Details,
-    stepLabel: ProposalStepMap[ProposalStep.Details]?.name ?? "",
+    stepLabel: FundSettingsStepsMap[ProposalStep.Details]?.name ?? "",
     sections: generateSections(ProposalStep.Details, proposal.value),
   },
 ]);
@@ -484,12 +483,12 @@ const formatProposalData = (proposal: IProposal) => {
     depositFee: toggledOffFields.includes("depositFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.depositFee)),
-    withdrawFee: toggledOffFields.includes("redemptionFee")
+    withdrawFee: toggledOffFields.includes("withdrawFee")
       ? 0
-      : parseInt(fromPercentageToBps(proposal.redemptionFee)),
-    performanceFee: toggledOffFields.includes("profitManagemnetFee")
+      : parseInt(fromPercentageToBps(proposal.withdrawFee)),
+    performanceFee: toggledOffFields.includes("performanceFee")
       ? 0
-      : parseInt(fromPercentageToBps(proposal.profitManagemnetFee)),
+      : parseInt(fromPercentageToBps(proposal.performanceFee)),
     managementFee: toggledOffFields.includes("managementFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.managementFee)),
@@ -503,15 +502,15 @@ const formatProposalData = (proposal: IProposal) => {
       toggledOffFields.includes("depositFeeRecipientAddress")
         ? ethers.ZeroAddress
         : proposal.depositFeeRecipientAddress,
-      toggledOffFields.includes("redemptionFeeRecipientAddress")
+      toggledOffFields.includes("withdrawFeeRecipientAddress")
         ? ethers.ZeroAddress
-        : proposal.redemptionFeeRecipientAddress,
+        : proposal.withdrawFeeRecipientAddress,
       toggledOffFields.includes("managementFeeRecipientAddress")
         ? ethers.ZeroAddress
         : proposal.managementFeeRecipientAddress,
-      toggledOffFields.includes("profitManagemnetFeeRecipientAddress")
+      toggledOffFields.includes("performanceFeeRecipientAddress")
         ? ethers.ZeroAddress
-        : proposal.profitManagemnetFeeRecipientAddress,
+        : proposal.performanceFeeRecipientAddress,
     ],
   };
 
@@ -523,10 +522,10 @@ const formatProposalData = (proposal: IProposal) => {
     minLiquidAssetShare: proposal.minLiquidAssetShare,
   };
   // performance and management periods
-  const isPerformancePeriod365 = proposal.profitManagementFeePeriod === "365";
+  const isPerformancePeriod365 = proposal.performanceFeePeriod === "365";
   const isManagementPeriod365 = proposal.managementFeePeriod === "365";
   const isPerformancePeriodToggledOff = toggledOffFields.includes(
-    "profitManagementFeePeriod",
+    "performanceFeePeriod",
   );
   const isManagementPeriodToggledOff = toggledOffFields.includes(
     "managementFeePeriod",
@@ -535,7 +534,7 @@ const formatProposalData = (proposal: IProposal) => {
   const performancePeriod =
     isPerformancePeriodToggledOff || isPerformancePeriod365
       ? 0
-      : parseInt(proposal.profitManagementFeePeriod);
+      : parseInt(proposal.performanceFeePeriod);
   const managementPeriod =
     isManagementPeriodToggledOff || isManagementPeriod365
       ? 0
@@ -617,15 +616,15 @@ const populateProposal = () => {
     baseToken: fundDeepCopy?.baseToken?.address ?? "",
     depositFee: fromBpsToPercentage(fundDeepCopy?.depositFee),
     depositFeeRecipientAddress: fundDeepCopy?.depositFeeAddress ?? "",
-    redemptionFee: fromBpsToPercentage(fundDeepCopy?.withdrawFee),
-    redemptionFeeRecipientAddress: fundDeepCopy?.withdrawFeeAddress ?? "",
+    withdrawFee: fromBpsToPercentage(fundDeepCopy?.withdrawFee),
+    withdrawFeeRecipientAddress: fundDeepCopy?.withdrawFeeAddress ?? "",
     managementFee: fromBpsToPercentage(fundDeepCopy?.managementFee),
     managementFeeRecipientAddress: fundDeepCopy?.managementFeeAddress ?? "",
     managementFeePeriod: parsedFeePeriod(fundDeepCopy?.managementPeriod ?? ""),
-    profitManagemnetFee: fromBpsToPercentage(fundDeepCopy?.performanceFee),
-    profitManagemnetFeeRecipientAddress:
+    performanceFee: fromBpsToPercentage(fundDeepCopy?.performanceFee),
+    performanceFeeRecipientAddress:
       fundDeepCopy?.performanceFeeAddress ?? "",
-    profitManagementFeePeriod: parsedFeePeriod(
+    performanceFeePeriod: parsedFeePeriod(
       fundDeepCopy?.performancePeriod ?? "",
     ),
     hurdleRate: fromBpsToPercentage(fundDeepCopy?.performaceHurdleRateBps),

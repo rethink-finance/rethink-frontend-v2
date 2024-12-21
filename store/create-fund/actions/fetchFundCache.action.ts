@@ -98,9 +98,34 @@ export const fetchFundCacheAction = async (
       ).call(),
   ) || {};
 
+
   // Parse Metadata JSON string
-  fundInitCache.fundMetadata = JSON.parse(fundInitCache._fundMetadata || "{}");
   fundInitCache.governorData = await fetchGovernorData(fundChainId, fundInitCache?.fundSettings?.governor);
+  fundInitCache.fundMetadata = JSON.parse(fundInitCache._fundMetadata || "{}");
+  fundInitCache.fundMetadata.chainId = fundChainId;
+
+  // Add more fields to fund metadata.
+  const fundSettings = fundInitCache?.fundSettings || {};
+  const feeCollectors = fundSettings?.feeCollectors || [];
+  const whitelistedAddresses = fundInitCache.fundSettings?.allowedDepositAddrs?.join("\n") || [];
+
+  fundInitCache.fundSettings = {
+    ...fundInitCache.fundSettings,
+    chainId: fundChainId,
+    whitelist: whitelistedAddresses,
+    // Add fee collector addresses as key value pairs to fundSettings
+    depositFee: Number(fundSettings?.depositFee || 0),
+    depositFeeRecipientAddress: feeCollectors[0] || "",
+    withdrawFee: Number(fundSettings?.withdrawFee || 0),
+    withdrawFeeRecipientAddress: feeCollectors[1] || "",
+    managementFee: Number(fundSettings?.managementFee || 0),
+    managementFeeRecipientAddress: feeCollectors[2] || "",
+    managementFeePeriod: Number(fundInitCache._feeManagePeriod || 0),
+    performanceFee: Number(fundSettings?.performanceFee || 0),
+    performanceFeePeriod: Number(fundInitCache._feePerformancePeriod || 0),
+    performanceFeeRecipientAddress: feeCollectors[3] || "",
+  };
+
 
   createFundStore.fundInitCache = fundInitCache;
   console.log("fund init cache", createFundStore.fundInitCache);

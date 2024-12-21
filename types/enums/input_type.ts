@@ -34,7 +34,7 @@ export interface IField {
   fields?: IField[];
   title?: string;
   value?: string | boolean;
-  choices?: any[],
+  choices?: { value: number | string | boolean; title: string }[],
 }
 
 export interface IFieldGroup {
