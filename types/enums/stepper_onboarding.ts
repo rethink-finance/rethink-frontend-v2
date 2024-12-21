@@ -1,6 +1,8 @@
 import { networks } from "~/store/web3/networksMap";
 import type INetwork from "~/types/network";
 import { InputType } from "~/types/enums/input_type";
+import { FundSettingProposalFieldsMap, StepSections } from "~/types/enums/fund_setting_proposal";
+import type { IField, IFieldGroup } from "~/types/enums/input_type";
 
 export enum OnboardingStep {
     Basics = "basics",
@@ -13,64 +15,11 @@ export enum OnboardingStep {
     Finalise = "finalise",
 }
 
-export interface IOnboardingForm {
-  chainId: string;
-  photoUrl: string;
-  fundName: string;
-  fundSymbol: string;
-  baseToken: string;
-  description: string;
-  depositFee: string;
-  depositFeeRecipientAddress: string;
-  redemptionFee: string;
-  redemptionFeeRecipientAddress: string;
-  managementFee: string;
-  managementFeeRecipientAddress: string;
-  managementFeePeriod: string;
-  profitManagemnetFee: string;
-  profitManagemnetFeeRecipientAddress: string;
-  hurdleRate: string;
-  plannedSettlementPeriod: string;
-  minLiquidAssetShare: string;
-  governanceToken: string;
-  quorum: string;
-  votingPeriod: string;
-  votingDelay: string;
-  proposalThreshold: string;
-  lateQuorum: string;
-}
-
-export interface IField {
-  label: string;
-  key: keyof IOnboardingForm;
-  type: InputType;
-  placeholder: string;
-  rules?: any[];
-  isEditable?: boolean;
-  cols?: number;
-  min?: number;
-  charLimit?: number;
-  info?: string;
-  isToggleable?: boolean;
-  isToggleOn?: boolean;
-  fields?: IField[];
-  title?: string;
-  value?: string | boolean;
-  choices?: any[],
-}
-
 export interface IOnboardingStep {
   name?: string;
   key: OnboardingStep;
   info?: string;
   fields?: IField[];
-  hasRegularFields: boolean;
-}
-
-export interface IFieldGroup {
-  isToggleable: boolean;
-  isToggleOn: boolean;
-  fields: IField[];
 }
 
 export type OnboardingInitializingSteps = Exclude<OnboardingStep, "permissions" | "navMethods" | "whitelist" | "finalise">;
@@ -82,47 +31,40 @@ export const OnboardingStepMap: IOnboardingStep[] = [
   {
     key: OnboardingStep.Basics,
     name: "Basics",
-    hasRegularFields: true,
   },
   {
     key: OnboardingStep.Fees,
     name: "Fees",
-    hasRegularFields: true,
   },
   {
     key: OnboardingStep.Whitelist,
     name: "Whitelist",
-    hasRegularFields: false, // whitelist is a component not a regular field
   },
   {
     key: OnboardingStep.Management,
     name: "Management",
-    hasRegularFields: true,
   },
   {
     key: OnboardingStep.Governance,
     name: "Governance",
-    hasRegularFields: true,
   },
   {
     key: OnboardingStep.Permissions,
     name: "Permissions",
-    hasRegularFields: false, // this is a component not a regular field
   },
   {
     key: OnboardingStep.NavMethods,
     name: "NAV Methods",
-    hasRegularFields: false, // this may be a component as well
   },
   {
     key: OnboardingStep.Finalise,
     name: "Finalise",
-    hasRegularFields: false, // this is last step, no fields here
   },
 ]
 
 
 // 2. define the fields for each section
+// TODO duplicate in fund_setting_proposal.ts, reuse it....
 export const OnboardingFieldsMap: FieldsMapType = {
   [OnboardingStep.Basics]: [
     {
@@ -186,118 +128,7 @@ export const OnboardingFieldsMap: FieldsMapType = {
       isEditable: true,
     },
   ],
-  [OnboardingStep.Fees]: [
-    {
-      isToggleable: true,
-      isToggleOn: true,
-      fields: [
-        {
-          label: "Deposit Fee (%)",
-          key: "depositFee",
-          type: InputType.Number,
-          placeholder: "E.g. 0",
-          min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
-          isEditable: true,
-        },
-        {
-          label: "Recipient Address",
-          key: "depositFeeRecipientAddress",
-          type: InputType.Text,
-          placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-          rules: [formRules.isValidAddress, formRules.required],
-          isEditable: true,
-        },
-      ],
-    },
-    {
-      isToggleable: true,
-      isToggleOn: true,
-      fields: [
-        {
-          label: "Redemption Fee (%)",
-          key: "redemptionFee",
-          type: InputType.Number,
-          placeholder: "E.g. 0",
-          min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
-          isEditable: true,
-        },
-        {
-          label: "Recipient Address",
-          key: "redemptionFeeRecipientAddress",
-          type: InputType.Text,
-          placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-          rules: [formRules.isValidAddress, formRules.required],
-          isEditable: true,
-        },
-      ],
-    },
-    {
-      isToggleable: true,
-      isToggleOn: true,
-      fields: [
-        {
-          label: "Management Fee (%)",
-          key: "managementFee",
-          type: InputType.Number,
-          placeholder: "E.g. 0",
-          min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
-          isEditable: true,
-        },
-        {
-          label: "Recipient Address",
-          key: "managementFeeRecipientAddress",
-          type: InputType.Text,
-          placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-          rules: [formRules.isValidAddress, formRules.required],
-          isEditable: true,
-        },
-        {
-          label: "Management Fee Period (Days)",
-          key: "managementFeePeriod",
-          type: InputType.Number,
-          placeholder: "E.g. 0",
-          min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
-          isEditable: true,
-          cols: 12,
-        },
-      ],
-    },
-    {
-      isToggleable: true,
-      isToggleOn: true,
-      fields: [
-        {
-          label: "Performance Fee (%)",
-          key: "profitManagemnetFee",
-          type: InputType.Number,
-          placeholder: "E.g. 0",
-          min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
-          isEditable: true,
-        },
-        {
-          label: "Recipient Address",
-          key: "profitManagemnetFeeRecipientAddress",
-          type: InputType.Text,
-          placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-          rules: [formRules.isValidAddress, formRules.required],
-          isEditable: true,
-        },
-      ],
-    },
-  ],
-  // [OnboardingStep.Whitelist]: [
-  //   {
-  //     label: "Whitelist",
-  //     key: "whitelist",
-  //     type: InputType.Textarea,
-  //     placeholder: "E.g. 0",
-  //   },
-  // ],
+  [OnboardingStep.Fees]: FundSettingProposalFieldsMap[StepSections.Fees],
   [OnboardingStep.Management]: [
     {
       label: "Planned Settlement Period (Days)",

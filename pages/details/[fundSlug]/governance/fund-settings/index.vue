@@ -170,11 +170,12 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { IField } from "~/types/enums/input_type";
+
 import {
   FundSettingProposalFieldsMap,
   ProposalStep,
   ProposalStepMap,
-  type IField,
   type IProposal,
   type IStepperSection,
   type IWhitelist,

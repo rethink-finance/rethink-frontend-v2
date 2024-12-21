@@ -42,11 +42,12 @@
 
 <script setup lang="ts">
 import { useFundStore } from "~/store/fund/fund.store";
+import type { IField } from "~/types/enums/input_type";
+
 import {
   FundSettingProposalFieldsMap,
   ProposalStep,
   ProposalStepMap,
-  type IField,
   type IProposal,
   type IStepperSection,
 } from "~/types/enums/fund_setting_proposal";

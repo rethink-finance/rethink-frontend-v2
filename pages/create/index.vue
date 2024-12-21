@@ -112,7 +112,7 @@
               :key="stepIndex"
               :value="stepIndex + 1"
             >
-              <div v-if="item.hasRegularFields" class="fields">
+              <div v-if="item.fields" class="fields">
                 <v-col
                   v-for="(field, index) in item.fields"
                   :key="index"
@@ -137,7 +137,7 @@
                         <UiField
                           v-model="subField.value"
                           :field="subField"
-                          :is-disabled="!field.isToggleOn || (isFundInitialized && step < 6)"
+                          :is-disabled="!field.isToggleOn || (isFundInitialized && step < 6)"
                         />
                       </v-col>
                     </div>
@@ -236,6 +236,7 @@ import { useActionStateStore } from "~/store/actionState.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { IField } from "~/types/enums/input_type";
 
 import { ActionState } from "~/types/enums/action_state";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
@@ -243,8 +244,6 @@ import {
   OnboardingFieldsMap,
   OnboardingStep,
   OnboardingStepMap,
-  type IField,
-  type IOnboardingForm,
   type IOnboardingStep, type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
@@ -290,27 +289,30 @@ const fetchFundCache = async () => {
       console.warn("[STEP]", step.name, step.fields);
 
       for (const field of step.fields || []) {
-        console.log("  step field", field.key, field.value);
+        const fieldKey = field.key as string;
+
+        console.log("  step field", fieldKey, field.value);
         console.log("  step field fields?: ", field.fields);
         // Convert all fields (except image & text area) to text fields, as they are all readonly.
         if (![InputType.Image, InputType.Textarea].includes(field.type)) {
           field.type = InputType.Text;
         }
 
-        if (field.key in fundSettings) {
-          console.log(" field key in settings", field.key);
-          field.value = fundSettings[field.key];
-        } else if (field.key in fundMetadata) {
-          console.log(" field key in metadata", field.key);
-          field.value = fundMetadata[field.key];
-        } else if (field.key in fundGovernorData) {
-          console.log(" field key in governorData", field.key);
-          field.value = fundGovernorData[field.key];
+        if (fieldKey in fundSettings) {
+          console.log(" field key in settings", fieldKey);
+          field.value = fundSettings[fieldKey];
+        } else if (fieldKey in fundMetadata) {
+          console.log(" field key in metadata", fieldKey);
+          field.value = fundMetadata[fieldKey];
+        } else if (fieldKey in fundGovernorData) {
+          console.log(" field key in governorData", fieldKey);
+          field.value = fundGovernorData[fieldKey];
         } else {
           console.warn(" field key missing", field);
-          mismatch.push(field.key);
+          mismatch.push(fieldKey);
         }
         // TODO take care of feeCollectors and allowedDepositAddrs (whitelist)
+        // TODO fee mgntmt period
       }
     }
     // TODO set this cached stepperEntry to localStorage
@@ -486,7 +488,6 @@ const generateSteps = (stepperEntry: IOnboardingStep[]) => {
     name: step?.name ?? "",
     key: step?.key ?? "",
     info: step?.info ?? "",
-    hasRegularFields: step?.hasRegularFields ?? false,
     fields: generateFields(step, stepperEntry),
   })) as IOnboardingStep[];
 }
@@ -564,16 +565,16 @@ const formatFundMetaData = () => {
   }
 };
 
-const getFeeValue = (fee: keyof IOnboardingForm) => {
-  return toggledOffFields.value.includes(fee)
+const getFeeValue = (feeKey: string) => {
+  return toggledOffFields.value.includes(feeKey)
     ? 0
-    : parseInt(fromPercentageToBps(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, fee)));
+    : parseInt(fromPercentageToBps(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, feeKey)));
 };
 
-const getFeeCollectors = (fee: keyof IOnboardingForm) => {
-  return toggledOffFields.value.includes(fee)
+const getFeeCollectors = (feeKey: string) => {
+  return toggledOffFields.value.includes(feeKey)
     ? ethers.ZeroAddress
-    : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, fee);
+    : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, feeKey);
 };
 
 const formatFeeCollectors = () => {

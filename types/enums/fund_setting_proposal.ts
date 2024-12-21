@@ -1,4 +1,5 @@
 import { InputType } from "~/types/enums/input_type";
+import type { IField, IFieldGroup } from "~/types/enums/input_type";
 
 export enum ProposalStep {
   Setup = "setup",
@@ -27,6 +28,7 @@ export interface IFundSettingProposalStep {
 }
 
 export interface IProposal {
+  [key: string]: string | boolean; // Add index signature
   photoUrl: string;
   fundName: string;
   fundSymbol: string;
@@ -63,30 +65,6 @@ export interface IWhitelist {
   isNew: boolean;
 }
 
-export interface IField {
-  label: string;
-  key: keyof IProposal;
-  type: InputType;
-  placeholder: string;
-  rules?: any[];
-  isEditable?: boolean;
-  cols?: number;
-  min?: number;
-  charLimit?: number;
-  info?: string;
-  isToggleable?: boolean;
-  isToggleOn?: boolean;
-  fields?: IField[];
-  title?: string;
-  value?: string | boolean;
-}
-
-export interface IFieldGroup {
-  isToggleable: boolean;
-  isToggleOn: boolean;
-  fields: IField[];
-}
-
 export type FieldsMapType = Record<StepSections, IField[] | IFieldGroup[]>;
 
 
@@ -117,6 +95,7 @@ export const ProposalStepMap: Record<ProposalStep, IFundSettingProposalStep> = {
 };
 
 // 2. define FundSettingProposalFieldsMap which holds the form fields for each section
+// TODO rename StepSections to StepSection
 export const FundSettingProposalFieldsMap: FieldsMapType = {
   [StepSections.Basics]: [
     {
@@ -178,6 +157,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           min: 0,
           rules: [formRules.required, formRules.isNonNegativeNumber],
           isEditable: true,
+          cols: 4,
         },
         {
           label: "Recipient Address",
@@ -186,6 +166,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
           rules: [formRules.isValidAddress, formRules.required],
           isEditable: true,
+          cols: 8,
         },
       ],
     },
@@ -201,6 +182,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           min: 0,
           rules: [formRules.required, formRules.isNonNegativeNumber],
           isEditable: true,
+          cols: 4,
         },
         {
           label: "Recipient Address",
@@ -209,6 +191,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
           rules: [formRules.isValidAddress, formRules.required],
           isEditable: true,
+          cols: 8,
         },
       ],
     },
@@ -224,6 +207,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           min: 0,
           rules: [formRules.required, formRules.isNonNegativeNumber],
           isEditable: true,
+          cols: 4,
         },
         {
           label: "Recipient Address",
@@ -232,6 +216,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
           rules: [formRules.isValidAddress, formRules.required],
           isEditable: true,
+          cols: 8,
         },
         {
           label: "Management Fee Period (Days)",
@@ -257,6 +242,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           min: 0,
           rules: [formRules.required, formRules.isNonNegativeNumber],
           isEditable: true,
+          cols: 4,
         },
         {
           label: "Recipient Address",
@@ -265,6 +251,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
           placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
           rules: [formRules.isValidAddress, formRules.required],
           isEditable: true,
+          cols: 8,
         },
         {
           label: "Performance Fee Period (Days)",

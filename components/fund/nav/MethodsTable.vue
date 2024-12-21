@@ -728,7 +728,7 @@ export default defineComponent({
       this.expanded = newExpanded.length ? [newExpanded[newExpanded.length - 1]] : [];
     },
     onRowClick(row: any, item: any) {
-      const internalItem = item?.item || undefined
+      const internalItem = item?.item || undefined
 
       if(!internalItem) return
 

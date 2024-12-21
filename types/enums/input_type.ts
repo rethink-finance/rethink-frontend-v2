@@ -17,3 +17,28 @@ export const defaultInputTypeValue: Record<InputType, any> = {
   [InputType.Select]: 0,
   [InputType.Image]: "",
 }
+
+export interface IField {
+  label: string;
+  key: string;
+  type: InputType;
+  placeholder: string;
+  rules?: any[];
+  isEditable?: boolean;
+  cols?: number;
+  min?: number;
+  charLimit?: number;
+  info?: string;
+  isToggleable?: boolean;
+  isToggleOn?: boolean;
+  fields?: IField[];
+  title?: string;
+  value?: string | boolean;
+  choices?: any[],
+}
+
+export interface IFieldGroup {
+  isToggleable: boolean;
+  isToggleOn: boolean;
+  fields: IField[];
+}
