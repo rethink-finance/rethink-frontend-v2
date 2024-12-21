@@ -223,7 +223,7 @@ const proposal = ref<IProposal>({
   photoUrl: "",
   fundName: "",
   fundSymbol: "",
-  denominationAsset: "",
+  baseToken: "",
   description: "",
   // Fees
   depositFee: "",
@@ -493,7 +493,7 @@ const formatProposalData = (proposal: IProposal) => {
       ? 0
       : parseInt(fromPercentageToBps(proposal.managementFee)),
     performaceHurdleRateBps: 0, // note from Rok to always submit 0 here
-    baseToken: proposal.denominationAsset,
+    baseToken: proposal.baseToken,
     allowedDepositAddrs: allowedDepositors,
     governanceToken: proposal.governanceToken,
     fundName: proposal.fundName,
@@ -613,7 +613,7 @@ const populateProposal = () => {
     // Fund settings
     fundName: fundDeepCopy?.title ?? "",
     fundSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
-    denominationAsset: fundDeepCopy?.baseToken?.address ?? "",
+    baseToken: fundDeepCopy?.baseToken?.address ?? "",
     depositFee: fromBpsToPercentage(fundDeepCopy?.depositFee),
     depositFeeRecipientAddress: fundDeepCopy?.depositFeeAddress ?? "",
     redemptionFee: fromBpsToPercentage(fundDeepCopy?.withdrawFee),

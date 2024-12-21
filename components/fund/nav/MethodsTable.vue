@@ -420,8 +420,6 @@ import { useFundsStore } from "~/store/funds/funds.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import {
-  defaultInputTypeValue,
-  InputType,
   PositionType,
   PositionTypeKeys,
   PositionTypes,
@@ -433,6 +431,7 @@ import {
 import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import type INAVParts from "~/types/nav_parts";
+import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 
 
 export default defineComponent({

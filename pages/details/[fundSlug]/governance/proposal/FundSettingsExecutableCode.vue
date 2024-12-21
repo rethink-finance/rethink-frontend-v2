@@ -61,7 +61,7 @@ const proposalFundSettings = ref<Partial<IProposal>>({
   photoUrl: "",
   fundName: "",
   fundSymbol: "",
-  denominationAsset: "",
+  baseToken: "",
   description: "",
   // Fees
   depositFee: "",
@@ -144,7 +144,7 @@ const populateProposalData = () => {
     photoUrl: metaData.photoUrl,
     fundName: settings.fundName,
     fundSymbol: settings.fundSymbol,
-    denominationAsset: settings.baseToken,
+    baseToken: settings.baseToken,
     description: metaData.description,
     // Fees
     depositFee: fromBpsToPercentage(settings.depositFee),

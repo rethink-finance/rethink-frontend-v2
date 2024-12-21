@@ -12,6 +12,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import { parseFundSettings } from "~/composables/fund/parseFundSettings";
 import { parseClockMode } from "~/composables/fund/parseClockMode";
 import { networksMap } from "~/store/web3/networksMap";
+import { formatQuorumPercentage } from "~/composables/formatters";
 
 export const fetchFundMetaDataAction = async (
   fundChainId: string,
@@ -160,13 +161,7 @@ export const fetchFundMetaDataAction = async (
       ),
       quorumNumerator,
       quorumDenominator,
-      quorumPercentage: formatPercent(
-        quorumDenominator
-          ? Number(quorumNumerator) / Number(quorumDenominator)
-          : 0,
-        false,
-        "N/A",
-      ),
+      quorumPercentage: formatQuorumPercentage(quorumNumerator, quorumDenominator),
       lateQuorum: pluralizeWord(votingUnit, lateQuorumVoteExtension),
 
       // Fees

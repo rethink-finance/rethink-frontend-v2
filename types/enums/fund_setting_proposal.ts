@@ -1,9 +1,17 @@
-import { InputType } from "./stepper";
+import { InputType } from "~/types/enums/input_type";
 
-export interface IFundSettingProposalStep {
-  name?: string;
-  key: ProposalStep;
-  sections: IStepperSection[];
+export enum ProposalStep {
+  Setup = "setup",
+  Details = "details",
+}
+
+export enum StepSections {
+  Basics = "basic",
+  Fees = "fees",
+  Whitelist = "whitelist",
+  Management = "management",
+  Governance = "governance",
+  Details = "details",
 }
 
 export interface IStepperSection {
@@ -12,11 +20,17 @@ export interface IStepperSection {
   info?: string;
 }
 
+export interface IFundSettingProposalStep {
+  name?: string;
+  key: ProposalStep;
+  sections: IStepperSection[];
+}
+
 export interface IProposal {
   photoUrl: string;
   fundName: string;
   fundSymbol: string;
-  denominationAsset: string;
+  baseToken: string;
   description: string;
   depositFee: string;
   depositFeeRecipientAddress: string;
@@ -75,19 +89,6 @@ export interface IFieldGroup {
 
 export type FieldsMapType = Record<StepSections, IField[] | IFieldGroup[]>;
 
-export enum ProposalStep {
-  Setup = "setup",
-  Details = "details",
-}
-
-export enum StepSections {
-  Basics = "basic",
-  Fees = "fees",
-  Whitelist = "whitelist",
-  Management = "management",
-  Governance = "governance",
-  Details = "details",
-}
 
 // 1. define ProposalStepMap which maps each proposal step to its corresponding sections
 export const ProposalStepMap: Record<ProposalStep, IFundSettingProposalStep> = {
@@ -147,7 +148,7 @@ export const FundSettingProposalFieldsMap: FieldsMapType = {
     },
     {
       label: "Denomination Asset",
-      key: "denominationAsset",
+      key: "baseToken",
       type: InputType.Text,
       placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
       rules: [formRules.isValidAddress, formRules.required],

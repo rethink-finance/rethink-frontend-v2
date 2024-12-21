@@ -26,4 +26,8 @@ export interface IFundInitCache {
   fundContractAddr: string;
   rolesModifier: string;
   fundSettings: IFundSettings;
+  _feeManagePeriod: string;
+  _feePerformancePeriod: string;
+  fundMetadata: Record<string, any>;
+  governorData: Record<string, any>;
 }

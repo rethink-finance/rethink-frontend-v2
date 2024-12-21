@@ -1,7 +1,6 @@
-
-import { InputType } from "./stepper";
 import { networks } from "~/store/web3/networksMap";
 import type INetwork from "~/types/network";
+import { InputType } from "~/types/enums/input_type";
 
 export enum OnboardingStep {
     Basics = "basics",
@@ -19,7 +18,7 @@ export interface IOnboardingForm {
   photoUrl: string;
   fundName: string;
   fundSymbol: string;
-  denominationAsset: string;
+  baseToken: string;
   description: string;
   depositFee: string;
   depositFeeRecipientAddress: string;
@@ -170,7 +169,7 @@ export const OnboardingFieldsMap: FieldsMapType = {
     },
     {
       label: "Denomination Asset",
-      key: "denominationAsset",
+      key: "baseToken",
       type: InputType.Text,
       placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
       rules: [formRules.isValidAddress, formRules.required],

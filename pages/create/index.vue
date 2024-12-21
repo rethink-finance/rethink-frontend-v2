@@ -247,6 +247,8 @@ import {
   type IOnboardingForm,
   type IOnboardingStep, type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
+import type IFundSettings from "~/types/fund_settings";
+import { InputType } from "~/types/enums/input_type";
 
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
@@ -276,18 +278,44 @@ const fetchFundCache = async () => {
     // TODO make use of loading spinner to lock form while fetching data
     await createFundStore.fetchFundCacheAction(chainId.value, accountStore.activeAccountAddress);
     // TODO fill form data from the fetched fund cache
-    const fundSettings = fundInitCache?.value?.fundSettings || {};
+    const fundSettings = fundInitCache?.value?.fundSettings || {} as IFundSettings;
+    const fundMetadata = fundInitCache?.value?.fundMetadata || {};
+    const fundGovernorData = fundInitCache?.value?.governorData || {};
+
+
+    // const fundMetadata = fundInitCache?.value?.fundSettings || {};
     console.warn("settings", fundSettings);
+    const mismatch = [];
     for (const step of stepperEntry.value) {
-      console.log("step", step.fields);
+      console.warn("[STEP]", step.name, step.fields);
 
       for (const field of step.fields || []) {
         console.log("  step field", field.key, field.value);
-        if (!(field.key in fundSettings)) {
-          console.warn(" field key missing", field.key);
+        console.log("  step field fields?: ", field.fields);
+        // Convert all fields (except image & text area) to text fields, as they are all readonly.
+        if (![InputType.Image, InputType.Textarea].includes(field.type)) {
+          field.type = InputType.Text;
         }
+
+        if (field.key in fundSettings) {
+          console.log(" field key in settings", field.key);
+          field.value = fundSettings[field.key];
+        } else if (field.key in fundMetadata) {
+          console.log(" field key in metadata", field.key);
+          field.value = fundMetadata[field.key];
+        } else if (field.key in fundGovernorData) {
+          console.log(" field key in governorData", field.key);
+          field.value = fundGovernorData[field.key];
+        } else {
+          console.warn(" field key missing", field);
+          mismatch.push(field.key);
+        }
+        // TODO take care of feeCollectors and allowedDepositAddrs (whitelist)
       }
     }
+    // TODO set this cached stepperEntry to localStorage
+    console.error(" mismatch", mismatch.length, mismatch);
+
   }
 }
 
@@ -389,6 +417,10 @@ const toggledOffFields = computed(() => {
 
 const isCurrentStepValid = computed(() => {
   // TODO: here we want to check which step are we on and validate the fields
+  // If fund was initialized all basic fields are read-only and user can
+  // go forward and backwards in steps if he wants and he can finalize fund creation.
+  if (isFundInitialized.value) return true;
+
   // Basics, Fees, Management, Governance is validated here
   const stepWithRegularFields = [
     OnboardingStep.Basics,
@@ -431,6 +463,8 @@ const isCurrentStepValid = computed(() => {
     } else {
       isCurrentStepValid = true;
     }
+
+    console.warn("FINISHED");
   }
   // validation for permissions
   else if (currentStep.key === OnboardingStep.Permissions) {
@@ -570,7 +604,7 @@ const formatInitializeData = () => {
       getFeeValue("profitManagemnetFee"),// profitManagemnetFee
       getFeeValue("managementFee"),// managementFee
       0, // performaceHurdleRateBps, default to 0
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "denominationAsset"), // baseToken
+      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "baseToken"), // baseToken
       "0x0000000000000000000000000000000000000000",
       false,
       false,

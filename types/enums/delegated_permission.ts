@@ -1,5 +1,5 @@
 import { encodeFunctionCall } from "web3-eth-abi";
-import { InputType } from "./stepper";
+import { InputType } from "~/types/enums/input_type";
 import type { IStepperStep } from "~/types/stepper";
 
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";

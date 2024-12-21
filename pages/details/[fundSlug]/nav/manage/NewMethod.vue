@@ -221,8 +221,8 @@ import { ethers } from "ethers";
 import { useRouter } from "vue-router";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
+import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 import {
-  defaultInputTypeValue, InputType,
   PositionType, PositionTypeKeys,
   PositionTypes, PositionTypeToNAVEntryTypeMap,
   PositionTypeToValuationTypesMap,

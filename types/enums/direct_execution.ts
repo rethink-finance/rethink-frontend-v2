@@ -1,6 +1,6 @@
-import type { IStepperStep } from "~/types/stepper";
 import type { FieldsMapType } from "./stepper";
-import { InputType } from "./stepper";
+import type { IStepperStep } from "~/types/stepper";
+import { InputType } from "~/types/enums/input_type";
 
 export enum ExecutionStep {
   Setup = "setup",
