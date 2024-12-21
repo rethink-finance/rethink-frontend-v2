@@ -1,7 +1,7 @@
 
+import { InputType } from "./stepper";
 import { networks } from "~/store/web3/networksMap";
 import type INetwork from "~/types/network";
-import { InputType } from "./stepper";
 
 export enum OnboardingStep {
     Basics = "basics",
@@ -17,8 +17,8 @@ export enum OnboardingStep {
 export interface IOnboardingForm {
   chainId: string;
   photoUrl: string;
-  fundDAOName: string;
-  tokenSymbol: string;
+  fundName: string;
+  fundSymbol: string;
   denominationAsset: string;
   description: string;
   depositFee: string;
@@ -152,7 +152,7 @@ export const OnboardingFieldsMap: FieldsMapType = {
     },
     {
       label: "OIV DAO Name",
-      key: "fundDAOName",
+      key: "fundName",
       type: InputType.Text,
       placeholder: "E.g. OIV DAO Name",
       rules: [formRules.required],
@@ -160,10 +160,10 @@ export const OnboardingFieldsMap: FieldsMapType = {
       cols: 6,
     },
     {
-      label: "Token Symbol",
-      key: "tokenSymbol",
+      label: "OIV Token Symbol",
+      key: "fundSymbol",
       type: InputType.Text,
-      placeholder: "E.g. Token Symbol",
+      placeholder: "E.g. ETH",
       rules: [formRules.required],
       isEditable: true,
       cols: 6,

@@ -59,8 +59,8 @@ const props = defineProps<{
 const proposalFundSettings = ref<Partial<IProposal>>({
   // Basics
   photoUrl: "",
-  fundDAOName: "",
-  tokenSymbol: "",
+  fundName: "",
+  fundSymbol: "",
   denominationAsset: "",
   description: "",
   // Fees
@@ -142,8 +142,8 @@ const populateProposalData = () => {
 
   proposalFundSettings.value = {
     photoUrl: metaData.photoUrl,
-    fundDAOName: settings.fundName,
-    tokenSymbol: settings.fundSymbol,
+    fundName: settings.fundName,
+    fundSymbol: settings.fundSymbol,
     denominationAsset: settings.baseToken,
     description: metaData.description,
     // Fees

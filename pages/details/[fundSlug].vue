@@ -91,7 +91,7 @@ const route = useRoute();
 const router = useRouter();
 // fund address is always in the third position of the route
 // e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
-const [fundChainId, tokenSymbol, fundAddress] = route.path
+const [fundChainId, fundSymbol, fundAddress] = route.path
   .split("/")[2]
   .split("-");
 
@@ -156,7 +156,7 @@ watch(
 
 
 const fundDetailsRoute = computed(
-  () => `/details/${fundChainId}-${tokenSymbol}-${fundAddress}`,
+  () => `/details/${fundChainId}-${fundSymbol}-${fundAddress}`,
 );
 
 // show icon + title in the breadcrumb for the fund

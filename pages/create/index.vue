@@ -276,8 +276,21 @@ const fetchFundCache = async () => {
     // TODO make use of loading spinner to lock form while fetching data
     await createFundStore.fetchFundCacheAction(chainId.value, accountStore.activeAccountAddress);
     // TODO fill form data from the fetched fund cache
+    const fundSettings = fundInitCache?.value?.fundSettings || {};
+    console.warn("settings", fundSettings);
+    for (const step of stepperEntry.value) {
+      console.log("step", step.fields);
+
+      for (const field of step.fields || []) {
+        console.log("  step field", field.key, field.value);
+        if (!(field.key in fundSettings)) {
+          console.warn(" field key missing", field.key);
+        }
+      }
+    }
   }
 }
+
 const isLoadingFetchFundCache = computed(() =>
   actionStateStore.isActionState(
     "fetchFundCache",
@@ -339,6 +352,7 @@ const showInitializeButton = computed(() => {
   return false;
 });
 
+/*
 const isStepEditable = (step: IOnboardingStep, index: number) => {
   // Disable some steps if fund was not initialized yet. User cannot change
   // permissions or NAV methods if fund was not initialized yet.
@@ -352,6 +366,7 @@ const isStepEditable = (step: IOnboardingStep, index: number) => {
     ].includes(step.key)
   );
 }
+*/
 
 const toggledOffFields = computed(() => {
   // check which fields are toggled off, and set them to 0 or null address
@@ -374,7 +389,7 @@ const toggledOffFields = computed(() => {
 
 const isCurrentStepValid = computed(() => {
   // TODO: here we want to check which step are we on and validate the fields
-  // Basics, Fees, Management, Governance is validatet here
+  // Basics, Fees, Management, Governance is validated here
   const stepWithRegularFields = [
     OnboardingStep.Basics,
     OnboardingStep.Fees,
@@ -385,11 +400,10 @@ const isCurrentStepValid = computed(() => {
   let isCurrentStepValid = false;
   const currentStep = stepperEntry.value[step.value - 1];
 
-
   if(stepWithRegularFields.includes(currentStep.key) && currentStep.fields) {
     isCurrentStepValid =  currentStep.fields.every((field) => {
       if (field.fields) {
-        // check if its toggled off
+        // check if it's toggled off
         if (!field.isToggleOn) return true;
 
         return field.fields.every((subField) => {
@@ -565,8 +579,8 @@ const formatInitializeData = () => {
       getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "governanceToken"), // governanceToken
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "fundDAOName"),
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "tokenSymbol"),
+      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "fundName"),
+      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "fundSymbol"),
       formatFeeCollectors(),
     ],
     [

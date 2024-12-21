@@ -221,8 +221,8 @@ let proposalInitial = {} as IProposal;
 const proposal = ref<IProposal>({
   // Basics
   photoUrl: "",
-  fundDAOName: "",
-  tokenSymbol: "",
+  fundName: "",
+  fundSymbol: "",
   denominationAsset: "",
   description: "",
   // Fees
@@ -496,8 +496,8 @@ const formatProposalData = (proposal: IProposal) => {
     baseToken: proposal.denominationAsset,
     allowedDepositAddrs: allowedDepositors,
     governanceToken: proposal.governanceToken,
-    fundName: proposal.fundDAOName,
-    fundSymbol: proposal.tokenSymbol,
+    fundName: proposal.fundName,
+    fundSymbol: proposal.fundSymbol,
     feeCollectors: [
       toggledOffFields.includes("depositFeeRecipientAddress")
         ? ethers.ZeroAddress
@@ -611,8 +611,8 @@ const populateProposal = () => {
     minLiquidAssetShare: fundDeepCopy?.minLiquidAssetShare ?? "",
     description: fundDeepCopy?.description ?? "",
     // Fund settings
-    fundDAOName: fundDeepCopy?.title ?? "",
-    tokenSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
+    fundName: fundDeepCopy?.title ?? "",
+    fundSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
     denominationAsset: fundDeepCopy?.baseToken?.address ?? "",
     depositFee: fromBpsToPercentage(fundDeepCopy?.depositFee),
     depositFeeRecipientAddress: fundDeepCopy?.depositFeeAddress ?? "",
