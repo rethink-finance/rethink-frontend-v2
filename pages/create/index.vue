@@ -92,98 +92,113 @@
 
       <v-window v-model="step">
         <!-- Add overlay if fund is initialized to prevent editing it. -->
-        <v-overlay
+        <!-- TODO: should we rather show the tooltip instead of overlay? -->
+        <!-- <v-overlay
           :model-value="isFundInitialized && step < 6"
           class="d-flex justify-center align-center"
           opacity="0.1"
           contained
           persistent
-        />
-        <v-window-item
-          v-for="(item, stepIndex) in stepperEntry"
-          :key="stepIndex"
-          :value="stepIndex + 1"
+        /> -->
+
+        <v-tooltip
+          activator="parent"
+          location="top"
+          :disabled="!showInitializeTooltip"
         >
-          <div v-if="item.hasRegularFields" class="fields">
-            <v-col
-              v-for="(field, index) in item.fields"
-              :key="index"
-              :cols="field?.cols ?? 12"
+          <template #activator="{ props }">
+            <v-window-item
+              v-for="(item, stepIndex) in stepperEntry"
+              :key="stepIndex"
+              :value="stepIndex + 1"
             >
-              <div v-if="field.isToggleable" class="toggleable_group">
-                <div class="toggleable_group__toggle">
-                  <v-switch
-                    v-model="field.isToggleOn"
-                    color="primary"
-                    hide-details
-                  />
-                </div>
+              <div v-if="item.hasRegularFields" class="fields">
+                <v-col
+                  v-for="(field, index) in item.fields"
+                  :key="index"
+                  :cols="field?.cols ?? 12"
+                >
+                  <div v-if="field.isToggleable" class="toggleable_group">
+                    <div class="toggleable_group__toggle">
+                      <v-switch
+                        v-model="field.isToggleOn"
+                        color="primary"
+                        hide-details
+                        :disabled="isFundInitialized && step < 6"
+                      />
+                    </div>
 
-                <div class="fields">
-                  <v-col
-                    v-for="(subField, subFieldIndex) in field.fields"
-                    :key="subFieldIndex"
-                    :cols="subField?.cols ?? 6"
-                  >
+                    <div class="fields">
+                      <v-col
+                        v-for="(subField, subFieldIndex) in field.fields"
+                        :key="subFieldIndex"
+                        :cols="subField?.cols ?? 6"
+                      >
+                        <UiField
+                          v-model="subField.value"
+                          :field="subField"
+                          :is-disabled="!field.isToggleOn || (isFundInitialized && step < 6)"
+                        />
+                      </v-col>
+                    </div>
+                  </div>
+                  <div v-else>
                     <UiField
-                      v-model="subField.value"
-                      :field="subField"
-                      :is-disabled="!field.isToggleOn"
+                      v-model="field.value"
+                      :field="field"
+                      :is-disabled="isFundInitialized && step < 6"
                     />
-                  </v-col>
-                </div>
+                  </div>
+                </v-col>
               </div>
-              <div v-else>
-                <UiField
-                  v-model="field.value"
-                  :field="field"
-                />
+
+              <!-- STEP WHITELIST -->
+              <OnboardingWhitelist
+                v-if="item.key === OnboardingStep.Whitelist"
+                :ls-whitelist="whitelist"
+                :is-disabled="isFundInitialized"
+                :ls-is-whitelisted-deposits="isWhitelistedDeposits"
+                @update-items="handleWhitelistChange"
+                @update-is-whitelisted-deposits="isWhitelistedDeposits = $event"
+              />
+
+              <!-- STEP PERMISSIONS -->
+              <OnboardingPermissions
+                v-if="item.key=== OnboardingStep.Permissions"
+              />
+
+              <!-- STEP NAV METHODS -->
+              <div
+                v-if="item.key === OnboardingStep.NavMethods"
+              >
+                This might be a component instead of regular fields
               </div>
-            </v-col>
-          </div>
 
-          <!-- STEP WHITELIST -->
-          <OnboardingWhitelist
-            v-if="item.key === OnboardingStep.Whitelist"
-            :ls-whitelist="whitelist"
-            :is-disabled="isFundInitialized"
-            :ls-is-whitelisted-deposits="isWhitelistedDeposits"
-            @update-items="handleWhitelistChange"
-            @update-is-whitelisted-deposits="isWhitelistedDeposits = $event"
-          />
+              <!-- STEP FINALISE -->
+              <div
+                v-if="item.key === OnboardingStep.Finalise"
+                class="step step__finalise"
+              >
+                <p>
+                  After finalising the setup users will be able to deposit into your OIV.
+                </p>
+                <p>
+                  Please note that any future change after finalisation will go through governance.
+                </p>
 
-          <!-- STEP PERMISSIONS -->
-          <OnboardingPermissions
-            v-if="item.key=== OnboardingStep.Permissions"
-          />
-
-          <!-- STEP NAV METHODS -->
-          <div
-            v-if="item.key === OnboardingStep.NavMethods"
-          >
-            This might be a component instead of regular fields
-          </div>
-
-          <!-- STEP FINALISE -->
-          <div
-            v-if="item.key === OnboardingStep.Finalise"
-            class="step step__finalise"
-          >
-            <p>
-              After finalising the setup users will be able to deposit into your OIV.
-            </p>
-            <p>
-              Please note that any future change after finalisation will go through governance.
-            </p>
-
-            <v-btn
-              color="primary"
-              @click="finalizeFundCreation"
-            >
-              Finalise
-            </v-btn>
-          </div>
-        </v-window-item>
+                <v-btn
+                  color="primary"
+                  @click="finalizeFundCreation"
+                >
+                  Finalise
+                </v-btn>
+              </div>
+            </v-window-item>
+          </template>
+          <template #default>
+            This fund has been initialized and cannot be edited.
+          </template>
+        </v-tooltip>
       </v-window>
 
 
@@ -216,13 +231,13 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
-import { computed } from "vue";
 import { useAccountStore } from "~/store/account/account.store";
+import { useActionStateStore } from "~/store/actionState.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { useActionStateStore } from "~/store/actionState.store";
 
+import { ActionState } from "~/types/enums/action_state";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 import {
   OnboardingFieldsMap,
@@ -232,7 +247,6 @@ import {
   type IOnboardingForm,
   type IOnboardingStep, type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
-import { ActionState } from "~/types/enums/action_state";
 
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
@@ -286,6 +300,10 @@ const isFundInitialized = computed(() => {
   return !!fundInitCache?.value?.fundContractAddr;
 })
 
+const showInitializeTooltip = computed(() => {
+  return isFundInitialized.value && step.value < 6;
+});
+
 const showButtonNext = computed(() => {
   const item = stepperEntry.value[step.value - 1];
 
@@ -302,9 +320,6 @@ const showButtonNext = computed(() => {
   if(steps.includes(item.key)) {
     return true;
   }
-
-  console.log("isFundInitialized", isFundInitialized.value);
-  console.log("item.key === OnboardingStep.Governance", item.key === OnboardingStep.Governance);
   // 2. button next is available on governance step ONLY IF fund was initialized
   if (item.key === OnboardingStep.Governance && isFundInitialized.value) {
     return true;
