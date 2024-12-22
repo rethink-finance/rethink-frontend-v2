@@ -155,7 +155,7 @@
               <!-- STEP WHITELIST -->
               <OnboardingWhitelist
                 v-if="item.key === OnboardingStep.Whitelist"
-                v-model="whitelist"
+                v-model="whitelistedAddresses"
                 v-model:whitelist-enabled="isWhitelistedDeposits"
               />
 
@@ -254,7 +254,6 @@ const createFundStore = useCreateFundStore();
 
 // Data
 const { chainId, fundInitCache } = toRefs(createFundStore);
-// TODO set step back to 1
 const step = ref(1);
 
 // TODO: add validation functionality
@@ -265,7 +264,7 @@ const isInitializeLoading = ref(false);
 let nextRouteResolve: Function | null = null;
 
 // whitelist data
-const whitelist = ref<IWhitelist[]>([]);
+const whitelistedAddresses = ref<IWhitelist[]>([]);
 const isWhitelistedDeposits = ref(false);
 
 const fundSettings = computed<IFundSettings>(() => fundInitCache?.value?.fundSettings || {} as IFundSettings);
@@ -280,23 +279,16 @@ const setFieldValue = (field: IField): void => {
   field.isToggleable = false;
 
   const fieldKey = field.key as string;
-  console.log("fund settings", fundSettings.value)
-  console.log("fund fundMetadata", fundMetadata.value)
   // Convert some fields to text fields, as they are all readonly.
   if (fieldKey in fundSettings.value) {
-    console.log(" field key in settings", fieldKey);
     field.value = fundSettings.value[fieldKey];
   } else if (fieldKey in fundMetadata.value) {
-    console.log(" field key in metadata", fieldKey);
     field.value = fundMetadata.value[fieldKey];
   } else if (fieldKey in fundGovernorData.value) {
-    console.log(" field key in governorData", fieldKey);
     field.value = fundGovernorData.value[fieldKey];
   } else {
     console.error(" field key missing", field);
   }
-  // TODO take care of feeCollectors and allowedDepositAddrs (whitelist)
-  // TODO fee mgntmt period
 }
 const fetchFundCache = async () => {
   // TODO only if there is no fund cache go set data from local storage, not before!
@@ -304,7 +296,7 @@ const fetchFundCache = async () => {
     await createFundStore.fetchFundCacheAction(chainId.value, accountStore.activeAccountAddress);
 
     console.warn("settings", fundSettings);
-    // const mismatch = [];
+
     for (const step of stepperEntry.value) {
       console.warn("[STEP]", step.name, step.fields);
 
@@ -313,18 +305,27 @@ const fetchFundCache = async () => {
           // Field is of type IFieldGroup, has more subfields.
           // TODO here we only go 2 levels deep, but IField can have infinite levels, do recursion for fields.
           for (const subField of field.fields || []) {
-            console.log("  step subfield", subField);
             setFieldValue(subField);
           }
         } else {
           // Field is a normal field.
           setFieldValue(field);
-          console.log("  step field", field);
         }
       }
     }
+
+    // Set Whitelisted addresses
+    whitelistedAddresses.value = (fundInitCache?.value?.fundSettings?.allowedDepositAddrs || []).map(
+      (address: string) => (
+        {
+          address,
+          deleted: false,
+          isNew: false,
+        } as IWhitelist
+      ),
+    )
+    isWhitelistedDeposits.value = fundInitCache?.value?.fundSettings?.isWhitelistedDeposits || false;
     // TODO set this cached stepperEntry to localStorage
-    // console.error(" mismatch", mismatch.length, mismatch);
   } else {
     createFundStore.clearFundInitCache();
   }
@@ -470,7 +471,7 @@ const isCurrentStepValid = computed(() => {
   // validation for whitelist
   else if (currentStep.key === OnboardingStep.Whitelist) {
     if (isWhitelistedDeposits.value) {
-      isCurrentStepValid = whitelist.value.length > 0;
+      isCurrentStepValid = whitelistedAddresses.value.length > 0;
     } else {
       isCurrentStepValid = true;
     }
@@ -494,7 +495,7 @@ const allowedDepositors = computed(() => {
     return [];
   }
 
-  return whitelist.value
+  return whitelistedAddresses.value
     .filter((item) => !item.deleted)
     .map((item) => item.address);
 });
@@ -669,13 +670,11 @@ const handleInitialize = async() => {
         console.log("receipt: ", receipt);
         if (receipt.status) {
           toastStore.successToast("Create Fund transaction was successful.");
-
         } else {
           toastStore.errorToast("The Create Fund tx has failed. Please contact the Rethink Finance community for support.");
         }
-
       }).on("error", (error: any) => {
-        console.log(error);
+        console.error("error when initializing", error);
         isInitializeLoading.value = false;
         toastStore.errorToast(
           "There has been an error. Please contact the Rethink Finance community for support.",
@@ -700,7 +699,7 @@ const initStepperEntry = () => {
   // set whitelist from local storage
   if (lsWhitelist){
     isWhitelistedDeposits.value = lsWhitelist.isWhitelistedDeposits ?? false;
-    whitelist.value = lsWhitelist.whitelist ?? [];
+    whitelistedAddresses.value = lsWhitelist.whitelistedAddresses ?? [];
   }
 
   // TODO: for now we only load the local storage steps
@@ -714,7 +713,7 @@ const handleSaveChanges = () => {
   setLocalStorageItem("onboardingStepperEntry", stepperEntry.value);
   // save whitelist data to local storage
   const whitelistData ={
-    whitelist: whitelist.value,
+    whitelistedAddresses: whitelistedAddresses.value,
     isWhitelistedDeposits: isWhitelistedDeposits.value,
   }
   setLocalStorageItem("onboardingWhitelist", whitelistData);
@@ -734,7 +733,7 @@ const stepperEntry = ref(initStepperEntry());
 
 // Watchers
 watch(stepperEntry.value, (newVal) => {
-  console.log("stepperEntry", newVal);
+  console.log("stepperEntr changedy", newVal);
 });
 
 // Lifecycle Hooks
