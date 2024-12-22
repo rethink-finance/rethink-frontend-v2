@@ -82,7 +82,7 @@ const onSelectionChanged = (hashes: string[]) => {
 };
 
 const addMethods = () => {
-  // // Add newly defined method to fund managed methods.
+  // Add newly defined method to fund managed methods.
   const addedMethods = uniqueNavMethods.value[props.chainId].filter((method) =>
     selectedMethodHashes.value.includes(method.detailsHash || ""),
   );

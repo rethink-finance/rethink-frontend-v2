@@ -23,7 +23,7 @@
     <template #[`header.pastNavValue`]>
       Last NAV Update
       <div v-if="showSummaryRow && showLastNavUpdateValue" class="text-right">
-        {{ formattedTotalLastNAV }}
+        <!-- {{ formattedTotalLastNAV }} -->
       </div>
     </template>
     <template #[`header.simulatedNavFormatted`]>
@@ -34,7 +34,7 @@
         </div>
         <div v-if="showSummaryRow && showSimulatedNav" class="bottom">
           <div class="text-right">
-            {{ formattedTotalSimulatedNAV }}
+            <!-- {{ formattedTotalSimulatedNAV }} -->
             <div
               v-if="simulatedNavErrorCount > 0"
               class="ms-2 justify-center align-center d-flex"
@@ -86,7 +86,7 @@
           />
         </div>
         <div v-else>
-          {{ value ? getFormattedBaseTokenValue(value) : '-' }}
+          <!-- {{ value ? getFormattedBaseTokenValue(value) : '-' }} -->
         </div>
         <div
           v-if="item.pastNavValueError"
@@ -414,11 +414,9 @@
 
 <script lang="ts">
 import { ethers } from "ethers";
-import { useRouter } from "vue-router";
-import { useFundStore } from "~/store/fund/fund.store";
-import { useFundsStore } from "~/store/funds/funds.store";
+// import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 import {
   PositionType,
   PositionTypeKeys,
@@ -431,7 +429,6 @@ import {
 import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import type INAVParts from "~/types/nav_parts";
-import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 
 
 export default defineComponent({
@@ -487,24 +484,31 @@ export default defineComponent({
       type: String,
       default: "",
     },
+    // fundAddress: {
+    //   type: String,
+    //   default: "",
+    // },
+    // baseTokenAddress: {
+    //   type: String,
+    //   default: "",
+    // },
+    // fundChainId: {
+    //   type: String,
+    //   default: "",
+    // },
+    // safeAddress: {
+    //   type: String,
+    //   default: "",
+    // },
   },
   emits: ["update:methods", "selectedChanged"],
   setup() {
-    const fundStore = useFundStore();
-    const fundsStore = useFundsStore();
-    const web3Store = useWeb3Store();
+    // const fundStore = useFundStore();
     const toastStore = useToastStore();
-    const router = useRouter();
 
-    const { getFormattedBaseTokenValue, selectedFundSlug } = toRefs(fundStore);
+    // const { getFormattedBaseTokenValue } = toRefs(fundStore);
     return {
-      router,
-      fundStore,
-      fundsStore,
-      web3Store,
       toastStore,
-      getFormattedBaseTokenValue,
-      selectedFundSlug,
       creatablePositionTypes: computed(() =>
         PositionTypes.filter(
           (positionType) => positionType.key !== PositionType.NFT,
@@ -617,20 +621,20 @@ export default defineComponent({
     usedMethodHashes(): string[] {
       return this.usedMethods.map(method => method.detailsHash || "");
     },
-    formattedTotalSimulatedNAV() {
-      // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
-      const fund = this.fundStore.fund;
+    // formattedTotalSimulatedNAV() {
+    //   // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
+    //   const fund = this.fundStore.fund;
 
-      const totalNAV =
-        (this.totalNavMethodsSimulatedNAV || 0n) +
-        (fund?.fundContractBaseTokenBalance || 0n) +
-        (fund?.safeContractBaseTokenBalance || 0n) +
-        (fund?.feeBalance || 0n);
-      return this.getFormattedBaseTokenValue(totalNAV);
-    },
-    formattedTotalLastNAV() {
-      return this.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n);
-    },
+    //   const totalNAV =
+    //     (this.totalNavMethodsSimulatedNAV || 0n) +
+    //     (fund?.fundContractBaseTokenBalance || 0n) +
+    //     (fund?.safeContractBaseTokenBalance || 0n) +
+    //     (fund?.feeBalance || 0n);
+    //   return this.getFormattedBaseTokenValue(totalNAV);
+    // },
+    // formattedTotalLastNAV() {
+    //   return this.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n);
+    // },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
       return this.methods.reduce(
@@ -642,15 +646,15 @@ export default defineComponent({
         0n,
       )
     },
-    formattedFundContractBaseTokenBalance() {
-      return this.getFormattedBaseTokenValue(this.fundStore.fund?.fundContractBaseTokenBalance);
-    },
-    formattedSafeContractBaseTokenBalance() {
-      return this.getFormattedBaseTokenValue(this.fundStore.fund?.safeContractBaseTokenBalance);
-    },
-    formattedFeeBalance() {
-      return this.getFormattedBaseTokenValue(this.fundStore.fund?.feeBalance);
-    },
+    // formattedFundContractBaseTokenBalance() {
+    //   return this.getFormattedBaseTokenValue(this.fundStore.fund?.fundContractBaseTokenBalance);
+    // },
+    // formattedSafeContractBaseTokenBalance() {
+    //   return this.getFormattedBaseTokenValue(this.fundStore.fund?.safeContractBaseTokenBalance);
+    // },
+    // formattedFeeBalance() {
+    //   return this.getFormattedBaseTokenValue(this.fundStore.fund?.feeBalance);
+    // },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
     },
@@ -663,11 +667,13 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
-          simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
+          // simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
+          simulatedNavFormatted: 0,
           isRethinkPosition: true,
           detailsHash: "-1",
           detailsJson: {
-            "fundContractAddress": this.fundStore.fund?.address,
+            // "fundContractAddress": this.fundStore.fund?.address,
+            "fundContractAddress": "",
           },
         } as any)
         methods.push({
@@ -675,11 +681,13 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetSafeBal,
-          simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
+          // simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
+          simulatedNavFormatted: 0,
           isRethinkPosition: true,
           detailsHash: "-2",
           detailsJson: {
-            "safeContractAddress": this.fundStore.fund?.safeAddress,
+            // "safeContractAddress": this.fundStore.fund?.safeAddress,
+            "safeContractAddress": "",
           },
         } as any)
         methods.push({
@@ -687,7 +695,8 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.feeBal,
-          simulatedNavFormatted: this.formattedFeeBalance,
+          // simulatedNavFormatted: this.formattedFeeBalance,
+          simulatedNavFormatted: 0,
           isRethinkPosition: true,
           detailsHash: "-3",
         } as any)
@@ -706,7 +715,7 @@ export default defineComponent({
       handler(newLen: any, oldLen: any) {
         // Simulate NAV method values everytime NAV methods change.
         if (!this.methods.length || oldLen === newLen) return;
-        this.simulateNAV();
+        // this.simulateNAV();
       },
       deep: true,
       immediate: true,
@@ -715,7 +724,7 @@ export default defineComponent({
       handler() {
         // Simulate NAV method values everytime Simulate NAV button is pressed and triggerSimulateNav changes.
         console.log("fundStore.refreshSimulateNAVCounter:")
-        this.simulateNAV();
+        // this.simulateNAV();
       },
     },
   },
@@ -738,35 +747,35 @@ export default defineComponent({
       const data = text as string;
       navigator.clipboard.writeText(data);
     },
-    async simulateNAV() {
-      if (!this.showSimulatedNav || this.isNavSimulationLoading) return;
-      this.isNavSimulationLoading = true;
-      console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
-      /**
-      if (!this.fundsStore.allNavMethods?.length) {
-        const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
+    // async simulateNAV() {
+    //   if (!this.showSimulatedNav || this.isNavSimulationLoading) return;
+    //   this.isNavSimulationLoading = true;
+    //   console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
+    //   /**
+    //   if (!this.fundsStore.allNavMethods?.length) {
+    //     const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
 
-        // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
-        // and make sure it is fetched before checking here with fundsStore.fetchFundsNavMethods, and then we
-        // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
-        console.log("simulate fetch all nav methods")
-        await this.fundsStore.fetchFundsNavMethods(fundsInfoArrays);
-      }
-      */
-      // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
-      // Otherwise, take managed methods, that user can change.
-      // Simulate all at once as many promises instead of one by one.
-      const promises = [];
-      const fundChainId = this.fundStore.fund?.chainId ?? "";
-      const fundAddress = this.fundStore.fund?.address ?? "";
+    //     // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
+    //     // and make sure it is fetched before checking here with fundsStore.fetchFundsNavMethods, and then we
+    //     // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
+    //     console.log("simulate fetch all nav methods")
+    //     await this.fundsStore.fetchFundsNavMethods(fundsInfoArrays);
+    //   }
+    //   */
+    //   // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
+    //   // Otherwise, take managed methods, that user can change.
+    //   // Simulate all at once as many promises instead of one by one.
+    //   const promises = [];
+    //   const fundChainId = this.fundStore.fund?.chainId ?? "";
+    //   const fundAddress = this.fundStore.fund?.address ?? "";
 
-      for (const navEntry of this.methods) {
-        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(fundChainId, fundAddress, navEntry));
-      }
-      const settled = await Promise.allSettled(promises);
-      this.isNavSimulationLoading = false;
-      console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
-    },
+    //   for (const navEntry of this.methods) {
+    //     promises.push(this.fundStore.fetchSimulatedNAVMethodValue(this.fundChainId ?? fundChainId, this.fundAddress ?? fundAddress, navEntry));
+    //   }
+    //   const settled = await Promise.allSettled(promises);
+    //   this.isNavSimulationLoading = false;
+    //   console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
+    // },
     simulatedNAVIconColor(method: INAVMethod) {
       if (!method.foundMatchingPastNAVUpdateEntryFundAddress) {
         return "var(--color-warning)";
@@ -776,7 +785,7 @@ export default defineComponent({
     },
     // only alow edit if the method is not rethink position and not one of the predefined positions
     isMethodEditable(navEntry: INAVMethod) {
-      const isManageNavMethodsPage = this.idx === "nav/manage/index";
+      const isManageNavMethodsPage = this.idx === "nav/manage/index" || this.idx === "nav/onboarding";
 
       return isManageNavMethodsPage && !this.isBaseTokenBalanceMethod(navEntry);
     },
@@ -784,7 +793,7 @@ export default defineComponent({
       const positionName = ["OIV Balance", "Safe Balance", "Fees Balance"];
       return positionName.includes(method.positionName) && method.valuationSource === "Rethink";
     },
-    deleteMethod(method: INAVMethod, toggle = true) {
+    deleteMethod(method: INAVMethod, toggle = true, newNavEntry?: INAVMethod) {
       // If method is new, we can just remove it from the methods array.
       // If it is not new, we will mark it as deleted.
       const methods = [...this.methods]; // Create a shallow copy of the array
@@ -803,7 +812,12 @@ export default defineComponent({
           }
         }
       }
-      this.$emit("update:methods", methods);
+
+      if(newNavEntry) {
+        this.$emit("update:methods", [...methods, newNavEntry]);
+      } else {
+        this.$emit("update:methods", methods);
+      }
     },
     deleteEditMethod(index: number) {
       console.log("remove0 method: ", index);
@@ -874,8 +888,9 @@ export default defineComponent({
 
         // Do not include the pastNAVUpdateEntryFundAddress in the details, as when we fetch entries
         // they don't include this data and details hash would be broken if we included it.
-        newNavEntry.pastNAVUpdateEntryFundAddress =
-          this.fundStore.fund?.address;
+        newNavEntry.pastNAVUpdateEntryFundAddress = 0;
+        // newNavEntry.pastNAVUpdateEntryFundAddress =
+        // this.fundStore.fund?.address;
 
         // Set default fields that are required for each entry.
         // All methods details have this data.
@@ -933,8 +948,9 @@ export default defineComponent({
             newNavEntry.positionType === PositionType.Liquid &&
             newNavEntry.valuationType === ValuationType.DEXPair
           ) {
-            method.nonAssetTokenAddress =
-              this.fundStore.fund?.baseToken?.address;
+            method.nonAssetTokenAddress = ""
+            // method.nonAssetTokenAddress =
+            //     this.fundStore.fund?.baseToken?.address;
           }
 
           // Remove unwanted properties that we don't need when submitting the proposal.
@@ -953,18 +969,12 @@ export default defineComponent({
           ethers.toUtf8Bytes(newNavEntry.detailsJson),
         );
 
-        // Add newly defined NAV entry to fund managed methods.
-        this.fundStore.fundManagedNAVMethods.push(newNavEntry);
-        // we need to delete the method from the navEntry
-
 
         if (this.hasChanged()) {
           // remove original method from the all methods
-          this.deleteMethod(this.originalNavEntry, false);
+          this.deleteMethod(this.originalNavEntry, false, newNavEntry);
         }
 
-        // Redirect back to Manage methods page.
-        this.router.push(`/details/${this.selectedFundSlug}/nav/manage`);
         this.toastStore.addToast("Method added successfully.");
       } catch (error: any) {
         console.error("Error editing method: ", error);

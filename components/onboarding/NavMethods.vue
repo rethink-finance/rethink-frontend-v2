@@ -15,7 +15,7 @@
         <v-btn
           class="text-secondary me-4"
           variant="outlined"
-          @click="addFromLibraryDialog = true"
+          @click="handleAddFromLibraryDialog(true)"
         >
           Add From Library
         </v-btn>
@@ -26,9 +26,37 @@
         >
           Add Raw
         </v-btn>
+        <v-btn
+          class="bg-primary text-secondary"
+          @click="storeNavMethods()"
+        >
+          Store NAV Methods
+        </v-btn>
 
       </div>
     </UiHeader>
+    <div class="main_card">
+
+      <div class="management">
+        <div class="management__row">
+          <div>
+            Allow manager to keep updating NAV based on approved methods
+          </div>
+          <v-switch
+            v-model="allowManagerToKeepUpdatingNav"
+            color="primary"
+            hide-details
+          />
+        </div>
+      </div>
+
+      <FundNavMethodsTable
+        v-model:methods="fundManagedNAVMethods"
+        deletable
+        idx="nav/onboarding"
+      />
+    </div>
+
 
     <FundNavAddRaw
       v-model="addRawDialog"
@@ -49,13 +77,18 @@
       />
     </UiConfirmDialog>
 
-    {{ fundManagedNAVMethods }}
-
-    <!-- <FundNavAddFromLibrary
-      :methods="uniqueNavMethods"
-      :used-methods="fundManagedNAVMethods"
-      @add-methods="addFromLibrary"
-    /> -->
+    <UiConfirmDialog
+      :model-value="addFromLibraryDialog"
+      title="Add New Method"
+      max-width="80%"
+      @update:model-value="handleAddFromLibraryDialog"
+    >
+      <FundNavAddFromLibrary
+        :chain-id="chainId"
+        :already-used-methods="fundManagedNAVMethods"
+        @add-methods="addFromLibrary"
+      />
+    </UiConfirmDialog>
   </div>
 </template>
 
@@ -68,6 +101,10 @@ const toastStore = useToastStore();
 
 // Props
 const props = defineProps({
+  chainId: {
+    type: String,
+    required: true,
+  },
   fundAddress: {
     type: String,
     required: true,
@@ -85,6 +122,7 @@ const addFromLibraryDialog = ref(false)
 const addRawDialog = ref(false)
 const fundManagedNAVMethods = ref<INAVMethod[]>([]);
 const uniqueNavMethods = ref<INAVMethod[]>([]);
+const allowManagerToKeepUpdatingNav = ref(false);
 
 
 console.log("fundManagedNAVMethods", fundManagedNAVMethods.value)
@@ -93,7 +131,14 @@ console.log("uniqueNavMethods", uniqueNavMethods.value)
 // Computeds
 
 // Methods
+const storeNavMethods = () => {
+  if(fundManagedNAVMethods.value.length === 0) {
+    toastStore.warningToast("No methods to store.");
+    return;
+  }
 
+  toastStore.successToast("Methods added successfully.");
+};
 const onNewNavMethodCreatedHandler = (navMethod: INAVMethod) => {
   // Add newly defined NAV entry to fund managed methods.
   fundManagedNAVMethods.value.push(navMethod);
@@ -106,6 +151,9 @@ const onNewNavMethodCreatedHandler = (navMethod: INAVMethod) => {
 
 const handleDefineNewMethodDialog = (value: boolean) => {
   defineNewMethodDialog.value = value;
+};
+const handleAddFromLibraryDialog = (value: boolean) => {
+  addFromLibraryDialog.value = value;
 };
 
 const addRawMethods = (newMethods: INAVMethod[]) => {
@@ -122,6 +170,7 @@ const addFromLibrary = (methods: INAVMethod[]) => {
     fundManagedNAVMethods.value.push(method);
   }
 
+  handleAddFromLibraryDialog(false);
   toastStore.addToast("Methods added successfully.");
 };
 
@@ -132,4 +181,14 @@ const addFromLibrary = (methods: INAVMethod[]) => {
 </script>
 
 <style scoped lang="scss">
+.management {
+  margin-bottom: 1rem;
+  &__row {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 2rem;
+  }
+}
 </style>

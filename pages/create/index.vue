@@ -167,6 +167,7 @@
               <!-- STEP NAV METHODS -->
               <OnboardingNavMethods
                 v-if="item.key === OnboardingStep.NavMethods"
+                :chain-id="chainId"
                 :fund-address="fundSettings.fundAddress"
                 :base-token-address="fundSettings.baseToken"
               />
