@@ -83,9 +83,9 @@ export const useFundsStore = defineStore({
         fetchFundsMetaDataAction(chainId, fundAddresses, fundsInfo),
       );
     },
-    fetchFundsNavMethods(chainId: string, fundsInfoArrays: any[]) {
+    fetchFundsNavMethods(chainId: string, fundsInfoArrays: any[], storeAllMethods = true) {
       return useActionState("fetchFundsNavMethodsAction", () =>
-        fetchFundsNavMethodsAction(chainId, fundsInfoArrays),
+        fetchFundsNavMethodsAction(chainId, fundsInfoArrays, storeAllMethods),
       );
     },
     calculateFundsPerformanceMetrics(chainId: string) {
