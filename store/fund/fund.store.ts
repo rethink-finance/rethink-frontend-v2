@@ -37,7 +37,6 @@ import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import { networksMap } from "~/store/web3/networksMap";
-import type { CustomContract } from "~/store/web3/customContract";
 
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund

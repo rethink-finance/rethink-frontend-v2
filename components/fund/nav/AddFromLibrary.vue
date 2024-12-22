@@ -40,8 +40,8 @@
     </div>
     <FundNavMethodsTable
       v-else
-      :methods="methods"
-      :used-methods="usedMethods"
+      :methods="uniqueNavMethods[chainId]"
+      :used-methods="alreadyUsedMethods"
       selectable
       :search="search"
       show-simulated-nav
@@ -53,25 +53,26 @@
 
 <script setup lang="ts">
 import type INAVMethod from "~/types/nav_method";
+import { useFundsStore } from "~/store/funds/funds.store";
 
 const emit = defineEmits(["add-methods"]);
 
 const props = defineProps({
-  methods: {
-    type: Array as PropType<INAVMethod[]>,
+  chainId: {
+    type: String,
     required: true,
   },
-  usedMethods: {
+  alreadyUsedMethods: {
     type: Array as PropType<INAVMethod[]>,
-    required: true,
-  },
-  loadingAllNavMethods: {
-    type: Boolean as PropType<boolean>,
     required: true,
   },
 });
+const fundsStore = useFundsStore();
+const { allNavMethods } = toRefs(fundsStore);
+const { uniqueNavMethods } = toRefs(fundsStore);
 
 // Data
+const loadingAllNavMethods = ref(false);
 const selectedMethodHashes = ref<string[]>([]);
 const search = ref("");
 
@@ -82,12 +83,29 @@ const onSelectionChanged = (hashes: string[]) => {
 
 const addMethods = () => {
   // // Add newly defined method to fund managed methods.
-  const addedMethods = props.methods.filter((method) =>
+  const addedMethods = uniqueNavMethods.value[props.chainId].filter((method) =>
     selectedMethodHashes.value.includes(method.detailsHash || ""),
   );
 
   emit("add-methods", addedMethods);
 };
+
+onMounted(async () => {
+  console.warn("fetch all nav methods", allNavMethods.value[props.chainId]);
+  if (!allNavMethods.value[props.chainId].length) {
+    loadingAllNavMethods.value = true;
+    const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays(
+      props.chainId,
+    );
+    // Fetch all possible NAV methods for all funds
+    try {
+      await fundsStore.fetchFundsNavMethods(props.chainId, fundsInfoArrays);
+    } catch (e: any) {
+      console.error("Failed fetchFundsNavMethods", e)
+    }
+    loadingAllNavMethods.value = false;
+  }
+});
 </script>
 
 <style scoped lang="scss">

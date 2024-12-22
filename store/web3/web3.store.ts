@@ -3,7 +3,6 @@ import { type HttpProvider, Web3 } from "web3";
 import addressesJson from "~/assets/contracts/addresses.json";
 import type IAddresses from "~/types/addresses";
 import type { IContractAddresses } from "~/types/addresses";
-import type INetwork from "~/types/network";
 import { networksMap } from "~/store/web3/networksMap";
 import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
 import { RethinkReader } from "assets/contracts/RethinkReader";

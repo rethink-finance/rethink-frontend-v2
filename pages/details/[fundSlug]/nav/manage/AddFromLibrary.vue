@@ -1,8 +1,7 @@
 <template>
   <FundNavAddFromLibrary
-    :methods="uniqueNavMethods"
-    :used-methods="fundStore.fundManagedNAVMethods"
-    :loading-all-nav-methods="loadingAllNavMethods"
+    :chain-id="fundStore.fundChainId"
+    :already-used-methods="fundStore.fundManagedNAVMethods"
     @add-methods="addMethods"
   />
 </template>
@@ -11,20 +10,15 @@
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 
-import { useFundsStore } from "~/store/funds/funds.store";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
-const fundsStore = useFundsStore();
 const toastStore = useToastStore();
 const router = useRouter();
 
 // Data
-const loadingAllNavMethods = ref(false);
 const { selectedFundSlug } = toRefs(fundStore);
-const { allNavMethods } = toRefs(fundsStore);
-const { uniqueNavMethods } = toRefs(fundsStore);
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -44,10 +38,20 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
+// Lifecycle Hooks
+onMounted(() => {
+  emit("updateBreadcrumbs", breadcrumbItems);
+});
+
+onBeforeUnmount(() => {
+  emit("updateBreadcrumbs", []);
+});
+
+
 // Methods
-const addMethods = (methods: INAVMethod[]) => {
+const addMethods = (addedMethods: INAVMethod[]) => {
   // // Add newly defined method to fund managed methods.
-  for (const method of methods) {
+  for (const method of addedMethods) {
     method.isNew = true;
     fundStore.fundManagedNAVMethods.push(method);
   }
@@ -56,28 +60,6 @@ const addMethods = (methods: INAVMethod[]) => {
   router.push(`/details/${selectedFundSlug.value}/nav/manage`);
   toastStore.addToast("Methods added successfully.");
 };
-
-// Lifecycle Hooks
-onMounted(async () => {
-  emit("updateBreadcrumbs", breadcrumbItems);
-
-  if (!allNavMethods.value.length) {
-    loadingAllNavMethods.value = true;
-    const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays(
-      fundStore.fundChainId,
-    );
-    // Fetch all possible NAV methods for all funds
-    try {
-      await fundsStore.fetchFundsNavMethods(fundStore.fundChainId, fundsInfoArrays);
-    } catch (e: any) {
-      console.error("Failed fetchFundsNavMethods", e)
-    }
-    loadingAllNavMethods.value = false;
-  }
-});
-onBeforeUnmount(() => {
-  emit("updateBreadcrumbs", []);
-});
 </script>
 
 <style scoped lang="scss">
