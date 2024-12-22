@@ -236,10 +236,11 @@ import { useActionStateStore } from "~/store/actionState.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import type { IField, IFieldGroup } from "~/types/enums/input_type";
+import type { IField } from "~/types/enums/input_type";
 
 import { ActionState } from "~/types/enums/action_state";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
+import { InputType } from "~/types/enums/input_type";
 import {
   OnboardingFieldsMap,
   OnboardingStep,
@@ -247,7 +248,6 @@ import {
   type IOnboardingStep, type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
-import { InputType } from "~/types/enums/input_type";
 
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
@@ -491,6 +491,16 @@ const isCurrentStepValid = computed(() => {
   return isCurrentStepValid;
 });
 
+const allowedDepositors = computed(() => {
+  if (!isWhitelistedDeposits.value) {
+    return [];
+  }
+
+  return whitelist.value
+    .filter((item) => !item.deleted)
+    .map((item) => item.address);
+});
+
 
 // Methods
 // helper function to generate sections
@@ -597,15 +607,6 @@ const formatFeeCollectors = () => {
   ]
 };
 
-const allowedDepositors = computed(() => {
-  if (!isWhitelistedDeposits.value) {
-    return [];
-  }
-
-  return whitelist.value
-    .filter((item) => !item.deleted)
-    .map((item) => item.address);
-});
 
 
 const formatInitializeData = () => {
