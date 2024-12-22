@@ -40,5 +40,8 @@ export const useCreateFundStore = defineStore({
         fetchFundCacheAction(fundChainId, deployerAddress),
       );
     },
+    clearFundInitCache() {
+      this.fundInitCache = undefined;
+    },
   },
 });

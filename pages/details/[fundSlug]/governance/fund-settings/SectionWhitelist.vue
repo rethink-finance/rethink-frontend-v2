@@ -1,218 +1,257 @@
 <template>
-  <div class="section_whitelist">
-    <div class="header">
-      <div class="header__actions">
-        <v-text-field
-          v-model="search"
-          label="Search"
-          prepend-inner-icon="mdi-magnify"
-          variant="outlined"
-          hide-details
-          single-line
-        />
+  <div>
+    <div
+      v-if="isWhitelistEnabled"
+      class="section_whitelist"
+    >
+      <div class="header">
+        <div class="header__actions">
+          <v-text-field
+            v-model="search"
+            label="Search"
+            prepend-inner-icon="mdi-magnify"
+            variant="outlined"
+            hide-details
+            single-line
+          />
 
-        <v-btn
-          v-if="!isDisabled"
-          color="#ffffff"
-          variant="text"
-          :class="{ 'v-btn--active': isAddAddressListActive }"
-          @click="toggleAddAddressList"
-        >
-          Add Address List +
-        </v-btn>
+          <v-btn
+            v-if="isWhitelistEnabled"
+            color="#ffffff"
+            variant="text"
+            :class="{ 'v-btn--active': isAddAddressListActive }"
+            @click="toggleAddAddressList"
+          >
+            Add Address List +
+          </v-btn>
 
-        <v-btn
-          v-if="!isDisabled"
-          color="#ffffff"
-          variant="text"
-          :class="{ 'v-btn--active': isAddAddressActive }"
-          @click="toggleAddAddress"
-        >
-          Add Address +
-        </v-btn>
+          <v-btn
+            v-if="isWhitelistEnabled"
+            color="#ffffff"
+            variant="text"
+            :class="{ 'v-btn--active': isAddAddressActive }"
+            @click="toggleAddAddress"
+          >
+            Add Address +
+          </v-btn>
+        </div>
+
+        <div v-if="isAddAddressActive && isWhitelistEnabled" class="header__new-address">
+          <v-col cols="12">
+            <v-label class="row-title">
+              <div class="label_required row-title__title">
+                Enter New Address
+              </div>
+            </v-label>
+
+            <v-text-field
+              ref="newAddressInputRef"
+              v-model="newAddress"
+              label="Address"
+              variant="outlined"
+              single-line
+              :rules="singleAddressRules"
+              @keydown.enter="isSingleAddressValid ? handleAddNewAddress() : null"
+            />
+
+            <div class="header__actions">
+              <v-btn color="red" variant="text" @click="toggleAddAddress">
+                Cancel
+              </v-btn>
+
+              <v-btn
+                color="#ffffff"
+                variant="outlined"
+                :disabled="!isSingleAddressValid"
+                @click="handleAddNewAddress"
+              >
+                Add Address
+              </v-btn>
+            </div>
+          </v-col>
+        </div>
       </div>
 
-      <div v-if="isAddAddressActive && !isDisabled" class="header__new-address">
+      <!-- Bulk add -->
+      <div
+        v-if="isAddAddressListActive && isWhitelistEnabled"
+        class="header__new-address"
+      >
         <v-col cols="12">
           <v-label class="row-title">
             <div class="label_required row-title__title">
-              Enter New Address
+              Enter New Addresses
             </div>
           </v-label>
 
-          <v-text-field
+          <v-textarea
+            ref="newAddressListInputRef"
             v-model="newAddress"
-            label="Address"
+            label="Addresses"
             variant="outlined"
             single-line
-            :rules="singleAddressRules"
-            @keydown.enter="isSingleAddressValid ? handleAddNewAddress() : null"
+            :error-messages="parsedBulkAddressErrors"
           />
 
           <div class="header__actions">
-            <v-btn color="red" variant="text" @click="toggleAddAddress">
+            <v-btn color="red" variant="text" @click="toggleAddAddressList">
               Cancel
             </v-btn>
 
             <v-btn
               color="#ffffff"
               variant="outlined"
-              :disabled="!isSingleAddressValid"
-              @click="handleAddNewAddress"
+              :disabled="!isBulkAddressValid"
+              @click="openConfirmDialog"
             >
-              Add Address
+              Add New Address List
             </v-btn>
           </div>
         </v-col>
+
+        <!-- Confirm dialog -->
+        <UiConfirmDialog
+          v-model="confirmDialog"
+          title="Heads Up!"
+          confirm-text="Add Address List"
+          cancel-text="Cancel"
+          message="By proceeding with <strong>'Add Address List'</strong>, all the previous addresses will be removed!"
+          @confirm="handleAddNewAddressList"
+        />
+      </div>
+
+      <v-skeleton-loader v-if="loading" type="table" />
+      <v-data-table
+        v-else-if="items.length"
+        class="section_whitelist__table"
+        :headers="headers"
+        :items="items"
+        :cell-props="methodProps"
+        :search="search"
+        hide-default-header
+        hover
+        hide-actions
+        items-per-page="10"
+        :page="page"
+      >
+        <template #[`item.index`]="{ index }">
+          <strong class="td_index">{{ index + 1 }}</strong>
+        </template>
+
+        <template #[`item.address`]="{ item }">
+          <div class="address">
+            <span class="address__text">{{ item.address }}</span>
+
+            <div v-if="item.deleted || item.isNew" class="address__state">
+              <span
+                v-if="item.deleted"
+                class="address__state__deleted"
+              >Removed</span>
+              <span
+                v-else-if="item.isNew"
+                class="address__state__new"
+              >Added</span>
+            </div>
+          </div>
+        </template>
+
+        <template v-if="isWhitelistEnabled" #[`item.delete`]="{ item }">
+          <UiDetailsButton small @click.stop="deleteAddress(item)">
+            <v-tooltip v-if="item.deleted" activator="parent" location="bottom">
+              <template #default>
+                Undo Delete
+              </template>
+              <template #activator="{ props }">
+                <v-icon
+                  class="icon_delete"
+                  icon="mdi-arrow-u-left-top"
+                  color="secondary"
+                  v-bind="props"
+                />
+              </template>
+            </v-tooltip>
+
+            <v-tooltip v-else activator="parent" location="bottom">
+              <template #default>
+                Delete Address
+              </template>
+              <template #activator="{ props }">
+                <v-icon
+                  class="icon_delete"
+                  icon="mdi-delete"
+                  color="error"
+                  v-bind="props"
+                />
+              </template>
+            </v-tooltip>
+          </UiDetailsButton>
+        </template>
+
+        <template #bottom>
+          <v-pagination v-model="page" :length="pages" />
+        </template>
+      </v-data-table>
+
+      <div v-else class="section_whitelist__no_data">
+        Currently there are no addresses in the whitelist.
+        <br>
+        This means that all addresses are allowed to participate in the OIV.
+        <br>
       </div>
     </div>
-
-    <!-- Bulk add -->
-    <div v-if="isAddAddressListActive && !isDisabled" class="header__new-address">
-      <v-col cols="12">
-        <v-label class="row-title">
-          <div class="label_required row-title__title">
-            Enter New Addresses
-          </div>
-        </v-label>
-
-        <v-textarea
-          v-model="newAddress"
-          label="Addresses"
-          variant="outlined"
-          single-line
-          :error-messages="parsedBulkAddressErrors"
-        />
-
-        <div class="header__actions">
-          <v-btn color="red" variant="text" @click="toggleAddAddressList">
-            Cancel
-          </v-btn>
-
-          <v-btn
-            color="#ffffff"
-            variant="outlined"
-            :disabled="!isBulkAddressValid"
-            @click="openConfirmDialog"
-          >
-            Add New Address List
-          </v-btn>
-        </div>
-      </v-col>
-
-      <!-- Confirm dialog -->
-      <UiConfirmDialog
-        v-model="confirmDialog"
-        title="Heads Up!"
-        confirm-text="Add Address List"
-        cancel-text="Cancel"
-        message="By proceeding with <strong>'Add Address List'</strong>, all the previous addresses will be removed!"
-        @confirm="handleAddNewAddressList"
+    <div v-else>
+      <UiInfoBox
+        class="info-box"
+        info="Whitelist is disabled. This means that anyone can deposit into the OIV. <br>
+                      If you want to enable the whitelist, please toggle the switch above. <br>
+                      Whitelist is a list of addresses that are allowed to deposit into the OIV."
       />
-    </div>
-
-    <v-skeleton-loader v-if="loading" type="table" />
-    <v-data-table
-      v-else-if="items.length"
-      class="section_whitelist__table"
-      :headers="headers"
-      :items="items"
-      :cell-props="methodProps"
-      :search="search"
-      hide-default-header
-      hover
-      hide-actions
-      items-per-page="10"
-      :page="page"
-    >
-      <template #[`item.index`]="{ index }">
-        <strong class="td_index">{{ index + 1 }}</strong>
-      </template>
-
-      <template #[`item.address`]="{ item }">
-        <div class="address">
-          <span class="address__text">{{ item.address }}</span>
-
-          <div v-if="item.deleted || item.isNew" class="address__state">
-            <span
-              v-if="item.deleted"
-              class="address__state__deleted"
-            >Removed</span>
-            <span
-              v-else-if="item.isNew"
-              class="address__state__new"
-            >Added</span>
-          </div>
-        </div>
-      </template>
-
-      <template v-if="!isDisabled" #[`item.delete`]="{ item }">
-        <UiDetailsButton small @click.stop="deleteAddress(item)">
-          <v-tooltip v-if="item.deleted" activator="parent" location="bottom">
-            <template #default>
-              Undo Delete
-            </template>
-            <template #activator="{ props }">
-              <v-icon
-                class="icon_delete"
-                icon="mdi-arrow-u-left-top"
-                color="secondary"
-                v-bind="props"
-              />
-            </template>
-          </v-tooltip>
-
-          <v-tooltip v-else activator="parent" location="bottom">
-            <template #default>
-              Delete Address
-            </template>
-            <template #activator="{ props }">
-              <v-icon
-                class="icon_delete"
-                icon="mdi-delete"
-                color="error"
-                v-bind="props"
-              />
-            </template>
-          </v-tooltip>
-        </UiDetailsButton>
-      </template>
-
-      <template #bottom>
-        <v-pagination v-model="page" :length="pages" />
-      </template>
-    </v-data-table>
-
-    <div v-else class="section_whitelist__no_data">
-      Currently there are no addresses in the whitelist.
-      <br>
-      This means that all addresses are allowed to participate in the OIV.
-      <br>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import type { VTextarea, VTextField } from "vuetify/components";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
+
 const toastStore = useToastStore();
 
-const props = defineProps<{
-  items: IWhitelist[];
-  isDisabled?: boolean;
-}>();
-const emit = defineEmits(["update-items"]);
+const props = defineProps({
+  modelValue: {
+    type: Array as () => IWhitelist[],
+    default: () => [],
+  },
+  whitelistEnabled: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const emit = defineEmits(["update:modelValue", "update:whitelistEnabled"]);
+const items = computed({
+  get: () => props?.modelValue || [],
+  set: (value: Record<string, any>) => {
+    emit("update:modelValue", value);
+  },
+});
+const isWhitelistEnabled = computed({
+  get: () => props.whitelistEnabled || false,
+  set: (value: boolean) => {
+    emit("update:whitelistEnabled", value);
+  },
+});
 
 const loading = ref(false);
 const search = ref("");
 const page = ref(1);
 const pages = computed(() => {
-  const totalItems = props.items.length;
+  const totalItems = items.value.length;
   if (totalItems == null) return 0;
-
-  const output = Math.ceil(totalItems / 10);
-  return output;
+  return Math.ceil(totalItems / 10);
 });
+const newAddressInputRef = ref<VTextField>();
+const newAddressListInputRef = ref<VTextarea>();
 const isAddAddressActive = ref(false);
 const isAddAddressListActive = ref(false);
 const newAddress = ref("");
@@ -224,7 +263,7 @@ const singleAddressRules = computed(() => [
   formRules.isValidAddress,
   formRules.required,
   formRules.notSameAs(
-    props.items.map((i) => i.address),
+    items.value.map((i) => i.address),
     "This address is already in the whitelist",
   ),
 ]);
@@ -293,11 +332,9 @@ const methodProps = ({ item }: { item: IWhitelist }) => {
 };
 
 const isSingleAddressValid = computed(() => {
-  const output = singleAddressRules.value.every(
+  return singleAddressRules.value.every(
     (rule) => rule(newAddress.value) === true,
   );
-
-  return output;
 });
 
 const isBulkAddressValid = computed(() => {
@@ -356,8 +393,7 @@ const toggleAddAddressList = () => {
 const deleteAddress = (item: IWhitelist) => {
   // if item is new, remove it from the list
   if (item.isNew) {
-    const updatedItems = props.items.filter((i) => i.address !== item.address);
-    emit("update-items", updatedItems);
+    items.value = items.value.filter((i) => i.address !== item.address);
     return;
   }
 
@@ -367,18 +403,18 @@ const deleteAddress = (item: IWhitelist) => {
 
 const handleAddNewAddress = () => {
   try {
-    const output: IWhitelist = {
+    const newWhitelistedAddress: IWhitelist = {
       address: newAddress.value,
       isNew: true,
       deleted: false,
     };
 
-    props.items.push(output);
-
-    emit("update-items", [...props.items]);
+    items.value = [...items.value, newWhitelistedAddress];
 
     newAddress.value = "";
-    toastStore.successToast("Address added to whitelist");
+    // Reset the field and validation
+    newAddressInputRef.value?.resetValidation();
+    toastStore.successToast("New address added to the whitelist.");
   } catch (e) {
     console.log(e);
   }
@@ -389,7 +425,7 @@ const handleAddNewAddressList = () => {
     // we need to split the addresses by new line
     const addressList = newAddress.value.split(/\r?\n/).map((addr) => addr);
 
-    const output = addressList.map((address) => {
+    items.value = addressList.map((address) => {
       return {
         address,
         isNew: true,
@@ -397,11 +433,11 @@ const handleAddNewAddressList = () => {
       };
     });
 
-    emit("update-items", [...output]);
-
     newAddress.value = "";
     confirmDialog.value = false;
-    toastStore.successToast("Address list added to whitelist");
+    // Reset the field and validation
+    newAddressListInputRef.value?.resetValidation();
+    toastStore.successToast("New addresses added to the whitelist.");
     isAddAddressListActive.value = false;
   } catch (e) {
     console.log(e);

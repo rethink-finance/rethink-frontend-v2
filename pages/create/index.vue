@@ -155,11 +155,8 @@
               <!-- STEP WHITELIST -->
               <OnboardingWhitelist
                 v-if="item.key === OnboardingStep.Whitelist"
-                :ls-whitelist="whitelist"
-                :is-disabled="isFundInitialized"
-                :ls-is-whitelisted-deposits="isWhitelistedDeposits"
-                @update-items="handleWhitelistChange"
-                @update-is-whitelisted-deposits="isWhitelistedDeposits = $event"
+                v-model="whitelist"
+                v-model:whitelist-enabled="isWhitelistedDeposits"
               />
 
               <!-- STEP PERMISSIONS -->
@@ -328,7 +325,8 @@ const fetchFundCache = async () => {
     }
     // TODO set this cached stepperEntry to localStorage
     // console.error(" mismatch", mismatch.length, mismatch);
-
+  } else {
+    createFundStore.clearFundInitCache();
   }
 }
 
@@ -553,10 +551,6 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
     } as IField;
   });
 }
-
-const handleWhitelistChange = (items: IWhitelist[]) => {
-  whitelist.value = items;
-};
 
 const finalizeFundCreation = () => {
   console.warn("finalizeFundCreation", stepperEntry.value);

@@ -140,18 +140,9 @@
           </div>
           <div v-else>
             <SectionWhitelist
-              v-if="proposal.isWhitelistedDeposits"
-              :items="whitelist"
-              @update-items="whitelist = $event"
+              v-model="whitelist"
+              v-model:whitelist-enabled="proposal.isWhitelistedDeposits"
             />
-            <div v-else>
-              <UiInfoBox
-                class="info-box"
-                info="Whitelist is disabled. This means that anyone can deposit into the OIV. <br>
-                      If you want to enable the whitelist, please toggle the switch above. <br>
-                      Whitelist is a list of addresses that are allowed to deposit into the OIV."
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -169,7 +160,6 @@ import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import type { IField } from "~/types/enums/input_type";
 
 import {

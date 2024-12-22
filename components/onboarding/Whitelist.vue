@@ -6,27 +6,16 @@
       class="toggleable_group__toggle"
     >
       <v-switch
-        v-model="isWhitelistedDeposits"
+        v-model="isWhitelistEnabled"
         color="primary"
         hide-details
-        :disabled="isDisabled"
       />
     </div>
 
     <SectionWhitelist
-      v-if="isWhitelistedDeposits"
-      :items="whitelist"
-      :is-disabled="isDisabled"
-      @update-items="handleWhitelistChange"
+      v-model="whitelist"
+      v-model:whitelist-enabled="isWhitelistEnabled"
     />
-    <div v-else>
-      <UiInfoBox
-        class="info-box"
-        info="Whitelist is disabled. This means that anyone can deposit into the OIV. <br>
-                      If you want to enable the whitelist, please toggle the switch above. <br>
-                      Whitelist is a list of addresses that are allowed to deposit into the OIV."
-      />
-    </div>
   </section>
 </template>
 
@@ -34,40 +23,30 @@
 import SectionWhitelist from "~/pages/details/[fundSlug]/governance/fund-settings/SectionWhitelist.vue";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 
-const emit = defineEmits(["update-items", "update-is-whitelisted-deposits"]);
+const emit = defineEmits(["update:modelValue", "update:whitelistEnabled"]);
 
-// 0x6EC175951624e1E1e6367Fa3dB90a1829E032Ec3
-// 0x0000000000000000000000000000000000000000
-
-const props = defineProps<{
-  lsIsWhitelistedDeposits: boolean;
-  lsWhitelist: IWhitelist[];
-  isDisabled: boolean;
-}>();
-
-// Data
-const isWhitelistedDeposits = ref(false)
-const whitelist = ref<IWhitelist[]>([]);
-// Computeds
-
-// Methods
-const handleWhitelistChange = (items: IWhitelist[]) => {
-  whitelist.value = items;
-  emit("update-items", whitelist.value);
-};
-
-// Watchers
-watch(isWhitelistedDeposits, () => {
-  emit("update-is-whitelisted-deposits", isWhitelistedDeposits.value);
+const props = defineProps({
+  modelValue: {
+    type: Array as () => IWhitelist[],
+    default: () => [],
+  },
+  whitelistEnabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-// Lifecycle Hooks
-onMounted(() => {
-  isWhitelistedDeposits.value = props.lsIsWhitelistedDeposits ?? false;
-  whitelist.value = props.lsWhitelist ?? [];
-
-  emit("update-is-whitelisted-deposits", isWhitelistedDeposits.value);
-  emit("update-items", whitelist.value);
+const whitelist = computed({
+  get: () => props?.modelValue || [],
+  set: (value: Record<string, any>) => {
+    emit("update:modelValue", value);
+  },
+});
+const isWhitelistEnabled = computed({
+  get: () => props.whitelistEnabled || false,
+  set: (value: boolean) => {
+    emit("update:whitelistEnabled", value);
+  },
 });
 </script>
 
