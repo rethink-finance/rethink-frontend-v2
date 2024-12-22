@@ -90,10 +90,13 @@ export const fetchFundMetaDataAction = async (
         fundChainId,
         () => fundGovernanceTokenContract.methods.totalSupply().call(),
       );
-    console.log(
-      "fundGovernanceTokenSupplyFixed: ",
-      fundGovernanceTokenSupplyFixed,
-    );
+    if (fundGovernanceTokenSupply !== fundGovernanceTokenSupplyFixed)
+      console.error(
+        "[MISMATCH] fundGovernanceTokenSupply: ",
+        fundGovernanceTokenSupply,
+        "fundGovernanceTokenSupplyFixed: ",
+        fundGovernanceTokenSupplyFixed,
+      );
 
     const quorumVotes: bigint = ((((fundGovernanceTokenSupplyFixed as bigint) *
       quorumNumerator) as bigint) / quorumDenominator) as bigint;
