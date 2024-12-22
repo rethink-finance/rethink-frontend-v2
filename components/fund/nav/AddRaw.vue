@@ -4,6 +4,7 @@
     title="Add Raw Methods"
     max-width="80%"
     confirm-text="Load"
+    cancel-text="Cancel"
     message="Please enter the raw methods JSON below"
     @confirm="addRawMethods"
     @update:model-value="updateModelValue"

@@ -105,6 +105,7 @@
         v-model="confirmDialog"
         title="Heads Up!"
         confirm-text="Add Address List"
+        cancel-text="Cancel"
         message="By proceeding with <strong>'Add Address List'</strong>, all the previous addresses will be removed!"
         @confirm="handleAddNewAddressList"
       />

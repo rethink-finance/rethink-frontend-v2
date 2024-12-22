@@ -52,8 +52,8 @@
 </template>
 
 <script setup lang="ts">
-import type INAVMethod from "~/types/nav_method";
 import { useFundsStore } from "~/store/funds/funds.store";
+import type INAVMethod from "~/types/nav_method";
 
 const emit = defineEmits(["add-methods"]);
 

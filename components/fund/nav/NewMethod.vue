@@ -392,6 +392,7 @@ const addMethod = () => {
 
   toastStore.addToast("New NAV method was created.")
   emit("newNavMethodCreated", newNavMethod)
+  resetMethods();
 }
 </script>
 

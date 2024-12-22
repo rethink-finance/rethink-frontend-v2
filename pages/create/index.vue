@@ -168,11 +168,11 @@
               />
 
               <!-- STEP NAV METHODS -->
-              <div
+              <OnboardingNavMethods
                 v-if="item.key === OnboardingStep.NavMethods"
-              >
-                This might be a component instead of regular fields
-              </div>
+                :fund-address="fundSettings.fundAddress"
+                :base-token-address="fundSettings.baseToken"
+              />
 
               <!-- STEP FINALISE -->
               <div

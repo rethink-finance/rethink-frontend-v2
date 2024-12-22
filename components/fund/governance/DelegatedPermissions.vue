@@ -51,6 +51,7 @@
       title="Add Raw Proposal"
       max-width="80%"
       confirm-text="Load"
+      cancel-text="Cancel"
       message="Please enter the raw proposal JSON below"
       @confirm="addRawProposal"
     >
@@ -73,14 +74,14 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
+import { useToastStore } from "~/store/toasts/toast.store";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
   proposalRoleModMethodStepsMap,
   roleModMethodChoices,
 } from "~/types/enums/delegated_permission";
-import { useToastStore } from "~/store/toasts/toast.store";
-import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
 
 const toastStore = useToastStore();
 

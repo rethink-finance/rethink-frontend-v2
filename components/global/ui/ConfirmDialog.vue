@@ -33,6 +33,7 @@
 
         <div class="di_card__button-container">
           <v-btn
+            v-if="cancelText"
             class="di_card__cancel-button"
             variant="text"
             @click="cancel()"
