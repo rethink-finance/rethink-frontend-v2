@@ -100,6 +100,9 @@ export const fetchFundMetaDataAction = async (
       parsedClockMode.mode === ClockMode.BlockNumber ? "block" : "second";
 
     const fundNetwork = networksMap[fundChainId];
+    //console.log("fundMetadata.updateTimes");
+    //console.log(fundMetadata.updateTimes);
+    const lastNavUpdateTime = undefined;//= fundMetadata.updateTimes[fundMetadata.updateTimes.length-1];
     const fund: IFund = {
       // Original fund settings
       originalFundSettings: parsedFundSettings,
@@ -116,6 +119,9 @@ export const fetchFundMetaDataAction = async (
       photoUrl: defaultAvatar,
       inceptionDate: startTime
         ? formatDate(new Date(Number(startTime) * 1000))
+        : "",
+      lastNavUpdateTime: lastNavUpdateTime
+        ? formatDate(new Date(Number(lastNavUpdateTime) * 1000))
         : "",
       fundToken: {
         symbol: parsedFundSettings.fundSymbol,

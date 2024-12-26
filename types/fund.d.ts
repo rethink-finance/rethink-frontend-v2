@@ -50,6 +50,7 @@ export default interface IFund {
   safeAddress: string; // safe
 
   inceptionDate: string;
+  lastNavUpdateTime: string;
   fundToken: IToken;
   fundTokenTotalSupply: bigint;
   baseToken: IToken;
