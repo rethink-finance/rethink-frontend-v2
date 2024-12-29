@@ -21,7 +21,18 @@ export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[]): IP
 
   if (navMethods) {
     for (const navMethod of navMethods) {
-      counts[navMethod.positionType] += 1;
+      if(navMethod.positionType === PositionType.Composable) {
+
+        if(navMethod.details.composable[0].functionSignatures.includes("illiquidCalc")) {
+          counts[PositionType.Illiquid] += 1;
+        } else if (navMethod.details.composable[0].functionSignatures.includes("liquidCalc")) {
+          counts[PositionType.Liquid] += 1;
+        } else {
+          counts[navMethod.positionType] += 1;
+        }
+      } else {
+          counts[navMethod.positionType] += 1;
+      }
     }
   }
 

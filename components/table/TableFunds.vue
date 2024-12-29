@@ -121,10 +121,16 @@ const headers: any = computed(() => [
     align: "end",
   },
   {
-    title: "NAV",
+    title: "Lastest NAV",
     key: "lastNAVUpdateTotalNAV",
     align: "end",
   },
+ // {
+ //   title: "Lastest NAV Date",
+ //   key: "lastNavUpdateTime",
+ //   value: (v: IFund) => v.lastNavUpdateTime,
+ //   align: "end",
+ // },
   {
     title: "Inception",
     key: "inceptionDate",

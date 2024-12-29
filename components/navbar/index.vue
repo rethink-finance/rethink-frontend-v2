@@ -25,15 +25,15 @@
         <div class="navbar__buttons hidden-sm-and-down">
           <nuxt-link
             v-for="route in computedRoutes"
-            :to="route.to"
+            :key="route.to"
+            :to="route.disabled ? undefined : route.to"
             :target="route.target"
           >
             <v-btn
-              class="nav-link"
+              :class="`nav-link ${route.disabled ? 'disabled' : ''}`"
               variant="plain"
               :active="route.isActive"
               :color="route.pathColor"
-              :disabled="route.disabled"
             >
               {{ route.title }}
               <template #append>
@@ -170,8 +170,7 @@ const routes : IRoute[] = [
     to: "/create",
     exactMatch: true,
     title: "Create",
-    text: "Coming soon",
-    disabled: true,
+    text: "Create your own strategies",
   },
   {
     to: "/governance",
@@ -309,6 +308,9 @@ const onClickConnect = async () => {
     &:not(:hover) {
       opacity: 0.85;
     }
+  }
+  .nav-link.disabled {
+    opacity: 0.5;
   }
 
   .connect_wallet_btn {
