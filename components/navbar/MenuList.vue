@@ -8,7 +8,8 @@
     >
       <nuxt-link
         v-for="route in routes"
-        :to="route.to"
+        :key="route.to"
+        :to="route.disabled ? undefined : route.to"
         :target="route.isExternal ? '_blank' : ''"
         @click="isMenuOpen = false"
       >
