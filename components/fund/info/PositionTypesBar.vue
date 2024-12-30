@@ -34,7 +34,7 @@ export default {
     totalCountSum() {
       return this.positionTypeCounts.reduce((sum, current) => {
         return sum + current.count;
-      }, 0);
+      }, 0n);
     },
     calculatedPositionTypes() {
       return this.positionTypeCounts.filter(
@@ -43,7 +43,7 @@ export default {
         const width = positionType.count / this.totalCountSum;
         return {
           width: formatPercent(width, false),
-          style: { width: width * 100 + "%" },
+          style: { width: width * 100n + "%" },
           class: `bg_nav_${positionType.type?.key || ""}`,
           ...positionType,
         }

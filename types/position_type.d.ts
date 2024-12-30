@@ -5,5 +5,5 @@ export interface IPositionType {
 
 export default interface IPositionTypeCount {
   type: IPositionTypeRecord;
-  count: number;
+  count: bigint;
 }
