@@ -32,15 +32,17 @@ export default {
   },
   computed: {
     totalCountSum() {
+      console.log("this.positionTypeCounts");
+      console.log(this.positionTypeCounts);
       return this.positionTypeCounts.reduce((sum, current) => {
         return sum + current.count;
-      }, 0);
+      }, 0n);
     },
     calculatedPositionTypes() {
       return this.positionTypeCounts.filter(
-        positionType => positionType.count > 0,
+        positionType => positionType.count > 0n,
       ).map((positionType) => {
-        const width = positionType.count / this.totalCountSum;
+        const width = Number(positionType.count) / Number(this.totalCountSum);
         return {
           width: formatPercent(width, false),
           style: { width: width * 100 + "%" },

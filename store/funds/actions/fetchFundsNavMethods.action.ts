@@ -89,15 +89,7 @@ async function processFundNavData(
   const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
   const fund = fundsStore.chainFunds[chainId]?.[fundIndex];
-  if (fund) {
-    fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
-      lastNavUpdate?.entries,
-    );
-
-    fund.lastNAVUpdateTotalNAV = navUpdates.length
-      ? lastNavUpdate.totalNAV || 0n
-      : fund.totalDepositBalance || 0n;
-  }
+  
 
   for (const [
     navUpdateIndex,
@@ -149,5 +141,16 @@ async function processFundNavData(
     } catch (error: any) {
       console.log("Error processing NAV methods: ", error);
     }
+  }
+
+  if (fund) {
+    fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
+      lastNavUpdate?.entries,
+      lastNavUpdate
+    );
+
+    fund.lastNAVUpdateTotalNAV = navUpdates.length
+      ? lastNavUpdate.totalNAV || 0n
+      : fund.totalDepositBalance || 0n;
   }
 }
