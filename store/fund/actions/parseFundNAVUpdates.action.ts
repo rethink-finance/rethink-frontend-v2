@@ -101,6 +101,8 @@ const updateNavMethodPastNavValue = async (
       (acc: bigint, val: bigint) => acc + val,
       0n,
     );
+    console.log("navMethod.pastNavValue");
+    console.log(navMethod.pastNavValue);
   } catch (error) {
     navMethod.pastNavValueError = true;
     console.error(

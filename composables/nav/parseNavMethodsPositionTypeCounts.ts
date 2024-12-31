@@ -23,8 +23,9 @@ export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[], nav
 
   if (navMethods) {
     for (const navMethod of navMethods) {
+      console.log("from parse counts");
+      console.log(navMethod.pastNavValue);
       if(navMethod.positionType === PositionType.Composable) {
-
         if(navMethod.details.composable[0].functionSignatures.includes("illiquidCalc")) {
           counts[PositionType.Illiquid] += navMethod.pastNavValue || 0n;
         } else if (navMethod.details.composable[0].functionSignatures.includes("liquidCalc")) {
