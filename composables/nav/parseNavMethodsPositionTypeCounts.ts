@@ -23,8 +23,8 @@ export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[], nav
 
   if (navMethods) {
     for (const navMethod of navMethods) {
-      console.log("from parse counts");
-      console.log(navMethod.pastNavValue);
+      //NOTE: at the time parseNavMethodsPositionTypeCounts gets executed all navMethod.pastNavValue are undefined
+
       if(navMethod.positionType === PositionType.Composable) {
         if(navMethod.details.composable[0].functionSignatures.includes("illiquidCalc")) {
           counts[PositionType.Illiquid] += navMethod.pastNavValue || 0n;
@@ -40,7 +40,10 @@ export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[], nav
   }
 
   return PositionTypeKeys.map(positionType => {
-    /*if (navUpdate && navUpdate.navParts) {
+    console.log("counts[positionType]");
+
+    console.log(counts[positionType]);
+    if (navUpdate && navUpdate.navParts) {
       //factor in base asset of oiv
       counts[PositionType.Liquid] += (
         (navUpdate.navParts.baseAssetOIVBal || 0n) + 
@@ -48,8 +51,6 @@ export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[], nav
         (navUpdate.navParts.baseAssetSafeBal || 0n)
       );
     }
-    */
-
 
     return {
       type: PositionTypesMap[positionType],

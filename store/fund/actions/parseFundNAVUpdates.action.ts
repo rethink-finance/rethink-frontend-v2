@@ -11,11 +11,11 @@ import { PositionTypeToNAVCacheMethod } from "~/types/enums/position_type";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
 
-export const parseFundNAVUpdatesAction = (
+export const parseFundNAVUpdatesAction = async (
   fundChainId: string,
   fundNAVData: IFundNavData,
   fundAddress: string,
-): Promise<any> => {
+) => {
   // Decode and parse navParts
   const navParts: (INAVParts | undefined)[] = [];
   fundNAVData.encodedNavParts.forEach((encodedNavPart) => {
@@ -60,6 +60,17 @@ export const parseFundNAVUpdatesAction = (
     navUpdates[navUpdates.length - 1]?.entries ?? [];
   console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
 
+  for (let i= 0; i< lastNavUpdateNavMethods.length; i++){
+    await updateNavMethodPastNavValue(
+      fundChainId,
+      fundAddress,
+      i,
+      lastNavUpdateNavMethods[i],
+    );
+  }
+
+
+  /*
   lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
     updateNavMethodPastNavValue(
       fundChainId,
@@ -68,8 +79,9 @@ export const parseFundNAVUpdatesAction = (
       navMethod,
     );
   });
+  */
 
-  return Promise.resolve(navUpdates);
+  return navUpdates;
 };
 
 const updateNavMethodPastNavValue = async (
@@ -101,8 +113,6 @@ const updateNavMethodPastNavValue = async (
       (acc: bigint, val: bigint) => acc + val,
       0n,
     );
-    console.log("navMethod.pastNavValue");
-    console.log(navMethod.pastNavValue);
   } catch (error) {
     navMethod.pastNavValueError = true;
     console.error(
