@@ -60,6 +60,7 @@
 <script setup lang="ts">
 import { encodeFunctionCall, encodeParameter } from "web3-eth-abi";
 import { ethers } from "ethers";
+import { Exception } from "sass";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
@@ -72,6 +73,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
 import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
 import { networksMap } from "~/store/web3/networksMap";
+import { addresses } from "assets/contracts/addresses";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
@@ -150,9 +152,19 @@ const getAllowManagerToCollectFeesPermission = (
   fundAddress: string,
 ): string[] => {
   const encodedRoleModEntries: string[] = [];
-  const byteEncodedFundAddress = encodeParameter("bytes", fundInitCache?.value?.fundContractAddr);
+  const poolPerformanceFeeAddress = addresses.PoolPerformanceFeeBeaconProxy[chainId.value];
+  if (!poolPerformanceFeeAddress) {
+    const errorMsg =  "Missing PoolPerformanceFeeBeaconProxy address. " +
+        "Please contact Rethink support.";
+    toastStore.errorToast(errorMsg)
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+  const byteEncodedPoolPerformanceFeeAddress = encodeParameter(
+    "bytes",
+    poolPerformanceFeeAddress,
+  );
 
-  // TODO fix to use performance fee proxy contract address compValue
   const encodedScopeParameter = encodeFunctionCall(
     proposalRoleModMethodAbiMap.scopeParameter,
     [
@@ -162,7 +174,7 @@ const getAllowManagerToCollectFeesPermission = (
       "0", // paramIndex
       "1", // paramType
       "0", // paramComp
-      byteEncodedFundAddress, // compValue, TODO Performance Fee Proxy Contract Address
+      byteEncodedPoolPerformanceFeeAddress, // compValue, Performance Fee Proxy Contract Address
     ],
   );
   encodedRoleModEntries.push(encodedScopeParameter);

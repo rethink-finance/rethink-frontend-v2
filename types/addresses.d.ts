@@ -2,6 +2,6 @@ export interface IContractAddresses {
   [chainId: string]: string;
 }
 
-export default interface IAddresses {
+export default interface IContractAddressesMap {
   [contractName: string]: IContractAddresses;
 }
