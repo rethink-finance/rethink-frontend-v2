@@ -16,7 +16,15 @@
         bg-transparent
       >
         <template #body>
-          <FundNavMethodsTable :methods="navUpdate.entries" idx="navUpdates" />
+          <FundNavMethodsTable
+            :fund-chain-id="fundStore.fundChainId"
+            :fund-address="fundStore.fundAddress"
+            :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
+            :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
+            :fee-balance="Number(fundStore.fund?.feeBalance)"
+            :methods="navUpdate.entries"
+            idx="navUpdates"
+          />
         </template>
         <!--        <template #actions="{detailsExpanded}">-->
         <!--          <UiDetailsButton text="Details" :active="detailsExpanded" />-->

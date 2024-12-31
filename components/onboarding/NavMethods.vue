@@ -53,7 +53,10 @@
       <FundNavMethodsTable
         v-model:methods="fundManagedNAVMethods"
         deletable
+        show-simulated-nav
         idx="nav/onboarding"
+        :fund-chain-id="chainId"
+        :fund-address="fundAddress"
       />
     </div>
 
@@ -85,6 +88,7 @@
     >
       <FundNavAddFromLibrary
         :chain-id="chainId"
+        :fund-address="fundAddress"
         :already-used-methods="fundManagedNAVMethods"
         @add-methods="addFromLibrary"
       />

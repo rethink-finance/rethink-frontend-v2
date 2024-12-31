@@ -42,6 +42,8 @@
       v-else
       :methods="uniqueNavMethods[chainId]"
       :used-methods="alreadyUsedMethods"
+      :fund-chain-id="chainId"
+      :fund-address="fundAddress"
       selectable
       :search="search"
       show-simulated-nav
@@ -59,6 +61,10 @@ const emit = defineEmits(["add-methods"]);
 
 const props = defineProps({
   chainId: {
+    type: String,
+    required: true,
+  },
+  fundAddress: {
     type: String,
     required: true,
   },

@@ -84,6 +84,11 @@
                     <template v-if="!toggledRawProposalCalldatas[calldataIndex]">
                       <template v-if="calldata?.calldataType === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
+                          :fund-chain-id="fundStore.fundChainId"
+                          :fund-address="fundStore.fundAddress"
+                          :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
+                          :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
+                          :fee-balance="Number(fundStore.fund?.feeBalance)"
                           :methods="allMethods[calldataIndex]"
                           show-summary-row
                           show-simulated-nav
@@ -180,8 +185,8 @@
 </template>
 
 <script setup lang="ts">
-import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { useActionStateStore } from "~/store/actionState.store";
+import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 
 import { formatPercent } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";

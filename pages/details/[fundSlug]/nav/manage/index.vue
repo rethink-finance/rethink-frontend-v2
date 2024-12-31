@@ -49,6 +49,11 @@
       </UiHeader>
       <FundNavMethodsTable
         v-model:methods="fundManagedNAVMethods"
+        :fund-chain-id="fundChainId"
+        :fund-address="fundAddress"
+        :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
+        :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
+        :fee-balance="Number(fundStore.fund?.feeBalance)"
         deletable
         show-summary-row
         show-base-token-balances
@@ -82,9 +87,12 @@ const {
   selectedFundAddress,
   fundManagedNAVMethods,
   fundLastNAVUpdateMethods,
+  fundChainId,
+  fundAddress,
 } = toRefs(useFundStore());
 
 const toastStore = useToastStore();
+const fundStore = useFundStore();
 const actionStateStore = useActionStateStore();
 const addRawDialog = ref(false);
 

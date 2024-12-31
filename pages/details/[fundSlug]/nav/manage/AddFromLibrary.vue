@@ -1,6 +1,7 @@
 <template>
   <FundNavAddFromLibrary
     :chain-id="fundStore.fundChainId"
+    :fund-address="fundStore.fundAddress"
     :already-used-methods="fundStore.fundManagedNAVMethods"
     @add-methods="addMethods"
   />

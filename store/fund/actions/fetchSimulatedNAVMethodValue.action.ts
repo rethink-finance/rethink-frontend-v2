@@ -2,38 +2,52 @@
 import { useFundStore } from "../fund.store";
 
 
+import { useFundsStore } from "~/store/funds/funds.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import {
   PositionType,
   PositionTypeToNAVCalculationMethod,
 } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import { useFundsStore } from "~/store/funds/funds.store";
 
 export const fetchSimulatedNAVMethodValueAction = async (
   fundChainId: string,
   fundAddress: string,
   navEntry: INAVMethod,
+  // baseDecimals: number,
+  // safeAddress: string,
 ): Promise<void> => {
   const fundStore = useFundStore();
   const fundsStore = useFundsStore();
   const web3Store = useWeb3Store();
   const fund = fundStore.chainFunds?.[fundChainId]?.[fundAddress];
-  const baseDecimals = fund?.baseToken.decimals;
+  // TODO: Fetch base decimals from fund instance and pass it to the method.
+  const baseDecimals = fund?.baseToken.decimals ?? 18;
 
-  if (!fund) {
-    console.error("Fund instance is not available.");
-    return;
-  }
+  console.log("fetchSimulatedNAVMethodValueAction: ", navEntry);
+  console.log("fundChainId: ", fundChainId);
+  console.log("fundAddress: ", fundAddress);
+  console.log("fund: ", fund);
+  console.log("fundStore.ChainFunds: ", fundStore.chainFunds);
+  console.log("fundStore.chainFunds[fundChainId]: ", fundStore.chainFunds[fundChainId]);
+  console.log("fundStore.chainFunds[fundChainId][fundAddress]: ", fundStore.chainFunds[fundChainId][fundAddress]);
+
+  // TODO: remove this check
+  // TODO: fund is used to get the baseToken and safeAddress
+  // TODO: pass those as parameters
+  // if (!fund) {
+  //   console.error("Fund instance is not available.");
+  //   return;
+  // }
   if (!navEntry.detailsHash) {
     console.error("No detailsHash provided in navEntry.");
     return;
   }
 
-  if (!baseDecimals) {
-    console.error("simulateNAVMethodValue error: No fund base decimals.");
-    return;
-  }
+  // if (!baseDecimals) {
+  //   console.error("simulateNAVMethodValue error: No fund base decimals.");
+  //   return;
+  // }
   const navCalculatorContract =
     web3Store.chainContracts[fundChainId]?.navCalculatorContract;
 

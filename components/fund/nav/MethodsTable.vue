@@ -34,7 +34,7 @@
         </div>
         <div v-if="showSummaryRow && showSimulatedNav" class="bottom">
           <div class="text-right">
-            <!-- {{ formattedTotalSimulatedNAV }} -->
+            {{ formattedTotalSimulatedNAV }}
             <div
               v-if="simulatedNavErrorCount > 0"
               class="ms-2 justify-center align-center d-flex"
@@ -86,7 +86,7 @@
           />
         </div>
         <div v-else>
-          <!-- {{ value ? getFormattedBaseTokenValue(value) : '-' }} -->
+          {{ value ? fundStore.getFormattedBaseTokenValue(value) : '-' }}
         </div>
         <div
           v-if="item.pastNavValueError"
@@ -414,7 +414,7 @@
 
 <script lang="ts">
 import { ethers } from "ethers";
-// import { useFundStore } from "~/store/fund/fund.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 import {
@@ -484,31 +484,42 @@ export default defineComponent({
       type: String,
       default: "",
     },
-    // fundAddress: {
-    //   type: String,
-    //   default: "",
-    // },
-    // baseTokenAddress: {
-    //   type: String,
-    //   default: "",
-    // },
-    // fundChainId: {
-    //   type: String,
-    //   default: "",
-    // },
-    // safeAddress: {
-    //   type: String,
-    //   default: "",
-    // },
+    fundAddress: {
+      type: String,
+      default: "",
+    },
+    baseTokenAddress: {
+      type: String,
+      default: "",
+    },
+    fundChainId: {
+      type: String,
+      default: "",
+    },
+    safeAddress: {
+      type: String,
+      default: "",
+    },
+    fundContractBaseTokenBalance: {
+      type: Number,
+      default: 0,
+    },
+    safeContractBaseTokenBalance: {
+      type: Number,
+      default: 0,
+    },
+    feeBalance: {
+      type: Number,
+      default: 0,
+    },
   },
   emits: ["update:methods", "selectedChanged"],
   setup() {
-    // const fundStore = useFundStore();
+    const fundStore = useFundStore();
     const toastStore = useToastStore();
-
-    // const { getFormattedBaseTokenValue } = toRefs(fundStore);
     return {
       toastStore,
+      fundStore,
       creatablePositionTypes: computed(() =>
         PositionTypes.filter(
           (positionType) => positionType.key !== PositionType.NFT,
@@ -621,20 +632,19 @@ export default defineComponent({
     usedMethodHashes(): string[] {
       return this.usedMethods.map(method => method.detailsHash || "");
     },
-    // formattedTotalSimulatedNAV() {
-    //   // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
-    //   const fund = this.fundStore.fund;
+    formattedTotalSimulatedNAV() {
+      // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
 
-    //   const totalNAV =
-    //     (this.totalNavMethodsSimulatedNAV || 0n) +
-    //     (fund?.fundContractBaseTokenBalance || 0n) +
-    //     (fund?.safeContractBaseTokenBalance || 0n) +
-    //     (fund?.feeBalance || 0n);
-    //   return this.getFormattedBaseTokenValue(totalNAV);
-    // },
-    // formattedTotalLastNAV() {
-    //   return this.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n);
-    // },
+      const totalNAV =
+        (this.totalNavMethodsSimulatedNAV || 0n) +
+        (BigInt(this.fundContractBaseTokenBalance) || 0n) +
+        (BigInt(this.safeContractBaseTokenBalance) || 0n) +
+        (BigInt(this.feeBalance) || 0n) ?? 0n;
+      return this.fundStore.getFormattedBaseTokenValue(totalNAV);
+    },
+    formattedTotalLastNAV() {
+      return this.fundStore.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n);
+    },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
       return this.methods.reduce(
@@ -646,15 +656,15 @@ export default defineComponent({
         0n,
       )
     },
-    // formattedFundContractBaseTokenBalance() {
-    //   return this.getFormattedBaseTokenValue(this.fundStore.fund?.fundContractBaseTokenBalance);
-    // },
-    // formattedSafeContractBaseTokenBalance() {
-    //   return this.getFormattedBaseTokenValue(this.fundStore.fund?.safeContractBaseTokenBalance);
-    // },
-    // formattedFeeBalance() {
-    //   return this.getFormattedBaseTokenValue(this.fundStore.fund?.feeBalance);
-    // },
+    formattedFundContractBaseTokenBalance() {
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance));
+    },
+    formattedSafeContractBaseTokenBalance() {
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.safeContractBaseTokenBalance));
+    },
+    formattedFeeBalance() {
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.feeBalance));
+    },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
     },
@@ -667,13 +677,11 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
-          // simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
-          simulatedNavFormatted: 0,
+          simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-1",
           detailsJson: {
-            // "fundContractAddress": this.fundStore.fund?.address,
-            "fundContractAddress": "",
+            "fundContractAddress": this.fundAddress ?? "",
           },
         } as any)
         methods.push({
@@ -681,13 +689,11 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetSafeBal,
-          // simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
-          simulatedNavFormatted: 0,
+          simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
           isRethinkPosition: true,
           detailsHash: "-2",
           detailsJson: {
-            // "safeContractAddress": this.fundStore.fund?.safeAddress,
-            "safeContractAddress": "",
+            "safeContractAddress": this.safeAddress ?? "",
           },
         } as any)
         methods.push({
@@ -695,8 +701,7 @@ export default defineComponent({
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.feeBal,
-          // simulatedNavFormatted: this.formattedFeeBalance,
-          simulatedNavFormatted: 0,
+          simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
           detailsHash: "-3",
         } as any)
@@ -715,7 +720,7 @@ export default defineComponent({
       handler(newLen: any, oldLen: any) {
         // Simulate NAV method values everytime NAV methods change.
         if (!this.methods.length || oldLen === newLen) return;
-        // this.simulateNAV();
+        this.simulateNAV();
       },
       deep: true,
       immediate: true,
@@ -724,7 +729,7 @@ export default defineComponent({
       handler() {
         // Simulate NAV method values everytime Simulate NAV button is pressed and triggerSimulateNav changes.
         console.log("fundStore.refreshSimulateNAVCounter:")
-        // this.simulateNAV();
+        this.simulateNAV();
       },
     },
   },
@@ -747,35 +752,36 @@ export default defineComponent({
       const data = text as string;
       navigator.clipboard.writeText(data);
     },
-    // async simulateNAV() {
-    //   if (!this.showSimulatedNav || this.isNavSimulationLoading) return;
-    //   this.isNavSimulationLoading = true;
-    //   console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
-    //   /**
-    //   if (!this.fundsStore.allNavMethods?.length) {
-    //     const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
+    async simulateNAV() {
+      if (!this.showSimulatedNav || this.isNavSimulationLoading) return;
+      this.isNavSimulationLoading = true;
+      console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
+      /**
+      if (!this.fundsStore.allNavMethods?.length) {
+        const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
 
-    //     // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
-    //     // and make sure it is fetched before checking here with fundsStore.fetchFundsNavMethods, and then we
-    //     // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
-    //     console.log("simulate fetch all nav methods")
-    //     await this.fundsStore.fetchFundsNavMethods(fundsInfoArrays);
-    //   }
-    //   */
-    //   // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
-    //   // Otherwise, take managed methods, that user can change.
-    //   // Simulate all at once as many promises instead of one by one.
-    //   const promises = [];
-    //   const fundChainId = this.fundStore.fund?.chainId ?? "";
-    //   const fundAddress = this.fundStore.fund?.address ?? "";
+        // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
+        // and make sure it is fetched before checking here with fundsStore.fetchFundsNavMethods, and then we
+        // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
+        console.log("simulate fetch all nav methods")
+        await this.fundsStore.fetchFundsNavMethods(fundsInfoArrays);
+      }
+      */
+      // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
+      // Otherwise, take managed methods, that user can change.
+      // Simulate all at once as many promises instead of one by one.
+      const promises = [];
+      const fundChainId = this.fundChainId ?? "";
+      const fundAddress = this.fundAddress ?? "";
 
-    //   for (const navEntry of this.methods) {
-    //     promises.push(this.fundStore.fetchSimulatedNAVMethodValue(this.fundChainId ?? fundChainId, this.fundAddress ?? fundAddress, navEntry));
-    //   }
-    //   const settled = await Promise.allSettled(promises);
-    //   this.isNavSimulationLoading = false;
-    //   console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
-    // },
+      for (const navEntry of this.methods) {
+        console.log("FUND CHAIN ID:", fundChainId, "FUND ADDRESS:", fundAddress, "NAV ENTRY:", navEntry)
+        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(fundChainId, fundAddress, navEntry));
+      }
+      const settled = await Promise.allSettled(promises);
+      this.isNavSimulationLoading = false;
+      console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
+    },
     simulatedNAVIconColor(method: INAVMethod) {
       if (!method.foundMatchingPastNAVUpdateEntryFundAddress) {
         return "var(--color-warning)";
