@@ -1,11 +1,11 @@
 import { networks } from "~/store/web3/networksMap";
-import type INetwork from "~/types/network";
-import { InputType } from "~/types/enums/input_type";
 import {
   FundSettingsStepFieldsMap,
   StepSections,
 } from "~/types/enums/fund_setting_proposal";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
+import { InputType } from "~/types/enums/input_type";
+import type INetwork from "~/types/network";
 
 export enum OnboardingStep {
     Basics = "basics",
@@ -87,9 +87,35 @@ const chainIdField: IField = {
 const OnboardingFieldsMap: FieldsMapType = {
   [OnboardingStep.Basics]: [
     chainIdField,
-    ...FundSettingsStepFieldsMap[StepSections.Basics],
+    // Take Basic fields and make them editable when creating new fund.
+    ...(FundSettingsStepFieldsMap[StepSections.Basics]).map(
+      (field) => {
+        return  {
+          ...field,
+          isEditable: true,
+          info: "",
+        }
+      },
+    ),
   ] as (IField[] | IFieldGroup[]),
-  [OnboardingStep.Fees]: FundSettingsStepFieldsMap[StepSections.Fees],
+  [OnboardingStep.Fees]: (FundSettingsStepFieldsMap[StepSections.Fees] as IFieldGroup[]).map(
+    (fieldGroup: IFieldGroup) => {
+      // fields to exclude
+      const blacklist = ["performanceFeePeriod"];
+
+      return {
+        ...fieldGroup,
+        fields: fieldGroup.fields
+          .filter((field: IField) => !blacklist.includes(field.key))
+          .map(
+            (field: IField) => ({
+              ...field,
+              isEditable: true,
+            }),
+          ),
+      };
+    },
+  ),
   [OnboardingStep.Management]: FundSettingsStepFieldsMap[StepSections.Management],
   // Take Governance fields and make them editable when creating new fund.
   [OnboardingStep.Governance]: (FundSettingsStepFieldsMap[StepSections.Governance] as IField[]).map(
@@ -102,4 +128,5 @@ const OnboardingFieldsMap: FieldsMapType = {
   ),
 };
 
-export { OnboardingFieldsMap }
+export { OnboardingFieldsMap };
+
