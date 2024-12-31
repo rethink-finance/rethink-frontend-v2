@@ -2,7 +2,6 @@ import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { IFundInitCache } from "~/types/fund_settings";
 import { RethinkFundGovernor } from "assets/contracts/RethinkFundGovernor";
-import { ClockMode } from "~/types/enums/clock_mode";
 import { formatQuorumPercentage } from "~/composables/formatters";
 
 

@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 
 import { useActionState } from "../actionState.store";
-import { fetchFundCacheAction } from "~/store/create-fund/actions/fetchFundCache.action";
+import { fetchFundCacheAction } from "./actions/fetchFundCache.action";
 import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { IFundInitCache } from "~/types/fund_settings";

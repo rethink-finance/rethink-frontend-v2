@@ -1,6 +1,6 @@
 import type IContractAddressesMap from "~/types/addresses";
 
-export const addresses: IContractAddressesMap = {
+export const rethinkContractAddresses: IContractAddressesMap = {
   "WrappedTokenFactory": {
     "0x1": "0x79b15F47640C4e3ac3A9c4B7f1B999a8cccEEeC7",
     "0x5": "0x50B55b0792a95508e524224bF7CCA39cA0Ee7dab",

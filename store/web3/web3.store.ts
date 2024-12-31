@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { type HttpProvider, Web3 } from "web3";
-import { addresses } from "assets/contracts/addresses";
+import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
 import type { IContractAddresses } from "~/types/addresses";
 import { networksMap } from "~/store/web3/networksMap";
 import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
@@ -57,7 +57,7 @@ export const useWeb3Store = defineStore({
       chainContracts[chainId] = {
         fundFactoryContract: new CustomContract(
           GovernableFundFactory.abi,
-          addresses.GovernableFundFactoryBeaconProxy[chainId],
+          rethinkContractAddresses.GovernableFundFactoryBeaconProxy[chainId],
           chainId,
           chainProviders[chainId].provider as HttpProvider,
         ),
@@ -67,11 +67,11 @@ export const useWeb3Store = defineStore({
         // ),
         rethinkReaderContract: new provider.eth.Contract(
           RethinkReader.abi,
-          addresses.RethinkReader[chainId],
+          rethinkContractAddresses.RethinkReader[chainId],
         ),
         navCalculatorContract: new provider.eth.Contract(
           NAVCalculator.abi,
-          addresses.NAVCalculatorBeaconProxy[chainId],
+          rethinkContractAddresses.NAVCalculatorBeaconProxy[chainId],
         ),
       };
     }
@@ -99,7 +99,7 @@ export const useWeb3Store = defineStore({
   },
   actions: {
     NAVExecutorBeaconProxyAddress(chainId: string): string {
-      return addresses.NAVExecutorBeaconProxy[chainId];
+      return rethinkContractAddresses.NAVExecutorBeaconProxy[chainId];
     },
     safeMultiSendCallOnlyToAddress(chainId: string): string {
       return SafeMultiSendCallOnlyAddresses[
