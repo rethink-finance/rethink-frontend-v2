@@ -101,6 +101,7 @@
             </div>
           </div>
         </div>
+        <slot name="post-steps-content" />
       </div>
 
       <div class="main_card stepper__step-content">

@@ -2,7 +2,6 @@
   <FundGovernanceDelegatedPermissions
     ref="delegatedPermissionsRef"
     v-model="delegatedPermissionsEntry"
-    v-model:allowManagerToSendFundsToFundContract="allowManagerToSendFundsToFundContract"
     :fields-map="DelegatedPermissionFieldsMap"
     submit-label="Store Permissions"
     title="Permissions"
@@ -10,6 +9,27 @@
     @entry-updated="entryUpdated"
     @submit="storePermissions"
   >
+    <template #post-steps-content>
+      <div class="main-step">
+        <div class="info_container">
+          <div class="info_container__buttons">
+            <UiLinkExternalButton
+              title="View OIV Permissions"
+              :href="gnosisPermissionsUrl"
+            />
+          </div>
+          <p class="info_container__text">
+            Having trouble reading permissions?<br>
+            <a
+              class="info_container__link"
+              href="https://docs.rethink.finance/rethink.finance"
+              target="_blank"
+            >Learn more about permissions here</a>.
+          </p>
+        </div>
+      </div>
+    </template>
+
     <template #pre-content>
       <div class="management">
         <div class="management__row">
@@ -39,6 +59,7 @@
 
 <script setup lang="ts">
 import { encodeFunctionCall, encodeParameter } from "web3-eth-abi";
+import { ethers } from "ethers";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
@@ -49,7 +70,8 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
-import { GovernableFund } from "assets/contracts/GovernableFund";
+import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
+import { networksMap } from "~/store/web3/networksMap";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
@@ -79,6 +101,10 @@ const delegatedPermissionsEntry = ref([
   },
 ]);
 
+const gnosisPermissionsUrl = computed(() => getGnosisPermissionsUrl(
+  networksMap[chainId.value]?.chainShort || "",
+  fundInitCache?.value?.rolesModifier || "",
+));
 // TODO this is not a good way to do that but the stepper and StepperFields
 //  should not be implemented like that, mutating props inside but instead they
 //  should be correctly emitting events. But it's a lot of refactor to fix that
@@ -87,19 +113,83 @@ const entryUpdated = (val: any) => {
   delegatedPermissionsEntry.value = val;
 }
 
+const getAllowManagerToSendFundsToFundContractPermission = (
+  baseTokenAddress: string,
+): string[] => {
+  const encodedRoleModEntries = [];
+  const byteEncodedFundAddress = encodeParameter("bytes", fundInitCache?.value?.fundContractAddr);
+
+  const encodedScopeParameter = encodeFunctionCall(
+    proposalRoleModMethodAbiMap.scopeParameter,
+    [
+      "1", // role
+      baseTokenAddress, // targetAddress, base token contract address
+      "0xa9059cbb", // functionSig, transfer
+      "0", // paramIndex
+      "0", // paramType
+      "0", // paramComp
+      byteEncodedFundAddress, // compValue, newly created fund contract address
+    ],
+  );
+  encodedRoleModEntries.push(encodedScopeParameter);
+
+  // Add scopeTarget permission also with target baseToken
+  const encodedScopeTarget = encodeFunctionCall(
+    proposalRoleModMethodAbiMap.scopeTarget,
+    [
+      "1", // role
+      baseTokenAddress, // targetAddress, base token contract address
+    ],
+  );
+  encodedRoleModEntries.push(encodedScopeTarget);
+  return encodedRoleModEntries;
+}
+
+
+const getAllowManagerToCollectFeesPermission = (
+  fundAddress: string,
+): string[] => {
+  const encodedRoleModEntries: string[] = [];
+  const byteEncodedFundAddress = encodeParameter("bytes", fundInitCache?.value?.fundContractAddr);
+
+  // TODO fix to use performance fee proxy contract address compValue
+  const encodedScopeParameter = encodeFunctionCall(
+    proposalRoleModMethodAbiMap.scopeParameter,
+    [
+      "1", // role
+      fundAddress, // targetAddress, OIV contract address
+      "0xec68ac8d", // functionSig
+      "0", // paramIndex
+      "1", // paramType
+      "0", // paramComp
+      byteEncodedFundAddress, // compValue, TODO Performance Fee Proxy Contract Address
+    ],
+  );
+  encodedRoleModEntries.push(encodedScopeParameter);
+
+  // Add scopeTarget permission also with target OIV contract address.
+  const encodedScopeTarget = encodeFunctionCall(
+    proposalRoleModMethodAbiMap.scopeTarget,
+    [
+      "1", // role
+      fundAddress, // targetAddress, OIV contract address
+    ],
+  );
+  encodedRoleModEntries.push(encodedScopeTarget);
+  return encodedRoleModEntries;
+}
+
 const storePermissions = async () => {
   const fundInitCacheSettings = fundInitCache?.value?.fundSettings;
   console.log("fundInitCacheSettings", fundInitCacheSettings)
   console.log("delegatedPermissionsEntry", delegatedPermissionsEntry.value)
 
-  if (!fundInitCache?.value?.rolesModifier) {
-    console.error(
-      "Something went wrong while storing permissions. " +
-      "Missing fund init cache role modifier address", fundInitCache,
-    )
+  if (!fundInitCache?.value?.rolesModifier || !fundInitCache?.value?.fundContractAddr || !fundInitCacheSettings?.baseToken) {
+    console.error("Missing fund init cache data", fundInitCache)
+    loading.value = false;
     return toastStore.errorToast(
       "Something went wrong while storing permissions. " +
-      "Missing fund init cache role modifier address.",
+      "Missing fund init cache data.",
     )
   }
 
@@ -145,50 +235,30 @@ const storePermissions = async () => {
   }
    */
   if (allowManagerToSendFundsToFundContract.value) {
-    if (!fundInitCache?.value?.fundContractAddr) {
-      console.error(
-        "Something went wrong while generating permissions to allow manager to send funds to fund contract. " +
-        "Missing fundInitCache.fundAddress", fundInitCache?.value,
-      )
-      loading.value = false;
-      return toastStore.errorToast(
-        "Something went wrong while generating permissions to allow manager to send funds to fund contract." +
-        "Was fund initialized correctly? Missing fund address in fund cache.",
-      )
-    }
-    if (!fundInitCacheSettings?.baseToken) {
-      console.error(
-        "Something went wrong while generating permissions to allow manager to send funds to fund contract. " +
-        "Missing fundInitCache.baseToken", fundInitCache?.value,
-      )
-      loading.value = false;
-      return toastStore.errorToast(
-        "Something went wrong while generating permissions to allow manager to send funds to fund contract." +
-        "Was fund initialized correctly? Missing base token address in fund cache.",
-      )
-    }
-    targets.push(roleModAddress);
-    gasValues.push(0);
-    const byteEncodedFundAddress = encodeParameter("bytes", fundInitCache?.value?.fundContractAddr);
-
-    const encodedRoleModFunction = encodeFunctionCall(
-      proposalRoleModMethodAbiMap.scopeParameter,
-      [
-        "1", // role
-        fundInitCacheSettings?.baseToken, // targetAddress, base token contract address
-        "0xa9059cbb", // functionSig
-        "0", // paramIndex
-        "0", // paramComp
-        byteEncodedFundAddress, // compValue, newly created fund contract address
-      ],
+    const _encodedRoleModEntries = getAllowManagerToSendFundsToFundContractPermission(
+      fundInitCacheSettings?.baseToken,
     );
-    encodedRoleModEntries.push(encodedRoleModFunction);
-    // TODO add scopeTarget permission also! with target baseToken
-    console.warn("encodedRoleModFunction", encodedRoleModFunction);
+    for (let i = 0; i < _encodedRoleModEntries.length; i++) {
+      gasValues.push(0);
+      targets.push(roleModAddress);
+    }
+    encodedRoleModEntries.push(..._encodedRoleModEntries);
   }
-  // TODO allowManagerToCollectFees permissions also
 
-  const proposalData = [
+  // Add allowManagerToCollectFees permissions if switch button is enabled.
+  if (allowManagerToCollectFees.value) {
+    const _encodedRoleModEntries = getAllowManagerToCollectFeesPermission(
+      fundInitCacheSettings?.fundAddress,
+    );
+
+    for (let i = 0; i < _encodedRoleModEntries.length; i++) {
+      gasValues.push(0);
+      targets.push(roleModAddress);
+    }
+    encodedRoleModEntries.push(..._encodedRoleModEntries);
+  }
+
+  const permissionsData = [
     targets,
     gasValues,
     encodedRoleModEntries,
@@ -196,9 +266,9 @@ const storePermissions = async () => {
   const fundFactoryContract = web3Store.chainContracts[chainId.value]?.fundFactoryContract;
 
   try {
-    console.log("PROPOSAL DATA", proposalData);
+    console.log("SUBMIT PERMISSIONS DATA", permissionsData);
     await fundFactoryContract
-      .send("submitPermissions", {}, ...proposalData)
+      .send("submitPermissions", {}, ...permissionsData)
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
@@ -239,6 +309,30 @@ const storePermissions = async () => {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+  }
+}
+.info_container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+
+  &__text {
+    font-size: $text-sm;
+    color: $color-light-subtitle;
+  }
+  &__link {
+    color: $color-primary;
+    text-decoration: underline;
+  }
+  &__buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+
+    @include md {
+      flex-direction: row;
+    }
   }
 }
 </style>

@@ -91,16 +91,6 @@
       </v-stepper-actions>
 
       <v-window v-model="step">
-        <!-- Add overlay if fund is initialized to prevent editing it. -->
-        <!-- TODO: should we rather show the tooltip instead of overlay? -->
-        <!-- <v-overlay
-          :model-value="isFundInitialized && step < 6"
-          class="d-flex justify-center align-center"
-          opacity="0.1"
-          contained
-          persistent
-        /> -->
-
         <v-tooltip
           activator="parent"
           location="top"
@@ -117,6 +107,7 @@
                   v-for="(field, index) in item.fields"
                   :key="index"
                   :cols="field?.cols ?? 12"
+                  class="pb-2"
                 >
                   <div v-if="field.isToggleable" class="toggleable_group">
                     <div class="toggleable_group__toggle">

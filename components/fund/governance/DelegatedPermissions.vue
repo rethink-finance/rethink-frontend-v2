@@ -11,6 +11,9 @@
       class="delegated-permission-stepper"
       @fields-changed="fieldsChanged"
     >
+      <template #post-steps-content>
+        <slot name="post-steps-content" />
+      </template>
       <template #pre-content>
         <slot name="pre-content" />
       </template>
@@ -88,7 +91,6 @@ const toastStore = useToastStore();
 // Props
 const props = defineProps({
   modelValue: { type: Array, required: true }, // Enables v-model for entry
-  allowManagerToSendFundsToFundContract: { type: Boolean, default: false },
   title: { type: String, default: "Delegated Permissions Proposal" },
   fieldsMap: { type: Object, default: () => DelegatedPermissionFieldsMap },
   submitLabel: { type: String, default: "Submit" },
@@ -107,7 +109,6 @@ const props = defineProps({
 // Emits
 const emit = defineEmits([
   "update:modelValue",
-  "update:allowManagerToSendFundsToFundContract",
   "fieldsChanged",
   "submit",
   "addRaw",
@@ -121,10 +122,6 @@ const delegatedEntry = ref(JSON.parse(JSON.stringify(props.modelValue)));
 const showAddRawDialog = ref(false);
 const rawProposalInput = ref("");
 const keepExistingPermissions = ref(true);
-
-const toggleAllowManagerToSend = () => {
-  emit("update:allowManagerToSendFundsToFundContract", !props.allowManagerToSendFundsToFundContract);
-};
 
 // Methods
 const openAddRawDialog = () => (showAddRawDialog.value = true);
