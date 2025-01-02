@@ -44,6 +44,10 @@
       :used-methods="alreadyUsedMethods"
       :fund-chain-id="chainId"
       :fund-address="fundAddress"
+      :safe-address="safeAddress"
+      :base-symbol="baseSymbol"
+      :base-decimals="baseDecimals"
+      :is-fund-non-init="isFundNonInit"
       selectable
       :search="search"
       show-simulated-nav
@@ -57,7 +61,7 @@
 import { useFundsStore } from "~/store/funds/funds.store";
 import type INAVMethod from "~/types/nav_method";
 
-const emit = defineEmits(["add-methods"]);
+const emit = defineEmits(["methods-added"]);
 
 const props = defineProps({
   chainId: {
@@ -67,6 +71,24 @@ const props = defineProps({
   fundAddress: {
     type: String,
     required: true,
+  },
+  safeAddress: {
+    type: String,
+    required: true,
+  },
+  baseDecimals: {
+    type: Number,
+    required: true,
+  },
+  baseSymbol: {
+    type: String,
+    required: true,
+  },
+  // If fund was not created yet, it means it is non init. Used
+  // only when simulating NAV.
+  isFundNonInit: {
+    type: Boolean,
+    default: false,
   },
   alreadyUsedMethods: {
     type: Array as PropType<INAVMethod[]>,
@@ -93,7 +115,7 @@ const addMethods = () => {
     selectedMethodHashes.value.includes(method.detailsHash || ""),
   );
 
-  emit("add-methods", addedMethods);
+  emit("methods-added", addedMethods);
 };
 
 onMounted(async () => {

@@ -159,27 +159,26 @@
               <OnboardingNavMethods
                 v-if="item.key === OnboardingStep.NavMethods"
                 :chain-id="chainId"
-                :fund-address="fundSettings.fundAddress"
-                :base-token-address="fundSettings.baseToken"
+                :fund-settings="fundSettings"
               />
 
               <!-- STEP FINALISE -->
               <div
-                v-if="item.key === OnboardingStep.Finalise"
-                class="step step__finalise"
+                v-if="item.key === OnboardingStep.Finalize"
+                class="step step__finalize"
               >
                 <p>
-                  After finalising the setup users will be able to deposit into your OIV.
+                  After finalizing the setup users will be able to deposit into your OIV.
                 </p>
                 <p>
-                  Please note that any future change after finalisation will go through governance.
+                  Please note that any future change after finalization will go through governance.
                 </p>
 
                 <v-btn
                   color="primary"
                   @click="finalizeFundCreation"
                 >
-                  Finalise
+                  Finalize
                 </v-btn>
               </div>
             </v-window-item>
@@ -394,7 +393,7 @@ const isStepEditable = (step: IOnboardingStep, index: number) => {
     !isFundInitialized.value &&
     [OnboardingStep.Permissions,
       OnboardingStep.NavMethods,
-      OnboardingStep.Finalise,
+      OnboardingStep.Finalize,
     ].includes(step.key)
   );
 }
@@ -826,7 +825,7 @@ onBeforeRouteLeave((to, from, next) => {
 .step{
   padding-block: 30px;
 
-  &__finalise{
+  &__finalize{
     display: flex;
     flex-direction: column;
     align-items: center;

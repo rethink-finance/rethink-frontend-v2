@@ -2,8 +2,11 @@
   <FundNavAddFromLibrary
     :chain-id="fundStore.fundChainId"
     :fund-address="fundStore.fundAddress"
+    :safe-address="fundStore.fund?.safeAddress || ''"
+    :base-symbol="fundStore.fund?.baseToken?.symbol || ''"
+    :base-decimals="fundStore.fund?.baseToken?.decimals || 18"
     :already-used-methods="fundStore.fundManagedNAVMethods"
-    @add-methods="addMethods"
+    @methods-added="methodsAddedFromLibrary"
   />
 </template>
 
@@ -50,7 +53,7 @@ onBeforeUnmount(() => {
 
 
 // Methods
-const addMethods = (addedMethods: INAVMethod[]) => {
+const methodsAddedFromLibrary = (addedMethods: INAVMethod[]) => {
   // // Add newly defined method to fund managed methods.
   for (const method of addedMethods) {
     method.isNew = true;

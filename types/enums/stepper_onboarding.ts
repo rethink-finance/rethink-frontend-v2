@@ -15,7 +15,7 @@ export enum OnboardingStep {
     Governance = "governance",
     Permissions = "permissions",
     NavMethods = "navMethods",
-    Finalise = "finalise",
+    Finalize = "finalize",
 }
 
 export interface IOnboardingStep {
@@ -25,7 +25,7 @@ export interface IOnboardingStep {
   fields?: IField[];
 }
 
-export type OnboardingInitializingSteps = Exclude<OnboardingStep, "permissions" | "navMethods" | "whitelist" | "finalise">;
+export type OnboardingInitializingSteps = Exclude<OnboardingStep, "permissions" | "navMethods" | "whitelist" | "finalize">;
 export type FieldsMapType = Record<OnboardingInitializingSteps, IField[] | IFieldGroup[]>;
 
 
@@ -60,8 +60,8 @@ export const OnboardingStepMap: IOnboardingStep[] = [
     name: "NAV Methods",
   },
   {
-    key: OnboardingStep.Finalise,
-    name: "Finalise",
+    key: OnboardingStep.Finalize,
+    name: "Finalize",
   },
 ]
 

@@ -190,6 +190,118 @@ export const NAVCalculator = {
           "name": "pastNAVUpdateEntryFundAddress",
           "type": "address",
         },
+        {
+          "internalType": "address",
+          "name": "gff",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "deployer",
+          "type": "address",
+        },
+      ],
+      "name": "composableCalculationNonInitReadOnly",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256",
+        },
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true,
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "remoteContractAddress",
+              "type": "address",
+            },
+            {
+              "internalType": "string",
+              "name": "functionSignatures",
+              "type": "string",
+            },
+            {
+              "internalType": "bytes",
+              "name": "encodedFunctionSignatureWithInputs",
+              "type": "bytes",
+            },
+            {
+              "internalType": "uint256",
+              "name": "normalizationDecimals",
+              "type": "uint256",
+            },
+            {
+              "internalType": "bool",
+              "name": "isReturnArray",
+              "type": "bool",
+            },
+            {
+              "internalType": "uint256",
+              "name": "returnValIndex",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "returnArraySize",
+              "type": "uint256",
+            },
+            {
+              "internalType": "enum IGovernableFundStorage.NAVComposableUpdateReturnType",
+              "name": "returnValType",
+              "type": "uint8",
+            },
+            {
+              "internalType": "uint256",
+              "name": "pastNAVUpdateIndex",
+              "type": "uint256",
+            },
+            {
+              "internalType": "bool",
+              "name": "isNegative",
+              "type": "bool",
+            },
+          ],
+          "internalType": "struct IGovernableFundStorage.NAVComposableUpdate[]",
+          "name": "composable",
+          "type": "tuple[]",
+        },
+        {
+          "internalType": "address",
+          "name": "fund",
+          "type": "address",
+        },
+        {
+          "internalType": "uint256",
+          "name": "navEntryIndex",
+          "type": "uint256",
+        },
+        {
+          "internalType": "bool",
+          "name": "isPastNAVUpdate",
+          "type": "bool",
+        },
+        {
+          "internalType": "uint256",
+          "name": "pastNAVUpdateIndex",
+          "type": "uint256",
+        },
+        {
+          "internalType": "uint256",
+          "name": "pastNAVUpdateEntryIndex",
+          "type": "uint256",
+        },
+        {
+          "internalType": "address",
+          "name": "pastNAVUpdateEntryFundAddress",
+          "type": "address",
+        },
       ],
       "name": "composableCalculationReadOnly",
       "outputs": [

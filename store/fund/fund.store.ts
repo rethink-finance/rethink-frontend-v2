@@ -344,8 +344,6 @@ export const useFundStore = defineStore({
           value: any,
           shouldCommify: boolean = true,
           shouldroundToSignificantDecimals: boolean = false,
-          // baseDecimals: number,
-          // baseSymbol: string,
         ): string => {
           // TODO: don't get from fund, pass it as a parameter instead
           const fund = state.chainFunds?.[state.selectedFundChain]?.[state.selectedFundAddress];
@@ -544,9 +542,25 @@ export const useFundStore = defineStore({
         fetchSimulateCurrentNAVAction(this.fundChainId, this.fundAddress),
       );
     },
-    fetchSimulatedNAVMethodValue(fundChainId: string, fundAddress: string, navEntry: INAVMethod) {
+    fetchSimulatedNAVMethodValue(
+      fundChainId: string,
+      fundAddress: string,
+      safeAddress: string,
+      baseDecimals: number,
+      baseSymbol: string,
+      navEntry: INAVMethod,
+      isFundNonInit: boolean = false,
+    ) {
       return useActionState("fetchSimulatedNAVMethodValueAction", () =>
-        fetchSimulatedNAVMethodValueAction(fundChainId, fundAddress, navEntry),
+        fetchSimulatedNAVMethodValueAction(
+          fundChainId,
+          fundAddress,
+          safeAddress,
+          baseDecimals,
+          baseSymbol,
+          navEntry,
+          isFundNonInit,
+        ),
       );
     },
     parseFundNAVUpdates(

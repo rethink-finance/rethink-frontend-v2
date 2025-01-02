@@ -71,6 +71,7 @@ export const prepNAVMethodComposable = (
     encodedSafeAddressToReplace = encodeParameter("address", safeAddressToReplace).replace("0x", "");
     console.log("encodedSafeAddressToReplace", encodedSafeAddressToReplace)
     encodedSafeAddressReplacement = encodeParameter("address", safeAddressReplacement).replace("0x", "");
+    console.log("encodedSafeAddressReplacement", encodedSafeAddressReplacement)
   } else {
     if (!safeAddressToReplace && safeAddressReplacement) {
       console.warn("no safeAddressToReplace", safeAddressToReplace)

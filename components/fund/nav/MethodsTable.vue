@@ -488,7 +488,13 @@ export default defineComponent({
       type: String,
       default: "",
     },
-    baseTokenAddress: {
+    // Only required if we want to simulate NAV
+    baseDecimals: {
+      type: Number,
+      default: -1,
+    },
+    // Only required if we want to simulate NAV
+    baseSymbol: {
       type: String,
       default: "",
     },
@@ -496,9 +502,16 @@ export default defineComponent({
       type: String,
       default: "",
     },
+    // Only required if we want to simulate NAV
     safeAddress: {
       type: String,
       default: "",
+    },
+    // If fund was not created yet, it means it is non init. Used
+    // only when simulating NAV.
+    isFundNonInit: {
+      type: Boolean,
+      default: false,
     },
     fundContractBaseTokenBalance: {
       type: Number,
@@ -776,7 +789,15 @@ export default defineComponent({
 
       for (const navEntry of this.methods) {
         console.log("FUND CHAIN ID:", fundChainId, "FUND ADDRESS:", fundAddress, "NAV ENTRY:", navEntry)
-        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(fundChainId, fundAddress, navEntry));
+        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(
+          fundChainId,
+          fundAddress,
+          this.safeAddress,
+          this.baseDecimals,
+          this.baseSymbol,
+          navEntry,
+          this.isFundNonInit,
+        ));
       }
       const settled = await Promise.allSettled(promises);
       this.isNavSimulationLoading = false;

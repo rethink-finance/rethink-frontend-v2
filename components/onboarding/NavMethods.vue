@@ -56,7 +56,7 @@
         show-simulated-nav
         idx="nav/onboarding"
         :fund-chain-id="chainId"
-        :fund-address="fundAddress"
+        :fund-address="fundSettings?.fundAddress"
       />
     </div>
 
@@ -74,8 +74,8 @@
       @update:model-value="handleDefineNewMethodDialog"
     >
       <FundNavNewMethod
-        :fund-address="fundAddress"
-        :base-token-address="baseTokenAddress"
+        :fund-address="fundSettings?.fundAddress"
+        :base-token-address="fundSettings?.baseToken"
         @new-nav-method-created="onNewNavMethodCreatedHandler"
       />
     </UiConfirmDialog>
@@ -88,18 +88,23 @@
     >
       <FundNavAddFromLibrary
         :chain-id="chainId"
-        :fund-address="fundAddress"
+        :fund-address="fundSettings?.fundAddress"
+        :safe-address="fundSettings?.safe || ''"
+        :base-symbol="fundSettings?.baseSymbol || ''"
+        :base-decimals="fundSettings?.baseDecimals || 18"
         :already-used-methods="fundManagedNAVMethods"
-        @add-methods="addFromLibrary"
+        :is-fund-non-init="true"
+        @methods-added="methodsAddedFromLibrary"
       />
     </UiConfirmDialog>
   </div>
 </template>
 
 <script setup lang="ts">
+import type { PropType } from "vue";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type INAVMethod from "~/types/nav_method";
-
+import type IFundSettings from "~/types/fund_settings";
 
 const toastStore = useToastStore();
 
@@ -109,15 +114,10 @@ const props = defineProps({
     type: String,
     required: true,
   },
-  fundAddress: {
-    type: String,
-    required: true,
+  fundSettings: {
+    type: Object as PropType<IFundSettings>,
+    default: () => {},
   },
-  baseTokenAddress: {
-    type: String,
-    required: true,
-  },
-
 })
 
 // Data
@@ -167,7 +167,7 @@ const addRawMethods = (newMethods: INAVMethod[]) => {
   ];
 };
 
-const addFromLibrary = (methods: INAVMethod[]) => {
+const methodsAddedFromLibrary = (methods: INAVMethod[]) => {
   // // Add newly defined method to fund managed methods.
   for (const method of methods) {
     method.isNew = true;

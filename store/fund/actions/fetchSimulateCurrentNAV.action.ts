@@ -22,6 +22,9 @@ export const fetchSimulateCurrentNAVAction = async (
     await fundsStore.fetchFundsNavMethods(fundChainId, fundsInfoArrays);
   }
   console.log("[CURRENT NAV] START SIMULATE:");
+  const safeAddress = fundStore.fund?.safeAddress || "";
+  const baseDecimals = fundStore.fund?.baseToken?.decimals || 18;
+  const baseSymbol = fundStore.fund?.baseToken?.symbol || "";
 
   // Simulate all at once as many promises instead of one by one.
   const promises = [];
@@ -31,7 +34,15 @@ export const fetchSimulateCurrentNAVAction = async (
       accountStore.requestConcurrencyLimit(() =>
         web3Store.callWithRetry(
           fundChainId,
-          () => fundStore.fetchSimulatedNAVMethodValue(fundChainId, fundAddress, navEntry),
+          () => fundStore.fetchSimulatedNAVMethodValue(
+            fundChainId,
+            fundAddress,
+            safeAddress,
+            baseDecimals,
+            baseSymbol,
+            navEntry,
+            false,
+          ),
           1,
           // Do not retry internal errors (probably invalid NAV method), better to fail on 1st try.
           // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts

@@ -10,6 +10,7 @@ export default interface IFundSettings {
   // TODO Here we have a typo, we should fix this in the original interface: IGovernableFundStorage
   performaceHurdleRateBps?: string;
   baseToken: string;
+  baseDecimals?: number;
   safe?: string;
   isExternalGovTokenInUse?: boolean;
   isWhitelistedDeposits?: boolean;
@@ -28,6 +29,7 @@ export interface IFundInitCache {
   fundSettings: IFundSettings;
   _feeManagePeriod: string;
   _feePerformancePeriod: string;
+  _fundMetadata: string;
   fundMetadata: Record<string, any>;
   governorData: Record<string, any>;
 }
