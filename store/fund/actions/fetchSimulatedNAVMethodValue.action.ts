@@ -121,7 +121,7 @@ export const fetchSimulatedNAVMethodValueAction = async (
       )
     }
 
-    console.log("json: ", JSON.stringify(callData, null, 2))
+    console.debug("simulate json: ", JSON.stringify(callData, null, 2))
     navEntry.simulatedNavFormatted = "N/A";
     navEntry.simulatedNav = 0n;
 
