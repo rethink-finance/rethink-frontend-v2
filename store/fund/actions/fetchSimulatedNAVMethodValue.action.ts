@@ -137,7 +137,7 @@ export const fetchSimulatedNAVMethodValueAction = async (
             ...callData,
           ).call(),
         1,
-        [-32603], // Do not retry internal errors (probably invalid NAV method)
+        [-32603, 310], // Do not retry internal errors (probably invalid NAV method)
       );
       console.warn("simulated value: ", simulatedVal);
 
