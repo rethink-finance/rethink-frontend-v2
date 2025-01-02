@@ -57,6 +57,10 @@
         idx="nav/onboarding"
         :fund-chain-id="chainId"
         :fund-address="fundSettings?.fundAddress"
+        :safe-address="fundSettings?.safe"
+        :base-symbol="fundSettings?.baseSymbol"
+        :base-decimals="fundSettings?.baseDecimals"
+        :is-fund-non-init="true"
       />
     </div>
 

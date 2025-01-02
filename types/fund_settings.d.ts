@@ -11,6 +11,7 @@ export default interface IFundSettings {
   performaceHurdleRateBps?: string;
   baseToken: string;
   baseDecimals?: number;
+  baseSymbol?: string;
   safe?: string;
   isExternalGovTokenInUse?: boolean;
   isWhitelistedDeposits?: boolean;

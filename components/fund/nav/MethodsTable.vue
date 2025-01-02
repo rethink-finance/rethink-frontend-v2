@@ -840,7 +840,7 @@ export default defineComponent({
         }
       }
 
-      if(newNavEntry) {
+      if (newNavEntry) {
         this.$emit("update:methods", [...methods, newNavEntry]);
       } else {
         this.$emit("update:methods", methods);
