@@ -71,7 +71,7 @@
 
     <template #[`item.positionType`]="{ value, item }">
       <UiPositionTypeBadge
-        :value="value"
+        :value="item.displayPositionType"
         :disabled="item.deleted || item.isAlreadyUsed"
       />
     </template>
@@ -684,11 +684,27 @@ export default defineComponent({
     computedMethods() {
       const methods = [];
 
+      //NOTE: this is ui hack around displaying nested rethink structures inside of PositionType.Composable types
+      for(let i=0; i< this.methods.length; i++){
+        if(this.methods[i].positionType === PositionType.Composable) {
+          if(this.methods[i].details.composable[0].functionSignatures.includes("illiquidCalc")) {
+            this.methods[i].displayPositionType = PositionType.Illiquid;
+          } else if (this.methods[i].details.composable[0].functionSignatures.includes("liquidCalc")) {
+            this.methods[i].displayPositionType = PositionType.Liquid;
+          } else {
+            this.methods[i].displayPositionType = this.methods[i].positionType;
+          }
+        } else {
+          this.methods[i].displayPositionType = this.methods[i].positionType;
+        }
+      }
+
       if (this.showBaseTokenBalances) {
         methods.push({
           positionName: "OIV Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
+          displayPositionType:  PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
           simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
           isRethinkPosition: true,
@@ -701,6 +717,7 @@ export default defineComponent({
           positionName: "Safe Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
+          displayPositionType:  PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetSafeBal,
           simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
           isRethinkPosition: true,
@@ -713,6 +730,7 @@ export default defineComponent({
           positionName: "Fees Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
+          displayPositionType:  PositionType.Liquid,
           pastNavValue: this.navParts?.feeBal,
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
