@@ -44,7 +44,7 @@ const finalizeCreateFund = async () => {
 
   try {
     await fundFactoryContract
-      .send("createFund", {}, [])
+      .send("finalizeCreateFund", {}, [])
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
