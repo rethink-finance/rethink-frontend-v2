@@ -157,10 +157,10 @@ const value = computed({
     }
   }
 }
-
-.label_required {
+.v-label {
   margin-bottom: 5px;
-
+}
+.label_required {
   &__label_type {
     margin-left: 5px;
   }

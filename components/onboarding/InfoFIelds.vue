@@ -60,7 +60,7 @@ const props = defineProps({
 });
 
 const isStepDisabled = computed(() =>
-  props.isFundInitialized && props.step > 1 && props.step < 6,
+  props.isFundInitialized && props.step > 1 && props.step < 7,
 )
 </script>
 

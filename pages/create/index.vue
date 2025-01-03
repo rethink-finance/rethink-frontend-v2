@@ -102,10 +102,12 @@
             >
               <div
                 v-if="item.key === OnboardingStep.Chain"
-                class="d-flex"
+                class="d-flex justify-center mb-6"
               >
                 <UiSelectChainButton
                   v-model="selectedChainId"
+                  label="Select OIV Chain"
+                  label-center
                 />
               </div>
               <OnboardingInfoFIelds
