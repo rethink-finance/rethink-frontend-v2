@@ -1,5 +1,6 @@
 export default interface IFundSettings {
   [key: string]: any;
+  chainId?: string; // additionally added field
   depositFee: string;
   withdrawFee: string;
   performancePeriod: string;
