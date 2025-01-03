@@ -1,0 +1,1 @@
+import{e,cM as c,n as t,h as a,y as s,_}from"./CKPNdySy.js";const r=e({__name:"Dropdown",props:{active:{type:Boolean,default:!1}},setup(o){return(p,l)=>{const n=c("Icon");return t(),a(n,{class:s(["dropdown_icon",{"dropdown_icon--active":o.active}]),icon:"octicon:triangle-down-16",width:"2rem"},null,8,["class"])}}}),d=_(r,[["__scopeId","data-v-5f331329"]]);export{d as default};
