@@ -39,7 +39,7 @@
       <div class="management">
         <div class="management__row">
           <div>
-            Allow manager to send funds to the fund contract to settle flows
+            Prepopulate permissions to allow manager to send funds to the fund contract to settle flows
           </div>
           <v-switch
             v-model="allowManagerToSendFundsToFundContract"
@@ -49,7 +49,7 @@
         </div>
         <div class="management__row">
           <div>
-            Allow manager to collect fees based on default performance fee contract
+            Prepopulate permissions to allow manager to collect fees based on default performance fee contract
           </div>
           <v-switch
             v-model="allowManagerToCollectFees"

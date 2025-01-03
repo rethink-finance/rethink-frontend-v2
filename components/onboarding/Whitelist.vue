@@ -1,6 +1,6 @@
 <template>
   <section
-    class="onboarding-whitelist"
+    class="onboarding_whitelist"
   >
     <div
       class="toggleable_group__toggle"

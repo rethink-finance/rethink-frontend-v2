@@ -102,46 +102,12 @@
               :key="stepIndex"
               :value="stepIndex + 1"
             >
-              <div v-if="item.fields" class="fields">
-                <v-col
-                  v-for="(field, index) in item.fields"
-                  :key="index"
-                  :cols="field?.cols ?? 12"
-                  class="pb-2"
-                >
-                  <div v-if="field.isToggleable" class="toggleable_group">
-                    <div class="toggleable_group__toggle">
-                      <v-switch
-                        v-model="field.isToggleOn"
-                        color="primary"
-                        hide-details
-                        :disabled="isFundInitialized && step < 6"
-                      />
-                    </div>
-
-                    <div class="fields">
-                      <v-col
-                        v-for="(subField, subFieldIndex) in field.fields"
-                        :key="subFieldIndex"
-                        :cols="subField?.cols ?? 6"
-                      >
-                        <UiField
-                          v-model="subField.value"
-                          :field="subField"
-                          :is-disabled="!field.isToggleOn || (isFundInitialized && step < 6)"
-                        />
-                      </v-col>
-                    </div>
-                  </div>
-                  <div v-else>
-                    <UiField
-                      v-model="field.value"
-                      :field="field"
-                      :is-disabled="isFundInitialized && step < 6"
-                    />
-                  </div>
-                </v-col>
-              </div>
+              <OnboardingInfoFIelds
+                v-if="item.fields"
+                :fields="item.fields"
+                :is-fund-initialized="isFundInitialized"
+                :step="step"
+              />
 
               <!-- STEP WHITELIST -->
               <OnboardingWhitelist
@@ -163,24 +129,9 @@
               />
 
               <!-- STEP FINALISE -->
-              <div
+              <OnboardingFinalize
                 v-if="item.key === OnboardingStep.Finalize"
-                class="step step__finalize"
-              >
-                <p>
-                  After finalizing the setup users will be able to deposit into your OIV.
-                </p>
-                <p>
-                  Please note that any future change after finalization will go through governance.
-                </p>
-
-                <v-btn
-                  color="primary"
-                  @click="finalizeFundCreation"
-                >
-                  Finalize
-                </v-btn>
-              </div>
+              />
             </v-window-item>
           </template>
           <template #default>
@@ -188,7 +139,6 @@
           </template>
         </v-tooltip>
       </v-window>
-
 
       <UiConfirmDialog
         v-model="saveChangesDialog"
@@ -544,10 +494,6 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
   });
 }
 
-const finalizeFundCreation = () => {
-  console.warn("finalizeFundCreation", stepperEntry.value);
-};
-
 
 const getFieldByStepAndFieldKey = (stepperEntry: IOnboardingStep[], stepKey:string, fieldKey:string) => {
   return stepperEntry
@@ -793,22 +739,7 @@ onBeforeRouteLeave((to, from, next) => {
   }
 }
 
-.fields {
-  display: flex;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-.section-whitelist {
-  display: none;
-  padding: 20px;
-
-  &.toggle__on {
-    display: block;
-  }
-}
 .tooltip {
-
   &__content {
     display: flex;
     gap: 40px;
@@ -819,17 +750,6 @@ onBeforeRouteLeave((to, from, next) => {
     align-items: center;
     justify-content: center;
     color: $color-primary;
-  }
-}
-
-.step{
-  padding-block: 30px;
-
-  &__finalize{
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
   }
 }
 </style>
