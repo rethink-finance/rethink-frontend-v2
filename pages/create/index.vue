@@ -184,7 +184,7 @@
             </v-window-item>
           </template>
           <template #default>
-            This fund has been initialized and cannot be edited.
+            This OIV has been initialized and cannot be edited.
           </template>
         </v-tooltip>
       </v-window>
