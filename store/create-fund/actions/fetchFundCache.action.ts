@@ -104,6 +104,8 @@ export const fetchFundCacheAction = async (
 ): Promise<IFundInitCache> => {
   const createFundStore = useCreateFundStore();
   const web3Store = useWeb3Store();
+  // Clear the existing fund init cache.
+  createFundStore.fundInitCache = undefined;
 
   if (!fundChainId) {
     throw new Error("No fund chainId provided, cannot fetch fund cache.");
@@ -119,6 +121,8 @@ export const fetchFundCacheAction = async (
       fundFactoryContract.methods.getFundInitializationCache(
         deployerAddress,
       ).call(),
+    0,
+    [205, undefined],
   ) || {};
   const fundContract = web3Store.getCustomContract(
     fundChainId,

@@ -55,7 +55,7 @@
         deletable
         show-simulated-nav
         idx="nav/onboarding"
-        :fund-chain-id="chainId"
+        :fund-chain-id="fundChainId"
         :fund-address="fundSettings?.fundAddress"
         :safe-address="fundSettings?.safe"
         :base-symbol="fundSettings?.baseSymbol"
@@ -63,7 +63,6 @@
         :is-fund-non-init="true"
       />
     </div>
-
 
     <FundNavAddRaw
       v-model="addRawDialog"
@@ -91,8 +90,8 @@
       @update:model-value="handleAddFromLibraryDialog"
     >
       <FundNavAddFromLibrary
-        :chain-id="chainId"
-        :fund-address="fundSettings?.fundAddress"
+        :chain-id="fundChainId"
+        :fund-address="fundSettings?.fundAddress || ''"
         :safe-address="fundSettings?.safe || ''"
         :base-symbol="fundSettings?.baseSymbol || ''"
         :base-decimals="fundSettings?.baseDecimals || 18"
@@ -105,24 +104,13 @@
 </template>
 
 <script setup lang="ts">
-import type { PropType } from "vue";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type INAVMethod from "~/types/nav_method";
-import type IFundSettings from "~/types/fund_settings";
+import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 
 const toastStore = useToastStore();
-
-// Props
-const props = defineProps({
-  chainId: {
-    type: String,
-    required: true,
-  },
-  fundSettings: {
-    type: Object as PropType<IFundSettings>,
-    default: () => {},
-  },
-})
+const createFundStore = useCreateFundStore();
+const { fundChainId, fundSettings } = toRefs(createFundStore);
 
 // Data
 const defineNewMethodDialog = ref(false)

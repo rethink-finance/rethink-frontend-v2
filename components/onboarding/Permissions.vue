@@ -30,7 +30,7 @@
         <div class="info_container mt-6">
           <p class="info_container__text">
             <strong>Safe Contract:</strong>
-            {{ fundInitCache?.fundSettings?.safe || "N/A" }}
+            {{ fundSettings?.safe || "N/A" }}
           </p>
         </div>
       </div>
@@ -81,7 +81,7 @@ import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddres
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
-const { chainId, fundInitCache } = toRefs(createFundStore);
+const { fundChainId, fundInitCache, fundSettings } = toRefs(createFundStore);
 
 const loading = ref(false);
 const allowManagerToSendFundsToFundContract = ref(false);
@@ -107,10 +107,15 @@ const delegatedPermissionsEntry = ref([
   },
 ]);
 
-const gnosisPermissionsUrl = computed(() => getGnosisPermissionsUrl(
-  networksMap[chainId.value]?.chainShort || "",
-  fundInitCache?.value?.rolesModifier || "",
-));
+const gnosisPermissionsUrl = computed(() => {
+  if (!fundChainId.value) return "";
+
+  getGnosisPermissionsUrl(
+    networksMap[fundChainId.value]?.chainShort || "",
+    fundInitCache?.value?.rolesModifier || "",
+  );
+});
+
 // TODO this is not a good way to do that but the stepper and StepperFields
 //  should not be implemented like that, mutating props inside but instead they
 //  should be correctly emitting events. But it's a lot of refactor to fix that
@@ -156,7 +161,7 @@ const getAllowManagerToCollectFeesPermission = (
   fundAddress: string,
 ): string[] => {
   const encodedRoleModEntries: string[] = [];
-  const poolPerformanceFeeAddress = rethinkContractAddresses.PoolPerformanceFeeBeaconProxy[chainId.value];
+  const poolPerformanceFeeAddress = rethinkContractAddresses.PoolPerformanceFeeBeaconProxy[fundChainId.value];
   if (!poolPerformanceFeeAddress) {
     const errorMsg =  "Missing PoolPerformanceFeeBeaconProxy address. " +
         "Please contact Rethink support.";
@@ -279,7 +284,7 @@ const storePermissions = async () => {
     gasValues,
     encodedRoleModEntries,
   ];
-  const fundFactoryContract = web3Store.chainContracts[chainId.value]?.fundFactoryContract;
+  const fundFactoryContract = web3Store.chainContracts[fundChainId.value]?.fundFactoryContract;
 
   try {
     console.log("SUBMIT PERMISSIONS DATA", permissionsData);
