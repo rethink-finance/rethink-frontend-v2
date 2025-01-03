@@ -29,7 +29,8 @@
         </div>
         <div class="info_container mt-6">
           <p class="info_container__text">
-            <strong>Safe Contract:</strong> {{ fundInitCache?.fundSettings?.safe }}
+            <strong>Safe Contract:</strong>
+            {{ fundInitCache?.fundSettings?.safe || "N/A" }}
           </p>
         </div>
       </div>
@@ -64,8 +65,6 @@
 
 <script setup lang="ts">
 import { encodeFunctionCall, encodeParameter } from "web3-eth-abi";
-import { ethers } from "ethers";
-import { Exception } from "sass";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,

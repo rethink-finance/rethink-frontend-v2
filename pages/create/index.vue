@@ -686,7 +686,7 @@ onBeforeRouteLeave((to, from, next) => {
   flex-direction: column;
   position: relative;
 
-  &:deep(.v-stepper-header){
+  &:deep(.v-stepper-header) {
     order: 1;
   }
   &:deep(.v-avatar){
@@ -697,7 +697,6 @@ onBeforeRouteLeave((to, from, next) => {
   }
   &:deep(.v-stepper-item--selected){
     font-weight: 800;
-
   }
   &:deep(.v-stepper-item--selected .v-avatar) {
     color: $color-primary;
@@ -718,25 +717,13 @@ onBeforeRouteLeave((to, from, next) => {
   }
 }
 
-.buttons{
+.buttons {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
 
   margin-left: auto;
-}
-
-
-.toggleable_group {
-  display: flex;
-  flex-direction: column;
-
-  &__toggle {
-    display: flex;
-    justify-content: flex-end;
-    margin-left: auto;
-  }
 }
 
 .tooltip {

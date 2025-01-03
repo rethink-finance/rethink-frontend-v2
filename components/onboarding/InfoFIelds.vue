@@ -67,4 +67,14 @@ const props = defineProps({
   flex-wrap: wrap;
   width: 100%;
 }
+.toggleable_group {
+  display: flex;
+  flex-direction: column;
+
+  &__toggle {
+    display: flex;
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+}
 </style>
