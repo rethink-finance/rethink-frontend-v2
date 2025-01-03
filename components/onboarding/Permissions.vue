@@ -27,6 +27,11 @@
             >Learn more about permissions here</a>.
           </p>
         </div>
+        <div class="info_container mt-6">
+          <p class="info_container__text">
+            <strong>Safe Contract:</strong> {{ fundInitCache?.fundSettings?.safe }}
+          </p>
+        </div>
       </div>
     </template>
 
