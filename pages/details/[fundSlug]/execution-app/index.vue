@@ -35,7 +35,7 @@
             />
 
             <template #tooltip>
-              Transfer any token from Custody Contract to approved destination
+              Transfer any token from Safe Contract to approved destination
               <a
                 class="tooltip__link"
                 href="https://docs.rethink.finance/rethink.finance"
@@ -137,7 +137,7 @@
             />
 
             <template #tooltip>
-              Submit any approved Raw TXN on behalf of Custody Contract
+              Submit any approved Raw TXN on behalf of Safe Contract
               <a
                 class="tooltip__link"
                 href="https://docs.rethink.finance/rethink.finance"

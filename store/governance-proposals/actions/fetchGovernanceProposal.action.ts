@@ -32,11 +32,6 @@ export const fetchGovernanceProposalAction = async (
   );
 
   const roleModAddress = await fundStore.getRoleModAddress();
-  const quorumDenominator = await web3Store.callWithRetry(
-    fund?.chainId,
-    () =>
-      fundStore.fundGovernorContract.methods.quorumDenominator().call(),
-  );
 
   const timepoint =
     fund?.clockMode?.mode === ClockMode.BlockNumber
@@ -44,11 +39,17 @@ export const fetchGovernanceProposalAction = async (
       : proposal.proposalCreated?.[0]?.timestamp;
   const blockNumber = proposal.proposalCreated?.[0]?.transaction?.blockNumber;
 
-  const [quorumNumerator, totalSupply] = await Promise.all([
+  const [quorumNumerator, quorumDenominator, totalSupply] = await Promise.all([
     web3Store.callWithRetry(
       fund?.chainId,
       () =>
         fundStore.fundGovernorContract.methods.quorumNumerator(timepoint).call(),
+    ),
+    web3Store.callWithRetry(
+      fund?.chainId,
+      () =>
+        // TODO why are we not passing timepoint here?
+        fundStore.fundGovernorContract.methods.quorumDenominator().call(),
     ),
     web3Store.callWithRetry(
       fund?.chainId,

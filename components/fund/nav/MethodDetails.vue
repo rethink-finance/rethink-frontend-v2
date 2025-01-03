@@ -45,8 +45,8 @@
 </template>
 
 <script setup lang="ts">
+import { InputType } from "~/types/enums/input_type";
 import {
-  InputType,
   PositionType,
   PositionTypeValuationTypeFieldsMap,
 } from "~/types/enums/position_type";

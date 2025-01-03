@@ -1,6 +1,5 @@
 import { excludeNAVDetailsHashes } from "../config/excludedNAVDetailsHashes.config";
 import { useFundsStore } from "../funds.store";
-
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
@@ -14,6 +13,7 @@ const excludeNAVDetails: boolean = true;
 export async function fetchFundsNavMethodsAction(
   chainId: string,
   fundsInfoArrays: any[],
+  storeAllMethods: boolean = true,
 ): Promise<any> {
   console.log("start calculating fund nav data ", chainId);
   const fundsStore = useFundsStore();
@@ -55,9 +55,10 @@ export async function fetchFundsNavMethodsAction(
   }
   const uniqueMethods = Array.from(uniqueMethodsMap.values());
 
-  fundsStore.allNavMethods = allMethods;
-  fundsStore.uniqueNavMethods = uniqueMethods;
-  console.log("done calculating fund nav data ", chainId);
+  if (storeAllMethods) {
+    fundsStore.allNavMethods[chainId] = allMethods;
+    fundsStore.uniqueNavMethods[chainId] = uniqueMethods;
+  }
 }
 
 async function processFundNavData(

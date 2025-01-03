@@ -159,3 +159,5 @@ done in the contract already?
 ### Frontend Tests TODO
 1) When creating NAV proposal check that all types match, especially that the navMethod.details is correct, especially
 the description (should be a string, not an object).
+2) add test to check if current reader contract ABI match the deployed address -> call function and check 
+  there are no decoding errors

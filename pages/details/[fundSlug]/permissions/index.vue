@@ -31,6 +31,7 @@
 import type IFund from "~/types/fund";
 // components
 import { useFundStore } from "~/store/fund/fund.store";
+import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -49,7 +50,7 @@ const updateGnosisLink = async () => {
 
   try {
     const roleModAddress = await fundStore.getRoleModAddress();
-    navigateToGnosis.value = `https://roles-v1.gnosisguild.org/#/${fund.chainShort}:${roleModAddress}`;
+    navigateToGnosis.value = getGnosisPermissionsUrl(fund.chainShort, roleModAddress);
   } catch (error) {
     console.error(error);
     navigateToGnosis.value = "";

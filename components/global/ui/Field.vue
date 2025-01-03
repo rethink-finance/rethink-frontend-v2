@@ -3,16 +3,16 @@
     <v-label
       :class="
         `row_title` +
-        (field.type === InputType.Image ? ' row_title__is-image' : '')
+          (field.type === InputType.Image ? ' row_title__is-image' : '')
       "
     >
       <div
         :class="
           `row_title__title` +
-          (isFieldRequired && field.isEditable && !isPreview
-            ? ' label_required'
-            : '') +
-          (isDisabled && !isPreview ? ' label_disabled' : '')
+            (isFieldRequired && field.isEditable && !isPreview
+              ? ' label_required'
+              : '') +
+            (isDisabled && !isPreview ? ' label_disabled' : '')
         "
       >
         {{ field.label }}
@@ -70,11 +70,11 @@
     <template v-else-if="field.type === InputType.Image">
       <div class="image_container">
         <v-avatar size="12rem" rounded="">
-          <img :src="value" class="image_container__image" alt="image" />
+          <img :src="value" class="image_container__image" alt="image">
         </v-avatar>
         <v-textarea
-          class="image_container__textarea"
           v-model="value"
+          class="image_container__textarea"
           :placeholder="field.placeholder"
           :rules="field.rules"
           rows="10"
@@ -88,9 +88,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { InputType } from "~/types/enums/stepper";
 import InfoBox from "./InfoBox.vue";
+import { InputType } from "~/types/enums/input_type";
 
 const emit = defineEmits(["update:modelValue"]);
 
@@ -114,7 +113,7 @@ const props = defineProps({
 });
 
 const isFieldRequired = computed(() =>
-  props?.field?.rules?.includes(formRules.required)
+  props?.field?.rules?.includes(formRules.required),
 );
 
 const value = computed({

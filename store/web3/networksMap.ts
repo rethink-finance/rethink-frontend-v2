@@ -110,3 +110,4 @@ export const networksMap: Record<string, INetwork> = {
 };
 
 export const chainIds: string[] = Object.keys(networksMap);
+export const networks: INetwork[] = Object.values(networksMap);

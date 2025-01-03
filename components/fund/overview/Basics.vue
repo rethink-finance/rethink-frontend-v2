@@ -2,7 +2,7 @@
   <div class="main_grid">
     <UiDataRowCard :title="fund.fundToken?.symbol" subtitle="Token Symbol" />
     <UiDataRowCard :title="fund.baseToken?.symbol" subtitle="Denomination Asset" />
-    <UiDataRowCard :title="fund.safeAddress" subtitle="Custody Contract" />
+    <UiDataRowCard :title="fund.safeAddress" subtitle="Safe Contract" />
     <UiDataRowCard :title="fund.fundToken?.address" subtitle="Token Contract" />
   </div>
 </template>

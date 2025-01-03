@@ -140,18 +140,9 @@
           </div>
           <div v-else>
             <SectionWhitelist
-              v-if="proposal.isWhitelistedDeposits"
-              :items="whitelist"
-              @update-items="whitelist = $event"
+              v-model="whitelist"
+              v-model:whitelist-enabled="proposal.isWhitelistedDeposits"
             />
-            <div v-else>
-              <UiInfoBox
-                class="info-box"
-                info="Whitelist is disabled. This means that anyone can deposit into the OIV. <br>
-                      If you want to enable the whitelist, please toggle the switch above. <br>
-                      Whitelist is a list of addresses that are allowed to deposit into the OIV."
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -169,12 +160,12 @@ import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import type { IField } from "~/types/enums/input_type";
+
 import {
-  FundSettingProposalFieldsMap,
+  FundSettingsStepFieldsMap,
   ProposalStep,
-  ProposalStepMap,
-  type IField,
+  FundSettingsStepsMap,
   type IProposal,
   type IStepperSection,
   type IWhitelist,
@@ -184,7 +175,6 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
-const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const router = useRouter();
@@ -221,21 +211,21 @@ let proposalInitial = {} as IProposal;
 const proposal = ref<IProposal>({
   // Basics
   photoUrl: "",
-  fundDAOName: "",
-  tokenSymbol: "",
-  denominationAsset: "",
+  fundName: "",
+  fundSymbol: "",
+  baseToken: "",
   description: "",
   // Fees
   depositFee: "",
   depositFeeRecipientAddress: "",
-  redemptionFee: "",
-  redemptionFeeRecipientAddress: "",
+  withdrawFee: "",
+  withdrawFeeRecipientAddress: "",
   managementFee: "",
   managementFeeRecipientAddress: "",
   managementFeePeriod: "",
-  profitManagemnetFee: "",
-  profitManagemnetFeeRecipientAddress: "",
-  profitManagementFeePeriod: "",
+  performanceFee: "",
+  performanceFeeRecipientAddress: "",
+  performanceFeePeriod: "",
   hurdleRate: "",
   // Whitelist
   whitelist: "",
@@ -259,7 +249,7 @@ const whitelist = ref<IWhitelist[]>([]);
 
 // helper function to generate fields
 function generateFields(section: IStepperSection, proposal: IProposal) {
-  return FundSettingProposalFieldsMap[section.key]?.map((field) => {
+  return FundSettingsStepFieldsMap[section.key]?.map((field) => {
     if (field?.isToggleable) {
       const output = field?.fields?.map((subField) => ({
         ...subField,
@@ -281,7 +271,7 @@ function generateFields(section: IStepperSection, proposal: IProposal) {
 
 // helper function to generate sections
 function generateSections(step: ProposalStep, proposal: IProposal) {
-  return ProposalStepMap[step]?.sections?.map((section) => ({
+  return FundSettingsStepsMap[step]?.sections?.map((section) => ({
     name: section?.name ?? "",
     info: section?.info,
     fields: generateFields(section, proposal),
@@ -292,12 +282,12 @@ function generateSections(step: ProposalStep, proposal: IProposal) {
 const proposalEntry = ref([
   {
     stepName: ProposalStep.Setup,
-    stepLabel: ProposalStepMap[ProposalStep.Setup]?.name ?? "",
+    stepLabel: FundSettingsStepsMap[ProposalStep.Setup]?.name ?? "",
     sections: generateSections(ProposalStep.Setup, proposal.value),
   },
   {
     stepName: ProposalStep.Details,
-    stepLabel: ProposalStepMap[ProposalStep.Details]?.name ?? "",
+    stepLabel: FundSettingsStepsMap[ProposalStep.Details]?.name ?? "",
     sections: generateSections(ProposalStep.Details, proposal.value),
   },
 ]);
@@ -483,34 +473,34 @@ const formatProposalData = (proposal: IProposal) => {
     depositFee: toggledOffFields.includes("depositFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.depositFee)),
-    withdrawFee: toggledOffFields.includes("redemptionFee")
+    withdrawFee: toggledOffFields.includes("withdrawFee")
       ? 0
-      : parseInt(fromPercentageToBps(proposal.redemptionFee)),
-    performanceFee: toggledOffFields.includes("profitManagemnetFee")
+      : parseInt(fromPercentageToBps(proposal.withdrawFee)),
+    performanceFee: toggledOffFields.includes("performanceFee")
       ? 0
-      : parseInt(fromPercentageToBps(proposal.profitManagemnetFee)),
+      : parseInt(fromPercentageToBps(proposal.performanceFee)),
     managementFee: toggledOffFields.includes("managementFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.managementFee)),
     performaceHurdleRateBps: 0, // note from Rok to always submit 0 here
-    baseToken: proposal.denominationAsset,
+    baseToken: proposal.baseToken,
     allowedDepositAddrs: allowedDepositors,
     governanceToken: proposal.governanceToken,
-    fundName: proposal.fundDAOName,
-    fundSymbol: proposal.tokenSymbol,
+    fundName: proposal.fundName,
+    fundSymbol: proposal.fundSymbol,
     feeCollectors: [
       toggledOffFields.includes("depositFeeRecipientAddress")
         ? ethers.ZeroAddress
         : proposal.depositFeeRecipientAddress,
-      toggledOffFields.includes("redemptionFeeRecipientAddress")
+      toggledOffFields.includes("withdrawFeeRecipientAddress")
         ? ethers.ZeroAddress
-        : proposal.redemptionFeeRecipientAddress,
+        : proposal.withdrawFeeRecipientAddress,
       toggledOffFields.includes("managementFeeRecipientAddress")
         ? ethers.ZeroAddress
         : proposal.managementFeeRecipientAddress,
-      toggledOffFields.includes("profitManagemnetFeeRecipientAddress")
+      toggledOffFields.includes("performanceFeeRecipientAddress")
         ? ethers.ZeroAddress
-        : proposal.profitManagemnetFeeRecipientAddress,
+        : proposal.performanceFeeRecipientAddress,
     ],
   };
 
@@ -522,10 +512,10 @@ const formatProposalData = (proposal: IProposal) => {
     minLiquidAssetShare: proposal.minLiquidAssetShare,
   };
   // performance and management periods
-  const isPerformancePeriod365 = proposal.profitManagementFeePeriod === "365";
+  const isPerformancePeriod365 = proposal.performanceFeePeriod === "365";
   const isManagementPeriod365 = proposal.managementFeePeriod === "365";
   const isPerformancePeriodToggledOff = toggledOffFields.includes(
-    "profitManagementFeePeriod",
+    "performanceFeePeriod",
   );
   const isManagementPeriodToggledOff = toggledOffFields.includes(
     "managementFeePeriod",
@@ -534,7 +524,7 @@ const formatProposalData = (proposal: IProposal) => {
   const performancePeriod =
     isPerformancePeriodToggledOff || isPerformancePeriod365
       ? 0
-      : parseInt(proposal.profitManagementFeePeriod);
+      : parseInt(proposal.performanceFeePeriod);
   const managementPeriod =
     isManagementPeriodToggledOff || isManagementPeriod365
       ? 0
@@ -611,20 +601,20 @@ const populateProposal = () => {
     minLiquidAssetShare: fundDeepCopy?.minLiquidAssetShare ?? "",
     description: fundDeepCopy?.description ?? "",
     // Fund settings
-    fundDAOName: fundDeepCopy?.title ?? "",
-    tokenSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
-    denominationAsset: fundDeepCopy?.baseToken?.address ?? "",
+    fundName: fundDeepCopy?.title ?? "",
+    fundSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
+    baseToken: fundDeepCopy?.baseToken?.address ?? "",
     depositFee: fromBpsToPercentage(fundDeepCopy?.depositFee),
     depositFeeRecipientAddress: fundDeepCopy?.depositFeeAddress ?? "",
-    redemptionFee: fromBpsToPercentage(fundDeepCopy?.withdrawFee),
-    redemptionFeeRecipientAddress: fundDeepCopy?.withdrawFeeAddress ?? "",
+    withdrawFee: fromBpsToPercentage(fundDeepCopy?.withdrawFee),
+    withdrawFeeRecipientAddress: fundDeepCopy?.withdrawFeeAddress ?? "",
     managementFee: fromBpsToPercentage(fundDeepCopy?.managementFee),
     managementFeeRecipientAddress: fundDeepCopy?.managementFeeAddress ?? "",
     managementFeePeriod: parsedFeePeriod(fundDeepCopy?.managementPeriod ?? ""),
-    profitManagemnetFee: fromBpsToPercentage(fundDeepCopy?.performanceFee),
-    profitManagemnetFeeRecipientAddress:
+    performanceFee: fromBpsToPercentage(fundDeepCopy?.performanceFee),
+    performanceFeeRecipientAddress:
       fundDeepCopy?.performanceFeeAddress ?? "",
-    profitManagementFeePeriod: parsedFeePeriod(
+    performanceFeePeriod: parsedFeePeriod(
       fundDeepCopy?.performancePeriod ?? "",
     ),
     hurdleRate: fromBpsToPercentage(fundDeepCopy?.performaceHurdleRateBps),

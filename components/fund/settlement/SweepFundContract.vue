@@ -3,7 +3,7 @@
     <div class="transfer__content">
       <div class="transfer__header">
         <div class="transfer__title">
-          Transfer Base Asset to the Custody Contract
+          Transfer Base Asset to the Safe Contract
         </div>
         <div class="transfer__subtitle">
           Transfer any excess base asset amount from the OIV contract back to the custody contract.

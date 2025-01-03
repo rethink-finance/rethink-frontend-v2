@@ -133,6 +133,11 @@
                 <v-expansion-panel-text>
                   <FundNavMethodsTable
                     v-model:methods="fundManagedNAVMethods"
+                    :fund-chain-id="fundStore.fundChainId"
+                    :fund-address="fundStore.fundAddress"
+                    :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
+                    :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
+                    :fee-balance="Number(fundStore.fund?.feeBalance)"
                     show-base-token-balances
                     show-simulated-nav
                     show-summary-row
@@ -172,10 +177,10 @@
 </template>
 
 <script setup lang="ts">
+import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
 import { encodeFunctionCall } from "web3-eth-abi";
-import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { NAVExecutor } from "~/assets/contracts/NAVExecutor";
 import { useAccountStore } from "~/store/account/account.store";

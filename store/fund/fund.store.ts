@@ -29,6 +29,7 @@ import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
+import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFund from "~/types/fund";
@@ -36,8 +37,6 @@ import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
-import { networksMap } from "~/store/web3/networksMap";
-import type { CustomContract } from "~/store/web3/customContract";
 
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
@@ -346,9 +345,10 @@ export const useFundStore = defineStore({
           shouldCommify: boolean = true,
           shouldroundToSignificantDecimals: boolean = false,
         ): string => {
+          // TODO: don't get from fund, pass it as a parameter instead
           const fund = state.chainFunds?.[state.selectedFundChain]?.[state.selectedFundAddress];
           const baseSymbol = fund?.baseToken?.symbol;
-          const baseDecimals = fund?.baseToken?.decimals;
+          const baseDecimals = fund?.baseToken?.decimals || 18;
           if (!baseDecimals) {
             return value;
           }
@@ -542,9 +542,25 @@ export const useFundStore = defineStore({
         fetchSimulateCurrentNAVAction(this.fundChainId, this.fundAddress),
       );
     },
-    fetchSimulatedNAVMethodValue(fundChainId: string, fundAddress: string, navEntry: INAVMethod) {
+    fetchSimulatedNAVMethodValue(
+      fundChainId: string,
+      fundAddress: string,
+      safeAddress: string,
+      baseDecimals: number,
+      baseSymbol: string,
+      navEntry: INAVMethod,
+      isFundNonInit: boolean = false,
+    ) {
       return useActionState("fetchSimulatedNAVMethodValueAction", () =>
-        fetchSimulatedNAVMethodValueAction(fundChainId, fundAddress, navEntry),
+        fetchSimulatedNAVMethodValueAction(
+          fundChainId,
+          fundAddress,
+          safeAddress,
+          baseDecimals,
+          baseSymbol,
+          navEntry,
+          isFundNonInit,
+        ),
       );
     },
     parseFundNAVUpdates(

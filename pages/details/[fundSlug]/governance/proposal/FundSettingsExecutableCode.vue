@@ -42,11 +42,12 @@
 
 <script setup lang="ts">
 import { useFundStore } from "~/store/fund/fund.store";
+import type { IField } from "~/types/enums/input_type";
+
 import {
-  FundSettingProposalFieldsMap,
+  FundSettingsStepFieldsMap,
   ProposalStep,
-  ProposalStepMap,
-  type IField,
+  FundSettingsStepsMap,
   type IProposal,
   type IStepperSection,
 } from "~/types/enums/fund_setting_proposal";
@@ -59,21 +60,21 @@ const props = defineProps<{
 const proposalFundSettings = ref<Partial<IProposal>>({
   // Basics
   photoUrl: "",
-  fundDAOName: "",
-  tokenSymbol: "",
-  denominationAsset: "",
+  fundName: "",
+  fundSymbol: "",
+  baseToken: "",
   description: "",
   // Fees
   depositFee: "",
   depositFeeRecipientAddress: "",
-  redemptionFee: "",
-  redemptionFeeRecipientAddress: "",
+  withdrawFee: "",
+  withdrawFeeRecipientAddress: "",
   managementFee: "",
   managementFeeRecipientAddress: "",
   managementFeePeriod: "",
-  profitManagemnetFee: "",
-  profitManagemnetFeeRecipientAddress: "",
-  profitManagementFeePeriod: "",
+  performanceFee: "",
+  performanceFeeRecipientAddress: "",
+  performanceFeePeriod: "",
   hurdleRate: "",
   // Whitelist
   whitelist: "",
@@ -94,7 +95,7 @@ function generateFields(
   section: IStepperSection,
   proposal: Partial<IProposal>,
 ) {
-  return FundSettingProposalFieldsMap[section.key]?.map((field) => {
+  return FundSettingsStepFieldsMap[section.key]?.map((field) => {
     if (field?.isToggleable) {
       const output = field?.fields?.map((subField) => ({
         ...subField,
@@ -116,7 +117,7 @@ function generateFields(
 
 // helper function to generate sections
 function generateSections(proposal: Partial<IProposal>) {
-  return ProposalStepMap[ProposalStep.Setup]?.sections?.map((section) => ({
+  return FundSettingsStepsMap[ProposalStep.Setup]?.sections?.map((section) => ({
     name: section?.name ?? "",
     info: section?.info,
     fields: generateFields(section, proposal),
@@ -138,25 +139,25 @@ const populateProposalData = () => {
   };
   const metaData = JSON.parse(props.calldataDecoded._fundMetadata);
   const managementFeePeriod = props.calldataDecoded._feeManagePeriod;
-  const profitManagementFeePeriod = props.calldataDecoded._feePerformancePeriod;
+  const performanceFeePeriod = props.calldataDecoded._feePerformancePeriod;
 
   proposalFundSettings.value = {
     photoUrl: metaData.photoUrl,
-    fundDAOName: settings.fundName,
-    tokenSymbol: settings.fundSymbol,
-    denominationAsset: settings.baseToken,
+    fundName: settings.fundName,
+    fundSymbol: settings.fundSymbol,
+    baseToken: settings.baseToken,
     description: metaData.description,
     // Fees
     depositFee: fromBpsToPercentage(settings.depositFee),
     depositFeeRecipientAddress: settings.feeCollectors[0],
-    redemptionFee: fromBpsToPercentage(settings.withdrawFee),
-    redemptionFeeRecipientAddress: settings.feeCollectors[1],
+    withdrawFee: fromBpsToPercentage(settings.withdrawFee),
+    withdrawFeeRecipientAddress: settings.feeCollectors[1],
     managementFee: fromBpsToPercentage(settings.managementFee),
     managementFeeRecipientAddress: settings.feeCollectors[2],
     managementFeePeriod,
-    profitManagemnetFee: fromBpsToPercentage(settings.performanceFee),
-    profitManagemnetFeeRecipientAddress: settings.feeCollectors[3],
-    profitManagementFeePeriod,
+    performanceFee: fromBpsToPercentage(settings.performanceFee),
+    performanceFeeRecipientAddress: settings.feeCollectors[3],
+    performanceFeePeriod,
     hurdleRate: fromBpsToPercentage(settings.performaceHurdleRateBps),
     // Whitelist
     whitelist: settings.allowedDepositAddrs.join("\n"),

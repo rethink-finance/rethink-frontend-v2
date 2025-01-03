@@ -53,7 +53,9 @@ export async function fetchFundsAction(): Promise<void> {
 
     // Fetch NAV data and calculate performance metrics
     try {
-      await fundsStore.fetchFundsNavMethods(chainId, filteredFundsInfoArrays);
+      // Pass storeAllMethods: false as we don't want to save methods to all methods as they
+      // are not all there, because we pass filtered addresses instead of all addresses.
+      await fundsStore.fetchFundsNavMethods(chainId, filteredFundsInfoArrays, false);
     } catch (error: any) {
       console.error("Failed fetchFundsNavMethods", chainId, filteredFundsInfoArrays, error);
       return

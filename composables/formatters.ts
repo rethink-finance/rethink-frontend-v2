@@ -229,3 +229,17 @@ export const fromPercentageToBps = (feePercent?: any) => {
   const feeBps = (Number(feePercent) * 100).toString();
   return feeBps;
 };
+
+
+export const formatQuorumPercentage = (
+  quorumNumerator: string | number | bigint,
+  quorumDenominator: string | number | bigint,
+) => {
+  return formatPercent(
+    quorumDenominator
+      ? Number(quorumNumerator) / Number(quorumDenominator)
+      : 0,
+    false,
+    "N/A",
+  )
+};

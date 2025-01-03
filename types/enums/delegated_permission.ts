@@ -1,5 +1,6 @@
+import { encodeFunctionCall } from "web3-eth-abi";
+import { InputType } from "~/types/enums/input_type";
 import type { IStepperStep } from "~/types/stepper";
-import { InputType } from "./stepper";
 
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 
@@ -101,6 +102,39 @@ const parseFuncInputDetails = (input: any) => {
     defaultValue,
   }
 };
+
+export const prepPermissionsProposalData = (roleModAddress: string, transactions: any[]) => {
+  const encodedRoleModEntries = [];
+  const targets = [];
+  const gasValues = [];
+
+  for (let i = 0; i < transactions.length; i++) {
+    const trx = transactions[i];
+    // Make sure function parameters are in the correct order, take them from function ABI and copy from the trx data
+    // that was filled from the form inputs. Then prepare data, parsing/casting to correct types.
+    const roleModFunctionData = proposalRoleModMethodStepsMap[
+      trx.contractMethod
+    ]
+      .filter((method: any) => method.key !== "contractMethod")
+      .map((method: any) =>
+        prepRoleModEntryInput({
+          ...method,
+          data: trx[method.key],
+        }),
+      );
+    console.warn("roleModFunctionData", trx.contractMethod, roleModFunctionData);
+    console.warn("proposalRoleModMethodAbiMap[trx.contractMethod]", proposalRoleModMethodAbiMap[trx.contractMethod]);
+    const encodedRoleModFunction = encodeFunctionCall(
+      proposalRoleModMethodAbiMap[trx.contractMethod],
+      roleModFunctionData,
+    );
+    encodedRoleModEntries.push(encodedRoleModFunction);
+    targets.push(roleModAddress);
+    gasValues.push(0);
+  }
+
+  return { encodedRoleModEntries, targets, gasValues };
+}
 
 // shape sub step fields for each method from ZodiacRoles contract
 export const proposalRoleModMethodAbiMap = proposalRoleModMethods.reduce((acc: any, functionAbi: any) => {

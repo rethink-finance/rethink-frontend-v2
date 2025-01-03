@@ -178,7 +178,7 @@ const props = defineProps({
 
 const getRowClass = (item: IGovernanceProposal) => {
   const hasVoted = governanceProposalStore.hasAccountVoted(item?.proposalId) ?? false;
-  const isActionRequired = item.state === ProposalState.Active && !hasVoted || item.state === ProposalState.Pending;
+  const isActionRequired = item.state === ProposalState.Active && !hasVoted || item.state === ProposalState.Pending;
 
   return [
     "v-data-table__row",

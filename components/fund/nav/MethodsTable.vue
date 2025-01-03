@@ -23,7 +23,7 @@
     <template #[`header.pastNavValue`]>
       Last NAV Update
       <div v-if="showSummaryRow && showLastNavUpdateValue" class="text-right">
-        {{ formattedTotalLastNAV }}
+        <!-- {{ formattedTotalLastNAV }} -->
       </div>
     </template>
     <template #[`header.simulatedNavFormatted`]>
@@ -86,7 +86,7 @@
           />
         </div>
         <div v-else>
-          {{ value ? getFormattedBaseTokenValue(value) : '-' }}
+          {{ value ? fundStore.getFormattedBaseTokenValue(value) : '-' }}
         </div>
         <div
           v-if="item.pastNavValueError"
@@ -414,14 +414,10 @@
 
 <script lang="ts">
 import { ethers } from "ethers";
-import { useRouter } from "vue-router";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useFundsStore } from "~/store/funds/funds.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 import {
-  defaultInputTypeValue,
-  InputType,
   PositionType,
   PositionTypeKeys,
   PositionTypes,
@@ -488,24 +484,55 @@ export default defineComponent({
       type: String,
       default: "",
     },
+    fundAddress: {
+      type: String,
+      default: "",
+    },
+    // Only required if we want to simulate NAV
+    baseDecimals: {
+      type: Number,
+      default: -1,
+    },
+    // Only required if we want to simulate NAV
+    baseSymbol: {
+      type: String,
+      default: "",
+    },
+    fundChainId: {
+      type: String,
+      default: "",
+    },
+    // Only required if we want to simulate NAV
+    safeAddress: {
+      type: String,
+      default: "",
+    },
+    // If fund was not created yet, it means it is non init. Used
+    // only when simulating NAV.
+    isFundNonInit: {
+      type: Boolean,
+      default: false,
+    },
+    fundContractBaseTokenBalance: {
+      type: Number,
+      default: 0,
+    },
+    safeContractBaseTokenBalance: {
+      type: Number,
+      default: 0,
+    },
+    feeBalance: {
+      type: Number,
+      default: 0,
+    },
   },
   emits: ["update:methods", "selectedChanged"],
   setup() {
     const fundStore = useFundStore();
-    const fundsStore = useFundsStore();
-    const web3Store = useWeb3Store();
     const toastStore = useToastStore();
-    const router = useRouter();
-
-    const { getFormattedBaseTokenValue, selectedFundSlug } = toRefs(fundStore);
     return {
-      router,
-      fundStore,
-      fundsStore,
-      web3Store,
       toastStore,
-      getFormattedBaseTokenValue,
-      selectedFundSlug,
+      fundStore,
       creatablePositionTypes: computed(() =>
         PositionTypes.filter(
           (positionType) => positionType.key !== PositionType.NFT,
@@ -620,17 +647,16 @@ export default defineComponent({
     },
     formattedTotalSimulatedNAV() {
       // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
-      const fund = this.fundStore.fund;
 
       const totalNAV =
         (this.totalNavMethodsSimulatedNAV || 0n) +
-        (fund?.fundContractBaseTokenBalance || 0n) +
-        (fund?.safeContractBaseTokenBalance || 0n) +
-        (fund?.feeBalance || 0n);
-      return this.getFormattedBaseTokenValue(totalNAV);
+        (BigInt(this.fundContractBaseTokenBalance) || 0n) +
+        (BigInt(this.safeContractBaseTokenBalance) || 0n) +
+        (BigInt(this.feeBalance) || 0n) ?? 0n;
+      return this.fundStore.getFormattedBaseTokenValue(totalNAV);
     },
     formattedTotalLastNAV() {
-      return this.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n);
+      return this.fundStore.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
@@ -644,13 +670,13 @@ export default defineComponent({
       )
     },
     formattedFundContractBaseTokenBalance() {
-      return this.getFormattedBaseTokenValue(this.fundStore.fund?.fundContractBaseTokenBalance);
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance));
     },
     formattedSafeContractBaseTokenBalance() {
-      return this.getFormattedBaseTokenValue(this.fundStore.fund?.safeContractBaseTokenBalance);
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.safeContractBaseTokenBalance));
     },
     formattedFeeBalance() {
-      return this.getFormattedBaseTokenValue(this.fundStore.fund?.feeBalance);
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.feeBalance));
     },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
@@ -684,7 +710,7 @@ export default defineComponent({
           isRethinkPosition: true,
           detailsHash: "-1",
           detailsJson: {
-            "fundContractAddress": this.fundStore.fund?.address,
+            "fundContractAddress": this.fundAddress ?? "",
           },
         } as any)
         methods.push({
@@ -697,7 +723,7 @@ export default defineComponent({
           isRethinkPosition: true,
           detailsHash: "-2",
           detailsJson: {
-            "safeContractAddress": this.fundStore.fund?.safeAddress,
+            "safeContractAddress": this.safeAddress ?? "",
           },
         } as any)
         methods.push({
@@ -747,7 +773,7 @@ export default defineComponent({
       this.expanded = newExpanded.length ? [newExpanded[newExpanded.length - 1]] : [];
     },
     onRowClick(row: any, item: any) {
-      const internalItem = item?.item || undefined
+      const internalItem = item?.item || undefined
 
       if(!internalItem) return
 
@@ -776,11 +802,20 @@ export default defineComponent({
       // Otherwise, take managed methods, that user can change.
       // Simulate all at once as many promises instead of one by one.
       const promises = [];
-      const fundChainId = this.fundStore.fund?.chainId ?? "";
-      const fundAddress = this.fundStore.fund?.address ?? "";
+      const fundChainId = this.fundChainId ?? "";
+      const fundAddress = this.fundAddress ?? "";
 
       for (const navEntry of this.methods) {
-        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(fundChainId, fundAddress, navEntry));
+        console.log("FUND CHAIN ID:", fundChainId, "FUND ADDRESS:", fundAddress, "NAV ENTRY:", navEntry)
+        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(
+          fundChainId,
+          fundAddress,
+          this.safeAddress,
+          this.baseDecimals,
+          this.baseSymbol,
+          navEntry,
+          this.isFundNonInit,
+        ));
       }
       const settled = await Promise.allSettled(promises);
       this.isNavSimulationLoading = false;
@@ -795,7 +830,7 @@ export default defineComponent({
     },
     // only alow edit if the method is not rethink position and not one of the predefined positions
     isMethodEditable(navEntry: INAVMethod) {
-      const isManageNavMethodsPage = this.idx === "nav/manage/index";
+      const isManageNavMethodsPage = this.idx === "nav/manage/index" || this.idx === "nav/onboarding";
 
       return isManageNavMethodsPage && !this.isBaseTokenBalanceMethod(navEntry);
     },
@@ -803,7 +838,7 @@ export default defineComponent({
       const positionName = ["OIV Balance", "Safe Balance", "Fees Balance"];
       return positionName.includes(method.positionName) && method.valuationSource === "Rethink";
     },
-    deleteMethod(method: INAVMethod, toggle = true) {
+    deleteMethod(method: INAVMethod, toggle = true, newNavEntry?: INAVMethod) {
       // If method is new, we can just remove it from the methods array.
       // If it is not new, we will mark it as deleted.
       const methods = [...this.methods]; // Create a shallow copy of the array
@@ -822,7 +857,12 @@ export default defineComponent({
           }
         }
       }
-      this.$emit("update:methods", methods);
+
+      if (newNavEntry) {
+        this.$emit("update:methods", [...methods, newNavEntry]);
+      } else {
+        this.$emit("update:methods", methods);
+      }
     },
     deleteEditMethod(index: number) {
       console.log("remove0 method: ", index);
@@ -893,8 +933,9 @@ export default defineComponent({
 
         // Do not include the pastNAVUpdateEntryFundAddress in the details, as when we fetch entries
         // they don't include this data and details hash would be broken if we included it.
-        newNavEntry.pastNAVUpdateEntryFundAddress =
-          this.fundStore.fund?.address;
+        newNavEntry.pastNAVUpdateEntryFundAddress = 0;
+        // newNavEntry.pastNAVUpdateEntryFundAddress =
+        // this.fundStore.fund?.address;
 
         // Set default fields that are required for each entry.
         // All methods details have this data.
@@ -952,8 +993,9 @@ export default defineComponent({
             newNavEntry.positionType === PositionType.Liquid &&
             newNavEntry.valuationType === ValuationType.DEXPair
           ) {
-            method.nonAssetTokenAddress =
-              this.fundStore.fund?.baseToken?.address;
+            method.nonAssetTokenAddress = ""
+            // method.nonAssetTokenAddress =
+            //     this.fundStore.fund?.baseToken?.address;
           }
 
           // Remove unwanted properties that we don't need when submitting the proposal.
@@ -972,18 +1014,12 @@ export default defineComponent({
           ethers.toUtf8Bytes(newNavEntry.detailsJson),
         );
 
-        // Add newly defined NAV entry to fund managed methods.
-        this.fundStore.fundManagedNAVMethods.push(newNavEntry);
-        // we need to delete the method from the navEntry
-
 
         if (this.hasChanged()) {
           // remove original method from the all methods
-          this.deleteMethod(this.originalNavEntry, false);
+          this.deleteMethod(this.originalNavEntry, false, newNavEntry);
         }
 
-        // Redirect back to Manage methods page.
-        this.router.push(`/details/${this.selectedFundSlug}/nav/manage`);
         this.toastStore.addToast("Method added successfully.");
       } catch (error: any) {
         console.error("Error editing method: ", error);

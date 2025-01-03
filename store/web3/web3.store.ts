@@ -1,16 +1,13 @@
 import { defineStore } from "pinia";
 import { type HttpProvider, Web3 } from "web3";
-import addressesJson from "~/assets/contracts/addresses.json";
-import type IAddresses from "~/types/addresses";
+import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
 import type { IContractAddresses } from "~/types/addresses";
-import type INetwork from "~/types/network";
 import { networksMap } from "~/store/web3/networksMap";
 import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
 import { RethinkReader } from "assets/contracts/RethinkReader";
 import { CustomContract } from "~/store/web3/customContract";
 import { NAVCalculator } from "assets/contracts/NAVCalculator";
 import SafeMultiSendCallOnlyJson from "assets/contracts/safe/SafeMultiSendCallOnly.json";
-const addresses: IAddresses = addressesJson as IAddresses;
 const SafeMultiSendCallOnlyAddresses: IContractAddresses =
   SafeMultiSendCallOnlyJson.networkAddresses as IContractAddresses;
 
@@ -58,17 +55,23 @@ export const useWeb3Store = defineStore({
 
       // Initialize contracts if addresses are available
       chainContracts[chainId] = {
-        fundFactoryContract: new provider.eth.Contract(
+        fundFactoryContract: new CustomContract(
           GovernableFundFactory.abi,
-          addresses.GovernableFundFactoryBeaconProxy[chainId],
+          rethinkContractAddresses.GovernableFundFactoryBeaconProxy[chainId],
+          chainId,
+          chainProviders[chainId].provider as HttpProvider,
         ),
+        // fundFactoryContract: new provider.eth.Contract(
+        //   GovernableFundFactory.abi,
+        //   addresses.GovernableFundFactoryBeaconProxy[chainId],
+        // ),
         rethinkReaderContract: new provider.eth.Contract(
           RethinkReader.abi,
-          addresses.RethinkReader[chainId],
+          rethinkContractAddresses.RethinkReader[chainId],
         ),
         navCalculatorContract: new provider.eth.Contract(
           NAVCalculator.abi,
-          addresses.NAVCalculatorBeaconProxy[chainId],
+          rethinkContractAddresses.NAVCalculatorBeaconProxy[chainId],
         ),
       };
     }
@@ -94,14 +97,9 @@ export const useWeb3Store = defineStore({
       },
     };
   },
-  getters: {
-    networks(): INetwork[] {
-      return Object.values(networksMap);
-    },
-  },
   actions: {
     NAVExecutorBeaconProxyAddress(chainId: string): string {
-      return addresses.NAVExecutorBeaconProxy[chainId];
+      return rethinkContractAddresses.NAVExecutorBeaconProxy[chainId];
     },
     safeMultiSendCallOnlyToAddress(chainId: string): string {
       return SafeMultiSendCallOnlyAddresses[

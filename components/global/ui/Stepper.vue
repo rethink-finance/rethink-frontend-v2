@@ -101,9 +101,12 @@
             </div>
           </div>
         </div>
+        <slot name="post-steps-content" />
       </div>
 
       <div class="main_card stepper__step-content">
+        <slot name="pre-content" />
+
         <v-form ref="form">
           <div
             v-for="(step, index) in entry"
@@ -168,6 +171,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  alwaysShowLastStep: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // define the form ref
@@ -218,6 +225,7 @@ const fields = computed(
 );
 
 const isLastStep = computed(() => {
+  if (props.alwaysShowLastStep) return true;
   return (
     activeMainStep.value === stepNames[stepNames.length - 1] &&
     activeSubStep.value ===

@@ -155,7 +155,7 @@
 </template>
 
 <script setup lang="ts">
-import { DefaultValues, InputType } from "~/types/enums/stepper";
+import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 const emit = defineEmits(["update:modelValue", "validate"]);
 
 const props = defineProps({
@@ -225,7 +225,7 @@ const addNewField = (field: any) => {
   const defaultValue =
     field?.defaultValue !== undefined
       ? field.defaultValue
-      : DefaultValues[type];
+      : defaultInputTypeValue[type];
 
   valueDetails.value[field.key].push(defaultValue);
 };
