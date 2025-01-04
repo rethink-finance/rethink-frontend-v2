@@ -178,22 +178,19 @@
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import type { AbiFunctionFragment } from "web3";
-import { encodeFunctionCall } from "web3-eth-abi";
-import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
-import { NAVExecutor } from "~/assets/contracts/NAVExecutor";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import { generateNAVPermission } from "~/composables/nav/generateNAVPermission";
 import {
-  encodedCollectFlowFeesAbiJSON,
   encodedCollectManagerFeesAbiJSON,
-  encodedCollectPerformanceFeesAbiJSON,
 } from "~/composables/nav/encodedCollectFees";
-import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
-import { encodeUpdateNavMethods } from "~/composables/nav/encodeUpdateNavMethods";
+import {
+  encodeUpdateNavMethods,
+  getAllowManagerToUpdateNavCalldata,
+  getNavMethodsProposalCalldata,
+  getNavMethodsProposalCalldata,
+} from "~/composables/nav/navProposal";
 const router = useRouter();
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
@@ -261,149 +258,6 @@ const fundLastNAVUpdateDate = computed(() => {
   return fundLastNAVUpdate.value.date ?? "N/A";
 });
 
-const storeNAVDataABI = NAVExecutor.abi.find(
-  (func: any) => func.name === "storeNAVData" && func.type === "function",
-);
-
-
-const encodeRoleModEntries = async (
-  proposalEntries: any[],
-): Promise<[any[], any[], any[]]> => {
-  loading.value = true;
-  const proposalRoleModMethods = ZodiacRoles.abi.filter(
-    (val) => val.type === "function",
-  );
-  const roleModAddress = await fundStore.getRoleModAddress();
-  console.log("roleModAddress: ", roleModAddress);
-
-  const encodedRoleModEntries = [];
-
-  const targets = [];
-  const gasValues = [];
-
-  for (let i = 0; i < proposalEntries.length; i++) {
-    const roleModFunctionABI =
-      proposalRoleModMethods[proposalEntries[i].valueMethodIdx];
-    console.log(
-      "roleModFunctionABI: ",
-      JSON.stringify(roleModFunctionABI, null, 2),
-    );
-    const roleModFunctionData = [];
-    for (let j = 0; j < proposalEntries[i].value.length; j++) {
-      /*
-        {
-          "isArray": false,
-          "data": "0xe977757dA5fd73Ca3D2bA6b7B544bdF42bb2CBf6",
-          "internalType": "address",
-          "name": "module"
-        },
-      */
-      roleModFunctionData.push(
-        prepRoleModEntryInput(proposalEntries[i].value[j]),
-      );
-    }
-    const encodedRoleModFunction = encodeFunctionCall(
-      roleModFunctionABI as AbiFunctionFragment,
-      roleModFunctionData,
-    );
-    console.log(
-      "roleModFunctionData: ",
-      i,
-      JSON.stringify(roleModFunctionData, null, 2),
-    );
-    encodedRoleModEntries.push(encodedRoleModFunction);
-    targets.push(roleModAddress);
-    gasValues.push(0);
-  }
-
-  return [encodedRoleModEntries, targets, gasValues];
-};
-
-const getProposal1Data = (encodedNavUpdateEntries: any) => {
-  // Propose NAV update for fund (target: fund addr, payloadL bytes)
-  loading.value = true;
-  const targetAddresses = [
-    fundStore.fundAddress, // encodedNavUpdateEntries
-    fundStore.fundAddress, // encodedCollectFlowFeesAbiJSON
-  ];
-  const gasValues = [
-    0, // encodedNavUpdateEntries
-    0, // encodedCollectFlowFeesAbiJSON
-  ];
-  const calldatas = [encodedNavUpdateEntries, encodedCollectFlowFeesAbiJSON];
-
-  // Conditionally include collect Management fees.
-  console.log("collectManagementFees: ", proposal.value.collectManagementFees);
-  if (proposal.value.collectManagementFees) {
-    targetAddresses.push(fundStore.fundAddress);
-    gasValues.push(0);
-    calldatas.push(encodedCollectManagerFeesAbiJSON);
-  }
-
-  // Include collect Performance fees.
-  targetAddresses.push(fundStore.fundAddress);
-  gasValues.push(0);
-  calldatas.push(encodedCollectPerformanceFeesAbiJSON);
-
-  console.log(
-    "proposal1:",
-    JSON.stringify(
-      {
-        targetAddresses,
-        gasValues,
-        calldatas,
-      },
-      null,
-      2,
-    ),
-  );
-
-  return [
-    targetAddresses,
-    gasValues,
-    calldatas,
-    JSON.stringify({
-      title: proposal.value.title,
-      description: proposal.value.description,
-    }),
-  ];
-}
-
-
-const getProposal2Data = async (
-  encodedNavUpdateEntries: any,
-  fundAddress: string,
-  fundChainId: string,
-) => {
-  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
-  const navPermissionEntries = generateNAVPermission(
-    fundAddress,
-    navExecutorAddress,
-  );
-  console.log(
-    "navPermission: ",
-    JSON.stringify(navPermissionEntries, null, 2),
-  );
-  const [encodedRoleModEntries, roleModTargets, roleModGasValues] =
-    await encodeRoleModEntries(navPermissionEntries);
-  const encodedDataStoreNAVDataNavUpdateEntries =
-    encodeFunctionCall(
-      storeNAVDataABI as AbiFunctionFragment,
-      [fundAddress, encodedNavUpdateEntries],
-    );
-
-  return [
-    [navExecutorAddress].concat(roleModTargets),
-    [0].concat(roleModGasValues),
-    [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
-    JSON.stringify({
-      title: "Allow Manager to Keep Updating - " + proposal.value.title,
-      description: "Allow Manager to keep updating NAV based on the methods in the " + proposal.value.title + ".\n All previous manager permissions related to NAV will be revoked.",
-    }),
-  ];
-}
-
-
 
 /**
  * Creating a new proposal flow:
@@ -425,7 +279,19 @@ const submitProposal = async () => {
     fundStore.fund?.baseToken.decimals,
     proposal.value.processWithdraw,
   );
-  const proposalData: any = getProposal1Data(encodedNavUpdateEntries);
+  const proposalData: any = getNavMethodsProposalCalldata(
+    encodedNavUpdateEntries,
+    fundStore.fundAddress,
+    proposal.value.collectManagementFees,
+    true,
+  );
+  // Add proposal metadata with title and description.
+  proposalData.push(
+    JSON.stringify({
+      title: proposal.value.title,
+      description: proposal.value.description,
+    }),
+  )
 
   /**
    * Submit Proposal 1
@@ -477,16 +343,27 @@ const submitProposal = async () => {
    */
   loading.value = true;
   if (!proposal.value.allowManagerToUpdateNav) return;
-  const proposalData2: any = await getProposal2Data(
+  const roleModAddress = await fundStore.getRoleModAddress();
+
+  const allowManagerToUpdateNavCalldata: any = getAllowManagerToUpdateNavCalldata(
     encodedNavUpdateEntries,
     fundStore.fundAddress,
     fundStore.selectedFundChain,
+    roleModAddress,
   );
+
+  // Add proposal metadata with title and description.
+  allowManagerToUpdateNavCalldata.push(
+    JSON.stringify({
+      title: "Allow Manager to Keep Updating - " + proposal.value.title,
+      description: "Allow Manager to keep updating NAV based on the methods in the " + proposal.value.title + ".\n All previous manager permissions related to NAV will be revoked.",
+    }),
+  )
 
   // Permissions for non gov NAV updates
   try {
     await fundStore.fundGovernorContract
-      .send("propose", {}, ...proposalData2)
+      .send("propose", {}, ...allowManagerToUpdateNavCalldata)
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
