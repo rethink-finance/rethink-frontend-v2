@@ -43,7 +43,7 @@
             Allow manager to keep updating NAV based on approved methods
           </div>
           <v-switch
-            v-model="allowManagerToKeepUpdatingNav"
+            v-model="allowManagerToUpdateNav"
             color="primary"
             hide-details
           />
@@ -51,7 +51,7 @@
       </div>
 
       <FundNavMethodsTable
-        v-model:methods="managedNAVMethods"
+        v-model:methods="navMethods"
         deletable
         show-simulated-nav
         idx="nav/onboarding"
@@ -66,7 +66,7 @@
 
     <FundNavAddRaw
       v-model="isAddRawDialogOpen"
-      :methods="managedNAVMethods"
+      :methods="navMethods"
       @added-methods="addRawMethods"
     />
 
@@ -95,7 +95,7 @@
         :safe-address="fundSettings?.safe || ''"
         :base-symbol="fundSettings?.baseSymbol || ''"
         :base-decimals="fundSettings?.baseDecimals || 18"
-        :already-used-methods="managedNAVMethods"
+        :already-used-methods="navMethods"
         :is-fund-non-init="true"
         @methods-added="methodsAddedFromLibrary"
       />
@@ -108,6 +108,10 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import type INAVMethod from "~/types/nav_method";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import {
+  encodeUpdateNavMethods,
+  getAllowManagerToUpdateNavProposalData,
+} from "~/composables/nav/navProposal";
 import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 
 const createFundStore = useCreateFundStore();
@@ -117,74 +121,169 @@ const web3Store = useWeb3Store();
 const { fundChainId, fundInitCache, fundSettings } = toRefs(createFundStore);
 
 // Data
-const loading = ref(false);
+const isLoadingStoreNavMethods = ref(false);
+const isLoadingAllowManagerToUpdateNav = ref(false);
 const isDefineNewMethodDialogOpen = ref(false)
 const isAddFromLibraryDialogOpen = ref(false)
 const isAddRawDialogOpen = ref(false)
-const managedNAVMethods = ref<INAVMethod[]>([]);
-const uniqueNavMethods = ref<INAVMethod[]>([]);
-const allowManagerToKeepUpdatingNav = ref(false);
-console.log("managedNAVMethods", managedNAVMethods.value)
-console.log("uniqueNavMethods", uniqueNavMethods.value)
+const navMethods = ref<INAVMethod[]>([]);
+const allowManagerToUpdateNav = ref(false);
 
-// Methods
+/**
+ * Computed
+ */
+const fundFactoryContract = computed(() => web3Store.chainContracts[fundChainId.value]?.fundFactoryContract)
+
+
+/**
+ * Methods
+ */
 const storeNavMethods = async () => {
-  if (managedNAVMethods.value.length === 0) {
-    toastStore.warningToast("No methods to store.");
-    return;
+  if (navMethods.value.length === 0) {
+    return toastStore.warningToast("No methods to store.");
   }
-  const [ encodedRoleModEntries, targets, gasValues ] = [[], [], []];
 
-  const fundFactoryContract = web3Store.chainContracts[fundChainId.value]?.fundFactoryContract;
-  const navExecutorAddr = NAVExecutorBeaconProxyAddress(fundChainId.value);
-  const fundInitCacheSettings = fundInitCache?.value?.fundSettings;
   // storeNAV(address navExecutorAddr, bytes calldata data) external {
-  // TODO parse & prepare NAV methods data
+  // TPrepare NAV methods data.
+  isLoadingStoreNavMethods.value = true;
+  const encodedNavUpdateEntries = encodeUpdateNavMethods(
+    navMethods.value,
+    fundSettings?.value?.baseDecimals,
+  );
 
-  const calldata = [
-    targets,
-    gasValues,
-    encodedRoleModEntries,
-  ];
+  await sendStoreNavMethodsTransaction(encodedNavUpdateEntries);
+
+  if (allowManagerToUpdateNav.value) {
+    await sendAllowManagerToUpdateNavTransaction(encodedNavUpdateEntries);
+  }
+};
+
+const sendStoreNavMethodsTransaction = async (
+  encodedNavUpdateEntries: string,
+) => {
+  if (!fundSettings?.value?.fundAddress) {
+    return toastStore.errorToast("Fund address is missing.");
+  }
+  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId.value);
+
   try {
-    console.log("STORE NAV DATA", calldata);
-    await fundFactoryContract
-      .send("storeNAV", {}, ...calldata)
+    console.log("STORE NAV DATA",
+      JSON.stringify(
+        [
+          navExecutorAddress,
+          encodedNavUpdateEntries,
+        ],
+        null,
+        2,
+      ),
+    );
+    await fundFactoryContract.value
+      .send(
+        "storeNAV",
+        {},
+        ...[
+          navExecutorAddress,
+          encodedNavUpdateEntries,
+        ],
+      )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
-          "Store permissions transaction has been submitted. Please wait for it to be confirmed.",
+          "Store NAV methods transaction has been submitted. Please wait for it to be confirmed.",
         );
       })
       .on("receipt", (receipt: any) => {
         console.log("receipt: ", receipt);
         if (receipt.status) {
-          toastStore.successToast("Permissions stored successfully.");
+          toastStore.successToast("NAV methods stored successfully.");
         } else {
           toastStore.errorToast(
-            "Storing permissions has failed. Please contact the Rethink Finance support.",
+            "Storing NAV methods has failed. Please contact the Rethink Finance support.",
           );
         }
-        loading.value = false;
+        isLoadingStoreNavMethods.value = false;
       })
       .on("error", (error: any) => {
         console.error(error);
-        loading.value = false;
+        isLoadingStoreNavMethods.value = false;
         toastStore.errorToast(
           "There has been an error. Please contact the Rethink Finance support.",
         );
       });
   } catch (error: any) {
-    loading.value = false;
+    isLoadingStoreNavMethods.value = false;
     toastStore.errorToast(error.message);
   }
-};
+}
+
+
+const sendAllowManagerToUpdateNavTransaction = async (
+  encodedNavUpdateEntries: string,
+) => {
+  if (!fundSettings?.value?.fundAddress) {
+    return toastStore.errorToast("Fund address is missing.");
+  }
+  if (!fundInitCache?.value?.rolesModifier) {
+    return toastStore.errorToast("Roles modifier address is missing.");
+  }
+  isLoadingAllowManagerToUpdateNav.value = true;
+
+  const allowManagerToUpdateNavProposal = getAllowManagerToUpdateNavProposalData(
+    encodedNavUpdateEntries,
+    fundSettings?.value?.fundAddress,
+    fundChainId.value,
+    fundInitCache?.value?.rolesModifier,
+  );
+
+  try {
+    console.log("submitPermissions allowManagerToUpdateNavProposal", allowManagerToUpdateNavProposal);
+    await fundFactoryContract.value
+      .send(
+        "submitPermissions",
+        {},
+        ...[
+          allowManagerToUpdateNavProposal.targets,
+          allowManagerToUpdateNavProposal.gasValues,
+          allowManagerToUpdateNavProposal.calldatas,
+        ],
+      )
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "Submit NAV permissions transaction has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          toastStore.successToast("NAV permissions submitted successfully.");
+        } else {
+          toastStore.errorToast(
+            "Submitting NAV permissions has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        isLoadingAllowManagerToUpdateNav.value = false;
+      })
+      .on("error", (error: any) => {
+        console.error(error);
+        isLoadingAllowManagerToUpdateNav.value = false;
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      });
+  } catch (error: any) {
+    isLoadingAllowManagerToUpdateNav.value = false;
+    toastStore.errorToast(error.message);
+  }
+}
+
 const onNewNavMethodCreatedHandler = (navMethod: INAVMethod) => {
   // Add newly defined NAV entry to fund managed methods.
-  managedNAVMethods.value.push(navMethod);
+  navMethods.value.push(navMethod);
 
   // close modal and clear form
   handleDefineNewMethodDialog(false);
+  console.log("new", navMethods.value);
 
   toastStore.addToast("Method added successfully.")
 }
@@ -197,8 +296,8 @@ const handleAddFromLibraryDialog = (value: boolean) => {
 };
 
 const addRawMethods = (newMethods: INAVMethod[]) => {
-  managedNAVMethods.value = [
-    ...managedNAVMethods.value,
+  navMethods.value = [
+    ...navMethods.value,
     ...newMethods,
   ];
 };
@@ -207,17 +306,12 @@ const methodsAddedFromLibrary = (methods: INAVMethod[]) => {
   // // Add newly defined method to fund managed methods.
   for (const method of methods) {
     method.isNew = true;
-    managedNAVMethods.value.push(method);
+    navMethods.value.push(method);
   }
 
   handleAddFromLibraryDialog(false);
   toastStore.addToast("Methods added successfully.");
 };
-
-
-// Watchers
-
-// Lifecycle Hooks
 </script>
 
 <style scoped lang="scss">

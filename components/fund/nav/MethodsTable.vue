@@ -684,21 +684,6 @@ export default defineComponent({
     computedMethods() {
       const methods = [];
 
-      //NOTE: this is ui hack around displaying nested rethink structures inside of PositionType.Composable types
-      for(let i=0; i< this.methods.length; i++){
-        if(this.methods[i].positionType === PositionType.Composable) {
-          if(this.methods[i].details.composable[0].functionSignatures.includes("illiquidCalc")) {
-            this.methods[i].displayPositionType = PositionType.Illiquid;
-          } else if (this.methods[i].details.composable[0].functionSignatures.includes("liquidCalc")) {
-            this.methods[i].displayPositionType = PositionType.Liquid;
-          } else {
-            this.methods[i].displayPositionType = this.methods[i].positionType;
-          }
-        } else {
-          this.methods[i].displayPositionType = this.methods[i].positionType;
-        }
-      }
-
       if (this.showBaseTokenBalances) {
         methods.push({
           positionName: "OIV Balance",
@@ -737,12 +722,28 @@ export default defineComponent({
           detailsHash: "-3",
         } as any)
       }
+
       return [
         ...methods,
-        ...this.methods.map(method => ({
-          ...method,
-          isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
-        })),
+        ...this.methods.map(method => {
+          // NOTE: this is a UI hack around displaying nested rethink structures
+          // inside PositionType.Composable types
+          if (method.positionType === PositionType.Composable) {
+            if (method.details.composable[0].functionSignatures.includes("illiquidCalc")) {
+              method.displayPositionType = PositionType.Illiquid;
+            } else if (method.details.composable[0].functionSignatures.includes("liquidCalc")) {
+              method.displayPositionType = PositionType.Liquid;
+            } else {
+              method.displayPositionType = method.positionType;
+            }
+          } else {
+            method.displayPositionType = method.positionType;
+          }
+          return {
+            ...method,
+            isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
+          }
+        }),
       ];
     },
   },
@@ -828,7 +829,7 @@ export default defineComponent({
 
       return "";
     },
-    // only alow edit if the method is not rethink position and not one of the predefined positions
+    // only allow edit if the method is not rethink position and not one of the predefined positions
     isMethodEditable(navEntry: INAVMethod) {
       const isManageNavMethodsPage = this.idx === "nav/manage/index" || this.idx === "nav/onboarding";
 

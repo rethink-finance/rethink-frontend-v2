@@ -12,6 +12,7 @@ import {
   encodedCollectManagerFeesAbiJSON,
   encodedCollectPerformanceFeesAbiJSON,
 } from "~/composables/nav/encodedCollectFees";
+import type IProposalData from "~/types/proposal/proposalData";
 
 const updateNavABI = GovernableFund.abi.find(
   (func: any) => func.name === "updateNav" && func.type === "function",
@@ -31,7 +32,7 @@ export const encodeUpdateNavMethods = (
   navMethods: INAVMethod[],
   baseDecimals?: number,
   processWithdraw: boolean = false,
-) => {
+): string => {
   const navUpdateEntries = [];
   const pastNavUpdateEntryAddresses: any[] = [];
 
@@ -103,6 +104,50 @@ export const encodeUpdateNavMethods = (
 }
 
 
+export const getNavMethodsProposalData = (
+  encodedNavUpdateEntries: any,
+  fundAddress: string,
+  collectFlowFees: boolean = false,
+  collectManagementFees: boolean = false,
+  collectPerformanceFees: boolean = false,
+): IProposalData => {
+  // Propose NAV update for fund (target: fund addr, payloadL bytes)
+  const targets = [fundAddress];
+  const gasValues = [0];
+  const calldatas = [encodedNavUpdateEntries];
+
+  // Conditionally include collect Flow fees.
+  console.log("NAV collectFlowFees: ", collectFlowFees);
+  if (collectFlowFees) {
+    targets.push(fundAddress);
+    gasValues.push(0);
+    calldatas.push(encodedCollectFlowFeesAbiJSON);
+  }
+
+  // Conditionally include collect Management fees.
+  console.log("NAV collectManagementFees: ", collectManagementFees);
+  if (collectManagementFees) {
+    targets.push(fundAddress);
+    gasValues.push(0);
+    calldatas.push(encodedCollectManagerFeesAbiJSON);
+  }
+
+  // Conditionally include collect Performance fees.
+  console.log("NAV collectPerformanceFees: ", collectPerformanceFees);
+  if (collectPerformanceFees) {
+    targets.push(fundAddress);
+    gasValues.push(0);
+    calldatas.push(encodedCollectPerformanceFeesAbiJSON);
+  }
+
+  return {
+    targets,
+    gasValues,
+    calldatas,
+  };
+}
+
+
 /**
  * Permissions proposal to:
  * allow manager to keep updating NAV based on approved methods.
@@ -111,12 +156,12 @@ export const encodeUpdateNavMethods = (
  * @param fundChainId
  * @param roleModAddress
  */
-export const getAllowManagerToUpdateNavCalldata = (
+export const getAllowManagerToUpdateNavProposalData = (
   encodedNavUpdateEntries: any,
   fundAddress: string,
   fundChainId: string,
   roleModAddress: string,
-) => {
+): IProposalData => {
   const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
   const navPermissionEntries = generateNAVPermission(
     fundAddress,
@@ -131,13 +176,12 @@ export const getAllowManagerToUpdateNavCalldata = (
       [fundAddress, encodedNavUpdateEntries],
     );
 
-  return [
-    [navExecutorAddress].concat(roleModTargets),
-    [0].concat(roleModGasValues),
-    [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
-  ];
+  return {
+    targets: [navExecutorAddress].concat(roleModTargets),
+    gasValues: [0].concat(roleModGasValues),
+    calldatas: [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
+  };
 }
-
 
 const encodeRoleModEntries = (
   proposalEntries: any[],
@@ -190,58 +234,3 @@ const encodeRoleModEntries = (
 
   return [encodedRoleModEntries, targets, gasValues];
 };
-
-
-
-export const getNavMethodsProposalCalldata = (
-  encodedNavUpdateEntries: any,
-  fundAddress: string,
-  collectManagementFees: boolean = false,
-  collectPerformanceFees: boolean = false,
-) => {
-  // Propose NAV update for fund (target: fund addr, payloadL bytes)
-  const targetAddresses = [
-    fundAddress, // encodedNavUpdateEntries
-    fundAddress, // encodedCollectFlowFeesAbiJSON
-  ];
-  const gasValues = [
-    0, // encodedNavUpdateEntries
-    0, // encodedCollectFlowFeesAbiJSON
-  ];
-  const calldatas = [encodedNavUpdateEntries, encodedCollectFlowFeesAbiJSON];
-
-  // Conditionally include collect Management fees.
-  console.log("NAV collectManagementFees: ", collectManagementFees);
-  if (collectManagementFees) {
-    targetAddresses.push(fundAddress);
-    gasValues.push(0);
-    calldatas.push(encodedCollectManagerFeesAbiJSON);
-  }
-
-  // Conditionally include collect Performance fees.
-  console.log("NAV collectPerformanceFees: ", collectPerformanceFees);
-  if (collectPerformanceFees) {
-    targetAddresses.push(fundAddress);
-    gasValues.push(0);
-    calldatas.push(encodedCollectPerformanceFeesAbiJSON);
-  }
-
-  console.log(
-    "proposal1:",
-    JSON.stringify(
-      {
-        targetAddresses,
-        gasValues,
-        calldatas,
-      },
-      null,
-      2,
-    ),
-  );
-
-  return [
-    targetAddresses,
-    gasValues,
-    calldatas,
-  ];
-}

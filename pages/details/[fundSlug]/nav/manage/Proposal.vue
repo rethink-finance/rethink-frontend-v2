@@ -183,13 +183,9 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import {
-  encodedCollectManagerFeesAbiJSON,
-} from "~/composables/nav/encodedCollectFees";
-import {
   encodeUpdateNavMethods,
-  getAllowManagerToUpdateNavCalldata,
-  getNavMethodsProposalCalldata,
-  getNavMethodsProposalCalldata,
+  getAllowManagerToUpdateNavProposalData,
+  getNavMethodsProposalData,
 } from "~/composables/nav/navProposal";
 const router = useRouter();
 const fundStore = useFundStore();
@@ -279,19 +275,13 @@ const submitProposal = async () => {
     fundStore.fund?.baseToken.decimals,
     proposal.value.processWithdraw,
   );
-  const proposalData: any = getNavMethodsProposalCalldata(
+  const navMethodsProposal = getNavMethodsProposalData(
     encodedNavUpdateEntries,
     fundStore.fundAddress,
+    true,
     proposal.value.collectManagementFees,
     true,
   );
-  // Add proposal metadata with title and description.
-  proposalData.push(
-    JSON.stringify({
-      title: proposal.value.title,
-      description: proposal.value.description,
-    }),
-  )
 
   /**
    * Submit Proposal 1
@@ -300,7 +290,19 @@ const submitProposal = async () => {
   loading.value = true;
   try {
     await fundStore.fundGovernorContract
-      .send("propose", {}, ...proposalData)
+      .send(
+        "propose",
+        {},
+        ...[
+          navMethodsProposal.targets,
+          navMethodsProposal.gasValues,
+          navMethodsProposal.calldatas,
+          JSON.stringify({
+            title: proposal.value.title,
+            description: proposal.value.description,
+          }),
+        ],
+      )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
@@ -345,25 +347,28 @@ const submitProposal = async () => {
   if (!proposal.value.allowManagerToUpdateNav) return;
   const roleModAddress = await fundStore.getRoleModAddress();
 
-  const allowManagerToUpdateNavCalldata: any = getAllowManagerToUpdateNavCalldata(
+  const allowManagerToUpdateNavProposal = getAllowManagerToUpdateNavProposalData(
     encodedNavUpdateEntries,
     fundStore.fundAddress,
     fundStore.selectedFundChain,
     roleModAddress,
   );
-
-  // Add proposal metadata with title and description.
-  allowManagerToUpdateNavCalldata.push(
-    JSON.stringify({
-      title: "Allow Manager to Keep Updating - " + proposal.value.title,
-      description: "Allow Manager to keep updating NAV based on the methods in the " + proposal.value.title + ".\n All previous manager permissions related to NAV will be revoked.",
-    }),
-  )
-
   // Permissions for non gov NAV updates
   try {
     await fundStore.fundGovernorContract
-      .send("propose", {}, ...allowManagerToUpdateNavCalldata)
+      .send(
+        "propose",
+        {},
+        ...[
+          allowManagerToUpdateNavProposal.targets,
+          allowManagerToUpdateNavProposal.gasValues,
+          allowManagerToUpdateNavProposal.calldatas,
+          JSON.stringify({
+            title: "Allow Manager to Keep Updating - " + proposal.value.title,
+            description: "Allow Manager to keep updating NAV based on the methods in the " + proposal.value.title + ".\n All previous manager permissions related to NAV will be revoked.",
+          }),
+        ],
+      )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(

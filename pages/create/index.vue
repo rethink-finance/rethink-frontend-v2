@@ -464,13 +464,11 @@ const generateSteps = (stepperEntry: IOnboardingStep[]) => {
 
 // helper function to generate fields
 const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) => {
-  console.log("generateFields", step);
   const stepKey = step.key as OnboardingInitializingSteps;
 
   if (!OnboardingFieldsMap[stepKey]) return [];
 
   return OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
-    console.log("step", stepKey, field);
     const stepIndex = findIndexByKey(stepperEntry, stepKey);
     const isToggleOn = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isToggleOn ?? field?.isToggleOn;
 
@@ -697,7 +695,7 @@ const stepperEntry = ref(initStepperEntry());
 
 // Watchers
 watch(stepperEntry.value, (newVal) => {
-  console.log("stepperEntr changedy", newVal);
+  console.log("stepperEntry changedy", newVal);
 });
 
 watch(() => accountStore.activeAccountAddress, () => {
