@@ -271,3 +271,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     "0x66e9d": "",
   },
 };
+
+export const NAVExecutorBeaconProxyAddress = (chainId: string): string => {
+  return rethinkContractAddresses.NAVExecutorBeaconProxy[chainId];
+};

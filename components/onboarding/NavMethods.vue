@@ -108,6 +108,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import type INAVMethod from "~/types/nav_method";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 
 const createFundStore = useCreateFundStore();
 const toastStore = useToastStore();
@@ -135,7 +136,7 @@ const storeNavMethods = async () => {
   const [ encodedRoleModEntries, targets, gasValues ] = [[], [], []];
 
   const fundFactoryContract = web3Store.chainContracts[fundChainId.value]?.fundFactoryContract;
-  const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress(fundChainId.value);
+  const navExecutorAddr = NAVExecutorBeaconProxyAddress(fundChainId.value);
   const fundInitCacheSettings = fundInitCache?.value?.fundSettings;
   // storeNAV(address navExecutorAddr, bytes calldata data) external {
   // TODO parse & prepare NAV methods data

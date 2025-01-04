@@ -181,23 +181,20 @@ import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
 import { encodeFunctionCall } from "web3-eth-abi";
 import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
-import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { NAVExecutor } from "~/assets/contracts/NAVExecutor";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import { PositionType } from "~/types/enums/position_type";
-import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import { generateNAVPermission, getMethodsPastNAVUpdateIndex } from "~/composables/nav/generateNAVPermission";
+import { generateNAVPermission } from "~/composables/nav/generateNAVPermission";
 import {
   encodedCollectFlowFeesAbiJSON,
   encodedCollectManagerFeesAbiJSON,
   encodedCollectPerformanceFeesAbiJSON,
 } from "~/composables/nav/encodedCollectFees";
+import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
+import { encodeUpdateNavMethods } from "~/composables/nav/encodeUpdateNavMethods";
 const router = useRouter();
-const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
 const toastStore = useToastStore();
@@ -264,14 +261,9 @@ const fundLastNAVUpdateDate = computed(() => {
   return fundLastNAVUpdate.value.date ?? "N/A";
 });
 
-const updateNavABI = GovernableFund.abi.find(
-  (func: any) => func.name === "updateNav" && func.type === "function",
-);
-
 const storeNAVDataABI = NAVExecutor.abi.find(
   (func: any) => func.name === "storeNAVData" && func.type === "function",
 );
-
 
 
 const encodeRoleModEntries = async (
@@ -329,7 +321,6 @@ const encodeRoleModEntries = async (
 
 const getProposal1Data = (encodedNavUpdateEntries: any) => {
   // Propose NAV update for fund (target: fund addr, payloadL bytes)
-  console.log("Active Account: ", fundStore.activeAccountAddress);
   loading.value = true;
   const targetAddresses = [
     fundStore.fundAddress, // encodedNavUpdateEntries
@@ -342,6 +333,7 @@ const getProposal1Data = (encodedNavUpdateEntries: any) => {
   const calldatas = [encodedNavUpdateEntries, encodedCollectFlowFeesAbiJSON];
 
   // Conditionally include collect Management fees.
+  console.log("collectManagementFees: ", proposal.value.collectManagementFees);
   if (proposal.value.collectManagementFees) {
     targetAddresses.push(fundStore.fundAddress);
     gasValues.push(0);
@@ -378,10 +370,14 @@ const getProposal1Data = (encodedNavUpdateEntries: any) => {
 }
 
 
-const getProposal2Data = async (encodedNavUpdateEntries: any) => {
-  const navExecutorAddress = web3Store.NAVExecutorBeaconProxyAddress(fundStore.selectedFundChain);
+const getProposal2Data = async (
+  encodedNavUpdateEntries: any,
+  fundAddress: string,
+  fundChainId: string,
+) => {
+  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
   const navPermissionEntries = generateNAVPermission(
-    fundStore.fundAddress,
+    fundAddress,
     navExecutorAddress,
   );
   console.log(
@@ -393,14 +389,11 @@ const getProposal2Data = async (encodedNavUpdateEntries: any) => {
   const encodedDataStoreNAVDataNavUpdateEntries =
     encodeFunctionCall(
       storeNAVDataABI as AbiFunctionFragment,
-      [fundStore.fundAddress, encodedNavUpdateEntries],
+      [fundAddress, encodedNavUpdateEntries],
     );
 
-  console.log("Active Account: ", fundStore.activeAccountAddress);
-  loading.value = true;
-  const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress(fundStore.fundChainId);
-  const proposalData2 = [
-    [navExecutorAddr].concat(roleModTargets),
+  return [
+    [navExecutorAddress].concat(roleModTargets),
     [0].concat(roleModGasValues),
     [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
     JSON.stringify({
@@ -408,82 +401,9 @@ const getProposal2Data = async (encodedNavUpdateEntries: any) => {
       description: "Allow Manager to keep updating NAV based on the methods in the " + proposal.value.title + ".\n All previous manager permissions related to NAV will be revoked.",
     }),
   ];
-  return proposalData2;
 }
 
-const encodeNavMethods = () => {
-  const navUpdateEntries = [];
-  const pastNavUpdateEntryAddresses: any[] = [];
 
-  for (const navEntry of fundManagedNAVMethods.value as INAVMethod[]) {
-    // Skip deleted entries in the new proposal.
-    if (navEntry.deleted) continue;
-
-    const navEntryDetails = JSON.parse(JSON.stringify(navEntry.details));
-
-    if (navEntry.pastNAVUpdateEntryFundAddress) {
-      pastNavUpdateEntryAddresses.push(navEntry.pastNAVUpdateEntryFundAddress);
-    }
-
-    let pastNAVUpdateIndex = 0;
-
-    const baseDecimals = fundStore.fund?.baseToken.decimals;
-    if (!baseDecimals) {
-      toastStore.errorToast("Failed preparing NAV Illiquid method, OIV base token decimals are not known.")
-      throw new Error("Failed preparing NAV Illiquid method, base decimals are not known.")
-    }
-
-    if (navEntry.positionType === PositionType.Liquid) {
-      navEntryDetails.liquid = prepNAVMethodLiquid(navEntryDetails);
-    } else if (navEntry.positionType === PositionType.Illiquid) {
-      navEntryDetails.illiquid = prepNAVMethodIlliquid(
-        navEntryDetails,
-        baseDecimals,
-      );
-    } else if (navEntry.positionType === PositionType.NFT) {
-      navEntryDetails.nft = prepNAVMethodNFT(navEntryDetails);
-    } else if (navEntry.positionType === PositionType.Composable) {
-      navEntryDetails.composable = prepNAVMethodComposable(navEntryDetails);
-    }
-
-    pastNAVUpdateIndex = getMethodsPastNAVUpdateIndex(
-      navEntryDetails[navEntry.positionType],
-    );
-    // Stringify description, if it is not yet stringified.
-    let descriptionJsonString = navEntryDetails.description;
-    if (
-      typeof descriptionJsonString === "object" &&
-      descriptionJsonString !== null
-    ) {
-      descriptionJsonString = JSON.stringify(navEntryDetails.description);
-    }
-    navUpdateEntries.push([
-      parseInt(navEntryDetails.entryType),
-      toRaw(navEntryDetails.liquid),
-      toRaw(navEntryDetails.illiquid),
-      toRaw(navEntryDetails.nft),
-      toRaw(navEntryDetails.composable),
-      navEntryDetails.isPastNAVUpdate,
-      pastNAVUpdateIndex,
-      parseInt(navEntryDetails.pastNAVUpdateEntryIndex),
-      descriptionJsonString,
-    ]);
-  }
-  console.log("navUpdateEntries: ", navUpdateEntries);
-  console.log("pastNavUpdateEntryAddresses: ", pastNavUpdateEntryAddresses);
-  console.log("collectManagementFees: ", proposal.value.collectManagementFees);
-  console.log("processWithdraw: ", proposal.value.processWithdraw);
-  const encodedNavUpdateEntries = encodeFunctionCall(
-    updateNavABI as AbiFunctionFragment,
-    [
-      navUpdateEntries,
-      pastNavUpdateEntryAddresses,
-      proposal.value.processWithdraw,
-    ],
-  );
-  console.log("encodedNavUpdateEntries: ", encodedNavUpdateEntries);
-  return encodedNavUpdateEntries;
-}
 
 /**
  * Creating a new proposal flow:
@@ -500,13 +420,18 @@ const encodeNavMethods = () => {
  *   )
  */
 const submitProposal = async () => {
-  const encodedNavUpdateEntries = encodeNavMethods();
+  const encodedNavUpdateEntries = encodeUpdateNavMethods(
+    fundManagedNAVMethods.value,
+    fundStore.fund?.baseToken.decimals,
+    proposal.value.processWithdraw,
+  );
   const proposalData: any = getProposal1Data(encodedNavUpdateEntries);
 
   /**
    * Submit Proposal 1
+   * NAV methods
    */
-  // ADD encoded entries for OIV permissions
+  loading.value = true;
   try {
     await fundStore.fundGovernorContract
       .send("propose", {}, ...proposalData)
@@ -548,11 +473,17 @@ const submitProposal = async () => {
 
   /**
    * Submit Proposal 2
+   * Allow manager to keep updating NAV based on approved methods
    */
+  loading.value = true;
   if (!proposal.value.allowManagerToUpdateNav) return;
-  const proposalData2: any = await getProposal2Data(encodedNavUpdateEntries);
+  const proposalData2: any = await getProposal2Data(
+    encodedNavUpdateEntries,
+    fundStore.fundAddress,
+    fundStore.selectedFundChain,
+  );
 
-  // Permissions for non gov nav updates
+  // Permissions for non gov NAV updates
   try {
     await fundStore.fundGovernorContract
       .send("propose", {}, ...proposalData2)
@@ -635,26 +566,6 @@ const saveDraft = () => {
     toastStore.errorToast("Failed to save NAV draft");
   }
 };
-
-/**
-const saveProposalDraft = () => {
-  try {
-    const fundProposalDrafts = getLocalStorageItem("fundProposalDrafts", {});
-
-    if (!fundProposalDrafts[selectedFundAddress.value]) {
-      fundProposalDrafts[selectedFundAddress.value] = {};
-    }
-
-    fundProposalDrafts[selectedFundAddress.value].nav = JSON.parse(
-      JSON.stringify(proposal.value, stringifyBigInt),
-    );
-    setLocalStorageItem("fundProposalDrafts", fundProposalDrafts);
-  } catch (e) {
-    console.error(e);
-    toastStore.errorToast("Failed to save fund proposal draft");
-  }
-};
- */
 </script>
 
 <style scoped lang="scss">
