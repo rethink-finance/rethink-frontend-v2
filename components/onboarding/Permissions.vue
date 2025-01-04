@@ -242,19 +242,6 @@ const storePermissions = async () => {
     ),
   );
 
-  // TODO allowManagerToSendFundsToFundContract permissions
-  /*
-    Example:
-      {
-    "role": "1",
-    "targetAddress": "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
-    "functionSig": "0xa9059cbb",
-    "paramIndex": "0",
-    "paramType": "0",
-    "paramComp": "0",
-    "compValue": "0x00000000000000000000000000a4dcbbb7eb5d0c4ef33ab9763dde5cd91a4b10"
-  }
-   */
   if (allowManagerToSendFundsToFundContract.value) {
     const _encodedRoleModEntries = getAllowManagerToSendFundsToFundContractPermission(
       fundInitCacheSettings?.baseToken,

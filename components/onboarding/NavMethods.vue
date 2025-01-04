@@ -22,13 +22,13 @@
         <v-btn
           class="text-secondary me-4"
           variant="outlined"
-          @click="addRawDialog = true"
+          @click="isAddRawDialogOpen = true"
         >
           Add Raw
         </v-btn>
         <v-btn
           class="bg-primary text-secondary"
-          @click="storeNavMethods()"
+          @click="storeNavMethods"
         >
           Store NAV Methods
         </v-btn>
@@ -51,7 +51,7 @@
       </div>
 
       <FundNavMethodsTable
-        v-model:methods="fundManagedNAVMethods"
+        v-model:methods="managedNAVMethods"
         deletable
         show-simulated-nav
         idx="nav/onboarding"
@@ -65,13 +65,13 @@
     </div>
 
     <FundNavAddRaw
-      v-model="addRawDialog"
-      :methods="fundManagedNAVMethods"
+      v-model="isAddRawDialogOpen"
+      :methods="managedNAVMethods"
       @added-methods="addRawMethods"
     />
 
     <UiConfirmDialog
-      :model-value="defineNewMethodDialog"
+      :model-value="isDefineNewMethodDialogOpen"
       title="Add New Method"
       max-width="80%"
       @update:model-value="handleDefineNewMethodDialog"
@@ -84,7 +84,7 @@
     </UiConfirmDialog>
 
     <UiConfirmDialog
-      :model-value="addFromLibraryDialog"
+      :model-value="isAddFromLibraryDialogOpen"
       title="Add New Method"
       max-width="80%"
       @update:model-value="handleAddFromLibraryDialog"
@@ -95,7 +95,7 @@
         :safe-address="fundSettings?.safe || ''"
         :base-symbol="fundSettings?.baseSymbol || ''"
         :base-decimals="fundSettings?.baseDecimals || 18"
-        :already-used-methods="fundManagedNAVMethods"
+        :already-used-methods="managedNAVMethods"
         :is-fund-non-init="true"
         @methods-added="methodsAddedFromLibrary"
       />
@@ -107,37 +107,80 @@
 import { useToastStore } from "~/store/toasts/toast.store";
 import type INAVMethod from "~/types/nav_method";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
-const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
-const { fundChainId, fundSettings } = toRefs(createFundStore);
+const toastStore = useToastStore();
+const web3Store = useWeb3Store();
+
+const { fundChainId, fundInitCache, fundSettings } = toRefs(createFundStore);
 
 // Data
-const defineNewMethodDialog = ref(false)
-const addFromLibraryDialog = ref(false)
-const addRawDialog = ref(false)
-const fundManagedNAVMethods = ref<INAVMethod[]>([]);
+const loading = ref(false);
+const isDefineNewMethodDialogOpen = ref(false)
+const isAddFromLibraryDialogOpen = ref(false)
+const isAddRawDialogOpen = ref(false)
+const managedNAVMethods = ref<INAVMethod[]>([]);
 const uniqueNavMethods = ref<INAVMethod[]>([]);
 const allowManagerToKeepUpdatingNav = ref(false);
-
-
-console.log("fundManagedNAVMethods", fundManagedNAVMethods.value)
+console.log("managedNAVMethods", managedNAVMethods.value)
 console.log("uniqueNavMethods", uniqueNavMethods.value)
 
-// Computeds
-
 // Methods
-const storeNavMethods = () => {
-  if(fundManagedNAVMethods.value.length === 0) {
+const storeNavMethods = async () => {
+  if (managedNAVMethods.value.length === 0) {
     toastStore.warningToast("No methods to store.");
     return;
   }
+  const [ encodedRoleModEntries, targets, gasValues ] = [[], [], []];
 
-  toastStore.successToast("Methods added successfully.");
+  const fundFactoryContract = web3Store.chainContracts[fundChainId.value]?.fundFactoryContract;
+  const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress(fundChainId.value);
+  const fundInitCacheSettings = fundInitCache?.value?.fundSettings;
+  // storeNAV(address navExecutorAddr, bytes calldata data) external {
+  // TODO parse & prepare NAV methods data
+
+  const calldata = [
+    targets,
+    gasValues,
+    encodedRoleModEntries,
+  ];
+  try {
+    console.log("STORE NAV DATA", calldata);
+    await fundFactoryContract
+      .send("storeNAV", {}, ...calldata)
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "Store permissions transaction has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+        if (receipt.status) {
+          toastStore.successToast("Permissions stored successfully.");
+        } else {
+          toastStore.errorToast(
+            "Storing permissions has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loading.value = false;
+      })
+      .on("error", (error: any) => {
+        console.error(error);
+        loading.value = false;
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      });
+  } catch (error: any) {
+    loading.value = false;
+    toastStore.errorToast(error.message);
+  }
 };
 const onNewNavMethodCreatedHandler = (navMethod: INAVMethod) => {
   // Add newly defined NAV entry to fund managed methods.
-  fundManagedNAVMethods.value.push(navMethod);
+  managedNAVMethods.value.push(navMethod);
 
   // close modal and clear form
   handleDefineNewMethodDialog(false);
@@ -146,15 +189,15 @@ const onNewNavMethodCreatedHandler = (navMethod: INAVMethod) => {
 }
 
 const handleDefineNewMethodDialog = (value: boolean) => {
-  defineNewMethodDialog.value = value;
+  isDefineNewMethodDialogOpen.value = value;
 };
 const handleAddFromLibraryDialog = (value: boolean) => {
-  addFromLibraryDialog.value = value;
+  isAddFromLibraryDialogOpen.value = value;
 };
 
 const addRawMethods = (newMethods: INAVMethod[]) => {
-  fundManagedNAVMethods.value = [
-    ...fundManagedNAVMethods.value,
+  managedNAVMethods.value = [
+    ...managedNAVMethods.value,
     ...newMethods,
   ];
 };
@@ -163,7 +206,7 @@ const methodsAddedFromLibrary = (methods: INAVMethod[]) => {
   // // Add newly defined method to fund managed methods.
   for (const method of methods) {
     method.isNew = true;
-    fundManagedNAVMethods.value.push(method);
+    managedNAVMethods.value.push(method);
   }
 
   handleAddFromLibraryDialog(false);

@@ -193,7 +193,8 @@ import {
   OnboardingFieldsMap,
   OnboardingStep,
   OnboardingStepMap,
-  type IOnboardingStep, type OnboardingInitializingSteps, chainIdField,
+  type IOnboardingStep,
+  type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
 import { networkChoices } from "~/store/web3/networksMap";
@@ -283,7 +284,7 @@ const fetchFundCache = async () => {
       ),
     )
     isWhitelistedDeposits.value = fundInitCache?.value?.fundSettings?.isWhitelistedDeposits || false;
-    // TODO set this cached stepperEntry to localStorage
+    // TODO clear local storage
   } else {
     createFundStore.clearFundInitCache();
   }

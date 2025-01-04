@@ -72,17 +72,6 @@ export const OnboardingStepMap: IOnboardingStep[] = [
 
 
 // 2. define the fields for each section
-export const chainIdField: IField = {
-  label: "OIV Chain",
-  key: "chainId",
-  type: InputType.Select,
-  placeholder: "",
-  rules: [formRules.required],
-  isEditable: true,
-  cols: 3,
-  choices: networkChoices,
-};
-
 // TODO rename to CreateFundStepFieldsMap
 const OnboardingFieldsMap: FieldsMapType = {
   [OnboardingStep.Basics]: [
