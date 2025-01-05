@@ -81,7 +81,7 @@ import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddres
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
-const { fundChainId, fundInitCache, fundSettings } = toRefs(createFundStore);
+const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
 
 const loading = ref(false);
 const allowManagerToSendFundsToFundContract = ref(false);

@@ -212,7 +212,7 @@ const {
   askToSaveDraftBeforeRouteLeave,
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
-} = toRefs(createFundStore);
+} = storeToRefs(createFundStore);
 const step = ref(1);
 
 // TODO: add validation functionality

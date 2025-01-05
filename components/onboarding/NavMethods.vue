@@ -122,7 +122,7 @@ const createFundStore = useCreateFundStore();
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 
-const { fundChainId, fundInitCache, fundSettings } = toRefs(createFundStore);
+const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
 
 // Data
 const isFetchingNavMethods = ref(false);

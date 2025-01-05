@@ -54,14 +54,12 @@ import { eth } from "web3";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 
-const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 
-const { isConnected } = toRefs(accountStore);
+const { isConnected } = storeToRefs(accountStore);
 const isSweepLoading = ref(false);
 
 const isSweepContractDisabled = computed(() => {

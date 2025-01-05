@@ -89,7 +89,7 @@ const {
   fundLastNAVUpdateMethods,
   fundChainId,
   fundAddress,
-} = toRefs(useFundStore());
+} = storeToRefs(useFundStore());
 
 const toastStore = useToastStore();
 const fundStore = useFundStore();

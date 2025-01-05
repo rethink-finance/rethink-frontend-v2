@@ -406,7 +406,7 @@ const {
   totalCurrentSimulatedNAV,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
-} = toRefs(fundStore);
+} = storeToRefs(fundStore);
 
 const customSimulatedNAVValue = ref("");
 const customSimulatedNAVValueChanged = ref(false);

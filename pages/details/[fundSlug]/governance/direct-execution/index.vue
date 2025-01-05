@@ -64,7 +64,7 @@ const router = useRouter();
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
-const { selectedFundSlug } = toRefs(fundStore);
+const { selectedFundSlug } = storeToRefs(fundStore);
 const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "Governance",

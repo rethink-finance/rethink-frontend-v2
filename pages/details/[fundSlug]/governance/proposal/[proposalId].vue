@@ -185,8 +185,8 @@
 </template>
 
 <script setup lang="ts">
-import { useActionStateStore } from "~/store/actionState.store";
 import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
+import { useActionStateStore } from "~/store/actionState.store";
 
 import { formatPercent } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
@@ -217,7 +217,7 @@ const toggleRawProposalCalldata = (index: number) => {
   toggledRawProposalCalldatas.value[index] = !(toggledRawProposalCalldatas.value[index] ?? false);
 }
 
-const { selectedFundSlug } = toRefs(useFundStore());
+const { selectedFundSlug } = storeToRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "Governance",

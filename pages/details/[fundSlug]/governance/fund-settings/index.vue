@@ -180,7 +180,7 @@ const toastStore = useToastStore();
 const router = useRouter();
 
 const fund = useAttrs().fund as IFund;
-const { selectedFundSlug } = toRefs(fundStore);
+const { selectedFundSlug } = storeToRefs(fundStore);
 const proposalSteps = Object.values(ProposalStep);
 
 const breadcrumbItems: BreadcrumbItem[] = [

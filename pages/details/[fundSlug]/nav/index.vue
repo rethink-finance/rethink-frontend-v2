@@ -124,7 +124,7 @@ const {
   selectedFundSlug,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
-} = toRefs(useFundStore());
+} = storeToRefs(useFundStore());
 
 const fundLastNAVUpdateDate = computed(() => {
   if (!fundLastNAVUpdate?.value?.date) return "N/A";
