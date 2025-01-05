@@ -56,6 +56,7 @@
         show-simulated-nav
         idx="nav/onboarding"
         :fund-chain-id="fundChainId"
+        :loading="isFetchingNavMethods"
         :fund-address="fundSettings?.fundAddress"
         :safe-address="fundSettings?.safe"
         :base-symbol="fundSettings?.baseSymbol"
@@ -109,10 +110,13 @@ import type INAVMethod from "~/types/nav_method";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import {
+  decodeUpdateNavMethods,
   encodeUpdateNavMethods,
   getAllowManagerToUpdateNavProposalData,
 } from "~/composables/nav/navProposal";
 import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
+import { NAVExecutor } from "assets/contracts/NAVExecutor";
+import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 
 const createFundStore = useCreateFundStore();
 const toastStore = useToastStore();
@@ -121,6 +125,7 @@ const web3Store = useWeb3Store();
 const { fundChainId, fundInitCache, fundSettings } = toRefs(createFundStore);
 
 // Data
+const isFetchingNavMethods = ref(false);
 const isLoadingStoreNavMethods = ref(false);
 const isLoadingAllowManagerToUpdateNav = ref(false);
 const isDefineNewMethodDialogOpen = ref(false)
@@ -312,6 +317,50 @@ const methodsAddedFromLibrary = (methods: INAVMethod[]) => {
   handleAddFromLibraryDialog(false);
   toastStore.addToast("Methods added successfully.");
 };
+
+onMounted(() => {
+  getNAVData();
+})
+
+watch(() => fundSettings?.value?.fundAddress, (fundAddress?: string) => {
+  if (fundAddress) {
+    getNAVData();
+  }
+})
+
+const getNAVData = async () => {
+  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId.value);
+  const fundAddress = fundSettings?.value?.fundAddress;
+  if (!fundAddress) return;
+  isFetchingNavMethods.value = true;
+
+  try {
+    const navExecutorContract = web3Store.getCustomContract(
+      fundChainId.value,
+      NAVExecutor.abi,
+      navExecutorAddress,
+    );
+
+    const navMethodsEncoded: string = await web3Store.callWithRetry(
+      fundChainId.value,
+      () =>
+        navExecutorContract.methods.getNAVData(fundAddress).call(),
+    );
+    // Decode NAV methods.
+    const navMethodsData = decodeUpdateNavMethods(navMethodsEncoded);
+
+    // Parse NAV methods.
+    for (const [navMethodIndex, navMethod] of navMethodsData.navUpdateData.entries()) {
+      navMethods.value.push(
+        parseNAVMethod(navMethodIndex, navMethod),
+      );
+    }
+  } catch (error: any) {
+    console.error("Failed loading NAV methods data.", error);
+    toastStore.errorToast("Failed loading NAV methods data. " + error.message);
+  }
+  isFetchingNavMethods.value = false;
+}
 </script>
 
 <style scoped lang="scss">

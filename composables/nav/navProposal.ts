@@ -1,5 +1,5 @@
 import { type AbiFunctionFragment } from "web3";
-import { encodeFunctionCall } from "web3-eth-abi";
+import { decodeFunctionCall, encodeFunctionCall } from "web3-eth-abi";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import type INAVMethod from "~/types/nav_method";
 import { PositionType } from "~/types/enums/position_type";
@@ -102,6 +102,13 @@ export const encodeUpdateNavMethods = (
   console.log("encodedNavUpdateEntries: ", encodedNavUpdateEntries);
   return encodedNavUpdateEntries;
 }
+
+export const decodeUpdateNavMethods = (
+  encodedNavMethods: string,
+): any => decodeFunctionCall(
+  updateNavABI as AbiFunctionFragment,
+  encodedNavMethods,
+)
 
 
 export const getNavMethodsProposalData = (
