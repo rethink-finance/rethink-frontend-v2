@@ -10,6 +10,7 @@ import { clearLocalStorageItem } from "~/composables/localStorage";
 
 interface IState {
   fundInitCache?: IFundInitCache;
+  askToSaveDraftBeforeRouteLeave: boolean;
 }
 
 
@@ -18,6 +19,7 @@ export const useCreateFundStore = defineStore({
   id: "createFund",
   state: (): IState => ({
     fundInitCache: undefined,
+    askToSaveDraftBeforeRouteLeave: true,
   }),
   getters: {
     accountStore(): any {

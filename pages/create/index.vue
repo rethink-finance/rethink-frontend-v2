@@ -209,6 +209,7 @@ const createFundStore = useCreateFundStore();
 const {
   fundChainId,
   fundInitCache,
+  askToSaveDraftBeforeRouteLeave,
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
 } = toRefs(createFundStore);
@@ -691,7 +692,7 @@ const stepperEntry = ref(initStepperEntry());
 
 // Watchers
 watch(stepperEntry.value, (newVal) => {
-  console.log("stepperEntry changedy", newVal);
+  console.log("stepperEntry changes", newVal);
 });
 
 watch(() => accountStore.activeAccountAddress, () => {
@@ -703,8 +704,15 @@ watch(() => accountStore.activeAccountAddress, () => {
 
 // Lifecycle Hooks
 onBeforeRouteLeave((to, from, next) => {
-  saveChangesDialog.value = true; // show the dialog
-  nextRouteResolve = next; // store the resolve function for later
+  if (askToSaveDraftBeforeRouteLeave.value) {
+    saveChangesDialog.value = true; // show the dialog
+    nextRouteResolve = next; // store the resolve function for later
+  } else {
+    // Reset askToSaveDraftBeforeRouteLeave value.
+    askToSaveDraftBeforeRouteLeave.value = true;
+
+    if (next) next();
+  }
 });
 </script>
 

@@ -66,7 +66,11 @@ const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
 
-const { fundChainId, fundSettings } = toRefs(createFundStore);
+const {
+  fundChainId,
+  fundSettings,
+  askToSaveDraftBeforeRouteLeave,
+} = storeToRefs(createFundStore);
 const { navigateToFundDetails } = usePageNavigation();
 
 const isFetchingNewlyCreatedFundSettings = ref(false);
@@ -74,7 +78,7 @@ const isFinalizingFundCreation = ref(false);
 const isFundCreateFinalized = ref(false);
 
 const finalizeCreateFund = async () => {
-  console.warn("finalizeFundCreation");
+  console.warn("finalizeCreateFund");
   if (!fundChainId.value) {
     return toastStore.errorToast("Fund chain ID not set.")
   }
@@ -141,13 +145,16 @@ const navigateToFundDetailsAfterFinalizedSuccessfully = async () => {
   console.log("fundSettingsData", fundSettingsData);
 
   // If fund address is set already in the fund settings, it means that
-  // node has data already and we can redirect to fund details.
+  // node has data already, and we can redirect to fund details.
   if (isZeroAddress(fundSettingsData?.fundAddress)) {
     // Sleep for 1 second before continuing
     await new Promise((resolve) => setTimeout(resolve, 1000));
     await navigateToFundDetailsAfterFinalizedSuccessfully();
   } else {
     isFetchingNewlyCreatedFundSettings.value = false;
+
+    // Disable guard when leaving fund create to not ask for saving draft.
+    askToSaveDraftBeforeRouteLeave.value = false;
 
     // Redirect to fund details page.
     navigateToFundDetails(

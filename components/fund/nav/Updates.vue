@@ -56,7 +56,7 @@ export default defineComponent({
   setup() {
     const fundStore = useFundStore();
     const actionStateStore = useActionStateStore();
-    const { getFormattedBaseTokenValue } = toRefs(fundStore);
+    const { getFormattedBaseTokenValue } = storeToRefs(fundStore);
     return { fundStore, actionStateStore, getFormattedBaseTokenValue };
   },
   computed:{
