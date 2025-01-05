@@ -90,7 +90,6 @@ async function processFundNavData(
   const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
   const fund = fundsStore.chainFunds[chainId]?.[fundIndex];
-  
 
   for (const [
     navUpdateIndex,
@@ -147,7 +146,7 @@ async function processFundNavData(
   if (fund) {
     fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
       lastNavUpdate?.entries,
-      lastNavUpdate
+      lastNavUpdate,
     );
 
     fund.lastNAVUpdateTotalNAV = navUpdates.length

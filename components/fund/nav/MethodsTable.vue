@@ -71,7 +71,7 @@
 
     <template #[`item.positionType`]="{ value, item }">
       <UiPositionTypeBadge
-        :value="item.displayPositionType"
+        :value="item.displayPositionType || item.positionType"
         :disabled="item.deleted || item.isAlreadyUsed"
       />
     </template>
@@ -210,7 +210,7 @@
               v-if="!isBaseTokenBalanceMethod(item)"
               ref="form"
               v-model="formIsValid"
-              :disabled="isMethodEditable(item) === false"
+              :disabled="!isMethodEditable(item)"
             >
               <v-row>
                 <v-col cols="12" sm="6">
@@ -247,7 +247,7 @@
                       v-model="navEntry.positionType"
                       group
                       mandatory
-                      :disabled="isMethodEditable(item) === false"
+                      :disabled="!isMethodEditable(item)"
                     >
                       <v-btn
                         v-for="positionType in creatablePositionTypes"
@@ -652,7 +652,7 @@ export default defineComponent({
         (this.totalNavMethodsSimulatedNAV || 0n) +
         (BigInt(this.fundContractBaseTokenBalance) || 0n) +
         (BigInt(this.safeContractBaseTokenBalance) || 0n) +
-        (BigInt(this.feeBalance) || 0n) ?? 0n;
+        (BigInt(this.feeBalance) || 0n);
       return this.fundStore.getFormattedBaseTokenValue(totalNAV);
     },
     formattedTotalLastNAV() {
@@ -689,7 +689,6 @@ export default defineComponent({
           positionName: "OIV Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
-          displayPositionType:  PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
           simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
           isRethinkPosition: true,
@@ -702,7 +701,6 @@ export default defineComponent({
           positionName: "Safe Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
-          displayPositionType:  PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetSafeBal,
           simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
           isRethinkPosition: true,
@@ -715,7 +713,6 @@ export default defineComponent({
           positionName: "Fees Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
-          displayPositionType:  PositionType.Liquid,
           pastNavValue: this.navParts?.feeBal,
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
@@ -725,25 +722,11 @@ export default defineComponent({
 
       return [
         ...methods,
-        ...this.methods.map(method => {
-          // NOTE: this is a UI hack around displaying nested rethink structures
-          // inside PositionType.Composable types
-          if (method.positionType === PositionType.Composable) {
-            if (method.details.composable[0].functionSignatures.includes("illiquidCalc")) {
-              method.displayPositionType = PositionType.Illiquid;
-            } else if (method.details.composable[0].functionSignatures.includes("liquidCalc")) {
-              method.displayPositionType = PositionType.Liquid;
-            } else {
-              method.displayPositionType = method.positionType;
-            }
-          } else {
-            method.displayPositionType = method.positionType;
-          }
-          return {
-            ...method,
-            isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
-          }
+        ...this.methods.map(method => ({
+          ...method,
+          isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
         }),
+        ),
       ];
     },
   },
@@ -773,7 +756,7 @@ export default defineComponent({
       // if newExpanded has a row, keep only the latest one; otherwise, clear the array
       this.expanded = newExpanded.length ? [newExpanded[newExpanded.length - 1]] : [];
     },
-    onRowClick(row: any, item: any) {
+    onRowClick(_: any, item: any) {
       const internalItem = item?.item || undefined
 
       if(!internalItem) return
