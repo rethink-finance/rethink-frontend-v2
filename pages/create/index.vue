@@ -206,7 +206,12 @@ const accountStore = useAccountStore();
 const createFundStore = useCreateFundStore();
 
 // Data
-const { fundChainId, fundInitCache } = toRefs(createFundStore);
+const {
+  fundChainId,
+  fundInitCache,
+  onboardingWhitelistLocalStorageKey,
+  onboardingStepperEntryLocalStorageKey,
+} = toRefs(createFundStore);
 const step = ref(1);
 
 // TODO: add validation functionality
@@ -254,11 +259,7 @@ const fetchFundCache = async () => {
       accountStore.activeAccountAddress,
     );
 
-    console.warn("settings", fundSettings);
-
     for (const step of stepperEntry.value) {
-      console.warn("[STEP]", step.name, step.fields);
-
       for (const field of step.fields || []) {
         if ("fields" in field) {
           // Field is of type IFieldGroup, has more subfields.
@@ -661,12 +662,7 @@ const initStepperEntry = () => {
   return generateSteps(lsStepperEntry);
 };
 
-const onboardingWhitelistLocalStorageKey = computed(() =>
-  "onboardingWhitelist_" + fundChainId.value || "undefined",
-)
-const onboardingStepperEntryLocalStorageKey = computed(() =>
-  "onboardingStepperEntry_" + fundChainId.value || "undefined",
-)
+
 const saveDraftToLocalStorage = () => {
   setLocalStorageItem(
     onboardingStepperEntryLocalStorageKey.value,

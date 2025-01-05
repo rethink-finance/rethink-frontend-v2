@@ -6,6 +6,7 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFundSettings from "~/types/fund_settings";
 import type { IFundInitCache } from "~/types/fund_settings";
+import { clearLocalStorageItem } from "~/composables/localStorage";
 
 interface IState {
   fundInitCache?: IFundInitCache;
@@ -31,6 +32,12 @@ export const useCreateFundStore = defineStore({
     fundChainId(): string {
       return this.fundInitCache?.fundSettings?.chainId || "";
     },
+    onboardingWhitelistLocalStorageKey(): string {
+      return "onboardingWhitelist_" + this.fundChainId || "undefined";
+    },
+    onboardingStepperEntryLocalStorageKey(): string {
+      return "onboardingStepperEntry_" + this.fundChainId || "undefined";
+    },
     fundSettings(): IFundSettings | undefined {
       return this.fundInitCache?.fundSettings;
     },
@@ -46,6 +53,10 @@ export const useCreateFundStore = defineStore({
     },
     clearFundInitCache() {
       this.fundInitCache = undefined;
+    },
+    clearFundLocalStorage() {
+      clearLocalStorageItem(this.onboardingWhitelistLocalStorageKey);
+      clearLocalStorageItem(this.onboardingStepperEntryLocalStorageKey);
     },
   },
 });

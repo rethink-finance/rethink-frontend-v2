@@ -124,19 +124,6 @@ export const fetchFundCacheAction = async (
     0,
     [205, undefined],
   ) || {};
-  const fundContract = web3Store.getCustomContract(
-    fundChainId,
-    GovernableFund.abi,
-    fundInitCache.fundContractAddr,
-  );
-
-  console.log("GET fund settings")
-  const sett = await web3Store.callWithRetry(
-    fundChainId,
-    () =>
-      fundContract.methods.getFundSettings().call(),
-  );
-  console.log("fund settings2:", sett)
 
   // Parse Metadata JSON string
   fundInitCache.governorData = await fetchGovernorData(fundChainId, fundInitCache?.fundSettings?.governor);
@@ -174,8 +161,7 @@ export const fetchFundCacheAction = async (
     baseSymbol,
   };
 
-
   createFundStore.fundInitCache = fundInitCache;
-  console.log("fund init cache", createFundStore.fundInitCache);
+  console.log("fund init cache", toRaw(createFundStore.fundInitCache));
   return fundInitCache;
 };
