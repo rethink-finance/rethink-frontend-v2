@@ -127,8 +127,8 @@ export const fetchSimulatedNAVMethodValueAction = async (
 
     // console.log("navCalculationMethod:", navCalculationMethod);
     // console.log("callData:", callData);
-    const calldata = navCalculatorContract.methods[navCalculationMethod](...callData).encodeABI();
-    console.log("Calldata being sent:", calldata);
+    // const calldata = navCalculatorContract.methods[navCalculationMethod](...callData).encodeABI();
+    // console.debug(Simulate calldata being sent:", calldata);
     try {
       const simulatedVal: bigint = await web3Store.callWithRetry(
         fundChainId,

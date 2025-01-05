@@ -12,7 +12,7 @@
             v-model="field.isToggleOn"
             color="primary"
             hide-details
-            :disabled="isFundInitialized && step < 6"
+            :disabled="isStepDisabled"
           />
         </div>
 
@@ -25,7 +25,7 @@
             <UiField
               v-model="subField.value"
               :field="subField"
-              :is-disabled="!field.isToggleOn || (isFundInitialized && step < 6)"
+              :is-disabled="!field.isToggleOn || isStepDisabled"
             />
           </v-col>
         </div>
@@ -34,7 +34,7 @@
         <UiField
           v-model="field.value"
           :field="field"
-          :is-disabled="isFundInitialized && step < 6"
+          :is-disabled="isStepDisabled"
         />
       </div>
     </v-col>
@@ -59,6 +59,9 @@ const props = defineProps({
   },
 });
 
+const isStepDisabled = computed(() =>
+  props.isFundInitialized && props.step > 1 && props.step < 7,
+)
 </script>
 
 <style scoped lang="scss">

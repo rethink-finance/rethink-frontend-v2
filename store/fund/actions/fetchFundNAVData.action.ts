@@ -31,7 +31,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
 
     fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
       lastNavUpdate?.entries,
-      lastNavUpdate
+      lastNavUpdate,
     );
 
     fund.lastNAVUpdateTotalNAV = navUpdates.length

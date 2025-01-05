@@ -1,14 +1,13 @@
 import { useFundStore } from "../fund.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 
 export const postUpdateNAVAction = async (): Promise<any> => {
-  const web3Store = useWeb3Store();
   const fundStore = useFundStore();
 
   try {
-    const navExecutorAddr = web3Store.NAVExecutorBeaconProxyAddress(fundStore.selectedFundChain);
+    const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundStore.selectedFundChain);
 
-    if (!navExecutorAddr) {
+    if (!navExecutorAddress) {
       fundStore.toastStore.errorToast(
         "The NAV Executor address is not available for this network. Please contact the Rethink Finance support.",
       );
@@ -16,7 +15,7 @@ export const postUpdateNAVAction = async (): Promise<any> => {
     }
 
     return await fundStore.fundContract
-      .send("executeNAVUpdate", {}, navExecutorAddr)
+      .send("executeNAVUpdate", {}, navExecutorAddress)
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         fundStore.toastStore.warningToast(

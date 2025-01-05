@@ -118,7 +118,7 @@ const {
   shouldUserWaitSettlementOrCancelRedemption,
   userDepositRequestExists,
   userRedemptionRequestExists,
-} = toRefs(fundStore);
+} = storeToRefs(fundStore);
 
 const isLoadingFetchUserFundDepositRedemptionRequestsAction = computed(() =>
   actionStateStore.isActionState(

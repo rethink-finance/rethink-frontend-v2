@@ -115,7 +115,7 @@ const {
   shouldUserWaitSettlementOrCancelDeposit,
   userDepositRequest,
   userDepositRequestExists,
-} = toRefs(fundStore);
+} = storeToRefs(fundStore);
 
 const loadingRequestDeposit = ref(false);
 const loadingApproveAllowance = ref(false);

@@ -112,7 +112,9 @@ import {
   useVueTable,
 } from "@tanstack/vue-table";
 import { onMounted, ref, watch } from "vue";
-const router = useRouter();
+import { usePageNavigation } from "~/composables/routing/usePageNavigation";
+
+const { navigateToFundDetails } = usePageNavigation();
 
 const props = defineProps({
   captionSide: {
@@ -222,9 +224,11 @@ const filterTable = (value: any) => {
   filtering.value = value;
 };
 
-const navigateFundDetails = (row: any) => {
-  router.push(`/details/${row.original.chainId}-${row.original.fundToken.symbol}-${row.original.address}`)
-};
+const navigateFundDetails = (row: any) => navigateToFundDetails(
+  row.original.chainId,
+  row.original.fundToken.symbol,
+  row.original.address,
+);
 
 // const gotoPage = (pageIndex: any) => {
 //   table.setPageIndex(pageIndex);

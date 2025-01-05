@@ -96,8 +96,8 @@ const props = defineProps({
   },
 });
 const fundsStore = useFundsStore();
-const { allNavMethods } = toRefs(fundsStore);
-const { uniqueNavMethods } = toRefs(fundsStore);
+const { allNavMethods } = storeToRefs(fundsStore);
+const { uniqueNavMethods } = storeToRefs(fundsStore);
 
 // Data
 const loadingAllNavMethods = ref(false);

@@ -98,9 +98,6 @@ export const useWeb3Store = defineStore({
     };
   },
   actions: {
-    NAVExecutorBeaconProxyAddress(chainId: string): string {
-      return rethinkContractAddresses.NAVExecutorBeaconProxy[chainId];
-    },
     safeMultiSendCallOnlyToAddress(chainId: string): string {
       return SafeMultiSendCallOnlyAddresses[
         parseInt(chainId).toString()

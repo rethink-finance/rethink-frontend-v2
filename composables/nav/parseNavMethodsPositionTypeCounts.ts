@@ -23,10 +23,9 @@ export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[], nav
 
   if (navMethods) {
     for (const navMethod of navMethods) {
-      //NOTE: at the time parseNavMethodsPositionTypeCounts gets executed all navMethod.pastNavValue are undefined
-
-      if(navMethod.positionType === PositionType.Composable) {
-        if(navMethod.details.composable[0].functionSignatures.includes("illiquidCalc")) {
+      // NOTE: at the time parseNavMethodsPositionTypeCounts gets executed all navMethod.pastNavValue are undefined
+      if (navMethod.positionType === PositionType.Composable) {
+        if (navMethod.details.composable[0].functionSignatures.includes("illiquidCalc")) {
           counts[PositionType.Illiquid] += navMethod.pastNavValue || 0n;
         } else if (navMethod.details.composable[0].functionSignatures.includes("liquidCalc")) {
           counts[PositionType.Liquid] += navMethod.pastNavValue || 0n;
@@ -34,7 +33,7 @@ export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[], nav
           counts[navMethod.positionType] += navMethod.pastNavValue || 0n;
         }
       } else {
-          counts[navMethod.positionType] += navMethod.pastNavValue || 0n;
+        counts[navMethod.positionType] += navMethod.pastNavValue || 0n;
       }
     }
   }
@@ -44,10 +43,10 @@ export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[], nav
 
     console.log(counts[positionType]);
     if (navUpdate && navUpdate.navParts) {
-      //factor in base asset of oiv
+      // factor in base asset of oiv
       counts[PositionType.Liquid] += (
-        (navUpdate.navParts.baseAssetOIVBal || 0n) + 
-        (navUpdate.navParts.feeBal || 0n) + 
+        (navUpdate.navParts.baseAssetOIVBal || 0n) +
+        (navUpdate.navParts.feeBal || 0n) +
         (navUpdate.navParts.baseAssetSafeBal || 0n)
       );
     }

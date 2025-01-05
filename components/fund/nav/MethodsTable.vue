@@ -71,7 +71,7 @@
 
     <template #[`item.positionType`]="{ value, item }">
       <UiPositionTypeBadge
-        :value="item.displayPositionType"
+        :value="item.displayPositionType || item.positionType"
         :disabled="item.deleted || item.isAlreadyUsed"
       />
     </template>
@@ -210,7 +210,7 @@
               v-if="!isBaseTokenBalanceMethod(item)"
               ref="form"
               v-model="formIsValid"
-              :disabled="isMethodEditable(item) === false"
+              :disabled="!isMethodEditable(item)"
             >
               <v-row>
                 <v-col cols="12" sm="6">
@@ -247,7 +247,7 @@
                       v-model="navEntry.positionType"
                       group
                       mandatory
-                      :disabled="isMethodEditable(item) === false"
+                      :disabled="!isMethodEditable(item)"
                     >
                       <v-btn
                         v-for="positionType in creatablePositionTypes"
@@ -652,7 +652,7 @@ export default defineComponent({
         (this.totalNavMethodsSimulatedNAV || 0n) +
         (BigInt(this.fundContractBaseTokenBalance) || 0n) +
         (BigInt(this.safeContractBaseTokenBalance) || 0n) +
-        (BigInt(this.feeBalance) || 0n) ?? 0n;
+        (BigInt(this.feeBalance) || 0n);
       return this.fundStore.getFormattedBaseTokenValue(totalNAV);
     },
     formattedTotalLastNAV() {
@@ -684,27 +684,11 @@ export default defineComponent({
     computedMethods() {
       const methods = [];
 
-      //NOTE: this is ui hack around displaying nested rethink structures inside of PositionType.Composable types
-      for(let i=0; i< this.methods.length; i++){
-        if(this.methods[i].positionType === PositionType.Composable) {
-          if(this.methods[i].details.composable[0].functionSignatures.includes("illiquidCalc")) {
-            this.methods[i].displayPositionType = PositionType.Illiquid;
-          } else if (this.methods[i].details.composable[0].functionSignatures.includes("liquidCalc")) {
-            this.methods[i].displayPositionType = PositionType.Liquid;
-          } else {
-            this.methods[i].displayPositionType = this.methods[i].positionType;
-          }
-        } else {
-          this.methods[i].displayPositionType = this.methods[i].positionType;
-        }
-      }
-
       if (this.showBaseTokenBalances) {
         methods.push({
           positionName: "OIV Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
-          displayPositionType:  PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
           simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
           isRethinkPosition: true,
@@ -717,7 +701,6 @@ export default defineComponent({
           positionName: "Safe Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
-          displayPositionType:  PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetSafeBal,
           simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
           isRethinkPosition: true,
@@ -730,19 +713,20 @@ export default defineComponent({
           positionName: "Fees Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
-          displayPositionType:  PositionType.Liquid,
           pastNavValue: this.navParts?.feeBal,
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
           detailsHash: "-3",
         } as any)
       }
+
       return [
         ...methods,
         ...this.methods.map(method => ({
           ...method,
           isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
-        })),
+        }),
+        ),
       ];
     },
   },
@@ -772,7 +756,7 @@ export default defineComponent({
       // if newExpanded has a row, keep only the latest one; otherwise, clear the array
       this.expanded = newExpanded.length ? [newExpanded[newExpanded.length - 1]] : [];
     },
-    onRowClick(row: any, item: any) {
+    onRowClick(_: any, item: any) {
       const internalItem = item?.item || undefined
 
       if(!internalItem) return
@@ -828,7 +812,7 @@ export default defineComponent({
 
       return "";
     },
-    // only alow edit if the method is not rethink position and not one of the predefined positions
+    // only allow edit if the method is not rethink position and not one of the predefined positions
     isMethodEditable(navEntry: INAVMethod) {
       const isManageNavMethodsPage = this.idx === "nav/manage/index" || this.idx === "nav/onboarding";
 

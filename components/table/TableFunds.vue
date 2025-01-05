@@ -80,20 +80,20 @@
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue/dist/iconify.js";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatPercent,
   formatTokenValue,
 } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
+import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 
-const web3Store = useWeb3Store();
+const { getFundDetailsUrl } = usePageNavigation();
 const router = useRouter();
 
-const props = defineProps({
+defineProps({
   items: {
     type: Array as () => IFund[],
     default: () => [],
@@ -125,12 +125,12 @@ const headers: any = computed(() => [
     key: "lastNAVUpdateTotalNAV",
     align: "end",
   },
- // {
- //   title: "Lastest NAV Date",
- //   key: "lastNavUpdateTime",
- //   value: (v: IFund) => v.lastNavUpdateTime,
- //   align: "end",
- // },
+  // {
+  //   title: "Lastest NAV Date",
+  //   key: "lastNavUpdateTime",
+  //   value: (v: IFund) => v.lastNavUpdateTime,
+  //   align: "end",
+  // },
   {
     title: "Inception",
     key: "inceptionDate",
@@ -179,7 +179,11 @@ const icon = (chainShort: string) => {
 };
 
 const navigateFundDetails = (event: any, row: any) => {
-  const fundDetailsUrl = `/details/${row.item.chainId}-${row.item.fundToken.symbol}-${row.item.address}`;
+  const fundDetailsUrl = getFundDetailsUrl(
+    row.item.chainId,
+    row.item.fundToken.symbol,
+    row.item.address,
+  );
   console.log(event)
   // Check if the middle mouse button or a modifier key (e.g., Ctrl/Command) is pressed
   if (event.button === 1 || event.metaKey || event.ctrlKey) {

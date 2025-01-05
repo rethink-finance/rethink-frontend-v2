@@ -95,7 +95,7 @@ const loadingRedeem = ref(false);
 const {
   shouldUserWaitSettlementOrCancelRedemption,
   userRedemptionRequestExists,
-} = toRefs(fundStore);
+} = storeToRefs(fundStore);
 
 watch(
   () => tokenValue.value,

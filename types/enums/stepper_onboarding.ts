@@ -1,4 +1,4 @@
-import { networks } from "~/store/web3/networksMap";
+import { networkChoices, networks } from "~/store/web3/networksMap";
 import {
   FundSettingsStepFieldsMap,
   StepSections,
@@ -8,6 +8,7 @@ import { InputType } from "~/types/enums/input_type";
 import type INetwork from "~/types/network";
 
 export enum OnboardingStep {
+    Chain = "chain",
     Basics = "basics",
     Fees = "fees",
     Whitelist = "whitelist",
@@ -25,12 +26,16 @@ export interface IOnboardingStep {
   fields?: IField[];
 }
 
-export type OnboardingInitializingSteps = Exclude<OnboardingStep, "permissions" | "navMethods" | "whitelist" | "finalize">;
+export type OnboardingInitializingSteps = Exclude<OnboardingStep, "chain" | "permissions" | "navMethods" | "whitelist" | "finalize">;
 export type FieldsMapType = Record<OnboardingInitializingSteps, IField[] | IFieldGroup[]>;
 
 
 // 1. define OnboardingStepMap with the steps
 export const OnboardingStepMap: IOnboardingStep[] = [
+  {
+    key: OnboardingStep.Chain,
+    name: "Chain",
+  },
   {
     key: OnboardingStep.Basics,
     name: "Basics",
@@ -67,26 +72,9 @@ export const OnboardingStepMap: IOnboardingStep[] = [
 
 
 // 2. define the fields for each section
-const chainIdField: IField = {
-  label: "Fund Chain",
-  key: "chainId",
-  type: InputType.Select,
-  placeholder: "",
-  rules: [formRules.required],
-  isEditable: true,
-  cols: 3,
-  choices: networks.map((network: INetwork) => (
-    {
-      value: network.chainId,
-      title: network.chainName,
-    }
-  )),
-};
-
 // TODO rename to CreateFundStepFieldsMap
 const OnboardingFieldsMap: FieldsMapType = {
   [OnboardingStep.Basics]: [
-    chainIdField,
     // Take Basic fields and make them editable when creating new fund.
     ...(FundSettingsStepFieldsMap[StepSections.Basics]).map(
       (field) => {

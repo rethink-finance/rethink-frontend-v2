@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { encodeParameter } from "web3-eth-abi";
 import type INAVMethod from "~/types/nav_method";
-import { NAVEntryTypeToPositionTypeMap } from "~/types/enums/position_type";
+import { NAVEntryTypeToPositionTypeMap, PositionType } from "~/types/enums/position_type";
 import { cleanComplexWeb3Data, formatJson } from "~/composables/utils";
 
 /**
@@ -171,9 +171,22 @@ export const parseNAVMethod = (index: number, navMethodData: Record<string, any>
   const detailsJson = formatJson(details);
   // console.log("DETAILS json 2 ", detailsJson)
 
+
+  // NOTE: this is a UI hack around displaying nested rethink structures
+  // inside PositionType.Composable types.
+  let displayPositionType = positionType;
+  if (positionType === PositionType.Composable) {
+    if (details.composable[0].functionSignatures.includes("illiquidCalc")) {
+      displayPositionType = PositionType.Illiquid;
+    } else if (details.composable[0].functionSignatures.includes("liquidCalc")) {
+      displayPositionType = PositionType.Liquid;
+    }
+  }
+
   return {
     index,
     positionType,
+    displayPositionType,
     positionName: description?.positionName,
     valuationSource: description?.valuationSource,
     details,

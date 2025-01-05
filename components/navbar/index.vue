@@ -50,45 +50,12 @@
 
         <ClientOnly>
           <div class="d-flex">
-            <v-select
+            <UiSelectChainButton
               v-if="accountStore.isConnected"
               v-model="selectedChainId"
-              v-model:menu="isSelectInputActive"
-              class="select_network"
-              density="compact"
-              :bg-color="selectedChainId ? '' : 'error'"
-              :items="networks"
               :loading="accountStore.isSwitchingNetworks"
-              item-title="chainName"
-              item-value="chainId"
-            >
-              <template #selection="{ item }">
-                <Icon
-                  :icon="item.raw.icon?.name ?? 'octicon:question-16'"
-                  :color="item.raw.icon?.color"
-                  class="select_item__icon mr-2"
-                />
-                <v-list-item-title>
-                  {{ item.raw.chainName ?? item.raw }}
-                </v-list-item-title>
-              </template>
-              <template #item="{ item }">
-                <div
-                  class="select_item"
-                  :class="{'select_item--active': item.raw.chainId === selectedChainId}"
-                  @click="switchNetwork(item.raw.chainId)"
-                >
-                  <Icon
-                    :icon="item.raw.icon?.name"
-                    :color="item.raw.icon?.color"
-                    class="select_item__icon"
-                  />
-                  <div>
-                    {{ item.raw.chainName }}
-                  </div>
-                </div>
-              </template>
-            </v-select>
+              @selected-chain-changed="switchNetwork"
+            />
             <v-btn
               class="connect_wallet_btn nav-link px-4"
               :class="{'connect_wallet_btn--connected': connectedWallet}"
@@ -146,12 +113,8 @@
 
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import type INetwork from "~/types/network";
 import type IRoute from "~/types/route";
-import { networks } from "~/store/web3/networksMap";
 const accountStore = useAccountStore();
-const web3Store = useWeb3Store();
 
 const route = useRoute();
 
@@ -203,7 +166,8 @@ const switchNetwork = async (chainId: string) => {
     isSelectInputActive.value = false;
   } catch (error: any) {
     // Revert the selected value to the previously selected chain.
-    // selectedChainId.value = accountStore.connectedWalletChainId;
+    selectedChainId.value = accountStore.connectedWalletChainId;
+    isSelectInputActive.value = true;
   }
 }
 const isPathActive = (path: string = "", exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);
@@ -344,36 +308,6 @@ const onClickConnect = async () => {
 
   :deep(.v-alert__content) {
     margin: auto;
-  }
-}
-.select_network {
-  min-width: 9rem;
-
-  :deep(.v-input__details) {
-    display: none;
-  }
-}
-.select_item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: .5rem;
-  padding: .5rem;
-  cursor: pointer;
-
-  transition: background-color 0.3s ease;
-
-  &:hover {
-    background-color: $color-hover;
-  }
-
-  &--active {
-    background-color: $color-border-light;
-  }
-
-  &__icon{
-    width: 1.5rem;
-    height: 1.5rem;
   }
 }
 </style>

@@ -4,11 +4,13 @@ import { useActionState } from "../actionState.store";
 import { fetchFundCacheAction } from "./actions/fetchFundCache.action";
 import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type IFundSettings from "~/types/fund_settings";
 import type { IFundInitCache } from "~/types/fund_settings";
+import { clearLocalStorageItem } from "~/composables/localStorage";
 
 interface IState {
-  chainId: string;
   fundInitCache?: IFundInitCache;
+  askToSaveDraftBeforeRouteLeave: boolean;
 }
 
 
@@ -16,9 +18,8 @@ interface IState {
 export const useCreateFundStore = defineStore({
   id: "createFund",
   state: (): IState => ({
-    // TODO get this chain ID from localStorage actually
-    chainId: "0xa4b1",
     fundInitCache: undefined,
+    askToSaveDraftBeforeRouteLeave: true,
   }),
   getters: {
     accountStore(): any {
@@ -30,9 +31,21 @@ export const useCreateFundStore = defineStore({
     web3Store(): any {
       return useWeb3Store();
     },
+    fundChainId(): string {
+      return this.fundInitCache?.fundSettings?.chainId || "";
+    },
+    onboardingWhitelistLocalStorageKey(): string {
+      return "onboardingWhitelist_" + this.fundChainId || "undefined";
+    },
+    onboardingStepperEntryLocalStorageKey(): string {
+      return "onboardingStepperEntry_" + this.fundChainId || "undefined";
+    },
+    fundSettings(): IFundSettings | undefined {
+      return this.fundInitCache?.fundSettings;
+    },
   },
   actions: {
-    fetchFundCacheAction(
+    fetchFundCache(
       fundChainId: string,
       deployerAddress: string,
     ): Promise<void> {
@@ -42,6 +55,10 @@ export const useCreateFundStore = defineStore({
     },
     clearFundInitCache() {
       this.fundInitCache = undefined;
+    },
+    clearFundLocalStorage() {
+      clearLocalStorageItem(this.onboardingWhitelistLocalStorageKey);
+      clearLocalStorageItem(this.onboardingStepperEntryLocalStorageKey);
     },
   },
 });

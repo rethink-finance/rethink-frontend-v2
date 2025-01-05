@@ -22,7 +22,7 @@ const toastStore = useToastStore();
 const router = useRouter();
 
 // Data
-const { selectedFundSlug } = toRefs(fundStore);
+const { selectedFundSlug } = storeToRefs(fundStore);
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
