@@ -129,6 +129,9 @@ const getAllowManagerToSendFundsToFundContractPermission = (
   baseTokenAddress: string,
 ): string[] => {
   const encodedRoleModEntries = [];
+  // transfer(address recipient, uint256 amount)
+  // Parameter of transfer is address which is a static param and is 20 bytes long.
+  // We have to zero pad left 20 bytes to 32 bytes and encode to bytes.
   const byteEncodedFundAddress = encodeParameter(
     "bytes32",
     // 64 hex characters = 32 bytes
@@ -142,8 +145,8 @@ const getAllowManagerToSendFundsToFundContractPermission = (
       baseTokenAddress, // targetAddress, base token contract address
       "0xa9059cbb", // functionSig, transfer
       "0", // paramIndex
-      "0", // paramType
-      "0", // paramComp
+      "0", // paramType -- Static
+      "0", // paramComp -- EqualTo
       byteEncodedFundAddress, // compValue, newly created fund contract address
     ],
   );
@@ -175,8 +178,8 @@ const getAllowManagerToCollectFeesPermission = (
     throw new Error(errorMsg);
   }
   const byteEncodedPoolPerformanceFeeAddress = encodeParameter(
-    "bytes",
-    poolPerformanceFeeAddress,
+    "bytes32",
+    padLeft(poolPerformanceFeeAddress as any, 64),
   );
 
   const encodedScopeParameter = encodeFunctionCall(
@@ -186,8 +189,8 @@ const getAllowManagerToCollectFeesPermission = (
       fundAddress, // targetAddress, OIV contract address
       "0xec68ac8d", // functionSig
       "0", // paramIndex
-      "1", // paramType
-      "0", // paramComp
+      "1", // paramType -- Dynamic
+      "0", // paramComp -- EqualTo
       byteEncodedPoolPerformanceFeeAddress, // compValue, Performance Fee Proxy Contract Address
     ],
   );
