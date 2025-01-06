@@ -130,7 +130,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
 ): string[] => {
   const encodedRoleModEntries = [];
   const byteEncodedFundAddress = encodeParameter(
-    "bytes832",
+    "bytes32",
     // 64 hex characters = 32 bytes
     padLeft(fundInitCache?.value?.fundContractAddr as any, 64),
   );
