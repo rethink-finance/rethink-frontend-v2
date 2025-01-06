@@ -4,7 +4,6 @@ import type { IFundInitCache } from "~/types/fund_settings";
 import { RethinkFundGovernor } from "assets/contracts/RethinkFundGovernor";
 import { formatQuorumPercentage } from "~/composables/formatters";
 import { ERC20 } from "assets/contracts/ERC20";
-import { GovernableFund } from "assets/contracts/GovernableFund";
 
 
 const fetchGovernorData = async (fundChainId: string, governorAddress?: string) => {
@@ -124,6 +123,7 @@ export const fetchFundCacheAction = async (
     0,
     [205, undefined],
   ) || {};
+  console.warn("fundInitCache", fundInitCache)
 
   // Parse Metadata JSON string
   fundInitCache.governorData = await fetchGovernorData(fundChainId, fundInitCache?.fundSettings?.governor);

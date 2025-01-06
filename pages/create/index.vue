@@ -611,7 +611,7 @@ const initializeFund = async() => {
     console.warn("SUBMIT formatted data", formattedData);
 
     await fundFactoryContract
-      .send("createFund", {}, ...formattedData)
+      .send("initCreateFund", {}, ...formattedData)
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
