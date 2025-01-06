@@ -585,7 +585,7 @@ const formatInitializeData = () => {
     ],
     JSON.stringify(formatFundMetaData()),
     0, // feePerformancePeriod, default to 0
-    parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, "managementFeePeriod") as string), // feeManagePeriod
+    parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, "managementFeePeriod") as string) || 0, // feeManagePeriod
   ]
 
   console.log("output", output);
@@ -608,7 +608,7 @@ const initializeFund = async() => {
     }
 
     const formattedData = formatInitializeData();
-    console.log("SUBMIT formatted data", formattedData);
+    console.warn("SUBMIT formatted data", formattedData);
 
     await fundFactoryContract
       .send("createFund", {}, ...formattedData)
