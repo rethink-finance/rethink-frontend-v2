@@ -54,6 +54,9 @@
         :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
         :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
         :fee-balance="Number(fundStore.fund?.feeBalance)"
+        :safe-address="fundStore.fund?.safeAddress"
+        :base-symbol="fundStore.fund?.baseToken.symbol"
+        :base-decimals="fundStore.fund?.baseToken.decimals"
         deletable
         show-summary-row
         show-base-token-balances
