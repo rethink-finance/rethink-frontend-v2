@@ -65,6 +65,7 @@
 
 <script setup lang="ts">
 import { encodeFunctionCall, encodeParameter } from "web3-eth-abi";
+import { padLeft } from "web3-utils";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
@@ -128,7 +129,11 @@ const getAllowManagerToSendFundsToFundContractPermission = (
   baseTokenAddress: string,
 ): string[] => {
   const encodedRoleModEntries = [];
-  const byteEncodedFundAddress = encodeParameter("bytes", fundInitCache?.value?.fundContractAddr);
+  const byteEncodedFundAddress = encodeParameter(
+    "bytes832",
+    // 64 hex characters = 32 bytes
+    padLeft(fundInitCache?.value?.fundContractAddr as any, 64),
+  );
 
   const encodedScopeParameter = encodeFunctionCall(
     proposalRoleModMethodAbiMap.scopeParameter,
