@@ -65,6 +65,7 @@
 
 <script setup lang="ts">
 import { encodeFunctionCall, encodeParameter } from "web3-eth-abi";
+import { padLeft } from "web3-utils";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
@@ -128,7 +129,11 @@ const getAllowManagerToSendFundsToFundContractPermission = (
   baseTokenAddress: string,
 ): string[] => {
   const encodedRoleModEntries = [];
-  const byteEncodedFundAddress = encodeParameter("bytes", fundInitCache?.value?.fundContractAddr);
+  const byteEncodedFundAddress = encodeParameter(
+    "bytes832",
+    // 64 hex characters = 32 bytes
+    padLeft(fundInitCache?.value?.fundContractAddr as any, 64),
+  );
 
   const encodedScopeParameter = encodeFunctionCall(
     proposalRoleModMethodAbiMap.scopeParameter,
@@ -225,18 +230,14 @@ const storePermissions = async () => {
   console.log("roleModAddress", roleModAddress);
   console.log("transactions", toRaw(transactions));
 
-  const { encodedRoleModEntries, targets, gasValues } = prepPermissionsProposalData(
+  const proposalData = prepPermissionsProposalData(
     roleModAddress,
     transactions,
   );
   console.log(
     "storePermissions data:",
     JSON.stringify(
-      [
-        targets,
-        gasValues,
-        encodedRoleModEntries,
-      ],
+      proposalData.encodedRoleModEntries,
       null,
       2,
     ),
@@ -246,11 +247,7 @@ const storePermissions = async () => {
     const _encodedRoleModEntries = getAllowManagerToSendFundsToFundContractPermission(
       fundInitCacheSettings?.baseToken,
     );
-    for (let i = 0; i < _encodedRoleModEntries.length; i++) {
-      gasValues.push(0);
-      targets.push(roleModAddress);
-    }
-    encodedRoleModEntries.push(..._encodedRoleModEntries);
+    proposalData.encodedRoleModEntries.push(..._encodedRoleModEntries);
   }
 
   // Add allowManagerToCollectFees permissions if switch button is enabled.
@@ -258,25 +255,15 @@ const storePermissions = async () => {
     const _encodedRoleModEntries = getAllowManagerToCollectFeesPermission(
       fundInitCacheSettings?.fundAddress,
     );
-
-    for (let i = 0; i < _encodedRoleModEntries.length; i++) {
-      gasValues.push(0);
-      targets.push(roleModAddress);
-    }
-    encodedRoleModEntries.push(..._encodedRoleModEntries);
+    proposalData.encodedRoleModEntries.push(..._encodedRoleModEntries);
   }
 
-  const permissionsData = [
-    targets,
-    gasValues,
-    encodedRoleModEntries,
-  ];
   const fundFactoryContract = web3Store.chainContracts[fundChainId.value]?.fundFactoryContract;
 
   try {
-    console.log("SUBMIT PERMISSIONS DATA", permissionsData);
+    console.log("SUBMIT PERMISSIONS DATA", proposalData.encodedRoleModEntries);
     await fundFactoryContract
-      .send("submitPermissions", {}, ...permissionsData)
+      .send("submitPermissions", {}, proposalData.encodedRoleModEntries)
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
