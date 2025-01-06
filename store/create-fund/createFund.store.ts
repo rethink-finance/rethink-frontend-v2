@@ -48,7 +48,7 @@ export const useCreateFundStore = defineStore({
     fetchFundCache(
       fundChainId: string,
       deployerAddress: string,
-    ): Promise<void> {
+    ): Promise<IFundInitCache | undefined> {
       return useActionState("fetchFundCacheAction", () =>
         fetchFundCacheAction(fundChainId, deployerAddress),
       );

@@ -4,6 +4,7 @@ import type { IFundInitCache } from "~/types/fund_settings";
 import { RethinkFundGovernor } from "assets/contracts/RethinkFundGovernor";
 import { formatQuorumPercentage } from "~/composables/formatters";
 import { ERC20 } from "assets/contracts/ERC20";
+import { isZeroAddress } from "~/composables/addressUtils";
 
 
 const fetchGovernorData = async (fundChainId: string, governorAddress?: string) => {
@@ -100,7 +101,7 @@ const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) 
 export const fetchFundCacheAction = async (
   fundChainId: string,
   deployerAddress: string,
-): Promise<IFundInitCache> => {
+): Promise<IFundInitCache | undefined> => {
   const createFundStore = useCreateFundStore();
   const web3Store = useWeb3Store();
   // Clear the existing fund init cache.
@@ -124,6 +125,11 @@ export const fetchFundCacheAction = async (
     [205, undefined],
   ) || {};
   console.warn("fundInitCache", fundInitCache)
+
+  if (isZeroAddress(fundInitCache.fundContractAddr)) {
+    console.log("Fund cache doesn't exist.");
+    return undefined;
+  }
 
   // Parse Metadata JSON string
   fundInitCache.governorData = await fetchGovernorData(fundChainId, fundInitCache?.fundSettings?.governor);
