@@ -621,8 +621,9 @@ const initializeFund = async() => {
         console.log("receipt: ", receipt);
         if (receipt.status) {
           toastStore.successToast("Fund initialization was successful.");
+          // TODO start fetching fund init cache
         } else {
-          toastStore.errorToast("Fund initialization binantransaction has failed. Please contact the Rethink Finance community for support.");
+          toastStore.errorToast("Fund initialization transaction has failed. Please contact the Rethink Finance community for support.");
         }
       }).on("error", (error: any) => {
         console.error("error when initializing", error);
