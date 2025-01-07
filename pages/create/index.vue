@@ -294,7 +294,7 @@ const fetchFundInitCache = async () => {
 
 const isLoadingFetchFundCache = computed(() =>
   actionStateStore.isActionState(
-    "fetchFundCacheAction",
+    "fetchFundInitCacheAction",
     ActionState.Loading,
   ),
 );
