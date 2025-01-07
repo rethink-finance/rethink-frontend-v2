@@ -111,7 +111,7 @@ const delegatedPermissionsEntry = ref([
 const gnosisPermissionsUrl = computed(() => {
   if (!fundChainId.value) return "";
 
-  getGnosisPermissionsUrl(
+  return getGnosisPermissionsUrl(
     networksMap[fundChainId.value]?.chainShort || "",
     fundInitCache?.value?.rolesModifier || "",
   );
