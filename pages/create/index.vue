@@ -204,6 +204,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { IField } from "~/types/enums/input_type";
 
+import { networkChoices } from "~/store/web3/networksMap";
 import { ActionState } from "~/types/enums/action_state";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 import { InputType } from "~/types/enums/input_type";
@@ -215,7 +216,6 @@ import {
   type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
-import { networkChoices } from "~/store/web3/networksMap";
 
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
@@ -231,7 +231,7 @@ const {
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
 } = storeToRefs(createFundStore);
-const step = ref(1);
+const step = ref(6);
 
 // TODO: add validation functionality
 const saveChangesDialog = ref(false);
@@ -526,13 +526,24 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
 
 function getFieldByStepAndFieldKey(
   stepperEntry: IOnboardingStep[],
-  stepKey:string,
-  fieldKey:string,
+  stepKey: string,
+  fieldKey: string,
 ) {
-  return stepperEntry
+  const field = stepperEntry
     ?.find(step => step.key === stepKey)?.fields
     ?.flatMap(field => field.fields || field)
-    ?.find(field => field.key === fieldKey)?.value || "";
+    ?.find(field => field.key === fieldKey);
+
+  if (!field) {
+    console.error(`Field ${fieldKey} not found in step ${stepKey}`);
+    return "";
+  }
+
+  if(field?.defaultValue){
+    return field?.isDefaultToggleOff ? field?.value : field?.defaultValue;
+  }
+
+  return field?.value;
 }
 
 
