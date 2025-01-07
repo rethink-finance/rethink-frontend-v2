@@ -140,7 +140,7 @@
                 v-if="item.key === OnboardingStep.Whitelist"
                 v-model="whitelistedAddresses"
                 v-model:whitelist-enabled="isWhitelistedDeposits"
-                :is-initialized="isFundInitialized"
+                :is-editable="!isFundInitialized"
               />
 
               <!-- STEP PERMISSIONS -->
@@ -654,7 +654,7 @@ const initializeFund = async() => {
           toastStore.successToast("Fund initialization was successful. Wait for node to sync and go to next step.");
           // Start fetching fund init cache so that the user can go to next step.
           // Repeat at least 10 times until the cache is there. Wait 1 sec between each try.
-          repeatUntilFundInitCacheExists(10, 1000);
+          repeatUntilFundInitCacheExists(20, 1000);
         } else {
           toastStore.errorToast("Fund initialization transaction has failed. Please contact the Rethink Finance community for support.");
         }

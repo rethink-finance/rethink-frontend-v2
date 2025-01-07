@@ -112,7 +112,7 @@ const OnboardingFieldsMap: FieldsMapType = {
         return {
           ...field,
           isEditable: true,
-          isDefaultToggleOff: false,
+          isDefaultToggleOff: true,
           defaultValue: "0x0000000000000000000000000000000000000000",
         }
       }

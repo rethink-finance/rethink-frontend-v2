@@ -16,7 +16,7 @@
           />
 
           <v-btn
-            v-if="!isPreview"
+            v-if="isEditable"
             color="#ffffff"
             variant="text"
             :class="{ 'v-btn--active': isAddAddressListActive }"
@@ -26,7 +26,7 @@
           </v-btn>
 
           <v-btn
-            v-if="!isPreview"
+            v-if="isEditable"
             color="#ffffff"
             variant="text"
             :class="{ 'v-btn--active': isAddAddressActive }"
@@ -155,7 +155,7 @@
           </div>
         </template>
 
-        <template v-if="!isPreview" #[`item.delete`]="{ item }">
+        <template v-if="isEditable" #[`item.delete`]="{ item }">
           <UiDetailsButton small @click.stop="deleteAddress(item)">
             <v-tooltip v-if="item.deleted" activator="parent" location="bottom">
               <template #default>
@@ -226,9 +226,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  isPreview: {
+  isEditable: {
     type: Boolean,
-    default: false,
+    default: true,
   },
 });
 
