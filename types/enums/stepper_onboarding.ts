@@ -90,6 +90,7 @@ const OnboardingFieldsMap: FieldsMapType = {
 
       return {
         ...fieldGroup,
+        isToggleOn: false,
         fields: fieldGroup.fields
           .filter((field: IField) => !blacklist.includes(field.key))
           .map(
