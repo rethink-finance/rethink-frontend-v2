@@ -88,6 +88,24 @@
         </template>
       </v-stepper-actions>
 
+      <v-dialog
+        :model-value="isCheckingIfFundInitCacheExists"
+        scrim="black"
+        opacity="0.3"
+        max-width="600px"
+        persistent
+        @update:model-value="isCheckingIfFundInitCacheExists = false"
+      >
+        <div class="main_card di_card d-flex">
+          <v-progress-circular
+            class="d-flex me-3"
+            size="20"
+            width="3"
+            indeterminate
+          />
+          Loading OIV init cache...
+        </div>
+      </v-dialog>
       <v-window v-model="step">
         <v-tooltip
           activator="parent"
@@ -144,7 +162,7 @@
             </v-window-item>
           </template>
           <template #default>
-            OIV has been initialized alaredy and cannot be edited.<br>
+            OIV has been initialized already and cannot be edited.<br>
             You can add permissions & NAV Methods and finalize OIV creation.
           </template>
         </v-tooltip>
@@ -224,6 +242,7 @@ let nextRouteResolve: Function | null = null;
 
 // whitelist data
 const whitelistedAddresses = ref<IWhitelist[]>([]);
+const isCheckingIfFundInitCacheExists = ref(false);
 const isWhitelistedDeposits = ref(false);
 const selectedChainId = ref(networkChoices[0].value);
 
@@ -286,7 +305,7 @@ const fetchFundInitCache = async () => {
       ),
     )
     isWhitelistedDeposits.value = fundInitCache?.value?.fundSettings?.isWhitelistedDeposits || false;
-    // TODO clear local storage
+    // TODO clear local storage for this chain
   } else {
     createFundStore.clearFundInitCache();
   }
@@ -620,8 +639,10 @@ const initializeFund = async() => {
       }).on("receipt", (receipt: any) => {
         console.log("receipt: ", receipt);
         if (receipt.status) {
-          toastStore.successToast("Fund initialization was successful.");
-          // TODO start fetching fund init cache
+          toastStore.successToast("Fund initialization was successful. Wait for node to sync and go to next step.");
+          // Start fetching fund init cache so that the user can go to next step.
+          // Repeat at least 10 times until the cache is there. Wait 1 sec between each try.
+          repeatUntilFundInitCacheExists(10, 1000);
         } else {
           toastStore.errorToast("Fund initialization transaction has failed. Please contact the Rethink Finance community for support.");
         }
@@ -639,6 +660,28 @@ const initializeFund = async() => {
     isInitializeDialogOpen.value = false;
     isInitializeLoading.value = false;
   }
+};
+
+// Called after init fund create.
+const repeatUntilFundInitCacheExists = async (maxRetries: number, intervalMs: number): Promise<void> => {
+  isCheckingIfFundInitCacheExists.value = true;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    await fetchFundInitCache();
+    if (fundInitCache?.value?.fundContractAddr) {
+      console.log("Cache is now available!");
+      // Redirect to next step, permissions.
+      isCheckingIfFundInitCacheExists.value = false;
+      goToNextStep()
+      return;
+    }
+
+    console.log(`Fund Init Cache fetch attempt ${attempt} failed. Retrying in ${intervalMs / 1000} seconds...`);
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  isCheckingIfFundInitCacheExists.value = false;
+  // TODO show some alert to refresh later
+  console.log("Cache is still not available after maximum retries.");
 };
 
 const initStepperEntry = () => {
