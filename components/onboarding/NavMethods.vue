@@ -351,9 +351,12 @@ const getNAVData = async () => {
 
     // Parse NAV methods.
     for (const [navMethodIndex, navMethod] of navMethodsData.navUpdateData.entries()) {
-      navMethods.value.push(
-        parseNAVMethod(navMethodIndex, navMethod),
-      );
+      // Don't push that method if it exists already, match by detailsHash.
+      const parsedNavMethod = parseNAVMethod(navMethodIndex, navMethod);
+      if (navMethods.value.some((m: INAVMethod) => m.detailsHash === parsedNavMethod.detailsHash)) {
+        continue
+      }
+      navMethods.value.push(parsedNavMethod);
     }
   } catch (error: any) {
     console.error("Failed loading NAV methods data.", error);

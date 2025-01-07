@@ -122,7 +122,7 @@ export const fetchFundCacheAction = async (
         deployerAddress,
       ).call(),
     0,
-    [205, undefined],
+    [205, undefined, -32000],
   ) || {};
   console.warn("fundInitCache", fundInitCache)
 
