@@ -120,6 +120,7 @@ export const fetchFundInitCacheAction = async (
     throw new Error("No deployerAddress provided, cannot fetch fund cache.");
   }
   const fundFactoryContract = web3Store.chainContracts[fundChainId]?.fundFactoryContract;
+  console.warn("fetch fundInitCache", fundChainId, "deployer:", deployerAddress)
 
   const fundInitCache: IFundInitCache = await web3Store.callWithRetry(
     fundChainId,

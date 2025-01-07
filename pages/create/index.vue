@@ -540,7 +540,7 @@ function getFieldByStepAndFieldKey(
     return "";
   }
 
-  if(field?.defaultValue){
+  if (field?.defaultValue){
     return field?.isDefaultToggleOff ? field?.value : field?.defaultValue;
   }
 
@@ -706,6 +706,7 @@ const initStepperEntry = () => {
   ) || {} as IOnboardingStep[];
 
   console.log("LS whitelist", lsWhitelist);
+  console.log("LS lsStepperEntry", lsStepperEntry);
   // set whitelist from local storage
   if (lsWhitelist){
     isWhitelistedDeposits.value = lsWhitelist.isWhitelistedDeposits ?? false;
@@ -754,6 +755,7 @@ watch(stepperEntry.value, (newVal) => {
 watch(() => accountStore.activeAccountAddress, () => {
   console.log("Watcher: connected wallet changed fetchFundInitCache");
   if (step.value > 1) {
+    stepperEntry.value = initStepperEntry();
     fetchFundInitCache();
   }
 });
