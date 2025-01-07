@@ -3,6 +3,7 @@
     class="onboarding_whitelist"
   >
     <div
+      v-if="!isInitialized"
       class="toggleable_group__toggle"
     >
       <v-switch
@@ -15,6 +16,7 @@
     <SectionWhitelist
       v-model="whitelist"
       v-model:whitelist-enabled="isWhitelistEnabled"
+      :is-preview="isInitialized"
     />
   </section>
 </template>
@@ -31,6 +33,10 @@ const props = defineProps({
     default: () => [],
   },
   whitelistEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  isInitialized: {
     type: Boolean,
     default: false,
   },

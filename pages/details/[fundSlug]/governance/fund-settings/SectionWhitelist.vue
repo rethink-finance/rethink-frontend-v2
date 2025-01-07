@@ -16,7 +16,7 @@
           />
 
           <v-btn
-            v-if="isWhitelistEnabled"
+            v-if="!isPreview"
             color="#ffffff"
             variant="text"
             :class="{ 'v-btn--active': isAddAddressListActive }"
@@ -26,7 +26,7 @@
           </v-btn>
 
           <v-btn
-            v-if="isWhitelistEnabled"
+            v-if="!isPreview"
             color="#ffffff"
             variant="text"
             :class="{ 'v-btn--active': isAddAddressActive }"
@@ -36,7 +36,7 @@
           </v-btn>
         </div>
 
-        <div v-if="isAddAddressActive && isWhitelistEnabled" class="header__new-address">
+        <div v-if="isAddAddressActive" class="header__new-address">
           <v-col cols="12">
             <v-label class="row-title">
               <div class="label_required row-title__title">
@@ -74,7 +74,7 @@
 
       <!-- Bulk add -->
       <div
-        v-if="isAddAddressListActive && isWhitelistEnabled"
+        v-if="isAddAddressListActive"
         class="header__new-address"
       >
         <v-col cols="12">
@@ -155,7 +155,7 @@
           </div>
         </template>
 
-        <template v-if="isWhitelistEnabled" #[`item.delete`]="{ item }">
+        <template v-if="!isPreview" #[`item.delete`]="{ item }">
           <UiDetailsButton small @click.stop="deleteAddress(item)">
             <v-tooltip v-if="item.deleted" activator="parent" location="bottom">
               <template #default>
@@ -223,6 +223,10 @@ const props = defineProps({
     default: () => [],
   },
   whitelistEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  isPreview: {
     type: Boolean,
     default: false,
   },

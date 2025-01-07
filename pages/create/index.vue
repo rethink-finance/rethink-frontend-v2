@@ -140,6 +140,7 @@
                 v-if="item.key === OnboardingStep.Whitelist"
                 v-model="whitelistedAddresses"
                 v-model:whitelist-enabled="isWhitelistedDeposits"
+                :is-initialized="isFundInitialized"
               />
 
               <!-- STEP PERMISSIONS -->
@@ -231,7 +232,7 @@ const {
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
 } = storeToRefs(createFundStore);
-const step = ref(6);
+const step = ref(1);
 
 // TODO: add validation functionality
 const saveChangesDialog = ref(false);
