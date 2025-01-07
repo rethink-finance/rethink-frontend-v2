@@ -250,12 +250,12 @@ const setFieldValue = (field: IField): void => {
     console.error(" field key missing", field);
   }
 }
-const fetchFundCache = async () => {
+const fetchFundInitCache = async () => {
   if (!selectedChainId.value) return;
 
   if (accountStore.activeAccountAddress) {
     // Take stepper entry chain id from the local storage
-    await createFundStore.fetchFundCache(
+    await createFundStore.fetchFundInitCache(
       selectedChainId.value,
       accountStore.activeAccountAddress,
     );
@@ -307,7 +307,7 @@ const goToNextStep = () => {
     // TODO do both only if chain has changed!!
     stepperEntry.value = initStepperEntry();
 
-    fetchFundCache();
+    fetchFundInitCache();
   }
 }
 
@@ -697,9 +697,9 @@ watch(stepperEntry.value, (newVal) => {
 });
 
 watch(() => accountStore.activeAccountAddress, () => {
-  console.log("Watcher: connected wallet changed fetchFundCache");
+  console.log("Watcher: connected wallet changed fetchFundInitCache");
   if (step.value > 1) {
-    fetchFundCache();
+    fetchFundInitCache();
   }
 });
 

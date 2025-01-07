@@ -98,7 +98,7 @@ const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) 
   return [Number(baseDecimals), baseSymbol];
 }
 
-export const fetchFundCacheAction = async (
+export const fetchFundInitCacheAction = async (
   fundChainId: string,
   deployerAddress: string,
 ): Promise<IFundInitCache | undefined> => {

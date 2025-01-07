@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 
 import { useActionState } from "../actionState.store";
-import { fetchFundCacheAction } from "./actions/fetchFundCache.action";
+import { fetchFundCacheAction } from "./actions/fetchFundInitCache.action";
 import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFundSettings from "~/types/fund_settings";
@@ -45,7 +45,7 @@ export const useCreateFundStore = defineStore({
     },
   },
   actions: {
-    fetchFundCache(
+    fetchFundInitCache(
       fundChainId: string,
       deployerAddress: string,
     ): Promise<IFundInitCache | undefined> {
