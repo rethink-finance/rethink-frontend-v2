@@ -541,7 +541,7 @@ function getFieldByStepAndFieldKey(
   }
 
   if (field?.defaultValue) {
-    return field?.isDefaultToggleOff ? field?.value : field?.defaultValue;
+    return field?.isCustomValue ? field?.value : field?.defaultValue;
   }
 
   return field?.value;

@@ -34,17 +34,17 @@
       <div v-else-if="field.defaultValue">
         <div class="toggleable_group__toggle">
           <v-switch
-            v-model="field.isDefaultToggleOff"
+            v-model="field.isCustomValue"
             color="primary"
             hide-details
             :disabled="isStepDisabled"
           />
         </div>
         <UiField
-          v-if="field.isDefaultToggleOff"
+          v-if="field.isCustomValue"
           v-model="field.value"
           :field="field"
-          :is-disabled="!field.isDefaultToggleOff || isStepDisabled"
+          :is-disabled="!field.isCustomValue || isStepDisabled"
         />
         <div v-else class="default-value">
           <UiField

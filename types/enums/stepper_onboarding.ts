@@ -112,7 +112,7 @@ const OnboardingFieldsMap: FieldsMapType = {
         return {
           ...field,
           isEditable: true,
-          isDefaultToggleOff: true,
+          isCustomValue: false, // this is used to determine if the value is custom or default
           defaultValue: "0x0000000000000000000000000000000000000000",
         }
       }
