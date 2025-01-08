@@ -246,11 +246,7 @@ const sendAllowManagerToUpdateNavTransaction = async (
       .send(
         "submitPermissions",
         {},
-        ...[
-          allowManagerToUpdateNavProposal.targets,
-          allowManagerToUpdateNavProposal.gasValues,
-          allowManagerToUpdateNavProposal.calldatas,
-        ],
+        allowManagerToUpdateNavProposal.calldatas,
       )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
