@@ -112,7 +112,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import {
   decodeUpdateNavMethods,
   encodeUpdateNavMethods,
-  getAllowManagerToUpdateNavProposalData,
+  getAllowManagerToUpdateNavPermissionsData,
 } from "~/composables/nav/navProposal";
 import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 import { NAVExecutor } from "assets/contracts/NAVExecutor";
@@ -151,6 +151,7 @@ const storeNavMethods = async () => {
   // storeNAV(address navExecutorAddr, bytes calldata data) external {
   // TPrepare NAV methods data.
   isLoadingStoreNavMethods.value = true;
+  console.log("storeNavMethods", toRaw(navMethods.value));
   const encodedNavUpdateEntries = encodeUpdateNavMethods(
     navMethods.value,
     fundSettings?.value?.baseDecimals,
@@ -159,7 +160,8 @@ const storeNavMethods = async () => {
   await sendStoreNavMethodsTransaction(encodedNavUpdateEntries);
 
   if (allowManagerToUpdateNav.value) {
-    await sendAllowManagerToUpdateNavTransaction(encodedNavUpdateEntries);
+    // Submit permission to allow manager to keep updating NAV.
+    await sendAllowManagerToUpdateNavTransaction();
   }
 };
 
@@ -222,9 +224,7 @@ const sendStoreNavMethodsTransaction = async (
 }
 
 
-const sendAllowManagerToUpdateNavTransaction = async (
-  encodedNavUpdateEntries: string,
-) => {
+const sendAllowManagerToUpdateNavTransaction = async () => {
   if (!fundSettings?.value?.fundAddress) {
     return toastStore.errorToast("Fund address is missing.");
   }
@@ -233,20 +233,20 @@ const sendAllowManagerToUpdateNavTransaction = async (
   }
   isLoadingAllowManagerToUpdateNav.value = true;
 
-  const allowManagerToUpdateNavProposal = getAllowManagerToUpdateNavProposalData(
-    encodedNavUpdateEntries,
-    fundSettings?.value?.fundAddress,
-    fundChainId.value,
-    fundInitCache?.value?.rolesModifier,
-  );
+  const allowManagerToUpdateNavpermissions =
+    getAllowManagerToUpdateNavPermissionsData(
+      fundSettings?.value?.fundAddress,
+      fundChainId.value,
+      fundInitCache?.value?.rolesModifier,
+    );
 
   try {
-    console.log("submitPermissions allowManagerToUpdateNavProposal", allowManagerToUpdateNavProposal);
+    console.log("submitPermissions allowManagerToUpdateNavpermissions", allowManagerToUpdateNavpermissions);
     await fundFactoryContract.value
       .send(
         "submitPermissions",
         {},
-        allowManagerToUpdateNavProposal.calldatas,
+        allowManagerToUpdateNavpermissions.calldatas,
       )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);

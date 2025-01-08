@@ -170,6 +170,36 @@ export const getAllowManagerToUpdateNavProposalData = (
   roleModAddress: string,
 ): IProposalData => {
   const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
+
+  const encodedDataStoreNAVDataNavUpdateEntries =
+    encodeFunctionCall(
+      storeNAVDataABI as AbiFunctionFragment,
+      [fundAddress, encodedNavUpdateEntries],
+    );
+
+  const permissionsData =
+    getAllowManagerToUpdateNavPermissionsData(
+      fundAddress,
+      fundChainId,
+      roleModAddress,
+    );
+  console.warn("encodedNavUpdateEntries", fundAddress, encodedNavUpdateEntries);
+
+  console.warn("encodedDataStoreNAVDataNavUpdateEntries", encodedDataStoreNAVDataNavUpdateEntries);
+
+  return {
+    targets: [navExecutorAddress].concat(permissionsData.targets),
+    gasValues: [0].concat(permissionsData.gasValues),
+    calldatas: [encodedDataStoreNAVDataNavUpdateEntries].concat(permissionsData.calldatas),
+  };
+}
+
+export const getAllowManagerToUpdateNavPermissionsData = (
+  fundAddress: string,
+  fundChainId: string,
+  roleModAddress: string,
+): IProposalData => {
+  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
   const navPermissionEntries = generateNAVPermission(
     fundAddress,
     navExecutorAddress,
@@ -177,16 +207,11 @@ export const getAllowManagerToUpdateNavProposalData = (
 
   const [encodedRoleModEntries, roleModTargets, roleModGasValues] =
     encodeRoleModEntries(navPermissionEntries, roleModAddress);
-  const encodedDataStoreNAVDataNavUpdateEntries =
-    encodeFunctionCall(
-      storeNAVDataABI as AbiFunctionFragment,
-      [fundAddress, encodedNavUpdateEntries],
-    );
 
   return {
-    targets: [navExecutorAddress].concat(roleModTargets),
-    gasValues: [0].concat(roleModGasValues),
-    calldatas: [encodedDataStoreNAVDataNavUpdateEntries].concat(encodedRoleModEntries),
+    targets: roleModTargets,
+    gasValues: roleModGasValues,
+    calldatas: encodedRoleModEntries,
   };
 }
 
