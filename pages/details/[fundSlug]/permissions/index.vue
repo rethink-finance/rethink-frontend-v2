@@ -37,7 +37,7 @@ const router = useRouter();
 const fundStore = useFundStore();
 
 const fund = useAttrs().fund as IFund;
-const { selectedFundSlug } = toRefs(useFundStore());
+const { selectedFundSlug } = storeToRefs(useFundStore());
 
 
 const navigateToGnosis = ref("");

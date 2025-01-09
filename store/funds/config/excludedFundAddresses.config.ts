@@ -37,6 +37,7 @@ const rawExcludedFundAddresses = {
     { address: "0x4DF9aD4B872D8E906990205aD055Bc00c39EEa74", alwaysExclude: false },
     { address: "0xbaA81241A186BC547Ec9e7a306755D4079b559cD", alwaysExclude: false },
     { address: "0xB9e1dC350af83a3127aDc8CFB48a9B4abADCA184", alwaysExclude: false },
+    { address: "0xe3c31b33FCBd905E978aCEa64b2b043Cc81DDA7c", alwaysExclude: true },  // ADEMO2
   ],
   // Fraxtal
   "0xfc": [],
@@ -53,6 +54,8 @@ const rawExcludedFundAddresses = {
     { address: "0x61d5e3dC0907EADa4D9B06D8B33Cd96c3510b533", alwaysExclude: false },
     { address: "0x016623a2b54F7a6DAdB35D3400557a1b79466429", alwaysExclude: false },
     { address: "0x2e40fDbA4d07E6b7aBCcBCCe3f6D28bDea727395", alwaysExclude: false },
+    { address: "0x34f1Ec0A0af19d622B281488C1B1ba0B5aE20860", alwaysExclude: true },  // BDAO
+    { address: "0x23C44260731B8614aa7F3B28AB0bafDb1610743c", alwaysExclude: true },  // bDEMO4
   ],
 } as Record<string, { address: string; alwaysExclude: boolean }[]>;
 

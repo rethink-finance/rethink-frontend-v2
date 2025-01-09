@@ -202,7 +202,7 @@ const {
   fundManagedNAVMethods,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
-} = toRefs(fundStore);
+} = storeToRefs(fundStore);
 
 const proposal = ref({
   title: "",

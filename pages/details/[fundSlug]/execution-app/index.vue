@@ -234,7 +234,7 @@ const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 
 const fund = useAttrs().fund as IFund;
-const { isUsingZodiacPilotExtension } = toRefs(fundStore);
+const { isUsingZodiacPilotExtension } = storeToRefs(fundStore);
 
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);

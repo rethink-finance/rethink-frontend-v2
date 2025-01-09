@@ -144,6 +144,11 @@ export const useWeb3Store = defineStore({
 
           // Get a list of error codes. Use innerError to catch Metamask exception codes.
           const errorCodes = new Set([error?.code, error?.innerError?.code]);
+          let errorData = error?.message;
+          try {
+            // https://docs.web3js.org/api/web3-errors/class/InternalError
+            errorData = error.toJSON();
+          } catch {}
 
           // Check Metamask errors:
           // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
@@ -152,10 +157,10 @@ export const useWeb3Store = defineStore({
             ignorableErrorCodes.some((code) => errorCodes.has(code)) ||
             error?.message?.indexOf("User denied transaction") >= 0
           ) {
-            console.log(
+            console.debug(
               "RPC error is one of known metamask errors",
               error?.code,
-              error?.message,
+              errorData,
             );
             throw error;
           }
@@ -164,9 +169,11 @@ export const useWeb3Store = defineStore({
           console.error(
             `RPC error ${retries}/${maxRetries}`,
             errorCodes,
-            error?.message,
             "method:",
             method,
+            errorData,
+            "data:",
+            error.data,
             `rpcUrl: ${rpcUrl}`,
           );
           retries++;

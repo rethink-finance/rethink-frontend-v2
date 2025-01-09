@@ -32,7 +32,7 @@ const loading = ref(false);
 const router = useRouter();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
-const { selectedFundSlug } = toRefs(useFundStore());
+const { selectedFundSlug } = storeToRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "Governance",

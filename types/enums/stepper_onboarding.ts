@@ -1,11 +1,8 @@
-import { networkChoices, networks } from "~/store/web3/networksMap";
 import {
   FundSettingsStepFieldsMap,
   StepSections,
 } from "~/types/enums/fund_setting_proposal";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
-import { InputType } from "~/types/enums/input_type";
-import type INetwork from "~/types/network";
 
 export enum OnboardingStep {
     Chain = "chain",
@@ -93,6 +90,7 @@ const OnboardingFieldsMap: FieldsMapType = {
 
       return {
         ...fieldGroup,
+        isToggleOn: false,
         fields: fieldGroup.fields
           .filter((field: IField) => !blacklist.includes(field.key))
           .map(
@@ -107,12 +105,25 @@ const OnboardingFieldsMap: FieldsMapType = {
   [OnboardingStep.Management]: FundSettingsStepFieldsMap[StepSections.Management],
   // Take Governance fields and make them editable when creating new fund.
   [OnboardingStep.Governance]: (FundSettingsStepFieldsMap[StepSections.Governance] as IField[]).map(
-    (field: IField) => (
-      {
+    (field: IField) => {
+
+      // add default value for governanceToken if it's toggled off
+      if (field.key === "governanceToken") {
+        return {
+          ...field,
+          label: "Custom Governance Token",
+          isEditable: true,
+          isCustomValueToggleOn: false, // this is used to determine if the value is custom or default
+          defaultValue: "0x0000000000000000000000000000000000000000",
+          defaultValueInfo: "OIV Token is used as the governance token for the fund.",
+        }
+      }
+
+      return {
         ...field,
         isEditable: true,
       }
-    ),
+    },
   ),
 };
 

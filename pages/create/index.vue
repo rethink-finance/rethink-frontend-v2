@@ -1,6 +1,12 @@
 <template>
-  <div class="d-flex" style="width: 100%; flex-direction: column">
+  <div class="d-flex" style="width: 100%; flex-direction: column; height: 100%;">
+    <OnboardingPasswordProtect
+      v-if="!isCreateFundPasswordCorrect"
+      v-model:is-password-correct="isCreateFundPasswordCorrect"
+    />
+
     <v-stepper
+      v-else
       ref="stepper"
       v-model="step"
       class="stepper_onboarding"
@@ -48,15 +54,32 @@
             </v-btn> -->
             <div class="item">
               <v-btn
+                v-if="showClearCacheButton"
+                class="me-8"
+                variant="outlined"
+                @click="isClearCacheDialogOpen = true"
+              >
+                Clear Draft
+              </v-btn>
+              <v-btn
                 v-if="showInitializeButton"
                 color="primary"
-                :disabled="isFundInitialized"
+                :disabled="isFundInitialized || !isCurrentStepValid || !accountStore.isConnected"
                 variant="flat"
                 class="me-4"
                 :loading="isInitializeLoading"
                 @click="isInitializeDialogOpen = true"
               >
                 Initialize
+                <v-tooltip
+                  v-if="!accountStore.isConnected"
+                  :model-value="true"
+                  activator="parent"
+                  location="top"
+                  @update:model-value="true"
+                >
+                  Connect your wallet to initialize the OIV
+                </v-tooltip>
               </v-btn>
               <v-tooltip
                 activator="parent"
@@ -75,7 +98,8 @@
                 <template #default>
                   Please fill out all required fields
                 </template>
-              </v-tooltip></div>
+              </v-tooltip>
+            </div>
           </div>
         </template>
         <template #prev>
@@ -88,6 +112,24 @@
         </template>
       </v-stepper-actions>
 
+      <v-dialog
+        :model-value="isCheckingIfFundInitCacheExists"
+        scrim="black"
+        opacity="0.3"
+        max-width="600px"
+        persistent
+        @update:model-value="isCheckingIfFundInitCacheExists = false"
+      >
+        <div class="main_card di_card d-flex">
+          <v-progress-circular
+            class="d-flex me-3"
+            size="20"
+            width="3"
+            indeterminate
+          />
+          Loading OIV init cache...
+        </div>
+      </v-dialog>
       <v-window v-model="step">
         <v-tooltip
           activator="parent"
@@ -122,6 +164,7 @@
                 v-if="item.key === OnboardingStep.Whitelist"
                 v-model="whitelistedAddresses"
                 v-model:whitelist-enabled="isWhitelistedDeposits"
+                :is-editable="!isFundInitialized"
               />
 
               <!-- STEP PERMISSIONS -->
@@ -144,7 +187,7 @@
             </v-window-item>
           </template>
           <template #default>
-            OIV has been initialized alaredy and cannot be edited.<br>
+            OIV has been initialized already and cannot be edited.<br>
             You can add permissions & NAV Methods and finalize OIV creation.
           </template>
         </v-tooltip>
@@ -173,6 +216,23 @@
         @confirm="initializeFund"
         @cancel="isInitializeDialogOpen = false"
       />
+
+      <UiConfirmDialog
+        v-model="isClearCacheDialogOpen"
+        title="Heads Up!"
+        confirm-text="Clear"
+        cancel-text="Don't clear"
+        :message="clearCacheMessage"
+        class="confirm_dialog"
+        max-width="600px"
+        @confirm="handleClearCache"
+        @cancel="isClearCacheDialogOpen = false"
+      >
+        <p class="mt-4">
+          This action will clear the create OIV form data for the selected chain.
+          You will lose all the saved data you have entered so far.
+        </p>
+      </UiConfirmDialog>
     </v-stepper>
   </div>
 </template>
@@ -186,6 +246,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { IField } from "~/types/enums/input_type";
 
+import { networkChoices, networksMap } from "~/store/web3/networksMap";
 import { ActionState } from "~/types/enums/action_state";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 import { InputType } from "~/types/enums/input_type";
@@ -197,7 +258,6 @@ import {
   type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
-import { networkChoices } from "~/store/web3/networksMap";
 
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
@@ -212,18 +272,25 @@ const {
   askToSaveDraftBeforeRouteLeave,
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
-} = toRefs(createFundStore);
+} = storeToRefs(createFundStore);
 const step = ref(1);
 
 // TODO: add validation functionality
 const saveChangesDialog = ref(false);
 const isInitializeDialogOpen = ref(false);
 const isInitializeLoading = ref(false);
+const isClearCacheDialogOpen = ref(false);
+// If user already authenticated before set isCreateFundPasswordCorrect to true.
+const isCreateFundPasswordCorrect = ref<boolean>(
+  getLocalStorageItem("isCreateFundPasswordCorrect", false),
+);
+
 // store the resolve/reject functions for the save changes dialog
 let nextRouteResolve: Function | null = null;
 
 // whitelist data
 const whitelistedAddresses = ref<IWhitelist[]>([]);
+const isCheckingIfFundInitCacheExists = ref(false);
 const isWhitelistedDeposits = ref(false);
 const selectedChainId = ref(networkChoices[0].value);
 
@@ -250,12 +317,12 @@ const setFieldValue = (field: IField): void => {
     console.error(" field key missing", field);
   }
 }
-const fetchFundCache = async () => {
+const fetchFundInitCache = async () => {
   if (!selectedChainId.value) return;
 
   if (accountStore.activeAccountAddress) {
     // Take stepper entry chain id from the local storage
-    await createFundStore.fetchFundCache(
+    await createFundStore.fetchFundInitCache(
       selectedChainId.value,
       accountStore.activeAccountAddress,
     );
@@ -286,15 +353,22 @@ const fetchFundCache = async () => {
       ),
     )
     isWhitelistedDeposits.value = fundInitCache?.value?.fundSettings?.isWhitelistedDeposits || false;
-    // TODO clear local storage
+    // TODO clear local storage for this chain
   } else {
     createFundStore.clearFundInitCache();
   }
 }
 
+
+const clearCacheMessage = computed(() => {
+  if(networksMap[selectedChainId.value]?.chainName === undefined) return "Are you sure you want to clear the cache for this chain?";
+
+  return `Are you sure you want to clear the cache for <strong>${networksMap[selectedChainId.value]?.chainName}</strong>?`
+});
+
 const isLoadingFetchFundCache = computed(() =>
   actionStateStore.isActionState(
-    "fetchFundCacheAction",
+    "fetchFundInitCacheAction",
     ActionState.Loading,
   ),
 );
@@ -307,7 +381,19 @@ const goToNextStep = () => {
     // TODO do both only if chain has changed!!
     stepperEntry.value = initStepperEntry();
 
-    fetchFundCache();
+    fetchFundInitCache();
+  }
+}
+
+const handleClearCache = () => {
+  try {
+    createFundStore.clearFundLocalStorage();
+    stepperEntry.value = initStepperEntry();
+    isClearCacheDialogOpen.value = false;
+    toastStore.successToast("Cache cleared successfully");
+  } catch (error) {
+    console.error("Error clearing cache", error);
+    toastStore.errorToast("Error clearing cache");
   }
 }
 
@@ -358,6 +444,15 @@ const showInitializeButton = computed(() => {
   return false;
 });
 
+const showClearCacheButton = computed(() => {
+  const item = stepperEntry.value[step.value - 1];
+
+  if (item.key === OnboardingStep.Chain) {
+    return true;
+  }
+  return false;
+});
+
 const toggledOffFields = computed(() => {
   // check which fields are toggled off, and set them to 0 or null address
   return stepperEntry.value
@@ -394,9 +489,12 @@ const isCurrentStepValid = computed(() => {
 
   let isCurrentStepValid = false;
   const currentStep = stepperEntry.value[step.value - 1];
-  console.log("currentStep.key", currentStep.key);
+
   if (stepWithRegularFields.includes(currentStep.key) && currentStep.fields) {
-    isCurrentStepValid =  currentStep.fields.every((field) => {
+    isCurrentStepValid = currentStep.fields.every((field) => {
+      // check if it's a custom value toggle
+      if (field.isCustomValueToggleOn === false) return true;
+
       if (field.fields) {
         // check if it's toggled off
         if (!field.isToggleOn) return true;
@@ -507,13 +605,24 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
 
 function getFieldByStepAndFieldKey(
   stepperEntry: IOnboardingStep[],
-  stepKey:string,
-  fieldKey:string,
+  stepKey: string,
+  fieldKey: string,
 ) {
-  return stepperEntry
+  const field = stepperEntry
     ?.find(step => step.key === stepKey)?.fields
     ?.flatMap(field => field.fields || field)
-    ?.find(field => field.key === fieldKey)?.value || "";
+    ?.find(field => field.key === fieldKey);
+
+  if (!field) {
+    console.error(`Field ${fieldKey} not found in step ${stepKey}`);
+    return "";
+  }
+
+  if (field?.defaultValue) {
+    return field?.isCustomValueToggleOn ? field?.value : field?.defaultValue;
+  }
+
+  return field?.value;
 }
 
 
@@ -585,7 +694,7 @@ const formatInitializeData = () => {
     ],
     JSON.stringify(formatFundMetaData()),
     0, // feePerformancePeriod, default to 0
-    parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, "managementFeePeriod") as string), // feeManagePeriod
+    parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, "managementFeePeriod") as string) || 0, // feeManagePeriod
   ]
 
   console.log("output", output);
@@ -608,10 +717,10 @@ const initializeFund = async() => {
     }
 
     const formattedData = formatInitializeData();
-    console.log("SUBMIT formatted data", formattedData);
+    console.warn("SUBMIT formatted data", formattedData);
 
     await fundFactoryContract
-      .send("createFund", {}, ...formattedData)
+      .send("initCreateFund", {}, ...formattedData)
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
@@ -620,9 +729,12 @@ const initializeFund = async() => {
       }).on("receipt", (receipt: any) => {
         console.log("receipt: ", receipt);
         if (receipt.status) {
-          toastStore.successToast("Fund initialization was successful.");
+          toastStore.successToast("Fund initialization was successful. Wait for node to sync and go to next step.");
+          // Start fetching fund init cache so that the user can go to next step.
+          // Repeat at least 10 times until the cache is there. Wait 1 sec between each try.
+          repeatUntilFundInitCacheExists(20, 1000);
         } else {
-          toastStore.errorToast("Fund initialization binantransaction has failed. Please contact the Rethink Finance community for support.");
+          toastStore.errorToast("Fund initialization transaction has failed. Please contact the Rethink Finance community for support.");
         }
       }).on("error", (error: any) => {
         console.error("error when initializing", error);
@@ -640,6 +752,28 @@ const initializeFund = async() => {
   }
 };
 
+// Called after init fund create.
+const repeatUntilFundInitCacheExists = async (maxRetries: number, intervalMs: number): Promise<void> => {
+  isCheckingIfFundInitCacheExists.value = true;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    await fetchFundInitCache();
+    if (fundInitCache?.value?.fundContractAddr) {
+      console.log("Cache is now available!");
+      // Redirect to next step, permissions.
+      isCheckingIfFundInitCacheExists.value = false;
+      goToNextStep()
+      return;
+    }
+
+    console.log(`Fund Init Cache fetch attempt ${attempt} failed. Retrying in ${intervalMs / 1000} seconds...`);
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  isCheckingIfFundInitCacheExists.value = false;
+  // TODO show some alert to refresh later
+  console.log("Cache is still not available after maximum retries.");
+};
+
 const initStepperEntry = () => {
   // generate stepper entry from local storage
   const lsWhitelist = getLocalStorageItem(
@@ -650,6 +784,7 @@ const initStepperEntry = () => {
   ) || {} as IOnboardingStep[];
 
   console.log("LS whitelist", lsWhitelist);
+  console.log("LS lsStepperEntry", lsStepperEntry);
   // set whitelist from local storage
   if (lsWhitelist){
     isWhitelistedDeposits.value = lsWhitelist.isWhitelistedDeposits ?? false;
@@ -691,14 +826,26 @@ const handleCloseSaveChangesDialog = () => {
 const stepperEntry = ref(initStepperEntry());
 
 // Watchers
+watch(() => isCreateFundPasswordCorrect.value, (isPasswordCorrect) => {
+  if (isPasswordCorrect) {
+    setLocalStorageItem("isCreateFundPasswordCorrect", true);
+  }
+});
+
+// TODO: remove this watcher
 watch(stepperEntry.value, (newVal) => {
   console.log("stepperEntry changes", newVal);
 });
 
+watch(() => selectedChainId.value, () => {
+  createFundStore.setSelectedStepperChainId(selectedChainId.value);
+});
+
 watch(() => accountStore.activeAccountAddress, () => {
-  console.log("Watcher: connected wallet changed fetchFundCache");
+  console.log("Watcher: connected wallet changed fetchFundInitCache");
   if (step.value > 1) {
-    fetchFundCache();
+    stepperEntry.value = initStepperEntry();
+    fetchFundInitCache();
   }
 });
 
@@ -713,6 +860,20 @@ onBeforeRouteLeave((to, from, next) => {
 
     if (next) next();
   }
+});
+
+const chainIdValues = computed(() => networkChoices.map((choice: any) => choice.value));
+
+onMounted(() => {
+  // Set selected chain to user's current network.
+  if (
+    accountStore.connectedWalletChainId &&
+    step.value === 1 &&
+    chainIdValues?.value?.includes(accountStore.connectedWalletChainId)
+  ) {
+    selectedChainId.value = accountStore.connectedWalletChainId;
+  }
+  createFundStore.setSelectedStepperChainId(selectedChainId.value);
 });
 </script>
 

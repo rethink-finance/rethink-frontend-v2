@@ -40,7 +40,7 @@
     </div>
     <FundNavMethodsTable
       v-else
-      :methods="uniqueNavMethods[chainId]"
+      :methods="libraryNavMethods"
       :used-methods="alreadyUsedMethods"
       :fund-chain-id="chainId"
       :fund-address="fundAddress"
@@ -58,8 +58,12 @@
 </template>
 
 <script setup lang="ts">
+import { encodeParameter } from "web3-eth-abi";
 import { useFundsStore } from "~/store/funds/funds.store";
 import type INAVMethod from "~/types/nav_method";
+import { PositionType } from "~/types/enums/position_type";
+import { ActionState } from "~/types/enums/action_state";
+import { useActionStateStore } from "~/store/actionState.store";
 
 const emit = defineEmits(["methods-added"]);
 
@@ -95,6 +99,7 @@ const props = defineProps({
     required: true,
   },
 });
+const actionStateStore = useActionStateStore();
 const fundsStore = useFundsStore();
 const { allNavMethods } = storeToRefs(fundsStore);
 const { uniqueNavMethods } = storeToRefs(fundsStore);
@@ -104,6 +109,13 @@ const loadingAllNavMethods = ref(false);
 const selectedMethodHashes = ref<string[]>([]);
 const search = ref("");
 
+const libraryNavMethods = ref<INAVMethod[]>([]);
+
+// Computed
+const isLoadingFetchFundsNavMethods = computed(() =>
+  actionStateStore.isActionState("fetchFundsNavMethodsAction", ActionState.Loading),
+);
+
 // Methods
 const onSelectionChanged = (hashes: string[]) => {
   selectedMethodHashes.value = hashes;
@@ -111,7 +123,7 @@ const onSelectionChanged = (hashes: string[]) => {
 
 const addMethods = () => {
   // Add newly defined method to fund managed methods.
-  const addedMethods = uniqueNavMethods.value[props.chainId].filter((method) =>
+  const addedMethods = libraryNavMethods.value.filter((method) =>
     selectedMethodHashes.value.includes(method.detailsHash || ""),
   );
 
@@ -133,7 +145,59 @@ onMounted(async () => {
     }
     loadingAllNavMethods.value = false;
   }
+
+  setLibraryNavMethods();
 });
+
+const setLibraryNavMethods = () => {
+  console.warn("setLibraryNavMethods", isLoadingFetchFundsNavMethods.value);
+  // Composable methods are complicated.
+  // Here we try to replace method parameters for each composable method, so that we find the original method's
+  // safe contract address and try to replace it in the method input parameters encodedFunctionSignatureWithInputs.
+  // So that we can simulate NAV on the passed safe address instead on the original.
+  libraryNavMethods.value = uniqueNavMethods.value[props.chainId].map((originalNavEntry: INAVMethod) => {
+    console.log("originalNavEntry", originalNavEntry);
+    const navEntry = JSON.parse(JSON.stringify(originalNavEntry));
+
+    if (navEntry.positionType === PositionType.Composable) {
+      console.warn("navEntry Composable: ", navEntry)
+
+      navEntry.details.composable = navEntry.details.composable.map(
+        (method: Record<string, any>) => {
+          console.warn("composable: ", method)
+          const safeAddressToReplace: string = navEntry.pastNAVUpdateEntrySafeAddress;
+          const safeAddressReplacement: string = props.safeAddress;
+          console.log("[ADD_LIB1] safeAddressToReplace", safeAddressToReplace)
+          console.log("[ADD_LIB2] safeAddressReplacement", safeAddressReplacement)
+
+          let encodedSafeAddressToReplace = "";
+          let encodedSafeAddressReplacement = "";
+          if (safeAddressToReplace && safeAddressReplacement) {
+            encodedSafeAddressToReplace = encodeParameter("address", safeAddressToReplace).replace("0x", "");
+            console.log("encodedSafeAddressToReplace", encodedSafeAddressToReplace)
+            encodedSafeAddressReplacement = encodeParameter("address", safeAddressReplacement).replace("0x", "");
+            console.log("encodedSafeAddressReplacement", encodedSafeAddressReplacement)
+          } else {
+            if (!safeAddressToReplace && safeAddressReplacement) {
+              console.warn("no safeAddressToReplace", safeAddressToReplace, method)
+            // TODO throw error, this is dangerous
+            }
+            if (!safeAddressReplacement && safeAddressToReplace) {
+              console.warn("no safeAddressReplacement", safeAddressReplacement, method)
+            // TODO throw error, this is dangerous
+            }
+          }
+
+          return {
+            ...method,
+            encodedFunctionSignatureWithInputs: method.encodedFunctionSignatureWithInputs.replace(encodedSafeAddressToReplace, encodedSafeAddressReplacement),
+          }
+        },
+      );
+    }
+    return navEntry
+  })
+};
 </script>
 
 <style scoped lang="scss">

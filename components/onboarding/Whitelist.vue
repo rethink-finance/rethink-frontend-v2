@@ -3,6 +3,7 @@
     class="onboarding_whitelist"
   >
     <div
+      v-if="isEditable"
       class="toggleable_group__toggle"
     >
       <v-switch
@@ -15,6 +16,7 @@
     <SectionWhitelist
       v-model="whitelist"
       v-model:whitelist-enabled="isWhitelistEnabled"
+      :is-editable="isEditable"
     />
   </section>
 </template>
@@ -33,6 +35,10 @@ const props = defineProps({
   whitelistEnabled: {
     type: Boolean,
     default: false,
+  },
+  isEditable: {
+    type: Boolean,
+    default: true,
   },
 });
 

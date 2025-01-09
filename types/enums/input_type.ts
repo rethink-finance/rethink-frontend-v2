@@ -31,6 +31,9 @@ export interface IField {
   info?: string;
   isToggleable?: boolean;
   isToggleOn?: boolean;
+  isCustomValueToggleOn?: boolean;
+  defaultValue?: any;
+  defaultValueInfo?: string;
   fields?: IField[];
   title?: string;
   value?: string | boolean;

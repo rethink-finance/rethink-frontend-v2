@@ -4,7 +4,7 @@ import type { IFundInitCache } from "~/types/fund_settings";
 import { RethinkFundGovernor } from "assets/contracts/RethinkFundGovernor";
 import { formatQuorumPercentage } from "~/composables/formatters";
 import { ERC20 } from "assets/contracts/ERC20";
-import { GovernableFund } from "assets/contracts/GovernableFund";
+import { isZeroAddress } from "~/composables/addressUtils";
 
 
 const fetchGovernorData = async (fundChainId: string, governorAddress?: string) => {
@@ -19,7 +19,7 @@ const fetchGovernorData = async (fundChainId: string, governorAddress?: string) 
   if (!governorAddress) return {};
 
   const web3Store = useWeb3Store();
-
+  console.debug("governor fetch")
   const fundGovernorContract = web3Store.getCustomContract(
     fundChainId,
     RethinkFundGovernor.abi,
@@ -77,31 +77,36 @@ const fetchGovernorData = async (fundChainId: string, governorAddress?: string) 
 }
 const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) => {
   const web3Store = useWeb3Store();
+  console.debug("fetchBaseTokenDetails")
 
   const tokenContract = web3Store.getCustomContract(
     chainId,
     ERC20,
     baseTokenAddress,
   );
+  console.debug("baseTokenAddress", baseTokenAddress)
 
   const baseDecimals = await web3Store.callWithRetry(
     chainId,
     () =>
       tokenContract.methods.decimals().call(),
   );
+  console.debug("baseDecimals")
+
   const baseSymbol = await web3Store.callWithRetry(
     chainId,
     () =>
       tokenContract.methods.symbol().call(),
   );
+  console.debug("baseSymbol")
 
   return [Number(baseDecimals), baseSymbol];
 }
 
-export const fetchFundCacheAction = async (
+export const fetchFundInitCacheAction = async (
   fundChainId: string,
   deployerAddress: string,
-): Promise<IFundInitCache> => {
+): Promise<IFundInitCache | undefined> => {
   const createFundStore = useCreateFundStore();
   const web3Store = useWeb3Store();
   // Clear the existing fund init cache.
@@ -114,6 +119,7 @@ export const fetchFundCacheAction = async (
     throw new Error("No deployerAddress provided, cannot fetch fund cache.");
   }
   const fundFactoryContract = web3Store.chainContracts[fundChainId]?.fundFactoryContract;
+  console.debug("fetch fundInitCache", fundChainId, "deployer:", deployerAddress)
 
   const fundInitCache: IFundInitCache = await web3Store.callWithRetry(
     fundChainId,
@@ -122,25 +128,33 @@ export const fetchFundCacheAction = async (
         deployerAddress,
       ).call(),
     0,
-    [205, undefined],
+    [205, undefined, -32000],
   ) || {};
+  console.warn("fundInitCache", fundInitCache)
+
+  if (isZeroAddress(fundInitCache.fundContractAddr)) {
+    console.log("Fund cache doesn't exist.");
+    return undefined;
+  }
 
   // Parse Metadata JSON string
   fundInitCache.governorData = await fetchGovernorData(fundChainId, fundInitCache?.fundSettings?.governor);
   fundInitCache.fundMetadata = JSON.parse(fundInitCache._fundMetadata || "{}");
   fundInitCache.fundMetadata.chainId = fundChainId;
+  console.debug("governor fetch done", fundInitCache.governorData)
 
   // Add more fields to fund metadata.
   const fundSettings = fundInitCache?.fundSettings || {};
   const feeCollectors = fundSettings?.feeCollectors || [];
   const whitelistedAddresses = fundInitCache.fundSettings?.allowedDepositAddrs?.join("\n") || [];
+  console.debug("governor fetch fetchBaseTokenDetails")
 
   // Fetch fund base token decimals
   const [baseDecimals, baseSymbol] = await fetchBaseTokenDetails(
     fundChainId,
     fundInitCache.fundSettings.baseToken,
   );
-  console.warn("BASE DECIMALS & SYMBOL", baseDecimals, baseSymbol)
+  console.debug("BASE DECIMALS & SYMBOL", baseDecimals, baseSymbol)
 
   fundInitCache.fundSettings = {
     ...fundInitCache.fundSettings,
@@ -162,6 +176,6 @@ export const fetchFundCacheAction = async (
   };
 
   createFundStore.fundInitCache = fundInitCache;
-  console.log("fund init cache", toRaw(createFundStore.fundInitCache));
+  console.log("fund init cache parsed", toRaw(createFundStore.fundInitCache));
   return fundInitCache;
 };

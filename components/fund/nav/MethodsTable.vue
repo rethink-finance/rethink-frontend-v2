@@ -771,20 +771,8 @@ export default defineComponent({
       if (!this.showSimulatedNav || this.isNavSimulationLoading) return;
       this.isNavSimulationLoading = true;
       console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
-      /**
-      if (!this.fundsStore.allNavMethods?.length) {
-        const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
 
-        // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
-        // and make sure it is fetched before checking here with fundsStore.fetchFundsNavMethods, and then we
-        // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
-        console.log("simulate fetch all nav methods")
-        await this.fundsStore.fetchFundsNavMethods(fundsInfoArrays);
-      }
-      */
-      // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
-      // Otherwise, take managed methods, that user can change.
-      // Simulate all at once as many promises instead of one by one.
+      // Simulate all methods at once as many promises.
       const promises = [];
       const fundChainId = this.fundChainId ?? "";
       const fundAddress = this.fundAddress ?? "";

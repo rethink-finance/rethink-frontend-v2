@@ -86,7 +86,7 @@ const toastStore = useToastStore();
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
 
-const { isUsingZodiacPilotExtension } = toRefs(fundStore);
+const { isUsingZodiacPilotExtension } = storeToRefs(fundStore);
 
 const baseToken = computed(() => {
   return fundStore.fund?.baseToken;

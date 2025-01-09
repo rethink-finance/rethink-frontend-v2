@@ -220,7 +220,7 @@ const toggleRawProposalCalldata = (index: number) => {
   toggledRawProposalCalldatas.value[index] = !(toggledRawProposalCalldatas.value[index] ?? false);
 }
 
-const { selectedFundSlug } = toRefs(useFundStore());
+const { selectedFundSlug } = storeToRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "Governance",

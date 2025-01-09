@@ -39,9 +39,6 @@ export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[], nav
   }
 
   return PositionTypeKeys.map(positionType => {
-    console.log("counts[positionType]");
-
-    console.log(counts[positionType]);
     if (navUpdate && navUpdate.navParts) {
       // factor in base asset of oiv
       counts[PositionType.Liquid] += (

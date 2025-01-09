@@ -87,7 +87,7 @@
           :safe-address="fundStore.fund?.safeAddress"
           :base-symbol="fundStore.fund?.baseToken.symbol"
           :base-decimals="fundStore.fund?.baseToken.decimals"
-          :methods="fundLastNAVUpdateMethods"
+          :methods="fundComputedNavMethods"
           :loading="isLoadingFetchFundNAVUpdatesAction"
           :nav-parts="fundLastNAVUpdate?.navParts"
           show-summary-row
@@ -127,11 +127,15 @@ const {
   selectedFundSlug,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
-} = toRefs(useFundStore());
+} = storeToRefs(useFundStore());
 
 const fundLastNAVUpdateDate = computed(() => {
   if (!fundLastNAVUpdate?.value?.date) return "N/A";
   return fundLastNAVUpdate.value.date ?? "N/A";
+});
+const fundComputedNavMethods = computed(() => {
+  if (fundLastNAVUpdate?.value?.date) return fundLastNAVUpdateMethods.value || [];
+  return fundStore.fundInitialNAVMethods || [];
 });
 
 const fundTotalNAVFormatted = computed(() => {

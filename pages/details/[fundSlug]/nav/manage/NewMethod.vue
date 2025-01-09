@@ -53,7 +53,7 @@ const fundStore = useFundStore();
 const toastStore = useToastStore();
 const router = useRouter();
 
-const { selectedFundSlug } = toRefs(fundStore);
+const { selectedFundSlug } = storeToRefs(fundStore);
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {

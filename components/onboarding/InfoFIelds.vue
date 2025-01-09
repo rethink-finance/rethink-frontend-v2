@@ -6,7 +6,7 @@
       :cols="field?.cols ?? 12"
       class="pb-2"
     >
-      <div v-if="field.isToggleable" class="toggleable_group">
+      <div v-if="field.fields" class="toggleable_group">
         <div class="toggleable_group__toggle">
           <v-switch
             v-model="field.isToggleOn"
@@ -29,6 +29,33 @@
             />
           </v-col>
         </div>
+      </div>
+      <!-- some fields can have toggleable default value -->
+      <div v-else-if="field.defaultValue">
+        <div class="toggleable_group__toggle">
+          <v-switch
+            v-model="field.isCustomValueToggleOn"
+            color="primary"
+            hide-details
+            :disabled="isStepDisabled"
+          />
+        </div>
+        <UiField
+          v-if="field.isCustomValueToggleOn"
+          v-model="field.value"
+          :field="field"
+          :is-disabled="!field.isCustomValueToggleOn || isStepDisabled"
+        />
+        <div v-else class="default-value">
+          <UiInfoBox v-if="field?.defaultValueInfo" :info="field.defaultValueInfo" />
+          <UiField
+            v-else
+            v-model="field.defaultValue"
+            :field="field"
+            :is-disabled="true"
+          />
+        </div>
+
       </div>
       <div v-else>
         <UiField

@@ -110,19 +110,17 @@ import type INAVMethod from "~/types/nav_method";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import {
-  decodeUpdateNavMethods,
   encodeUpdateNavMethods,
-  getAllowManagerToUpdateNavProposalData,
+  getAllowManagerToUpdateNavPermissionsData,
 } from "~/composables/nav/navProposal";
 import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
-import { NAVExecutor } from "assets/contracts/NAVExecutor";
-import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
+import { getNAVData } from "~/store/fund/actions/fetchFundNAVData.action";
 
 const createFundStore = useCreateFundStore();
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 
-const { fundChainId, fundInitCache, fundSettings } = toRefs(createFundStore);
+const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
 
 // Data
 const isFetchingNavMethods = ref(false);
@@ -151,6 +149,7 @@ const storeNavMethods = async () => {
   // storeNAV(address navExecutorAddr, bytes calldata data) external {
   // TPrepare NAV methods data.
   isLoadingStoreNavMethods.value = true;
+
   const encodedNavUpdateEntries = encodeUpdateNavMethods(
     navMethods.value,
     fundSettings?.value?.baseDecimals,
@@ -159,7 +158,8 @@ const storeNavMethods = async () => {
   await sendStoreNavMethodsTransaction(encodedNavUpdateEntries);
 
   if (allowManagerToUpdateNav.value) {
-    await sendAllowManagerToUpdateNavTransaction(encodedNavUpdateEntries);
+    // Submit permission to allow manager to keep updating NAV.
+    await sendAllowManagerToUpdateNavTransaction();
   }
 };
 
@@ -222,9 +222,7 @@ const sendStoreNavMethodsTransaction = async (
 }
 
 
-const sendAllowManagerToUpdateNavTransaction = async (
-  encodedNavUpdateEntries: string,
-) => {
+const sendAllowManagerToUpdateNavTransaction = async () => {
   if (!fundSettings?.value?.fundAddress) {
     return toastStore.errorToast("Fund address is missing.");
   }
@@ -233,24 +231,20 @@ const sendAllowManagerToUpdateNavTransaction = async (
   }
   isLoadingAllowManagerToUpdateNav.value = true;
 
-  const allowManagerToUpdateNavProposal = getAllowManagerToUpdateNavProposalData(
-    encodedNavUpdateEntries,
-    fundSettings?.value?.fundAddress,
-    fundChainId.value,
-    fundInitCache?.value?.rolesModifier,
-  );
+  const allowManagerToUpdateNavPermission =
+    getAllowManagerToUpdateNavPermissionsData(
+      fundSettings?.value?.fundAddress,
+      fundChainId.value,
+      fundInitCache?.value?.rolesModifier,
+    );
 
   try {
-    console.log("submitPermissions allowManagerToUpdateNavProposal", allowManagerToUpdateNavProposal);
+    console.log("submitPermissions allowManagerToUpdateNavPermission", allowManagerToUpdateNavPermission);
     await fundFactoryContract.value
       .send(
         "submitPermissions",
         {},
-        ...[
-          allowManagerToUpdateNavProposal.targets,
-          allowManagerToUpdateNavProposal.gasValues,
-          allowManagerToUpdateNavProposal.calldatas,
-        ],
+        allowManagerToUpdateNavPermission.calldatas,
       )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
@@ -319,44 +313,34 @@ const methodsAddedFromLibrary = (methods: INAVMethod[]) => {
 };
 
 onMounted(() => {
-  getNAVData();
+  fetchNavMethods();
 })
 
 watch(() => fundSettings?.value?.fundAddress, (fundAddress?: string) => {
   if (fundAddress) {
-    getNAVData();
+    fetchNavMethods();
   }
 })
 
-const getNAVData = async () => {
-  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId.value);
-  const fundAddress = fundSettings?.value?.fundAddress;
-  if (!fundAddress) return;
+const fetchNavMethods = async () => {
+  if (!fundSettings?.value?.fundAddress) return;
+
   isFetchingNavMethods.value = true;
 
   try {
-    const navExecutorContract = web3Store.getCustomContract(
+    const fetchedNavMethods = await getNAVData(
       fundChainId.value,
-      NAVExecutor.abi,
-      navExecutorAddress,
+      fundSettings?.value?.fundAddress,
     );
 
-    const navMethodsEncoded: string = await web3Store.callWithRetry(
-      fundChainId.value,
-      () =>
-        navExecutorContract.methods.getNAVData(fundAddress).call(),
-    );
-    // Decode NAV methods.
-    const navMethodsData = decodeUpdateNavMethods(navMethodsEncoded);
-
-    // Parse NAV methods.
-    for (const [navMethodIndex, navMethod] of navMethodsData.navUpdateData.entries()) {
-      navMethods.value.push(
-        parseNAVMethod(navMethodIndex, navMethod),
-      );
+    for (const navMethod of fetchedNavMethods) {
+      // Don't push that method if it exists already, match by detailsHash.
+      if (navMethods.value.some((existingMethod: INAVMethod) => existingMethod.detailsHash === navMethod.detailsHash)) {
+        continue
+      }
+      navMethods.value.push(navMethod);
     }
   } catch (error: any) {
-    console.error("Failed loading NAV methods data.", error);
     toastStore.errorToast("Failed loading NAV methods data. " + error.message);
   }
   isFetchingNavMethods.value = false;

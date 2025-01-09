@@ -1,14 +1,15 @@
 import { defineStore } from "pinia";
 
-import { useActionState } from "../actionState.store";
-import { fetchFundCacheAction } from "./actions/fetchFundCache.action";
+import { clearLocalStorageItem } from "~/composables/localStorage";
 import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFundSettings from "~/types/fund_settings";
 import type { IFundInitCache } from "~/types/fund_settings";
-import { clearLocalStorageItem } from "~/composables/localStorage";
+import { useActionState } from "../actionState.store";
+import { fetchFundInitCacheAction } from "./actions/fetchFundInitCache.action";
 
 interface IState {
+  selectedStepperChainId?: string;
   fundInitCache?: IFundInitCache;
   askToSaveDraftBeforeRouteLeave: boolean;
 }
@@ -32,7 +33,11 @@ export const useCreateFundStore = defineStore({
       return useWeb3Store();
     },
     fundChainId(): string {
-      return this.fundInitCache?.fundSettings?.chainId || "";
+      if (this.fundInitCache?.fundSettings?.chainId) {
+        return this.fundInitCache.fundSettings.chainId;
+      }
+
+      return this.selectedStepperChainId || ""
     },
     onboardingWhitelistLocalStorageKey(): string {
       return "onboardingWhitelist_" + this.fundChainId || "undefined";
@@ -45,13 +50,16 @@ export const useCreateFundStore = defineStore({
     },
   },
   actions: {
-    fetchFundCache(
+    fetchFundInitCache(
       fundChainId: string,
       deployerAddress: string,
-    ): Promise<void> {
-      return useActionState("fetchFundCacheAction", () =>
-        fetchFundCacheAction(fundChainId, deployerAddress),
+    ): Promise<IFundInitCache | undefined> {
+      return useActionState("fetchFundInitCacheAction", () =>
+        fetchFundInitCacheAction(fundChainId, deployerAddress),
       );
+    },
+    setSelectedStepperChainId(chainId: string) {
+      this.selectedStepperChainId = chainId;
     },
     clearFundInitCache() {
       this.fundInitCache = undefined;

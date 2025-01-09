@@ -156,7 +156,7 @@ const governanceProposalStore = useGovernanceProposalsStore();
 
 const confirmDialog = ref(false);
 const updateSettingsProposals = ref([]) as Ref<IGovernanceProposal[]>;
-const { shouldUserDelegate } = toRefs(fundStore);
+const { shouldUserDelegate } = storeToRefs(fundStore);
 
 // dummy data governance activity
 const governanceProposals = computed(() => {

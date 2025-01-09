@@ -1,7 +1,12 @@
+import { ERR_CONTRACT_EXECUTION_REVERTED } from "web3";
 import { useFundStore } from "../fund.store";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 import type INAVMethod from "~/types/nav_method";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
+import { NAVExecutor } from "assets/contracts/NAVExecutor";
+import { decodeUpdateNavMethods } from "~/composables/nav/navProposal";
+import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
@@ -27,6 +32,25 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
       fundNAVData,
       fundStore.selectedFundAddress,
     );
+    console.log("FUND NAV DATA", navUpdates);
+
+    if (!navUpdates.length) {
+      // No NAV updates yet, try fetching NAV methods directly.
+      // This means that fund was freshly created and no NAV updates have been
+      // made, but NAV methods were stored on fund create.
+      const newNavMethods = await getNAVData(
+        fund.chainId,
+        fund.address,
+      );
+      console.log("FETCHED GET NAV DATA", newNavMethods);
+
+      fundStore.fundInitialNAVMethods = mergeNAVMethodsFromLocalStorage(
+        fundStore.selectedFundAddress,
+        newNavMethods,
+      );
+      fundStore.fundManagedNAVMethods = fundStore.fundInitialNAVMethods;
+      fundStore.refreshSimulateNAVCounter++;
+    }
     const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
     fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
@@ -64,6 +88,54 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
   );
   fundStore.refreshSimulateNAVCounter++;
 };
+
+/**
+ * This function calls getNAVData directly to NAV executor contract.
+ **/
+export const getNAVData = async (
+  fundChainId: string,
+  fundAddress: string,
+): Promise<INAVMethod[]> => {
+  const web3Store = useWeb3Store();
+  const navMethods: INAVMethod[] = [];
+  console.debug("getNAVData", fundChainId, fundAddress);
+
+  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
+  if (!fundAddress) return navMethods;
+
+  try {
+    const navExecutorContract = web3Store.getCustomContract(
+      fundChainId,
+      NAVExecutor.abi,
+      navExecutorAddress,
+    );
+
+    const updateNavDataEncoded: string = await web3Store.callWithRetry(
+      fundChainId,
+      () =>
+        navExecutorContract.methods.getNAVData(fundAddress).call(),
+    );
+
+    // Decode NAV methods.
+    const updateNavDataDecoded = decodeUpdateNavMethods(updateNavDataEncoded);
+
+    // Parse NAV methods.
+    for (const [navMethodIndex, navMethod] of updateNavDataDecoded.navUpdateData.entries()) {
+      const parsedNavMethod = parseNAVMethod(navMethodIndex, navMethod);
+      navMethods.push(parsedNavMethod);
+    }
+  } catch (error: any) {
+    // If execution was reverted, is probably because methods don't exist and
+    // there is a require in contract "null output data". Could also check
+    // if error.cause includes the "null output data", just to be sure.
+    if (error.code !== ERR_CONTRACT_EXECUTION_REVERTED) {
+      console.error("Failed loading NAV methods data from getNAVData.", error);
+      throw error;
+    }
+  }
+  console.debug("getNAVData parsed NAV methods", fundChainId, fundAddress, navMethods);
+  return navMethods;
+}
 
 const mergeNAVMethodsFromLocalStorage = (
   fundAddress: string,
