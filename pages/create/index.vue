@@ -51,7 +51,7 @@
                 v-if="showClearCacheButton"
                 class="me-4"
                 variant="outlined"
-                @click="handleClearCache"
+                @click="isClearCacheDialogOpen = true"
               >
 
                 Clear Cache
@@ -211,6 +211,18 @@
         @confirm="initializeFund"
         @cancel="isInitializeDialogOpen = false"
       />
+
+      <UiConfirmDialog
+        v-model="isClearCacheDialogOpen"
+        title="Heads Up!"
+        confirm-text="Clear"
+        cancel-text="Don't clear"
+        :message="`Are you sure you want to clear the cache for <strong>${networksMap[selectedChainId]?.chainName}</strong>?`"
+        class="confirm_dialog"
+        max-width="600px"
+        @confirm="handleClearCache"
+        @cancel="isClearCacheDialogOpen = false"
+      />
     </v-stepper>
   </div>
 </template>
@@ -224,7 +236,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { IField } from "~/types/enums/input_type";
 
-import { networkChoices } from "~/store/web3/networksMap";
+import { networkChoices, networksMap } from "~/store/web3/networksMap";
 import { ActionState } from "~/types/enums/action_state";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 import { InputType } from "~/types/enums/input_type";
@@ -257,6 +269,7 @@ const step = ref(1);
 const saveChangesDialog = ref(false);
 const isInitializeDialogOpen = ref(false);
 const isInitializeLoading = ref(false);
+const isClearCacheDialogOpen = ref(false);
 // store the resolve/reject functions for the save changes dialog
 let nextRouteResolve: Function | null = null;
 
@@ -351,9 +364,15 @@ const goToNextStep = () => {
 }
 
 const handleClearCache = () => {
-  alert("TODO: Clearing cache");
-  // createFundStore.clearFundInitCache();
-  // stepperEntry.value = initStepperEntry();
+  try {
+    createFundStore.clearFundLocalStorage();
+    stepperEntry.value = initStepperEntry();
+    isClearCacheDialogOpen.value = false;
+    toastStore.successToast("Cache cleared successfully");
+  } catch (error) {
+    console.error("Error clearing cache", error);
+    toastStore.errorToast("Error clearing cache");
+  }
 }
 
 // Computed
@@ -785,8 +804,13 @@ const handleCloseSaveChangesDialog = () => {
 const stepperEntry = ref(initStepperEntry());
 
 // Watchers
+// TODO: remove this watcher
 watch(stepperEntry.value, (newVal) => {
   console.log("stepperEntry changes", newVal);
+});
+
+watch(() => selectedChainId.value, () => {
+  createFundStore.setSelectedStepperChainId(selectedChainId.value);
 });
 
 watch(() => accountStore.activeAccountAddress, () => {
@@ -808,6 +832,10 @@ onBeforeRouteLeave((to, from, next) => {
 
     if (next) next();
   }
+});
+
+onMounted(() => {
+  createFundStore.setSelectedStepperChainId(selectedChainId.value);
 });
 </script>
 
