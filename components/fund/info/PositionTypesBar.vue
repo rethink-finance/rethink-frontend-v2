@@ -32,8 +32,6 @@ export default {
   },
   computed: {
     totalCountSum() {
-      console.log("this.positionTypeCounts");
-      console.log(this.positionTypeCounts);
       return this.positionTypeCounts.reduce((sum, current) => {
         return sum + current.count;
       }, 0n);
