@@ -105,6 +105,7 @@
 </template>
 
 <script setup lang="ts">
+import { ERR_CONTRACT_EXECUTION_REVERTED } from "web3";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type INAVMethod from "~/types/nav_method";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
@@ -117,7 +118,9 @@ import {
 import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 import { NAVExecutor } from "assets/contracts/NAVExecutor";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
+import { useFundsStore } from "~/store/funds/funds.store";
 
+const fundsStore = useFundsStore();
 const createFundStore = useCreateFundStore();
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
@@ -151,7 +154,7 @@ const storeNavMethods = async () => {
   // storeNAV(address navExecutorAddr, bytes calldata data) external {
   // TPrepare NAV methods data.
   isLoadingStoreNavMethods.value = true;
-  console.log("storeNavMethods", toRaw(navMethods.value));
+
   const encodedNavUpdateEntries = encodeUpdateNavMethods(
     navMethods.value,
     fundSettings?.value?.baseDecimals,
@@ -233,7 +236,7 @@ const sendAllowManagerToUpdateNavTransaction = async () => {
   }
   isLoadingAllowManagerToUpdateNav.value = true;
 
-  const allowManagerToUpdateNavpermissions =
+  const allowManagerToUpdateNavPermission =
     getAllowManagerToUpdateNavPermissionsData(
       fundSettings?.value?.fundAddress,
       fundChainId.value,
@@ -241,12 +244,12 @@ const sendAllowManagerToUpdateNavTransaction = async () => {
     );
 
   try {
-    console.log("submitPermissions allowManagerToUpdateNavpermissions", allowManagerToUpdateNavpermissions);
+    console.log("submitPermissions allowManagerToUpdateNavPermission", allowManagerToUpdateNavPermission);
     await fundFactoryContract.value
       .send(
         "submitPermissions",
         {},
-        allowManagerToUpdateNavpermissions.calldatas,
+        allowManagerToUpdateNavPermission.calldatas,
       )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
@@ -330,6 +333,20 @@ const getNAVData = async () => {
   if (!fundAddress) return;
   isFetchingNavMethods.value = true;
 
+  // if (!fundsStore.allNavMethods?.length) {
+  const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays(fundChainId.value);
+
+  // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
+  // and make sure it is fetched before checking here with fundsStore.fetchFundsNavMethods, and then we
+  // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
+  console.log("simulate fetch all nav methods")
+  await fundsStore.fetchFundsNavMethods(
+    fundChainId.value,
+    fundsInfoArrays,
+    true,
+  );
+  // }
+
   try {
     const navExecutorContract = web3Store.getCustomContract(
       fundChainId.value,
@@ -337,16 +354,18 @@ const getNAVData = async () => {
       navExecutorAddress,
     );
 
-    const navMethodsEncoded: string = await web3Store.callWithRetry(
+    const updateNavDataEncoded: string = await web3Store.callWithRetry(
       fundChainId.value,
       () =>
         navExecutorContract.methods.getNAVData(fundAddress).call(),
+      1,
+      [ERR_CONTRACT_EXECUTION_REVERTED],
     );
     // Decode NAV methods.
-    const navMethodsData = decodeUpdateNavMethods(navMethodsEncoded);
+    const updateNavDataDecoded = decodeUpdateNavMethods(updateNavDataEncoded);
 
     // Parse NAV methods.
-    for (const [navMethodIndex, navMethod] of navMethodsData.navUpdateData.entries()) {
+    for (const [navMethodIndex, navMethod] of updateNavDataDecoded.navUpdateData.entries()) {
       // Don't push that method if it exists already, match by detailsHash.
       const parsedNavMethod = parseNAVMethod(navMethodIndex, navMethod);
       if (navMethods.value.some((m: INAVMethod) => m.detailsHash === parsedNavMethod.detailsHash)) {
@@ -355,8 +374,13 @@ const getNAVData = async () => {
       navMethods.value.push(parsedNavMethod);
     }
   } catch (error: any) {
-    console.error("Failed loading NAV methods data.", error);
-    toastStore.errorToast("Failed loading NAV methods data. " + error.message);
+    // If execution was reverted, is probably because methods don't exist and
+    // there is a require in contract "null output data". Could also check
+    // if error.cause includes the "null output data", just to be sure.
+    if (error.code !== ERR_CONTRACT_EXECUTION_REVERTED) {
+      console.error("Failed loading NAV methods data.", error, error.code);
+      toastStore.errorToast("Failed loading NAV methods data. " + error.message);
+    }
   }
   isFetchingNavMethods.value = false;
 }

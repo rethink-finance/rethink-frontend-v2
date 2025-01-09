@@ -862,7 +862,17 @@ onBeforeRouteLeave((to, from, next) => {
   }
 });
 
+const chainIdValues = computed(() => networkChoices.map((choice: any) => choice.value));
+
 onMounted(() => {
+  // Set selected chain to user's current network.
+  if (
+    accountStore.connectedWalletChainId &&
+    step.value === 1 &&
+    chainIdValues?.value?.includes(accountStore.connectedWalletChainId)
+  ) {
+    selectedChainId.value = accountStore.connectedWalletChainId;
+  }
   createFundStore.setSelectedStepperChainId(selectedChainId.value);
 });
 </script>

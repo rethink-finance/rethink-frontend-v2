@@ -49,6 +49,7 @@ interface IState {
   selectedFundAddress: string;
   // Fund NAV methods that user can manage and change, delete, add...
   fundManagedNAVMethods: INAVMethod[];
+  fundInitialNAVMethods: INAVMethod[];
   // Cached roleMod addresses for each fund.
   fundRoleModAddress: Record<string, string>;
   refreshSimulateNAVCounter: number;
@@ -76,6 +77,7 @@ export const useFundStore = defineStore({
     selectedFundChain: "",
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
+    fundInitialNAVMethods: [],
     fundRoleModAddress: {},
     refreshSimulateNAVCounter: 0,
   }),
@@ -442,6 +444,7 @@ export const useFundStore = defineStore({
       this.fundUserData.depositRequest = undefined;
       this.fundUserData.redemptionRequest = undefined;
       this.fundManagedNAVMethods = [];
+      this.fundInitialNAVMethods = [];
       this.fundRoleModAddress = {};
       this.fundUserData = structuredClone(DEFAULT_FUND_USER_DATA);
     },

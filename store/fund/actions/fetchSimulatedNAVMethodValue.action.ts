@@ -83,8 +83,6 @@ export const fetchSimulatedNAVMethodValueAction = async (
       callData.push(
         prepNAVMethodComposable(
           navEntry.details,
-          navEntry.pastNAVUpdateEntrySafeAddress,
-          safeAddress,
         ),
       );
 

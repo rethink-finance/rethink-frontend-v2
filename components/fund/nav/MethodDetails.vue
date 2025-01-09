@@ -4,7 +4,7 @@
     :key="field.key"
     class="method_details"
     cols="12"
-    :md="field.cols || 6"
+    :md="field.cols || getInputTypeCols(field.type)"
   >
     <v-label :class="{'label_required mb-2': !isFieldCheckbox(field)}">
       {{ field.label }}
@@ -47,6 +47,7 @@
 <script setup lang="ts">
 import { InputType } from "~/types/enums/input_type";
 import {
+  getInputTypeCols,
   PositionType,
   PositionTypeValuationTypeFieldsMap,
 } from "~/types/enums/position_type";

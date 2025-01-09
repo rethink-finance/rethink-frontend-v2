@@ -2,6 +2,10 @@ import { useFundStore } from "../fund.store";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 import type INAVMethod from "~/types/nav_method";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
+import { NAVExecutor } from "assets/contracts/NAVExecutor";
+import { decodeUpdateNavMethods } from "~/composables/nav/navProposal";
+import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
@@ -27,6 +31,25 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
       fundNAVData,
       fundStore.selectedFundAddress,
     );
+    console.log("FUND NAV DATA", navUpdates);
+
+    if (!navUpdates.length) {
+      // No NAV updates yet, try fetching NAV methods directly.
+      // This means that fund was freshly created and no NAV updates have been
+      // made, but NAV methods were stored on fund create.
+      const newNavMethods = await getNAVData(
+        fund.chainId,
+        fund.address,
+      );
+      console.log("FETCHED GET NAV DATA", newNavMethods);
+
+      fundStore.fundInitialNAVMethods = mergeNAVMethodsFromLocalStorage(
+        fundStore.selectedFundAddress,
+        newNavMethods,
+      );
+      fundStore.fundManagedNAVMethods = fundStore.fundInitialNAVMethods;
+      fundStore.refreshSimulateNAVCounter++;
+    }
     const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
     fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
@@ -64,6 +87,53 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
   );
   fundStore.refreshSimulateNAVCounter++;
 };
+
+
+const getNAVData = async (
+  fundChainId: string,
+  fundAddress: string,
+): Promise<INAVMethod[]> => {
+  const web3Store = useWeb3Store();
+  const navMethods: INAVMethod[] = [];
+  console.warn("getNAVData");
+
+  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
+  if (!fundAddress) return navMethods;
+  console.warn("getNAVData fetch");
+
+  try {
+    const navExecutorContract = web3Store.getCustomContract(
+      fundChainId,
+      NAVExecutor.abi,
+      navExecutorAddress,
+    );
+
+    const updateNavDataEncoded: string = await web3Store.callWithRetry(
+      fundChainId,
+      () =>
+        navExecutorContract.methods.getNAVData(fundAddress).call(),
+    );
+    console.warn("NEW FUND updateNavDataEncoded", updateNavDataEncoded);
+    // Decode NAV methods.
+    const updateNavDataDecoded = decodeUpdateNavMethods(updateNavDataEncoded);
+    console.log("NEW FUND updateNavDataDecoded", updateNavDataDecoded)
+
+    // Parse NAV methods.
+    for (const [navMethodIndex, navMethod] of updateNavDataDecoded.navUpdateData.entries()) {
+      // Don't push that method if it exists already, match by detailsHash.
+      const parsedNavMethod = parseNAVMethod(navMethodIndex, navMethod);
+      // if (navMethods.value.some((m: INAVMethod) => m.detailsHash === parsedNavMethod.detailsHash)) {
+      //   continue
+      // }
+      navMethods.push(parsedNavMethod);
+    }
+  } catch (error: any) {
+    console.error("Failed loading NAV methods data.", error);
+    // toastStore.errorToast("Failed loading NAV methods data. " + error.message);
+  }
+  console.log("PARSED NAV METHODS", navMethods);
+  return navMethods;
+}
 
 const mergeNAVMethodsFromLocalStorage = (
   fundAddress: string,

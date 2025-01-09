@@ -95,6 +95,12 @@ type PositionTypeValuationTypeFieldsMapType = {
   };
 };
 
+export const getInputTypeCols = (inputType: InputType) => {
+  // Default width of 6 for number and checkbox inputs.
+  if ([InputType.Number, InputType.Checkbox].includes(inputType)) return 6;
+  return 12;
+}
+
 export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFieldsMapType = {
   [PositionType.Liquid]: {
     [ValuationType.DEXPair]: [
