@@ -2,7 +2,7 @@
   <div class="d-flex" style="width: 100%; flex-direction: column; height: 100%;">
     <OnboardingPasswordProtect
       v-if="!isAuthenticated"
-      v-model:authenticated="isAuthenticated"
+      v-model:is-password-correct="isAuthenticated"
     />
 
     <v-stepper
