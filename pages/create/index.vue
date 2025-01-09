@@ -59,13 +59,22 @@
               <v-btn
                 v-if="showInitializeButton"
                 color="primary"
-                :disabled="isFundInitialized || !isCurrentStepValid"
+                :disabled="isFundInitialized || !isCurrentStepValid || !accountStore.isConnected"
                 variant="flat"
                 class="me-4"
                 :loading="isInitializeLoading"
                 @click="isInitializeDialogOpen = true"
               >
                 Initialize
+                <v-tooltip
+                  v-if="!accountStore.isConnected"
+                  :model-value="true"
+                  activator="parent"
+                  location="top"
+                  @update:model-value="true"
+                >
+                  Connect your wallet to initialize the OIV
+                </v-tooltip>
               </v-btn>
               <v-tooltip
                 activator="parent"
