@@ -415,7 +415,6 @@
 <script lang="ts">
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useFundsStore } from "~/store/funds/funds.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 import {
@@ -530,11 +529,9 @@ export default defineComponent({
   emits: ["update:methods", "selectedChanged"],
   setup() {
     const fundStore = useFundStore();
-    const fundsStore = useFundsStore();
     const toastStore = useToastStore();
     return {
       toastStore,
-      fundsStore,
       fundStore,
       creatablePositionTypes: computed(() =>
         PositionTypes.filter(
