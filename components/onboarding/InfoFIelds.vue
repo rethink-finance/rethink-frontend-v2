@@ -34,27 +34,26 @@
       <div v-else-if="field.defaultValue">
         <div class="toggleable_group__toggle">
           <v-switch
-            v-model="field.isCustomValue"
+            v-model="field.isCustomValueToggleOn"
             color="primary"
             hide-details
             :disabled="isStepDisabled"
           />
         </div>
         <UiField
-          v-if="field.isCustomValue"
+          v-if="field.isCustomValueToggleOn"
           v-model="field.value"
           :field="field"
-          :is-disabled="!field.isCustomValue || isStepDisabled"
+          :is-disabled="!field.isCustomValueToggleOn || isStepDisabled"
         />
         <div v-else class="default-value">
+          <UiInfoBox v-if="field?.defaultValueInfo" :info="field.defaultValueInfo" />
           <UiField
+            v-else
             v-model="field.defaultValue"
             :field="field"
             :is-disabled="true"
           />
-          <v-tooltip activator="parent" location="top">
-            Default value (toggle to edit)
-          </v-tooltip>
         </div>
 
       </div>

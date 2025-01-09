@@ -232,7 +232,7 @@ const {
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
 } = storeToRefs(createFundStore);
-const step = ref(1);
+const step = ref(6);
 
 // TODO: add validation functionality
 const saveChangesDialog = ref(false);
@@ -541,7 +541,7 @@ function getFieldByStepAndFieldKey(
   }
 
   if (field?.defaultValue) {
-    return field?.isCustomValue ? field?.value : field?.defaultValue;
+    return field?.isCustomValueToggleOn ? field?.value : field?.defaultValue;
   }
 
   return field?.value;
