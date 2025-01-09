@@ -48,9 +48,18 @@
             </v-btn> -->
             <div class="item">
               <v-btn
+                v-if="showClearCacheButton"
+                class="me-4"
+                variant="outlined"
+                @click="handleClearCache"
+              >
+
+                Clear Cache
+              </v-btn>
+              <v-btn
                 v-if="showInitializeButton"
                 color="primary"
-                :disabled="isFundInitialized"
+                :disabled="isFundInitialized || !isCurrentStepValid"
                 variant="flat"
                 class="me-4"
                 :loading="isInitializeLoading"
@@ -75,7 +84,8 @@
                 <template #default>
                   Please fill out all required fields
                 </template>
-              </v-tooltip></div>
+              </v-tooltip>
+            </div>
           </div>
         </template>
         <template #prev>
@@ -331,6 +341,12 @@ const goToNextStep = () => {
   }
 }
 
+const handleClearCache = () => {
+  alert("TODO: Clearing cache");
+  // createFundStore.clearFundInitCache();
+  // stepperEntry.value = initStepperEntry();
+}
+
 // Computed
 const isFundInitialized = computed(() => {
   // Return true if fund was initialized already
@@ -378,6 +394,15 @@ const showInitializeButton = computed(() => {
   return false;
 });
 
+const showClearCacheButton = computed(() => {
+  const item = stepperEntry.value[step.value - 1];
+
+  if (item.key === OnboardingStep.Chain) {
+    return true;
+  }
+  return false;
+});
+
 const toggledOffFields = computed(() => {
   // check which fields are toggled off, and set them to 0 or null address
   return stepperEntry.value
@@ -416,7 +441,10 @@ const isCurrentStepValid = computed(() => {
   const currentStep = stepperEntry.value[step.value - 1];
   console.log("currentStep.key", currentStep.key);
   if (stepWithRegularFields.includes(currentStep.key) && currentStep.fields) {
-    isCurrentStepValid =  currentStep.fields.every((field) => {
+    isCurrentStepValid = currentStep.fields.every((field) => {
+      // check if it's a custom value toggle
+      if (field.isCustomValueToggleOn === false) return true;
+
       if (field.fields) {
         // check if it's toggled off
         if (!field.isToggleOn) return true;
