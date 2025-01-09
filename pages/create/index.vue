@@ -232,7 +232,7 @@ const {
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
 } = storeToRefs(createFundStore);
-const step = ref(6);
+const step = ref(1);
 
 // TODO: add validation functionality
 const saveChangesDialog = ref(false);
