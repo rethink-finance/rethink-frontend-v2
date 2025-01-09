@@ -1,3 +1,4 @@
+import { ERR_CONTRACT_EXECUTION_REVERTED } from "web3";
 import { useFundStore } from "../fund.store";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 import type INAVMethod from "~/types/nav_method";
@@ -88,18 +89,19 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
   fundStore.refreshSimulateNAVCounter++;
 };
 
-
-const getNAVData = async (
+/**
+ * This function calls getNAVData directly to NAV executor contract.
+ **/
+export const getNAVData = async (
   fundChainId: string,
   fundAddress: string,
 ): Promise<INAVMethod[]> => {
   const web3Store = useWeb3Store();
   const navMethods: INAVMethod[] = [];
-  console.warn("getNAVData");
+  console.debug("getNAVData", fundChainId, fundAddress);
 
   const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
   if (!fundAddress) return navMethods;
-  console.warn("getNAVData fetch");
 
   try {
     const navExecutorContract = web3Store.getCustomContract(
@@ -113,25 +115,25 @@ const getNAVData = async (
       () =>
         navExecutorContract.methods.getNAVData(fundAddress).call(),
     );
-    console.warn("NEW FUND updateNavDataEncoded", updateNavDataEncoded);
+
     // Decode NAV methods.
     const updateNavDataDecoded = decodeUpdateNavMethods(updateNavDataEncoded);
-    console.log("NEW FUND updateNavDataDecoded", updateNavDataDecoded)
 
     // Parse NAV methods.
     for (const [navMethodIndex, navMethod] of updateNavDataDecoded.navUpdateData.entries()) {
-      // Don't push that method if it exists already, match by detailsHash.
       const parsedNavMethod = parseNAVMethod(navMethodIndex, navMethod);
-      // if (navMethods.value.some((m: INAVMethod) => m.detailsHash === parsedNavMethod.detailsHash)) {
-      //   continue
-      // }
       navMethods.push(parsedNavMethod);
     }
   } catch (error: any) {
-    console.error("Failed loading NAV methods data.", error);
-    // toastStore.errorToast("Failed loading NAV methods data. " + error.message);
+    // If execution was reverted, is probably because methods don't exist and
+    // there is a require in contract "null output data". Could also check
+    // if error.cause includes the "null output data", just to be sure.
+    if (error.code !== ERR_CONTRACT_EXECUTION_REVERTED) {
+      console.error("Failed loading NAV methods data from getNAVData.", error);
+      throw error;
+    }
   }
-  console.log("PARSED NAV METHODS", navMethods);
+  console.debug("getNAVData parsed NAV methods", fundChainId, fundAddress, navMethods);
   return navMethods;
 }
 
