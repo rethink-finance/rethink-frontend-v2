@@ -217,12 +217,17 @@
         title="Heads Up!"
         confirm-text="Clear"
         cancel-text="Don't clear"
-        :message="`Are you sure you want to clear the cache for <strong>${networksMap[selectedChainId]?.chainName}</strong>?`"
+        :message="clearCacheMessage"
         class="confirm_dialog"
         max-width="600px"
         @confirm="handleClearCache"
         @cancel="isClearCacheDialogOpen = false"
-      />
+      >
+        <UiInfoBox
+          info="This action will clear the cache for this chain. You will lose all the data you have entered so far."
+          variant="error"
+        />
+      </UiConfirmDialog>
     </v-stepper>
   </div>
 </template>
@@ -343,6 +348,13 @@ const fetchFundInitCache = async () => {
     createFundStore.clearFundInitCache();
   }
 }
+
+
+const clearCacheMessage = computed(() => {
+  if(networksMap[selectedChainId.value]?.chainName === undefined) return "Are you sure you want to clear the cache for this chain?";
+
+  return `Are you sure you want to clear the cache for <strong>${networksMap[selectedChainId.value]?.chainName}</strong>?`
+});
 
 const isLoadingFetchFundCache = computed(() =>
   actionStateStore.isActionState(
