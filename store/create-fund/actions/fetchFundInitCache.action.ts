@@ -19,7 +19,7 @@ const fetchGovernorData = async (fundChainId: string, governorAddress?: string) 
   if (!governorAddress) return {};
 
   const web3Store = useWeb3Store();
-  console.log("governor fetch")
+  console.debug("governor fetch")
   const fundGovernorContract = web3Store.getCustomContract(
     fundChainId,
     RethinkFundGovernor.abi,
@@ -64,7 +64,6 @@ const fetchGovernorData = async (fundChainId: string, governorAddress?: string) 
         fundGovernorContract.methods.lateQuorumVoteExtension().call(),
     ),
   ]);
-  console.log("governor fetch done")
 
   return {
     quorumNumerator: Number(quorumNumerator),
@@ -78,28 +77,28 @@ const fetchGovernorData = async (fundChainId: string, governorAddress?: string) 
 }
 const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) => {
   const web3Store = useWeb3Store();
-  console.log("fetchBaseTokenDetails")
+  console.debug("fetchBaseTokenDetails")
 
   const tokenContract = web3Store.getCustomContract(
     chainId,
     ERC20,
     baseTokenAddress,
   );
-  console.log("baseTokenAddress", baseTokenAddress)
+  console.debug("baseTokenAddress", baseTokenAddress)
 
   const baseDecimals = await web3Store.callWithRetry(
     chainId,
     () =>
       tokenContract.methods.decimals().call(),
   );
-  console.log("baseDecimals")
+  console.debug("baseDecimals")
 
   const baseSymbol = await web3Store.callWithRetry(
     chainId,
     () =>
       tokenContract.methods.symbol().call(),
   );
-  console.log("baseSymbol")
+  console.debug("baseSymbol")
 
   return [Number(baseDecimals), baseSymbol];
 }
@@ -120,7 +119,7 @@ export const fetchFundInitCacheAction = async (
     throw new Error("No deployerAddress provided, cannot fetch fund cache.");
   }
   const fundFactoryContract = web3Store.chainContracts[fundChainId]?.fundFactoryContract;
-  console.warn("fetch fundInitCache", fundChainId, "deployer:", deployerAddress)
+  console.debug("fetch fundInitCache", fundChainId, "deployer:", deployerAddress)
 
   const fundInitCache: IFundInitCache = await web3Store.callWithRetry(
     fundChainId,
@@ -142,20 +141,20 @@ export const fetchFundInitCacheAction = async (
   fundInitCache.governorData = await fetchGovernorData(fundChainId, fundInitCache?.fundSettings?.governor);
   fundInitCache.fundMetadata = JSON.parse(fundInitCache._fundMetadata || "{}");
   fundInitCache.fundMetadata.chainId = fundChainId;
-  console.log("governor fetch done data", fundInitCache.governorData)
+  console.debug("governor fetch done", fundInitCache.governorData)
 
   // Add more fields to fund metadata.
   const fundSettings = fundInitCache?.fundSettings || {};
   const feeCollectors = fundSettings?.feeCollectors || [];
   const whitelistedAddresses = fundInitCache.fundSettings?.allowedDepositAddrs?.join("\n") || [];
-  console.log("governor fetch fetchBaseTokenDetails")
+  console.debug("governor fetch fetchBaseTokenDetails")
 
   // Fetch fund base token decimals
   const [baseDecimals, baseSymbol] = await fetchBaseTokenDetails(
     fundChainId,
     fundInitCache.fundSettings.baseToken,
   );
-  console.warn("BASE DECIMALS & SYMBOL", baseDecimals, baseSymbol)
+  console.debug("BASE DECIMALS & SYMBOL", baseDecimals, baseSymbol)
 
   fundInitCache.fundSettings = {
     ...fundInitCache.fundSettings,
@@ -177,6 +176,6 @@ export const fetchFundInitCacheAction = async (
   };
 
   createFundStore.fundInitCache = fundInitCache;
-  console.log("fund init cache done", toRaw(createFundStore.fundInitCache));
+  console.log("fund init cache parsed", toRaw(createFundStore.fundInitCache));
   return fundInitCache;
 };

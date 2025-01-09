@@ -1,8 +1,8 @@
 <template>
   <div class="d-flex" style="width: 100%; flex-direction: column; height: 100%;">
     <OnboardingPasswordProtect
-      v-if="!isAuthenticated"
-      v-model:is-password-correct="isAuthenticated"
+      v-if="!isCreateFundPasswordCorrect"
+      v-model:is-password-correct="isCreateFundPasswordCorrect"
     />
 
     <v-stepper
@@ -55,12 +55,11 @@
             <div class="item">
               <v-btn
                 v-if="showClearCacheButton"
-                class="me-4"
+                class="me-8"
                 variant="outlined"
                 @click="isClearCacheDialogOpen = true"
               >
-
-                Clear Cache
+                Clear Draft
               </v-btn>
               <v-btn
                 v-if="showInitializeButton"
@@ -229,10 +228,10 @@
         @confirm="handleClearCache"
         @cancel="isClearCacheDialogOpen = false"
       >
-        <UiInfoBox
-          info="This action will clear the cache for this chain. You will lose all the data you have entered so far."
-          variant="error"
-        />
+        <p class="mt-4">
+          This action will clear the create OIV form data for the selected chain.
+          You will lose all the saved data you have entered so far.
+        </p>
       </UiConfirmDialog>
     </v-stepper>
   </div>
@@ -281,7 +280,11 @@ const saveChangesDialog = ref(false);
 const isInitializeDialogOpen = ref(false);
 const isInitializeLoading = ref(false);
 const isClearCacheDialogOpen = ref(false);
-const isAuthenticated = ref(false);
+// If user already authenticated before set isCreateFundPasswordCorrect to true.
+const isCreateFundPasswordCorrect = ref<boolean>(
+  getLocalStorageItem("isCreateFundPasswordCorrect", false),
+);
+
 // store the resolve/reject functions for the save changes dialog
 let nextRouteResolve: Function | null = null;
 
@@ -486,7 +489,7 @@ const isCurrentStepValid = computed(() => {
 
   let isCurrentStepValid = false;
   const currentStep = stepperEntry.value[step.value - 1];
-  console.log("currentStep.key", currentStep.key);
+
   if (stepWithRegularFields.includes(currentStep.key) && currentStep.fields) {
     isCurrentStepValid = currentStep.fields.every((field) => {
       // check if it's a custom value toggle
@@ -823,6 +826,12 @@ const handleCloseSaveChangesDialog = () => {
 const stepperEntry = ref(initStepperEntry());
 
 // Watchers
+watch(() => isCreateFundPasswordCorrect.value, (isPasswordCorrect) => {
+  if (isPasswordCorrect) {
+    setLocalStorageItem("isCreateFundPasswordCorrect", true);
+  }
+});
+
 // TODO: remove this watcher
 watch(stepperEntry.value, (newVal) => {
   console.log("stepperEntry changes", newVal);
