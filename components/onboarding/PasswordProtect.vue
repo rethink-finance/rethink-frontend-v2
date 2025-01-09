@@ -1,15 +1,11 @@
 <template>
-  <div class="password-protect">
+  <div class="password_protect">
     <h2 class="title">
-      Password Protected
+      Create OIV
     </h2>
-    <UiInfoBox
-      info="This page is password protected. Please enter the password to continue."
-    />
-
-    <div class="password-field">
-      <v-label class="label_required mb-2">
-        Enter password
+    <div class="password_input">
+      <v-label class="mb-2">
+        Enter password to proceed to the OIV creation page
       </v-label>
       <v-text-field
         v-model="password"
@@ -17,14 +13,26 @@
         type="password"
         outlined
         dense
-        :error="!!error"
-        :error-messages="error"
         @keydown.enter="checkPassword"
       />
     </div>
     <v-btn color="primary" @click="checkPassword">
       Submit
     </v-btn>
+    <v-alert
+      v-if="error"
+      class="mt-6"
+      type="error"
+      variant="tonal"
+      :icon="false"
+    >
+      {{ error }}
+    </v-alert>
+
+    <UiInfoBox
+      class="mt-12"
+      info="rethink.finance is currently in the closed beta stage. <br>Please contact <strong>rok@rethink.finance</strong> for access."
+    />
   </div>
 </template>
 
@@ -41,13 +49,13 @@ const emit = defineEmits(["update:authenticated"]);
 
 const password = ref("");
 // TODO: Replace with actual password
-const correctPassword = "createOIV";
+const correctPassword = "rethinkCreate";
 const error = ref("");
 
 const checkPassword = () => {
   if (password.value === correctPassword) {
     error.value = "";
-    emit("update:authenticated", true); // notify parent that user is authenticated
+    emit("update:authenticated", true);
   } else {
     error.value = "Incorrect password. Please try again.";
   }
@@ -59,22 +67,18 @@ watch(() => props.authenticated, (newVal) => {
 </script>
 
 <style scoped lang="scss">
-.title{
+.title {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 1rem;
 }
-.password-protect {
+.password_protect {
     display: flex;
     flex-direction: column;
     max-width: 600px;
     margin: 0 auto;
 }
-.password-field {
+.password_input {
     margin-top: 60px;
     margin-bottom: 10px;
-}
-.error {
-    color: var(--color-error);
-
 }
   </style>
