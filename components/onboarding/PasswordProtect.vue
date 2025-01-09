@@ -48,12 +48,11 @@ const props = defineProps({
 const emit = defineEmits(["update:isPasswordCorrect"]);
 
 const password = ref("");
-// TODO: Replace with actual password
-const correctPassword = "rethinkCreate";
+const correctPasswords = ["rethinkCreate", "rethinkCreate2025"];
 const error = ref("");
 
 const checkPassword = () => {
-  if (password.value === correctPassword) {
+  if (correctPasswords.includes(password.value)) {
     error.value = "";
     emit("update:isPasswordCorrect", true);
   } else {
