@@ -39,13 +39,13 @@
 <script setup>
 
 const props = defineProps({
-  authenticated: {
+  isPasswordCorrect: {
     type: Boolean,
     default: false,
   },
 });
 
-const emit = defineEmits(["update:authenticated"]);
+const emit = defineEmits(["update:isPasswordCorrect"]);
 
 const password = ref("");
 // TODO: Replace with actual password
@@ -55,13 +55,14 @@ const error = ref("");
 const checkPassword = () => {
   if (password.value === correctPassword) {
     error.value = "";
-    emit("update:authenticated", true);
+    emit("update:isPasswordCorrect", true);
   } else {
     error.value = "Incorrect password. Please try again.";
+    emit("update:isPasswordCorrect", false);
   }
 };
 
-watch(() => props.authenticated, (newVal) => {
+watch(() => props.isPasswordCorrect, (newVal) => {
   if (!newVal) password.value = "";
 });
 </script>
