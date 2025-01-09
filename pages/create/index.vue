@@ -1,6 +1,12 @@
 <template>
-  <div class="d-flex" style="width: 100%; flex-direction: column">
+  <div class="d-flex" style="width: 100%; flex-direction: column; height: 100%;">
+    <OnboardingPasswordProtect
+      v-if="!isAuthenticated"
+      v-model:authenticated="isAuthenticated"
+    />
+
     <v-stepper
+      v-else
       ref="stepper"
       v-model="step"
       class="stepper_onboarding"
@@ -275,6 +281,7 @@ const saveChangesDialog = ref(false);
 const isInitializeDialogOpen = ref(false);
 const isInitializeLoading = ref(false);
 const isClearCacheDialogOpen = ref(false);
+const isAuthenticated = ref(false);
 // store the resolve/reject functions for the save changes dialog
 let nextRouteResolve: Function | null = null;
 
