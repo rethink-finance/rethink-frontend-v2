@@ -32,7 +32,10 @@
       </div>
       <!-- some fields can have toggleable default value -->
       <div v-else-if="field.defaultValue">
-        <div class="toggleable_group__toggle">
+        <div
+          v-if="!isFundInitialized"
+          class="toggleable_group__toggle"
+        >
           <v-switch
             v-model="field.isCustomValueToggleOn"
             color="primary"
@@ -41,7 +44,7 @@
           />
         </div>
         <UiField
-          v-if="field.isCustomValueToggleOn"
+          v-if="field.isCustomValueToggleOn || isFundInitialized"
           v-model="field.value"
           :field="field"
           :is-disabled="!field.isCustomValueToggleOn || isStepDisabled"
