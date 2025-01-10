@@ -1,5 +1,5 @@
-import { InputType } from "~/types/enums/input_type";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
+import { InputType } from "~/types/enums/input_type";
 
 export enum ProposalStep {
   Setup = "setup",

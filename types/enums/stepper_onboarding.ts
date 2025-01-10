@@ -102,7 +102,26 @@ const OnboardingFieldsMap: FieldsMapType = {
       };
     },
   ),
-  [OnboardingStep.Management]: FundSettingsStepFieldsMap[StepSections.Management],
+  [OnboardingStep.Management]: (FundSettingsStepFieldsMap[StepSections.Management] as IField[]).map(
+    (field: IField) => {
+
+
+      // override for minLiquidAssetShare
+      if(field.key === "minLiquidAssetShare") {
+
+        return {
+          ...field,
+          isEditable: true,
+          info: "Please note that <strong>Planned Settlement Period</strong> and Min. <strong>Liquid Asset Share</strong> are not enforced on-chain. Your job as a manager is to make sure OIV is managed accordingly to these parameters. Your management role may otherwise be removed through governance.",
+        }
+      }
+
+      return {
+        ...field,
+        isEditable: true,
+      };
+    },
+  ),
   // Take Governance fields and make them editable when creating new fund.
   [OnboardingStep.Governance]: (FundSettingsStepFieldsMap[StepSections.Governance] as IField[]).map(
     (field: IField) => {

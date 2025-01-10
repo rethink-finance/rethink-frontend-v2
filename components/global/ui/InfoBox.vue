@@ -5,7 +5,7 @@
       class="info__icon"
       width="1.5rem"
     />
-    <span v-html="props.info" />
+    <span class="info__text" v-html="props.info" />
   </div>
 </template>
 
@@ -33,6 +33,10 @@ const props = defineProps<{
   &__icon {
     rotate: 180deg;
     color: var(--color-primary);
+    width: 30px;
+  }
+  &__text{
+    width: calc(100% - 30px);
   }
 }
 </style>
