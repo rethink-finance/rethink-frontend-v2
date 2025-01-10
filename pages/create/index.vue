@@ -851,6 +851,12 @@ watch(() => accountStore.activeAccountAddress, () => {
 
 // Lifecycle Hooks
 onBeforeRouteLeave((to, from, next) => {
+  // allow page change if user is not validated (he is seeing the password page)
+  if(!isCreateFundPasswordCorrect.value) {
+    next();
+    return;
+  }
+
   if (askToSaveDraftBeforeRouteLeave.value) {
     saveChangesDialog.value = true; // show the dialog
     nextRouteResolve = next; // store the resolve function for later
