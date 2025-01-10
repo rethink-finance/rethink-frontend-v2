@@ -669,16 +669,10 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
     if (managementStepIndex !== -1) {
       const managementStepFields = stepperEntry[managementStepIndex].fields ?? [];
 
-      // filter out custom fields (fields that doesn't exist in output)
+      // find custom fields (fields that has key "isFieldByUser")
       const customFields = managementStepFields?.filter(
         (field) => {
-          return !output.some((f) => {
-            if("key" in f) {
-              return f.key === field.key
-            }
-
-            return f.fields?.some((subField) => subField.key === field.key)
-          })
+          return field.isFieldByUser;
         },
       ) ?? [];
 
@@ -720,18 +714,37 @@ function getFieldByStepAndFieldKey(
 }
 
 
+const findCustomFieldsFromStep = (stepKey: string) => {
+  if(Object.keys(stepperEntry).length === 0) return [];
+
+  const stepIndex = stepperEntry.value.findIndex(
+    (step) => step.key === stepKey,
+  );
+
+  if (stepIndex !== -1) {
+    const stepFields = stepperEntry.value[stepIndex].fields ?? [];
+
+    // find custom fields (fields that has key "isFieldByUser")
+    return stepFields?.filter(
+      (field) => {
+        return field.isFieldByUser;
+      },
+    ) ?? [];
+  }
+
+  return [];
+};
+
 const formatFundMetaData = () => {
-  return {
+  // find fields with key "isFieldByUser" from management step and add them to the fund metadata
+  const customFIelds = findCustomFieldsFromStep(OnboardingStep.Management);
+
+  return  {
     description: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "description"),
     photoUrl: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "photoUrl"),
     plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "plannedSettlementPeriod"),
     minLiquidAssetShare: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "minLiquidAssetShare"),
-
-    // description: form.value.description,
-    // photoUrl: form.value.photoUrl,
-    // plannedSettlementPeriod: form.value.plannedSettlementPeriod,
-    // minLiquidAssetShare: form.value.minLiquidAssetShare,
-    // custom fields goes here
+    ...Object.fromEntries(customFIelds.map((field) => [field.key, field.value])),
   }
 };
 

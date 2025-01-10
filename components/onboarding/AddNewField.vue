@@ -60,7 +60,7 @@ const addCustomFieldRow = (fieldName: string) => {
     value: "",
     rules: [formRules.required],
     isEditable: true,
-    isDeletable: true,
+    isFieldByUser: true,
   } as IField;
 
   emit("addCustomField", customField);

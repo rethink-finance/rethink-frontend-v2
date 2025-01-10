@@ -64,7 +64,7 @@
           :is-disabled="isStepDisabled"
         />
         <UiDetailsButton
-          v-if="field.isDeletable"
+          v-if="field.isFieldByUser"
           small
           style="margin-top: 30px;"
           @click.stop="deleteRow(field)"
