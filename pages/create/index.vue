@@ -251,7 +251,7 @@ import { useActionStateStore } from "~/store/actionState.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import type { IField } from "~/types/enums/input_type";
+import type { IField, IFieldGroup } from "~/types/enums/input_type";
 
 import { networkChoices, networksMap } from "~/store/web3/networksMap";
 import { ActionState } from "~/types/enums/action_state";
@@ -622,7 +622,7 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
 
   if (!OnboardingFieldsMap[stepKey]) return [];
 
-  return OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
+  const output =  OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
     const stepIndex = findIndexByKey(stepperEntry, stepKey);
     const isToggleOn = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isToggleOn ?? field?.isToggleOn;
 
@@ -642,18 +642,58 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
         ...field,
         isToggleOn,
         fields: output,
-      };
+      } as IFieldGroup;
     }
     const fieldTyped = field as IField;
 
     // Try to get the value from local storage, if it doesn't exist, use the default value
     const fieldValue = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.value;
+    const fieldIsCustomValueToggleOn = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isCustomValueToggleOn;
 
     return {
       ...fieldTyped,
+      isCustomValueToggleOn: fieldIsCustomValueToggleOn ?? fieldTyped?.isCustomValueToggleOn,
       value: fieldValue ?? fieldTyped?.value,
     } as IField;
   });
+
+  // find management step and add custom fields to that step
+  if (stepKey === OnboardingStep.Management) {
+
+    if(Object.keys(stepperEntry).length === 0) return output;
+
+    const managementStepIndex = stepperEntry.findIndex(
+      (step) => step.key === OnboardingStep.Management,
+    );
+
+    if (managementStepIndex !== -1) {
+      const managementStepFields = stepperEntry[managementStepIndex].fields ?? [];
+
+      // filter out custom fields (fields that doesn't exist in output)
+      const customFields = managementStepFields?.filter(
+        (field) => {
+          return !output.some((f) => {
+            if("key" in f) {
+              return f.key === field.key
+            }
+
+            return f.fields?.some((subField) => subField.key === field.key)
+          })
+        },
+      ) ?? [];
+
+      const customFiledsFormatted = customFields?.map((field) => {
+        return {
+          ...field,
+          rules: [formRules.required],
+        };
+      }) ?? [];
+
+      return output.concat(customFiledsFormatted);
+    }
+  }
+
+  return output;
 }
 
 
