@@ -105,10 +105,8 @@ const OnboardingFieldsMap: FieldsMapType = {
   [OnboardingStep.Management]: (FundSettingsStepFieldsMap[StepSections.Management] as IField[]).map(
     (field: IField) => {
 
-
       // override for minLiquidAssetShare
       if(field.key === "minLiquidAssetShare") {
-
         return {
           ...field,
           isEditable: true,

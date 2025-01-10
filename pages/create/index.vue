@@ -157,6 +157,13 @@
                 :fields="item.fields"
                 :is-fund-initialized="isFundInitialized"
                 :step="step"
+                @delete-row="deleteCustomFieldRow"
+              />
+
+              <!-- STEP MANAGEMENT -->
+              <OnboardingAddNewField
+                v-if="item.key === OnboardingStep.Management"
+                @add-custom-field="addCustomFieldRow"
               />
 
               <!-- STEP WHITELIST -->
@@ -372,6 +379,53 @@ const isLoadingFetchFundCache = computed(() =>
     ActionState.Loading,
   ),
 );
+
+const deleteCustomFieldRow = (field: IField) => {
+  try{
+    const stepIndex = stepperEntry.value.findIndex(
+      (step) => step.key === OnboardingStep.Management,
+    );
+
+    if (stepIndex !== -1) {
+      const fieldIndex = stepperEntry.value[stepIndex].fields?.findIndex(
+        (f) => f.key === field.key,
+      ) ?? -1;
+
+      if (fieldIndex !== -1) {
+        stepperEntry.value[stepIndex].fields?.splice(fieldIndex, 1);
+      }
+    }
+  }
+  catch (error) {
+    console.error("Error deleting custom field", error);
+    toastStore.errorToast("Error deleting custom field");
+  }
+};
+
+const addCustomFieldRow = (customField: IField) => {
+  try {
+    const managementStepIndex = stepperEntry.value.findIndex(
+      (step) => step.key === OnboardingStep.Management,
+    );
+
+    // check if this key already exists
+    if (managementStepIndex !== -1) {
+      const fieldIndex = stepperEntry.value[managementStepIndex].fields?.findIndex(
+        (f) => f.key === customField.key,
+      );
+
+      if (fieldIndex !== -1) {
+        return toastStore.errorToast("Custom field with this name already exists");
+      }
+
+      stepperEntry.value[managementStepIndex].fields?.push(customField);
+    }
+  } catch (error) {
+    console.error("Error adding custom field", error);
+    toastStore.errorToast("Error adding custom field");
+  }
+
+};
 
 const goToNextStep = () => {
   step.value += 1;

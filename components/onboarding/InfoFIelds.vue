@@ -57,12 +57,23 @@
         </div>
 
       </div>
-      <div v-else>
+      <div v-else class="field_container">
         <UiField
           v-model="field.value"
           :field="field"
           :is-disabled="isStepDisabled"
         />
+        <UiDetailsButton
+          v-if="field.isDeletable"
+          small
+          style="margin-top: 30px;"
+          @click.stop="deleteRow(field)"
+        >
+          <v-icon
+            icon="mdi-delete"
+            color="error"
+          />
+        </UiDetailsButton>
       </div>
     </v-col>
   </div>
@@ -70,6 +81,8 @@
 
 <script setup lang="ts">
 import type { IField } from "~/types/enums/input_type";
+
+const emit = defineEmits(["deleteRow"]);
 
 const props = defineProps({
   fields: {
@@ -89,6 +102,11 @@ const props = defineProps({
 const isStepDisabled = computed(() =>
   props.isFundInitialized && props.step > 1 && props.step < 7,
 )
+
+const deleteRow = (field: IField) => {
+  emit("deleteRow", field);
+}
+
 </script>
 
 <style scoped lang="scss">
@@ -105,6 +123,16 @@ const isStepDisabled = computed(() =>
     display: flex;
     justify-content: flex-end;
     margin-left: auto;
+  }
+}
+
+.field_container{
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+
+  :deep(.field){
+    width: 100%;
   }
 }
 </style>
