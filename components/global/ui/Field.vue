@@ -30,57 +30,64 @@
       />
     </v-label>
 
-    <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
-      <v-text-field
-        v-model="value"
-        :placeholder="field.placeholder"
-        :type="field.type"
-        :min="field.min"
-        :rules="field.rules"
-        :disabled="isDisabled || !field.isEditable || isPreview"
-      />
-    </template>
 
-    <template v-else-if="field.type === InputType.Textarea">
-      <v-textarea
-        v-model="value"
-        :placeholder="field.placeholder"
-        :rules="field.rules"
-        auto-grow
-        :disabled="isDisabled || !field.isEditable || isPreview"
-      />
-    </template>
-
-    <template v-else-if="field.type === InputType.Select">
-      <v-select
-        v-model="value"
-        :rules="field.rules"
-        :items="field.choices"
-        item-title="title"
-        item-value="value"
-        class="field-select"
-        :disabled="isDisabled || !field.isEditable || isPreview"
-      />
-    </template>
-
-    <template v-else-if="field.type === InputType.Checkbox">
-      <v-checkbox v-model="value" :disabled="isDisabled || !field.isEditable" />
-    </template>
-
-    <template v-else-if="field.type === InputType.Image">
-      <div class="image_container">
-        <v-avatar size="12rem" rounded="">
-          <img :src="value" class="image_container__image" alt="image">
-        </v-avatar>
-        <v-textarea
+    <!-- if field has defaultValueInfo, show UiInfoBox instead of input field -->
+    <UiInfoBox v-if="showDefailtValueInfo" :info="field.defaultValueInfo" />
+    <template
+      v-else
+    >
+      <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
+        <v-text-field
           v-model="value"
-          class="image_container__textarea"
           :placeholder="field.placeholder"
+          :type="field.type"
+          :min="field.min"
           :rules="field.rules"
-          rows="10"
           :disabled="isDisabled || !field.isEditable || isPreview"
         />
-      </div>
+      </template>
+
+      <template v-else-if="field.type === InputType.Textarea">
+        <v-textarea
+          v-model="value"
+          :placeholder="field.placeholder"
+          :rules="field.rules"
+          auto-grow
+          :disabled="isDisabled || !field.isEditable || isPreview"
+        />
+      </template>
+
+      <template v-else-if="field.type === InputType.Select">
+        <v-select
+          v-model="value"
+          :rules="field.rules"
+          :items="field.choices"
+          item-title="title"
+          item-value="value"
+          class="field-select"
+          :disabled="isDisabled || !field.isEditable || isPreview"
+        />
+      </template>
+
+      <template v-else-if="field.type === InputType.Checkbox">
+        <v-checkbox v-model="value" :disabled="isDisabled || !field.isEditable" />
+      </template>
+
+      <template v-else-if="field.type === InputType.Image">
+        <div class="image_container">
+          <v-avatar size="12rem" rounded="">
+            <img :src="value" class="image_container__image" alt="image">
+          </v-avatar>
+          <v-textarea
+            v-model="value"
+            class="image_container__textarea"
+            :placeholder="field.placeholder"
+            :rules="field.rules"
+            rows="10"
+            :disabled="isDisabled || !field.isEditable || isPreview"
+          />
+        </div>
+      </template>
     </template>
 
     <InfoBox v-if="field.info && !isPreview" :info="field.info" />
@@ -88,8 +95,8 @@
 </template>
 
 <script setup lang="ts">
-import InfoBox from "./InfoBox.vue";
 import { InputType } from "~/types/enums/input_type";
+import InfoBox from "./InfoBox.vue";
 
 const emit = defineEmits(["update:modelValue"]);
 
@@ -107,6 +114,10 @@ const props = defineProps({
     default: false,
   },
   isPreview: {
+    type: Boolean,
+    default: false,
+  },
+  showDefailtValueInfo: {
     type: Boolean,
     default: false,
   },

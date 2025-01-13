@@ -132,7 +132,7 @@ const OnboardingFieldsMap: FieldsMapType = {
           isEditable: true,
           isCustomValueToggleOn: false, // this is used to determine if the value is custom or default
           defaultValue: "0x0000000000000000000000000000000000000000",
-          defaultValueInfo: "OIV Token is used as the governance token for the fund.",
+          defaultValueInfo: "By default OIV Token is used as the Governance Token for the OIV.",
         }
       }
 

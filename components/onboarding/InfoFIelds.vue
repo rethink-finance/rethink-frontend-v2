@@ -47,12 +47,10 @@
           :is-disabled="!field.isCustomValueToggleOn || isStepDisabled"
         />
         <div v-else class="default-value">
-          <UiInfoBox v-if="field?.defaultValueInfo" :info="field.defaultValueInfo" />
           <UiField
-            v-else
             v-model="field.defaultValue"
             :field="field"
-            :is-disabled="true"
+            :show-defailt-value-info="true"
           />
         </div>
 
