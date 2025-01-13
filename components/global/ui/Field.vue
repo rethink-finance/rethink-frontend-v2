@@ -1,36 +1,38 @@
 <template>
   <div :class="`field` + (isPreview ? ' label_preview' : '')" v-bind="$attrs">
-    <v-label
-      :class="
-        `row_title` +
-          (field.type === InputType.Image ? ' row_title__is-image' : '')
-      "
-    >
-      <div
+
+    <div class="field-actions-container">
+      <v-label
         :class="
-          `row_title__title` +
-            (isFieldRequired && field.isEditable && !isPreview
-              ? ' label_required'
-              : '') +
-            (isDisabled && !isPreview ? ' label_disabled' : '')
+          `row_title` +
+            (field.type === InputType.Image ? ' row_title__is-image' : '')
         "
       >
-        {{ field.label }}
-        <span
-          v-if="!field.isEditable && !isPreview"
-          class="row_title__uneditable"
+        <div
+          :class="
+            `row_title__title` +
+              (isFieldRequired && field.isEditable && !isPreview
+                ? ' label_required'
+                : '') +
+              (isDisabled && !isPreview ? ' label_disabled' : '')
+          "
         >
-          (Uneditable)
-        </span>
-      </div>
-      <ui-char-limit
-        v-if="field.charLimit && !isPreview"
-        :char-limit="field.charLimit"
-        :char-number="value"
-      />
-    </v-label>
-
-
+          {{ field.label }}
+          <span
+            v-if="!field.isEditable && !isPreview"
+            class="row_title__uneditable"
+          >
+            (Uneditable)
+          </span>
+        </div>
+        <ui-char-limit
+          v-if="field.charLimit && !isPreview"
+          :char-limit="field.charLimit"
+          :char-number="value"
+        />
+      </v-label>
+      <slot name="field-actions" />
+    </div>
     <!-- if field has defaultValueInfo, show UiInfoBox instead of input field -->
     <UiInfoBox v-if="showDefailtValueInfo" :info="field.defaultValueInfo" />
     <template
@@ -134,6 +136,10 @@ const value = computed({
 </script>
 
 <style lang="scss" scoped>
+.field-actions-container{
+  display: flex;
+  justify-content: space-between;
+}
 .row_title {
   display: flex;
   justify-content: space-between;

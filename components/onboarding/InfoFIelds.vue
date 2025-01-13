@@ -7,15 +7,6 @@
       class="pb-2"
     >
       <div v-if="field.fields" class="toggleable_group">
-        <div class="toggleable_group__toggle">
-          <v-switch
-            v-model="field.isToggleOn"
-            color="primary"
-            hide-details
-            :disabled="isStepDisabled"
-          />
-        </div>
-
         <div class="fields">
           <v-col
             v-for="(subField, subFieldIndex) in field.fields"
@@ -26,7 +17,22 @@
               v-model="subField.value"
               :field="subField"
               :is-disabled="!field.isToggleOn || isStepDisabled"
-            />
+            >
+              <template #field-actions>
+                <div
+                  v-if="subFieldIndex === 0"
+                  class="toggleable_group__toggle"
+                >
+                  <v-switch
+                    v-model="field.isToggleOn"
+                    color="primary"
+                    hide-details
+                    :disabled="isStepDisabled"
+                  />
+                </div>
+              </template>
+
+            </UiField>
           </v-col>
         </div>
       </div>
@@ -116,6 +122,8 @@ const deleteRow = (field: IField) => {
 .toggleable_group {
   display: flex;
   flex-direction: column;
+  border: 1px solid $color-bg-transparent;
+
 
   &__toggle {
     display: flex;

@@ -63,11 +63,10 @@
               </v-btn>
               <v-btn
                 v-if="showInitializeButton"
-                color="primary"
-                variant="flat"
-                class="me-4"
                 :loading="isInitializeLoading"
-                @click="isFundInitialized || !isCurrentStepValid || !accountStore.isConnected ? null : isInitializeDialogOpen = true"
+                class="bg-primary text-white"
+                :disabled="isFundInitialized || !isCurrentStepValid || !accountStore.isConnected"
+                @click="isInitializeDialogOpen = true"
               >
                 Initialize
                 <v-tooltip
