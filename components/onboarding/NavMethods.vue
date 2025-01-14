@@ -28,7 +28,8 @@
         </v-btn>
         <v-btn
           class="bg-primary text-secondary"
-          @click="storeNavMethods"
+          :loading="isLoadingStoreNavMethods"
+          @click="handleClickStoreNavMethods"
         >
           Store NAV Methods
         </v-btn>
@@ -101,20 +102,58 @@
         @methods-added="methodsAddedFromLibrary"
       />
     </UiConfirmDialog>
+
+    <UiConfirmDialog
+      v-model="isNotifyDialogOpen"
+      title="Store NAV Methods"
+      class="confirm_dialog"
+      max-width="680px"
+      confirm-text="Got it"
+      @cancel="isNotifyDialogOpen = false"
+    >
+      <p class="mt-4">
+        This action requires sending two transactions:
+      </p>
+
+      <div class="d-flex flex-column mt-2">
+        <div class="d-flex flex-row align-items-center">
+          <Icon icon="mynaui:one-circle" width="24" height="24" />
+          <strong class="ms-1">
+            Store the NAV methods.
+          </strong>
+        </div>
+        <div class="d-flex flex-row align-items-center mt-1">
+          <Icon icon="mynaui:two-circle" width="24" height="24" />
+          <strong class="ms-1">
+            Allow the manager to keep updating NAV based on approved methods.
+          </strong>
+        </div>
+      </div>
+      <p class="mt-4">
+        Please ensure you approve both to complete the process.
+      </p>
+    </UiConfirmDialog>
+
+    <UiConfirmDialog
+      max-width="80%"
+      confirm-text="Got it"
+      @confirm="storeNavMethods"
+      @cancel="isNotifyDialogOpen = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { useToastStore } from "~/store/toasts/toast.store";
-import type INAVMethod from "~/types/nav_method";
-import { useCreateFundStore } from "~/store/create-fund/createFund.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 import {
   encodeUpdateNavMethods,
   getAllowManagerToUpdateNavPermissionsData,
 } from "~/composables/nav/navProposal";
-import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
+import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { getNAVData } from "~/store/fund/actions/fetchFundNAVData.action";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import type INAVMethod from "~/types/nav_method";
 
 const createFundStore = useCreateFundStore();
 const toastStore = useToastStore();
@@ -129,6 +168,7 @@ const isLoadingAllowManagerToUpdateNav = ref(false);
 const isDefineNewMethodDialogOpen = ref(false)
 const isAddFromLibraryDialogOpen = ref(false)
 const isAddRawDialogOpen = ref(false)
+const isNotifyDialogOpen = ref(false)
 const navMethods = ref<INAVMethod[]>([]);
 const allowManagerToUpdateNav = ref(false);
 
@@ -141,6 +181,13 @@ const fundFactoryContract = computed(() => web3Store.chainContracts[fundChainId.
 /**
  * Methods
  */
+const handleClickStoreNavMethods = () => {
+  if (allowManagerToUpdateNav.value) {
+    isNotifyDialogOpen.value = true;
+  }
+
+  storeNavMethods();
+}
 const storeNavMethods = async () => {
   if (navMethods.value.length === 0) {
     return toastStore.warningToast("No methods to store.");
@@ -155,6 +202,7 @@ const storeNavMethods = async () => {
     fundSettings?.value?.baseDecimals,
   );
 
+  // TODO if this trx fails, there is no need to send the next one.
   await sendStoreNavMethodsTransaction(encodedNavUpdateEntries);
 
   if (allowManagerToUpdateNav.value) {
@@ -262,6 +310,7 @@ const sendAllowManagerToUpdateNavTransaction = async () => {
           );
         }
         isLoadingAllowManagerToUpdateNav.value = false;
+        isNotifyDialogOpen.value = true;
       })
       .on("error", (error: any) => {
         console.error(error);
