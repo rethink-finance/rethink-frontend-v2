@@ -97,8 +97,8 @@
 </template>
 
 <script setup lang="ts">
-import { InputType } from "~/types/enums/input_type";
 import InfoBox from "./InfoBox.vue";
+import { InputType } from "~/types/enums/input_type";
 
 const emit = defineEmits(["update:modelValue"]);
 

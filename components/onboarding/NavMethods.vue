@@ -105,25 +105,36 @@
 
     <UiConfirmDialog
       v-model="isNotifyDialogOpen"
-      title="Approve in wallet"
+      title="Store NAV Methods"
       class="confirm_dialog"
-      max-width="650px"
+      max-width="680px"
       confirm-text="Got it"
-      @confirm="storeNavMethods"
       @cancel="isNotifyDialogOpen = false"
     >
       <p class="mt-4">
-        This action requires two approvals in your wallet. One to store the NAV methods and another to allow the manager to keep updating NAV based on approved methods.
+        This action requires sending two transactions:
       </p>
+
+      <div class="d-flex flex-column mt-2">
+        <div class="d-flex flex-row align-items-center">
+          <Icon icon="mynaui:one-circle" width="24" height="24" />
+          <strong class="ms-1">
+            Store the NAV methods.
+          </strong>
+        </div>
+        <div class="d-flex flex-row align-items-center mt-1">
+          <Icon icon="mynaui:two-circle" width="24" height="24" />
+          <strong class="ms-1">
+            Allow the manager to keep updating NAV based on approved methods.
+          </strong>
+        </div>
+      </div>
       <p class="mt-4">
         Please ensure you approve both to complete the process.
       </p>
     </UiConfirmDialog>
 
-
     <UiConfirmDialog
-
-
       max-width="80%"
       confirm-text="Got it"
       @confirm="storeNavMethods"
@@ -171,11 +182,11 @@ const fundFactoryContract = computed(() => web3Store.chainContracts[fundChainId.
  * Methods
  */
 const handleClickStoreNavMethods = () => {
-  if(allowManagerToUpdateNav.value) {
+  if (allowManagerToUpdateNav.value) {
     isNotifyDialogOpen.value = true;
-  } else {
-    storeNavMethods();
   }
+
+  storeNavMethods();
 }
 const storeNavMethods = async () => {
   if (navMethods.value.length === 0) {
@@ -185,13 +196,13 @@ const storeNavMethods = async () => {
   // storeNAV(address navExecutorAddr, bytes calldata data) external {
   // TPrepare NAV methods data.
   isLoadingStoreNavMethods.value = true;
-  isNotifyDialogOpen.value = false;
 
   const encodedNavUpdateEntries = encodeUpdateNavMethods(
     navMethods.value,
     fundSettings?.value?.baseDecimals,
   );
 
+  // TODO if this trx fails, there is no need to send the next one.
   await sendStoreNavMethodsTransaction(encodedNavUpdateEntries);
 
   if (allowManagerToUpdateNav.value) {
@@ -299,6 +310,7 @@ const sendAllowManagerToUpdateNavTransaction = async () => {
           );
         }
         isLoadingAllowManagerToUpdateNav.value = false;
+        isNotifyDialogOpen.value = true;
       })
       .on("error", (error: any) => {
         console.error(error);
