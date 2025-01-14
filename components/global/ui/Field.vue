@@ -138,7 +138,7 @@ const value = computed({
 <style lang="scss" scoped>
 .field-actions-container{
   display: flex;
-  justify-content: space-between;
+  gap: 40px;
 }
 .row_title {
   display: flex;

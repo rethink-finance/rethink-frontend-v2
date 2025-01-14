@@ -38,26 +38,40 @@
       </div>
       <!-- some fields can have toggleable default value -->
       <div v-else-if="field.defaultValue">
-        <div class="toggleable_group__toggle">
-          <v-switch
-            v-model="field.isCustomValueToggleOn"
-            color="primary"
-            hide-details
-            :disabled="isStepDisabled"
-          />
-        </div>
         <UiField
           v-if="field.isCustomValueToggleOn"
           v-model="field.value"
           :field="field"
           :is-disabled="!field.isCustomValueToggleOn || isStepDisabled"
-        />
+        >
+          <template #field-actions>
+            <div class="toggleable_group__toggle">
+              <v-switch
+                v-model="field.isCustomValueToggleOn"
+                color="primary"
+                hide-details
+                :disabled="isStepDisabled"
+              />
+            </div>
+          </template>
+        </UiField>
         <div v-else class="default-value">
           <UiField
             v-model="field.defaultValue"
             :field="field"
             :show-defailt-value-info="true"
-          />
+          >
+            <template #field-actions>
+              <div class="toggleable_group__toggle">
+                <v-switch
+                  v-model="field.isCustomValueToggleOn"
+                  color="primary"
+                  hide-details
+                  :disabled="isStepDisabled"
+                />
+              </div>
+            </template>
+          </UiField>
         </div>
 
       </div>
