@@ -43,15 +43,6 @@
       <v-stepper-actions>
         <template #next>
           <div class="buttons">
-            <!-- TODO: determine when to show 'Skip' button -->
-            <!-- TODO: determine onClick behavior for 'Skip' button -->
-            <!-- <v-btn
-              v-if="step !== stepperEntry.length"
-              variant="text"
-              @click="step = stepperEntry.length"
-            >
-              Skip
-            </v-btn> -->
             <div class="item">
               <v-btn
                 v-if="showClearCacheButton"
@@ -280,7 +271,6 @@ const {
 } = storeToRefs(createFundStore);
 const step = ref(1);
 
-// TODO: add validation functionality
 const saveChangesDialog = ref(false);
 const isInitializeDialogOpen = ref(false);
 const isInitializeLoading = ref(false);
@@ -525,9 +515,6 @@ const toggledOffFields = computed(() => {
 
 
 const isCurrentStepValid = computed(() => {
-  // TODO: here we want to check which step are we on and validate the fields
-  // If fund was initialized all basic fields are read-only and user can
-  // go forward and backwards in steps if he wants and he can finalize fund creation.
   if (isFundInitialized.value) return true;
 
   // Basics, Fees, Management, Governance is validated here
@@ -896,9 +883,6 @@ const initStepperEntry = () => {
     whitelistedAddresses.value = lsWhitelist.whitelistedAddresses ?? [];
   }
 
-  // TODO: for now we only load the local storage steps
-  // 1. here we should load the fetched initialized steps as well, if exist
-  // 2. if fetched initialized step DON'T exist, we should load the local storage steps
 
   return generateSteps(lsStepperEntry);
 };
@@ -944,6 +928,10 @@ watch(stepperEntry.value, (newVal) => {
 
 watch(() => selectedChainId.value, () => {
   createFundStore.setSelectedStepperChainId(selectedChainId.value);
+
+  // clear fetched fund if we change the chain
+  createFundStore.clearFundInitCache();
+  stepperEntry.value = initStepperEntry();
 });
 
 watch(() => accountStore.activeAccountAddress, () => {
