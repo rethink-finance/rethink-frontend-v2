@@ -350,7 +350,8 @@ const fetchFundInitCache = async () => {
     isWhitelistedDeposits.value = fundInitCache?.value?.fundSettings?.isWhitelistedDeposits || false;
     // clear local storage for this chain
     createFundStore.clearFundLocalStorage();
-
+    // if fund is initialized, don't ask user to save draft
+    askToSaveDraftBeforeRouteLeave.value = false;
   } else {
     createFundStore.clearFundInitCache();
   }
