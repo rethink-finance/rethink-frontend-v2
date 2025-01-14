@@ -59,7 +59,8 @@
           <UiField
             v-model="field.defaultValue"
             :field="field"
-            :show-defailt-value-info="true"
+            :is-disabled="isStepDisabled"
+            :show-default-value-info="isFundInitialized ? false : true"
           >
             <template #field-actions>
               <div class="toggleable_group__toggle">

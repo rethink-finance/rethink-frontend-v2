@@ -34,7 +34,7 @@
       <slot name="field-actions" />
     </div>
     <!-- if field has defaultValueInfo, show UiInfoBox instead of input field -->
-    <UiInfoBox v-if="showDefailtValueInfo" :info="field.defaultValueInfo" />
+    <UiInfoBox v-if="showDefaultValueInfo" :info="field.defaultValueInfo" />
     <template
       v-else
     >
@@ -119,7 +119,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  showDefailtValueInfo: {
+  showDefaultValueInfo: {
     type: Boolean,
     default: false,
   },
