@@ -348,7 +348,9 @@ const fetchFundInitCache = async () => {
       ),
     )
     isWhitelistedDeposits.value = fundInitCache?.value?.fundSettings?.isWhitelistedDeposits || false;
-    // TODO clear local storage for this chain
+    // clear local storage for this chain
+    createFundStore.clearFundLocalStorage();
+
   } else {
     createFundStore.clearFundInitCache();
   }
