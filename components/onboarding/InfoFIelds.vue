@@ -180,12 +180,12 @@ const handleBaseTokenChange = debounce(async (newBaseToken: string | null) => {
     } catch (error: any) {
       console.error("Failed fetching base token symbol & decimals", error);
       baseTokenFetchError.value = `Are you sure this is a valid ERC20 token address on ${fundChainName?.value}? Failed fetching its symbol and decimals.`;
-      baseTokenSymbol.value = "";
-      baseTokenDecimals.value = "";
+      baseTokenSymbol.value = "/";
+      baseTokenDecimals.value = "/";
     }
   } else {
-    baseTokenSymbol.value = "";
-    baseTokenDecimals.value = "";
+    baseTokenSymbol.value = "/";
+    baseTokenDecimals.value = "/";
   }
 }, 300); // 300ms delay
 
