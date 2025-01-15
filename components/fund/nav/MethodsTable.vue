@@ -897,7 +897,7 @@ export default defineComponent({
           parseBigInt,
         );
 
-        if (this.hasChanged() === false) {
+        if (!this.hasChanged()) {
           return this.toastStore.warningToast("No changes detected.");
         }
 

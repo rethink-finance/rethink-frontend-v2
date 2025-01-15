@@ -100,6 +100,12 @@ export const baseTokenSymbolField =     {
   type: InputType.Text,
   isEditable: false,
 }
+export const baseTokenDecimalsField =     {
+  label: "Decimals",
+  key: "baseTokenDecimals",
+  type: InputType.Text,
+  isEditable: false,
+}
 
 // 2. define FundSettingsStepFieldsMap which holds the form fields for each section
 export const FundSettingsStepFieldsMap: FieldsMapType = {

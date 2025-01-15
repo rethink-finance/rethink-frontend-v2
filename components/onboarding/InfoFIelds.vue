@@ -37,6 +37,7 @@
       </div>
       <!-- some fields can have toggleable default value -->
       <div v-else-if="field.defaultValue">
+        <!-- TODO refactor this code block and put this logic to UiField with less code -->
         <UiField
           v-if="field.isCustomValueToggleOn"
           v-model="field.value"
@@ -59,7 +60,7 @@
             v-model="field.defaultValue"
             :field="field"
             :is-disabled="isStepDisabled"
-            :show-default-value-info="isFundInitialized ? false : true"
+            :show-default-value-info="!isFundInitialized"
           >
             <template #field-actions>
               <div class="toggleable_group__toggle">
@@ -80,18 +81,30 @@
           v-model="field.value"
           :field="field"
           :is-disabled="isStepDisabled"
+          :custom-error-message="getCustomFieldErrorMessage(field)"
         />
 
-        <UiField
+        <div
           v-if="field.key === 'baseToken'"
-          v-model:model-value="baseTokenSymbol"
-          :field="baseTokenSymbolField"
-          :is-preview="true"
-        />
+          class="base_token_data"
+        >
+          <UiField
+            v-model:model-value="baseTokenSymbol"
+            class="base_token_data__input"
+            :field="baseTokenSymbolField"
+            :is-disabled="true"
+          />
+          <UiField
+            v-model:model-value="baseTokenDecimals"
+            class="base_token_data__input"
+            :field="baseTokenDecimalsField"
+            :is-disabled="true"
+          />
+        </div>
         <UiDetailsButton
           v-if="field.isFieldByUser"
           small
-          style="margin-top: 30px;"
+          class="mt-4"
           @click.stop="deleteRow(field)"
         >
           <v-icon
@@ -105,13 +118,15 @@
 </template>
 
 <script setup lang="ts">
+import debounce from "lodash.debounce";
 import type { IField } from "~/types/enums/input_type";
-import { baseTokenSymbolField } from "~/types/enums/fund_setting_proposal";
+import { baseTokenDecimalsField, baseTokenSymbolField } from "~/types/enums/fund_setting_proposal";
 import { fetchBaseTokenDetails } from "~/store/create-fund/actions/fetchFundInitCache.action";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
+
 const createFundStore = useCreateFundStore();
 
-const { fundChainId } = storeToRefs(createFundStore);
+const { fundChainId, fundChainName } = storeToRefs(createFundStore);
 const emit = defineEmits(["deleteRow"]);
 
 const props = defineProps({
@@ -129,27 +144,50 @@ const props = defineProps({
   },
 });
 
+const baseTokenDecimals = ref<string>("/");
 const baseTokenSymbol = ref<string>("/");
+const baseTokenFetchError = ref<string>("");
 
 const isStepDisabled = computed(() =>
   props.isFundInitialized && props.step > 1 && props.step < 7,
 )
 
-// TODO add watcher after baseToken changes, fetch ERC20 token symbol using
-// function fetchBaseTokenDetails that is already built and update ref baseTokenSymbol
-// Watcher for changes in `baseToken`
-// watch(
-//   () => props.fields.find((field) => field.key === "baseToken")?.value,
-//   (newBaseToken) => {
-//     if (newBaseToken) {
-//       // TODO try except
-//       fetchBaseTokenDetails(fundChainId.value, newBaseToken);
-//       console.log("Base token changed", newBaseToken);
-//     } else {
-//       baseTokenSymbol.value = "/";
-//     }
-//   },
-// );
+const getCustomFieldErrorMessage = (field: IField): string => {
+  // Show base token error message if we tried fetching it and there was an error.
+  if (field.key === "baseToken") {
+    return baseTokenFetchError.value || "";
+  }
+  return "";
+}
+
+watch(
+  () => props.fields.find((field) => field.key === "baseToken")?.value,
+  (newBaseToken) => handleBaseTokenChange(newBaseToken as any),
+);
+
+// Debounced watcher callback, do not fetch token data immediately, but wait 300ms.
+const handleBaseTokenChange = debounce(async (newBaseToken: string | null) => {
+  baseTokenFetchError.value = "";
+
+  // If the base token changes, try fetching its symbol and decimals to validate
+  // if it's a correct ERC20 token address to prevent mistakes.
+  if (newBaseToken) {
+    console.debug("Base token changed", fundChainId?.value, newBaseToken);
+    try {
+      const [decimals, symbol] = await fetchBaseTokenDetails(fundChainId.value, newBaseToken);
+      baseTokenDecimals.value = decimals;
+      baseTokenSymbol.value = symbol;
+    } catch (error: any) {
+      console.error("Failed fetching base token symbol & decimals", error);
+      baseTokenFetchError.value = `Are you sure this is a valid ERC20 token address on ${fundChainName?.value}? Failed fetching its symbol and decimals.`;
+      baseTokenSymbol.value = "";
+      baseTokenDecimals.value = "";
+    }
+  } else {
+    baseTokenSymbol.value = "";
+    baseTokenDecimals.value = "";
+  }
+}, 300); // 300ms delay
 
 const deleteRow = (field: IField) => {
   emit("deleteRow", field);
@@ -184,5 +222,9 @@ const deleteRow = (field: IField) => {
   :deep(.field){
     width: 100%;
   }
+}
+.base_token_data {
+  display: flex;
+  gap: 2rem;
 }
 </style>

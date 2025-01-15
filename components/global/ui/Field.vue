@@ -22,7 +22,7 @@
             v-if="!field.isEditable && !isPreview"
             class="row_title__uneditable"
           >
-            (Uneditable)
+            (readonly)
           </span>
         </div>
         <ui-char-limit
@@ -46,6 +46,7 @@
           :min="field.min"
           :rules="field.rules"
           :disabled="isDisabled || !field.isEditable || isPreview"
+          :error-messages="[customErrorMessage]"
         />
       </template>
 
@@ -56,6 +57,7 @@
           :rules="field.rules"
           auto-grow
           :disabled="isDisabled || !field.isEditable || isPreview"
+          :error-messages="[customErrorMessage]"
         />
       </template>
 
@@ -68,11 +70,16 @@
           item-value="value"
           class="field-select"
           :disabled="isDisabled || !field.isEditable || isPreview"
+          :error-messages="[customErrorMessage]"
         />
       </template>
 
       <template v-else-if="field.type === InputType.Checkbox">
-        <v-checkbox v-model="value" :disabled="isDisabled || !field.isEditable" />
+        <v-checkbox
+          v-model="value"
+          :disabled="isDisabled || !field.isEditable"
+          :error-messages="[customErrorMessage]"
+        />
       </template>
 
       <template v-else-if="field.type === InputType.Image">
@@ -87,6 +94,7 @@
             :rules="field.rules"
             rows="10"
             :disabled="isDisabled || !field.isEditable || isPreview"
+            :error-messages="[customErrorMessage]"
           />
         </div>
       </template>
@@ -109,6 +117,10 @@ const props = defineProps({
   },
   modelValue: {
     type: [String, Number, Array, Boolean] as PropType<any>,
+    default: () => "",
+  },
+  customErrorMessage: {
+    type: String,
     default: () => "",
   },
   isDisabled: {

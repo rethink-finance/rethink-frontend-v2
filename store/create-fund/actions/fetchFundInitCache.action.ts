@@ -90,6 +90,8 @@ export const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: s
     chainId,
     () =>
       tokenContract.methods.decimals().call(),
+    1,
+    [205],
   );
   console.debug("baseDecimals")
 
@@ -97,6 +99,8 @@ export const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: s
     chainId,
     () =>
       tokenContract.methods.symbol().call(),
+    1,
+    [205],
   );
   console.debug("baseSymbol")
 
