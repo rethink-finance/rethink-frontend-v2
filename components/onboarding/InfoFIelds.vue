@@ -31,7 +31,6 @@
                   />
                 </div>
               </template>
-
             </UiField>
           </v-col>
         </div>
@@ -82,6 +81,13 @@
           :field="field"
           :is-disabled="isStepDisabled"
         />
+
+        <UiField
+          v-if="field.key === 'baseToken'"
+          v-model:model-value="baseTokenSymbol"
+          :field="baseTokenSymbolField"
+          :is-preview="true"
+        />
         <UiDetailsButton
           v-if="field.isFieldByUser"
           small
@@ -100,7 +106,12 @@
 
 <script setup lang="ts">
 import type { IField } from "~/types/enums/input_type";
+import { baseTokenSymbolField } from "~/types/enums/fund_setting_proposal";
+import { fetchBaseTokenDetails } from "~/store/create-fund/actions/fetchFundInitCache.action";
+import { useCreateFundStore } from "~/store/create-fund/createFund.store";
+const createFundStore = useCreateFundStore();
 
+const { fundChainId } = storeToRefs(createFundStore);
 const emit = defineEmits(["deleteRow"]);
 
 const props = defineProps({
@@ -118,9 +129,27 @@ const props = defineProps({
   },
 });
 
+const baseTokenSymbol = ref<string>("/");
+
 const isStepDisabled = computed(() =>
   props.isFundInitialized && props.step > 1 && props.step < 7,
 )
+
+// TODO add watcher after baseToken changes, fetch ERC20 token symbol using
+// function fetchBaseTokenDetails that is already built and update ref baseTokenSymbol
+// Watcher for changes in `baseToken`
+// watch(
+//   () => props.fields.find((field) => field.key === "baseToken")?.value,
+//   (newBaseToken) => {
+//     if (newBaseToken) {
+//       // TODO try except
+//       fetchBaseTokenDetails(fundChainId.value, newBaseToken);
+//       console.log("Base token changed", newBaseToken);
+//     } else {
+//       baseTokenSymbol.value = "/";
+//     }
+//   },
+// );
 
 const deleteRow = (field: IField) => {
   emit("deleteRow", field);

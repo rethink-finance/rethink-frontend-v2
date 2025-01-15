@@ -94,6 +94,13 @@ export const FundSettingsStepsMap: Record<ProposalStep, IFundSettingProposalStep
   },
 };
 
+export const baseTokenSymbolField =     {
+  label: "Symbol",
+  key: "baseTokenSymbol",
+  type: InputType.Text,
+  isEditable: false,
+}
+
 // 2. define FundSettingsStepFieldsMap which holds the form fields for each section
 export const FundSettingsStepFieldsMap: FieldsMapType = {
   [StepSections.Basics]: [

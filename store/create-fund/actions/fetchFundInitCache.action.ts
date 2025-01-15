@@ -75,7 +75,7 @@ const fetchGovernorData = async (fundChainId: string, governorAddress?: string) 
     lateQuorum: Number(lateQuorum),
   };
 }
-const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) => {
+export const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) => {
   const web3Store = useWeb3Store();
   console.debug("fetchBaseTokenDetails")
 
