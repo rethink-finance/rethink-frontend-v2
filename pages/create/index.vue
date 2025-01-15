@@ -151,7 +151,7 @@
 
               <!-- STEP MANAGEMENT -->
               <OnboardingAddNewField
-                v-if="item.key === OnboardingStep.Management"
+                v-if="item.key === OnboardingStep.Management && !isFundInitialized"
                 @add-custom-field="addCustomFieldRow"
               />
 
