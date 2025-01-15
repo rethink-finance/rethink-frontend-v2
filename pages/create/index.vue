@@ -930,6 +930,7 @@ watch(stepperEntry.value, (newVal) => {
 });
 
 watch(() => selectedChainId.value, () => {
+  askToSaveDraftBeforeRouteLeave.value = true;
   createFundStore.setSelectedStepperChainId(selectedChainId.value);
 
   // clear fetched fund if we change the chain
