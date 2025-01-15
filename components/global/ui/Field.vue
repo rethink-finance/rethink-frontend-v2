@@ -46,7 +46,7 @@
           :min="field.min"
           :rules="field.rules"
           :disabled="isDisabled || !field.isEditable || isPreview"
-          :error-messages="[customErrorMessage]"
+          :error-messages="customErrorMessageValue"
         />
       </template>
 
@@ -57,7 +57,7 @@
           :rules="field.rules"
           auto-grow
           :disabled="isDisabled || !field.isEditable || isPreview"
-          :error-messages="[customErrorMessage]"
+          :error-messages="customErrorMessageValue"
         />
       </template>
 
@@ -70,7 +70,7 @@
           item-value="value"
           class="field-select"
           :disabled="isDisabled || !field.isEditable || isPreview"
-          :error-messages="[customErrorMessage]"
+          :error-messages="customErrorMessageValue"
         />
       </template>
 
@@ -78,7 +78,7 @@
         <v-checkbox
           v-model="value"
           :disabled="isDisabled || !field.isEditable"
-          :error-messages="[customErrorMessage]"
+          :error-messages="customErrorMessageValue"
         />
       </template>
 
@@ -94,7 +94,7 @@
             :rules="field.rules"
             rows="10"
             :disabled="isDisabled || !field.isEditable || isPreview"
-            :error-messages="[customErrorMessage]"
+            :error-messages="customErrorMessageValue"
           />
         </div>
       </template>
@@ -105,8 +105,8 @@
 </template>
 
 <script setup lang="ts">
-import InfoBox from "./InfoBox.vue";
 import { InputType } from "~/types/enums/input_type";
+import InfoBox from "./InfoBox.vue";
 
 const emit = defineEmits(["update:modelValue"]);
 
@@ -140,6 +140,10 @@ const props = defineProps({
 const isFieldRequired = computed(() =>
   props?.field?.rules?.includes(formRules.required),
 );
+
+const customErrorMessageValue = computed(() => {
+  return props.customErrorMessage ? [props.customErrorMessage] : [];
+});
 
 const value = computed({
   get: () => props.modelValue,
