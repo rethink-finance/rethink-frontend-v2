@@ -80,15 +80,15 @@
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue/dist/iconify.js";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatPercent,
   formatTokenValue,
 } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
-import type IFund from "~/types/fund";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
+import type IFund from "~/types/fund";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 
 const { getFundDetailsUrl } = usePageNavigation();
 const router = useRouter();
@@ -121,12 +121,12 @@ const headers: any = computed(() => [
     align: "end",
   },
   {
-    title: "Lastest NAV",
+    title: "Latest NAV",
     key: "lastNAVUpdateTotalNAV",
     align: "end",
   },
   // {
-  //   title: "Lastest NAV Date",
+  //   title: "Latest NAV Date",
   //   key: "lastNavUpdateTime",
   //   value: (v: IFund) => v.lastNavUpdateTime,
   //   align: "end",
