@@ -287,6 +287,10 @@ const getStepValidityArray = () => {
     return step.sections.every((section) => {
       return section.fields.every((field) => {
         if (field?.isToggleable) {
+          // disabled fields should be considered valid
+          if(!field.isToggleOn) {
+            return true;
+          }
           return field?.fields?.every((subField) => {
             return (
               subField?.rules?.every((rule) => {
@@ -411,13 +415,10 @@ const submit = async () => {
   }
 };
 
-// format proposal data to be sent to the backend
-const formatProposalData = (proposal: IProposal) => {
-  const originalFundSettings = fund.originalFundSettings;
-  console.log("originalFundSettings: ", originalFundSettings);
 
-  // check which fields are toggled off, and set them to 0 or null address
-  const toggledOffFields = proposalEntry.value
+// check which fields are toggled off, and set them to 0 or null address
+const toggledOffFields = computed(() =>{
+  return proposalEntry.value
     .map((step) => {
       return step.sections.map((section) => {
         return section.fields
@@ -434,8 +435,14 @@ const formatProposalData = (proposal: IProposal) => {
     })
     .flat(2)
     .flat();
+});
 
-  console.log("toggledOffFields: ", toggledOffFields);
+// format proposal data to be sent to the backend
+const formatProposalData = (proposal: IProposal) => {
+  const originalFundSettings = fund.originalFundSettings;
+  console.log("originalFundSettings: ", originalFundSettings);
+
+  console.log("toggledOffFields: ", toggledOffFields.value);
   // 1. if whitelist is toggled on, get the whitelist addresses and filter out the deleted ones
   // 2. if whitelist is toggled off, set the whitelist to an empty array (this will toggle off currently whitelisted addresses in the backend)
   //    because we are sending two calldatas to the backend(the first one is the old proposal and the second one is the new proposal)
@@ -460,16 +467,16 @@ const formatProposalData = (proposal: IProposal) => {
     fundAddress: originalFundSettings?.fundAddress, // did not change
     governor: originalFundSettings?.governor, // did not change
     isWhitelistedDeposits,
-    depositFee: toggledOffFields.includes("depositFee")
+    depositFee: toggledOffFields.value.includes("depositFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.depositFee)),
-    withdrawFee: toggledOffFields.includes("withdrawFee")
+    withdrawFee: toggledOffFields.value.includes("withdrawFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.withdrawFee)),
-    performanceFee: toggledOffFields.includes("performanceFee")
+    performanceFee: toggledOffFields.value.includes("performanceFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.performanceFee)),
-    managementFee: toggledOffFields.includes("managementFee")
+    managementFee: toggledOffFields.value.includes("managementFee")
       ? 0
       : parseInt(fromPercentageToBps(proposal.managementFee)),
     performaceHurdleRateBps: 0, // note from Rok to always submit 0 here
@@ -479,16 +486,16 @@ const formatProposalData = (proposal: IProposal) => {
     fundName: proposal.fundName,
     fundSymbol: proposal.fundSymbol,
     feeCollectors: [
-      toggledOffFields.includes("depositFeeRecipientAddress")
+      toggledOffFields.value.includes("depositFeeRecipientAddress")
         ? ethers.ZeroAddress
         : proposal.depositFeeRecipientAddress,
-      toggledOffFields.includes("withdrawFeeRecipientAddress")
+      toggledOffFields.value.includes("withdrawFeeRecipientAddress")
         ? ethers.ZeroAddress
         : proposal.withdrawFeeRecipientAddress,
-      toggledOffFields.includes("managementFeeRecipientAddress")
+      toggledOffFields.value.includes("managementFeeRecipientAddress")
         ? ethers.ZeroAddress
         : proposal.managementFeeRecipientAddress,
-      toggledOffFields.includes("performanceFeeRecipientAddress")
+      toggledOffFields.value.includes("performanceFeeRecipientAddress")
         ? ethers.ZeroAddress
         : proposal.performanceFeeRecipientAddress,
     ],
@@ -504,10 +511,10 @@ const formatProposalData = (proposal: IProposal) => {
   // performance and management periods
   const isPerformancePeriod365 = proposal.performanceFeePeriod === "365";
   const isManagementPeriod365 = proposal.managementFeePeriod === "365";
-  const isPerformancePeriodToggledOff = toggledOffFields.includes(
+  const isPerformancePeriodToggledOff = toggledOffFields.value.includes(
     "performanceFeePeriod",
   );
-  const isManagementPeriodToggledOff = toggledOffFields.includes(
+  const isManagementPeriodToggledOff = toggledOffFields.value.includes(
     "managementFeePeriod",
   );
 
