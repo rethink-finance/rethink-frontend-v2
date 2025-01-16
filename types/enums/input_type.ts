@@ -36,6 +36,7 @@ export interface IField {
   defaultValueInfo?: string;
   isFieldByUser?: boolean;
   fields?: IField[];
+  groupName?: string;
   title?: string;
   value?: string | boolean;
   choices?: { value: number | string | boolean; title: string }[],
@@ -44,5 +45,6 @@ export interface IField {
 export interface IFieldGroup {
   isToggleable: boolean;
   isToggleOn: boolean;
+  groupName?: string;
   fields: IField[];
 }

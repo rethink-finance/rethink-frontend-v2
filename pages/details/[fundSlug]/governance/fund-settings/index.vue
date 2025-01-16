@@ -83,7 +83,6 @@
 
             <div
               v-if="section.name === 'Whitelist'"
-              class="toggleable_group__toggle"
             >
               <v-switch
                 v-model="proposal.isWhitelistedDeposits"
@@ -105,30 +104,21 @@
               :key="index"
               :cols="field?.cols ?? 12"
             >
-              <div v-if="field.isToggleable" class="toggleable_group">
-                <div class="toggleable_group__toggle">
-                  <v-switch
-                    v-model="field.isToggleOn"
-                    color="primary"
-                    hide-details
+              <UiFieldsGroup
+                v-if="field.fields"
+                v-model:is-toggle-on="field.isToggleOn"
+                :field-group="field"
+              >
+                <template #default="{ subField }">
+                  <UiField
+                    v-model="proposal[subField.key]"
+                    :field="subField"
+                    :is-disabled="!field.isToggleOn"
+                    :class="`${isFieldModified(subField.key) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
                   />
-                </div>
+                </template>
 
-                <div class="fields">
-                  <v-col
-                    v-for="(subField, index) in field.fields"
-                    :key="index"
-                    :cols="subField?.cols ?? 6"
-                  >
-                    <UiField
-                      v-model="proposal[subField.key]"
-                      :field="subField"
-                      :is-disabled="!field.isToggleOn"
-                      :class="`${isFieldModified(subField.key) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
-                    />
-                  </v-col>
-                </div>
-              </div>
+              </UiFieldsGroup>
               <div v-else>
                 <UiField
                   v-model="proposal[field.key]"
@@ -155,17 +145,17 @@ import { ethers } from "ethers";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
 import { encodeFunctionCall } from "web3-eth-abi";
-import SectionWhitelist from "./SectionWhitelist.vue";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type { IField } from "~/types/enums/input_type";
+import SectionWhitelist from "./SectionWhitelist.vue";
 
 import {
   FundSettingsStepFieldsMap,
-  ProposalStep,
   FundSettingsStepsMap,
+  ProposalStep,
   type IProposal,
   type IStepperSection,
   type IWhitelist,
@@ -704,13 +694,6 @@ onBeforeUnmount(() => {
   flex-direction: row;
   gap: 0.5rem;
   margin-left: auto;
-}
-.toggleable_group {
-  &__toggle {
-    display: flex;
-    justify-content: flex-end;
-    margin-left: auto;
-  }
 }
 
 .section {

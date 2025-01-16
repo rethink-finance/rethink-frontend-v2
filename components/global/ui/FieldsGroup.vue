@@ -1,0 +1,74 @@
+<template>
+  <div class="field_group">
+    <v-col
+      class="field_group__toggle"
+    >
+      <v-switch
+        v-model="toggleValue"
+        color="primary"
+        hide-details
+        :disabled="isGroupDisabled"
+        :label="fieldGroup.groupName"
+      />
+    </v-col>
+
+    <div class="field_group__fields">
+      <v-col
+        v-for="(subField, subFieldIndex) in fieldGroup.fields"
+        :key="subFieldIndex"
+        :cols="subField?.cols ?? 6"
+      >
+        <slot :sub-field="subField" />
+      </v-col>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { IField } from "~/types/enums/input_type";
+
+const emit = defineEmits(["update:isToggleOn"]);
+
+// Props
+const props = defineProps({
+  isToggleOn: {
+    type: Boolean,
+    default: false,
+  },
+  fieldGroup: {
+    type: Object as PropType<IField>,
+    default: () => ({}),
+  },
+  isGroupDisabled: {
+    type: Boolean,
+    default: false,
+  },
+})
+
+const toggleValue = computed({
+  get: () => props.isToggleOn,
+  set: (value: boolean) => {
+    emit("update:isToggleOn", value);
+  },
+});
+</script>
+
+<style scoped lang="scss">
+.field_group {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid $color-bg-transparent;
+
+    &__toggle {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    &__fields {
+        display: flex;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+}
+</style>

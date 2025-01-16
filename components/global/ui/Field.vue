@@ -28,76 +28,74 @@
         <ui-char-limit
           v-if="field.charLimit && !isPreview"
           :char-limit="field.charLimit"
-          :char-number="value"
+          :char-number="fieldValue"
         />
       </v-label>
-      <slot name="field-actions" />
+
+      <!-- toggle for default value and custom value -->
+      <v-switch
+        v-if="hasDefaultValue && !isInputDisabled"
+        v-model="isCustomValueActive"
+        color="primary"
+        hide-details
+      />
     </div>
-    <!-- if field has defaultValueInfo, show UiInfoBox instead of input field -->
-    <UiInfoBox v-if="showDefaultValueInfo" :info="field.defaultValueInfo" />
-    <template
-      v-else
-    >
-      <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
-        <v-text-field
-          v-model="value"
-          :placeholder="field.placeholder"
-          :type="field.type"
-          :min="field.min"
-          :rules="field.rules"
-          :disabled="isDisabled || !field.isEditable || isPreview"
-          :error-messages="customErrorMessageValue"
-        />
-      </template>
 
-      <template v-else-if="field.type === InputType.Textarea">
-        <v-textarea
-          v-model="value"
-          :placeholder="field.placeholder"
-          :rules="field.rules"
-          auto-grow
-          :disabled="isDisabled || !field.isEditable || isPreview"
-          :error-messages="customErrorMessageValue"
-        />
-      </template>
+    <!--
+      there are two types of fields:
+      1. fields with default value
+      2. fields without default value
+    -->
 
-      <template v-else-if="field.type === InputType.Select">
-        <v-select
-          v-model="value"
-          :rules="field.rules"
-          :items="field.choices"
-          item-title="title"
-          item-value="value"
-          class="field-select"
-          :disabled="isDisabled || !field.isEditable || isPreview"
-          :error-messages="customErrorMessageValue"
-        />
-      </template>
-
-      <template v-else-if="field.type === InputType.Checkbox">
-        <v-checkbox
-          v-model="value"
-          :disabled="isDisabled || !field.isEditable"
-          :error-messages="customErrorMessageValue"
-        />
-      </template>
-
-      <template v-else-if="field.type === InputType.Image">
-        <div class="image_container">
-          <v-avatar size="12rem" rounded="">
-            <img :src="value" class="image_container__image" alt="image">
-          </v-avatar>
-          <v-textarea
-            v-model="value"
-            class="image_container__textarea"
-            :placeholder="field.placeholder"
-            :rules="field.rules"
-            rows="10"
-            :disabled="isDisabled || !field.isEditable || isPreview"
-            :error-messages="customErrorMessageValue"
+    <!--
+      1. fields with default value
+      - if the toggle is on, show the custom value input
+      - if the toggle is off, show the default value input or the default value info
+    -->
+    <div v-if="hasDefaultValue && !isInputDisabled" class="field-with-toggle">
+      <template v-if="isCustomValueActive">
+        <!-- Custom value input -->
+        <div class="field-input">
+          <FieldInput
+            v-model="fieldValue"
+            :field="field"
+            :is-disabled="isInputDisabled"
+            :is-preview="isPreview"
+            :custom-error-message="customErrorMessage"
           />
         </div>
       </template>
+      <template v-else>
+        <!-- Default value input -->
+        <div class="field-input default-value">
+          <template v-if="field.defaultValueInfo">
+            <UiInfoBox :info="field.defaultValueInfo" />
+          </template>
+          <template v-else>
+            <FieldInput
+              v-model="defaultValue"
+              :field="field"
+              :is-disabled="isInputDisabled"
+              :is-preview="isPreview"
+              :custom-error-message="customErrorMessage"
+            />
+          </template>
+        </div>
+      </template>
+    </div>
+
+    <!--
+        2. fields without default value
+        - show the regular field input without toggle
+     -->
+    <template v-else>
+      <FieldInput
+        v-model="fieldValue"
+        :field="field"
+        :is-disabled="isInputDisabled"
+        :is-preview="isPreview"
+        :custom-error-message="customErrorMessage"
+      />
     </template>
 
     <InfoBox v-if="field.info && !isPreview" :info="field.info" />
@@ -106,9 +104,10 @@
 
 <script setup lang="ts">
 import { InputType } from "~/types/enums/input_type";
+import FieldInput from "./FieldInput.vue";
 import InfoBox from "./InfoBox.vue";
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue", "update:isCustomValueToggleOn", "update:defaultValue"]);
 
 const props = defineProps({
   field: {
@@ -118,6 +117,14 @@ const props = defineProps({
   modelValue: {
     type: [String, Number, Array, Boolean] as PropType<any>,
     default: () => "",
+  },
+  defaultValue: {
+    type: [String, Number, Array, Boolean] as PropType<any>,
+    default: () => "",
+  },
+  isCustomValueToggleOn: {
+    type: Boolean,
+    default: false,
   },
   customErrorMessage: {
     type: String,
@@ -141,13 +148,26 @@ const isFieldRequired = computed(() =>
   props?.field?.rules?.includes(formRules.required),
 );
 
-const customErrorMessageValue = computed(() => {
-  return props.customErrorMessage ? [props.customErrorMessage] : [];
+const hasDefaultValue = computed(() => {
+  return props?.defaultValue;
+});
+const isInputDisabled = computed(() =>
+  props.isDisabled || !props.field.isEditable || props.isPreview,
+);
+
+const isCustomValueActive = computed({
+  get: () => props.isCustomValueToggleOn,
+  set: (val) => emit("update:isCustomValueToggleOn", val),
 });
 
-const value = computed({
+const fieldValue = computed({
   get: () => props.modelValue,
   set: (val) => emit("update:modelValue", val),
+});
+
+const defaultValue = computed({
+  get: () => props.defaultValue,
+  set: (val) => emit("update:defaultValue", val),
 });
 </script>
 
@@ -199,36 +219,4 @@ const value = computed({
   }
 }
 
-.field-select {
-  line-height: normal;
-
-  :deep(.v-field__input) {
-    padding: 12px;
-    min-height: 45px;
-  }
-}
-
-.image_container {
-  display: flex;
-  flex-direction: column-reverse;
-  align-items: center;
-  gap: 0.2rem;
-
-  @include sm {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  &__image {
-    border-radius: 0.25rem;
-    height: 100%;
-    width: 100%;
-    object-fit: cover;
-  }
-
-  &__textarea {
-    width: 100%;
-  }
-}
 </style>

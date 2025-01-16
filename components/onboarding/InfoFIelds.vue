@@ -6,82 +6,30 @@
       :cols="field?.cols ?? 12"
       class="pb-2"
     >
-      <div v-if="field.fields" class="toggleable_group">
-        <div class="fields">
-          <v-col
-            v-for="(subField, subFieldIndex) in field.fields"
-            :key="subFieldIndex"
-            :cols="subField?.cols ?? 6"
-          >
-            <UiField
-              v-model="subField.value"
-              :field="subField"
-              :is-disabled="!field.isToggleOn || isStepDisabled"
-            >
-              <template #field-actions>
-                <div
-                  v-if="subFieldIndex === 0"
-                  class="toggleable_group__toggle"
-                >
-                  <v-switch
-                    v-model="field.isToggleOn"
-                    color="primary"
-                    hide-details
-                    :disabled="isStepDisabled"
-                  />
-                </div>
-              </template>
-            </UiField>
-          </v-col>
-        </div>
-      </div>
-      <!-- some fields can have toggleable default value -->
-      <div v-else-if="field.defaultValue">
-        <!-- TODO refactor this code block and put this logic to UiField with less code -->
-        <UiField
-          v-if="field.isCustomValueToggleOn"
-          v-model="field.value"
-          :field="field"
-          :is-disabled="!field.isCustomValueToggleOn || isStepDisabled"
-        >
-          <template #field-actions>
-            <div class="toggleable_group__toggle">
-              <v-switch
-                v-model="field.isCustomValueToggleOn"
-                color="primary"
-                hide-details
-                :disabled="isStepDisabled"
-              />
-            </div>
-          </template>
-        </UiField>
-        <div v-else class="default-value">
+      <UiFieldsGroup
+        v-if="field.fields"
+        v-model:is-toggle-on="field.isToggleOn"
+        :field-group="field"
+        :is-group-disabled="isStepDisabled"
+      >
+        <template #default="{ subField }">
           <UiField
-            v-model="field.defaultValue"
-            :field="field"
-            :is-disabled="isStepDisabled"
-            :show-default-value-info="!isFundInitialized"
-          >
-            <template #field-actions>
-              <div class="toggleable_group__toggle">
-                <v-switch
-                  v-model="field.isCustomValueToggleOn"
-                  color="primary"
-                  hide-details
-                  :disabled="isStepDisabled"
-                />
-              </div>
-            </template>
-          </UiField>
-        </div>
+            v-model="subField.value"
+            :field="subField"
+            :is-disabled="!field.isToggleOn || isStepDisabled"
+          />
+        </template>
+      </UiFieldsGroup>
 
-      </div>
       <div v-else class="field_container">
         <UiField
           v-model="field.value"
+          v-model:is-custom-value-toggle-on="field.isCustomValueToggleOn"
+          v-model:default-value="field.defaultValue"
           :field="field"
           :is-disabled="isStepDisabled"
           :custom-error-message="getCustomFieldErrorMessage(field)"
+          :show-default-value-info="!isFundInitialized"
         />
 
         <div
@@ -119,10 +67,10 @@
 
 <script setup lang="ts">
 import debounce from "lodash.debounce";
-import type { IField } from "~/types/enums/input_type";
-import { baseTokenDecimalsField, baseTokenSymbolField } from "~/types/enums/fund_setting_proposal";
 import { fetchBaseTokenDetails } from "~/store/create-fund/actions/fetchFundInitCache.action";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
+import { baseTokenDecimalsField, baseTokenSymbolField } from "~/types/enums/fund_setting_proposal";
+import type { IField } from "~/types/enums/input_type";
 
 const createFundStore = useCreateFundStore();
 
