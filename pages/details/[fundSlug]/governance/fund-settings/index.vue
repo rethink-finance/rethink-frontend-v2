@@ -151,24 +151,23 @@
 </template>
 
 <script setup lang="ts">
+
+
 import { ethers } from "ethers";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
 import { encodeFunctionCall } from "web3-eth-abi";
 import SectionWhitelist from "./SectionWhitelist.vue";
+
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type { IField } from "~/types/enums/input_type";
 
+import type { IProposal, IStepperSection, IWhitelist } from "~/types/enums/fund_setting_proposal";
 import {
-  FundSettingsStepFieldsMap,
-  ProposalStep,
-  FundSettingsStepsMap,
-  type IProposal,
-  type IStepperSection,
-  type IWhitelist,
+FundSettingsStepFieldsMap, FundSettingsStepsMap, ProposalStep,
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
@@ -243,6 +242,13 @@ const proposal = ref<IProposal>({
   // Details
   proposalTitle: "",
   proposalDescription: "",
+  // Management
+  isNotTransferable: false,
+  useLegacyFlows: false,
+  minDeposit: "",
+  maxDeposit: "",
+  minWithdrawal: "",
+  maxWithdrawal: "",
 });
 
 const whitelist = ref<IWhitelist[]>([]);
@@ -296,19 +302,29 @@ const getStepValidityArray = () => {
   const output = proposalEntry.value.map((step) => {
     return step.sections.every((section) => {
       return section.fields.every((field) => {
+        // If it's a toggleable field group
         if (field?.isToggleable) {
+          console.log("field.isToggleOn: ", field.isToggleOn);
+          // If toggle is off, consider it valid
+          if (!field.isToggleOn) {
+            return true;
+          }
+          // If toggle is on, validate all subfields
           return field?.fields?.every((subField) => {
             return (
+              !subField.rules || // If no rules, consider valid
               subField?.rules?.every((rule) => {
                 return rule(subField.value) === true;
-              }) ?? true
+              })
             );
           });
         }
+        // For regular fields
         return (
+          !field.rules || // If no rules, consider valid
           field?.rules?.every((rule) => {
             return rule(field.value) === true;
-          }) ?? true
+          })
         );
       });
     });
@@ -331,7 +347,7 @@ const handleButtonClick = () => {
 
 const submit = async () => {
   // trigger form validation to show errors
-  const valid = form.value?.validate();
+  // const valid = form.value?.validate();
   // check if every step is valid
   formIsValid.value = getStepValidityArray().every((step) => step);
 
@@ -530,11 +546,24 @@ const formatProposalData = (proposal: IProposal) => {
       ? 0
       : parseInt(proposal.managementFeePeriod);
 
+  // Create flow configs object
+  const flowConfigs = {
+    flowVersion: proposal.useLegacyFlows ? 0 : 1, // v0 if legacy, v1 if not
+    minDeposit: proposal.minDeposit ? ethers.parseUnits(proposal.minDeposit, 18) : 0,
+    maxDeposit: proposal.maxDeposit ? ethers.parseUnits(proposal.maxDeposit, 18) : 0,
+    minWithdrawal: proposal.minWithdrawal ? ethers.parseUnits(proposal.minWithdrawal, 18) : 0,
+    maxWithdrawal: proposal.maxWithdrawal ? ethers.parseUnits(proposal.maxWithdrawal, 18) : 0,
+    limitsEnabled: true, // Enable limits if any values are set
+  };
+
+  // Format proposal data for contract
   return [
     fundSettings,
     JSON.stringify(metaData),
     managementPeriod,
     performancePeriod,
+    flowConfigs,           // Add flow configs
+    proposal.isNotTransferable,  // Add transferability flag
   ];
 };
 
@@ -569,7 +598,7 @@ const nextStep = () => {
     return;
   }
   // trigger form validation to show errors
-  const valid = form.value?.validate();
+  form.value?.validate();
   // check if step is valid before moving to the next step
   const stepIndex = proposalSteps.indexOf(activeStep.value);
   const stepValidityArray = getStepValidityArray();
@@ -631,6 +660,13 @@ const populateProposal = () => {
     // Whitelist
     whitelist: "",
     isWhitelistedDeposits: fundDeepCopy?.isWhitelistedDeposits,
+    // Management
+    isNotTransferable: fundDeepCopy?.isNonTransferable ?? false,
+    useLegacyFlows: fundDeepCopy?.flowConfigs?.flowVersion === 0,
+    minDeposit: fundDeepCopy?.flowConfigs?.minDeposit ?? "",
+    maxDeposit: fundDeepCopy?.flowConfigs?.maxDeposit ?? "",
+    minWithdrawal: fundDeepCopy?.flowConfigs?.minWithdrawal ?? "",
+    maxWithdrawal: fundDeepCopy?.flowConfigs?.maxWithdrawal ?? "",
   };
 
   whitelist.value = fundDeepCopy?.allowedDepositAddresses?.map(

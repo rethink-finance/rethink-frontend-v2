@@ -57,6 +57,12 @@ export interface IProposal {
   proposalDescription: string;
   whitelist: string;
   isWhitelistedDeposits: boolean;
+  isNotTransferable: boolean;
+  useLegacyFlows: boolean;
+  minDeposit: string;
+  maxDeposit: string;
+  minWithdrawal: string;
+  maxWithdrawal: string;
 }
 
 export interface IWhitelist {
@@ -290,7 +296,67 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       rules: [formRules.required, formRules.isNonNegativeNumber],
       isEditable: true,
     },
-  ],
+    {
+      label: "Is Not Transferable",
+      key: "isNotTransferable",
+      type: InputType.Checkbox,
+      rules: [],
+      isEditable: true,
+    },
+    {
+      label: "Use Legacy Flows",
+      key: "useLegacyFlows",
+      type: InputType.Checkbox,
+      rules: [],
+      isEditable: true,
+    },
+    {
+      isToggleable: true,
+      isToggleOn: false,
+      fields: [
+        {
+          label: "Min. Deposit",
+          key: "minDeposit",
+          type: InputType.Number,
+          placeholder: "E.g. 0",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+        {
+          label: "Max. Deposit",
+          key: "maxDeposit",
+          type: InputType.Number,
+          placeholder: "E.g. 1000",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+        {
+          label: "Min. Withdrawal",
+          key: "minWithdrawal",
+          type: InputType.Number,
+          placeholder: "E.g. 0",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+        {
+          label: "Max. Withdrawal",
+          key: "maxWithdrawal",
+          type: InputType.Number,
+          placeholder: "E.g. 1000",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+      ],
+    } as IFieldGroup,
+  ] as IFieldGroup[],
   [StepSections.Governance]: [
     {
       label: "Governance Token",
