@@ -1,86 +1,95 @@
 <template>
   <div :class="`field` + (isPreview ? ' label_preview' : '')" v-bind="$attrs">
-    <v-label
-      :class="
-        `row_title` +
-          (field.type === InputType.Image ? ' row_title__is-image' : '')
-      "
-    >
-      <div
+
+    <div class="field-actions-container">
+      <v-label
         :class="
-          `row_title__title` +
-            (isFieldRequired && field.isEditable && !isPreview
-              ? ' label_required'
-              : '') +
-            (isDisabled && !isPreview ? ' label_disabled' : '')
+          `row_title` +
+            (field.type === InputType.Image ? ' row_title__is-image' : '')
         "
       >
-        {{ field.label }}
-        <span
-          v-if="!field.isEditable && !isPreview"
-          class="row_title__uneditable"
+        <div
+          :class="
+            `row_title__title` +
+              (isFieldRequired && field.isEditable && !isPreview
+                ? ' label_required'
+                : '') +
+              (isDisabled && !isPreview ? ' label_disabled' : '')
+          "
         >
-          (Uneditable)
-        </span>
-      </div>
-      <ui-char-limit
-        v-if="field.charLimit && !isPreview"
-        :char-limit="field.charLimit"
-        :char-number="value"
-      />
-    </v-label>
-
-    <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
-      <v-text-field
-        v-model="value"
-        :placeholder="field.placeholder"
-        :type="field.type"
-        :min="field.min"
-        :rules="field.rules"
-        :disabled="isDisabled || !field.isEditable || isPreview"
-      />
-    </template>
-
-    <template v-else-if="field.type === InputType.Textarea">
-      <v-textarea
-        v-model="value"
-        :placeholder="field.placeholder"
-        :rules="field.rules"
-        auto-grow
-        :disabled="isDisabled || !field.isEditable || isPreview"
-      />
-    </template>
-
-    <template v-else-if="field.type === InputType.Select">
-      <v-select
-        v-model="value"
-        :rules="field.rules"
-        :items="field.choices"
-        item-title="title"
-        item-value="value"
-        class="field-select"
-        :disabled="isDisabled || !field.isEditable || isPreview"
-      />
-    </template>
-
-    <template v-else-if="field.type === InputType.Checkbox">
-      <v-checkbox v-model="value" :disabled="isDisabled || !field.isEditable" />
-    </template>
-
-    <template v-else-if="field.type === InputType.Image">
-      <div class="image_container">
-        <v-avatar size="12rem" rounded="">
-          <img :src="value" class="image_container__image" alt="image">
-        </v-avatar>
-        <v-textarea
+          {{ field.label }}
+          <span
+            v-if="!field.isEditable && !isPreview"
+            class="row_title__uneditable"
+          >
+            (Uneditable)
+          </span>
+        </div>
+        <ui-char-limit
+          v-if="field.charLimit && !isPreview"
+          :char-limit="field.charLimit"
+          :char-number="value"
+        />
+      </v-label>
+      <slot name="field-actions" />
+    </div>
+    <!-- if field has defaultValueInfo, show UiInfoBox instead of input field -->
+    <UiInfoBox v-if="showDefaultValueInfo" :info="field.defaultValueInfo" />
+    <template
+      v-else
+    >
+      <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
+        <v-text-field
           v-model="value"
-          class="image_container__textarea"
           :placeholder="field.placeholder"
+          :type="field.type"
+          :min="field.min"
           :rules="field.rules"
-          rows="10"
           :disabled="isDisabled || !field.isEditable || isPreview"
         />
-      </div>
+      </template>
+
+      <template v-else-if="field.type === InputType.Textarea">
+        <v-textarea
+          v-model="value"
+          :placeholder="field.placeholder"
+          :rules="field.rules"
+          auto-grow
+          :disabled="isDisabled || !field.isEditable || isPreview"
+        />
+      </template>
+
+      <template v-else-if="field.type === InputType.Select">
+        <v-select
+          v-model="value"
+          :rules="field.rules"
+          :items="field.choices"
+          item-title="title"
+          item-value="value"
+          class="field-select"
+          :disabled="isDisabled || !field.isEditable || isPreview"
+        />
+      </template>
+
+      <template v-else-if="field.type === InputType.Checkbox">
+        <v-checkbox v-model="value" :disabled="isDisabled || !field.isEditable" />
+      </template>
+
+      <template v-else-if="field.type === InputType.Image">
+        <div class="image_container">
+          <v-avatar size="12rem" rounded="">
+            <img :src="value" class="image_container__image" alt="image">
+          </v-avatar>
+          <v-textarea
+            v-model="value"
+            class="image_container__textarea"
+            :placeholder="field.placeholder"
+            :rules="field.rules"
+            rows="10"
+            :disabled="isDisabled || !field.isEditable || isPreview"
+          />
+        </div>
+      </template>
     </template>
 
     <InfoBox v-if="field.info && !isPreview" :info="field.info" />
@@ -110,6 +119,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  showDefaultValueInfo: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const isFieldRequired = computed(() =>
@@ -123,6 +136,10 @@ const value = computed({
 </script>
 
 <style lang="scss" scoped>
+.field-actions-container{
+  display: flex;
+  gap: 40px;
+}
 .row_title {
   display: flex;
   justify-content: space-between;

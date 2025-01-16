@@ -243,3 +243,21 @@ export const formatQuorumPercentage = (
     "N/A",
   )
 };
+
+
+/**
+ *
+ * @param str - string to convert to camel case
+ * @returns string in camel case
+ */
+export const toCamelCase = (str: string) => {
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((word, index) =>
+      index === 0
+        ? word
+        : word.charAt(0).toUpperCase() + word.slice(1),
+    )
+    .join("");
+}
