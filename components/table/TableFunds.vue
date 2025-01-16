@@ -65,7 +65,7 @@
     </template>
 
     <template #item.positionTypeCounts="{ item }">
-      <PositionTypesBar :position-type-counts="item.positionTypeCounts ?? []" />
+      <PositionTypesBar :position-type-counts="item.positionTypeCounts ?? []" class="position_types_bar" />
     </template>
 
     <template #bottom>
@@ -109,7 +109,6 @@ const headers: any = computed(() => [
     title: "OIV Name",
     key: "name",
     sortable: false,
-    width: 200,
     maxWidth: 300,
     minWidth: 200,
   },
@@ -140,7 +139,6 @@ const headers: any = computed(() => [
   {
     title: "Cumulative",
     key: "cumulativeReturnPercent",
-    maxWidth: 100,
     value: (v: IFund) => formatPercent(v.cumulativeReturnPercent, true),
     align: "end",
   },
@@ -163,8 +161,6 @@ const headers: any = computed(() => [
   {
     title: "Position Types",
     key: "positionTypeCounts",
-    width: 128,
-    maxWidth: 158,
     align: "end",
   },
 ]);
@@ -253,5 +249,10 @@ const navigateFundDetails = (event: any, row: any) => {
 
   rotate: 180deg;
   transform: scaleX(-1);
+}
+
+.position_types_bar{
+  max-width: 100px;
+  margin-left: auto;
 }
 </style>
