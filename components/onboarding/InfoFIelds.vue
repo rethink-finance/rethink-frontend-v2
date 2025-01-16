@@ -52,7 +52,7 @@
         <UiDetailsButton
           v-if="field.isFieldByUser"
           small
-          class="mt-4"
+          class="field_delete"
           @click.stop="deleteRow(field)"
         >
           <v-icon
@@ -170,6 +170,9 @@ const deleteRow = (field: IField) => {
   :deep(.field){
     width: 100%;
   }
+}
+.field_delete{
+  margin-top: 30px;
 }
 .base_token_data {
   display: flex;
