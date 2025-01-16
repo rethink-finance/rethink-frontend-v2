@@ -18,6 +18,16 @@
         :key="subFieldIndex"
         :cols="subField?.cols ?? 6"
       >
+
+        <!-- TODO: here we should have the UiField component, but fund settings don't use value from the field
+            we need to refactor fund settings page to use value from the field, that's why we are using slot here (for now)
+        -->
+        <!-- <UiField
+          v-model="subField.value"
+          :field="subField"
+          :is-disabled="!toggleValue || isGroupDisabled"
+        /> -->
+
         <slot :sub-field="subField" />
       </v-col>
     </div>
