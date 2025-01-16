@@ -43,15 +43,6 @@
       <v-stepper-actions>
         <template #next>
           <div class="buttons">
-            <!-- TODO: determine when to show 'Skip' button -->
-            <!-- TODO: determine onClick behavior for 'Skip' button -->
-            <!-- <v-btn
-              v-if="step !== stepperEntry.length"
-              variant="text"
-              @click="step = stepperEntry.length"
-            >
-              Skip
-            </v-btn> -->
             <div class="item">
               <v-btn
                 v-if="showClearCacheButton"
@@ -63,11 +54,9 @@
               </v-btn>
               <v-btn
                 v-if="showInitializeButton"
-                color="primary"
-                :disabled="isFundInitialized || !isCurrentStepValid || !accountStore.isConnected"
-                variant="flat"
-                class="me-4"
                 :loading="isInitializeLoading"
+                class="bg-primary text-white"
+                :disabled="isFundInitialized || !isCurrentStepValid || !accountStore.isConnected"
                 @click="isInitializeDialogOpen = true"
               >
                 Initialize
@@ -157,6 +146,13 @@
                 :fields="item.fields"
                 :is-fund-initialized="isFundInitialized"
                 :step="step"
+                @delete-row="deleteCustomFieldRow"
+              />
+
+              <!-- STEP MANAGEMENT -->
+              <OnboardingAddNewField
+                v-if="item.key === OnboardingStep.Management"
+                @add-custom-field="addCustomFieldRow"
               />
 
               <!-- STEP WHITELIST -->
@@ -244,7 +240,7 @@ import { useActionStateStore } from "~/store/actionState.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import type { IField } from "~/types/enums/input_type";
+import type { IField, IFieldGroup } from "~/types/enums/input_type";
 
 import { networkChoices, networksMap } from "~/store/web3/networksMap";
 import { ActionState } from "~/types/enums/action_state";
@@ -275,7 +271,6 @@ const {
 } = storeToRefs(createFundStore);
 const step = ref(1);
 
-// TODO: add validation functionality
 const saveChangesDialog = ref(false);
 const isInitializeDialogOpen = ref(false);
 const isInitializeLoading = ref(false);
@@ -353,7 +348,10 @@ const fetchFundInitCache = async () => {
       ),
     )
     isWhitelistedDeposits.value = fundInitCache?.value?.fundSettings?.isWhitelistedDeposits || false;
-    // TODO clear local storage for this chain
+    // clear local storage for this chain
+    createFundStore.clearFundLocalStorage();
+    // if fund is initialized, don't ask user to save draft
+    askToSaveDraftBeforeRouteLeave.value = false;
   } else {
     createFundStore.clearFundInitCache();
   }
@@ -372,6 +370,53 @@ const isLoadingFetchFundCache = computed(() =>
     ActionState.Loading,
   ),
 );
+
+const deleteCustomFieldRow = (field: IField) => {
+  try{
+    const stepIndex = stepperEntry.value.findIndex(
+      (step) => step.key === OnboardingStep.Management,
+    );
+
+    if (stepIndex !== -1) {
+      const fieldIndex = stepperEntry.value[stepIndex].fields?.findIndex(
+        (f) => f.key === field.key,
+      ) ?? -1;
+
+      if (fieldIndex !== -1) {
+        stepperEntry.value[stepIndex].fields?.splice(fieldIndex, 1);
+      }
+    }
+  }
+  catch (error) {
+    console.error("Error deleting custom field", error);
+    toastStore.errorToast("Error deleting custom field");
+  }
+};
+
+const addCustomFieldRow = (customField: IField) => {
+  try {
+    const managementStepIndex = stepperEntry.value.findIndex(
+      (step) => step.key === OnboardingStep.Management,
+    );
+
+    // check if this key already exists
+    if (managementStepIndex !== -1) {
+      const fieldIndex = stepperEntry.value[managementStepIndex].fields?.findIndex(
+        (f) => f.key === customField.key,
+      );
+
+      if (fieldIndex !== -1) {
+        return toastStore.errorToast("Custom field with this name already exists");
+      }
+
+      stepperEntry.value[managementStepIndex].fields?.push(customField);
+    }
+  } catch (error) {
+    console.error("Error adding custom field", error);
+    toastStore.errorToast("Error adding custom field");
+  }
+
+};
 
 const goToNextStep = () => {
   step.value += 1;
@@ -473,9 +518,6 @@ const toggledOffFields = computed(() => {
 
 
 const isCurrentStepValid = computed(() => {
-  // TODO: here we want to check which step are we on and validate the fields
-  // If fund was initialized all basic fields are read-only and user can
-  // go forward and backwards in steps if he wants and he can finalize fund creation.
   if (isFundInitialized.value) return true;
 
   // Basics, Fees, Management, Governance is validated here
@@ -568,7 +610,7 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
 
   if (!OnboardingFieldsMap[stepKey]) return [];
 
-  return OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
+  const output =  OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
     const stepIndex = findIndexByKey(stepperEntry, stepKey);
     const isToggleOn = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isToggleOn ?? field?.isToggleOn;
 
@@ -588,18 +630,52 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
         ...field,
         isToggleOn,
         fields: output,
-      };
+      } as IFieldGroup;
     }
     const fieldTyped = field as IField;
 
     // Try to get the value from local storage, if it doesn't exist, use the default value
     const fieldValue = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.value;
+    const fieldIsCustomValueToggleOn = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isCustomValueToggleOn;
 
     return {
       ...fieldTyped,
+      isCustomValueToggleOn: fieldIsCustomValueToggleOn ?? fieldTyped?.isCustomValueToggleOn,
       value: fieldValue ?? fieldTyped?.value,
     } as IField;
   });
+
+  // find management step and add custom fields to that step
+  if (stepKey === OnboardingStep.Management) {
+
+    if(Object.keys(stepperEntry).length === 0) return output;
+
+    const managementStepIndex = stepperEntry.findIndex(
+      (step) => step.key === OnboardingStep.Management,
+    );
+
+    if (managementStepIndex !== -1) {
+      const managementStepFields = stepperEntry[managementStepIndex].fields ?? [];
+
+      // find custom fields (fields that has key "isFieldByUser")
+      const customFields = managementStepFields?.filter(
+        (field) => {
+          return field.isFieldByUser;
+        },
+      ) ?? [];
+
+      const customFiledsFormatted = customFields?.map((field) => {
+        return {
+          ...field,
+          rules: [formRules.required],
+        };
+      }) ?? [];
+
+      return output.concat(customFiledsFormatted);
+    }
+  }
+
+  return output;
 }
 
 
@@ -626,18 +702,37 @@ function getFieldByStepAndFieldKey(
 }
 
 
+const findCustomFieldsFromStep = (stepKey: string) => {
+  if(Object.keys(stepperEntry).length === 0) return [];
+
+  const stepIndex = stepperEntry.value.findIndex(
+    (step) => step.key === stepKey,
+  );
+
+  if (stepIndex !== -1) {
+    const stepFields = stepperEntry.value[stepIndex].fields ?? [];
+
+    // find custom fields (fields that has key "isFieldByUser")
+    return stepFields?.filter(
+      (field) => {
+        return field.isFieldByUser;
+      },
+    ) ?? [];
+  }
+
+  return [];
+};
+
 const formatFundMetaData = () => {
-  return {
+  // find fields with key "isFieldByUser" from management step and add them to the fund metadata
+  const customFIelds = findCustomFieldsFromStep(OnboardingStep.Management);
+
+  return  {
     description: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "description"),
     photoUrl: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "photoUrl"),
     plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "plannedSettlementPeriod"),
     minLiquidAssetShare: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "minLiquidAssetShare"),
-
-    // description: form.value.description,
-    // photoUrl: form.value.photoUrl,
-    // plannedSettlementPeriod: form.value.plannedSettlementPeriod,
-    // minLiquidAssetShare: form.value.minLiquidAssetShare,
-    // custom fields goes here
+    ...Object.fromEntries(customFIelds.map((field) => [field.key, field.value])),
   }
 };
 
@@ -791,9 +886,6 @@ const initStepperEntry = () => {
     whitelistedAddresses.value = lsWhitelist.whitelistedAddresses ?? [];
   }
 
-  // TODO: for now we only load the local storage steps
-  // 1. here we should load the fetched initialized steps as well, if exist
-  // 2. if fetched initialized step DON'T exist, we should load the local storage steps
 
   return generateSteps(lsStepperEntry);
 };
@@ -839,6 +931,10 @@ watch(stepperEntry.value, (newVal) => {
 
 watch(() => selectedChainId.value, () => {
   createFundStore.setSelectedStepperChainId(selectedChainId.value);
+
+  // clear fetched fund if we change the chain
+  createFundStore.clearFundInitCache();
+  stepperEntry.value = initStepperEntry();
 });
 
 watch(() => accountStore.activeAccountAddress, () => {

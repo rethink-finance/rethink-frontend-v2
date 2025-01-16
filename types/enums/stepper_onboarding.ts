@@ -102,7 +102,24 @@ const OnboardingFieldsMap: FieldsMapType = {
       };
     },
   ),
-  [OnboardingStep.Management]: FundSettingsStepFieldsMap[StepSections.Management],
+  [OnboardingStep.Management]: (FundSettingsStepFieldsMap[StepSections.Management] as IField[]).map(
+    (field: IField) => {
+
+      // override for minLiquidAssetShare
+      if(field.key === "minLiquidAssetShare") {
+        return {
+          ...field,
+          isEditable: true,
+          info: "Please note that <strong>Planned Settlement Period</strong> and Min. <strong>Liquid Asset Share</strong> are not enforced on-chain. Your job as a manager is to make sure OIV is managed accordingly to these parameters. Your management role may otherwise be removed through governance.",
+        }
+      }
+
+      return {
+        ...field,
+        isEditable: true,
+      };
+    },
+  ),
   // Take Governance fields and make them editable when creating new fund.
   [OnboardingStep.Governance]: (FundSettingsStepFieldsMap[StepSections.Governance] as IField[]).map(
     (field: IField) => {
@@ -115,7 +132,7 @@ const OnboardingFieldsMap: FieldsMapType = {
           isEditable: true,
           isCustomValueToggleOn: false, // this is used to determine if the value is custom or default
           defaultValue: "0x0000000000000000000000000000000000000000",
-          defaultValueInfo: "OIV Token is used as the governance token for the fund.",
+          defaultValueInfo: "By default OIV Token is used as the Governance Token for the OIV.",
         }
       }
 
