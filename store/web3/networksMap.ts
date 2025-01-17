@@ -1,6 +1,7 @@
 import type INetwork from "~/types/network";
 
-export const networksMap: Record<string, INetwork> = {
+// Create base networks without Hardhat
+const baseNetworksMap: Record<string, INetwork> = {
   "0x89": {
     chainId: "0x89",
     chainName: "Polygon",
@@ -109,14 +110,33 @@ export const networksMap: Record<string, INetwork> = {
   },
 };
 
+// Add Hardhat network only in development mode
+const hardhatNetwork: INetwork = {
+  chainId: "0x7A69",
+  chainName: "Hardhat",
+  chainShort: "hadhat",
+  nativeCurrency: {
+    name: "POL",
+    symbol: "POL",
+    decimals: 18,
+  },
+  icon: getChainIcon("hardhat"),
+  rpcUrls: ["http://127.0.0.1:8545"],
+  blockExplorerUrls: [],
+};
+
+// Conditionally include Hardhat network based on environment
+export const networksMap: Record<string, INetwork> =
+  process.env.NODE_ENV === "development"
+    ? { ...baseNetworksMap, "0x7A69": hardhatNetwork }
+    : baseNetworksMap;
+
 export const chainIds: string[] = Object.keys(networksMap);
 export const networks: INetwork[] = Object.values(networksMap);
 
 export const networkChoices = networks.map(
-  (network: INetwork) => (
-    {
-      value: network.chainId,
-      title: network.chainName,
-    }
-  ),
+  (network: INetwork) => ({
+    value: network.chainId,
+    title: network.chainName,
+  }),
 );

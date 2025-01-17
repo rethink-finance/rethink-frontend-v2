@@ -247,11 +247,11 @@ import { ActionState } from "~/types/enums/action_state";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 import { InputType } from "~/types/enums/input_type";
 import {
-  OnboardingFieldsMap,
-  OnboardingStep,
-  OnboardingStepMap,
-  type IOnboardingStep,
-  type OnboardingInitializingSteps,
+OnboardingFieldsMap,
+OnboardingStep,
+OnboardingStepMap,
+type IOnboardingStep,
+type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
 
@@ -760,6 +760,23 @@ const formatFeeCollectors = () => {
 
 
 const formatInitializeData = () => {
+  // Helper to get the limits field group from management step
+  const getLimitsFieldGroup = () => {
+    const managementStep = stepperEntry.value.find(step => step.key === OnboardingStep.Management);
+    return managementStep?.fields?.find(field => "isToggleable" in field && field.fields?.some(f => f.key === "minDeposit")) as IFieldGroup | undefined;
+  };
+
+  // Get the limits field group
+  const limitsFieldGroup = getLimitsFieldGroup();
+  const limitsEnabled = limitsFieldGroup?.isToggleOn ?? false;
+
+  // Get limit values, defaulting to 0 if disabled or not set
+  const getLimit = (key: string) => {
+    if (!limitsEnabled) return 0;
+    const field = limitsFieldGroup?.fields?.find(f => f.key === key);
+    return field?.value ? parseInt(field.value as string) : 0;
+  };
+
   const output = [
     [
       getFeeValue("depositFee"),// depositFee
@@ -790,6 +807,15 @@ const formatInitializeData = () => {
     JSON.stringify(formatFundMetaData()),
     0, // feePerformancePeriod, default to 0
     parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, "managementFeePeriod") as string) || 0, // feeManagePeriod
+    [
+      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "useLegacyFlows") ? 0 : 1, // isLegacy (0 for legacy, 1 for non-legacy)
+      getLimit("minDeposit"), // minDeposit
+      getLimit("maxDeposit"), // maxDeposit
+      getLimit("minWithdrawal"), // minWithdrawal
+      getLimit("maxWithdrawal"), // maxWithdrawal
+      limitsEnabled, // limitsEnabled
+    ],
+    getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "isNotTransferable"), // isNonTransferable
   ]
 
   console.log("output", output);
