@@ -1,5 +1,5 @@
 <template>
-  <div :class="`field` + (isPreview ? ' label_preview' : '')" v-bind="$attrs">
+  <div :class="classes" v-bind="$attrs">
 
     <div class="field-actions-container">
       <v-label
@@ -142,6 +142,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  initialValue: {
+    type: [String, Number, Array, Boolean] as PropType<any>,
+    default: undefined,
+  },
 });
 
 const isFieldRequired = computed(() =>
@@ -169,6 +173,21 @@ const defaultValue = computed({
   get: () => props.defaultValue,
   set: (val) => emit("update:defaultValue", val),
 });
+
+const isFieldModified = computed(() => {
+  if(props.initialValue === undefined) return false;
+
+  return fieldValue.value !== props.initialValue;
+});
+
+const classes = computed(() => {
+  return [
+    "field",
+    { label_preview: props.isPreview },
+    { is_modified: isFieldModified.value },
+  ]
+});
+
 </script>
 
 <style lang="scss" scoped>
@@ -207,6 +226,11 @@ const defaultValue = computed({
     :deep(.v-field) {
       color: $color-text-irrelevant;
       opacity: 1;
+    }
+  }
+  &.is_modified {
+    :deep(.v-field__input) {
+      color: var(--color-success);
     }
   }
 }

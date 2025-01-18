@@ -1,71 +1,21 @@
 <template>
   <div>
-    <UiHeader>
-      <div class="main_header__title">
-        OIV Settings Proposal
-
-        <UiTooltipClick location="right" :hide-after="6000">
-          <Icon
-            icon="material-symbols:info-outline"
-            :class="'main_header__info-icon'"
-            width="1.5rem"
-          />
-
-          <template #tooltip>
-            <div class="tooltip__content">
-              Update OIV Settings on need!
-              <a
-                class="tooltip__link"
-                href="https://docs.rethink.finance/rethink.finance"
-                target="_blank"
-              >
-                Learn More
-                <Icon icon="maki:arrow" color="primary" width="1rem" />
-              </a>
-            </div>
-          </template>
-        </UiTooltipClick>
-      </div>
-
-      <div class="buttons_container">
-        <v-btn
-          v-if="showPrevStep"
-          variant="outlined"
-          color="secondary"
-          @click="prevStep"
-        >
-          Previous
-        </v-btn>
-
-        <v-btn
-          class="button--primary"
-          :type="isLastStep ? 'submit' : 'button'"
-          :loading="loading"
-          :disabled="isLastStep && !accountStore.isConnected"
-          @click="handleButtonClick"
-        >
-          {{ isLastStep ? "Submit Proposal" : "Next" }}
-          <v-tooltip
-            v-if="isLastStep && !accountStore.isConnected"
-            :model-value="true"
-            activator="parent"
-            location="top"
-            @update:model-value="true"
-          >
-            Connect your wallet to create a proposal.
-          </v-tooltip>
-        </v-btn>
-      </div>
-    </UiHeader>
+    <FundSettingsProposalHeader
+      :show-prev-step="showPrevStep"
+      :is-last-step="isLastStep"
+      :loading="loading"
+      @prev-step="prevStep"
+      @handle-click="handleButtonClick"
+    />
 
     <v-form ref="form">
       <div v-for="(step, indexStep) in proposalEntry" :key="indexStep">
-        <div
-          v-for="(section, indexSection) in step.sections"
-          :key="indexSection"
-          class="section main_card"
-        >
-          <template v-if="step.stepName === activeStep">
+        <template v-for="(section, indexSection) in step.sections">
+          <div
+            v-if="step.stepName === activeStep"
+            :key="indexSection"
+            class="section main_card"
+          >
             <div class="section__title subtitle_white">
               {{ section.name }}
 
@@ -114,7 +64,7 @@
                       v-model="subField.value"
                       :field="subField"
                       :is-disabled="!field.isToggleOn"
-                      :class="`${isFieldModified(subField.key, subField.value) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
+                      :initial-value="step.stepName !== ProposalStep.Details ? proposalInitial[subField.key] : undefined"
                     />
                   </template>
 
@@ -123,19 +73,19 @@
                   <UiField
                     v-model="field.value"
                     :field="field"
-                    :class="`${isFieldModified(field.key, field.value) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
+                    :initial-value="step.stepName !== ProposalStep.Details ? proposalInitial[field.key] : undefined"
                   />
                 </div>
               </v-col>
             </div>
             <div v-else>
-              <SectionWhitelist
+              <FundSettingsSectionWhitelist
                 v-model="whitelistAddresses"
                 v-model:whitelist-enabled="isWhitelistedDeposits"
               />
             </div>
-          </template>
-        </div>
+          </div>
+        </template>
       </div>
     </v-form>
   </div>
@@ -147,11 +97,9 @@ import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
 import { encodeFunctionCall } from "web3-eth-abi";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
-import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type { IField } from "~/types/enums/input_type";
-import SectionWhitelist from "./SectionWhitelist.vue";
 
 import {
   FundSettingsStepFieldsMap,
@@ -166,7 +114,6 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
-const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const router = useRouter();
 
@@ -207,10 +154,6 @@ const isWhitelistedDeposits = ref(false);
 // if fee period is 0 set it to 365
 const parsedFeePeriod = (value: string) => {
   return value === "0" ? "365" : value;
-};
-
-const isFieldModified = (key: keyof IProposal, value: string | boolean | undefined) => {
-  return value !== proposalInitial.value[key];
 };
 
 // helper function to generate fields
@@ -645,29 +588,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
-.main_header {
-  flex-wrap: wrap;
-  gap: 15px;
-
-  &__title {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    align-content: center;
-    gap: 20px;
-  }
-  &__info-icon {
-    cursor: pointer;
-    display: flex;
-    color: $color-text-irrelevant;
-  }
-}
-.buttons_container {
-  display: flex;
-  flex-direction: row;
-  gap: 0.5rem;
-  margin-left: auto;
-}
 
 .section {
   &__title {
@@ -693,28 +613,10 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
-.modified-field {
-  :deep(.v-field__input) {
-    color: var(--color-success);
-  }
-}
 .section-whitelist {
   display: none;
   &.toggle__on {
     display: block;
-  }
-}
-.tooltip {
-  &__content {
-    display: flex;
-    gap: 40px;
-  }
-  &__link {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
-    color: $color-primary;
   }
 }
 </style>
