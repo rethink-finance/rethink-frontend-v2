@@ -181,15 +181,15 @@
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import { useAccountStore } from "~/store/account/account.store";
-import { useFundStore } from "~/store/fund/fund.store";
-import { useToastStore } from "~/store/toasts/toast.store";
-import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import {
   encodeUpdateNavMethods,
   getAllowManagerToUpdateNavProposalData,
   getNavMethodsProposalData,
 } from "~/composables/nav/navProposal";
+import { useAccountStore } from "~/store/account/account.store";
+import { useFundStore } from "~/store/fund/fund.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const router = useRouter();
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
@@ -311,8 +311,6 @@ const submitProposal = async () => {
         toastStore.addToast(
           "The proposal transaction has been submitted. Please wait for it to be confirmed.",
         );
-
-        clearDraft();
       })
       .on("receipt", (receipt: any) => {
         console.log("receipt: ", receipt);
