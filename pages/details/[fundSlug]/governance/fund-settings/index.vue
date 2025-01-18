@@ -416,10 +416,6 @@ const submit = async () => {
         }),
       ];
 
-      // TODO: delete this return
-      // we dont want to submit the proposal, tessting phase
-      return
-
       await fundStore.fundGovernorContract
         .send("propose", {}, ...proposalData)
         .on("transactionHash", (hash: any) => {
