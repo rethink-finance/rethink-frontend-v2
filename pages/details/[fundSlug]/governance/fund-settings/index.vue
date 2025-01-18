@@ -59,81 +59,82 @@
     </UiHeader>
 
     <v-form ref="form">
-      <div v-for="(step, index) in proposalEntry" :key="index">
+      <div v-for="(step, indexStep) in proposalEntry" :key="indexStep">
         <div
-          v-for="(section, index) in step.sections"
-          v-if="step.stepName === activeStep"
-          :key="index"
+          v-for="(section, indexSection) in step.sections"
+          :key="indexSection"
           class="section main_card"
         >
-          <div class="section__title subtitle_white">
-            {{ section.name }}
+          <template v-if="step.stepName === activeStep">
+            <div class="section__title subtitle_white">
+              {{ section.name }}
 
-            <UiTooltipClick v-if="section.info" :hide-after="8000">
-              <Icon
-                icon="material-symbols:info-outline"
-                class="section__info-icon"
-                width="1.5rem"
-              />
+              <UiTooltipClick v-if="section.info" :hide-after="8000">
+                <Icon
+                  icon="material-symbols:info-outline"
+                  class="section__info-icon"
+                  width="1.5rem"
+                />
 
-              <template #tooltip>
-                {{ section.info }}
-              </template>
-            </UiTooltipClick>
-
-            <div
-              v-if="section.name === 'Whitelist'"
-            >
-              <v-switch
-                v-model="proposal.isWhitelistedDeposits"
-                color="primary"
-                hide-details
-              />
-            </div>
-          </div>
-
-          <UiInfoBox
-            v-if="section.info"
-            class="info-box"
-            :info="section.info"
-          />
-
-          <div v-if="section.name !== 'Whitelist'" class="fields">
-            <v-col
-              v-for="(field, index) in section.fields"
-              :key="index"
-              :cols="field?.cols ?? 12"
-            >
-              <UiFieldsGroup
-                v-if="field.fields"
-                v-model:is-toggle-on="field.isToggleOn"
-                :field-group="field"
-              >
-                <template #default="{ subField }">
-                  <UiField
-                    v-model="proposal[subField.key]"
-                    :field="subField"
-                    :is-disabled="!field.isToggleOn"
-                    :class="`${isFieldModified(subField.key) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
-                  />
+                <template #tooltip>
+                  {{ section.info }}
                 </template>
+              </UiTooltipClick>
 
-              </UiFieldsGroup>
-              <div v-else>
-                <UiField
-                  v-model="proposal[field.key]"
-                  :field="field"
-                  :class="`${isFieldModified(field.key) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
+              <div
+                v-if="section.name === 'Whitelist'"
+              >
+                <v-switch
+                  v-model="isWhitelistedDeposits"
+                  color="primary"
+                  hide-details
                 />
               </div>
-            </v-col>
-          </div>
-          <div v-else>
-            <SectionWhitelist
-              v-model="whitelist"
-              v-model:whitelist-enabled="proposal.isWhitelistedDeposits"
+            </div>
+
+            <UiInfoBox
+              v-if="section.info"
+              class="info-box"
+              :info="section.info"
             />
-          </div>
+
+            <div v-if="section.name !== 'Whitelist'" class="fields">
+              <v-col
+                v-for="(field, indexField) in section.fields"
+                :key="indexField"
+                :cols="field?.cols ?? 12"
+              >
+                <UiFieldsGroup
+                  v-if="field.fields"
+                  v-model:is-toggle-on="field.isToggleOn"
+                  :field-group="field"
+                >
+                  <template #default="{ subField }">
+                    <UiField
+                      v-model="subField.value"
+                      :field="subField"
+                      :is-disabled="!field.isToggleOn"
+                      :class="`${isFieldModified(subField.key, subField.value) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
+                    />
+                  </template>
+
+                </UiFieldsGroup>
+                <div v-else>
+                  <UiField
+                    v-model="field.value"
+                    :field="field"
+                    :class="`${isFieldModified(field.key, field.value) && step.stepName !== ProposalStep.Details ? 'modified-field' : ''}`"
+                  />
+                </div>
+              </v-col>
+            </div>
+            <div v-else>
+              <SectionWhitelist
+                v-model="whitelistAddresses"
+                v-model:whitelist-enabled="isWhitelistedDeposits"
+              />
+            </div>
+          </template>
         </div>
       </div>
     </v-form>
@@ -196,46 +197,21 @@ const updateSettingsABI = GovernableFund.abi.find(
 );
 
 // TODO: implement undo changes that will reset form with initial values
-let proposalInitial = {} as IProposal;
+// we need to have proposalInitial so that we can compare the initial values with the current values
+const proposalInitial = ref({} as IProposal);
 
-const proposal = ref<IProposal>({
-  // Basics
-  photoUrl: "",
-  fundName: "",
-  fundSymbol: "",
-  baseToken: "",
-  description: "",
-  // Fees
-  depositFee: "",
-  depositFeeRecipientAddress: "",
-  withdrawFee: "",
-  withdrawFeeRecipientAddress: "",
-  managementFee: "",
-  managementFeeRecipientAddress: "",
-  managementFeePeriod: "",
-  performanceFee: "",
-  performanceFeeRecipientAddress: "",
-  performanceFeePeriod: "",
-  hurdleRate: "",
-  // Whitelist
-  whitelist: "",
-  isWhitelistedDeposits: false,
-  // Management
-  plannedSettlementPeriod: "",
-  minLiquidAssetShare: "",
-  // Governance
-  governanceToken: "",
-  quorum: "",
-  votingPeriod: "",
-  votingDelay: "",
-  proposalThreshold: "",
-  lateQuorum: "",
-  // Details
-  proposalTitle: "",
-  proposalDescription: "",
-});
+const whitelistAddresses = ref<IWhitelist[]>([]);
+const isWhitelistedDeposits = ref(false);
 
-const whitelist = ref<IWhitelist[]>([]);
+
+// if fee period is 0 set it to 365
+const parsedFeePeriod = (value: string) => {
+  return value === "0" ? "365" : value;
+};
+
+const isFieldModified = (key: keyof IProposal, value: string | boolean | undefined) => {
+  return value !== proposalInitial.value[key];
+};
 
 // helper function to generate fields
 function generateFields(section: IStepperSection, proposal: IProposal) {
@@ -268,19 +244,83 @@ function generateSections(step: ProposalStep, proposal: IProposal) {
   })) as { name: string; fields: IField[]; info?: string }[];
 }
 
+
+const generateSteps = (proposalEntry: IProposal) => {
+  return proposalSteps.map((step) => ({
+    stepName: step,
+    stepLabel: FundSettingsStepsMap[step]?.name ?? "",
+    sections: generateSections(step, proposalEntry),
+  }));
+};
+
+const initProposalEntry = () => {
+  const fundDeepCopy = JSON.parse(
+    JSON.stringify(fund, stringifyBigInt),
+    parseBigInt,
+  );
+
+  console.log("fundDeepCopy: ", fundDeepCopy);
+
+  const proposal = {
+    // Metadata
+    photoUrl: fundDeepCopy?.photoUrl ?? "",
+    plannedSettlementPeriod: fundDeepCopy?.plannedSettlementPeriod ?? "",
+    minLiquidAssetShare: fundDeepCopy?.minLiquidAssetShare ?? "",
+    description: fundDeepCopy?.description ?? "",
+    // Fund settings
+    fundName: fundDeepCopy?.title ?? "",
+    fundSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
+    baseToken: fundDeepCopy?.baseToken?.address ?? "",
+    depositFee: fromBpsToPercentage(fundDeepCopy?.depositFee),
+    depositFeeRecipientAddress: fundDeepCopy?.depositFeeAddress ?? "",
+    withdrawFee: fromBpsToPercentage(fundDeepCopy?.withdrawFee),
+    withdrawFeeRecipientAddress: fundDeepCopy?.withdrawFeeAddress ?? "",
+    managementFee: fromBpsToPercentage(fundDeepCopy?.managementFee),
+    managementFeeRecipientAddress: fundDeepCopy?.managementFeeAddress ?? "",
+    managementFeePeriod: parsedFeePeriod(fundDeepCopy?.managementPeriod ?? ""),
+    performanceFee: fromBpsToPercentage(fundDeepCopy?.performanceFee),
+    performanceFeeRecipientAddress:
+      fundDeepCopy?.performanceFeeAddress ?? "",
+    performanceFeePeriod: parsedFeePeriod(
+      fundDeepCopy?.performancePeriod ?? "",
+    ),
+    hurdleRate: fromBpsToPercentage(fundDeepCopy?.performaceHurdleRateBps),
+    // Governance
+    governanceToken: fundDeepCopy?.governanceToken?.address ?? "",
+    quorum: fundDeepCopy?.quorumPercentage ?? "",
+    votingPeriod: fundDeepCopy?.votingPeriod ?? "",
+    votingDelay: fundDeepCopy?.votingDelay ?? "",
+    proposalThreshold: fundDeepCopy?.proposalThreshold ?? "",
+    lateQuorum: fundDeepCopy?.lateQuorum ?? "",
+    // Details
+    proposalTitle: "",
+    proposalDescription: "",
+    // Whitelist
+    whitelist: "",
+    isWhitelistedDeposits: fundDeepCopy?.isWhitelistedDeposits,
+  };
+
+  whitelistAddresses.value = fundDeepCopy?.allowedDepositAddresses?.map(
+    (item: string) => ({
+      deleted: false,
+      isNew: false,
+      address: item,
+    }),
+  ) as IWhitelist[];
+
+  isWhitelistedDeposits.value = fundDeepCopy?.isWhitelistedDeposits || false;
+
+  // Store the original values for comparison
+  proposalInitial.value = JSON.parse(
+    JSON.stringify(proposal, stringifyBigInt),
+    parseBigInt,
+  );
+
+  return generateSteps(proposalInitial.value);
+};
+
 // main proposalEntry array
-const proposalEntry = ref([
-  {
-    stepName: ProposalStep.Setup,
-    stepLabel: FundSettingsStepsMap[ProposalStep.Setup]?.name ?? "",
-    sections: generateSections(ProposalStep.Setup, proposal.value),
-  },
-  {
-    stepName: ProposalStep.Details,
-    stepLabel: FundSettingsStepsMap[ProposalStep.Details]?.name ?? "",
-    sections: generateSections(ProposalStep.Details, proposal.value),
-  },
-]);
+const proposalEntry = ref(initProposalEntry());
 
 const getStepValidityArray = () => {
   const output = proposalEntry.value.map((step) => {
@@ -332,7 +372,7 @@ const submit = async () => {
   if (formIsValid.value) {
     try {
       loading.value = true;
-      const formattedProposal = formatProposalData(proposal.value);
+      const formattedProposal = formatProposalData();
       console.log("formattedProposal: ", formattedProposal);
 
       // TODO: we will delete this old proposal after we change how whitelist works in the backend
@@ -371,10 +411,14 @@ const submit = async () => {
         gasValues,
         calldatas,
         JSON.stringify({
-          title: proposal.value.proposalTitle,
-          description: proposal.value.proposalDescription,
+          title: getFieldValueByFieldKey("proposalTitle"),
+          description: getFieldValueByFieldKey("proposalDescription"),
         }),
       ];
+
+      // TODO: delete this return
+      // we dont want to submit the proposal, tessting phase
+      return
 
       await fundStore.fundGovernorContract
         .send("propose", {}, ...proposalData)
@@ -437,27 +481,44 @@ const toggledOffFields = computed(() =>{
     .flat();
 });
 
-// format proposal data to be sent to the backend
-const formatProposalData = (proposal: IProposal) => {
-  const originalFundSettings = fund.originalFundSettings;
-  console.log("originalFundSettings: ", originalFundSettings);
+const getFieldValueByFieldKey = (fieldKey: string) => {
+  for (const step of proposalEntry.value) {
+    for (const section of step.sections) {
+      for (const field of section.fields) {
+        if (field.key === fieldKey) {
+          return field.value;
+        }
+        if (field.fields) {
+          for (const subField of field.fields) {
+            if (subField.key === fieldKey) {
+              return subField.value;
+            }
+          }
+        }
+      }
+    }
+  }
+};
 
-  console.log("toggledOffFields: ", toggledOffFields.value);
+// format proposal data to be sent to the backend
+const formatProposalData = () => {
+  const originalFundSettings = fund.originalFundSettings;
+
   // 1. if whitelist is toggled on, get the whitelist addresses and filter out the deleted ones
   // 2. if whitelist is toggled off, set the whitelist to an empty array (this will toggle off currently whitelisted addresses in the backend)
   //    because we are sending two calldatas to the backend(the first one is the old proposal and the second one is the new proposal)
   //    old proposal will toggle off currently whitelisted addresses, and the new proposal will be an empty array which means that there will be no whitelisted addresses
   let allowedDepositors = [] as string[];
-  if (proposal.isWhitelistedDeposits) {
-    allowedDepositors = whitelist.value
+  if (isWhitelistedDeposits.value) {
+    allowedDepositors = whitelistAddresses.value
       .filter((item) => !item.deleted)
       .map((item) => item.address);
   }
 
-  let isWhitelistedDeposits = proposal.isWhitelistedDeposits;
+  let isWhitelistedDepositsSubmit = isWhitelistedDeposits.value;
   // Disable the isWhitelistedDeposits if there are no addresses so that everyone can deposit.
   if (!allowedDepositors?.length) {
-    isWhitelistedDeposits = false;
+    isWhitelistedDepositsSubmit = false;
   }
 
   const fundSettings = {
@@ -466,51 +527,51 @@ const formatProposalData = (proposal: IProposal) => {
     allowedManagers: originalFundSettings?.allowedManagers, // did not change
     fundAddress: originalFundSettings?.fundAddress, // did not change
     governor: originalFundSettings?.governor, // did not change
-    isWhitelistedDeposits,
+    isWhitelistedDepositsSubmit,
     depositFee: toggledOffFields.value.includes("depositFee")
       ? 0
-      : parseInt(fromPercentageToBps(proposal.depositFee)),
+      : parseInt(fromPercentageToBps(getFieldValueByFieldKey("depositFee"))),
     withdrawFee: toggledOffFields.value.includes("withdrawFee")
       ? 0
-      : parseInt(fromPercentageToBps(proposal.withdrawFee)),
+      : parseInt(fromPercentageToBps(getFieldValueByFieldKey("withdrawFee"))),
     performanceFee: toggledOffFields.value.includes("performanceFee")
       ? 0
-      : parseInt(fromPercentageToBps(proposal.performanceFee)),
+      : parseInt(fromPercentageToBps(getFieldValueByFieldKey("performanceFee"))),
     managementFee: toggledOffFields.value.includes("managementFee")
       ? 0
-      : parseInt(fromPercentageToBps(proposal.managementFee)),
+      : parseInt(fromPercentageToBps(getFieldValueByFieldKey("managementFee"))),
     performaceHurdleRateBps: 0, // note from Rok to always submit 0 here
-    baseToken: proposal.baseToken,
+    baseToken: getFieldValueByFieldKey("baseToken"),
     allowedDepositAddrs: allowedDepositors,
-    governanceToken: proposal.governanceToken,
-    fundName: proposal.fundName,
-    fundSymbol: proposal.fundSymbol,
+    governanceToken: getFieldValueByFieldKey("governanceToken"),
+    fundName: getFieldValueByFieldKey("fundName"),
+    fundSymbol: getFieldValueByFieldKey("fundSymbol"),
     feeCollectors: [
       toggledOffFields.value.includes("depositFeeRecipientAddress")
         ? ethers.ZeroAddress
-        : proposal.depositFeeRecipientAddress,
+        : getFieldValueByFieldKey("depositFeeRecipientAddress"),
       toggledOffFields.value.includes("withdrawFeeRecipientAddress")
         ? ethers.ZeroAddress
-        : proposal.withdrawFeeRecipientAddress,
+        : getFieldValueByFieldKey("withdrawFeeRecipientAddress"),
       toggledOffFields.value.includes("managementFeeRecipientAddress")
         ? ethers.ZeroAddress
-        : proposal.managementFeeRecipientAddress,
+        : getFieldValueByFieldKey("managementFeeRecipientAddress"),
       toggledOffFields.value.includes("performanceFeeRecipientAddress")
         ? ethers.ZeroAddress
-        : proposal.performanceFeeRecipientAddress,
+        : getFieldValueByFieldKey("performanceFeeRecipientAddress"),
     ],
   };
 
   // metadata should be stringified
   const metaData = {
-    photoUrl: proposal.photoUrl,
-    description: proposal.description,
-    plannedSettlementPeriod: proposal.plannedSettlementPeriod,
-    minLiquidAssetShare: proposal.minLiquidAssetShare,
+    photoUrl: getFieldValueByFieldKey("photoUrl"),
+    description: getFieldValueByFieldKey("description"),
+    plannedSettlementPeriod: getFieldValueByFieldKey("plannedSettlementPeriod"),
+    minLiquidAssetShare: getFieldValueByFieldKey("minLiquidAssetShare"),
   };
   // performance and management periods
-  const isPerformancePeriod365 = proposal.performanceFeePeriod === "365";
-  const isManagementPeriod365 = proposal.managementFeePeriod === "365";
+  const isPerformancePeriod365 = getFieldValueByFieldKey("performanceFeePeriod") === "365";
+  const isManagementPeriod365 = getFieldValueByFieldKey("managementFeePeriod") === "365";
   const isPerformancePeriodToggledOff = toggledOffFields.value.includes(
     "performanceFeePeriod",
   );
@@ -521,11 +582,11 @@ const formatProposalData = (proposal: IProposal) => {
   const performancePeriod =
     isPerformancePeriodToggledOff || isPerformancePeriod365
       ? 0
-      : parseInt(proposal.performanceFeePeriod);
+      : parseInt(getFieldValueByFieldKey("performanceFeePeriod") as string);
   const managementPeriod =
     isManagementPeriodToggledOff || isManagementPeriod365
       ? 0
-      : parseInt(proposal.managementFeePeriod);
+      : parseInt(getFieldValueByFieldKey("managementFeePeriod") as string);
 
   return [
     fundSettings,
@@ -578,100 +639,9 @@ const nextStep = () => {
   activeStep.value = proposalSteps[proposalSteps.indexOf(activeStep.value) + 1];
 };
 
-// if fee period is 0 set it to 365
-const parsedFeePeriod = (value: string) => {
-  return value === "0" ? "365" : value;
-};
-
-const populateProposal = () => {
-  const fundDeepCopy = JSON.parse(
-    JSON.stringify(fund, stringifyBigInt),
-    parseBigInt,
-  );
-
-  console.log("fundDeepCopy: ", fundDeepCopy);
-
-  proposal.value = {
-    // Metadata
-    photoUrl: fundDeepCopy?.photoUrl ?? "",
-    plannedSettlementPeriod: fundDeepCopy?.plannedSettlementPeriod ?? "",
-    minLiquidAssetShare: fundDeepCopy?.minLiquidAssetShare ?? "",
-    description: fundDeepCopy?.description ?? "",
-    // Fund settings
-    fundName: fundDeepCopy?.title ?? "",
-    fundSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
-    baseToken: fundDeepCopy?.baseToken?.address ?? "",
-    depositFee: fromBpsToPercentage(fundDeepCopy?.depositFee),
-    depositFeeRecipientAddress: fundDeepCopy?.depositFeeAddress ?? "",
-    withdrawFee: fromBpsToPercentage(fundDeepCopy?.withdrawFee),
-    withdrawFeeRecipientAddress: fundDeepCopy?.withdrawFeeAddress ?? "",
-    managementFee: fromBpsToPercentage(fundDeepCopy?.managementFee),
-    managementFeeRecipientAddress: fundDeepCopy?.managementFeeAddress ?? "",
-    managementFeePeriod: parsedFeePeriod(fundDeepCopy?.managementPeriod ?? ""),
-    performanceFee: fromBpsToPercentage(fundDeepCopy?.performanceFee),
-    performanceFeeRecipientAddress:
-      fundDeepCopy?.performanceFeeAddress ?? "",
-    performanceFeePeriod: parsedFeePeriod(
-      fundDeepCopy?.performancePeriod ?? "",
-    ),
-    hurdleRate: fromBpsToPercentage(fundDeepCopy?.performaceHurdleRateBps),
-    // Governance
-    governanceToken: fundDeepCopy?.governanceToken?.address ?? "",
-    quorum: fundDeepCopy?.quorumPercentage ?? "",
-    votingPeriod: fundDeepCopy?.votingPeriod ?? "",
-    votingDelay: fundDeepCopy?.votingDelay ?? "",
-    proposalThreshold: fundDeepCopy?.proposalThreshold ?? "",
-    lateQuorum: fundDeepCopy?.lateQuorum ?? "",
-    // Details
-    proposalTitle: "",
-    proposalDescription: "",
-    // Whitelist
-    whitelist: "",
-    isWhitelistedDeposits: fundDeepCopy?.isWhitelistedDeposits,
-  };
-
-  whitelist.value = fundDeepCopy?.allowedDepositAddresses?.map(
-    (item: string) => ({
-      deleted: false,
-      isNew: false,
-      address: item,
-    }),
-  ) as IWhitelist[];
-
-  // Store the original values for comparison
-  proposalInitial = JSON.parse(
-    JSON.stringify(proposal.value, stringifyBigInt),
-    parseBigInt,
-  );
-};
-
-const isFieldModified = (key: keyof IProposal) => {
-  return proposal.value[key] !== proposalInitial[key];
-};
-
-watch(
-  proposal,
-  (newValue) => {
-    proposalEntry.value.forEach((step) => {
-      step.sections.forEach((section) => {
-        section.fields.forEach((field) => {
-          if (field?.isToggleable) {
-            field?.fields?.forEach((subField) => {
-              subField.value = newValue[subField?.key];
-            });
-          } else {
-            field.value = newValue[field?.key];
-          }
-        });
-      });
-    });
-  },
-  { deep: true },
-);
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
-  populateProposal(); // Populate proposal with fund data
 });
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);

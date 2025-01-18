@@ -679,11 +679,11 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
 }
 
 
-function getFieldByStepAndFieldKey(
+const getFieldByStepAndFieldKey =(
   stepperEntry: IOnboardingStep[],
   stepKey: string,
   fieldKey: string,
-) {
+) =>{
   const field = stepperEntry
     ?.find(step => step.key === stepKey)?.fields
     ?.flatMap(field => field.fields || field)
