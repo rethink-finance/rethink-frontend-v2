@@ -146,13 +146,13 @@
                 :fields="item.fields"
                 :is-fund-initialized="isFundInitialized"
                 :step="step"
-                @delete-row="deleteCustomFieldRow"
+                @delete-row="(e) => deleteCustomFieldRow(e, item.key)"
               />
 
-              <!-- STEP MANAGEMENT -->
+              <!-- STEP BASICS -->
               <OnboardingAddNewField
-                v-if="item.key === OnboardingStep.Management && !isFundInitialized"
-                @add-custom-field="addCustomFieldRow"
+                v-if="item.key === OnboardingStep.Basics && !isFundInitialized"
+                @add-custom-field="(e) =>addCustomFieldRow(e, OnboardingStep.Basics)"
               />
 
               <!-- STEP WHITELIST -->
@@ -371,10 +371,10 @@ const isLoadingFetchFundCache = computed(() =>
   ),
 );
 
-const deleteCustomFieldRow = (field: IField) => {
+const deleteCustomFieldRow = (field: IField, stepKey: string) => {
   try{
     const stepIndex = stepperEntry.value.findIndex(
-      (step) => step.key === OnboardingStep.Management,
+      (step) => step.key === stepKey,
     );
 
     if (stepIndex !== -1) {
@@ -393,15 +393,15 @@ const deleteCustomFieldRow = (field: IField) => {
   }
 };
 
-const addCustomFieldRow = (customField: IField) => {
+const addCustomFieldRow = (customField: IField, stepKey: string) => {
   try {
-    const managementStepIndex = stepperEntry.value.findIndex(
-      (step) => step.key === OnboardingStep.Management,
+    const stepIndex = stepperEntry.value.findIndex(
+      (step) => step.key === stepKey,
     );
 
     // check if this key already exists
-    if (managementStepIndex !== -1) {
-      const fieldIndex = stepperEntry.value[managementStepIndex].fields?.findIndex(
+    if (stepIndex !== -1) {
+      const fieldIndex = stepperEntry.value[stepIndex].fields?.findIndex(
         (f) => f.key === customField.key,
       );
 
@@ -409,7 +409,7 @@ const addCustomFieldRow = (customField: IField) => {
         return toastStore.errorToast("Custom field with this name already exists");
       }
 
-      stepperEntry.value[managementStepIndex].fields?.push(customField);
+      stepperEntry.value[stepIndex].fields?.push(customField);
     }
   } catch (error) {
     console.error("Error adding custom field", error);
@@ -645,20 +645,20 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
     } as IField;
   });
 
-  // find management step and add custom fields to that step
-  if (stepKey === OnboardingStep.Management) {
+  // find basic step and add custom fields to that step
+  if (stepKey === OnboardingStep.Basics) {
 
     if(Object.keys(stepperEntry).length === 0) return output;
 
-    const managementStepIndex = stepperEntry.findIndex(
-      (step) => step.key === OnboardingStep.Management,
+    const stepIndex = stepperEntry.findIndex(
+      (step) => step.key === OnboardingStep.Basics,
     );
 
-    if (managementStepIndex !== -1) {
-      const managementStepFields = stepperEntry[managementStepIndex].fields ?? [];
+    if (stepIndex !== -1) {
+      const stepFields = stepperEntry[stepIndex].fields ?? [];
 
       // find custom fields (fields that has key "isFieldByUser")
-      const customFields = managementStepFields?.filter(
+      const customFields = stepFields?.filter(
         (field) => {
           return field.isFieldByUser;
         },
@@ -724,8 +724,8 @@ const findCustomFieldsFromStep = (stepKey: string) => {
 };
 
 const formatFundMetaData = () => {
-  // find fields with key "isFieldByUser" from management step and add them to the fund metadata
-  const customFIelds = findCustomFieldsFromStep(OnboardingStep.Management);
+  // find fields with key "isFieldByUser" from basics step and add them to the fund metadata
+  const customFIelds = findCustomFieldsFromStep(OnboardingStep.Basics);
 
   return  {
     description: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "description"),
