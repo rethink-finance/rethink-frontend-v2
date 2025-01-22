@@ -1,5 +1,5 @@
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
-import { InputType } from "~/types/enums/input_type";
+import { InputType, periodChoices } from "~/types/enums/input_type";
 
 export enum ProposalStep {
   Setup = "setup",
@@ -292,9 +292,10 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
   ],
   [StepSections.Management]: [
     {
-      label: "Planned Settlement Period (Days)",
+      label: "Planned Settlement Period",
       key: "plannedSettlementPeriod",
-      type: InputType.Number,
+      type: InputType.Period,
+      choices: periodChoices,
       placeholder: "E.g. 0",
       rules: [formRules.required, formRules.isNonNegativeNumber],
       isEditable: true,

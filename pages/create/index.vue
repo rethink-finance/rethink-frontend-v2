@@ -146,6 +146,7 @@
                 :fields="item.fields"
                 :is-fund-initialized="isFundInitialized"
                 :step="step"
+                :chain-id="selectedChainId"
                 @delete-row="(e) => deleteCustomFieldRow(e, item.key)"
               />
 
