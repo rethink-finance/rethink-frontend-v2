@@ -101,6 +101,19 @@ export const feeFieldKeys = [
   "performanceFee",
 ]
 
+export const baseTokenSymbolField =     {
+  label: "Symbol",
+  key: "baseTokenSymbol",
+  type: InputType.Text,
+  isEditable: false,
+}
+export const baseTokenDecimalsField =     {
+  label: "Decimals",
+  key: "baseTokenDecimals",
+  type: InputType.Text,
+  isEditable: false,
+}
+
 // 2. define FundSettingsStepFieldsMap which holds the form fields for each section
 // TODO instead of doing this manually, each field should have here defined function to serialize and deserialize.
 //   for example fee fields are shown in the UI as Number(fromPercentageToBps(
@@ -156,6 +169,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Deposit Fees",
       fields: [
         {
           label: "Deposit Fee (%)",
@@ -181,6 +195,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Withdraw Fees",
       fields: [
         {
           label: "Redemption Fee (%)",
@@ -206,6 +221,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Management Fees",
       fields: [
         {
           label: "Management Fee (%)",
@@ -241,6 +257,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Performance Fees",
       fields: [
         {
           label: "Performance Fee (%)",

@@ -13,7 +13,7 @@
       />
     </div>
 
-    <SectionWhitelist
+    <FundSettingsSectionWhitelist
       v-model="whitelist"
       v-model:whitelist-enabled="isWhitelistEnabled"
       :is-editable="isEditable"
@@ -22,7 +22,6 @@
 </template>
 
 <script setup lang="ts">
-import SectionWhitelist from "~/pages/details/[fundSlug]/governance/fund-settings/SectionWhitelist.vue";
 import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
 
 const emit = defineEmits(["update:modelValue", "update:whitelistEnabled"]);

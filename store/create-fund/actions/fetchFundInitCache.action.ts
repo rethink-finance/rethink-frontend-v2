@@ -75,7 +75,7 @@ const fetchGovernorData = async (fundChainId: string, governorAddress?: string) 
     lateQuorum: Number(lateQuorum),
   };
 }
-const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) => {
+export const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) => {
   const web3Store = useWeb3Store();
   console.debug("fetchBaseTokenDetails")
 
@@ -90,6 +90,8 @@ const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) 
     chainId,
     () =>
       tokenContract.methods.decimals().call(),
+    1,
+    [205],
   );
   console.debug("baseDecimals")
 
@@ -97,6 +99,8 @@ const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) 
     chainId,
     () =>
       tokenContract.methods.symbol().call(),
+    1,
+    [205],
   );
   console.debug("baseSymbol")
 

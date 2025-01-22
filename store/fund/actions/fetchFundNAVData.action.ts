@@ -114,6 +114,8 @@ export const getNAVData = async (
       fundChainId,
       () =>
         navExecutorContract.methods.getNAVData(fundAddress).call(),
+      1,
+      [310],
     );
 
     // Decode NAV methods.
