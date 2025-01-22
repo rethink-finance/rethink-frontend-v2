@@ -94,7 +94,16 @@ export const FundSettingsStepsMap: Record<ProposalStep, IFundSettingProposalStep
   },
 };
 
+export const feeFieldKeys = [
+  "depositFee",
+  "withdrawFee",
+  "managementFee",
+  "performanceFee",
+]
+
 // 2. define FundSettingsStepFieldsMap which holds the form fields for each section
+// TODO instead of doing this manually, each field should have here defined function to serialize and deserialize.
+//   for example fee fields are shown in the UI as Number(fromPercentageToBps(
 export const FundSettingsStepFieldsMap: FieldsMapType = {
   [StepSections.Basics]: [
     {
