@@ -1,6 +1,9 @@
 <template>
   <v-row class="time-to-blocks">
-    <v-col cols="10">
+    <v-col
+      class="column"
+      cols="7"
+    >
       <v-skeleton-loader
         v-if="isLoading"
         type="text"
@@ -16,18 +19,47 @@
         :error-messages="customErrorMessage"
       />
     </v-col>
-    <v-col cols="2">
+    <v-col
+      class="column"
+      cols="3"
+    >
       <v-skeleton-loader
         v-if="isLoading"
         type="text"
         class="skeleton-text-field"
       />
-      <v-select
+      <UiField
+        v-else
+        v-model="blocks"
+        class="move-up"
+        :field="{
+          label: 'Blocks',
+          type: InputType.Text,
+          isEditable: false,
+        }"
+      />
+
+    </v-col>
+    <v-col
+      class="column"
+      cols="2"
+    >
+      <v-skeleton-loader
+        v-if="isLoading"
+        type="text"
+        class="skeleton-text-field"
+      />
+      <UiField
         v-else
         v-model="selectedUnit"
-        :items="periodChoices"
-        class="field-select"
-        :disabled="isDisabled"
+        class="padding-bottom"
+        :field="{
+          label: 'Unit',
+          type: InputType.Select,
+          choices: periodChoices,
+          isDisabled: isDisabled,
+          isEditable: true,
+        }"
       />
     </v-col>
   </v-row>
@@ -35,7 +67,7 @@
 
 <script setup lang="ts">
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { periodChoices, PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
+import { InputType, periodChoices, PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 
 const CHAIN_ID_MAP = {
   "0xa4b1": "0x1",
@@ -155,26 +187,32 @@ watch([inputValue, selectedUnit], () => {
   console.log("blocks: ", blocks.value);
   emit("update:modelValue", blocks.value);
 });
+
+watch(() => props.chainId, () => {
+  initializeBlockTime();
+});
 </script>
 
 <style scoped lang="scss">
 .time-to-blocks {
   display: flex;
   align-items: center;
-}
-
-.field-select {
-  line-height: normal;
-
-  :deep(.v-field__input) {
-    padding: 10px;
-    min-height: 40px;
-  }
+  margin-top: -29px;
 }
 
 .skeleton-text-field,
 .skeleton-select {
   height: 64px;
   border-radius: 4px;
+}
+
+.column{
+  padding-block: 0;
+}
+.move-up{
+  margin-top: -29px;
+}
+.padding-bottom{
+  padding-bottom: 29px;
 }
 </style>

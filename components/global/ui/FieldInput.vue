@@ -140,4 +140,13 @@ const errorMessages = computed(() => {
     width: 100%;
   }
 }
+.field-select {
+  line-height: normal;
+
+  :deep(.v-field__input) {
+    padding: 10px;
+    min-height: 40px;
+  }
+}
+
 </style>
