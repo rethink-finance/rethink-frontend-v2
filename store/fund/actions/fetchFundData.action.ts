@@ -20,12 +20,14 @@ export const fetchFundDataAction = async (
 
     fundStore.fetchFundPendingDepositRedemptionBalance();
 
-    // const rolesModAddress = await fundStore.getRoleModAddress(fundStore.fundAddress);
+    const rolesModAddress = await fundStore.getRoleModAddress(fundStore.fundAddress);
     // Async fetch roles:
-    // const roles = await fetchRoles(
-    //   fundChainId,
-    //   rolesModAddress,
-    // );
+    const roles = await fetchRoles(
+      fundChainId,
+      rolesModAddress,
+    );
+    console.log("PARSED ZODIAC roles:", roles);
+
   } catch (e) {
     console.error(`Failed fetching fund data for ${fundAddress}`, e);
     throw e;

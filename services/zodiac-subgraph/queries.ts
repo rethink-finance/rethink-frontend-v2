@@ -1,6 +1,11 @@
 // services/subgraph/queries.ts
 import { gql } from "@apollo/client/core";
-import type { ConditionType, Member, ParamComparison, ParameterType } from "~/types/zodiac/role";
+import {
+  ParameterType,
+  ParamComparison,
+  ConditionType,
+} from "~/types/enums/zodiac-roles";
+import type { Member } from "~/types/zodiac-roles/role";
 
 export const RolesQuery = gql`
     query ($id: ID!) {

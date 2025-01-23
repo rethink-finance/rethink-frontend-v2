@@ -1,10 +1,3 @@
-export enum ExecutionOption {
-  NONE,
-  SEND,
-  DELEGATE_CALL,
-  BOTH,
-}
-
 export type Role = {
   id: string
   name: string
@@ -23,12 +16,6 @@ export type Member = {
   address: string
 }
 
-export enum EntityStatus {
-  REMOVE,
-  PENDING,
-  NONE,
-}
-
 export type FuncParams = Record<string, boolean[]>
 
 export interface ParamCondition {
@@ -36,39 +23,6 @@ export interface ParamCondition {
   type: ParameterType
   condition: ParamComparison
   value: string[] // usually a single-element array, multiple values are used only for ParamComparison.ONE_OF
-}
-
-export enum ParamComparison {
-  EQUAL_TO = "EqualTo",
-  ONE_OF = "OneOf",
-  GREATER_THAN = "GreaterThan",
-  LESS_THAN = "LessThan",
-}
-
-export enum ParameterType {
-  STATIC = "Static",
-  DYNAMIC = "Dynamic",
-  DYNAMIC32 = "Dynamic32",
-  NO_RESTRICTION = "NoRestriction",
-}
-
-export enum ParamNativeType {
-  INT,
-  UINT,
-  BOOLEAN,
-  BYTES,
-  BYTES_FIXED,
-  ADDRESS,
-  STRING,
-  ARRAY,
-  TUPLE,
-  UNSUPPORTED,
-}
-
-export enum ConditionType {
-  BLOCKED = "None",
-  WILDCARDED = "Target",
-  SCOPED = "Function",
 }
 
 export interface FunctionCondition extends ConditionalEntity {
