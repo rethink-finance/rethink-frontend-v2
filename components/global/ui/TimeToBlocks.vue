@@ -2,7 +2,7 @@
   <v-row class="time-to-blocks">
     <v-col
       class="column"
-      cols="7"
+      cols="5"
     >
       <v-skeleton-loader
         v-if="isLoading"
@@ -17,6 +17,28 @@
         :disabled="isDisabled"
         :rules="rules"
         :error-messages="customErrorMessage"
+      />
+    </v-col>
+    <v-col
+      class="column"
+      cols="4"
+    >
+      <v-skeleton-loader
+        v-if="isLoading"
+        type="text"
+        class="skeleton-text-field"
+      />
+      <UiField
+        v-else
+        v-model="selectedUnit"
+        class="padding-bottom"
+        :field="{
+          label: 'Unit',
+          type: InputType.Select,
+          choices: periodChoices,
+          isDisabled: isDisabled,
+          isEditable: true,
+        }"
       />
     </v-col>
     <v-col
@@ -39,28 +61,6 @@
         }"
       />
 
-    </v-col>
-    <v-col
-      class="column"
-      cols="2"
-    >
-      <v-skeleton-loader
-        v-if="isLoading"
-        type="text"
-        class="skeleton-text-field"
-      />
-      <UiField
-        v-else
-        v-model="selectedUnit"
-        class="padding-bottom"
-        :field="{
-          label: 'Unit',
-          type: InputType.Select,
-          choices: periodChoices,
-          isDisabled: isDisabled,
-          isEditable: true,
-        }"
-      />
     </v-col>
   </v-row>
 </template>
