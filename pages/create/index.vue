@@ -243,6 +243,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
 
+import { fromBpsToPercentage } from "~/composables/formatters";
 import { networkChoices, networksMap } from "~/store/web3/networksMap";
 import { ActionState } from "~/types/enums/action_state";
 import { feeFieldKeys, type IWhitelist } from "~/types/enums/fund_setting_proposal";
@@ -255,7 +256,6 @@ import {
   type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
-import { fromBpsToPercentage } from "~/composables/formatters";
 
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
@@ -297,7 +297,7 @@ const fundGovernorData = computed(() => fundInitCache?.value?.governorData || {}
 
 // Fetch Fund Cache and fill the form data with the fetched fund cache.
 const setFieldValue = (field: IField): void => {
-  if (![InputType.Image, InputType.Textarea, InputType.Select].includes(field.type)) {
+  if (![InputType.Image, InputType.Textarea, InputType.Select, InputType.Period].includes(field.type)) {
     field.type = InputType.Text;
   }
   field.isToggleable = false;

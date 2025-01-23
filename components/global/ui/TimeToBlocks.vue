@@ -137,6 +137,7 @@ const determineInputValueAndUnit = (totalSeconds: number, currentUnit: PeriodUni
   if (currentValue >= 1) {
     return {
       bestValue: parseFloat(currentValue.toFixed(2)),
+      // bestValue: currentValue,
       bestUnit: currentUnit,
     };
   }
@@ -156,6 +157,7 @@ const determineInputValueAndUnit = (totalSeconds: number, currentUnit: PeriodUni
 
   return {
     bestValue: parseFloat(bestValue.toFixed(2)),
+    // bestValue,
     bestUnit,
   };
 };
