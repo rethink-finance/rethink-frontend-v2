@@ -59,11 +59,11 @@ export const useWeb3Store = defineStore({
           GovernableFundFactory.abi,
           rethinkContractAddresses.GovernableFundFactoryBeaconProxy[chainId],
           chainId,
-          chainProviders[chainId].provider as HttpProvider,
+          provider as unknown as HttpProvider,
         ),
         // fundFactoryContract: new provider.eth.Contract(
         //   GovernableFundFactory.abi,
-        //   addresses.GovernableFundFactoryBeaconProxy[chainId],
+        //   rethinkContractAddresses.GovernableFundFactoryBeaconProxy[chainId],
         // ),
         rethinkReaderContract: new provider.eth.Contract(
           RethinkReader.abi,
@@ -202,10 +202,16 @@ export const useWeb3Store = defineStore({
         console.log("set new provider on chain", chainId, " to RPC url", newRpcUrl);
         chainProvider.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
       }
+
+      // Also update the provider for all contracts
+      Object.values(this.chainContracts[chainId]).forEach((contract: any) => {
+        if (contract.setProvider) {
+          contract.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
+        }
+      });
     },
     delay(ms: number): Promise<void> {
       return new Promise((resolve) => setTimeout(resolve, ms));
     },
   },
 });
-
