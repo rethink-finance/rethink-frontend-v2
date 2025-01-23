@@ -245,7 +245,7 @@ import type { IField, IFieldGroup } from "~/types/enums/input_type";
 
 import { networkChoices, networksMap } from "~/store/web3/networksMap";
 import { ActionState } from "~/types/enums/action_state";
-import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
+import { feeFieldKeys, type IWhitelist } from "~/types/enums/fund_setting_proposal";
 import { InputType } from "~/types/enums/input_type";
 import {
   OnboardingFieldsMap,
@@ -255,6 +255,7 @@ import {
   type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
+import { fromBpsToPercentage } from "~/composables/formatters";
 
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
@@ -304,7 +305,12 @@ const setFieldValue = (field: IField): void => {
   const fieldKey = field.key as string;
   // Convert some fields to text fields, as they are all readonly.
   if (fieldKey in fundSettings.value) {
-    field.value = fundSettings.value[fieldKey];
+    let value = fundSettings.value[fieldKey];
+    if (feeFieldKeys.includes(fieldKey)) {
+      value = Number(fromBpsToPercentage(value));
+    }
+
+    field.value = value;
   } else if (fieldKey in fundMetadata.value) {
     field.value = fundMetadata.value[fieldKey];
   } else if (fieldKey in fundGovernorData.value) {
@@ -740,7 +746,7 @@ const formatFundMetaData = () => {
 const getFeeValue = (feeKey: string) => {
   return toggledOffFields.value.includes(feeKey)
     ? 0
-    : parseInt(fromPercentageToBps(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, feeKey)));
+    : Number(fromPercentageToBps(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, feeKey)));
 };
 
 const getFeeCollectors = (feeKey: string) => {
