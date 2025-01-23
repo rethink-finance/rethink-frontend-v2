@@ -35,10 +35,22 @@ export default defineNuxtConfig({
     public: {
       WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
       BASE_DOMAIN: process.env.BASE_DOMAIN,
+      ENV_EXCLUDE_TEST_FUNDS: process.env.ENV_EXCLUDE_TEST_FUNDS !== "false",  // default value is true
+      // Rethink Subgraph
       GRAPH_BASE_URL: process.env.GRAPH_BASE_URL,
       GRAPH_USERID: process.env.GRAPH_USERID,
       GRAPH_VERSION: process.env.GRAPH_VERSION,
-      ENV_EXCLUDE_TEST_FUNDS: process.env.ENV_EXCLUDE_TEST_FUNDS !== "false",  // default value is true
+      // Zodiac Subgraph
+      ZODIAC_GRAPH_BASE_URL: process.env.ZODIAC_GRAPH_BASE_URL,
+      ZODIAC_GRAPH_SEPOLIA: process.env.ZODIAC_GRAPH_SEPOLIA,
+      ZODIAC_GRAPH_GNOSIS_CHAIN: process.env.ZODIAC_GRAPH_GNOSIS_CHAIN,
+      ZODIAC_GRAPH_MAINNET: process.env.ZODIAC_GRAPH_MAINNET,
+      ZODIAC_GRAPH_POLYGON: process.env.ZODIAC_GRAPH_POLYGON,
+      ZODIAC_GRAPH_ARBITRUM: process.env.ZODIAC_GRAPH_ARBITRUM,
+      ZODIAC_GRAPH_OPTIMISM: process.env.ZODIAC_GRAPH_OPTIMISM,
+      ZODIAC_GRAPH_AVALANCHE: process.env.ZODIAC_GRAPH_AVALANCHE,
+      ZODIAC_GRAPH_BSC: process.env.ZODIAC_GRAPH_BSC,
+      ZODIAC_GRAPH_BASE: process.env.ZODIAC_GRAPH_BASE,
     },
   },
   routeRules: {

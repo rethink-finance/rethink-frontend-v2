@@ -31,7 +31,7 @@ export const fetchGovernanceProposalAction = async (
     governanceProposalStore.getWeb3InstanceByChainId(),
   );
 
-  const roleModAddress = await fundStore.getRoleModAddress();
+  const roleModAddress = await fundStore.getRoleModAddress(fund.address);
 
   const timepoint =
     fund?.clockMode?.mode === ClockMode.BlockNumber

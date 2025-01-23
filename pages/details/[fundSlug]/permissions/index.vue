@@ -49,7 +49,7 @@ const updateGnosisLink = async () => {
   }
 
   try {
-    const roleModAddress = await fundStore.getRoleModAddress();
+    const roleModAddress = await fundStore.getRoleModAddress(fund.address);
     navigateToGnosis.value = getGnosisPermissionsUrl(fund.chainShort, roleModAddress);
   } catch (error) {
     console.error(error);

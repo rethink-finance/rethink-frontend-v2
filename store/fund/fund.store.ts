@@ -101,7 +101,7 @@ export const useFundStore = defineStore({
       return this.fund?.chainId ?? "";
     },
     fundAddress(): string {
-      return this.fund?.address ?? "";
+      return this.fund?.address ?? this.selectedFundAddress ?? "";
     },
     fund(): IFund | undefined {
       return this.chainFunds?.[this.selectedFundChain]?.[this.selectedFundAddress];
@@ -647,11 +647,11 @@ export const useFundStore = defineStore({
       this.fund.fundContractBaseTokenBalance = balanceWei;
       this.fund.fundContractBaseTokenBalanceLoading = false;
     },
-    async getRoleModAddress(): Promise<string> {
-      if (!this.fund?.address) return "";
+    async getRoleModAddress(fundAddress: string): Promise<string> {
+      if (!fundAddress) return "";
 
       // If we have already fetched the role mod address for the current fund, just return it.
-      let roleModAddress = this.fundRoleModAddress[this.fund.address ?? ""];
+      let roleModAddress = this.fundRoleModAddress[fundAddress];
       if (roleModAddress) {
         return roleModAddress;
       }
@@ -672,7 +672,7 @@ export const useFundStore = defineStore({
             .call(),
       );
       roleModAddress = safeModules[0][1];
-      this.fundRoleModAddress[this.fund?.address ?? ""] = roleModAddress;
+      this.fundRoleModAddress[fundAddress] = roleModAddress;
       return roleModAddress;
     },
     postUpdateNAV(): Promise<any> {

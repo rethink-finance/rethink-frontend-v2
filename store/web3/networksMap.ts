@@ -1,8 +1,25 @@
 import type INetwork from "~/types/network";
 
+export enum ChainId {
+  ETHEREUM = "0x1",
+  GOERLI = "0x5",
+  SEPOLIA = "0x6a9",
+  OPTIMISM = "0xa",
+  BASE = "0x2105",
+  OPTIMISM_ON_GNOSIS = "0x12c",
+  BINANCE = "0x38",
+  GNOSIS = "0x64",
+  POLYGON = "0x89",
+  EWT = "0xf6",
+  ARBITRUM = "0xa4b1",
+  AVALANCHE = "0xa86a",
+  VOLTA = "0x12077",
+  AURORA = "0x4e454152",
+}
+
 export const networksMap: Record<string, INetwork> = {
   "0x89": {
-    chainId: "0x89",
+    chainId: ChainId.POLYGON,
     chainName: "Polygon",
     chainNameLong: "Polygon Mainnet",
     chainShort: "matic",
@@ -23,7 +40,7 @@ export const networksMap: Record<string, INetwork> = {
     blockExplorerUrls: ["https://polygonscan.com"],
   },
   "0xa4b1": {
-    chainId: "0xa4b1",
+    chainId: ChainId.ARBITRUM,
     chainName: "Arbitrum One",
     chainShort: "arb1",
     nativeCurrency: {
@@ -59,7 +76,7 @@ export const networksMap: Record<string, INetwork> = {
   //   blockExplorerUrls: ["https://fraxscan.com"],
   // },
   "0x1": {
-    chainId: "0x1",
+    chainId: ChainId.ETHEREUM,
     chainName: "Ethereum",
     chainShort: "eth",
     nativeCurrency: {
@@ -84,7 +101,7 @@ export const networksMap: Record<string, INetwork> = {
     blockExplorerUrls: ["https://etherscan.io"],
   },
   "0x2105": {
-    chainId: "0x2105",
+    chainId: ChainId.BASE,
     chainName: "Base",
     chainShort: "base",
     nativeCurrency: {
