@@ -1,7 +1,13 @@
 <template>
   <v-row class="time-to-blocks">
     <v-col cols="10">
+      <v-skeleton-loader
+        v-if="isLoading"
+        type="text"
+        class="skeleton-text-field"
+      />
       <v-text-field
+        v-else
         v-model="inputValue"
         type="number"
         :placeholder="placeholder"
@@ -11,7 +17,13 @@
       />
     </v-col>
     <v-col cols="2">
+      <v-skeleton-loader
+        v-if="isLoading"
+        type="text"
+        class="skeleton-text-field"
+      />
       <v-select
+        v-else
         v-model="selectedUnit"
         :items="periodChoices"
         class="field-select"
@@ -66,6 +78,7 @@ const props = defineProps({
 const inputValue = ref(props.modelValue);
 const selectedUnit = ref<PeriodUnits>(PeriodUnits.Days);
 const blockTime = ref(0);
+const isLoading = ref(false);
 
 const blocks = computed(() => {
   const timeInSeconds = TimeInSeconds[selectedUnit.value];
@@ -85,7 +98,17 @@ const getWeb3Instance = () => {
   return web3Store.chainProviders[props.chainId];
 };
 
-const determineInputValueAndUnit = (totalSeconds: number) => {
+const determineInputValueAndUnit = (totalSeconds: number, currentUnit: PeriodUnits) => {
+  const currentUnitSeconds = TimeInSeconds[currentUnit];
+  const currentValue = totalSeconds / currentUnitSeconds;
+
+  if (currentValue >= 1) {
+    return {
+      bestValue: parseFloat(currentValue.toFixed(2)),
+      bestUnit: currentUnit,
+    };
+  }
+
   let bestUnit: PeriodUnits = PeriodUnits.Seconds;
   let bestValue = totalSeconds;
 
@@ -99,10 +122,14 @@ const determineInputValueAndUnit = (totalSeconds: number) => {
     }
   }
 
-  return { bestValue, bestUnit };
+  return {
+    bestValue: parseFloat(bestValue.toFixed(2)),
+    bestUnit,
+  };
 };
 
 const initializeBlockTime = async () => {
+  isLoading.value = true;
   const web3Instance = getWeb3Instance();
   if (!web3Instance) return;
   const context = await initializeBlockTimeContext(web3Instance);
@@ -111,13 +138,15 @@ const initializeBlockTime = async () => {
 
   if (blockTime.value > 0 && props.modelValue > 0) {
     const totalSeconds = props.modelValue * blockTime.value;
-    const { bestValue, bestUnit } = determineInputValueAndUnit(totalSeconds);
+    const { bestValue, bestUnit } = determineInputValueAndUnit(totalSeconds, selectedUnit.value);
     inputValue.value = bestValue;
     selectedUnit.value = bestUnit;
   } else {
     inputValue.value = 0;
     selectedUnit.value = PeriodUnits.Days;
   }
+
+  isLoading.value = false;
 };
 
 onMounted(initializeBlockTime);
@@ -141,5 +170,11 @@ watch([inputValue, selectedUnit], () => {
     padding: 10px;
     min-height: 40px;
   }
+}
+
+.skeleton-text-field,
+.skeleton-select {
+  height: 64px;
+  border-radius: 4px;
 }
 </style>
