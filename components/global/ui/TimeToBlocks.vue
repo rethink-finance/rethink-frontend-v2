@@ -36,9 +36,9 @@
           label: 'Unit',
           type: InputType.Select,
           choices: periodChoices,
-          isDisabled: isDisabled,
           isEditable: true,
         }"
+        :is-disabled="isDisabled"
       />
     </v-col>
     <v-col

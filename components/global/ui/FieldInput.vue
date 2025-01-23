@@ -65,7 +65,7 @@
         v-model="value"
         :rules="field.rules"
         :placeholder="field.placeholder"
-        :disabled="isDisabled"
+        :is-disabled="isDisabled"
         :error-messages="errorMessages"
         :chain-id="chainId"
       />
