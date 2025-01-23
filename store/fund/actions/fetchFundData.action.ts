@@ -1,8 +1,9 @@
 import { useFundStore } from "../fund.store";
 import { fetchRoles } from "~/services/zodiac-subgraph";
+import type { ChainId } from "~/store/web3/networksMap";
 
 export const fetchFundDataAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
 ): Promise<any> => {
   const fundStore = useFundStore();

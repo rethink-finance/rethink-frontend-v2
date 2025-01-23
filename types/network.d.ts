@@ -1,5 +1,7 @@
+import type { ChainId } from "~/store/web3/networksMap";
+
 export default interface INetwork {
-  chainId:  string,
+  chainId:  ChainId,
   chainName: string,
   chainNameLong?: string,
   chainShort: string,

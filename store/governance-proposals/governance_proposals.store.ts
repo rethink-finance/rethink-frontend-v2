@@ -23,6 +23,7 @@ import {
 } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { ChainId } from "~/store/web3/networksMap";
 
 interface IState {
   /* Example fund proposals.
@@ -78,14 +79,14 @@ export const useGovernanceProposalsStore = defineStore({
       return useWeb3Store();
     },
     selectedFundChainId(): any {
-      return this.fundStore.fundChainId;
+      return this.fundStore.selectedFundChain;
     },
     selectedFundWeb3Provider(): Web3 {
       return this.web3Store.chainProviders[this.selectedFundChainId];
     },
   },
   actions: {
-    resetProposals(chainId: string, fundAddress?: string): void {
+    resetProposals(chainId: ChainId, fundAddress?: string): void {
       if (!fundAddress) return;
 
       const chainData = this.fundProposals?.[chainId];
@@ -109,7 +110,7 @@ export const useGovernanceProposalsStore = defineStore({
       );
     },
     storeProposal(
-      chainId: string,
+      chainId: ChainId,
       fundAddress: string,
       proposal: IGovernanceProposal,
     ): void {
@@ -120,7 +121,7 @@ export const useGovernanceProposalsStore = defineStore({
       setLocalStorageItem("fundProposals", this.fundProposals);
     },
     storeProposals(
-      chainId: string,
+      chainId: ChainId,
       fundAddress: string,
       proposals: IGovernanceProposal[],
     ): void {
@@ -145,7 +146,7 @@ export const useGovernanceProposalsStore = defineStore({
       setLocalStorageItem("fundProposals", this.fundProposals);
     },
     storeDelegates(
-      chainId: string,
+      chainId: ChainId,
       fundAddress: string,
       delegates: IDelegate[],
     ): void {
@@ -169,7 +170,7 @@ export const useGovernanceProposalsStore = defineStore({
 
       setLocalStorageItem("fundDelegates", this.fundDelegates);
     },
-    getProposals(chainId: string, fundAddress?: string): IGovernanceProposal[] {
+    getProposals(chainId: ChainId, fundAddress?: string): IGovernanceProposal[] {
       if (!fundAddress) return [];
 
       const chainData = this.fundProposals?.[chainId];
@@ -181,7 +182,7 @@ export const useGovernanceProposalsStore = defineStore({
       return Object.values(this.fundProposals[chainId][fundAddress]);
     },
     getProposal(
-      chainId: string,
+      chainId: ChainId,
       fundAddress?: string,
       proposalId?: string,
     ): IGovernanceProposal | undefined {
@@ -195,7 +196,7 @@ export const useGovernanceProposalsStore = defineStore({
 
       return fundData[proposalId];
     },
-    getDelegates(chainId: string, fundAddress?: string): IDelegate[] {
+    getDelegates(chainId: ChainId, fundAddress?: string): IDelegate[] {
       if (!fundAddress) return [];
 
       const chainData = this.fundDelegates?.[chainId];
@@ -207,7 +208,7 @@ export const useGovernanceProposalsStore = defineStore({
       return Object.values(this.fundDelegates[chainId][fundAddress]);
     },
     getDelegate(
-      chainId: string,
+      chainId: ChainId,
       fundAddress?: string,
       delegateAddress?: string,
     ): IDelegate | undefined {
@@ -233,7 +234,7 @@ export const useGovernanceProposalsStore = defineStore({
       ];
     },
     getFundProposalsBlockFetchedRanges(
-      chainId: string,
+      chainId: ChainId,
       fundAddress?: string,
     ): number[] | undefined[] {
       if (!fundAddress) return [undefined, undefined];
@@ -247,7 +248,7 @@ export const useGovernanceProposalsStore = defineStore({
       return fundData;
     },
     setFundProposalsBlockFetchedRanges(
-      chainId: string,
+      chainId: ChainId,
       fundAddress: string,
       latestBlock: number,
       oldestBlock: number,
@@ -489,7 +490,7 @@ export const useGovernanceProposalsStore = defineStore({
       const chainIdMap = {
         "0xa4b1": "0x1",
       };
-      const chainId = this.fundStore.fundChainId as keyof typeof chainIdMap;
+      const chainId = this.fundStore.selectedFundChain as keyof typeof chainIdMap;
       const chainIdMapKey = chainIdMap[chainId];
 
       // if the chainIdMapKey is found, use the rpcUrl from the chainIdMap

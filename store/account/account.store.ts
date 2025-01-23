@@ -7,7 +7,7 @@ import { Web3 } from "web3";
 import { useToastStore } from "../toasts/toast.store";
 
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { networksMap } from "~/store/web3/networksMap";
+import { type ChainId, networksMap } from "~/store/web3/networksMap";
 
 interface IState {
   web3Onboard?: any;
@@ -36,8 +36,8 @@ export const useAccountStore = defineStore("accounts", {
       );
       return this.web3Onboard?.connectedWallet || undefined;
     },
-    connectedWalletChainId(): string | undefined {
-      return this.connectedWallet?.chains[0]?.id;
+    connectedWalletChainId(): ChainId | undefined {
+      return this.connectedWallet?.chains[0]?.id as ChainId;
     },
     isConnected(): boolean {
       return !!this.connectedWallet;
@@ -73,7 +73,7 @@ export const useAccountStore = defineStore("accounts", {
       const chainId = this.web3Onboard?.connectedChain?.id || "";
       await this.setActiveChain(chainId);
     },
-    async addNewNetwork(chainId: string) {
+    async addNewNetwork(chainId: ChainId) {
       console.log("Add New Network for chain:", chainId);
       const network = networksMap[chainId];
       console.log({
@@ -99,7 +99,7 @@ export const useAccountStore = defineStore("accounts", {
     checkConnection() {
       return this.connectedWalletWeb3?.eth.getBlockNumber();
     },
-    async switchNetwork(chainId: string) {
+    async switchNetwork(chainId: ChainId) {
       this.isSwitchingNetworks = true;
       let errorToThrow;
 
@@ -147,7 +147,7 @@ export const useAccountStore = defineStore("accounts", {
         throw errorToThrow;
       }
     },
-    async setActiveChain(chainId: string): Promise<void> {
+    async setActiveChain(chainId: ChainId): Promise<void> {
       console.log("setActiveChain", chainId);
       // If the user is currently on a different
       // network, ask him to switch it.

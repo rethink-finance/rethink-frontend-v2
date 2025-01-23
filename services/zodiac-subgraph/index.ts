@@ -3,6 +3,7 @@ import { ApolloClient } from "@apollo/client/core";
 import { ethers } from "ethers";
 import type { Role } from "~/types/zodiac/role";
 import { RolesQuery, type RolesQueryResponse } from "~/services/zodiac-subgraph/queries";
+import { type ChainId } from "~/store/web3/networksMap";
 
 /**
  * export enum Network {
@@ -22,7 +23,7 @@ import { RolesQuery, type RolesQueryResponse } from "~/services/zodiac-subgraph/
  *   AURORA = 1313161554,
  * }
  */
-export const fetchRoles = async (chainId: string, rolesModifierAddress: string): Promise<Role[]> => {
+export const fetchRoles = async (chainId: ChainId, rolesModifierAddress: string): Promise<Role[]> => {
   const client = useNuxtApp().$getApolloClient(chainId) as ApolloClient<any>;
 
   if (rolesModifierAddress == null || !ethers.isAddress(rolesModifierAddress)) {

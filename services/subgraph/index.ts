@@ -9,13 +9,14 @@ import {
 
 import type ISubgraphFetchDelegatesResponse from "~/types/responses/subgraph_fetch_delegates";
 import type ISubgraphGovernanceProposal from "~/types/subgraph_governance_proposal";
+import { type ChainId } from "~/store/web3/networksMap";
 
 export interface GovernorProposalsResponse {
   proposals: ISubgraphGovernanceProposal[];
 }
 
 export const fetchSubgraphGovernorProposals = async (
-  chainId: string,
+  chainId: ChainId,
   values: {
     governorAddress: string;
   },
@@ -49,7 +50,7 @@ export interface GovernorProposalResponse {
 }
 
 export const fetchSubgraphGovernorProposal = async (
-  chainId: string,
+  chainId: ChainId,
   values: {
     governorAddress: string;
     proposalId: string;
@@ -87,7 +88,7 @@ export interface DelegateResponse {
 }
 
 export const fetchSubgraphDelegates = async (
-  chainId: string,
+  chainId: ChainId,
   values: {
     votingContract: string;
   },

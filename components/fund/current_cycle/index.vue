@@ -228,7 +228,7 @@ const redemptionDisabledTooltipText = computed(() => {
 
 const signDepositAndDelegateBySigTransaction = async () => {
   const activeAccountAddress = fundStore.activeAccountAddress ?? "";
-  const fundChainId = fundStore.fundChainId;
+  const fundChainId = fundStore.selectedFundChain;
   if (!activeAccountAddress) {
     toastStore.errorToast("No active account, try re-authenticating.");
     return;
@@ -269,7 +269,7 @@ const signDepositAndDelegateBySigTransaction = async () => {
   let signature;
 
   try {
-    const web3Provider = web3Store.chainProviders[fundStore.fundChainId];
+    const web3Provider = web3Store.chainProviders[fundStore.selectedFundChain];
     const hexSignature = await web3Provider?.eth.signTypedData(
       activeAccountAddress ?? "",
       dataToSign,

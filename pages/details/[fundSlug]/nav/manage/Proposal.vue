@@ -133,7 +133,7 @@
                 <v-expansion-panel-text>
                   <FundNavMethodsTable
                     v-model:methods="fundManagedNAVMethods"
-                    :fund-chain-id="fundStore.fundChainId"
+                    :fund-chain-id="fundStore.selectedFundChain"
                     :fund-address="fundStore.fundAddress"
                     :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
                     :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"

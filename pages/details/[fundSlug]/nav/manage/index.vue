@@ -49,7 +49,7 @@
       </UiHeader>
       <FundNavMethodsTable
         v-model:methods="fundManagedNAVMethods"
-        :fund-chain-id="fundChainId"
+        :fund-chain-id="selectedFundChain"
         :fund-address="fundAddress"
         :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
         :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
@@ -87,10 +87,10 @@ const emit = defineEmits(["updateBreadcrumbs"]);
 
 const {
   selectedFundSlug,
+  selectedFundChain,
   selectedFundAddress,
   fundManagedNAVMethods,
   fundLastNAVUpdateMethods,
-  fundChainId,
   fundAddress,
 } = storeToRefs(useFundStore());
 

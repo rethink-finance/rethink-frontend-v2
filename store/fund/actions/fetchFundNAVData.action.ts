@@ -7,6 +7,7 @@ import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractA
 import { NAVExecutor } from "assets/contracts/NAVExecutor";
 import { decodeUpdateNavMethods } from "~/composables/nav/navProposal";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
+import type { ChainId } from "~/store/web3/networksMap";
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
@@ -93,7 +94,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
  * This function calls getNAVData directly to NAV executor contract.
  **/
 export const getNAVData = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
 ): Promise<INAVMethod[]> => {
   const web3Store = useWeb3Store();

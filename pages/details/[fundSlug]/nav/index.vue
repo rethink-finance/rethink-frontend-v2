@@ -79,7 +79,7 @@
       </UiHeader>
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
         <FundNavMethodsTable
-          :fund-chain-id="fundStore.fundChainId"
+          :fund-chain-id="fundStore.selectedFundChain"
           :fund-address="fundStore.fundAddress"
           :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
           :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"

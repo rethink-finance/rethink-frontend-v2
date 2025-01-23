@@ -2,23 +2,24 @@ import type INetwork from "~/types/network";
 
 export enum ChainId {
   ETHEREUM = "0x1",
-  GOERLI = "0x5",
-  SEPOLIA = "0x6a9",
-  OPTIMISM = "0xa",
   BASE = "0x2105",
-  OPTIMISM_ON_GNOSIS = "0x12c",
-  BINANCE = "0x38",
-  GNOSIS = "0x64",
   POLYGON = "0x89",
-  EWT = "0xf6",
   ARBITRUM = "0xa4b1",
-  AVALANCHE = "0xa86a",
-  VOLTA = "0x12077",
-  AURORA = "0x4e454152",
+  // GOERLI = "0x5",
+  // SEPOLIA = "0x6a9",
+  // OPTIMISM = "0xa",
+  // OPTIMISM_ON_GNOSIS = "0x12c",
+  // BINANCE = "0x38",
+  // GNOSIS = "0x64",
+  // EWT = "0xf6",
+  // AVALANCHE = "0xa86a",
+  // VOLTA = "0x12077",
+  // AURORA = "0x4e454152",
+  // FRAXTAL = "0xfc"
 }
 
-export const networksMap: Record<string, INetwork> = {
-  "0x89": {
+export const networksMap: Record<ChainId, INetwork> = {
+  [ChainId.POLYGON]: {
     chainId: ChainId.POLYGON,
     chainName: "Polygon",
     chainNameLong: "Polygon Mainnet",
@@ -39,7 +40,7 @@ export const networksMap: Record<string, INetwork> = {
     ],
     blockExplorerUrls: ["https://polygonscan.com"],
   },
-  "0xa4b1": {
+  [ChainId.ARBITRUM]: {
     chainId: ChainId.ARBITRUM,
     chainName: "Arbitrum One",
     chainShort: "arb1",
@@ -60,8 +61,8 @@ export const networksMap: Record<string, INetwork> = {
     ],
     blockExplorerUrls: ["https://arbiscan.io"],
   },
-  // "0xfc": {
-  //   chainId: "0xfc",
+  // [ChainId.FRAXTAL]: {
+  //   chainId: ChainId.FRAXTAL,
   //   chainName: "Fraxtal",
   //   chainShort: "frax",
   //   nativeCurrency: {
@@ -75,7 +76,7 @@ export const networksMap: Record<string, INetwork> = {
   //   ],
   //   blockExplorerUrls: ["https://fraxscan.com"],
   // },
-  "0x1": {
+  [ChainId.ETHEREUM]: {
     chainId: ChainId.ETHEREUM,
     chainName: "Ethereum",
     chainShort: "eth",
@@ -100,7 +101,7 @@ export const networksMap: Record<string, INetwork> = {
     ],
     blockExplorerUrls: ["https://etherscan.io"],
   },
-  "0x2105": {
+  [ChainId.BASE]: {
     chainId: ChainId.BASE,
     chainName: "Base",
     chainShort: "base",
@@ -126,7 +127,7 @@ export const networksMap: Record<string, INetwork> = {
   },
 };
 
-export const chainIds: string[] = Object.keys(networksMap);
+export const chainIds: ChainId[] = Object.keys(networksMap) as ChainId[];
 export const networks: INetwork[] = Object.values(networksMap);
 
 export const networkChoices = networks.map(

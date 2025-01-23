@@ -191,7 +191,7 @@ watch([() => props.items, () => fundStore.activeAccountAddress], () => {
     return
   }
   const activeAccountAddress = fundStore.activeAccountAddress;
-  const fundChainId = fundStore.fundChainId;
+  const fundChainId = fundStore.selectedFundChain;
 
   for (const proposal of props.items) {
     governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId] ??= {};

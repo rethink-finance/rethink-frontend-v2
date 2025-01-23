@@ -1,10 +1,11 @@
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { IFundInitCache } from "~/types/fund_settings";
 import { GovernableFund } from "assets/contracts/GovernableFund";
+import type { ChainId } from "~/store/web3/networksMap";
 
 
 export const fetchFundSettingsAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
 ): Promise<IFundInitCache> => {
   const web3Store = useWeb3Store();

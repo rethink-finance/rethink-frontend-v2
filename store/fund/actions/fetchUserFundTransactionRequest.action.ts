@@ -13,8 +13,10 @@ export const fetchUserFundTransactionRequestAction = async (
 ): Promise<any> => {
   const fundStore = useFundStore();
   const web3Store = useWeb3Store();
+
   const fundAddress = fundStore.fundAddress;
-  const fundChainId = fundStore.fundChainId;
+  const fundChainId = fundStore.selectedFundChain;
+  if (!fundChainId) return;
   const web3Provider = web3Store.chainProviders[fundChainId];
 
   if (!fundStore.activeAccountAddress) return undefined;
