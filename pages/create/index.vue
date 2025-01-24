@@ -936,6 +936,17 @@ const handleCloseSaveChangesDialog = () => {
   if (nextRouteResolve) nextRouteResolve(); // continue navigation
 };
 
+const setChainIdToUsersCurrentNetwork = () =>{
+  if (
+    accountStore.connectedWalletChainId &&
+    step.value === 1 &&
+    chainIdValues?.value?.includes(accountStore.connectedWalletChainId)
+  ) {
+    selectedChainId.value = accountStore.connectedWalletChainId;
+  }
+  createFundStore.setSelectedStepperChainId(selectedChainId.value);
+}
+
 const stepperEntry = ref(initStepperEntry());
 
 // Watchers
@@ -967,6 +978,12 @@ watch(() => accountStore.activeAccountAddress, () => {
   }
 });
 
+watch(()=> accountStore.connectedWalletChainId, (newVal, oldVal) =>{
+  if(!oldVal){
+    setChainIdToUsersCurrentNetwork()
+  }
+})
+
 // Lifecycle Hooks
 onBeforeRouteLeave((to, from, next) => {
   // allow page change if user is not validated (he is seeing the password page)
@@ -990,14 +1007,7 @@ const chainIdValues = computed(() => networkChoices.map((choice: any) => choice.
 
 onMounted(() => {
   // Set selected chain to user's current network.
-  if (
-    accountStore.connectedWalletChainId &&
-    step.value === 1 &&
-    chainIdValues?.value?.includes(accountStore.connectedWalletChainId)
-  ) {
-    selectedChainId.value = accountStore.connectedWalletChainId;
-  }
-  createFundStore.setSelectedStepperChainId(selectedChainId.value);
+  setChainIdToUsersCurrentNetwork()
 });
 </script>
 
