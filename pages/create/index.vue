@@ -776,7 +776,6 @@ const formatFeeCollectors = () => {
 };
 
 
-
 const formatInitializeData = () => {
   const output = [
     [
@@ -933,13 +932,40 @@ const handleCloseSaveChangesDialog = () => {
   if (nextRouteResolve) nextRouteResolve(); // continue navigation
 };
 
-const setChainIdToUsersCurrentNetwork = () =>{
+const getChainDrafts = () => {
+  return chainIdValues.value.map((chainId) => {
+    const drafts = (getLocalStorageItem(`onboardingStepperEntry_${chainId}`) || []) as IOnboardingStep[];
+    return {
+      chainId,
+      hasDrafts: drafts.length > 0,
+    };
+  });
+};
+
+
+const setDefaultSelectedChainId = () =>{
+  const chainDrafts = getChainDrafts();
+
   if (
-    accountStore.connectedWalletChainId &&
-    step.value === 1 &&
-    chainIdValues?.value?.includes(accountStore.connectedWalletChainId)
+    step.value === 1
   ) {
-    selectedChainId.value = accountStore.connectedWalletChainId;
+    const chainWithDraftConnectedWallet = chainDrafts.find((chain) => chain.hasDrafts && chain.chainId === accountStore.connectedWalletChainId);
+    const chainWithDraft = chainDrafts.find((chain) => chain.hasDrafts);
+
+    // 1. try to set the chain with draft and connected wallet
+    if (chainWithDraftConnectedWallet) {
+      selectedChainId.value = chainWithDraftConnectedWallet.chainId;
+    }
+    // 2. try to set the chain with draft
+    else if (chainWithDraft) {
+      selectedChainId.value = chainWithDraft.chainId;
+    }
+    // 3. set the connected wallet chain
+    else if (accountStore.connectedWalletChainId &&
+      chainIdValues?.value?.includes(accountStore.connectedWalletChainId)
+    ) {
+      selectedChainId.value = accountStore.connectedWalletChainId;
+    }
   }
   createFundStore.setSelectedStepperChainId(selectedChainId.value);
 }
@@ -977,7 +1003,7 @@ watch(() => accountStore.activeAccountAddress, () => {
 
 watch(()=> accountStore.connectedWalletChainId, (newVal, oldVal) =>{
   if(!oldVal){
-    setChainIdToUsersCurrentNetwork()
+    setDefaultSelectedChainId()
   }
 })
 
@@ -1004,7 +1030,7 @@ const chainIdValues = computed(() => networkChoices.map((choice: any) => choice.
 
 onMounted(() => {
   // Set selected chain to user's current network.
-  setChainIdToUsersCurrentNetwork()
+  setDefaultSelectedChainId()
 });
 </script>
 
