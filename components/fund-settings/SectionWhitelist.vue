@@ -135,11 +135,11 @@
         :page="page"
       >
         <template #[`item.index`]="{ index }">
-          <strong class="td_index">{{ index + 1 }}</strong>
+          <strong :class="`td_index  ` + !isEditable ? 'disabled' : ''">{{ index + 1 }}</strong>
         </template>
 
         <template #[`item.address`]="{ item }">
-          <div class="address">
+          <div :class="`address ` + !isEditable ? 'disabled' : ''">
             <span class="address__text">{{ item.address }}</span>
 
             <div v-if="item.deleted || item.isNew" class="address__state">
@@ -533,5 +533,10 @@ const handleAddNewAddressList = () => {
     flex-direction: column;
     gap: 1rem;
   }
+}
+
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 </style>
