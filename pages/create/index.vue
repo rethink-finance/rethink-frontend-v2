@@ -132,7 +132,7 @@
               :value="stepIndex + 1"
             >
               <div
-                v-if="item.key === OnboardingStep.Chain"
+                v-if="item.key === OnboardingStep.Chain && accountStore.isConnected"
                 class="d-flex justify-center mb-6"
               >
                 <UiSelectChainButton
@@ -141,6 +141,20 @@
                   label-center
                 />
               </div>
+              <div
+                v-else-if="item.key === OnboardingStep.Chain && !accountStore.isConnected"
+                class="connect_wallet"
+              >
+                In order to create an OIV, you need to connect your wallet.
+
+                <v-btn
+                  class="bg-primary text-secondary"
+                  @click="accountStore.connectWallet()"
+                >
+                  Connect Wallet
+                </v-btn>
+              </div>
+
               <OnboardingInfoFIelds
                 v-if="item.fields"
                 :fields="item.fields"
@@ -236,17 +250,16 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
+import { fromBpsToPercentage } from "~/composables/formatters";
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import type { IField, IFieldGroup } from "~/types/enums/input_type";
-
-import { fromBpsToPercentage } from "~/composables/formatters";
 import { networkChoices, networksMap } from "~/store/web3/networksMap";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
 import { feeFieldKeys, type IWhitelist } from "~/types/enums/fund_setting_proposal";
+import type { IField, IFieldGroup } from "~/types/enums/input_type";
 import { InputType } from "~/types/enums/input_type";
 import {
   OnboardingFieldsMap,
@@ -256,7 +269,6 @@ import {
   type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
-
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
 const web3Store = useWeb3Store();
@@ -463,6 +475,8 @@ const showInitializeTooltip = computed(() => {
 const showButtonNext = computed(() => {
   const item = stepperEntry.value[step.value - 1];
 
+  if(!accountStore.isConnected) return false;
+
   const steps = [
     OnboardingStep.Chain,
     OnboardingStep.Basics,
@@ -499,7 +513,7 @@ const showInitializeButton = computed(() => {
 const showClearCacheButton = computed(() => {
   const item = stepperEntry.value[step.value - 1];
 
-  if (item.key === OnboardingStep.Chain) {
+  if (item.key === OnboardingStep.Chain && accountStore.isConnected) {
     return true;
   }
   return false;
@@ -1045,5 +1059,16 @@ onMounted(() => {
     justify-content: center;
     color: $color-primary;
   }
+}
+
+.connect_wallet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  font-size: 16px;
+  color: $color-text-irrelevant;
+  text-align: center;
 }
 </style>
