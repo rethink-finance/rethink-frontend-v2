@@ -482,7 +482,6 @@ const showButtonNext = computed(() => {
     OnboardingStep.Basics,
     OnboardingStep.Fees,
     OnboardingStep.Whitelist,
-    OnboardingStep.Management,
     OnboardingStep.Permissions,
     OnboardingStep.NavMethods,
   ];
@@ -546,7 +545,6 @@ const isCurrentStepValid = computed(() => {
     OnboardingStep.Chain,
     OnboardingStep.Basics,
     OnboardingStep.Fees,
-    OnboardingStep.Management,
     OnboardingStep.Governance,
   ];
 
@@ -751,8 +749,7 @@ const formatFundMetaData = () => {
   return  {
     description: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "description"),
     photoUrl: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "photoUrl"),
-    plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "plannedSettlementPeriod"),
-    minLiquidAssetShare: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "minLiquidAssetShare"),
+    plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "plannedSettlementPeriod"),
     ...Object.fromEntries(customFIelds.map((field) => [field.key, field.value])),
   }
 };
