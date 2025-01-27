@@ -80,10 +80,10 @@ const OnboardingFieldsMap: FieldsMapType = {
     ),
     ...(FundSettingsStepFieldsMap[StepSections.Management] as IField[]).map(
       (field: IField) => {
-        // don't show this fields
-        const blacklist =[ "minLiquidAssetShare"]
+        // Hide some fields.
+        const fieldsToHide = [ "minLiquidAssetShare"]
 
-        if(blacklist.includes(field.key)) return undefined
+        if (fieldsToHide.includes(field.key)) return undefined
 
         // override for minLiquidAssetShare
         if(field.key === "plannedSettlementPeriod") {
@@ -104,13 +104,13 @@ const OnboardingFieldsMap: FieldsMapType = {
   [OnboardingStep.Fees]: (FundSettingsStepFieldsMap[StepSections.Fees] as IFieldGroup[]).map(
     (fieldGroup: IFieldGroup) => {
       // fields to exclude
-      const blacklist = ["performanceFeePeriod"];
+      const fieldsToHide = ["performanceFeePeriod"];
 
       return {
         ...fieldGroup,
         isToggleOn: false,
         fields: fieldGroup.fields
-          .filter((field: IField) => !blacklist.includes(field.key))
+          .filter((field: IField) => !fieldsToHide.includes(field.key))
           .map(
             (field: IField) => ({
               ...field,

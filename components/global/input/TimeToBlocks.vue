@@ -1,9 +1,6 @@
 <template>
   <v-row class="time-to-blocks">
-    <v-col
-      class="column"
-      cols="5"
-    >
+    <v-col class="column" cols="5">
       <v-skeleton-loader
         v-if="isLoading"
         type="text"
@@ -19,10 +16,7 @@
         :error-messages="customErrorMessage"
       />
     </v-col>
-    <v-col
-      class="column"
-      cols="4"
-    >
+    <v-col class="column" cols="4">
       <v-skeleton-loader
         v-if="isLoading"
         type="text"
@@ -41,10 +35,7 @@
         :is-disabled="isDisabled"
       />
     </v-col>
-    <v-col
-      class="column"
-      cols="3"
-    >
+    <v-col class="column" cols="3">
       <v-skeleton-loader
         v-if="isLoading"
         type="text"
@@ -60,19 +51,25 @@
           isEditable: false,
         }"
       />
-
     </v-col>
   </v-row>
 </template>
 
 <script setup lang="ts">
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { InputType, periodChoices, PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
+import {
+  InputType,
+  periodChoices,
+  PeriodUnits,
+  TimeInSeconds,
+} from "~/types/enums/input_type";
 
 const CHAIN_ID_MAP = {
+  // Arbitrum uses L1 ETH as block time.
+  // TODO fix when merged with new PR:
+  // ChainId.ARBITRUM: ChainId.ETHEREUM,
   "0xa4b1": "0x1",
 } as const;
-
 
 const emit = defineEmits(["update:modelValue", "update:blocks"]);
 
@@ -114,23 +111,25 @@ const isLoading = ref(false);
 
 const blocks = computed(() => {
   const timeInSeconds = TimeInSeconds[selectedUnit.value];
-  const output =  Math.floor((inputValue.value * timeInSeconds) / blockTime.value);
-
-  return output;
+  return Math.floor((inputValue.value * timeInSeconds) / blockTime.value);
 });
 
 const getWeb3Instance = () => {
-  const mappedChainId = CHAIN_ID_MAP[props.chainId as keyof typeof CHAIN_ID_MAP];
+  const mappedChainId =
+    CHAIN_ID_MAP[props.chainId as keyof typeof CHAIN_ID_MAP];
 
   // ARB1 is mapped to ETH
-  if(mappedChainId) {
+  if (mappedChainId) {
     return web3Store.chainProviders[mappedChainId];
   }
 
   return web3Store.chainProviders[props.chainId];
 };
 
-const determineInputValueAndUnit = (totalSeconds: number, currentUnit: PeriodUnits) => {
+const determineInputValueAndUnit = (
+  totalSeconds: number,
+  currentUnit: PeriodUnits,
+) => {
   const currentUnitSeconds = TimeInSeconds[currentUnit];
   const currentValue = totalSeconds / currentUnitSeconds;
 
@@ -169,10 +168,12 @@ const initializeBlockTime = async () => {
   const context = await initializeBlockTimeContext(web3Instance);
   blockTime.value = context?.averageBlockTime || 0;
 
-
   if (blockTime.value > 0 && props.modelValue > 0) {
     const totalSeconds = props.modelValue * blockTime.value;
-    const { bestValue, bestUnit } = determineInputValueAndUnit(totalSeconds, selectedUnit.value);
+    const { bestValue, bestUnit } = determineInputValueAndUnit(
+      totalSeconds,
+      selectedUnit.value,
+    );
     inputValue.value = bestValue;
     selectedUnit.value = bestUnit;
   } else {
@@ -190,9 +191,12 @@ watch([inputValue, selectedUnit], () => {
   emit("update:modelValue", blocks.value);
 });
 
-watch(() => props.chainId, () => {
-  initializeBlockTime();
-});
+watch(
+  () => props.chainId,
+  () => {
+    initializeBlockTime();
+  },
+);
 </script>
 
 <style scoped lang="scss">
@@ -208,13 +212,13 @@ watch(() => props.chainId, () => {
   border-radius: 4px;
 }
 
-.column{
+.column {
   padding-block: 0;
 }
-.move-up{
+.move-up {
   margin-top: -29px;
 }
-.padding-bottom{
+.padding-bottom {
   padding-bottom: 29px;
 }
 </style>

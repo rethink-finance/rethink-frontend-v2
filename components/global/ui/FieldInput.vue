@@ -61,7 +61,7 @@
       </div>
     </template>
     <template v-else-if="field.type === InputType.Period">
-      <UiTimeToBlocks
+      <UiInputTimeToBlocks
         v-model="value"
         :rules="field.rules"
         :placeholder="field.placeholder"
