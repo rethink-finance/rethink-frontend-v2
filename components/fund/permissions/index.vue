@@ -99,10 +99,10 @@ watch(() => props.roles.length, () => {
     display: flex;
     border: 1px solid $color-border-dark;
     padding: 0.5rem;
-    background-color: $color-moonlight-dark;
+    background-color: $color-hover;
 
     &:hover {
-      background-color: $color-hover;
+      background-color: $color-moonlight-dark;
       cursor: pointer;
     }
   }
