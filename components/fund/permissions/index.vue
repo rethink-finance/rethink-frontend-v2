@@ -1,20 +1,8 @@
 <template>
   <div class="permissions">
-    <!-- TODO Convert this to select input to select roles-->
-    <!--    <strong>Selected Role:</strong> {{ roleNumberOne?.id }}-->
-
-    <FundPermissionsMenuLeft
-      class="permissions__menu_left"
-      :role="roleNumberOne"
-    />
-
-    <FundPermissionsTarget
-      v-if="selectedTarget"
-      class="permissions__content"
-      :target="selectedTarget"
-    />
     <!-- TODO make this progress spinner in center of div -->
-    <div v-else-if="isFetchingPermissions">
+    <!-- TODO here it flickers as we first have to fetch fundData and then roleModAddress, prevent flickering -->
+    <div v-if="isFetchingPermissions">
       Loading permissions...
       <v-progress-circular
         class="d-flex"
@@ -23,9 +11,21 @@
         indeterminate
       />
     </div>
-    <div v-else>
-      No Roles/Permissions Found
-    </div>
+    <template v-else>
+      <FundPermissionsMenuLeft
+        class="permissions__menu_left"
+        :role="selectedRole"
+      />
+
+      <FundPermissionsTarget
+        v-if="selectedTarget"
+        class="permissions__content"
+        :target="selectedTarget"
+      />
+      <div v-else>
+        Select a target.
+      </div>
+    </template>
   </div>
 </template>
 
@@ -41,23 +41,28 @@ const props = defineProps({
 });
 
 const actionStateStore = useActionStateStore();
+const selectedRole = ref<Role | undefined>();
 const selectedTarget = ref<Target | undefined>();
 
 const isFetchingPermissions = computed(() =>
-  actionStateStore.getActionState("fetchFundPermissionsAction"),
+  actionStateStore.isActionStateLoading("fetchFundPermissionsAction"),
 );
-// Return Permissions of Role with ID: "1" as we use this one now
-// everywhere with Rethink. This is Hardcoded now at many places and needs
-// to be adjusted as any ID can be used.
-// TODO maybe just use the select dropdown to select ROLE
+
 const roleNumberOne = computed<Role|undefined>(
   () => props.roles.filter(role => role.name === "1")[0],
 );
 
-watch(() => roleNumberOne.value, () => {
-  // TODO instead of roleNumberOne, just do watcher on props.roles.length and
-  //   select the role with ID "1" if none is selected yet.
-  selectedTarget.value = roleNumberOne.value?.targets[0];
+watch(() => props.roles.length, () => {
+  // Pre-select Role with ID: "1" as we use this one now everywhere.
+  // This is hardcoded now at many places and needs
+  // to be adjusted as any ID can be used.
+  if (props.roles.length) {
+    selectedRole.value = roleNumberOne.value || props.roles[0];
+    selectedTarget.value = selectedRole.value?.targets[0];
+  } else {
+    selectedRole.value = undefined;
+    selectedTarget.value = undefined;
+  }
 });
 </script>
 

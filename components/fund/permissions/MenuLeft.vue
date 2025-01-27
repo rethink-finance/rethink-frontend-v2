@@ -3,7 +3,8 @@
     <div
       class="permissions__menu_section"
     >
-      <strong>Role #{{ role.name }}</strong>
+      <!-- TODO Convert this to select input to select roles-->
+      <strong>Role #{{ role?.name }}</strong>
     </div>
     <div
       class="permissions__menu_section"

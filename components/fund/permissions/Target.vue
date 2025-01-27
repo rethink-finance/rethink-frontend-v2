@@ -1,12 +1,14 @@
 <template>
   <div class="permissions__target">
-    {{ truncateAddress(target?.address) }}
+    <div>
+      <strong>Target Address:</strong>
+      {{ target?.address }}
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Target } from "~/types/zodiac-roles/role";
-import { truncateAddress } from "~/composables/addressUtils";
 
 const props = defineProps({
   target: {
