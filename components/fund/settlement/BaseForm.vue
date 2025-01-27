@@ -16,7 +16,7 @@
           {{ token0.symbol }}
         </div>
         <div class="request_deposit__token_col pa-0 request_deposit__token_col--dark text-end">
-          <InputNumber
+          <UiInputNumber
             v-model="tokenValue"
             :rules="tokenValueRules"
             class="request_deposit__input_amount"

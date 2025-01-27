@@ -17,7 +17,7 @@
           <div
             class="transfer__token_col pa-0 transfer__token_col--dark text-end"
           >
-            <InputNumber
+            <UiInputNumber
               v-model="tokenValue"
               :rules="tokenValueRules"
               class="transfer__input_amount"
