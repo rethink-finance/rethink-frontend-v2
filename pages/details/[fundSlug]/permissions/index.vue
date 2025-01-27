@@ -23,6 +23,9 @@
         </div>
       </div>
     </UiMainCard>
+
+    <!-- Permissions loaded from zodiac roles modifier -->
+    <FundPermissions />
   </div>
 </template>
 
@@ -59,8 +62,12 @@ const updateGnosisLink = async () => {
 
 watch(
   () => [fund.chainShort, fundStore.getRoleModAddress],
-  () => {
+  async () => {
     updateGnosisLink();
+    if (fundStore.fundAddress) {
+      const rolesModAddress = await fundStore.getRoleModAddress(fundStore.fundAddress);
+      fundStore.fetchFundPermissions(fund.chainId, rolesModAddress);
+    }
   },
   { immediate: true },
 );

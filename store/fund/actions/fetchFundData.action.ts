@@ -1,5 +1,4 @@
 import { useFundStore } from "../fund.store";
-import { fetchRoles } from "~/services/zodiac-subgraph";
 import type { ChainId } from "~/store/web3/networksMap";
 
 export const fetchFundDataAction = async (
@@ -19,15 +18,6 @@ export const fetchFundDataAction = async (
     fundStore.fetchUserFundData(fundChainId, fundAddress);
 
     fundStore.fetchFundPendingDepositRedemptionBalance();
-
-    const rolesModAddress = await fundStore.getRoleModAddress(fundStore.fundAddress);
-    // Async fetch roles:
-    const roles = await fetchRoles(
-      fundChainId,
-      rolesModAddress,
-    );
-    console.log("PARSED ZODIAC roles:", roles);
-
   } catch (e) {
     console.error(`Failed fetching fund data for ${fundAddress}`, e);
     throw e;

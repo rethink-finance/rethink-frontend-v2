@@ -39,6 +39,7 @@ import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import { fetchFundSettingsAction } from "~/store/fund/actions/fetchFundSettings.action";
 import type IFundSettings from "~/types/fund_settings";
+import { fetchFundPermissionsAction } from "~/store/fund/actions/fetchFundPermissions.action";
 
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
@@ -474,6 +475,11 @@ export const useFundStore = defineStore({
     fetchUserFundData(chainId: ChainId, fundAddress: string) {
       return useActionState("fetchUserFundDataAction", () =>
         fetchUserFundDataAction(chainId, fundAddress),
+      );
+    },
+    fetchFundPermissions(chainId: ChainId, rolesModAddress: string) {
+      return useActionState("fetchFundPermissionsAction", () =>
+        fetchFundPermissionsAction(chainId, rolesModAddress),
       );
     },
     /**
