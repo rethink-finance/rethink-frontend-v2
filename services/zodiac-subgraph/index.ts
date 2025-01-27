@@ -5,10 +5,13 @@ import {
   ConditionType,
   ExecutionOption,
 } from "~/types/enums/zodiac-roles";
+
 import type {
-  FunctionCondition, ParamCondition,
+  FunctionCondition,
+  ParamCondition,
   Role,
-  Target, TargetConditions,
+  Target,
+  TargetConditions,
 } from "~/types/zodiac-roles/role";
 import { RolesQuery, type RolesQueryResponse } from "~/services/zodiac-subgraph/queries";
 import { type ChainId } from "~/store/web3/networksMap";
@@ -32,7 +35,6 @@ export const fetchRoles = async (chainId: ChainId, rolesModifierAddress: string)
         variables: { id: rolesModifierAddress.toLowerCase() },
         fetchPolicy: "network-only", // Adjust based on caching needs
       })
-    console.log("ROLES RAW", roles);
 
     if (!roles.data || !roles.data.rolesModifier) {
       return []
@@ -72,7 +74,7 @@ export const fetchRoles = async (chainId: ChainId, rolesModifierAddress: string)
       }),
     }))
   } catch (err) {
-    console.log("err", err)
+    console.log("error fetchRoles from zodiac subgraph", err)
     throw err
   }
 }
