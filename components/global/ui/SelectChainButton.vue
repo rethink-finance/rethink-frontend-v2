@@ -124,7 +124,7 @@ const changeSelectedChainId = (chainId: ChainId) => {
   }
 
   &--active {
-    background-color: $color-border-light;
+    background-color: $color-border-dark;
   }
 
   &__icon{

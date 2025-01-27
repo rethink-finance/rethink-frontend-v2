@@ -92,7 +92,7 @@ watch(() => roleNumberOne.value, () => {
   }
   &__list_item {
     display: flex;
-    border: 1px solid $color-border-light;
+    border: 1px solid $color-border-dark;
     padding: 0.5rem;
     background-color: $color-moonlight-dark;
 
