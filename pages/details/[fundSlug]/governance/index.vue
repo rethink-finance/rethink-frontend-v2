@@ -932,7 +932,7 @@ const handleDelegateSuccess = async () => {
 const isFetchingProposals = computed(() => {
   const actionStates = actionStateStore.getActionState("fetchGovernanceProposalsAction");
 
-  if(!actionStates) return false;
+  if (!actionStates) return false;
 
   const isLoadingState = actionStates.includes(ActionState.Loading);
   const hasNeverLoaded = !actionStates.includes(ActionState.Success) &&
@@ -944,7 +944,7 @@ const isFetchingProposals = computed(() => {
 const isFetchingDelegates = computed(() => {
   const actionStates = actionStateStore.getActionState("fetchDelegatesAction");
 
-  if(!actionStates) return false;
+  if (!actionStates) return false;
 
   const isLoadingState = actionStates.includes(ActionState.Loading);
   const hasNeverLoaded = !actionStates.includes(ActionState.Success) &&
