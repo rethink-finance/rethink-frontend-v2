@@ -17,6 +17,7 @@
             v-model="subField.value"
             :field="subField"
             :is-disabled="!field.isToggleOn || isStepDisabled"
+            :chain-id="chainId"
           />
         </template>
       </UiFieldsGroup>
@@ -30,6 +31,7 @@
           :is-disabled="isStepDisabled"
           :custom-error-message="getCustomFieldErrorMessage(field)"
           :show-default-value-info="!isFundInitialized"
+          :chain-id="chainId"
         />
 
         <div
@@ -41,12 +43,14 @@
             class="base_token_data__input"
             :field="baseTokenSymbolField"
             :is-disabled="true"
+            :chain-id="chainId"
           />
           <UiField
             v-model:model-value="baseTokenDecimals"
             class="base_token_data__input"
             :field="baseTokenDecimalsField"
             :is-disabled="true"
+            :chain-id="chainId"
           />
         </div>
         <UiDetailsButton
@@ -78,6 +82,10 @@ const { fundChainId, fundChainName } = storeToRefs(createFundStore);
 const emit = defineEmits(["deleteRow"]);
 
 const props = defineProps({
+  chainId: {
+    type: String,
+    default: "",
+  },
   fields: {
     type: Array as () => IField[],
     default: () => [],

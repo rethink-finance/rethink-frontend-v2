@@ -1,5 +1,5 @@
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
-import { InputType } from "~/types/enums/input_type";
+import { InputType, periodChoices } from "~/types/enums/input_type";
 
 export enum ProposalStep {
   Setup = "setup",
@@ -301,9 +301,10 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
   ],
   [StepSections.Management]: [
     {
-      label: "Planned Settlement Period (Days)",
+      label: "Planned Settlement Period",
       key: "plannedSettlementPeriod",
-      type: InputType.Number,
+      type: InputType.Period,
+      choices: periodChoices,
       placeholder: "E.g. 0",
       rules: [formRules.required, formRules.isNonNegativeNumber],
       isEditable: true,
@@ -335,17 +336,19 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       isEditable: false,
     },
     {
-      label: "Voting Period (in blocks)",
+      label: "Voting Period",
       key: "votingPeriod",
-      type: InputType.Text,
+      type: InputType.Period,
+      choices: periodChoices,
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
     },
     {
-      label: "Voting Delay (in seconds)",
+      label: "Voting Delay",
       key: "votingDelay",
-      type: InputType.Text,
+      type: InputType.Period,
+      choices: periodChoices,
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
@@ -359,9 +362,9 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       isEditable: false,
     },
     {
-      label: "Late Quorum (in seconds)",
+      label: "Late Quorum",
       key: "lateQuorum",
-      type: InputType.Text,
+      type: InputType.Period,
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,

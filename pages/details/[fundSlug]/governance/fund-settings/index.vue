@@ -65,6 +65,7 @@
                       :field="subField"
                       :is-disabled="!field.isToggleOn"
                       :initial-value="step.stepName !== ProposalStep.Details ? proposalInitial[subField.key] : undefined"
+                      :chain-id="fund.chainId"
                     />
                   </template>
 
@@ -74,6 +75,7 @@
                     v-model="field.value"
                     :field="field"
                     :initial-value="step.stepName !== ProposalStep.Details ? proposalInitial[field.key] : undefined"
+                    :chain-id="fund.chainId"
                   />
                 </div>
               </v-col>

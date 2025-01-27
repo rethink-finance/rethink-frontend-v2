@@ -60,11 +60,21 @@
         />
       </div>
     </template>
+    <template v-else-if="field.type === InputType.Period">
+      <UiInputTimeToBlocks
+        v-model="value"
+        :rules="field.rules"
+        :placeholder="field.placeholder"
+        :is-disabled="isDisabled"
+        :error-messages="errorMessages"
+        :chain-id="chainId"
+      />
+    </template>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
 import { InputType } from "~/types/enums/input_type";
 
 const props = defineProps({
@@ -85,6 +95,10 @@ const props = defineProps({
     default: false,
   },
   customErrorMessage: {
+    type: String,
+    default: "",
+  },
+  chainId: {
     type: String,
     default: "",
   },
@@ -126,4 +140,13 @@ const errorMessages = computed(() => {
     width: 100%;
   }
 }
+.field-select {
+  line-height: normal;
+
+  :deep(.v-field__input) {
+    padding: 10px;
+    min-height: 40px;
+  }
+}
+
 </style>

@@ -23,7 +23,7 @@ export interface IOnboardingStep {
   fields?: IField[];
 }
 
-export type OnboardingInitializingSteps = Exclude<OnboardingStep, "chain" | "permissions" | "navMethods" | "whitelist" | "finalize">;
+export type OnboardingInitializingSteps = Exclude<OnboardingStep, "chain" | "management" | "permissions" | "navMethods" | "whitelist" | "finalize">;
 export type FieldsMapType = Record<OnboardingInitializingSteps, IField[] | IFieldGroup[]>;
 
 
@@ -44,10 +44,6 @@ export const OnboardingStepMap: IOnboardingStep[] = [
   {
     key: OnboardingStep.Whitelist,
     name: "Whitelist",
-  },
-  {
-    key: OnboardingStep.Management,
-    name: "Management",
   },
   {
     key: OnboardingStep.Governance,
@@ -82,41 +78,45 @@ const OnboardingFieldsMap: FieldsMapType = {
         }
       },
     ),
+    ...(FundSettingsStepFieldsMap[StepSections.Management] as IField[]).map(
+      (field: IField) => {
+        // Hide some fields.
+        const fieldsToHide = [ "minLiquidAssetShare"]
+
+        if (fieldsToHide.includes(field.key)) return undefined
+
+        // override for minLiquidAssetShare
+        if(field.key === "plannedSettlementPeriod") {
+          return {
+            ...field,
+            isEditable: true,
+            info: "Please note that <strong>Planned Settlement Period</strong> is not enforced on-chain. Your job as a manager is to make sure OIV is managed accordingly to these parameters. Your management role may otherwise be removed through governance.",
+          }
+        }
+
+        return {
+          ...field,
+          isEditable: true,
+        };
+      },
+    ).filter((field) => field),
   ] as (IField[] | IFieldGroup[]),
   [OnboardingStep.Fees]: (FundSettingsStepFieldsMap[StepSections.Fees] as IFieldGroup[]).map(
     (fieldGroup: IFieldGroup) => {
       // fields to exclude
-      const blacklist = ["performanceFeePeriod"];
+      const fieldsToHide = ["performanceFeePeriod"];
 
       return {
         ...fieldGroup,
         isToggleOn: false,
         fields: fieldGroup.fields
-          .filter((field: IField) => !blacklist.includes(field.key))
+          .filter((field: IField) => !fieldsToHide.includes(field.key))
           .map(
             (field: IField) => ({
               ...field,
               isEditable: true,
             }),
           ),
-      };
-    },
-  ),
-  [OnboardingStep.Management]: (FundSettingsStepFieldsMap[StepSections.Management] as IField[]).map(
-    (field: IField) => {
-
-      // override for minLiquidAssetShare
-      if(field.key === "minLiquidAssetShare") {
-        return {
-          ...field,
-          isEditable: true,
-          info: "Please note that <strong>Planned Settlement Period</strong> and Min. <strong>Liquid Asset Share</strong> are not enforced on-chain. Your job as a manager is to make sure OIV is managed accordingly to these parameters. Your management role may otherwise be removed through governance.",
-        }
-      }
-
-      return {
-        ...field,
-        isEditable: true,
       };
     },
   ),

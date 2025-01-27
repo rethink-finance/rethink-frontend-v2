@@ -62,6 +62,7 @@
             :is-disabled="isInputDisabled"
             :is-preview="isPreview"
             :custom-error-message="customErrorMessage"
+            :chain-id="chainId"
           />
         </div>
       </template>
@@ -78,6 +79,7 @@
               :is-disabled="isInputDisabled"
               :is-preview="isPreview"
               :custom-error-message="customErrorMessage"
+              :chain-id="chainId"
             />
           </template>
         </div>
@@ -95,6 +97,7 @@
         :is-disabled="isInputDisabled"
         :is-preview="isPreview"
         :custom-error-message="customErrorMessage"
+        :chain-id="chainId"
       />
     </template>
 
@@ -110,6 +113,11 @@ import InfoBox from "./InfoBox.vue";
 const emit = defineEmits(["update:modelValue", "update:isCustomValueToggleOn", "update:defaultValue"]);
 
 const props = defineProps({
+  // chainId is required for time to blocks component
+  chainId: {
+    type: String,
+    default: "",
+  },
   field: {
     type: Object as PropType<any>,
     default: () => ({}),
