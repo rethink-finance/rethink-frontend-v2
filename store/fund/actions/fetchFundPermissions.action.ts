@@ -1,15 +1,14 @@
 import { fetchRoles } from "~/services/zodiac-subgraph";
 import type { ChainId } from "~/store/web3/networksMap";
+import type { Role } from "~/types/zodiac-roles/role";
 
-export const fetchFundPermissionsAction = async (
+export const fetchFundPermissionsAction = (
   fundChainId: ChainId,
   rolesModAddress: string,
-): Promise<any> => {
+): Promise<Role[]> => {
   // Async fetch Zodiac roles:
-  console.log("GET ZODIAC roles:");
-  const roles = await fetchRoles(
+  return fetchRoles(
     fundChainId,
     rolesModAddress,
   );
-  console.log("PARSED ZODIAC roles:", roles);
 };

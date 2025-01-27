@@ -1,17 +1,7 @@
 <template>
   <div class="page-permissions">
-    <UiMainCard
-      title="🛠️ We are working on displaying permissions within Rethink dApp. Until then please use Gnosis Guild frontend."
-    >
+    <UiMainCard>
       <div class="info_container">
-        <p class="info_container__text">
-          Having trouble understanding how to read permissions?
-          <a
-            class="info_container__link"
-            href="https://docs.rethink.finance/rethink.finance"
-            target="_blank"
-          >Learn more here</a>.
-        </p>
         <div class="info_container__buttons">
           <UiLinkExternalButton
             title="View OIV Permissions"
@@ -21,11 +11,19 @@
             Create Permissions Proposal
           </v-btn>
         </div>
+        <p class="info_container__text">
+          Having trouble understanding how to read permissions?
+          <a
+            class="info_container__link"
+            href="https://docs.rethink.finance/rethink.finance"
+            target="_blank"
+          >Learn more here</a>.
+        </p>
       </div>
-    </UiMainCard>
 
-    <!-- Permissions loaded from zodiac roles modifier -->
-    <FundPermissions />
+      <!-- Permissions loaded from zodiac roles modifier -->
+      <FundPermissions class="mt-6" :roles="roles" />
+    </UiMainCard>
   </div>
 </template>
 
@@ -35,6 +33,7 @@ import type IFund from "~/types/fund";
 // components
 import { useFundStore } from "~/store/fund/fund.store";
 import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
+import type { Role } from "~/types/zodiac-roles/role";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -42,11 +41,12 @@ const fundStore = useFundStore();
 const fund = useAttrs().fund as IFund;
 const { selectedFundSlug } = storeToRefs(useFundStore());
 
-
+const roles = ref<Role[]>([]);
 const navigateToGnosis = ref("");
 
 const updateGnosisLink = async () => {
-  if (!fund) {
+  if (!fund?.address) {
+    roles.value = [];
     navigateToGnosis.value = "";
     return;
   }
@@ -54,6 +54,7 @@ const updateGnosisLink = async () => {
   try {
     const roleModAddress = await fundStore.getRoleModAddress(fund.address);
     navigateToGnosis.value = getGnosisPermissionsUrl(fund.chainShort, roleModAddress);
+    await fetchPermissions(roleModAddress);
   } catch (error) {
     console.error(error);
     navigateToGnosis.value = "";
@@ -62,15 +63,16 @@ const updateGnosisLink = async () => {
 
 watch(
   () => [fund.chainShort, fundStore.getRoleModAddress],
-  async () => {
+  () => {
     updateGnosisLink();
-    if (fundStore.fundAddress) {
-      const rolesModAddress = await fundStore.getRoleModAddress(fundStore.fundAddress);
-      fundStore.fetchFundPermissions(fund.chainId, rolesModAddress);
-    }
   },
   { immediate: true },
 );
+
+const fetchPermissions = async (rolesModAddress: string) => {
+  roles.value = await fundStore.fetchFundPermissions(fund.chainId, rolesModAddress);
+  console.log("Roles", roles.value);
+}
 
 const navigateToCreatePermissions = () => {
   router.push(

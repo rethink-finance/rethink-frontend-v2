@@ -16,22 +16,8 @@ import { SubgraphClientType } from "~/types/enums/subgraph";
 import { getFunctionConditionType } from "~/composables/zodiac-roles/conditions";
 
 /**
- * export enum Network {
- *   MAINNET = 1,
- *   GOERLI = 5,
- *   SEPOLIA = 11155111,
- *   OPTIMISM = 10,
- *   BASE = 8453,
- *   OPTIMISM_ON_GNOSIS = 300,
- *   BINANCE = 56,
- *   GNOSIS = 100,
- *   POLYGON = 137,
- *   EWT = 246,
- *   ARBITRUM = 42161,
- *   AVALANCHE = 43114,
- *   VOLTA = 73799,
- *   AURORA = 1313161554,
- * }
+ * Code from:
+ * https://github.com/gnosisguild/zodiac-modifier-roles-v1/tree/main/packages/subgraph
  */
 export const fetchRoles = async (chainId: ChainId, rolesModifierAddress: string): Promise<Role[]> => {
   if (rolesModifierAddress == null || !ethers.isAddress(rolesModifierAddress)) {
