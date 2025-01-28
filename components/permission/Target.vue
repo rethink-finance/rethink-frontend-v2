@@ -44,7 +44,7 @@
           >
             <template #title>
               <div class="permissions__target_function_sighash">
-                <div>
+                <div class="mt-1">
                   <v-checkbox-btn
                     :model-value="!!target.conditions[func.selector]"
                     disabled
