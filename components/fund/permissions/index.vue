@@ -17,7 +17,7 @@
         @update:selected-target="setSelectedTarget"
       />
 
-      <FundPermissionsTarget
+      <PermissionTarget
         v-if="selectedTarget"
         class="permissions__content"
         :target="selectedTarget"
@@ -112,6 +112,15 @@ watch(() => props.roles.length, () => {
       background-color: $color-moonlight-dark;
       cursor: pointer;
     }
+  }
+  &__json {
+    color: #dcdcaa;
+    padding: 10px;
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+    background-color: $color-badge-navy;
+    border: 1px solid $color-gray-transparent;
+    margin-top: 2rem;
   }
 }
 </style>

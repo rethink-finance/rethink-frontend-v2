@@ -10,13 +10,12 @@
           <v-progress-circular
             indeterminate
             color="gray"
-            size="22"
+            size="18"
             width="2"
-            class="me-2"
           />
           Fetching contract ABI
         </template>
-        <template v-else-if="abiDetectedWriteFunctions.length">
+        <template v-else-if="abiDetectedFunctions.length">
           <Icon
             icon="weui:done-filled"
             width="1rem"
@@ -32,24 +31,21 @@
           <!-- TODO upload ABI form input -->
         </template>
       </div>
+      <div>
+        <pre class="permissions__json">{{ JSON.stringify(target.conditions, null, 4) }}</pre>
+      </div>
       <template
-        v-if="abiDetectedWriteFunctions.length && !isFetchingTargetABI"
+        v-if="abiDetectedFunctions.length && !isFetchingTargetABI"
       >
         <div class="permissions__list">
-          <div
-            v-for="func in abiDetectedWriteFunctions"
+          <PermissionTargetFunction
+            v-for="func in abiDetectedFunctions"
             :key="func.selector"
+            :func="func as FunctionFragment"
             class="permissions__list_item"
-          >
-            <span>
-              {{ func.name }}
-            </span>
-            <span class="permissions__target_params">
-              {{ getParamsTypesTitle(func as FunctionFragment) }}
-            </span>
-          </div>
+          />
         </div>
-        <pre class="permissions__target_abi_json">{{ JSON.stringify(abiDetectedWriteFunctions, null, 4) }}</pre>
+        <pre class="permissions__json">{{ JSON.stringify(abiDetectedFunctions, null, 4) }}</pre>
       </template>
     </div>
   </div>
@@ -62,11 +58,10 @@ import type { ChainId } from "~/store/web3/networksMap";
 import type { Explorer } from "~/services/explorer";
 import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { getParamsTypesTitle } from "~/composables/zodiac-roles/target";
 
 const { $getExplorer } = useNuxtApp();
 const toastStore = useToastStore();
-const abiDetectedWriteFunctions = ref<FunctionFragment[]>([]);
+const abiDetectedFunctions = ref<FunctionFragment[]>([]);
 const isFetchingTargetABI = ref(false);
 const props = defineProps({
   target: {
@@ -80,7 +75,7 @@ const props = defineProps({
 });
 
 const fetchTargetABI = async () => {
-  abiDetectedWriteFunctions.value = [];
+  abiDetectedFunctions.value = [];
   if (!props.target.address) return;
   isFetchingTargetABI.value = true;
   console.log("Fetch target ABI action", props.chainId, props.target.address);
@@ -96,8 +91,8 @@ const fetchTargetABI = async () => {
   try {
     const resultAbiJson = await explorer.abi(props.target.address)
     console.log("fetched ABI", resultAbiJson);
-    abiDetectedWriteFunctions.value = getWriteFunctions(resultAbiJson);
-    console.log("fetched ABI abiDetectedWriteFunctions", abiDetectedWriteFunctions.value);
+    abiDetectedFunctions.value = getWriteFunctions(resultAbiJson);
+    console.log("fetched ABI abiDetectedFunctions", abiDetectedFunctions.value);
     isFetchingTargetABI.value = false;
   } catch (error: any) {
     handleABIError(error);
@@ -126,28 +121,14 @@ watch(
     display: flex;
     padding: 1rem;
   }
-  &__target_abi_json {
-    color: #dcdcaa;
-    padding: 10px;
-    font-size: 0.85rem;
-    white-space: pre-wrap;
-    background-color: $color-badge-navy;
-    border: 1px solid $color-gray-transparent;
-    margin-top: 2rem;
-  }
-  &__target_params {
-    color: $color-steel-blue;
-    margin-left: 0.3rem;
-  }
   &__target_abi_fetch_text {
     display: flex;
     align-items: center;
     margin: 1rem 0;
-    gap: 0.25rem;
+    gap: 0.5rem;
     padding: 1rem;
     border: 1px solid $color-gray-transparent;
     background-color: $color-badge-navy;
-
   }
   &__list_item {
     font-family: monospace;
