@@ -40,7 +40,7 @@ export const useWeb3Store = defineStore({
     const chainContracts: Record<string, any> = {};
 
     for (const network of Object.values(networksMap)) {
-      const chainId = network.chainId;
+      const chainId = network.chainId as ChainId;
       const rpcUrl = networksMap[chainId]?.rpcUrls[0];
       if (!rpcUrl) {
         console.error("No RPC url for chainId", chainId);

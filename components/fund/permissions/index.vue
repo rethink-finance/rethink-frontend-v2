@@ -1,8 +1,7 @@
 <template>
   <div class="permissions">
     <!-- TODO make this progress spinner in center of div -->
-    <!-- TODO here it flickers as we first have to fetch fundData and then roleModAddress, prevent flickering -->
-    <div v-if="isFetchingPermissions">
+    <div v-if="isLoading">
       Loading permissions...
       <v-progress-circular
         class="d-flex"
@@ -21,6 +20,7 @@
         v-if="selectedTarget"
         class="permissions__content"
         :target="selectedTarget"
+        :chain-id="chainId"
       />
       <div v-else>
         Select a target.
@@ -31,23 +31,25 @@
 
 <script setup lang="ts">
 import type { Role, Target } from "~/types/zodiac-roles/role";
-import { useActionStateStore } from "~/store/actionState.store";
+import type { ChainId } from "~/store/web3/networksMap";
 
 const props = defineProps({
+  chainId: {
+    type: String as PropType<ChainId>,
+    required: true,
+  },
   roles: {
     type: Array as () => Role[],
     default: () => [],
   },
+  isLoading: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const actionStateStore = useActionStateStore();
 const selectedRole = ref<Role | undefined>();
 const selectedTarget = ref<Target | undefined>();
-
-const isFetchingPermissions = computed(() =>
-  actionStateStore.isActionStateLoading("fetchFundPermissionsAction"),
-);
-
 const roleNumberOne = computed<Role|undefined>(
   () => props.roles.filter(role => role.name === "1")[0],
 );

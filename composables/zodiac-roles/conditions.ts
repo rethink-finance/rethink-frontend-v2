@@ -1,4 +1,5 @@
-import { ethers, type FunctionFragment } from "ethers";
+// src: https://github.com/gnosisguild/zodiac-modifier-roles-v1/blob/main/packages/app/src/utils/conditions.ts
+import { ethers, type FunctionFragment, type JsonFragment, Interface } from "ethers";
 import {
   ParamNativeType,
   ParameterType,
@@ -62,9 +63,19 @@ export function isWriteFunction(method: FunctionFragment) {
   return !["view", "pure"].includes(method.stateMutability)
 }
 
-// TODO fix in ethers v6 looks like we cant call functions
-// export const getWriteFunctions = (abi: JsonFragment[] | undefined) =>
-//   !abi ? [] : Object.values(new Interface(abi).functions).filter(isWriteFunction)
+export const getWriteFunctions = (abi: JsonFragment[] | undefined): FunctionFragment[] => {
+  if (!abi) return [];
+  const iface = new Interface(abi);
+
+  const writeFunctions: FunctionFragment[] = [];
+
+  iface.forEachFunction((func) => {
+    if (isWriteFunction(func)) {
+      writeFunctions.push(func);
+    }
+  });
+  return writeFunctions
+}
 
 export function formatParamValue(param: ethers.ParamType, value: string) {
   const nativeType = getNativeType(param)

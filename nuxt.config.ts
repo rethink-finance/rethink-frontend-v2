@@ -51,6 +51,11 @@ export default defineNuxtConfig({
       ZODIAC_GRAPH_AVALANCHE: process.env.ZODIAC_GRAPH_AVALANCHE,
       ZODIAC_GRAPH_BSC: process.env.ZODIAC_GRAPH_BSC,
       ZODIAC_GRAPH_BASE: process.env.ZODIAC_GRAPH_BASE,
+      // Explorers for loading ABIs
+      ETHERSCAN_KEY: process.env.ETHERSCAN_KEY,
+      POLYGONSCAN_KEY: process.env.POLYGONSCAN_KEY,
+      ARBISCAN_KEY: process.env.ARBISCAN_KEY,
+      BASESCAN_KEY: process.env.BASESCAN_KEY,
     },
   },
   routeRules: {
@@ -113,6 +118,7 @@ export default defineNuxtConfig({
     ],
   },
   plugins: [
+    "plugins/explorer.ts",
     "plugins/iconify.ts",
     "plugins/apexcharts.client.ts",
     "plugins/numeral.ts",

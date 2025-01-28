@@ -22,21 +22,30 @@
       </div>
 
       <!-- Permissions loaded from zodiac roles modifier -->
-      <FundPermissions class="mt-6" :roles="roles" />
+      <!-- TODO here it flickers as we first have to fetch fundData and then roleModAddress, prevent flickering -->
+      <FundPermissions
+        class="mt-6"
+        :chain-id="fund.chainId"
+        :roles="roles"
+        :is-loading="isFetchingPermissions"
+      />
     </UiMainCard>
   </div>
 </template>
 
 <script setup lang="ts">
 // types
+import { fetchRolesMod } from "zodiac-roles-sdk"
 import type IFund from "~/types/fund";
 // components
 import { useFundStore } from "~/store/fund/fund.store";
 import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
 import type { Role } from "~/types/zodiac-roles/role";
+import { useActionStateStore } from "~/store/actionState.store";
 
 const router = useRouter();
 const fundStore = useFundStore();
+const actionStateStore = useActionStateStore();
 
 const fund = useAttrs().fund as IFund;
 const { selectedFundSlug } = storeToRefs(useFundStore());
@@ -61,10 +70,25 @@ const updateGnosisLink = async () => {
   }
 };
 
+const isFetchingPermissions = computed(() =>
+  actionStateStore.isActionStateLoading("fetchFundPermissionsAction"),
+);
+
 watch(
   () => [fund.chainShort, fundStore.getRoleModAddress],
-  () => {
+  async () => {
     updateGnosisLink();
+
+    console.warn("USE ZODIAC SDK")
+    const address = "0xBd1099dFD3c11b65FB4BB19A350da2f5B61Efb0d";
+    const mod = {
+      chainId: 1,
+      chainPrefix: "eth",
+      address: address.toLowerCase() as `0x${string}`,
+    }
+    const data = await fetchRolesMod(mod as any)
+    console.warn("FETCHED SDK ROLES", data);
+
   },
   { immediate: true },
 );
