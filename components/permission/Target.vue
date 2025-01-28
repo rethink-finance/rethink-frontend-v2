@@ -26,24 +26,45 @@
           Contract ABI detected
         </template>
         <template v-else>
-          Unable to fetch ABI for this addrses.
-          Upload contract ABI
+          Unable to fetch ABI for this address.
+          Upload contract ABI.
           <!-- TODO upload ABI form input -->
         </template>
-      </div>
-      <div>
-        <pre class="permissions__json">{{ JSON.stringify(target.conditions, null, 4) }}</pre>
       </div>
       <template
         v-if="abiDetectedFunctions.length && !isFetchingTargetABI"
       >
         <div class="permissions__list">
-          <PermissionTargetFunction
-            v-for="func in abiDetectedFunctions"
-            :key="func.selector"
-            :func="func as FunctionFragment"
-            class="permissions__list_item"
-          />
+          <UiDataRowCard
+            v-for="(func, index) in abiDetectedFunctions"
+            :key="index"
+            :grow-column1="true"
+            no-body-padding
+            bg-transparent
+          >
+            <template #title>
+              <div class="permissions__target_function_sighash">
+                <div>
+                  <v-checkbox-btn
+                    :model-value="!!target.conditions[func.selector]"
+                    disabled
+                  />
+                </div>
+                <div>
+                  {{ func.name }}
+                </div>
+                <div class="permissions__target_function_params">
+                  {{ getParamsTypesTitle(func as FunctionFragment) }}
+                </div>
+              </div>
+            </template>
+            <template #body>
+              <PermissionTargetFunction
+                :func="func as FunctionFragment"
+                :condition="target.conditions[func.selector]"
+              />
+            </template>
+          </UiDataRowCard>
         </div>
         <pre class="permissions__json">{{ JSON.stringify(abiDetectedFunctions, null, 4) }}</pre>
       </template>
@@ -58,6 +79,7 @@ import type { ChainId } from "~/store/web3/networksMap";
 import type { Explorer } from "~/services/explorer";
 import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
 import { useToastStore } from "~/store/toasts/toast.store";
+import { getParamsTypesTitle } from "~/composables/zodiac-roles/target";
 
 const { $getExplorer } = useNuxtApp();
 const toastStore = useToastStore();
@@ -130,9 +152,17 @@ watch(
     border: 1px solid $color-gray-transparent;
     background-color: $color-badge-navy;
   }
-  &__list_item {
+  &__target_function_sighash {
+    display: flex;
+    flex-direction: row;
+    align-content: center;
+    align-items: center;
     font-family: monospace;
     white-space: pre-wrap;
+  }
+  &__target_function_params {
+    color: $color-steel-blue;
+    margin-left: 0.3rem;
   }
 }
 </style>

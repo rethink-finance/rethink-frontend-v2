@@ -1,21 +1,22 @@
 <template>
   <div class="permission_target_function">
-    <span>
-      {{ func.name }}
-    </span>
     <span class="permission_target_function__params">
-      {{ getParamsTypesTitle(func as FunctionFragment) }}
+      <pre class="permissions__json">{{ JSON.stringify(condition, null, 4) }}</pre>
     </span>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { FunctionFragment } from "ethers";
-import { getParamsTypesTitle } from "~/composables/zodiac-roles/target";
+import type { FunctionCondition, TargetConditions } from "~/types/zodiac-roles/role";
 
 const props = defineProps({
   func: {
     type: Object as PropType<FunctionFragment>,
+    default: () => {},
+  },
+  condition: {
+    type: Object as PropType<FunctionCondition>,
     default: () => {},
   },
 });
@@ -31,10 +32,6 @@ const props = defineProps({
     background-color: $color-badge-navy;
     border: 1px solid $color-gray-transparent;
     margin-top: 2rem;
-  }
-  &__params {
-    color: $color-steel-blue;
-    margin-left: 0.3rem;
   }
 }
 </style>
