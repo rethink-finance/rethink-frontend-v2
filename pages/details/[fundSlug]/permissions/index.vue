@@ -35,7 +35,6 @@
 
 <script setup lang="ts">
 // types
-import { fetchRolesMod } from "zodiac-roles-sdk"
 import type IFund from "~/types/fund";
 // components
 import { useFundStore } from "~/store/fund/fund.store";
@@ -76,18 +75,20 @@ const isFetchingPermissions = computed(() =>
 
 watch(
   () => [fund.chainShort, fundStore.getRoleModAddress],
-  async () => {
+  () => {
     updateGnosisLink();
 
-    console.warn("USE ZODIAC SDK")
-    const address = "0xBd1099dFD3c11b65FB4BB19A350da2f5B61Efb0d";
-    const mod = {
-      chainId: 1,
-      chainPrefix: "eth",
-      address: address.toLowerCase() as `0x${string}`,
-    }
-    const data = await fetchRolesMod(mod as any)
-    console.warn("FETCHED SDK ROLES", data);
+    // TODO try using the zodiac-roles-sdk  fetchRolesMod (does it also work for roles v1?)
+    // import { fetchRolesMod } from "zodiac-roles-sdk"
+    // console.warn("USE ZODIAC SDK")
+    // const address = "0xBd1099dFD3c11b65FB4BB19A350da2f5B61Efb0d";
+    // const mod = {
+    //   chainId: 1,
+    //   chainPrefix: "eth",
+    //   address: address.toLowerCase() as `0x${string}`,
+    // }
+    // const data = await fetchRolesMod(mod as any)
+    // console.warn("FETCHED SDK ROLES", data);
 
   },
   { immediate: true },

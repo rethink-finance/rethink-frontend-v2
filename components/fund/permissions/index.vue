@@ -14,6 +14,7 @@
       <FundPermissionsMenuLeft
         class="permissions__menu_left"
         :role="selectedRole"
+        @update:selected-target="setSelectedTarget"
       />
 
       <FundPermissionsTarget
@@ -53,6 +54,10 @@ const selectedTarget = ref<Target | undefined>();
 const roleNumberOne = computed<Role|undefined>(
   () => props.roles.filter(role => role.name === "1")[0],
 );
+
+const setSelectedTarget = (newTarget: Target) => {
+  selectedTarget.value = newTarget;
+};
 
 watch(() => props.roles.length, () => {
   // Pre-select Role with ID: "1" as we use this one now everywhere.
