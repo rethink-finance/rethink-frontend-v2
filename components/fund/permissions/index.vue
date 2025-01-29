@@ -19,6 +19,7 @@
 
       <PermissionTarget
         v-if="selectedTarget"
+        v-model:conditions="localConditions[selectedTarget.address]"
         class="permissions__content"
         :target="selectedTarget"
         :chain-id="chainId"
@@ -31,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Role, Target } from "~/types/zodiac-roles/role";
+import type { Role, Target, TargetConditions } from "~/types/zodiac-roles/role";
 import type { ChainId } from "~/store/web3/networksMap";
 
 const props = defineProps({
@@ -48,29 +49,52 @@ const props = defineProps({
     default: false,
   },
 });
+// Local reactive copy for target conditions (mapped by target address)
+const localConditions = ref<Record<string, TargetConditions>>({});
 
 const selectedRole = ref<Role | undefined>();
 const selectedTarget = ref<Target | undefined>();
+
+// This is Rethink.finance specific thing now, to hardcode select condition
+// with ID "1". We have to remove this and always select the first one.
 const roleNumberOne = computed<Role|undefined>(
   () => props.roles.filter(role => role.name === "1")[0],
 );
 
+// Set selected target & initialize its local conditions.
 const setSelectedTarget = (newTarget: Target) => {
+  console.log("[0] setSelectedTarget", newTarget);
   selectedTarget.value = newTarget;
+  if (!localConditions.value[newTarget.address]) {
+    localConditions.value[newTarget.address] = { ...newTarget.conditions };
+  }
 };
 
+// Watch for `roles` change and preselect a role & target
 watch(() => props.roles.length, () => {
   // Pre-select Role with ID: "1" as we use this one now everywhere.
   // This is hardcoded now at many places and needs
   // to be adjusted as any ID can be used.
   if (props.roles.length) {
     selectedRole.value = roleNumberOne.value || props.roles[0];
-    selectedTarget.value = selectedRole.value?.targets[0];
+    setSelectedTarget(selectedRole.value?.targets[0]);
   } else {
     selectedRole.value = undefined;
     selectedTarget.value = undefined;
   }
 });
+
+// Watch for target changes and update `localConditions` accordingly
+watch(
+  selectedTarget,
+  (newTarget) => {
+    console.log("[0] watch selectedTarget", newTarget);
+    if (newTarget && !localConditions.value[newTarget.address]) {
+      localConditions.value[newTarget.address] = { ...newTarget.conditions };
+    }
+  },
+  { deep: true, immediate: true },
+);
 </script>
 
 <style lang="scss" scoped>
@@ -115,11 +139,9 @@ watch(() => props.roles.length, () => {
   }
   &__json {
     color: #dcdcaa;
-    padding: 10px;
     font-size: 0.85rem;
     white-space: pre-wrap;
     background-color: $color-badge-navy;
-    border: 1px solid $color-gray-transparent;
   }
 }
 </style>

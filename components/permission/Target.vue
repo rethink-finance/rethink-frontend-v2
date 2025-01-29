@@ -55,15 +55,15 @@
       <PermissionTargetFunction
         v-for="(func, index) in abiDetectedFunctions"
         :key="index"
+        v-model:condition="localConditions[func.selector]"
         :func="func as FunctionFragment"
-        :condition="target.conditions[func.selector]"
       />
       <!-- Display function conditions that were not found in the ABI -->
       <PermissionTargetFunction
         v-for="(sighash, index) in sighashesNotInAbi"
         :key="index"
+        v-model:condition="localConditions[sighash]"
         :sighash="sighash"
-        :condition="target.conditions[sighash]"
       />
     </div>
   </div>
@@ -71,22 +71,21 @@
 
 <script setup lang="ts">
 import type { FunctionFragment } from "ethers";
-import type { Target } from "~/types/zodiac-roles/role";
+import type { Target, TargetConditions } from "~/types/zodiac-roles/role";
 import type { ChainId } from "~/store/web3/networksMap";
 import type { Explorer } from "~/services/explorer";
 import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
 import { useToastStore } from "~/store/toasts/toast.store";
 
-const { $getExplorer } = useNuxtApp();
-const toastStore = useToastStore();
-// Functions from the detected ABI.
-const abiDetectedFunctions = ref<FunctionFragment[]>([]);
-// Condition sighashes of functions that are not in the detected ABI.
-const sighashesNotInAbi = ref<string[]>([]);
-const isFetchingTargetABI = ref(false);
+const emit = defineEmits(["update:conditions"]);
+
 const props = defineProps({
   target: {
     type: Object as PropType<Target>,
+    default: () => {},
+  },
+  conditions: {
+    type: Object as PropType<TargetConditions>,
     default: () => {},
   },
   chainId: {
@@ -94,6 +93,17 @@ const props = defineProps({
     required: true,
   },
 });
+
+const { $getExplorer } = useNuxtApp();
+const toastStore = useToastStore();
+// 🔥 **Create a local reactive copy of `target.conditions`**
+const localConditions = ref({ ...props.conditions });
+
+// Functions from the detected ABI.
+const abiDetectedFunctions = ref<FunctionFragment[]>([]);
+// Condition sighashes of functions that are not in the detected ABI.
+const sighashesNotInAbi = ref<string[]>([]);
+const isFetchingTargetABI = ref(false);
 
 const fetchTargetABI = async () => {
   abiDetectedFunctions.value = [];
@@ -140,6 +150,30 @@ watch(
     fetchTargetABI();
   },
   { immediate: true },
+);
+
+// Watch for changes in `localConditions` and emit updates to parent
+watch(
+  localConditions,
+  (newConditions) => {
+    if (JSON.stringify(newConditions) !== JSON.stringify(props.conditions)) {
+      console.log("  [1] watch localConditions", toRaw(newConditions))
+      emit("update:conditions", newConditions);
+    }
+  },
+  { deep: true },
+);
+
+// Sync `localConditions` when `props.conditions` changes (but prevent looping)
+watch(
+  () => props.conditions,
+  (newConditions) => {
+    if (JSON.stringify(newConditions) !== JSON.stringify(localConditions.value)) {
+      console.log("  [1] watch props.conditions")
+      localConditions.value = { ...newConditions };
+    }
+  },
+  { deep: true, immediate: true },
 );
 </script>
 
