@@ -1,9 +1,9 @@
 <template>
   <UiDataRowCard
-    :grow-column1="true"
     no-body-padding
     bg-transparent
     class="permission_target_function"
+    :is-expandable="!!condition"
   >
     <template #title>
       <div class="permission_target_function__sighash">

@@ -178,6 +178,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    isExpandable: {
+      type: Boolean,
+      default: true,
+    },
   },
   data() {
     const expandedList = [];
@@ -194,6 +198,7 @@ export default defineComponent({
       return !(!this.body && !this.$slots.body);
     },
     isReadOnly(): boolean {
+      if (!this.isExpandable) return true;
       return !this.hasBody;
     },
   },

@@ -1,57 +1,70 @@
 <template>
-  <div class="permissions__target">
+  <div class="target">
     <div>
       <strong>Target Address:</strong>
       {{ target?.address }}
     </div>
-    <div>
-      <div class="permissions__target_abi_fetch_text">
-        <template v-if="isFetchingTargetABI">
-          <v-progress-circular
-            indeterminate
-            color="gray"
-            size="18"
-            width="2"
-          />
-          Fetching contract ABI
-        </template>
-        <template v-else-if="abiDetectedFunctions.length">
-          <Icon
-            icon="weui:done-filled"
-            width="1rem"
-            height="1rem"
-            color="var(--color-success)"
-            class="mt-1"
-          />
-          Contract ABI detected
-        </template>
-        <template v-else>
-          Unable to fetch ABI for this address.
-          Upload contract ABI.
+
+    <UiDataRowCard
+      no-body-padding
+      bg-transparent
+      class="target__abi_fetch_card"
+    >
+      <template #title>
+        <div
+          class="target__abi_fetch_text"
+        >
+          <template v-if="isFetchingTargetABI">
+            <v-progress-circular
+              indeterminate
+              color="gray"
+              size="18"
+              width="2"
+            />
+            Fetching contract ABI
+          </template>
+          <template v-else-if="abiDetectedFunctions.length">
+            <Icon
+              icon="weui:done-filled"
+              width="1rem"
+              height="1rem"
+              color="var(--color-success)"
+              class="mt-1"
+            />
+            Contract ABI detected
+          </template>
+          <template v-else>
+            Unable to fetch ABI for this address.
+            Upload contract ABI.
           <!-- TODO upload ABI form input -->
-        </template>
-      </div>
-      <template
-        v-if="!isFetchingTargetABI"
-      >
-        <div class="permissions__list">
-          <!-- Display functions that were found in the ABI -->
-          <PermissionTargetFunction
-            v-for="(func, index) in abiDetectedFunctions"
-            :key="index"
-            :func="func as FunctionFragment"
-            :condition="target.conditions[func.selector]"
-          />
-          <!-- Display function conditions that were not found in the ABI -->
-          <PermissionTargetFunction
-            v-for="(sighash, index) in sighashesNotInAbi"
-            :key="index"
-            :sighash="sighash"
-            :condition="target.conditions[sighash]"
-          />
+          </template>
         </div>
-        <pre class="permissions__json mt-8">{{ JSON.stringify(abiDetectedFunctions, null, 4) }}</pre>
+
       </template>
+      <template #actionText>
+        Show ABI
+      </template>
+      <template #body>
+        <pre class="permissions__json">{{ JSON.stringify(abiDetectedFunctions, null, 4) }}</pre>
+        <!-- TODO allow entering custom ABI input -->
+      </template>
+    </UiDataRowCard>
+
+    <div v-if="!isFetchingTargetABI" class="permissions__list">
+      <!-- Display functions that were found in the ABI -->
+      <PermissionTargetFunction
+        v-for="(func, index) in abiDetectedFunctions"
+        :key="index"
+        :func="func as FunctionFragment"
+        :condition="target.conditions[func.selector]"
+      />
+      <!-- Display function conditions that were not found in the ABI -->
+      <PermissionTargetFunction
+        v-for="(sighash, index) in sighashesNotInAbi"
+        :key="index"
+        :sighash="sighash"
+        :condition="target.conditions[sighash]"
+      />
     </div>
   </div>
 </template>
@@ -131,19 +144,19 @@ watch(
 </script>
 
 <style lang="scss" scoped>
-.permissions {
-  &__target {
-    display: flex;
-    padding: 1rem;
-  }
-  &__target_abi_fetch_text {
-    display: flex;
-    align-items: center;
-    margin: 1rem 0;
-    gap: 0.5rem;
-    padding: 1rem;
+.target {
+  display: flex;
+  padding: 1rem;
+
+  &__abi_fetch_card {
     border: 1px solid $color-gray-transparent;
     background-color: $color-badge-navy;
+    margin: 1rem 0 1.5rem 0;
+  }
+  &__abi_fetch_text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 }
 </style>
