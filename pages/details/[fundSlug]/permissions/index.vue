@@ -6,6 +6,7 @@
           <UiLinkExternalButton
             title="View OIV Permissions"
             :href="navigateToGnosis"
+            :show-tooltip="false"
           />
           <v-btn color="primary" @click="navigateToCreatePermissions">
             Create Permissions Proposal
@@ -37,8 +38,8 @@
 // types
 import type IFund from "~/types/fund";
 // components
-import { useFundStore } from "~/store/fund/fund.store";
 import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
+import { useFundStore } from "~/store/fund/fund.store";
 import type { Role } from "~/types/zodiac-roles/role";
 import { useActionStateStore } from "~/store/actionState.store";
 
@@ -111,7 +112,7 @@ const navigateToCreatePermissions = () => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 15px;
+  gap: 1rem;
 
   &__text {
     font-size: $text-sm;

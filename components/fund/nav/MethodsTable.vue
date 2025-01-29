@@ -23,7 +23,7 @@
     <template #[`header.pastNavValue`]>
       Last NAV Update
       <div v-if="showSummaryRow && showLastNavUpdateValue" class="text-right">
-        <!-- {{ formattedTotalLastNAV }} -->
+        {{ formattedTotalLastNAV }}
       </div>
     </template>
     <template #[`header.simulatedNavFormatted`]>
@@ -453,6 +453,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    showSafeContractBalance: {
+      type: Boolean,
+      default: false,
+    },
     showSummaryRow: {
       type: Boolean,
       default: false,
@@ -654,10 +658,12 @@ export default defineComponent({
         (BigInt(this.fundContractBaseTokenBalance) || 0n) +
         (BigInt(this.safeContractBaseTokenBalance) || 0n) +
         (BigInt(this.feeBalance) || 0n);
-      return this.fundStore.getFormattedBaseTokenValue(totalNAV);
+
+
+      return this.fundStore.getFormattedBaseTokenValue(totalNAV, true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedTotalLastNAV() {
-      return this.fundStore.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n);
+      return this.fundStore.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n, true, false, this.baseSymbol, this.baseDecimals);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
@@ -671,13 +677,14 @@ export default defineComponent({
       )
     },
     formattedFundContractBaseTokenBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance));
+
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedSafeContractBaseTokenBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.safeContractBaseTokenBalance));
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.safeContractBaseTokenBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedFeeBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.feeBalance));
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.feeBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
@@ -687,7 +694,7 @@ export default defineComponent({
 
       if (this.showBaseTokenBalances) {
         methods.push({
-          positionName: "OIV Balance",
+          positionName: "Admin Contract Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
@@ -718,6 +725,20 @@ export default defineComponent({
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
           detailsHash: "-3",
+        } as any)
+      }
+      else if (this.showSafeContractBalance) {
+        methods.push({
+          positionName: "Safe Balance",
+          valuationSource: "Rethink",
+          positionType: PositionType.Liquid,
+          pastNavValue: this.navParts?.baseAssetSafeBal,
+          simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
+          isRethinkPosition: true,
+          detailsHash: "-2",
+          detailsJson: {
+            "safeContractAddress": this.safeAddress ?? "",
+          },
         } as any)
       }
 
@@ -812,7 +833,7 @@ export default defineComponent({
       return isManageNavMethodsPage && !this.isBaseTokenBalanceMethod(navEntry);
     },
     isBaseTokenBalanceMethod(method: INAVMethod) {
-      const positionName = ["OIV Balance", "Safe Balance", "Fees Balance"];
+      const positionName = ["Admin Contract Balance", "Safe Balance", "Fees Balance"];
       return positionName.includes(method.positionName) && method.valuationSource === "Rethink";
     },
     deleteMethod(method: INAVMethod, toggle = true, newNavEntry?: INAVMethod) {
