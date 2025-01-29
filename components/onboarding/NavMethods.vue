@@ -111,7 +111,6 @@
       title="Store NAV Methods"
       class="confirm_dialog"
       max-width="680px"
-      confirm-text="Got it"
       @cancel="isNotifyDialogOpen = false"
     >
       <p class="mt-4">
@@ -136,13 +135,6 @@
         Please ensure you approve both to complete the process.
       </p>
     </UiConfirmDialog>
-
-    <UiConfirmDialog
-      max-width="80%"
-      confirm-text="Got it"
-      @confirm="storeNavMethods"
-      @cancel="isNotifyDialogOpen = false"
-    />
   </div>
 </template>
 
@@ -313,7 +305,6 @@ const sendAllowManagerToUpdateNavTransaction = async () => {
           );
         }
         isLoadingAllowManagerToUpdateNav.value = false;
-        isNotifyDialogOpen.value = true;
       })
       .on("error", (error: any) => {
         console.error(error);
