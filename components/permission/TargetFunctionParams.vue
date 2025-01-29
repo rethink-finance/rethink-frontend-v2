@@ -4,14 +4,15 @@
       <div
         v-for="(funcInputParam, index) in func.inputs"
       >
-        <div class="permissions__function_title">
-          <!--          <Icon icon="mdi:circle-small" />-->
-          <Icon icon="tabler:point-filled" />
-          <div>
-            {{ funcInputParam.name }}
-          </div>
-          <div class="permissions__function_params">
-            ({{ funcInputParam.type }})
+        <div class="permissions__function">
+          <div class="target_function_params__title">
+            <Icon icon="tabler:point-filled" />
+            <div>
+              {{ funcInputParam.name }}
+            </div>
+            <div class="permissions__function_params">
+              ({{ funcInputParam.type }})
+            </div>
           </div>
           <PermissionParamConditionInput
             :index="index"
@@ -83,5 +84,15 @@ const props = defineProps({
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+
+  &__title {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 2.75rem;
+  }
+}
+.permissions__function {
+  align-items: flex-start;
 }
 </style>

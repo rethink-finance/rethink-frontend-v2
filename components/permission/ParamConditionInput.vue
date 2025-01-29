@@ -25,20 +25,28 @@
       hide-details
       :menu-icon="disabled ? '' : '$dropdown'"
     />
-    <PermissionParamConditionInputValue
-      v-if="localCondition.condition !== ParamComparison.ONE_OF"
-      v-model="localCondition.value"
-      class="flex-grow-1"
-      :param="param"
-      :disabled="disabled"
-    />
-    <!-- TODO implement one of input -->
-    <!--      <PermissionOneOfParamConditionInputValue-->
-    <!--        v-else-if="localCondition.condition === ParamComparison.ONE_OF"-->
-    <!--        :param="param"-->
-    <!--        :value="localValue"-->
-    <!--        :disabled="disabled"-->
-    <!--      />-->
+    <!-- "One of" field, needs to iterate over more ParamConditionInputValue -->
+    <div
+      v-if="localCondition.condition === ParamComparison.ONE_OF"
+      class="d-flex flex-column flex-grow-1"
+    >
+      <PermissionParamConditionInputValue
+        v-for="(_, valueIndex) in localCondition.value"
+        :model-value="[localCondition.value[valueIndex]]"
+        :param="param"
+        :condition-type="localCondition.condition"
+        :disabled="disabled"
+        @update:model-value="(newValue) => updateConditionValueByIndex(valueIndex, newValue)"
+      />
+    </div>
+    <template v-else>
+      <PermissionParamConditionInputValue
+        v-model="localCondition.value"
+        :param="param"
+        :condition-type="localCondition.condition"
+        :disabled="disabled"
+      />
+    </template>
   </template>
 </template>
 
@@ -90,6 +98,9 @@ const conditionOptions = computed(() =>
   })) || [],
 );
 
+const updateConditionValueByIndex = (index: number, newValue: string) => {
+  localCondition.value.value[index] = newValue;
+}
 
 // Watch for changes in localCondition and emit updates
 watch(

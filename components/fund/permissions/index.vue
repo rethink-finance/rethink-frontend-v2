@@ -138,7 +138,7 @@ watch(
       cursor: pointer;
     }
   }
-  &__function_title {
+  &__function {
     display: flex;
     flex-direction: row;
     align-content: center;

@@ -6,7 +6,7 @@
     :is-expandable="!!funcConditions?.type"
   >
     <template #title>
-      <div class="permissions__function_title">
+      <div class="permissions__function">
         <div class="mt-1">
           <v-checkbox-btn
             :model-value="funcConditions?.type === ConditionType.WILDCARDED"
@@ -38,7 +38,7 @@
           :func-conditions="funcConditions"
         />
         <!-- TODO remove this RAW json -->
-        <pre class="permissions__json">{{ JSON.stringify(funcConditions, null, 4) }}</pre>
+        <!--        <pre class="permissions__json">{{ JSON.stringify(funcConditions, null, 4) }}</pre>-->
       </span>
     </template>
   </UiDataRowCard>
