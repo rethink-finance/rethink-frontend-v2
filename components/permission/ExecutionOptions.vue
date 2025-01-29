@@ -1,23 +1,25 @@
 <template>
   <div class="execution_options">
-    <v-checkbox-btn
-      v-model="allowSend"
-      :disabled="disabled"
-      label="Allow sending ether"
-      @change="emitChange"
-    />
-
-    <v-checkbox-btn
-      v-model="allowDelegateCall"
-      :disabled="disabled"
-      label="Allow delegate call"
-      @change="emitChange"
-    />
+    <div>
+      <v-checkbox-btn
+        v-model="allowSend"
+        :disabled="disabled"
+        label="Allow Sending Ether"
+        @change="emitChange"
+      />
+    </div>
+    <div>
+      <v-checkbox-btn
+        v-model="allowDelegateCall"
+        :disabled="disabled"
+        label="Allow Delegate Call"
+        @change="emitChange"
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineProps, defineEmits, ref, watch } from "vue";
 import type { PropType } from "vue";
 import { ExecutionOption } from "~/types/enums/zodiac-roles";
 
@@ -33,7 +35,6 @@ const props = defineProps({
   },
 });
 
-// Emits with Vue 3 `update:modelValue`
 const emit = defineEmits(["update:modelValue"]);
 
 // Reactive states for checkboxes
@@ -55,11 +56,14 @@ const flagsToEnum = computed(() => {
 });
 
 // Update local state when `modelValue` changes
-watch(() => props.modelValue, (newValue) => {
-  const flags = enumToFlags(newValue);
-  allowSend.value = flags.allowSend;
-  allowDelegateCall.value = flags.allowDelegateCall;
-}, { immediate: true });
+watch(() => props.modelValue,
+  (newValue) => {
+    const flags = enumToFlags(newValue);
+    allowSend.value = flags.allowSend;
+    allowDelegateCall.value = flags.allowDelegateCall;
+  },
+  { immediate: true },
+);
 
 // Emit updated value when checkboxes change
 const emitChange = () => {
@@ -70,7 +74,7 @@ const emitChange = () => {
 <style lang="scss" scoped>
 .execution_options {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  gap: 1.5rem;
 }
 </style>

@@ -115,6 +115,7 @@ watch(
   &__content {
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
   }
 }
 </style>
@@ -136,6 +137,18 @@ watch(
       background-color: $color-moonlight-dark;
       cursor: pointer;
     }
+  }
+  &__function_title {
+    display: flex;
+    flex-direction: row;
+    align-content: center;
+    align-items: center;
+    font-family: monospace;
+    white-space: normal;
+  }
+  &__function_params {
+    color: $color-steel-blue;
+    margin-left: 0.3rem;
   }
   &__json {
     color: #dcdcaa;

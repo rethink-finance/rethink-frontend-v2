@@ -19,8 +19,14 @@ export enum BooleanValue {
   FALSE = "false",
   TRUE = "true",
 }
+export const ConditionLabel: Record<ParamComparison, string> = {
+  [ParamComparison.EQUAL_TO]: "is equal to",
+  [ParamComparison.ONE_OF]: "is one of",
+  [ParamComparison.GREATER_THAN]: "is greater than",
+  [ParamComparison.LESS_THAN]: "is less than",
+}
 
-export function getNativeType(param: ethers.ParamType | null): ParamNativeType {
+export function getNativeType(param?: ethers.ParamType): ParamNativeType {
   if (!param) return ParamNativeType.UNSUPPORTED
 
   if (param.baseType === "address") return ParamNativeType.ADDRESS

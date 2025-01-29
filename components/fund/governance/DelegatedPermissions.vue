@@ -76,7 +76,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
 import { useToastStore } from "~/store/toasts/toast.store";
 import {

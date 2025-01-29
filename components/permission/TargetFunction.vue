@@ -3,30 +3,42 @@
     no-body-padding
     bg-transparent
     class="target_function"
-    :is-expandable="!!condition?.type"
+    :is-expandable="!!funcConditions?.type"
   >
     <template #title>
-      <div class="target_function__sighash">
+      <div class="permissions__function_title">
         <div class="mt-1">
           <v-checkbox-btn
-            :model-value="condition?.type === ConditionType.WILDCARDED"
-            :indeterminate="condition?.type === ConditionType.SCOPED"
+            :model-value="funcConditions?.type === ConditionType.WILDCARDED"
+            :indeterminate="funcConditions?.type === ConditionType.SCOPED"
             disabled
           />
         </div>
         <div>
           {{ func?.name || sighash }}
         </div>
-        <div class="target_function__params">
+        <div class="permissions__function_params">
           {{ functionParamsText }}
         </div>
       </div>
     </template>
     <template #body>
-      <span v-if="condition?.sighash" class="target_function__condition">
-        <pre class="permissions__json"><strong>sighash:</strong> {{ condition?.sighash }}</pre>
-        <PermissionExecutionOptions v-model="localCondition.executionOption" />
-        <pre class="permissions__json">{{ JSON.stringify(condition, null, 4) }}</pre>
+      <span v-if="funcConditions?.sighash" class="target_function__condition">
+        <div class="d-flex align-center">
+          <pre class="permissions__json me-6"><strong>sighash:</strong> {{ funcConditions?.sighash }}</pre>
+          <PermissionExecutionOptions
+            v-model="localFuncConditions.executionOption"
+            disabled
+          />
+        </div>
+        <PermissionTargetFunctionParams
+          class="ms-4"
+          :func="func"
+          :sighash="sighash"
+          :func-conditions="funcConditions"
+        />
+        <!-- TODO remove this RAW json -->
+        <pre class="permissions__json">{{ JSON.stringify(funcConditions, null, 4) }}</pre>
       </span>
     </template>
   </UiDataRowCard>
@@ -34,7 +46,6 @@
 
 <script setup lang="ts">
 import type { FunctionFragment } from "ethers";
-import { defineEmits } from "vue";
 import type { FunctionCondition } from "~/types/zodiac-roles/role";
 import { getParamsTypesTitle } from "~/composables/zodiac-roles/target";
 import { ConditionType } from "~/types/enums/zodiac-roles";
@@ -47,9 +58,9 @@ import { ConditionType } from "~/types/enums/zodiac-roles";
  *
  * @prop {FunctionFragment | undefined} func - The function fragment from the contract ABI, if available.
  * @prop {string} sighash - The function signature hash (sighash) used as an identifier if the ABI is missing.
- * @prop {FunctionCondition} condition - The associated condition for the function or sighash.
+ * @prop {FunctionCondition} funcConditions - The associated conditions for the function or sighash.
  */
-const emit = defineEmits(["update:condition"]);
+const emit = defineEmits(["update:funcConditions"]);
 
 const props = defineProps({
   func: {
@@ -60,35 +71,34 @@ const props = defineProps({
     type: String,
     default: "",
   },
-  condition: {
+  funcConditions: {
     type: Object as PropType<FunctionCondition>,
     default: () => {},
   },
 });
-// Create a local reactive copy of condition to allow editing it without mutating props.
-const localCondition = ref<FunctionCondition>({ ...props.condition });
+// Create a local reactive copy of funcConditions to allow editing it without mutating props.
+const localFuncConditions = ref<FunctionCondition>({ ...props.funcConditions });
 
-// Watch for prop changes and update localCondition**
-// Watch for changes in `localCondition` and emit updates
+// Watch for changes in localFuncConditions and emit updates
 watch(
-  localCondition,
-  (newValue) => {
-    if (JSON.stringify(newValue) !== JSON.stringify(props.condition)) {
-      console.log("    [2] watch localCondition", toRaw(newValue))
-      emit("update:condition", newValue);
+  localFuncConditions,
+  (newLocalFuncConditions) => {
+    if (JSON.stringify(newLocalFuncConditions) !== JSON.stringify(props.funcConditions)) {
+      console.log("    [2] watch localFuncConditions", toRaw(newLocalFuncConditions))
+      emit("update:funcConditions", newLocalFuncConditions);
     }
   },
   { deep: true },
 );
 
-// Update `localCondition` when `props.condition` changes (but don't emit).
+// Update `localFuncConditions` when `props.funcConditions` changes (but don't emit).
 watch(
-  () => props.condition,
-  (newCondition) => {
+  () => props.funcConditions,
+  (newFuncConditions) => {
     // Update without emitting
-    if (JSON.stringify(newCondition) !== JSON.stringify(localCondition.value)) {
-      console.log("    [2] watch props.condition", toRaw(newCondition))
-      localCondition.value = { ...newCondition };
+    if (JSON.stringify(newFuncConditions) !== JSON.stringify(localFuncConditions.value)) {
+      console.log("    [2] watch props.funcConditions", toRaw(newFuncConditions))
+      localFuncConditions.value = { ...newFuncConditions };
     }
   },
   { deep: true, immediate: true },
@@ -101,23 +111,10 @@ const functionParamsText = computed(() =>
 
 <style lang="scss" scoped>
 .target_function {
-  &__sighash {
-    display: flex;
-    flex-direction: row;
-    align-content: center;
-    align-items: center;
-    font-family: monospace;
-    white-space: pre-wrap;
-  }
-  &__params {
-    color: $color-steel-blue;
-    margin-left: 0.3rem;
-  }
   &__condition {
     display: flex;
     flex-direction: column;
     padding: 1rem;
-    gap: 1rem;
   }
 }
 </style>
