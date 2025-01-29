@@ -369,7 +369,6 @@ watch(() => fundSettings?.value?.fundAddress, (fundAddress?: string) => {
 })
 
 watch(()=> fundSettings?.value?.safe, (safeAddress?: string) => {
-  console.log("SAFE ADDRESS CHANGED", safeAddress);
   if (safeAddress) {
     fetchSafeBalance();
   }
