@@ -452,6 +452,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    showAdminContractBalance: {
+      type: Boolean,
+      default: false,
+    },
     showSummaryRow: {
       type: Boolean,
       default: false,
@@ -653,6 +657,10 @@ export default defineComponent({
         (BigInt(this.fundContractBaseTokenBalance) || 0n) +
         (BigInt(this.safeContractBaseTokenBalance) || 0n) +
         (BigInt(this.feeBalance) || 0n);
+
+
+      console.log("TOTAL NAVVTAL NAVVTAL NAVVTAL NAVVVV:", totalNAV)
+
       return this.fundStore.getFormattedBaseTokenValue(totalNAV);
     },
     formattedTotalLastNAV() {
@@ -670,7 +678,12 @@ export default defineComponent({
       )
     },
     formattedFundContractBaseTokenBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance));
+      console.log("formattedFundContractBaseTokenBalanceformattedFundContractBaseTokenBalance:", this.fundContractBaseTokenBalance)
+
+      const output =  this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance));
+      console.log("OUTPUT:", output)
+
+      return output;
     },
     formattedSafeContractBaseTokenBalance() {
       return this.fundStore.getFormattedBaseTokenValue(BigInt(this.safeContractBaseTokenBalance));
@@ -717,6 +730,20 @@ export default defineComponent({
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
           detailsHash: "-3",
+        } as any)
+      }
+      else if (this.showAdminContractBalance) {
+        methods.push({
+          positionName: "Admin Contract Balance",
+          valuationSource: "Rethink",
+          positionType: PositionType.Liquid,
+          pastNavValue: this.navParts?.baseAssetOIVBal,
+          simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
+          isRethinkPosition: true,
+          detailsHash: "-1",
+          detailsJson: {
+            "fundContractAddress": this.fundAddress ?? "",
+          },
         } as any)
       }
 

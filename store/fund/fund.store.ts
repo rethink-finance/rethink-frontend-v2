@@ -28,17 +28,17 @@ import { NAVCalculator } from "~/assets/contracts/NAVCalculator";
 import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import { useAccountStore } from "~/store/account/account.store";
+import { fetchFundSettingsAction } from "~/store/fund/actions/fetchFundSettings.action";
 import { useFundsStore } from "~/store/funds/funds.store";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFund from "~/types/fund";
+import type IFundSettings from "~/types/fund_settings";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
-import { fetchFundSettingsAction } from "~/store/fund/actions/fetchFundSettings.action";
-import type IFundSettings from "~/types/fund_settings";
 
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
@@ -365,6 +365,11 @@ export const useFundStore = defineStore({
               shouldroundToSignificantDecimals,
             )
             : "0";
+
+          if(!baseSymbol) {
+            return valueFormatted;
+          }
+
           return valueFormatted + " " + baseSymbol;
         },
     getFormattedFundTokenValue:
