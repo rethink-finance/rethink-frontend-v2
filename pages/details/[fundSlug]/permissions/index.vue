@@ -16,6 +16,7 @@
           <UiLinkExternalButton
             title="View OIV Permissions"
             :href="navigateToGnosis"
+            :show-tooltip="false"
           />
           <v-btn color="primary" @click="navigateToCreatePermissions">
             Create Permissions Proposal
@@ -30,8 +31,8 @@
 // types
 import type IFund from "~/types/fund";
 // components
-import { useFundStore } from "~/store/fund/fund.store";
 import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
+import { useFundStore } from "~/store/fund/fund.store";
 
 const router = useRouter();
 const fundStore = useFundStore();

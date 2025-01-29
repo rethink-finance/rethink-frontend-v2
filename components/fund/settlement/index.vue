@@ -11,9 +11,6 @@
           @click="selectActionButton('deposit')"
         >
           Deposit
-          <v-tooltip activator="parent" location="bottom">
-            Deposit tokens to the OIV.
-          </v-tooltip>
         </v-btn>
         <v-btn
           :class="getDepositRedeemButtonClass('redeem')"
@@ -21,9 +18,6 @@
           @click="selectActionButton('redeem')"
         >
           Redeem
-          <v-tooltip activator="parent" location="bottom">
-            Redeem tokens from the OIV.
-          </v-tooltip>
         </v-btn>
       </div>
     </div>
