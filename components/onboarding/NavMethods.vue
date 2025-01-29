@@ -62,8 +62,8 @@
         :safe-address="fundSettings?.safe"
         :base-symbol="fundSettings?.baseSymbol"
         :base-decimals="fundSettings?.baseDecimals"
-        :fund-contract-base-token-balance="fundSettings?.baseTokenBalance"
-        :show-admin-contract-balance="true"
+        :safe-contract-base-token-balance="fundSettings?.safeContractBaseTokenBalance"
+        :show-safe-contract-balance="true"
         :show-summary-row="true"
         :is-fund-non-init="true"
       />

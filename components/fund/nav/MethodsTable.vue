@@ -452,7 +452,7 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    showAdminContractBalance: {
+    showSafeContractBalance: {
       type: Boolean,
       default: false,
     },
@@ -659,12 +659,10 @@ export default defineComponent({
         (BigInt(this.feeBalance) || 0n);
 
 
-      console.log("TOTAL NAVVTAL NAVVTAL NAVVTAL NAVVVV:", totalNAV)
-
-      return this.fundStore.getFormattedBaseTokenValue(totalNAV);
+      return this.fundStore.getFormattedBaseTokenValue(totalNAV, true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedTotalLastNAV() {
-      return this.fundStore.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n);
+      return this.fundStore.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n, true, false, this.baseSymbol, this.baseDecimals);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
@@ -678,18 +676,14 @@ export default defineComponent({
       )
     },
     formattedFundContractBaseTokenBalance() {
-      console.log("formattedFundContractBaseTokenBalanceformattedFundContractBaseTokenBalance:", this.fundContractBaseTokenBalance)
 
-      const output =  this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance));
-      console.log("OUTPUT:", output)
-
-      return output;
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedSafeContractBaseTokenBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.safeContractBaseTokenBalance));
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.safeContractBaseTokenBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedFeeBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.feeBalance));
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.feeBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
@@ -732,17 +726,17 @@ export default defineComponent({
           detailsHash: "-3",
         } as any)
       }
-      else if (this.showAdminContractBalance) {
+      else if (this.showSafeContractBalance) {
         methods.push({
-          positionName: "Admin Contract Balance",
+          positionName: "Safe Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
-          pastNavValue: this.navParts?.baseAssetOIVBal,
-          simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
+          pastNavValue: this.navParts?.baseAssetSafeBal,
+          simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
           isRethinkPosition: true,
-          detailsHash: "-1",
+          detailsHash: "-2",
           detailsJson: {
-            "fundContractAddress": this.fundAddress ?? "",
+            "safeContractAddress": this.safeAddress ?? "",
           },
         } as any)
       }
