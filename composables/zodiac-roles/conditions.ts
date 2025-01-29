@@ -66,15 +66,14 @@ export function isWriteFunction(method: FunctionFragment) {
 export const getWriteFunctions = (abi: JsonFragment[] | undefined): FunctionFragment[] => {
   if (!abi) return [];
   const iface = new Interface(abi);
-
   const writeFunctions: FunctionFragment[] = [];
 
-  iface.forEachFunction((func) => {
+  iface.forEachFunction((func: FunctionFragment) => {
     if (isWriteFunction(func)) {
       writeFunctions.push(func);
     }
   });
-  return writeFunctions
+  return writeFunctions as FunctionFragment[]
 }
 
 export function formatParamValue(param: ethers.ParamType, value: string) {

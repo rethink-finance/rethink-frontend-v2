@@ -120,7 +120,6 @@ watch(() => props.roles.length, () => {
     white-space: pre-wrap;
     background-color: $color-badge-navy;
     border: 1px solid $color-gray-transparent;
-    margin-top: 2rem;
   }
 }
 </style>

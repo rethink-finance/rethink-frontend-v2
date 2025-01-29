@@ -32,41 +32,25 @@
         </template>
       </div>
       <template
-        v-if="abiDetectedFunctions.length && !isFetchingTargetABI"
+        v-if="!isFetchingTargetABI"
       >
         <div class="permissions__list">
-          <UiDataRowCard
+          <!-- Display functions that were found in the ABI -->
+          <PermissionTargetFunction
             v-for="(func, index) in abiDetectedFunctions"
             :key="index"
-            :grow-column1="true"
-            no-body-padding
-            bg-transparent
-          >
-            <template #title>
-              <div class="permissions__target_function_sighash">
-                <div class="mt-1">
-                  <v-checkbox-btn
-                    :model-value="!!target.conditions[func.selector]"
-                    disabled
-                  />
-                </div>
-                <div>
-                  {{ func.name }}
-                </div>
-                <div class="permissions__target_function_params">
-                  {{ getParamsTypesTitle(func as FunctionFragment) }}
-                </div>
-              </div>
-            </template>
-            <template #body>
-              <PermissionTargetFunction
-                :func="func as FunctionFragment"
-                :condition="target.conditions[func.selector]"
-              />
-            </template>
-          </UiDataRowCard>
+            :func="func as FunctionFragment"
+            :condition="target.conditions[func.selector]"
+          />
+          <!-- Display function conditions that were not found in the ABI -->
+          <PermissionTargetFunction
+            v-for="(sighash, index) in sighashesNotInAbi"
+            :key="index"
+            :sighash="sighash"
+            :condition="target.conditions[sighash]"
+          />
         </div>
-        <pre class="permissions__json">{{ JSON.stringify(abiDetectedFunctions, null, 4) }}</pre>
+        <pre class="permissions__json mt-8">{{ JSON.stringify(abiDetectedFunctions, null, 4) }}</pre>
       </template>
     </div>
   </div>
@@ -79,11 +63,13 @@ import type { ChainId } from "~/store/web3/networksMap";
 import type { Explorer } from "~/services/explorer";
 import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { getParamsTypesTitle } from "~/composables/zodiac-roles/target";
 
 const { $getExplorer } = useNuxtApp();
 const toastStore = useToastStore();
+// Functions from the detected ABI.
 const abiDetectedFunctions = ref<FunctionFragment[]>([]);
+// Condition sighashes of functions that are not in the detected ABI.
+const sighashesNotInAbi = ref<string[]>([]);
 const isFetchingTargetABI = ref(false);
 const props = defineProps({
   target: {
@@ -113,9 +99,16 @@ const fetchTargetABI = async () => {
   try {
     const resultAbiJson = await explorer.abi(props.target.address)
     console.log("fetched ABI", resultAbiJson);
-    abiDetectedFunctions.value = getWriteFunctions(resultAbiJson);
+    const writeFunctions: FunctionFragment[] = getWriteFunctions(resultAbiJson);
+    abiDetectedFunctions.value = writeFunctions;
     console.log("fetched ABI abiDetectedFunctions", abiDetectedFunctions.value);
     isFetchingTargetABI.value = false;
+
+    sighashesNotInAbi.value = Object.keys(props.target?.conditions || {}).filter(
+      (conditionKey: string) => !writeFunctions?.some(
+        (func: FunctionFragment) => func.selector === conditionKey,
+      ),
+    )
   } catch (error: any) {
     handleABIError(error);
   }
@@ -151,18 +144,6 @@ watch(
     padding: 1rem;
     border: 1px solid $color-gray-transparent;
     background-color: $color-badge-navy;
-  }
-  &__target_function_sighash {
-    display: flex;
-    flex-direction: row;
-    align-content: center;
-    align-items: center;
-    font-family: monospace;
-    white-space: pre-wrap;
-  }
-  &__target_function_params {
-    color: $color-steel-blue;
-    margin-left: 0.3rem;
   }
 }
 </style>
