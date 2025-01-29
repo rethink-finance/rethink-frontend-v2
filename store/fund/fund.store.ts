@@ -345,7 +345,7 @@ export const useFundStore = defineStore({
         (
           value: any,
           shouldCommify: boolean = true,
-          shouldroundToSignificantDecimals: boolean = false,
+          shouldRoundToSignificantDecimals: boolean = false,
           symbol?: string,
           decimals?: number,
         ): string => {
@@ -363,7 +363,7 @@ export const useFundStore = defineStore({
               value,
               baseDecimals,
               shouldCommify,
-              shouldroundToSignificantDecimals,
+              shouldRoundToSignificantDecimals,
             )
             : "0";
 
@@ -378,7 +378,7 @@ export const useFundStore = defineStore({
         (
           value: any,
           shouldCommify: boolean = true,
-          shouldroundToSignificantDecimals: boolean = false,
+          shouldRoundToSignificantDecimals: boolean = false,
         ): string => {
           const fund = state.chainFunds?.[state.selectedFundChain]?.[state.selectedFundAddress];
           const fundSymbol = fund?.fundToken.symbol;
@@ -392,7 +392,7 @@ export const useFundStore = defineStore({
               value,
               fundDecimals,
               shouldCommify,
-              shouldroundToSignificantDecimals,
+              shouldRoundToSignificantDecimals,
             )
             : "0";
           return valueFormatted + " " + fundSymbol;
