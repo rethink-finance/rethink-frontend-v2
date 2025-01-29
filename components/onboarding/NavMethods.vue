@@ -62,7 +62,7 @@
         :safe-address="fundSettings?.safe"
         :base-symbol="fundSettings?.baseSymbol"
         :base-decimals="fundSettings?.baseDecimals"
-        :safe-contract-base-token-balance="fundSettings?.safeContractBaseTokenBalance"
+        :safe-contract-base-token-balance="safeContractBaseTokenBalance"
         :show-safe-contract-balance="true"
         :show-summary-row="true"
         :is-fund-non-init="true"
@@ -140,6 +140,7 @@
 
 <script setup lang="ts">
 import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
+import { ERC20 } from "~/assets/contracts/ERC20";
 import {
   encodeUpdateNavMethods,
   getAllowManagerToUpdateNavPermissionsData,
@@ -166,6 +167,7 @@ const isAddRawDialogOpen = ref(false)
 const isNotifyDialogOpen = ref(false)
 const navMethods = ref<INAVMethod[]>([]);
 const allowManagerToUpdateNav = ref(false);
+const safeContractBaseTokenBalance = ref(0);
 
 /**
  * Computed
@@ -357,6 +359,7 @@ const methodsAddedFromLibrary = (methods: INAVMethod[]) => {
 
 onMounted(() => {
   fetchNavMethods();
+  fetchSafeBalance();
 })
 
 watch(() => fundSettings?.value?.fundAddress, (fundAddress?: string) => {
@@ -364,6 +367,40 @@ watch(() => fundSettings?.value?.fundAddress, (fundAddress?: string) => {
     fetchNavMethods();
   }
 })
+
+watch(()=> fundSettings?.value?.safe, (safeAddress?: string) => {
+  console.log("SAFE ADDRESS CHANGED", safeAddress);
+  if (safeAddress) {
+    fetchSafeBalance();
+  }
+})
+
+
+const fetchSafeBalance = async () => {
+  if (!fundSettings?.value?.safe) return;
+  let balanceWei = BigInt(0)
+
+  const fundBaseTokenContract = web3Store.getCustomContract(
+    fundChainId.value,
+    ERC20,
+    fundSettings.value?.baseToken, // baseToken
+  );
+
+  try {
+    balanceWei = await web3Store.callWithRetry(
+      fundChainId.value,
+      () => fundBaseTokenContract.methods
+        .balanceOf(fundSettings.value?.safe)
+        .call(),
+    );
+
+  } catch (error: any) {
+    toastStore.errorToast("Failed loading safe balance. " + error.message);
+  } finally {
+    console.log("SAFE BALANCE", balanceWei);
+    safeContractBaseTokenBalance.value = Number(balanceWei);
+  }
+}
 
 const fetchNavMethods = async () => {
   if (!fundSettings?.value?.fundAddress) return;
