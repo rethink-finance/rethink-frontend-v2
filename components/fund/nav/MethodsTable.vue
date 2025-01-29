@@ -23,7 +23,7 @@
     <template #[`header.pastNavValue`]>
       Last NAV Update
       <div v-if="showSummaryRow && showLastNavUpdateValue" class="text-right">
-        <!-- {{ formattedTotalLastNAV }} -->
+        {{ formattedTotalLastNAV }}
       </div>
     </template>
     <template #[`header.simulatedNavFormatted`]>
@@ -686,7 +686,7 @@ export default defineComponent({
 
       if (this.showBaseTokenBalances) {
         methods.push({
-          positionName: "OIV Balance",
+          positionName: "Admin Contract Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
@@ -807,7 +807,7 @@ export default defineComponent({
       return isManageNavMethodsPage && !this.isBaseTokenBalanceMethod(navEntry);
     },
     isBaseTokenBalanceMethod(method: INAVMethod) {
-      const positionName = ["OIV Balance", "Safe Balance", "Fees Balance"];
+      const positionName = ["Admin Contract Balance", "Safe Balance", "Fees Balance"];
       return positionName.includes(method.positionName) && method.valuationSource === "Rethink";
     },
     deleteMethod(method: INAVMethod, toggle = true, newNavEntry?: INAVMethod) {
