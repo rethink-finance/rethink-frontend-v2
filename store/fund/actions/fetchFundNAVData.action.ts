@@ -1,13 +1,13 @@
-import { ERR_CONTRACT_EXECUTION_REVERTED } from "web3";
-import { useFundStore } from "../fund.store";
-import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
-import type INAVMethod from "~/types/nav_method";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 import { NAVExecutor } from "assets/contracts/NAVExecutor";
+import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
+import { ERR_CONTRACT_EXECUTION_REVERTED } from "web3";
 import { decodeUpdateNavMethods } from "~/composables/nav/navProposal";
+import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import type { ChainId } from "~/store/web3/networksMap";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import type INAVMethod from "~/types/nav_method";
+import { useFundStore } from "../fund.store";
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
@@ -45,7 +45,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
       );
       console.log("FETCHED GET NAV DATA", newNavMethods);
 
-      fundStore.fundInitialNAVMethods = mergeNAVMethodsFromLocalStorage(
+      fundStore.fundInitialNAVMethods = await mergeNAVMethodsFromLocalStorage(
         fundStore.selectedFundAddress,
         newNavMethods,
       );
@@ -83,7 +83,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
   );
 
   // Merge user's local storage NAV method changes with the last NAV update methods.
-  fundStore.fundManagedNAVMethods = mergeNAVMethodsFromLocalStorage(
+  fundStore.fundManagedNAVMethods = await mergeNAVMethodsFromLocalStorage(
     fundStore.selectedFundAddress,
     lastNavUpdateMethods,
   );
@@ -140,20 +140,20 @@ export const getNAVData = async (
   return navMethods;
 }
 
-const mergeNAVMethodsFromLocalStorage = (
+const mergeNAVMethodsFromLocalStorage = async (
   fundAddress: string,
   lastNavUpdateMethods: INAVMethod[],
 ) => {
   // TODO should do cached in local storage separately by chain: navUpdateEntries[chainId][fundAddress]
   // TODO: this code is not the best, generally now only "deleted" property can change for each NAV method,
   //   and they way mutation happen here is not good, losing reactive references?
-  const localStorageNAVUpdateEntries = getLocalStorageItem("navUpdateEntries");
+  const localStorageNAVUpdateEntries = await getLocalForageItem("navUpdateEntries");
   // if there are no NAV methods in local storage, save them
 
   if (!localStorageNAVUpdateEntries[fundAddress]?.length) {
     // Merge NAV method changes from localStorage to the current fundManagedNAVMethods.
     localStorageNAVUpdateEntries[fundAddress] = lastNavUpdateMethods;
-    setLocalStorageItem("navUpdateEntries", localStorageNAVUpdateEntries);
+    setLocalForageItem("navUpdateEntries", localStorageNAVUpdateEntries);
   }
   const localStorageNAVMethods =
     localStorageNAVUpdateEntries[fundAddress] || [];

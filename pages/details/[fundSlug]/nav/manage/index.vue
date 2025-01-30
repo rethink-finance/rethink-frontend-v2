@@ -4,21 +4,21 @@
       <div class="main_header__title">
         Manage NAV Methods
       </div>
-      <div>
+      <div class="main_header__actions">
         <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/newMethod`">
-          <v-btn class="text-secondary me-4" variant="outlined">
+          <v-btn class="text-secondary" variant="outlined">
             Define New Method
           </v-btn>
         </nuxt-link>
         <nuxt-link
           :to="`/details/${selectedFundSlug}/nav/manage/addFromLibrary`"
         >
-          <v-btn class="text-secondary me-4" variant="outlined">
+          <v-btn class="text-secondary" variant="outlined">
             Add From Library
           </v-btn>
         </nuxt-link>
         <v-btn
-          class="text-secondary me-4"
+          class="text-secondary"
           variant="outlined"
           @click="addRawDialog = true"
         >
@@ -136,16 +136,16 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 
-const clearDraft = () => {
+const clearDraft = async () => {
   try {
     fundManagedNAVMethods.value =  JSON.parse(JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt), parseBigInt);
     // reset the local storage as well
-    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
+    const navUpdateEntries = await getLocalForageItem("navUpdateEntries", {});
     // navUpdateEntries[selectedFundAddress.value] = fundManagedNAVMethods.value;
     // we need to delete navUpdateEntries[selectedFundAddress.value];
     delete navUpdateEntries[selectedFundAddress.value];
 
-    setLocalStorageItem("navUpdateEntries", navUpdateEntries);
+    setLocalForageItem("navUpdateEntries", navUpdateEntries);
 
     toastStore.successToast("Draft cleared successfully");
   } catch (e) {
@@ -154,15 +154,15 @@ const clearDraft = () => {
   }
 };
 
-const saveDraft = () => {
+const saveDraft = async () => {
   try {
-    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
+    const navUpdateEntries = await getLocalForageItem("navUpdateEntries", {});
 
     navUpdateEntries[selectedFundAddress.value] = JSON.parse(
       JSON.stringify(fundManagedNAVMethods.value, stringifyBigInt),
     );
 
-    setLocalStorageItem("navUpdateEntries", navUpdateEntries);
+    setLocalForageItem("navUpdateEntries", navUpdateEntries);
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to save NAV draft");
@@ -198,6 +198,13 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
+.main_header {
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+}
 .btn-draft {
   min-height: 40px;
 }

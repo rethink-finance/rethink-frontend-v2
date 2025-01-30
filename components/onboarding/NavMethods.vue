@@ -4,23 +4,23 @@
       <div class="main_header__title">
         Manage NAV Methods
       </div>
-      <div>
+      <div class="main_header__actions">
         <v-btn
-          class="text-secondary me-4"
+          class="text-secondary"
           variant="outlined"
           @click="handleDefineNewMethodDialog(true)"
         >
           Define New Method
         </v-btn>
         <v-btn
-          class="text-secondary me-4"
+          class="text-secondary"
           variant="outlined"
           @click="handleAddFromLibraryDialog(true)"
         >
           Add From Library
         </v-btn>
         <v-btn
-          class="text-secondary me-4"
+          class="text-secondary"
           variant="outlined"
           @click="isAddRawDialogOpen = true"
         >
@@ -427,6 +427,13 @@ const fetchNavMethods = async () => {
 </script>
 
 <style scoped lang="scss">
+.main_header {
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+}
 .management {
   margin-bottom: 1rem;
   &__row {
