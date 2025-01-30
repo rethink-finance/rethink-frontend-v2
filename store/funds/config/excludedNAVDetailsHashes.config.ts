@@ -13,6 +13,7 @@ export const excludeNAVDetailsHashes = {
     "0x37c0cad1bac6a4cdd3a7e5f13162b8b1c7fd8db96ce2557de5db67e1f8213ece",
     "0x003651b0da2306f94cde72d015b08ba7d647d94cddd832a0ece2814a433abf5f",
     "0xb749dd887a361f0a54620e6b951cdbe81b247fd13579b1adccbebb3f20d2fdc5",
+    // List from Rok goes from here to the bottom
     "0xb2ff5e623b7d7968f1be9368581d2a8b81a196be14fd49bf17f2d81cc6a5a792",
     "0xb39cda6e5b4682c22be024de190ef1b4d51272080717f6736d23336d66816d90",
     "0x2c7539dd92643763ddfeb50e7128163bd84b23888ef23aa51b8699c3062f7afe",
@@ -25,6 +26,7 @@ export const excludeNAVDetailsHashes = {
     "0x3f1ebea95611c81d5d1796f2b8ba5aa0a4c096be233b1b6e364d672a90b51541",
     "0x185b86eb262389d024f24547dbe747fac1fd105d4fdb289760271d283f8455bc",
     "0x89af9028f446bd5dfa641ae943850706f94954a90276b37bec6d85c240b3fba2",
+    "0xd35f068cd38e3889ea64c766e5f0bc2dc3115b277da66a8f45ae03a8b36bbb56",
   ],
   "0xa4b1": [],
   "0xfc": [],
