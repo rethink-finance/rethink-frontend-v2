@@ -16,7 +16,7 @@ export const fetchUserFundShareValueAction = async (): Promise<any> => {
   let balanceWei = BigInt("0");
   try {
     balanceWei = await web3Store.callWithRetry(
-      fundStore.fundChainId,
+      fundStore.selectedFundChain,
       () =>
         fundStore.fundContract.methods.valueOf(fundStore.activeAccountAddress).call(),
     );

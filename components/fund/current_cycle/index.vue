@@ -91,7 +91,6 @@
 
 <script setup lang="ts">
 import { ethers, FixedNumber } from "ethers";
-import { computed, ref } from "vue";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type IFund from "~/types/fund";
@@ -228,7 +227,7 @@ const redemptionDisabledTooltipText = computed(() => {
 
 const signDepositAndDelegateBySigTransaction = async () => {
   const activeAccountAddress = fundStore.activeAccountAddress ?? "";
-  const fundChainId = fundStore.fundChainId;
+  const fundChainId = fundStore.selectedFundChain;
   if (!activeAccountAddress) {
     toastStore.errorToast("No active account, try re-authenticating.");
     return;
@@ -269,7 +268,7 @@ const signDepositAndDelegateBySigTransaction = async () => {
   let signature;
 
   try {
-    const web3Provider = web3Store.chainProviders[fundStore.fundChainId];
+    const web3Provider = web3Store.chainProviders[fundStore.selectedFundChain];
     const hexSignature = await web3Provider?.eth.signTypedData(
       activeAccountAddress ?? "",
       dataToSign,

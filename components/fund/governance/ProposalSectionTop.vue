@@ -456,7 +456,7 @@ const voteOptionIcon = (voteType: number) => {
 };
 
 const fetchHasVoted = () => {
-  const fundChainId = fundStore.fundChainId;
+  const fundChainId = fundStore.selectedFundChain;
   if (
     fundStore.activeAccountAddress === undefined ||
     !props.proposal.proposalId

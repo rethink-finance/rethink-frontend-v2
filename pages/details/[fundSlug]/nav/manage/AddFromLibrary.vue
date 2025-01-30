@@ -1,6 +1,6 @@
 <template>
   <FundNavAddFromLibrary
-    :chain-id="fundStore.fundChainId"
+    :chain-id="fundStore.selectedFundChain"
     :fund-address="fundStore.fundAddress"
     :safe-address="fundStore.fund?.safeAddress || ''"
     :base-symbol="fundStore.fund?.baseToken?.symbol || ''"

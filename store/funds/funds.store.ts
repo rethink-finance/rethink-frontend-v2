@@ -7,7 +7,7 @@ import { fetchFundsInfoArraysAction } from "./actions/fetchFundsInfoArrays.actio
 import { fetchFundsMetaDataAction } from "./actions/fetchFundsMetadata.action";
 import { fetchFundsNavMethodsAction } from "./actions/fetchFundsNavMethods.action";
 import { useFundStore } from "~/store/fund/fund.store";
-import { networksMap } from "~/store/web3/networksMap";
+import { type ChainId, networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
 import type INAVMethod from "~/types/nav_method";
@@ -58,7 +58,7 @@ export const useFundsStore = defineStore({
     },
   },
   actions: {
-    fetchFundsInfoArrays(chainId: string) {
+    fetchFundsInfoArrays(chainId: ChainId) {
       return useActionState("fetchFundsInfoArraysAction", () =>
         fetchFundsInfoArraysAction(chainId),
       );
@@ -75,7 +75,7 @@ export const useFundsStore = defineStore({
      * More data can be fetched from fundSettings later if needed, or added to the reader contract.
      */
     fetchFundsMetaData(
-      chainId: string,
+      chainId: ChainId,
       fundAddresses: string[],
       fundsInfo: any,
     ) {
@@ -83,12 +83,12 @@ export const useFundsStore = defineStore({
         fetchFundsMetaDataAction(chainId, fundAddresses, fundsInfo),
       );
     },
-    fetchFundsNavMethods(chainId: string, fundsInfoArrays: any[], storeAllMethods = true) {
+    fetchFundsNavMethods(chainId: ChainId, fundsInfoArrays: any[], storeAllMethods = true) {
       return useActionState("fetchFundsNavMethodsAction", () =>
         fetchFundsNavMethodsAction(chainId, fundsInfoArrays, storeAllMethods),
       );
     },
-    calculateFundsPerformanceMetrics(chainId: string) {
+    calculateFundsPerformanceMetrics(chainId: ChainId) {
       return useActionState("calculateFundsPerformanceMetricsAction", () =>
         calculateFundsPerformanceMetricsAction(chainId),
       );

@@ -1,7 +1,8 @@
 import { useFundsStore } from "../funds.store";
+import { type ChainId } from "~/store/web3/networksMap";
 
 export async function calculateFundsPerformanceMetricsAction(
-  chainId: string,
+  chainId: ChainId,
 ): Promise<any> {
   const fundsStore = useFundsStore();
   console.log("start calculateFundsPerformanceMetricsAction ", chainId);
@@ -18,10 +19,10 @@ export async function calculateFundsPerformanceMetricsAction(
           const baseTokenDecimals = fund.baseToken.decimals;
           const cumulativeReturnPercent = fundLastNavUpdateExists
             ? await calculateCumulativeReturnPercent(
-                fund.totalDepositBalance,
-                fund.lastNAVUpdateTotalNAV || 0n,
-                baseTokenDecimals,
-              )
+              fund.totalDepositBalance,
+              fund.lastNAVUpdateTotalNAV || 0n,
+              baseTokenDecimals,
+            )
             : 0;
 
           fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists

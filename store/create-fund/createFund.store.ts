@@ -7,10 +7,10 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFundSettings from "~/types/fund_settings";
 import type { IFundInitCache } from "~/types/fund_settings";
-import { networksMap } from "~/store/web3/networksMap";
+import { ChainId, networksMap } from "~/store/web3/networksMap";
 
 interface IState {
-  selectedStepperChainId?: string;
+  selectedStepperChainId?: ChainId;
   fundInitCache?: IFundInitCache;
   askToSaveDraftBeforeRouteLeave: boolean;
 }
@@ -33,12 +33,12 @@ export const useCreateFundStore = defineStore({
     web3Store(): any {
       return useWeb3Store();
     },
-    fundChainId(): string {
+    fundChainId(): ChainId {
       if (this.fundInitCache?.fundSettings?.chainId) {
         return this.fundInitCache.fundSettings.chainId;
       }
 
-      return this.selectedStepperChainId || ""
+      return this.selectedStepperChainId || ChainId.ETHEREUM;
     },
     fundChainName(): string {
       const defaultValue = this.fundChainId;
@@ -58,14 +58,14 @@ export const useCreateFundStore = defineStore({
   },
   actions: {
     fetchFundInitCache(
-      fundChainId: string,
+      fundChainId: ChainId,
       deployerAddress: string,
     ): Promise<IFundInitCache | undefined> {
       return useActionState("fetchFundInitCacheAction", () =>
         fetchFundInitCacheAction(fundChainId, deployerAddress),
       );
     },
-    setSelectedStepperChainId(chainId: string) {
+    setSelectedStepperChainId(chainId: ChainId) {
       this.selectedStepperChainId = chainId;
     },
     clearFundInitCache() {

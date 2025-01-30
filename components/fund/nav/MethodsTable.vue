@@ -429,6 +429,7 @@ import {
 import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import type INAVParts from "~/types/nav_parts";
+import { ChainId } from "~/store/web3/networksMap";
 
 
 export default defineComponent({
@@ -503,7 +504,7 @@ export default defineComponent({
       default: "",
     },
     fundChainId: {
-      type: String,
+      type: String as PropType<ChainId>,
       default: "",
     },
     // Only required if we want to simulate NAV
@@ -789,14 +790,18 @@ export default defineComponent({
       navigator.clipboard.writeText(data);
     },
     async simulateNAV() {
-      if (!this.showSimulatedNav || this.isNavSimulationLoading) return;
+      const fundChainId = this.fundChainId as ChainId;
+      const fundAddress = this.fundAddress;
+      if (
+        !this.showSimulatedNav || this.isNavSimulationLoading || !fundChainId || !fundAddress
+      ) {
+        return;
+      }
       this.isNavSimulationLoading = true;
       console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
 
       // Simulate all methods at once as many promises.
       const promises = [];
-      const fundChainId = this.fundChainId ?? "";
-      const fundAddress = this.fundAddress ?? "";
 
       for (const navEntry of this.methods) {
         console.log("FUND CHAIN ID:", fundChainId, "FUND ADDRESS:", fundAddress, "NAV ENTRY:", navEntry)

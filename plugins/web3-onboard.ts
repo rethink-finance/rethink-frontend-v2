@@ -6,6 +6,7 @@ import walletConnectModule from "@web3-onboard/walletconnect"
 import ledgerModule from "@web3-onboard/ledger"
 import enkrypt from "@web3-onboard/enkrypt"
 import logoSVG from "@/assets/images/logo_mobile.svg"
+import { ChainId } from "~/store/web3/networksMap";
 
 export default defineNuxtPlugin(() => {
   const runtimeConfig = useRuntimeConfig()
@@ -52,31 +53,31 @@ export default defineNuxtPlugin(() => {
     wallets: [injected, safe, walletConnect, ledger, enkryptModule],
     chains: [
       {
-        id: "0x89",
+        id: ChainId.POLYGON,
         token: "MATIC",
         label: "Polygon",
         rpcUrl: "https://polygon.drpc.org",
       },
       {
-        id: "0xa4b1",
+        id: ChainId.ARBITRUM,
         token: "ARB1",
         label: "Arbitrum One",
         rpcUrl: "https://1rpc.io/arb",
       },
+      // {
+      //   id: "0xfc",
+      //   token: "frxETH",
+      //   label: "Fraxtal",
+      //   rpcUrl: "https://rpc.frax.com",
+      // },
       {
-        id: "0xfc",
-        token: "frxETH",
-        label: "Fraxtal",
-        rpcUrl: "https://rpc.frax.com",
-      },
-      {
-        id: "0x1",
+        id: ChainId.ETHEREUM,
         token: "ETH",
         label: "Ethereum",
         rpcUrl: "https://rpc.ankr.com/eth",
       },
       {
-        id: "0x2105",
+        id: ChainId.BASE,
         token: "ETH",
         label: "BASE",
         rpcUrl: "https://mainnet.base.org/",

@@ -93,13 +93,11 @@ const props = defineProps({
   },
   token0: {
     type: Object as PropType<IToken>,
-    default: () => {
-    },
+    default: () => {},
   },
   token1: {
     type: Object as PropType<IToken>,
-    default: () => {
-    },
+    default: () => {},
   },
   token0UserBalance: {
     type: BigInt as unknown as PropType<bigint>,

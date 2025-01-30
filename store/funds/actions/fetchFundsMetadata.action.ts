@@ -5,11 +5,11 @@ import type IFundMetaData from "~/types/fund_meta_data";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
-import { networksMap } from "~/store/web3/networksMap";
+import { type ChainId, networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 
 export async function fetchFundsMetaDataAction(
-  chainId: string,
+  chainId: ChainId,
   fundAddresses: string[],
   fundsInfo: any,
 ): Promise<IFund[]> {
@@ -38,8 +38,8 @@ export async function fetchFundsMetaDataAction(
       const baseTokenDecimals = Number(fundMetaData.fundBaseTokenDecimals);
 
       const fundStartTime = fundMetaData.startTime;
-      //console.log("fundMetaData.updateTimes");
-      //console.log(fundMetaData.updateTimes);
+      // console.log("fundMetaData.updateTimes");
+      // console.log(fundMetaData.updateTimes);
       const lastNavUpdateTime = undefined;// = fundMetaData.updateTimes[fundMetaData.updateTimes.length-1];
       const fund: IFund = {
         chainId,

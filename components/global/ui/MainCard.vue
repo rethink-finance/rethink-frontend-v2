@@ -1,11 +1,17 @@
 <template>
   <div class="main_card">
-    <div class="header">
+    <div v-if="title || subtitle"  class="header">
       <div class="header__title-col">
-        <div class="header__title subtitle_white">
+        <div
+          v-if="title"
+          class="header__title subtitle_white"
+        >
           {{ title }}
         </div>
-        <div class="header__sub-title" v-if="subtitle">
+        <div
+          v-if="subtitle"
+          class="header__sub-title"
+        >
           {{ subtitle }}
         </div>
       </div>

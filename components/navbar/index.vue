@@ -114,6 +114,7 @@
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
 import type IRoute from "~/types/route";
+import { type ChainId } from "~/store/web3/networksMap";
 const accountStore = useAccountStore();
 
 const route = useRoute();
@@ -156,11 +157,11 @@ const selectedChainId = ref(accountStore.connectedWalletChainId);
 
 watch(() => accountStore.connectedWalletChainId, (newVal, oldVal) => {
   console.log(`Connected Wallet Cain ID changed from ${oldVal} to ${newVal}`);
-  selectedChainId.value = newVal || "";
+  selectedChainId.value = newVal;
 });
 
 const isSelectInputActive = ref(false);
-const switchNetwork = async (chainId: string) => {
+const switchNetwork = async (chainId: ChainId) => {
   try {
     await accountStore.switchNetwork(chainId)
     isSelectInputActive.value = false;

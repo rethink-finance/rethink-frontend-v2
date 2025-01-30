@@ -161,10 +161,10 @@ const { shouldUserDelegate } = storeToRefs(fundStore);
 // dummy data governance activity
 const governanceProposals = computed(() => {
   const proposals = governanceProposalStore.getProposals(
-    fundStore.fundChainId,
+    fundStore.selectedFundChain,
     fundStore.fundAddress,
   );
-  console.log("fetched proposals in view", fundStore.fundChainId, fundStore.fundAddress, proposals)
+  console.log("fetched proposals in view", fundStore.selectedFundChain, fundStore.fundAddress, proposals)
 
   // set updateSettingsProposals to proposals that have updateSettings calldata
   updateSettingsProposals.value = proposals.filter((proposal) => {
@@ -230,7 +230,7 @@ const shouldFetchTrendingDelegates = ref(true);
 // trending delegates
 const trendingDelegates = computed(() => {
   const delegates = governanceProposalStore.getDelegates(
-    fundStore.fundChainId,
+    fundStore.selectedFundChain,
     fundStore.fundAddress,
   );
   delegates.sort((a, b) => {
@@ -704,7 +704,7 @@ const fetchProposals = async (
         fromBlock,
       );
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
-        fundStore.fundChainId,
+        fundStore.selectedFundChain,
         fundAddress,
         toBlock,
         fromBlock,
@@ -795,7 +795,7 @@ const fetchProposals = async (
         await governanceProposalStore.parseProposalCreatedEvents(chunkEvents);
       }
       governanceProposalStore.setFundProposalsBlockFetchedRanges(
-        fundStore.fundChainId,
+        fundStore.selectedFundChain,
         fundAddress,
         toBlock,
         fromBlock,
@@ -873,7 +873,7 @@ const startFetchingFundProposals = async () => {
 
   const [mostRecentFetchedBlock, oldestFetchedBlock] =
     governanceProposalStore.getFundProposalsBlockFetchedRanges(
-      fundStore.fundChainId,
+      fundStore.selectedFundChain,
       fundAddress,
     );
   console.log(
@@ -913,7 +913,7 @@ const startFetchingFundProposals = async () => {
   } else {
     // Fetch all history.
     governanceProposalStore.resetProposals(
-      fundStore.fundChainId,
+      fundStore.selectedFundChain,
       fundStore.fundAddress,
     );
     console.log("fetch all blocks");
@@ -932,7 +932,7 @@ const handleDelegateSuccess = async () => {
 const isFetchingProposals = computed(() => {
   const actionStates = actionStateStore.getActionState("fetchGovernanceProposalsAction");
 
-  if(!actionStates) return false;
+  if (!actionStates) return false;
 
   const isLoadingState = actionStates.includes(ActionState.Loading);
   const hasNeverLoaded = !actionStates.includes(ActionState.Success) &&
@@ -944,7 +944,7 @@ const isFetchingProposals = computed(() => {
 const isFetchingDelegates = computed(() => {
   const actionStates = actionStateStore.getActionState("fetchDelegatesAction");
 
-  if(!actionStates) return false;
+  if (!actionStates) return false;
 
   const isLoadingState = actionStates.includes(ActionState.Loading);
   const hasNeverLoaded = !actionStates.includes(ActionState.Success) &&

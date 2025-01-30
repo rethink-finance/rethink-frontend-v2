@@ -1,9 +1,9 @@
-export interface IExcludeNAVDetailsHashes {
-  [chainId: string]: string[];
-}
+import { ChainId } from "~/store/web3/networksMap";
 
-export const excludeNAVDetailsHashes = {
-  "0x89": [
+export type IExcludeNAVDetailsHashes = Partial<Record<ChainId, string[]>>;
+
+export const excludeNAVDetailsHashes: IExcludeNAVDetailsHashes = {
+  [ChainId.POLYGON]: [
     "0xd87d9b63abe927264903466398cabf9e105ac2fae7c6dc76f822d8ef89e7012d",
     "0xe63fd752a9fdc61a6bb0ac72d9134f09f1f85778192fa6d10278bd9a09a425e9",
     "0x36e7ba53628d044345c9d4e0e9b917f5479d1d4a3e212a0e5b56493f67958020",
@@ -28,12 +28,11 @@ export const excludeNAVDetailsHashes = {
     "0x89af9028f446bd5dfa641ae943850706f94954a90276b37bec6d85c240b3fba2",
     "0xd35f068cd38e3889ea64c766e5f0bc2dc3115b277da66a8f45ae03a8b36bbb56",
   ],
-  "0xa4b1": [],
-  "0xfc": [],
-  "0x1": [],
-  // Base
-  "0x2105": [
+  [ChainId.ARBITRUM]: [],
+  // [ChainId.FRAXTAL]: [],
+  [ChainId.ETHEREUM]: [],
+  [ChainId.BASE]: [
     "0x4226e636db1dbaa1da860ce7df92d151aaea7f23934b94a21bc75d2c1d6233ee",
     "0x50a4f3bc878614729c8dc9365a4ad9ea717e089870d706459c85e1f8fb89ac94",
   ],
-} as IExcludeNAVDetailsHashes;
+};

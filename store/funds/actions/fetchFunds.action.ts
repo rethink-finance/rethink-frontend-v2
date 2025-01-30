@@ -1,6 +1,6 @@
 import { excludedFundAddresses } from "../config/excludedFundAddresses.config";
 import { useFundsStore } from "../funds.store";
-import { chainIds } from "~/store/web3/networksMap";
+import { type ChainId, chainIds } from "~/store/web3/networksMap";
 // You can see test funds by storing:
 // excludeTestFunds: false
 // to local storage.
@@ -9,7 +9,9 @@ export async function fetchFundsAction(): Promise<void> {
   const fundsStore = useFundsStore();
 
   // Function to process each chain asynchronously
-  async function processChain(chainId: string): Promise<void> {
+  async function processChain(chainId?: ChainId): Promise<void> {
+    if (!chainId) return;
+
     // Fetch the funds info arrays
     let fundsInfoArrays = fundsStore.chainFundsInfoArrays[chainId];
     // Only fetch if there are no funds fetched yet.

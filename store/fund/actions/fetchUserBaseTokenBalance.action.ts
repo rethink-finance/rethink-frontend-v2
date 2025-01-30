@@ -15,7 +15,7 @@ export const fetchUserBaseTokenBalanceAction = async (): Promise<any> => {
     return;
   }
   fundStore.fundUserData.baseTokenBalance = await web3Store.callWithRetry(
-    fundStore.fundChainId,
+    fundStore.selectedFundChain,
     () =>
       fundStore.fundBaseTokenContract.methods
         .balanceOf(fundStore.activeAccountAddress)
