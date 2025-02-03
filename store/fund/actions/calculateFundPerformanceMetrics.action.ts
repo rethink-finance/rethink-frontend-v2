@@ -13,6 +13,9 @@ export function calculateFundPerformanceMetricsAction(
     const fundNAVUpdates = fund.navUpdates;
     const fundLastNavUpdate = fundNAVUpdates[fundNAVUpdates?.length - 1];
     const fundLastNavUpdateExists = fundLastNavUpdate?.timestamp;
+    console.warn("METRICS title", fund.title)
+    console.warn("METRICS totalDepositBalance", fund.totalDepositBalance)
+    console.warn("METRICS last NAV update", fundLastNavUpdate)
 
     if (fund) {
       const baseTokenDecimals = fund.baseToken.decimals;
@@ -28,7 +31,6 @@ export function calculateFundPerformanceMetricsAction(
         ? fund.lastNAVUpdateTotalNAV
         : fund.totalDepositBalance;
       fund.cumulativeReturnPercent = cumulativeReturnPercent;
-      fund.navUpdates = fundNAVUpdates;
       fund.isNavUpdatesLoading = false;
       fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates, fund.totalDepositBalance);
     }
