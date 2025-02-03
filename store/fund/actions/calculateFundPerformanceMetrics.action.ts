@@ -13,9 +13,10 @@ export function calculateFundPerformanceMetricsAction(
     const fundNAVUpdates = fund.navUpdates;
     const fundLastNavUpdate = fundNAVUpdates[fundNAVUpdates?.length - 1];
     const fundLastNavUpdateExists = fundLastNavUpdate?.timestamp;
-    console.warn("METRICS title", fund.title)
-    console.warn("METRICS totalDepositBalance", fund.totalDepositBalance)
-    console.warn("METRICS last NAV update", fundLastNavUpdate)
+    console.debug("  [METRICS] title", fund.title)
+    console.debug("  [METRICS] totalDepositBalance", fund.totalDepositBalance)
+    console.debug("  [METRICS] fund.lastNAVUpdateTotalNAV", fund.lastNAVUpdateTotalNAV)
+    console.debug("  [METRICS] last NAV update", fundLastNavUpdate)
 
     if (fund) {
       const baseTokenDecimals = fund.baseToken.decimals;
