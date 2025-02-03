@@ -87,6 +87,10 @@ async function processFundNavData(
   );
 
   fundsStore.chainFundNAVUpdates[chainId][fundAddress] = navUpdates;
+  if (fundsStore.chainFunds?.[chainId]?.[fundIndex]) {
+    // Save NAV updates to the fund in store.
+    fundsStore.chainFunds[chainId][fundIndex].navUpdates = navUpdates;
+  }
   const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
   const fund = fundsStore.chainFunds[chainId]?.[fundIndex];
