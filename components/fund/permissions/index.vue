@@ -13,6 +13,7 @@
     <template v-else>
       <FundPermissionsMenuLeft
         class="permissions__menu_left"
+        :selected-target="selectedTarget"
         :role="selectedRole"
         @update:selected-target="setSelectedTarget"
       />
@@ -32,8 +33,8 @@
 </template>
 
 <script setup lang="ts">
-import type { Role, Target, TargetConditions } from "~/types/zodiac-roles/role";
 import type { ChainId } from "~/store/web3/networksMap";
+import type { Role, Target, TargetConditions } from "~/types/zodiac-roles/role";
 
 const props = defineProps({
   chainId: {
@@ -132,6 +133,13 @@ watch(
     border: 1px solid $color-border-dark;
     padding: 0.5rem;
     background-color: $color-hover;
+
+    &--selected {
+      background-color: $color-moonlight-light;
+      font-weight: bold;
+      /* Disable hover effect for active items */
+      pointer-events: none;
+    }
 
     &:hover {
       background-color: $color-moonlight-dark;
