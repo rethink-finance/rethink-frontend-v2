@@ -8,20 +8,7 @@ export function calculateFundsPerformanceMetricsAction(
   const fundStore = useFundStore();
   console.log("start calculateFundsPerformanceMetricsAction ", chainId);
 
-  try {
-    for (const fund of fundsStore.chainFunds[chainId]) {
-      try {
-        fundStore.calculateFundPerformanceMetrics(fund);
-      } catch (error) {
-        console.error(
-          "Error calculating fund performance metrics: ",
-          fund,
-          error,
-        );
-        fund.isNavUpdatesLoading = false;
-      }
-    }
-  } catch (error) {
-    console.error("Error fetching fund NAV updates: ", error);
+  for (const fund of fundsStore.chainFunds[chainId]) {
+    fundStore.calculateFundPerformanceMetrics(fund);
   }
 }

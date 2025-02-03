@@ -10,38 +10,34 @@ export function calculateFundPerformanceMetricsAction(
   }
 
   try {
-    try {
-      const fundNAVUpdates = fund.navUpdates;
-      const fundLastNavUpdate = fundNAVUpdates[fundNAVUpdates?.length - 1];
-      const fundLastNavUpdateExists = fundLastNavUpdate?.timestamp;
+    const fundNAVUpdates = fund.navUpdates;
+    const fundLastNavUpdate = fundNAVUpdates[fundNAVUpdates?.length - 1];
+    const fundLastNavUpdateExists = fundLastNavUpdate?.timestamp;
 
-      if (fund) {
-        const baseTokenDecimals = fund.baseToken.decimals;
-        const cumulativeReturnPercent = fundLastNavUpdateExists
-          ? calculateCumulativeReturnPercent(
-            fund.totalDepositBalance,
-            fund.lastNAVUpdateTotalNAV || 0n,
-            baseTokenDecimals,
-          )
-          : 0;
+    if (fund) {
+      const baseTokenDecimals = fund.baseToken.decimals;
+      const cumulativeReturnPercent = fundLastNavUpdateExists
+        ? calculateCumulativeReturnPercent(
+          fund.totalDepositBalance,
+          fund.lastNAVUpdateTotalNAV || 0n,
+          baseTokenDecimals,
+        )
+        : 0;
 
-        fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists
-          ? fund.lastNAVUpdateTotalNAV
-          : fund.totalDepositBalance;
-        fund.cumulativeReturnPercent = cumulativeReturnPercent;
-        fund.navUpdates = fundNAVUpdates;
-        fund.isNavUpdatesLoading = false;
-        fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates, fund.totalDepositBalance);
-      }
-    } catch (error) {
-      console.error(
-        "Error calculating fund performance metrics: ",
-        fund,
-        error,
-      );
+      fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists
+        ? fund.lastNAVUpdateTotalNAV
+        : fund.totalDepositBalance;
+      fund.cumulativeReturnPercent = cumulativeReturnPercent;
+      fund.navUpdates = fundNAVUpdates;
       fund.isNavUpdatesLoading = false;
+      fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates, fund.totalDepositBalance);
     }
   } catch (error) {
-    console.error("Error fetching fund NAV updates: ", error);
+    console.error(
+      "Error calculating fund performance metrics: ",
+      fund,
+      error,
+    );
+    fund.isNavUpdatesLoading = false;
   }
 }
