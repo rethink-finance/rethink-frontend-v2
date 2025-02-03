@@ -16,7 +16,7 @@ export async function fetchFundsMetaDataAction(
   console.log("process fund fetchFundsMetaDataAction fetchFundsMetaDataAction fetchFundsMetaDataAction ", chainId)
   const web3Store = useWeb3Store();
 
-  const funds: IFund[] = [];
+  const funds: IFund[] = reactive([]);
   const rethinkReaderContract =
     web3Store.chainContracts[chainId]?.rethinkReaderContract;
   if (!rethinkReaderContract) {
@@ -38,10 +38,9 @@ export async function fetchFundsMetaDataAction(
       const baseTokenDecimals = Number(fundMetaData.fundBaseTokenDecimals);
 
       const fundStartTime = fundMetaData.startTime;
-      //console.log("fundMetaData.updateTimes");
-      //console.log(fundMetaData.updateTimes);
+      //  console.log("fundMetaData.updateTimes");
       const lastNavUpdateTime = undefined;// = fundMetaData.updateTimes[fundMetaData.updateTimes.length-1];
-      const fund: IFund = {
+      const fund: IFund = reactive({
         chainId,
         chainName: fundNetwork.chainName,
         chainShort: fundNetwork.chainShort,
@@ -116,7 +115,7 @@ export async function fetchFundsMetaDataAction(
         // NAV Updates
         navUpdates: [] as INAVUpdate[],
         isNavUpdatesLoading: true,
-      };
+      });
 
       const metaDataJson = fundMetaData.fundMetadata;
       // Process metadata if available

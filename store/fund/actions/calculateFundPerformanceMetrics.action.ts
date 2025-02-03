@@ -1,15 +1,15 @@
-import { useFundStore } from "../fund.store";
+import type IFund from "~/types/fund";
 
 
-export async function calculateFundPerformanceMetricsAction(): Promise<any> {
-  const fundStore = useFundStore();
+export function calculateFundPerformanceMetricsAction(
+  fund: IFund | undefined,
+): any {
+  if (!fund) {
+    console.error("Error: this.fund is not available");
+    return;
+  }
 
   try {
-    if (!fundStore.fund) {
-      console.error("Error: this.fund is not available");
-      return;
-    }
-    const fund = fundStore.fund;
     try {
       const fundNAVUpdates = fund.navUpdates;
       const fundLastNavUpdate = fundNAVUpdates[fundNAVUpdates?.length - 1];
