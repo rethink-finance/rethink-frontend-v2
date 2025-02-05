@@ -69,12 +69,26 @@ const classesButton = (item: Item) => {
     .v-btn {
         color: $color-white !important;
         flex: 1;
+
+        &:deep(.v-btn__content) {
+          opacity: 0.35;
+        }
+
+        &:hover {
+          &:deep(.v-btn__content) {
+            opacity: 1;
+          }
+        }
+
         &.active {
             background-color: $color-surface;
 
             // remove hover overlay for active button
             &:deep(.v-btn__overlay) {
                 display: none;
+            }
+            &:deep(.v-btn__content) {
+              opacity: 1;
             }
         }
     }
