@@ -51,15 +51,34 @@ export const calculateFundPerformanceMetricsAction = async (
   }
 }
 
+// TODO: we should move this function to utils or somewhere else because it's reusable
+const CHAIN_ID_MAP = {
+  // Arbitrum uses L1 ETH as block time.
+  [ChainId.ARBITRUM]: ChainId.ETHEREUM,
+} as const;
+
+const getWeb3Instance = (chainId: ChainIdType) => {
+  const web3Store = useWeb3Store();
+
+  const mappedChainId =
+    CHAIN_ID_MAP[chainId as keyof typeof CHAIN_ID_MAP];
+
+  // ARB1 is mapped to ETH
+  if (mappedChainId) {
+    return web3Store.chainProviders[mappedChainId];
+  }
+
+  return web3Store.chainProviders[chainId];
+};
 
 
 const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavUpdate: any) => {
   if(fundLastNavUpdate?.timestamp) {
     const web3Store = useWeb3Store();
-    const chainProvider = web3Store.chainProviders[fund.chainId]
     // 1. get average block time for the chain
+    const web3Instance = getWeb3Instance(fund.chainId);
     const { initializeBlockTimeContext } = useBlockTime()
-    const context = await initializeBlockTimeContext(chainProvider)
+    const context = await initializeBlockTimeContext(web3Instance)
     const averageBlockTime = context?.averageBlockTime || 0;
 
     // 2. estimate the block number of the last NAV update timestamp
@@ -72,12 +91,6 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
       fund.address,
     );
 
-    // TODO: figure out why arbitrum chainId is not working with _totalDepositBal
-    // try to use different approach as a fallback if _totalDepositBal is not working
-    if(fund.chainId === ChainId.ARBITRUM) {
-      // const totalDepositBal = BigInt(await fundContract.methods._totalDepositBal().call() || 0);
-      return null;
-    }
 
     const totalDepositBal = BigInt(await fundContract.methods._totalDepositBal().call({}, lastNavUpdateBlockNumber) || 0);
     return totalDepositBal;
