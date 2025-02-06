@@ -1,6 +1,5 @@
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
-import type { ChainId as ChainIdType } from "~/store/web3/networksMap";
-import { ChainId } from "~/store/web3/networksMap";
+import { ChainId, type ChainId as ChainIdType } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
 
@@ -92,8 +91,13 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
     );
 
 
-    const totalDepositBal = BigInt(await fundContract.methods._totalDepositBal().call({}, lastNavUpdateBlockNumber) || 0);
-    return totalDepositBal;
+    try{
+      const totalDepositBal = BigInt(await fundContract.methods._totalDepositBal().call({}, lastNavUpdateBlockNumber) || 0);
+      return totalDepositBal;
+    } catch (e) {
+      console.error("Error getting total deposit balance at last NAV update", e);
+      return null;
+    }
   }
 
   return null;
@@ -101,7 +105,7 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
 
 
 // TODO: we might move this f-ijon to utils or somewhere else
-const getBlockByTimestamp = async (chainId: ChainIdType, timestamp: number, averageBlockTime: number) =>{
+const getBlockByTimestamp = async (chainId: ChainIdType, timestamp: number, averageBlockTime: number) => {
   try {
     const web3Store = useWeb3Store();
     const provider = web3Store.chainProviders[chainId]
@@ -120,57 +124,12 @@ const getBlockByTimestamp = async (chainId: ChainIdType, timestamp: number, aver
       )
     const latestTimestamp = Number(latestBlockData.timestamp);
 
-    let estimatedStartBlock = latestBlock - Math.floor((latestTimestamp - timestamp) / averageBlockTime);
+    const estimatedStartBlock = latestBlock - Math.floor((latestTimestamp - timestamp) / averageBlockTime);
 
     console.log("latestBlock: ", latestBlock);
     console.log("estimatedStartBlock: ", estimatedStartBlock);
 
-    estimatedStartBlock = Math.max(estimatedStartBlock, 0);
-    let low = estimatedStartBlock;
-    let high = latestBlock;
-
-    while (low < high) {
-      const mid = Math.floor((low + high) / 2);
-      const block =  await web3Store
-        .callWithRetry(
-          chainId,
-          async () =>
-            await provider.eth.getBlock(mid, false),
-        )
-
-      if (!block) break;
-
-      if (Number(block.timestamp) < timestamp) {
-        low = mid + 1;
-      } else {
-        high = mid;
-      }
-
-      console.log("low: ", low);
-      console.log("high: ", high);
-    }
-
-    const lowBlock =  await web3Store
-      .callWithRetry(
-        chainId,
-        async () =>
-          await provider.eth.getBlock(low),
-      )
-    const highBlock = low > 0 ?  await web3Store
-      .callWithRetry(
-        chainId,
-        async () =>
-          await provider.eth.getBlock(low - 1),
-      ) : null
-
-    if (
-      highBlock &&
-      Math.abs(Number(highBlock.timestamp) - timestamp) < Math.abs(Number(lowBlock.timestamp) - timestamp)
-    ) {
-      return highBlock.number;
-    }
-
-    return lowBlock.number;
+    return estimatedStartBlock;
   } catch (e) {
     console.error("Error getting block by timestamp", e);
     return null;
