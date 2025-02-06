@@ -1,17 +1,7 @@
 <template>
   <div class="page-permissions">
-    <UiMainCard
-      title="🛠️ We are working on displaying permissions within Rethink dApp. Until then please use Gnosis Guild frontend."
-    >
+    <UiMainCard>
       <div class="info_container">
-        <p class="info_container__text">
-          Having trouble understanding how to read permissions?
-          <a
-            class="info_container__link"
-            href="https://docs.rethink.finance/rethink.finance"
-            target="_blank"
-          >Learn more here</a>.
-        </p>
         <div class="info_container__buttons">
           <UiLinkExternalButton
             title="View OIV Permissions"
@@ -22,7 +12,24 @@
             Create Permissions Proposal
           </v-btn>
         </div>
+        <p class="info_container__text">
+          Having trouble understanding how to read permissions?
+          <a
+            class="info_container__link"
+            href="https://docs.rethink.finance/rethink.finance"
+            target="_blank"
+          >Learn more here</a>.
+        </p>
       </div>
+
+      <!-- Permissions loaded from zodiac roles modifier -->
+      <!-- TODO here it flickers as we first have to fetch fundData and then roleModAddress, prevent flickering -->
+      <FundPermissions
+        class="mt-6"
+        :chain-id="fund.chainId"
+        :roles="roles"
+        :is-loading="isFetchingPermissions"
+      />
     </UiMainCard>
   </div>
 </template>
@@ -33,38 +40,65 @@ import type IFund from "~/types/fund";
 // components
 import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
 import { useFundStore } from "~/store/fund/fund.store";
+import type { Role } from "~/types/zodiac-roles/role";
+import { useActionStateStore } from "~/store/actionState.store";
 
 const router = useRouter();
 const fundStore = useFundStore();
+const actionStateStore = useActionStateStore();
 
 const fund = useAttrs().fund as IFund;
 const { selectedFundSlug } = storeToRefs(useFundStore());
 
-
+const roles = ref<Role[]>([]);
 const navigateToGnosis = ref("");
 
 const updateGnosisLink = async () => {
-  if (!fund) {
+  if (!fund?.address) {
+    roles.value = [];
     navigateToGnosis.value = "";
     return;
   }
 
   try {
-    const roleModAddress = await fundStore.getRoleModAddress();
+    const roleModAddress = await fundStore.getRoleModAddress(fund.address);
     navigateToGnosis.value = getGnosisPermissionsUrl(fund.chainShort, roleModAddress);
+    await fetchPermissions(roleModAddress);
   } catch (error) {
     console.error(error);
     navigateToGnosis.value = "";
   }
 };
 
+const isFetchingPermissions = computed(() =>
+  actionStateStore.isActionStateLoading("fetchFundPermissionsAction"),
+);
+
 watch(
   () => [fund.chainShort, fundStore.getRoleModAddress],
   () => {
     updateGnosisLink();
+
+    // TODO try using the zodiac-roles-sdk  fetchRolesMod (does it also work for roles v1?)
+    // import { fetchRolesMod } from "zodiac-roles-sdk"
+    // console.warn("USE ZODIAC SDK")
+    // const address = "0xBd1099dFD3c11b65FB4BB19A350da2f5B61Efb0d";
+    // const mod = {
+    //   chainId: 1,
+    //   chainPrefix: "eth",
+    //   address: address.toLowerCase() as `0x${string}`,
+    // }
+    // const data = await fetchRolesMod(mod as any)
+    // console.warn("FETCHED SDK ROLES", data);
+
   },
   { immediate: true },
 );
+
+const fetchPermissions = async (rolesModAddress: string) => {
+  roles.value = await fundStore.fetchFundPermissions(fund.chainId, rolesModAddress);
+  console.log("Roles", roles.value);
+}
 
 const navigateToCreatePermissions = () => {
   router.push(
@@ -78,7 +112,7 @@ const navigateToCreatePermissions = () => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 15px;
+  gap: 1rem;
 
   &__text {
     font-size: $text-sm;

@@ -13,6 +13,7 @@ import {
   encodedCollectPerformanceFeesAbiJSON,
 } from "~/composables/nav/encodedCollectFees";
 import type IProposalData from "~/types/proposal/proposalData";
+import type { ChainId } from "~/store/web3/networksMap";
 
 const updateNavABI = GovernableFund.abi.find(
   (func: any) => func.name === "updateNav" && func.type === "function",
@@ -166,7 +167,7 @@ export const getNavMethodsProposalData = (
 export const getAllowManagerToUpdateNavProposalData = (
   encodedNavUpdateEntries: any,
   fundAddress: string,
-  fundChainId: string,
+  fundChainId: ChainId,
   roleModAddress: string,
 ): IProposalData => {
   const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
@@ -196,7 +197,7 @@ export const getAllowManagerToUpdateNavProposalData = (
 
 export const getAllowManagerToUpdateNavPermissionsData = (
   fundAddress: string,
-  fundChainId: string,
+  fundChainId: ChainId,
   roleModAddress: string,
 ): IProposalData => {
   const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);

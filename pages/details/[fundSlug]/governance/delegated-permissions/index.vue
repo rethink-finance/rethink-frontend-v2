@@ -101,7 +101,7 @@ const submitProposal = async () => {
   )?.steps[0];
   if (!details || !transactions?.length) return;
 
-  const roleModAddress = await fundStore.getRoleModAddress();
+  const roleModAddress = await fundStore.getRoleModAddress(fundStore.fundAddress);
 
   console.log(toRaw(transactions));
   console.log(toRaw(details));

@@ -6,12 +6,13 @@ import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMet
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type INAVMethod from "~/types/nav_method";
+import { type ChainId } from "~/store/web3/networksMap";
 
 // Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
 const excludeNAVDetails: boolean = true;
 
 export async function fetchFundsNavMethodsAction(
-  chainId: string,
+  chainId: ChainId,
   fundsInfoArrays: any[],
   storeAllMethods: boolean = true,
 ): Promise<any> {
@@ -62,7 +63,7 @@ export async function fetchFundsNavMethodsAction(
 }
 
 async function processFundNavData(
-  chainId: string, // the type of FundNavData
+  chainId: ChainId, // the type of FundNavData
   fundNAVData: any, // the type of FundNavData
   fundAddress: string,
   fundIndex: number,
@@ -117,7 +118,7 @@ async function processFundNavData(
         if (
           excludeNAVDetails &&
           parsedNavMethod.detailsHash &&
-          excludeNAVDetailsHashes[chainId].includes(
+          excludeNAVDetailsHashes[chainId]?.includes(
             parsedNavMethod.detailsHash,
           )
         ) {

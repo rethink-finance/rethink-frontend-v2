@@ -77,23 +77,23 @@
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import { ChainId } from "~/store/web3/networksMap";
 
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
-const web3Store = useWeb3Store();
 const actionStateStore = useActionStateStore();
 const route = useRoute();
-const router = useRouter();
 // fund address is always in the third position of the route
 // e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
-const [fundChainId, fundSymbol, fundAddress] = route.path
-  .split("/")[2]
-  .split("-");
+const parts = route.path.split("/")[2]?.split("-") ?? [];
+
+const fundChainId: ChainId = (parts[0] as ChainId);
+const fundSymbol: string = parts[1] ?? "";
+const fundAddress: string = parts[2] ?? "";
 
 onMounted(() => {
   fetchFund();
@@ -113,7 +113,7 @@ const setBreadcrumbItems = (items: BreadcrumbItem[]) => {
 };
 
 const fetchFund = async () => {
-  if (!fundAddress) {
+  if (!fundAddress || !fundChainId) {
     console.error("No fund address provided in the route.");
     return;
   }

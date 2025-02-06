@@ -178,6 +178,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    isExpandable: {
+      type: Boolean,
+      default: true,
+    },
   },
   data() {
     const expandedList = [];
@@ -194,6 +198,7 @@ export default defineComponent({
       return !(!this.body && !this.$slots.body);
     },
     isReadOnly(): boolean {
+      if (!this.isExpandable) return true;
       return !this.hasBody;
     },
   },
@@ -235,9 +240,9 @@ export default defineComponent({
   }
   .v-expansion-panel-title {
     overflow: hidden;
-    padding: 10px 8px;
-    height: 56px;
-    font-size: 14px;
+    padding: 0.75rem 0.5rem;
+    height: 3.5rem;
+    font-size: $text-sm;
   }
 
   &__body {
@@ -265,7 +270,7 @@ export default defineComponent({
   &__column {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem;
     min-width: 7rem;
     max-width: 100%;
     margin-top: auto;
@@ -278,7 +283,7 @@ export default defineComponent({
 
     &.is-last {
       margin-left: auto;
-      padding-left: 25px;
+      padding-left: 1.5rem;
       border-left: 1px solid $color-gray-transparent;
     }
   }
@@ -288,8 +293,8 @@ export default defineComponent({
   }
 
   &__action_icon{
-    height: 24px;
-    width: 24px;
+    height: 1.5rem;
+    width: 1.5rem;
   }
 }
 </style>

@@ -335,7 +335,7 @@ const submitRawTXN = async () => {
     console.log("from:", fundStore.activeAccountAddress);
     console.log("value:", parseInt(submitRawTXNEntry.amountValue));
 
-    const web3Provider = web3Store.chainProviders[fundStore.fundChainId];
+    const web3Provider = web3Store.chainProviders[fundStore.selectedFundChain];
     await web3Provider.eth.sendTransaction({
       to: submitRawTXNEntry.contractAddress,
       data: submitRawTXNEntry.txData,
@@ -411,7 +411,7 @@ const fetchTokenDetails = async () => {
 
   try {
     const tokenContract = web3Store.getCustomContract(
-      fundStore.fundChainId,
+      fundStore.selectedFundChain,
       ERC20,
       transferEntry.inputTokenAddress,
     );

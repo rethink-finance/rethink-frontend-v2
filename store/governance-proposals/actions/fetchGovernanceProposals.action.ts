@@ -22,7 +22,7 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
     governanceProposalStore.getWeb3InstanceByChainId(),
   );
 
-  const roleModAddress = await fundStore.getRoleModAddress(); // TODO replace with fetchGovernableFund
+  const roleModAddress = await fundStore.getRoleModAddress(fund.address); // TODO replace with fetchGovernableFund
   console.log("roleModAddress", roleModAddress);
 
   const quorumDenominator = await web3Store.callWithRetry(

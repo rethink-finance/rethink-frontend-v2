@@ -260,6 +260,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
 import { feeFieldKeys, type IWhitelist } from "~/types/enums/fund_setting_proposal";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
+import type { ChainId } from "~/store/web3/networksMap";
 import { InputType } from "~/types/enums/input_type";
 import {
   OnboardingFieldsMap,
@@ -301,7 +302,7 @@ let nextRouteResolve: Function | null = null;
 const whitelistedAddresses = ref<IWhitelist[]>([]);
 const isCheckingIfFundInitCacheExists = ref(false);
 const isWhitelistedDeposits = ref(false);
-const selectedChainId = ref(networkChoices[0].value);
+const selectedChainId = ref<ChainId>(networkChoices[0].value);
 
 const fundSettings = computed<IFundSettings>(() => fundInitCache?.value?.fundSettings || {} as IFundSettings);
 const fundMetadata = computed(() => fundInitCache?.value?.fundMetadata || {});
@@ -378,9 +379,10 @@ const fetchFundInitCache = async () => {
 
 
 const clearCacheMessage = computed(() => {
-  if(networksMap[selectedChainId.value]?.chainName === undefined) return "Are you sure you want to clear the cache for this chain?";
+  const selectedChainName = networksMap[selectedChainId.value]?.chainName;
+  if (!selectedChainName) return "Are you sure you want to clear the cache for this chain?";
 
-  return `Are you sure you want to clear the cache for <strong>${networksMap[selectedChainId.value]?.chainName}</strong>?`
+  return `Are you sure you want to clear the cache for <strong>${selectedChainName}</strong>?`
 });
 
 const isLoadingFetchFundCache = computed(() =>

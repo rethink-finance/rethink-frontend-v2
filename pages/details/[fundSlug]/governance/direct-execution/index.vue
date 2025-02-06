@@ -135,7 +135,7 @@ const submitProposal = async () => {
   console.log(toRaw(transactions));
   console.log(toRaw(details));
 
-  const to = web3Store.safeMultiSendCallOnlyToAddress(fundStore.fundChainId);
+  const to = web3Store.safeMultiSendCallOnlyToAddress(fundStore.selectedFundChain);
   console.log("to address: ", to);
   const multisendAbiJSON = SafeMultiSendCallOnly.abi[0];
   const processedTxs = [];

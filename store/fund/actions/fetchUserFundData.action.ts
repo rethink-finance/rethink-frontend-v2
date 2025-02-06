@@ -1,8 +1,9 @@
 import { useFundStore } from "../fund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { ChainId } from "~/store/web3/networksMap";
 
 export const fetchUserFundDataAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
 ): Promise<any> => {
   const fundStore = useFundStore();

@@ -10,9 +10,10 @@ import type INAVMethod from "~/types/nav_method";
 import { PositionTypeToNAVCacheMethod } from "~/types/enums/position_type";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { ChainId } from "~/store/web3/networksMap";
 
 export const parseFundNAVUpdatesAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundNAVData: IFundNavData,
   fundAddress: string,
 ) => {
@@ -73,7 +74,7 @@ export const parseFundNAVUpdatesAction = async (
 };
 
 const updateNavMethodPastNavValue = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
   navMethodIndex: number,
   navMethod: INAVMethod,

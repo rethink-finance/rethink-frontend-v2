@@ -17,7 +17,7 @@ export const fetchUserFundDelegateAddressAction = async (): Promise<any> => {
   console.warn("FETCH userFundDelegateAddress");
 
   fundStore.fundUserData.fundDelegateAddress = await web3Store.callWithRetry(
-    fundStore.fundChainId,
+    fundStore.selectedFundChain,
     () =>
       fundStore.fundGovernanceTokenContract.methods
         .delegates(fundStore.activeAccountAddress)

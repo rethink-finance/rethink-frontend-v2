@@ -28,24 +28,25 @@ import { NAVCalculator } from "~/assets/contracts/NAVCalculator";
 import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import { useAccountStore } from "~/store/account/account.store";
-import { fetchFundSettingsAction } from "~/store/fund/actions/fetchFundSettings.action";
 import { useFundsStore } from "~/store/funds/funds.store";
-import { networksMap } from "~/store/web3/networksMap";
+import { ChainId, networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFund from "~/types/fund";
-import type IFundSettings from "~/types/fund_settings";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
+import { fetchFundSettingsAction } from "~/store/fund/actions/fetchFundSettings.action";
+import type IFundSettings from "~/types/fund_settings";
+import { fetchFundPermissionsAction } from "~/store/fund/actions/fetchFundPermissions.action";
 
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
-  chainFunds: Record<string, Record<string, IFund | undefined>>;
+  chainFunds: Record<ChainId, Record<string, IFund | undefined>>;
   fundUserData: IFundUserData;
   userRedemptionRequest?: IFundTransactionRequest;
-  selectedFundChain: string;
+  selectedFundChain: ChainId;
   selectedFundAddress: string;
   // Fund NAV methods that user can manage and change, delete, add...
   fundManagedNAVMethods: INAVMethod[];
@@ -74,7 +75,7 @@ export const useFundStore = defineStore({
       Object.keys(networksMap).map((chainId) => [chainId, {}]),
     ) as Record<string, Record<string, IFund | undefined>>,
     fundUserData: structuredClone(DEFAULT_FUND_USER_DATA),
-    selectedFundChain: "",
+    selectedFundChain: ChainId.ETHEREUM,
     selectedFundAddress: "",
     fundManagedNAVMethods: [],
     fundInitialNAVMethods: [],
@@ -97,11 +98,8 @@ export const useFundStore = defineStore({
     toastStore(): any {
       return useToastStore();
     },
-    fundChainId(): string {
-      return this.fund?.chainId ?? "";
-    },
     fundAddress(): string {
-      return this.fund?.address ?? "";
+      return this.fund?.address ?? this.selectedFundAddress ?? "";
     },
     fund(): IFund | undefined {
       return this.chainFunds?.[this.selectedFundChain]?.[this.selectedFundAddress];
@@ -221,7 +219,7 @@ export const useFundStore = defineStore({
     },
     selectedFundSlug(): string {
       return (
-        (this.fundChainId || "") +
+        (this.selectedFundChain || "") +
         "-" +
         (this.fund?.fundToken.symbol || "") +
         "-" +
@@ -347,7 +345,7 @@ export const useFundStore = defineStore({
         (
           value: any,
           shouldCommify: boolean = true,
-          shouldroundToSignificantDecimals: boolean = false,
+          shouldRoundToSignificantDecimals: boolean = false,
           symbol?: string,
           decimals?: number,
         ): string => {
@@ -365,11 +363,11 @@ export const useFundStore = defineStore({
               value,
               baseDecimals,
               shouldCommify,
-              shouldroundToSignificantDecimals,
+              shouldRoundToSignificantDecimals,
             )
             : "0";
 
-          if(!baseSymbol) {
+          if (!baseSymbol) {
             return valueFormatted;
           }
 
@@ -380,7 +378,7 @@ export const useFundStore = defineStore({
         (
           value: any,
           shouldCommify: boolean = true,
-          shouldroundToSignificantDecimals: boolean = false,
+          shouldRoundToSignificantDecimals: boolean = false,
         ): string => {
           const fund = state.chainFunds?.[state.selectedFundChain]?.[state.selectedFundAddress];
           const fundSymbol = fund?.fundToken.symbol;
@@ -394,7 +392,7 @@ export const useFundStore = defineStore({
               value,
               fundDecimals,
               shouldCommify,
-              shouldroundToSignificantDecimals,
+              shouldRoundToSignificantDecimals,
             )
             : "0";
           return valueFormatted + " " + fundSymbol;
@@ -404,51 +402,50 @@ export const useFundStore = defineStore({
      */
     navCalculatorContract(): any {
       return this.web3Store.getCustomContract(
-        this.fundChainId,
+        this.selectedFundChain,
         NAVCalculator.abi,
         this.web3Store.NAVCalculatorBeaconProxyAddress,
       );
     },
     fundContract(): any {
       return this.web3Store.getCustomContract(
-        this.fundChainId,
+        this.selectedFundChain,
         GovernableFund.abi,
         this.selectedFundAddress,
       );
     },
     fundSafeContract(): any {
       return this.web3Store.getCustomContract(
-        this.fundChainId,
+        this.selectedFundChain,
         GnosisSafeL2JSON.abi,
         this.fund?.safeAddress,
       );
     },
     fundGovernorContract(): any {
       return this.web3Store.getCustomContract(
-        this.fundChainId,
+        this.selectedFundChain,
         RethinkFundGovernor.abi,
         this.fund?.governorAddress,
       );
     },
     fundBaseTokenContract(): any {
       return this.web3Store.getCustomContract(
-        this.fundChainId,
+        this.selectedFundChain,
         ERC20,
         this.fund?.baseToken?.address,
       );
     },
     fundGovernanceTokenContract(): any {
       return this.web3Store.getCustomContract(
-        this.fundChainId,
+        this.selectedFundChain,
         ERC20Votes.abi,
         this.fund?.governanceToken.address,
       );
     },
   },
   actions: {
-    resetFundData(fundChainId: string, fundAddress: string) {
+    resetFundData(fundChainId: ChainId, fundAddress: string) {
       this.chainFunds[fundChainId][fundAddress] = undefined;
-
       this.fundUserData.depositRequest = undefined;
       this.fundUserData.redemptionRequest = undefined;
       this.fundManagedNAVMethods = [];
@@ -468,12 +465,12 @@ export const useFundStore = defineStore({
      * @dev: would be better to separate fundSettings from (startTime & metadata), as sometimes we already
      *   have the fund settings from the discovery page.
      */
-    fetchFundData(fundChainId: string, fundAddress: string): Promise<void> {
+    fetchFundData(fundChainId: ChainId, fundAddress: string): Promise<void> {
       return useActionState("fetchFundDataAction", () =>
         fetchFundDataAction(fundChainId, fundAddress),
       );
     },
-    fetchFundSettings(fundChainId: string, fundAddress: string): Promise<IFundSettings> {
+    fetchFundSettings(fundChainId: ChainId, fundAddress: string): Promise<IFundSettings> {
       return useActionState("fetchFundSettingsAction", () =>
         fetchFundSettingsAction(fundChainId, fundAddress),
       );
@@ -483,9 +480,14 @@ export const useFundStore = defineStore({
         fetchFundNAVDataAction(),
       );
     },
-    fetchUserFundData(chainId: string, fundAddress: string) {
+    fetchUserFundData(chainId: ChainId, fundAddress: string) {
       return useActionState("fetchUserFundDataAction", () =>
         fetchUserFundDataAction(chainId, fundAddress),
+      );
+    },
+    fetchFundPermissions(chainId: ChainId, rolesModAddress: string) {
+      return useActionState("fetchFundPermissionsAction", () =>
+        fetchFundPermissionsAction(chainId, rolesModAddress),
       );
     },
     /**
@@ -494,7 +496,7 @@ export const useFundStore = defineStore({
      * - fundMetadata
      */
     fetchFundMetaData(
-      fundChainId: string,
+      fundChainId: ChainId,
       fundAddress: string,
     ): Promise<IFund> {
       return useActionState("fetchFundMetaDataAction", () =>
@@ -509,7 +511,7 @@ export const useFundStore = defineStore({
       this.fund.pendingRedemptionBalanceLoading = true;
 
       this.web3Store.callWithRetry(
-        this.fundChainId,
+        this.selectedFundChain,
         () => this.fundContract.methods.getCurrentPendingDepositBal().call(),
       )
         .then((value: any) => {
@@ -532,7 +534,7 @@ export const useFundStore = defineStore({
           }
         });
       this.web3Store.callWithRetry(
-        this.fundChainId,
+        this.selectedFundChain,
         () => this.fundContract.methods.getCurrentPendingWithdrawalBal().call(),
       )
         .then((value: any) => {
@@ -557,11 +559,11 @@ export const useFundStore = defineStore({
     },
     simulateCurrentNAV(): Promise<void> {
       return useActionState("fetchSimulateCurrentNAVAction", () =>
-        fetchSimulateCurrentNAVAction(this.fundChainId, this.fundAddress),
+        fetchSimulateCurrentNAVAction(this.selectedFundChain, this.fundAddress),
       );
     },
     fetchSimulatedNAVMethodValue(
-      fundChainId: string,
+      fundChainId: ChainId,
       fundAddress: string,
       safeAddress: string,
       baseDecimals: number,
@@ -582,7 +584,7 @@ export const useFundStore = defineStore({
       );
     },
     parseFundNAVUpdates(
-      chainId: string,
+      chainId: ChainId,
       fundNAVData: any,
       fundAddress: string,
     ): Promise<INAVUpdate[]> {
@@ -639,7 +641,7 @@ export const useFundStore = defineStore({
       let balanceWei = BigInt("0");
       try {
         balanceWei = await this.web3Store.callWithRetry(
-          this.fundChainId,
+          this.selectedFundChain,
           () => this.fundBaseTokenContract.methods
             .balanceOf(this.fund?.address)
             .call(),
@@ -655,11 +657,11 @@ export const useFundStore = defineStore({
       this.fund.fundContractBaseTokenBalance = balanceWei;
       this.fund.fundContractBaseTokenBalanceLoading = false;
     },
-    async getRoleModAddress(): Promise<string> {
-      if (!this.fund?.address) return "";
+    async getRoleModAddress(fundAddress: string): Promise<string> {
+      if (!fundAddress) return "";
 
       // If we have already fetched the role mod address for the current fund, just return it.
-      let roleModAddress = this.fundRoleModAddress[this.fund.address ?? ""];
+      let roleModAddress = this.fundRoleModAddress[fundAddress];
       if (roleModAddress) {
         return roleModAddress;
       }
@@ -673,14 +675,14 @@ export const useFundStore = defineStore({
       )
        */
       const safeModules = await this.web3Store.callWithRetry(
-        this.fundChainId,
+        this.selectedFundChain,
         () =>
           this.fundSafeContract.methods
             .getModulesPaginated(startAddress, 10)
             .call(),
       );
       roleModAddress = safeModules[0][1];
-      this.fundRoleModAddress[this.fund?.address ?? ""] = roleModAddress;
+      this.fundRoleModAddress[fundAddress] = roleModAddress;
       return roleModAddress;
     },
     postUpdateNAV(): Promise<any> {

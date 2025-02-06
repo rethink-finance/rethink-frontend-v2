@@ -49,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { networks } from "~/store/web3/networksMap";
+import { type ChainId, networks } from "~/store/web3/networksMap";
 
 const props = defineProps({
   modelValue: {
@@ -82,7 +82,7 @@ const selectedChainId = computed({
   },
 });
 
-const changeSelectedChainId = (chainId: string) => {
+const changeSelectedChainId = (chainId: ChainId) => {
   selectedChainId.value = chainId;
   emit("selected-chain-changed", chainId);
   isSelectInputActive.value = false;
@@ -124,7 +124,7 @@ const changeSelectedChainId = (chainId: string) => {
   }
 
   &--active {
-    background-color: $color-border-light;
+    background-color: $color-border-dark;
   }
 
   &__icon{

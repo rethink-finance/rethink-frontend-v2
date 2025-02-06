@@ -64,12 +64,13 @@ import type INAVMethod from "~/types/nav_method";
 import { PositionType } from "~/types/enums/position_type";
 import { ActionState } from "~/types/enums/action_state";
 import { useActionStateStore } from "~/store/actionState.store";
+import type { ChainId } from "~/store/web3/networksMap";
 
 const emit = defineEmits(["methods-added"]);
 
 const props = defineProps({
   chainId: {
-    type: String,
+    type: String as PropType<ChainId>,
     required: true,
   },
   fundAddress: {
