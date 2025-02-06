@@ -4,22 +4,12 @@
       <div class="card_header__title subtitle_white">
         Manage Deposits
       </div>
-      <div class="fund_settlement__buttons">
-        <v-btn
-          :class="getDepositRedeemButtonClass('deposit')"
-          variant="outlined"
-          @click="selectActionButton('deposit')"
-        >
-          Deposit
-        </v-btn>
-        <v-btn
-          :class="getDepositRedeemButtonClass('redeem')"
-          variant="outlined"
-          @click="selectActionButton('redeem')"
-        >
-          Redeem
-        </v-btn>
-      </div>
+      <UiButtonsSwitch
+        v-model="selectedActionButtonValue"
+        :items="selectItems"
+        class="fund_settlement__buttons"
+        @update:model-value="selectActionButton"
+      />
     </div>
     <div class="fund_settlement__card_boxes">
       <div v-if="selectedActionButtonValue" class="card_box">
@@ -54,6 +44,16 @@ export default {
     return {
       selectedActionButtonValue: "deposit",
       isDelegateDialogOpen: false,
+      selectItems: [
+        {
+          key: "deposit",
+          label: "Deposit",
+        },
+        {
+          key: "redeem",
+          label: "Redeem",
+        },
+      ],
     };
   },
   computed: {
@@ -67,16 +67,6 @@ export default {
   methods: {
     selectActionButton(value: string) {
       this.selectedActionButtonValue = value;
-    },
-    getDepositRedeemButtonClass(buttonType: string) {
-      // Check if this.selectedActionButtonValue is falsy and return "" if so
-      if (!this.selectedActionButtonValue) return "";
-
-      // Return "button-active" if buttonType matches this.selectedActionButtonValue,
-      // otherwise return "button-inactive"
-      return buttonType === this.selectedActionButtonValue
-        ? "button-active"
-        : "button-inactive";
     },
     openDelegateDialog() {
       console.log("openDelegateDialog");
@@ -95,21 +85,11 @@ export default {
 .fund_settlement {
   overflow: auto;
   &__buttons {
-    display: flex;
-    gap: 1rem;
-    margin: auto 0;
-  }
-  // TODO: this should be in the base classes, generalized for all buttons like this.
-  button {
-    color: $color-white !important;
-    border-color: $color-steel-blue !important;
-    &.button-active,
-    &.button-active:hover {
-      background: unset !important;
-      color: $color-white !important;
-    }
-    &.button-inactive {
-      opacity: 0.32;
+    width: 100%;
+
+    @include sm {
+      width: 80%;
+      margin-right: 5px;
     }
   }
   &__card_boxes {
@@ -127,9 +107,12 @@ export default {
 
     &__title {
       margin-bottom: 0.75rem;
+      width: 100%;
+      text-align: center;
 
       @include sm {
         margin-bottom: 0;
+        width: 20%;
       }
     }
   }

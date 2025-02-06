@@ -14,7 +14,7 @@ export const fetchFundDataAction = async (
     await fundStore.fetchFundMetaData(fundChainId, fundAddress);
     await fundStore.fetchFundNAVData();
 
-    fundStore.calculateFundPerformanceMetrics();
+    fundStore.calculateFundPerformanceMetrics(fundStore.fund);
     fundStore.fetchUserFundData(fundChainId, fundAddress);
 
     fundStore.fetchFundPendingDepositRedemptionBalance();

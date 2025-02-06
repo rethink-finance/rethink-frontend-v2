@@ -59,7 +59,7 @@ export const parseFundNAVUpdatesAction = async (
   // Only get past NAV update values for all methods for the last NAV update.
   const lastNavUpdateNavMethods =
     navUpdates[navUpdates.length - 1]?.entries ?? [];
-  console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
+  // console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
 
   for (let i= 0; i< lastNavUpdateNavMethods.length; i++){
     await updateNavMethodPastNavValue(
@@ -69,18 +69,6 @@ export const parseFundNAVUpdatesAction = async (
       lastNavUpdateNavMethods[i],
     );
   }
-
-
-  /*
-  lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
-    updateNavMethodPastNavValue(
-      fundChainId,
-      fundAddress,
-      navMethodIndex,
-      navMethod,
-    );
-  });
-  */
 
   return navUpdates;
 };

@@ -174,7 +174,7 @@ export const trimTrailingSlash = (str: string) => {
  */
 export const calculateCumulativeReturnPercent = (
   totalDepositBal: bigint,
-  totalNAV:bigint,
+  totalNAV: bigint,
   baseTokenDecimals: number,
 ): number | undefined => {
   try{

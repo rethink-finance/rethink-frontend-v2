@@ -77,10 +77,6 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     JSON.stringify(fundStore.fundLastNAVUpdateMethods, stringifyBigInt),
     parseBigInt,
   );
-  console.log(
-    "fundManagedNAVMethods: ",
-    toRaw(fundStore.fundManagedNAVMethods),
-  );
 
   // Merge user's local storage NAV method changes with the last NAV update methods.
   fundStore.fundManagedNAVMethods = mergeNAVMethodsFromLocalStorage(
