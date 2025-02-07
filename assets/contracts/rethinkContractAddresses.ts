@@ -47,7 +47,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     "0x66e9d": "",
   },
   "NAVExecutorBeaconProxy": {
-    "0x1":"0x49a2Ec2De6CbdB3282c5BdEc3b6ceb0157d84A47",
+    "0x1":"0x6Bcbc7959CE79b8F27efe1EAe504f98CBe2647A8",
     "0x5":"",
     "0x2a":"",
     "0x89":"0x540f022CD860c65FD4DF1969553263014C862bbd",
