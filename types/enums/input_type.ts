@@ -5,7 +5,35 @@ export enum InputType {
   Number = "number",
   Select = "select",
   Image = "image",
+  Period = "period",
+  Date = "date",
 }
+
+export enum PeriodUnits {
+  Seconds = "seconds",
+  Minutes = "minutes",
+  Hours = "hours",
+  Days = "days",
+  Weeks = "weeks",
+}
+
+type TimeInSecondsMap = Record<PeriodUnits, number>;
+
+
+export const TimeInSeconds: TimeInSecondsMap = {
+  [PeriodUnits.Seconds]: 1,
+  [PeriodUnits.Minutes]: 60,
+  [PeriodUnits.Hours]: 3600,
+  [PeriodUnits.Days]: 86400,
+  [PeriodUnits.Weeks]: 604800,
+};
+export const periodChoices = [
+  { value: PeriodUnits.Seconds, title: "Seconds" },
+  { value: PeriodUnits.Minutes, title: "Minutes" },
+  { value: PeriodUnits.Hours, title: "Hours" },
+  { value: PeriodUnits.Days, title: "Days" },
+  { value: PeriodUnits.Weeks, title: "Weeks" },
+]
 
 export const defaultInputTypeValue: Record<InputType, any> = {
   [InputType.Text]: "",
@@ -16,6 +44,8 @@ export const defaultInputTypeValue: Record<InputType, any> = {
   // wherever we will need them.
   [InputType.Select]: 0,
   [InputType.Image]: "",
+  [InputType.Period]: 0,
+  [InputType.Date]: "",
 }
 
 export interface IField {
@@ -36,6 +66,7 @@ export interface IField {
   defaultValueInfo?: string;
   isFieldByUser?: boolean;
   fields?: IField[];
+  groupName?: string;
   title?: string;
   value?: string | boolean;
   choices?: { value: number | string | boolean; title: string }[],
@@ -44,5 +75,6 @@ export interface IField {
 export interface IFieldGroup {
   isToggleable: boolean;
   isToggleOn: boolean;
+  groupName?: string;
   fields: IField[];
 }

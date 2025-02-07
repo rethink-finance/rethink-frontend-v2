@@ -17,7 +17,6 @@ $color-table-row: #162039;
 $color-hover: #1a2338;
 $color-badge-navy: #171e30;
 $color-border-dark: #242c40;
-$color-border-light: #252c3d;
 $color-toast: #242e45;
 $color-moonlight-dark: #293041;
 $color-moonlight: rgba(31, 95, 255, 0.16);
@@ -157,20 +156,20 @@ $default-border-properties: (
     // offset the scrollbar to the left
     padding-right: $offset;
     margin-right: -$offset;
-    
+
     /* Custom scrollbar styles */
     &::-webkit-scrollbar {
-      width: 4px; 
+      width: 4px;
       height: 4px;
     }
     &::-webkit-scrollbar-track {
       background: $color-subtitle;
-      border-radius: 16px; 
+      border-radius: 16px;
     }
 
     &::-webkit-scrollbar-thumb {
       background: $color-primary;
-      border-radius: 16px; 
+      border-radius: 16px;
     }
 
     &::-webkit-scrollbar-thumb:hover {

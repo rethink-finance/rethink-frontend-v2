@@ -30,7 +30,6 @@
 </template>
 <script lang="ts">
 import { ethers } from "ethers";
-import type { PropType } from "vue";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";

@@ -132,7 +132,7 @@
               :value="stepIndex + 1"
             >
               <div
-                v-if="item.key === OnboardingStep.Chain"
+                v-if="item.key === OnboardingStep.Chain && accountStore.isConnected"
                 class="d-flex justify-center mb-6"
               >
                 <UiSelectChainButton
@@ -141,18 +141,33 @@
                   label-center
                 />
               </div>
+              <div
+                v-else-if="item.key === OnboardingStep.Chain && !accountStore.isConnected"
+                class="connect_wallet"
+              >
+                In order to create an OIV, you need to connect your wallet.
+
+                <v-btn
+                  class="bg-primary text-secondary"
+                  @click="accountStore.connectWallet()"
+                >
+                  Connect Wallet
+                </v-btn>
+              </div>
+
               <OnboardingInfoFIelds
                 v-if="item.fields"
                 :fields="item.fields"
                 :is-fund-initialized="isFundInitialized"
                 :step="step"
-                @delete-row="deleteCustomFieldRow"
+                :chain-id="selectedChainId"
+                @delete-row="(e) => deleteCustomFieldRow(e, item.key)"
               />
 
-              <!-- STEP MANAGEMENT -->
+              <!-- STEP BASICS -->
               <OnboardingAddNewField
-                v-if="item.key === OnboardingStep.Management"
-                @add-custom-field="addCustomFieldRow"
+                v-if="item.key === OnboardingStep.Basics && !isFundInitialized"
+                @add-custom-field="(e) =>addCustomFieldRow(e, OnboardingStep.Basics)"
               />
 
               <!-- STEP WHITELIST -->
@@ -235,16 +250,17 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
+import { fromBpsToPercentage } from "~/composables/formatters";
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import type { IField, IFieldGroup } from "~/types/enums/input_type";
-
 import { networkChoices, networksMap } from "~/store/web3/networksMap";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
-import type { IWhitelist } from "~/types/enums/fund_setting_proposal";
+import { feeFieldKeys, type IWhitelist } from "~/types/enums/fund_setting_proposal";
+import type { IField, IFieldGroup } from "~/types/enums/input_type";
+import type { ChainId } from "~/store/web3/networksMap";
 import { InputType } from "~/types/enums/input_type";
 import {
   OnboardingFieldsMap,
@@ -254,7 +270,6 @@ import {
   type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
-
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
 const web3Store = useWeb3Store();
@@ -287,7 +302,7 @@ let nextRouteResolve: Function | null = null;
 const whitelistedAddresses = ref<IWhitelist[]>([]);
 const isCheckingIfFundInitCacheExists = ref(false);
 const isWhitelistedDeposits = ref(false);
-const selectedChainId = ref(networkChoices[0].value);
+const selectedChainId = ref<ChainId>(networkChoices[0].value);
 
 const fundSettings = computed<IFundSettings>(() => fundInitCache?.value?.fundSettings || {} as IFundSettings);
 const fundMetadata = computed(() => fundInitCache?.value?.fundMetadata || {});
@@ -295,7 +310,7 @@ const fundGovernorData = computed(() => fundInitCache?.value?.governorData || {}
 
 // Fetch Fund Cache and fill the form data with the fetched fund cache.
 const setFieldValue = (field: IField): void => {
-  if (![InputType.Image, InputType.Textarea, InputType.Select].includes(field.type)) {
+  if (![InputType.Image, InputType.Textarea, InputType.Select, InputType.Period].includes(field.type)) {
     field.type = InputType.Text;
   }
   field.isToggleable = false;
@@ -303,7 +318,12 @@ const setFieldValue = (field: IField): void => {
   const fieldKey = field.key as string;
   // Convert some fields to text fields, as they are all readonly.
   if (fieldKey in fundSettings.value) {
-    field.value = fundSettings.value[fieldKey];
+    let value = fundSettings.value[fieldKey];
+    if (feeFieldKeys.includes(fieldKey)) {
+      value = Number(fromBpsToPercentage(value));
+    }
+
+    field.value = value;
   } else if (fieldKey in fundMetadata.value) {
     field.value = fundMetadata.value[fieldKey];
   } else if (fieldKey in fundGovernorData.value) {
@@ -359,9 +379,10 @@ const fetchFundInitCache = async () => {
 
 
 const clearCacheMessage = computed(() => {
-  if(networksMap[selectedChainId.value]?.chainName === undefined) return "Are you sure you want to clear the cache for this chain?";
+  const selectedChainName = networksMap[selectedChainId.value]?.chainName;
+  if (!selectedChainName) return "Are you sure you want to clear the cache for this chain?";
 
-  return `Are you sure you want to clear the cache for <strong>${networksMap[selectedChainId.value]?.chainName}</strong>?`
+  return `Are you sure you want to clear the cache for <strong>${selectedChainName}</strong>?`
 });
 
 const isLoadingFetchFundCache = computed(() =>
@@ -371,10 +392,10 @@ const isLoadingFetchFundCache = computed(() =>
   ),
 );
 
-const deleteCustomFieldRow = (field: IField) => {
+const deleteCustomFieldRow = (field: IField, stepKey: string) => {
   try{
     const stepIndex = stepperEntry.value.findIndex(
-      (step) => step.key === OnboardingStep.Management,
+      (step) => step.key === stepKey,
     );
 
     if (stepIndex !== -1) {
@@ -393,15 +414,15 @@ const deleteCustomFieldRow = (field: IField) => {
   }
 };
 
-const addCustomFieldRow = (customField: IField) => {
+const addCustomFieldRow = (customField: IField, stepKey: string) => {
   try {
-    const managementStepIndex = stepperEntry.value.findIndex(
-      (step) => step.key === OnboardingStep.Management,
+    const stepIndex = stepperEntry.value.findIndex(
+      (step) => step.key === stepKey,
     );
 
     // check if this key already exists
-    if (managementStepIndex !== -1) {
-      const fieldIndex = stepperEntry.value[managementStepIndex].fields?.findIndex(
+    if (stepIndex !== -1) {
+      const fieldIndex = stepperEntry.value[stepIndex].fields?.findIndex(
         (f) => f.key === customField.key,
       );
 
@@ -409,7 +430,7 @@ const addCustomFieldRow = (customField: IField) => {
         return toastStore.errorToast("Custom field with this name already exists");
       }
 
-      stepperEntry.value[managementStepIndex].fields?.push(customField);
+      stepperEntry.value[stepIndex].fields?.push(customField);
     }
   } catch (error) {
     console.error("Error adding custom field", error);
@@ -456,12 +477,13 @@ const showInitializeTooltip = computed(() => {
 const showButtonNext = computed(() => {
   const item = stepperEntry.value[step.value - 1];
 
+  if(!accountStore.isConnected) return false;
+
   const steps = [
     OnboardingStep.Chain,
     OnboardingStep.Basics,
     OnboardingStep.Fees,
     OnboardingStep.Whitelist,
-    OnboardingStep.Management,
     OnboardingStep.Permissions,
     OnboardingStep.NavMethods,
   ];
@@ -492,7 +514,7 @@ const showInitializeButton = computed(() => {
 const showClearCacheButton = computed(() => {
   const item = stepperEntry.value[step.value - 1];
 
-  if (item.key === OnboardingStep.Chain) {
+  if (item.key === OnboardingStep.Chain && accountStore.isConnected) {
     return true;
   }
   return false;
@@ -525,7 +547,6 @@ const isCurrentStepValid = computed(() => {
     OnboardingStep.Chain,
     OnboardingStep.Basics,
     OnboardingStep.Fees,
-    OnboardingStep.Management,
     OnboardingStep.Governance,
   ];
 
@@ -645,20 +666,20 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
     } as IField;
   });
 
-  // find management step and add custom fields to that step
-  if (stepKey === OnboardingStep.Management) {
+  // find basic step and add custom fields to that step
+  if (stepKey === OnboardingStep.Basics) {
 
     if(Object.keys(stepperEntry).length === 0) return output;
 
-    const managementStepIndex = stepperEntry.findIndex(
-      (step) => step.key === OnboardingStep.Management,
+    const stepIndex = stepperEntry.findIndex(
+      (step) => step.key === OnboardingStep.Basics,
     );
 
-    if (managementStepIndex !== -1) {
-      const managementStepFields = stepperEntry[managementStepIndex].fields ?? [];
+    if (stepIndex !== -1) {
+      const stepFields = stepperEntry[stepIndex].fields ?? [];
 
       // find custom fields (fields that has key "isFieldByUser")
-      const customFields = managementStepFields?.filter(
+      const customFields = stepFields?.filter(
         (field) => {
           return field.isFieldByUser;
         },
@@ -679,11 +700,11 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
 }
 
 
-function getFieldByStepAndFieldKey(
+const getFieldByStepAndFieldKey =(
   stepperEntry: IOnboardingStep[],
   stepKey: string,
   fieldKey: string,
-) {
+) =>{
   const field = stepperEntry
     ?.find(step => step.key === stepKey)?.fields
     ?.flatMap(field => field.fields || field)
@@ -724,14 +745,13 @@ const findCustomFieldsFromStep = (stepKey: string) => {
 };
 
 const formatFundMetaData = () => {
-  // find fields with key "isFieldByUser" from management step and add them to the fund metadata
-  const customFIelds = findCustomFieldsFromStep(OnboardingStep.Management);
+  // find fields with key "isFieldByUser" from basics step and add them to the fund metadata
+  const customFIelds = findCustomFieldsFromStep(OnboardingStep.Basics);
 
   return  {
     description: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "description"),
     photoUrl: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "photoUrl"),
-    plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "plannedSettlementPeriod"),
-    minLiquidAssetShare: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "minLiquidAssetShare"),
+    plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "plannedSettlementPeriod"),
     ...Object.fromEntries(customFIelds.map((field) => [field.key, field.value])),
   }
 };
@@ -739,7 +759,7 @@ const formatFundMetaData = () => {
 const getFeeValue = (feeKey: string) => {
   return toggledOffFields.value.includes(feeKey)
     ? 0
-    : parseInt(fromPercentageToBps(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, feeKey)));
+    : Number(fromPercentageToBps(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, feeKey)));
 };
 
 const getFeeCollectors = (feeKey: string) => {
@@ -756,7 +776,6 @@ const formatFeeCollectors = () => {
     getFeeCollectors("performanceFeeRecipientAddress"),
   ]
 };
-
 
 
 const formatInitializeData = () => {
@@ -915,6 +934,44 @@ const handleCloseSaveChangesDialog = () => {
   if (nextRouteResolve) nextRouteResolve(); // continue navigation
 };
 
+const getChainDrafts = () => {
+  return chainIdValues.value.map((chainId) => {
+    const drafts = (getLocalStorageItem(`onboardingStepperEntry_${chainId}`) || []) as IOnboardingStep[];
+    return {
+      chainId,
+      hasDrafts: drafts.length > 0,
+    };
+  });
+};
+
+
+const setDefaultSelectedChainId = () =>{
+  const chainDrafts = getChainDrafts();
+
+  if (
+    step.value === 1
+  ) {
+    const chainWithDraftConnectedWallet = chainDrafts.find((chain) => chain.hasDrafts && chain.chainId === accountStore.connectedWalletChainId);
+    const chainWithDraft = chainDrafts.find((chain) => chain.hasDrafts);
+
+    // 1. try to set the chain with draft and connected wallet
+    if (chainWithDraftConnectedWallet) {
+      selectedChainId.value = chainWithDraftConnectedWallet.chainId;
+    }
+    // 2. try to set the chain with draft
+    else if (chainWithDraft) {
+      selectedChainId.value = chainWithDraft.chainId;
+    }
+    // 3. set the connected wallet chain
+    else if (accountStore.connectedWalletChainId &&
+      chainIdValues?.value?.includes(accountStore.connectedWalletChainId)
+    ) {
+      selectedChainId.value = accountStore.connectedWalletChainId;
+    }
+  }
+  createFundStore.setSelectedStepperChainId(selectedChainId.value);
+}
+
 const stepperEntry = ref(initStepperEntry());
 
 // Watchers
@@ -930,6 +987,7 @@ watch(stepperEntry.value, (newVal) => {
 });
 
 watch(() => selectedChainId.value, () => {
+  askToSaveDraftBeforeRouteLeave.value = true;
   createFundStore.setSelectedStepperChainId(selectedChainId.value);
 
   // clear fetched fund if we change the chain
@@ -944,6 +1002,12 @@ watch(() => accountStore.activeAccountAddress, () => {
     fetchFundInitCache();
   }
 });
+
+watch(()=> accountStore.connectedWalletChainId, (newVal, oldVal) =>{
+  if(!oldVal){
+    setDefaultSelectedChainId()
+  }
+})
 
 // Lifecycle Hooks
 onBeforeRouteLeave((to, from, next) => {
@@ -968,14 +1032,7 @@ const chainIdValues = computed(() => networkChoices.map((choice: any) => choice.
 
 onMounted(() => {
   // Set selected chain to user's current network.
-  if (
-    accountStore.connectedWalletChainId &&
-    step.value === 1 &&
-    chainIdValues?.value?.includes(accountStore.connectedWalletChainId)
-  ) {
-    selectedChainId.value = accountStore.connectedWalletChainId;
-  }
-  createFundStore.setSelectedStepperChainId(selectedChainId.value);
+  setDefaultSelectedChainId()
 });
 </script>
 
@@ -1037,5 +1094,16 @@ onMounted(() => {
     justify-content: center;
     color: $color-primary;
   }
+}
+
+.connect_wallet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  font-size: 16px;
+  color: $color-text-irrelevant;
+  text-align: center;
 }
 </style>

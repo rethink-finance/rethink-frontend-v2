@@ -1,8 +1,26 @@
 import type INetwork from "~/types/network";
 
-export const networksMap: Record<string, INetwork> = {
-  "0x89": {
-    chainId: "0x89",
+export enum ChainId {
+  ETHEREUM = "0x1",
+  BASE = "0x2105",
+  POLYGON = "0x89",
+  ARBITRUM = "0xa4b1",
+  // GOERLI = "0x5",
+  // SEPOLIA = "0x6a9",
+  // OPTIMISM = "0xa",
+  // OPTIMISM_ON_GNOSIS = "0x12c",
+  // BINANCE = "0x38",
+  // GNOSIS = "0x64",
+  // EWT = "0xf6",
+  // AVALANCHE = "0xa86a",
+  // VOLTA = "0x12077",
+  // AURORA = "0x4e454152",
+  // FRAXTAL = "0xfc"
+}
+
+export const networksMap: Record<ChainId, INetwork> = {
+  [ChainId.POLYGON]: {
+    chainId: ChainId.POLYGON,
     chainName: "Polygon",
     chainNameLong: "Polygon Mainnet",
     chainShort: "matic",
@@ -14,7 +32,7 @@ export const networksMap: Record<string, INetwork> = {
     icon: getChainIcon("matic"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      // "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
       "https://polygon-rpc.com",
       "https://polygon.drpc.org",
       "https://polygon-pokt.nodies.app",
@@ -22,8 +40,8 @@ export const networksMap: Record<string, INetwork> = {
     ],
     blockExplorerUrls: ["https://polygonscan.com"],
   },
-  "0xa4b1": {
-    chainId: "0xa4b1",
+  [ChainId.ARBITRUM]: {
+    chainId: ChainId.ARBITRUM,
     chainName: "Arbitrum One",
     chainShort: "arb1",
     nativeCurrency: {
@@ -34,7 +52,7 @@ export const networksMap: Record<string, INetwork> = {
     icon: getChainIcon("arb1"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      // "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
       "https://arb1.arbitrum.io/rpc", // Max 10k blocks, if auth: more than 1M
       "https://arbitrum.drpc.org", // Max 10k blocks, if auth: more than 1M
       "https://arbitrum.llamarpc.com", // Max 10k blocks
@@ -43,8 +61,8 @@ export const networksMap: Record<string, INetwork> = {
     ],
     blockExplorerUrls: ["https://arbiscan.io"],
   },
-  // "0xfc": {
-  //   chainId: "0xfc",
+  // [ChainId.FRAXTAL]: {
+  //   chainId: ChainId.FRAXTAL,
   //   chainName: "Fraxtal",
   //   chainShort: "frax",
   //   nativeCurrency: {
@@ -58,8 +76,8 @@ export const networksMap: Record<string, INetwork> = {
   //   ],
   //   blockExplorerUrls: ["https://fraxscan.com"],
   // },
-  "0x1": {
-    chainId: "0x1",
+  [ChainId.ETHEREUM]: {
+    chainId: ChainId.ETHEREUM,
     chainName: "Ethereum",
     chainShort: "eth",
     nativeCurrency: {
@@ -70,7 +88,7 @@ export const networksMap: Record<string, INetwork> = {
     icon: getChainIcon("eth"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      // "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
       "https://eth.drpc.org",
       "https://endpoints.omniatech.io/v1/eth/mainnet/public",
       "https://ethereum.blockpi.network/v1/rpc/public",
@@ -83,8 +101,8 @@ export const networksMap: Record<string, INetwork> = {
     ],
     blockExplorerUrls: ["https://etherscan.io"],
   },
-  "0x2105": {
-    chainId: "0x2105",
+  [ChainId.BASE]: {
+    chainId: ChainId.BASE,
     chainName: "Base",
     chainShort: "base",
     nativeCurrency: {
@@ -95,7 +113,7 @@ export const networksMap: Record<string, INetwork> = {
     icon: getChainIcon("base"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      // "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
       "https://mainnet.base.org",
       "https://base.llamarpc.com",
       "https://base-mainnet.public.blastapi.io",
@@ -109,7 +127,7 @@ export const networksMap: Record<string, INetwork> = {
   },
 };
 
-export const chainIds: string[] = Object.keys(networksMap);
+export const chainIds: ChainId[] = Object.keys(networksMap) as ChainId[];
 export const networks: INetwork[] = Object.values(networksMap);
 
 export const networkChoices = networks.map(

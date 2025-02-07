@@ -10,6 +10,7 @@
             v-for="buttonLink in buttonLinks"
             :title="buttonLink.title"
             :href="buttonLink.href"
+            :show-tooltip="buttonLink.showTooltip"
           />
         </div>
       </template>
@@ -50,10 +51,12 @@ export default {
         {
           title: "DeBank - NAV",
           href: this.deBankUrl,
+          showTooltip: false,
         },
         {
           title: "Safe - Custody",
           href: this.custodyUrl,
+          showTooltip: false,
         },
       ]
     },

@@ -11,11 +11,11 @@ import { ERC20 } from "assets/contracts/ERC20";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { parseFundSettings } from "~/composables/fund/parseFundSettings";
 import { parseClockMode } from "~/composables/fund/parseClockMode";
-import { networksMap } from "~/store/web3/networksMap";
+import { type ChainId, networksMap } from "~/store/web3/networksMap";
 import { formatQuorumPercentage } from "~/composables/formatters";
 
 export const fetchFundMetaDataAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
 ): Promise<IFund> => {
   const web3Store = useWeb3Store();
@@ -74,9 +74,9 @@ export const fetchFundMetaDataAction = async (
 
     const parsedFundSettings: IFundSettings = parseFundSettings(fundSettings);
     const parsedClockMode = parseClockMode(clockMode);
-    console.log("parsedClockMode: ", parsedClockMode);
+    console.debug("parsedClockMode: ", parsedClockMode);
     console.log("parsedFundSettings: ", parsedFundSettings);
-    console.log("fundGovernanceTokenSupply: ", fundGovernanceTokenSupply);
+    console.debug("fundGovernanceTokenSupply: ", fundGovernanceTokenSupply);
 
     // TODO fundGovernanceTokenSupply is wrong from reader contract, until it is fixed and redeployed there
     //   manually fetch governance token total supply here. Then remove this line.
@@ -104,8 +104,8 @@ export const fetchFundMetaDataAction = async (
       parsedClockMode.mode === ClockMode.BlockNumber ? "block" : "second";
 
     const fundNetwork = networksMap[fundChainId];
-    //console.log("fundMetadata.updateTimes");
-    //console.log(fundMetadata.updateTimes);
+    // console.log("fundMetadata.updateTimes");
+    // console.log(fundMetadata.updateTimes);
     const lastNavUpdateTime = undefined;//= fundMetadata.updateTimes[fundMetadata.updateTimes.length-1];
     const fund: IFund = {
       // Original fund settings

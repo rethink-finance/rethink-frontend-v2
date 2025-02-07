@@ -14,7 +14,7 @@ export const fetchUserFundAllowanceAction = async (): Promise<any> => {
     return console.error("Active account not found");
 
   fundStore.fundUserData.fundAllowance = await web3Store.callWithRetry(
-    fundStore.fundChainId,
+    fundStore.selectedFundChain,
     () =>
       fundStore.fundBaseTokenContract.methods
         .allowance(fundStore.activeAccountAddress, fundStore.selectedFundAddress)

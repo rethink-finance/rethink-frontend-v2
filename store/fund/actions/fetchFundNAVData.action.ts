@@ -7,6 +7,7 @@ import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractA
 import { NAVExecutor } from "assets/contracts/NAVExecutor";
 import { decodeUpdateNavMethods } from "~/composables/nav/navProposal";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
+import type { ChainId } from "~/store/web3/networksMap";
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
@@ -76,10 +77,6 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     JSON.stringify(fundStore.fundLastNAVUpdateMethods, stringifyBigInt),
     parseBigInt,
   );
-  console.log(
-    "fundManagedNAVMethods: ",
-    toRaw(fundStore.fundManagedNAVMethods),
-  );
 
   // Merge user's local storage NAV method changes with the last NAV update methods.
   fundStore.fundManagedNAVMethods = mergeNAVMethodsFromLocalStorage(
@@ -93,7 +90,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
  * This function calls getNAVData directly to NAV executor contract.
  **/
 export const getNAVData = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
 ): Promise<INAVMethod[]> => {
   const web3Store = useWeb3Store();
@@ -114,6 +111,8 @@ export const getNAVData = async (
       fundChainId,
       () =>
         navExecutorContract.methods.getNAVData(fundAddress).call(),
+      1,
+      [310],
     );
 
     // Decode NAV methods.

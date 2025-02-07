@@ -87,52 +87,62 @@
       </div>
 
       <div class="buttons-container">
-        <v-btn
-          v-if="isProposalActive && !hasAccountVotedAlready"
-          class="section-top__submit-button"
-          :disabled="!accountStore.isConnected"
-          @click="openVoteDialog"
-        >
-          Submit Vote
-          <v-tooltip
-            v-if="!accountStore.isConnected || hasAccountVotedAlready"
-            :model-value="true"
-            activator="parent"
-            location="top"
-            @update:model-value="false"
-          >
-            <template v-if="!accountStore.isConnected">
-              Connect your wallet.
-            </template>
-          </v-tooltip>
-        </v-btn>
-        <UiNotification
-          v-else-if="hasAccountVotedAlready && isProposalActive"
-          class="notification"
-        >
-          You have voted on this proposal.
-        </UiNotification>
+        <v-progress-circular
+          v-if="loadingProposalVoteSubmissions"
+          class="vote_submission"
+          size="35"
+          width="2"
+          indeterminate
+        />
 
-        <v-btn
-          v-if="hasProposalSucceeded && !hasProposalExecuted"
-          class="section-top__submit-button"
-          :loading="loadingExecuteProposal"
-          :disabled="!accountStore.isConnected"
-          @click="executeProposal"
-        >
-          Execute Proposal
-          <v-tooltip
-            v-if="!accountStore.isConnected"
-            :model-value="true"
-            activator="parent"
-            location="top"
-            @update:model-value="false"
+        <template v-else>
+          <v-btn
+            v-if="isProposalActive && !hasAccountVotedAlready"
+            class="section-top__submit-button"
+            :disabled="!accountStore.isConnected"
+            @click="openVoteDialog"
           >
-            <template v-if="!accountStore.isConnected">
-              Connect your wallet.
-            </template>
-          </v-tooltip>
-        </v-btn>
+            Submit Vote
+            <v-tooltip
+              v-if="!accountStore.isConnected || hasAccountVotedAlready"
+              :model-value="true"
+              activator="parent"
+              location="top"
+              @update:model-value="false"
+            >
+              <template v-if="!accountStore.isConnected">
+                Connect your wallet.
+              </template>
+            </v-tooltip>
+          </v-btn>
+          <UiNotification
+            v-else-if="hasAccountVotedAlready && isProposalActive"
+            class="notification"
+          >
+            You have voted on this proposal.
+          </UiNotification>
+
+          <v-btn
+            v-if="hasProposalSucceeded && !hasProposalExecuted"
+            class="section-top__submit-button"
+            :loading="loadingExecuteProposal"
+            :disabled="!accountStore.isConnected"
+            @click="executeProposal"
+          >
+            Execute Proposal
+            <v-tooltip
+              v-if="!accountStore.isConnected"
+              :model-value="true"
+              activator="parent"
+              location="top"
+              @update:model-value="false"
+            >
+              <template v-if="!accountStore.isConnected">
+                Connect your wallet.
+              </template>
+            </v-tooltip>
+          </v-btn>
+        </template>
       </div>
 
       <v-dialog
@@ -446,7 +456,7 @@ const voteOptionIcon = (voteType: number) => {
 };
 
 const fetchHasVoted = () => {
-  const fundChainId = fundStore.fundChainId;
+  const fundChainId = fundStore.selectedFundChain;
   if (
     fundStore.activeAccountAddress === undefined ||
     !props.proposal.proposalId

@@ -1,5 +1,5 @@
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
-import { InputType } from "~/types/enums/input_type";
+import { InputType, periodChoices } from "~/types/enums/input_type";
 
 export enum ProposalStep {
   Setup = "setup",
@@ -94,7 +94,29 @@ export const FundSettingsStepsMap: Record<ProposalStep, IFundSettingProposalStep
   },
 };
 
+export const feeFieldKeys = [
+  "depositFee",
+  "withdrawFee",
+  "managementFee",
+  "performanceFee",
+]
+
+export const baseTokenSymbolField =     {
+  label: "Symbol",
+  key: "baseTokenSymbol",
+  type: InputType.Text,
+  isEditable: false,
+}
+export const baseTokenDecimalsField =     {
+  label: "Decimals",
+  key: "baseTokenDecimals",
+  type: InputType.Text,
+  isEditable: false,
+}
+
 // 2. define FundSettingsStepFieldsMap which holds the form fields for each section
+// TODO instead of doing this manually, each field should have here defined function to serialize and deserialize.
+//   for example fee fields are shown in the UI as Number(fromPercentageToBps(
 export const FundSettingsStepFieldsMap: FieldsMapType = {
   [StepSections.Basics]: [
     {
@@ -147,6 +169,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Deposit Fees",
       fields: [
         {
           label: "Deposit Fee (%)",
@@ -172,6 +195,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Withdraw Fees",
       fields: [
         {
           label: "Redemption Fee (%)",
@@ -197,6 +221,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Management Fees",
       fields: [
         {
           label: "Management Fee (%)",
@@ -232,6 +257,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Performance Fees",
       fields: [
         {
           label: "Performance Fee (%)",
@@ -275,9 +301,10 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
   ],
   [StepSections.Management]: [
     {
-      label: "Planned Settlement Period (Days)",
+      label: "Planned Settlement Period",
       key: "plannedSettlementPeriod",
-      type: InputType.Number,
+      type: InputType.Period,
+      choices: periodChoices,
       placeholder: "E.g. 0",
       rules: [formRules.required, formRules.isNonNegativeNumber],
       isEditable: true,
@@ -309,17 +336,19 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       isEditable: false,
     },
     {
-      label: "Voting Period (in blocks)",
+      label: "Voting Period",
       key: "votingPeriod",
-      type: InputType.Text,
+      type: InputType.Period,
+      choices: periodChoices,
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
     },
     {
-      label: "Voting Delay (in seconds)",
+      label: "Voting Delay",
       key: "votingDelay",
-      type: InputType.Text,
+      type: InputType.Period,
+      choices: periodChoices,
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
@@ -333,9 +362,9 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       isEditable: false,
     },
     {
-      label: "Late Quorum (in seconds)",
+      label: "Late Quorum",
       key: "lateQuorum",
-      type: InputType.Text,
+      type: InputType.Period,
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,

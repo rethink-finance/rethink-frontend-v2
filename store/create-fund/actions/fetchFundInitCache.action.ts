@@ -5,9 +5,10 @@ import { RethinkFundGovernor } from "assets/contracts/RethinkFundGovernor";
 import { formatQuorumPercentage } from "~/composables/formatters";
 import { ERC20 } from "assets/contracts/ERC20";
 import { isZeroAddress } from "~/composables/addressUtils";
+import { type ChainId } from "~/store/web3/networksMap";
 
 
-const fetchGovernorData = async (fundChainId: string, governorAddress?: string) => {
+const fetchGovernorData = async (fundChainId: ChainId, governorAddress?: string) => {
   /*
     Data to fetch:
     "quorum"
@@ -75,7 +76,7 @@ const fetchGovernorData = async (fundChainId: string, governorAddress?: string) 
     lateQuorum: Number(lateQuorum),
   };
 }
-const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) => {
+export const fetchBaseTokenDetails = async (chainId: ChainId, baseTokenAddress: string) => {
   const web3Store = useWeb3Store();
   console.debug("fetchBaseTokenDetails")
 
@@ -90,6 +91,8 @@ const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) 
     chainId,
     () =>
       tokenContract.methods.decimals().call(),
+    1,
+    [205],
   );
   console.debug("baseDecimals")
 
@@ -97,6 +100,8 @@ const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) 
     chainId,
     () =>
       tokenContract.methods.symbol().call(),
+    1,
+    [205],
   );
   console.debug("baseSymbol")
 
@@ -104,7 +109,7 @@ const fetchBaseTokenDetails = async (chainId: string, baseTokenAddress: string) 
 }
 
 export const fetchFundInitCacheAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   deployerAddress: string,
 ): Promise<IFundInitCache | undefined> => {
   const createFundStore = useCreateFundStore();

@@ -10,9 +10,10 @@ import type INAVMethod from "~/types/nav_method";
 import { PositionTypeToNAVCacheMethod } from "~/types/enums/position_type";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { ChainId } from "~/store/web3/networksMap";
 
 export const parseFundNAVUpdatesAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundNAVData: IFundNavData,
   fundAddress: string,
 ) => {
@@ -58,7 +59,7 @@ export const parseFundNAVUpdatesAction = async (
   // Only get past NAV update values for all methods for the last NAV update.
   const lastNavUpdateNavMethods =
     navUpdates[navUpdates.length - 1]?.entries ?? [];
-  console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
+  // console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
 
   for (let i= 0; i< lastNavUpdateNavMethods.length; i++){
     await updateNavMethodPastNavValue(
@@ -69,23 +70,11 @@ export const parseFundNAVUpdatesAction = async (
     );
   }
 
-
-  /*
-  lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
-    updateNavMethodPastNavValue(
-      fundChainId,
-      fundAddress,
-      navMethodIndex,
-      navMethod,
-    );
-  });
-  */
-
   return navUpdates;
 };
 
 const updateNavMethodPastNavValue = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
   navMethodIndex: number,
   navMethod: INAVMethod,

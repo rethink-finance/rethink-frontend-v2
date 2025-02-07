@@ -7,9 +7,10 @@ import {
 import type INAVMethod from "~/types/nav_method";
 import { useAccountStore } from "~/store/account/account.store";
 import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
+import type { ChainId } from "~/store/web3/networksMap";
 
 export const fetchSimulatedNAVMethodValueAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
   safeAddress: string,
   baseDecimals: number,

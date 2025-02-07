@@ -84,7 +84,7 @@
                     <template v-if="!toggledRawProposalCalldatas[calldataIndex]">
                       <template v-if="calldata?.calldataType === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
-                          :fund-chain-id="fundStore.fundChainId"
+                          :fund-chain-id="fundStore.selectedFundChain"
                           :fund-address="fundStore.fundAddress"
                           :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
                           :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
@@ -256,7 +256,7 @@ const activeUserVoteSubmission = computed(() => {
 
 const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
-  const proposal = governanceProposalStore.getProposal(fundStore.fundChainId, fundStore.fundAddress, proposalId);
+  const proposal = governanceProposalStore.getProposal(fundStore.selectedFundChain, fundStore.fundAddress, proposalId);
   if (!proposal) return undefined;
 
   /**

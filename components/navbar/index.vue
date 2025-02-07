@@ -18,9 +18,6 @@
       >
         <nuxt-link :to="'/'" class="d-flex">
           <Logo />
-          <v-tooltip activator="parent" location="bottom">
-            Go to homepage
-          </v-tooltip>
         </nuxt-link>
         <div class="navbar__buttons hidden-sm-and-down">
           <nuxt-link
@@ -114,6 +111,7 @@
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
 import type IRoute from "~/types/route";
+import { type ChainId } from "~/store/web3/networksMap";
 const accountStore = useAccountStore();
 
 const route = useRoute();
@@ -127,13 +125,13 @@ const routes : IRoute[] = [
     matchPrefix: "/details",
     exactMatch: false,
     title: "Discover",
-    text: "Find the most favorable opportunities",
+    text: "",
   },
   {
     to: "/create",
     exactMatch: true,
     title: "Create",
-    text: "Create your own strategies",
+    text: "",
   },
   {
     to: "/governance",
@@ -147,7 +145,7 @@ const routes : IRoute[] = [
     exactMatch: true,
     to: "https://docs.rethink.finance",
     title: "Docs",
-    text: "Delve into the details of the protocol",
+    text: "",
     icon: "mdi:launch",
     color: "var(--color-light-subtitle)",
   },
@@ -156,11 +154,11 @@ const selectedChainId = ref(accountStore.connectedWalletChainId);
 
 watch(() => accountStore.connectedWalletChainId, (newVal, oldVal) => {
   console.log(`Connected Wallet Cain ID changed from ${oldVal} to ${newVal}`);
-  selectedChainId.value = newVal || "";
+  selectedChainId.value = newVal;
 });
 
 const isSelectInputActive = ref(false);
-const switchNetwork = async (chainId: string) => {
+const switchNetwork = async (chainId: ChainId) => {
   try {
     await accountStore.switchNetwork(chainId)
     isSelectInputActive.value = false;

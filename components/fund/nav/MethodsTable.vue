@@ -23,7 +23,7 @@
     <template #[`header.pastNavValue`]>
       Last NAV Update
       <div v-if="showSummaryRow && showLastNavUpdateValue" class="text-right">
-        <!-- {{ formattedTotalLastNAV }} -->
+        {{ formattedTotalLastNAV }}
       </div>
     </template>
     <template #[`header.simulatedNavFormatted`]>
@@ -242,47 +242,21 @@
                   <v-label class="mb-2">
                     Position Type
                   </v-label>
-                  <div class="toggle_buttons">
-                    <v-btn-toggle
-                      v-model="navEntry.positionType"
-                      group
-                      mandatory
-                      :disabled="!isMethodEditable(item)"
-                    >
-                      <v-btn
-                        v-for="positionType in creatablePositionTypes"
-                        :key="positionType.key"
-                        :value="positionType.key"
-                        variant="outlined"
-                        @click.native="resetMethods(true)"
-                      >
-                        {{ positionType.name }}
-                      </v-btn>
-                    </v-btn-toggle>
-                  </div>
+                  <UiButtonsSwitch
+                    v-model="navEntry.positionType"
+                    :items="parsedPositionTypeItems"
+                    @update:model-value="navEntry.positionType = $event"
+                  />
                 </v-col>
                 <v-col v-if="valuationTypes.length" cols="12" sm="6">
                   <v-label class="mb-2">
                     Valuation Type
                   </v-label>
-                  <div class="toggle_buttons">
-                    <v-btn-toggle
-                      v-model="navEntry.valuationType"
-                      group
-                      mandatory
-                      :disabled="isMethodEditable(item) === false"
-                    >
-                      <v-btn
-                        v-for="valuationType in valuationTypes"
-                        :key="valuationType.key"
-                        :value="valuationType.key"
-                        variant="outlined"
-                        @click.native="resetMethods()"
-                      >
-                        {{ valuationType.name }}
-                      </v-btn>
-                    </v-btn-toggle>
-                  </div>
+                  <UiButtonsSwitch
+                    v-model="navEntry.valuationType"
+                    :items="parsedValuationTypeItems"
+                    @update:model-value="navEntry.valuationType = $event"
+                  />
                 </v-col>
               </v-row>
 
@@ -429,6 +403,7 @@ import {
 import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import type INAVParts from "~/types/nav_parts";
+import { ChainId } from "~/store/web3/networksMap";
 
 
 export default defineComponent({
@@ -449,6 +424,10 @@ export default defineComponent({
       default: () => undefined,
     },
     showBaseTokenBalances: {
+      type: Boolean,
+      default: false,
+    },
+    showSafeContractBalance: {
       type: Boolean,
       default: false,
     },
@@ -499,7 +478,7 @@ export default defineComponent({
       default: "",
     },
     fundChainId: {
-      type: String,
+      type: String as PropType<ChainId>,
       default: "",
     },
     // Only required if we want to simulate NAV
@@ -628,6 +607,20 @@ export default defineComponent({
 
       return headers;
     },
+    parsedPositionTypeItems() {
+      return this.creatablePositionTypes.map((positionType) => ({
+        key: positionType.key,
+        label: positionType.name,
+        onClick: () => this.resetMethods(true),
+      }));
+    },
+    parsedValuationTypeItems() {
+      return this.valuationTypes.map((valuationType) => ({
+        key: valuationType.key,
+        label: valuationType.name,
+        onClick: () => this.resetMethods(),
+      }));
+    },
     valuationTypes() {
       return (
         PositionTypeToValuationTypesMap[this.navEntry?.positionType]?.map(
@@ -653,10 +646,12 @@ export default defineComponent({
         (BigInt(this.fundContractBaseTokenBalance) || 0n) +
         (BigInt(this.safeContractBaseTokenBalance) || 0n) +
         (BigInt(this.feeBalance) || 0n);
-      return this.fundStore.getFormattedBaseTokenValue(totalNAV);
+
+
+      return this.fundStore.getFormattedBaseTokenValue(totalNAV, true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedTotalLastNAV() {
-      return this.fundStore.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n);
+      return this.fundStore.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n, true, false, this.baseSymbol, this.baseDecimals);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
@@ -670,13 +665,14 @@ export default defineComponent({
       )
     },
     formattedFundContractBaseTokenBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance));
+
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedSafeContractBaseTokenBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.safeContractBaseTokenBalance));
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.safeContractBaseTokenBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedFeeBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.feeBalance));
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.feeBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
@@ -686,7 +682,7 @@ export default defineComponent({
 
       if (this.showBaseTokenBalances) {
         methods.push({
-          positionName: "OIV Balance",
+          positionName: "Admin Contract Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
@@ -717,6 +713,20 @@ export default defineComponent({
           simulatedNavFormatted: this.formattedFeeBalance,
           isRethinkPosition: true,
           detailsHash: "-3",
+        } as any)
+      }
+      else if (this.showSafeContractBalance) {
+        methods.push({
+          positionName: "Safe Balance",
+          valuationSource: "Rethink",
+          positionType: PositionType.Liquid,
+          pastNavValue: this.navParts?.baseAssetSafeBal,
+          simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
+          isRethinkPosition: true,
+          detailsHash: "-2",
+          detailsJson: {
+            "safeContractAddress": this.safeAddress ?? "",
+          },
         } as any)
       }
 
@@ -768,14 +778,18 @@ export default defineComponent({
       navigator.clipboard.writeText(data);
     },
     async simulateNAV() {
-      if (!this.showSimulatedNav || this.isNavSimulationLoading) return;
+      const fundChainId = this.fundChainId as ChainId;
+      const fundAddress = this.fundAddress;
+      if (
+        !this.showSimulatedNav || this.isNavSimulationLoading || !fundChainId || !fundAddress
+      ) {
+        return;
+      }
       this.isNavSimulationLoading = true;
       console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
 
       // Simulate all methods at once as many promises.
       const promises = [];
-      const fundChainId = this.fundChainId ?? "";
-      const fundAddress = this.fundAddress ?? "";
 
       for (const navEntry of this.methods) {
         console.log("FUND CHAIN ID:", fundChainId, "FUND ADDRESS:", fundAddress, "NAV ENTRY:", navEntry)
@@ -807,7 +821,7 @@ export default defineComponent({
       return isManageNavMethodsPage && !this.isBaseTokenBalanceMethod(navEntry);
     },
     isBaseTokenBalanceMethod(method: INAVMethod) {
-      const positionName = ["OIV Balance", "Safe Balance", "Fees Balance"];
+      const positionName = ["Admin Contract Balance", "Safe Balance", "Fees Balance"];
       return positionName.includes(method.positionName) && method.valuationSource === "Rethink";
     },
     deleteMethod(method: INAVMethod, toggle = true, newNavEntry?: INAVMethod) {
@@ -897,7 +911,7 @@ export default defineComponent({
           parseBigInt,
         );
 
-        if (this.hasChanged() === false) {
+        if (!this.hasChanged()) {
           return this.toastStore.warningToast("No changes detected.");
         }
 
@@ -1238,28 +1252,6 @@ export default defineComponent({
     color: $color-success;
   }
 }
-// toggle buttons
-.toggle_buttons {
-  .v-btn-toggle {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    height: 100%;
-
-    .v-btn {
-      opacity: 0.35;
-      color: $color-text-irrelevant;
-      border-radius: 4px !important;
-      min-height: 48px;
-      @include borderGray;
-    }
-    .v-btn--active {
-      color: $color-white !important;
-      opacity: 1;
-    }
-  }
-}
-
 .text-end{
   margin-bottom: 20px;
 }
