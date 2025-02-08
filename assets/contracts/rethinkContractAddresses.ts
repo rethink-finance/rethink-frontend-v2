@@ -27,7 +27,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     [ChainId.ARBITRUM]: "0x9825a09FbC727Bb671f08Fa66e3508a2e8938d45",
   },
   "NAVExecutorBeaconProxy": {
-    [ChainId.ETHEREUM]:"0x49a2Ec2De6CbdB3282c5BdEc3b6ceb0157d84A47",
+    [ChainId.ETHEREUM]:"0x6Bcbc7959CE79b8F27efe1EAe504f98CBe2647A8",
     // [ChainId.GOERLI]: "",
     [ChainId.POLYGON]:"0x540f022CD860c65FD4DF1969553263014C862bbd",
     [ChainId.BASE]: "0x5FA5a70A3A143E3F7B8906cbc08CAd606E4622b3",
