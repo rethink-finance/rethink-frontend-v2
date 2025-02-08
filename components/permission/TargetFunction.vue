@@ -45,21 +45,22 @@
           />
         </div>
         <PermissionTargetFunctionParams
+          v-model:func-conditions="localFuncConditions"
           class="ms-4"
           :func="func"
           :sighash="sighash"
-          :func-conditions="funcConditions"
           :show-raw="showRaw"
+          :disabled="true"
         />
-        <!-- TODO remove this RAW json -->
-        <!--        <pre class="permissions__json">{{ JSON.stringify(funcConditions, null, 4) }}</pre>-->
       </span>
     </template>
   </UiDataRowCard>
 </template>
 
 <script setup lang="ts">
-import type { FunctionFragment } from "ethers";
+import { FunctionFragment } from "ethers";
+import { useVModel } from "@vueuse/core";
+import cloneDeep from "lodash.clonedeep";
 import type { FunctionCondition } from "~/types/zodiac-roles/role";
 import { getParamsTypesTitle } from "~/composables/zodiac-roles/target";
 import { ConditionType } from "~/types/enums/zodiac-roles";
@@ -93,32 +94,11 @@ const props = defineProps({
 const showRaw = ref(false);
 
 // Create a local reactive copy of funcConditions to allow editing it without mutating props.
-const localFuncConditions = ref<FunctionCondition>({ ...props.funcConditions });
-
-// Watch for changes in localFuncConditions and emit updates
-watch(
-  localFuncConditions,
-  (newLocalFuncConditions) => {
-    if (JSON.stringify(newLocalFuncConditions) !== JSON.stringify(props.funcConditions)) {
-      console.log("    [2] watch localFuncConditions", toRaw(newLocalFuncConditions))
-      emit("update:funcConditions", newLocalFuncConditions);
-    }
-  },
-  { deep: true },
-);
-
-// Update `localFuncConditions` when `props.funcConditions` changes (but don't emit).
-watch(
-  () => props.funcConditions,
-  (newFuncConditions) => {
-    // Update without emitting
-    if (JSON.stringify(newFuncConditions) !== JSON.stringify(localFuncConditions.value)) {
-      console.log("    [2] watch props.funcConditions", toRaw(newFuncConditions))
-      localFuncConditions.value = { ...newFuncConditions };
-    }
-  },
-  { deep: true, immediate: true },
-);
+const localFuncConditions = useVModel(props, "funcConditions", emit, {
+  clone: cloneDeep, // Deep copy to avoid prop mutation
+  passive: true,    // Prevents excessive reactivity updates
+  deep: true,       // Ensures Vue watches nested changes
+});
 
 const functionParamsText = computed(() =>
   props.func ? getParamsTypesTitle(props.func) : "(function not found in ABI)",

@@ -21,7 +21,7 @@ export type Member = {
 export type FuncParams = Record<string, boolean[]>
 
 export interface FlattenedParamType extends ParamType {
-  index: number;
+  index: number | null;
   parentIndex: number | null;
   parentName: string | null;
 }
@@ -30,7 +30,9 @@ export interface ParamCondition {
   index: number
   type: ParameterType
   condition: ParamComparison
-  value: string[] // usually a single-element array, multiple values are used only for ParamComparison.ONE_OF
+  // usually a single-element array, multiple values are used
+  // only for ParamComparison.ONE_OF
+  value: string[]
 }
 
 export interface FunctionCondition extends ConditionalEntity {

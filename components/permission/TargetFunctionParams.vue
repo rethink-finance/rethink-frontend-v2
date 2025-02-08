@@ -4,38 +4,36 @@
       v-if="func?.inputs?.length"
       class="target_function_params__inputs"
     >
-      <!-- TODO TEST flattened inputs -->
-      <!--      <pre class="permissions__json">{{ JSON.stringify(flattenedInputs, null, 2) }}</pre>-->
       <pre
         v-if="showRaw"
         class="permissions__json"
-      >{{ JSON.stringify(funcConditions?.params, null, 2) }}</pre>
+      >{{ JSON.stringify(localCondition?.params, null, 2) }}</pre>
       <template v-else>
         <div
           v-for="(funcInputParam, index) in flattenedInputs"
           :key="index"
+          class="permissions__function"
         >
-          <div class="permissions__function">
-            <div class="target_function_params__title">
-              <Icon icon="tabler:point-filled" />
-              <div>
-                [{{ index }}]
-                <span v-if="funcInputParam.parentName">
-                  {{ funcInputParam.parentName }}
-                </span>
-                {{ funcInputParam.name }}
-              </div>
-              <div class="permissions__function_params">
-                ({{ funcInputParam.type }})
-              </div>
+          <div class="target_function_params__title">
+            <Icon icon="tabler:point-filled" />
+            <div>
+              [{{ index }}]
+              <span v-if="funcInputParam.parentName">
+                {{ funcInputParam.parentName }}
+              </span>
+              {{ funcInputParam.name }}
             </div>
-            <PermissionParamConditionInput
-              :index="index"
-              :param="funcInputParam"
-              :condition="funcConditions?.params?.find((param) => param?.index === index)"
-              :disabled="true"
-            />
+            <div class="permissions__function_params">
+              ({{ funcInputParam.type }})
+            </div>
           </div>
+          <PermissionParamConditionInput
+            :index="index"
+            :param="funcInputParam"
+            :condition="getParamConditionByIndex(index)"
+            :disabled="disabled"
+            @update:condition="(newValue) => updateParamConditionByIndex(index, newValue)"
+          />
         </div>
       </template>
     </div>
@@ -44,10 +42,11 @@
 
 <script setup lang="ts">
 import type { PropType } from "vue";
-import { type FunctionFragment, ParamType } from "ethers";
+import { type FunctionFragment } from "ethers";
 import { useVModel } from "@vueuse/core";
 import cloneDeep from "lodash.clonedeep";
-import type { FlattenedParamType, FunctionCondition } from "~/types/zodiac-roles/role";
+import type { FlattenedParamType, FunctionCondition, ParamCondition } from "~/types/zodiac-roles/role";
+import { flattenAbiFunctionInputs } from "~/composables/zodiac-roles/flattenAbiFunctionInputs";
 
 const emit = defineEmits(["update:funcConditions"]);
 
@@ -74,77 +73,33 @@ const props = defineProps({
   },
 });
 
-// const flattenedInputs = ref<FlattenedParamType[]>([]);
-
-const flattenedInputs = computed(() => {
-  let indexCounter = 0;
-  const flatInputs: FlattenedParamType[] = [];
-
-  function processInputs(
-    inputs?: ParamType[],
-    parentIndex: number | null = null,
-    parentName: string | null = null,
-  ) {
-    if (!inputs) return;
-
-    for (const input of inputs) {
-      if (input.isTuple() && input.components) {
-        processInputs(
-          input?.components as FlattenedParamType[],
-          indexCounter,
-          input.name,
-        );
-      } else {
-        // Properly instantiate ParamType to retain methods
-        const param = ParamType.from(input);
-
-        // Create a new FlattenedParamType instance without breaking prototype methods
-        const wrappedParam: FlattenedParamType = Object.create(param);
-        wrappedParam.index = indexCounter;
-        wrappedParam.parentIndex = parentIndex;
-        wrappedParam.parentName = parentName;
-
-        flatInputs.push(wrappedParam);
-        indexCounter++;
-      }
-    }
-  }
-
-  processInputs(props.func?.inputs as FlattenedParamType[]);
-  return flatInputs;
-});
-
+// Create a local reactive copy of funcConditions to allow editing it without mutating props.
 const localCondition = useVModel(props, "funcConditions", emit, {
   clone: cloneDeep, // Deep copy to avoid prop mutation
   passive: true,    // Prevents excessive reactivity updates
-  deep: true,        // Ensures Vue watches nested changes
+  deep: true,       // Ensures Vue watches nested changes
 });
-// TODO localCondition and emit to parent, test when you edit field in child
-// Watch for changes in localCondition and emit updates
-// watch(
-//   localCondition,
-//   (newLocalFuncConditions) => {
-//     if (JSON.stringify(newLocalFuncConditions) !== JSON.stringify(props.condition)) {
-//       console.log("    [2] watch localCondition", toRaw(newLocalFuncConditions))
-//       emit("update:condition", newLocalFuncConditions);
-//     }
-//   },
-//   { deep: true },
-// );
 
-// // Update localCondition when `props.condition` changes (but don't emit).
-// watch(
-//   () => props.condition,
-//   (newCondition) => {
-//     // Update without emitting
-//     if (JSON.stringify(newCondition) !== JSON.stringify(localCondition.value)) {
-//       console.log("    [2] watch props.condition", toRaw(newCondition))
-//       // TODO check boolean when editing if they update correctly, convert bool to string
-//       localCondition.value = { ...newCondition };
-//     }
-//   },
-//   { deep: true, immediate: true },
-// );
+const flattenedInputs = computed(
+  () => flattenAbiFunctionInputs(props.func?.inputs as FlattenedParamType[]),
+);
+
+const getParamConditionByIndex = (
+  index: number,
+): ParamCondition | undefined => {
+  return localCondition.value?.params?.find((param) => param?.index === index);
+}
+
+const updateParamConditionByIndex = (index: number, newValue: ParamCondition) => {
+  console.debug("updateConditionByIndex", index, toRaw(newValue), toRaw(localCondition.value));
+  // localCondition.value.value[index] = newValue;
+  if (!localCondition.value?.params) return;
+
+  const condIndex = localCondition.value?.params?.findIndex((param) => param?.index === index);
+  if (localCondition.value?.params && condIndex >= 0) {
+    localCondition.value.params[condIndex] = newValue;
+  }
+}
 </script>
 
 <style lang="scss" scoped>

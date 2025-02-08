@@ -21,8 +21,8 @@ const emit = defineEmits(["update:modelValue"]);
 
 const props = defineProps({
   modelValue: {
-    type: Array as () => string[],
-    default: () => [],
+    type: String,
+    default: undefined,
   },
   param: {
     type: Object as PropType<FlattenedParamType>,
@@ -44,6 +44,7 @@ const tryAbiEncode = (value: string) => {
     return abiCoder.encode([props.param], [formatParamValue(props.param, value)])
   } catch (err: any) {
     console.error("failed abi encode", props.param, "value", value, "err", err);
+    // TODO show input error in the form to let user know it fails!
     return null
   }
 }
@@ -55,6 +56,11 @@ const tryAbiDecode = (value?: string) => {
   try {
     const paramTypeString = props.param.format("full")
     const nativeType = getNativeType(props.param)
+    console.log("tryAbi decode 2 param", props.param,
+      "val:", toRaw(value),
+      "paramTypeString:", paramTypeString,
+      "nativeType", nativeType,
+    )
     const decoded = abiCoder.decode([paramTypeString], value)[0]
     return nativeType === ParamNativeType.ARRAY || nativeType === ParamNativeType.TUPLE
       ? JSON.stringify(decoded)
@@ -88,9 +94,9 @@ const PlaceholderPerType: Record<ParamNativeType, string> = {
 watch(
   localValue,
   (newValue) => {
-    if (newValue !== props.modelValue[0]) {
-      console.log("    [2] watch newValue", toRaw(newValue))
-      const encoded = [tryAbiEncode(newValue) || ""];
+    if (newValue !== props.modelValue) {
+      console.log("    [2] watch newValue", toRaw(newValue), toRaw(props.modelValue))
+      const encoded = tryAbiEncode(newValue) || "";
       // console.log("encoded value: ", encoded);
       console.log("encoded value to emit: ", encoded);
       emit("update:modelValue", encoded);
@@ -102,9 +108,10 @@ watch(
 watch(
   () => props.modelValue,
   (newValue) => {
-    if (newValue[0] !== localValue.value) {
-      localValue.value = tryAbiDecode(newValue[0] || "");
-      console.log("  condition input value changed decoded value", localValue.value);
+    if (newValue !== localValue.value) {
+      console.log("  condition input value changed decoded value OLD", localValue.value);
+      localValue.value = tryAbiDecode(newValue || "");
+      console.log("  condition input value changed decoded value NEW", localValue.value);
     }
   },
   { deep: true, immediate: true },
