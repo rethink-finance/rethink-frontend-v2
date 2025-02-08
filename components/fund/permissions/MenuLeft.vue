@@ -33,7 +33,7 @@
         <div
           v-for="target in role?.targets || []"
           :key="target.id"
-          class="permissions__list_item"
+          :class="classesTarget(target)"
           @click="emitSelectedTarget(target)"
         >
           {{ truncateAddress(target.address) }}
@@ -44,8 +44,8 @@
 </template>
 
 <script setup lang="ts">
-import type { Role, Target } from "~/types/zodiac-roles/role";
 import { truncateAddress } from "~/composables/addressUtils";
+import type { Role, Target } from "~/types/zodiac-roles/role";
 
 const emit = defineEmits(["update:selectedTarget"]);
 
@@ -54,12 +54,22 @@ const props = defineProps({
     type: Object as PropType<Role>,
     default: () => {},
   },
+  selectedTarget: {
+    type: Object as PropType<Target>,
+    default: () => {},
+  },
 });
 
-// TODO highlight selected target in html
 const emitSelectedTarget = (selectedTarget: Target) => {
   emit("update:selectedTarget", selectedTarget);
 }
+
+const classesTarget = (target: Target) => {
+  return [
+    "permissions__list_item",
+    { "permissions__list_item--selected": target.address === props.selectedTarget.address },
+  ];
+};
 </script>
 
 <style lang="scss" scoped>

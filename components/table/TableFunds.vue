@@ -10,7 +10,7 @@
     items-per-page="-1"
     @mousedown:row="navigateFundDetails"
   >
-    <template #item.name="{ item }">
+    <template #[`item.name`]="{ item }">
       <FundNameCell
         :image="item.photoUrl"
         :title="item.fundToken.symbol"
@@ -18,7 +18,7 @@
       />
     </template>
 
-    <template #item.chainShort="{ item }">
+    <template #[`item.chainShort`]="{ item }">
       <Icon
         :icon="icon(item.chainShort).name"
         :width="icon(item.chainShort).size"
@@ -27,7 +27,7 @@
       />
     </template>
 
-    <template #item.lastNAVUpdateTotalNAV="{ item }">
+    <template #[`item.lastNAVUpdateTotalNAV`]="{ item }">
       <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
         <v-progress-circular
           v-if="item.isNavUpdatesLoading"
@@ -50,7 +50,7 @@
     </template>
 
     <!-- cumulative -->
-    <template #item.cumulativeReturnPercent="{ item }">
+    <template #[`item.cumulativeReturnPercent`]="{ item }">
       <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
         <v-progress-circular
           v-if="item.isNavUpdatesLoading"
@@ -64,7 +64,7 @@
       </div>
     </template>
 
-    <template #item.positionTypeCounts="{ item }">
+    <template #[`item.positionTypeCounts`]="{ item }">
       <PositionTypesBar :position-type-counts="item.positionTypeCounts ?? []" class="position_types_bar" />
     </template>
 
@@ -80,6 +80,8 @@
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue/dist/iconify.js";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatPercent,
   formatTokenValue,
@@ -87,8 +89,6 @@ import {
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 import type IFund from "~/types/fund";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 
 const { getFundDetailsUrl } = usePageNavigation();
 const router = useRouter();
@@ -180,7 +180,7 @@ const navigateFundDetails = (event: any, row: any) => {
     row.item.fundToken.symbol,
     row.item.address,
   );
-  console.log(event)
+
   // Check if the middle mouse button or a modifier key (e.g., Ctrl/Command) is pressed
   if (event.button === 1 || event.metaKey || event.ctrlKey) {
     // Allow the default behavior (open in a new tab)

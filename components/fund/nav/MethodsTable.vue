@@ -242,47 +242,21 @@
                   <v-label class="mb-2">
                     Position Type
                   </v-label>
-                  <div class="toggle_buttons">
-                    <v-btn-toggle
-                      v-model="navEntry.positionType"
-                      group
-                      mandatory
-                      :disabled="!isMethodEditable(item)"
-                    >
-                      <v-btn
-                        v-for="positionType in creatablePositionTypes"
-                        :key="positionType.key"
-                        :value="positionType.key"
-                        variant="outlined"
-                        @click.native="resetMethods(true)"
-                      >
-                        {{ positionType.name }}
-                      </v-btn>
-                    </v-btn-toggle>
-                  </div>
+                  <UiButtonsSwitch
+                    v-model="navEntry.positionType"
+                    :items="parsedPositionTypeItems"
+                    @update:model-value="navEntry.positionType = $event"
+                  />
                 </v-col>
                 <v-col v-if="valuationTypes.length" cols="12" sm="6">
                   <v-label class="mb-2">
                     Valuation Type
                   </v-label>
-                  <div class="toggle_buttons">
-                    <v-btn-toggle
-                      v-model="navEntry.valuationType"
-                      group
-                      mandatory
-                      :disabled="isMethodEditable(item) === false"
-                    >
-                      <v-btn
-                        v-for="valuationType in valuationTypes"
-                        :key="valuationType.key"
-                        :value="valuationType.key"
-                        variant="outlined"
-                        @click.native="resetMethods()"
-                      >
-                        {{ valuationType.name }}
-                      </v-btn>
-                    </v-btn-toggle>
-                  </div>
+                  <UiButtonsSwitch
+                    v-model="navEntry.valuationType"
+                    :items="parsedValuationTypeItems"
+                    @update:model-value="navEntry.valuationType = $event"
+                  />
                 </v-col>
               </v-row>
 
@@ -632,6 +606,20 @@ export default defineComponent({
       }
 
       return headers;
+    },
+    parsedPositionTypeItems() {
+      return this.creatablePositionTypes.map((positionType) => ({
+        key: positionType.key,
+        label: positionType.name,
+        onClick: () => this.resetMethods(true),
+      }));
+    },
+    parsedValuationTypeItems() {
+      return this.valuationTypes.map((valuationType) => ({
+        key: valuationType.key,
+        label: valuationType.name,
+        onClick: () => this.resetMethods(),
+      }));
     },
     valuationTypes() {
       return (
@@ -1264,28 +1252,6 @@ export default defineComponent({
     color: $color-success;
   }
 }
-// toggle buttons
-.toggle_buttons {
-  .v-btn-toggle {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    height: 100%;
-
-    .v-btn {
-      opacity: 0.35;
-      color: $color-text-irrelevant;
-      border-radius: 4px !important;
-      min-height: 48px;
-      @include borderGray;
-    }
-    .v-btn--active {
-      color: $color-white !important;
-      opacity: 1;
-    }
-  }
-}
-
 .text-end{
   margin-bottom: 20px;
 }

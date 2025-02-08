@@ -688,9 +688,9 @@ export const useFundStore = defineStore({
     postUpdateNAV(): Promise<any> {
       return useActionState("postUpdateNAVAction", () => postUpdateNAVAction());
     },
-    calculateFundPerformanceMetrics() {
+    calculateFundPerformanceMetrics(fund?: IFund) {
       return useActionState("calculateFundPerformanceMetricsAction", () =>
-        calculateFundPerformanceMetricsAction(),
+        calculateFundPerformanceMetricsAction(fund),
       );
     },
   },

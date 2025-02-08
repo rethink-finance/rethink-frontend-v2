@@ -36,7 +36,6 @@
           <template v-else>
             Unable to fetch ABI for this address.
             Upload contract ABI.
-          <!-- TODO upload ABI form input -->
           </template>
         </div>
 
@@ -45,8 +44,45 @@
         Show ABI
       </template>
       <template #body>
-        <pre class="permissions__json">{{ JSON.stringify(abiDetectedFunctions, null, 4) }}</pre>
-        <!-- TODO allow entering custom ABI input -->
+        <v-btn
+          v-if="!isEditingCustomABI"
+          color="primary"
+          class="target__abi_edit_button"
+          @click="handleClickEditCustomABI"
+        >
+          Edit ABI
+        </v-btn>
+
+        <v-col
+          v-if="isEditingCustomABI"
+        >
+          <v-textarea
+            v-model="customABI"
+            label="Custom ABI"
+            placeholder="Enter the contract ABI here"
+            rows="25"
+          />
+          <div class="d-flex">
+            <v-btn
+              color="primary"
+              class="mr-2"
+              @click="submitCustomABI"
+            >
+              Submit custom ABI
+            </v-btn>
+            <v-btn
+              variant="text"
+              @click="handleClickEditCustomABI"
+            >
+              Cancel
+            </v-btn>
+          </div>
+        </v-col>
+
+        <pre
+          v-else
+          class="permissions__json"
+        >{{ JSON.stringify(abiDetectedFunctions, null, 4) }}</pre>
       </template>
     </UiDataRowCard>
 
@@ -71,11 +107,11 @@
 
 <script setup lang="ts">
 import type { FunctionFragment } from "ethers";
-import type { Target, TargetConditions } from "~/types/zodiac-roles/role";
-import type { ChainId } from "~/store/web3/networksMap";
-import type { Explorer } from "~/services/explorer";
 import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
+import type { Explorer } from "~/services/explorer";
 import { useToastStore } from "~/store/toasts/toast.store";
+import type { ChainId } from "~/store/web3/networksMap";
+import type { Target, TargetConditions } from "~/types/zodiac-roles/role";
 
 const emit = defineEmits(["update:conditions"]);
 
@@ -98,6 +134,27 @@ const { $getExplorer } = useNuxtApp();
 const toastStore = useToastStore();
 // 🔥 **Create a local reactive copy of `target.conditions`**
 const localConditions = ref({ ...props.conditions });
+
+const customABI = ref<string>("");
+const isEditingCustomABI = ref(false);
+
+const submitCustomABI = () => {
+  try {
+    const customABIJson = JSON.parse(customABI.value);
+    const writeFunctions: FunctionFragment[] = getWriteFunctions(customABIJson);
+    abiDetectedFunctions.value = writeFunctions;
+    console.log("Custom ABI detected functions", writeFunctions);
+    isEditingCustomABI.value = false;
+  } catch (error: any) {
+    console.error("Error parsing custom ABI", error);
+    toastStore.errorToast("Error parsing custom ABI: " + error.message);
+  }
+}
+
+const handleClickEditCustomABI = () => {
+  customABI.value = JSON.stringify(abiDetectedFunctions.value, null, 4);
+  isEditingCustomABI.value = !isEditingCustomABI.value;
+}
 
 // Functions from the detected ABI.
 const abiDetectedFunctions = ref<FunctionFragment[]>([]);
@@ -148,6 +205,7 @@ const handleABIError = (error: any) => {
 watch(
   () => props.target, () => {
     fetchTargetABI();
+    isEditingCustomABI.value = false;
   },
   { immediate: true },
 );
@@ -192,5 +250,14 @@ watch(
     align-items: center;
     gap: 0.5rem;
   }
+  &__abi_edit_button {
+    display:flex;
+    margin: 1rem 1rem 1rem auto;
+  }
+}
+
+:deep(.data_row__body) {
+  max-height: 600px;
+  overflow-y: auto;
 }
 </style>

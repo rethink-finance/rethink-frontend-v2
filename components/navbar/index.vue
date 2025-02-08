@@ -18,9 +18,6 @@
       >
         <nuxt-link :to="'/'" class="d-flex">
           <Logo />
-          <v-tooltip activator="parent" location="bottom">
-            Go to homepage
-          </v-tooltip>
         </nuxt-link>
         <div class="navbar__buttons hidden-sm-and-down">
           <nuxt-link

@@ -74,9 +74,9 @@ export const fetchFundMetaDataAction = async (
 
     const parsedFundSettings: IFundSettings = parseFundSettings(fundSettings);
     const parsedClockMode = parseClockMode(clockMode);
-    console.log("parsedClockMode: ", parsedClockMode);
+    console.debug("parsedClockMode: ", parsedClockMode);
     console.log("parsedFundSettings: ", parsedFundSettings);
-    console.log("fundGovernanceTokenSupply: ", fundGovernanceTokenSupply);
+    console.debug("fundGovernanceTokenSupply: ", fundGovernanceTokenSupply);
 
     // TODO fundGovernanceTokenSupply is wrong from reader contract, until it is fixed and redeployed there
     //   manually fetch governance token total supply here. Then remove this line.
