@@ -53,7 +53,7 @@ export const calculateFundPerformanceMetricsAction = async (
 // TODO: we should move this function to utils or somewhere else because it's reusable
 const CHAIN_ID_MAP = {
   // Arbitrum uses L1 ETH as block time.
-  [ChainId.ARBITRUM]: ChainId.ETHEREUM,
+  // [ChainId.ARBITRUM]: ChainId.ETHEREUM,
 } as const;
 
 const getWeb3Instance = (chainId: ChainIdType) => {
@@ -84,15 +84,31 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
     const lastNavUpdateBlockNumber = Number(await getBlockByTimestamp(fund.chainId, fundLastNavUpdate.timestamp / 1000, averageBlockTime) || 0);
 
     // 3. get total deposit balance at the last NAV update
-    const fundContract = web3Store.getCustomContract(
-      fund.chainId,
-      GovernableFund.abi,
-      fund.address,
-    );
+    try {
+      let blockNumberForQuery = lastNavUpdateBlockNumber;
 
+      if (fund.chainId === ChainId.ARBITRUM) {
+        console.log("Fetching L1 Block for Arbitrum:", fund.title);
+        console.log("L2 Block Number:", lastNavUpdateBlockNumber);
 
-    try{
-      const totalDepositBal = BigInt(await fundContract.methods._totalDepositBal().call({}, lastNavUpdateBlockNumber) || 0);
+        // get L1 block equivalent
+        const l1BlockNumber = await getL1BlockNumber(lastNavUpdateBlockNumber, fund.chainId);
+        console.log("Mapped L1 Block Number:", l1BlockNumber);
+
+        if (l1BlockNumber) {
+          blockNumberForQuery = l1BlockNumber; // Use L1 block number for query
+        }
+      }
+
+      const fundContract = web3Store.getCustomContract(
+        fund.chainId,
+        GovernableFund.abi,
+        fund.address,
+      );
+
+      console.log("blockNumberForQuery: ", blockNumberForQuery);
+      const totalDepositBal = BigInt(await fundContract.methods._totalDepositBal().call({}, blockNumberForQuery) || 0);
+
       return totalDepositBal;
     } catch (e) {
       console.error("Error getting total deposit balance at last NAV update", e);
@@ -135,3 +151,56 @@ const getBlockByTimestamp = async (chainId: ChainIdType, timestamp: number, aver
     return null;
   }
 }
+
+
+const getL1BlockNumber = async (l2BlockNumber: number, chainId: ChainIdType) => {
+  try {
+    const web3Store = useWeb3Store();
+    const provider = web3Store.chainProviders[chainId];
+
+    // Fetch the L2 block details
+    const l2Block = await web3Store.callWithRetry(
+      chainId,
+      async () => await provider.eth.getBlock(l2BlockNumber),
+    );
+
+    if (!l2Block) {
+      console.error(`Block not found on L2: ${l2BlockNumber}`);
+      return null;
+    }
+
+    console.warn("L1 block number not found in L2 metadata. Estimating...");
+
+    // Fetch the latest Ethereum L1 block
+    const ethProvider = getWeb3Instance(ChainId.ETHEREUM);
+    const latestL1Block = await web3Store.callWithRetry(
+      ChainId.ETHEREUM,
+      async () => await ethProvider.eth.getBlock("latest"),
+    );
+
+    if (!latestL1Block) {
+      console.error("Failed to fetch latest L1 block.");
+      return null;
+    }
+
+    // Get block times for better estimation
+    const { initializeBlockTimeContext } = useBlockTime();
+    const context = await initializeBlockTimeContext(ethProvider);
+    const averageL1BlockTime = context?.averageBlockTime || 12; // Default fallback to 12s
+
+    // Estimate based on time difference
+    const l2Timestamp = Number(l2Block.timestamp);
+    const l1LatestTimestamp = Number(latestL1Block.timestamp);
+
+    const estimatedL1Block =
+      Number(latestL1Block.number) -
+      Math.floor((l1LatestTimestamp - l2Timestamp) / averageL1BlockTime);
+
+    console.debug("Estimated L1 Block:", estimatedL1Block);
+
+    return estimatedL1Block;
+  } catch (e) {
+    console.error("Error getting L1 block number", e);
+    return null;
+  }
+};
