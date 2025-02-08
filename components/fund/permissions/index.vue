@@ -64,7 +64,7 @@ const roleNumberOne = computed<Role|undefined>(
 
 // Set selected target & initialize its local conditions.
 const setSelectedTarget = (newTarget: Target) => {
-  console.log("[0] setSelectedTarget", newTarget);
+  console.log("[0] setSelectedTarget", toRaw(newTarget));
   selectedTarget.value = newTarget;
   if (!localConditions.value[newTarget.address]) {
     localConditions.value[newTarget.address] = { ...newTarget.conditions };
@@ -89,7 +89,6 @@ watch(() => props.roles.length, () => {
 watch(
   selectedTarget,
   (newTarget) => {
-    console.log("[0] watch selectedTarget", newTarget);
     if (newTarget && !localConditions.value[newTarget.address]) {
       localConditions.value[newTarget.address] = { ...newTarget.conditions };
     }
@@ -117,6 +116,7 @@ watch(
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    margin-left: 1rem;
   }
 }
 </style>
@@ -153,6 +153,7 @@ watch(
     align-items: center;
     font-family: monospace;
     white-space: normal;
+    line-height: 1.2rem;
   }
   &__function_params {
     color: $color-steel-blue;

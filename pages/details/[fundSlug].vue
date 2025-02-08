@@ -127,12 +127,10 @@ const fetchFund = async () => {
 const isLoadingFetchFundData = computed(() =>
   actionStateStore.isActionState("fetchFundDataAction", ActionState.Loading),
 );
-console.log("isLoadingFetchFundData", isLoadingFetchFundData.value);
 
 watch(
   () => accountStore.connectedWallet,
   (wallet: any) => {
-    console.warn("CONNECTED WALLET CHANGE, refresh user balances", wallet);
     fundStore.fetchUserFundData(fundChainId, fundAddress);
   },
 );

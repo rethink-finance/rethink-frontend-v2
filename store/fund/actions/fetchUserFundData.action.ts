@@ -6,6 +6,11 @@ export const fetchUserFundDataAction = async (
   fundChainId: ChainId,
   fundAddress: string,
 ): Promise<any> => {
+  console.debug(
+    "fetchUserFundDataAction, refresh user balances",
+    fundChainId,
+    fundAddress,
+  );
   const fundStore = useFundStore();
   const web3Store = useWeb3Store();
 
@@ -46,7 +51,7 @@ export const fetchUserFundDataAction = async (
     );
 
     if (fundDelegateAddress !== fundStore.fundUserData.fundDelegateAddress) {
-      console.error(
+      console.warn(
         "[MISMATCH] wrong delegate to address from reader contract",
         fundDelegateAddress,
         "should be:",

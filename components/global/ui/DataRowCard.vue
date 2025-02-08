@@ -12,7 +12,11 @@
       :class="{'data_row__panel--transparent': bgTransparent }"
       :readonly="isReadOnly"
     >
-      <v-expansion-panel-title :hide-actions="isReadOnly" static>
+      <v-expansion-panel-title
+        :hide-actions="isReadOnly"
+        :class="{'data_row__panel--full_height': titleFullHeight }"
+        static
+      >
         <div class="data_row__header">
           <div class="data_row__column" :class="{'data_row__column--grow': growColumn1}">
             <div class="data_row__title">
@@ -182,6 +186,10 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
+    titleFullHeight: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     const expandedList = [];
@@ -210,6 +218,12 @@ export default defineComponent({
   overflow: hidden;
   user-select: text !important;
 
+  .v-expansion-panel-title {
+    overflow: hidden;
+    padding: 0.75rem 0.5rem;
+    height: 3.5rem;
+    font-size: $text-sm;
+  }
   &--readonly {
     ::v-deep(.v-expansion-panel-title__overlay) {
       display: none !important;
@@ -223,6 +237,9 @@ export default defineComponent({
 
     &--transparent {
       background: transparent;
+    }
+    &--full_height.v-expansion-panel-title {
+      height: auto;
     }
   }
   &__header {
@@ -238,13 +255,6 @@ export default defineComponent({
     margin: auto;
     text-align: right;
   }
-  .v-expansion-panel-title {
-    overflow: hidden;
-    padding: 0.75rem 0.5rem;
-    height: 3.5rem;
-    font-size: $text-sm;
-  }
-
   &__body {
     word-wrap: break-word;
     max-width: 100%;
