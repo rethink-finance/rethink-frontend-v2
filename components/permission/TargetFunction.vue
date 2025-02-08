@@ -2,6 +2,7 @@
   <UiDataRowCard
     no-body-padding
     bg-transparent
+    title-full-height
     class="target_function"
     :is-expandable="!!funcConditions?.type"
   >
@@ -14,21 +15,33 @@
             disabled
           />
         </div>
-        <div>
-          {{ func?.name || sighash }}
-        </div>
-        <div class="permissions__function_params">
-          {{ functionParamsText }}
-        </div>
+        <p>
+          <span>
+            {{ func?.name || sighash }}
+          </span>
+          <span class="permissions__function_params">
+            {{ functionParamsText }}
+          </span>
+        </p>
       </div>
     </template>
     <template #body>
-      <span v-if="funcConditions?.sighash" class="target_function__condition">
+      <span
+        v-if="funcConditions?.sighash"
+        class="target_function__condition"
+      >
         <div class="d-flex align-center">
-          <pre class="permissions__json me-6"><strong>sighash:</strong> {{ funcConditions?.sighash }}</pre>
+          <pre class="permissions__json me-4"><strong>sighash:</strong> {{ funcConditions?.sighash }}</pre>
           <PermissionExecutionOptions
             v-model="localFuncConditions.executionOption"
             disabled
+          />
+          <v-switch
+            v-model="showRaw"
+            label="Raw"
+            color="primary"
+            class="ms-6"
+            hide-details
           />
         </div>
         <PermissionTargetFunctionParams
@@ -36,6 +49,7 @@
           :func="func"
           :sighash="sighash"
           :func-conditions="funcConditions"
+          :show-raw="showRaw"
         />
         <!-- TODO remove this RAW json -->
         <!--        <pre class="permissions__json">{{ JSON.stringify(funcConditions, null, 4) }}</pre>-->
@@ -76,6 +90,8 @@ const props = defineProps({
     default: () => {},
   },
 });
+const showRaw = ref(false);
+
 // Create a local reactive copy of funcConditions to allow editing it without mutating props.
 const localFuncConditions = ref<FunctionCondition>({ ...props.funcConditions });
 
@@ -115,6 +131,8 @@ const functionParamsText = computed(() =>
     display: flex;
     flex-direction: column;
     padding: 1rem;
+    overflow-y: hidden;
+    height: 100%;
   }
 }
 </style>

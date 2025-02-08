@@ -1,3 +1,5 @@
+import { ParamType } from "ethers";
+
 export type Role = {
   id: string
   name: string
@@ -17,6 +19,12 @@ export type Member = {
 }
 
 export type FuncParams = Record<string, boolean[]>
+
+export interface FlattenedParamType extends ParamType {
+  index: number;
+  parentIndex: number | null;
+  parentName: string | null;
+}
 
 export interface ParamCondition {
   index: number

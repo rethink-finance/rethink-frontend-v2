@@ -10,12 +10,13 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
+import { ethers, type ParamType } from "ethers";
 import {
   formatParamValue,
   getNativeType,
 } from "~/composables/zodiac-roles/conditions";
 import { ParamNativeType } from "~/types/enums/zodiac-roles";
+import type { FlattenedParamType } from "~/types/zodiac-roles/role";
 const emit = defineEmits(["update:modelValue"]);
 
 const props = defineProps({
@@ -24,7 +25,7 @@ const props = defineProps({
     default: () => [],
   },
   param: {
-    type: Object as PropType<ethers.ParamType>,
+    type: Object as PropType<FlattenedParamType>,
     default: undefined,
   },
   disabled: {
@@ -50,17 +51,17 @@ const tryAbiEncode = (value: string) => {
 const tryAbiDecode = (value?: string) => {
   if (!value) return value
   if (!props.param) return value
-
-  const paramTypeString = props.param.format("full")
-  const nativeType = getNativeType(props.param)
+  console.debug("tryAbi decode", props.param, value)
   try {
+    const paramTypeString = props.param.format("full")
+    const nativeType = getNativeType(props.param)
     const decoded = abiCoder.decode([paramTypeString], value)[0]
     return nativeType === ParamNativeType.ARRAY || nativeType === ParamNativeType.TUPLE
       ? JSON.stringify(decoded)
       : decoded.toString()
   } catch (err) {
     // TODO handle errors, if bad address checksum and so on...
-    // console.error("Error decoding value", err, { value })
+    console.error("Error decoding value", err, { value })
     return null
   }
 }

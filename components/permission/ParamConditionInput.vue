@@ -51,8 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
-import type { ParamCondition } from "~/types/zodiac-roles/role";
+import type { FlattenedParamType, ParamCondition } from "~/types/zodiac-roles/role";
 import {
   getConditionType,
   getNativeType,
@@ -69,7 +68,7 @@ const props = defineProps({
     required: true,
   },
   param: {
-    type: Object as PropType<ethers.ParamType>,
+    type: Object as PropType<FlattenedParamType>,
     default: undefined,
   },
   condition: {
@@ -99,6 +98,7 @@ const conditionOptions = computed(() =>
 );
 
 const updateConditionValueByIndex = (index: number, newValue: string) => {
+  console.log("updateConditionValueByIndex", index, newValue, localCondition.value);
   localCondition.value.value[index] = newValue;
 }
 

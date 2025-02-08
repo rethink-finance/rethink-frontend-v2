@@ -23,8 +23,8 @@ export const fetchFundMetaDataAction = async (
   const rethinkReaderContract =
     web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
   try {
-    console.log(
-      "fundNavMetaData000",
+    console.debug(
+      "fundNavMetaData",
       fundAddress,
       fundChainId,
       rethinkReaderContract,
@@ -70,7 +70,7 @@ export const fetchFundMetaDataAction = async (
 
     fundSettings.performancePeriod = feePerformancePeriod;
     fundSettings.managementPeriod = feeManagePeriod;
-    console.warn("fundSettings: ", fundSettings);
+    console.debug("fundSettings: ", fundSettings);
 
     const parsedFundSettings: IFundSettings = parseFundSettings(fundSettings);
     const parsedClockMode = parseClockMode(clockMode);
@@ -91,7 +91,7 @@ export const fetchFundMetaDataAction = async (
         () => fundGovernanceTokenContract.methods.totalSupply().call(),
       );
     if (fundGovernanceTokenSupply !== fundGovernanceTokenSupplyFixed)
-      console.error(
+      console.warn(
         "[MISMATCH] fundGovernanceTokenSupply: ",
         fundGovernanceTokenSupply,
         "fundGovernanceTokenSupplyFixed: ",
