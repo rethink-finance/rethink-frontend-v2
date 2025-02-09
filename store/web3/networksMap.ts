@@ -52,7 +52,7 @@ export const networksMap: Record<ChainId, INetwork> = {
     icon: getChainIcon("arb1"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      // "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
       "https://arb1.arbitrum.io/rpc", // Max 10k blocks, if auth: more than 1M
       "https://arbitrum.drpc.org", // Max 10k blocks, if auth: more than 1M
       "https://arbitrum.llamarpc.com", // Max 10k blocks

@@ -50,32 +50,11 @@ export const calculateFundPerformanceMetricsAction = async (
   }
 }
 
-// TODO: we should move this function to utils or somewhere else because it's reusable
-const CHAIN_ID_MAP = {
-  // Arbitrum uses L1 ETH as block time.
-  // [ChainId.ARBITRUM]: ChainId.ETHEREUM,
-} as const;
-
-const getWeb3Instance = (chainId: ChainIdType) => {
-  const web3Store = useWeb3Store();
-
-  const mappedChainId =
-    CHAIN_ID_MAP[chainId as keyof typeof CHAIN_ID_MAP];
-
-  // ARB1 is mapped to ETH
-  if (mappedChainId) {
-    return web3Store.chainProviders[mappedChainId];
-  }
-
-  return web3Store.chainProviders[chainId];
-};
-
-
 const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavUpdate: any) => {
   if(fundLastNavUpdate?.timestamp) {
     const web3Store = useWeb3Store();
     // 1. get average block time for the chain
-    const web3Instance = getWeb3Instance(fund.chainId);
+    const web3Instance = web3Store.getWeb3Instance(fund.chainId, false);
     const { initializeBlockTimeContext } = useBlockTime()
     const context = await initializeBlockTimeContext(web3Instance)
     const averageBlockTime = context?.averageBlockTime || 0;
@@ -85,29 +64,19 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
 
     // 3. get total deposit balance at the last NAV update
     try {
-      let blockNumberForQuery = lastNavUpdateBlockNumber;
-
-      if (fund.chainId === ChainId.ARBITRUM) {
-        console.log("Fetching L1 Block for Arbitrum:", fund.title);
-        console.log("L2 Block Number:", lastNavUpdateBlockNumber);
-
-        // get L1 block equivalent
-        const l1BlockNumber = await getL1BlockNumber(lastNavUpdateBlockNumber, fund.chainId);
-        console.log("Mapped L1 Block Number:", l1BlockNumber);
-
-        if (l1BlockNumber) {
-          blockNumberForQuery = l1BlockNumber; // Use L1 block number for query
-        }
-      }
-
       const fundContract = web3Store.getCustomContract(
         fund.chainId,
         GovernableFund.abi,
         fund.address,
       );
 
-      console.log("blockNumberForQuery: ", blockNumberForQuery);
-      const totalDepositBal = BigInt(await fundContract.methods._totalDepositBal().call({}, blockNumberForQuery) || 0);
+      const totalDepositBal =
+
+      await web3Store.callWithRetry(
+        fund.chainId,
+        async () =>
+          BigInt(await fundContract.methods._totalDepositBal().call({}, lastNavUpdateBlockNumber) || 0),
+      );
 
       return totalDepositBal;
     } catch (e) {
@@ -119,8 +88,6 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
   return null;
 }
 
-
-// TODO: we might move this f-ijon to utils or somewhere else
 const getBlockByTimestamp = async (chainId: ChainIdType, timestamp: number, averageBlockTime: number) => {
   try {
     const web3Store = useWeb3Store();
@@ -142,6 +109,17 @@ const getBlockByTimestamp = async (chainId: ChainIdType, timestamp: number, aver
 
     const estimatedStartBlock = latestBlock - Math.floor((latestTimestamp - timestamp) / averageBlockTime);
 
+
+    if(estimatedStartBlock < 0) {
+      console.error("Estimated start block is negative", estimatedStartBlock);
+      return null;
+    }
+
+    if(estimatedStartBlock > latestBlock) {
+      console.error("Estimated start block is greater than latest block", estimatedStartBlock, latestBlock);
+      return null;
+    }
+
     console.log("latestBlock: ", latestBlock);
     console.log("estimatedStartBlock: ", estimatedStartBlock);
 
@@ -153,6 +131,7 @@ const getBlockByTimestamp = async (chainId: ChainIdType, timestamp: number, aver
 }
 
 
+// TODO: we don't use this f-ijon, but might be useful in the future? should we keep it?
 const getL1BlockNumber = async (l2BlockNumber: number, chainId: ChainIdType) => {
   try {
     const web3Store = useWeb3Store();
@@ -172,7 +151,7 @@ const getL1BlockNumber = async (l2BlockNumber: number, chainId: ChainIdType) => 
     console.warn("L1 block number not found in L2 metadata. Estimating...");
 
     // Fetch the latest Ethereum L1 block
-    const ethProvider = getWeb3Instance(ChainId.ETHEREUM);
+    const ethProvider = web3Store.getWeb3Instance(ChainId.ETHEREUM);
     const latestL1Block = await web3Store.callWithRetry(
       ChainId.ETHEREUM,
       async () => await ethProvider.eth.getBlock("latest"),
