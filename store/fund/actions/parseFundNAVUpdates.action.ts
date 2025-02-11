@@ -3,14 +3,14 @@ import {
   decodeNavUpdateEntry,
 } from "~/composables/nav/navDecoder";
 
+import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
+import type { ChainId } from "~/store/web3/networksMap";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import { PositionTypeToNAVCacheMethod } from "~/types/enums/position_type";
 import type IFundNavData from "~/types/fund_nav_data";
+import type INAVMethod from "~/types/nav_method";
 import type INAVParts from "~/types/nav_parts";
 import type INAVUpdate from "~/types/nav_update";
-import type INAVMethod from "~/types/nav_method";
-import { PositionTypeToNAVCacheMethod } from "~/types/enums/position_type";
-import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import type { ChainId } from "~/store/web3/networksMap";
 
 export const parseFundNAVUpdatesAction = async (
   fundChainId: ChainId,
@@ -49,7 +49,14 @@ export const parseFundNAVUpdatesAction = async (
 
   // Parse NAV methods and populate entries and pastNavValues for the last update
   fundNAVData.encodedNavUpdate.forEach((navUpdate, navUpdateIndex) => {
-    const navMethods: Record<string, any>[] = decodeNavUpdateEntry(navUpdate);
+    let navMethods: Record<string, any>[] = [];
+
+    try{
+      navMethods = decodeNavUpdateEntry(navUpdate);
+    } catch (error) {
+      console.error("Error decoding navUpdate entry: ", error);
+    }
+
     for (const [navMethodIndex, navMethod] of navMethods.entries()) {
       const parsedNavMethod = parseNAVMethod(navMethodIndex, navMethod);
       navUpdates[navUpdateIndex].entries.push(parsedNavMethod);

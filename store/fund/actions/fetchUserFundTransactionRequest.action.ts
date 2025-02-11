@@ -29,7 +29,7 @@ export const fetchUserFundTransactionRequestAction = async (
     slotId,
   );
   const userRequestTimestampAddress = incrementStorageKey(userRequestAddress);
-  console.log("[FETCH REQUEST] AMOUNT", fundTransactionType);
+  console.debug("[FETCH REQUEST] AMOUNT", fundTransactionType);
   try {
     // TODO use correct provider based on chainId
     const amount = await web3Store.callWithRetry(
@@ -40,11 +40,11 @@ export const fetchUserFundTransactionRequestAction = async (
           userRequestAddress,
         ),
     );
-    console.log("[FETCH REQUEST] AMOUNT fetched", fundTransactionType, amount);
+    console.debug("[FETCH REQUEST] AMOUNT fetched", fundTransactionType, amount);
     let amountWei: string | bigint = ethers.stripZerosLeft(amount);
     amountWei = amountWei === "0x" ? 0n : BigInt(amountWei);
 
-    console.log("[FETCH REQUEST] fetch TS", fundTransactionType);
+    console.debug("[FETCH REQUEST] fetch TS", fundTransactionType);
     const ts = await web3Store.callWithRetry(
       fundChainId,
       () =>
@@ -53,7 +53,7 @@ export const fetchUserFundTransactionRequestAction = async (
           userRequestTimestampAddress,
         ),
     );
-    console.warn("[FETCH REQUEST] TS", fundTransactionType, ts);
+    console.debug("[FETCH REQUEST] TS", fundTransactionType, ts);
     let timestamp: string | number = ethers.stripZerosLeft(ts);
     timestamp = timestamp === "0x" ? 0 : Number(timestamp) * 1000;
 

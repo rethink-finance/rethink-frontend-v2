@@ -75,6 +75,6 @@ const emitChange = () => {
 .execution_options {
   display: flex;
   flex-direction: row;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 </style>

@@ -10,21 +10,22 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
+import { ethers, type ParamType } from "ethers";
 import {
   formatParamValue,
   getNativeType,
 } from "~/composables/zodiac-roles/conditions";
 import { ParamNativeType } from "~/types/enums/zodiac-roles";
+import type { FlattenedParamType } from "~/types/zodiac-roles/role";
 const emit = defineEmits(["update:modelValue"]);
 
 const props = defineProps({
   modelValue: {
-    type: Array as () => string[],
-    default: () => [],
+    type: String,
+    default: undefined,
   },
   param: {
-    type: Object as PropType<ethers.ParamType>,
+    type: Object as PropType<FlattenedParamType>,
     default: undefined,
   },
   disabled: {
@@ -43,6 +44,7 @@ const tryAbiEncode = (value: string) => {
     return abiCoder.encode([props.param], [formatParamValue(props.param, value)])
   } catch (err: any) {
     console.error("failed abi encode", props.param, "value", value, "err", err);
+    // TODO show input error in the form to let user know it fails!
     return null
   }
 }
@@ -50,17 +52,22 @@ const tryAbiEncode = (value: string) => {
 const tryAbiDecode = (value?: string) => {
   if (!value) return value
   if (!props.param) return value
-
-  const paramTypeString = props.param.format("full")
-  const nativeType = getNativeType(props.param)
+  console.debug("tryAbi decode", props.param, value)
   try {
+    const paramTypeString = props.param.format("full")
+    const nativeType = getNativeType(props.param)
+    console.log("tryAbi decode 2 param", props.param,
+      "val:", toRaw(value),
+      "paramTypeString:", paramTypeString,
+      "nativeType", nativeType,
+    )
     const decoded = abiCoder.decode([paramTypeString], value)[0]
     return nativeType === ParamNativeType.ARRAY || nativeType === ParamNativeType.TUPLE
       ? JSON.stringify(decoded)
       : decoded.toString()
   } catch (err) {
     // TODO handle errors, if bad address checksum and so on...
-    // console.error("Error decoding value", err, { value })
+    console.error("Error decoding value", err, { value })
     return null
   }
 }
@@ -87,9 +94,9 @@ const PlaceholderPerType: Record<ParamNativeType, string> = {
 watch(
   localValue,
   (newValue) => {
-    if (newValue !== props.modelValue[0]) {
-      console.log("    [2] watch newValue", toRaw(newValue))
-      const encoded = [tryAbiEncode(newValue) || ""];
+    if (newValue !== props.modelValue) {
+      console.log("    [2] watch newValue", toRaw(newValue), toRaw(props.modelValue))
+      const encoded = tryAbiEncode(newValue) || "";
       // console.log("encoded value: ", encoded);
       console.log("encoded value to emit: ", encoded);
       emit("update:modelValue", encoded);
@@ -101,9 +108,10 @@ watch(
 watch(
   () => props.modelValue,
   (newValue) => {
-    if (newValue[0] !== localValue.value) {
-      localValue.value = tryAbiDecode(newValue[0] || "");
-      console.log("  condition input value changed decoded value", localValue.value);
+    if (newValue !== localValue.value) {
+      console.log("  condition input value changed decoded value OLD", localValue.value);
+      localValue.value = tryAbiDecode(newValue || "");
+      console.log("  condition input value changed decoded value NEW", localValue.value);
     }
   },
   { deep: true, immediate: true },
