@@ -64,18 +64,17 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
 
     // 3. get total deposit balance at the last NAV update
     try {
-      const fundContract = web3Store.getCustomContract(
+      const totalDepositBal = await web3Store.callWithRetry(
         fund.chainId,
-        GovernableFund.abi,
-        fund.address,
-      );
+        async () => {
+          const fundContract = web3Store.getCustomContract(
+            fund.chainId,
+            GovernableFund.abi,
+            fund.address,
+          );
 
-      const totalDepositBal =
-
-      await web3Store.callWithRetry(
-        fund.chainId,
-        async () =>
-          BigInt(await fundContract.methods._totalDepositBal().call({}, lastNavUpdateBlockNumber) || 0),
+          return BigInt(await fundContract.methods._totalDepositBal().call({}, lastNavUpdateBlockNumber) || 0)
+        },
       );
 
       return totalDepositBal;

@@ -32,7 +32,8 @@ export const networksMap: Record<ChainId, INetwork> = {
     icon: getChainIcon("matic"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      // "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      // "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", Luka T.
+      // "https://polygon-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", Rok
       "https://polygon-rpc.com",
       "https://polygon.drpc.org",
       "https://polygon-pokt.nodies.app",
@@ -52,7 +53,9 @@ export const networksMap: Record<ChainId, INetwork> = {
     icon: getChainIcon("arb1"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      // "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", // Luka T.
+      // "https://arb-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", // Rok
+      // "https://arbitrum-mainnet.infura.io/v3/be388d08c0334adbbabb9cd6555165d1", // Luka V. Infura Arbitrum
       "https://arb1.arbitrum.io/rpc", // Max 10k blocks, if auth: more than 1M
       "https://arbitrum.drpc.org", // Max 10k blocks, if auth: more than 1M
       "https://arbitrum.llamarpc.com", // Max 10k blocks
@@ -88,7 +91,8 @@ export const networksMap: Record<ChainId, INetwork> = {
     icon: getChainIcon("eth"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      // "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      // "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", // Luka T.
+      // "https://eth-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", // Rok
       "https://eth.drpc.org",
       "https://endpoints.omniatech.io/v1/eth/mainnet/public",
       "https://ethereum.blockpi.network/v1/rpc/public",
@@ -113,7 +117,8 @@ export const networksMap: Record<ChainId, INetwork> = {
     icon: getChainIcon("base"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      // "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      // "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", Luka T.
+      // "https://base-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", Rok
       "https://mainnet.base.org",
       "https://base.llamarpc.com",
       "https://base-mainnet.public.blastapi.io",
