@@ -227,7 +227,6 @@ import { ERC20 } from "~/assets/contracts/ERC20";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import type IFund from "~/types/fund";
 import { useAccountStore } from "~/store/account/account.store";
 
 const fundStore = useFundStore();
@@ -239,9 +238,9 @@ const { isUsingZodiacPilotExtension } = storeToRefs(fundStore);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({
-  contractAddress: "0xeECa9AB62c474d8C94f55f7026495eeBe1542501",
-  txData: "0x",
-  amountValue: "1",
+  contractAddress: "",
+  txData: "",
+  amountValue: "",
 });
 
 const loadingTransfer = ref(false);
