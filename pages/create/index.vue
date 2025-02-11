@@ -255,12 +255,12 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
+import type { ChainId } from "~/store/web3/networksMap";
 import { networkChoices, networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
 import { feeFieldKeys, type IWhitelist } from "~/types/enums/fund_setting_proposal";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
-import type { ChainId } from "~/store/web3/networksMap";
 import { InputType } from "~/types/enums/input_type";
 import {
   OnboardingFieldsMap,
@@ -471,7 +471,7 @@ const isFundInitialized = computed(() => {
 })
 
 const showInitializeTooltip = computed(() => {
-  return isFundInitialized.value && step.value > 1 && step.value < 7;
+  return isFundInitialized.value && step.value > 1 && step.value < 6;
 });
 
 const showButtonNext = computed(() => {
