@@ -91,14 +91,14 @@
       <PermissionTargetFunction
         v-for="(func, index) in abiWriteFunctions"
         :key="index"
-        v-model:funcConditions="localConditions[func.selector]"
+        v-model:func-conditions="localConditions[func.selector]"
         :func="func as FunctionFragment"
       />
       <!-- Display function conditions that were not found in the ABI -->
       <PermissionTargetFunction
         v-for="(sighash, index) in sighashesNotInAbi"
         :key="index"
-        v-model:funcConditions="localConditions[sighash]"
+        v-model:func-conditions="localConditions[sighash]"
         :sighash="sighash"
       />
     </div>
@@ -203,10 +203,6 @@ watch(
         (func: FunctionFragment) => func.selector === conditionKey,
       ),
     );
-
-    for (const conditionKey in Object.keys(props.target?.conditions || {})) {
-      console.warn("conditionKey:", conditionKey);
-    }
   },
   { immediate: true, deep: true },
 );
