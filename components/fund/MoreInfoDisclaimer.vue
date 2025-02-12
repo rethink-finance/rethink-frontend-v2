@@ -4,7 +4,7 @@
     <p>
       For a deeper look and additional information, please view the Soonami OIV on
       <a
-        href="https://app.rethink.finance/details/0x89-SOON1-0xc748d5E77B998608Ef84d063b9694f2dBB81a325"
+        :href="rethinkSoonamiUrl"
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -14,7 +14,8 @@
   </div>
 </template>
 <script setup lang="ts">
-
+import { SOONAMI_FUND_DETAILS_URL } from "~/middleware/redirectToSoonamiFund.global";
+const rethinkSoonamiUrl = `https://app.rethink.finance${SOONAMI_FUND_DETAILS_URL}`;
 </script>
 
 <style scoped lang="scss">
