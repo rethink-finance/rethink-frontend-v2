@@ -1,53 +1,62 @@
-import type { ApolloClient } from "@apollo/client";
 import { useGovernanceProposalsStore } from "../governance_proposals.store";
 
 import { fetchSubgraphGovernorProposal } from "~/services/subgraph";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { _mapSubgraphProposalToProposal } from "~/types/helpers/mappers";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export const fetchGovernanceProposalAction = async (
   proposalId: string,
 ): Promise<any> => {
   const governanceProposalStore = useGovernanceProposalsStore();
+  const web3Store = useWeb3Store();
   const fundStore = useFundStore();
-  const nuxtApp = useNuxtApp();
-  const client = nuxtApp.$apolloClient as Ref<ApolloClient<any>>;
-
-  if (!client) throw new Error("Apollo client not found");
-  if (!fundStore.fund?.governorAddress)
+  const fund = unref(fundStore.fund);
+  if (!fund) {
+    return;
+  }
+  if (!fund?.governorAddress)
     throw new Error("Governor address not found");
   if (!proposalId) throw new Error("Proposal ID not found");
 
-  const proposal = await fetchSubgraphGovernorProposal(client.value, {
-    governorAddress: fundStore.fund?.governorAddress,
-    proposalId,
-  });
-
+  const proposal = await fetchSubgraphGovernorProposal(
+    fund?.chainId,
+    {
+      governorAddress: fund?.governorAddress,
+      proposalId,
+    });
   const { initializeBlockTimeContext, getTimestampForBlock } = useBlockTime();
   const blockTimeContext = await initializeBlockTimeContext(
     governanceProposalStore.getWeb3InstanceByChainId(),
   );
 
-  const roleModAddress = await fundStore.getRoleModAddress();
-  const quorumDenominator = await governanceProposalStore.callWithRetry(() =>
-    fundStore.fundGovernorContract.methods.quorumDenominator().call(),
-  );
+  const roleModAddress = await fundStore.getRoleModAddress(fund.address);
 
   const timepoint =
-    fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber
+    fund?.clockMode?.mode === ClockMode.BlockNumber
       ? proposal.proposalCreated?.[0]?.transaction?.blockNumber
       : proposal.proposalCreated?.[0]?.timestamp;
   const blockNumber = proposal.proposalCreated?.[0]?.transaction?.blockNumber;
 
-  const [quorumNumerator, totalSupply] = await Promise.all([
-    governanceProposalStore.callWithRetry(() =>
-      fundStore.fundGovernorContract.methods.quorumNumerator(timepoint).call(),
+  const [quorumNumerator, quorumDenominator, totalSupply] = await Promise.all([
+    web3Store.callWithRetry(
+      fund?.chainId,
+      () =>
+        fundStore.fundGovernorContract.methods.quorumNumerator(timepoint).call(),
     ),
-    governanceProposalStore.callWithRetry(() =>
-      fundStore.fundGovernanceTokenContract.methods
-        .totalSupply()
-        .call({ blockNumber }),
+    web3Store.callWithRetry(
+      fund?.chainId,
+      () =>
+        // TODO why are we not passing timepoint here?
+        fundStore.fundGovernorContract.methods.quorumDenominator().call(),
+    ),
+    web3Store.callWithRetry(
+      fund?.chainId,
+      () =>
+        fundStore.fundGovernanceTokenContract.methods
+          .totalSupply()
+          .call({ blockNumber }),
     ),
   ]);
 
@@ -55,19 +64,20 @@ export const fetchGovernanceProposalAction = async (
     proposal,
     totalSupply,
     blockTimeContext,
-    fundStore.fund?.governanceToken.decimals ?? 0,
+    fund?.governanceToken.decimals ?? 0,
     quorumNumerator,
     quorumDenominator,
     getTimestampForBlock,
-    fundStore.fund?.clockMode?.mode as ClockMode,
+    fund?.clockMode?.mode as ClockMode,
     roleModAddress ?? "",
-    fundStore.fund?.safeAddress ?? "",
+    fund?.safeAddress ?? "",
+    fund?.address ?? "",
   );
 
-  governanceProposalStore.storeProposals(
-    governanceProposalStore.web3Store.chainId,
-    governanceProposalStore.fundStore.fund?.address,
-    [mappedProposal],
+  governanceProposalStore.storeProposal(
+    fund?.chainId,
+    fund?.address,
+    mappedProposal,
   );
 
   return mappedProposal;

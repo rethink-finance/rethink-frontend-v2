@@ -97,7 +97,6 @@ import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallA
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
 
@@ -105,7 +104,6 @@ const emit = defineEmits(["deposit-success"]);
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
-const web3Store = useWeb3Store();
 
 const tokenValue = ref("");
 const tokenValueChanged = ref(false);
@@ -117,7 +115,7 @@ const {
   shouldUserWaitSettlementOrCancelDeposit,
   userDepositRequest,
   userDepositRequestExists,
-} = toRefs(fundStore);
+} = storeToRefs(fundStore);
 
 const loadingRequestDeposit = ref(false);
 const loadingApproveAllowance = ref(false);
@@ -225,7 +223,10 @@ const handleError = (error: any, refreshData: boolean = true) => {
     );
     console.error(error);
     if (refreshData) {
-      fundStore.fetchUserFundData(fundStore.selectedFundAddress);
+      fundStore.fetchUserFundData(
+        fundStore.selectedFundChain,
+        fundStore.selectedFundAddress,
+      );
     }
   }
 };
@@ -263,21 +264,11 @@ const requestDeposit = async () => {
   );
   console.log("contract:", fundStore.fundContract);
   console.warn("connectedWallet", accountStore?.connectedWallet);
-  // Prepare the transaction data
-  const transactionData = fundStore.fundContract.methods
-    .fundFlowsCall(encodedFunctionCall)
-    .encodeABI();
 
-  // Print the transaction calldata
-  console.warn("Transaction Calldata:", transactionData);
   try {
-    await fundStore.fundContract.methods
-      .fundFlowsCall(encodedFunctionCall)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
-      .on("transactionHash", (hash: string) => {
+    await fundStore.fundContract
+      .send("fundFlowsCall", {}, encodedFunctionCall)
+      .on("transactionHash", (hash: any) => {
         console.log("tx hash: ", hash);
         toastStore.addToast(
           "The transaction has been submitted. Please wait for it to be confirmed.",
@@ -292,7 +283,7 @@ const requestDeposit = async () => {
           // he can approve it without inputting the value himself, for better UX.
           // TODO takes 15-20 sec for node to sync .. fix
           // await fundStore.fetchUserBalances();
-          fundStore.userDepositRequest = {
+          fundStore.fundUserData.depositRequest = {
             amount: tokensWei.value,
             timestamp: Date.now(),
             type: FundTransactionType.Deposit,
@@ -304,7 +295,10 @@ const requestDeposit = async () => {
           toastStore.errorToast(
             "Your deposit request has failed. Please contact the Rethink Finance support.",
           );
-          fundStore.fetchUserFundData(fundStore.selectedFundAddress);
+          fundStore.fetchUserFundData(
+            fundStore.selectedFundChain,
+            fundStore.selectedFundAddress,
+          );
         }
         loadingRequestDeposit.value = false;
       })
@@ -342,13 +336,9 @@ const approveAllowance = async () => {
 
   try {
     // call the approval method
-    await fundStore.fundBaseTokenContract.methods
-      .approve(fund.value?.address, tokensWei.value)
-      .send({
-        from: fundStore.activeAccountAddress,
-        gasPrice: "",
-      })
-      .on("transactionHash", (hash: string) => {
+    await fundStore.fundBaseTokenContract
+      .send("approve", {}, fund.value?.address, tokensWei.value)
+      .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
           "The transaction has been submitted. Please wait for it to be confirmed.",

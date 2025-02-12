@@ -35,7 +35,7 @@
             />
 
             <template #tooltip>
-              Transfer any token from Custody Contract to approved destination
+              Transfer any token from Safe Contract to approved destination
               <a
                 class="tooltip__link"
                 href="https://docs.rethink.finance/rethink.finance"
@@ -128,7 +128,7 @@
     <div :class="`main_card ${!isUsingZodiacPilotExtension ? 'disabled' : ''}`">
       <UiHeader>
         <div class="main_header__title">
-          Submit Raw TXN
+          Submit Raw Transaction
           <UiTooltipClick location="right" :hide-after="6000">
             <Icon
               icon="material-symbols:info-outline"
@@ -137,7 +137,7 @@
             />
 
             <template #tooltip>
-              Submit any approved Raw TXN on behalf of Custody Contract
+              Submit any approved Raw TXN on behalf of Safe Contract
               <a
                 class="tooltip__link"
                 href="https://docs.rethink.finance/rethink.finance"
@@ -227,15 +227,14 @@ import { ERC20 } from "~/assets/contracts/ERC20";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import type IFund from "~/types/fund";
+import { useAccountStore } from "~/store/account/account.store";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
+const accountStore = useAccountStore();
 
-const fund = useAttrs().fund as IFund;
-const { isUsingZodiacPilotExtension } = toRefs(fundStore);
-
+const { isUsingZodiacPilotExtension } = storeToRefs(fundStore);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({
@@ -298,12 +297,8 @@ const handleTransfer = async () => {
   const tokensWei = ethers.parseUnits(transferEntry.depositValue, decimals);
 
   // call the transfer method
-  await inputTokenContract.value.methods
-    .transfer(transferEntry.to, tokensWei)
-    .send({
-      from: fundStore.activeAccountAddress,
-      gas: 200000,
-    })
+  await inputTokenContract.value
+    .send("transfer", {}, transferEntry.to, tokensWei)
     .on("transactionHash", (hash: any) => {
       console.log("tx hash: " + hash);
       toastStore.addToast(
@@ -339,14 +334,14 @@ const submitRawTXN = async () => {
     console.log("from:", fundStore.activeAccountAddress);
     console.log("value:", parseInt(submitRawTXNEntry.amountValue));
 
-    if (!web3Store.web3) {
-      toastStore.errorToast("Web3 is not initialized. Please try again later.");
+    if (!accountStore.connectedWalletWeb3) {
+      console.log("Send trx raw no connected wallet");
+      toastStore.errorToast(
+        "Connect your wallet.",
+      );
       return;
     }
-
-    // TODO this next line can be removed probably?
-    // web3Store.web3.config.ignoreGasPricing = true;
-    await web3Store.web3.eth.sendTransaction({
+    await accountStore.connectedWalletWeb3.eth.sendTransaction({
       to: submitRawTXNEntry.contractAddress,
       data: submitRawTXNEntry.txData,
       from: fundStore.activeAccountAddress,
@@ -360,7 +355,7 @@ const submitRawTXN = async () => {
       checkRevertBeforeSending: false,
     },
     )
-      .on("transactionHash", (hash: string) => {
+      .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
           "The transaction has been submitted. Please wait for it to be confirmed.",
@@ -413,7 +408,6 @@ const inputTokenDetais = ref({
 // fetch entered token details
 const fetchTokenDetails = async () => {
   if (!transferEntry.inputTokenAddress) return;
-  if (!web3Store.web3) return;
   // e.g. for testing inputTokenAddresses (POLYGON):
   // 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 DAI
   // 0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359 USDC
@@ -421,7 +415,8 @@ const fetchTokenDetails = async () => {
   // 0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6 WBTC
 
   try {
-    const tokenContract = new web3Store.web3.eth.Contract(
+    const tokenContract = web3Store.getCustomContract(
+      fundStore.selectedFundChain,
       ERC20,
       transferEntry.inputTokenAddress,
     );

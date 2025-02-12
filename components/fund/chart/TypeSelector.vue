@@ -37,7 +37,7 @@
 
 <script lang="ts">
 const typeOptions: Record<string, string> = {
-  "aum": "AUM",
+  "nav": "NAV",
   // TODO add other type options when needed.
   // "sharePrice": "Share Price",
 };
@@ -51,7 +51,7 @@ export default {
     },
     selected: {
       type: String,
-      default: "aum",
+      default: "nav",
       rules: [
         (value: string) => {
           if (!Object.keys(typeOptions)?.includes(value)) {

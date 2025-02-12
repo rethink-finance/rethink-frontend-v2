@@ -1,7 +1,9 @@
 import { useFundStore } from "../fund.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export const fetchUserFundShareValueAction = async (): Promise<any> => {
   const fundStore = useFundStore();
+  const web3Store = useWeb3Store();
   fundStore.fundUserData.fundShareValue = BigInt("0");
 
   if (!fundStore.activeAccountAddress)
@@ -13,8 +15,10 @@ export const fetchUserFundShareValueAction = async (): Promise<any> => {
   }
   let balanceWei = BigInt("0");
   try {
-    balanceWei = await fundStore.callWithRetry(() =>
-      fundStore.fundContract.methods.valueOf(fundStore.activeAccountAddress).call(),
+    balanceWei = await web3Store.callWithRetry(
+      fundStore.selectedFundChain,
+      () =>
+        fundStore.fundContract.methods.valueOf(fundStore.activeAccountAddress).call(),
     );
   } catch (e) {
     console.error(

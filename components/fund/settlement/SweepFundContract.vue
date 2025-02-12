@@ -3,7 +3,7 @@
     <div class="transfer__content">
       <div class="transfer__header">
         <div class="transfer__title">
-          Transfer Base Asset to the Custody Contract
+          Transfer Base Asset to the Safe Contract
         </div>
         <div class="transfer__subtitle">
           Transfer any excess base asset amount from the OIV contract back to the custody contract.
@@ -15,7 +15,11 @@
       </FundSettlementAlert>
       <div class="buttons_container">
         <div>
-          <v-tooltip activator="parent" location="bottom" :disabled="!isConnected">
+          <v-tooltip
+            activator="parent"
+            location="bottom"
+            :disabled="!isConnected"
+          >
             <template #activator="{ props }">
               <v-btn
                 v-bind="props"
@@ -50,18 +54,20 @@ import { eth } from "web3";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 
-const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 
-const { isConnected } = toRefs(accountStore);
+const { isConnected } = storeToRefs(accountStore);
 const isSweepLoading = ref(false);
 
 const isSweepContractDisabled = computed(() => {
-  return !!sweepContractTooltipText.value || isSweepLoading.value || !isConnected.value;
+  return (
+    !!sweepContractTooltipText.value ||
+    isSweepLoading.value ||
+    !isConnected.value
+  );
 });
 const sweepContractTooltipText = computed(() => {
   if (!isConnected.value) {
@@ -70,42 +76,49 @@ const sweepContractTooltipText = computed(() => {
     // TODO actually we need to check if there are excess OIVs to sweep.
     return "Currently there are no base assets in the OIV contract to sweep.";
   }
-  return ""
+  return "";
 });
 
 const fundContractBaseTokenBalance = computed(() => {
   return fundStore.fund?.fundContractBaseTokenBalance || 0n;
 });
 
-
 const sweepFundContract = async () => {
   isSweepLoading.value = true;
 
   try {
-    const functionSignatureHash = eth.abi.encodeFunctionSignature("sweepTokens()");
+    const functionSignatureHash =
+      eth.abi.encodeFunctionSignature("sweepTokens()");
 
-    await fundStore.fundContract.methods.fundFlowsCall(functionSignatureHash).send({
-      from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
-      gasPrice: "",
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: ", hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt :", receipt);
-      if (receipt.status) {
-        toastStore.successToast("Fund contract sweep was successful.");
-        // Refresh balances
-        // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
-        fundStore.fetchFundContractBaseTokenBalance();
-      } else {
-        toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
-        fundStore.fetchUserFundData(fundStore.selectedFundAddress);
-      }
-      isSweepLoading.value = false;
-    }).on("error", (error: any) => {
-      handleError(error);
-    })
+    await fundStore.fundContract
+      .send("fundFlowsCall", {}, functionSignatureHash)
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: ", hash);
+        toastStore.addToast(
+          "The transaction has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt :", receipt);
+        if (receipt.status) {
+          toastStore.successToast("Fund contract sweep was successful.");
+          // Refresh balances
+          // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
+          fundStore.fetchFundContractBaseTokenBalance();
+        } else {
+          toastStore.errorToast(
+            "Your deposit request has failed. Please contact the Rethink Finance support.",
+          );
+          fundStore.fetchUserFundData(
+            fundStore.selectedFundChain,
+            fundStore.selectedFundAddress,
+          );
+        }
+        isSweepLoading.value = false;
+      })
+      .on("error", (error: any) => {
+        handleError(error);
+      });
   } catch (error: any) {
     handleError(error);
   }
@@ -115,13 +128,15 @@ const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
   if ([4001, 100].includes(error?.code)) {
-    toastStore.addToast("Transaction was rejected.")
+    toastStore.addToast("Transaction was rejected.");
   } else {
-    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    toastStore.errorToast(
+      "There has been an error. Please contact the Rethink Finance support.",
+    );
     console.error(error);
   }
   isSweepLoading.value = false;
-}
+};
 </script>
 
 <style lang="scss" scoped>
@@ -167,7 +182,7 @@ const handleError = (error: any) => {
     flex-direction: row;
     gap: 0.75rem;
     margin-bottom: 0.75rem;
-    color: $color-light-subtitle
+    color: $color-light-subtitle;
   }
   &__token_data {
     @include borderGray;

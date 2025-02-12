@@ -14,8 +14,10 @@
           <div class="transfer__token_col">
             {{ baseToken?.symbol }}
           </div>
-          <div class="transfer__token_col pa-0 transfer__token_col--dark text-end">
-            <InputNumber
+          <div
+            class="transfer__token_col pa-0 transfer__token_col--dark text-end"
+          >
+            <UiInputNumber
               v-model="tokenValue"
               :rules="tokenValueRules"
               class="transfer__input_amount"
@@ -33,12 +35,19 @@
         </div>
       </div>
 
-      <FundSettlementAlert v-if="!isUsingZodiacPilotExtension" class="switch_alert">
+      <FundSettlementAlert
+        v-if="!isUsingZodiacPilotExtension"
+        class="switch_alert"
+      >
         Switch to the Zodiac Pilot extension!
       </FundSettlementAlert>
       <div class="buttons_container">
         <div>
-          <v-tooltip activator="parent" location="bottom" :disabled="!transferTooltipText">
+          <v-tooltip
+            activator="parent"
+            location="bottom"
+            :disabled="!transferTooltipText"
+          >
             <template #activator="{ props }">
               <v-btn
                 v-bind="props"
@@ -77,7 +86,7 @@ const toastStore = useToastStore();
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
 
-const { isUsingZodiacPilotExtension } = toRefs(fundStore);
+const { isUsingZodiacPilotExtension } = storeToRefs(fundStore);
 
 const baseToken = computed(() => {
   return fundStore.fund?.baseToken;
@@ -100,18 +109,21 @@ const tokenValue = computed({
 
 const tokenValueChanged = ref(false);
 const isTransferLoading = ref(false);
-const tokensWei = computed( () => {
+const tokensWei = computed(() => {
   if (!baseToken.value) return 0n;
-  return ethers.parseUnits(tokenValue.value || "0", baseToken.value.decimals)
-})
-
-watch(() => tokenValue.value, () => {
-  tokenValueChanged.value = true;
+  return ethers.parseUnits(tokenValue.value || "0", baseToken.value.decimals);
 });
+
+watch(
+  () => tokenValue.value,
+  () => {
+    tokenValueChanged.value = true;
+  },
+);
 
 const setTokenValue = (value: any) => {
   tokenValue.value = value;
-}
+};
 
 const tokenValueRules = [
   (value: string) => {
@@ -119,29 +131,36 @@ const tokenValueRules = [
     try {
       valueWei = ethers.parseUnits(value || "0", baseToken.value?.decimals);
     } catch {
-      return `Make sure the value has max ${baseToken.value?.decimals} decimals.`
+      return `Make sure the value has max ${baseToken.value?.decimals} decimals.`;
     }
     if (valueWei <= 0) {
-      return "Value must be positive."
+      return "Value must be positive.";
     }
     if (valueWei > safeContractBaseTokenBalance.value) {
-      return "Not enough balance."
+      return "Not enough balance.";
     }
     return true;
   },
 ];
 const errorMessages = computed(() => {
-  return tokenValueRules.map(rule => rule(tokenValue.value || "0")).filter(rule => rule !== true);
+  return tokenValueRules
+    .map((rule) => rule(tokenValue.value || "0"))
+    .filter((rule) => rule !== true);
 });
 const isTransferDisabled = computed(() => {
-  return errorMessages.value.length > 0 || isTransferLoading.value || !isUsingZodiacPilotExtension.value;
+  return (
+    errorMessages.value.length > 0 ||
+    isTransferLoading.value ||
+    !isUsingZodiacPilotExtension.value
+  );
 });
 const transferTooltipText = computed(() => {
   if (!isUsingZodiacPilotExtension.value) {
     return "Switch to the Zodiac Pilot Extension to make a transfer.";
   }
-  if (errorMessages.value.length && tokenValueChanged.value) return errorMessages.value[0];
-  return ""
+  if (errorMessages.value.length && tokenValueChanged.value)
+    return errorMessages.value[0];
+  return "";
 });
 
 const safeContractBaseTokenBalance = computed(() => {
@@ -149,42 +168,46 @@ const safeContractBaseTokenBalance = computed(() => {
 });
 const safeContractBaseTokenBalanceFormatted = computed(() => {
   if (!baseToken.value) return "--";
-  return formatTokenValue(safeContractBaseTokenBalance.value, baseToken.value?.decimals, false);
+  return formatTokenValue(
+    safeContractBaseTokenBalance.value,
+    baseToken.value?.decimals,
+    false,
+  );
 });
 
 const transfer = async () => {
   isTransferLoading.value = true;
-  // const [gasPrice] = await web3Store.estimateGas(
-  //   {
-  //     from: fundStore.activeAccountAddress,
-  //     to: fundStore.fundBaseTokenContract.options.address,
-  //     data: fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei.value).encodeABI(),
-  //   },
-  // );
 
   try {
-    await fundStore.fundBaseTokenContract.methods.transfer(fundStore?.fund?.address, tokensWei.value).send({
-      from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: gasPrice,
-      gasPrice: "",
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: ", hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt :", receipt);
-      if (receipt.status) {
-        toastStore.successToast("Transfer was successful.");
-        // Refresh balances
-        // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
-        fundStore.fetchFundContractBaseTokenBalance();
-      } else {
-        toastStore.errorToast("Your deposit request has failed. Please contact the Rethink Finance support.");
-        fundStore.fetchUserFundData(fundStore.selectedFundAddress);;
-      }
-      isTransferLoading.value = false;
-    }).on("error", (error: any) => {
-      handleError(error);
-    })
+    await fundStore.fundBaseTokenContract
+      .send("transfer", {}, fundStore?.fundAddress, tokensWei.value)
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: ", hash);
+        toastStore.addToast(
+          "The transaction has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt :", receipt);
+        if (receipt.status) {
+          toastStore.successToast("Transfer was successful.");
+          // Refresh balances
+          // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
+          fundStore.fetchFundContractBaseTokenBalance();
+        } else {
+          toastStore.errorToast(
+            "Your deposit request has failed. Please contact the Rethink Finance support.",
+          );
+          fundStore.fetchUserFundData(
+            fundStore.selectedFundChain,
+            fundStore.selectedFundAddress,
+          );
+        }
+        isTransferLoading.value = false;
+      })
+      .on("error", (error: any) => {
+        handleError(error);
+      });
   } catch (error: any) {
     handleError(error);
   }
@@ -195,12 +218,14 @@ const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
   if ([4001, 100].includes(error?.code)) {
-    toastStore.addToast("Transaction was rejected.")
+    toastStore.addToast("Transaction was rejected.");
   } else {
-    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    toastStore.errorToast(
+      "There has been an error. Please contact the Rethink Finance support.",
+    );
     console.error(error);
   }
-}
+};
 </script>
 
 <style lang="scss" scoped>
@@ -245,7 +270,7 @@ const handleError = (error: any) => {
     flex-direction: row;
     gap: 0.75rem;
     margin-bottom: 0.75rem;
-    color: $color-light-subtitle
+    color: $color-light-subtitle;
   }
   &__token_data {
     @include borderGray;
@@ -280,7 +305,7 @@ const handleError = (error: any) => {
     text-decoration: underline;
   }
 }
-.switch_alert{
+.switch_alert {
   justify-content: flex-start !important;
 }
 </style>

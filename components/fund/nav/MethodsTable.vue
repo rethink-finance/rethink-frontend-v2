@@ -15,6 +15,8 @@
     :show-select="selectable"
     items-per-page="-1"
     @input="onSelectionChanged"
+    @update:expanded="onExpandedUpdate"
+    @click:row="onRowClick"
   >
 
     <!-- template for header simulated  -->
@@ -69,7 +71,7 @@
 
     <template #[`item.positionType`]="{ value, item }">
       <UiPositionTypeBadge
-        :value="value"
+        :value="item.displayPositionType || item.positionType"
         :disabled="item.deleted || item.isAlreadyUsed"
       />
     </template>
@@ -84,7 +86,7 @@
           />
         </div>
         <div v-else>
-          {{ value ? getFormattedBaseTokenValue(value) : '-' }}
+          {{ value ? fundStore.getFormattedBaseTokenValue(value) : '-' }}
         </div>
         <div
           v-if="item.pastNavValueError"
@@ -130,11 +132,11 @@
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
       <UiDetailsButton
         v-if="item.detailsJson"
-        :text="isMethodEditable(item) ? 'Details' : 'Raw'"
+        :text="isBaseTokenBalanceMethod(item) ? 'Raw' : 'Details'"
         :active="isExpanded(internalItem)"
         :disabled="item.deleted || item.isAlreadyUsed"
         @click.stop="toggleExpand(internalItem)"
-        @click.native="isMethodEditable(item) ? setNavEntry(item) : null"
+        @click.native="isBaseTokenBalanceMethod(item) ? null : setNavEntry(item)"
       />
     </template>
 
@@ -205,9 +207,10 @@
 
             <!-- form goes here -->
             <v-form
-              v-if="isMethodEditable(item)"
+              v-if="!isBaseTokenBalanceMethod(item)"
               ref="form"
               v-model="formIsValid"
+              :disabled="!isMethodEditable(item)"
             >
               <v-row>
                 <v-col cols="12" sm="6">
@@ -239,45 +242,21 @@
                   <v-label class="mb-2">
                     Position Type
                   </v-label>
-                  <div class="toggle_buttons">
-                    <v-btn-toggle
-                      v-model="navEntry.positionType"
-                      group
-                      mandatory
-                    >
-                      <v-btn
-                        v-for="positionType in creatablePositionTypes"
-                        :key="positionType.key"
-                        :value="positionType.key"
-                        variant="outlined"
-                        @click.native="resetMethods(true)"
-                      >
-                        {{ positionType.name }}
-                      </v-btn>
-                    </v-btn-toggle>
-                  </div>
+                  <UiButtonsSwitch
+                    v-model="navEntry.positionType"
+                    :items="parsedPositionTypeItems"
+                    @update:model-value="navEntry.positionType = $event"
+                  />
                 </v-col>
                 <v-col v-if="valuationTypes.length" cols="12" sm="6">
                   <v-label class="mb-2">
                     Valuation Type
                   </v-label>
-                  <div class="toggle_buttons">
-                    <v-btn-toggle
-                      v-model="navEntry.valuationType"
-                      group
-                      mandatory
-                    >
-                      <v-btn
-                        v-for="valuationType in valuationTypes"
-                        :key="valuationType.key"
-                        :value="valuationType.key"
-                        variant="outlined"
-                        @click.native="resetMethods()"
-                      >
-                        {{ valuationType.name }}
-                      </v-btn>
-                    </v-btn-toggle>
-                  </div>
+                  <UiButtonsSwitch
+                    v-model="navEntry.valuationType"
+                    :items="parsedValuationTypeItems"
+                    @update:model-value="navEntry.valuationType = $event"
+                  />
                 </v-col>
               </v-row>
 
@@ -331,6 +310,7 @@
                             </UiTextBadge>
 
                             <UiDetailsButton
+                              v-if="isMethodEditable(item)"
                               small
                               @click.stop="deleteEditMethod(index)"
                             >
@@ -362,7 +342,7 @@
                 </template>
               </v-row>
 
-              <v-row v-if="navEntry.positionType === PositionType.Composable">
+              <v-row v-if="navEntry.positionType === PositionType.Composable && isMethodEditable(item)">
                 <v-col class="text-center">
                   <v-btn
                     class="text-secondary"
@@ -380,7 +360,7 @@
                   </v-btn>
                 </v-col>
               </v-row>
-              <v-row class="mt-4">
+              <v-row v-if="isMethodEditable(item)" class="mt-4">
                 <v-col class="text-end">
                   <v-btn :disabled="!hasChanged()" @click="editMethod">
                     Edit Method
@@ -408,14 +388,10 @@
 
 <script lang="ts">
 import { ethers } from "ethers";
-import { useRouter } from "vue-router";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useFundsStore } from "~/store/funds/funds.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 import {
-  defaultInputTypeValue,
-  InputType,
   PositionType,
   PositionTypeKeys,
   PositionTypes,
@@ -427,6 +403,7 @@ import {
 import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import type INAVParts from "~/types/nav_parts";
+import { ChainId } from "~/store/web3/networksMap";
 
 
 export default defineComponent({
@@ -447,6 +424,10 @@ export default defineComponent({
       default: () => undefined,
     },
     showBaseTokenBalances: {
+      type: Boolean,
+      default: false,
+    },
+    showSafeContractBalance: {
       type: Boolean,
       default: false,
     },
@@ -482,24 +463,55 @@ export default defineComponent({
       type: String,
       default: "",
     },
+    fundAddress: {
+      type: String,
+      default: "",
+    },
+    // Only required if we want to simulate NAV
+    baseDecimals: {
+      type: Number,
+      default: -1,
+    },
+    // Only required if we want to simulate NAV
+    baseSymbol: {
+      type: String,
+      default: "",
+    },
+    fundChainId: {
+      type: String as PropType<ChainId>,
+      default: "",
+    },
+    // Only required if we want to simulate NAV
+    safeAddress: {
+      type: String,
+      default: "",
+    },
+    // If fund was not created yet, it means it is non init. Used
+    // only when simulating NAV.
+    isFundNonInit: {
+      type: Boolean,
+      default: false,
+    },
+    fundContractBaseTokenBalance: {
+      type: Number,
+      default: 0,
+    },
+    safeContractBaseTokenBalance: {
+      type: Number,
+      default: 0,
+    },
+    feeBalance: {
+      type: Number,
+      default: 0,
+    },
   },
   emits: ["update:methods", "selectedChanged"],
   setup() {
     const fundStore = useFundStore();
-    const fundsStore = useFundsStore();
-    const web3Store = useWeb3Store();
     const toastStore = useToastStore();
-    const router = useRouter();
-
-    const { getFormattedBaseTokenValue, selectedFundSlug } = toRefs(fundStore);
     return {
-      router,
-      fundStore,
-      fundsStore,
-      web3Store,
       toastStore,
-      getFormattedBaseTokenValue,
-      selectedFundSlug,
+      fundStore,
       creatablePositionTypes: computed(() =>
         PositionTypes.filter(
           (positionType) => positionType.key !== PositionType.NFT,
@@ -510,7 +522,7 @@ export default defineComponent({
   },
   data() {
     return {
-      expanded: [],
+      expanded: [] as string[],
       selected: [],
       isNavSimulationLoading: false,
       form: ref(null),
@@ -595,6 +607,20 @@ export default defineComponent({
 
       return headers;
     },
+    parsedPositionTypeItems() {
+      return this.creatablePositionTypes.map((positionType) => ({
+        key: positionType.key,
+        label: positionType.name,
+        onClick: () => this.resetMethods(true),
+      }));
+    },
+    parsedValuationTypeItems() {
+      return this.valuationTypes.map((valuationType) => ({
+        key: valuationType.key,
+        label: valuationType.name,
+        onClick: () => this.resetMethods(),
+      }));
+    },
     valuationTypes() {
       return (
         PositionTypeToValuationTypesMap[this.navEntry?.positionType]?.map(
@@ -614,17 +640,18 @@ export default defineComponent({
     },
     formattedTotalSimulatedNAV() {
       // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
-      const fund = this.fundStore.fund;
 
       const totalNAV =
         (this.totalNavMethodsSimulatedNAV || 0n) +
-        (fund?.fundContractBaseTokenBalance || 0n) +
-        (fund?.safeContractBaseTokenBalance || 0n) +
-        (fund?.feeBalance || 0n);
-      return this.getFormattedBaseTokenValue(totalNAV);
+        (BigInt(this.fundContractBaseTokenBalance) || 0n) +
+        (BigInt(this.safeContractBaseTokenBalance) || 0n) +
+        (BigInt(this.feeBalance) || 0n);
+
+
+      return this.fundStore.getFormattedBaseTokenValue(totalNAV, true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedTotalLastNAV() {
-      return this.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n);
+      return this.fundStore.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n, true, false, this.baseSymbol, this.baseDecimals);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
@@ -638,13 +665,14 @@ export default defineComponent({
       )
     },
     formattedFundContractBaseTokenBalance() {
-      return this.getFormattedBaseTokenValue(this.fundStore.fund?.fundContractBaseTokenBalance);
+
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedSafeContractBaseTokenBalance() {
-      return this.getFormattedBaseTokenValue(this.fundStore.fund?.safeContractBaseTokenBalance);
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.safeContractBaseTokenBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedFeeBalance() {
-      return this.getFormattedBaseTokenValue(this.fundStore.fund?.feeBalance);
+      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.feeBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
@@ -654,7 +682,7 @@ export default defineComponent({
 
       if (this.showBaseTokenBalances) {
         methods.push({
-          positionName: "OIV Balance",
+          positionName: "Admin Contract Balance",
           valuationSource: "Rethink",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
@@ -662,7 +690,7 @@ export default defineComponent({
           isRethinkPosition: true,
           detailsHash: "-1",
           detailsJson: {
-            "fundContractAddress": this.fundStore.fund?.address,
+            "fundContractAddress": this.fundAddress ?? "",
           },
         } as any)
         methods.push({
@@ -674,7 +702,7 @@ export default defineComponent({
           isRethinkPosition: true,
           detailsHash: "-2",
           detailsJson: {
-            "safeContractAddress": this.fundStore.fund?.safeAddress,
+            "safeContractAddress": this.safeAddress ?? "",
           },
         } as any)
         methods.push({
@@ -687,12 +715,28 @@ export default defineComponent({
           detailsHash: "-3",
         } as any)
       }
+      else if (this.showSafeContractBalance) {
+        methods.push({
+          positionName: "Safe Balance",
+          valuationSource: "Rethink",
+          positionType: PositionType.Liquid,
+          pastNavValue: this.navParts?.baseAssetSafeBal,
+          simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
+          isRethinkPosition: true,
+          detailsHash: "-2",
+          detailsJson: {
+            "safeContractAddress": this.safeAddress ?? "",
+          },
+        } as any)
+      }
+
       return [
         ...methods,
         ...this.methods.map(method => ({
           ...method,
           isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
-        })),
+        }),
+        ),
       ];
     },
   },
@@ -715,32 +759,49 @@ export default defineComponent({
     },
   },
   methods: {
+    /**
+     * Ensures only one row is expanded at a time.
+     */
+    onExpandedUpdate(newExpanded:string) {
+      // if newExpanded has a row, keep only the latest one; otherwise, clear the array
+      this.expanded = newExpanded.length ? [newExpanded[newExpanded.length - 1]] : [];
+    },
+    onRowClick(_: any, item: any) {
+      const internalItem = item?.item || undefined
+
+      if(!internalItem) return
+
+      this.setNavEntry(internalItem); // set navEntry for the clicked row
+    },
     copyText(text: string | undefined) {
       const data = text as string;
       navigator.clipboard.writeText(data);
     },
     async simulateNAV() {
-      if (!this.showSimulatedNav || !this.web3Store.web3 || this.isNavSimulationLoading) return;
+      const fundChainId = this.fundChainId as ChainId;
+      const fundAddress = this.fundAddress;
+      if (
+        !this.showSimulatedNav || this.isNavSimulationLoading || !fundChainId || !fundAddress
+      ) {
+        return;
+      }
       this.isNavSimulationLoading = true;
       console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
-      /**
-      if (!this.fundsStore.allNavMethods?.length) {
-        const fundsInfoArrays = await this.fundsStore.fetchFundsInfoArrays();
 
-        // To get pastNAVUpdateEntryFundAddress we have to search for it in the fundsStore.allNavMethods
-        // and make sure it is fetched before checking here with fundsStore.fetchFundsNAVData, and then we
-        // have to match by the detailsHash to extract the pastNAVUpdateEntryFundAddress
-        console.log("simulate fetch all nav methods")
-        await this.fundsStore.fetchFundsNAVData(fundsInfoArrays);
-      }
-      */
-      // If useLastNavUpdateMethods props is true, take methods of the last NAV update.
-      // Otherwise, take managed methods, that user can change.
-      // Simulate all at once as many promises instead of one by one.
+      // Simulate all methods at once as many promises.
       const promises = [];
 
       for (const navEntry of this.methods) {
-        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(navEntry));
+        console.log("FUND CHAIN ID:", fundChainId, "FUND ADDRESS:", fundAddress, "NAV ENTRY:", navEntry)
+        promises.push(this.fundStore.fetchSimulatedNAVMethodValue(
+          fundChainId,
+          fundAddress,
+          this.safeAddress,
+          this.baseDecimals,
+          this.baseSymbol,
+          navEntry,
+          this.isFundNonInit,
+        ));
       }
       const settled = await Promise.allSettled(promises);
       this.isNavSimulationLoading = false;
@@ -753,13 +814,17 @@ export default defineComponent({
 
       return "";
     },
-    // only alow edit if the method is not rethink position and not one of the predefined positions
+    // only allow edit if the method is not rethink position and not one of the predefined positions
     isMethodEditable(navEntry: INAVMethod) {
-      const isManageNavMethodsPage = this.idx === "nav/manage/index";
-      const positionName = ["Fund Balance", "Safe Balance", "Fees Balance"];
-      return isManageNavMethodsPage && navEntry.valuationSource !== "Rethink" && !positionName.includes(navEntry.positionName);
+      const isManageNavMethodsPage = this.idx === "nav/manage/index" || this.idx === "nav/onboarding";
+
+      return isManageNavMethodsPage && !this.isBaseTokenBalanceMethod(navEntry);
     },
-    deleteMethod(method: INAVMethod, toggle = true) {
+    isBaseTokenBalanceMethod(method: INAVMethod) {
+      const positionName = ["Admin Contract Balance", "Safe Balance", "Fees Balance"];
+      return positionName.includes(method.positionName) && method.valuationSource === "Rethink";
+    },
+    deleteMethod(method: INAVMethod, toggle = true, newNavEntry?: INAVMethod) {
       // If method is new, we can just remove it from the methods array.
       // If it is not new, we will mark it as deleted.
       const methods = [...this.methods]; // Create a shallow copy of the array
@@ -778,7 +843,12 @@ export default defineComponent({
           }
         }
       }
-      this.$emit("update:methods", methods);
+
+      if (newNavEntry) {
+        this.$emit("update:methods", [...methods, newNavEntry]);
+      } else {
+        this.$emit("update:methods", methods);
+      }
     },
     deleteEditMethod(index: number) {
       console.log("remove0 method: ", index);
@@ -841,7 +911,7 @@ export default defineComponent({
           parseBigInt,
         );
 
-        if (this.hasChanged() === false) {
+        if (!this.hasChanged()) {
           return this.toastStore.warningToast("No changes detected.");
         }
 
@@ -849,8 +919,9 @@ export default defineComponent({
 
         // Do not include the pastNAVUpdateEntryFundAddress in the details, as when we fetch entries
         // they don't include this data and details hash would be broken if we included it.
-        newNavEntry.pastNAVUpdateEntryFundAddress =
-          this.fundStore.fund?.address;
+        newNavEntry.pastNAVUpdateEntryFundAddress = 0;
+        // newNavEntry.pastNAVUpdateEntryFundAddress =
+        // this.fundStore.fund?.address;
 
         // Set default fields that are required for each entry.
         // All methods details have this data.
@@ -890,11 +961,11 @@ export default defineComponent({
                   .split(",")
                   .map(
                     // Remove leading and trailing whitespace
-                    (hash: string) => hash.trim(),
+                    (hash: any) => hash.trim(),
                   )
                   .filter(
                     // Remove empty strings;
-                    (hash: string) => hash !== "",
+                    (hash: any) => hash !== "",
                   ) || [];
             } catch (error: any) {
               return this.toastStore.errorToast(
@@ -908,8 +979,9 @@ export default defineComponent({
             newNavEntry.positionType === PositionType.Liquid &&
             newNavEntry.valuationType === ValuationType.DEXPair
           ) {
-            method.nonAssetTokenAddress =
-              this.fundStore.fund?.baseToken?.address;
+            method.nonAssetTokenAddress = ""
+            // method.nonAssetTokenAddress =
+            //     this.fundStore.fund?.baseToken?.address;
           }
 
           // Remove unwanted properties that we don't need when submitting the proposal.
@@ -928,18 +1000,12 @@ export default defineComponent({
           ethers.toUtf8Bytes(newNavEntry.detailsJson),
         );
 
-        // Add newly defined NAV entry to fund managed methods.
-        this.fundStore.fundManagedNAVMethods.push(newNavEntry);
-        // we need to delete the method from the navEntry
-
 
         if (this.hasChanged()) {
           // remove original method from the all methods
-          this.deleteMethod(this.originalNavEntry, false);
+          this.deleteMethod(this.originalNavEntry, false, newNavEntry);
         }
 
-        // Redirect back to Manage methods page.
-        this.router.push(`/details/${this.selectedFundSlug}/nav/manage`);
         this.toastStore.addToast("Method added successfully.");
       } catch (error: any) {
         console.error("Error editing method: ", error);
@@ -1079,9 +1145,10 @@ export default defineComponent({
 .nav_entries {
   @include borderGray;
   border-color: $color-bg-transparent;
+  overflow: auto;
 
   :deep(.v-table__wrapper) {
-    @include customScrollbar;
+    @include customScrollbar(0);
   }
 
   :deep(.v-data-table__tr) {
@@ -1106,6 +1173,8 @@ export default defineComponent({
     background-color: $color-card-background;
     padding: 1.5rem;
     color: $color-primary;
+    white-space: break-spaces;
+    word-wrap: break-word;
   }
   &__no_data {
     text-align: center;
@@ -1183,25 +1252,6 @@ export default defineComponent({
     color: $color-success;
   }
 }
-// toggle buttons
-.toggle_buttons {
-  .v-btn-toggle {
-    display: flex;
-    gap: 10px;
-
-    .v-btn {
-      opacity: 0.35;
-      color: $color-text-irrelevant;
-      border-radius: 4px !important;
-      @include borderGray;
-    }
-    .v-btn--active {
-      color: $color-white !important;
-      opacity: 1;
-    }
-  }
-}
-
 .text-end{
   margin-bottom: 20px;
 }

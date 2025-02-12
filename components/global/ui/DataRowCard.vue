@@ -12,7 +12,11 @@
       :class="{'data_row__panel--transparent': bgTransparent }"
       :readonly="isReadOnly"
     >
-      <v-expansion-panel-title :hide-actions="isReadOnly" static>
+      <v-expansion-panel-title
+        :hide-actions="isReadOnly"
+        :class="{'data_row__panel--full_height': titleFullHeight }"
+        static
+      >
         <div class="data_row__header">
           <div class="data_row__column" :class="{'data_row__column--grow': growColumn1}">
             <div class="data_row__title">
@@ -178,6 +182,14 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    isExpandable: {
+      type: Boolean,
+      default: true,
+    },
+    titleFullHeight: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     const expandedList = [];
@@ -194,6 +206,7 @@ export default defineComponent({
       return !(!this.body && !this.$slots.body);
     },
     isReadOnly(): boolean {
+      if (!this.isExpandable) return true;
       return !this.hasBody;
     },
   },
@@ -205,6 +218,12 @@ export default defineComponent({
   overflow: hidden;
   user-select: text !important;
 
+  .v-expansion-panel-title {
+    overflow: hidden;
+    padding: 0.75rem 0.5rem;
+    height: 3.5rem;
+    font-size: $text-sm;
+  }
   &--readonly {
     ::v-deep(.v-expansion-panel-title__overlay) {
       display: none !important;
@@ -218,6 +237,9 @@ export default defineComponent({
 
     &--transparent {
       background: transparent;
+    }
+    &--full_height.v-expansion-panel-title {
+      height: auto;
     }
   }
   &__header {
@@ -233,13 +255,6 @@ export default defineComponent({
     margin: auto;
     text-align: right;
   }
-  .v-expansion-panel-title {
-    overflow: hidden;
-    padding: 10px 8px;
-    height: 56px;
-    font-size: 14px;
-  }
-
   &__body {
     word-wrap: break-word;
     max-width: 100%;
@@ -265,7 +280,7 @@ export default defineComponent({
   &__column {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem;
     min-width: 7rem;
     max-width: 100%;
     margin-top: auto;
@@ -278,7 +293,7 @@ export default defineComponent({
 
     &.is-last {
       margin-left: auto;
-      padding-left: 25px;
+      padding-left: 1.5rem;
       border-left: 1px solid $color-gray-transparent;
     }
   }
@@ -288,8 +303,8 @@ export default defineComponent({
   }
 
   &__action_icon{
-    height: 24px;
-    width: 24px;
+    height: 1.5rem;
+    width: 1.5rem;
   }
 }
 </style>

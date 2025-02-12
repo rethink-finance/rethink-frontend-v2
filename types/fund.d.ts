@@ -3,6 +3,7 @@ import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 import type IFundSettings from "./fund_settings";
+import { type ChainId } from "~/store/web3/networksMap";
 
 export interface INAVParts {
   baseAssetOIVBal: bigint;
@@ -36,6 +37,7 @@ export default interface IFund {
   originalFundSettings?: IFundSettings;
   // chain data is populated from the current network
   // the user has selected when fetching funds.
+  chainId: ChainId;
   chainName: string;
   chainShort: string;
 
@@ -49,6 +51,7 @@ export default interface IFund {
   safeAddress: string; // safe
 
   inceptionDate: string;
+  lastNavUpdateTime: string;
   fundToken: IToken;
   fundTokenTotalSupply: bigint;
   baseToken: IToken;

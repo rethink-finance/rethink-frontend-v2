@@ -30,7 +30,6 @@
 </template>
 <script lang="ts">
 import { ethers } from "ethers";
-import type { PropType } from "vue";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";
@@ -181,7 +180,7 @@ export default {
               "<div class='tooltip_row'>" +
               "<div class='label'>Date:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
               "<div class='tooltip_row'>" +
-              "<div class='label'>AUM:</div>" + this.formatWei(this.totalNAVItems[dataPointIndex]) + "</div>" +
+              "<div class='label'>NAV:</div>" + this.formatWei(this.totalNAVItems[dataPointIndex]) + "</div>" +
               "</div>"
           },
         },

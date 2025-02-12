@@ -8,14 +8,16 @@
     multi-line
   >
     <div class="toast_content">
-        <Icon
-          v-if="toastIcon(toast.level)"
-          :icon="toastIcon(toast.level)"
-          width="1.5rem"
-          class="icon__toast"
-        />
+      <Icon
+        v-if="toastIcon(toast.level)"
+        :icon="toastIcon(toast.level)"
+        width="1.5rem"
+        class="icon__toast"
+      />
 
-      {{ toast.message }}
+      <div class="message">
+        {{ toast.message }}
+      </div>
     </div>
 
     <template #actions>
@@ -85,6 +87,14 @@ const textColorClass = (level) => {
   display: flex;
   align-items: center;
   gap: 14px;
+
+  .icon__toast {
+    width: 30px;
+  }
+
+  .message{
+    max-width: calc(100% - 30px);
+  }
 }
 .toast-success {
   .icon__toast {

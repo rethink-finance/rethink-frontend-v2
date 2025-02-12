@@ -229,3 +229,35 @@ export const fromPercentageToBps = (feePercent?: any) => {
   const feeBps = (Number(feePercent) * 100).toString();
   return feeBps;
 };
+
+
+export const formatQuorumPercentage = (
+  quorumNumerator: string | number | bigint,
+  quorumDenominator: string | number | bigint,
+) => {
+  return formatPercent(
+    quorumDenominator
+      ? Number(quorumNumerator) / Number(quorumDenominator)
+      : 0,
+    false,
+    "N/A",
+  )
+};
+
+
+/**
+ *
+ * @param str - string to convert to camel case
+ * @returns string in camel case
+ */
+export const toCamelCase = (str: string) => {
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((word, index) =>
+      index === 0
+        ? word
+        : word.charAt(0).toUpperCase() + word.slice(1),
+    )
+    .join("");
+}

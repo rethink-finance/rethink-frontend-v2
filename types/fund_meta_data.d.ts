@@ -3,6 +3,7 @@ import type IFundGovernanceData from "./fund_governance_data";
 
 export default interface IFundMetaData {
   startTime: bigint;
+  updateTimes: any;
   totalDepositBal: bigint;
   feeBalance: bigint;
   feePerformancePeriod: bigint;

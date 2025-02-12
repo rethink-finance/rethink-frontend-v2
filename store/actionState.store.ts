@@ -12,6 +12,11 @@ export const useActionStateStore = defineStore("actionState", {
         return state.loadingStates[key] === stateToCheck;
       };
     },
+    isActionStateLoading: (state) => {
+      return (key: string): boolean => {
+        return state.loadingStates[key] === ActionState.Loading;
+      };
+    },
     getActionState: (state) => {
       return (key: string): ActionState | undefined => {
         return state.loadingStates[key];

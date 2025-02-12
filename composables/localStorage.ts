@@ -22,3 +22,7 @@ export const getLocalStorageItem = (key: string, defaultValue: any = {}) => {
 export const setLocalStorageItem = (key: string, value: any) => {
   localStorage.setItem(key, JSON.stringify(value, stringifyBigInt));
 };
+
+export const clearLocalStorageItem = (key: string) => {
+  localStorage.removeItem(key);
+};

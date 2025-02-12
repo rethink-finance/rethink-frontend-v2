@@ -1,5 +1,8 @@
+import type { ChainId } from "~/store/web3/networksMap";
+
 export default interface IFundSettings {
   [key: string]: any;
+  chainId?: ChainId; // additionally added field
   depositFee: string;
   withdrawFee: string;
   performancePeriod: string;
@@ -10,6 +13,8 @@ export default interface IFundSettings {
   // TODO Here we have a typo, we should fix this in the original interface: IGovernableFundStorage
   performaceHurdleRateBps?: string;
   baseToken: string;
+  baseDecimals?: number;
+  baseSymbol?: string;
   safe?: string;
   isExternalGovTokenInUse?: boolean;
   isWhitelistedDeposits?: boolean;
@@ -20,4 +25,15 @@ export default interface IFundSettings {
   fundAddress: string;
   fundName: string;
   fundSymbol: string;
+}
+
+export interface IFundInitCache {
+  fundContractAddr: string;
+  rolesModifier: string;
+  fundSettings: IFundSettings;
+  _feeManagePeriod: string;
+  _feePerformancePeriod: string;
+  _fundMetadata: string;
+  fundMetadata: Record<string, any>;
+  governorData: Record<string, any>;
 }

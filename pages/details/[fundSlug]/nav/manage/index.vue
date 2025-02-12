@@ -49,6 +49,14 @@
       </UiHeader>
       <FundNavMethodsTable
         v-model:methods="fundManagedNAVMethods"
+        :fund-chain-id="selectedFundChain"
+        :fund-address="fundAddress"
+        :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
+        :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
+        :fee-balance="Number(fundStore.fund?.feeBalance)"
+        :safe-address="fundStore.fund?.safeAddress"
+        :base-symbol="fundStore.fund?.baseToken.symbol"
+        :base-decimals="fundStore.fund?.baseToken.decimals"
         deletable
         show-summary-row
         show-base-token-balances
@@ -58,106 +66,45 @@
       />
     </div>
 
-    <UiConfirmDialog
+    <FundNavAddRaw
       v-model="addRawDialog"
-      title="Add Raw Methods"
-      max-width="80%"
-      confirm-text="Load"
-      message="Please enter the raw methods JSON below"
-      @confirm="addRawMethods"
-    >
-      <v-textarea
-        v-model="rawMethods"
-        label="Raw Methods"
-        outlined
-        placeholder="Enter the raw methods here"
-        rows="20"
-        class="raw-method-textarea"
-      />
-    </UiConfirmDialog>
+      :methods="fundManagedNAVMethods"
+      @added-methods="addRawMethods"
+    />
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { ActionState } from "~/types/enums/action_state";
-import { NAVEntryTypeStringToNAVEntryTypeMap, NAVEntryTypeStringToPositionTypeMap } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
-import type { INAVMethodDetails } from "~/types/nav_method";
 
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 
 const {
   selectedFundSlug,
+  selectedFundChain,
   selectedFundAddress,
   fundManagedNAVMethods,
   fundLastNAVUpdateMethods,
-} = toRefs(useFundStore());
+  fundAddress,
+} = storeToRefs(useFundStore());
 
 const toastStore = useToastStore();
+const fundStore = useFundStore();
 const actionStateStore = useActionStateStore();
 const addRawDialog = ref(false);
-const rawMethods = ref("");
 
-const addRawMethods = () => {
-  try {
-    const parsedMethod =  JSON.parse(rawMethods.value, (key, value) => {
-      // check if value is a string and exactly "true" or "false" and convert it to boolean
-      if (value === "true") return true;
-      if (value === "false") return false;
-      return value;
-    });
-    const lastIndex = fundManagedNAVMethods.value.length - 1;
 
-    parsedMethod?.map((method: any, index: number) => {
-      const newIndex = lastIndex + index + 1;
-
-      const details = {
-        composable: method?.composableUpdates || [],
-        description: JSON.stringify(method?.description || "{}"),
-        entryType: NAVEntryTypeStringToNAVEntryTypeMap[method?.entryType].toString() || "",
-        illiquid: method?.illiquidUpdates || [],
-        isPastNAVUpdate: method?.isPastNAVUpdate || false,
-        liquid: method?.liquidUpdates || [],
-        nft: method?.nftUpdates || [],
-        pastNAVUpdateEntryIndex: method?.pastNAVUpdateEntryIndex || 0,
-        pastNAVUpdateIndex: method?.pastNAVUpdateIndex || 0,
-      } as INAVMethodDetails;
-
-      const detailsJson = formatJson(details) || "{}";
-
-      const newEntry = {
-        index: newIndex,
-        isNew: true,
-        details,
-        detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
-        detailsJson,
-        foundMatchingPastNAVUpdateEntryFundAddress: method?.foundMatchingPastNAVUpdateEntryFundAddress || false,
-        isSimulatedNavError: method?.isSimulatedNavError || false,
-        pastNAVUpdateEntryFundAddress: method?.pastNAVUpdateEntryFundAddress || ethers.ZeroAddress,
-        positionName: method?.description?.positionName || "",
-        positionType: NAVEntryTypeStringToPositionTypeMap[method?.entryType] || "",
-        simulatedNav: method?.simulatedNav || 0n,
-        simulatedNavFormatted: method?.simulatedNavFormatted || "0 USDC",
-        valuationSource: method?.description?.valuationSource || "",
-      } as INAVMethod;
-
-      // add the new entry to the fundManagedNAVMethods
-      fundManagedNAVMethods.value.push(newEntry);
-    });
-
-    // clear input and close dialog
-    rawMethods.value = "";
-    addRawDialog.value = false;
-    toastStore.successToast("Raw methods added successfully");
-  } catch (e) {
-    console.error(e);
-    toastStore.errorToast("Failed to add raw method. Invalid JSON format.");
-  }
+const addRawMethods = (newMethods: INAVMethod[]) => {
+  fundManagedNAVMethods.value = [
+    ...fundManagedNAVMethods.value,
+    ...newMethods,
+  ];
 };
 
 const isLoadingFetchFundNAVUpdatesAction = computed(() => {
@@ -166,8 +113,8 @@ const isLoadingFetchFundNAVUpdatesAction = computed(() => {
 
 const changesNumber = computed(() => {
   // check how many methods are deleted and added
-  const changedMethods = Object.values(fundManagedNAVMethods.value).filter(
-    (method) => {
+  const changedMethods = fundManagedNAVMethods.value.filter(
+    (method: INAVMethod) => {
       return method.deleted || method.isNew;
     },
   )

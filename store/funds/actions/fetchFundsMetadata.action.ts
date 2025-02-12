@@ -1,6 +1,3 @@
-import { useFundsStore } from "../funds.store";
-
-
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 
 import type IFund from "~/types/fund";
@@ -8,20 +5,31 @@ import type IFundMetaData from "~/types/fund_meta_data";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
+import { type ChainId, networksMap } from "~/store/web3/networksMap";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export async function fetchFundsMetaDataAction(
+  chainId: ChainId,
   fundAddresses: string[],
   fundsInfo: any,
 ): Promise<IFund[]> {
-  const fundsStore = await useFundsStore();
+  console.log("process fund fetchFundsMetaDataAction fetchFundsMetaDataAction fetchFundsMetaDataAction ", chainId)
+  const web3Store = useWeb3Store();
 
-  const funds: IFund[] = [];
+  const funds: IFund[] = reactive([]);
+  const rethinkReaderContract =
+    web3Store.chainContracts[chainId]?.rethinkReaderContract;
+  if (!rethinkReaderContract) {
+    throw new Error(`No reader contract found for chainId: ${chainId}`);
+  }
+  const fundNetwork = networksMap[chainId];
+
   try {
-    const fundsMetaData: IFundMetaData[] = await fundsStore.callWithRetry(() =>
-      fundsStore.rethinkReaderContract.methods
-        .getFundsMetaData(fundAddresses)
-        .call(),
-    );
+    console.log("process fund fundsMetaData", chainId, fundAddresses)
+    const fundsMetaData: IFundMetaData[] = await rethinkReaderContract.methods
+      .getFundsMetaData(fundAddresses)
+      .call();
+    console.log("process fund fundsMetaData done", chainId, "fundsMetaData:", fundsMetaData)
 
     for (const [index, address] of fundAddresses.entries()) {
       const fundMetaData: IFundMetaData = fundsMetaData[index];
@@ -30,9 +38,12 @@ export async function fetchFundsMetaDataAction(
       const baseTokenDecimals = Number(fundMetaData.fundBaseTokenDecimals);
 
       const fundStartTime = fundMetaData.startTime;
-      const fund: IFund = {
-        chainName: fundsStore.web3Store.chainName,
-        chainShort: fundsStore.web3Store.chainShort,
+      //  console.log("fundMetaData.updateTimes");
+      const lastNavUpdateTime = undefined;// = fundMetaData.updateTimes[fundMetaData.updateTimes.length-1];
+      const fund: IFund = reactive({
+        chainId,
+        chainName: fundNetwork.chainName,
+        chainShort: fundNetwork.chainShort,
         address,
         title: fundMetaData.fundName || "N/A",
         description: "N/A",
@@ -41,6 +52,9 @@ export async function fetchFundsMetaDataAction(
         photoUrl: defaultAvatar,
         inceptionDate: fundStartTime
           ? formatDate(new Date(Number(fundStartTime) * 1000))
+          : "",
+        lastNavUpdateTime: lastNavUpdateTime
+          ? formatDate(new Date(Number(lastNavUpdateTime) * 1000))
           : "",
         fundToken: {
           symbol: fundsInfo[address].fundSymbol,
@@ -101,7 +115,7 @@ export async function fetchFundsMetaDataAction(
         // NAV Updates
         navUpdates: [] as INAVUpdate[],
         isNavUpdatesLoading: true,
-      };
+      });
 
       const metaDataJson = fundMetaData.fundMetadata;
       // Process metadata if available

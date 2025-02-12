@@ -138,6 +138,11 @@ const chainIconMap: Record<string, IIcon> = {
   },
 };
 
+export const findIndexByKey = (array: any, keyToFind: string) => {
+  if (!Array.isArray(array)) return -1;
+  return array.findIndex((item: any) => item.key === keyToFind);
+}
+
 export const getChainIcon = (chainShort: string) => {
   return (
     chainIconMap[chainShort] ?? {
@@ -169,7 +174,7 @@ export const trimTrailingSlash = (str: string) => {
  */
 export const calculateCumulativeReturnPercent = (
   totalDepositBal: bigint,
-  totalNAV:bigint,
+  totalNAV: bigint,
   baseTokenDecimals: number,
 ): number | undefined => {
   try{
@@ -192,3 +197,59 @@ export const calculateCumulativeReturnPercent = (
     return undefined;
   }
 };
+
+export const calculateSharpeRatio = (
+  fundNAVUpdates: any,
+  totalDepositBal: bigint,
+): number | undefined => {
+  try {
+    // 1. step: calculate excess returns
+    const excessReturns = calculateExcessReturns(fundNAVUpdates, totalDepositBal);
+
+    if (excessReturns.length === 0) return undefined;
+
+    // 2. step: calculate standard deviation of excess returns
+    const sharpeRatio = _calculateSharpeRatio(excessReturns);
+
+    // Round sharpe to 2 decimals.
+    return Number(sharpeRatio?.toFixed(2));
+  } catch (error) {
+    console.error("Error calculating Sharpe Ratio: ", error);
+    return undefined;
+  }
+}
+
+
+export const _calculateSharpeRatio = (values: number[]): number | undefined => {
+  if (values.length === 0) return undefined;
+
+  // First calculate standard deviation.
+  // Calculate the mean (average)
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+
+  // Calculate the variance
+  const variance =
+    values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / values.length;
+
+  // Return the sharpe ratio.
+  // Divide average returns with standard deviation of returns.
+  return mean / Math.sqrt(variance);
+};
+
+
+export const calculateExcessReturns = (fundNavUpdates: any, totalDepositBal: bigint): number[] => {
+  const excessReturns: number[] = [];
+
+  for (const navUpdate of fundNavUpdates) {
+    const totalNavAtUpdate = Number(navUpdate?.navParts?.totalNAV) || undefined;
+    // const totalDepositBalAtUpdate = Number(navUpdate?.navParts?.baseAssetSafeBal || undefined);
+
+    if (totalNavAtUpdate && Number(totalDepositBal) !== 0) {
+
+      const excessReturn = (totalNavAtUpdate - Number(totalDepositBal)) / Number(totalDepositBal);
+      excessReturns.push(excessReturn);
+    }
+  }
+
+  return excessReturns;
+}

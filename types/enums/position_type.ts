@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import { ValuationType } from "~/types/enums/valuation_type";
 import type { IPositionType } from "~/types/position_type";
+import { InputType } from "~/types/enums/input_type";
 
 export enum PositionType {
   Liquid = "liquid",
@@ -94,21 +95,10 @@ type PositionTypeValuationTypeFieldsMapType = {
   };
 };
 
-export enum InputType {
-  Text = "text",
-  Textarea = "textarea",
-  Checkbox = "checkbox",
-  Number = "number",
-  Select = "select",
-}
-export const defaultInputTypeValue: Record<InputType, any> = {
-  [InputType.Text]: "",
-  [InputType.Textarea]: "",
-  [InputType.Checkbox]: false,
-  [InputType.Number]: 0,
-  // If the default value 0 as integer won't work for all, add default values to PositionTypeValuationTypeFieldsMap
-  // wherever we will need them.
-  [InputType.Select]: 0,
+export const getInputTypeCols = (inputType: InputType) => {
+  // Default width of 6 for number and checkbox inputs.
+  if ([InputType.Number, InputType.Checkbox].includes(inputType)) return 6;
+  return 12;
 }
 
 export const PositionTypeValuationTypeFieldsMap: PositionTypeValuationTypeFieldsMapType = {

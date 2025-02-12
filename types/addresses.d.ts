@@ -1,7 +1,7 @@
-export interface IContractAddresses {
-  [chainId: string]: string;
-}
+import { ChainId } from "~/store/web3/networksMap";
 
-export default interface IAddresses {
+export type IContractAddresses = Record<ChainId, string>;
+
+export default interface IContractAddressesMap {
   [contractName: string]: IContractAddresses;
 }

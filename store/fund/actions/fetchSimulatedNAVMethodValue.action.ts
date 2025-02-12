@@ -1,39 +1,55 @@
-
-import { useFundStore } from "../fund.store";
-
-
+import { useFundsStore } from "~/store/funds/funds.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import {
   PositionType,
   PositionTypeToNAVCalculationMethod,
 } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
+import { useAccountStore } from "~/store/account/account.store";
+import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
+import type { ChainId } from "~/store/web3/networksMap";
 
 export const fetchSimulatedNAVMethodValueAction = async (
+  fundChainId: ChainId,
+  fundAddress: string,
+  safeAddress: string,
+  baseDecimals: number,
+  baseSymbol: string,
   navEntry: INAVMethod,
+  isFundNonInit: boolean = false,
 ): Promise<void> => {
-  const fundStore = useFundStore();
+  const fundsStore = useFundsStore();
+  const web3Store = useWeb3Store();
+  const accountStore = useAccountStore();
+  console.log(
+    "fetchSimulatedNAVMethodValueAction: ",
+    navEntry,
+    "safeAddress", safeAddress,
+    "baseDecimals", baseDecimals,
+    "baseSymbol", baseSymbol,
+  );
 
-  if (!fundStore.web3Store.web3) {
-    console.error("Web3 instance is not available.");
-    return;
-  }
   if (!navEntry.detailsHash) {
-    console.error("No detailsHash provided in navEntry.");
+    console.error("No detailsHash provided in navEntry.", navEntry);
     return;
   }
-
-  const baseDecimals = fundStore.fund?.baseToken.decimals;
-  if (!baseDecimals) {
-    console.error("simulateNAVMethodValue error: No fund base decimals.");
+  if (!baseDecimals || !baseSymbol) {
+    console.error("simulateNAVMethodValue error: No fund base decimals or symbol.");
     return;
   }
+  if (!safeAddress) {
+    console.error("simulateNAVMethodValue error: No fund safe address.");
+    return;
+  }
+  const navCalculatorContract =
+    web3Store.chainContracts[fundChainId]?.navCalculatorContract;
 
   try {
     navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
 
     if (!navEntry.pastNAVUpdateEntryFundAddress) {
       navEntry.pastNAVUpdateEntryFundAddress =
-        fundStore.fundsStore.navMethodDetailsHashToFundAddress[
+        fundsStore.navMethodDetailsHashToFundAddress[
           navEntry.detailsHash ?? ""
         ];
     }
@@ -47,33 +63,43 @@ export const fetchSimulatedNAVMethodValueAction = async (
       //    -> We have a bigger problem if it won't fail, we should mark the address somewhere in the table.
       //
       // Here we take solution 1), as we assume that the method was not yet added to allMethods
-      navEntry.pastNAVUpdateEntryFundAddress = fundStore.fund?.address;
+      navEntry.pastNAVUpdateEntryFundAddress = fundAddress;
       navEntry.foundMatchingPastNAVUpdateEntryFundAddress = false;
     }
+
+    let navCalculationMethod =
+      PositionTypeToNAVCalculationMethod[navEntry.positionType];
 
     const callData: any[] = [];
     if (navEntry.positionType === PositionType.Liquid) {
       callData.push(prepNAVMethodLiquid(navEntry.details));
-      callData.push(fundStore.fund?.safeAddress);
+      callData.push(safeAddress);
     } else if (navEntry.positionType === PositionType.Illiquid) {
       callData.push(prepNAVMethodIlliquid(navEntry.details, baseDecimals));
-      callData.push(fundStore.fund?.safeAddress);
+      callData.push(safeAddress);
     } else if (navEntry.positionType === PositionType.NFT) {
       callData.push(prepNAVMethodNFT(navEntry.details));
-      // callData.push(this.fundStore.fund?.safeAddress);
+      // callData.push(this.safeAddress);
     } else if (navEntry.positionType === PositionType.Composable) {
       callData.push(
         prepNAVMethodComposable(
           navEntry.details,
-          navEntry.pastNAVUpdateEntrySafeAddress,
-          fundStore.fund?.safeAddress,
         ),
       );
+
+      // If it is non init, we call different NAV composable simulation method.
+      // Non init means that the fund was not yet created.
+      if (isFundNonInit) {
+        navCalculationMethod = navCalculationMethod.replace(
+          "ReadOnly",
+          "NonInitReadOnly",
+        )
+      }
     }
 
     callData.push(
       ...[
-        fundStore.fund?.address, // fund
+        fundAddress, // fund
         0, // navEntryIndex
         false, // isPastNAVUpdate -- set to false to simulate on current fund.
         parseInt(navEntry.details.pastNAVUpdateIndex), // pastNAVUpdateIndex
@@ -82,27 +108,47 @@ export const fetchSimulatedNAVMethodValueAction = async (
       ],
     );
 
-    // console.log("json: ", JSON.stringify(callData, null, 2))
-    const navCalculationMethod =
-      PositionTypeToNAVCalculationMethod[navEntry.positionType];
+    if (isFundNonInit && navEntry.positionType === PositionType.Composable) {
+      // Add 2 more parameters to calldata:
+      // - governable fund factory contract address
+      // - deployer
+      callData.push(
+        ...[
+          rethinkContractAddresses.GovernableFundFactoryBeaconProxy[fundChainId],
+          accountStore.activeAccountAddress,
+        ],
+      )
+    }
+
+    console.debug("simulate json: ", JSON.stringify(callData, null, 2))
     navEntry.simulatedNavFormatted = "N/A";
     navEntry.simulatedNav = 0n;
 
     // console.log("navCalculationMethod:", navCalculationMethod);
     // console.log("callData:", callData);
+    // const calldata = navCalculatorContract.methods[navCalculationMethod](...callData).encodeABI();
+    // console.debug(Simulate calldata being sent:", calldata);
     try {
-      const simulatedVal: bigint = await fundStore.callWithRetry(
+      const simulatedVal: bigint = await web3Store.callWithRetry(
+        fundChainId,
         () =>
-          fundStore.navCalculatorContract.methods[navCalculationMethod](
+          navCalculatorContract.methods[navCalculationMethod](
             ...callData,
           ).call(),
-        5,
-        [-32603], // Do not retry internal errors (probably invalid NAV method)
+        1,
+        [-32603, 310], // Do not retry internal errors (probably invalid NAV method)
       );
       console.warn("simulated value: ", simulatedVal);
 
-      navEntry.simulatedNavFormatted =
-        fundStore.getFormattedBaseTokenValue(simulatedVal);
+      const valueFormatted = simulatedVal
+        ? formatTokenValue(
+          simulatedVal,
+          baseDecimals,
+          true,
+          false,
+        )
+        : "0";
+      navEntry.simulatedNavFormatted = valueFormatted + " " + baseSymbol;
       navEntry.simulatedNav = simulatedVal;
       navEntry.isSimulatedNavError = false;
     } catch (error: any) {

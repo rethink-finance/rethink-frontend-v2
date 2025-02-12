@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { encodeParameter } from "web3-eth-abi";
 import type INAVMethod from "~/types/nav_method";
-import { NAVEntryTypeToPositionTypeMap } from "~/types/enums/position_type";
+import { NAVEntryTypeToPositionTypeMap, PositionType } from "~/types/enums/position_type";
 import { cleanComplexWeb3Data, formatJson } from "~/composables/utils";
 
 /**
@@ -28,10 +28,10 @@ export const prepNAVMethodIlliquid = (details: Record<string, any>, baseDecimals
   return details.illiquid.map((method: Record<string, any>) => {
     const trxHashes = method.otcTxHashes?.map(
       // Remove leading and trailing whitespace
-      (hash: string) => hash.trim(),
+      (hash: any) => hash.trim(),
     ).filter(
       // Remove empty strings;
-      (hash: string) => hash !== "",
+      (hash: any) => hash !== "",
     ) || [];
 
     return [
@@ -59,30 +59,11 @@ export const prepNAVMethodNFT = (details: Record<string, any>): any[] => {
 
 export const prepNAVMethodComposable = (
   details: Record<string, any>,
-  safeAddressToReplace: string = "",
-  safeAddressReplacement: string= "",
 ): any[] => {
-  // Sometimes we want to replace an address in the encodedFunctionSignatureWithInputs with another one.
-  // This happens when we are simulating NAV and we use the passed safeAddressToReplace
-  // and it is replaced with safeAddressReplacement
-  let encodedSafeAddressToReplace = "";
-  let encodedSafeAddressReplacement = "";
-  if (safeAddressToReplace && safeAddressReplacement) {
-    encodedSafeAddressToReplace = encodeParameter("address", safeAddressToReplace).replace("0x", "");
-    console.log("encodedSafeAddressToReplace", encodedSafeAddressToReplace)
-    encodedSafeAddressReplacement = encodeParameter("address", safeAddressReplacement).replace("0x", "");
-  } else {
-    if (!safeAddressToReplace && safeAddressReplacement) {
-      console.warn("no safeAddressToReplace", safeAddressToReplace)
-    }
-    if (!safeAddressReplacement && safeAddressToReplace) {
-      console.warn("no safeAddressReplacement", safeAddressReplacement)
-    }
-  }
   return details.composable.map((method: Record<string, any>) => [
     method.remoteContractAddress,
     method.functionSignatures,
-    method.encodedFunctionSignatureWithInputs.replace(encodedSafeAddressToReplace, encodedSafeAddressReplacement),
+    method.encodedFunctionSignatureWithInputs,
     parseInt(method.normalizationDecimals) || 0,
     method.isReturnArray,
     parseInt(method.returnValIndex) || 0,
@@ -170,9 +151,22 @@ export const parseNAVMethod = (index: number, navMethodData: Record<string, any>
   const detailsJson = formatJson(details);
   // console.log("DETAILS json 2 ", detailsJson)
 
+
+  // NOTE: this is a UI hack around displaying nested rethink structures
+  // inside PositionType.Composable types.
+  let displayPositionType = positionType;
+  if (positionType === PositionType.Composable) {
+    if (details.composable[0].functionSignatures.includes("illiquidCalc")) {
+      displayPositionType = PositionType.Illiquid;
+    } else if (details.composable[0].functionSignatures.includes("liquidCalc")) {
+      displayPositionType = PositionType.Liquid;
+    }
+  }
+
   return {
     index,
     positionType,
+    displayPositionType,
     positionName: description?.positionName,
     valuationSource: description?.valuationSource,
     details,

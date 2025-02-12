@@ -18,22 +18,19 @@
       >
         <nuxt-link href="https://soonami.io/" target="_blank" class="d-flex">
           <LogoSoonami />
-          <v-tooltip activator="parent" location="bottom">
-            Go to homepage
-          </v-tooltip>
         </nuxt-link>
         <div class="navbar__buttons hidden-sm-and-down">
           <nuxt-link
             v-for="route in computedRoutes"
-            :to="route.to"
+            :key="route.to"
+            :to="route.disabled ? undefined : route.to"
             :target="route.target"
           >
             <v-btn
-              class="nav-link"
+              :class="`nav-link ${route.disabled ? 'disabled' : ''}`"
               variant="plain"
               :active="route.isActive"
               :color="route.pathColor"
-              :disabled="route.disabled"
             >
               {{ route.title }}
               <template #append>
@@ -50,43 +47,12 @@
 
         <ClientOnly>
           <div class="d-flex">
-            <v-select
+            <UiSelectChainButton
+              v-if="accountStore.isConnected"
               v-model="selectedChainId"
-              class="select_network"
-              density="compact"
-              :bg-color="selectedChainId ? '' : 'error'"
-              :items="networks"
               :loading="accountStore.isSwitchingNetworks"
-              item-title="chainName"
-              item-value="chainId"
-            >
-              <template #selection="{ item }">
-                <Icon
-                  :icon="item.raw.icon.name"
-                  :color="item.raw.icon.color"
-                  class="select_item__icon mr-2"
-                />
-                <v-list-item-title>
-                  {{ item.raw.chainName }}
-                </v-list-item-title>
-              </template>
-              <template #item="{ item }">
-                <div
-                  class="select_item"
-                  :class="{'select_item--active': item.raw.chainId === selectedChainId}"
-                  @click="switchNetwork(item.raw.chainId)"
-                >
-                  <Icon
-                    :icon="item.raw.icon.name"
-                    :color="item.raw.icon.color"
-                    class="select_item__icon"
-                  />
-                  <div>
-                    {{ item.raw.chainName }}
-                  </div>
-                </div>
-              </template>
-            </v-select>
+              @selected-chain-changed="switchNetwork"
+            />
             <v-btn
               class="connect_wallet_btn nav-link px-4"
               :class="{'connect_wallet_btn--connected': connectedWallet}"
@@ -144,12 +110,9 @@
 
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
-import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import type INetwork from "~/types/network";
 import type IRoute from "~/types/route";
+import { type ChainId } from "~/store/web3/networksMap";
 const accountStore = useAccountStore();
-const web3Store = useWeb3Store();
 
 const route = useRoute();
 
@@ -162,14 +125,13 @@ const routes : IRoute[] = [
   //   matchPrefix: "/details",
   //   exactMatch: false,
   //   title: "Discover",
-  //   text: "Find the most favorable opportunities",
+  //   text: "",
   // },
   // {
   //   to: "/create",
   //   exactMatch: true,
   //   title: "Create",
-  //   text: "Coming soon",
-  //   disabled: true,
+  //   text: "",
   // },
   // {
   //   to: "/governance",
@@ -183,26 +145,27 @@ const routes : IRoute[] = [
   //   exactMatch: true,
   //   to: "https://docs.rethink.finance",
   //   title: "Docs",
-  //   text: "Delve into the details of the protocol",
+  //   text: "",
   //   icon: "mdi:launch",
   //   color: "var(--color-light-subtitle)",
   // },
 ]
-const selectedChainId = ref(web3Store.chainId);
-const networks: INetwork[] = web3Store.networks;
+const selectedChainId = ref(accountStore.connectedWalletChainId);
 
-watch(() => web3Store.chainId, (newVal, oldVal) => {
-  console.log(`Chain ID changed from ${oldVal} to ${newVal}`);
-  // Perform additional actions when chainId changes
-  selectedChainId.value = newVal || "";
+watch(() => accountStore.connectedWalletChainId, (newVal, oldVal) => {
+  console.log(`Connected Wallet Cain ID changed from ${oldVal} to ${newVal}`);
+  selectedChainId.value = newVal;
 });
 
-const switchNetwork = async (chainId: string) => {
+const isSelectInputActive = ref(false);
+const switchNetwork = async (chainId: ChainId) => {
   try {
     await accountStore.switchNetwork(chainId)
+    isSelectInputActive.value = false;
   } catch (error: any) {
     // Revert the selected value to the previously selected chain.
-    selectedChainId.value = web3Store.chainId;
+    selectedChainId.value = accountStore.connectedWalletChainId;
+    isSelectInputActive.value = true;
   }
 }
 const isPathActive = (path: string = "", exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);
@@ -308,6 +271,9 @@ const onClickConnect = async () => {
       opacity: 0.85;
     }
   }
+  .nav-link.disabled {
+    opacity: 0.5;
+  }
 
   .connect_wallet_btn {
     color: $color-primary;
@@ -340,36 +306,6 @@ const onClickConnect = async () => {
 
   :deep(.v-alert__content) {
     margin: auto;
-  }
-}
-.select_network {
-  min-width: 9rem;
-
-  :deep(.v-input__details) {
-    display: none;
-  }
-}
-.select_item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: .5rem;
-  padding: .5rem;
-  cursor: pointer;
-
-  transition: background-color 0.3s ease;
-
-  &:hover {
-    background-color: $color-hover;
-  }
-
-  &--active {
-    background-color: $color-border-light;
-  }
-
-  &__icon{
-    width: 1.5rem;
-    height: 1.5rem;
   }
 }
 </style>

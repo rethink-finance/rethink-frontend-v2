@@ -30,7 +30,7 @@
           </template>
         </div>
         <div class="data_bar__subtitle">
-          AUM
+          NAV
         </div>
       </div>
       <div class="data_bar__item">
@@ -63,7 +63,8 @@
           Cumulative
         </div>
       </div>
-      <div class="data_bar__item">
+      <!-- Remove Monthly Return for now -->
+      <!-- <div class="data_bar__item">
         <div
           class="data_bar__title"
           :class="numberColorClass(fund.monthlyReturnPercent)"
@@ -73,15 +74,17 @@
         <div class="data_bar__subtitle">
           Monthly Return
         </div>
-      </div>
-      <div class="data_bar__item">
+      </div> -->
+
+      <!-- TODO: show sharpe ratio later -->
+      <!-- <div class="data_bar__item">
         <div class="data_bar__title">
           {{ fund.sharpeRatio ||  "N/A" }}
         </div>
         <div class="data_bar__subtitle">
           Sharpe Ratio
         </div>
-      </div>
+      </div> -->
       <div class="data_bar__item">
         <div class="data_bar__title">
           <FundInfoPositionTypesBar

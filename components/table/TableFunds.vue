@@ -8,9 +8,9 @@
     :loading="loading && items.length === 0"
     loading-text="Loading OIVs"
     items-per-page="-1"
-    @click:row="navigateFundDetails"
+    @mousedown:row="navigateFundDetails"
   >
-    <template #item.name="{ item }">
+    <template #[`item.name`]="{ item }">
       <FundNameCell
         :image="item.photoUrl"
         :title="item.fundToken.symbol"
@@ -18,7 +18,7 @@
       />
     </template>
 
-    <template #item.chainShort="{ item }">
+    <template #[`item.chainShort`]="{ item }">
       <Icon
         :icon="icon(item.chainShort).name"
         :width="icon(item.chainShort).size"
@@ -27,7 +27,7 @@
       />
     </template>
 
-    <template #item.lastNAVUpdateTotalNAV="{ item }">
+    <template #[`item.lastNAVUpdateTotalNAV`]="{ item }">
       <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
         <v-progress-circular
           v-if="item.isNavUpdatesLoading"
@@ -50,7 +50,7 @@
     </template>
 
     <!-- cumulative -->
-    <template #item.cumulativeReturnPercent="{ item }">
+    <template #[`item.cumulativeReturnPercent`]="{ item }">
       <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
         <v-progress-circular
           v-if="item.isNavUpdatesLoading"
@@ -64,8 +64,8 @@
       </div>
     </template>
 
-    <template #item.positionTypeCounts="{ item }">
-      <PositionTypesBar :position-type-counts="item.positionTypeCounts ?? []" />
+    <template #[`item.positionTypeCounts`]="{ item }">
+      <PositionTypesBar :position-type-counts="item.positionTypeCounts ?? []" class="position_types_bar" />
     </template>
 
     <template #bottom>
@@ -87,13 +87,13 @@ import {
   formatTokenValue,
 } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 import type IFund from "~/types/fund";
 
-const web3Store = useWeb3Store();
+const { getFundDetailsUrl } = usePageNavigation();
 const router = useRouter();
 
-const props = defineProps({
+defineProps({
   items: {
     type: Array as () => IFund[],
     default: () => [],
@@ -109,7 +109,6 @@ const headers: any = computed(() => [
     title: "OIV Name",
     key: "name",
     sortable: false,
-    width: 200,
     maxWidth: 300,
     minWidth: 200,
   },
@@ -121,10 +120,16 @@ const headers: any = computed(() => [
     align: "end",
   },
   {
-    title: "AUM",
+    title: "Latest NAV",
     key: "lastNAVUpdateTotalNAV",
     align: "end",
   },
+  // {
+  //   title: "Latest NAV Date",
+  //   key: "lastNavUpdateTime",
+  //   value: (v: IFund) => v.lastNavUpdateTime,
+  //   align: "end",
+  // },
   {
     title: "Inception",
     key: "inceptionDate",
@@ -134,7 +139,6 @@ const headers: any = computed(() => [
   {
     title: "Cumulative",
     key: "cumulativeReturnPercent",
-    maxWidth: 100,
     value: (v: IFund) => formatPercent(v.cumulativeReturnPercent, true),
     align: "end",
   },
@@ -145,18 +149,18 @@ const headers: any = computed(() => [
   //   value: (v: IFund) => formatPercent(v.monthlyReturnPercent, true),
   //   align: "end",
   // },
-  {
-    title: "Sharpe Ratio",
-    key: "sharpeRatio",
-    maxWidth: 100,
-    value: (v: IFund) => v.sharpeRatio || "N/A",
-    align: "end",
-  },
+
+  // TODO: show sharpe ratio later
+  // {
+  //   title: "Sharpe Ratio",
+  //   key: "sharpeRatio",
+  //   maxWidth: 100,
+  //   value: (v: IFund) => v.sharpeRatio || "N/A",
+  //   align: "end",
+  // },
   {
     title: "Position Types",
     key: "positionTypeCounts",
-    width: 128,
-    maxWidth: 158,
     align: "end",
   },
 ]);
@@ -164,17 +168,27 @@ const headers: any = computed(() => [
 const icon = (chainShort: string) => {
   const icon = getChainIcon(chainShort);
   return {
-    name: icon.name,
-    size: icon.size,
-    color: icon.color,
+    name: icon?.name,
+    size: icon?.size,
+    color: icon?.color,
   };
 };
 
 const navigateFundDetails = (event: any, row: any) => {
-  const chainId = web3Store.chainId;
-  router.push(
-    `/details/${chainId}-${row.item.fundToken.symbol}-${row.item.address}`,
+  const fundDetailsUrl = getFundDetailsUrl(
+    row.item.chainId,
+    row.item.fundToken.symbol,
+    row.item.address,
   );
+
+  // Check if the middle mouse button or a modifier key (e.g., Ctrl/Command) is pressed
+  if (event.button === 1 || event.metaKey || event.ctrlKey) {
+    // Allow the default behavior (open in a new tab)
+    window.open(fundDetailsUrl, "_blank");
+  } else {
+    // Normal left-click behavior (navigate)
+    router.push(fundDetailsUrl);
+  }
 };
 </script>
 
@@ -184,19 +198,15 @@ const navigateFundDetails = (event: any, row: any) => {
   border-color: $color-bg-transparent;
   // add table max height
   :deep(.v-table__wrapper) {
-    max-height: 500px;
-    @include customScrollbar;
+    @include customScrollbar(0);
 
     .v-data-table__tr {
       height: 72px;
       cursor: pointer;
-      transition:
-        background-color 0.3s ease,
-        box-shadow 0.3s ease;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
       color: $color-steel-blue;
       outline: 2px solid #111c35;
       background-color: $color-table-row;
-      color: white;
 
       &:hover {
         background-color: $color-gray-transparent;
@@ -239,5 +249,10 @@ const navigateFundDetails = (event: any, row: any) => {
 
   rotate: 180deg;
   transform: scaleX(-1);
+}
+
+.position_types_bar{
+  max-width: 100px;
+  margin-left: auto;
 }
 </style>

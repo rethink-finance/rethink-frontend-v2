@@ -1,78 +1,28 @@
 <template>
-  <div class="add_from_library">
-    <UiHeader>
-      <div class="main_header__title">
-        Add From Library
-      </div>
-      <div>
-        <v-btn
-          class="bg-primary text-secondary"
-          :disabled="!selectedMethodHashes.length"
-          @click="addMethods"
-        >
-          Add Methods
-        </v-btn>
-      </div>
-    </UiHeader>
-
-    <UiHeader>
-      <div class="main_header__title">
-        <v-text-field
-          v-model="search"
-          label="Search"
-          prepend-inner-icon="mdi-magnify"
-          variant="outlined"
-          hide-details
-          single-line
-          class="search"
-        />
-      </div>
-      <div class="subtitle_steel_blue mb-0">
-        {{ selectedMethodHashes.length }} selected
-      </div>
-    </UiHeader>
-
-
-    <div v-if="loadingAllNavMethods" class="mt-4">
-      <v-skeleton-loader type="table-row" />
-      <v-skeleton-loader type="table-row" />
-      <v-skeleton-loader type="table-row" />
-      <v-skeleton-loader type="table-row" />
-    </div>
-    <FundNavMethodsTable
-      v-else
-      :methods="uniqueNavMethods"
-      :used-methods="fundStore.fundManagedNAVMethods"
-      selectable
-      :search="search"
-      show-simulated-nav
-      idx="addFromLibrary"
-      @selected-changed="onSelectionChanged"
-    />
-  </div>
+  <FundNavAddFromLibrary
+    :chain-id="fundStore.selectedFundChain"
+    :fund-address="fundStore.fundAddress"
+    :safe-address="fundStore.fund?.safeAddress || ''"
+    :base-symbol="fundStore.fund?.baseToken?.symbol || ''"
+    :base-decimals="fundStore.fund?.baseToken?.decimals || 18"
+    :already-used-methods="fundStore.fundManagedNAVMethods"
+    @methods-added="methodsAddedFromLibrary"
+  />
 </template>
 
 <script setup lang="ts">
-// import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 
-import { useFundsStore } from "~/store/funds/funds.store";
+import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
-const fundsStore = useFundsStore();
 const toastStore = useToastStore();
 const router = useRouter();
 
-const loadingAllNavMethods = ref(false);
-const selectedMethodHashes = ref<string[]>([]);
-const search = ref("");
-
-const { selectedFundSlug } = toRefs(fundStore);
-const { allNavMethods } = toRefs(fundsStore);
-const { uniqueNavMethods } = toRefs(fundsStore);
-
+// Data
+const { selectedFundSlug } = storeToRefs(fundStore);
 
 const breadcrumbItems: BreadcrumbItem[] = [
   {
@@ -92,42 +42,29 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-onMounted(async () => {
+// Lifecycle Hooks
+onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
-
-  if (!allNavMethods.value.length) {
-    loadingAllNavMethods.value = true;
-    const fundsInfoArrays = await fundsStore.fetchFundsInfoArrays()
-    // Fetch all possible NAV methods for all OIVs
-    await fundsStore.fetchFundsNAVData(fundsInfoArrays);
-    loadingAllNavMethods.value = false;
-  }
 });
+
 onBeforeUnmount(() => {
   emit("updateBreadcrumbs", []);
 });
 
-const onSelectionChanged = (hashes: string[]) => {
-  selectedMethodHashes.value = hashes;
-}
 
-const addMethods = () => {
+// Methods
+const methodsAddedFromLibrary = (addedMethods: INAVMethod[]) => {
   // // Add newly defined method to fund managed methods.
-  const methods = uniqueNavMethods.value.filter(method => selectedMethodHashes.value.includes(method.detailsHash || ""));
-
-  for (const method of methods) {
+  for (const method of addedMethods) {
     method.isNew = true;
     fundStore.fundManagedNAVMethods.push(method);
   }
 
   // Redirect back to Manage methods page.
   router.push(`/details/${selectedFundSlug.value}/nav/manage`);
-  toastStore.addToast("Methods added successfully.")
-}
+  toastStore.addToast("Methods added successfully.");
+};
 </script>
 
 <style scoped lang="scss">
-.search{
-  width: 300px;
-}
 </style>

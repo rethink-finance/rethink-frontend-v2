@@ -10,8 +10,9 @@
             v-for="buttonLink in buttonLinks"
             :title="buttonLink.title"
             :href="buttonLink.href"
+            :show-tooltip="buttonLink.showTooltip"
           />
-      </div>
+        </div>
       </template>
 
       <template #tools>
@@ -48,12 +49,14 @@ export default {
     buttonLinks() {
       return [
         {
-          title: "DeBank - AUM",
+          title: "DeBank - NAV",
           href: this.deBankUrl,
+          showTooltip: false,
         },
         {
           title: "Safe - Custody",
           href: this.custodyUrl,
+          showTooltip: false,
         },
       ]
     },
@@ -90,7 +93,7 @@ export default {
   gap: 1.5rem;
   flex-direction: column;
   justify-content: space-between;
-  
+
 
   &__header{
     padding: 0;

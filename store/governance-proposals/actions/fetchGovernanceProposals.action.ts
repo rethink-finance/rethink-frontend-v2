@@ -1,6 +1,4 @@
-import type { ApolloClient } from "@apollo/client";
 import { useGovernanceProposalsStore } from "../governance_proposals.store";
-
 import { fetchSubgraphGovernorProposals } from "~/services/subgraph";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ClockMode } from "~/types/enums/clock_mode";
@@ -11,12 +9,9 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   const governanceProposalStore = useGovernanceProposalsStore();
   const fundStore = useFundStore();
   const web3Store = useWeb3Store();
-  const nuxtApp = useNuxtApp();
-  const client = nuxtApp.$apolloClient as Ref<ApolloClient<any>>;
   const fund = fundStore.fund;
-
-  if (!client) {
-    throw new Error("Apollo client not found");
+  if (!fund) {
+    return;
   }
   if (!fund?.governorAddress) {
     throw new Error("Governor address not found");
@@ -27,16 +22,21 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
     governanceProposalStore.getWeb3InstanceByChainId(),
   );
 
+  const roleModAddress = await fundStore.getRoleModAddress(fund.address); // TODO replace with fetchGovernableFund
+  console.log("roleModAddress", roleModAddress);
 
-  const roleModAddress = await fundStore.getRoleModAddress(); // TODO replace with fetchGovernableFund
+  const quorumDenominator = await web3Store.callWithRetry(
+    fund.chainId,
+    () =>
+      fundStore.fundGovernorContract.methods.quorumDenominator().call(),
+  );
 
-  const quorumDenominator = await governanceProposalStore.callWithRetry(() =>
-    fundStore.fundGovernorContract.methods.quorumDenominator().call(),
-  ); // TODO
-
-  const fetchedProposals = await fetchSubgraphGovernorProposals(client.value, {
-    governorAddress: fund?.governorAddress,
-  });
+  const fetchedProposals = await fetchSubgraphGovernorProposals(
+    fund.chainId,
+    {
+      governorAddress: fund?.governorAddress,
+    },
+  );
 
   const proposalsWithPoints = fetchedProposals.map((proposal) => ({
     proposal,
@@ -62,15 +62,19 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
     await Promise.all(
       uniquePoints.map(async ({ timepoint, blockNumber }) => {
         const [quorumNumerator, totalSupply] = await Promise.all([
-          governanceProposalStore.callWithRetry(() =>
-            fundStore.fundGovernorContract.methods
-              .quorumNumerator(timepoint)
-              .call(), // TODO
+          web3Store.callWithRetry(
+            fund.chainId,
+            () =>
+              fundStore.fundGovernorContract.methods
+                .quorumNumerator(timepoint)
+                .call(), // TODO
           ),
-          governanceProposalStore.callWithRetry(() =>
-            fundStore.fundGovernanceTokenContract.methods
-              .totalSupply()
-              .call({ blockNumber }), // TODO
+          web3Store.callWithRetry(
+            fund.chainId,
+            () =>
+              fundStore.fundGovernanceTokenContract.methods
+                .totalSupply()
+                .call({ blockNumber }), // TODO
           ),
         ]);
         return [
@@ -96,13 +100,14 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
       fund?.clockMode?.mode as ClockMode,
       roleModAddress ?? "",
       fund?.safeAddress ?? "",
+      fund?.address ?? "",
     );
   });
 
   const mappedProposals = await Promise.all(processedProposals);
 
   governanceProposalStore.storeProposals(
-    web3Store.chainId,
+    fund.chainId,
     fund?.address,
     mappedProposals,
   );

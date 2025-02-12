@@ -1,28 +1,35 @@
 import { ApolloClient, HttpLink, InMemoryCache } from "@apollo/client/core";
-import { useSubgraphUrl } from "~/composables/useSubgraphUrl";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import { useSubgraphUrl } from "~/composables/subgraph/useSubgraphUrl";
+import { SubgraphClientType } from "~/types/enums/subgraph";
+import type { ChainId } from "~/store/web3/networksMap";
 
-export default defineNuxtPlugin((nuxtApp) => {
-  const web3Store = useWeb3Store();
-  const clientCache: Record<string, ApolloClient<any>> = {};
 
-  const getApolloClient = (chainId: string): ApolloClient<any> => {
-    if (!clientCache[chainId]) {
-      const subgraphUrl = useSubgraphUrl(web3Store.chainId);
 
-      clientCache[chainId] = new ApolloClient({
+export default defineNuxtPlugin(() => {
+  const clientCache: Record<SubgraphClientType, Partial<Record<ChainId, ApolloClient<any>>>> = {
+    [SubgraphClientType.Rethink]: {},
+    [SubgraphClientType.Zodiac]: {},
+  };
+
+  const getApolloClient = (
+    chainId: ChainId,
+    clientType: SubgraphClientType = SubgraphClientType.Rethink,
+  ): ApolloClient<any> => {
+    if (!clientCache[clientType][chainId]) {
+      const subgraphUrl = useSubgraphUrl(chainId, clientType);
+      clientCache[clientType][chainId] = new ApolloClient({
         link: new HttpLink({
           uri: subgraphUrl,
         }),
         cache: new InMemoryCache(),
       });
     }
-
-    return clientCache[chainId];
+    return clientCache[clientType][chainId];
   };
 
-  const currentClient = computed(() => getApolloClient(web3Store.chainId));
-
-  // Provide the reactive Apollo Client with typing
-  nuxtApp.provide("apolloClient", currentClient as Ref<ApolloClient<any>>);
+  return {
+    provide: {
+      getApolloClient,
+    },
+  };
 });

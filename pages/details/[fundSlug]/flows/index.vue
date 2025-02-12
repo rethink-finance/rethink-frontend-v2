@@ -145,7 +145,7 @@
                     <div
                       class="transfer__token_col transfer__input pa-0 transfer__token_col--dark text-end"
                     >
-                      <InputNumber
+                      <UiInputNumber
                         v-model="customSimulatedNAVValue"
                         :rules="customSimulatedNAVValueRules"
                         class="transfer__input_amount"
@@ -406,7 +406,7 @@ const {
   totalCurrentSimulatedNAV,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
-} = toRefs(fundStore);
+} = storeToRefs(fundStore);
 
 const customSimulatedNAVValue = ref("");
 const customSimulatedNAVValueChanged = ref(false);

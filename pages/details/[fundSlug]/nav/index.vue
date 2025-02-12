@@ -48,13 +48,11 @@
                 </template>
                 Update NAV
               </v-btn>
-
             </template>
 
             <template #default>
               Switch to the Zodiac Pilot Extension to Update NAV.
             </template>
-
           </v-tooltip>
         </div>
       </div>
@@ -79,7 +77,15 @@
       </UiHeader>
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
         <FundNavMethodsTable
-          :methods="fundLastNAVUpdateMethods"
+          :fund-chain-id="fundStore.selectedFundChain"
+          :fund-address="fundStore.fundAddress"
+          :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
+          :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
+          :fee-balance="Number(fundStore.fund?.feeBalance)"
+          :safe-address="fundStore.fund?.safeAddress"
+          :base-symbol="fundStore.fund?.baseToken.symbol"
+          :base-decimals="fundStore.fund?.baseToken.decimals"
+          :methods="fundComputedNavMethods"
           :loading="isLoadingFetchFundNAVUpdatesAction"
           :nav-parts="fundLastNAVUpdate?.navParts"
           show-summary-row
@@ -119,11 +125,15 @@ const {
   selectedFundSlug,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
-} = toRefs(useFundStore());
+} = storeToRefs(useFundStore());
 
 const fundLastNAVUpdateDate = computed(() => {
   if (!fundLastNAVUpdate?.value?.date) return "N/A";
   return fundLastNAVUpdate.value.date ?? "N/A";
+});
+const fundComputedNavMethods = computed(() => {
+  if (fundLastNAVUpdate?.value?.date) return fundLastNAVUpdateMethods.value || [];
+  return fundStore.fundInitialNAVMethods || [];
 });
 
 const fundTotalNAVFormatted = computed(() => {

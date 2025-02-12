@@ -9,7 +9,9 @@
         class="fund_settlement__buttons"
       >
         <v-tooltip
-          :disabled="!(depositDisabledTooltipText || redemptionDisabledTooltipText)"
+          :disabled="
+            !(depositDisabledTooltipText || redemptionDisabledTooltipText)
+          "
           activator="parent"
           location="bottom"
         >
@@ -41,7 +43,10 @@
         </v-tooltip>
       </div>
     </div>
-    <div v-if="!accountStore.isConnected" class="fund_settlement__no_pending_requests">
+    <div
+      v-if="!accountStore.isConnected"
+      class="fund_settlement__no_pending_requests"
+    >
       Connect your wallet to view deposit or redemption requests.
     </div>
     <div v-else-if="isLoadingFetchUserFundDepositRedemptionRequestsAction">
@@ -71,17 +76,21 @@
       Currently there are no deposit or redemption requests.
     </div>
     <UiNotification>
-      The deposit and redeem requests are settled within the planned Settlement Cycle
-      of <span class="text-primary">{{ fund?.plannedSettlementPeriod || "N/A" }}</span>.
-      You can learn more about how settlements work
-      <a href="https://docs.rethink.finance/rethink.finance" target="_blank">here</a>.
+      The deposit and redeem requests are settled within the planned Settlement
+      Cycle of
+      <span class="text-primary">{{
+        fund?.plannedSettlementPeriod || "N/A"
+      }}</span>. You can learn more about how settlements work
+      <a
+        href="https://docs.rethink.finance/rethink.finance"
+        target="_blank"
+      >here</a>.
     </UiNotification>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ethers, FixedNumber } from "ethers";
-import { computed, ref } from "vue";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type IFund from "~/types/fund";
@@ -94,9 +103,9 @@ import { ActionState } from "~/types/enums/action_state";
 const emit = defineEmits(["deposit-success"]);
 
 const web3Store = useWeb3Store();
-const toastStore = useToastStore()
+const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
-const fundStore = useFundStore()
+const fundStore = useFundStore();
 const accountStore = useAccountStore();
 const {
   fundUserData,
@@ -108,24 +117,32 @@ const {
   shouldUserWaitSettlementOrCancelRedemption,
   userDepositRequestExists,
   userRedemptionRequestExists,
-} = toRefs(fundStore);
+} = storeToRefs(fundStore);
 
-const isLoadingFetchUserFundDepositRedemptionRequestsAction = computed (() => actionStateStore.isActionState("fetchUserFundDepositRedemptionRequests", ActionState.Loading));
+const isLoadingFetchUserFundDepositRedemptionRequestsAction = computed(() =>
+  actionStateStore.isActionState(
+    "fetchUserFundDepositRedemptionRequests",
+    ActionState.Loading,
+  ),
+);
 
 defineProps({
   fund: {
     type: Object as PropType<IFund>,
     default: () => {},
   },
-})
+});
 const isProcessRequestDisabled = computed(() => {
   if (isAnythingLoading.value) return true;
 
   // Do not disable process request button if the user can do either deposit or redemption.
-  if (!depositDisabledTooltipText.value || !redemptionDisabledTooltipText.value) {
+  if (
+    !depositDisabledTooltipText.value ||
+    !redemptionDisabledTooltipText.value
+  ) {
     return false;
   }
-  return true
+  return true;
 });
 
 const processRequest = () => {
@@ -135,7 +152,7 @@ const processRequest = () => {
   if (userRedemptionRequestExists.value) {
     redeem();
   }
-}
+};
 
 const loadingDeposit = ref(false);
 const loadingRedemption = ref(false);
@@ -145,42 +162,54 @@ const isAnythingLoading = computed(() => {
 });
 const depositDisabledTooltipText = computed(() => {
   if (!userDepositRequestExists.value) {
-    return "There is no deposit request."
+    return "There is no deposit request.";
   }
-  if (fundUserData.value.fundAllowance < (userDepositRequest?.value?.amount || 0n)) {
-    return "Not enough allowance to process the deposit request."
+  if (
+    fundUserData.value.fundAllowance < (userDepositRequest?.value?.amount || 0n)
+  ) {
+    return "Not enough allowance to process the deposit request.";
   }
   if (shouldUserWaitSettlementOrCancelDeposit.value) {
-    return "Wait for settlement or cancel the deposit request."
+    return "Wait for settlement or cancel the deposit request.";
   }
   if (!fundStore.isUserWalletWhitelisted) {
     return "Your wallet address is not whitelisted to allow deposits into this OIV."
   }
-  return ""
+  return "";
 });
 const redemptionDisabledTooltipText = computed(() => {
   const redemptionRequestAmount = userRedemptionRequest?.value?.amount || 0n;
 
   if (!userRedemptionRequestExists.value) {
-    return "There is no redemption request."
+    return "There is no redemption request.";
   }
   if (fundUserData.value.fundTokenBalance < redemptionRequestAmount) {
     return "Not enough OIV tokens to process the redemptions request."
   }
   if (shouldUserWaitSettlementOrCancelRedemption.value) {
-    return "Wait for settlement or cancel the redemption request."
+    return "Wait for settlement or cancel the redemption request.";
   }
 
   // Check if there is even enough liquidity in the OIV contract to redeem the requested amount.
   const fundContractBaseTokenBalance = fundStore.fund?.fundContractBaseTokenBalance || 0n;
   // Get the last NAV update exchange rate.
-  const lastNAVExchangeRate = FixedNumber.fromString(fundStore.fundToBaseTokenExchangeRate.toString());
-  const redemptionRequestAmountFN = FixedNumber.fromString(
-    ethers.formatUnits(redemptionRequestAmount, fundStore.fund?.fundToken.decimals),
+  const lastNAVExchangeRate = FixedNumber.fromString(
+    fundStore.fundToBaseTokenExchangeRate.toString(),
   );
-  const redemptionRequestAmountInBaseFN = lastNAVExchangeRate.mul(redemptionRequestAmountFN);
+  const redemptionRequestAmountFN = FixedNumber.fromString(
+    ethers.formatUnits(
+      redemptionRequestAmount,
+      fundStore.fund?.fundToken.decimals,
+    ),
+  );
+  const redemptionRequestAmountInBaseFN = lastNAVExchangeRate.mul(
+    redemptionRequestAmountFN,
+  );
   const fundContractBaseTokenBalanceFN = FixedNumber.fromString(
-    ethers.formatUnits(fundContractBaseTokenBalance, fundStore.fund?.baseToken.decimals),
+    ethers.formatUnits(
+      fundContractBaseTokenBalance,
+      fundStore.fund?.baseToken.decimals,
+    ),
   );
   // console.log("NSS lastNAVExchangeRate", lastNAVExchangeRate.toString())
   // console.log("NSS redemptionRequestAmountFN", redemptionRequestAmountFN.toString());
@@ -193,34 +222,35 @@ const redemptionDisabledTooltipText = computed(() => {
   if (!fundStore.isUserWalletWhitelisted) {
     return "Your wallet address is not whitelisted to allow deposits into this OIV."
   }
-  return ""
+  return "";
 });
 
 const signDepositAndDelegateBySigTransaction = async () => {
   const activeAccountAddress = fundStore.activeAccountAddress ?? "";
+  const fundChainId = fundStore.selectedFundChain;
   if (!activeAccountAddress) {
     toastStore.errorToast("No active account, try re-authenticating.");
     return;
   }
   // Get contract domain data (name, verifyingContract, chainId, version) that
   // will be used to create the EIP-712 message.
-  const [domainDataResult, nonceResult] =
-    await Promise.allSettled(
-      [
-        () => fundStore.fundGovernanceTokenContract.methods.eip712Domain().call(),
-        () => fundStore.fundGovernanceTokenContract.methods.nonces(activeAccountAddress).call(),
-      ].map((fn) => accountStore.requestConcurrencyLimit(() =>
-        fundStore.callWithRetry(fn),
-      )),
-    );
+  const [domainDataResult, nonceResult] = await Promise.allSettled(
+    [
+      () => fundStore.fundGovernanceTokenContract.methods.eip712Domain().call(),
+      () =>
+        fundStore.fundGovernanceTokenContract.methods
+          .nonces(activeAccountAddress)
+          .call(),
+    ].map((fn) =>
+      accountStore.requestConcurrencyLimit(() => web3Store.callWithRetry(fundChainId, fn)),
+    ),
+  );
   const domainData =
     domainDataResult.status === "fulfilled"
       ? domainDataResult.value
       : undefined;
   const nonce =
-    nonceResult.status === "fulfilled"
-      ? nonceResult.value
-      : undefined;
+    nonceResult.status === "fulfilled" ? nonceResult.value : undefined;
   console.log("depositAndDelegateBySig domain data ", domainData);
 
   const expiry = Math.floor(Date.now() / 1000) + 3600; // expiry 1 hour from now;
@@ -233,31 +263,32 @@ const signDepositAndDelegateBySigTransaction = async () => {
     domainData.verifyingContract,
     domainData.chainId,
     domainData.version,
-  )
-  console.log("dataToSign", JSON.stringify(dataToSign, null, 2))
+  );
+  console.log("dataToSign", JSON.stringify(dataToSign, null, 2));
   let signature;
 
   try {
-    const hexSignature = await web3Store?.web3?.eth.signTypedData(activeAccountAddress ?? "", dataToSign);
+    const web3Provider = web3Store.chainProviders[fundStore.selectedFundChain];
+    const hexSignature = await web3Provider?.eth.signTypedData(
+      activeAccountAddress ?? "",
+      dataToSign,
+    );
     signature = ethers.Signature.from(hexSignature);
   } catch (error) {
     console.error("Error signing message:", error);
-    return
+    return;
   }
 
   // If user has not delegated to himself yet, just use the depositAndDelegateBySig
-  return encodeFundFlowsCallFunctionData(
-    "depositAndDelegateBySig",
-    [
-      activeAccountAddress, // delegatee, delegate to self first
-      nonce, // nonce
-      expiry, // expiry
-      signature.v, // v
-      signature.r, // r
-      signature.s, // s
-    ],
-  );
-}
+  return encodeFundFlowsCallFunctionData("depositAndDelegateBySig", [
+    activeAccountAddress, // delegatee, delegate to self first
+    nonce, // nonce
+    expiry, // expiry
+    signature.v, // v
+    signature.r, // r
+    signature.s, // s
+  ]);
+};
 
 const deposit = async () => {
   if (!fundStore.activeAccountAddress) {
@@ -269,10 +300,15 @@ const deposit = async () => {
     return;
   }
   if (!userDepositRequest?.value?.amount) {
-    toastStore.errorToast("Deposit request data is missing.")
+    toastStore.errorToast("Deposit request data is missing.");
     return;
   }
-  console.log("DEPOSIT tokensWei: ", userDepositRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
+  console.log(
+    "DEPOSIT tokensWei: ",
+    userDepositRequest?.value?.amount,
+    "from : ",
+    fundStore.activeAccountAddress,
+  );
   loadingDeposit.value = true;
   let encodedFunctionCall;
 
@@ -283,9 +319,9 @@ const deposit = async () => {
     let delegateBySigData;
     try {
       encodedFunctionCall = await signDepositAndDelegateBySigTransaction();
-      console.warn("signed delegateBySigData", delegateBySigData)
+      console.warn("signed delegateBySigData", delegateBySigData);
     } catch (error: any) {
-      console.error("failed signing delegate by sig data", error)
+      console.error("failed signing delegate by sig data", error);
 
       // Only use the deposit call as a fallback, and delegate to self later.
       encodedFunctionCall = encodeFundFlowsCallFunctionData("deposit");
@@ -296,41 +332,48 @@ const deposit = async () => {
   }
 
   try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: fundStore.activeAccountAddress,
-      gasPrice: "",
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
+    await fundStore.fundContract
+      .send("fundFlowsCall", {}, encodedFunctionCall)
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The transaction has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
 
-      // Refresh user balances & allowance & refresh pending requests.
-      fundStore.fetchUserFundData(fundStore.selectedFundAddress);
+        // Refresh user balances & allowance & refresh pending requests.
+        fundStore.fetchUserFundData(
+          fundStore.selectedFundChain,
+          fundStore.selectedFundAddress,
+        );
 
-      if (receipt.status) {
-        toastStore.successToast("Your deposit was successful.");
+        if (receipt.status) {
+          toastStore.successToast("Your deposit was successful.");
 
-        // emit event to open the delegate votes modal
-        emit("deposit-success");
-      } else {
-        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-      }
+          // emit event to open the delegate votes modal
+          emit("deposit-success");
+        } else {
+          toastStore.errorToast(
+            "The transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
 
-      loadingDeposit.value = false;
-    }).on("error", (error: any) => {
-      loadingDeposit.value = false;
-      console.error(error);
-      toastStore.errorToast(
-        "There has been an error. Please contact the Rethink Finance support.",
-      );
-    })
+        loadingDeposit.value = false;
+      })
+      .on("error", (error: any) => {
+        loadingDeposit.value = false;
+        console.error(error);
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      });
   } catch (error: any) {
     loadingDeposit.value = false;
     handleError(error);
   }
-}
-
+};
 
 const redeem = async () => {
   if (!fundStore.activeAccountAddress) {
@@ -342,44 +385,57 @@ const redeem = async () => {
     return;
   }
   if (!userRedemptionRequest?.value?.amount) {
-    toastStore.errorToast("Redemption request data is missing.")
+    toastStore.errorToast("Redemption request data is missing.");
     return;
   }
   console.log("[REDEEM]");
   loadingRedemption.value = true;
-  console.log("[REDEEM] tokensWei: ", userRedemptionRequest?.value?.amount, "from : ", fundStore.activeAccountAddress);
+  console.log(
+    "[REDEEM] tokensWei: ",
+    userRedemptionRequest?.value?.amount,
+    "from : ",
+    fundStore.activeAccountAddress,
+  );
 
   const encodedFunctionCall = encodeFundFlowsCallFunctionData("withdraw");
 
   try {
-    await fundStore.fundContract.methods.fundFlowsCall(encodedFunctionCall).send({
-      from: fundStore.activeAccountAddress,
-      gasPrice: "",
-    }).on("transactionHash", (hash: string) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed.");
-    }).on("receipt", (receipt: any) => {
-      console.log("receipt: ", receipt);
-
-      // Refresh user balances & allowance.
-      fundStore.fetchUserFundData(fundStore.selectedFundAddress);
-
-      if (receipt.status) {
-        toastStore.successToast(
-          "Your redemption was successful. It may take 10 seconds or more for values to update.",
+    await fundStore.fundContract
+      .send("fundFlowsCall", {}, encodedFunctionCall)
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The transaction has been submitted. Please wait for it to be confirmed.",
         );
-      } else {
-        toastStore.errorToast("The transaction has failed. Please contact the Rethink Finance support.");
-      }
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
 
-      loadingRedemption.value = false;
-    }).on("error", (error: any) => {
-      handleError(error);
-    })
+        // Refresh user balances & allowance.
+        fundStore.fetchUserFundData(
+          fundStore.selectedFundChain,
+          fundStore.selectedFundAddress,
+        );
+
+        if (receipt.status) {
+          toastStore.successToast(
+            "Your redemption was successful. It may take 10 seconds or more for values to update.",
+          );
+        } else {
+          toastStore.errorToast(
+            "The transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+
+        loadingRedemption.value = false;
+      })
+      .on("error", (error: any) => {
+        handleError(error);
+      });
   } catch (error: any) {
     handleError(error);
   }
-}
+};
 
 const handleError = (error: any) => {
   loadingRedemption.value = false;
@@ -387,12 +443,14 @@ const handleError = (error: any) => {
   // Check Metamask errors:
   // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
   if ([4001, 100].includes(error?.code)) {
-    toastStore.addToast("Transaction was rejected.")
+    toastStore.addToast("Transaction was rejected.");
   } else {
-    toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
+    toastStore.errorToast(
+      "There has been an error. Please contact the Rethink Finance support.",
+    );
     console.error(error);
   }
-}
+};
 </script>
 
 <style lang="scss" scoped>
@@ -420,12 +478,12 @@ const handleError = (error: any) => {
   }
 }
 
-.card_header{
-  &__title{
+.card_header {
+  &__title {
     margin-bottom: 0.75rem;
 
-    @include sm{
-      margin-bottom: 0
+    @include sm {
+      margin-bottom: 0;
     }
   }
 }

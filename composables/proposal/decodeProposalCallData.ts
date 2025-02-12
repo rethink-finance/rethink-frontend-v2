@@ -5,6 +5,7 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { NAVExecutor } from "assets/contracts/NAVExecutor";
 
 
 export const decodeProposalCallData = (
@@ -12,11 +13,20 @@ export const decodeProposalCallData = (
   calldata: string,
   targetAddress: string,
   safeAddress: string,
+  fundAddress: string,
 ): Record<any, any> | undefined => {
   // Iterate over each method in ABI to find a match
   const signature = calldata.slice(0, 10);
   const encodedParameters = calldata.slice(10);
   const functionAbi = functionSignaturesMap[signature];
+  const defaultDecodedCalldata = {
+    functionName: undefined,
+    contractName: undefined,
+    calldataType: undefined,
+    calldataDecoded: undefined,
+    calldata,
+  };
+  console.log("sig", signature, functionAbi)
 
   if (!functionAbi?.function?.name) {
     console.warn(
@@ -24,7 +34,7 @@ export const decodeProposalCallData = (
       signature,
       functionAbi,
     );
-    return undefined;
+    return defaultDecodedCalldata;
   }
   const functionAbiInputs = functionAbi?.function?.inputs as AbiInput[];
 
@@ -45,8 +55,23 @@ export const decodeProposalCallData = (
       calldataType = ProposalCalldataType.DIRECT_EXECUTION;
     } else if (targetAddressLowerCase === roleModAddress?.toLocaleLowerCase()) {
       calldataType = ProposalCalldataType.PERMISSIONS;
-    } else if(functionName === "updateSettings") {
+    } else if (functionName === "updateSettings") {
       calldataType = ProposalCalldataType.FUND_SETTINGS;
+    } else if (functionName === "storeNAVData") {
+      // storeNAVData has two fields, "oiv" and "data", where "data" is actually NAV methods, so we can try decoding
+      // it even further to show NAV methods table.
+      try {
+        // Only decode if decoded.oiv address is the same as current fund address.
+        if (fundAddress && decoded?.oiv === fundAddress) {
+          const decodedNavMethods = decodeProposalCallData(roleModAddress, (decoded?.data ?? "") as string, targetAddress, safeAddress, fundAddress)
+          if (decodedNavMethods?.calldataDecoded) {
+            decoded = decodedNavMethods?.calldataDecoded;
+          }
+          calldataType = ProposalCalldataType.NAV_UPDATE;
+        }
+      } catch (e: any) {
+        console.error("Failed decoding storeNAVData NAV methods", calldata, e)
+      }
     }
 
     return {
@@ -65,7 +90,7 @@ export const decodeProposalCallData = (
     functionSignaturesMap[signature],
   );
 
-  return undefined;
+  return defaultDecodedCalldata;
 };
 
 /**
@@ -89,6 +114,10 @@ const contractsToExtractFunctionSignatures = [
   {
     abi: ZodiacRoles.abi,
     name: "ZodiacRoles",
+  },
+  {
+    abi: NAVExecutor.abi,
+    name: "NAVExecutor",
   },
 ];
 

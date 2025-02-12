@@ -1,26 +1,34 @@
 import { excludeNAVDetailsHashes } from "../config/excludedNAVDetailsHashes.config";
 import { useFundsStore } from "../funds.store";
-
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
-import type INAVMethod from "~/types/nav_method";
-import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
+import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import type INAVMethod from "~/types/nav_method";
+import { type ChainId } from "~/store/web3/networksMap";
 
 // Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
 const excludeNAVDetails: boolean = true;
 
-export async function fetchFundsNAVDataAction(
+export async function fetchFundsNavMethodsAction(
+  chainId: ChainId,
   fundsInfoArrays: any[],
+  storeAllMethods: boolean = true,
 ): Promise<any> {
-  const fundsStore = await useFundsStore();
+  console.log("start calculating fund nav data ", chainId);
+  const fundsStore = useFundsStore();
+  const web3Store = useWeb3Store();
   const fundAddresses: string[] = fundsInfoArrays[0];
 
-  const allFundsNavData = await fundsStore.callWithRetry(() =>
-    fundsStore.rethinkReaderContract.methods
-      .getFundsNAVData(fundAddresses)
-      .call(),
-  );
+  const rethinkReaderContract =
+    web3Store.chainContracts[chainId]?.rethinkReaderContract;
+  if (!rethinkReaderContract) {
+    throw new Error(`No reader contract found for chainId: ${chainId}`);
+  }
+  const allFundsNavData = await rethinkReaderContract.methods
+    .getFundsNAVData(fundAddresses)
+    .call();
 
   const allMethods: INAVMethod[] = [];
   fundsStore.navMethodDetailsHashToFundAddress = {};
@@ -29,6 +37,7 @@ export async function fetchFundsNAVDataAction(
   for (const [fundIndex, fundNavData] of allFundsNavData.entries()) {
     const fundAddress = fundAddresses[fundIndex];
     await processFundNavData(
+      chainId,
       fundNavData,
       fundAddress,
       fundIndex,
@@ -47,11 +56,14 @@ export async function fetchFundsNAVDataAction(
   }
   const uniqueMethods = Array.from(uniqueMethodsMap.values());
 
-  fundsStore.allNavMethods = allMethods;
-  fundsStore.uniqueNavMethods = uniqueMethods;
+  if (storeAllMethods) {
+    fundsStore.allNavMethods[chainId] = allMethods;
+    fundsStore.uniqueNavMethods[chainId] = uniqueMethods;
+  }
 }
 
 async function processFundNavData(
+  chainId: ChainId, // the type of FundNavData
   fundNAVData: any, // the type of FundNavData
   fundAddress: string,
   fundIndex: number,
@@ -59,33 +71,30 @@ async function processFundNavData(
   fundsInfoArrays: any[],
   allMethods: INAVMethod[],
 ) {
-  const fund = fundsStore.funds[fundIndex];
-  fundsStore.fundNAVUpdates[fundAddress] = [];
+  const web3Store = useWeb3Store();
+  fundsStore.chainFundNAVUpdates[chainId][fundAddress] = [];
 
   if (!fundNAVData.encodedNavUpdate?.length) return;
-
-  const fundContract = new fundsStore.web3.eth.Contract(
+  const fundContract = web3Store.getCustomContract(
+    chainId,
     GovernableFund.abi,
     fundAddress,
   );
+  const navUpdates = await fundsStore.fundStore.parseFundNAVUpdates(
+    chainId,
+    fundNAVData,
+    fundAddress,
+    fundContract,
+  );
 
-  const navUpdates =
-    await fundsStore.fundStore.parseFundNAVUpdates(
-      fundNAVData,
-      fundAddress,
-      fundContract,
-    );
-
-  fundsStore.fundNAVUpdates[fundAddress] = navUpdates;
+  fundsStore.chainFundNAVUpdates[chainId][fundAddress] = navUpdates;
+  if (fundsStore.chainFunds?.[chainId]?.[fundIndex]) {
+    // Save NAV updates to the fund in store.
+    fundsStore.chainFunds[chainId][fundIndex].navUpdates = navUpdates;
+  }
   const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
-  if (fund) {
-    fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(lastNavUpdate?.entries);
-
-    fund.lastNAVUpdateTotalNAV = navUpdates.length
-      ? lastNavUpdate.totalNAV || 0n
-      : fund.totalDepositBalance || 0n;
-  }
+  const fund = fundsStore.chainFunds[chainId]?.[fundIndex];
 
   for (const [
     navUpdateIndex,
@@ -109,7 +118,7 @@ async function processFundNavData(
         if (
           excludeNAVDetails &&
           parsedNavMethod.detailsHash &&
-          excludeNAVDetailsHashes[fundsStore.web3Store.chainId].includes(
+          excludeNAVDetailsHashes[chainId]?.includes(
             parsedNavMethod.detailsHash,
           )
         ) {
@@ -124,7 +133,7 @@ async function processFundNavData(
         allMethods.push(parsedNavMethod);
         if (parsedNavMethod.detailsHash) {
           fundsStore.navMethodDetailsHashToFundAddress[
-            parsedNavMethod.detailsHash
+            parsedNavMethod.detailsHash as string
           ] = fundAddress;
         } else {
           console.error(
@@ -137,5 +146,16 @@ async function processFundNavData(
     } catch (error: any) {
       console.log("Error processing NAV methods: ", error);
     }
+  }
+
+  if (fund) {
+    fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
+      lastNavUpdate?.entries,
+      lastNavUpdate,
+    );
+
+    fund.lastNAVUpdateTotalNAV = navUpdates.length
+      ? lastNavUpdate.totalNAV || 0n
+      : fund.totalDepositBalance || 0n;
   }
 }

@@ -16,7 +16,15 @@
         bg-transparent
       >
         <template #body>
-          <FundNavMethodsTable :methods="navUpdate.entries" idx="navUpdates" />
+          <FundNavMethodsTable
+            :fund-chain-id="fundStore.selectedFundChain"
+            :fund-address="fundStore.fundAddress"
+            :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
+            :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
+            :fee-balance="Number(fundStore.fund?.feeBalance)"
+            :methods="navUpdate.entries"
+            idx="navUpdates"
+          />
         </template>
         <!--        <template #actions="{detailsExpanded}">-->
         <!--          <UiDetailsButton text="Details" :active="detailsExpanded" />-->
@@ -48,7 +56,7 @@ export default defineComponent({
   setup() {
     const fundStore = useFundStore();
     const actionStateStore = useActionStateStore();
-    const { getFormattedBaseTokenValue } = toRefs(fundStore);
+    const { getFormattedBaseTokenValue } = storeToRefs(fundStore);
     return { fundStore, actionStateStore, getFormattedBaseTokenValue };
   },
   computed:{

@@ -96,7 +96,7 @@ Example library:
 ## Production Build
 Build and deploy to GH pages.
 ```shell
-npx nuxi generate; cd .output/public/; git init; git add -A; git commit -m "deployment to GH Pages"; git push -f git@github.com:rethink-finance/rethink-frontend-v2.git master:gh-pages; cd ../..;
+ENV_EXCLUDE_TEST_FUNDS=true BASE_DOMAIN=rethink.finance npx nuxi generate; cd .output/public/; git init; git add -A; git commit -m "deployment to GH Pages"; git push -f git@github.com:rethink-finance/rethink-frontend-v2.git master:gh-pages; cd ../..;
 ```
 
 
@@ -143,10 +143,10 @@ If there is no NAV update yet, cumulative return percent must be 0.
 2) Calculate Total NAV like we do in the frontend. There is a special case if there are no NAV
 updates yet, then the total NAV is actually totalDepositBal.
 3) Also add getNavUpdateTime for each navUpdate already when fetching navUpdates (bulk also).
+4) Return rolesModifierAddress 
+
 
 ### Frontend TODO
-0) When all READER contracts get redeployed, refactor parseFundNAVUpdates to use navUpdates that are passed already.
-No need to refetch them again. Also go to finish WIP in branch:  fix/calculate_funds_performance_metrics_refactor
 1) Until the reader contract cumulative value is implemented:
    Special case if the totalDepositBal is 0, we must take
    the first NAV update as the start value (TSHN - ShineDAO is such example on Polygon)
@@ -156,6 +156,19 @@ done in the contract already?
 3) Rename all variable names: navEntry to navMethod
 4) callWithRetry --> when switching chain, cancel all pending callWithRetry
 5) instead of `ethers.keccak256(ethers.toUtf8Bytes(proposal.description))` ... use `ethers.id(proposal.description)`
+6) rewrite to use only ethersv6 instead of web3.js
+7) implement ethers FallbackProvider instead of doing callWithRetry custom implementations
+      ```txt
+    ethers.providers.FallbackProvider
+    1. What is FallbackProvider?
+    ethers.providers.FallbackProvider allows you to use multiple RPC providers simultaneously. If one provider fails or is too slow, it will fallback to another. This ensures high availability and reliability in decentralized applications.
+    
+    If a primary RPC (e.g., Infura) goes down, your dApp can automatically switch to another (e.g., Alchemy).
+    Can be used for load balancing.
+    Ensures better performance by distributing requests among multiple providers. 
+    ```
 ### Frontend Tests TODO
 1) When creating NAV proposal check that all types match, especially that the navMethod.details is correct, especially
 the description (should be a string, not an object).
+2) add test to check if current reader contract ABI match the deployed address -> call function and check 
+  there are no decoding errors

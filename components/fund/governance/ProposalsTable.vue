@@ -178,7 +178,7 @@ const props = defineProps({
 
 const getRowClass = (item: IGovernanceProposal) => {
   const hasVoted = governanceProposalStore.hasAccountVoted(item?.proposalId) ?? false;
-  const isActionRequired = item.state === ProposalState.Active && !hasVoted || item.state === ProposalState.Pending;
+  const isActionRequired = item.state === ProposalState.Active && !hasVoted || item.state === ProposalState.Pending;
 
   return [
     "v-data-table__row",
@@ -191,6 +191,7 @@ watch([() => props.items, () => fundStore.activeAccountAddress], () => {
     return
   }
   const activeAccountAddress = fundStore.activeAccountAddress;
+  const fundChainId = fundStore.selectedFundChain;
 
   for (const proposal of props.items) {
     governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId] ??= {};
@@ -199,8 +200,9 @@ watch([() => props.items, () => fundStore.activeAccountAddress], () => {
 
     // console.log("get votes for ", proposal.proposalId);
     proposal.hasVotedLoading = true;
-    web3Store.callWithRetry(() =>
-      fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call(),
+    web3Store.callWithRetry(
+      fundChainId, () =>
+        fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call(),
     ).then(
       (hasVoted: boolean) => {
         // console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)

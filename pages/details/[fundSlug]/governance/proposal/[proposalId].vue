@@ -43,11 +43,11 @@
             </div>
             <template v-else>
               <div
-                v-for="(calldata, index) in filteredProposalCalldatasDecoded"
-                :key="index"
+                v-for="(calldata, calldataIndex) in filteredProposalCalldatasDecoded"
+                :key="calldataIndex"
                 class="mb-6"
               >
-                <strong class="text-primary">{{ index }}#</strong>
+                <strong class="text-primary">{{ calldataIndex }}#</strong>
                 <div>
                   <strong>Contract:</strong> {{ calldata?.contractName ?? "N/A" }}
                 </div>
@@ -55,10 +55,10 @@
                   <strong>Function:</strong> {{ calldata?.functionName ?? "N/A" }}
                 </div>
                 <div>
-                  <strong>Target:</strong> {{ proposal?.targets?.[index] ?? "N/A" }}
+                  <strong>Target:</strong> {{ proposal?.targets?.[calldataIndex] ?? "N/A" }}
                 </div>
                 <div>
-                  <strong>Value:</strong> {{ proposal?.values?.[index] ?? "N/A" }}
+                  <strong>Value:</strong> {{ proposal?.values?.[calldataIndex] ?? "N/A" }}
                 </div>
                 <UiDataRowCard
                   :grow-column1="true"
@@ -71,20 +71,28 @@
                       </div>
                       <div>
                         <v-switch
-                          v-model="toggledRawProposalCalldatas[index]"
+                          v-model="toggledRawProposalCalldatas[calldataIndex]"
                           label="Raw"
                           color="primary"
                           hide-details
-                          @click.stop="toggleRawProposalCalldata(index)"
+                          @click.stop="toggleRawProposalCalldata(calldataIndex)"
                         />
                       </div>
                     </div>
                   </template>
                   <template #body>
-                    <template v-if="!toggledRawProposalCalldatas[index]">
+                    <template v-if="!toggledRawProposalCalldatas[calldataIndex]">
                       <template v-if="calldata?.calldataType === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
-                          :methods="allMethods[index]"
+                          :fund-chain-id="fundStore.selectedFundChain"
+                          :fund-address="fundStore.fundAddress"
+                          :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
+                          :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
+                          :fee-balance="Number(fundStore.fund?.feeBalance)"
+                          :safe-address="fundStore.fund?.safeAddress"
+                          :base-symbol="fundStore.fund?.baseToken.symbol"
+                          :base-decimals="fundStore.fund?.baseToken.decimals"
+                          :methods="allMethods[calldataIndex]"
                           show-summary-row
                           show-simulated-nav
                           show-base-token-balances
@@ -99,7 +107,12 @@
                       </template>
                       <template v-else>
                         <div class="code_block">
-                          {{ formatCalldata(calldata?.calldataDecoded) }}
+                          <template v-if="calldata?.calldataDecoded">
+                            {{ formatCalldata(calldata?.calldataDecoded) }}
+                          </template>
+                          <template v-else>
+                            Calldata could not be decoded. Check raw data.
+                          </template>
                         </div>
                       </template>
                     </template>
@@ -176,14 +189,12 @@
 
 <script setup lang="ts">
 import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
-
 import { useActionStateStore } from "~/store/actionState.store";
 
 import { formatPercent } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
@@ -192,7 +203,6 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
-const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const route = useRoute();
 const proposalSlug = route.params.proposalId as string;
@@ -210,7 +220,7 @@ const toggleRawProposalCalldata = (index: number) => {
   toggledRawProposalCalldatas.value[index] = !(toggledRawProposalCalldatas.value[index] ?? false);
 }
 
-const { selectedFundSlug } = toRefs(useFundStore());
+const { selectedFundSlug } = storeToRefs(useFundStore());
 const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "Governance",
@@ -246,7 +256,7 @@ const activeUserVoteSubmission = computed(() => {
 
 const proposal = computed(():IGovernanceProposal | undefined => {
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
-  const proposal = governanceProposalStore.getProposal(web3Store.chainId, fundStore.fund?.address, proposalId);
+  const proposal = governanceProposalStore.getProposal(fundStore.selectedFundChain, fundStore.fundAddress, proposalId);
   if (!proposal) return undefined;
 
   /**
@@ -284,10 +294,14 @@ const filteredProposalCalldatasDecoded = computed(() => {
   return calldatasDecoded;
 })
 
-const parseNavEntries = (calldataDecoded: any): INAVMethod[] => {
-  console.log("calldataDecoded", calldataDecoded);
+const parseNavEntries = (calldata: any): INAVMethod[] => {
+  console.log("parseNavEntries calldataDecoded", calldata?.calldataDecoded);
+  const calldataDecoded = calldata?.calldataDecoded;
   const navMethods = [];
-  for (const [index, navMethod] of (calldataDecoded?.navUpdateData ?? []).entries()) {
+  const navUpdateData = calldataDecoded?.navUpdateData ?? [];
+
+  // Try parsing NAV methods for this callData, will only work for NAV updates calldata type.
+  for (const [index, navMethod] of navUpdateData.entries()) {
     navMethods.push(parseNAVMethod(index, navMethod));
   }
   return navMethods
@@ -446,14 +460,17 @@ onMounted(async () => {
 
     // await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
 
-    if (proposal.value && !proposal.value?.executedBlockNumber) {
-      // await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
-    }
+    // if (proposal.value && !proposal.value?.executedBlockNumber) {
+    //    await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
+    // }
   } catch {}
+  console.log("gov prop fetched", proposal.value)
 
   if (proposal.value) {
+    console.warn("proposal.value?.calldatasDecoded", proposal.value?.calldatasDecoded)
     allMethods.value = proposal.value?.calldatasDecoded?.map((calldata) => {
-      return parseNavEntries(calldata?.calldataDecoded);
+      console.warn("parseNavEntries(calldata)", calldata, parseNavEntries(calldata))
+      return parseNavEntries(calldata);
     }) ?? [];
   }
 });

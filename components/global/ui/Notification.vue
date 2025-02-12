@@ -17,7 +17,7 @@
 <script setup lang="ts">
 import { useFundStore } from "~/store/fund/fund.store";
 
-const { fund } = toRefs(useFundStore());
+const { fund } = storeToRefs(useFundStore());
 </script>
 
 <style lang="scss" scoped>
