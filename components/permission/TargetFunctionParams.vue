@@ -1,14 +1,11 @@
 <template>
   <div class="target_function_params">
-    <div
-      v-if="func?.inputs?.length"
-      class="target_function_params__inputs"
-    >
+    <div class="target_function_params__inputs">
       <pre
         v-if="showRaw"
         class="permissions__json"
-      >{{ JSON.stringify(localCondition?.params, null, 2) }}</pre>
-      <template v-else>
+      >{{ JSON.stringify(localFuncCondition?.params, null, 2) }}</pre>
+      <template v-else-if="flattenedInputs.length">
         <div
           v-for="(funcInputParam, index) in flattenedInputs"
           :key="index"
@@ -27,9 +24,39 @@
               ({{ funcInputParam.type }})
             </div>
           </div>
+
           <PermissionParamConditionInput
             :index="index"
             :param="funcInputParam"
+            :condition="getParamConditionByIndex(index)"
+            :disabled="disabled"
+            @update:condition="(newValue) => updateParamConditionByIndex(index, newValue)"
+          />
+        </div>
+      </template>
+      <template v-else>
+        <!--
+          Contract ABI not found, but we still want to render conditions
+          at least as view only.
+        -->
+        <div
+          v-for="index in indices"
+          :key="index"
+          class="permissions__function"
+        >
+          <div class="target_function_params__title">
+            <Icon icon="tabler:point-filled" />
+            <div>
+              [{{ index }}]
+            </div>
+            <div class="permissions__function_params">
+              ({{ getParamConditionByIndex(index)?.type || "Unknown type" }})
+            </div>
+          </div>
+
+          <PermissionParamConditionInput
+            :index="index"
+            :param="undefined"
             :condition="getParamConditionByIndex(index)"
             :disabled="disabled"
             @update:condition="(newValue) => updateParamConditionByIndex(index, newValue)"
@@ -74,7 +101,7 @@ const props = defineProps({
 });
 
 // Create a local reactive copy of funcConditions to allow editing it without mutating props.
-const localCondition = useVModel(props, "funcConditions", emit, {
+const localFuncCondition = useVModel(props, "funcConditions", emit, {
   clone: cloneDeep, // Deep copy to avoid prop mutation
   passive: true,    // Prevents excessive reactivity updates
   deep: true,       // Ensures Vue watches nested changes
@@ -84,20 +111,25 @@ const flattenedInputs = computed(
   () => flattenAbiFunctionInputs(props.func?.inputs as FlattenedParamType[]),
 );
 
+const maxIndex = computed(() =>
+  localFuncCondition.value?.params.reduce((max, param) => Math.max(max, param.index), -1) || 0,
+)
+const indices = Array.from({ length: maxIndex.value + 1 }, (_, i) => i)
+
 const getParamConditionByIndex = (
   index: number,
 ): ParamCondition | undefined => {
-  return localCondition.value?.params?.find((param) => param?.index === index);
+  return localFuncCondition.value?.params?.find((param) => param?.index === index);
 }
 
 const updateParamConditionByIndex = (index: number, newValue: ParamCondition) => {
-  console.debug("updateConditionByIndex", index, toRaw(newValue), toRaw(localCondition.value));
-  // localCondition.value.value[index] = newValue;
-  if (!localCondition.value?.params) return;
+  console.debug("updateConditionByIndex", index, toRaw(newValue), toRaw(localFuncCondition.value));
+  // localFuncCondition.value.value[index] = newValue;
+  if (!localFuncCondition.value?.params) return;
 
-  const condIndex = localCondition.value?.params?.findIndex((param) => param?.index === index);
-  if (localCondition.value?.params && condIndex >= 0) {
-    localCondition.value.params[condIndex] = newValue;
+  const condIndex = localFuncCondition.value?.params?.findIndex((param) => param?.index === index);
+  if (localFuncCondition.value?.params && condIndex >= 0) {
+    localFuncCondition.value.params[condIndex] = newValue;
   }
 }
 </script>
