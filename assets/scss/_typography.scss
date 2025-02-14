@@ -35,6 +35,12 @@
   font-weight: normal; /* Regular is normal weight */
 }
 
+@font-face {
+  font-family: 'Outfit';
+  src: url('../fonts/Outfit.woff2') format('truetype');
+  font-weight: normal; /* Regular is normal weight */
+}
+
 html, body {
   font-family: EudoxusSans, sans-serif;
   color: $color-light-subtitle;
