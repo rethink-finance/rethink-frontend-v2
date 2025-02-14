@@ -1,13 +1,19 @@
+import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
+import { NAVCalculator } from "assets/contracts/NAVCalculator";
+import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
+import { RethinkReader } from "assets/contracts/RethinkReader";
+import SafeMultiSendCallOnlyJson from "assets/contracts/safe/SafeMultiSendCallOnly.json";
 import { defineStore } from "pinia";
 import { type HttpProvider, Web3 } from "web3";
-import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
-import { type ChainId, networksMap } from "~/store/web3/networksMap";
-import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
-import { RethinkReader } from "assets/contracts/RethinkReader";
 import { CustomContract } from "~/store/web3/customContract";
-import { NAVCalculator } from "assets/contracts/NAVCalculator";
-import SafeMultiSendCallOnlyJson from "assets/contracts/safe/SafeMultiSendCallOnly.json";
+import { type ChainId, ChainId as ChainIdValue, networksMap } from "~/store/web3/networksMap";
 const SafeMultiSendCallOnlyAddresses: Partial<Record<string, string>> = SafeMultiSendCallOnlyJson.networkAddresses;
+
+
+const L2_TO_L1_CHAIN_ID_MAP = {
+  // Arbitrum uses L1 ETH as block time.
+  [ChainIdValue.ARBITRUM]: ChainIdValue.ETHEREUM,
+} as const;
 
 interface IState {
   currentRpcIndex: number;
@@ -208,6 +214,16 @@ export const useWeb3Store = defineStore({
     },
     delay(ms: number): Promise<void> {
       return new Promise((resolve) => setTimeout(resolve, ms));
+    },
+    getWeb3Instance(chainId: ChainId, convertToL1 = true): Web3 {
+      const mappedChainId =
+        L2_TO_L1_CHAIN_ID_MAP[chainId as keyof typeof L2_TO_L1_CHAIN_ID_MAP];
+
+      if (mappedChainId && convertToL1) {
+        return this.chainProviders[mappedChainId];
+      }
+
+      return this.chainProviders[chainId];
     },
   },
 });
