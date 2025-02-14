@@ -190,9 +190,10 @@ export const calculateCumulativeReturnPercent = (
         .sub(fixedTotalDepositBal)
         .div(fixedTotalDepositBal);
 
-      cumulativeReturnPercent = cumulativeReturn.toUnsafeFloat();
+      cumulativeReturnPercent = Number(cumulativeReturn.toUnsafeFloat().toFixed(4));
     }
-    return cumulativeReturnPercent;
+    console.log("After calculating cumulativeReturnPercent: ", cumulativeReturnPercent);
+    return cumulativeReturnPercent
   } catch (error) {
     return undefined;
   }
