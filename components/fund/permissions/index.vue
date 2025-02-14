@@ -13,16 +13,19 @@
     <template v-else>
       <FundPermissionsMenuLeft
         class="permissions__menu_left"
-        :selected-target="selectedTarget"
-        :role="selectedRole"
+        :selected-target="activeTarget"
+        :role="roleStore.role"
         @update:selected-target="setSelectedTarget"
       />
-
+      <!--      TODO remove this JSON -->
+      <!--      <div class="permissions__json" style="width: 650px;">-->
+      <!--        <div>-->
+      <!--          {{ roleStore.getActiveRole || "no target selected" }}-->
+      <!--        </div>-->
+      <!--      </div>-->
       <PermissionTarget
-        v-if="selectedTarget"
-        v-model:conditions="localConditions[selectedTarget.address]"
+        v-if="roleStore.activeTarget"
         class="permissions__content"
-        :target="selectedTarget"
         :chain-id="chainId"
       />
       <div v-else>
@@ -35,6 +38,7 @@
 <script setup lang="ts">
 import type { ChainId } from "~/store/web3/networksMap";
 import type { Role, Target, TargetConditions } from "~/types/zodiac-roles/role";
+import { useRoleStore } from "~/store/role/role.store";
 
 const props = defineProps({
   chainId: {
@@ -50,10 +54,13 @@ const props = defineProps({
     default: false,
   },
 });
-// Local reactive copy for target conditions (mapped by target address)
-const localConditions = ref<Record<string, TargetConditions>>({});
 
-const selectedRole = ref<Role | undefined>();
+const roleStore = useRoleStore();
+const { activeTarget, getActiveRole } = storeToRefs(roleStore);
+
+// Provide the store to child components
+provide("roleStore", roleStore);
+
 const selectedTarget = ref<Target | undefined>();
 
 // This is Rethink.finance specific thing now, to hardcode select condition
@@ -63,38 +70,32 @@ const roleNumberOne = computed<Role|undefined>(
 );
 
 // Set selected target & initialize its local conditions.
-const setSelectedTarget = (newTarget: Target) => {
-  console.log("[0] setSelectedTarget", toRaw(newTarget));
-  selectedTarget.value = newTarget;
-  if (!localConditions.value[newTarget.address]) {
-    localConditions.value[newTarget.address] = { ...newTarget.conditions };
-  }
+const setSelectedTarget = (newTargetId: string) => {
+  console.log("[0] setSelectedTarget", toRaw(newTargetId));
+  // selectedTarget.value = newTarget; // TODO remove this
+  roleStore.activeTarget = newTargetId;
 };
 
+// TODO whenever role changes reset role store and populate it with this role data
 // Watch for `roles` change and preselect a role & target
 watch(() => props.roles.length, () => {
   // Pre-select Role with ID: "1" as we use this one now everywhere.
   // This is hardcoded now at many places and needs
   // to be adjusted as any ID can be used.
   if (props.roles.length) {
-    selectedRole.value = roleNumberOne.value || props.roles[0];
-    setSelectedTarget(selectedRole.value?.targets[0]);
+    const selectedRole = roleNumberOne.value || props.roles[0];
+    roleStore.role = selectedRole;
+    roleStore.initRoleState(
+      roleStore.getRoleId(selectedRole.name, props.roles),
+      toRaw(selectedRole),
+    );
+
+    setSelectedTarget(selectedRole?.targets[0].id);
   } else {
-    selectedRole.value = undefined;
+    roleStore.role = undefined;
     selectedTarget.value = undefined;
   }
 });
-
-// Watch for target changes and update `localConditions` accordingly
-watch(
-  selectedTarget,
-  (newTarget) => {
-    if (newTarget && !localConditions.value[newTarget.address]) {
-      localConditions.value[newTarget.address] = { ...newTarget.conditions };
-    }
-  },
-  { deep: true, immediate: true },
-);
 </script>
 
 <style lang="scss" scoped>

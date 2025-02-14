@@ -38,10 +38,12 @@
 // types
 import type IFund from "~/types/fund";
 // components
+import { fetchRoles } from "~/services/zodiac-subgraph";
 import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
 import { useFundStore } from "~/store/fund/fund.store";
 import type { Role } from "~/types/zodiac-roles/role";
-import { useActionStateStore } from "~/store/actionState.store";
+import { useActionState, useActionStateStore } from "~/store/actionState.store";
+import { ChainId } from "~/store/web3/networksMap";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -71,33 +73,28 @@ const updateGnosisLink = async () => {
 };
 
 const isFetchingPermissions = computed(() =>
-  actionStateStore.isActionStateLoading("fetchFundPermissionsAction"),
+  actionStateStore.isActionStateLoading("fetchRolesAction"),
 );
 
 watch(
   () => [fund.chainShort, fundStore.getRoleModAddress],
   () => {
     updateGnosisLink();
-
-    // TODO try using the zodiac-roles-sdk  fetchRolesMod (does it also work for roles v1?)
-    // import { fetchRolesMod } from "zodiac-roles-sdk"
-    // console.warn("USE ZODIAC SDK")
-    // const address = "0xBd1099dFD3c11b65FB4BB19A350da2f5B61Efb0d";
-    // const mod = {
-    //   chainId: 1,
-    //   chainPrefix: "eth",
-    //   address: address.toLowerCase() as `0x${string}`,
-    // }
-    // const data = await fetchRolesMod(mod as any)
-    // console.warn("FETCHED SDK ROLES", data);
-
   },
   { immediate: true },
 );
 
+
+// TODO move this into roles store.
+function fetchRolesAction(chainId: ChainId, rolesModAddress: string): Promise<Role[]> {
+  return useActionState("fetchRolesAction", () =>
+    fetchRoles(chainId, rolesModAddress),
+  );
+}
+
 const fetchPermissions = async (rolesModAddress: string) => {
-  roles.value = await fundStore.fetchFundPermissions(fund.chainId, rolesModAddress);
-  console.log("Roles", roles.value);
+  roles.value = await fetchRolesAction(fund.chainId, rolesModAddress);
+  console.log("Fetched Roles", toRaw(roles.value));
 }
 
 const navigateToCreatePermissions = () => {

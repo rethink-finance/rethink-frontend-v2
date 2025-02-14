@@ -34,7 +34,7 @@
           v-for="target in role?.targets || []"
           :key="target.id"
           :class="classesTarget(target)"
-          @click="emitSelectedTarget(target)"
+          @click="emitSelectedTarget(target.id)"
         >
           {{ truncateAddress(target.address) }}
         </div>
@@ -55,19 +55,19 @@ const props = defineProps({
     default: () => {},
   },
   selectedTarget: {
-    type: Object as PropType<Target>,
-    default: () => {},
+    type: String,
+    default: "",
   },
 });
 
-const emitSelectedTarget = (selectedTarget: Target) => {
-  emit("update:selectedTarget", selectedTarget);
+const emitSelectedTarget = (selectedTargetId: string) => {
+  emit("update:selectedTarget", selectedTargetId);
 }
 
 const classesTarget = (target: Target) => {
   return [
     "permissions__list_item",
-    { "permissions__list_item--selected": target.address === props.selectedTarget.address },
+    { "permissions__list_item--selected": target.id === props.selectedTarget },
   ];
 };
 </script>

@@ -12,6 +12,16 @@
       hide-details
     />
   </template>
+  <template v-else-if="!condition && !disabled">
+    <!-- TODO add condition logic -->
+    <!--    <v-btn-->
+    <!--      variant="outlined"-->
+    <!--      size="small"-->
+    <!--      class="pa-2 ms-2"-->
+    <!--    >-->
+    <!--      + Condition-->
+    <!--    </v-btn>-->
+  </template>
   <template v-else-if="condition">
     <v-select
       v-model="localCondition.condition"
@@ -103,7 +113,7 @@ const conditionOptions = computed(() =>
 );
 
 const updateConditionValueByIndex = (index: number, newValue: string) => {
-  console.log("updateConditionValueByIndex", index, newValue, toRaw(localCondition.value));
+  console.warn("updateConditionValueByIndex", index, newValue, toRaw(localCondition.value));
   localCondition.value.value[index] = newValue;
 }
 

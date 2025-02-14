@@ -51,7 +51,7 @@
           :func="func"
           :sighash="sighash"
           :show-raw="showRaw"
-          :disabled="true"
+          :disabled="false"
         />
       </span>
     </template>

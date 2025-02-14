@@ -91,15 +91,17 @@
       <PermissionTargetFunction
         v-for="(func, index) in abiWriteFunctions"
         :key="index"
-        v-model:func-conditions="localConditions[func.selector]"
         :func="func as FunctionFragment"
+        :func-conditions="target?.conditions[func.selector]"
+        @update:func-conditions="(newFuncConditions) => updateConditions(func.selector, newFuncConditions)"
       />
       <!-- Display function conditions that were not found in the ABI -->
       <PermissionTargetFunction
         v-for="(sighash, index) in sighashesNotInAbi"
         :key="index"
-        v-model:func-conditions="localConditions[sighash]"
         :sighash="sighash"
+        :func-conditions="target?.conditions[sighash]"
+        @update:func-conditions="(newFuncConditions) => updateConditions(sighash, newFuncConditions)"
       />
     </div>
   </div>
@@ -111,15 +113,10 @@ import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
 import type { Explorer } from "~/services/explorer";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type { ChainId } from "~/store/web3/networksMap";
-import type { Target, TargetConditions } from "~/types/zodiac-roles/role";
-
-const emit = defineEmits(["update:conditions"]);
+import type { FunctionCondition, TargetConditions } from "~/types/zodiac-roles/role";
+import type { RoleStoreType } from "~/store/role/role.store"; // Import the type
 
 const props = defineProps({
-  target: {
-    type: Object as PropType<Target>,
-    default: () => {},
-  },
   conditions: {
     type: Object as PropType<TargetConditions>,
     default: () => {},
@@ -129,11 +126,16 @@ const props = defineProps({
     required: true,
   },
 });
+// Inject the Role Store
+const roleStore = inject<RoleStoreType>("roleStore");
+if (!roleStore) {
+  throw new Error("roleStore is not provided!");
+}
+
+const target = computed(() => roleStore.getActiveRole);
 
 const { $getExplorer } = useNuxtApp();
 const toastStore = useToastStore();
-// 🔥 **Create a local reactive copy of `target.conditions`**
-const localConditions = ref({ ...props.conditions });
 
 const targetABIJson = ref<JsonFragment[]>([]);
 const customABI = ref<string>("");
@@ -163,9 +165,9 @@ const isFetchingTargetABI = ref(false);
 
 const fetchTargetABI = async () => {
   targetABIJson.value = [];
-  if (!props.target.address) return;
+  if (!target.value?.address) return;
   isFetchingTargetABI.value = true;
-  console.log("Fetch target ABI action", props.chainId, props.target.address);
+  console.log("Fetch target ABI action", props.chainId, target.value.address);
 
   let explorer: Explorer;
   try {
@@ -175,7 +177,7 @@ const fetchTargetABI = async () => {
   }
 
   try {
-    targetABIJson.value = await explorer.abi(props.target.address);
+    targetABIJson.value = await explorer.abi(target.value.address);
     console.debug("fetched ABI targetABIJson", targetABIJson.value);
     isFetchingTargetABI.value = false;
   } catch (error: any) {
@@ -198,7 +200,7 @@ watch(
     abiWriteFunctions.value = writeFunctions;
 
     // Condition sighashes of functions that are not in the detected ABI.
-    sighashesNotInAbi.value = Object.keys(props.target?.conditions || {}).filter(
+    sighashesNotInAbi.value = Object.keys(target.value?.conditions || {}).filter(
       (conditionKey: string) => !writeFunctions?.some(
         (func: FunctionFragment) => func.selector === conditionKey,
       ),
@@ -208,36 +210,25 @@ watch(
 );
 
 watch(
-  () => props.target, () => {
+  () => roleStore.activeTarget, () => {
     fetchTargetABI();
     isEditingCustomABI.value = false;
   },
   { immediate: true },
 );
-
-// Watch for changes in `localConditions` and emit updates to parent
-watch(
-  localConditions,
-  (newConditions) => {
-    if (JSON.stringify(newConditions) !== JSON.stringify(props.conditions)) {
-      console.log("  [1] watch localConditions", toRaw(newConditions))
-      emit("update:conditions", newConditions);
-    }
-  },
-  { deep: true },
-);
-
-// Sync `localConditions` when `props.conditions` changes (but prevent looping)
-watch(
-  () => props.conditions,
-  (newConditions) => {
-    if (JSON.stringify(newConditions) !== JSON.stringify(localConditions.value)) {
-      console.log("  [1] watch props.conditions")
-      localConditions.value = { ...newConditions };
-    }
-  },
-  { deep: true, immediate: true },
-);
+const updateConditions = (sighash: string, newFuncConditions: FunctionCondition) => {
+  console.log("[FATHER] Conditions changed for sighash", sighash, "New:", newFuncConditions);
+  if (target.value?.id && target.value?.address) {
+    console.log("[FATHER] Conditions changed for", target.value, "New:", { sighash, conditions: toRaw(newFuncConditions) });
+    roleStore.handleTargetConditions(
+      target.value.id,
+      {
+        ...target.value?.conditions,
+        [sighash]: newFuncConditions,
+      },
+    );
+  }
+};
 </script>
 
 <style lang="scss" scoped>

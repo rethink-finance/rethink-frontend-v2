@@ -47,6 +47,5 @@ export const flattenAbiFunctionInputs = (
   }
 
   processInputs(inputs);
-  console.warn("FLAT INPUTS", flatInputs);
   return flatInputs;
 }

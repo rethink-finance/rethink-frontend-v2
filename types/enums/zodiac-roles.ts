@@ -43,3 +43,10 @@ export enum ConditionType {
   WILDCARDED = "Target",
   SCOPED = "Function",
 }
+
+export enum Level {
+  SCOPE_TARGET, // Allowed, Scoped, Blocked
+  SCOPE_FUNCTION, // Allowed, Scoped, Blocked
+  SCOPE_PARAM,
+  UPDATE_FUNCTION_EXECUTION_OPTION,
+}

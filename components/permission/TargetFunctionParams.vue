@@ -53,7 +53,6 @@
               ({{ getParamConditionByIndex(index)?.type || "Unknown type" }})
             </div>
           </div>
-
           <PermissionParamConditionInput
             :index="index"
             :param="undefined"
@@ -74,6 +73,7 @@ import { useVModel } from "@vueuse/core";
 import cloneDeep from "lodash.clonedeep";
 import type { FlattenedParamType, FunctionCondition, ParamCondition } from "~/types/zodiac-roles/role";
 import { flattenAbiFunctionInputs } from "~/composables/zodiac-roles/flattenAbiFunctionInputs";
+import { ConditionType } from "~/types/enums/zodiac-roles";
 
 const emit = defineEmits(["update:funcConditions"]);
 
@@ -131,6 +131,19 @@ const updateParamConditionByIndex = (index: number, newValue: ParamCondition) =>
   if (localFuncCondition.value?.params && condIndex >= 0) {
     localFuncCondition.value.params[condIndex] = newValue;
   }
+  // Step 3: Update the type based on remaining conditions
+  // This determines whether the function conditions should be:
+  //    SCOPED     -> If there are still conditions (means there are specific constraints).
+  //    WILDCARDED -> If no conditions remain (means all values are allowed).
+  localFuncCondition.value.type = localFuncCondition.value.params.length ? ConditionType.SCOPED : ConditionType.WILDCARDED;
+
+  // TODO in react code they do also change type if needed!:
+  //     const newConditions = funcConditions.params.filter((param) => param.index !== index)
+  //     if (value != null) {
+  //       newConditions.push(value)
+  //     }
+  //     const type: ConditionType = newConditions.length ? ConditionType.SCOPED : ConditionType.WILDCARDED
+  //     onChange({ ...funcConditions, type, params: newConditions })
 }
 </script>
 
