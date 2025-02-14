@@ -106,6 +106,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ChainId } from "~/store/web3/networksMap";
 import { InputType } from "~/types/enums/input_type";
 import FieldInput from "./FieldInput.vue";
 import InfoBox from "./InfoBox.vue";
@@ -115,7 +116,7 @@ const emit = defineEmits(["update:modelValue", "update:isCustomValueToggleOn", "
 const props = defineProps({
   // chainId is required for time to blocks component
   chainId: {
-    type: String,
+    type: String as PropType<ChainId>,
     default: "",
   },
   field: {
