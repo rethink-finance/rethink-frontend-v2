@@ -414,19 +414,19 @@ watch(
   { deep: true },
 );
 
-const clearDraft = () => {
+const clearDraft = async () => {
   try {
     fundManagedNAVMethods.value = JSON.parse(
       JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt),
       parseBigInt,
     );
     // reset the local storage as well
-    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
+    const navUpdateEntries = await getLocalForageItem("navUpdateEntries");
     // navUpdateEntries[selectedFundAddress.value] = fundManagedNAVMethods.value;
     // we need to delete navUpdateEntries[selectedFundAddress.value];
     delete navUpdateEntries[selectedFundAddress.value];
 
-    setLocalStorageItem("navUpdateEntries", navUpdateEntries);
+    setLocalForageItem("navUpdateEntries", navUpdateEntries);
 
     toastStore.successToast("Draft cleared successfully");
   } catch (e) {
@@ -435,15 +435,15 @@ const clearDraft = () => {
   }
 };
 
-const saveDraft = () => {
+const saveDraft = async () => {
   try {
-    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
+    const navUpdateEntries = await getLocalForageItem("navUpdateEntries");
 
     navUpdateEntries[selectedFundAddress.value] = JSON.parse(
       JSON.stringify(fundManagedNAVMethods.value, stringifyBigInt),
     );
 
-    setLocalStorageItem("navUpdateEntries", navUpdateEntries);
+    setLocalForageItem("navUpdateEntries", navUpdateEntries);
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to save NAV draft");
