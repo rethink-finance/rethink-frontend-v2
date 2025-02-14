@@ -55,15 +55,13 @@ const props = defineProps({
     font-style: normal;
     font-weight: 700;
     letter-spacing: 0.0525rem;
-    line-height: 1; /* 1.3125rem */
-    text-transform: uppercase;
+
   }
 
   h5 {
     font-size: 0.875rem;
     font-style: normal;
     font-weight: 500;
-    line-height: 1; /* 1.3125rem */
     letter-spacing: 0.02625rem;
     color: $color-light-subtitle;
   }
