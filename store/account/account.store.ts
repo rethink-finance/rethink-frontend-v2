@@ -30,10 +30,6 @@ export const useAccountStore = defineStore("accounts", {
       return this.web3Onboard?.connectingWallet ?? false;
     },
     connectedWallet(): WalletState | undefined {
-      console.log(
-        "accountStore.connectedWallet ",
-        this.web3Onboard?.connectedWallet,
-      );
       return this.web3Onboard?.connectedWallet || undefined;
     },
     connectedWalletChainId(): ChainId | undefined {
@@ -148,7 +144,6 @@ export const useAccountStore = defineStore("accounts", {
       }
     },
     async setActiveChain(chainId: ChainId): Promise<void> {
-      console.log("setActiveChain", chainId);
       // If the user is currently on a different
       // network, ask him to switch it.
       if (chainId !== this.connectedWalletChainId) {
@@ -162,7 +157,6 @@ export const useAccountStore = defineStore("accounts", {
           ],
         });
       }
-      console.log("REQUEST FINISH switch network in accountStore")
     },
     async connectWallet() {
       try {

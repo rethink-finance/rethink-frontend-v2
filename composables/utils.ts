@@ -1,4 +1,5 @@
 import { ethers, FixedNumber } from "ethers";
+import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 import type { PositionType } from "~/types/enums/position_type";
 import { PositionTypesMap } from "~/types/enums/position_type";
 import type { IIcon } from "~/types/network";
@@ -190,9 +191,10 @@ export const calculateCumulativeReturnPercent = (
         .sub(fixedTotalDepositBal)
         .div(fixedTotalDepositBal);
 
-      cumulativeReturnPercent = cumulativeReturn.toUnsafeFloat();
+      cumulativeReturnPercent = Number(cumulativeReturn.toUnsafeFloat().toFixed(4));
     }
-    return cumulativeReturnPercent;
+    console.log("After calculating cumulativeReturnPercent: ", cumulativeReturnPercent);
+    return cumulativeReturnPercent
   } catch (error) {
     return undefined;
   }
@@ -253,3 +255,36 @@ export const calculateExcessReturns = (fundNavUpdates: any, totalDepositBal: big
 
   return excessReturns;
 }
+
+
+export const convertBlocksToTime = (blockNumber: number, averageBlockTimeInSeconds: number) => {
+  if (!blockNumber || !averageBlockTimeInSeconds) return;
+
+  const totalSeconds = blockNumber * averageBlockTimeInSeconds;
+  const { bestValue, bestUnit } = determineTimeValueAndTimeUnit(totalSeconds);
+
+  if (bestValue && bestUnit) {
+    return `${bestValue} ${bestUnit}`;
+  }
+}
+
+
+const determineTimeValueAndTimeUnit = (totalSeconds: number) => {
+  let bestUnit: PeriodUnits = PeriodUnits.Seconds;
+  let bestValue = totalSeconds;
+
+  for (const unit of Object.keys(TimeInSeconds) as PeriodUnits[]) {
+    const secondsPerUnit = TimeInSeconds[unit];
+    const value = totalSeconds / secondsPerUnit;
+
+    if (value >= 1 && value < bestValue) {
+      bestValue = value;
+      bestUnit = unit;
+    }
+  }
+
+  return {
+    bestValue: parseFloat(bestValue.toFixed(2)),
+    bestUnit,
+  };
+};

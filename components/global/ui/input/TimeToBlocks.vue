@@ -56,6 +56,7 @@
 </template>
 
 <script setup lang="ts">
+import { ChainId } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import {
   InputType,
@@ -63,13 +64,6 @@ import {
   PeriodUnits,
   TimeInSeconds,
 } from "~/types/enums/input_type";
-
-const CHAIN_ID_MAP = {
-  // Arbitrum uses L1 ETH as block time.
-  // TODO fix when merged with new PR:
-  // ChainId.ARBITRUM: ChainId.ETHEREUM,
-  "0xa4b1": "0x1",
-} as const;
 
 const emit = defineEmits(["update:modelValue", "update:blocks"]);
 
@@ -82,7 +76,7 @@ const props = defineProps({
     default: 0,
   },
   chainId: {
-    type: String,
+    type: String as PropType<ChainId>,
     default: "",
   },
   placeholder: {
@@ -113,18 +107,6 @@ const blocks = computed(() => {
   const timeInSeconds = TimeInSeconds[selectedUnit.value];
   return Math.floor((inputValue.value * timeInSeconds) / blockTime.value);
 });
-
-const getWeb3Instance = () => {
-  const mappedChainId =
-    CHAIN_ID_MAP[props.chainId as keyof typeof CHAIN_ID_MAP];
-
-  // ARB1 is mapped to ETH
-  if (mappedChainId) {
-    return web3Store.chainProviders[mappedChainId];
-  }
-
-  return web3Store.chainProviders[props.chainId];
-};
 
 const determineInputValueAndUnit = (
   totalSeconds: number,
@@ -163,7 +145,7 @@ const determineInputValueAndUnit = (
 
 const initializeBlockTime = async () => {
   isLoading.value = true;
-  const web3Instance = getWeb3Instance();
+  const web3Instance = web3Store.getWeb3Instance(props.chainId);
   if (!web3Instance) return;
   const context = await initializeBlockTimeContext(web3Instance);
   blockTime.value = context?.averageBlockTime || 0;

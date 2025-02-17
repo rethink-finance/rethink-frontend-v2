@@ -78,9 +78,7 @@
     <UiNotification>
       The deposit and redeem requests are settled within the planned Settlement
       Cycle of
-      <span class="text-primary">{{
-        fund?.plannedSettlementPeriod || "N/A"
-      }}</span>. You can learn more about how settlements work
+      <span class="text-primary">{{ parsedPlannedSettlement }}</span>. You can learn more about how settlements work
       <a
         href="https://docs.rethink.finance/rethink.finance"
         target="_blank"
@@ -102,6 +100,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
 const emit = defineEmits(["deposit-success"]);
 
+const { initializeBlockTimeContext } = useBlockTime();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
@@ -126,7 +125,7 @@ const isLoadingFetchUserFundDepositRedemptionRequestsAction = computed(() =>
   ),
 );
 
-defineProps({
+const props = defineProps({
   fund: {
     type: Object as PropType<IFund>,
     default: () => {},
@@ -156,6 +155,7 @@ const processRequest = () => {
 
 const loadingDeposit = ref(false);
 const loadingRedemption = ref(false);
+const parsedPlannedSettlement = ref("");
 
 const isAnythingLoading = computed(() => {
   return loadingDeposit.value || loadingRedemption.value;
@@ -224,6 +224,60 @@ const redemptionDisabledTooltipText = computed(() => {
   }
   return "";
 });
+
+
+// TODO: this is extracted to the utils folder (waiting for cumulative PR to be merged)
+const CHAIN_ID_MAP = {
+  // Arbitrum uses L1 ETH as block time.
+  // TODO fix when merged with new PR:
+  // ChainId.ARBITRUM: ChainId.ETHEREUM,
+  "0xa4b1": "0x1",
+} as const;
+
+const getWeb3Instance = () => {
+  const mappedChainId =
+    CHAIN_ID_MAP[props.fund.chainId as keyof typeof CHAIN_ID_MAP];
+
+  // ARB1 is mapped to ETH
+  if (mappedChainId) {
+    return web3Store.chainProviders[mappedChainId];
+  }
+
+  return web3Store.chainProviders[props.fund.chainId];
+};
+
+
+// at first, this value could be any string (e.g. "5 business days")
+// after that it was the number of days (e.g. 5)
+// and now it's a block number (e.g. 31130)
+// so we need to consider all these cases and convert them to a human readable string
+const parsePlannedSettlement = async () => {
+  const web3Instance = getWeb3Instance();
+  if (!web3Instance) return;
+
+  const context = await initializeBlockTimeContext(web3Instance);
+  const blockTime = context?.averageBlockTime || 0;
+  const plannedSettlement = Number(props.fund?.plannedSettlementPeriod);
+
+  // Default to original plannedSettlementPeriod or "N/A" if not available
+  let output = props.fund?.plannedSettlementPeriod ?? "N/A";
+
+  if (!plannedSettlement || isNaN(plannedSettlement) || plannedSettlement <= 0) {
+    parsedPlannedSettlement.value = output;
+    return;
+  }
+
+  // If planned settlement is between 1 and 100, display in days
+  if (plannedSettlement < 100) {
+    output = pluralizeWord("day", plannedSettlement)
+  }
+  // Otherwise, convert blocks to time if block time is available
+  else if (blockTime > 0) {
+    output = convertBlocksToTime(plannedSettlement, blockTime) || output;
+  }
+
+  parsedPlannedSettlement.value = output;
+};
 
 const signDepositAndDelegateBySigTransaction = async () => {
   const activeAccountAddress = fundStore.activeAccountAddress ?? "";
@@ -451,6 +505,9 @@ const handleError = (error: any) => {
     console.error(error);
   }
 };
+
+
+onMounted(parsePlannedSettlement);
 </script>
 
 <style lang="scss" scoped>

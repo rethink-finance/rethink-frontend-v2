@@ -48,13 +48,11 @@
                 </template>
                 Update NAV
               </v-btn>
-
             </template>
 
             <template #default>
               Switch to the Zodiac Pilot Extension to Update NAV.
             </template>
-
           </v-tooltip>
         </div>
       </div>
