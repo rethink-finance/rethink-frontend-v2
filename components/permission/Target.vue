@@ -254,7 +254,7 @@ const updateConditions = (sighash: string, newFuncConditions: FunctionCondition)
 }
 
 :deep(.data_row__body) {
-  max-height: 600px;
+  //max-height: 700px;
   overflow-y: auto;
 }
 </style>

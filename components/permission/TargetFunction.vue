@@ -34,7 +34,7 @@
           <pre class="permissions__json me-4"><strong>sighash:</strong> {{ funcConditions?.sighash }}</pre>
           <PermissionExecutionOptions
             v-model="localFuncConditions.executionOption"
-            disabled
+            :disabled="isEditDisabled"
           />
           <v-switch
             v-model="showRaw"
@@ -51,7 +51,7 @@
           :func="func"
           :sighash="sighash"
           :show-raw="showRaw"
-          :disabled="false"
+          :disabled="isEditDisabled"
         />
       </span>
     </template>
@@ -93,6 +93,8 @@ const props = defineProps({
   },
 });
 const showRaw = ref(false);
+// TODO pass as prop from parent
+const isEditDisabled = ref(false);
 
 // Create a local reactive copy of funcConditions to allow editing it without mutating props.
 const localFuncConditions = useVModel(props, "funcConditions", emit, {

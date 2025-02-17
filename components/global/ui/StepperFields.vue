@@ -147,7 +147,7 @@
     </template>
     <!-- check if field "isArray", if yes allow adding new fields -->
     <template v-if="field.isArray">
-      <div class="add-new-field" @click="addNewField(field)">
+      <div class="btn_add_param" @click="addNewField(field)">
         Add Parameters +
       </div>
     </template>
@@ -319,23 +319,23 @@ const removeField = (field: any, index: number) => {
   }
 }
 
-.add-new-field {
-  width: max-content;
-  margin-left: auto;
-  padding: 0.5rem;
-
-  font-size: $text-sm;
-  color: $color-text-irrelevant;
-  cursor: pointer;
-  user-select: none;
-  text-align: center;
-
-  transition: background-color 0.3s ease;
-
-  &:hover {
-    background-color: $color-gray-light-transparent;
-  }
-}
+//.btn_add_param {
+//  width: max-content;
+//  margin-left: auto;
+//  padding: 0.5rem;
+//
+//  font-size: $text-sm;
+//  color: $color-text-irrelevant;
+//  cursor: pointer;
+//  user-select: none;
+//  text-align: center;
+//
+//  transition: background-color 0.3s ease;
+//
+//  &:hover {
+//    background-color: $color-gray-light-transparent;
+//  }
+//}
 
 .field-select {
   line-height: normal;
