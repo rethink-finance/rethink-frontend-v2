@@ -1,0 +1,1 @@
+import{_ as e,A as c,t}from"./DbdxEK-r.js";const n={},o={class:"d-flex",style:{width:"100%","flex-direction":"column"}};function s(r,_){return t(),c("div",o," Governance ")}const d=e(n,[["render",s]]);export{d as default};

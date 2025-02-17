@@ -1,0 +1,1 @@
+import{_ as t,A as n,cN as o,t as s}from"./DbdxEK-r.js";const c={},_={class:"main_header"};function r(e,a){return s(),n("div",_,[o(e.$slots,"default")])}const l=t(c,[["render",r]]);export{l as default};
