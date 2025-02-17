@@ -1,7 +1,7 @@
 <template>
   <div class="main_grid">
     <UiDataRowCard
-      :title="fund.plannedSettlementPeriod || 'N/A'"
+      :title="parsedPlannedSettlement"
       subtitle="Planned Settlement Cycle"
     />
     <UiDataRowCard
@@ -19,6 +19,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from "vue";
+import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
 import type IFund from "~/types/fund";
 
 export default defineComponent({
@@ -28,6 +29,11 @@ export default defineComponent({
       type: Object as PropType<IFund>,
       default: () => {},
     },
+  },
+  data() {
+    return {
+      parsedPlannedSettlement: "",
+    };
   },
   computed: {
     managementTitle() {
@@ -43,6 +49,16 @@ export default defineComponent({
       }
       return "There are currently no addresses."
     },
+  },
+  async mounted() {
+    await parsePlannedSettlement(this.fund?.chainId, this.fund?.plannedSettlementPeriod)
+      .then((result) => {
+        console.log("RESULTT:" ,result)
+        this.parsedPlannedSettlement = result;
+      })
+      .catch((error) => {
+        console.error("Error parsing planned settlement", error);
+      })
   },
 })
 </script>

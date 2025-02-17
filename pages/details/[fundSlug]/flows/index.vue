@@ -45,7 +45,17 @@
         </div>
         <div class="data_bar__item">
           <div class="data_bar__title">
-            {{ fund.plannedSettlementPeriod || "N/A" }}
+            <v-progress-circular
+              v-if="isLoadingParsedPlannedSettlement"
+              class="d-flex"
+              size="18"
+              width="2"
+              indeterminate
+            />
+
+            <template v-else>
+              {{ parsedPlannedSettlement }}
+            </template>
           </div>
           <div class="data_bar__subtitle">
             Planned Settlement Cycle
@@ -392,6 +402,7 @@
 <script setup lang="ts">
 import { ethers, FixedNumber } from "ethers";
 import { formatTokenValue, roundToSignificantDecimals } from "~/composables/formatters";
+import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";
@@ -410,6 +421,8 @@ const {
 
 const customSimulatedNAVValue = ref("");
 const customSimulatedNAVValueChanged = ref(false);
+const parsedPlannedSettlement = ref("");
+const isLoadingParsedPlannedSettlement = ref(false);
 
 watch(
   () => totalCurrentSimulatedNAV.value,
@@ -643,6 +656,20 @@ const isLoadingFetchSimulateCurrentNAVAction = computed(() => {
 });
 const isLoadingFetchSimulatedNAVMethodValueAction = computed(() => {
   return actionStateStore.isActionState("fetchSimulatedNAVMethodValueAction", ActionState.Loading);
+});
+
+onMounted(async () => {
+  isLoadingParsedPlannedSettlement.value = true;
+  await parsePlannedSettlement(fund.chainId, fund.plannedSettlementPeriod)
+    .then((result) => {
+      parsedPlannedSettlement.value = result;
+    })
+    .catch((error) => {
+      console.error("Error parsing planned settlement", error);
+    })
+    .finally(() => {
+      isLoadingParsedPlannedSettlement.value = false;
+    });
 });
 </script>
 

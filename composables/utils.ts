@@ -283,8 +283,25 @@ const determineTimeValueAndTimeUnit = (totalSeconds: number) => {
     }
   }
 
+  // allow rounding to the nearest whole number if the difference is less than 0.1
+  const roundedValue = Math.round(bestValue);
+  const difference = Math.abs(bestValue - roundedValue);
+
+  if (difference <= 0.1) {
+    bestValue = roundedValue; // round to the nearest whole number
+  } else if (bestValue > roundedValue) {
+    // ff bestValue is too high (e.g., 2.89), convert to the smaller unit
+    const nextSmallerUnitIndex = Object.keys(TimeInSeconds).indexOf(bestUnit) - 1;
+    if (nextSmallerUnitIndex >= 0) {
+      const nextSmallerUnit = Object.keys(TimeInSeconds)[nextSmallerUnitIndex] as PeriodUnits;
+      bestValue = totalSeconds / TimeInSeconds[nextSmallerUnit];
+      bestUnit = nextSmallerUnit;
+      bestValue = Math.round(bestValue);
+    }
+  }
+
   return {
-    bestValue: parseFloat(bestValue.toFixed(2)),
+    bestValue,
     bestUnit,
   };
 };
