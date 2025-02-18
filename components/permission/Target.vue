@@ -87,12 +87,13 @@
     </UiDataRowCard>
 
     <div v-if="!isFetchingTargetABI" class="permissions__list">
-      <!-- Display functions that were found in the ABI -->
+      <!-- Display write functions that were found in the ABI -->
       <PermissionTargetFunction
         v-for="(func, index) in abiWriteFunctions"
         :key="index"
         :func="func as FunctionFragment"
-        :func-conditions="target?.conditions[func.selector]"
+        :disabled="isEditDisabled"
+        :func-conditions="getFuncCondition(func.selector)"
         @update:func-conditions="(newFuncConditions) => updateConditions(func.selector, newFuncConditions)"
       />
       <!-- Display function conditions that were not found in the ABI -->
@@ -100,7 +101,8 @@
         v-for="(sighash, index) in sighashesNotInAbi"
         :key="index"
         :sighash="sighash"
-        :func-conditions="target?.conditions[sighash]"
+        :disabled="isEditDisabled"
+        :func-conditions="getFuncCondition(sighash)"
         @update:func-conditions="(newFuncConditions) => updateConditions(sighash, newFuncConditions)"
       />
     </div>
@@ -114,7 +116,8 @@ import type { Explorer } from "~/services/explorer";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type { ChainId } from "~/store/web3/networksMap";
 import type { FunctionCondition, TargetConditions } from "~/types/zodiac-roles/role";
-import type { RoleStoreType } from "~/store/role/role.store"; // Import the type
+import type { RoleStoreType } from "~/store/role/role.store";
+import { ConditionType, ExecutionOption } from "~/types/enums/zodiac-roles"; // Import the type
 
 const props = defineProps({
   conditions: {
@@ -126,6 +129,8 @@ const props = defineProps({
     required: true,
   },
 });
+const isEditDisabled = ref(false);
+
 // Inject the Role Store
 const roleStore = inject<RoleStoreType>("roleStore");
 if (!roleStore) {
@@ -140,6 +145,15 @@ const toastStore = useToastStore();
 const targetABIJson = ref<JsonFragment[]>([]);
 const customABI = ref<string>("");
 const isEditingCustomABI = ref(false);
+
+const getFuncCondition = (funcSelector: string): FunctionCondition => {
+  return target?.value?.conditions[funcSelector] || {
+    sighash: funcSelector,
+    type: ConditionType.BLOCKED,
+    executionOption: ExecutionOption.NONE,
+    params: [],
+  }
+}
 
 const submitCustomABI = () => {
   try {

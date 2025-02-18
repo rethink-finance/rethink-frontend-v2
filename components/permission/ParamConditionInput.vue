@@ -12,7 +12,7 @@
         </template>
       </div>
       <div class="permissions__function_params">
-        ({{ condition?.type || "Unknown type" }})
+        ({{ param?.type || condition?.type || "Unknown type" }})
       </div>
     </div>
 
