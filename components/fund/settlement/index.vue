@@ -87,7 +87,7 @@ export default {
   &__buttons {
     width: 100%;
 
-    @include sm {
+    @include lg {
       width: 80%;
       margin-right: 5px;
     }
@@ -101,18 +101,20 @@ export default {
   .card_header {
     flex-direction: column;
     gap: 1.5rem;
-    @include sm {
+
+
+    @include lg {
       flex-direction: row;
     }
 
     &__title {
       margin-bottom: 0.75rem;
       width: 100%;
-      text-align: center;
+      white-space: nowrap;
+      width: fit-content;
 
-      @include sm {
+      @include lg {
         margin-bottom: 0;
-        width: 20%;
       }
     }
   }

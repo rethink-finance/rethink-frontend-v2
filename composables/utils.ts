@@ -1,4 +1,5 @@
 import { ethers, FixedNumber } from "ethers";
+import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 import type { PositionType } from "~/types/enums/position_type";
 import { PositionTypesMap } from "~/types/enums/position_type";
 import type { IIcon } from "~/types/network";
@@ -254,3 +255,53 @@ export const calculateExcessReturns = (fundNavUpdates: any, totalDepositBal: big
 
   return excessReturns;
 }
+
+
+export const convertBlocksToTime = (blockNumber: number, averageBlockTimeInSeconds: number) => {
+  if (!blockNumber || !averageBlockTimeInSeconds) return;
+
+  const totalSeconds = blockNumber * averageBlockTimeInSeconds;
+  const { bestValue, bestUnit } = determineTimeValueAndTimeUnit(totalSeconds);
+
+  if (bestValue && bestUnit) {
+    return `${bestValue} ${bestUnit}`;
+  }
+}
+
+
+const determineTimeValueAndTimeUnit = (totalSeconds: number) => {
+  let bestUnit: PeriodUnits = PeriodUnits.Seconds;
+  let bestValue = totalSeconds;
+
+  for (const unit of Object.keys(TimeInSeconds) as PeriodUnits[]) {
+    const secondsPerUnit = TimeInSeconds[unit];
+    const value = totalSeconds / secondsPerUnit;
+
+    if (value >= 1 && value < bestValue) {
+      bestValue = value;
+      bestUnit = unit;
+    }
+  }
+
+  // allow rounding to the nearest whole number if the difference is less than 0.1
+  const roundedValue = Math.round(bestValue);
+  const difference = Math.abs(bestValue - roundedValue);
+
+  if (difference <= 0.1) {
+    bestValue = roundedValue; // round to the nearest whole number
+  } else if (bestValue > roundedValue) {
+    // ff bestValue is too high (e.g., 2.89), convert to the smaller unit
+    const nextSmallerUnitIndex = Object.keys(TimeInSeconds).indexOf(bestUnit) - 1;
+    if (nextSmallerUnitIndex >= 0) {
+      const nextSmallerUnit = Object.keys(TimeInSeconds)[nextSmallerUnitIndex] as PeriodUnits;
+      bestValue = totalSeconds / TimeInSeconds[nextSmallerUnit];
+      bestUnit = nextSmallerUnit;
+      bestValue = Math.round(bestValue);
+    }
+  }
+
+  return {
+    bestValue,
+    bestUnit,
+  };
+};
