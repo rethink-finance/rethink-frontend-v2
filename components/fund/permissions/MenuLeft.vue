@@ -57,7 +57,7 @@
           variant="outlined"
           size="small"
           class="ms-2 mt-2 app_btn_small"
-          @click="addNewTarget"
+          @click="isAddTargetModalOpen = true"
         >
           <template #prepend>
             <Icon
@@ -68,6 +68,10 @@
           </template>
           Add Target
         </v-btn>
+        <FundPermissionsAddTargetModal
+          v-model="isAddTargetModalOpen"
+          @target-added="addNewTarget"
+        />
       </div>
     </div>
   </div>
@@ -78,7 +82,8 @@ import { truncateAddress } from "~/composables/addressUtils";
 import type { Role, Target } from "~/types/zodiac-roles/role";
 import type { RoleStoreType } from "~/store/role/role.store";
 import {
-  EntityStatus,
+  ConditionType,
+  EntityStatus, ExecutionOption,
 } from "~/types/enums/zodiac-roles";
 const emit = defineEmits(
   [
@@ -101,6 +106,7 @@ const props = defineProps({
     default: false,
   },
 });
+const isAddTargetModalOpen = ref(false);
 
 // Inject the Role Store
 const roleStore = inject<RoleStoreType>("roleStore");
@@ -121,8 +127,16 @@ const classesTarget = (target: Target) => {
   ];
 };
 
-const addNewTarget = () => {
-  console.log("new target");
+const addNewTarget = (newTargetAddress: string) => {
+  roleStore.handleAddTarget(
+    {
+      id: `${newTargetAddress}_${Date.now()}`,
+      address: newTargetAddress,
+      type: ConditionType.WILDCARDED,
+      executionOption: ExecutionOption.NONE,
+      conditions: {},
+    } as Target,
+  )
 }
 </script>
 
