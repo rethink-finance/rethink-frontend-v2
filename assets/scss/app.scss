@@ -224,3 +224,22 @@ input[type="number"]:focus:hover {
   color: $color-white;
   line-height: 1;
 }
+
+// Buttons
+.btn_add_param {
+  width: max-content;
+  margin-left: auto;
+  padding: 0.5rem;
+
+  font-size: $text-sm;
+  color: $color-text-irrelevant;
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background-color: $color-gray-light-transparent;
+  }
+}

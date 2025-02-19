@@ -33,10 +33,13 @@ main {
     padding-top: calc($navbar-height + 3.5rem);
   }
   @include xl {
-    width: 80%;
+    width: 90%;
   }
   @include xxl {
-    width: 70%;
+    width: 80%;
+  }
+  @include xxxl {
+    width: 75%;
   }
 }
 </style>
