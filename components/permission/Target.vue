@@ -117,7 +117,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import type { ChainId } from "~/store/web3/networksMap";
 import type { FunctionCondition, TargetConditions } from "~/types/zodiac-roles/role";
 import type { RoleStoreType } from "~/store/role/role.store";
-import { ConditionType, ExecutionOption } from "~/types/enums/zodiac-roles"; // Import the type
+import { ConditionType, ExecutionOption } from "~/types/enums/zodiac-roles";
 
 const props = defineProps({
   conditions: {
