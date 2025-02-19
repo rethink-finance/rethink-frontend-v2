@@ -16,11 +16,13 @@
       </div>
     </div>
 
-    <template v-if="!condition.type && !disabled">
+    <template
+      v-if="!condition.type && !disabled"
+    >
       <v-btn
         variant="outlined"
         size="small"
-        class="ms-2 mt-2 app_btn_small"
+        class="ms-3 mt-2 app_btn_small"
         @click="addNewCondition"
       >
         <template #prepend>
@@ -77,17 +79,11 @@
               :disabled="disabled"
               @update:model-value="(newValue) => updateConditionValueByIndex(valueIndex, newValue)"
             />
-            <UiDetailsButton
+            <UiDeleteButton
               v-if="!disabled"
               small
               @click="deleteCondition(valueIndex)"
-            >
-              <v-icon
-                icon="mdi-delete-outline"
-                color="error"
-                v-bind="props"
-              />
-            </UiDetailsButton>
+            />
           </div>
         </div>
         <div class="btn_add_param mx-auto mt-2" @click="addNewOneOfValue">
@@ -102,17 +98,11 @@
           :disabled="disabled"
           @update:model-value="(newValue) => updateConditionValueByIndex(0, newValue)"
         />
-        <UiDetailsButton
+        <UiDeleteButton
           v-if="!disabled"
           small
           @click="deleteCondition"
-        >
-          <v-icon
-            icon="mdi-delete-outline"
-            color="error"
-            v-bind="props"
-          />
-        </UiDetailsButton>
+        />
       </template>
     </template>
   </div>

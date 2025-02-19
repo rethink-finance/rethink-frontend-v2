@@ -51,7 +51,6 @@
 
         <PermissionTargetFunctionParams
           v-model:func-conditions="localFuncConditions"
-          class="ms-4"
           :func="func"
           :sighash="sighash"
           :show-raw="showRaw"

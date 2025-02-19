@@ -13,8 +13,10 @@ import type {
 } from "~/types/zodiac-roles/role";
 import {
   ConditionType,
+  EntityStatus,
   ExecutionOption,
-  Level, ParamComparison,
+  Level,
+  ParamComparison,
   ParameterType,
 } from "~/types/enums/zodiac-roles";
 import {
@@ -32,7 +34,7 @@ export const useRoleStore = defineStore("role", () => {
   // State
   const roleId = ref<string>("");
   const role = ref<Role | undefined>(undefined);
-  const activeTarget = ref<string | undefined>(undefined);
+  const activeTargetAddress = ref<string | undefined>(undefined);
   const members = ref({
     list: [] as string[],
     add: [] as string[],
@@ -66,9 +68,16 @@ export const useRoleStore = defineStore("role", () => {
   /**
    * Getters (similar to computed properties)
    */
-  const getActiveRole = computed(() => {
-    return targets.value.list.find((t) => t.id === activeTarget.value) ||
-      targets.value.add.find((t) => t.id === activeTarget.value);
+  const activeTarget = computed(() => {
+    return targets.value.list.find((t) => t.id === activeTargetAddress.value) ||
+      targets.value.add.find((t) => t.id === activeTargetAddress.value);
+  });
+
+  const getTargetStatus = computed(() => (target: Target) => {
+    if (!target?.id) return EntityStatus.NONE
+    if (targets.value.remove.includes(target?.address)) return EntityStatus.REMOVE
+    if (targets.value.add.find((_target) => _target?.id === target?.id)) return EntityStatus.PENDING
+    return EntityStatus.NONE
   });
 
   /**
@@ -143,22 +152,24 @@ export const useRoleStore = defineStore("role", () => {
     return events;
   }
 
-  function handleRemoveTarget(payload: { target: Target; remove?: boolean }) {
-    const { target, remove = true } = payload;
-
-    if (activeTarget.value === target.id) {
-      activeTarget.value = undefined;
+  function handleRemoveTarget(target: Target, remove: boolean = true) {
+    console.log("handleRemoveTarget", 1);
+    if (activeTargetAddress.value === target.id) {
+      activeTargetAddress.value = undefined;
     }
+    console.log("handleRemoveTarget", 2);
 
     if (!remove) {
       targets.value.remove = targets.value.remove.filter((_target) => _target !== target.address);
       return;
     }
+    console.log("handleRemoveTarget", 3);
 
     if (targets.value.add.find((_target) => _target.address === target.address)) {
       targets.value.add = targets.value.add.filter((_target) => _target.address !== target.address);
       return;
     }
+    console.log("handleRemoveTarget", 4);
 
     if (!targets.value.remove.includes(target.address)) {
       targets.value.remove.push(target.address);
@@ -171,11 +182,11 @@ export const useRoleStore = defineStore("role", () => {
       targets.value.list.find((_target) => target.address.toLowerCase() === _target.address.toLowerCase());
 
     if (currentTarget) {
-      activeTarget.value = currentTarget.id;
+      activeTargetAddress.value = currentTarget.id;
       return;
     }
 
-    activeTarget.value = target.id;
+    activeTargetAddress.value = target.id;
     targets.value.add.push({ ...target, address: target.address.toLowerCase() });
   }
 
@@ -597,10 +608,11 @@ export const useRoleStore = defineStore("role", () => {
   return {
     roleId,
     role,
-    activeTarget,
+    activeTargetAddress,
     members,
     targets,
-    getActiveRole,
+    activeTarget,
+    getTargetStatus,
     getRoleId,
     initRoleState,
     updateRole,

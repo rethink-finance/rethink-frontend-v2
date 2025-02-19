@@ -44,45 +44,47 @@
         Show ABI
       </template>
       <template #body>
-        <v-btn
-          v-if="!isEditingCustomABI"
-          color="primary"
-          class="target__abi_edit_button"
-          @click="handleClickEditCustomABI"
-        >
-          Edit ABI
-        </v-btn>
+        <div class="target__abi_fetch_card_body">
+          <v-btn
+            v-if="!isEditingCustomABI"
+            color="primary"
+            class="target__abi_edit_button"
+            @click="handleClickEditCustomABI"
+          >
+            Edit ABI
+          </v-btn>
 
-        <v-col
-          v-if="isEditingCustomABI"
-        >
-          <v-textarea
-            v-model="customABI"
-            label="Custom ABI"
-            placeholder="Enter the contract ABI here"
-            rows="25"
-          />
-          <div class="d-flex">
-            <v-btn
-              color="primary"
-              class="mr-2"
-              @click="submitCustomABI"
-            >
-              Submit custom ABI
-            </v-btn>
-            <v-btn
-              variant="text"
-              @click="handleClickEditCustomABI"
-            >
-              Cancel
-            </v-btn>
-          </div>
-        </v-col>
+          <v-col
+            v-if="isEditingCustomABI"
+          >
+            <v-textarea
+              v-model="customABI"
+              label="Custom ABI"
+              placeholder="Enter the contract ABI here"
+              rows="25"
+            />
+            <div class="d-flex">
+              <v-btn
+                color="primary"
+                class="mr-2"
+                @click="submitCustomABI"
+              >
+                Submit custom ABI
+              </v-btn>
+              <v-btn
+                variant="text"
+                @click="handleClickEditCustomABI"
+              >
+                Cancel
+              </v-btn>
+            </div>
+          </v-col>
 
-        <pre
-          v-else
-          class="permissions__json"
-        >{{ JSON.stringify(abiWriteFunctions, null, 4) }}</pre>
+          <pre
+            v-else
+            class="permissions__json"
+          >{{ JSON.stringify(abiWriteFunctions, null, 4) }}</pre>
+        </div>
       </template>
     </UiDataRowCard>
 
@@ -92,7 +94,7 @@
         v-for="(func, index) in abiWriteFunctions"
         :key="index"
         :func="func as FunctionFragment"
-        :disabled="isEditDisabled"
+        :disabled="disabled"
         :func-conditions="getFuncCondition(func.selector)"
         @update:func-conditions="(newFuncConditions) => updateConditions(func.selector, newFuncConditions)"
       />
@@ -101,7 +103,7 @@
         v-for="(sighash, index) in sighashesNotInAbi"
         :key="index"
         :sighash="sighash"
-        :disabled="isEditDisabled"
+        :disabled="disabled"
         :func-conditions="getFuncCondition(sighash)"
         @update:func-conditions="(newFuncConditions) => updateConditions(sighash, newFuncConditions)"
       />
@@ -128,8 +130,11 @@ const props = defineProps({
     type: String as PropType<ChainId>,
     required: true,
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
-const isEditDisabled = ref(false);
 
 // Inject the Role Store
 const roleStore = inject<RoleStoreType>("roleStore");
@@ -137,7 +142,7 @@ if (!roleStore) {
   throw new Error("roleStore is not provided!");
 }
 
-const target = computed(() => roleStore.getActiveRole);
+const target = computed(() => roleStore.activeTarget);
 
 const { $getExplorer } = useNuxtApp();
 const toastStore = useToastStore();
@@ -177,6 +182,7 @@ const abiWriteFunctions = ref<FunctionFragment[]>([]);
 const sighashesNotInAbi = ref<string[]>([]);
 const isFetchingTargetABI = ref(false);
 
+// TODO: move this code to role.store and cache each targetABI in a map
 const fetchTargetABI = async () => {
   targetABIJson.value = [];
   if (!target.value?.address) return;
@@ -224,7 +230,7 @@ watch(
 );
 
 watch(
-  () => roleStore.activeTarget, () => {
+  () => roleStore.activeTargetAddress, () => {
     fetchTargetABI();
     isEditingCustomABI.value = false;
   },
@@ -254,6 +260,9 @@ const updateConditions = (sighash: string, newFuncConditions: FunctionCondition)
     background-color: $color-badge-navy;
     margin: 1rem 0 1.5rem 0;
   }
+  &__abi_fetch_card_body {
+    min-height: 7rem;
+  }
   &__abi_fetch_text {
     display: flex;
     align-items: center;
@@ -263,7 +272,7 @@ const updateConditions = (sighash: string, newFuncConditions: FunctionCondition)
     display:flex;
     margin: 1rem 1rem 1rem auto;
     position: absolute;
-    right: 1rem;
+    right: 0;
   }
 }
 

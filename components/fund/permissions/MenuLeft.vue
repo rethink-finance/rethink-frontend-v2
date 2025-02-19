@@ -37,7 +37,37 @@
           @click="emitSelectedTarget(target.id)"
         >
           {{ truncateAddress(target.address) }}
+          <template v-if="!disabled">
+            <UiDeleteButton
+              v-if="getTargetStatus(target) === EntityStatus.REMOVE"
+              xs
+              is-undo
+              @click.stop="roleStore.handleRemoveTarget(target, false)"
+            />
+            <UiDeleteButton
+              v-else
+              xs
+              @click.stop="roleStore.handleRemoveTarget(target)"
+            />
+          </template>
         </div>
+      </div>
+      <div class="mx-auto my-2">
+        <v-btn
+          variant="outlined"
+          size="small"
+          class="ms-2 mt-2 app_btn_small"
+          @click="addNewTarget"
+        >
+          <template #prepend>
+            <Icon
+              icon="octicon:plus-16"
+              height="1rem"
+              width="1rem"
+            />
+          </template>
+          Add Target
+        </v-btn>
       </div>
     </div>
   </div>
@@ -46,8 +76,16 @@
 <script setup lang="ts">
 import { truncateAddress } from "~/composables/addressUtils";
 import type { Role, Target } from "~/types/zodiac-roles/role";
-
-const emit = defineEmits(["update:selectedTarget"]);
+import type { RoleStoreType } from "~/store/role/role.store";
+import {
+  EntityStatus,
+} from "~/types/enums/zodiac-roles";
+const emit = defineEmits(
+  [
+    "update:selectedTarget",
+    "targetRemoved",
+  ],
+);
 
 const props = defineProps({
   role: {
@@ -58,18 +96,34 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emitSelectedTarget = (selectedTargetId: string) => {
-  emit("update:selectedTarget", selectedTargetId);
+// Inject the Role Store
+const roleStore = inject<RoleStoreType>("roleStore");
+if (!roleStore) {
+  throw new Error("roleStore is not provided!");
+}
+const { getTargetStatus } = storeToRefs(roleStore);
+
+const emitSelectedTarget = (targetId: string) => {
+  emit("update:selectedTarget", targetId);
 }
 
 const classesTarget = (target: Target) => {
   return [
     "permissions__list_item",
+    { "permissions__list_item--deleted": getTargetStatus.value(target) === EntityStatus.REMOVE },
     { "permissions__list_item--selected": target.id === props.selectedTarget },
   ];
 };
+
+const addNewTarget = () => {
+  console.log("new target");
+}
 </script>
 
 <style lang="scss" scoped>

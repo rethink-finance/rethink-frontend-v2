@@ -11,21 +11,29 @@
       />
     </div>
     <template v-else>
-      <FundPermissionsMenuLeft
+      <div
         class="permissions__menu_left"
-        :selected-target="activeTarget"
-        :role="roleStore.role"
-        @update:selected-target="setSelectedTarget"
-      />
-      <!--      TODO remove this JSON -->
-      <!--      <div class="permissions__json" style="width: 650px;">-->
-      <!--        <div>-->
-      <!--          {{ roleStore.getActiveRole || "no target selected" }}-->
-      <!--        </div>-->
-      <!--      </div>-->
+      >
+        <FundPermissionsMenuLeft
+          :selected-target="activeTargetAddress"
+          :role="roleStore.role"
+          :disabled="isEditDisabled"
+          @update:selected-target="setSelectedTarget"
+        />
+        <v-btn @click="updateRole">
+          Update Role
+        </v-btn>
+      </div>
+      <!--      TODO remove this JSON-->
+      <div class="permissions__json" style="width: 550px; font-size: 11px;">
+        <div>
+          {{ activeTarget || "no target selected" }}
+        </div>
+      </div>
       <PermissionTarget
-        v-if="roleStore.activeTarget"
+        v-if="activeTargetAddress"
         class="permissions__content"
+        :disabled="isEditDisabled"
         :chain-id="chainId"
       />
       <div v-else>
@@ -37,7 +45,7 @@
 
 <script setup lang="ts">
 import type { ChainId } from "~/store/web3/networksMap";
-import type { Role, Target, TargetConditions } from "~/types/zodiac-roles/role";
+import type { Role, Target } from "~/types/zodiac-roles/role";
 import { useRoleStore } from "~/store/role/role.store";
 
 const props = defineProps({
@@ -56,12 +64,13 @@ const props = defineProps({
 });
 
 const roleStore = useRoleStore();
-const { activeTarget, getActiveRole } = storeToRefs(roleStore);
+const { activeTargetAddress, activeTarget } = storeToRefs(roleStore);
 
 // Provide the store to child components
 provide("roleStore", roleStore);
 
 const selectedTarget = ref<Target | undefined>();
+const isEditDisabled = ref(false);
 
 // This is Rethink.finance specific thing now, to hardcode select condition
 // with ID "1". We have to remove this and always select the first one.
@@ -72,9 +81,16 @@ const roleNumberOne = computed<Role|undefined>(
 // Set selected target & initialize its local conditions.
 const setSelectedTarget = (newTargetId: string) => {
   console.log("[0] setSelectedTarget", toRaw(newTargetId));
-  // selectedTarget.value = newTarget; // TODO remove this
-  roleStore.activeTarget = newTargetId;
+  roleStore.activeTargetAddress = newTargetId;
 };
+
+const updateRole = () => {
+  try {
+    roleStore.updateRole(props.chainId)
+  } catch (e: any) {
+    console.error("Failed updating role", e);
+  }
+}
 
 // TODO whenever role changes reset role store and populate it with this role data
 // Watch for `roles` change and preselect a role & target
@@ -107,7 +123,7 @@ watch(() => props.roles.length, () => {
     display: flex;
     flex-direction: column;
     max-width: 30%;
-    min-width: 12rem;
+    min-width: 15rem;
     gap: 1.5rem;
     margin-right: 1rem;
     border: 1px solid $color-border-dark;
@@ -134,17 +150,23 @@ watch(() => props.roles.length, () => {
     border: 1px solid $color-border-dark;
     padding: 0.5rem;
     background-color: $color-hover;
-
-    &--selected {
-      background-color: $color-moonlight-light;
-      font-weight: bold;
-      /* Disable hover effect for active items */
-      pointer-events: none;
-    }
+    justify-content: space-between;
 
     &:hover {
       background-color: $color-moonlight-dark;
       cursor: pointer;
+    }
+    &--selected {
+      background-color: $color-moonlight-light;
+      font-weight: bold;
+      &:hover {
+        background-color: $color-moonlight-light;
+        cursor: auto;
+      }
+    }
+    &--deleted {
+      color: $color-disabled;
+      //color: $color-error;
     }
   }
   &__function {
