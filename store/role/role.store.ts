@@ -34,7 +34,7 @@ export const useRoleStore = defineStore("role", () => {
   // State
   const roleId = ref<string>("");
   const role = ref<Role | undefined>(undefined);
-  const activeTargetAddress = ref<string | undefined>(undefined);
+  const activeTargetId = ref<string | undefined>(undefined);
   const members = ref({
     list: [] as string[],
     add: [] as string[],
@@ -69,14 +69,19 @@ export const useRoleStore = defineStore("role", () => {
    * Getters (similar to computed properties)
    */
   const activeTarget = computed(() => {
-    return targets.value.list.find((t) => t.id === activeTargetAddress.value) ||
-      targets.value.add.find((t) => t.id === activeTargetAddress.value);
+    return targets.value.list.find((t) => t.id === activeTargetId.value) ||
+      targets.value.add.find((t) => t.id === activeTargetId.value);
   });
 
   const getTargetStatus = computed(() => (target: Target) => {
     if (!target?.id) return EntityStatus.NONE
     if (targets.value.remove.includes(target?.address)) return EntityStatus.REMOVE
     if (targets.value.add.find((_target) => _target?.id === target?.id)) return EntityStatus.PENDING
+    return EntityStatus.NONE
+  });
+  const getMemberStatus = computed(() => (member: string) => {
+    if (members.value.remove.includes(member)) return EntityStatus.REMOVE
+    if (members.value.add.includes(member)) return EntityStatus.PENDING
     return EntityStatus.NONE
   });
 
@@ -154,8 +159,8 @@ export const useRoleStore = defineStore("role", () => {
 
   function handleRemoveTarget(target: Target, remove: boolean = true) {
     console.log("handleRemoveTarget", 1);
-    if (activeTargetAddress.value === target.id) {
-      activeTargetAddress.value = undefined;
+    if (activeTargetId.value === target.id) {
+      activeTargetId.value = undefined;
     }
     console.log("handleRemoveTarget", 2);
 
@@ -182,17 +187,16 @@ export const useRoleStore = defineStore("role", () => {
       targets.value.list.find((_target) => target.address.toLowerCase() === _target.address.toLowerCase());
 
     if (currentTarget) {
-      activeTargetAddress.value = currentTarget.id;
+      activeTargetId.value = currentTarget.id;
       return;
     }
 
-    activeTargetAddress.value = target.id;
+    activeTargetId.value = target.id;
     targets.value.add.push({ ...target, address: target.address.toLowerCase() });
   }
 
-  function handleRemoveMember(payload: { member: string; remove?: boolean }) {
-    const { member, remove = true } = payload;
-
+  function handleRemoveMember(member: string, remove: boolean = true) {
+    console.warn("remove mebmer", member, remove);
     if (!remove) {
       members.value.remove = members.value.remove.filter((_member) => _member !== member);
       return;
@@ -217,11 +221,11 @@ export const useRoleStore = defineStore("role", () => {
     });
   }
 
-  function handleTargetExecutionOption(payload: { targetId: string; option: ExecutionOption }) {
+  function handleTargetExecutionOption(targetId: string, option: ExecutionOption) {
     const replaceValue = (targets: Target[]) =>
-      replaceTargetValue(targets, payload.targetId, { executionOption: payload.option });
+      replaceTargetValue(targets, targetId, { executionOption: option });
 
-    if (targets.value.list.find((target) => target.id === payload.targetId)) {
+    if (targets.value.list.find((target) => target.id === targetId)) {
       targets.value.list = replaceValue(targets.value.list);
     } else {
       targets.value.add = replaceValue(targets.value.add);
@@ -271,10 +275,10 @@ export const useRoleStore = defineStore("role", () => {
     members.value.add.push(member.toLowerCase());
   }
 
-  function handleSetTargetClearance(payload: { targetId: string; option: ConditionType }) {
+  function handleSetTargetClearance(targetId: string, option: ConditionType) {
     const replaceOption = (target: Target): Target => {
-      if (target.id !== payload.targetId) return target;
-      return { ...target, executionOption: ExecutionOption.NONE, type: payload.option };
+      if (target.id !== targetId) return target;
+      return { ...target, executionOption: ExecutionOption.NONE, type: option };
     };
 
     targets.value.add = targets.value.add.map(replaceOption);
@@ -608,10 +612,11 @@ export const useRoleStore = defineStore("role", () => {
   return {
     roleId,
     role,
-    activeTargetAddress,
+    activeTargetId,
     members,
     targets,
     activeTarget,
+    getMemberStatus,
     getTargetStatus,
     getRoleId,
     initRoleState,

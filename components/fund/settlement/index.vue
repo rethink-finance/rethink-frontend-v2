@@ -4,7 +4,7 @@
       <div class="card_header__title subtitle_white">
         Manage Deposits
       </div>
-      <UiButtonsSwitch
+      <UiButtonSwitchItems
         v-model="selectedActionButtonValue"
         :items="selectItems"
         class="fund_settlement__buttons"

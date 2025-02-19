@@ -1,5 +1,5 @@
 <template>
-  <UiDetailsButton>
+  <UiButtonDetails>
     <v-icon
       v-if="isUndo"
       icon="mdi-arrow-u-left-top"
@@ -10,7 +10,7 @@
       icon="mdi-delete-outline"
       color="error"
     />
-  </UiDetailsButton>
+  </UiButtonDetails>
 </template>
 
 <script setup lang="ts">

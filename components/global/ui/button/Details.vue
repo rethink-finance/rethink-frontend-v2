@@ -23,7 +23,7 @@
 
 <script lang="ts">
 export default defineComponent({
-  name: "DetailsButton",
+  name: "ButtonDetails",
   props: {
     text: {
       type: String,

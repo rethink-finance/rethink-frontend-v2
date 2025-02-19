@@ -9,7 +9,7 @@
     <div class="main_card di-card">
       <div class="di-card__header-container">
         <div class="di-card__header">
-          Add a Target
+          Add a {{ type }}
         </div>
         <Icon
           icon="material-symbols:close"
@@ -21,15 +21,15 @@
 
       <div class="di-card__content">
         <div class="di-card">
-          Targets are the accounts that the members can interact with on behalf of the avatar.
+          <slot name="description" />
         </div>
 
         <div class="di-card__someone-else-container">
           <v-label class="di-card__label label_required">
-            Target Address
+            {{ type }} Address
           </v-label>
           <v-text-field
-            v-model="targetAddress"
+            v-model="address"
             placeholder="0x..."
             :rules="rules"
             required
@@ -40,9 +40,9 @@
             class="di-card__submit_button"
             variant="flat"
             color="rgba(210, 223, 255, 1)"
-            @click="addTarget"
+            @click="addAddress"
           >
-            Add Target
+            Add {{ type }}
           </v-btn>
         </div>
       </div>
@@ -51,25 +51,34 @@
 </template>
 
 <script setup lang="ts">
-defineProps({ modelValue: Boolean });
-const emit = defineEmits(["update:modelValue", "targetAdded"]);
+defineProps({
+  modelValue: {
+    type: Boolean,
+    default: false,
+  },
+  type: {
+    type: String,
+    default: "Target",
+  },
+});
+const emit = defineEmits(["update:modelValue", "addressAdded"]);
 
-const targetAddress = ref("");
+const address = ref("");
 const rules = [formRules.required, formRules.isValidAddress];
 
 const isTargetAddressValid = computed(() => {
   return rules.every((rule) => {
-    return rule(targetAddress.value) === true;
+    return rule(address.value) === true;
   });
 });
 
 const closeModal = () => {
-  targetAddress.value = "";
+  address.value = "";
   emit("update:modelValue", false);
 };
 
-const addTarget = () => {
-  emit("targetAdded", targetAddress.value)
+const addAddress = () => {
+  emit("addressAdded", address.value)
   closeModal();
 };
 </script>

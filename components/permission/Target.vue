@@ -232,7 +232,7 @@ watch(
 );
 
 watch(
-  () => roleStore.activeTargetAddress, () => {
+  () => roleStore.activeTargetId, () => {
     fetchTargetABI();
     isEditingCustomABI.value = false;
   },

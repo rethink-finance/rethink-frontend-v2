@@ -15,17 +15,16 @@
         class="permissions__menu_left"
       >
         <FundPermissionsMenuLeft
-          :selected-target="activeTargetAddress"
+          :selected-target="activeTargetId"
           :role="roleStore.role"
           :disabled="isEditDisabled"
-          @update:selected-target="setSelectedTarget"
         />
         <v-btn @click="updateRole">
           Update Role
         </v-btn>
       </div>
       <PermissionTarget
-        v-if="activeTargetAddress"
+        v-if="activeTargetId"
         class="permissions__content"
         :disabled="isEditDisabled"
         :chain-id="chainId"
@@ -58,7 +57,7 @@ const props = defineProps({
 });
 
 const roleStore = useRoleStore();
-const { activeTargetAddress, activeTarget } = storeToRefs(roleStore);
+const { activeTargetId, activeTarget } = storeToRefs(roleStore);
 
 // Provide the store to child components
 provide("roleStore", roleStore);
@@ -71,12 +70,6 @@ const isEditDisabled = ref(false);
 const roleNumberOne = computed<Role|undefined>(
   () => props.roles.filter(role => role.name === "1")[0],
 );
-
-// Set selected target & initialize its local conditions.
-const setSelectedTarget = (newTargetId: string) => {
-  console.log("[0] setSelectedTarget", toRaw(newTargetId));
-  roleStore.activeTargetAddress = newTargetId;
-};
 
 const updateRole = () => {
   try {
@@ -100,7 +93,7 @@ watch(() => props.roles.length, () => {
       toRaw(selectedRole),
     );
 
-    setSelectedTarget(selectedRole?.targets[0].id);
+    roleStore.activeTargetId = selectedRole?.targets[0].id;
   } else {
     roleStore.role = undefined;
     selectedTarget.value = undefined;

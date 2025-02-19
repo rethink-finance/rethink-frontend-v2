@@ -16,25 +16,13 @@
       </div>
     </div>
 
-    <template
+    <UiButtonAddRow
       v-if="!condition.type && !disabled"
+      class="ms-3 mt-2"
+      @click="addNewCondition"
     >
-      <v-btn
-        variant="outlined"
-        size="small"
-        class="ms-3 mt-2 app_btn_small"
-        @click="addNewCondition"
-      >
-        <template #prepend>
-          <Icon
-            icon="octicon:plus-16"
-            height="1rem"
-            width="1rem"
-          />
-        </template>
-        Add Condition
-      </v-btn>
-    </template>
+      Add Condition
+    </UiButtonAddRow>
     <template
       v-else-if="nativeType === ParamNativeType.BOOLEAN"
     >
@@ -79,7 +67,7 @@
               :disabled="disabled"
               @update:model-value="(newValue) => updateConditionValueByIndex(valueIndex, newValue)"
             />
-            <UiDeleteButton
+            <UiButtonDelete
               v-if="!disabled"
               small
               @click="deleteCondition(valueIndex)"
@@ -98,7 +86,7 @@
           :disabled="disabled"
           @update:model-value="(newValue) => updateConditionValueByIndex(0, newValue)"
         />
-        <UiDeleteButton
+        <UiButtonDelete
           v-if="!disabled"
           small
           @click="deleteCondition"

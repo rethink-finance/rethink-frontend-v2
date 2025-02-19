@@ -53,7 +53,7 @@
             :chain-id="chainId"
           />
         </div>
-        <UiDetailsButton
+        <UiButtonDetails
           v-if="field.isFieldByUser"
           small
           class="field_delete"
@@ -63,7 +63,7 @@
             icon="mdi-delete"
             color="error"
           />
-        </UiDetailsButton>
+        </UiButtonDetails>
       </div>
     </v-col>
   </div>

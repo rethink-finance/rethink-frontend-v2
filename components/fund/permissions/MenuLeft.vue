@@ -10,16 +10,46 @@
       class="permissions__menu_section"
     >
       <strong>Members</strong>
-      <div
-        class="permissions__list"
-      >
+      <div class="permissions__list">
         <div
-          v-for="member in role?.members || []"
-          :key="member.id"
+          v-for="memberAddress in allMembers"
+          :key="memberAddress"
           class="permissions__list_item"
+          :class="memberClasses(memberAddress)"
         >
-          {{ truncateAddress(member.address) }}
+          {{ truncateAddress(memberAddress) }}
+          <template v-if="!disabled">
+            <UiButtonDelete
+              v-if="getMemberStatus(memberAddress) === EntityStatus.REMOVE"
+              xs
+              is-undo
+              @click.stop="roleStore.handleRemoveMember(memberAddress, false)"
+            />
+            <UiButtonDelete
+              v-else
+              xs
+              @click.stop="roleStore.handleRemoveMember(memberAddress)"
+            />
+          </template>
         </div>
+      </div>
+      <div class="mx-auto my-2">
+        <UiButtonAddRow
+          v-if="!disabled"
+          class="ms-3 mt-2"
+          @click="isAddMemberModalOpen = true"
+        >
+          Add Member
+        </UiButtonAddRow>
+        <FundPermissionsAddAddressModal
+          v-model="isAddMemberModalOpen"
+          type="Member"
+          @address-added="roleStore.handleAddMember"
+        >
+          <template #description>
+            Members are accounts that that the role is assigned to.
+          </template>
+        </FundPermissionsAddAddressModal>
       </div>
     </div>
 
@@ -27,24 +57,23 @@
       class="permissions__menu_section"
     >
       <strong>Targets</strong>
-      <div
-        class="permissions__list"
-      >
+      <div class="permissions__list">
         <div
-          v-for="target in role?.targets || []"
+          v-for="target in allTargets"
           :key="target.id"
-          :class="classesTarget(target)"
-          @click="emitSelectedTarget(target.id)"
+          class="permissions__list_item"
+          :class="targetClasses(target)"
+          @click="setSelectedTarget(target.id)"
         >
           {{ truncateAddress(target.address) }}
           <template v-if="!disabled">
-            <UiDeleteButton
+            <UiButtonDelete
               v-if="getTargetStatus(target) === EntityStatus.REMOVE"
               xs
               is-undo
               @click.stop="roleStore.handleRemoveTarget(target, false)"
             />
-            <UiDeleteButton
+            <UiButtonDelete
               v-else
               xs
               @click.stop="roleStore.handleRemoveTarget(target)"
@@ -53,25 +82,22 @@
         </div>
       </div>
       <div class="mx-auto my-2">
-        <v-btn
-          variant="outlined"
-          size="small"
-          class="ms-2 mt-2 app_btn_small"
+        <UiButtonAddRow
+          v-if="!disabled"
+          class="ms-3 mt-2"
           @click="isAddTargetModalOpen = true"
         >
-          <template #prepend>
-            <Icon
-              icon="octicon:plus-16"
-              height="1rem"
-              width="1rem"
-            />
-          </template>
           Add Target
-        </v-btn>
-        <FundPermissionsAddTargetModal
+        </UiButtonAddRow>
+        <FundPermissionsAddAddressModal
           v-model="isAddTargetModalOpen"
-          @target-added="addNewTarget"
-        />
+          type="Target"
+          @address-added="addNewTarget"
+        >
+          <template #description>
+            Targets are the accounts that the members can interact with on behalf of the avatar.
+          </template>
+        </FundPermissionsAddAddressModal>
       </div>
     </div>
   </div>
@@ -87,7 +113,6 @@ import {
 } from "~/types/enums/zodiac-roles";
 const emit = defineEmits(
   [
-    "update:selectedTarget",
     "targetRemoved",
   ],
 );
@@ -97,15 +122,12 @@ const props = defineProps({
     type: Object as PropType<Role>,
     default: () => {},
   },
-  selectedTarget: {
-    type: String,
-    default: "",
-  },
   disabled: {
     type: Boolean,
     default: false,
   },
 });
+const isAddMemberModalOpen = ref(false);
 const isAddTargetModalOpen = ref(false);
 
 // Inject the Role Store
@@ -113,21 +135,30 @@ const roleStore = inject<RoleStoreType>("roleStore");
 if (!roleStore) {
   throw new Error("roleStore is not provided!");
 }
-const { getTargetStatus } = storeToRefs(roleStore);
+const { getTargetStatus, getMemberStatus, activeTargetId } = storeToRefs(roleStore);
 
-const emitSelectedTarget = (targetId: string) => {
-  emit("update:selectedTarget", targetId);
-}
+const allTargets = computed(() => [...roleStore.targets.list, ...roleStore.targets.add]);
+const allMembers = computed(() => [...roleStore.members.list, ...roleStore.members.add]);
 
-const classesTarget = (target: Target) => {
+// Set selected target & initialize its local conditions.
+const setSelectedTarget = (newTargetId: string) => {
+  activeTargetId.value = newTargetId;
+};
+
+const targetClasses = (target: Target) => {
   return [
-    "permissions__list_item",
     { "permissions__list_item--deleted": getTargetStatus.value(target) === EntityStatus.REMOVE },
-    { "permissions__list_item--selected": target.id === props.selectedTarget },
+    { "permissions__list_item--selected": target.id === activeTargetId.value },
+  ];
+};
+const memberClasses = (memberAddress: string) => {
+  return [
+    { "permissions__list_item--deleted": getMemberStatus.value(memberAddress) === EntityStatus.REMOVE },
   ];
 };
 
 const addNewTarget = (newTargetAddress: string) => {
+  console.warn("NEW);", newTargetAddress)
   roleStore.handleAddTarget(
     {
       id: `${newTargetAddress}_${Date.now()}`,
