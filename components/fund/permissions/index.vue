@@ -24,12 +24,6 @@
           Update Role
         </v-btn>
       </div>
-      <!--      TODO remove this JSON-->
-      <div class="permissions__json" style="width: 550px; font-size: 11px;">
-        <div>
-          {{ activeTarget || "no target selected" }}
-        </div>
-      </div>
       <PermissionTarget
         v-if="activeTargetAddress"
         class="permissions__content"

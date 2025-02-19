@@ -1,8 +1,10 @@
 <template>
   <div class="target">
-    <div>
+    <div class="d-flex align-center">
       <strong>Target Address:</strong>
-      {{ target?.address }}
+      <div class="permissions__json ms-2">
+        {{ target?.address }}
+      </div>
     </div>
 
     <UiDataRowCard
