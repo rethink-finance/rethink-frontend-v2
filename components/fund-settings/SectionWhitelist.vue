@@ -156,7 +156,7 @@
         </template>
 
         <template v-if="isEditable" #[`item.delete`]="{ item }">
-          <UiDetailsButton small @click.stop="deleteAddress(item)">
+          <UiButtonDetails small @click.stop="deleteAddress(item)">
             <v-tooltip v-if="item.deleted" activator="parent" location="bottom">
               <template #default>
                 Undo Delete
@@ -184,7 +184,7 @@
                 />
               </template>
             </v-tooltip>
-          </UiDetailsButton>
+          </UiButtonDetails>
         </template>
 
         <template #bottom>

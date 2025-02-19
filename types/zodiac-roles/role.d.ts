@@ -46,3 +46,34 @@ export interface ConditionalEntity {
 }
 
 export type TargetConditions = Record<string, FunctionCondition>
+
+export type UpdateEventScopeTarget = {
+  level: Level.SCOPE_TARGET;
+  value: Target;
+  old: Target;
+};
+export type UpdateEventFunctionCondition = {
+  level: Level.SCOPE_FUNCTION | Level.UPDATE_FUNCTION_EXECUTION_OPTION
+  value: FunctionCondition
+  old: FunctionCondition
+  targetAddress: string
+};
+export type UpdateEventParamCondition = {
+  level: Level.SCOPE_PARAM
+  funcSighash: string
+  targetAddress: string
+  value: ParamCondition
+  old: ParamCondition
+}
+
+export type UpdateEvent = UpdateEventScopeTarget | UpdateEventFunctionCondition | UpdateEventParamCondition;
+
+export type RemoveTargetPayload = { target: Target; remove?: boolean }
+
+export type RemoveMemberPayload = { member: string; remove?: boolean }
+
+export type SetTargetExecutionOptionPayload = { targetId: string; option: ExecutionOption }
+
+export type SetTargetConditionsPayload = { targetId: string; conditions: TargetConditions }
+
+export type SetTargetClearancePayload = { targetId: string; option: ConditionType }
