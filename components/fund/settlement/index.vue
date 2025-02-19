@@ -102,14 +102,11 @@ export default {
     flex-direction: column;
     gap: 1.5rem;
 
-
     @include lg {
       flex-direction: row;
     }
-
     &__title {
       margin-bottom: 0.75rem;
-      width: 100%;
       white-space: nowrap;
       width: fit-content;
 
