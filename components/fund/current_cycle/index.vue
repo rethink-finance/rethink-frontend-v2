@@ -80,6 +80,7 @@
       Cycle of
       <span class="text-primary">{{ parsedPlannedSettlement }}</span>. You can learn more about how settlements work
       <a
+        class="text-primary"
         href="https://docs.rethink.finance/rethink.finance"
         target="_blank"
       >here</a>.
