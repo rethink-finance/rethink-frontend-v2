@@ -51,15 +51,17 @@
 </template>
 
 <script setup lang="ts">
+import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { ethers, FixedNumber } from "ethers";
 import { ref } from "vue";
+import { roundToSignificantDecimals } from "~/composables/formatters";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IToken from "~/types/token";
-import { roundToSignificantDecimals } from "~/composables/formatters";
-import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
+
+const emit = defineEmits(["cancel-request-success"]);
 
 const fundStore = useFundStore();
 const toastStore = useToastStore();
@@ -132,6 +134,7 @@ const cancelPendingRequest = async () => {
           toastStore.successToast(
             `Cancellation of a ${props.fundTransactionRequest.type} request was successful.`,
           );
+          emit("cancel-request-success");
           if (isDepositRequest) {
             fundStore.fundUserData.depositRequest = undefined;
           } else {
