@@ -16,86 +16,45 @@
         Deposit in progress:
       </h3>
 
-      <div class="step">
-        <span class="label">
-          1. Request Deposit
-        </span>
-        <Icon
-          v-if="hasRequestedDeposit"
-          icon="material-symbols:done"
-          class="text-success me-2"
-          height="1.2rem"
-          width="1.2rem"
-        />
-        <v-progress-circular
-          v-if="loadingRequestDeposit"
-          class="d-flex ms-2"
-          size="20"
-          width="3"
-          indeterminate
-        />
+      <div v-for="(step, index) in stepsDeposit" :key="index">
+        <v-tooltip
+          :disabled="!step.isDisabled"
+          activator="parent"
+          location="top"
+        >
+          <template #default>
+            {{ step.tooltip }}
+          </template>
+          <template #activator="{ props }">
+            <div v-bind="props">
+              <div
+                :key="index"
+                class="step"
+                :class="{ 'is-disabled': step.isDisabled }"
+              >
+                <span class="label">
+                  {{ step.label }}
+                </span>
+                <Icon
+                  v-if="step.done && !step.isDisabled"
+                  icon="material-symbols:done"
+                  class="text-success me-2"
+                  height="1.2rem"
+                  width="1.2rem"
+                />
+                <v-progress-circular
+                  v-if="step.loading"
+                  class="d-flex ms-2"
+                  size="20"
+                  width="3"
+                  indeterminate
+                />
+              </div>
+            </div>
+          </template>
+        </v-tooltip>
       </div>
 
-      <div :class="`step ${hasApprovedAmount ? '' : 'is-disabled'}`">
-        <span class="label">
-          2. Approve Amount
-        </span>
-        <Icon
-          v-if="hasApprovedAmount"
-          icon="material-symbols:done"
-          class="text-success me-2"
-          height="1.2rem"
-          width="1.2rem"
-        />
-        <v-progress-circular
-          v-if="loadingApproveAllowance"
-          class="d-flex ms-2"
-          size="20"
-          width="3"
-          indeterminate
-        />
-      </div>
-
-      <div class="step">
-        <span class="label">
-          3. Delegate to Myself
-        </span>
-        <Icon
-          v-if="hasDelegatedToSelf && hasApprovedAmount"
-          icon="material-symbols:done"
-          class="text-success me-2"
-          height="1.2rem"
-          width="1.2rem"
-        />
-        <v-progress-circular
-          v-if="isLoadingDelegate"
-          class="d-flex ms-2"
-          size="20"
-          width="3"
-          indeterminate
-        />
-      </div>
-
-      <div class="step">
-        <span class="label">
-          4. Process Deposit
-        </span>
-        <Icon
-          v-if="hasProcessedDeposit"
-          icon="material-symbols:done"
-          class="text-success me-2"
-          height="1.2rem"
-          width="1.2rem"
-        />
-        <v-progress-circular
-          v-if="isLoadingProcessDeposit"
-          class="d-flex ms-2"
-          size="20"
-          width="3"
-          indeterminate
-        />
-
-      </div>
     </div>
 
     <div class="divider" />
@@ -125,87 +84,44 @@
         v-model="isDepositModalOpen"
         title="Deposit Flow"
       >
-        <div class="deposit-flow">
-          <div class="step">
-            <span class="label">
-              1. Request Deposit
-            </span>
-            <Icon
-              v-if="hasRequestedDeposit"
-              icon="material-symbols:done"
-              class="text-success me-2"
-              height="1.2rem"
-              width="1.2rem"
-            />
-            <!-- loading spinner -->
-            <v-progress-circular
-              v-if="loadingRequestDeposit"
-              class="d-flex ms-2"
-              size="20"
-              width="3"
-              indeterminate
-            />
-          </div>
-
-          <div :class="`step ${hasApprovedAmount ? '' : 'is-disabled'}`">
-            <span class="label">
-              2. Approve Amount
-            </span>
-            <Icon
-              v-if="hasApprovedAmount"
-              icon="material-symbols:done"
-              class="text-success me-2"
-              height="1.2rem"
-              width="1.2rem"
-            />
-            <!-- loading spinner -->
-            <v-progress-circular
-              v-if="loadingApproveAllowance"
-              class="d-flex ms-2"
-              size="20"
-              width="3"
-              indeterminate
-            />
-          </div>
-
-          <div class="step">
-            <span class="label">
-              3. Delegate to Myself
-            </span>
-            <Icon
-              v-if="hasDelegatedToSelf && hasApprovedAmount"
-              icon="material-symbols:done"
-              class="text-success me-2"
-              height="1.2rem"
-              width="1.2rem"
-            />
-            <v-progress-circular
-              v-if="isLoadingDelegate"
-              class="d-flex ms-2"
-              size="20"
-              width="3"
-              indeterminate
-            />
-          </div>
-
-          <div class="step">
-            <span class="label">
-              4. Process Deposit
-            </span>
-            <Icon
-              v-if="hasProcessedDeposit"
-              icon="material-symbols:done"
-              class="text-success me-2"
-              height="1.2rem"
-              width="1.2rem"
-            />
-            <v-progress-circular
-              v-if="isLoadingProcessDeposit"
-              class="d-flex ms-2"
-              size="20"
-              width="3"
-              indeterminate
-            />
+        <div class="deposit-flow mb-4">
+          <div v-for="(step, index) in stepsDeposit" :key="index">
+            <v-tooltip
+              :disabled="!step.isDisabled"
+              activator="parent"
+              location="top"
+            >
+              <template #default>
+                {{ step.tooltip }}
+              </template>
+              <template #activator="{ props }">
+                <div v-bind="props">
+                  <div
+                    :key="index"
+                    class="step"
+                    :class="{ 'is-disabled': step.isDisabled }"
+                  >
+                    <span class="label">
+                      {{ step.label }}
+                    </span>
+                    <Icon
+                      v-if="step.done && !step.isDisabled"
+                      icon="material-symbols:done"
+                      class="text-success me-2"
+                      height="1.2rem"
+                      width="1.2rem"
+                    />
+                    <v-progress-circular
+                      v-if="step.loading"
+                      class="d-flex ms-2"
+                      size="20"
+                      width="3"
+                      indeterminate
+                    />
+                  </div>
+                </div>
+              </template>
+            </v-tooltip>
           </div>
         </div>
 
@@ -674,12 +590,26 @@ const approveAllowance = async () => {
   }
 };
 
-const showApproveAllowanceWarning = computed(() => {
-  // User deposit request exists and allowance is bigger.
-  return (
-    shouldUserApproveAllowance.value &&
-    tokensWei.value < (userDepositRequest?.value?.amount || 0n)
-  );
+
+const hasRequestedDeposit = computed(() => {
+  console.log("fundStore.fundUserDataStore.fundUserDataStore.fundUserData: ", fundStore.fundUserData);
+  return !!fundStore.fundUserData.depositRequest?.timestamp
+});
+
+const hasApprovedAmount = computed(() => {
+  if (!fundStore.fundUserData?.fundAllowance) return false;
+  if (!fundStore.fundUserData?.depositRequest?.amount) return false;
+
+  return fundStore.fundUserData?.fundAllowance >= fundStore.fundUserData?.depositRequest?.amount && hasRequestedDeposit.value;
+});
+
+const hasDelegatedToSelf = computed(() => {
+  return fundStore.fundUserData.fundDelegateAddress.toLowerCase() === fundStore.activeAccountAddress
+});
+
+const hasProcessedDeposit = computed(() => {
+  return false;
+  // return fundStore.fundUserData.depositRequestProcessed;
 });
 
 const buttons = ref([
@@ -709,28 +639,31 @@ const buttons = ref([
 ]);
 
 
-const hasRequestedDeposit = computed(() => {
-  console.log("fundStore.fundUserData: ", fundStore.fundUserData);
-
-  return !!fundStore.fundUserData.depositRequest?.timestamp
-});
-
-const hasApprovedAmount = computed(() => {
-  if (!fundStore.fundUserData?.fundAllowance) return false;
-  if (!fundStore.fundUserData?.depositRequest?.amount) return false;
-
-  return fundStore.fundUserData?.fundAllowance >= fundStore.fundUserData?.depositRequest?.amount && hasRequestedDeposit.value;
-});
-
-const hasDelegatedToSelf = computed(() => {
-  return fundStore.fundUserData.fundDelegateAddress.toLowerCase() === fundStore.activeAccountAddress
-});
-
-const hasProcessedDeposit = computed(() => {
-  return false;
-  // return fundStore.fundUserData.depositRequestProcessed;
-});
-
+const stepsDeposit = computed(() => [
+  {
+    label: "1. Request Deposit",
+    done: hasRequestedDeposit.value,
+    loading: loadingRequestDeposit.value,
+    isDisabled: false,
+  },
+  {
+    label: "2. Approve Amount",
+    done: hasApprovedAmount.value,
+    loading: loadingApproveAllowance.value,
+    isDisabled: false,
+  },
+  {
+    label: "3. Delegate to Myself",
+    done: hasDelegatedToSelf.value && hasApprovedAmount.value,
+    loading: isLoadingDelegate.value,
+  },
+  {
+    label: "4. Process Deposit",
+    done: hasProcessedDeposit.value,
+    isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
+    tooltip: "Wait for the next NAV update to process the deposit.",
+  },
+]);
 
 const handleDepositClick = () =>{
   if(!hasRequestedDeposit.value){
@@ -854,13 +787,14 @@ const delegateToMyself = async () => {
   display: flex;
   align-items: center;
   margin: 0.25rem 0;
-
-  &:last-child{
-    margin-bottom: 3rem;
-  }
+  width: fit-content;
 }
 .button-deposit{
   display: block;
   margin: 0 auto;
+}
+
+.is-disabled{
+  opacity: 0.5;
 }
 </style>
