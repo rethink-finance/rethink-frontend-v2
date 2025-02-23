@@ -63,7 +63,7 @@
               </div>
 
               <div class="sub-steps__icons">
-                <UiDetailsButton
+                <UiButtonDetails
                   v-if="
                     step.steps &&
                       step.steps?.length > 1 &&
@@ -75,7 +75,7 @@
                   @click.stop="deleteSubstep(step, substepIndex)"
                 >
                   <v-icon icon="mdi-delete" color="error" />
-                </UiDetailsButton>
+                </UiButtonDetails>
                 <div v-else class="sub-steps__feedback-icons">
                   <Icon
                     v-if="substep.isValid === false"

@@ -22,10 +22,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue"
-
 export default defineComponent({
-  name: "DetailsButton",
+  name: "ButtonDetails",
   props: {
     text: {
       type: String,

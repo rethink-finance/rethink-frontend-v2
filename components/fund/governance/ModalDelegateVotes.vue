@@ -263,7 +263,6 @@ const delegate = async (isMyself = false) => {
     width: 100%;
     margin: 0 auto;
     max-width: 350px;
-
     color: $color-light-subtitle !important;
   }
   &__label {

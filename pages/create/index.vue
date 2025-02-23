@@ -135,7 +135,7 @@
                 v-if="item.key === OnboardingStep.Chain && accountStore.isConnected"
                 class="d-flex justify-center mb-6"
               >
-                <UiSelectChainButton
+                <UiButtonSelectChain
                   v-model="selectedChainId"
                   label="Select OIV Chain"
                   label-center

@@ -45,7 +45,7 @@
           <v-label class="mb-2">
             Position Type
           </v-label>
-          <UiButtonsSwitch
+          <UiButtonSwitchItems
             v-model="navMethod.positionType"
             :items="parsedPositionTypeItems"
             @update:model-value="navMethod.positionType = $event"
@@ -59,7 +59,7 @@
           <v-label class="mb-2">
             Valuation Type
           </v-label>
-          <UiButtonsSwitch
+          <UiButtonSwitchItems
             v-model="navMethod.valuationType"
             :items="parsedValuationTypeItems"
             @update:model-value="navMethod.valuationType = $event"
@@ -100,12 +100,12 @@
                       </template>
                     </UiTextBadge>
 
-                    <UiDetailsButton small @click.stop="deleteMethod(index)">
+                    <UiButtonDetails small @click.stop="deleteMethod(index)">
                       <v-icon
                         icon="mdi-delete"
                         color="error"
                       />
-                    </UiDetailsButton>
+                    </UiButtonDetails>
                   </div>
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
