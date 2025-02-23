@@ -1,25 +1,195 @@
 <template>
-  <FundSettlementBaseForm
-    v-if="fund"
-    v-model="tokenValue"
-    :token0="fund.baseToken"
-    :token1="fund.fundToken"
-    :token0-user-balance="fundStore.fundUserData.baseTokenBalance"
-    :token1-user-balance="fundStore.fundUserData.fundTokenBalance"
-    :exchange-rate="fundStore.baseToFundTokenExchangeRate"
-  >
-    <template #buttons>
-      <div v-if="accountStore.isConnected">
-        <div class="buttons_group">
-          <template v-if="shouldUserWaitSettlementOrCancelDeposit">
-            <h3>Wait for settlement or cancel the deposit request.</h3>
+  <div style="width: 100%">
+    <template v-if="!hasRequestedDeposit">
+      <FundSettlementBaseForm
+        v-if="fund"
+        v-model="tokenValue"
+        :token0="fund.baseToken"
+        :token1="fund.fundToken"
+        :token0-user-balance="fundStore.fundUserData.baseTokenBalance"
+        :token1-user-balance="fundStore.fundUserData.fundTokenBalance"
+        :exchange-rate="fundStore.baseToFundTokenExchangeRate"
+      />
+    </template>
+    <div v-else class="deposit-flow" @click="handleDepositClick">
+      <h3 class="title">
+        Deposit in progress:
+      </h3>
+
+      <div v-for="(step, index) in stepsDeposit" :key="index">
+        <v-tooltip
+          :disabled="!step.isDisabled"
+          activator="parent"
+          location="top"
+        >
+          <template #default>
+            {{ step.tooltip }}
           </template>
-          <template v-else-if="canUserProcessDeposit">
-            <h3>You can now process or cancel the deposit request.</h3>
+          <template #activator="{ props }">
+            <div v-bind="props">
+              <div
+                :key="index"
+                class="step"
+                :class="{ 'is-disabled': step.isDisabled }"
+              >
+                <span class="label">
+                  {{ step.label }}
+                </span>
+                <Icon
+                  v-if="step.done && !step.isDisabled"
+                  icon="material-symbols:done"
+                  class="text-success me-2"
+                  height="1.2rem"
+                  width="1.2rem"
+                />
+                <v-progress-circular
+                  v-if="step.loading"
+                  class="d-flex ms-2"
+                  size="20"
+                  width="3"
+                  indeterminate
+                />
+              </div>
+            </div>
+          </template>
+        </v-tooltip>
+      </div>
+
+    </div>
+
+    <div class="divider" />
+
+
+    <div v-if="accountStore.isConnected" style="width: 100%">
+      <v-btn
+        class="button-deposit"
+        variant="outlined"
+        :disabled="isDepositButtonDisabled"
+        @click="handleDepositClick"
+      >
+        {{ hasRequestedDeposit ? 'Continue Deposit' : 'Deposit' }}
+      </v-btn>
+
+      <div
+        v-if="visibleErrorMessages && tokenValueChanged"
+        class="text-red mt-4 text-center"
+      >
+        <div v-for="(error, index) in visibleErrorMessages" :key="index">
+          {{ error.message }}
+        </div>
+      </div>
+
+
+      <UiConfirmDialog
+        v-model="isDepositModalOpen"
+        title="Deposit Flow"
+      >
+        <div class="deposit-flow mb-4">
+          <div v-for="(step, index) in stepsDeposit" :key="index">
+            <v-tooltip
+              :disabled="!step.isDisabled"
+              activator="parent"
+              location="top"
+            >
+              <template #default>
+                {{ step.tooltip }}
+              </template>
+              <template #activator="{ props }">
+                <div v-bind="props">
+                  <div
+                    :key="index"
+                    class="step"
+                    :class="{ 'is-disabled': step.isDisabled }"
+                  >
+                    <span class="label">
+                      {{ step.label }}
+                    </span>
+                    <Icon
+                      v-if="step.done && !step.isDisabled"
+                      icon="material-symbols:done"
+                      class="text-success me-2"
+                      height="1.2rem"
+                      width="1.2rem"
+                    />
+                    <v-progress-circular
+                      v-if="step.loading"
+                      class="d-flex ms-2"
+                      size="20"
+                      width="3"
+                      indeterminate
+                    />
+                  </div>
+                </div>
+              </template>
+            </v-tooltip>
+          </div>
+        </div>
+
+        <div class="buttons_group">
+          <template v-if="!hasDelegatedToSelf && hasApprovedAmount">
+            <v-btn
+              class="button"
+              variant="outlined"
+              @click="delegateToMyself"
+            >
+              <template #prepend>
+                <v-progress-circular
+                  v-if="isLoadingDelegate"
+                  class="d-flex"
+                  size="20"
+                  width="3"
+                  indeterminate
+                />
+              </template>
+              Delegate to Myself
+            </v-btn>
+
+            <FundGovernanceModalDelegateVotes
+              v-model="isDelegateModalOpen"
+            />
+
+          </template>
+          <template v-else-if="canUserProcessDeposit || shouldUserWaitSettlementOrCancelDeposit">
+            <h3 v-if="shouldUserWaitSettlementOrCancelDeposit">
+              Wait for settlement or cancel the deposit request.
+            </h3>
+            <h3 v-else-if="canUserProcessDeposit">
+              You can now process or cancel the deposit request.
+            </h3>
+
+            <v-btn
+              class="button"
+              variant="outlined"
+              :disabled="shouldUserWaitSettlementOrCancelDeposit"
+              @click="processDeposit"
+            >
+              <template #prepend>
+                <v-progress-circular
+                  v-if="isLoadingProcessDeposit"
+                  class="d-flex"
+                  size="20"
+                  width="3"
+                  indeterminate
+                />
+              </template>
+              Process Deposit
+            </v-btn>
+
+            <FundCurrentCyclePendingRequest
+              v-if="userDepositRequestExists && fund"
+              :fund-transaction-request="userDepositRequest"
+              :exchange-rate="fundStore.baseToFundTokenExchangeRate"
+              :token0="fund.baseToken"
+              :token1="fund.fundToken"
+              style="width: 100%;"
+              @cancel-request-success="isDepositModalOpen = false"
+            />
+
           </template>
           <template v-for="button in buttons">
             <v-tooltip
               v-if="button.isVisible"
+              :key="button.name"
               :disabled="!button.tooltipText"
               bottom
             >
@@ -27,7 +197,6 @@
                 {{ button.tooltipText }}
               </template>
               <template #activator="{ props }">
-                <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
                 <span v-bind="props">
                   <v-btn
                     class="button"
@@ -50,25 +219,6 @@
               </template>
             </v-tooltip>
           </template>
-          <div v-if="showApproveAllowanceWarning" class="d-flex align-center">
-            <Icon
-              icon="zondicons:exclamation-outline"
-              class="text-warning me-2"
-              height="1.2rem"
-              width="1.2rem"
-            />
-            <span>
-              Approve at least
-              <strong
-                class="set_approve_allowance_button mx-1"
-                @click="setTokenValueToDepositRequestAmount"
-              >
-                {{ depositRequestAmountFormatted }}
-                {{ fundStore?.fund?.baseToken.symbol }}
-              </strong>
-              to process the deposit request.
-            </span>
-          </div>
         </div>
         <div
           v-if="visibleErrorMessages && tokenValueChanged"
@@ -78,22 +228,23 @@
             {{ error.message }}
           </div>
         </div>
-      </div>
-      <template v-else>
-        <v-btn
-          class="bg-primary text-secondary"
-          @click="accountStore.connectWallet()"
-        >
-          Connect Wallet
-        </v-btn>
-      </template>
+      </UiConfirmDialog>
+
+    </div>
+    <template v-else>
+      <v-btn
+        class="bg-primary text-secondary"
+        @click="accountStore.connectWallet()"
+      >
+        Connect Wallet
+      </v-btn>
     </template>
-  </FundSettlementBaseForm>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
 import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
+import { ethers } from "ethers";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -119,6 +270,11 @@ const {
 
 const loadingRequestDeposit = ref(false);
 const loadingApproveAllowance = ref(false);
+const isLoadingDelegate = ref(false);
+const isLoadingProcessDeposit = ref(false);
+
+const isDepositModalOpen = ref(false);
+const isDelegateModalOpen = ref(false);
 
 watch(
   () => tokenValue.value,
@@ -306,6 +462,73 @@ const requestDeposit = async () => {
   }
 };
 
+const processDeposit = async () => {
+  if (!fundStore.activeAccountAddress) {
+    toastStore.errorToast("Connect your wallet to deposit tokens to the OIV.")
+    return;
+  }
+  if (!fundStore.fund) {
+    toastStore.errorToast("OIV data is missing.")
+    return;
+  }
+  if (!userDepositRequest?.value?.amount) {
+    toastStore.errorToast("Deposit request data is missing.");
+    return;
+  }
+  console.log(
+    "DEPOSIT tokensWei: ",
+    userDepositRequest?.value?.amount,
+    "from : ",
+    fundStore.activeAccountAddress,
+  );
+  isLoadingProcessDeposit.value = true;
+  const encodedFunctionCall = encodeFundFlowsCallFunctionData("deposit");
+
+  try {
+    await fundStore.fundContract
+      .send("fundFlowsCall", {}, encodedFunctionCall)
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The transaction has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("receipt: ", receipt);
+
+        // Refresh user balances & allowance & refresh pending requests.
+        fundStore.fetchUserFundData(
+          fundStore.selectedFundChain,
+          fundStore.selectedFundAddress,
+        );
+
+        if (receipt.status) {
+          toastStore.successToast("Your deposit was successful.");
+          isDepositModalOpen.value = false;
+
+          // emit event to open the delegate votes modal
+          emit("deposit-success");
+        } else {
+          toastStore.errorToast(
+            "The transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+
+        isLoadingProcessDeposit.value = false;
+      })
+      .on("error", (error: any) => {
+        isLoadingProcessDeposit.value = false;
+        console.error(error);
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      });
+  } catch (error: any) {
+    isLoadingProcessDeposit.value = false;
+    handleError(error);
+  }
+};
+
 const setTokenValueToDepositRequestAmount = () => {
   tokenValue.value = depositRequestAmountFormatted.value;
 };
@@ -321,6 +544,8 @@ const approveAllowance = async () => {
   }
   console.log("APPROVE ALLOWANCE");
   loadingApproveAllowance.value = true;
+
+  setTokenValueToDepositRequestAmount();
 
   console.log(
     "Approve allowance tokensWei: ",
@@ -365,12 +590,26 @@ const approveAllowance = async () => {
   }
 };
 
-const showApproveAllowanceWarning = computed(() => {
-  // User deposit request exists and allowance is bigger.
-  return (
-    shouldUserApproveAllowance.value &&
-    tokensWei.value < (userDepositRequest?.value?.amount || 0n)
-  );
+
+const hasRequestedDeposit = computed(() => {
+  console.log("fundStore.fundUserDataStore.fundUserDataStore.fundUserData: ", fundStore.fundUserData);
+  return !!fundStore.fundUserData.depositRequest?.timestamp
+});
+
+const hasApprovedAmount = computed(() => {
+  if (!fundStore.fundUserData?.fundAllowance) return false;
+  if (!fundStore.fundUserData?.depositRequest?.amount) return false;
+
+  return fundStore.fundUserData?.fundAllowance >= fundStore.fundUserData?.depositRequest?.amount && hasRequestedDeposit.value;
+});
+
+const hasDelegatedToSelf = computed(() => {
+  return fundStore.fundUserData.fundDelegateAddress.toLowerCase() === fundStore.activeAccountAddress
+});
+
+const hasProcessedDeposit = computed(() => {
+  return false;
+  // return fundStore.fundUserData.depositRequestProcessed;
 });
 
 const buttons = ref([
@@ -391,14 +630,120 @@ const buttons = ref([
     }),
   },
   {
-    name: "Approve",
+    name: "Approve Amount",
     onClick: approveAllowance,
-    disabled: isRequestDepositDisabled,
     loading: loadingApproveAllowance,
     isVisible: shouldUserApproveAllowance,
     tooltipText: undefined,
   },
 ]);
+
+
+const stepsDeposit = computed(() => [
+  {
+    label: "1. Request Deposit",
+    done: hasRequestedDeposit.value,
+    loading: loadingRequestDeposit.value,
+    isDisabled: false,
+  },
+  {
+    label: "2. Approve Amount",
+    done: hasApprovedAmount.value,
+    loading: loadingApproveAllowance.value,
+    isDisabled: false,
+  },
+  {
+    label: "3. Delegate to Myself",
+    done: hasDelegatedToSelf.value && hasApprovedAmount.value,
+    loading: isLoadingDelegate.value,
+  },
+  {
+    label: "4. Process Deposit",
+    done: hasProcessedDeposit.value,
+    isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
+    tooltip: "Wait for the next NAV update to process the deposit.",
+  },
+]);
+
+const handleDepositClick = () =>{
+  if(!hasRequestedDeposit.value){
+    requestDeposit();
+  }
+  isDepositModalOpen.value = true;
+}
+
+
+const isDepositButtonDisabled = computed(() => {
+  return (
+    (!hasRequestedDeposit.value && errorMessages.value.length > 0) ||
+    !fundStore.isUserWalletWhitelisted
+  );
+});
+
+const delegateToMyself = async () => {
+  try {
+    isLoadingDelegate.value = true;
+
+    const delegateTo = fundStore.activeAccountAddress
+    const governanceTokenAddress = fundStore.fund?.governanceToken.address;
+    const fundAddress = fundStore.fund?.address;
+
+    if (fundAddress === ethers.ZeroAddress) {
+      toastStore.errorToast(
+        "The OIV address is not available. Please contact the Rethink Finance support.",
+      );
+      return;
+    }
+
+    let contract = fundStore.fundContract;
+
+    if (
+      governanceTokenAddress !== fundAddress &&
+      governanceTokenAddress !== ethers.ZeroAddress
+    ) {
+      // external gov token
+      contract = fundStore.fundGovernanceTokenContract;
+    }
+
+    await contract
+      .send("delegate", {}, delegateTo)
+      .on("transactionHash", function (hash: any) {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The transaction has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", function (receipt: any) {
+        console.log(receipt);
+        if (receipt.status) {
+          toastStore.successToast(
+            "Delegation of Governance Tokens Succeeded",
+          );
+
+          if (delegateTo) fundStore.fundUserData.fundDelegateAddress = delegateTo;
+        } else {
+          toastStore.errorToast(
+            "The delegateTo tx has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        isLoadingDelegate.value = false;
+      })
+      .on("error", function (error: any) {
+        console.error(error);
+        isLoadingDelegate.value = false;
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      })
+  } catch (error) {
+    console.error("Error delegating to external gov token: ", error);
+    isLoadingDelegate.value = false;
+    toastStore.errorToast(
+      "There has been an error. Please contact the Rethink Finance support.",
+    );
+  }
+};
+
 </script>
 
 <style lang="scss" scoped>
@@ -426,5 +771,30 @@ const buttons = ref([
     cursor: pointer;
     text-decoration: underline;
   }
+}
+
+.divider{
+  margin: 1rem auto;
+  height: 0.1px;
+  width: 100%;
+  border: 1px solid rgba(246, 249, 255, 0.08)
+}
+
+.title{
+  margin: 0 0 0.5rem;
+}
+.step{
+  display: flex;
+  align-items: center;
+  margin: 0.25rem 0;
+  width: fit-content;
+}
+.button-deposit{
+  display: block;
+  margin: 0 auto;
+}
+
+.is-disabled{
+  opacity: 0.5;
 }
 </style>

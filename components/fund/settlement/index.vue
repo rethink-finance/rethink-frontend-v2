@@ -15,8 +15,8 @@
       <div v-if="selectedActionButtonValue" class="card_box">
         <FundSettlementDeposit
           v-if="isSelectedDepositButton"
-          @deposit-success="openDelegateDialog"
         />
+        <!-- @deposit-success="openDelegateDialog" -->
         <FundSettlementRedeem v-else-if="isSelectedRedeemButton" />
       </div>
     </div>
