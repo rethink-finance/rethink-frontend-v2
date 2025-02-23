@@ -15,7 +15,10 @@
     cols="12"
   >
     <v-label class="row-title">
-      <div class="label_required row-title__title">
+      <div
+        :class="field.required ?? true ? 'label_required' : ''"
+        class="row-title__title"
+      >
         {{ field.label }}
         <v-label class="label_required__label_type">
           {{ field.internalType }}
@@ -62,6 +65,11 @@
             class="is-array__remove"
             @click="removeField(field, index)"
           /></v-text-field>
+      </div>
+    </template>
+    <template v-else-if="field.type === InputType.ReadonlyJSON">
+      <div class="json_field">
+        {{ valueDetails[field.key] }}
       </div>
     </template>
     <template v-else-if="field.type === InputType.Textarea">

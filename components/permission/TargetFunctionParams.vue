@@ -1,7 +1,7 @@
 <template>
   <div class="target_function_params">
     <div class="target_function_params__inputs">
-      <pre v-if="showRaw" class="permissions__json">{{
+      <pre v-if="showRaw" class="json_field">{{
         JSON.stringify(localFuncCondition?.params, null, 2)
       }}</pre>
       <template v-else-if="flattenedInputs.length">

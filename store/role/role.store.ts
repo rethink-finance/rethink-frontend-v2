@@ -9,7 +9,7 @@ import type {
   Role,
   Target,
   UpdateEvent,
-  TargetConditions, FunctionCondition, ParamCondition, UpdateEventParamCondition,
+  TargetConditions, FunctionCondition, ParamCondition, UpdateEventParamCondition, IRawTrx,
 } from "~/types/zodiac-roles/role";
 import {
   ConditionType,
@@ -29,12 +29,9 @@ import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import { roleModFunctionNameIndexMap } from "~/types/enums/delegated_permission";
 
 
-interface IRawTrx {
-  func: string;
-  args: any[];
-}
 
-const rolesInterface = RolesFactory.createInterface();
+
+export const rolesInterface = RolesFactory.createInterface();
 
 // Define the store
 export const useRoleStore = defineStore("role", () => {
@@ -310,19 +307,19 @@ export const useRoleStore = defineStore("role", () => {
       case ConditionType.SCOPED:
         console.log("[getTargetTransaction] scopeTarget")
         return {
-          func: "scopeTarget",
+          funcName: "scopeTarget",
           args: [roleId.value, target.address],
         }
       case ConditionType.WILDCARDED:
         console.log("[getTargetTransaction] allowTarget")
         return {
-          func: "allowTarget",
+          funcName: "allowTarget",
           args: [roleId.value, target.address, target.executionOption],
         }
     }
     console.log("[getTargetTransaction] revoke target")
     return {
-      func: "revokeTarget",
+      funcName: "revokeTarget",
       args: [roleId.value, target.address],
     }
   }
@@ -337,7 +334,7 @@ export const useRoleStore = defineStore("role", () => {
     if (funcCondition.type === ConditionType.BLOCKED) {
       console.log("[getFunctionTransaction] scope revoke function", [roleId.value, target.address, funcCondition.sighash])
       return {
-        func: "scopeRevokeFunction",
+        funcName: "scopeRevokeFunction",
         args: [
           roleId.value,
           target.address,
@@ -354,7 +351,7 @@ export const useRoleStore = defineStore("role", () => {
         funcCondition.executionOption,
       ])
       return {
-        func: "scopeAllowFunction",
+        funcName: "scopeAllowFunction",
         args: [
           roleId.value,
           target.address,
@@ -400,7 +397,7 @@ export const useRoleStore = defineStore("role", () => {
       funcCondition.executionOption,
     ])
     return {
-      func: "scopeFunction",
+      funcName: "scopeFunction",
       args: [
         roleId.value,
         target.address,
@@ -421,7 +418,7 @@ export const useRoleStore = defineStore("role", () => {
    * @param chainId
    * @returns calldatas array
    */
-  async function updateRole(chainId: ChainId): Promise<string[]> {
+  async function updateRole(chainId: ChainId): Promise<IRawTrx[]> {
     if (!role?.value?.id) throw new Error("No role");
 
     console.log("roleId: ", roleId.value)
@@ -432,44 +429,29 @@ export const useRoleStore = defineStore("role", () => {
     console.log("role: ", role)
 
     const rawTransactions: IRawTrx[] = [];
-    const encodedTransactions: string[] = [];
-    const addMemberTxs: string[] = [];
     members.value.add.forEach((member: string) => {
-      const encodedTx = rolesInterface.encodeFunctionData("assignRoles", [member, [roleId.value], [true]]);
       rawTransactions.push({
-        func: "assignRoles",
+        funcName: "assignRoles",
         args: [member, [roleId.value], [true]],
       })
-      addMemberTxs.push(encodedTx);
-      encodedTransactions.push(encodedTx);
     });
 
-    const removeMemberTxs: string[] = [];
     members.value.remove.forEach((member: string) => {
-      const encodedTx = rolesInterface.encodeFunctionData("assignRoles", [member, [roleId.value], [false]]);
       rawTransactions.push({
-        func: "assignRoles",
+        funcName: "assignRoles",
         args: [member, [roleId.value], [false]],
       })
-      removeMemberTxs.push(encodedTx);
-      encodedTransactions.push(encodedTx);
     });
 
-    const removeTargetTxs: string[] = [];
     targets.value.remove.forEach((target: string) => {
-      const encodedTx = rolesInterface.encodeFunctionData("revokeTarget", [roleId.value, target]);
       rawTransactions.push({
-        func: "revokeTarget",
+        funcName: "revokeTarget",
         args: [roleId.value, target],
       })
-      removeTargetTxs.push(encodedTx);
-      encodedTransactions.push(encodedTx);
     });
 
     const explorer: Explorer = $getExplorer(chainId);
     const targetAbis: any = {};
-
-    const targetTx: string[] = [];
 
     const targetTxPromises = [...targets.value.list, ...targets.value.add].map(async (target) => {
       console.log("target: ", target)
@@ -491,38 +473,27 @@ export const useRoleStore = defineStore("role", () => {
         console.warn("failed to fetch ABI of target", target.address)
       }
 
-      const targetLevelTxs: string[] = [];
       updateEvents.filter(
         event => event.level === Level.SCOPE_TARGET,
       ).forEach((event) => {
-        const rawTrx = getTargetTransaction(event.value as Target);
-        const encodedTx = rolesInterface.encodeFunctionData(rawTrx.func as any, rawTrx.args as any);
-        rawTransactions.push(rawTrx);
-        targetLevelTxs.push(encodedTx);
-        encodedTransactions.push(encodedTx);
+        rawTransactions.push(
+          getTargetTransaction(event.value as Target),
+        );
       });
 
-      const updateFunctionOptionTxs: string[] = [];
       updateEvents.filter(event =>
         event.level === Level.UPDATE_FUNCTION_EXECUTION_OPTION
         && "targetAddress" in event
         && event?.targetAddress === target.address,
       ).forEach((event) => {
         const value = event.value as FunctionCondition
-        const encodedTx = rolesInterface.encodeFunctionData(
-          "scopeFunctionExecutionOptions",
-          [roleId.value, target.address, value.sighash, value.executionOption],
-        );
         rawTransactions.push({
-          func: "scopeFunctionExecutionOptions",
+          funcName: "scopeFunctionExecutionOptions",
           args: [roleId.value, target.address, value.sighash, value.executionOption],
         });
-        updateFunctionOptionTxs.push(encodedTx);
-        encodedTransactions.push(encodedTx);
       });
 
       const scopedFunctions: string[] = []
-      const functionLevelTxs: string[] = [];
       updateEvents.filter(event =>
         event.level === Level.SCOPE_FUNCTION
         && "targetAddress" in event
@@ -530,11 +501,9 @@ export const useRoleStore = defineStore("role", () => {
       ).forEach((event) => {
         const value = event.value as FunctionCondition;
         scopedFunctions.push(value.sighash)
-        const rawTrx = getFunctionTransaction(target, value, functions[value.sighash]);
-        const encodedTx = rolesInterface.encodeFunctionData(rawTrx.func as any, rawTrx.args as any);
-        rawTransactions.push(rawTrx);
-        functionLevelTxs.push(encodedTx);
-        encodedTransactions.push(encodedTx);
+        rawTransactions.push(
+          getFunctionTransaction(target, value, functions[value.sighash]),
+        );
       });
 
       // Group Param Events by Function
@@ -561,12 +530,11 @@ export const useRoleStore = defineStore("role", () => {
           }
         }, {} as Record<string, ParamCondition[]>)
 
-      const paramLevelTxs: string[] = [];
       Object.entries(paramEventsPerFunction)
         .forEach(([sighash, params]) => {
           params.forEach((paramCondition) => {
             let rawTrx = {
-              func: "scopeParameterAsOneOf",
+              funcName: "scopeParameterAsOneOf",
               args: [
                 roleId.value,
                 target.address,
@@ -578,7 +546,7 @@ export const useRoleStore = defineStore("role", () => {
             };
             if (paramCondition.type === ParameterType.NO_RESTRICTION) {
               rawTrx = {
-                func: "unscopeParameter",
+                funcName: "unscopeParameter",
                 args: [
                   roleId.value,
                   target.address,
@@ -588,7 +556,7 @@ export const useRoleStore = defineStore("role", () => {
               };
             } else if (paramCondition.condition !== ParamComparison.ONE_OF) {
               rawTrx = {
-                func: "scopeParameter",
+                funcName: "scopeParameter",
                 args: [
                   roleId.value,
                   target.address,
@@ -600,55 +568,14 @@ export const useRoleStore = defineStore("role", () => {
                 ],
               };
             }
-            const encodedTx = rolesInterface.encodeFunctionData(
-              rawTrx.func as any,
-              rawTrx.args as any,
-            );
             rawTransactions.push(rawTrx);
-            paramLevelTxs.push(encodedTx);
-            encodedTransactions.push(encodedTx);
           })
         })
-
-      return [...targetLevelTxs, ...functionLevelTxs, ...updateFunctionOptionTxs, ...paramLevelTxs]
     })
 
-    const targetTxs = (await Promise.all([...targetTxPromises])).flat()
-    const memberTxs = [...addMemberTxs, ...removeMemberTxs, ...removeTargetTxs]
-    console.warn("FINAL CALLDATA memberTxs", memberTxs)
-    console.warn("FINAL CALLDATA targetTxs", targetTxs)
-    console.warn("encodedTransactions", encodedTransactions)
-    const rawTransactionsEncoded = rawTransactions.map(
-      trx => rolesInterface.encodeFunctionData(trx.func as any, trx.args as any),
-    );
-    console.warn("rawTransactionsEncoded", rawTransactionsEncoded)
-
+    await Promise.all(targetTxPromises)
     console.warn("rawTransactions", rawTransactions)
-    // Export data in the form to be imported as RAW JSON.
-    const rawTransactionsJson: any[] = [];
-    rawTransactions.forEach((rawTrx, index) => {
-      const func = rolesInterface.getFunction(rawTrx.func as any);
-
-      rawTransactionsJson.push(
-        {
-          idx: index,
-          valueMethodIdx: roleModFunctionNameIndexMap[func.name],
-          value: rawTrx.args.map((arg, argIdx) => {
-            const input = func.inputs[argIdx];
-            return {
-              idx: argIdx,
-              isArray: input.baseType === "array",
-              data: arg,
-              internalType: input.type,
-              name: input.name,
-            }
-          }),
-        },
-      )
-    })
-    console.warn(JSON.stringify(rawTransactionsJson, null, 2))
-
-    return [...memberTxs, ...targetTxs]
+    return rawTransactions
   }
 
   return {

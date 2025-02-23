@@ -40,6 +40,8 @@
 import type { ChainId } from "~/store/web3/networksMap";
 import type { Role, Target } from "~/types/zodiac-roles/role";
 import { useRoleStore } from "~/store/role/role.store";
+import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
+import { useFundStore } from "~/store/fund/fund.store";
 
 const props = defineProps({
   chainId: {
@@ -55,9 +57,11 @@ const props = defineProps({
     default: false,
   },
 });
-
+const router = useRouter();
 const roleStore = useRoleStore();
-const { activeTargetId, activeTarget } = storeToRefs(roleStore);
+const { selectedFundSlug } = storeToRefs(useFundStore());
+const { activeTargetId } = storeToRefs(roleStore);
+const permissionsProposalStore = usePermissionsProposalStore();
 
 // Provide the store to child components
 provide("roleStore", roleStore);
@@ -72,13 +76,14 @@ const roleNumberOne = computed<Role|undefined>(
 );
 
 const updateRole = async () => {
-  let r;
   try {
-    r = await roleStore.updateRole(props.chainId)
+    permissionsProposalStore.rawTransactions = await roleStore.updateRole(props.chainId);
+    router.push(
+      `/details/${selectedFundSlug.value}/governance/delegated-permissions`,
+    );
   } catch (e: any) {
     console.error("Failed updating role", e);
   }
-  console.log("Updated role", r);
 }
 
 // TODO whenever role changes reset role store and populate it with this role data
@@ -170,12 +175,6 @@ watch(() => props.roles.length, () => {
   &__function_params {
     color: $color-steel-blue;
     margin-left: 0.3rem;
-  }
-  &__json {
-    color: #dcdcaa;
-    font-size: 0.85rem;
-    white-space: pre-wrap;
-    background-color: $color-badge-navy;
   }
 }
 </style>

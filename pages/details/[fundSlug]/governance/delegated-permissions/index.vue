@@ -79,6 +79,8 @@ const delegatedPermissionsEntry = ref([
       {
         proposalTitle: "",
         proposalDescription: "",
+        transactionsOverview: "",
+        transactionsRawJSON: "",
       },
     ],
   },

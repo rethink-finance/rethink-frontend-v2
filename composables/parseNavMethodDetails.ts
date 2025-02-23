@@ -81,7 +81,8 @@ export const prepRoleModEntryInput = (value: any) => {
     - int validation
     - enum valudation (int)
   */
-  const dtype = value.internalType;
+  if (!value) return;
+  const dtype = value.internalType ?? "";
 
   if (value.isArray) {
     const retDat = []

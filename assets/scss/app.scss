@@ -243,3 +243,10 @@ input[type="number"]:focus:hover {
     background-color: $color-gray-light-transparent;
   }
 }
+
+.json_field {
+  color: #dcdcaa;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  background-color: $color-badge-navy;
+}

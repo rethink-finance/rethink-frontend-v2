@@ -33,7 +33,7 @@
       <span class="target_function__condition">
         <div class="d-flex align-center">
           <pre
-            class="permissions__json me-4"
+            class="json_field me-4"
           ><strong>sighash:</strong> {{ funcConditions?.sighash }}</pre>
           <PermissionExecutionOptions
             :model-value="localFuncConditions.executionOption"

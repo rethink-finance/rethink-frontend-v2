@@ -9,7 +9,7 @@
             :show-tooltip="false"
           />
           <v-btn color="primary" @click="navigateToCreatePermissions">
-            Create Permissions Proposal
+            Create Raw Permissions Proposal
           </v-btn>
         </div>
         <p class="info_container__text">

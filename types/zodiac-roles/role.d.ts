@@ -1,5 +1,10 @@
 import { ParamType } from "ethers";
 
+export interface IRawTrx {
+  funcName: string;
+  args: any[];
+}
+
 export type Role = {
   id: string
   name: string

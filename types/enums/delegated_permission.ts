@@ -26,20 +26,22 @@ export const DelegatedStepMap: Record<DelegatedStep, IStepperStep> = {
 
 
 // get all methods from ZodiacRoles contract
-const roleModWriteFunctions = getWriteFunctions(ZodiacRoles.abi);
-const proposalRoleModMethods = ZodiacRoles.abi.filter(
+export const roleModFunctions = ZodiacRoles.abi.filter(
   (func) => func.type === "function",
 );
+// Note: should not use the getWriteFunctions as it is not returning internalType.
+const roleModWriteFunctions = roleModFunctions.filter(
+  func => isWriteFunction(func as any),
+);
 export const roleModFunctionNameIndexMap: Record<string, number> = {};
-proposalRoleModMethods.forEach((func, index) => {
+roleModFunctions.forEach((func, index) => {
   if (func.name) {
     roleModFunctionNameIndexMap[func.name as string] = index;
   }
 })
 
 // make a list of choices for the select field out of the methods
-export const roleModMethodChoices = proposalRoleModMethods.map((func,i) => {
-  console.log({ title: func.name, value: func.name, valueMethodIdx: i, inputs: func.inputs });
+export const roleModMethodChoices = roleModFunctions.map((func,i) => {
   return { title: func.name, value: func.name, valueMethodIdx: i, isWriteFunction: isWriteFunction(func as any) };
 }).filter(choice => choice.isWriteFunction);
 
@@ -179,6 +181,18 @@ export const DelegatedPermissionFieldsMap: any = {
       type: InputType.Textarea,
       placeholder: "E.g. Proposal Description",
       rules: [formRules.required],
+    },
+    {
+      label: "Transactions Overview",
+      key: "transactionsOverview",
+      type: InputType.ReadonlyJSON,
+      required: false,
+    },
+    {
+      label: "Transactions Raw JSON",
+      key: "transactionsRawJSON",
+      type: InputType.ReadonlyJSON,
+      required: false,
     },
   ],
 };

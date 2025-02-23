@@ -2,7 +2,7 @@
   <div class="target">
     <div class="d-flex align-center">
       <strong>Target Address:</strong>
-      <div class="permissions__json ms-2">
+      <div class="json_field ms-2">
         {{ target?.address }}
       </div>
     </div>
@@ -84,7 +84,7 @@
 
           <pre
             v-else
-            class="permissions__json"
+            class="json_field"
           >{{ JSON.stringify(abiWriteFunctions, null, 4) }}</pre>
         </div>
       </template>
