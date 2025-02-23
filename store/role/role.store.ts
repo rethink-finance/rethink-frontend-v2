@@ -25,7 +25,14 @@ import {
 import { getParamComparisonInt, getParameterTypeInt, getWriteFunctions } from "~/composables/zodiac-roles/conditions";
 import type { Explorer } from "~/services/explorer";
 import type { ChainId } from "~/store/web3/networksMap";
+import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
+import { roleModFunctionNameIndexMap } from "~/types/enums/delegated_permission";
 
+
+interface IRawTrx {
+  func: string;
+  args: any[];
+}
 
 const rolesInterface = RolesFactory.createInterface();
 
@@ -296,47 +303,47 @@ export const useRoleStore = defineStore("role", () => {
     targets.value.remove = [];
   }
 
-  function getTargetTransaction(target: Target): string {
+  function getTargetTransaction(target: Target): IRawTrx {
     if (!role?.value?.id) throw new Error("No role");
 
     switch (target.type) {
       case ConditionType.SCOPED:
         console.log("[getTargetTransaction] scopeTarget")
-        return rolesInterface.encodeFunctionData(
-          "scopeTarget",
-          [roleId.value, target.address],
-        )
+        return {
+          func: "scopeTarget",
+          args: [roleId.value, target.address],
+        }
       case ConditionType.WILDCARDED:
         console.log("[getTargetTransaction] allowTarget")
-        return rolesInterface.encodeFunctionData(
-          "allowTarget",
-          [roleId.value, target.address, target.executionOption],
-        )
+        return {
+          func: "allowTarget",
+          args: [roleId.value, target.address, target.executionOption],
+        }
     }
     console.log("[getTargetTransaction] revoke target")
-    return rolesInterface.encodeFunctionData(
-      "revokeTarget",
-      [roleId.value, target.address],
-    )
+    return {
+      func: "revokeTarget",
+      args: [roleId.value, target.address],
+    }
   }
 
   function getFunctionTransaction(
     target: Target,
     funcCondition: FunctionCondition,
     func?: FunctionFragment,
-  ): string {
+  ): IRawTrx {
     if (!role?.value?.id) throw new Error("No role");
 
     if (funcCondition.type === ConditionType.BLOCKED) {
       console.log("[getFunctionTransaction] scope revoke function", [roleId.value, target.address, funcCondition.sighash])
-      return rolesInterface.encodeFunctionData(
-        "scopeRevokeFunction",
-        [
+      return {
+        func: "scopeRevokeFunction",
+        args: [
           roleId.value,
           target.address,
           funcCondition.sighash,
         ],
-      )
+      }
     }
 
     if (funcCondition.type === ConditionType.WILDCARDED) {
@@ -346,15 +353,15 @@ export const useRoleStore = defineStore("role", () => {
         funcCondition.sighash,
         funcCondition.executionOption,
       ])
-      return rolesInterface.encodeFunctionData(
-        "scopeAllowFunction",
-        [
+      return {
+        func: "scopeAllowFunction",
+        args: [
           roleId.value,
           target.address,
           funcCondition.sighash,
           funcCondition.executionOption,
         ],
-      )
+      }
     }
 
     if (!func) throw new Error("ABI is needed to scope targets")
@@ -392,10 +399,9 @@ export const useRoleStore = defineStore("role", () => {
       compValue,
       funcCondition.executionOption,
     ])
-
-    return rolesInterface.encodeFunctionData(
-      "scopeFunction",
-      [
+    return {
+      func: "scopeFunction",
+      args: [
         roleId.value,
         target.address,
         funcCondition.sighash,
@@ -405,7 +411,7 @@ export const useRoleStore = defineStore("role", () => {
         compValue,
         funcCondition.executionOption,
       ],
-    )
+    }
   }
 
   /**
@@ -425,23 +431,49 @@ export const useRoleStore = defineStore("role", () => {
     console.log("targets to remove: ", targets.value.remove)
     console.log("role: ", role)
 
-    const addMemberTxs = members.value.add.map((member: string) =>
-      rolesInterface.encodeFunctionData("assignRoles", [member, [roleId.value], [true]]),
-    )
-    const removeMemberTxs = members.value.remove.map((member: string) =>
-      rolesInterface.encodeFunctionData("assignRoles", [member, [roleId.value], [false]]),
-    )
-    const removeTargetTxs = targets.value.remove.map((target: string) =>
-      rolesInterface.encodeFunctionData("revokeTarget", [roleId.value, target]),
-    )
-    console.warn("prepare txes on chain: ", chainId)
+    const rawTransactions: IRawTrx[] = [];
+    const encodedTransactions: string[] = [];
+    const addMemberTxs: string[] = [];
+    members.value.add.forEach((member: string) => {
+      const encodedTx = rolesInterface.encodeFunctionData("assignRoles", [member, [roleId.value], [true]]);
+      rawTransactions.push({
+        func: "assignRoles",
+        args: [member, [roleId.value], [true]],
+      })
+      addMemberTxs.push(encodedTx);
+      encodedTransactions.push(encodedTx);
+    });
+
+    const removeMemberTxs: string[] = [];
+    members.value.remove.forEach((member: string) => {
+      const encodedTx = rolesInterface.encodeFunctionData("assignRoles", [member, [roleId.value], [false]]);
+      rawTransactions.push({
+        func: "assignRoles",
+        args: [member, [roleId.value], [false]],
+      })
+      removeMemberTxs.push(encodedTx);
+      encodedTransactions.push(encodedTx);
+    });
+
+    const removeTargetTxs: string[] = [];
+    targets.value.remove.forEach((target: string) => {
+      const encodedTx = rolesInterface.encodeFunctionData("revokeTarget", [roleId.value, target]);
+      rawTransactions.push({
+        func: "revokeTarget",
+        args: [roleId.value, target],
+      })
+      removeTargetTxs.push(encodedTx);
+      encodedTransactions.push(encodedTx);
+    });
+
     const explorer: Explorer = $getExplorer(chainId);
     const targetAbis: any = {};
+
+    const targetTx: string[] = [];
 
     const targetTxPromises = [...targets.value.list, ...targets.value.add].map(async (target) => {
       console.log("target: ", target)
       const updateEvents = getTargetUpdate(target.id)
-      console.warn("  updateEvents:", updateEvents)
 
       let functions: Record<string, FunctionFragment> = {}
       try {
@@ -459,63 +491,58 @@ export const useRoleStore = defineStore("role", () => {
         console.warn("failed to fetch ABI of target", target.address)
       }
 
-      console.warn("  get targetLevelTxs:")
-      const targetLevelTxs: string[] = updateEvents
-        .filter((event) => event.level === Level.SCOPE_TARGET)
-        .map((event) => getTargetTransaction(event.value as Target))
-      console.warn("  get targetLevelTxs:", targetLevelTxs)
+      const targetLevelTxs: string[] = [];
+      updateEvents.filter(
+        event => event.level === Level.SCOPE_TARGET,
+      ).forEach((event) => {
+        const rawTrx = getTargetTransaction(event.value as Target);
+        const encodedTx = rolesInterface.encodeFunctionData(rawTrx.func as any, rawTrx.args as any);
+        rawTransactions.push(rawTrx);
+        targetLevelTxs.push(encodedTx);
+        encodedTransactions.push(encodedTx);
+      });
 
-      console.warn("  get updateFunctionOptionTxs:")
-      const updateFunctionOptionTxs: string[] = updateEvents
-        .filter(
-          event => event.level === Level.UPDATE_FUNCTION_EXECUTION_OPTION
-          && "targetAddress" in event
-          && event?.targetAddress === target.address,
-        )
-        .map((event) => {
-          const value = event.value as FunctionCondition
-          console.log("[updateRole] scope function execution option", [
-            roleId.value,
-            target.address,
-            value.sighash,
-            value.executionOption,
-            functions[value.sighash].format("full"),
-          ])
-          return rolesInterface.encodeFunctionData(
-            "scopeFunctionExecutionOptions",
-            [
-              roleId.value,
-              target.address,
-              value.sighash,
-              value.executionOption,
-            ],
-          )
-        })
-      console.warn("  get updateFunctionOptionTxs:", updateFunctionOptionTxs)
+      const updateFunctionOptionTxs: string[] = [];
+      updateEvents.filter(event =>
+        event.level === Level.UPDATE_FUNCTION_EXECUTION_OPTION
+        && "targetAddress" in event
+        && event?.targetAddress === target.address,
+      ).forEach((event) => {
+        const value = event.value as FunctionCondition
+        const encodedTx = rolesInterface.encodeFunctionData(
+          "scopeFunctionExecutionOptions",
+          [roleId.value, target.address, value.sighash, value.executionOption],
+        );
+        rawTransactions.push({
+          func: "scopeFunctionExecutionOptions",
+          args: [roleId.value, target.address, value.sighash, value.executionOption],
+        });
+        updateFunctionOptionTxs.push(encodedTx);
+        encodedTransactions.push(encodedTx);
+      });
 
       const scopedFunctions: string[] = []
-
-      console.warn("  get functionLevelTxs:")
-      const functionLevelTxs: string[] = updateEvents
-        .filter(
-          (event) => event.level === Level.SCOPE_FUNCTION
-          && "targetAddress" in event
-          && event?.targetAddress === target.address,
-        )
-        .map((event): string => {
-          const value = event.value as FunctionCondition
-          scopedFunctions.push(value.sighash)
-          return getFunctionTransaction(target, value, functions[value.sighash])
-        })
-      console.warn("  get functionLevelTxs:", functionLevelTxs)
+      const functionLevelTxs: string[] = [];
+      updateEvents.filter(event =>
+        event.level === Level.SCOPE_FUNCTION
+        && "targetAddress" in event
+        && event?.targetAddress === target.address,
+      ).forEach((event) => {
+        const value = event.value as FunctionCondition;
+        scopedFunctions.push(value.sighash)
+        const rawTrx = getFunctionTransaction(target, value, functions[value.sighash]);
+        const encodedTx = rolesInterface.encodeFunctionData(rawTrx.func as any, rawTrx.args as any);
+        rawTransactions.push(rawTrx);
+        functionLevelTxs.push(encodedTx);
+        encodedTransactions.push(encodedTx);
+      });
 
       // Group Param Events by Function
-      console.warn("  get paramEventsPerFunction:")
       const paramEventsPerFunction = updateEvents
         .filter(
           (event): event is UpdateEventParamCondition => event?.level === Level.SCOPE_PARAM
-          && "targetAddress" in event
-          && event?.targetAddress === target.address,
+            && "targetAddress" in event
+            && event?.targetAddress === target.address,
         )
         .reduce((obj, event): Record<string, ParamCondition[]> => {
           if (event.level !== Level.SCOPE_PARAM) return obj
@@ -533,37 +560,36 @@ export const useRoleStore = defineStore("role", () => {
             [event.funcSighash]: [...funcParams, event.value],
           }
         }, {} as Record<string, ParamCondition[]>)
-      console.warn("  get paramEventsPerFunction:", paramEventsPerFunction)
 
-      console.warn("  get paramLevelTxs:")
-      const paramLevelTxs: string[] = Object.entries(paramEventsPerFunction)
-        .map(([sighash, params]) => {
-          return params.map((paramCondition) => {
-            if (paramCondition.type === ParameterType.NO_RESTRICTION) {
-              // unscopeParameter
-              console.log("[updateRole] unscope parameter", [roleId.value, target.address, sighash, paramCondition.index])
-              return rolesInterface.encodeFunctionData(
-                "unscopeParameter",
-                [
-                  roleId.value,
-                  target.address,
-                  sighash,
-                  paramCondition.index,
-                ],
-              )
-            } else if (paramCondition.condition !== ParamComparison.ONE_OF) {
-              console.log("[updateRole] scope parameter", [
+      const paramLevelTxs: string[] = [];
+      Object.entries(paramEventsPerFunction)
+        .forEach(([sighash, params]) => {
+          params.forEach((paramCondition) => {
+            let rawTrx = {
+              func: "scopeParameterAsOneOf",
+              args: [
                 roleId.value,
                 target.address,
                 sighash,
                 paramCondition.index,
                 getParameterTypeInt(paramCondition.type),
-                getParamComparisonInt(paramCondition.condition),
-                paramCondition.value[0],
-              ])
-              return rolesInterface.encodeFunctionData(
-                "scopeParameter",
-                [
+                paramCondition.value,
+              ],
+            };
+            if (paramCondition.type === ParameterType.NO_RESTRICTION) {
+              rawTrx = {
+                func: "unscopeParameter",
+                args: [
+                  roleId.value,
+                  target.address,
+                  sighash,
+                  paramCondition.index,
+                ],
+              };
+            } else if (paramCondition.condition !== ParamComparison.ONE_OF) {
+              rawTrx = {
+                func: "scopeParameter",
+                args: [
                   roleId.value,
                   target.address,
                   sighash,
@@ -572,31 +598,17 @@ export const useRoleStore = defineStore("role", () => {
                   getParamComparisonInt(paramCondition.condition),
                   paramCondition.value[0],
                 ],
-              )
+              };
             }
-            console.log("[updateRole] scope parameter as OneOf", [
-              roleId.value,
-              target.address,
-              sighash,
-              paramCondition.index,
-              getParameterTypeInt(paramCondition.type),
-              paramCondition.value,
-            ])
-            return rolesInterface.encodeFunctionData(
-              "scopeParameterAsOneOf",
-              [
-                roleId.value,
-                target.address,
-                sighash,
-                paramCondition.index,
-                getParameterTypeInt(paramCondition.type),
-                paramCondition.value,
-              ],
-            )
+            const encodedTx = rolesInterface.encodeFunctionData(
+              rawTrx.func as any,
+              rawTrx.args as any,
+            );
+            rawTransactions.push(rawTrx);
+            paramLevelTxs.push(encodedTx);
+            encodedTransactions.push(encodedTx);
           })
         })
-        .flat()
-      console.warn("  get paramLevelTxs:", paramLevelTxs)
 
       return [...targetLevelTxs, ...functionLevelTxs, ...updateFunctionOptionTxs, ...paramLevelTxs]
     })
@@ -605,6 +617,36 @@ export const useRoleStore = defineStore("role", () => {
     const memberTxs = [...addMemberTxs, ...removeMemberTxs, ...removeTargetTxs]
     console.warn("FINAL CALLDATA memberTxs", memberTxs)
     console.warn("FINAL CALLDATA targetTxs", targetTxs)
+    console.warn("encodedTransactions", encodedTransactions)
+    const rawTransactionsEncoded = rawTransactions.map(
+      trx => rolesInterface.encodeFunctionData(trx.func as any, trx.args as any),
+    );
+    console.warn("rawTransactionsEncoded", rawTransactionsEncoded)
+
+    console.warn("rawTransactions", rawTransactions)
+    // Export data in the form to be imported as RAW JSON.
+    const rawTransactionsJson: any[] = [];
+    rawTransactions.forEach((rawTrx, index) => {
+      const func = rolesInterface.getFunction(rawTrx.func as any);
+
+      rawTransactionsJson.push(
+        {
+          idx: index,
+          valueMethodIdx: roleModFunctionNameIndexMap[func.name],
+          value: rawTrx.args.map((arg, argIdx) => {
+            const input = func.inputs[argIdx];
+            return {
+              idx: argIdx,
+              isArray: input.baseType === "array",
+              data: arg,
+              internalType: input.type,
+              name: input.name,
+            }
+          }),
+        },
+      )
+    })
+    console.warn(JSON.stringify(rawTransactionsJson, null, 2))
 
     return [...memberTxs, ...targetTxs]
   }

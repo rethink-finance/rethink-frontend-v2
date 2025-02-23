@@ -1,14 +1,10 @@
 <template>
-  <div class="permissions__menu_left">
-    <div
-      class="permissions__menu_section"
-    >
+  <div>
+    <div class="permissions__menu_section">
       <!-- TODO Convert this to select input to select roles-->
       <strong>Role #{{ role?.name }}</strong>
     </div>
-    <div
-      class="permissions__menu_section"
-    >
+    <div class="permissions__menu_section">
       <strong>Members</strong>
       <div class="permissions__list">
         <div
@@ -53,9 +49,7 @@
       </div>
     </div>
 
-    <div
-      class="permissions__menu_section"
-    >
+    <div class="permissions__menu_section">
       <strong>Targets</strong>
       <div class="permissions__list">
         <div

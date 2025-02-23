@@ -71,12 +71,14 @@ const roleNumberOne = computed<Role|undefined>(
   () => props.roles.filter(role => role.name === "1")[0],
 );
 
-const updateRole = () => {
+const updateRole = async () => {
+  let r;
   try {
-    roleStore.updateRole(props.chainId)
+    r = await roleStore.updateRole(props.chainId)
   } catch (e: any) {
     console.error("Failed updating role", e);
   }
+  console.log("Updated role", r);
 }
 
 // TODO whenever role changes reset role store and populate it with this role data
