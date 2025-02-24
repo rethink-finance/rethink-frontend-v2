@@ -49,9 +49,14 @@ export default {
         positionType => positionType.count > 0n,
       ).map((positionType) => {
         const width = Number(positionType.count) / Number(this.totalCountSum);
+
+        // if the width value is very small, it will not be visible in the UI
+        // so we set a minimum width of 0.05
+        const visualWidth = Math.max(width, 0.05);
+
         return {
           width: formatPercent(width, false),
-          style: { width: width * 100 + "%" },
+          style: { width: visualWidth * 100 + "%" },
           class: `bg_nav_${positionType.type?.key || ""}`,
           ...positionType,
         }
