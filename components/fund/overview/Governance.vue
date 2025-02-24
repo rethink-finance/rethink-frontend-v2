@@ -38,8 +38,8 @@ export default defineComponent({
 <style lang="scss" scoped>
 .accordion_content{
   :deep(.v-expansion-panel-title) {
-      padding: 10px 8px !important;
-      font-size: 14px !important;
+    padding: 0.625rem 0.5rem !important;
+    font-size: $text-sm !important;
   }
 }
 </style>

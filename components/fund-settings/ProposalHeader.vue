@@ -103,14 +103,14 @@ const handleButtonClick = () => {
 <style scoped lang="scss">
 .main_header {
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 1rem;
 
   &__title {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     align-content: center;
-    gap: 20px;
+    gap: 1.25rem;
   }
   &__info-icon {
     cursor: pointer;

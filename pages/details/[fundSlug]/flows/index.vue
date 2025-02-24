@@ -828,7 +828,7 @@ onMounted(async () => {
   }
 }
 .title_balance {
-  font-size: 21px;
+  font-size: $text-lg;
   font-weight: bold;
   line-height: 1;
 }

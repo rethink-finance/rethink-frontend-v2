@@ -247,12 +247,12 @@ const removeField = (field: any, index: number) => {
 
 <style lang="scss" scoped>
 .title {
-  font-size: 16px;
+  font-size: $text-md;
   font-weight: 700;
   color: $color-white;
 }
 .text {
-  font-size: 14px;
+  font-size: $text-sm;
   font-weight: 500;
   color: $color-text-irrelevant;
 }

@@ -93,6 +93,7 @@ export const useRoleStore = defineStore("role", () => {
    * Actions
    */
   // Function to determine Role ID
+  // TODO this goes to roles store
   function getRoleId(roleId: string, roles: Role[]): string {
     if (roleId === "new") {
       return (

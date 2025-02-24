@@ -1,19 +1,27 @@
 <template>
   <div class="accordion_content">
     <div class="main_card">
-      <div class="subtitle_steel_blue">Basics</div>
+      <div class="subtitle_steel_blue">
+        Basics
+      </div>
       <FundOverviewBasics :fund="fund" />
     </div>
     <div class="main_card">
-      <div class="subtitle_steel_blue">Whitelist</div>
+      <div class="subtitle_steel_blue">
+        Whitelist
+      </div>
       <FundOverviewDeposits :fund="fund" class="whitelist_card" />
     </div>
     <div class="main_card">
-      <div class="subtitle_steel_blue">Management</div>
+      <div class="subtitle_steel_blue">
+        Management
+      </div>
       <FundOverviewManagement :fund="fund" />
     </div>
     <div class="main_card">
-      <div class="subtitle_steel_blue">Fees</div>
+      <div class="subtitle_steel_blue">
+        Fees
+      </div>
       <FundOverviewFees :fund="fund" />
     </div>
   </div>
@@ -35,7 +43,7 @@ export default defineComponent({
       return (
         formatTokenValue(
           this.fund.governanceTokenTotalSupply,
-          this.fund.governanceToken.decimals
+          this.fund.governanceToken.decimals,
         ) +
         " " +
         this.fund.governanceToken.symbol
@@ -51,13 +59,13 @@ export default defineComponent({
 <style lang="scss" scoped>
 .accordion_content {
   :deep(.v-expansion-panel-title) {
-    padding: 10px 8px !important;
-    font-size: 14px !important;
+    padding: 0.625rem 0.5rem !important;
+    font-size: $text-sm !important;
   }
 }
 .whitelist_card {
   :deep(.v-expansion-panel-text__wrapper) {
-    padding: 10px 8px !important;
+    padding: 0.625rem 0.5rem !important;
   }
 }
 </style>

@@ -17,7 +17,7 @@
         <FundPermissionsMenuLeft
           :selected-target="activeTargetId"
           :role="roleStore.role"
-          :disabled="isEditDisabled"
+          :disabled="disabled"
         />
         <v-btn @click="updateRole">
           Update Role
@@ -26,7 +26,7 @@
       <PermissionTarget
         v-if="activeTargetId"
         class="permissions__content"
-        :disabled="isEditDisabled"
+        :disabled="disabled"
         :chain-id="chainId"
       />
       <div v-else>
@@ -38,8 +38,7 @@
 
 <script setup lang="ts">
 import type { ChainId } from "~/store/web3/networksMap";
-import type { Role, Target } from "~/types/zodiac-roles/role";
-import { useRoleStore } from "~/store/role/role.store";
+import type { RoleStoreType } from "~/store/role/role.store";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 import { useFundStore } from "~/store/fund/fund.store";
 
@@ -48,33 +47,27 @@ const props = defineProps({
     type: String as PropType<ChainId>,
     required: true,
   },
-  roles: {
-    type: Array as () => Role[],
-    default: () => [],
-  },
   isLoading: {
+    type: Boolean,
+    default: false,
+  },
+  disabled: {
     type: Boolean,
     default: false,
   },
 });
 const router = useRouter();
-const roleStore = useRoleStore();
 const { selectedFundSlug } = storeToRefs(useFundStore());
-const { activeTargetId } = storeToRefs(roleStore);
 const permissionsProposalStore = usePermissionsProposalStore();
 
-// Provide the store to child components
-provide("roleStore", roleStore);
+// Inject the Role Store
+const roleStore = inject<RoleStoreType>("roleStore");
+if (!roleStore) {
+  throw new Error("roleStore is not provided!");
+}
+const { activeTargetId } = storeToRefs(roleStore);
 
-const selectedTarget = ref<Target | undefined>();
-const isEditDisabled = ref(false);
-
-// This is Rethink.finance specific thing now, to hardcode select condition
-// with ID "1". We have to remove this and always select the first one.
-const roleNumberOne = computed<Role|undefined>(
-  () => props.roles.filter(role => role.name === "1")[0],
-);
-
+// TODO emit update role event
 const updateRole = async () => {
   try {
     permissionsProposalStore.rawTransactions = await roleStore.updateRole(props.chainId);
@@ -85,27 +78,6 @@ const updateRole = async () => {
     console.error("Failed updating role", e);
   }
 }
-
-// TODO whenever role changes reset role store and populate it with this role data
-// Watch for `roles` change and preselect a role & target
-watch(() => props.roles.length, () => {
-  // Pre-select Role with ID: "1" as we use this one now everywhere.
-  // This is hardcoded now at many places and needs
-  // to be adjusted as any ID can be used.
-  if (props.roles.length) {
-    const selectedRole = roleNumberOne.value || props.roles[0];
-    roleStore.role = selectedRole;
-    roleStore.initRoleState(
-      roleStore.getRoleId(selectedRole.name, props.roles),
-      toRaw(selectedRole),
-    );
-
-    roleStore.activeTargetId = selectedRole?.targets[0].id;
-  } else {
-    roleStore.role = undefined;
-    selectedTarget.value = undefined;
-  }
-});
 </script>
 
 <style lang="scss" scoped>

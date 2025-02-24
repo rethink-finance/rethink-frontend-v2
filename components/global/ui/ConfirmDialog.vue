@@ -103,7 +103,7 @@ const confirm = () => {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 16px;
+    font-size: $text-md;
     font-weight: 700;
   }
   &__info-icon {

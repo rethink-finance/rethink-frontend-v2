@@ -483,10 +483,9 @@ const handleAddNewAddressList = () => {
     gap: 0.5rem;
 
     &__state {
-      padding: 0px 4px;
+      padding: 0 0.25rem;
       margin-left: 0.5rem;
-
-      font-size: 10px;
+      font-size: $text-xs;
       font-weight: 800;
       text-transform: uppercase;
 
@@ -524,7 +523,7 @@ const handleAddNewAddressList = () => {
     margin-bottom: 1.5rem;
 
     .v-btn {
-      font-size: 12px;
+      font-size: $text-xs;
       font-weight: 600;
     }
   }
