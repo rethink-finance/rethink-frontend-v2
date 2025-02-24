@@ -6,6 +6,7 @@
           <div class="d-flex align-center">
             <strong>Role #</strong>
             <v-select
+              v-if="roles.length > 1"
               v-model="selectedRole"
               :items="roles"
               item-title="name"
@@ -15,6 +16,9 @@
               required
               return-object
             />
+            <strong v-else>
+              {{ selectedRole?.name }}
+            </strong>
           </div>
 
           <v-btn color="primary" @click="navigateToCreatePermissions">
