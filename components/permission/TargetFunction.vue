@@ -134,15 +134,12 @@ const handleFunctionCheck = (checked: boolean) => {
       : ConditionType.BLOCKED;
 
   // Reset params and assign new type.
-  console.warn("reset type", type);
-  console.warn("OLD", localFuncConditions.value);
   localFuncConditions.value = {
     ...localFuncConditions.value,
     params: [],
     sighash: props.func?.selector || props.sighash,
     type,
   };
-  console.warn("NEW", localFuncConditions.value);
 };
 </script>
 

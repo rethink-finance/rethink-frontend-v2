@@ -52,10 +52,10 @@ export const useRoleStore = defineStore("role", () => {
   const { $getExplorer } = useNuxtApp();
 
   // Function to initialize state
-  function initRoleState(id: string, r?: Role) {
+  function initRoleState(id: string | undefined, r?: Role) {
     console.log("Init role state", id, r);
 
-    roleId.value = id;
+    roleId.value = id || "";
     role.value = r;
     members.value = {
       list: r?.members.map((member) => member.address) || [],
@@ -94,7 +94,7 @@ export const useRoleStore = defineStore("role", () => {
    */
   // Function to determine Role ID
   // TODO this goes to roles store
-  function getRoleId(roleId: string, roles: Role[]): string {
+  function getRoleId(roleId: string | undefined, roles: Role[]): string | undefined {
     if (roleId === "new") {
       return (
         (roles
