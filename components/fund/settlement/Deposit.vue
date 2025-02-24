@@ -604,7 +604,11 @@ const hasApprovedAmount = computed(() => {
 });
 
 const hasDelegatedToSelf = computed(() => {
-  return fundStore.fundUserData.fundDelegateAddress.toLowerCase() === fundStore.activeAccountAddress
+
+  if (!fundStore.fundUserData.fundDelegateAddress) return false;
+  if (!fundStore.activeAccountAddress) return false;
+
+  return fundStore.fundUserData.fundDelegateAddress.toLowerCase() === fundStore.activeAccountAddress.toLowerCase();
 });
 
 const hasProcessedDeposit = computed(() => {
