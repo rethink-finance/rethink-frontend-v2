@@ -14,7 +14,15 @@
       </div>
     </template>
     <div v-else class="d-flex flex-grow-1 justify-end">
-      N/A
+      <!-- show 100% liquid if all position types are 0 -->
+      <div
+        class="position_types_bar__item bg_nav_liquid"
+        style="width: 100%"
+      >
+        <v-tooltip activator="parent" location="bottom">
+          Liquid of 100%
+        </v-tooltip>
+      </div>
     </div>
   </div>
 </template>
