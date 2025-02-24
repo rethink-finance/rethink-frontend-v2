@@ -11,17 +11,12 @@
       />
     </div>
     <template v-else>
-      <div
-        class="permissions__menu_left"
-      >
+      <div class="permissions__menu_left">
         <FundPermissionsMenuLeft
           :selected-target="activeTargetId"
           :role="roleStore.role"
           :disabled="disabled"
         />
-        <v-btn @click="updateRole">
-          Update Role
-        </v-btn>
       </div>
       <PermissionTarget
         v-if="activeTargetId"
@@ -39,10 +34,8 @@
 <script setup lang="ts">
 import type { ChainId } from "~/store/web3/networksMap";
 import type { RoleStoreType } from "~/store/role/role.store";
-import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
-import { useFundStore } from "~/store/fund/fund.store";
 
-const props = defineProps({
+defineProps({
   chainId: {
     type: String as PropType<ChainId>,
     required: true,
@@ -56,28 +49,12 @@ const props = defineProps({
     default: false,
   },
 });
-const router = useRouter();
-const { selectedFundSlug } = storeToRefs(useFundStore());
-const permissionsProposalStore = usePermissionsProposalStore();
-
 // Inject the Role Store
 const roleStore = inject<RoleStoreType>("roleStore");
 if (!roleStore) {
   throw new Error("roleStore is not provided!");
 }
 const { activeTargetId } = storeToRefs(roleStore);
-
-// TODO emit update role event
-const updateRole = async () => {
-  try {
-    permissionsProposalStore.rawTransactions = await roleStore.updateRole(props.chainId);
-    router.push(
-      `/details/${selectedFundSlug.value}/governance/delegated-permissions`,
-    );
-  } catch (e: any) {
-    console.error("Failed updating role", e);
-  }
-}
 </script>
 
 <style lang="scss" scoped>
