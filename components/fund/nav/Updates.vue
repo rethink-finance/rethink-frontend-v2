@@ -27,7 +27,7 @@
           />
         </template>
         <!--        <template #actions="{detailsExpanded}">-->
-        <!--          <UiDetailsButton text="Details" :active="detailsExpanded" />-->
+        <!--          <UiButtonDetails text="Details" :active="detailsExpanded" />-->
         <!--        </template>-->
       </UiDataRowCard>
     </template>

@@ -1,6 +1,7 @@
 export enum InputType {
   Text = "text",
   Textarea = "textarea",
+  ReadonlyJSON = "readonlyJson",
   Checkbox = "checkbox",
   Number = "number",
   Select = "select",
@@ -38,6 +39,7 @@ export const periodChoices = [
 export const defaultInputTypeValue: Record<InputType, any> = {
   [InputType.Text]: "",
   [InputType.Textarea]: "",
+  [InputType.ReadonlyJSON]: "",
   [InputType.Checkbox]: false,
   [InputType.Number]: 0,
   // If the default value 0 as integer won't work for all, add default values to PositionTypeValuationTypeFieldsMap

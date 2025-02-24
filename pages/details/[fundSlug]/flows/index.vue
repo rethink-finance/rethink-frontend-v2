@@ -186,15 +186,15 @@
             </div>
             <div class="data_bar__subtitle d-flex">
               Simulated NAV
-              <UiDetailsButton
+              <UiButtonDetails
                 v-if="!isSimulatedNAVEdit"
                 class="ms-2"
                 xs
                 @click="toggleSimulatedNAVEdit()"
               >
                 <Icon icon="fa-solid:edit" width="1.4em" height="1.4em" />
-              </UiDetailsButton>
-              <UiDetailsButton
+              </UiButtonDetails>
+              <UiButtonDetails
                 v-else
                 class="ms-2"
                 xs
@@ -205,7 +205,7 @@
                   width="1.4em"
                   height="1.4em"
                 />
-              </UiDetailsButton>
+              </UiButtonDetails>
             </div>
           </div>
           <div class="data_bar__item">
@@ -828,7 +828,7 @@ onMounted(async () => {
   }
 }
 .title_balance {
-  font-size: 21px;
+  font-size: $text-lg;
   font-weight: bold;
   line-height: 1;
 }

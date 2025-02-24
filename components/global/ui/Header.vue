@@ -9,9 +9,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 2rem;
+
   &__title {
-    font-size: 16px;
+    font-size: $text-md;
     font-weight: bold;
     line-height: 1;
     color: $color-white;

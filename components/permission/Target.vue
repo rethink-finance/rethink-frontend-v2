@@ -1,8 +1,10 @@
 <template>
   <div class="target">
-    <div>
+    <div class="d-flex align-center">
       <strong>Target Address:</strong>
-      {{ target?.address }}
+      <div class="json_field ms-2">
+        {{ target?.address }}
+      </div>
     </div>
 
     <UiDataRowCard
@@ -44,62 +46,68 @@
         Show ABI
       </template>
       <template #body>
-        <v-btn
-          v-if="!isEditingCustomABI"
-          color="primary"
-          class="target__abi_edit_button"
-          @click="handleClickEditCustomABI"
-        >
-          Edit ABI
-        </v-btn>
+        <div class="target__abi_fetch_card_body">
+          <v-btn
+            v-if="!isEditingCustomABI"
+            color="primary"
+            class="target__abi_edit_button"
+            @click="handleClickEditCustomABI"
+          >
+            Edit ABI
+          </v-btn>
 
-        <v-col
-          v-if="isEditingCustomABI"
-        >
-          <v-textarea
-            v-model="customABI"
-            label="Custom ABI"
-            placeholder="Enter the contract ABI here"
-            rows="25"
-          />
-          <div class="d-flex">
-            <v-btn
-              color="primary"
-              class="mr-2"
-              @click="submitCustomABI"
-            >
-              Submit custom ABI
-            </v-btn>
-            <v-btn
-              variant="text"
-              @click="handleClickEditCustomABI"
-            >
-              Cancel
-            </v-btn>
-          </div>
-        </v-col>
+          <v-col
+            v-if="isEditingCustomABI"
+          >
+            <v-textarea
+              v-model="customABI"
+              label="Custom ABI"
+              placeholder="Enter the contract ABI here"
+              rows="25"
+            />
+            <div class="d-flex">
+              <v-btn
+                color="primary"
+                class="mr-2"
+                @click="submitCustomABI"
+              >
+                Submit custom ABI
+              </v-btn>
+              <v-btn
+                variant="text"
+                @click="handleClickEditCustomABI"
+              >
+                Cancel
+              </v-btn>
+            </div>
+          </v-col>
 
-        <pre
-          v-else
-          class="permissions__json"
-        >{{ JSON.stringify(abiWriteFunctions, null, 4) }}</pre>
+          <pre
+            v-else
+            class="json_field"
+          >{{ JSON.stringify(abiWriteFunctions, null, 4) }}</pre>
+        </div>
       </template>
     </UiDataRowCard>
 
     <div v-if="!isFetchingTargetABI" class="permissions__list">
-      <!-- Display functions that were found in the ABI -->
+      <!-- Display write functions that were found in the ABI -->
       <PermissionTargetFunction
         v-for="(func, index) in abiWriteFunctions"
         :key="index"
-        v-model:func-conditions="localConditions[func.selector]"
         :func="func as FunctionFragment"
+        :disabled="disabled"
+        :func-conditions="getFuncCondition(func.selector)"
+        @update:func-conditions="(newFuncConditions) => updateConditions(func.selector, newFuncConditions)"
       />
       <!-- Display function conditions that were not found in the ABI -->
       <PermissionTargetFunction
         v-for="(sighash, index) in sighashesNotInAbi"
         :key="index"
-        v-model:func-conditions="localConditions[sighash]"
         :sighash="sighash"
+        :disabled="disabled"
+        :func-conditions="getFuncCondition(sighash)"
+        @update:func-conditions="(newFuncConditions) => updateConditions(sighash, newFuncConditions)"
       />
     </div>
   </div>
@@ -111,15 +119,11 @@ import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
 import type { Explorer } from "~/services/explorer";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type { ChainId } from "~/store/web3/networksMap";
-import type { Target, TargetConditions } from "~/types/zodiac-roles/role";
-
-const emit = defineEmits(["update:conditions"]);
+import type { FunctionCondition, TargetConditions } from "~/types/zodiac-roles/role";
+import type { RoleStoreType } from "~/store/role/role.store";
+import { ConditionType, ExecutionOption } from "~/types/enums/zodiac-roles";
 
 const props = defineProps({
-  target: {
-    type: Object as PropType<Target>,
-    default: () => {},
-  },
   conditions: {
     type: Object as PropType<TargetConditions>,
     default: () => {},
@@ -128,16 +132,35 @@ const props = defineProps({
     type: String as PropType<ChainId>,
     required: true,
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+// Inject the Role Store
+const roleStore = inject<RoleStoreType>("roleStore");
+if (!roleStore) {
+  throw new Error("roleStore is not provided!");
+}
+
+const target = computed(() => roleStore.activeTarget);
 
 const { $getExplorer } = useNuxtApp();
 const toastStore = useToastStore();
-// 🔥 **Create a local reactive copy of `target.conditions`**
-const localConditions = ref({ ...props.conditions });
 
 const targetABIJson = ref<JsonFragment[]>([]);
 const customABI = ref<string>("");
 const isEditingCustomABI = ref(false);
+
+const getFuncCondition = (funcSelector: string): FunctionCondition => {
+  return target?.value?.conditions[funcSelector] || {
+    sighash: funcSelector,
+    type: ConditionType.BLOCKED,
+    executionOption: ExecutionOption.NONE,
+    params: [],
+  }
+}
 
 const submitCustomABI = () => {
   try {
@@ -161,11 +184,12 @@ const abiWriteFunctions = ref<FunctionFragment[]>([]);
 const sighashesNotInAbi = ref<string[]>([]);
 const isFetchingTargetABI = ref(false);
 
+// TODO: move this code to role.store and cache each targetABI in a map
 const fetchTargetABI = async () => {
   targetABIJson.value = [];
-  if (!props.target.address) return;
+  if (!target.value?.address) return;
   isFetchingTargetABI.value = true;
-  console.log("Fetch target ABI action", props.chainId, props.target.address);
+  console.log("Fetch target ABI action", props.chainId, target.value.address);
 
   let explorer: Explorer;
   try {
@@ -175,7 +199,7 @@ const fetchTargetABI = async () => {
   }
 
   try {
-    targetABIJson.value = await explorer.abi(props.target.address);
+    targetABIJson.value = await explorer.abi(target.value.address);
     console.debug("fetched ABI targetABIJson", targetABIJson.value);
     isFetchingTargetABI.value = false;
   } catch (error: any) {
@@ -198,7 +222,7 @@ watch(
     abiWriteFunctions.value = writeFunctions;
 
     // Condition sighashes of functions that are not in the detected ABI.
-    sighashesNotInAbi.value = Object.keys(props.target?.conditions || {}).filter(
+    sighashesNotInAbi.value = Object.keys(target.value?.conditions || {}).filter(
       (conditionKey: string) => !writeFunctions?.some(
         (func: FunctionFragment) => func.selector === conditionKey,
       ),
@@ -208,36 +232,25 @@ watch(
 );
 
 watch(
-  () => props.target, () => {
+  () => roleStore.activeTargetId, () => {
     fetchTargetABI();
     isEditingCustomABI.value = false;
   },
   { immediate: true },
 );
-
-// Watch for changes in `localConditions` and emit updates to parent
-watch(
-  localConditions,
-  (newConditions) => {
-    if (JSON.stringify(newConditions) !== JSON.stringify(props.conditions)) {
-      console.log("  [1] watch localConditions", toRaw(newConditions))
-      emit("update:conditions", newConditions);
-    }
-  },
-  { deep: true },
-);
-
-// Sync `localConditions` when `props.conditions` changes (but prevent looping)
-watch(
-  () => props.conditions,
-  (newConditions) => {
-    if (JSON.stringify(newConditions) !== JSON.stringify(localConditions.value)) {
-      console.log("  [1] watch props.conditions")
-      localConditions.value = { ...newConditions };
-    }
-  },
-  { deep: true, immediate: true },
-);
+const updateConditions = (sighash: string, newFuncConditions: FunctionCondition) => {
+  console.log("[FATHER] Conditions changed for sighash", sighash, "New:", newFuncConditions);
+  if (target.value?.id && target.value?.address) {
+    console.log("[FATHER] Conditions changed for", target.value, "New:", { sighash, conditions: toRaw(newFuncConditions) });
+    roleStore.handleTargetConditions(
+      target.value.id,
+      {
+        ...target.value?.conditions,
+        [sighash]: newFuncConditions,
+      },
+    );
+  }
+};
 </script>
 
 <style lang="scss" scoped>
@@ -249,6 +262,9 @@ watch(
     background-color: $color-badge-navy;
     margin: 1rem 0 1.5rem 0;
   }
+  &__abi_fetch_card_body {
+    min-height: 7rem;
+  }
   &__abi_fetch_text {
     display: flex;
     align-items: center;
@@ -258,12 +274,12 @@ watch(
     display:flex;
     margin: 1rem 1rem 1rem auto;
     position: absolute;
-    right: 1rem;
+    right: 0;
   }
 }
 
 :deep(.data_row__body) {
-  max-height: 600px;
+  //max-height: 700px;
   overflow-y: auto;
 }
 </style>

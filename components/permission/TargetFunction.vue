@@ -4,15 +4,19 @@
     bg-transparent
     title-full-height
     class="target_function"
-    :is-expandable="!!funcConditions?.type"
+    :is-expandable="!disabled"
   >
     <template #title>
       <div class="permissions__function">
         <div class="mt-1">
           <v-checkbox-btn
-            :model-value="funcConditions?.type === ConditionType.WILDCARDED"
-            :indeterminate="funcConditions?.type === ConditionType.SCOPED"
-            disabled
+            :model-value="
+              [ConditionType.WILDCARDED, ConditionType.SCOPED].includes(localFuncConditions?.type)
+            "
+            :indeterminate="isIndeterminate"
+            :disabled="disabled"
+            @click.stop
+            @update:model-value="handleFunctionCheck"
           />
         </div>
         <p>
@@ -26,15 +30,15 @@
       </div>
     </template>
     <template #body>
-      <span
-        v-if="funcConditions?.sighash"
-        class="target_function__condition"
-      >
+      <span class="target_function__condition">
         <div class="d-flex align-center">
-          <pre class="permissions__json me-4"><strong>sighash:</strong> {{ funcConditions?.sighash }}</pre>
+          <pre
+            class="json_field me-4"
+          ><strong>sighash:</strong> {{ funcConditions?.sighash }}</pre>
           <PermissionExecutionOptions
-            v-model="localFuncConditions.executionOption"
-            disabled
+            :model-value="localFuncConditions.executionOption"
+            :disabled="disabled"
+            @update:model-value="updateExecutionOption"
           />
           <v-switch
             v-model="showRaw"
@@ -47,11 +51,10 @@
 
         <PermissionTargetFunctionParams
           v-model:func-conditions="localFuncConditions"
-          class="ms-4"
           :func="func"
           :sighash="sighash"
           :show-raw="showRaw"
-          :disabled="true"
+          :disabled="disabled"
         />
       </span>
     </template>
@@ -64,7 +67,7 @@ import { useVModel } from "@vueuse/core";
 import cloneDeep from "lodash.clonedeep";
 import type { FunctionCondition } from "~/types/zodiac-roles/role";
 import { getParamsTypesTitle } from "~/composables/zodiac-roles/target";
-import { ConditionType } from "~/types/enums/zodiac-roles";
+import { ConditionType, ExecutionOption } from "~/types/enums/zodiac-roles";
 
 /**
  * This component displays function conditions based on ABI detection.
@@ -91,6 +94,10 @@ const props = defineProps({
     type: Object as PropType<FunctionCondition>,
     default: () => {},
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 const showRaw = ref(false);
 
@@ -101,9 +108,42 @@ const localFuncConditions = useVModel(props, "funcConditions", emit, {
   deep: true,       // Ensures Vue watches nested changes
 });
 
+const isIndeterminate = computed(() => localFuncConditions?.value?.type === ConditionType.SCOPED);
+
 const functionParamsText = computed(() =>
   props.func ? getParamsTypesTitle(props.func) : "(function not found in ABI)",
 )
+
+const updateExecutionOption = (option: ExecutionOption) => {
+  let type = localFuncConditions?.value?.type;
+  // When the function was not yet selected and user clicks on "Allow Sending Ether"
+  // then the function should be marked as selected.
+  if (type === ConditionType.BLOCKED && option !== ExecutionOption.NONE) {
+    type = ConditionType.WILDCARDED
+  }
+  localFuncConditions.value = {
+    ...localFuncConditions.value,
+    executionOption: option,
+    type,
+  };
+}
+const handleFunctionCheck = (checked: boolean) => {
+  const type =
+    checked && localFuncConditions?.value?.type !== ConditionType.SCOPED
+      ? ConditionType.WILDCARDED
+      : ConditionType.BLOCKED;
+
+  // Reset params and assign new type.
+  console.warn("reset type", type);
+  console.warn("OLD", localFuncConditions.value);
+  localFuncConditions.value = {
+    ...localFuncConditions.value,
+    params: [],
+    sighash: props.func?.selector || props.sighash,
+    type,
+  };
+  console.warn("NEW", localFuncConditions.value);
+};
 </script>
 
 <style lang="scss" scoped>

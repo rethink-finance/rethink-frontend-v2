@@ -14,6 +14,7 @@ import {
 } from "~/composables/nav/encodedCollectFees";
 import type IProposalData from "~/types/proposal/proposalData";
 import type { ChainId } from "~/store/web3/networksMap";
+import { roleModFunctions } from "~/types/enums/delegated_permission";
 
 const updateNavABI = GovernableFund.abi.find(
   (func: any) => func.name === "updateNav" && func.type === "function",
@@ -220,19 +221,14 @@ const encodeRoleModEntries = (
   proposalEntries: any[],
   roleModAddress: string,
 ): [any[], any[], any[]] => {
-  const proposalRoleModMethods = ZodiacRoles.abi.filter(
-    (val) => val.type === "function",
-  );
   console.log("roleModAddress: ", roleModAddress);
-
   const encodedRoleModEntries = [];
 
   const targets = [];
   const gasValues = [];
 
   for (let i = 0; i < proposalEntries.length; i++) {
-    const roleModFunctionABI =
-      proposalRoleModMethods[proposalEntries[i].valueMethodIdx];
+    const roleModFunctionABI = roleModFunctions[proposalEntries[i].valueMethodIdx];
     console.log(
       "roleModFunctionABI: ",
       JSON.stringify(roleModFunctionABI, null, 2),

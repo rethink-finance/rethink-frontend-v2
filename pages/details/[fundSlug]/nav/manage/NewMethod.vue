@@ -98,7 +98,7 @@ const onNewNavMethodCreatedHandler = (navMethod: INAVMethod) => {
     display: flex;
     align-items: center;
     align-content: center;
-    gap: 20px;
+    gap: 1.25rem;
   }
 }
 .tooltip{

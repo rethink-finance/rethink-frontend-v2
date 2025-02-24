@@ -124,21 +124,18 @@ export default {
   }
 
   &__date {
-    font-size: 14px;
+    font-size: $text-sm;
     margin-left: 2rem;
     margin-bottom: 0.25rem;
   }
-
   &__container {
     display: flex;
     gap: 0.5rem;
     align-items: center;
   }
-
   &__icon {
     position: relative;
     width: min-content;
-
     color: $color-text-irrelevant;
 
     &:after {
@@ -147,32 +144,28 @@ export default {
       left: 50%;
       bottom: 0;
       transform: translateY(100%);
-
       height: 100%;
       border-left: 0.5px dashed $color-steel-blue;
       opacity: 0.4;
     }
   }
-
   &__details {
     width: 100%;
     padding: 0.75rem;
     background-color: $color-gray-light-transparent;
     @include borderGray;
   }
-
   &__title {
     padding: 0;
     margin-bottom: 0.8rem;
-
-    font-size: 14px;
+    font-size: $text-sm;
     line-height: 1;
     font-weight: 500;
     color: $color-white;
   }
   &__subtitle {
     font-weight: 500;
-    font-size: 13px;
+    font-size: $text-sm;
     line-height: 1;
     letter-spacing: 0.03em;
     color: $color-steel-blue;

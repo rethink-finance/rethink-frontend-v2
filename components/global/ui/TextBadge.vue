@@ -46,15 +46,12 @@ defineProps({
   gap: 0.5rem;
   justify-content: center;
   align-items: center;
-  
   width: max-content;
   padding: 0.25rem;
-  
-  font-size: 12px;
+  font-size: $text-xs;
   font-weight: bold;
   line-height: 1;
   color: $color-text-irrelevant;
-
   @include borderGray;
   background: $color-gray-light-transparent;
 

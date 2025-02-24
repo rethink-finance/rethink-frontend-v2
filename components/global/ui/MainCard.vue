@@ -60,11 +60,11 @@ export default {
   &__title-col {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 1rem;
   }
 
   &__sub-title {
-    font-size: 14px;
+    font-size: $text-sm;
     color: $color-text-irrelevant;
     font-weight: 500;
   }

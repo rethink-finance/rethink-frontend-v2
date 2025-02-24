@@ -1,5 +1,5 @@
 <template>
-  <div class="char-limit" v-if="charLimit">
+  <div v-if="charLimit" class="char-limit">
     MAX {{ charLimit }}
     <v-progress-circular
       v-model="parsedCharLimit"
@@ -26,8 +26,7 @@ const parsedCharLimit = computed(() => {
 .char-limit {
   display: flex;
   align-items: center;
-  gap: 10px;
-
-  font-size: 14px;
+  gap: 0.5rem;
+  font-size: $text-sm;
 }
 </style>

@@ -69,7 +69,7 @@ import { padLeft } from "web3-utils";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
-  DelegatedStepMap, prepPermissionsProposalData, proposalRoleModMethodAbiMap,
+  DelegatedStepMap, prepPermissionsProposalData, roleModWriteFunctionAbiMap,
   proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -139,7 +139,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
   );
 
   const encodedScopeParameter = encodeFunctionCall(
-    proposalRoleModMethodAbiMap.scopeParameter,
+    roleModWriteFunctionAbiMap.scopeParameter,
     [
       "1", // role
       baseTokenAddress, // targetAddress, base token contract address
@@ -154,7 +154,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
 
   // Add scopeTarget permission also with target baseToken
   const encodedScopeTarget = encodeFunctionCall(
-    proposalRoleModMethodAbiMap.scopeTarget,
+    roleModWriteFunctionAbiMap.scopeTarget,
     [
       "1", // role
       baseTokenAddress, // targetAddress, base token contract address
@@ -183,7 +183,7 @@ const getAllowManagerToCollectFeesPermission = (
   );
 
   const encodedScopeParameter = encodeFunctionCall(
-    proposalRoleModMethodAbiMap.scopeParameter,
+    roleModWriteFunctionAbiMap.scopeParameter,
     [
       "1", // role
       fundAddress, // targetAddress, OIV contract address
@@ -198,7 +198,7 @@ const getAllowManagerToCollectFeesPermission = (
 
   // Add scopeTarget permission also with target OIV contract address.
   const encodedScopeTarget = encodeFunctionCall(
-    proposalRoleModMethodAbiMap.scopeTarget,
+    roleModWriteFunctionAbiMap.scopeTarget,
     [
       "1", // role
       fundAddress, // targetAddress, OIV contract address

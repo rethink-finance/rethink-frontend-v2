@@ -580,7 +580,7 @@ onMounted(() => {
 
 .meta-label {
   display: inline;
-  font-size: 13px;
+  font-size: $text-sm;
   font-weight: 500;
   letter-spacing: 0.03em;
   color: $color-steel-blue;

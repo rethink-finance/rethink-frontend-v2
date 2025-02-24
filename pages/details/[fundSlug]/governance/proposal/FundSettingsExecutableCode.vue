@@ -190,8 +190,7 @@ watch(
     display: flex;
     gap: 15px;
     align-items: center;
-
-    font-size: 16px;
+    font-size: $text-md;
     font-weight: 700;
     color: $color-white;
   }

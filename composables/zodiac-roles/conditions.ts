@@ -87,3 +87,29 @@ export function formatParamValue(param: ethers.ParamType, value: string) {
   if (nativeType === ParamNativeType.ARRAY || nativeType === ParamNativeType.TUPLE) return JSON.parse(value)
   return value
 }
+
+export function getParamComparisonInt(paramComparison: ParamComparison): number {
+  switch (paramComparison) {
+    case ParamComparison.EQUAL_TO:
+      return 0
+    case ParamComparison.GREATER_THAN:
+      return 1
+    case ParamComparison.LESS_THAN:
+      return 2
+    case ParamComparison.ONE_OF:
+      return 3
+  }
+}
+
+export function getParameterTypeInt(parameterType: ParameterType): number {
+  switch (parameterType) {
+    case ParameterType.STATIC:
+      return 0
+    case ParameterType.DYNAMIC:
+      return 1
+    case ParameterType.DYNAMIC32:
+      return 2
+    case ParameterType.NO_RESTRICTION:
+      throw new Error("No restriction should not go on chain. This should be unscoped via unscopeParameter")
+  }
+}
