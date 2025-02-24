@@ -54,21 +54,24 @@
           </template>
         </v-tooltip>
       </div>
-
     </div>
 
     <div class="divider" />
 
 
     <div v-if="accountStore.isConnected" style="width: 100%">
-      <v-btn
-        class="button-deposit"
-        variant="outlined"
-        :disabled="isDepositButtonDisabled"
-        @click="handleDepositClick"
+      <div
+        class="buttons_group"
       >
-        {{ hasRequestedDeposit ? 'Continue Deposit' : 'Deposit' }}
-      </v-btn>
+        <v-btn
+          class="button-deposit button"
+          variant="outlined"
+          :disabled="isDepositButtonDisabled"
+          @click="handleDepositClick"
+        >
+          {{ hasRequestedDeposit ? 'Continue Deposit' : 'Deposit' }}
+        </v-btn>
+      </div>
 
       <div
         v-if="visibleErrorMessages && tokenValueChanged"
@@ -604,7 +607,6 @@ const hasApprovedAmount = computed(() => {
 });
 
 const hasDelegatedToSelf = computed(() => {
-
   if (!fundStore.fundUserData.fundDelegateAddress) return false;
   if (!fundStore.activeAccountAddress) return false;
 
