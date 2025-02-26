@@ -141,17 +141,26 @@ export const commify = (value: string | number | bigint) => {
 
   const neg = match[1];
   const whole = BigInt(match[2] || 0).toLocaleString("en-us");
-  let frac = "";
+  let frac = match[4] || "";
 
-  if (match[4]) {
-    const fracDigits = match[4];
-    const asDecimal = parseFloat("0." + fracDigits);
+  // Convert fraction part into a number
+  const asDecimal = frac ? parseFloat(`0.${frac}`) : 0;
 
-    // Retain the first 3 significant digits
-    const significantDigits = Number(asDecimal.toPrecision(3));
+  // Numbers bigger than 1: Force exactly 2 decimal places
+  if (Number(match[2]) > 0 && asDecimal > 0) {
+    frac = asDecimal.toFixed(2).split(".")[1];
 
-    // Convert to string, remove "0." prefix
-    frac = significantDigits.toString().split(".")[1] || "";
+  } else if (asDecimal > 0) {
+    // Small numbers: Keep first 3 significant digits
+    if(Number(match[2]) === 0) {
+      frac = Number(asDecimal.toPrecision(3)).toString().split(".")[1] || "";
+    }
+    else {
+      frac = asDecimal.toFixed(2).split(".")[1];
+    }
+  } else {
+    // Remove fraction if it's zero
+    frac = "";
   }
 
   let commifiedValue = `${neg}${whole}`;
