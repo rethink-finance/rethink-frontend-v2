@@ -16,7 +16,6 @@ export const flattenAbiFunctionInputs = (
     if (!inputs) return;
 
     for (const input of inputs) {
-      console.log("input", JSON.stringify(input, null, 2));
       if (input.isTuple() && input.components) {
         // Concatenate parentName with input.name, allowing multiple
         // tuple levels of parent names to be saved. Name is including
@@ -47,6 +46,5 @@ export const flattenAbiFunctionInputs = (
   }
 
   processInputs(inputs);
-  console.warn("FLAT INPUTS", flatInputs);
   return flatInputs;
 }

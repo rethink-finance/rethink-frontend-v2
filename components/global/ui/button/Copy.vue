@@ -19,7 +19,7 @@
 import { useToastStore } from "~/store/toasts/toast.store";
 
 export default {
-  name: "CopyButton",
+  name: "ButtonCopy",
   props: {
     title: {
       type: String,

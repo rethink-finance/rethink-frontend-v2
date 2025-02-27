@@ -298,7 +298,6 @@ const rowClick = (_:any, item: any) => {
 .proposal {
   &__title {
     padding-block: 0.5rem;
-
   }
   &__title__text {
     max-width: 400px;
@@ -309,13 +308,11 @@ const rowClick = (_:any, item: any) => {
     text-overflow: ellipsis;
     word-wrap: break-word;
   }
-
   &__tags {
     display: flex;
     align-items: center;
     margin-top: 0.5rem;
   }
-
   &__tag {
     margin-right: 0.5rem;
   }

@@ -53,7 +53,7 @@
             :chain-id="chainId"
           />
         </div>
-        <UiDetailsButton
+        <UiButtonDetails
           v-if="field.isFieldByUser"
           small
           class="field_delete"
@@ -63,7 +63,7 @@
             icon="mdi-delete"
             color="error"
           />
-        </UiDetailsButton>
+        </UiButtonDetails>
       </div>
     </v-col>
   </div>
@@ -73,6 +73,7 @@
 import debounce from "lodash.debounce";
 import { fetchBaseTokenDetails } from "~/store/create-fund/actions/fetchFundInitCache.action";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
+import type { ChainId } from "~/store/web3/networksMap";
 import { baseTokenDecimalsField, baseTokenSymbolField } from "~/types/enums/fund_setting_proposal";
 import type { IField } from "~/types/enums/input_type";
 
@@ -83,7 +84,7 @@ const emit = defineEmits(["deleteRow"]);
 
 const props = defineProps({
   chainId: {
-    type: String,
+    type: String as PropType<ChainId>,
     default: "",
   },
   fields: {

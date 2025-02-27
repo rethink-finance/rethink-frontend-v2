@@ -65,6 +65,11 @@ $vuetify-border-width: 1px;
     &--density-default {
       height: 2.5rem;
     }
+    &.app_btn_small {
+      font-size: $text-xs;
+      padding: 0.2rem 0.5rem;
+      height: 2rem;
+    }
   }
 
   /* INPUTS */

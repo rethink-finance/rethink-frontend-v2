@@ -135,7 +135,7 @@
                 v-if="item.key === OnboardingStep.Chain && accountStore.isConnected"
                 class="d-flex justify-center mb-6"
               >
-                <UiSelectChainButton
+                <UiButtonSelectChain
                   v-model="selectedChainId"
                   label="Select OIV Chain"
                   label-center
@@ -1048,7 +1048,7 @@ onMounted(() => {
   &:deep(.v-avatar){
     border: 1px solid $color-text-irrelevant;
     background-color: transparent;
-    font-size: 16px;
+    font-size: $text-md;
     font-weight: 700;
   }
   &:deep(.v-stepper-item--selected){
@@ -1065,10 +1065,10 @@ onMounted(() => {
   }
   &:deep(.v-stepper-actions){
     order: 2;
-    padding: 20px;
+    padding: 1.25rem;
   }
   &:deep(.v-window){
-    padding: 20px;
+    padding: 1.25rem;
     order: 3;
   }
 }
@@ -1077,8 +1077,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-
+  gap: 1.25rem;
   margin-left: auto;
 }
 
@@ -1101,8 +1100,8 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  font-size: 16px;
+  gap: 1.25rem;
+  font-size: $text-md;
   color: $color-text-irrelevant;
   text-align: center;
 }

@@ -3,31 +3,33 @@
     <UiMainCard>
       <div class="info_container">
         <div class="info_container__buttons">
-          <UiLinkExternalButton
-            title="View OIV Permissions"
-            :href="navigateToGnosis"
-            :show-tooltip="false"
-          />
+          <div class="d-flex align-center">
+            <strong>Role #</strong>
+            <v-select
+              v-model="selectedRole"
+              :items="roles"
+              item-title="name"
+              density="compact"
+              variant="outlined"
+              hide-details
+              required
+              return-object
+            />
+          </div>
+
           <v-btn color="primary" @click="navigateToCreatePermissions">
             Create Permissions Proposal
           </v-btn>
         </div>
-        <p class="info_container__text">
-          Having trouble understanding how to read permissions?
-          <a
-            class="info_container__link"
-            href="https://docs.rethink.finance/rethink.finance"
-            target="_blank"
-          >Learn more here</a>.
-        </p>
       </div>
 
       <!-- Permissions loaded from zodiac roles modifier -->
       <!-- TODO here it flickers as we first have to fetch fundData and then roleModAddress, prevent flickering -->
       <FundPermissions
+        v-if="roles.length"
         class="mt-6"
         :chain-id="fund.chainId"
-        :roles="roles"
+        :disabled="isEditDisabled"
         :is-loading="isFetchingPermissions"
       />
     </UiMainCard>
@@ -38,80 +40,115 @@
 // types
 import type IFund from "~/types/fund";
 // components
-import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
+import { fetchRoles } from "~/services/zodiac-subgraph";
 import { useFundStore } from "~/store/fund/fund.store";
 import type { Role } from "~/types/zodiac-roles/role";
-import { useActionStateStore } from "~/store/actionState.store";
+import { useActionState, useActionStateStore } from "~/store/actionState.store";
+import { ChainId } from "~/store/web3/networksMap";
+import { useRoleStore } from "~/store/role/role.store";
+import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 
 const router = useRouter();
 const fundStore = useFundStore();
+const permissionsProposalStore = usePermissionsProposalStore();
 const actionStateStore = useActionStateStore();
+// Provide the store to child components
+const roleStore = useRoleStore();
+provide("roleStore", roleStore);
 
 const fund = useAttrs().fund as IFund;
 const { selectedFundSlug } = storeToRefs(useFundStore());
 
 const roles = ref<Role[]>([]);
-const navigateToGnosis = ref("");
+const selectedRole = ref<Role | undefined>(undefined)
+const isEditDisabled = ref(false);
+
+// This is Rethink.finance specific thing now, to hardcode select condition
+// with ID "1". We have to remove this and always select the first one.
+const roleNumberOne = computed<Role|undefined>(
+  () => roles.value.filter(role => role.name === "1")[0],
+);
 
 const updateGnosisLink = async () => {
   if (!fund?.address) {
     roles.value = [];
-    navigateToGnosis.value = "";
     return;
   }
 
   try {
     const roleModAddress = await fundStore.getRoleModAddress(fund.address);
-    navigateToGnosis.value = getGnosisPermissionsUrl(fund.chainShort, roleModAddress);
     await fetchPermissions(roleModAddress);
   } catch (error) {
     console.error(error);
-    navigateToGnosis.value = "";
   }
 };
 
 const isFetchingPermissions = computed(() =>
-  actionStateStore.isActionStateLoading("fetchFundPermissionsAction"),
+  actionStateStore.isActionStateLoading("fetchRolesAction"),
 );
+
+// TODO move this into roles store.
+function fetchRolesAction(chainId: ChainId, rolesModAddress: string): Promise<Role[]> {
+  return useActionState("fetchRolesAction", () =>
+    fetchRoles(chainId, rolesModAddress),
+  );
+}
+
+const fetchPermissions = async (rolesModAddress: string) => {
+  roles.value = await fetchRolesAction(fund.chainId, rolesModAddress);
+  console.log("Fetched Roles", toRaw(roles.value));
+}
+
+const navigateToCreatePermissions = async () => {
+  try {
+    permissionsProposalStore.rawTransactions = await roleStore.updateRole(fund.chainId);
+  } catch (e: any) {
+    console.error("Failed updating role", e);
+  }
+
+  router.push(
+    `/details/${selectedFundSlug.value}/governance/delegated-permissions`,
+  );
+};
+
+// Whenever role changes reset role store and populate it with this role data.
+// Watch for `roles` change and preselect a role.
+watch(() => roles.value.length, () => {
+  // Pre-select Role with ID: "1" as we use this one now everywhere.
+  // This is hardcoded now at many places and needs
+  // to be adjusted as any ID can be used.
+  if (roles.value.length) {
+    selectedRole.value = roleNumberOne.value || roles.value[0];
+  } else {
+    selectedRole.value = undefined;
+  }
+});
+watch(() => selectedRole.value, () => {
+  // Pre-select Role with ID: "1" as we use this one now everywhere.
+  // This is hardcoded now at many places and needs
+  // to be adjusted as any ID can be used.
+  console.log("selectedRole.value", selectedRole.value);
+  roleStore.initRoleState(
+    roleStore.getRoleId(selectedRole.value?.name, roles.value),
+    toRaw(selectedRole.value),
+  );
+
+  roleStore.activeTargetId = selectedRole.value?.targets?.[0].id;
+});
 
 watch(
   () => [fund.chainShort, fundStore.getRoleModAddress],
   () => {
     updateGnosisLink();
-
-    // TODO try using the zodiac-roles-sdk  fetchRolesMod (does it also work for roles v1?)
-    // import { fetchRolesMod } from "zodiac-roles-sdk"
-    // console.warn("USE ZODIAC SDK")
-    // const address = "0xBd1099dFD3c11b65FB4BB19A350da2f5B61Efb0d";
-    // const mod = {
-    //   chainId: 1,
-    //   chainPrefix: "eth",
-    //   address: address.toLowerCase() as `0x${string}`,
-    // }
-    // const data = await fetchRolesMod(mod as any)
-    // console.warn("FETCHED SDK ROLES", data);
-
   },
   { immediate: true },
 );
-
-const fetchPermissions = async (rolesModAddress: string) => {
-  roles.value = await fundStore.fetchFundPermissions(fund.chainId, rolesModAddress);
-  console.log("Roles", roles.value);
-}
-
-const navigateToCreatePermissions = () => {
-  router.push(
-    `/details/${selectedFundSlug.value}/governance/delegated-permissions`,
-  );
-};
 </script>
 
 <style scoped lang="scss">
 .info_container {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 1rem;
 
   &__text {
@@ -125,7 +162,8 @@ const navigateToCreatePermissions = () => {
   &__buttons {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    justify-content: space-between;
+    gap: 1rem;
 
     @include md {
       flex-direction: row;

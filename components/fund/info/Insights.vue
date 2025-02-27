@@ -42,9 +42,9 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': isLoadingFetchFundNAVUpdatesActionState}">
+        <div class="data_bar__title" :class="{'justify-center': isLoadingCalculateFundPerformanceMetricsActionState}">
           <v-progress-circular
-            v-if="isLoadingFetchFundNAVUpdatesActionState"
+            v-if="isLoadingCalculateFundPerformanceMetricsActionState"
             class="d-flex"
             size="18"
             width="2"
@@ -112,6 +112,10 @@ const actionStateStore = useActionStateStore();
 
 const isLoadingFetchFundNAVUpdatesActionState =
   computed(() => actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading));
+
+const isLoadingCalculateFundPerformanceMetricsActionState =
+  computed(() => actionStateStore.isActionState("calculateFundPerformanceMetricsAction", ActionState.Loading));
+
 
 const props = defineProps({
   fund: {

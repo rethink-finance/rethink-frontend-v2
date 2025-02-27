@@ -78,10 +78,9 @@
     <UiNotification>
       The deposit and redeem requests are settled within the planned Settlement
       Cycle of
-      <span class="text-primary">{{
-        fund?.plannedSettlementPeriod || "N/A"
-      }}</span>. You can learn more about how settlements work
+      <span class="text-primary">{{ parsedPlannedSettlement }}</span>. You can learn more about how settlements work
       <a
+        class="text-primary"
         href="https://docs.rethink.finance/rethink.finance"
         target="_blank"
       >here</a>.
@@ -96,6 +95,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import type IFund from "~/types/fund";
 
 import { createDelegateBySigMessage, encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
+import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -126,7 +126,7 @@ const isLoadingFetchUserFundDepositRedemptionRequestsAction = computed(() =>
   ),
 );
 
-defineProps({
+const props = defineProps({
   fund: {
     type: Object as PropType<IFund>,
     default: () => {},
@@ -156,6 +156,7 @@ const processRequest = () => {
 
 const loadingDeposit = ref(false);
 const loadingRedemption = ref(false);
+const parsedPlannedSettlement = ref("");
 
 const isAnythingLoading = computed(() => {
   return loadingDeposit.value || loadingRedemption.value;
@@ -451,6 +452,17 @@ const handleError = (error: any) => {
     console.error(error);
   }
 };
+
+
+onMounted(async () => {
+  await parsePlannedSettlement(props.fund?.chainId, props.fund?.plannedSettlementPeriod)
+    .then((result) => {
+      parsedPlannedSettlement.value = result;
+    })
+    .catch((error) => {
+      console.error("Error parsing planned settlement", error);
+    })
+});
 </script>
 
 <style lang="scss" scoped>

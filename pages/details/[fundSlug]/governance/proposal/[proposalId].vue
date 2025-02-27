@@ -500,9 +500,9 @@ const isLoadingProposal = computed(() => {
   margin-bottom: 1rem;
 
   :deep(.data_row__title) {
-    font-size: 16px;
+    font-size: $text-md;
     font-weight: 700;
-    line-height: 24px;
+    line-height: $text-lg;
   }
   // remove outer border
   :deep(.data_row__panel) {

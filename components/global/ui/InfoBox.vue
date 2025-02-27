@@ -19,15 +19,12 @@ const props = defineProps<{
 .info {
   display: flex;
   align-items: center;
-  gap: 8px;
-
+  gap: 0.5rem;
   width: 100%;
-  padding: 16px;
-
+  padding: 1rem;
   background-color: $color-gray-light-transparent;
   @include borderGray;
-
-  font-size: 14px;
+  font-size: $text-sm;
   font-weight: 400;
 
   &__icon {

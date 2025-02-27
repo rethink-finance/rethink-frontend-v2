@@ -11,18 +11,17 @@
       />
     </div>
     <template v-else>
-      <FundPermissionsMenuLeft
-        class="permissions__menu_left"
-        :selected-target="selectedTarget"
-        :role="selectedRole"
-        @update:selected-target="setSelectedTarget"
-      />
-
+      <div class="permissions__menu_left">
+        <FundPermissionsMenuLeft
+          :selected-target="activeTargetId"
+          :role="roleStore.role"
+          :disabled="disabled"
+        />
+      </div>
       <PermissionTarget
-        v-if="selectedTarget"
-        v-model:conditions="localConditions[selectedTarget.address]"
+        v-if="activeTargetId"
         class="permissions__content"
-        :target="selectedTarget"
+        :disabled="disabled"
         :chain-id="chainId"
       />
       <div v-else>
@@ -34,67 +33,28 @@
 
 <script setup lang="ts">
 import type { ChainId } from "~/store/web3/networksMap";
-import type { Role, Target, TargetConditions } from "~/types/zodiac-roles/role";
+import type { RoleStoreType } from "~/store/role/role.store";
 
-const props = defineProps({
+defineProps({
   chainId: {
     type: String as PropType<ChainId>,
     required: true,
-  },
-  roles: {
-    type: Array as () => Role[],
-    default: () => [],
   },
   isLoading: {
     type: Boolean,
     default: false,
   },
-});
-// Local reactive copy for target conditions (mapped by target address)
-const localConditions = ref<Record<string, TargetConditions>>({});
-
-const selectedRole = ref<Role | undefined>();
-const selectedTarget = ref<Target | undefined>();
-
-// This is Rethink.finance specific thing now, to hardcode select condition
-// with ID "1". We have to remove this and always select the first one.
-const roleNumberOne = computed<Role|undefined>(
-  () => props.roles.filter(role => role.name === "1")[0],
-);
-
-// Set selected target & initialize its local conditions.
-const setSelectedTarget = (newTarget: Target) => {
-  console.log("[0] setSelectedTarget", toRaw(newTarget));
-  selectedTarget.value = newTarget;
-  if (!localConditions.value[newTarget.address]) {
-    localConditions.value[newTarget.address] = { ...newTarget.conditions };
-  }
-};
-
-// Watch for `roles` change and preselect a role & target
-watch(() => props.roles.length, () => {
-  // Pre-select Role with ID: "1" as we use this one now everywhere.
-  // This is hardcoded now at many places and needs
-  // to be adjusted as any ID can be used.
-  if (props.roles.length) {
-    selectedRole.value = roleNumberOne.value || props.roles[0];
-    setSelectedTarget(selectedRole.value?.targets[0]);
-  } else {
-    selectedRole.value = undefined;
-    selectedTarget.value = undefined;
-  }
-});
-
-// Watch for target changes and update `localConditions` accordingly
-watch(
-  selectedTarget,
-  (newTarget) => {
-    if (newTarget && !localConditions.value[newTarget.address]) {
-      localConditions.value[newTarget.address] = { ...newTarget.conditions };
-    }
+  disabled: {
+    type: Boolean,
+    default: false,
   },
-  { deep: true, immediate: true },
-);
+});
+// Inject the Role Store
+const roleStore = inject<RoleStoreType>("roleStore");
+if (!roleStore) {
+  throw new Error("roleStore is not provided!");
+}
+const { activeTargetId } = storeToRefs(roleStore);
 </script>
 
 <style lang="scss" scoped>
@@ -106,7 +66,7 @@ watch(
     display: flex;
     flex-direction: column;
     max-width: 30%;
-    min-width: 12rem;
+    min-width: 15rem;
     gap: 1.5rem;
     margin-right: 1rem;
     border: 1px solid $color-border-dark;
@@ -133,17 +93,23 @@ watch(
     border: 1px solid $color-border-dark;
     padding: 0.5rem;
     background-color: $color-hover;
-
-    &--selected {
-      background-color: $color-moonlight-light;
-      font-weight: bold;
-      /* Disable hover effect for active items */
-      pointer-events: none;
-    }
+    justify-content: space-between;
 
     &:hover {
       background-color: $color-moonlight-dark;
       cursor: pointer;
+    }
+    &--selected {
+      background-color: $color-moonlight-light;
+      font-weight: bold;
+      &:hover {
+        background-color: $color-moonlight-light;
+        cursor: auto;
+      }
+    }
+    &--deleted {
+      color: $color-disabled;
+      //color: $color-error;
     }
   }
   &__function {
@@ -158,12 +124,6 @@ watch(
   &__function_params {
     color: $color-steel-blue;
     margin-left: 0.3rem;
-  }
-  &__json {
-    color: #dcdcaa;
-    font-size: 0.85rem;
-    white-space: pre-wrap;
-    background-color: $color-badge-navy;
   }
 }
 </style>

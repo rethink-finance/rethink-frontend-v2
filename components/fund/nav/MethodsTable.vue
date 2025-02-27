@@ -130,7 +130,7 @@
     </template>
 
     <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
-      <UiDetailsButton
+      <UiButtonDetails
         v-if="item.detailsJson"
         :text="isBaseTokenBalanceMethod(item) ? 'Raw' : 'Details'"
         :active="isExpanded(internalItem)"
@@ -153,7 +153,7 @@
 
     <template #[`item.delete`]="{ item }">
       <!-- Rethink Position such as fund, safe, fees cannot be deleted -->
-      <UiDetailsButton
+      <UiButtonDetails
         v-if="!item.isRethinkPosition"
         small
         @click.stop="deleteMethod(item)"
@@ -183,7 +183,7 @@
             />
           </template>
         </v-tooltip>
-      </UiDetailsButton>
+      </UiButtonDetails>
     </template>
 
     <template #expanded-row="{ columns, item }">
@@ -242,7 +242,7 @@
                   <v-label class="mb-2">
                     Position Type
                   </v-label>
-                  <UiButtonsSwitch
+                  <UiButtonSwitchItems
                     v-model="navEntry.positionType"
                     :items="parsedPositionTypeItems"
                     @update:model-value="navEntry.positionType = $event"
@@ -252,7 +252,7 @@
                   <v-label class="mb-2">
                     Valuation Type
                   </v-label>
-                  <UiButtonsSwitch
+                  <UiButtonSwitchItems
                     v-model="navEntry.valuationType"
                     :items="parsedValuationTypeItems"
                     @update:model-value="navEntry.valuationType = $event"
@@ -309,13 +309,13 @@
                               </template>
                             </UiTextBadge>
 
-                            <UiDetailsButton
+                            <UiButtonDetails
                               v-if="isMethodEditable(item)"
                               small
                               @click.stop="deleteEditMethod(index)"
                             >
                               <v-icon icon="mdi-delete" color="error" />
-                            </UiDetailsButton>
+                            </UiButtonDetails>
                           </div>
                         </v-expansion-panel-title>
                         <v-expansion-panel-text>

@@ -153,15 +153,17 @@ const submitProposal = async () => {
   for (const i in transactions) {
     const trx = transactions[i];
     console.log("tx:", i, trx);
+
+    /*
     const filteredTxData = encodeFunctionCall(
       multisendAbiJSON,
       [trx.rawTxData],
-    );
+    );*/
 
     const formatSafeTxInput = [
       trx.addressOfContractInteraction, // MultiSendCallOnly
       0, // value
-      filteredTxData, // data
+      trx.rawTxData, // data
       parseInt(trx.operation), // operation
       parseInt(trx.gasToSendWithTransaction), // safeTxGas
       0, // baseGas

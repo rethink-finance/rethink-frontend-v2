@@ -47,7 +47,7 @@
 
         <ClientOnly>
           <div class="d-flex">
-            <UiSelectChainButton
+            <UiButtonSelectChain
               v-if="accountStore.isConnected"
               v-model="selectedChainId"
               :loading="accountStore.isSwitchingNetworks"

@@ -91,10 +91,10 @@ const changeSelectedChainId = (chainId: ChainId) => {
 
 <style scoped lang="scss">
 .label {
-  font-size: 16px;
+  font-size: $text-md;
   font-weight: 500;
   color: $color-text-irrelevant;
-  margin-bottom: 5px;
+  margin-bottom: 0.25rem;
 
   &--center {
     display: flex;
@@ -116,17 +116,14 @@ const changeSelectedChainId = (chainId: ChainId) => {
   gap: .5rem;
   padding: .5rem;
   cursor: pointer;
-
   transition: background-color 0.3s ease;
 
   &:hover {
     background-color: $color-hover;
   }
-
   &--active {
     background-color: $color-border-dark;
   }
-
   &__icon{
     width: 1.5rem;
     height: 1.5rem;
