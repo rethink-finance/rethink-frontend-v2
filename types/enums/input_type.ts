@@ -11,11 +11,11 @@ export enum InputType {
 }
 
 export enum PeriodUnits {
-  Seconds = "seconds",
-  Minutes = "minutes",
-  Hours = "hours",
-  Days = "days",
-  Weeks = "weeks",
+  Seconds = "second",
+  Minutes = "minute",
+  Hours = "hour",
+  Days = "day",
+  Weeks = "week",
 }
 
 type TimeInSecondsMap = Record<PeriodUnits, number>;
