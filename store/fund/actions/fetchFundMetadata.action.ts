@@ -5,20 +5,20 @@ import type IFundSettings from "~/types/fund_settings";
 import type INAVUpdate from "~/types/nav_update";
 
 import defaultAvatar from "@/assets/images/default_avatar.webp";
-import { ClockMode } from "~/types/enums/clock_mode";
-import type IToken from "~/types/token";
 import { ERC20 } from "assets/contracts/ERC20";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import { parseFundSettings } from "~/composables/fund/parseFundSettings";
-import { parseClockMode } from "~/composables/fund/parseClockMode";
-import { type ChainId, networksMap } from "~/store/web3/networksMap";
 import { formatQuorumPercentage } from "~/composables/formatters";
+import { parseClockMode } from "~/composables/fund/parseClockMode";
+import { parseFundSettings } from "~/composables/fund/parseFundSettings";
+import { type ChainId, networksMap } from "~/store/web3/networksMap";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import type IToken from "~/types/token";
 
 export const fetchFundMetaDataAction = async (
   fundChainId: ChainId,
   fundAddress: string,
 ): Promise<IFund> => {
   const web3Store = useWeb3Store();
+  const web3Instance = web3Store.getWeb3Instance(fundChainId);
   const fundStore = useFundStore();
   const rethinkReaderContract =
     web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
@@ -100,8 +100,10 @@ export const fetchFundMetaDataAction = async (
 
     const quorumVotes: bigint = ((((fundGovernanceTokenSupplyFixed as bigint) *
       quorumNumerator) as bigint) / quorumDenominator) as bigint;
-    const votingUnit =
-      parsedClockMode.mode === ClockMode.BlockNumber ? "block" : "second";
+
+    const { initializeBlockTimeContext } = useBlockTime();
+    const context = await initializeBlockTimeContext(web3Instance);
+    const averageBlockTime = context?.averageBlockTime || 0;
 
     const fundNetwork = networksMap[fundChainId];
     // console.log("fundMetadata.updateTimes");
@@ -157,8 +159,8 @@ export const fetchFundMetaDataAction = async (
       minLiquidAssetShare: "",
 
       // Governance
-      votingDelay: pluralizeWord(votingUnit, votingDelay),
-      votingPeriod: pluralizeWord(votingUnit, votingPeriod),
+      votingDelay: getVoteTimeValue(votingDelay, averageBlockTime, parsedClockMode.mode),
+      votingPeriod: getVoteTimeValue(votingPeriod, averageBlockTime, parsedClockMode.mode),
       proposalThreshold:
         !proposalThreshold && proposalThreshold !== 0n
           ? "N/A"
@@ -171,7 +173,7 @@ export const fetchFundMetaDataAction = async (
       quorumNumerator,
       quorumDenominator,
       quorumPercentage: formatQuorumPercentage(quorumNumerator, quorumDenominator),
-      lateQuorum: pluralizeWord(votingUnit, lateQuorumVoteExtension),
+      lateQuorum: getVoteTimeValue(lateQuorumVoteExtension, averageBlockTime, parsedClockMode.mode),
 
       // Fees
       depositFee: parsedFundSettings.depositFee.toString(),

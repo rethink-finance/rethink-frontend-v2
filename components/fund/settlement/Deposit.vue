@@ -63,14 +63,26 @@
       <div
         class="buttons_group"
       >
-        <v-btn
-          class="button-deposit button"
-          variant="outlined"
-          :disabled="isDepositButtonDisabled"
-          @click="handleDepositClick"
+        <v-tooltip
+          :disabled="fundStore.isUserWalletWhitelisted"
+          location="bottom"
         >
-          {{ hasRequestedDeposit ? 'Continue Deposit' : 'Deposit' }}
-        </v-btn>
+          <template #default>
+            Your wallet address is not whitelisted to allow deposits into this OIV.
+          </template>
+          <template #activator="{ props }">
+            <span v-bind="props">
+              <v-btn
+                class="button-deposit button"
+                variant="outlined"
+                :disabled="isDepositButtonDisabled"
+                @click="handleDepositClick"
+              >
+                {{ hasRequestedDeposit ? 'Continue Deposit' : 'Deposit' }}
+              </v-btn>
+            </span>
+          </template>
+        </v-tooltip>
       </div>
 
       <div

@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import numeral from "numeral";
+import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 
 /**
  * Formats a JavaScript Date object as "24 Jul 23" (day of the month, abbreviated month name, and last two digits of the year).
@@ -261,3 +262,48 @@ export const toCamelCase = (str: string) => {
     )
     .join("");
 }
+
+
+/**
+ *
+ * @param totalSeconds - total seconds to convert to human readable duration
+ * @returns human readable duration
+ */
+export const formatDuration = (totalSeconds: number): string => {
+  const orderedUnits: PeriodUnits[] = [
+    // PeriodUnits.Weeks,
+    PeriodUnits.Days,
+    PeriodUnits.Hours,
+    PeriodUnits.Minutes,
+    PeriodUnits.Seconds,
+  ];
+
+  let remainingSeconds = totalSeconds;
+  let result: { unit: PeriodUnits; value: number }[] = [];
+
+  for (const unit of orderedUnits) {
+    const secondsPerUnit = TimeInSeconds[unit];
+    const value = Math.floor(remainingSeconds / secondsPerUnit);
+
+    if (value > 0) {
+      result.push({ unit, value });
+      remainingSeconds %= secondsPerUnit;
+    }
+  }
+
+  // Keep only the first two units
+  if (result.length > 2) {
+    // Check the third unit's value and round up the second if it's large enough
+    const thirdUnit = result[2];
+
+    if (thirdUnit.value >= (TimeInSeconds[thirdUnit.unit] / 2)) {
+      result[1].value += 1;
+    }
+
+    result = result.slice(0, 2);
+  }
+
+  return result
+    .map(({ unit, value }) => pluralizeWord(unit, value))
+    .join(", ") || "0 seconds";
+};

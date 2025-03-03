@@ -1,4 +1,5 @@
 import { ethers, FixedNumber } from "ethers";
+import { ClockMode } from "~/types/enums/clock_mode";
 import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 import type { PositionType } from "~/types/enums/position_type";
 import { PositionTypesMap } from "~/types/enums/position_type";
@@ -264,12 +265,12 @@ export const convertBlocksToTime = (blockNumber: number, averageBlockTimeInSecon
   const { bestValue, bestUnit } = determineTimeValueAndTimeUnit(totalSeconds);
 
   if (bestValue && bestUnit) {
-    return `${bestValue} ${bestUnit}`;
+    return pluralizeWord(bestUnit, bestValue);
   }
 }
 
-
-const determineTimeValueAndTimeUnit = (totalSeconds: number) => {
+// used in create OIV process to determine the best time unit
+export const determineTimeValueAndTimeUnit = (totalSeconds: number) => {
   let bestUnit: PeriodUnits = PeriodUnits.Seconds;
   let bestValue = totalSeconds;
 
@@ -305,3 +306,16 @@ const determineTimeValueAndTimeUnit = (totalSeconds: number) => {
     bestUnit,
   };
 };
+
+export const getVoteTimeValue = (value: number | bigint, averageBlockTimeInSeconds: number, mode: string) => {
+  if(value === undefined || value === null || !mode || !averageBlockTimeInSeconds) {
+    return "N/A";
+  }
+
+  if (mode === ClockMode.BlockNumber) {
+    const totalSeconds = Number(value) * averageBlockTimeInSeconds;
+    return formatDuration(totalSeconds);
+  }
+
+  return formatDuration(Number(value));
+}
