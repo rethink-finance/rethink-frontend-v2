@@ -7,6 +7,10 @@
     <!--    </div>-->
 
     <!-- show just NAV value -->
+
+    <!-- Description -->
+    <fund-settlement-soonami-description />
+
     <UiDataBar class="data_bar">
       <div class="data_bar__item">
         <div class="data_bar__title" :class="{'justify-center': isLoadingFetchFundNAVUpdatesActionState}">
@@ -58,4 +62,11 @@ const isLoadingFetchFundNAVUpdatesActionState =
 const fund = useAttrs().fund as IFund;
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+  :deep(.data_bar__body){
+    padding: 1rem;
+    background: $color-card-background;
+    grid-template-columns: 1fr;
+    grid-template-areas: unset;
+  }
+</style>
