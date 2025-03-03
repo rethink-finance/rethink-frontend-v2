@@ -1,0 +1,1 @@
+import{_ as o,a0 as a,l as s,t as c,m as e,a1 as r,n as _,a2 as l}from"./BdKPAYFI.js";const p={};function i(t,m){const n=a("Icon");return c(),s(l,{variant:"outlined",size:"small",class:"app_btn_small"},{prepend:e(()=>[_(n,{icon:"octicon:plus-16",height:"1rem",width:"1rem"})]),default:e(()=>[r(t.$slots,"default")]),_:3})}const f=o(p,[["render",i]]);export{f as default};

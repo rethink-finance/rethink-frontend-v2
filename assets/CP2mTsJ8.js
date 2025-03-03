@@ -1,0 +1,1 @@
+import{_ as t,A as n,a1 as o,t as s}from"./BdKPAYFI.js";const _={},a={class:"main_header"};function c(e,r){return s(),n("div",a,[o(e.$slots,"default")])}const l=t(_,[["render",c]]);export{l as default};
