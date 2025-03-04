@@ -81,6 +81,25 @@ $vuetify-border-width: 1px;
     line-height: 1;
     padding: 0.75rem;
   }
+
+  textarea{
+    min-height: $input-height;
+    font-size: $text-md;
+    line-height: 1;
+    padding-inline: 0.75rem;
+  }
+
+  .v-select .v-field__input {
+    padding-inline-start: 0.75rem;
+    padding-inline-end: 0.75rem;
+    min-height: $input-height;
+    height: $input-height;
+    font-size: $text-md;
+  }
+
+  .v-select .v-select__selection-text{
+    overflow: unset;
+  }
   .v-input {
     font-size: $text-md;
     line-height: 1;
