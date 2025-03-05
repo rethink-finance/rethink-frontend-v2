@@ -141,18 +141,38 @@ export const commify = (value: string | number | bigint) => {
   }
 
   const neg = match[1];
-  const whole = BigInt(match[2] || 0).toLocaleString("en-us");
-  let frac = "";
+  let whole = BigInt(match[2] || 0).toLocaleString("en-us");
+  let frac = match[4] || "";
 
-  if (match[4]) {
-    const fracDigits = match[4];
-    const asDecimal = parseFloat("0." + fracDigits);
+  // Convert fraction part into a number
+  const asDecimal = frac ? parseFloat(`0.${frac}`) : 0;
 
-    // Retain the first 3 significant digits
-    const significantDigits = Number(asDecimal.toPrecision(3));
 
-    // Convert to string, remove "0." prefix
-    frac = significantDigits.toString().split(".")[1] || "";
+  // if decimales are bigger than 0.9999, we round up the whole number
+  if (asDecimal >= 0.9999) {
+    whole = (BigInt(whole) + 1n).toLocaleString("en-us");
+    frac = "00"; // Reset fraction to "00"
+  }
+  // if decimals are bigger than .995, we truncate the fraction, because we don't want to round up the whole number based on three decimal places
+  else if (asDecimal > 0.995) {
+    frac = frac.slice(0, 2); // Truncate instead of rounding
+  }
+  // Numbers bigger than 1: Force exactly 2 decimal places
+  else if (Number(match[2]) > 0 && asDecimal > 0) {
+    frac = asDecimal.toFixed(2).split(".")[1];
+  }
+  else if (asDecimal > 0) {
+    // Small numbers: Keep first 3 significant digits
+    if(Number(match[2]) === 0) {
+      frac = Number(asDecimal.toPrecision(3)).toString().split(".")[1] || "";
+    }
+    else {
+      frac = asDecimal.toFixed(2).split(".")[1];
+    }
+  }
+  else {
+    // Remove fraction if it's zero
+    frac = "";
   }
 
   let commifiedValue = `${neg}${whole}`;
