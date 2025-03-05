@@ -111,6 +111,9 @@ export default {
     },
     userCurrentValueFormatted() {
       if (!this.fundBaseToken) return "N/A";
+      // const value = "319999999648000000352";
+      // return this.fundStore.getFormattedBaseTokenValue(value);
+
       return this.fundStore.getFormattedBaseTokenValue(this.fundStore.userCurrentValue);
     },
     isLoadingUserBalances() {

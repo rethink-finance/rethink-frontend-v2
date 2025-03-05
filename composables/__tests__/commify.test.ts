@@ -105,4 +105,28 @@ describe("commify", () => {
     expect(commify(123456789.9876543)).toBe("123,456,789.99");
     expect(commify(-9876543.123456789)).toBe("-9,876,543.12");
   });
+
+  // Test edge cases for large decimals
+  it("should handle large numbers correctly", () => {
+    expect(commify("319.99")).toBe("319.99");
+    expect(commify("319.994")).toBe("319.99");
+    expect(commify("319.995")).toBe("319.99");
+    expect(commify("319.996")).toBe("319.99");
+    expect(commify("319.986")).toBe("319.99");
+    expect(commify("319.9999")).toBe("320.00");
+    expect(commify("319.99999")).toBe("320.00");
+    expect(commify("319.999999")).toBe("320.00");
+    expect(commify("319.9999996")).toBe("320.00");
+    expect(commify("319.99999964")).toBe("320.00");
+    expect(commify("319.999999648")).toBe("320.00");
+    expect(commify("319.9999996480")).toBe("320.00");
+    expect(commify("319.9999996480")).toBe("320.00");
+    expect(commify("319.99999964800")).toBe("320.00");
+    expect(commify("319.999999648000")).toBe("320.00");
+    expect(commify("319.9999996480000")).toBe("320.00");
+    expect(commify("319.99999964800000")).toBe("320.00");
+    expect(commify("319.999999648000000")).toBe("320.00");
+    expect(commify("319.9999996480000003")).toBe("320.00");
+    expect(commify("319.99999964800000035")).toBe("320.00");
+  });
 });
