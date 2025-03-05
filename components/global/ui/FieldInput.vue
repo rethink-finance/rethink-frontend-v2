@@ -30,7 +30,7 @@
         :items="field.choices"
         item-title="title"
         item-value="value"
-        class="field-select"
+        density="compact"
         :disabled="isDisabled"
         :error-messages="errorMessages"
       />
@@ -141,13 +141,4 @@ const errorMessages = computed(() => {
     width: 100%;
   }
 }
-.field-select {
-  line-height: normal;
-
-  :deep(.v-field__input) {
-    padding: 10px;
-    min-height: 40px;
-  }
-}
-
 </style>

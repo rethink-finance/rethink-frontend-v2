@@ -181,7 +181,7 @@ const deleteRow = (field: IField) => {
   }
 }
 .field_delete{
-  margin-top: 30px;
+  margin-top: 2rem;
 }
 .base_token_data {
   display: flex;

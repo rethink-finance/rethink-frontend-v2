@@ -30,7 +30,7 @@
               <div
                 :key="index"
                 class="step"
-                :class="{ 'is-disabled': step.isDisabled }"
+                :class="{ 'is_disabled': step.isDisabled }"
               >
                 <span class="label">
                   {{ step.label }}
@@ -54,21 +54,36 @@
           </template>
         </v-tooltip>
       </div>
-
     </div>
 
     <div class="divider" />
 
 
     <div v-if="accountStore.isConnected" style="width: 100%">
-      <v-btn
-        class="button-deposit"
-        variant="outlined"
-        :disabled="isDepositButtonDisabled"
-        @click="handleDepositClick"
+      <div
+        class="buttons_group"
       >
-        {{ hasRequestedDeposit ? 'Continue Deposit' : 'Deposit' }}
-      </v-btn>
+        <v-tooltip
+          :disabled="fundStore.isUserWalletWhitelisted"
+          location="bottom"
+        >
+          <template #default>
+            Your wallet address is not whitelisted to allow deposits into this OIV.
+          </template>
+          <template #activator="{ props }">
+            <span v-bind="props">
+              <v-btn
+                class="button_deposit button"
+                variant="outlined"
+                :disabled="isDepositButtonDisabled"
+                @click="handleDepositClick"
+              >
+                {{ hasRequestedDeposit ? 'Continue Deposit' : 'Deposit' }}
+              </v-btn>
+            </span>
+          </template>
+        </v-tooltip>
+      </div>
 
       <div
         v-if="visibleErrorMessages && tokenValueChanged"
@@ -99,7 +114,7 @@
                   <div
                     :key="index"
                     class="step"
-                    :class="{ 'is-disabled': step.isDisabled }"
+                    :class="{ 'is_disabled': step.isDisabled }"
                   >
                     <span class="label">
                       {{ step.label }}
@@ -233,7 +248,7 @@
     </div>
     <template v-else>
       <v-btn
-        class="bg-primary text-secondary"
+        class="bg-primary text-secondary button_connect_wallet"
         @click="accountStore.connectWallet()"
       >
         Connect Wallet
@@ -604,7 +619,10 @@ const hasApprovedAmount = computed(() => {
 });
 
 const hasDelegatedToSelf = computed(() => {
-  return fundStore.fundUserData.fundDelegateAddress.toLowerCase() === fundStore.activeAccountAddress
+  if (!fundStore.fundUserData.fundDelegateAddress) return false;
+  if (!fundStore.activeAccountAddress) return false;
+
+  return fundStore.fundUserData.fundDelegateAddress.toLowerCase() === fundStore.activeAccountAddress.toLowerCase();
 });
 
 const hasProcessedDeposit = computed(() => {
@@ -773,28 +791,32 @@ const delegateToMyself = async () => {
   }
 }
 
-.divider{
+.divider {
   margin: 1rem auto;
   height: 0.1px;
   width: 100%;
   border: 1px solid rgba(246, 249, 255, 0.08)
 }
 
-.title{
+.title {
   margin: 0 0 0.5rem;
 }
-.step{
+.step {
   display: flex;
   align-items: center;
   margin: 0.25rem 0;
   width: fit-content;
+
+  &.is_disabled {
+    opacity: 0.5;
+  }
 }
-.button-deposit{
+.button_deposit {
   display: block;
   margin: 0 auto;
 }
-
-.is-disabled{
-  opacity: 0.5;
+.button_connect_wallet{
+  display: block;
+  margin: 0 auto;
 }
 </style>
