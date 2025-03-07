@@ -14,6 +14,7 @@ import { cleanComplexWeb3Data } from "~/composables/utils";
 import { useFundStore } from "~/store/fund/fund.store";
 
 import { decodeProposalCallData } from "~/composables/proposal/decodeProposalCallData";
+import { ChainId } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IDelegate from "~/types/delegate";
 import { ClockMode } from "~/types/enums/clock_mode";
@@ -23,7 +24,6 @@ import {
 } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
-import { ChainId } from "~/store/web3/networksMap";
 
 interface IState {
   /* Example fund proposals.
@@ -62,8 +62,8 @@ interface IState {
 export const useGovernanceProposalsStore = defineStore({
   id: "governanceProposalStore",
   state: (): IState => ({
-    fundProposals: getLocalStorageItem("fundProposals", {}) ?? {},
-    fundDelegates: getLocalStorageItem("fundDelegates", {}) ?? {},
+    fundProposals: {} as Record<string, Record<string, Record<string, IGovernanceProposal>>>,
+    fundDelegates: {} as Record<string, Record<string, Record<string, IDelegate>>>,
     fundProposalsBlockFetchedRanges:
       getLocalStorageItem("fundProposalsBlockFetchedRanges", {}) ?? {},
     connectedAccountProposalsHasVoted: {},
@@ -86,6 +86,14 @@ export const useGovernanceProposalsStore = defineStore({
     },
   },
   actions: {
+    async loadFundProposals() {
+      const storedProposals = await getLocalForageItem("fundProposals", {});
+      this.fundProposals = storedProposals;
+    },
+    async loadFundDelegates() {
+      const storedDelegates = await getLocalForageItem("fundDelegates", {});
+      this.fundDelegates = storedDelegates;
+    },
     resetProposals(chainId: ChainId, fundAddress?: string): void {
       if (!fundAddress) return;
 
@@ -103,7 +111,7 @@ export const useGovernanceProposalsStore = defineStore({
         this.fundProposalsBlockFetchedRanges[chainId] = {};
       }
       this.fundProposalsBlockFetchedRanges[chainId][fundAddress] = [];
-      setLocalStorageItem("fundProposals", this.fundProposals);
+      setLocalForageItem("fundProposals", this.fundProposals);
       setLocalStorageItem(
         "fundProposalsBlockFetchedRanges",
         this.fundProposalsBlockFetchedRanges,
@@ -118,7 +126,7 @@ export const useGovernanceProposalsStore = defineStore({
       this.fundProposals[chainId][fundAddress] ??= {};
       this.fundProposals[chainId][fundAddress][proposal.proposalId] =
         cleanComplexWeb3Data(proposal);
-      setLocalStorageItem("fundProposals", this.fundProposals);
+      setLocalForageItem("fundProposals", this.fundProposals);
     },
     storeProposals(
       chainId: ChainId,
@@ -143,7 +151,7 @@ export const useGovernanceProposalsStore = defineStore({
           cleanComplexWeb3Data(proposal);
       });
 
-      setLocalStorageItem("fundProposals", this.fundProposals);
+      setLocalForageItem("fundProposals", this.fundProposals);
     },
     storeDelegates(
       chainId: ChainId,
@@ -168,7 +176,7 @@ export const useGovernanceProposalsStore = defineStore({
           cleanComplexWeb3Data(delegate);
       });
 
-      setLocalStorageItem("fundDelegates", this.fundDelegates);
+      setLocalForageItem("fundDelegates", this.fundDelegates);
     },
     getProposals(chainId: ChainId, fundAddress?: string): IGovernanceProposal[] {
       if (!fundAddress) return [];
@@ -793,3 +801,10 @@ const proposalCreatedEventInputs =
         event.name === "ProposalCreated" && event.type === "event",
     ) as any
   )?.inputs ?? [];
+
+// Fetch the proposals and delegates from the localForage when the app is ready.
+onNuxtReady(() => {
+  const governanceProposalsStore = useGovernanceProposalsStore();
+  governanceProposalsStore.loadFundProposals();
+  governanceProposalsStore.loadFundDelegates();
+});

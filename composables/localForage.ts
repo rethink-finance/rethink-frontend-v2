@@ -2,7 +2,8 @@ import localforage from "localforage";
 
 export const setLocalForageItem = async (key: string, data: any) => {
   try {
-    await localforage.setItem(key, data);
+    const rawData = JSON.parse(JSON.stringify(toRaw(data), stringifyBigInt), parseBigInt);
+    await localforage.setItem(key, rawData);
     console.log(`Saved data to ${key}`);
   } catch (error) {
     console.error(`Error saving data to ${key}:`, error);

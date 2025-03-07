@@ -7,9 +7,9 @@ import localforage from "localforage";
 
 export default defineNuxtPlugin(() => {
   localforage.config({
-    name: "nav",
-    storeName: "navUpdates",
-    description: "Stores NAV update entries",
+    name: "app",
+    storeName: "appData",
+    description: "Stores app data",
   });
 
   // set driver to indexedDB
