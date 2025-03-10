@@ -3,6 +3,8 @@
     v-model="localValue"
     :placeholder="getPlaceholderForType"
     :disabled="disabled"
+    :rules="rules"
+    :error-messages="errorMessages"
     variant="outlined"
     density="compact"
     hide-details="auto"
@@ -10,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-import { ethers, type ParamType } from "ethers";
+import { ethers } from "ethers";
 import {
   formatParamValue,
   getNativeType,
@@ -36,15 +38,22 @@ const props = defineProps({
 
 const localValue = ref("");
 const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+const rules = [
+  formRules.required,
+];
+const errorMessages = ref<string[]>([]);
 
 const tryAbiEncode = (value: string) => {
+  errorMessages.value = [];
   if (!props.param) return value
 
   try {
     return abiCoder.encode([props.param], [formatParamValue(props.param, value)])
   } catch (err: any) {
     console.error("failed abi encode", props.param, "value", value, "err", err);
+    console.error(err);
     // TODO show input error in the form to let user know it fails!
+    errorMessages.value = [err?.message || ""]
     return null
   }
 }
