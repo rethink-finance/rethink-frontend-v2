@@ -20,13 +20,18 @@ useHead(() => {
   return {
     titleTemplate(titleChunk) {
       const title = titleChunk
-      const siteTitle = "Rethnik Finance"
+      const titlePrefix = "Rethnik Finance"
 
-      let output = siteTitle
+      const siteTitle = "Rethink Finance | Run Funds On-Chain"
+
+      let output = titlePrefix
 
       switch (true) {
         case siteTitle === title:
           output = siteTitle
+          break
+        case titlePrefix === title:
+          output = titlePrefix
           break
 
         case Boolean(title):
