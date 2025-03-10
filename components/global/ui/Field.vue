@@ -106,10 +106,10 @@
 </template>
 
 <script setup lang="ts">
-import FieldInput from "./FieldInput.vue";
-import InfoBox from "./InfoBox.vue";
 import type { ChainId } from "~/store/web3/networksMap";
 import { InputType } from "~/types/enums/input_type";
+import FieldInput from "./FieldInput.vue";
+import InfoBox from "./InfoBox.vue";
 
 const emit = defineEmits(["update:modelValue", "update:isCustomValueToggleOn", "update:defaultValue"]);
 
@@ -215,6 +215,13 @@ const classes = computed(() => {
 
     &.label_disabled {
       color: $color-disabled;
+
+      // make required label color same as disabled label
+      &.label_required {
+        &::after {
+            color: $color-disabled;
+        }
+      }
     }
   }
   &__uneditable {
