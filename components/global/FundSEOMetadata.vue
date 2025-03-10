@@ -1,11 +1,10 @@
 <template>
-  <div class="seo">
-
-    <h1 v-if="oivName" class="oivName">
-      {{ oivName }}
+  <div class="fund_seo_metadata">
+    <h1 v-if="fundName">
+      {{ fundName }}
     </h1>
 
-    <div v-if="description" class="description">
+    <div v-if="description">
       {{ description }}
     </div>
   </div>
@@ -15,7 +14,7 @@
 // Props
 const props = defineProps(
   {
-    oivName: {
+    fundName: {
       type: String,
       default: "",
     },
@@ -36,7 +35,7 @@ const props = defineProps(
 
 // Token Symbol - OIV Name
 const parsedTitle = computed(() => {
-  return props.symbol ? `${props.symbol} - ${props.oivName}` : props.oivName
+  return props.symbol ? `${props.symbol} - ${props.fundName}` : props.fundName
 })
 
 useSeoMeta({
@@ -49,7 +48,7 @@ useSeoMeta({
 </script>
 
 <style scoped>
-.seo {
+.fund_seo_metadata {
     display: none;
 }
 </style>
