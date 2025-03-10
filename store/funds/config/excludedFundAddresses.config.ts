@@ -48,6 +48,7 @@ const rawExcludedFundAddresses = {
   "0x1": [
     { address: "0x7ed95418063d5b61bDE7b40D65F93739c0CFdcf4", alwaysExclude: false },
     { address: "0x51cf0Bc0f5312d824a55B83B2c032Fb8c96c249a", alwaysExclude: false },
+    { address: "0xB6aB76d451B98a992FB84A93602527CC30cd3b22", alwaysExclude: false }, // QCLE
   ],
   // Base
   "0x2105": [
