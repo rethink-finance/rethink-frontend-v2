@@ -6,8 +6,8 @@
     <v-skeleton-loader type="card" />
   </div>
   <div v-else-if="fund?.address" class="w-100">
-    <seo
-      :oiv-name="fund?.title"
+    <FundSEOMetadata
+      :fund-name="fund?.title"
       :symbol="fund?.fundToken?.symbol"
       :description="fund?.description"
       :image-url="fund?.photoUrl"
