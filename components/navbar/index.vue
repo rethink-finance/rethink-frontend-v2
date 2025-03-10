@@ -16,8 +16,8 @@
         no-gutters
         flat
       >
-        <nuxt-link :to="'/'" class="d-flex">
-          <Logo />
+        <nuxt-link href="https://soonami.io/" target="_blank" class="d-flex">
+          <LogoSoonami />
         </nuxt-link>
         <div class="navbar__buttons hidden-sm-and-down">
           <nuxt-link
@@ -120,35 +120,35 @@ const currentRoute = ref(route?.path);
 const menuOpen = ref(false);
 
 const routes : IRoute[] = [
-  {
-    to: "/",
-    matchPrefix: "/details",
-    exactMatch: false,
-    title: "Discover",
-    text: "",
-  },
-  {
-    to: "/create",
-    exactMatch: true,
-    title: "Create",
-    text: "",
-  },
-  {
-    to: "/governance",
-    exactMatch: true,
-    title: "Governance",
-    text: "Coming soon",
-    disabled: true,
-  },
-  {
-    isExternal: true,
-    exactMatch: true,
-    to: "https://docs.rethink.finance",
-    title: "Docs",
-    text: "",
-    icon: "mdi:launch",
-    color: "var(--color-light-subtitle)",
-  },
+  // {
+  //   to: "/",
+  //   matchPrefix: "/details",
+  //   exactMatch: false,
+  //   title: "Discover",
+  //   text: "",
+  // },
+  // {
+  //   to: "/create",
+  //   exactMatch: true,
+  //   title: "Create",
+  //   text: "",
+  // },
+  // {
+  //   to: "/governance",
+  //   exactMatch: true,
+  //   title: "Governance",
+  //   text: "Coming soon",
+  //   disabled: true,
+  // },
+  // {
+  //   isExternal: true,
+  //   exactMatch: true,
+  //   to: "https://docs.rethink.finance",
+  //   title: "Docs",
+  //   text: "",
+  //   icon: "mdi:launch",
+  //   color: "var(--color-light-subtitle)",
+  // },
 ]
 const selectedChainId = ref(accountStore.connectedWalletChainId);
 

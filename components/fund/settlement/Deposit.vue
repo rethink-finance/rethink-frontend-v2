@@ -313,6 +313,10 @@ const rules = [
     if (valueWei <= 0)
       return { message: "Value must be positive.", display: false };
 
+    if (Number(value) < 32) {
+      return { message: "Min. deposit = 32 WETH.", display: true };
+    }
+
     console.log(
       "[DEPOSIT] check user base token balance wei: ",
       valueWei,
