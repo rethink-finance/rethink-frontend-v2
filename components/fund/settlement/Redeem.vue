@@ -68,7 +68,7 @@
     </div>
     <template v-else>
       <v-btn
-        class="bg-primary text-secondary"
+        class="bg-primary text-secondary button_connect_wallet"
         @click="accountStore.connectWallet()"
       >
         Connect Wallet
@@ -303,5 +303,8 @@ const buttons = ref([
   width: 100%;
   border: 1px solid rgba(246, 249, 255, 0.08)
 }
-
+.button_connect_wallet{
+  display: block;
+  margin: 0 auto;
+}
 </style>

@@ -108,7 +108,7 @@
         :items="field.choices"
         item-title="title"
         item-value="value"
-        class="field-select"
+        density="compact"
       />
       <div
         v-for="(value, index) in valueDetails[field.key]"
@@ -125,7 +125,7 @@
           :items="field.choices"
           item-title="title"
           item-value="value"
-          class="field-select"
+          density="compact"
         />
         <Icon
           icon="material-symbols:cancel-outline"
@@ -345,12 +345,4 @@ const removeField = (field: any, index: number) => {
 //  }
 //}
 
-.field-select {
-  line-height: normal;
-
-  :deep(.v-field__input) {
-    padding: 12px;
-    min-height: 45px;
-  }
-}
 </style>

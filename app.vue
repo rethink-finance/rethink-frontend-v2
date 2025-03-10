@@ -15,6 +15,30 @@ watch(() => accountStore.connectedWallet?.provider, () => {
   accountStore.setAlreadyConnectedWallet();
 });
 
+// Methods
+useHead(() => {
+  return {
+    titleTemplate(titleChunk) {
+      const title = titleChunk
+      const siteTitle = "Rethnik Finance"
+
+      let output = siteTitle
+
+      switch (true) {
+        case siteTitle === title:
+          output = siteTitle
+          break
+
+        case Boolean(title):
+          output = `${siteTitle} | ${title}`
+          break
+      }
+
+      return output
+    },
+  }
+})
+
 </script>
 
 <template>

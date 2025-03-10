@@ -30,7 +30,7 @@
               <div
                 :key="index"
                 class="step"
-                :class="{ 'is-disabled': step.isDisabled }"
+                :class="{ 'is_disabled': step.isDisabled }"
               >
                 <span class="label">
                   {{ step.label }}
@@ -73,7 +73,7 @@
           <template #activator="{ props }">
             <span v-bind="props">
               <v-btn
-                class="button-deposit button"
+                class="button_deposit button"
                 variant="outlined"
                 :disabled="isDepositButtonDisabled"
                 @click="handleDepositClick"
@@ -114,7 +114,7 @@
                   <div
                     :key="index"
                     class="step"
-                    :class="{ 'is-disabled': step.isDisabled }"
+                    :class="{ 'is_disabled': step.isDisabled }"
                   >
                     <span class="label">
                       {{ step.label }}
@@ -248,7 +248,7 @@
     </div>
     <template v-else>
       <v-btn
-        class="bg-primary text-secondary"
+        class="bg-primary text-secondary button_connect_wallet"
         @click="accountStore.connectWallet()"
       >
         Connect Wallet
@@ -795,28 +795,32 @@ const delegateToMyself = async () => {
   }
 }
 
-.divider{
+.divider {
   margin: 1rem auto;
   height: 0.1px;
   width: 100%;
   border: 1px solid rgba(246, 249, 255, 0.08)
 }
 
-.title{
+.title {
   margin: 0 0 0.5rem;
 }
-.step{
+.step {
   display: flex;
   align-items: center;
   margin: 0.25rem 0;
   width: fit-content;
+
+  &.is_disabled {
+    opacity: 0.5;
+  }
 }
-.button-deposit{
+.button_deposit {
   display: block;
   margin: 0 auto;
 }
-
-.is-disabled{
-  opacity: 0.5;
+.button_connect_wallet{
+  display: block;
+  margin: 0 auto;
 }
 </style>
