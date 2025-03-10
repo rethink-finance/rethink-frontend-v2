@@ -40,20 +40,12 @@
             :disabled="disabled"
             @update:model-value="updateExecutionOption"
           />
-          <v-switch
-            v-model="showRaw"
-            label="Raw"
-            color="primary"
-            class="ms-6"
-            hide-details
-          />
         </div>
 
         <PermissionTargetFunctionParams
           v-model:func-conditions="localFuncConditions"
           :func="func"
           :sighash="sighash"
-          :show-raw="showRaw"
           :disabled="disabled"
         />
       </span>
@@ -99,7 +91,6 @@ const props = defineProps({
     default: false,
   },
 });
-const showRaw = ref(false);
 
 // Create a local reactive copy of funcConditions to allow editing it without mutating props.
 const localFuncConditions = useVModel(props, "funcConditions", emit, {

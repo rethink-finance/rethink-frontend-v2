@@ -21,7 +21,17 @@
             </strong>
           </div>
 
-          <v-btn color="primary" @click="navigateToCreatePermissions">
+          <v-btn
+            v-if="isEditDisabled"
+            color="primary"
+            @click="isEditDisabled = true"
+          >
+            Edit
+          </v-btn>
+          <v-btn
+            color="primary"
+            @click="navigateToCreatePermissions"
+          >
             Create Permissions Proposal
           </v-btn>
         </div>
@@ -65,7 +75,7 @@ const { selectedFundSlug } = storeToRefs(useFundStore());
 
 const roles = ref<Role[]>([]);
 const selectedRole = ref<Role | undefined>(undefined)
-const isEditDisabled = ref(false);
+const isEditDisabled = ref(true);
 
 // This is Rethink.finance specific thing now, to hardcode select condition
 // with ID "1". We have to remove this and always select the first one.

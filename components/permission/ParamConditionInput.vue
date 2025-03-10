@@ -186,7 +186,6 @@ const deleteCondition = (oneOfValueIndex?: number) => {
   });
 }
 const updateConditionValueByIndex = (index: number, newValue: string) => {
-  console.warn("updateConditionValueByIndex", index, newValue, toRaw(localCondition.value));
   localCondition.value.value[index] = newValue;
 }
 
@@ -196,10 +195,6 @@ const previousCondition = ref<ParamComparison>({ ...localCondition.value?.condit
 watch(
   () => localCondition.value,
   (newLocalFuncConditions, oldLocalFuncConditions) => {
-    console.log("    [2] watch localCondition", toRaw(newLocalFuncConditions.condition))
-    console.log("    [2] watch localCondition old", localCondition.value.condition)
-    console.log("    [2] watch localCondition oldLocalFuncConditions", oldLocalFuncConditions.condition)
-
     // If previous condition was "One Of" and the new one is not, we will
     // take only the first value from it.
     if (previousCondition.value === ParamComparison.ONE_OF && previousCondition.value !== newLocalFuncConditions.condition) {
@@ -213,7 +208,6 @@ watch(
     }
 
     if (JSON.stringify(newLocalFuncConditions) !== JSON.stringify(props.condition)) {
-      console.log("    [2] watch localCondition", toRaw(newLocalFuncConditions))
       emit("update:condition", newLocalFuncConditions);
     }
     // Store the new value as previous, to track changes.
@@ -228,7 +222,6 @@ watch(
   (newCondition) => {
     // Update without emitting
     if (JSON.stringify(newCondition) !== JSON.stringify(localCondition.value)) {
-      console.log("    [2] watch props.condition", toRaw(newCondition))
       // TODO check boolean when editing if they update correctly, convert bool to string
       localCondition.value = { ...newCondition };
     }
