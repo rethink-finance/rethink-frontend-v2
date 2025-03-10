@@ -169,7 +169,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Deposit Fees",
+      groupName: "Deposit Fee",
       fields: [
         {
           label: "Deposit Fee (%)",
@@ -195,7 +195,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Withdraw Fees",
+      groupName: "Withdraw Fee",
       fields: [
         {
           label: "Redemption Fee (%)",
@@ -221,7 +221,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Management Fees",
+      groupName: "Management Fee",
       fields: [
         {
           label: "Management Fee (%)",
@@ -257,7 +257,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Performance Fees",
+      groupName: "Performance Fee",
       fields: [
         {
           label: "Performance Fee (%)",
