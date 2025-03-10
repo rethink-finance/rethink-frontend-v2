@@ -30,6 +30,7 @@
         v-model="localCondition.value[0]"
         :items="booleanOptions"
         :disabled="disabled"
+        class="select_condition_type"
         label="Boolean Condition"
         density="compact"
         variant="outlined"
@@ -43,7 +44,7 @@
         :disabled="disabled"
         :readonly="disabled"
         label="Condition"
-        class="flex-grow-0"
+        class="select_condition_type"
         density="compact"
         variant="outlined"
         hide-details
@@ -78,7 +79,7 @@
           Add Value +
         </div>
       </div>
-      <template v-else>
+      <div v-else class="d-flex flex-grow-1">
         <PermissionParamConditionInputValue
           :model-value="localCondition.value[0]"
           :param="param"
@@ -91,7 +92,7 @@
           small
           @click="deleteCondition"
         />
-      </template>
+      </div>
     </template>
   </div>
 </template>
@@ -244,6 +245,14 @@ watch(
     flex-direction: row;
     align-items: center;
     height: 2.75rem;
+    white-space: nowrap;
   }
+}
+
+.select_condition_type {
+  display: flex;
+  flex-grow: 0;
+  height: fit-content;
+  min-width: max-content;
 }
 </style>
