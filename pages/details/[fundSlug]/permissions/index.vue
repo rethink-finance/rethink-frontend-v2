@@ -6,6 +6,7 @@
           <div class="d-flex align-center">
             <strong>Role #</strong>
             <v-select
+              v-if="roles.length > 1"
               v-model="selectedRole"
               :items="roles"
               item-title="name"
@@ -15,11 +16,36 @@
               required
               return-object
             />
+            <strong v-else>
+              {{ selectedRole?.name }}
+            </strong>
           </div>
 
-          <v-btn color="primary" @click="navigateToCreatePermissions">
-            Create Permissions Proposal
+          <v-btn
+            v-if="isEditDisabled"
+            color="primary"
+            @click="isEditDisabled = false"
+          >
+            Edit
           </v-btn>
+          <div v-else>
+            <v-btn
+              color="primary"
+              @click="navigateToCreatePermissions"
+            >
+              Create Permissions Proposal
+            </v-btn>
+            <v-btn
+              variant="text"
+              color="secondary"
+              @click="isEditDisabled = true"
+            >
+              <Icon
+                icon="ic:twotone-cancel"
+                width="1.5rem"
+              />
+            </v-btn>
+          </div>
         </div>
       </div>
 
@@ -61,7 +87,7 @@ const { selectedFundSlug } = storeToRefs(useFundStore());
 
 const roles = ref<Role[]>([]);
 const selectedRole = ref<Role | undefined>(undefined)
-const isEditDisabled = ref(false);
+const isEditDisabled = ref(true);
 
 // This is Rethink.finance specific thing now, to hardcode select condition
 // with ID "1". We have to remove this and always select the first one.
