@@ -6,6 +6,12 @@
     <v-skeleton-loader type="card" />
   </div>
   <div v-else-if="fund?.address" class="w-100">
+    <seo
+      :oiv-name="fund?.title"
+      :symbol="fund?.fundToken?.symbol"
+      :description="fund?.description"
+      :image-url="fund?.photoUrl"
+    />
     <div v-if="breadcrumbItems.length === 0" class="fund_name">
       <v-avatar class="fund_name__avatar" :rounded="false">
         <img
@@ -77,11 +83,11 @@
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
+import { ChainId } from "~/store/web3/networksMap";
 import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-import { ChainId } from "~/store/web3/networksMap";
 
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
@@ -106,6 +112,8 @@ onUnmounted(() => {
 });
 
 const fund = computed(() => fundStore.fund as IFund);
+
+console.log("FUNDFUND: ", fund);
 
 const breadcrumbItems = ref<BreadcrumbItem[]>([]);
 const setBreadcrumbItems = (items: BreadcrumbItem[]) => {
