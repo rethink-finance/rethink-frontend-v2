@@ -20,10 +20,8 @@ useHead(() => {
   return {
     titleTemplate(titleChunk) {
       const title = titleChunk
-      const titlePrefix = "Rethnik Finance"
-
+      const titlePrefix = "Rethink Finance"
       const siteTitle = "Rethink Finance | Run Funds On-Chain"
-
       let output = titlePrefix
 
       switch (true) {
