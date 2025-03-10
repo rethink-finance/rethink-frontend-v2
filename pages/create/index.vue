@@ -482,7 +482,7 @@ const showButtonNext = computed(() => {
   const steps = [
     OnboardingStep.Chain,
     OnboardingStep.Basics,
-    OnboardingStep.Fees,
+    OnboardingStep.Fee,
     OnboardingStep.Whitelist,
     OnboardingStep.Permissions,
     OnboardingStep.NavMethods,
@@ -546,7 +546,7 @@ const isCurrentStepValid = computed(() => {
   const stepWithRegularFields = [
     OnboardingStep.Chain,
     OnboardingStep.Basics,
-    OnboardingStep.Fees,
+    OnboardingStep.Fee,
     OnboardingStep.Governance,
   ];
 
@@ -759,13 +759,13 @@ const formatFundMetaData = () => {
 const getFeeValue = (feeKey: string) => {
   return toggledOffFields.value.includes(feeKey)
     ? 0
-    : Number(fromPercentageToBps(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, feeKey)));
+    : Number(fromPercentageToBps(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fee, feeKey)));
 };
 
 const getFeeCollectors = (feeKey: string) => {
   return toggledOffFields.value.includes(feeKey)
     ? ethers.ZeroAddress
-    : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, feeKey);
+    : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fee, feeKey);
 };
 
 const formatFeeCollectors = () => {
@@ -808,7 +808,7 @@ const formatInitializeData = () => {
     ],
     JSON.stringify(formatFundMetaData()),
     0, // feePerformancePeriod, default to 0
-    parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fees, "managementFeePeriod") as string) || 0, // feeManagePeriod
+    parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fee, "managementFeePeriod") as string) || 0, // feeManagePeriod
   ]
 
   console.log("output", output);

@@ -8,7 +8,7 @@ export enum ProposalStep {
 
 export enum StepSections {
   Basics = "basic",
-  Fees = "fees",
+  Fee = "fee",
   Whitelist = "whitelist",
   Management = "management",
   Governance = "governance",
@@ -77,7 +77,7 @@ export const FundSettingsStepsMap: Record<ProposalStep, IFundSettingProposalStep
         name: "Basic",
         key: StepSections.Basics,
       },
-      { name: "Fees", key: StepSections.Fees },
+      { name: "Fee", key: StepSections.Fee },
       { name: "Whitelist", key: StepSections.Whitelist },
       { name: "Management", key: StepSections.Management },
       {
@@ -165,7 +165,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       isEditable: true,
     },
   ],
-  [StepSections.Fees]: [
+  [StepSections.Fee]: [
     {
       isToggleable: true,
       isToggleOn: true,

@@ -7,7 +7,7 @@ import type { IField, IFieldGroup } from "~/types/enums/input_type";
 export enum OnboardingStep {
     Chain = "chain",
     Basics = "basics",
-    Fees = "fees",
+    Fee = "fee",
     Whitelist = "whitelist",
     Management = "management",
     Governance = "governance",
@@ -38,8 +38,8 @@ export const OnboardingStepMap: IOnboardingStep[] = [
     name: "Basics",
   },
   {
-    key: OnboardingStep.Fees,
-    name: "Fees",
+    key: OnboardingStep.Fee,
+    name: "Fee",
   },
   {
     key: OnboardingStep.Whitelist,
@@ -101,7 +101,7 @@ const OnboardingFieldsMap: FieldsMapType = {
       },
     ).filter((field) => field),
   ] as (IField[] | IFieldGroup[]),
-  [OnboardingStep.Fees]: (FundSettingsStepFieldsMap[StepSections.Fees] as IFieldGroup[]).map(
+  [OnboardingStep.Fee]: (FundSettingsStepFieldsMap[StepSections.Fee] as IFieldGroup[]).map(
     (fieldGroup: IFieldGroup) => {
       // fields to exclude
       const fieldsToHide = ["performanceFeePeriod"];
