@@ -24,16 +24,28 @@
           <v-btn
             v-if="isEditDisabled"
             color="primary"
-            @click="isEditDisabled = true"
+            @click="isEditDisabled = false"
           >
             Edit
           </v-btn>
-          <v-btn
-            color="primary"
-            @click="navigateToCreatePermissions"
-          >
-            Create Permissions Proposal
-          </v-btn>
+          <div v-else>
+            <v-btn
+              color="primary"
+              @click="navigateToCreatePermissions"
+            >
+              Create Permissions Proposal
+            </v-btn>
+            <v-btn
+              variant="text"
+              color="secondary"
+              @click="isEditDisabled = true"
+            >
+              <Icon
+                icon="ic:twotone-cancel"
+                width="1.5rem"
+              />
+            </v-btn>
+          </div>
         </div>
       </div>
 
