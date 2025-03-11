@@ -9,7 +9,7 @@ import type {
   Role,
   Target,
   UpdateEvent,
-  TargetConditions, FunctionCondition, ParamCondition, UpdateEventParamCondition, IRawTrx,
+  TargetConditions, FunctionCondition, ParamCondition, UpdateEventParamCondition, IRawTrx, Member,
 } from "~/types/zodiac-roles/role";
 import {
   ConditionType,
@@ -25,11 +25,6 @@ import {
 import { getParamComparisonInt, getParameterTypeInt, getWriteFunctions } from "~/composables/zodiac-roles/conditions";
 import type { Explorer } from "~/services/explorer";
 import type { ChainId } from "~/store/web3/networksMap";
-import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
-import { roleModFunctionNameIndexMap } from "~/types/enums/delegated_permission";
-
-
-
 
 export const rolesInterface = RolesFactory.createInterface();
 
@@ -58,7 +53,7 @@ export const useRoleStore = defineStore("role", () => {
     roleId.value = id || "";
     role.value = r;
     members.value = {
-      list: r?.members.map((member) => member.address) || [],
+      list: r?.members.map((member: Member) => member.address) || [],
       add: [],
       remove: [],
     };
@@ -73,14 +68,14 @@ export const useRoleStore = defineStore("role", () => {
    * Getters (similar to computed properties)
    */
   const activeTarget = computed(() => {
-    return targets.value.list.find((t) => t.id === activeTargetId.value) ||
-      targets.value.add.find((t) => t.id === activeTargetId.value);
+    return targets.value.list.find((t: Target) => t.id === activeTargetId.value) ||
+      targets.value.add.find((t: Target) => t.id === activeTargetId.value);
   });
 
   const getTargetStatus = computed(() => (target: Target) => {
     if (!target?.id) return EntityStatus.NONE
     if (targets.value.remove.includes(target?.address)) return EntityStatus.REMOVE
-    if (targets.value.add.find((_target) => _target?.id === target?.id)) return EntityStatus.PENDING
+    if (targets.value.add.find((_target: Target) => _target?.id === target?.id)) return EntityStatus.PENDING
     return EntityStatus.NONE
   });
   const getMemberStatus = computed(() => (member: string) => {
@@ -111,7 +106,7 @@ export const useRoleStore = defineStore("role", () => {
     const updatedTarget = [...targets.value.list, ...targets.value.add].find((_target) => _target.id === targetId);
     if (!updatedTarget) return [];
 
-    const originalTarget = role.value?.targets.find((_target) => _target.id === targetId);
+    const originalTarget = role.value?.targets.find((_target: Target) => _target.id === targetId);
     if (!originalTarget) {
       // Avoid creating block conditions as that's the default value
       if (updatedTarget.type === ConditionType.BLOCKED) return [];
@@ -175,8 +170,8 @@ export const useRoleStore = defineStore("role", () => {
     }
     console.log("handleRemoveTarget", 3);
 
-    if (targets.value.add.find((_target) => _target.address === target.address)) {
-      targets.value.add = targets.value.add.filter((_target) => _target.address !== target.address);
+    if (targets.value.add.find((_target: Target) => _target.address === target.address)) {
+      targets.value.add = targets.value.add.filter((_target: Target) => _target.address !== target.address);
       return;
     }
     console.log("handleRemoveTarget", 4);
@@ -188,8 +183,8 @@ export const useRoleStore = defineStore("role", () => {
 
   function handleAddTarget(target: Target) {
     const currentTarget =
-      targets.value.add.find((_target) => target.address.toLowerCase() === _target.address.toLowerCase()) ||
-      targets.value.list.find((_target) => target.address.toLowerCase() === _target.address.toLowerCase());
+      targets.value.add.find((_target: Target) => target.address.toLowerCase() === _target.address.toLowerCase()) ||
+      targets.value.list.find((_target: Target) => target.address.toLowerCase() === _target.address.toLowerCase());
 
     if (currentTarget) {
       activeTargetId.value = currentTarget.id;
@@ -230,7 +225,7 @@ export const useRoleStore = defineStore("role", () => {
     const replaceValue = (targets: Target[]) =>
       replaceTargetValue(targets, targetId, { executionOption: option });
 
-    if (targets.value.list.find((target) => target.id === targetId)) {
+    if (targets.value.list.find((target: Target) => target.id === targetId)) {
       targets.value.list = replaceValue(targets.value.list);
     } else {
       targets.value.add = replaceValue(targets.value.add);
@@ -266,7 +261,7 @@ export const useRoleStore = defineStore("role", () => {
     console.log("  handleTargetConditions targetId", targetId);
     console.log("  handleTargetConditions conditions", conditions);
 
-    if (targets.value.list.find((target) => target.id === targetId)) {
+    if (targets.value.list.find((target: Target) => target.id === targetId)) {
       targets.value.list = replaceValue(targets.value.list);
     } else {
       targets.value.add = replaceValue(targets.value.add);
@@ -293,7 +288,7 @@ export const useRoleStore = defineStore("role", () => {
   function reset(newRole: Role, newRoleId: string) {
     roleId.value = newRoleId;
     role.value = newRole;
-    members.value.list = newRole?.members.map((m) => m.address) || [];
+    members.value.list = newRole?.members.map((m: Member) => m.address) || [];
     members.value.add = [];
     members.value.remove = [];
     targets.value.list = newRole?.targets || [];
@@ -364,7 +359,7 @@ export const useRoleStore = defineStore("role", () => {
 
     if (!func) throw new Error("ABI is needed to scope targets")
 
-    const paramIndexes = funcCondition.params.map((param) => param?.index)
+    const paramIndexes = funcCondition.params.map((param: ParamCondition) => param?.index)
     const paramsLength = Math.max(-1, ...paramIndexes) + 1
 
     const isParamScoped: boolean[] = []
@@ -373,7 +368,7 @@ export const useRoleStore = defineStore("role", () => {
     const compValue: BytesLike[] = []
 
     for (let i = 0; i < paramsLength; i++) {
-      const param = funcCondition.params.find((param) => param.index === i)
+      const param = funcCondition.params.find((param: ParamCondition) => param.index === i)
       if (param && param.condition !== ParamComparison.ONE_OF) {
         isParamScoped.push(true)
         paramType.push(getParameterTypeInt(param.type))
@@ -533,7 +528,7 @@ export const useRoleStore = defineStore("role", () => {
 
       Object.entries(paramEventsPerFunction)
         .forEach(([sighash, params]) => {
-          params.forEach((paramCondition) => {
+          params.forEach((paramCondition: ParamCondition) => {
             let rawTrx = {
               funcName: "scopeParameterAsOneOf",
               args: [
@@ -612,7 +607,7 @@ function getParamUpdate(
   const updates = funcCondition.params.reduce((toUpdate, newParamConfig) => {
     // console.log("getParamUpdate - param:", newParamConfig)
     if (!newParamConfig) return toUpdate
-    const originalParamConfig = original?.params.find((_param) => newParamConfig.index === _param?.index)
+    const originalParamConfig = original?.params.find((_param: ParamCondition) => newParamConfig.index === _param?.index)
     // console.log("getParamUpdate - originalParam:", originalParamConfig)
 
     if (
@@ -637,7 +632,7 @@ function getParamUpdate(
   }, [] as UpdateEvent[])
 
   const removals = (original?.params ?? []).reduce((toRemove, originalParamConfig) => {
-    const newParamConfig = funcCondition.params.find((_param) => originalParamConfig.index === _param?.index)
+    const newParamConfig = funcCondition.params.find((_param: ParamCondition) => originalParamConfig.index === _param?.index)
 
     if (
       newParamConfig == null &&
