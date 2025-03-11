@@ -1,0 +1,1 @@
+import{_ as n,P as s,e as a,o as c,w as e,Q as r,g as _,R as l}from"./BIun0SHX.js";const p={};function i(o,d){const t=s("Icon");return c(),a(l,{variant:"outlined",size:"small",class:"app_btn_small"},{prepend:e(()=>[_(t,{icon:"octicon:plus-16",height:"1rem",width:"1rem"})]),default:e(()=>[r(o.$slots,"default")]),_:3})}const f=n(p,[["render",i]]);export{f as default};
