@@ -4,10 +4,13 @@ import {
 } from "~/types/enums/fund_setting_proposal";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
 
+const FeesDocs = "https://docs.rethink.finance/rethink.finance/protocol/architecture/admin-contract/fees"
+
+
 export enum OnboardingStep {
     Chain = "chain",
     Basics = "basics",
-    Fees = "fees",
+    Fee = "fee",
     Whitelist = "whitelist",
     Management = "management",
     Governance = "governance",
@@ -38,8 +41,9 @@ export const OnboardingStepMap: IOnboardingStep[] = [
     name: "Basics",
   },
   {
-    key: OnboardingStep.Fees,
-    name: "Fees",
+    key: OnboardingStep.Fee,
+    info: `<span>Please find more about details about fees and alternative fee types in our <a target='_blank' href='${FeesDocs}'>documentation.</a></span>`,
+    name: "Fee",
   },
   {
     key: OnboardingStep.Whitelist,
@@ -69,12 +73,15 @@ export const OnboardingStepMap: IOnboardingStep[] = [
 const OnboardingFieldsMap: FieldsMapType = {
   [OnboardingStep.Basics]: [
     // Take Basic fields and make them editable when creating new fund.
-    ...(FundSettingsStepFieldsMap[StepSections.Basics]).map(
+    ...(FundSettingsStepFieldsMap[StepSections.Basics] as IField[]).map(
       (field) => {
+        const isEditableAfterCreating = field.isEditable;
+
         return  {
           ...field,
           isEditable: true,
           info: "",
+          tag: isEditableAfterCreating ? "upgradable" : "fixed",
         }
       },
     ),
@@ -90,6 +97,7 @@ const OnboardingFieldsMap: FieldsMapType = {
           return {
             ...field,
             isEditable: true,
+            tag: "upgradable",
             info: "Please note that <strong>Planned Settlement Period</strong> is not enforced on-chain. Your job as a manager is to make sure OIV is managed accordingly to these parameters. Your management role may otherwise be removed through governance.",
           }
         }
@@ -101,7 +109,7 @@ const OnboardingFieldsMap: FieldsMapType = {
       },
     ).filter((field) => field),
   ] as (IField[] | IFieldGroup[]),
-  [OnboardingStep.Fees]: (FundSettingsStepFieldsMap[StepSections.Fees] as IFieldGroup[]).map(
+  [OnboardingStep.Fee]: (FundSettingsStepFieldsMap[StepSections.Fee] as IFieldGroup[]).map(
     (fieldGroup: IFieldGroup) => {
       // fields to exclude
       const fieldsToHide = ["performanceFeePeriod"];
@@ -112,10 +120,16 @@ const OnboardingFieldsMap: FieldsMapType = {
         fields: fieldGroup.fields
           .filter((field: IField) => !fieldsToHide.includes(field.key))
           .map(
-            (field: IField) => ({
-              ...field,
-              isEditable: true,
-            }),
+            (field: IField) => {
+              const isEditableAfterCreating = field.isEditable;
+
+              return {
+                ...field,
+                isEditable: true,
+                tag: isEditableAfterCreating ? "upgradable" : "fixed",
+
+              }
+            },
           ),
       };
     },
@@ -123,12 +137,14 @@ const OnboardingFieldsMap: FieldsMapType = {
   // Take Governance fields and make them editable when creating new fund.
   [OnboardingStep.Governance]: (FundSettingsStepFieldsMap[StepSections.Governance] as IField[]).map(
     (field: IField) => {
+      const isEditableAfterCreating = field.isEditable;
 
       // add default value for governanceToken if it's toggled off
       if (field.key === "governanceToken") {
         return {
           ...field,
           label: "Custom Governance Token",
+          tag: isEditableAfterCreating ? "upgradable" : "fixed",
           isEditable: true,
           isCustomValueToggleOn: false, // this is used to determine if the value is custom or default
           defaultValue: "0x0000000000000000000000000000000000000000",
@@ -138,6 +154,7 @@ const OnboardingFieldsMap: FieldsMapType = {
 
       return {
         ...field,
+        tag: isEditableAfterCreating ? "upgradable" : "fixed",
         isEditable: true,
       }
     },
