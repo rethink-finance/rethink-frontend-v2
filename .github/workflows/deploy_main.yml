@@ -1,4 +1,4 @@
-name: [PRODUCTION] Deploy to GitHub Pages
+name: "[PRODUCTION] Deploy to GitHub Pages"
 
 on:
   workflow_dispatch:
