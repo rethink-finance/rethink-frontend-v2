@@ -292,7 +292,7 @@ const {
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
 } = storeToRefs(createFundStore);
-const step = ref(3);
+const step = ref(1);
 
 const saveChangesDialog = ref(false);
 const isInitializeDialogOpen = ref(false);
