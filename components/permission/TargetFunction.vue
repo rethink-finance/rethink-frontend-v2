@@ -4,7 +4,6 @@
     bg-transparent
     title-full-height
     class="target_function"
-    :is-expandable="!disabled"
   >
     <template #title>
       <div class="permissions__function">
