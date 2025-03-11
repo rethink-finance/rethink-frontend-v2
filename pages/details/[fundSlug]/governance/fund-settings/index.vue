@@ -27,7 +27,7 @@
                 />
 
                 <template #tooltip>
-                  {{ section.info }}
+                  <div v-html="section.info" />
                 </template>
               </UiTooltipClick>
 

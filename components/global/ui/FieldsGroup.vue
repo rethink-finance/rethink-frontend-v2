@@ -10,6 +10,17 @@
         :disabled="isGroupDisabled"
         :label="fieldGroup.groupName"
       />
+      <v-tooltip v-if="fieldGroup?.tooltip" location="top">
+        <template #activator="{ props }">
+          <Icon
+            v-bind="props"
+            icon="octicon:question-16"
+            width="1.25rem"
+            class="field_group__tooltip"
+          />
+        </template>
+        {{ fieldGroup.tooltip }}
+      </v-tooltip>
     </v-col>
 
     <div class="field_group__fields">
@@ -73,12 +84,26 @@ const toggleValue = computed({
         display: flex;
         gap: 10px;
         align-items: center;
-    }
+
+      }
 
     &__fields {
         display: flex;
         flex-wrap: wrap;
         width: 100%;
+    }
+
+    &__tooltip{
+      cursor: pointer;
+      color: $color-text-irrelevant;
+      transition: color 0.3s ease;
+
+      &:hover {
+        color: $color-primary;
+      }
+      &:focus {
+        outline: none;
+      }
     }
 }
 </style>

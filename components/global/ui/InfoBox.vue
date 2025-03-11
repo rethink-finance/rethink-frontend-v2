@@ -34,6 +34,9 @@ const props = defineProps<{
   }
   &__text{
     width: calc(100% - 30px);
+    :deep(a){
+      color: var(--color-primary);
+    }
   }
 }
 </style>

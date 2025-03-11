@@ -20,9 +20,15 @@
           {{ field.label }}
           <span
             v-if="!field.isEditable && !isPreview"
-            class="row_title__uneditable"
+            class="row_title__small"
           >
             (readonly)
+          </span>
+          <span
+            v-if="field.tag"
+            class="row_title__small"
+          >
+            ({{ field.tag }})
           </span>
         </div>
         <ui-char-limit
@@ -30,6 +36,18 @@
           :char-limit="field.charLimit"
           :char-number="fieldValue"
         />
+
+        <v-tooltip v-if="field?.tooltip" location="top">
+          <template #activator="{ props }">
+            <Icon
+              v-bind="props"
+              icon="octicon:question-16"
+              width="1.25rem"
+              class="row_title__tooltip"
+            />
+          </template>
+          {{ field.tooltip }}
+        </v-tooltip>
       </v-label>
 
       <!-- toggle for default value and custom value -->
@@ -224,8 +242,22 @@ const classes = computed(() => {
       }
     }
   }
-  &__uneditable {
+  &__small {
     font-size: $text-xs;
+  }
+
+  &__tooltip{
+    margin-left: .5rem;
+    cursor: pointer;
+
+    transition: color 0.3s ease;
+
+    &:hover {
+      color: $color-primary;
+    }
+    &:focus {
+      outline: none;
+    }
   }
 
   &__is-image {

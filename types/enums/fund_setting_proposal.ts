@@ -1,6 +1,8 @@
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
 import { InputType, periodChoices } from "~/types/enums/input_type";
 
+const FeesDocs = "https://docs.rethink.finance/rethink.finance/protocol/architecture/admin-contract/fees"
+
 export enum ProposalStep {
   Setup = "setup",
   Details = "details",
@@ -77,7 +79,10 @@ export const FundSettingsStepsMap: Record<ProposalStep, IFundSettingProposalStep
         name: "Basic",
         key: StepSections.Basics,
       },
-      { name: "Fee", key: StepSections.Fee },
+      { name: "Fee",
+        key: StepSections.Fee,
+        info: `<span>Please find more about details about fees and alternative fee types in our <a target='_blank' href='${FeesDocs}'>documentation.</a></span>`,
+      },
       { name: "Whitelist", key: StepSections.Whitelist },
       { name: "Management", key: StepSections.Management },
       {
@@ -129,16 +134,17 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       cols: 12,
     },
     {
-      label: "OIV DAO Name",
+      label: "OIV Name",
       key: "fundName",
       type: InputType.Text,
-      placeholder: "E.g. OIV DAO Name",
+      placeholder: "E.g. OIV Name",
       rules: [formRules.required],
       isEditable: false,
       cols: 6,
     },
     {
       label: "OIV Token Symbol",
+      tooltip: "Token ticker representing the tokenized shares of your OIV.",
       key: "fundSymbol",
       type: InputType.Text,
       placeholder: "E.g. ETH",
@@ -150,6 +156,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       label: "Denomination Asset Address",
       key: "baseToken",
       type: InputType.Text,
+      tooltip: "Asset is used for deposits and measuring share price.",
       placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
       rules: [formRules.isValidAddress, formRules.required],
       isEditable: false,
@@ -170,6 +177,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       isToggleable: true,
       isToggleOn: true,
       groupName: "Deposit Fee",
+      tooltip: "Share of deposited denomination asset.",
       fields: [
         {
           label: "Deposit Fee (%)",
@@ -195,7 +203,8 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Withdraw Fee",
+      groupName: "Redemption Fee",
+      tooltip: "Share of redeemed denomination asset.",
       fields: [
         {
           label: "Redemption Fee (%)",
@@ -222,6 +231,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       isToggleable: true,
       isToggleOn: true,
       groupName: "Management Fee",
+      tooltip: "Share of minted OIV tokens per management fee period.",
       fields: [
         {
           label: "Management Fee (%)",
@@ -258,6 +268,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       isToggleable: true,
       isToggleOn: true,
       groupName: "Performance Fee",
+      tooltip: "Profit share in minted OIV tokens.",
       fields: [
         {
           label: "Performance Fee (%)",
@@ -303,6 +314,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       label: "Planned Settlement Period",
       key: "plannedSettlementPeriod",
+      tooltip: "Frequency of settling deposit and redemtion requests.",
       type: InputType.Period,
       choices: periodChoices,
       placeholder: "E.g. 0",
@@ -326,6 +338,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. Governance Token",
       rules: [formRules.required],
       isEditable: false,
+      tooltip: "TBD Use any existing ERC20 token",
     },
     {
       label: "Quorum (%)",
@@ -334,6 +347,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
+      tooltip: "Required minimum participation form total token supply.",
     },
     {
       label: "Voting Period",
@@ -343,6 +357,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
+      tooltip: "Amount of time available for voting.",
     },
     {
       label: "Voting Delay",
@@ -352,6 +367,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
+      tooltip: "Delay between proposal creation and start of the voting period.",
     },
     {
       label: "Proposal Threshold",
@@ -360,6 +376,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
+      tooltip: "Minimum required OIV tokens to create a proposal.",
     },
     {
       label: "Late Quorum",
@@ -368,6 +385,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
+      tooltip: "Amount of time required for porposal to pass, after it reaches quorom.",
     },
   ],
   [StepSections.Details]: [

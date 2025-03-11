@@ -195,6 +195,14 @@
                 v-if="item.key === OnboardingStep.Finalize"
                 :fund-chain-id="fundChainId"
               />
+
+              <v-col>
+                <UiInfoBox
+                  v-if="item.info"
+                  class="info-box"
+                  :info="item.info"
+                />
+              </v-col>
             </v-window-item>
           </template>
           <template #default>
@@ -284,7 +292,7 @@ const {
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
 } = storeToRefs(createFundStore);
-const step = ref(1);
+const step = ref(3);
 
 const saveChangesDialog = ref(false);
 const isInitializeDialogOpen = ref(false);
@@ -1104,5 +1112,9 @@ onMounted(() => {
   font-size: $text-md;
   color: $color-text-irrelevant;
   text-align: center;
+}
+
+.info-box{
+  margin-top: 1.25rem;
 }
 </style>
