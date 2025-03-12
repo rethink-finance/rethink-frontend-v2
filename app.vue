@@ -33,7 +33,8 @@ useHead(() => {
           break
 
         case Boolean(title):
-          output = `${titlePrefix} | ${title}`
+          // output = `${titlePrefix} | ${title}`
+          output = `${title}`
           break
       }
 
