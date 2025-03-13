@@ -469,10 +469,10 @@ export const useFundStore = defineStore({
     },
     async fetchAddressSourceCode(chainId: ChainId, address: string) {
       if (!address) return;
-      console.log("Fetch target ABI action", chainId, address);
       if (this.chainAddressSourceCode[chainId][address]) {
         return this.chainAddressSourceCode[chainId][address];
       }
+      console.log("Fetch target ABI action", chainId, address);
 
       const { $getExplorer } = useNuxtApp(); // ✅ Works here
       let explorer: Explorer;
@@ -485,7 +485,11 @@ export const useFundStore = defineStore({
 
       try {
         const sourceCode = await explorer.sourceCode(address);
-        this.chainAddressSourceCode[chainId][address] = sourceCode;
+        console.warn("sourceCode", sourceCode);
+        if (sourceCode.Proxy === "0") {
+          // Only save it if it's not a proxy.
+          this.chainAddressSourceCode[chainId][address] = sourceCode;
+        }
         return sourceCode;
       } catch (error: any) {
         this.chainAddressSourceCode[chainId][address] = undefined;

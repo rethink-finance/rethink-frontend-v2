@@ -178,12 +178,10 @@ const addNewTarget = (newTargetAddress: string) => {
 }
 
 watchEffect(async () => {
-  const map: Record<string, string> = {}
   for (const target of allTargets.value) {
     const label = await fundStore.getAddressLabel(target.address, props.chainId)
-    if (label) map[target.address.toLowerCase()] = label
+    if (label) addressLabels.value[target.address] = label
   }
-  addressLabels.value = map
 })
 </script>
 

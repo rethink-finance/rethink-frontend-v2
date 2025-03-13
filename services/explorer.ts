@@ -2,9 +2,12 @@
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios"
 import { ethers, type JsonFragment, Interface, JsonRpcProvider } from "ethers";
 import detectProxyTarget from "evm-proxy-detection"
+import pLimit from "p-limit";
 import type { ExplorerConfig } from "~/types/explorer";
 import { configureAxios } from "~/services/http";
 
+// Make only 2 parallel requests at once.
+const explorerApiLimit = pLimit(1)
 
 export class Explorer {
   private readonly apiUrl: string
@@ -19,7 +22,7 @@ export class Explorer {
     this.provider = provider
   }
 
-  async abi(address: string): Promise<JsonFragment[]> {
+  async abi(address: string): Promise<[JsonFragment[], string | null]> {
     const client = await this.getHttpClient()
     const response = await client.get<{ status: string; result: string }>(this.apiUrl, {
       params: {
@@ -47,39 +50,33 @@ export class Explorer {
       if (proxyAddress) return await this.abi(proxyAddress)
     }
 
-    return json
+    // Return JSON ABI and final proxy resolved address.
+    return [json, address]
   }
 
   async sourceCode(address: string): Promise<Record<string, any>> {
     const client = await this.getHttpClient()
-    const response = await client.get<{ status: string; result: string }>(this.apiUrl, {
-      params: {
-        module: "contract",
-        action: "getsourcecode",
-        address,
-      },
-    })
-
+    // First, fetch ABI only, as it is a faster call, less likely to fail.
+    const [abiResponse, proxyAddress] = await explorerApiLimit(() => this.abi(address))
+    // const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    // await sleep(300);
+    console.log("PROXY", proxyAddress)
+    const response = await explorerApiLimit(() =>
+      client.get<{ status: string; result: string }>(this.apiUrl, {
+        params: {
+          module: "contract",
+          action: "getsourcecode",
+          address: proxyAddress || address,
+        },
+      }),
+    )
     if (response.data.status !== "1") {
-      // could not fetch ABI
-      // check if this is a proxy
-      const proxyAddress = await this.detectProxyTarget(address)
-      if (proxyAddress) return await this.sourceCode(proxyAddress)
-
-      // otherwise remove from cache so we can try again later
+      // remove from cache so we can try again later
       this.removeResponseFromCache(response)
       throw new Error(response.data.result)
     }
 
-    const sourceCode = response.data.result[0] as any;
-    const json = JSON.parse(sourceCode.ABI);
-
-    if (looksLikeAProxy(json)) {
-      const proxyAddress = await this.detectProxyTarget(address)
-      if (proxyAddress) return await this.sourceCode(proxyAddress)
-    }
-
-    return sourceCode
+    return response.data.result[0] as any;
   }
 
   async detectProxyTarget(address: string): Promise<string | null> {
