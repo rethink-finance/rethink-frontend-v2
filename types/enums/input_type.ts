@@ -72,6 +72,8 @@ export interface IField {
   title?: string;
   value?: string | boolean;
   choices?: { value: number | string | boolean; title: string }[],
+  tooltip?: string;
+  tag?: string;
 }
 
 export interface IFieldGroup {
@@ -79,4 +81,6 @@ export interface IFieldGroup {
   isToggleOn: boolean;
   groupName?: string;
   fields: IField[];
+  info?: string;
+  tooltip?: string;
 }
