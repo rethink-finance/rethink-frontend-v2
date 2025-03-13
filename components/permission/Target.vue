@@ -116,12 +116,12 @@
 <script setup lang="ts">
 import type { FunctionFragment, JsonFragment } from "ethers";
 import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
-import type { Explorer } from "~/services/explorer";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type { ChainId } from "~/store/web3/networksMap";
 import type { FunctionCondition, TargetConditions } from "~/types/zodiac-roles/role";
 import type { RoleStoreType } from "~/store/role/role.store";
 import { ConditionType, ExecutionOption } from "~/types/enums/zodiac-roles";
+import { useFundStore } from "~/store/fund/fund.store";
 
 const props = defineProps({
   conditions: {
@@ -143,11 +143,12 @@ const roleStore = inject<RoleStoreType>("roleStore");
 if (!roleStore) {
   throw new Error("roleStore is not provided!");
 }
+provide("chainId", props.chainId);
 
 const target = computed(() => roleStore.activeTarget);
 
-const { $getExplorer } = useNuxtApp();
 const toastStore = useToastStore();
+const fundStore = useFundStore();
 
 const targetABIJson = ref<JsonFragment[]>([]);
 const customABI = ref<string>("");
@@ -184,22 +185,15 @@ const abiWriteFunctions = ref<FunctionFragment[]>([]);
 const sighashesNotInAbi = ref<string[]>([]);
 const isFetchingTargetABI = ref(false);
 
-// TODO: move this code to role.store and cache each targetABI in a map
 const fetchTargetABI = async () => {
   targetABIJson.value = [];
   if (!target.value?.address) return;
   isFetchingTargetABI.value = true;
   console.log("Fetch target ABI action", props.chainId, target.value.address);
 
-  let explorer: Explorer;
   try {
-    explorer = $getExplorer(props.chainId);
-  } catch (error: any) {
-    return handleABIError(error);
-  }
-
-  try {
-    targetABIJson.value = await explorer.abi(target.value.address);
+    const sourceCode = await fundStore.fetchAddressSourceCode(props.chainId, target.value.address);
+    targetABIJson.value = sourceCode?.ABI || [];
     console.debug("fetched ABI targetABIJson", targetABIJson.value);
     isFetchingTargetABI.value = false;
   } catch (error: any) {
