@@ -143,6 +143,7 @@ const roleStore = inject<RoleStoreType>("roleStore");
 if (!roleStore) {
   throw new Error("roleStore is not provided!");
 }
+provide("chainId", props.chainId);
 
 const target = computed(() => roleStore.activeTarget);
 
@@ -202,6 +203,9 @@ const fetchTargetABI = async () => {
     targetABIJson.value = await explorer.abi(target.value.address);
     console.debug("fetched ABI targetABIJson", targetABIJson.value);
     isFetchingTargetABI.value = false;
+    console.warn("fetch source")
+    const sourceCode = await explorer.sourceCode(target.value.address);
+    console.warn("source", sourceCode)
   } catch (error: any) {
     handleABIError(error);
   }

@@ -103,6 +103,16 @@ export const useFundStore = defineStore({
     fund(): IFund | undefined {
       return this.chainFunds?.[this.selectedFundChain]?.[this.selectedFundAddress];
     },
+    addressLabelMap(): Record<string, string> {
+      const labels: Record<string, string> = {};
+      if (this.fund?.safeAddress) {
+        labels[this.fund.safeAddress] = this.fund?.title + " Safe"
+      }
+      if (this.fund?.address) {
+        labels[this.fund.address] = this.fund?.title + " OIV"
+      }
+      return labels
+    },
     isUsingZodiacPilotExtension(): boolean {
       // Check if user is using Zodiac Pilot extension.
       // The connected wallet address is the same as custody (safe address).

@@ -31,7 +31,6 @@ export class Explorer {
 
     if (response.data.status !== "1") {
       // could not fetch ABI
-
       // check if this is a proxy
       const proxyAddress = await this.detectProxyTarget(address)
       if (proxyAddress) return await this.abi(proxyAddress)
@@ -49,6 +48,39 @@ export class Explorer {
     }
 
     return json
+  }
+
+
+  async sourceCode(address: string): Promise<Record<string, any>> {
+    const client = await this.getHttpClient()
+    const response = await client.get<{ status: string; result: string }>(this.apiUrl, {
+      params: {
+        module: "contract",
+        action: "getsourcecode",
+        address,
+      },
+    })
+
+    if (response.data.status !== "1") {
+      // could not fetch ABI
+      // check if this is a proxy
+      const proxyAddress = await this.detectProxyTarget(address)
+      if (proxyAddress) return await this.sourceCode(proxyAddress)
+
+      // otherwise remove from cache so we can try again later
+      this.removeResponseFromCache(response)
+      throw new Error(response.data.result)
+    }
+
+    const sourceCode = response.data.result[0] as any;
+    const json = JSON.parse(sourceCode.ABI);
+
+    if (looksLikeAProxy(json)) {
+      const proxyAddress = await this.detectProxyTarget(address)
+      if (proxyAddress) return await this.sourceCode(proxyAddress)
+    }
+
+    return sourceCode
   }
 
   async detectProxyTarget(address: string): Promise<string | null> {

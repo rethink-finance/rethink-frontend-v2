@@ -5,6 +5,8 @@
     :disabled="disabled"
     :rules="rules"
     :error-messages="errorMessages"
+    :hint="localValueLabel"
+    :persistent-hint="!!localValueLabel"
     variant="outlined"
     density="compact"
     hide-details="auto"
@@ -19,6 +21,9 @@ import {
 } from "~/composables/zodiac-roles/conditions";
 import { ParamNativeType } from "~/types/enums/zodiac-roles";
 import type { FlattenedParamType } from "~/types/zodiac-roles/role";
+import { useFundsStore } from "~/store/funds/funds.store";
+import type { ChainId } from "~/store/web3/networksMap";
+import { useFundStore } from "~/store/fund/fund.store";
 const emit = defineEmits(["update:modelValue"]);
 
 const props = defineProps({
@@ -35,6 +40,9 @@ const props = defineProps({
     default: false,
   },
 });
+const fundsStore = useFundsStore();
+const fundStore = useFundStore();
+const chainId = inject<ChainId>("chainId");
 
 const localValue = ref("");
 const abiCoder = ethers.AbiCoder.defaultAbiCoder();
@@ -99,6 +107,10 @@ const PlaceholderPerType: Record<ParamNativeType, string> = {
   [ParamNativeType.UNSUPPORTED]: "0x...",
 }
 
+const localValueLabel = computed(() => {
+  if (!chainId) return undefined;
+  return fundStore.addressLabelMap[localValue.value] || fundsStore.addressLabelMap[chainId]?.[localValue.value];
+})
 // Watch for Local Changes & Emit Encoded Value
 watch(
   localValue,
@@ -128,4 +140,12 @@ watch(
 </script>
 
 <style lang="scss" scoped>
+::v-deep(.v-input__details) {
+  opacity: 1;
+  font-weight: 700;
+
+  .v-messages {
+    opacity: 1;
+  }
+}
 </style>
