@@ -56,7 +56,7 @@ export const useFundsStore = defineStore({
     web3Store(): any {
       return useWeb3Store();
     },
-    addressLabelMap(): Record<string, Record<string, string>> {
+    chainAddressLabelMap(): Record<string, Record<string, string>> {
       const addressMap: Record<string, Record<string, string>> = {};
       for (const chainId in this.chainFunds.keys) {
         addressMap[chainId] = {};

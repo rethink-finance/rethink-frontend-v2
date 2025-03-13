@@ -15,6 +15,7 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
+import debounce from "lodash.debounce";
 import {
   formatParamValue,
   getNativeType,
@@ -107,32 +108,35 @@ const PlaceholderPerType: Record<ParamNativeType, string> = {
   [ParamNativeType.UNSUPPORTED]: "0x...",
 }
 
-const localValueLabel = computed(() => {
-  if (!chainId) return undefined;
-  return fundStore.addressLabelMap[localValue.value] || fundsStore.addressLabelMap[chainId]?.[localValue.value];
-})
+const localValueLabel = ref<string | undefined>()
+
 // Watch for Local Changes & Emit Encoded Value
 watch(
   localValue,
   (newValue) => {
     if (newValue !== props.modelValue) {
-      console.log("    [2] watch newValue", toRaw(newValue), toRaw(props.modelValue))
       const encoded = tryAbiEncode(newValue) || "";
-      // console.log("encoded value: ", encoded);
-      console.log("encoded value to emit: ", encoded);
       emit("update:modelValue", encoded);
     }
   },
 );
 
-// Watch for ModelValue Changes & Sync Local Value
+// Debounced label loader
+const setAddressLabel = debounce(async (value: string) => {
+  try {
+    localValueLabel.value = await fundStore.getAddressLabel(value, chainId)
+  } catch (err: any) {
+    console.error("Error getAddressLabel", value, err)
+  }
+}, 250) // 250ms debounce
+
+// Watch for ModelValue Changes & Sync Local Value & fetch label
 watch(
   () => props.modelValue,
   (newValue) => {
     if (newValue !== localValue.value) {
-      console.log("  condition input value changed decoded value OLD", localValue.value);
       localValue.value = tryAbiDecode(newValue || "");
-      console.log("  condition input value changed decoded value NEW", localValue.value);
+      setAddressLabel(localValue.value);
     }
   },
   { deep: true, immediate: true },
@@ -143,6 +147,8 @@ watch(
 ::v-deep(.v-input__details) {
   opacity: 1;
   font-weight: 700;
+  position: relative;
+  top: -0.5rem;
 
   .v-messages {
     opacity: 1;

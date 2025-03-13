@@ -39,10 +39,12 @@ import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import { fetchFundSettingsAction } from "~/store/fund/actions/fetchFundSettings.action";
 import type IFundSettings from "~/types/fund_settings";
+import type { Explorer } from "~/services/explorer";
 
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
   chainFunds: Record<ChainId, Record<string, IFund | undefined>>;
+  chainAddressSourceCode: Record<ChainId, Record<string, Record<string, any> | undefined>>;
   fundUserData: IFundUserData;
   userRedemptionRequest?: IFundTransactionRequest;
   selectedFundChain: ChainId;
@@ -73,6 +75,9 @@ export const useFundStore = defineStore({
     chainFunds: Object.fromEntries(
       Object.keys(networksMap).map((chainId) => [chainId, {}]),
     ) as Record<string, Record<string, IFund | undefined>>,
+    chainAddressSourceCode: Object.fromEntries(
+      Object.keys(networksMap).map((chainId) => [chainId, {}]),
+    ) as Record<string, Record<string, Record<string, any> | undefined>>,
     fundUserData: structuredClone(DEFAULT_FUND_USER_DATA),
     selectedFundChain: ChainId.ETHEREUM,
     selectedFundAddress: "",
@@ -461,6 +466,43 @@ export const useFundStore = defineStore({
       this.fundInitialNAVMethods = [];
       this.fundRoleModAddress = {};
       this.fundUserData = structuredClone(DEFAULT_FUND_USER_DATA);
+    },
+    async fetchAddressSourceCode(chainId: ChainId, address: string) {
+      if (!address) return;
+      console.log("Fetch target ABI action", chainId, address);
+      if (this.chainAddressSourceCode[chainId][address]) {
+        return this.chainAddressSourceCode[chainId][address];
+      }
+
+      const { $getExplorer } = useNuxtApp(); // ✅ Works here
+      let explorer: Explorer;
+      try {
+        explorer = $getExplorer(chainId);
+      } catch (error: any) {
+        this.chainAddressSourceCode[chainId][address] = undefined;
+        return undefined;
+      }
+
+      try {
+        const sourceCode = await explorer.sourceCode(address);
+        this.chainAddressSourceCode[chainId][address] = sourceCode;
+        return sourceCode;
+      } catch (error: any) {
+        this.chainAddressSourceCode[chainId][address] = undefined;
+        return undefined;
+      }
+    },
+    async getAddressLabel(address: string, chainId?: ChainId): Promise<string | undefined> {
+      if (!chainId) return undefined;
+      if (this.addressLabelMap[address]) {
+        return this.addressLabelMap[address];
+      }
+      if (this.fundsStore.chainAddressLabelMap[chainId]?.[address])  {
+        return this.fundsStore.chainAddressLabelMap[chainId]?.[address];
+      }
+
+      const sourceCode = await this.fetchAddressSourceCode(chainId, address);
+      return sourceCode?.ContractName;
     },
     /**
      * Fetches all needed fund data..

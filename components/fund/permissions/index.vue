@@ -16,6 +16,7 @@
           :selected-target="activeTargetId"
           :role="roleStore.role"
           :disabled="disabled"
+          :chain-id="chainId"
         />
       </div>
       <PermissionTarget
@@ -65,7 +66,7 @@ const { activeTargetId } = storeToRefs(roleStore);
   &__menu_left {
     display: flex;
     flex-direction: column;
-    max-width: 30%;
+    max-width: 35%;
     min-width: 15rem;
     gap: 1.5rem;
     margin-right: 1rem;
@@ -87,30 +88,6 @@ const { activeTargetId } = storeToRefs(roleStore);
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-  }
-  &__list_item {
-    display: flex;
-    border: 1px solid $color-border-dark;
-    padding: 0.5rem;
-    background-color: $color-hover;
-    justify-content: space-between;
-
-    &:hover {
-      background-color: $color-moonlight-dark;
-      cursor: pointer;
-    }
-    &--selected {
-      background-color: $color-moonlight-light;
-      font-weight: bold;
-      &:hover {
-        background-color: $color-moonlight-light;
-        cursor: auto;
-      }
-    }
-    &--deleted {
-      color: $color-disabled;
-      //color: $color-error;
-    }
   }
   &__function {
     display: flex;
