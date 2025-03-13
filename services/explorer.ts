@@ -50,7 +50,6 @@ export class Explorer {
     return json
   }
 
-
   async sourceCode(address: string): Promise<Record<string, any>> {
     const client = await this.getHttpClient()
     const response = await client.get<{ status: string; result: string }>(this.apiUrl, {
@@ -84,11 +83,22 @@ export class Explorer {
   }
 
   async detectProxyTarget(address: string): Promise<string | null> {
+    const key = `proxyTarget:${address.toLowerCase()}`
+    const cached = await this.cache?.getItem<{ target: string | null; timestamp: number }>(key)
+    // Check cache age (24h expiry)
+    if (cached && Date.now() - cached.timestamp < 24 * 60 * 60 * 1000) {
+      return cached.target
+    }
+
     const res = await detectProxyTarget(
       address as `0x${string}`,
       ({ method, params }) => this.provider.send(method, params),
     )
-    return res?.target as string;
+    const target = res?.target as string | null
+
+    await this.cache?.setItem(key, { target, timestamp: Date.now() })
+
+    return target
   }
 
   private getHttpClientConfig(): AxiosRequestConfig {
