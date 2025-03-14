@@ -6,9 +6,14 @@ export interface IChartType {
 
 export enum ChartType {
   NAV = "nav",
-  SHARE_PRICE = "share-price",
-  MARKET_VALUE = "market-value",
+  SHARE_PRICE = "share-price"
 }
+
+// Stroke Colors
+export const ChartTypeStrokeColors = {
+  [ChartType.NAV]: "var(--color-primary)",
+  [ChartType.SHARE_PRICE]: "#00CEC8",
+};
 
 export const ChartTypesMap: Record<ChartType, IChartType> = {
   [ChartType.NAV]: {
@@ -19,8 +24,5 @@ export const ChartTypesMap: Record<ChartType, IChartType> = {
     value: "Share Price",
     key: ChartType.SHARE_PRICE,
   },
-  [ChartType.MARKET_VALUE]: {
-    value: "Market Value",
-    key: ChartType.MARKET_VALUE,
-  },
+
 };

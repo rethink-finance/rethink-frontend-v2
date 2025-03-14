@@ -33,7 +33,7 @@ import { ethers } from "ethers";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";
-import { ChartType, ChartTypesMap } from "~/types/enums/chart_type";
+import { ChartType, ChartTypesMap, ChartTypeStrokeColors } from "~/types/enums/chart_type";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
 
@@ -51,11 +51,7 @@ const selectedType = ref(ChartType.NAV);
 // Computeds
 const series = computed(() => [
   {
-    name: "NAV",
-    data: chartItems.value,
-  },
-  {
-    name: "Share Price",
+    name: ChartTypesMap[selectedType.value].value,
     data: chartItems.value,
   },
 ]);
@@ -69,13 +65,25 @@ const totalNAVItems = computed(() => {
 });
 
 const chartItems = computed(() => {
-  return props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => parseFloat(
-    ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals),
-  )) || [];
-});
+  const items: Record<ChartType, number[]> = {
+    [ChartType.NAV]: props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => parseFloat(
+      ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals),
+    )) || [],
+    [ChartType.SHARE_PRICE]: props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => parseFloat(
+      ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals),
+    )) || [],
+  };
+
+  return items[selectedType.value];
+})
 
 const chartDates = computed(() => {
-  return props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [];
+  const items: Record<ChartType, string[]> = {
+    [ChartType.NAV]: props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [],
+    [ChartType.SHARE_PRICE]: [],
+  };
+
+  return items[selectedType.value];
 });
 
 const options = computed(() => {
@@ -102,7 +110,7 @@ const options = computed(() => {
     markers: {
       size: 0,
       colors: ["transparent"],
-      strokeColors: "var(--color-primary)",
+      strokeColors: ChartTypeStrokeColors[selectedType.value],
       strokeWidth: 2,
     },
     grid: {
@@ -125,14 +133,14 @@ const options = computed(() => {
         type: "vertical",
         stops: [20, 100],
       },
-      colors: ["var(--color-primary)"],
+      colors: [ChartTypeStrokeColors[selectedType.value]],
     },
     stroke: {
       show: true,
       curve: "straight",
       lineCap: "round",
       width: 2,
-      colors: ["var(--color-primary)"],
+      colors: [ChartTypeStrokeColors[selectedType.value]],
     },
     yaxis: {
       // Set dynamic min and max values with a small buffer (5%) to ensure minor fluctuations
@@ -181,14 +189,19 @@ const options = computed(() => {
     tooltip: {
       theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
       // TODO when multiple series use:
-      // custom: ({ series, seriesIndex, dataPointIndex, w }: any) => {
-      custom: ({ dataPointIndex, w }: any) => {
-        return "<div class='custom_tooltip'>" +
-          "<div class='tooltip_row'>" +
-          "<div class='label'>Date:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
-          "<div class='tooltip_row'>" +
-          "<div class='label'>NAV:</div>" + formatWei(totalNAVItems.value[dataPointIndex]) + "</div>" +
-          "</div>"
+      custom: ({ series, seriesIndex, dataPointIndex, w }: any) => {
+        const value = totalNAVItems.value[dataPointIndex]; // Modify this if needed for share price
+        return `
+          <div class='custom_tooltip'>
+            <div class='tooltip_row'>
+              <div class='label'>Date:</div> ${w.globals.categoryLabels[dataPointIndex]}
+            </div>
+            <div class='tooltip_row'>
+              <div class='label'>${selectedType.value === ChartType.NAV ? "NAV" : "Share Price"}:</div>
+              ${formatWei(value)}
+            </div>
+          </div>
+        `;
       },
     },
   }
