@@ -455,9 +455,12 @@ export const useRoleStore = defineStore("role", () => {
 
       let functions: Record<string, FunctionFragment> = {}
       try {
+        // TODO: move this part to getFunctionTransaction and cache values instead of here doing it everytime even
+        //   if it's not needed
         if (!targetAbis[target.address]) {
           console.log("fetch ABI for target", target.address, targetAbis[target.address])
-          targetAbis[target.address] = await explorer.abi(target.address);
+          const [abiResponse, proxyAddress] = await explorer.abi(target.address);
+          targetAbis[target.address] = abiResponse;
         }
 
         const targetABI: JsonFragment[] = targetAbis[target.address];

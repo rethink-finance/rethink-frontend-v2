@@ -75,7 +75,11 @@
             />
           </div>
         </div>
-        <div class="btn_add_param mx-auto mt-2" @click="addNewOneOfValue">
+        <div
+          v-if="!disabled"
+          class="btn_add_param mx-auto mt-2"
+          @click="addNewOneOfValue"
+        >
           Add Value +
         </div>
       </div>

@@ -2,9 +2,12 @@
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios"
 import { ethers, type JsonFragment, Interface, JsonRpcProvider } from "ethers";
 import detectProxyTarget from "evm-proxy-detection"
+import pLimit from "p-limit";
 import type { ExplorerConfig } from "~/types/explorer";
 import { configureAxios } from "~/services/http";
 
+// Make only 2 parallel requests at once.
+const explorerApiLimit = pLimit(1)
 
 export class Explorer {
   private readonly apiUrl: string
@@ -19,7 +22,7 @@ export class Explorer {
     this.provider = provider
   }
 
-  async abi(address: string): Promise<JsonFragment[]> {
+  async abi(address: string): Promise<[JsonFragment[], string | null]> {
     const client = await this.getHttpClient()
     const response = await client.get<{ status: string; result: string }>(this.apiUrl, {
       params: {
@@ -31,7 +34,6 @@ export class Explorer {
 
     if (response.data.status !== "1") {
       // could not fetch ABI
-
       // check if this is a proxy
       const proxyAddress = await this.detectProxyTarget(address)
       if (proxyAddress) return await this.abi(proxyAddress)
@@ -48,15 +50,52 @@ export class Explorer {
       if (proxyAddress) return await this.abi(proxyAddress)
     }
 
-    return json
+    // Return JSON ABI and final proxy resolved address.
+    return [json, address]
+  }
+
+  async sourceCode(address: string): Promise<Record<string, any>> {
+    const client = await this.getHttpClient()
+    // First, fetch ABI only, as it is a faster call, less likely to fail.
+    const [abiResponse, proxyAddress] = await explorerApiLimit(() => this.abi(address))
+    // const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    // await sleep(300);
+    console.log("PROXY", proxyAddress)
+    const response = await explorerApiLimit(() =>
+      client.get<{ status: string; result: string }>(this.apiUrl, {
+        params: {
+          module: "contract",
+          action: "getsourcecode",
+          address: proxyAddress || address,
+        },
+      }),
+    )
+    if (response.data.status !== "1") {
+      // remove from cache so we can try again later
+      this.removeResponseFromCache(response)
+      throw new Error(response.data.result)
+    }
+
+    return response.data.result[0] as any;
   }
 
   async detectProxyTarget(address: string): Promise<string | null> {
+    const key = `proxyTarget:${address.toLowerCase()}`
+    const cached = await this.cache?.getItem<{ target: string | null; timestamp: number }>(key)
+    // Check cache age (24h expiry)
+    if (cached && Date.now() - cached.timestamp < 24 * 60 * 60 * 1000) {
+      return cached.target
+    }
+
     const res = await detectProxyTarget(
       address as `0x${string}`,
       ({ method, params }) => this.provider.send(method, params),
     )
-    return res?.target as string;
+    const target = res?.target as string | null
+
+    await this.cache?.setItem(key, { target, timestamp: Date.now() })
+
+    return target
   }
 
   private getHttpClientConfig(): AxiosRequestConfig {

@@ -1,15 +1,19 @@
 <template>
-  <div>
-    <div class="permissions__menu_section">
+  <div class="permissions_menu">
+    <div class="permissions_menu__section">
       <strong>Members</strong>
       <div class="permissions__list">
         <div
           v-for="memberAddress in allMembers"
           :key="memberAddress"
-          class="permissions__list_item"
+          class="permissions_menu__list_item"
           :class="memberClasses(memberAddress)"
         >
-          {{ truncateAddress(memberAddress) }}
+          <PermissionAddressLabelTooltip
+            :label="addressLabels[memberAddress]"
+            :address="memberAddress"
+          />
+          {{ addressLabels[memberAddress] || truncateAddress(memberAddress) }}
           <template v-if="!disabled">
             <UiButtonDelete
               v-if="getMemberStatus(memberAddress) === EntityStatus.REMOVE"
@@ -45,17 +49,22 @@
       </div>
     </div>
 
-    <div class="permissions__menu_section">
+    <div class="permissions_menu__section">
       <strong>Targets</strong>
       <div class="permissions__list">
         <div
           v-for="target in allTargets"
           :key="target.id"
-          class="permissions__list_item"
+          class="permissions_menu__list_item"
           :class="targetClasses(target)"
           @click="setSelectedTarget(target.id)"
         >
-          {{ truncateAddress(target.address) }}
+          <PermissionAddressLabelTooltip
+            :label="addressLabels[target.address]"
+            :address="target.address"
+          />
+          {{ addressLabels[target.address] || truncateAddress(target.address) }}
+
           <template v-if="!disabled">
             <UiButtonDelete
               v-if="getTargetStatus(target) === EntityStatus.REMOVE"
@@ -101,6 +110,8 @@ import {
   ConditionType,
   EntityStatus, ExecutionOption,
 } from "~/types/enums/zodiac-roles";
+import { useFundStore } from "~/store/fund/fund.store";
+import type { ChainId } from "~/store/web3/networksMap";
 const emit = defineEmits(
   [
     "targetRemoved",
@@ -112,11 +123,17 @@ const props = defineProps({
     type: Object as PropType<Role>,
     default: () => {},
   },
+  chainId: {
+    type: String as PropType<ChainId>,
+    required: true,
+  },
   disabled: {
     type: Boolean,
     default: false,
   },
 });
+const fundStore = useFundStore();
+const addressLabels = ref<Record<string, string>>({})
 const isAddMemberModalOpen = ref(false);
 const isAddTargetModalOpen = ref(false);
 
@@ -137,13 +154,13 @@ const setSelectedTarget = (newTargetId: string) => {
 
 const targetClasses = (target: Target) => {
   return [
-    { "permissions__list_item--deleted": getTargetStatus.value(target) === EntityStatus.REMOVE },
-    { "permissions__list_item--selected": target.id === activeTargetId.value },
+    { "permissions_menu__list_item--deleted": getTargetStatus.value(target) === EntityStatus.REMOVE },
+    { "permissions_menu__list_item--selected": target.id === activeTargetId.value },
   ];
 };
 const memberClasses = (memberAddress: string) => {
   return [
-    { "permissions__list_item--deleted": getMemberStatus.value(memberAddress) === EntityStatus.REMOVE },
+    { "permissions_menu__list_item--deleted": getMemberStatus.value(memberAddress) === EntityStatus.REMOVE },
   ];
 };
 
@@ -159,16 +176,45 @@ const addNewTarget = (newTargetAddress: string) => {
     } as Target,
   )
 }
+
+watchEffect(async () => {
+  for (const target of allTargets.value) {
+    const label = await fundStore.getAddressLabel(target.address, props.chainId)
+    if (label) addressLabels.value[target.address] = label
+  }
+})
 </script>
 
 <style lang="scss" scoped>
-.permissions {
-  display: flex;
-
-  &__menu_section {
+.permissions_menu {
+  &__section {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+  }
+
+  &__list_item {
+    border: 1px solid $color-border-dark;
+    padding: 0.5rem;
+    background-color: $color-hover;
+    @include ellipsis;
+
+    &:hover {
+      background-color: $color-moonlight-dark;
+      cursor: pointer;
+    }
+    &--selected {
+      background-color: $color-moonlight-light;
+      font-weight: bold;
+      &:hover {
+        background-color: $color-moonlight-light;
+        cursor: auto;
+      }
+    }
+    &--deleted {
+      color: $color-disabled;
+      //color: $color-error;
+    }
   }
 }
 </style>

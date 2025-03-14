@@ -5,6 +5,8 @@
     :disabled="disabled"
     :rules="rules"
     :error-messages="errorMessages"
+    :hint="localValueLabel"
+    :persistent-hint="!!localValueLabel"
     variant="outlined"
     density="compact"
     hide-details="auto"
@@ -13,12 +15,16 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
+import debounce from "lodash.debounce";
 import {
   formatParamValue,
   getNativeType,
 } from "~/composables/zodiac-roles/conditions";
 import { ParamNativeType } from "~/types/enums/zodiac-roles";
 import type { FlattenedParamType } from "~/types/zodiac-roles/role";
+import { useFundsStore } from "~/store/funds/funds.store";
+import type { ChainId } from "~/store/web3/networksMap";
+import { useFundStore } from "~/store/fund/fund.store";
 const emit = defineEmits(["update:modelValue"]);
 
 const props = defineProps({
@@ -35,6 +41,9 @@ const props = defineProps({
     default: false,
   },
 });
+const fundsStore = useFundsStore();
+const fundStore = useFundStore();
+const chainId = inject<ChainId>("chainId");
 
 const localValue = ref("");
 const abiCoder = ethers.AbiCoder.defaultAbiCoder();
@@ -99,28 +108,35 @@ const PlaceholderPerType: Record<ParamNativeType, string> = {
   [ParamNativeType.UNSUPPORTED]: "0x...",
 }
 
+const localValueLabel = ref<string | undefined>()
+
 // Watch for Local Changes & Emit Encoded Value
 watch(
   localValue,
   (newValue) => {
     if (newValue !== props.modelValue) {
-      console.log("    [2] watch newValue", toRaw(newValue), toRaw(props.modelValue))
       const encoded = tryAbiEncode(newValue) || "";
-      // console.log("encoded value: ", encoded);
-      console.log("encoded value to emit: ", encoded);
       emit("update:modelValue", encoded);
     }
   },
 );
 
-// Watch for ModelValue Changes & Sync Local Value
+// Debounced label loader
+const setAddressLabel = debounce(async (value: string) => {
+  try {
+    localValueLabel.value = await fundStore.getAddressLabel(value, chainId)
+  } catch (err: any) {
+    console.error("Error getAddressLabel", value, err)
+  }
+}, 250) // 250ms debounce
+
+// Watch for ModelValue Changes & Sync Local Value & fetch label
 watch(
   () => props.modelValue,
   (newValue) => {
     if (newValue !== localValue.value) {
-      console.log("  condition input value changed decoded value OLD", localValue.value);
       localValue.value = tryAbiDecode(newValue || "");
-      console.log("  condition input value changed decoded value NEW", localValue.value);
+      setAddressLabel(localValue.value);
     }
   },
   { deep: true, immediate: true },
@@ -128,4 +144,14 @@ watch(
 </script>
 
 <style lang="scss" scoped>
+::v-deep(.v-input__details) {
+  opacity: 1;
+  font-weight: 700;
+  position: relative;
+  top: -0.5rem;
+
+  .v-messages {
+    opacity: 1;
+  }
+}
 </style>
