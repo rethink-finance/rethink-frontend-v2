@@ -67,6 +67,7 @@ const toggleMenuOpen = () => {
   flex-direction: column;
   gap: 0.5rem;
   font-weight: 500;
+  min-width: 10rem;
   @include borderGray("border");
   position: relative;
 

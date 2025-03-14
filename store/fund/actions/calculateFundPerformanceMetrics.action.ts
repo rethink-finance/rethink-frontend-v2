@@ -60,7 +60,7 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
     const averageBlockTime = context?.averageBlockTime || 0;
 
     // 2. estimate the block number of the last NAV update timestamp
-    const lastNavUpdateBlockNumber = Number(await getBlockByTimestamp(fund.chainId, fundLastNavUpdate.timestamp / 1000, averageBlockTime) || 0);
+    const lastNavUpdateBlockNumber = Number(await getBlockByTimestamp(web3Store, fund.chainId, fundLastNavUpdate.timestamp / 1000, averageBlockTime) || 0);
 
     // 3. get total deposit balance at the last NAV update
     try {
@@ -86,49 +86,6 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
 
   return null;
 }
-
-const getBlockByTimestamp = async (chainId: ChainIdType, timestamp: number, averageBlockTime: number) => {
-  try {
-    const web3Store = useWeb3Store();
-    const provider = web3Store.chainProviders[chainId]
-
-    const latestBlock = await web3Store
-      .callWithRetry(
-        chainId,
-        async () =>
-          Number(await provider.eth.getBlockNumber()),
-      )
-    const latestBlockData = await web3Store
-      .callWithRetry(
-        chainId,
-        async () =>
-          await provider.eth.getBlock(latestBlock),
-      )
-    const latestTimestamp = Number(latestBlockData.timestamp);
-
-    const estimatedStartBlock = latestBlock - Math.floor((latestTimestamp - timestamp) / averageBlockTime);
-
-
-    if(estimatedStartBlock < 0) {
-      console.error("Estimated start block is negative", estimatedStartBlock);
-      return null;
-    }
-
-    if(estimatedStartBlock > latestBlock) {
-      console.error("Estimated start block is greater than latest block", estimatedStartBlock, latestBlock);
-      return null;
-    }
-
-    console.log("latestBlock: ", latestBlock);
-    console.log("estimatedStartBlock: ", estimatedStartBlock);
-
-    return estimatedStartBlock;
-  } catch (e) {
-    console.error("Error getting block by timestamp", e);
-    return null;
-  }
-}
-
 
 // TODO: we don't use this f-ijon, but might be useful in the future? should we keep it?
 const getL1BlockNumber = async (l2BlockNumber: number, chainId: ChainIdType) => {

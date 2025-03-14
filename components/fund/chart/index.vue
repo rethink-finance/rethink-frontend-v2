@@ -4,7 +4,7 @@
       <div>
         <FundChartTypeSelector
           v-model:selected="selectedType"
-          :value="fundStore.fundTotalNAVFormattedShort"
+          :value="valueShownInTypeSelector"
           :type-options="ChartTypesMap"
         />
       </div>
@@ -30,17 +30,18 @@
 </template>
 <script lang="ts" setup>
 import { ethers } from "ethers";
+import { ERC20 } from "~/assets/contracts/ERC20";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
 import { ChartType, ChartTypesMap, ChartTypeStrokeColors } from "~/types/enums/chart_type";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
 
-
 const fundStore = useFundStore();
+const web3Store = useWeb3Store();
 const actionStateStore = useActionStateStore();
-
 
 const props = defineProps<{
   fund: IFund;
@@ -48,7 +49,19 @@ const props = defineProps<{
 
 const selectedType = ref(ChartType.NAV);
 
+const sharePriceItems = ref([]) as Ref<number[]>;
+const isSharePriceLoading = ref(true);
+
 // Computeds
+const valueShownInTypeSelector = computed(() => {
+  const items: Record<ChartType, string> = {
+    [ChartType.NAV]: fundStore.fundTotalNAVFormattedShort,
+    [ChartType.SHARE_PRICE]: "",
+  }
+
+  return items[selectedType.value];
+});
+
 const series = computed(() => [
   {
     name: ChartTypesMap[selectedType.value].value,
@@ -69,9 +82,7 @@ const chartItems = computed(() => {
     [ChartType.NAV]: props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => parseFloat(
       ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals),
     )) || [],
-    [ChartType.SHARE_PRICE]: props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => parseFloat(
-      ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals),
-    )) || [],
+    [ChartType.SHARE_PRICE]: sharePriceItems.value,
   };
 
   return items[selectedType.value];
@@ -80,7 +91,7 @@ const chartItems = computed(() => {
 const chartDates = computed(() => {
   const items: Record<ChartType, string[]> = {
     [ChartType.NAV]: props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [],
-    [ChartType.SHARE_PRICE]: [],
+    [ChartType.SHARE_PRICE]: props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [],
   };
 
   return items[selectedType.value];
@@ -137,7 +148,7 @@ const options = computed(() => {
     },
     stroke: {
       show: true,
-      curve: "straight",
+      curve: selectedType.value === ChartType.SHARE_PRICE ? "stepline" : "straight",
       lineCap: "round",
       width: 2,
       colors: [ChartTypeStrokeColors[selectedType.value]],
@@ -190,7 +201,9 @@ const options = computed(() => {
       theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
       // TODO when multiple series use:
       custom: ({ series, seriesIndex, dataPointIndex, w }: any) => {
-        const value = totalNAVItems.value[dataPointIndex]; // Modify this if needed for share price
+        const valueNav = totalNAVItems.value[dataPointIndex];
+        const valueSharePrice = sharePriceItems.value[dataPointIndex];
+
         return `
           <div class='custom_tooltip'>
             <div class='tooltip_row'>
@@ -198,7 +211,7 @@ const options = computed(() => {
             </div>
             <div class='tooltip_row'>
               <div class='label'>${selectedType.value === ChartType.NAV ? "NAV" : "Share Price"}:</div>
-              ${formatWei(value)}
+              ${selectedType.value === ChartType.NAV ? formatWei(valueNav) : valueSharePrice}
             </div>
           </div>
         `;
@@ -211,10 +224,48 @@ const options = computed(() => {
 const formatWei = (value: bigint) => {
   return formatTokenValue(value, props.fund?.baseToken.decimals) + " " + props.fund?.baseToken.symbol;
 };
+
+const getSharePrice = async () => {
+  isSharePriceLoading.value = true;
+
+  // 1. get average block time for the chain
+  const web3Instance = web3Store.getWeb3Instance(props.fund.chainId, false);
+  const { initializeBlockTimeContext } = useBlockTime()
+  const context = await initializeBlockTimeContext(web3Instance)
+  const averageBlockTime = context?.averageBlockTime || 0;
+
+  const output = await Promise.all(props.fund?.navUpdates?.map(async (navUpdate: INAVUpdate) =>  {
+    const totalNav = parseFloat(ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals));
+    const blockNumber = Number(await getBlockByTimestamp(web3Store, props.fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
+
+    const fundBaseTokenContract = web3Store.getCustomContract(
+      props.fund.chainId,
+      ERC20,
+      props.fund.baseToken.address,
+    );
+
+    // Fetch the total supply at the specific block number
+    const totalSupplyRaw = await web3Store.callWithRetry(
+      props.fund.chainId,
+      () => fundBaseTokenContract.methods.totalSupply().call({}, blockNumber ),
+    );
+
+    const totalSupply = parseFloat(ethers.formatUnits(totalSupplyRaw, props.fund?.baseToken.decimals));
+    return totalNav / totalSupply;
+  }));
+
+  sharePriceItems.value = output;
+  isSharePriceLoading.value = false;
+};
+
+
+// Lifecycle
+watch(() => props.fund, () => {
+  if (props.fund) {
+    getSharePrice();
+  }
+}, { immediate: true });
 </script>
-
-
-
 
 <style lang="scss" scoped>
 .chart {
