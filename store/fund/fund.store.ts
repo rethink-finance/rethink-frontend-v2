@@ -488,6 +488,16 @@ export const useFundStore = defineStore({
         console.warn("sourceCode", sourceCode);
         if (sourceCode.Proxy === "0") {
           // Only save it if it's not a proxy.
+          try {
+            // Try fetching ERC20 token symbol, if it works, we will show token symbol as a label.
+            const tokenContract = this.web3Store.getCustomContract(
+              chainId,
+              ERC20,
+              address,
+            );
+            sourceCode.symbol = await tokenContract.methods.symbol().call();
+          } catch {}
+          // Save the source code
           this.chainAddressSourceCode[chainId][address] = sourceCode;
         }
         return sourceCode;
@@ -506,6 +516,14 @@ export const useFundStore = defineStore({
       }
 
       const sourceCode = await this.fetchAddressSourceCode(chainId, address);
+      // Return the ERC20 token symbol if it exists, else try returning contract name.
+      if (sourceCode?.symbol) {
+        let label = sourceCode.symbol;
+        if (sourceCode?.ContractName) {
+          label += ` (${sourceCode.ContractName})`
+          return label;
+        }
+      }
       return sourceCode?.ContractName;
     },
     /**
