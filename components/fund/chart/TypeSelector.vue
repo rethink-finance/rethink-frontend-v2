@@ -2,7 +2,7 @@
   <div class="price_type_selector">
     <div
       class="price_type_selector__select_button"
-      :class="{'price_type_selector__select_button--hover': hasMultipleTypeOptions}"
+      :class="{ 'price_type_selector__select_button--hover': hasMultipleTypeOptions }"
       @click="toggleMenuOpen"
     >
       <div>
@@ -13,83 +13,51 @@
           {{ selectedTypeValue }}
         </div>
       </div>
-      <IconDropdown
-        v-if="hasMultipleTypeOptions"
-        :active="menuOpen"
-      />
+      <IconDropdown v-if="hasMultipleTypeOptions" :active="menuOpen" />
     </div>
-    <div
-      v-if="menuOpen"
-      class="price_type_selector__options"
-    >
+    <div v-if="menuOpen" class="price_type_selector__options">
       <div
-        v-for="(optionValue, optionKey) in typeOptions"
-        :key="optionKey"
+        v-for="(option) in typeOptions"
+        :key="option.key"
         class="price_type_selector__option"
-        :class="{ 'option-active': selectedType === optionKey }"
-        @click="selectType(optionKey)"
+        :class="{ 'option-active': selected === option.key }"
+        @click="selectType(option)"
       >
-        {{ optionValue }}
+        {{ option.value }}
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-const typeOptions: Record<string, string> = {
-  "nav": "NAV",
-  // TODO add other type options when needed.
-  // "sharePrice": "Share Price",
+<script setup lang="ts">
+import { ChartTypesMap, type ChartType, type IChartType } from "~/types/enums/chart_type";
+
+
+const props = defineProps<{
+  value: string;
+  selected: ChartType;
+  typeOptions: Record<ChartType, IChartType>
+}>();
+
+const emit = defineEmits<{
+  (e: "update:selected", value: string): void;
+}>();
+
+const menuOpen = ref(false);
+
+
+const selectedTypeValue = computed(() => ChartTypesMap[props.selected].value);
+const hasMultipleTypeOptions = computed(() => Object.keys(props.typeOptions).length > 1);
+
+const selectType = (option: IChartType) => {
+
+  emit("update:selected", option.key);
+  menuOpen.value = false;
 };
 
-export default {
-  name: "TypeSelector",
-  props: {
-    value: {
-      type: String,
-      default: "N/A",
-    },
-    selected: {
-      type: String,
-      default: "nav",
-      rules: [
-        (value: string) => {
-          if (!Object.keys(typeOptions)?.includes(value)) {
-            return `Selected value is not supported: ${value}`
-          }
-
-          return true;
-        },
-      ],
-    },
-  },
-  emits: ["change"],
-  data() {
-    return {
-      selectedType: this.selected,
-      menuOpen: false,
-      typeOptions,
-    }
-  },
-  computed: {
-    selectedTypeValue() {
-      return this.typeOptions[this.selectedType];
-    },
-    hasMultipleTypeOptions() {
-      return Object.keys(typeOptions).length > 1
-    },
-  },
-  methods: {
-    selectType(option: string) {
-      this.selectedType = option;
-      this.$emit("change", option);
-      this.menuOpen = false;
-    },
-    toggleMenuOpen() {
-      if (!this.hasMultipleTypeOptions) return;
-      this.menuOpen = !this.menuOpen;
-    },
-  },
+const toggleMenuOpen = () => {
+  if (!hasMultipleTypeOptions.value) return;
+  menuOpen.value = !menuOpen.value;
 };
 </script>
 

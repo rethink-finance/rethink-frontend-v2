@@ -3,9 +3,9 @@
     <div class="chart__toolbar">
       <div>
         <FundChartTypeSelector
-          selected="aum"
+          v-model:selected="selectedType"
           :value="fundStore.fundTotalNAVFormattedShort"
-          @change="updateChart"
+          :type-options="ChartTypesMap"
         />
       </div>
       <!--      <FundChartTimelineSelector selected="3M" @change="updateChart" />-->
@@ -28,175 +28,179 @@
     </div>
   </div>
 </template>
-<script lang="ts">
+<script lang="ts" setup>
 import { ethers } from "ethers";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";
+import { ChartType, ChartTypesMap } from "~/types/enums/chart_type";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
 
-export default {
-  props: {
-    fund: {
-      type: Object as PropType<IFund>,
-      default: () => ({}),
-    },
+
+const fundStore = useFundStore();
+const actionStateStore = useActionStateStore();
+
+
+const props = defineProps<{
+  fund: IFund;
+}>();
+
+const selectedType = ref(ChartType.NAV);
+
+// Computeds
+const series = computed(() => [
+  {
+    name: "NAV",
+    data: chartItems.value,
   },
-  setup() {
-    const fundStore = useFundStore();
-    const actionStateStore = useActionStateStore();
-    return { fundStore, actionStateStore }
+  {
+    name: "Share Price",
+    data: chartItems.value,
   },
-  computed: {
-    series() {
-      return [
-        {
-          name: "NAV",
-          data: this.chartItems,
-        },
-      ];
+]);
+
+const isLoadingFetchFundNAVUpdatesActionState = computed(() => {
+  return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
+});
+
+const totalNAVItems = computed(() => {
+  return props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n) || [];
+});
+
+const chartItems = computed(() => {
+  return props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => parseFloat(
+    ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals),
+  )) || [];
+});
+
+const chartDates = computed(() => {
+  return props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [];
+});
+
+const options = computed(() => {
+  return {
+    chart: {
+      id: "nav-area-chart",
+      type: "area",
+      background: "var(--color-gray-light-transparent)",
+      stacked: false,
+      zoom: {
+        enabled: false,
+      },
+      toolbar: {
+        show: false,
+      },
     },
-    isLoadingFetchFundNAVUpdatesActionState(): boolean {
-      return this.actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
+    dataLabels: {
+      enabled: false,
     },
-    totalNAVItems(): bigint[] {
-      return this.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n) || [];
+    context: {
+      // Store additional context data here.
+      navUpdates: props.fund?.navUpdates || [],
     },
-    chartItems(): number[] {
-      return this.fund?.navUpdates?.map((navUpdate: INAVUpdate) => parseFloat(
-        ethers.formatUnits(navUpdate.totalNAV || 0n, this.fund?.baseToken.decimals),
-      )) || [];
+    markers: {
+      size: 0,
+      colors: ["transparent"],
+      strokeColors: "var(--color-primary)",
+      strokeWidth: 2,
     },
-    chartDates() {
-      return this.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [];
+    grid: {
+      show: false,
+      padding: {
+        // This removes the right padding. Without removing it, we have a lot of
+        // space on the right of the chart.
+        // TODO if you use here -26 it extends the chart until the end of the div, but the last label
+        //   is not entirely visible.
+        right: 0,
+      },
     },
-    options() {
-      return {
-        chart: {
-          id: "nav-area-chart",
-          type: "area",
-          background: "var(--color-gray-light-transparent)",
-          stacked: false,
-          zoom: {
-            enabled: false,
-          },
-          toolbar: {
-            show: false,
-          },
-        },
-        dataLabels: {
-          enabled: false,
-        },
-        context: {
-          // Store additional context data here.
-          navUpdates: this.fund?.navUpdates || [],
-        },
-        markers: {
-          size: 0,
-          colors: ["transparent"],
-          strokeColors: "var(--color-primary)",
-          strokeWidth: 2,
-        },
-        grid: {
-          show: false,
-          padding: {
-            // This removes the right padding. Without removing it, we have a lot of
-            // space on the right of the chart.
-            // TODO if you use here -26 it extends the chart until the end of the div, but the last label
-            //   is not entirely visible.
-            right: 0,
-          },
-        },
-        fill: {
-          type: "gradient",
-          gradient: {
-            shadeIntensity: 1,
-            inverseColors: false,
-            opacityFrom: 0.25,
-            opacityTo: 0.1,
-            type: "vertical",
-            stops: [20, 100],
-          },
-          colors: ["var(--color-primary)"],
-        },
-        stroke: {
-          show: true,
-          curve: "straight",
-          lineCap: "round",
-          width: 2,
-          colors: ["var(--color-primary)"],
-        },
-        yaxis: {
-          // Set dynamic min and max values with a small buffer (5%) to ensure minor fluctuations
-          // in NAV data do not appear overly exaggerated on the chart. This helps in providing a
-          // more accurate visual representation when NAV values change slightly between updates.
-          min: Math.min(...this.chartItems) * 0.95,
-          max: Math.max(...this.chartItems) * 1.05,
-          forceNiceScale: true,
-          labels: {
-            style: {
-              colors: "var(--color-light-subtitle)",
-            },
-            offsetX: 0,
-            formatter: (value: number) => {
-              return abbreviateNumber(value, 3);
-            },
-          },
-          axisBorder: {
-            show: false,
-          },
-          axisTicks: {
-            show: false,
-          },
-        },
-        xaxis: {
-          categories: this.chartDates,
-          tickAmount: 4,
-          axisBorder: {
-            show: false,
-          },
-          axisTicks: {
-            show: false,
-          },
-          crosshairs: {
-            show: false,
-          },
-          tooltip: {
-            enabled: false,
-          },
-          labels: {
-            style: {
-              colors: "var(--color-light-subtitle)",
-            },
-          },
-        },
-        tooltip: {
-          theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
-          // TODO when multiple series use:
-          // custom: ({ series, seriesIndex, dataPointIndex, w }: any) => {
-          custom: ({ dataPointIndex, w }: any) => {
-            return "<div class='custom_tooltip'>" +
-              "<div class='tooltip_row'>" +
-              "<div class='label'>Date:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
-              "<div class='tooltip_row'>" +
-              "<div class='label'>NAV:</div>" + this.formatWei(this.totalNAVItems[dataPointIndex]) + "</div>" +
-              "</div>"
-          },
-        },
-      }
+    fill: {
+      type: "gradient",
+      gradient: {
+        shadeIntensity: 1,
+        inverseColors: false,
+        opacityFrom: 0.25,
+        opacityTo: 0.1,
+        type: "vertical",
+        stops: [20, 100],
+      },
+      colors: ["var(--color-primary)"],
     },
-  },
-  methods: {
-    formatWei(value: bigint) {
-      return formatTokenValue(value, this.fund?.baseToken.decimals) + " " + this.fund?.baseToken.symbol;
+    stroke: {
+      show: true,
+      curve: "straight",
+      lineCap: "round",
+      width: 2,
+      colors: ["var(--color-primary)"],
     },
-    updateChart(value?: string) {
-      console.log("updateChart: " + value)
+    yaxis: {
+      // Set dynamic min and max values with a small buffer (5%) to ensure minor fluctuations
+      // in NAV data do not appear overly exaggerated on the chart. This helps in providing a
+      // more accurate visual representation when NAV values change slightly between updates.
+      min: Math.min(...chartItems.value) * 0.95,
+      max: Math.max(...chartItems.value) * 1.05,
+      forceNiceScale: true,
+      labels: {
+        style: {
+          colors: "var(--color-light-subtitle)",
+        },
+        offsetX: 0,
+        formatter: (value: number) => {
+          return abbreviateNumber(value, 3);
+        },
+      },
+      axisBorder: {
+        show: false,
+      },
+      axisTicks: {
+        show: false,
+      },
     },
-  },
+    xaxis: {
+      categories: chartDates.value,
+      tickAmount: 4,
+      axisBorder: {
+        show: false,
+      },
+      axisTicks: {
+        show: false,
+      },
+      crosshairs: {
+        show: false,
+      },
+      tooltip: {
+        enabled: false,
+      },
+      labels: {
+        style: {
+          colors: "var(--color-light-subtitle)",
+        },
+      },
+    },
+    tooltip: {
+      theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
+      // TODO when multiple series use:
+      // custom: ({ series, seriesIndex, dataPointIndex, w }: any) => {
+      custom: ({ dataPointIndex, w }: any) => {
+        return "<div class='custom_tooltip'>" +
+          "<div class='tooltip_row'>" +
+          "<div class='label'>Date:</div>" + w.globals.categoryLabels[dataPointIndex] + "</div>" +
+          "<div class='tooltip_row'>" +
+          "<div class='label'>NAV:</div>" + formatWei(totalNAVItems.value[dataPointIndex]) + "</div>" +
+          "</div>"
+      },
+    },
+  }
+});
+
+// Methods
+const formatWei = (value: bigint) => {
+  return formatTokenValue(value, props.fund?.baseToken.decimals) + " " + props.fund?.baseToken.symbol;
 };
 </script>
+
+
 
 
 <style lang="scss" scoped>
