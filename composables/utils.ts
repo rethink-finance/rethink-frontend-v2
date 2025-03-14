@@ -1,4 +1,5 @@
 import { ethers, FixedNumber } from "ethers";
+import { type ChainId as ChainIdType } from "~/store/web3/networksMap";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 import type { PositionType } from "~/types/enums/position_type";
@@ -318,4 +319,44 @@ export const getVoteTimeValue = (value: number | bigint, averageBlockTimeInSecon
   }
 
   return formatDuration(Number(value));
+}
+
+
+export const getBlockByTimestamp = async (web3Store: any, chainId: ChainIdType, timestamp: number, averageBlockTime: number) => {
+  try {
+    // const web3Store = useWeb3Store();
+    const provider = web3Store.chainProviders[chainId]
+
+    const latestBlock = await web3Store
+      .callWithRetry(
+        chainId,
+        async () =>
+          Number(await provider.eth.getBlockNumber()),
+      )
+    const latestBlockData = await web3Store
+      .callWithRetry(
+        chainId,
+        async () =>
+          await provider.eth.getBlock(latestBlock),
+      )
+    const latestTimestamp = Number(latestBlockData.timestamp);
+
+    const estimatedStartBlock = latestBlock - Math.floor((latestTimestamp - timestamp) / averageBlockTime);
+
+
+    if(estimatedStartBlock < 0) {
+      console.error("Estimated start block is negative", estimatedStartBlock);
+      return null;
+    }
+
+    if(estimatedStartBlock > latestBlock) {
+      console.error("Estimated start block is greater than latest block", estimatedStartBlock, latestBlock);
+      return null;
+    }
+
+    return estimatedStartBlock;
+  } catch (e) {
+    console.error("Error getting block by timestamp", e);
+    return null;
+  }
 }
