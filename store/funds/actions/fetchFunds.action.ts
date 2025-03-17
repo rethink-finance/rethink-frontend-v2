@@ -1,6 +1,7 @@
+import { chainIds } from "~/store/web3/networksMap";
+import type { ChainId } from "~/types/enums/chain_id";
 import { excludedFundAddresses } from "../config/excludedFundAddresses.config";
 import { useFundsStore } from "../funds.store";
-import { type ChainId, chainIds } from "~/store/web3/networksMap";
 // You can see test funds by storing:
 // excludeTestFunds: false
 // to local storage.

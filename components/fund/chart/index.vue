@@ -233,7 +233,7 @@ const formatWei = (value: bigint) => {
   return formatTokenValue(value, props.fund?.baseToken.decimals) + " " + props.fund?.baseToken.symbol;
 };
 
-const getSharePrice = async () => {
+const getSharePricePerNav = async () => {
   isSharePriceLoading.value = true;
 
   // 1. get average block time for the chain
@@ -243,25 +243,38 @@ const getSharePrice = async () => {
   const averageBlockTime = context?.averageBlockTime || 0;
 
   const output = await Promise.all(props.fund?.navUpdates?.map(async (navUpdate: INAVUpdate) =>  {
+    // 2. get block number for the timestamp
     const totalNav = parseFloat(ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals));
     const blockNumber = Number(await getBlockByTimestamp(web3Store, props.fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
 
-    const fundBaseTokenContract = web3Store.getCustomContract(
-      props.fund.chainId,
-      ERC20,
-      props.fund.baseToken.address,
-    );
+    try {
+      const totalSupplyRaw = await web3Store.callWithRetry(
+        props.fund.chainId,
+        async () => {
+          const fundTokenContract = await web3Store.getCustomContract(
+            props.fund.chainId,
+            ERC20,
+            props.fund.fundToken.address,
+          );
 
-    // Fetch the total supply at the specific block number
-    const totalSupplyRaw = await web3Store.callWithRetry(
-      props.fund.chainId,
-      () => fundBaseTokenContract.methods.totalSupply().call({}, blockNumber ),
-    );
+          return fundTokenContract.methods.totalSupply().call({}, blockNumber);
+        },
+      );
 
-    const totalSupply = parseFloat(ethers.formatUnits(totalSupplyRaw, props.fund?.baseToken.decimals));
-    return totalNav / totalSupply;
+      const totalSupply = parseFloat(ethers.formatUnits(totalSupplyRaw, props.fund.fundToken.decimals));
+      const sharePrice = totalNav / totalSupply;
+
+      console.log("totalSupplyRaw", totalSupplyRaw, "props.fund.fundToken.decimals", props.fund.fundToken.decimals);
+      console.log("totalNav", totalNav, "totalSupply", totalSupply, "sharePrice", sharePrice);
+
+      return sharePrice;
+    }
+    catch(e){
+      console.error("Error getting share price", e)
+      return 0;
+    }
   }));
-
+  console.log("OUTPUTTT:" , output)
   sharePriceItems.value = output;
   isSharePriceLoading.value = false;
 };
@@ -270,7 +283,7 @@ const getSharePrice = async () => {
 // Lifecycle
 watch(() => props.fund, () => {
   if (props.fund) {
-    getSharePrice();
+    getSharePricePerNav();
   }
 }, { immediate: true });
 </script>

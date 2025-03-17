@@ -1,17 +1,18 @@
 import { defineStore } from "pinia";
 
+import { useFundStore } from "~/store/fund/fund.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import { type ChainId } from "~/types/enums/chain_id";
+import type IFund from "~/types/fund";
+import type INAVMethod from "~/types/nav_method";
+import type INAVUpdate from "~/types/nav_update";
 import { useActionState } from "../actionState.store";
+import { networksMap } from "../web3/networksMap";
 import { calculateFundsPerformanceMetricsAction } from "./actions/calculateFundsPerformanceMetrics.action";
 import { fetchFundsAction } from "./actions/fetchFunds.action";
 import { fetchFundsInfoArraysAction } from "./actions/fetchFundsInfoArrays.action";
 import { fetchFundsMetaDataAction } from "./actions/fetchFundsMetadata.action";
 import { fetchFundsNavMethodsAction } from "./actions/fetchFundsNavMethods.action";
-import { useFundStore } from "~/store/fund/fund.store";
-import { type ChainId, networksMap } from "~/store/web3/networksMap";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import type IFund from "~/types/fund";
-import type INAVMethod from "~/types/nav_method";
-import type INAVUpdate from "~/types/nav_update";
 
 
 interface IState {

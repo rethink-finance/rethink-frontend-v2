@@ -49,6 +49,20 @@
       </div>
     </template>
 
+    <template #[`item.sharePrice`]="{ item }">
+      <div :class="{ 'justify-center': item.isSharePriceLoading }">
+        <v-progress-circular
+          v-if="item.isSharePriceLoading"
+          size="18"
+          width="2"
+          indeterminate
+        />
+        <template v-else>
+          {{ item.sharePrice ?? "N/A" }}
+        </template>
+      </div>
+    </template>
+
     <!-- cumulative -->
     <template #[`item.cumulativeReturnPercent`]="{ item }">
       <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
@@ -79,16 +93,16 @@
 </template>
 
 <script lang="ts" setup>
-import { Icon } from "@iconify/vue/dist/iconify.js";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatPercent,
   formatTokenValue,
 } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
+import { getChainIcon } from "~/composables/utils";
 import type IFund from "~/types/fund";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 
 const { getFundDetailsUrl } = usePageNavigation();
 const router = useRouter();
@@ -134,6 +148,11 @@ const headers: any = computed(() => [
     title: "Inception",
     key: "inceptionDate",
     value: (v: IFund) => v.inceptionDate,
+    align: "end",
+  },
+  {
+    title: "Share Price",
+    key: "sharePrice",
     align: "end",
   },
   {

@@ -1,16 +1,16 @@
 // store/role.ts
-import { defineStore } from "pinia";
 import {
   type BigNumberish,
   type BytesLike,
   type FunctionFragment, type JsonFragment,
 } from "ethers";
-import type {
-  Role,
-  Target,
-  UpdateEvent,
-  TargetConditions, FunctionCondition, ParamCondition, UpdateEventParamCondition, IRawTrx, Member,
-} from "~/types/zodiac-roles/role";
+import { defineStore } from "pinia";
+import { getParamComparisonInt, getParameterTypeInt, getWriteFunctions } from "~/composables/zodiac-roles/conditions";
+import {
+  Roles__factory as RolesFactory,
+} from "~/composables/zodiac-roles/contracts/typechain-types";
+import type { Explorer } from "~/services/explorer";
+import type { ChainId } from "~/types/enums/chain_id";
 import {
   ConditionType,
   EntityStatus,
@@ -19,12 +19,16 @@ import {
   ParamComparison,
   ParameterType,
 } from "~/types/enums/zodiac-roles";
-import {
-  Roles__factory as RolesFactory,
-} from "~/composables/zodiac-roles/contracts/typechain-types";
-import { getParamComparisonInt, getParameterTypeInt, getWriteFunctions } from "~/composables/zodiac-roles/conditions";
-import type { Explorer } from "~/services/explorer";
-import type { ChainId } from "~/store/web3/networksMap";
+import type {
+  FunctionCondition,
+  IRawTrx, Member,
+  ParamCondition,
+  Role,
+  Target,
+  TargetConditions,
+  UpdateEvent,
+  UpdateEventParamCondition,
+} from "~/types/zodiac-roles/role";
 
 export const rolesInterface = RolesFactory.createInterface();
 

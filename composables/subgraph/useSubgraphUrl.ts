@@ -1,7 +1,7 @@
-import { SubgraphClientType } from "~/types/enums/subgraph";
-import { getZodiacSubgraphUrl } from "~/composables/subgraph/getZodiacSubgraphUrl";
 import { getRethinkSubgraphUrl } from "~/composables/subgraph/getRethinkSubgraphUrl";
-import { ChainId } from "~/store/web3/networksMap";
+import { getZodiacSubgraphUrl } from "~/composables/subgraph/getZodiacSubgraphUrl";
+import { ChainId } from "~/types/enums/chain_id";
+import { SubgraphClientType } from "~/types/enums/subgraph";
 
 export function useSubgraphUrl(
   chainId: ChainId,

@@ -104,14 +104,14 @@
 
 <script setup lang="ts">
 import { truncateAddress } from "~/composables/addressUtils";
-import type { Role, Target } from "~/types/zodiac-roles/role";
+import { useFundStore } from "~/store/fund/fund.store";
 import type { RoleStoreType } from "~/store/role/role.store";
+import type { ChainId } from "~/types/enums/chain_id";
 import {
   ConditionType,
   EntityStatus, ExecutionOption,
 } from "~/types/enums/zodiac-roles";
-import { useFundStore } from "~/store/fund/fund.store";
-import type { ChainId } from "~/store/web3/networksMap";
+import type { Role, Target } from "~/types/zodiac-roles/role";
 const emit = defineEmits(
   [
     "targetRemoved",

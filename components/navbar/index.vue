@@ -110,8 +110,8 @@
 
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
+import { type ChainId } from "~/types/enums/chain_id";
 import type IRoute from "~/types/route";
-import { type ChainId } from "~/store/web3/networksMap";
 const accountStore = useAccountStore();
 
 const route = useRoute();

@@ -1,6 +1,6 @@
 // actions/fetchFundsInfoArrays.action.ts
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { type ChainId } from "~/store/web3/networksMap";
+import { type ChainId } from "~/types/enums/chain_id";
 
 export async function fetchFundsInfoArraysAction(
   chainId: ChainId,

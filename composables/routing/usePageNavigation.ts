@@ -1,4 +1,4 @@
-import { type ChainId } from "~/store/web3/networksMap";
+import { type ChainId } from "~/types/enums/chain_id";
 
 export const usePageNavigation = () => {
   const router = useRouter();

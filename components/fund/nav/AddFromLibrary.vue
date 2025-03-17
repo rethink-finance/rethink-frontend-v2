@@ -59,12 +59,12 @@
 
 <script setup lang="ts">
 import { encodeParameter } from "web3-eth-abi";
-import { useFundsStore } from "~/store/funds/funds.store";
-import type INAVMethod from "~/types/nav_method";
-import { PositionType } from "~/types/enums/position_type";
-import { ActionState } from "~/types/enums/action_state";
 import { useActionStateStore } from "~/store/actionState.store";
-import type { ChainId } from "~/store/web3/networksMap";
+import { useFundsStore } from "~/store/funds/funds.store";
+import { ActionState } from "~/types/enums/action_state";
+import type { ChainId } from "~/types/enums/chain_id";
+import { PositionType } from "~/types/enums/position_type";
+import type INAVMethod from "~/types/nav_method";
 
 const emit = defineEmits(["methods-added"]);
 

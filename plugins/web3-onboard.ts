@@ -1,12 +1,12 @@
 import { defineNuxtPlugin } from "#app"
+import logoSVG from "@/assets/images/logo_mobile.svg"
+import enkrypt from "@web3-onboard/enkrypt"
 import safeModule from "@web3-onboard/gnosis"
 import injectedModule from "@web3-onboard/injected-wallets"
+import ledgerModule from "@web3-onboard/ledger"
 import { init } from "@web3-onboard/vue"
 import walletConnectModule from "@web3-onboard/walletconnect"
-import ledgerModule from "@web3-onboard/ledger"
-import enkrypt from "@web3-onboard/enkrypt"
-import logoSVG from "@/assets/images/logo_mobile.svg"
-import { ChainId } from "~/store/web3/networksMap";
+import { ChainId } from "~/types/enums/chain_id"
 
 export default defineNuxtPlugin(() => {
   const runtimeConfig = useRuntimeConfig()

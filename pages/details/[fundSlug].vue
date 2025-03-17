@@ -83,8 +83,8 @@
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
-import { ChainId } from "~/store/web3/networksMap";
 import { ActionState } from "~/types/enums/action_state";
+import { ChainId } from "~/types/enums/chain_id";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";

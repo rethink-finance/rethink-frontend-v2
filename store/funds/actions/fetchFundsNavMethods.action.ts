@@ -1,12 +1,12 @@
-import { excludeNAVDetailsHashes } from "../config/excludedNAVDetailsHashes.config";
-import { useFundsStore } from "../funds.store";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { type ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
-import { type ChainId } from "~/store/web3/networksMap";
+import { excludeNAVDetailsHashes } from "../config/excludedNAVDetailsHashes.config";
+import { useFundsStore } from "../funds.store";
 
 // Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
 const excludeNAVDetails: boolean = true;

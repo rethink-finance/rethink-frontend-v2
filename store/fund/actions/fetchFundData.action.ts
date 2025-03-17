@@ -1,5 +1,5 @@
+import type { ChainId } from "~/types/enums/chain_id";
 import { useFundStore } from "../fund.store";
-import type { ChainId } from "~/store/web3/networksMap";
 
 export const fetchFundDataAction = async (
   fundChainId: ChainId,

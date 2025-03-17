@@ -67,12 +67,12 @@
 import type IFund from "~/types/fund";
 // components
 import { fetchRoles } from "~/services/zodiac-subgraph";
-import { useFundStore } from "~/store/fund/fund.store";
-import type { Role } from "~/types/zodiac-roles/role";
 import { useActionState, useActionStateStore } from "~/store/actionState.store";
-import { ChainId } from "~/store/web3/networksMap";
-import { useRoleStore } from "~/store/role/role.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
+import { useRoleStore } from "~/store/role/role.store";
+import { ChainId } from "~/types/enums/chain_id";
+import type { Role } from "~/types/zodiac-roles/role";
 
 const router = useRouter();
 const fundStore = useFundStore();
