@@ -66,7 +66,7 @@ const { activeTargetId } = storeToRefs(roleStore);
   &__menu_left {
     display: flex;
     flex-direction: column;
-    max-width: 35%;
+    max-width: 30%;
     min-width: 15rem;
     gap: 1.5rem;
     margin-right: 1rem;

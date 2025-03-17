@@ -60,7 +60,6 @@ export class Explorer {
     const [abiResponse, proxyAddress] = await explorerApiLimit(() => this.abi(address))
     // const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     // await sleep(300);
-    console.log("PROXY", proxyAddress)
     const response = await explorerApiLimit(() =>
       client.get<{ status: string; result: string }>(this.apiUrl, {
         params: {
