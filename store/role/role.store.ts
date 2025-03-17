@@ -45,6 +45,9 @@ export const useRoleStore = defineStore("role", () => {
     remove: [] as string[],
   });
   const { $getExplorer } = useNuxtApp();
+  // Store user's custom ABIs.
+  // TODO could save them to localForage also but make sure to show a button to reset to original ABI
+  const customAbiMap = ref<Record<string, JsonFragment[]>>({});
 
   // Function to initialize state
   function initRoleState(id: string | undefined, r?: Role) {
@@ -457,7 +460,11 @@ export const useRoleStore = defineStore("role", () => {
       try {
         // TODO: move this part to getFunctionTransaction and cache values instead of here doing it everytime even
         //   if it's not needed
-        if (!targetAbis[target.address]) {
+        if (customAbiMap.value[target.address]) {
+          // Take user's custom ABI if he provided it.
+          targetAbis[target.address] = customAbiMap.value[target.address];
+        } else if (!targetAbis[target.address]) {
+          // If there is no ABI specified, try to fetch it from the explorer.
           console.log("fetch ABI for target", target.address, targetAbis[target.address])
           const [abiResponse, proxyAddress] = await explorer.abi(target.address);
           targetAbis[target.address] = abiResponse;
@@ -584,6 +591,7 @@ export const useRoleStore = defineStore("role", () => {
     members,
     targets,
     activeTarget,
+    customAbiMap,
     getMemberStatus,
     getTargetStatus,
     getRoleId,

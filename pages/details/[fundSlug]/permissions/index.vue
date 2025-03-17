@@ -64,6 +64,7 @@
 
 <script setup lang="ts">
 // types
+import type { JsonFragment } from "ethers";
 import type IFund from "~/types/fund";
 // components
 import { fetchRoles } from "~/services/zodiac-subgraph";
@@ -73,6 +74,7 @@ import { useActionState, useActionStateStore } from "~/store/actionState.store";
 import { ChainId } from "~/store/web3/networksMap";
 import { useRoleStore } from "~/store/role/role.store";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
+import { GovernableFund } from "assets/contracts/GovernableFund";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -166,6 +168,16 @@ watch(
   () => [fund.chainShort, fundStore.getRoleModAddress],
   () => {
     updateGnosisLink();
+  },
+  { immediate: true },
+);
+watch(
+  () => fund?.address,
+  () => {
+    // Store GovernableFund ABI for the fund address.
+    if (fund?.address) {
+      roleStore.customAbiMap[fund.address.toLowerCase()] = JSON.parse(JSON.stringify(GovernableFund.abi)) as JsonFragment[];
+    }
   },
   { immediate: true },
 );
