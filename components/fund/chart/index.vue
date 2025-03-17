@@ -11,20 +11,28 @@
       <!--      <FundChartTimelineSelector selected="3M" @change="updateChart" />-->
     </div>
     <div class="chart__chart_wrapper">
-      <ClientOnly>
-        <apexchart
-          v-if="chartItems.length > 0"
-          height="400"
-          width="100%"
-          :options="options"
-          :series="series"
-        />
-        <div v-else class="w-100 d-flex justify-center align-center h-100">
-          <h3>
-            No NAV updates available yet.
-          </h3>
-        </div>
-      </ClientOnly>
+      <v-skeleton-loader
+        v-if="isSharePriceLoading && selectedType === ChartType.SHARE_PRICE"
+        type="ossein"
+        height="400px"
+        width="100%"
+      />
+      <div v-else class="meta">
+        <ClientOnly>
+          <apexchart
+            v-if="chartItems.length > 0"
+            height="400"
+            width="100%"
+            :options="options"
+            :series="series"
+          />
+          <div v-else class="w-100 d-flex justify-center align-center h-100">
+            <h3>
+              No NAV updates available yet.
+            </h3>
+          </div>
+        </ClientOnly>
+      </div>
     </div>
   </div>
 </template>

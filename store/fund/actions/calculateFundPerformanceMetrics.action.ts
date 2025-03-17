@@ -1,5 +1,4 @@
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
-import { ChainId, type ChainId as ChainIdType } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
 
@@ -86,56 +85,3 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
 
   return null;
 }
-
-// TODO: we don't use this f-ijon, but might be useful in the future? should we keep it?
-const getL1BlockNumber = async (l2BlockNumber: number, chainId: ChainIdType) => {
-  try {
-    const web3Store = useWeb3Store();
-    const provider = web3Store.chainProviders[chainId];
-
-    // Fetch the L2 block details
-    const l2Block = await web3Store.callWithRetry(
-      chainId,
-      async () => await provider.eth.getBlock(l2BlockNumber),
-    );
-
-    if (!l2Block) {
-      console.error(`Block not found on L2: ${l2BlockNumber}`);
-      return null;
-    }
-
-    console.warn("L1 block number not found in L2 metadata. Estimating...");
-
-    // Fetch the latest Ethereum L1 block
-    const ethProvider = web3Store.getWeb3Instance(ChainId.ETHEREUM);
-    const latestL1Block = await web3Store.callWithRetry(
-      ChainId.ETHEREUM,
-      async () => await ethProvider.eth.getBlock("latest"),
-    );
-
-    if (!latestL1Block) {
-      console.error("Failed to fetch latest L1 block.");
-      return null;
-    }
-
-    // Get block times for better estimation
-    const { initializeBlockTimeContext } = useBlockTime();
-    const context = await initializeBlockTimeContext(ethProvider);
-    const averageL1BlockTime = context?.averageBlockTime || 12; // Default fallback to 12s
-
-    // Estimate based on time difference
-    const l2Timestamp = Number(l2Block.timestamp);
-    const l1LatestTimestamp = Number(latestL1Block.timestamp);
-
-    const estimatedL1Block =
-      Number(latestL1Block.number) -
-      Math.floor((l1LatestTimestamp - l2Timestamp) / averageL1BlockTime);
-
-    console.debug("Estimated L1 Block:", estimatedL1Block);
-
-    return estimatedL1Block;
-  } catch (e) {
-    console.error("Error getting L1 block number", e);
-    return null;
-  }
-};

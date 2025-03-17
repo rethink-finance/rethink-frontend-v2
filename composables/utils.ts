@@ -1,5 +1,5 @@
 import { ethers, FixedNumber } from "ethers";
-import { type ChainId as ChainIdType } from "~/store/web3/networksMap";
+import { ChainId, type ChainId as ChainIdType } from "~/store/web3/networksMap";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 import type { PositionType } from "~/types/enums/position_type";
@@ -360,3 +360,55 @@ export const getBlockByTimestamp = async (web3Store: any, chainId: ChainIdType, 
     return null;
   }
 }
+
+
+export const getL1BlockNumber = async (web3Store: any, l2BlockNumber: number, chainId: ChainIdType) => {
+  try {
+    const provider = web3Store.chainProviders[chainId];
+
+    // Fetch the L2 block details
+    const l2Block = await web3Store.callWithRetry(
+      chainId,
+      async () => await provider.eth.getBlock(l2BlockNumber),
+    );
+
+    if (!l2Block) {
+      console.error(`Block not found on L2: ${l2BlockNumber}`);
+      return null;
+    }
+
+    console.warn("L1 block number not found in L2 metadata. Estimating...");
+
+    // Fetch the latest Ethereum L1 block
+    const ethProvider = web3Store.getWeb3Instance(ChainId.ETHEREUM);
+    const latestL1Block = await web3Store.callWithRetry(
+      ChainId.ETHEREUM,
+      async () => await ethProvider.eth.getBlock("latest"),
+    );
+
+    if (!latestL1Block) {
+      console.error("Failed to fetch latest L1 block.");
+      return null;
+    }
+
+    // Get block times for better estimation
+    const { initializeBlockTimeContext } = useBlockTime();
+    const context = await initializeBlockTimeContext(ethProvider);
+    const averageL1BlockTime = context?.averageBlockTime || 12; // Default fallback to 12s
+
+    // Estimate based on time difference
+    const l2Timestamp = Number(l2Block.timestamp);
+    const l1LatestTimestamp = Number(latestL1Block.timestamp);
+
+    const estimatedL1Block =
+      Number(latestL1Block.number) -
+      Math.floor((l1LatestTimestamp - l2Timestamp) / averageL1BlockTime);
+
+    console.debug("Estimated L1 Block:", estimatedL1Block);
+
+    return estimatedL1Block;
+  } catch (e) {
+    console.error("Error getting L1 block number", e);
+    return null;
+  }
+};
