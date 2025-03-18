@@ -59,11 +59,13 @@
           :class="targetClasses(target)"
           @click="setSelectedTarget(target.id)"
         >
-          <PermissionAddressLabelTooltip
-            :label="addressLabels[target.address]"
-            :address="target.address"
-          />
-          {{ addressLabels[target.address] || truncateAddress(target.address) }}
+          <div class="permissions_menu__list_item_label">
+            <PermissionAddressLabelTooltip
+              :label="addressLabels[target.address]"
+              :address="target.address"
+            />
+            {{ addressLabels[target.address] || truncateAddress(target.address) }}
+          </div>
 
           <template v-if="!disabled">
             <UiButtonDelete
@@ -197,7 +199,9 @@ watchEffect(async () => {
     border: 1px solid $color-border-dark;
     padding: 0.5rem;
     background-color: $color-hover;
-    @include ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 
     &:hover {
       background-color: $color-moonlight-dark;
@@ -215,6 +219,11 @@ watchEffect(async () => {
       color: $color-disabled;
       //color: $color-error;
     }
+  }
+  &__list_item_label {
+    @include ellipsis;
+    flex: 1;
+    margin-right: 0.5rem;
   }
 }
 </style>
