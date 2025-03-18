@@ -468,7 +468,7 @@ export const useFundStore = defineStore({
       this.fundRoleModAddress = {};
       this.fundUserData = structuredClone(DEFAULT_FUND_USER_DATA);
     },
-    async fetchAddressSourceCode(chainId: ChainId, address: string) {
+    async fetchAddressSourceCode(chainId: ChainId, address: string): Promise<Record<string, any> | undefined> {
       if (!address) return;
       if (this.chainAddressSourceCode[chainId][address]) {
         return this.chainAddressSourceCode[chainId][address];
@@ -484,6 +484,15 @@ export const useFundStore = defineStore({
         return undefined;
       }
 
+      // Check if address is same as the fund address.
+      if (address.toLowerCase() === this.fund?.address.toLowerCase()) {
+        const governableFundSourceCode = {
+          "ContractName": this.fund.title + " (GovernableFund)",
+          "ABI": JSON.stringify(GovernableFund.abi),
+        };
+        this.chainAddressSourceCode[chainId][address] = governableFundSourceCode;
+        return governableFundSourceCode;
+      }
       try {
         const sourceCode = await explorer.sourceCode(address);
         console.warn("sourceCode", sourceCode);
@@ -519,7 +528,7 @@ export const useFundStore = defineStore({
       const sourceCode = await this.fetchAddressSourceCode(chainId, address);
       // Return the ERC20 token symbol if it exists, else try returning contract name.
       if (sourceCode?.symbol) {
-        let label = sourceCode.symbol;
+        let label = sourceCode?.symbol;
         if (sourceCode?.ContractName) {
           label += ` (${sourceCode.ContractName})`
           return label;

@@ -168,9 +168,15 @@ const submitCustomABI = () => {
     targetABIJson.value = JSON.parse(customABI.value);
     console.log("Custom ABI targetABIJson", targetABIJson.value);
     isEditingCustomABI.value = false;
+    if (target.value?.address) {
+      roleStore.customAbiMap[target.value.address] = targetABIJson.value;
+    }
   } catch (error: any) {
     console.error("Error parsing custom ABI", error);
     toastStore.errorToast("Error parsing custom ABI: " + error.message);
+    if (target.value?.address) {
+      delete roleStore.customAbiMap[target.value.address];
+    }
   }
 }
 
