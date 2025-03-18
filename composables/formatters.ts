@@ -141,7 +141,7 @@ export const commify = (value: string | number | bigint) => {
   }
 
   const neg = match[1];
-  let whole = BigInt(match[2] || 0).toLocaleString("en-us");
+  let whole = BigInt(match[2] || 0).toString();
   let frac = match[4] || "";
 
   // Convert fraction part into a number
@@ -150,7 +150,7 @@ export const commify = (value: string | number | bigint) => {
 
   // if decimales are bigger than 0.9999, we round up the whole number
   if (asDecimal >= 0.9999) {
-    whole = (BigInt(whole) + 1n).toLocaleString("en-us");
+    whole = (BigInt(whole) + 1n).toString();
     frac = "00"; // Reset fraction to "00"
   }
   // if decimals are bigger than .995, we truncate the fraction, because we don't want to round up the whole number based on three decimal places
@@ -175,7 +175,7 @@ export const commify = (value: string | number | bigint) => {
     frac = "";
   }
 
-  let commifiedValue = `${neg}${whole}`;
+  let commifiedValue = `${neg}${BigInt(whole).toLocaleString("en-us")}`;
   if (frac) {
     commifiedValue += `.${frac}`;
   }
