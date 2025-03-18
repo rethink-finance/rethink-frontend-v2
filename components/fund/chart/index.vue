@@ -5,6 +5,7 @@
         <FundChartTypeSelector
           v-model:selected="selectedType"
           :value="valueShownInTypeSelector"
+          :is-loading="isSharePriceLoading && selectedType === ChartType.SHARE_PRICE"
           :type-options="ChartTypesMap"
         />
       </div>
@@ -64,7 +65,7 @@ const isSharePriceLoading = ref(true);
 const valueShownInTypeSelector = computed(() => {
   const items: Record<ChartType, string> = {
     [ChartType.NAV]: fundStore.fundTotalNAVFormattedShort,
-    [ChartType.SHARE_PRICE]: "",
+    [ChartType.SHARE_PRICE]: sharePriceItems.value[sharePriceItems.value.length - 1]?.toString() || "0",
   }
 
   return items[selectedType.value];
@@ -244,7 +245,7 @@ const getSharePricePerNav = async () => {
 
   const output = await Promise.all(props.fund?.navUpdates?.map(async (navUpdate: INAVUpdate) =>  {
     // 2. get block number for the timestamp
-    const totalNav = parseFloat(ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals));
+    const totalNav = ethers.parseUnits(String(navUpdate.totalNAV || "0"), props.fund?.baseToken.decimals);
     const blockNumber = Number(await getBlockByTimestamp(web3Store, props.fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
 
     try {
@@ -261,11 +262,22 @@ const getSharePricePerNav = async () => {
         },
       );
 
-      const totalSupply = parseFloat(ethers.formatUnits(totalSupplyRaw, props.fund.fundToken.decimals));
-      const sharePrice = totalNav / totalSupply;
+      const totalSupply = ethers.parseUnits(String(totalSupplyRaw || "0"), props.fund.fundToken.decimals);
 
-      console.log("totalSupplyRaw", totalSupplyRaw, "props.fund.fundToken.decimals", props.fund.fundToken.decimals);
-      console.log("totalNav", totalNav, "totalSupply", totalSupply, "sharePrice", sharePrice);
+      // Determine the highest decimals between NAV and Supply
+      const navDecimals = props.fund.baseToken.decimals;
+      const supplyDecimals = props.fund.fundToken.decimals;
+      const diffDecimals = navDecimals - supplyDecimals;
+
+      // Scale totalNav to the same decimals as totalSupply for proper division
+      const adjustedTotalNav = diffDecimals > 0 ? totalNav * 10n ** BigInt(diffDecimals) : totalNav;
+      const adjustedTotalSupply = diffDecimals < 0 ? totalSupply * 10n ** BigInt(-diffDecimals) : totalSupply;
+
+      // Perform the division
+      const sharePriceBigInt = totalSupply > 0n ? (adjustedTotalNav * 10n ** 18n) / adjustedTotalSupply : 0n;
+
+      // Convert to float and format the share price correctly
+      const sharePrice = parseFloat(ethers.formatUnits(sharePriceBigInt, 18));
 
       return sharePrice;
     }
@@ -274,7 +286,7 @@ const getSharePricePerNav = async () => {
       return 0;
     }
   }));
-  console.log("OUTPUTTT:" , output)
+
   sharePriceItems.value = output;
   isSharePriceLoading.value = false;
 };

@@ -43,8 +43,8 @@ export const calculateFundPerformanceMetricsAction = async (
       fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates, fund.totalDepositBalance);
 
       fund.isSharePriceLoading = true;
-      const sharePrice = await getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund);
-      fund.sharePrice = sharePrice;
+      // const sharePrice = getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund);
+      // fund.sharePrice = sharePrice;
       fund.isSharePriceLoading = false;
     }
   } catch (error) {
@@ -66,7 +66,7 @@ const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, f
     const averageBlockTime = context?.averageBlockTime || 0;
 
     // 2. get block number for the timestamp
-    const totalNav = parseFloat(ethers.formatUnits(navUpdate.totalNAV || 0n, fund?.baseToken.decimals));
+    const totalNav = navUpdate.totalNAV ?? 0n;
     const blockNumber = Number(await getBlockByTimestamp(web3Store, fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
 
     try {
@@ -83,17 +83,22 @@ const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, f
         },
       );
 
-      const totalSupply = parseFloat(ethers.formatUnits(totalSupplyRaw, fund?.fundToken.decimals));
-      const sharePrice = totalNav / totalSupply;
+      const totalSupply = totalSupplyRaw ?? 0n;
 
-      if(fund?.title === "Base DEMO 2"){
-        console.log("fund:", fund)
-        console.log("raw total supply:", totalSupplyRaw)
-        console.log("fundToken decimals:", fund.fundToken.decimals)
-        console.log("TOTAL NAV:", totalNav)
-        console.log("TOTAL SUPPLY:", totalSupply)
-        console.log("SHARE PRICEE:" , sharePrice)
-      }
+      // Determine the highest decimals between NAV and Supply
+      const navDecimals = fund.baseToken.decimals;
+      const supplyDecimals = fund.fundToken.decimals;
+      const diffDecimals = navDecimals - supplyDecimals;
+
+      // Scale totalNav to the same decimals as totalSupply for proper division
+      const adjustedTotalNav = diffDecimals > 0 ? totalNav * 10n ** BigInt(diffDecimals) : totalNav;
+      const adjustedTotalSupply = diffDecimals < 0 ? totalSupply * 10n ** BigInt(-diffDecimals) : totalSupply;
+
+      // Perform the division
+      const sharePriceBigInt = totalSupply > 0n ? (adjustedTotalNav * 10n ** 18n) / adjustedTotalSupply : 0n;
+
+      // Convert to float and format the share price correctly
+      const sharePrice = parseFloat(ethers.formatUnits(sharePriceBigInt, 18));
 
       return sharePrice;
     }

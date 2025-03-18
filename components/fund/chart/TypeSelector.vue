@@ -7,7 +7,14 @@
     >
       <div>
         <div class="price_type_selector__price">
-          {{ value }}
+          <v-progress-circular
+            v-if="isLoading"
+            class="d-flex"
+            size="20"
+            width="3"
+            indeterminate
+          />
+          <span v-else>{{ value }}</span>
         </div>
         <div class="price_type_selector__selected">
           {{ selectedTypeValue }}
@@ -36,7 +43,8 @@ import { ChartTypesMap, type ChartType, type IChartType } from "~/types/enums/ch
 const props = defineProps<{
   value: string;
   selected: ChartType;
-  typeOptions: Record<ChartType, IChartType>
+  typeOptions: Record<ChartType, IChartType>;
+  isLoading: boolean;
 }>();
 
 const emit = defineEmits<{

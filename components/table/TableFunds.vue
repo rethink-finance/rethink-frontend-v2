@@ -49,7 +49,7 @@
       </div>
     </template>
 
-    <template #[`item.sharePrice`]="{ item }">
+    <!-- <template #[`item.sharePrice`]="{ item }">
       <div :class="{ 'justify-center': item.isSharePriceLoading }">
         <v-progress-circular
           v-if="item.isSharePriceLoading"
@@ -61,7 +61,7 @@
           {{ item.sharePrice ?? "N/A" }}
         </template>
       </div>
-    </template>
+    </template> -->
 
     <!-- cumulative -->
     <template #[`item.cumulativeReturnPercent`]="{ item }">
@@ -150,11 +150,11 @@ const headers: any = computed(() => [
     value: (v: IFund) => v.inceptionDate,
     align: "end",
   },
-  {
-    title: "Share Price",
-    key: "sharePrice",
-    align: "end",
-  },
+  // {
+  //   title: "Share Price",
+  //   key: "sharePrice",
+  //   align: "end",
+  // },
   {
     title: "Cumulative",
     key: "cumulativeReturnPercent",
