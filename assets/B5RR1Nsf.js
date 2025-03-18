@@ -1,0 +1,1 @@
+import{_ as o,m as t,Q as n,o as s}from"./3wSeewPj.js";const _={},c={class:"main_header"};function r(e,a){return s(),t("div",c,[n(e.$slots,"default")])}const l=o(_,[["render",r]]);export{l as default};
