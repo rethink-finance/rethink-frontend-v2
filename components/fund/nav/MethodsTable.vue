@@ -390,6 +390,7 @@
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
+import { ChainId } from "~/types/enums/chain_id";
 import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 import {
   PositionType,
@@ -403,7 +404,6 @@ import {
 import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import type INAVParts from "~/types/nav_parts";
-import { ChainId } from "~/store/web3/networksMap";
 
 
 export default defineComponent({

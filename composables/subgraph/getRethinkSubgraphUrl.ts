@@ -1,5 +1,5 @@
 import { useRuntimeConfig } from "#app";
-import { ChainId } from "~/store/web3/networksMap";
+import { ChainId } from "~/types/enums/chain_id";
 import { RethinkSubgraphSlugs } from "~/types/enums/subgraph";
 
 

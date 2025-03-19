@@ -6,7 +6,8 @@ import SafeMultiSendCallOnlyJson from "assets/contracts/safe/SafeMultiSendCallOn
 import { defineStore } from "pinia";
 import { type HttpProvider, Web3 } from "web3";
 import { CustomContract } from "~/store/web3/customContract";
-import { type ChainId, ChainId as ChainIdValue, networksMap } from "~/store/web3/networksMap";
+import { networksMap } from "~/store/web3/networksMap";
+import { type ChainId, ChainId as ChainIdValue } from "~/types/enums/chain_id";
 const SafeMultiSendCallOnlyAddresses: Partial<Record<string, string>> = SafeMultiSendCallOnlyJson.networkAddresses;
 
 

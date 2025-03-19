@@ -1,7 +1,7 @@
 import defaultAvatar from "@/assets/images/default_avatar.webp";
-
-import { type ChainId, networksMap } from "~/store/web3/networksMap";
+import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { type ChainId } from "~/types/enums/chain_id";
 import type IFund from "~/types/fund";
 import type IFundMetaData from "~/types/fund_meta_data";
 import type INAVUpdate from "~/types/nav_update";
@@ -74,6 +74,10 @@ export async function fetchFundsMetaDataAction(
         monthlyReturnPercent: undefined,
         sharpeRatio: undefined,
         positionTypeCounts: [] as IPositionTypeCount[],
+
+        // Share Price
+        sharePrice: undefined,
+        isSharePriceLoading: true,
 
         // My Fund Positions
         netDeposits: "",

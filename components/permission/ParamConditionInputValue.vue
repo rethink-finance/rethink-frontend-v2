@@ -20,11 +20,11 @@ import {
   formatParamValue,
   getNativeType,
 } from "~/composables/zodiac-roles/conditions";
+import { useFundStore } from "~/store/fund/fund.store";
+import { useFundsStore } from "~/store/funds/funds.store";
+import type { ChainId } from "~/types/enums/chain_id";
 import { ParamNativeType } from "~/types/enums/zodiac-roles";
 import type { FlattenedParamType } from "~/types/zodiac-roles/role";
-import { useFundsStore } from "~/store/funds/funds.store";
-import type { ChainId } from "~/store/web3/networksMap";
-import { useFundStore } from "~/store/fund/fund.store";
 const emit = defineEmits(["update:modelValue"]);
 
 const props = defineProps({
