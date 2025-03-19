@@ -229,6 +229,8 @@ const updateTransactionsJsonField = () => {
   const detailsStep = delegatedEntry.value.find(
     (entry: any) => entry.stepName === DelegatedStep.Details,
   );
+  if (!detailsStep) return;
+
   const rawTransactions: IRawTrx[] = [];
   transactions.forEach((trx: any) => {
     const trxArgs = proposalRoleModMethodStepsMap[trx.contractMethod]
@@ -252,7 +254,6 @@ const updateTransactionsJsonField = () => {
 // we need to change the inputs based on the contractMethod
 const fieldsChanged = (stepName: any, subStepIndex: any, step: any) => {
   updateTransactionsJsonField();
-
   // we need to formatInputToObject for the new substep inputs based on the contractMethod
   const newInput = formatInputToObject(
     proposalRoleModMethodStepsMap[step.contractMethod],
@@ -266,7 +267,7 @@ const fieldsChanged = (stepName: any, subStepIndex: any, step: any) => {
     return;
   }
 
-  const currentInputs = delegatedEntry.value[mainStepIndex].steps[subStepIndex];
+  const currentInputs = delegatedEntry?.value?.[mainStepIndex]?.steps?.[subStepIndex];
   if (!currentInputs) {
     console.error("Substep not found");
     return;
