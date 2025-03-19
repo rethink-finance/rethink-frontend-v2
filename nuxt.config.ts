@@ -101,13 +101,14 @@ export default defineNuxtConfig({
   ],
   sourcemap: {
     server: false,
-    client: "hidden",
+    client: true,
   },
   sentry: {
     sourceMapsUploadOptions: {
       org: "tawchhh",
       project: "rethink-finance",
       authToken: process.env.SENTRY_AUTH_TOKEN,
+      telemetry: false,
     },
   },
   vite: {
