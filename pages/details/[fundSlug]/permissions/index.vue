@@ -59,6 +59,10 @@
         :is-loading="isFetchingPermissions"
       />
     </UiMainCard>
+    <button id="errorBtn" @click="() => {throw new Error('Nuxt error test')}">
+      Trigger Error
+    </button>
+
   </div>
 </template>
 

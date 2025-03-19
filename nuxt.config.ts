@@ -56,6 +56,11 @@ export default defineNuxtConfig({
       POLYGONSCAN_KEY: process.env.POLYGONSCAN_KEY,
       ARBISCAN_KEY: process.env.ARBISCAN_KEY,
       BASESCAN_KEY: process.env.BASESCAN_KEY,
+      // Sentry
+      sentry: {
+        dsn: process.env.SENTRY_DSN,
+        environment: "development",
+      },
     },
   },
   routeRules: {
@@ -73,6 +78,7 @@ export default defineNuxtConfig({
         );
       });
     },
+    "@sentry/nuxt/module",
     [
       "@nuxtjs/google-fonts",
       {
@@ -95,7 +101,14 @@ export default defineNuxtConfig({
   ],
   sourcemap: {
     server: false,
-    client: false,
+    client: "hidden",
+  },
+  sentry: {
+    sourceMapsUploadOptions: {
+      org: "tawchhh",
+      project: "rethink-finance",
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+    },
   },
   vite: {
     ssr: { noExternal: ["vuetify"] },

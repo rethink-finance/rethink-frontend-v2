@@ -195,7 +195,7 @@ const fetchTargetABI = async () => {
   targetABIJson.value = [];
   if (!target.value?.address) return;
   isFetchingTargetABI.value = true;
-  console.log("Fetch target ABI action", props.chainId, target.value.address);
+  // console.log("Fetch target ABI action", props.chainId, target.value.address);
 
   try {
     const sourceCode = await fundStore.fetchAddressSourceCode(props.chainId, target.value.address);
