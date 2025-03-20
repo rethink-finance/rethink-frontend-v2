@@ -86,7 +86,7 @@ export const prepRoleModEntryInput = (value: any) => {
 
   if (value.isArray) {
     const retDat = []
-    for (let i = 0; i < value.data.length; i++) {
+    for (let i = 0; i < value.data?.length || 0; i++) {
       if (dtype.startsWith("address")) {
         retDat.push(value.data[i]);
       } else if (dtype.startsWith("bytes")) {
