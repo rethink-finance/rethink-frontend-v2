@@ -207,13 +207,17 @@ export const calculateCumulativeReturnPercent = (
 
 
 export const calculateCumulativeWithSharePrice = (
-  latestSharePrice: number,
-  baseTokenDecimals: number,
-  fundTokenDecimals: number,
+  latestSharePrice?: number | undefined,
+  baseTokenDecimals?: number,
+  fundTokenDecimals?: number,
 ): number | undefined => {
   try {
     if(!baseTokenDecimals || !fundTokenDecimals) {
       console.error("Base token decimals or fund token decimals are not provided");
+      return undefined;
+    }
+    if(latestSharePrice === undefined) {
+      console.error("Latest share price is not provided", latestSharePrice);
       return undefined;
     }
 

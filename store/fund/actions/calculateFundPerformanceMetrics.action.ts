@@ -27,17 +27,16 @@ export const calculateFundPerformanceMetricsAction = async (
       const web3Store = useWeb3Store();
       // const lastNAVUpdateTotalDepositBalance = await getTotalDepositBalanceAtNAVUpdate(web3Store, fund, fundLastNavUpdate);
 
-      const sharePrice = await getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund);
+      const sharePrice = await getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund)
       fund.sharePrice = sharePrice;
 
       const baseTokenDecimals = fund.baseToken.decimals;
       const fundTokenDecimals = fund.fundToken.decimals;
       const cumulativeReturnPercent = calculateCumulativeWithSharePrice(
-
         sharePrice,
         baseTokenDecimals,
         fundTokenDecimals,
-      );
+      )
 
       fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists
         ? fund.lastNAVUpdateTotalNAV
@@ -106,7 +105,7 @@ const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, f
     }
     catch(e){
       console.error("Error getting share price", e)
-      return 0;
+      return undefined;
     }
   }
 
