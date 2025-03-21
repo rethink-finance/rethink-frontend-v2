@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { ERC20 } from "~/assets/contracts/ERC20";
+import { calculateCumulativeWithSharePrice } from "~/composables/utils";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
@@ -24,16 +25,19 @@ export const calculateFundPerformanceMetricsAction = async (
 
     if (fund) {
       const web3Store = useWeb3Store();
-      const lastNAVUpdateTotalDepositBalance = await getTotalDepositBalanceAtNAVUpdate(web3Store, fund, fundLastNavUpdate);
+      // const lastNAVUpdateTotalDepositBalance = await getTotalDepositBalanceAtNAVUpdate(web3Store, fund, fundLastNavUpdate);
+
+      const sharePrice = await getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund);
+      fund.sharePrice = sharePrice;
 
       const baseTokenDecimals = fund.baseToken.decimals;
-      const cumulativeReturnPercent = fundLastNavUpdateExists
-        ? calculateCumulativeReturnPercent(
-          lastNAVUpdateTotalDepositBalance || 0n,
-          fund.lastNAVUpdateTotalNAV || 0n,
-          baseTokenDecimals,
-        )
-        : 0;
+      const fundTokenDecimals = fund.fundToken.decimals;
+      const cumulativeReturnPercent = calculateCumulativeWithSharePrice(
+
+        sharePrice,
+        baseTokenDecimals,
+        fundTokenDecimals,
+      );
 
       fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists
         ? fund.lastNAVUpdateTotalNAV
@@ -43,8 +47,6 @@ export const calculateFundPerformanceMetricsAction = async (
       fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates, fund.totalDepositBalance);
 
       fund.isSharePriceLoading = true;
-      // const sharePrice = getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund);
-      // fund.sharePrice = sharePrice;
       fund.isSharePriceLoading = false;
     }
   } catch (error) {
