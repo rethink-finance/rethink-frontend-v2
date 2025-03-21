@@ -57,10 +57,7 @@ export default defineNuxtConfig({
       ARBISCAN_KEY: process.env.ARBISCAN_KEY,
       BASESCAN_KEY: process.env.BASESCAN_KEY,
       // Sentry
-      sentry: {
-        dsn: process.env.SENTRY_DSN,
-        environment: "development",
-      },
+      SENTRY_DSN: process.env.SENTRY_DSN,
     },
   },
   routeRules: {
