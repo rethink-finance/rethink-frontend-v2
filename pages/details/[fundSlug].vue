@@ -83,6 +83,7 @@
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
+import { useSettingsStore } from "~/store/settings/settings.store";
 import { ChainId } from "~/store/web3/networksMap";
 import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
@@ -92,6 +93,7 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const actionStateStore = useActionStateStore();
+const appSettingsStore = useSettingsStore();
 const route = useRoute();
 // fund address is always in the third position of the route
 // e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
@@ -224,7 +226,13 @@ const getPathColor = (isActive = false, color = "#77839f") =>
   isActive ? "primary" : color;
 
 const computedRoutes = computed(() => {
+  const showInManageMode = [
+    `${fundDetailsRoute.value}/flows`,
+    `${fundDetailsRoute.value}/execution-app`,
+  ]
   return routes.map((routeItem: IRoute) => {
+    const isHidden = showInManageMode.includes(routeItem.to) ? !appSettingsStore.isManageMode : false;
+
     let isActive;
     if (routeItem.exactMatch) {
       isActive = isPathActive(routeItem.to, true);
@@ -242,8 +250,9 @@ const computedRoutes = computed(() => {
       isActive,
       pathColor: getPathColor(isActive, routeItem.color),
       target: routeItem.isExternal ? "_blank" : "",
+      isHidden,
     };
-  });
+  }).filter((routeItem: IRoute) => !routeItem.isHidden);
 });
 </script>
 

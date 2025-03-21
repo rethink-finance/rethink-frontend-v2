@@ -86,6 +86,10 @@
                 }}
               </v-tooltip>
             </v-btn>
+
+            <v-btn class="btn_settings" @click="menuSettingsOpen = !menuSettingsOpen">
+              <v-icon class="icon_settings" icon="mdi-cog" size="1.5rem" />
+            </v-btn>
           </div>
         </ClientOnly>
 
@@ -96,6 +100,19 @@
         </v-btn>
       </v-toolbar>
     </v-row>
+
+    <UiConfirmDialog
+      v-model="menuSettingsOpen"
+      title="Application Settings"
+    >
+      <v-switch
+        v-model="appSettingsStore.isManageMode"
+        label="Manage Mode"
+        color="primary"
+        hide-details
+        @change="appSettingsStore.toggleAdvancedMode"
+      />
+    </UiConfirmDialog>
   </v-app-bar>
 
   <v-alert
@@ -110,14 +127,17 @@
 
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
-import type IRoute from "~/types/route";
+import { useSettingsStore } from "~/store/settings/settings.store";
 import { type ChainId } from "~/store/web3/networksMap";
+import type IRoute from "~/types/route";
 const accountStore = useAccountStore();
 
 const route = useRoute();
 
 const currentRoute = ref(route?.path);
 const menuOpen = ref(false);
+const menuSettingsOpen = ref(false);
+const appSettingsStore = useSettingsStore();
 
 const routes : IRoute[] = [
   {
@@ -189,8 +209,10 @@ const computedRoutes = computed(() => {
       isActive,
       pathColor: getPathColor(isActive, routeItem.color),
       target: routeItem.isExternal ? "_blank" : "",
+      isHidden: routeItem.to === "/create" ? !appSettingsStore.isManageMode : false,
+
     };
-  });
+  }).filter((routeItem: IRoute) => !routeItem.isHidden);
 });
 
 const activeAccount = computed(() => truncateAddress(accountStore.activeAccount?.address));
@@ -235,6 +257,23 @@ const onClickConnect = async () => {
       margin-right: 0;
     }
   }
+
+  .btn_settings {
+    margin-left: .5rem;
+    padding: 0.5rem;
+
+    &:hover {
+      .icon_settings {
+        transform: rotate(90deg);
+      }
+    }
+  }
+  .icon_settings{
+    transition: transform 0.3s ease-in-out;
+    transform: rotate(0deg);
+  }
+
+
 
   &__toolbar {
     letter-spacing: normal;
