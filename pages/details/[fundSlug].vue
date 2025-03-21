@@ -13,7 +13,7 @@
       :image-url="fund?.photoUrl"
     />
     <div v-if="breadcrumbItems.length === 0" class="fund_name">
-      <v-avatar class="fund_name__avatar" :rounded="false">
+      <v-avatar class="fund_name__avatar" :rounded="false" size="3.75rem">
         <img
           :src="fund.photoUrl"
           class="fund_name__avatar_img"
@@ -22,12 +22,20 @@
       </v-avatar>
       <div class="fund_name__title">
         <p>
-          {{ fund?.fundToken.symbol }}
+          <span>{{ fund?.title }}</span> {{ fund?.strategistName ? " | " : "" }}
         </p>
       </div>
-      <div class="fund_name__subtitle">
+      <div
+        v-if="fund?.strategistName"
+        class="fund_name__subtitle"
+      >
         <p>
-          {{ fund?.title }}
+          <a
+            :href="fund?.strategistUrl"
+            target="_blank"
+          >
+            by {{ fund?.strategistName }}
+          </a>
         </p>
       </div>
     </div>

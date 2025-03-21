@@ -1,14 +1,16 @@
 <template>
   <div class="fund_name">
-    <v-avatar size="3rem" :rounded="true" class="fund_name__avatar">
+    <v-avatar size="3.75rem" :rounded="true" class="fund_name__avatar">
       <img
         cover
         :src="props.image"
       >
     </v-avatar>
     <div class="title_wrapper">
-      <h4>{{ title }}</h4>
-      <h5>{{ subtitle }}</h5>
+      <h4>{{ subtitle }}</h4>
+      <h5 v-if="strategistName">
+        by {{ strategistName }}
+      </h5>
     </div>
   </div>
 </template>
@@ -21,6 +23,7 @@ const props = defineProps({
   },
   title: { type: String, default: "" },
   subtitle: { type: String, default: "" },
+  strategistName: { type: String, default: "" },
 });
 </script>
 
@@ -28,6 +31,7 @@ const props = defineProps({
 .fund_name {
   display: flex;
   flex-direction: row;
+  padding-block: .25rem;
 
   &__avatar {
     border-radius: 50%;
