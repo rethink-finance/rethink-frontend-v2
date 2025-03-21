@@ -105,7 +105,6 @@ export default defineNuxtConfig({
       org: "tawchhh",
       project: "rethink-finance",
       authToken: process.env.SENTRY_AUTH_TOKEN,
-      telemetry: false,
     },
   },
   vite: {

@@ -59,9 +59,6 @@
         :is-loading="isFetchingPermissions"
       />
     </UiMainCard>
-    <button id="errorBtn" @click="() => {throw new Error('BEbeeeeeeee error test')}">
-      Trigger Error
-    </button>
   </div>
 </template>
 
