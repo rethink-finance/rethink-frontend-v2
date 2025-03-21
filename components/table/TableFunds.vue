@@ -13,8 +13,8 @@
     <template #[`item.name`]="{ item }">
       <FundNameCell
         :image="item.photoUrl"
-        :title="item.fundToken.symbol"
-        :subtitle="item.title"
+        :title="item.title"
+        :strategist-name="item.strategistName"
       />
     </template>
 
@@ -80,8 +80,6 @@
 
 <script lang="ts" setup>
 import { Icon } from "@iconify/vue/dist/iconify.js";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatPercent,
   formatTokenValue,
@@ -89,6 +87,8 @@ import {
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 import type IFund from "~/types/fund";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 
 const { getFundDetailsUrl } = usePageNavigation();
 const router = useRouter();

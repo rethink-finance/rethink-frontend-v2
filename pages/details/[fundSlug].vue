@@ -29,14 +29,13 @@
         v-if="fund?.strategistName"
         class="fund_name__subtitle"
       >
-        <p>
-          <a
-            :href="fund?.strategistUrl"
-            target="_blank"
-          >
-            by {{ fund?.strategistName }}
-          </a>
-        </p>
+        <a
+          :href="fund?.strategistUrl"
+          target="_blank"
+        >
+          by {{ fund?.strategistName }}
+        </a>
+
       </div>
     </div>
     <div v-if="breadcrumbItems.length === 0" class="details_nav_container">
@@ -363,7 +362,16 @@ const computedRoutes = computed(() => {
   &__subtitle {
     font-weight: 500;
     font-size: $text-sm;
-    color: $color-text-irrelevant;
+
+    a {
+      color: $color-light-subtitle;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    &:hover a{
+      color: $color-primary;
+    }
   }
 }
 

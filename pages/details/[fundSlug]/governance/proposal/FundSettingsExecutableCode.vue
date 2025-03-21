@@ -46,8 +46,8 @@ import type { IField } from "~/types/enums/input_type";
 
 import {
   FundSettingsStepFieldsMap,
-  ProposalStep,
   FundSettingsStepsMap,
+  ProposalStep,
   type IProposal,
   type IStepperSection,
 } from "~/types/enums/fund_setting_proposal";
@@ -64,6 +64,9 @@ const proposalFundSettings = ref<Partial<IProposal>>({
   fundSymbol: "",
   baseToken: "",
   description: "",
+  strategistName: "",
+  strategistUrl: "",
+  oivChatLink: "",
   // Fees
   depositFee: "",
   depositFeeRecipientAddress: "",
@@ -147,6 +150,9 @@ const populateProposalData = () => {
     fundSymbol: settings.fundSymbol,
     baseToken: settings.baseToken,
     description: metaData.description,
+    strategistName: metaData.strategistName,
+    strategistUrl: metaData.strategistUrl,
+    oivChatLink: metaData.oivChatLink,
     // Fees
     depositFee: fromBpsToPercentage(settings.depositFee),
     depositFeeRecipientAddress: settings.feeCollectors[0],

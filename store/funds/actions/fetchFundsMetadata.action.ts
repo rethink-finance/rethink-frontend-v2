@@ -121,10 +121,14 @@ export async function fetchFundsMetaDataAction(
       // Process metadata if available
       if (metaDataJson) {
         const metaData = JSON.parse(metaDataJson);
+        // TODO: here we can hardcode the metadata fields to be displayed
         fund.description = metaData.description;
         fund.photoUrl = metaData.photoUrl || defaultAvatar;
         fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
         fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
+        fund.strategistName = metaData?.strategistName || "";
+        fund.strategistUrl = metaData?.strategistUrl || "";
+        fund.oivChatUrl = metaData?.oivChatUrl || "";
       }
       funds.push(fund);
     }

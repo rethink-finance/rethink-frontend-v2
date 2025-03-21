@@ -7,7 +7,7 @@
       >
     </v-avatar>
     <div class="title_wrapper">
-      <h4>{{ subtitle }}</h4>
+      <h4>{{ title }}</h4>
       <h5 v-if="strategistName">
         by {{ strategistName }}
       </h5>
@@ -22,7 +22,6 @@ const props = defineProps({
     default: "",
   },
   title: { type: String, default: "" },
-  subtitle: { type: String, default: "" },
   strategistName: { type: String, default: "" },
 });
 </script>

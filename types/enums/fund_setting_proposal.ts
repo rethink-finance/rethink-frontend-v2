@@ -36,6 +36,9 @@ export interface IProposal {
   fundSymbol: string;
   baseToken: string;
   description: string;
+  strategistName: string;
+  strategistUrl: string;
+  oivChatLink: string;
   depositFee: string;
   depositFeeRecipientAddress: string;
   withdrawFee: string;
@@ -183,7 +186,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     },
     {
       label: "Strategist Link",
-      key: "strategistLink",
+      key: "strategistUrl",
       type: InputType.Text,
       placeholder: "E.g. https://rethink.finance",
       isEditable: true,

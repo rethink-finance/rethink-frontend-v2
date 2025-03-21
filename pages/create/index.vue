@@ -761,7 +761,7 @@ const formatFundMetaData = () => {
     photoUrl: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "photoUrl"),
     plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "plannedSettlementPeriod"),
     strategistName : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistName"),
-    strategistLink : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistLink"),
+    strategistUrl : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistUrl"),
     oivChatLink : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "oivChatLink"),
     ...Object.fromEntries(customFIelds.map((field) => [field.key, field.value])),
   }

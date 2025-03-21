@@ -199,10 +199,14 @@ export const fetchFundMetaDataAction = async (
     // Process metadata if available
     if (fundMetadata) {
       const metaData = JSON.parse(fundMetadata);
+      // TODO: hardcore here
       fund.description = metaData.description;
       fund.photoUrl = metaData.photoUrl || defaultAvatar;
       fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
       fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
+      fund.strategistName = metaData?.strategistName || "";
+      fund.strategistUrl = metaData?.strategistUrl || "";
+      fund.oivChatUrl = metaData?.oivChatUrl || "";
     }
     fundStore.chainFunds[fundChainId][fundAddress] = fund;
     return fund;
