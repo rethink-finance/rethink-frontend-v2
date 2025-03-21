@@ -66,7 +66,7 @@ const proposalFundSettings = ref<Partial<IProposal>>({
   description: "",
   strategistName: "",
   strategistUrl: "",
-  oivChatLink: "",
+  oivChatUrl: "",
   // Fees
   depositFee: "",
   depositFeeRecipientAddress: "",
@@ -152,7 +152,7 @@ const populateProposalData = () => {
     description: metaData.description,
     strategistName: metaData.strategistName,
     strategistUrl: metaData.strategistUrl,
-    oivChatLink: metaData.oivChatLink,
+    oivChatUrl: metaData.oivChatUrl,
     // Fees
     depositFee: fromBpsToPercentage(settings.depositFee),
     depositFeeRecipientAddress: settings.feeCollectors[0],

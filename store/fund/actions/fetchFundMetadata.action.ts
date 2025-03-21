@@ -9,6 +9,7 @@ import { ERC20 } from "assets/contracts/ERC20";
 import { formatQuorumPercentage } from "~/composables/formatters";
 import { parseClockMode } from "~/composables/fund/parseClockMode";
 import { parseFundSettings } from "~/composables/fund/parseFundSettings";
+import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
 import { type ChainId, networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IToken from "~/types/token";
@@ -199,14 +200,18 @@ export const fetchFundMetaDataAction = async (
     // Process metadata if available
     if (fundMetadata) {
       const metaData = JSON.parse(fundMetadata);
-      // TODO: hardcore here
+
+      const { strategistName, strategistUrl, oivChatUrl } = fundMetaDataHardcoded[fundChainId].find(
+        (fund) => fund.address === fundAddress,
+      ) || { strategistName: "", strategistUrl: "", oivChatUrl: "" };
+
       fund.description = metaData.description;
       fund.photoUrl = metaData.photoUrl || defaultAvatar;
       fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
       fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
-      fund.strategistName = metaData?.strategistName || "";
-      fund.strategistUrl = metaData?.strategistUrl || "";
-      fund.oivChatUrl = metaData?.oivChatUrl || "";
+      fund.strategistName = metaData?.strategistName || strategistName;
+      fund.strategistUrl = metaData?.strategistUrl || strategistUrl;
+      fund.oivChatUrl = metaData?.oivChatUrl || oivChatUrl;
     }
     fundStore.chainFunds[fundChainId][fundAddress] = fund;
     return fund;

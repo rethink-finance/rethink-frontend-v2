@@ -1,5 +1,7 @@
 <template>
-  <div class="fund_name">
+  <div
+    class="fund_name"
+  >
     <v-avatar size="3.75rem" :rounded="true" class="fund_name__avatar">
       <img
         cover
@@ -8,9 +10,18 @@
     </v-avatar>
     <div class="title_wrapper">
       <h4>{{ title }}</h4>
-      <h5 v-if="strategistName">
-        by {{ strategistName }}
-      </h5>
+
+      <a
+        v-if="strategistName"
+        :href="strategistUrl"
+        target="_blank"
+        class="strategist_url"
+        @click.stop
+      >
+        <h5>
+          by {{ strategistName }}
+        </h5>
+      </a>
     </div>
   </div>
 </template>
@@ -23,6 +34,7 @@ const props = defineProps({
   },
   title: { type: String, default: "" },
   strategistName: { type: String, default: "" },
+  strategistUrl: { type: String, default: "" },
 });
 </script>
 
@@ -62,12 +74,22 @@ const props = defineProps({
   }
 
   h5 {
+    width: fit-content;
     font-size: 0.875rem;
     font-style: normal;
     font-weight: 500;
     letter-spacing: 0.02625rem;
     color: $color-light-subtitle;
+
+    transition: color 0.2s ease;
+
+    &:hover {
+    color: $color-primary;
+  }
   }
 }
 
+.strategist_url{
+  width: fit-content;
+}
 </style>

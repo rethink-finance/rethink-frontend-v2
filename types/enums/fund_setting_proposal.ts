@@ -38,7 +38,7 @@ export interface IProposal {
   description: string;
   strategistName: string;
   strategistUrl: string;
-  oivChatLink: string;
+  oivChatUrl: string;
   depositFee: string;
   depositFeeRecipientAddress: string;
   withdrawFee: string;
@@ -196,7 +196,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     },
     {
       label: "OIV Chat Link",
-      key: "oivChatLink",
+      key: "oivChatUrl",
       type: InputType.Text,
       placeholder: "E.g. https://discord.com/channels/945238616408481833/946693607216279562",
       isEditable: true,

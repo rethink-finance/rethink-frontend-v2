@@ -22,7 +22,12 @@
       </v-avatar>
       <div class="fund_name__title">
         <p>
-          <span>{{ fund?.title }}</span> {{ fund?.strategistName ? " | " : "" }}
+          {{ fund?.title }}
+        </p>
+      </div>
+      <div v-if="fund?.strategistName" class="fund_name__title">
+        <p>
+          |
         </p>
       </div>
       <div
