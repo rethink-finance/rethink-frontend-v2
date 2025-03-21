@@ -67,7 +67,7 @@ export interface IWhitelist {
   isNew: boolean;
 }
 
-export type FieldsMapType = Record<StepSections, IField[] | IFieldGroup[]>;
+export type FieldsMapType = Record<StepSections, (IField | IFieldGroup)[]>;
 
 
 // 1. define FundSettingsStepsMap which maps each proposal step to its corresponding sections
@@ -170,6 +170,36 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       charLimit: 5000,
       rules: [formRules.required, formRules.charLimit(5000)],
       isEditable: true,
+    },
+    {
+      label: "Strategist Name",
+      key: "strategistName",
+      type: InputType.Text,
+      placeholder: "E.g. rethink.finance",
+      isEditable: true,
+      rules: [],
+      tooltip: "Strategist will be displayed next to the OIV Name",
+      cols: 6,
+    },
+    {
+      label: "Strategist Link",
+      key: "strategistLink",
+      type: InputType.Text,
+      placeholder: "E.g. https://rethink.finance",
+      isEditable: true,
+      rules: [],
+      tooltip: "Strategist name will be clickable and redirect to this link",
+      cols: 6,
+    },
+    {
+      label: "OIV Chat Link",
+      key: "oivChatLink",
+      type: InputType.Text,
+      placeholder: "E.g. https://discord.com/channels/945238616408481833/946693607216279562",
+      isEditable: true,
+      rules: [],
+      tooltip: "Link to OIV communication, eg: [Telegram Group Link]",
+      cols: 12,
     },
   ],
   [StepSections.Fee]: [

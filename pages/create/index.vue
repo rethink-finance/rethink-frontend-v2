@@ -760,6 +760,9 @@ const formatFundMetaData = () => {
     description: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "description"),
     photoUrl: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "photoUrl"),
     plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "plannedSettlementPeriod"),
+    strategistName : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistName"),
+    strategistLink : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistLink"),
+    oivChatLink : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "oivChatLink"),
     ...Object.fromEntries(customFIelds.map((field) => [field.key, field.value])),
   }
 };
@@ -840,6 +843,9 @@ const initializeFund = async() => {
 
     const formattedData = formatInitializeData();
     console.warn("SUBMIT formatted data", formattedData);
+
+
+    return;
 
     await fundFactoryContract
       .send("initCreateFund", {}, ...formattedData)
