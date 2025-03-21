@@ -47,6 +47,23 @@
 
         <ClientOnly>
           <div class="d-flex">
+            <nuxt-link
+              to="https://docs.rethink.finance"
+              target="_blank"
+              class="mr-2"
+            >
+              <v-btn
+                class="nav-link"
+                variant="plain"
+                color="var(--color-light-subtitle)"
+              >
+                Docs
+                <template #append>
+                  <Icon  icon="mdi:launch" width="0.875rem" />
+                </template>
+              </v-btn>
+            </nuxt-link>
+
             <UiButtonSelectChain
               v-if="accountStore.isConnected"
               v-model="selectedChainId"
@@ -159,15 +176,6 @@ const routes : IRoute[] = [
     title: "Governance",
     text: "Coming soon",
     disabled: true,
-  },
-  {
-    isExternal: true,
-    exactMatch: true,
-    to: "https://docs.rethink.finance",
-    title: "Docs",
-    text: "",
-    icon: "mdi:launch",
-    color: "var(--color-light-subtitle)",
   },
 ]
 const selectedChainId = ref(accountStore.connectedWalletChainId);
