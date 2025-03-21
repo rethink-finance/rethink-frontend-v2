@@ -1,5 +1,5 @@
 import { useFundStore } from "~/store/fund/fund.store";
-import { type ChainId } from "~/store/web3/networksMap";
+import { type ChainId } from "~/types/enums/chain_id";
 import { useFundsStore } from "../funds.store";
 
 export function calculateFundsPerformanceMetricsAction(

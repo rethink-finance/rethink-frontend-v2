@@ -4,8 +4,8 @@ import {
 } from "~/composables/nav/navDecoder";
 
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
-import type { ChainId } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { ChainId } from "~/types/enums/chain_id";
 import { PositionTypeToNAVCacheMethod } from "~/types/enums/position_type";
 import type IFundNavData from "~/types/fund_nav_data";
 import type INAVMethod from "~/types/nav_method";

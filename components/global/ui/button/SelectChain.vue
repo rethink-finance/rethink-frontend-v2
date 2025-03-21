@@ -49,7 +49,8 @@
 </template>
 
 <script setup lang="ts">
-import { type ChainId, networks } from "~/store/web3/networksMap";
+import { networks } from "~/store/web3/networksMap";
+import { type ChainId } from "~/types/enums/chain_id";
 
 const props = defineProps({
   modelValue: {

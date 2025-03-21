@@ -1,4 +1,4 @@
-import type { ChainId } from "~/store/web3/networksMap";
+import type { ChainId } from "~/types/enums/chain_id";
 
 export default interface IFundSettings {
   [key: string]: any;

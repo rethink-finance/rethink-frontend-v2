@@ -7,7 +7,8 @@ import { Web3 } from "web3";
 import { useToastStore } from "../toasts/toast.store";
 
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { type ChainId, networksMap } from "~/store/web3/networksMap";
+import { type ChainId } from "~/types/enums/chain_id";
+import { networksMap } from "../web3/networksMap";
 
 interface IState {
   web3Onboard?: any;

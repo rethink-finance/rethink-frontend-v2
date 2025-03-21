@@ -1,20 +1,19 @@
+import { NAVExecutor } from "assets/contracts/NAVExecutor";
+import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 import { type AbiFunctionFragment } from "web3";
 import { decodeFunctionCall, encodeFunctionCall } from "web3-eth-abi";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
-import type INAVMethod from "~/types/nav_method";
-import { PositionType } from "~/types/enums/position_type";
-import { generateNAVPermission, getMethodsPastNAVUpdateIndex } from "~/composables/nav/generateNAVPermission";
-import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
-import { NAVExecutor } from "assets/contracts/NAVExecutor";
-import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import {
   encodedCollectFlowFeesAbiJSON,
   encodedCollectManagerFeesAbiJSON,
   encodedCollectPerformanceFeesAbiJSON,
 } from "~/composables/nav/encodedCollectFees";
-import type IProposalData from "~/types/proposal/proposalData";
-import type { ChainId } from "~/store/web3/networksMap";
+import { generateNAVPermission, getMethodsPastNAVUpdateIndex } from "~/composables/nav/generateNAVPermission";
+import type { ChainId } from "~/types/enums/chain_id";
 import { roleModFunctions } from "~/types/enums/delegated_permission";
+import { PositionType } from "~/types/enums/position_type";
+import type INAVMethod from "~/types/nav_method";
+import type IProposalData from "~/types/proposal/proposalData";
 
 const updateNavABI = GovernableFund.abi.find(
   (func: any) => func.name === "updateNav" && func.type === "function",

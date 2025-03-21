@@ -1,7 +1,9 @@
-import { GovernableFund } from "~/assets/contracts/GovernableFund";
-import { ChainId, type ChainId as ChainIdType } from "~/store/web3/networksMap";
+import { ethers } from "ethers";
+import { ERC20 } from "~/assets/contracts/ERC20";
+import { calculateCumulativeWithSharePrice } from "~/composables/utils";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
+import type INAVUpdate from "~/types/nav_update";
 
 
 export const calculateFundPerformanceMetricsAction = async (
@@ -22,16 +24,19 @@ export const calculateFundPerformanceMetricsAction = async (
     console.debug("  [METRICS] last NAV update", fundLastNavUpdate)
 
     if (fund) {
-      const lastNAVUpdateTotalDepositBalance = await getFundLastNAVUpdateTotalDepositBalance(fund, fundLastNavUpdate);
+      const web3Store = useWeb3Store();
+      // const lastNAVUpdateTotalDepositBalance = await getTotalDepositBalanceAtNAVUpdate(web3Store, fund, fundLastNavUpdate);
+
+      const sharePrice = await getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund)
+      fund.sharePrice = sharePrice;
 
       const baseTokenDecimals = fund.baseToken.decimals;
-      const cumulativeReturnPercent = fundLastNavUpdateExists
-        ? calculateCumulativeReturnPercent(
-          lastNAVUpdateTotalDepositBalance || 0n,
-          fund.lastNAVUpdateTotalNAV || 0n,
-          baseTokenDecimals,
-        )
-        : 0;
+      const fundTokenDecimals = fund.fundToken.decimals;
+      const cumulativeReturnPercent = calculateCumulativeWithSharePrice(
+        sharePrice,
+        baseTokenDecimals,
+        fundTokenDecimals,
+      )
 
       fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists
         ? fund.lastNAVUpdateTotalNAV
@@ -39,6 +44,9 @@ export const calculateFundPerformanceMetricsAction = async (
       fund.cumulativeReturnPercent = cumulativeReturnPercent;
       fund.isNavUpdatesLoading = false;
       fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates, fund.totalDepositBalance);
+
+      fund.isSharePriceLoading = true;
+      fund.isSharePriceLoading = false;
     }
   } catch (error) {
     console.error(
@@ -50,135 +58,56 @@ export const calculateFundPerformanceMetricsAction = async (
   }
 }
 
-const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavUpdate: any) => {
-  if(fundLastNavUpdate?.timestamp) {
-    const web3Store = useWeb3Store();
-    // 1. get average block time for the chain
+const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, fund: IFund) => {
+  if(navUpdate?.timestamp) {
+  // 1. get average block time for the chain
     const web3Instance = web3Store.getWeb3Instance(fund.chainId, false);
     const { initializeBlockTimeContext } = useBlockTime()
     const context = await initializeBlockTimeContext(web3Instance)
     const averageBlockTime = context?.averageBlockTime || 0;
 
-    // 2. estimate the block number of the last NAV update timestamp
-    const lastNavUpdateBlockNumber = Number(await getBlockByTimestamp(fund.chainId, fundLastNavUpdate.timestamp / 1000, averageBlockTime) || 0);
+    // 2. get block number for the timestamp
+    const totalNav = navUpdate.totalNAV ?? 0n;
+    const blockNumber = Number(await getBlockByTimestamp(web3Store, fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
 
-    // 3. get total deposit balance at the last NAV update
     try {
-      const totalDepositBal = await web3Store.callWithRetry(
+      const totalSupplyRaw = await web3Store.callWithRetry(
         fund.chainId,
         async () => {
-          const fundContract = web3Store.getCustomContract(
+          const fundTokenContract = await web3Store.getCustomContract(
             fund.chainId,
-            GovernableFund.abi,
-            fund.address,
+            ERC20,
+            fund.fundToken.address,
           );
 
-          return BigInt(await fundContract.methods._totalDepositBal().call({}, lastNavUpdateBlockNumber) || 0)
+          return fundTokenContract.methods.totalSupply().call({}, blockNumber);
         },
       );
 
-      return totalDepositBal;
-    } catch (e) {
-      console.error("Error getting total deposit balance at last NAV update", e);
-      return null;
+      const totalSupply = totalSupplyRaw ?? 0n;
+
+      // Determine the highest decimals between NAV and Supply
+      const navDecimals = fund.baseToken.decimals;
+      const supplyDecimals = fund.fundToken.decimals;
+      const diffDecimals = navDecimals - supplyDecimals;
+
+      // Scale totalNav to the same decimals as totalSupply for proper division
+      const adjustedTotalNav = diffDecimals > 0 ? totalNav * 10n ** BigInt(diffDecimals) : totalNav;
+      const adjustedTotalSupply = diffDecimals < 0 ? totalSupply * 10n ** BigInt(-diffDecimals) : totalSupply;
+
+      // Perform the division
+      const sharePriceBigInt = totalSupply > 0n ? (adjustedTotalNav * 10n ** 18n) / adjustedTotalSupply : 0n;
+
+      // Convert to float and format the share price correctly
+      const sharePrice = parseFloat(ethers.formatUnits(sharePriceBigInt, 18));
+
+      return sharePrice;
+    }
+    catch(e){
+      console.error("Error getting share price", e)
+      return undefined;
     }
   }
 
-  return null;
+  return 0;
 }
-
-const getBlockByTimestamp = async (chainId: ChainIdType, timestamp: number, averageBlockTime: number) => {
-  try {
-    const web3Store = useWeb3Store();
-    const provider = web3Store.chainProviders[chainId]
-
-    const latestBlock = await web3Store
-      .callWithRetry(
-        chainId,
-        async () =>
-          Number(await provider.eth.getBlockNumber()),
-      )
-    const latestBlockData = await web3Store
-      .callWithRetry(
-        chainId,
-        async () =>
-          await provider.eth.getBlock(latestBlock),
-      )
-    const latestTimestamp = Number(latestBlockData.timestamp);
-
-    const estimatedStartBlock = latestBlock - Math.floor((latestTimestamp - timestamp) / averageBlockTime);
-
-
-    if(estimatedStartBlock < 0) {
-      console.error("Estimated start block is negative", estimatedStartBlock);
-      return null;
-    }
-
-    if(estimatedStartBlock > latestBlock) {
-      console.error("Estimated start block is greater than latest block", estimatedStartBlock, latestBlock);
-      return null;
-    }
-
-    console.log("latestBlock: ", latestBlock);
-    console.log("estimatedStartBlock: ", estimatedStartBlock);
-
-    return estimatedStartBlock;
-  } catch (e) {
-    console.error("Error getting block by timestamp", e);
-    return null;
-  }
-}
-
-
-// TODO: we don't use this f-ijon, but might be useful in the future? should we keep it?
-const getL1BlockNumber = async (l2BlockNumber: number, chainId: ChainIdType) => {
-  try {
-    const web3Store = useWeb3Store();
-    const provider = web3Store.chainProviders[chainId];
-
-    // Fetch the L2 block details
-    const l2Block = await web3Store.callWithRetry(
-      chainId,
-      async () => await provider.eth.getBlock(l2BlockNumber),
-    );
-
-    if (!l2Block) {
-      console.error(`Block not found on L2: ${l2BlockNumber}`);
-      return null;
-    }
-
-    console.warn("L1 block number not found in L2 metadata. Estimating...");
-
-    // Fetch the latest Ethereum L1 block
-    const ethProvider = web3Store.getWeb3Instance(ChainId.ETHEREUM);
-    const latestL1Block = await web3Store.callWithRetry(
-      ChainId.ETHEREUM,
-      async () => await ethProvider.eth.getBlock("latest"),
-    );
-
-    if (!latestL1Block) {
-      console.error("Failed to fetch latest L1 block.");
-      return null;
-    }
-
-    // Get block times for better estimation
-    const { initializeBlockTimeContext } = useBlockTime();
-    const context = await initializeBlockTimeContext(ethProvider);
-    const averageL1BlockTime = context?.averageBlockTime || 12; // Default fallback to 12s
-
-    // Estimate based on time difference
-    const l2Timestamp = Number(l2Block.timestamp);
-    const l1LatestTimestamp = Number(latestL1Block.timestamp);
-
-    const estimatedL1Block =
-      Number(latestL1Block.number) -
-      Math.floor((l1LatestTimestamp - l2Timestamp) / averageL1BlockTime);
-
-    console.debug("Estimated L1 Block:", estimatedL1Block);
-
-    return estimatedL1Block;
-  } catch (e) {
-    console.error("Error getting L1 block number", e);
-    return null;
-  }
-};

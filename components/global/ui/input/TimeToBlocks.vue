@@ -56,8 +56,8 @@
 </template>
 
 <script setup lang="ts">
-import { ChainId } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { ChainId } from "~/types/enums/chain_id";
 import {
   InputType,
   periodChoices,

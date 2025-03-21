@@ -33,8 +33,8 @@
 </template>
 
 <script setup lang="ts">
-import type { ChainId } from "~/store/web3/networksMap";
 import type { RoleStoreType } from "~/store/role/role.store";
+import type { ChainId } from "~/types/enums/chain_id";
 
 defineProps({
   chainId: {

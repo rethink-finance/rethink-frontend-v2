@@ -6,6 +6,10 @@ import {
   ExecutionOption,
 } from "~/types/enums/zodiac-roles";
 
+import { getFunctionConditionType } from "~/composables/zodiac-roles/conditions";
+import { RolesQuery, type RolesQueryResponse } from "~/services/zodiac-subgraph/queries";
+import { type ChainId } from "~/types/enums/chain_id";
+import { SubgraphClientType } from "~/types/enums/subgraph";
 import type {
   FunctionCondition,
   ParamCondition,
@@ -13,10 +17,6 @@ import type {
   Target,
   TargetConditions,
 } from "~/types/zodiac-roles/role";
-import { RolesQuery, type RolesQueryResponse } from "~/services/zodiac-subgraph/queries";
-import { type ChainId } from "~/store/web3/networksMap";
-import { SubgraphClientType } from "~/types/enums/subgraph";
-import { getFunctionConditionType } from "~/composables/zodiac-roles/conditions";
 
 /**
  * Code from:

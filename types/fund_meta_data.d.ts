@@ -19,6 +19,7 @@ export default interface IFundMetaData {
   fundName: string;
   fundBaseTokenSymbol: string;
   fundGovernanceTokenSymbol: string;
+  fundGovernanceTokenDecimals: number;
   fundGovernanceData: IFundGovernanceData;
   fundSettings: any;
 }

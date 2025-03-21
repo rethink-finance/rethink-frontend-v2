@@ -4,8 +4,8 @@ import { ERR_CONTRACT_EXECUTION_REVERTED } from "web3";
 import { decodeUpdateNavMethods } from "~/composables/nav/navProposal";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
-import type { ChainId } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
 import { useFundStore } from "../fund.store";
 
