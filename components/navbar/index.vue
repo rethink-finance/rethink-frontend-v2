@@ -104,9 +104,26 @@
               </v-tooltip>
             </v-btn>
 
-            <v-btn class="btn_settings" @click="menuSettingsOpen = !menuSettingsOpen">
-              <v-icon class="icon_settings" icon="mdi-cog" size="1.5rem" />
-            </v-btn>
+            <v-menu location="bottom" :close-on-content-click="false">
+              <template #activator="{ props }">
+                <v-btn class="btn_settings" v-bind="props">
+                  <v-icon class="icon_settings" icon="mdi-cog" size="1.5rem" />
+                </v-btn>
+              </template>
+              <v-list>
+                <v-list-item>
+                  <v-list-item-title>
+                    <v-switch
+                      v-model="appSettingsStore.isManageMode"
+                      label="Manage Mode"
+                      color="primary"
+                      hide-details
+                      @change="appSettingsStore.toggleAdvancedMode"
+                    />
+                  </v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
           </div>
         </ClientOnly>
 
@@ -117,19 +134,6 @@
         </v-btn>
       </v-toolbar>
     </v-row>
-
-    <UiConfirmDialog
-      v-model="menuSettingsOpen"
-      title="Application Settings"
-    >
-      <v-switch
-        v-model="appSettingsStore.isManageMode"
-        label="Manage Mode"
-        color="primary"
-        hide-details
-        @change="appSettingsStore.toggleAdvancedMode"
-      />
-    </UiConfirmDialog>
   </v-app-bar>
 
   <v-alert
@@ -153,7 +157,6 @@ const route = useRoute();
 
 const currentRoute = ref(route?.path);
 const menuOpen = ref(false);
-const menuSettingsOpen = ref(false);
 const appSettingsStore = useSettingsStore();
 
 const routes : IRoute[] = [
