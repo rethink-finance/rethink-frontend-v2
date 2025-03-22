@@ -285,16 +285,18 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
           isEditable: true,
           cols: 8,
         },
-        {
-          label: "Management Fee Period (Days)",
-          key: "managementFeePeriod",
-          type: InputType.Number,
-          placeholder: "E.g. 0",
-          min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
-          isEditable: true,
-          cols: 12,
-        },
+
+        // // Note from Rok: remove for now
+        // {
+        //   label: "Management Fee Period (Days)",
+        //   key: "managementFeePeriod",
+        //   type: InputType.Number,
+        //   placeholder: "E.g. 0",
+        //   min: 0,
+        //   rules: [formRules.required, formRules.isNonNegativeNumber],
+        //   isEditable: true,
+        //   cols: 12,
+        // },
       ],
     },
     {

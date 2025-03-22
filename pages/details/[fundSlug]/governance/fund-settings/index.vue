@@ -524,10 +524,7 @@ const formatProposalData = () => {
     isPerformancePeriodToggledOff || isPerformancePeriod365
       ? 0
       : parseInt(getFieldValueByFieldKey("performanceFeePeriod") as string);
-  const managementPeriod =
-    isManagementPeriodToggledOff || isManagementPeriod365
-      ? 0
-      : parseInt(getFieldValueByFieldKey("managementFeePeriod") as string);
+  const managementPeriod = 0; // Note from Rok: always submit 0 here for now
 
   return [
     fundSettings,

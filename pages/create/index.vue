@@ -819,7 +819,7 @@ const formatInitializeData = () => {
     ],
     JSON.stringify(formatFundMetaData()),
     0, // feePerformancePeriod, default to 0
-    parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fee, "managementFeePeriod") as string) || 0, // feeManagePeriod
+    0, // managementFeePeriod, default to 0
   ]
 
   console.log("output", output);
