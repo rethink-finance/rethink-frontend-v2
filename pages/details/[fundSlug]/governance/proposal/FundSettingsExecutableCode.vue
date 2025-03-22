@@ -1,41 +1,45 @@
 <template>
-  <div
-    v-for="(section, index) in sections"
-    :key="index"
-    class="fund_settings_executable_code section"
-  >
-    <div class="section__title">
-      {{ section.name }}
-    </div>
+  <div>
+    <div
+      v-for="(section, index) in sections"
+      :key="index"
+      class="fund_settings_executable_code section"
+    >
+      <div class="section__title">
+        {{ section.name }}
+      </div>
 
-    <div class="fields">
-      <v-col
-        v-for="(field, index) in section.fields"
-        :key="index"
-        :cols="field?.cols ?? 12"
-      >
-        <div v-if="field.isToggleable" class="toggleable_group">
-          <div class="fields">
-            <v-col
-              v-for="(subField, subFieldIndex) in field.fields"
-              :key="subFieldIndex"
-              :cols="subField?.cols ?? 6"
-            >
-              <UiField
-                v-model="subField.value"
-                :field="subField"
-                :is-preview="true"
-              />
-            </v-col>
+      <div class="fields">
+        <v-col
+          v-for="(field, index) in section.fields"
+          :key="index"
+          :cols="field?.cols ?? 12"
+        >
+          <div v-if="field.isToggleable" class="toggleable_group">
+            <div class="fields">
+              <v-col
+                v-for="(subField, subFieldIndex) in field.fields"
+                :key="subFieldIndex"
+                :cols="subField?.cols ?? 6"
+              >
+                <UiField
+                  v-model="subField.value"
+                  :field="subField"
+                  :is-preview="true"
+                  :chain-id="chainId"
+                />
+              </v-col>
+            </div>
           </div>
-        </div>
-        <UiField
-          v-else
-          v-model="field.value"
-          :field="field"
-          :is-preview="true"
-        />
-      </v-col>
+          <UiField
+            v-else
+            v-model="field.value"
+            :field="field"
+            :is-preview="true"
+            :chain-id="chainId"
+          />
+        </v-col>
+      </div>
     </div>
   </div>
 </template>
@@ -44,6 +48,7 @@
 import { useFundStore } from "~/store/fund/fund.store";
 import type { IField } from "~/types/enums/input_type";
 
+import { ChainId } from "~/store/web3/networksMap";
 import {
   FundSettingsStepFieldsMap,
   FundSettingsStepsMap,
@@ -55,6 +60,7 @@ const fundStore = useFundStore();
 
 const props = defineProps<{
   calldataDecoded: any;
+  chainId: ChainId;
 }>();
 
 const proposalFundSettings = ref<Partial<IProposal>>({

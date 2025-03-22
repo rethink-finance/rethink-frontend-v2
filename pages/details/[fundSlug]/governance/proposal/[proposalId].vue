@@ -102,7 +102,9 @@
                       <template v-else-if="calldata?.calldataType === ProposalCalldataType.FUND_SETTINGS">
                         <!-- Show fund setting UI -->
                         <FundSettingsExecutableCode
+                          v-if="calldata?.calldataDecoded && fundStore?.fund?.chainId"
                           :calldata-decoded="calldata?.calldataDecoded"
+                          :chain-id="fundStore.fund?.chainId"
                         />
                       </template>
                       <template v-else>
@@ -188,8 +190,8 @@
 </template>
 
 <script setup lang="ts">
-import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { useActionStateStore } from "~/store/actionState.store";
+import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 
 import { formatPercent } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
