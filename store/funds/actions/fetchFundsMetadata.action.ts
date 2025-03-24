@@ -1,7 +1,8 @@
 import defaultAvatar from "@/assets/images/default_avatar.webp";
-import { networksMap } from "~/store/web3/networksMap";
+import { fundMetaDataHardcoded } from "../config/fundMetadata.config";
+
+import { type ChainId, networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { type ChainId } from "~/types/enums/chain_id";
 import type IFund from "~/types/fund";
 import type IFundMetaData from "~/types/fund_meta_data";
 import type INAVUpdate from "~/types/nav_update";
@@ -75,10 +76,6 @@ export async function fetchFundsMetaDataAction(
         sharpeRatio: undefined,
         positionTypeCounts: [] as IPositionTypeCount[],
 
-        // Share Price
-        sharePrice: undefined,
-        isSharePriceLoading: true,
-
         // My Fund Positions
         netDeposits: "",
         // Overview fields
@@ -125,10 +122,18 @@ export async function fetchFundsMetaDataAction(
       // Process metadata if available
       if (metaDataJson) {
         const metaData = JSON.parse(metaDataJson);
+
+        const { strategistName, strategistUrl, oivChatUrl } = fundMetaDataHardcoded[chainId].find(
+          (fund) => fund.address === address,
+        ) || { strategistName: "", strategistUrl: "", oivChatUrl: "" };
+
         fund.description = metaData.description;
         fund.photoUrl = metaData.photoUrl || defaultAvatar;
         fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
         fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
+        fund.strategistName = metaData?.strategistName || strategistName;
+        fund.strategistUrl = metaData?.strategistUrl || strategistUrl;
+        fund.oivChatUrl = metaData?.oivChatUrl || oivChatUrl;
       }
       funds.push(fund);
     }

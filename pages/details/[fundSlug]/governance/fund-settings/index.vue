@@ -130,7 +130,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
     to: `/details/${selectedFundSlug.value}/governance`,
   },
   {
-    title: "Fund Setting Proposal",
+    title: "OIV Setting Proposal",
     disabled: true,
     to: `/details/${selectedFundSlug.value}/governance/fund-settings`,
   },
@@ -524,10 +524,7 @@ const formatProposalData = () => {
     isPerformancePeriodToggledOff || isPerformancePeriod365
       ? 0
       : parseInt(getFieldValueByFieldKey("performanceFeePeriod") as string);
-  const managementPeriod =
-    isManagementPeriodToggledOff || isManagementPeriod365
-      ? 0
-      : parseInt(getFieldValueByFieldKey("managementFeePeriod") as string);
+  const managementPeriod = 0; // Note from Rok: always submit 0 here for now
 
   return [
     fundSettings,

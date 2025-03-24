@@ -13,7 +13,7 @@
       :image-url="fund?.photoUrl"
     />
     <div v-if="breadcrumbItems.length === 0" class="fund_name">
-      <v-avatar class="fund_name__avatar" :rounded="false">
+      <v-avatar class="fund_name__avatar" :rounded="false" size="3.75rem">
         <img
           :src="fund.photoUrl"
           class="fund_name__avatar_img"
@@ -22,13 +22,25 @@
       </v-avatar>
       <div class="fund_name__title">
         <p>
-          {{ fund?.fundToken.symbol }}
-        </p>
-      </div>
-      <div class="fund_name__subtitle">
-        <p>
           {{ fund?.title }}
         </p>
+      </div>
+      <div v-if="fund?.strategistName" class="fund_name__title">
+        <p>
+          |
+        </p>
+      </div>
+      <div
+        v-if="fund?.strategistName"
+        class="fund_name__subtitle"
+      >
+        <a
+          :href="fund?.strategistUrl"
+          target="_blank"
+        >
+          by {{ fund?.strategistName }}
+        </a>
+
       </div>
     </div>
     <div v-if="breadcrumbItems.length === 0" class="details_nav_container">
@@ -83,8 +95,9 @@
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
+import { useSettingsStore } from "~/store/settings/settings.store";
+import { ChainId } from "~/store/web3/networksMap";
 import { ActionState } from "~/types/enums/action_state";
-import { ChainId } from "~/types/enums/chain_id";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
@@ -92,6 +105,7 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const actionStateStore = useActionStateStore();
+const appSettingsStore = useSettingsStore();
 const route = useRoute();
 // fund address is always in the third position of the route
 // e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
@@ -224,7 +238,13 @@ const getPathColor = (isActive = false, color = "#77839f") =>
   isActive ? "primary" : color;
 
 const computedRoutes = computed(() => {
+  const showInManageMode = [
+    `${fundDetailsRoute.value}/flows`,
+    `${fundDetailsRoute.value}/execution-app`,
+  ]
   return routes.map((routeItem: IRoute) => {
+    const isHidden = showInManageMode.includes(routeItem.to) ? !appSettingsStore.isManageMode : false;
+
     let isActive;
     if (routeItem.exactMatch) {
       isActive = isPathActive(routeItem.to, true);
@@ -242,8 +262,9 @@ const computedRoutes = computed(() => {
       isActive,
       pathColor: getPathColor(isActive, routeItem.color),
       target: routeItem.isExternal ? "_blank" : "",
+      isHidden,
     };
-  });
+  }).filter((routeItem: IRoute) => !routeItem.isHidden);
 });
 </script>
 
@@ -346,7 +367,16 @@ const computedRoutes = computed(() => {
   &__subtitle {
     font-weight: 500;
     font-size: $text-sm;
-    color: $color-text-irrelevant;
+
+    a {
+      color: $color-light-subtitle;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    &:hover a{
+      color: $color-primary;
+    }
   }
 }
 

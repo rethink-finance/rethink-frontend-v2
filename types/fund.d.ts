@@ -1,3 +1,4 @@
+import { type ChainId } from "~/store/web3/networksMap";
 import type IClockMode from "~/types/clock_mode";
 import { type ChainId } from "~/types/enums/chain_id";
 import type INAVUpdate from "~/types/nav_update";
@@ -40,6 +41,9 @@ export default interface IFund {
   chainId: ChainId;
   chainName: string;
   chainShort: string;
+  strategistName?: string;
+  strategistUrl?: string;
+  oivChatUrl?: string;
 
   address: string;
   title: string;

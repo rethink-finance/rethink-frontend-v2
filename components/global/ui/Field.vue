@@ -119,7 +119,7 @@
       />
     </template>
 
-    <InfoBox v-if="field.info && !isPreview" :info="field.info" />
+    <InfoBox v-if="field.info && !isPreview" :info="field.info" class="info_box" />
   </div>
 </template>
 
@@ -290,4 +290,7 @@ const classes = computed(() => {
   }
 }
 
+.info_box{
+  margin-bottom: 3rem;
+}
 </style>
