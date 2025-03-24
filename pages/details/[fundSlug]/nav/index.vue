@@ -17,14 +17,17 @@
         </div>
       </div>
       <div class="button_container">
-        <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage`">
+        <nuxt-link v-if="appSettingsStore.isManageMode" :to="`/details/${selectedFundSlug}/nav/manage`">
           <v-btn class="text-secondary" variant="outlined">
             Manage NAV Methods
           </v-btn>
         </nuxt-link>
 
 
-        <div class="tooltip-wrapper">
+        <div
+          v-if="appSettingsStore.isManageMode"
+          class="tooltip-wrapper"
+        >
           <v-tooltip
             activator="parent"
             location="bottom"
@@ -112,12 +115,14 @@
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
+import { useSettingsStore } from "~/store/settings/settings.store";
 import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
 const actionStateStore = useActionStateStore();
+const appSettingsStore = useSettingsStore();
 
 const fund = useAttrs().fund as IFund;
 const {

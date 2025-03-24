@@ -516,7 +516,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
       router.push(`/details/${fundStore.selectedFundSlug}/nav/manage`);
     },
   },
-  "Fund Settings": {
+  "OIV Settings": {
     click: () => {
       // if fund settings proposal already exist, open up the dialog
       if (hasUpdateSettingsProposal.value) {

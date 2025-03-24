@@ -21,30 +21,32 @@
             </strong>
           </div>
 
-          <v-btn
-            v-if="isEditDisabled"
-            color="primary"
-            @click="isEditDisabled = false"
-          >
-            Edit
-          </v-btn>
-          <div v-else>
+          <div v-if="appSettingsStore.isManageMode" class="is-manage-mode">
             <v-btn
+              v-if="isEditDisabled"
               color="primary"
-              @click="navigateToCreatePermissions"
+              @click="isEditDisabled = false"
             >
-              Create Permissions Proposal
+              Edit
             </v-btn>
-            <v-btn
-              variant="text"
-              color="secondary"
-              @click="isEditDisabled = true"
-            >
-              <Icon
-                icon="ic:twotone-cancel"
-                width="1.5rem"
-              />
-            </v-btn>
+            <div v-else>
+              <v-btn
+                color="primary"
+                @click="navigateToCreatePermissions"
+              >
+                Create Permissions Proposal
+              </v-btn>
+              <v-btn
+                variant="text"
+                color="secondary"
+                @click="isEditDisabled = true"
+              >
+                <Icon
+                  icon="ic:twotone-cancel"
+                  width="1.5rem"
+                />
+              </v-btn>
+            </div>
           </div>
         </div>
       </div>
@@ -73,6 +75,7 @@ import { useActionState, useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 import { useRoleStore } from "~/store/role/role.store";
+import { useSettingsStore } from "~/store/settings/settings.store";
 import { ChainId } from "~/types/enums/chain_id";
 import type { Role } from "~/types/zodiac-roles/role";
 
@@ -80,6 +83,7 @@ const router = useRouter();
 const fundStore = useFundStore();
 const permissionsProposalStore = usePermissionsProposalStore();
 const actionStateStore = useActionStateStore();
+const appSettingsStore = useSettingsStore();
 // Provide the store to child components
 const roleStore = useRoleStore();
 provide("roleStore", roleStore);

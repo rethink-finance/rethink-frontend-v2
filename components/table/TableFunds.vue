@@ -13,8 +13,9 @@
     <template #[`item.name`]="{ item }">
       <FundNameCell
         :image="item.photoUrl"
-        :title="item.fundToken.symbol"
-        :subtitle="item.title"
+        :title="item.title"
+        :strategist-name="item.strategistName"
+        :strategist-url="item.strategistUrl"
       />
     </template>
 
@@ -175,6 +176,15 @@ const icon = (chainShort: string) => {
 };
 
 const navigateFundDetails = (event: any, row: any) => {
+  // Check if the click target is an anchor (<a>) or any clickable element
+  const target = event.target as HTMLElement;
+
+  if (target.tagName.toLowerCase() === "a" || target.closest("a")) {
+  // If the target is an anchor tag, prevent the row navigation
+    return;
+  }
+
+
   const fundDetailsUrl = getFundDetailsUrl(
     row.item.chainId,
     row.item.fundToken.symbol,

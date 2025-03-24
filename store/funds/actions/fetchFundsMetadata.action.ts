@@ -1,4 +1,5 @@
 import defaultAvatar from "@/assets/images/default_avatar.webp";
+import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { type ChainId } from "~/types/enums/chain_id";
@@ -130,10 +131,18 @@ export async function fetchFundsMetaDataAction(
       // Process metadata if available
       if (metaDataJson) {
         const metaData = JSON.parse(metaDataJson);
+
+        const { strategistName, strategistUrl, oivChatUrl } = fundMetaDataHardcoded[chainId].find(
+          (fund) => fund.address === address,
+        ) || { strategistName: "", strategistUrl: "", oivChatUrl: "" };
+
         fund.description = metaData.description;
         fund.photoUrl = metaData.photoUrl || defaultAvatar;
         fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
         fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
+        fund.strategistName = metaData?.strategistName || strategistName;
+        fund.strategistUrl = metaData?.strategistUrl || strategistUrl;
+        fund.oivChatUrl = metaData?.oivChatUrl || oivChatUrl;
       }
       funds.push(fund);
     }

@@ -51,7 +51,7 @@
         width="1rem"
         class="me-1"
       />
-      {{ currentYear }} Rethink.finance. All rights reserved
+      rethink.finance, {{ currentYear }}. All rights reserved.
     </v-col>
   </v-footer>
 </template>

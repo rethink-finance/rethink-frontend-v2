@@ -8,4 +8,5 @@ export default interface IRoute {
   isExternal?: boolean;
   icon?: string;
   color?: string;
+  isHidden?: boolean;
 }
