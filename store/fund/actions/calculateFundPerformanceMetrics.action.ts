@@ -30,12 +30,10 @@ export const calculateFundPerformanceMetricsAction = async (
       const sharePrice = await getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund)
       fund.sharePrice = sharePrice;
 
-      const baseTokenDecimals = fund.baseToken.decimals;
-      const fundTokenDecimals = fund.fundToken.decimals;
       const cumulativeReturnPercent = calculateCumulativeWithSharePrice(
         sharePrice,
-        baseTokenDecimals,
-        fundTokenDecimals,
+        fund.baseToken.decimals,
+        fund.fundToken.decimals,
       )
 
       fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists
@@ -71,17 +69,14 @@ const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, f
     const blockNumber = Number(await getBlockByTimestamp(web3Store, fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
 
     try {
+      const fundTokenContract = web3Store.getCustomContract(
+        fund.chainId,
+        ERC20,
+        fund.fundToken.address,
+      );
       const totalSupplyRaw = await web3Store.callWithRetry(
         fund.chainId,
-        async () => {
-          const fundTokenContract = await web3Store.getCustomContract(
-            fund.chainId,
-            ERC20,
-            fund.fundToken.address,
-          );
-
-          return fundTokenContract.methods.totalSupply().call({}, blockNumber);
-        },
+        () => fundTokenContract.methods.totalSupply().call({}, blockNumber),
       );
 
       const totalSupply = totalSupplyRaw ?? 0n;
