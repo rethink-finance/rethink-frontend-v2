@@ -116,12 +116,12 @@
 <script setup lang="ts">
 import type { FunctionFragment, JsonFragment } from "ethers";
 import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
-import { useToastStore } from "~/store/toasts/toast.store";
-import type { ChainId } from "~/store/web3/networksMap";
-import type { FunctionCondition, TargetConditions } from "~/types/zodiac-roles/role";
-import type { RoleStoreType } from "~/store/role/role.store";
-import { ConditionType, ExecutionOption } from "~/types/enums/zodiac-roles";
 import { useFundStore } from "~/store/fund/fund.store";
+import type { RoleStoreType } from "~/store/role/role.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import type { ChainId } from "~/types/enums/chain_id";
+import { ConditionType, ExecutionOption } from "~/types/enums/zodiac-roles";
+import type { FunctionCondition, TargetConditions } from "~/types/zodiac-roles/role";
 
 const props = defineProps({
   conditions: {

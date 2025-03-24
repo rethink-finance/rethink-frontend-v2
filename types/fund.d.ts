@@ -1,5 +1,6 @@
 import { type ChainId } from "~/store/web3/networksMap";
 import type IClockMode from "~/types/clock_mode";
+import { type ChainId } from "~/types/enums/chain_id";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
@@ -66,6 +67,10 @@ export default interface IFund {
   monthlyReturnPercent?: number; // TODO
   sharpeRatio?: number; // TODO
   positionTypeCounts: IPositionTypeCount[];
+  
+  // Share Price
+  sharePrice?: number;
+  isSharePriceLoading?: boolean;
 
   // Metadata
   photoUrl: string;

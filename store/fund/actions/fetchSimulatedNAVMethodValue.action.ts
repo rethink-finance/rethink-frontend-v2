@@ -1,13 +1,13 @@
+import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
+import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { ChainId } from "~/types/enums/chain_id";
 import {
   PositionType,
   PositionTypeToNAVCalculationMethod,
 } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
-import { useAccountStore } from "~/store/account/account.store";
-import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
-import type { ChainId } from "~/store/web3/networksMap";
 
 export const fetchSimulatedNAVMethodValueAction = async (
   fundChainId: ChainId,

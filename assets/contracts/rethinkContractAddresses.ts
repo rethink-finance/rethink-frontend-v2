@@ -1,5 +1,5 @@
-import { ChainId } from "~/store/web3/networksMap";
 import type IContractAddressesMap from "~/types/addresses";
+import { ChainId } from "~/types/enums/chain_id";
 
 export const rethinkContractAddresses: IContractAddressesMap = {
   "WrappedTokenFactory": {

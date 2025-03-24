@@ -1,7 +1,7 @@
 import { ApolloClient, HttpLink, InMemoryCache } from "@apollo/client/core";
 import { useSubgraphUrl } from "~/composables/subgraph/useSubgraphUrl";
+import type { ChainId } from "~/types/enums/chain_id";
 import { SubgraphClientType } from "~/types/enums/subgraph";
-import type { ChainId } from "~/store/web3/networksMap";
 
 
 

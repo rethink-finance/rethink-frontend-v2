@@ -7,9 +7,9 @@ import {
   FETCH_GOVERNANCE_PROPOSALS,
 } from "./queries";
 
+import { type ChainId } from "~/types/enums/chain_id";
 import type ISubgraphFetchDelegatesResponse from "~/types/responses/subgraph_fetch_delegates";
 import type ISubgraphGovernanceProposal from "~/types/subgraph_governance_proposal";
-import { type ChainId } from "~/store/web3/networksMap";
 
 export interface GovernorProposalsResponse {
   proposals: ISubgraphGovernanceProposal[];
