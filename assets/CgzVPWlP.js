@@ -1,0 +1,1 @@
+import{n as o}from"./DMAfeIv4.js";const i=()=>{const s=o(),n=(t,e,a)=>`/details/${t}-${e}-${a}`;return{getFundDetailsUrl:n,navigateToFundDetails:(t,e,a)=>{s.push(n(t,e,a))}}};export{i as u};
