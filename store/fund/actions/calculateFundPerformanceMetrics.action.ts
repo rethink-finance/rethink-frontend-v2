@@ -32,13 +32,6 @@ export const calculateFundPerformanceMetricsAction = async (
 
       const initialSharePrice = await getSharePriceAtNavUpdate(web3Store, fundNAVUpdates[0], fund)
 
-      console.log("fundLastNavUpdate", fundLastNavUpdate)
-      console.log("fundNavUpdates[0]", fundNAVUpdates[0])
-
-      console.log("sharePrice", sharePrice)
-      console.log("initialSharePrice", initialSharePrice)
-
-
       const cumulativeReturnPercent = calculateCumulativeWithSharePrice(
         initialSharePrice,
         sharePrice,
