@@ -251,8 +251,8 @@ const getSharePricePerNav = async () => {
     try {
       const totalSupplyRaw = await web3Store.callWithRetry(
         props.fund.chainId,
-        async () => {
-          const fundTokenContract = await web3Store.getCustomContract(
+        () => {
+          const fundTokenContract = web3Store.getCustomContract(
             props.fund.chainId,
             ERC20,
             props.fund.fundToken.address,
@@ -274,10 +274,11 @@ const getSharePricePerNav = async () => {
       const adjustedTotalSupply = diffDecimals < 0 ? totalSupply * 10n ** BigInt(-diffDecimals) : totalSupply;
 
       // Perform the division
-      const sharePriceBigInt = totalSupply > 0n ? (adjustedTotalNav * 10n ** 18n) / adjustedTotalSupply : 0n;
+      const scaleFactor = 10n ** 36n; // Scale up before division to avoid rounding errors
+      const sharePriceBigInt = totalSupply > 0n ? (adjustedTotalNav * scaleFactor) / adjustedTotalSupply : 0n;
 
       // Convert to float and format the share price correctly
-      const sharePrice = parseFloat(ethers.formatUnits(sharePriceBigInt, 18));
+      const sharePrice = parseFloat(ethers.formatUnits(sharePriceBigInt, 36));
 
       return sharePrice;
     }

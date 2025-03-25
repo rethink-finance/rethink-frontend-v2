@@ -83,7 +83,6 @@ export async function fetchFundsMetaDataAction(
 
         // Share Price
         sharePrice: undefined,
-        isSharePriceLoading: true,
 
         // My Fund Positions
         netDeposits: "",

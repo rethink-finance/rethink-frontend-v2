@@ -30,7 +30,17 @@ export const calculateFundPerformanceMetricsAction = async (
       const sharePrice = await getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund)
       fund.sharePrice = sharePrice;
 
+      const initialSharePrice = await getSharePriceAtNavUpdate(web3Store, fundNAVUpdates[0], fund)
+
+      console.log("fundLastNavUpdate", fundLastNavUpdate)
+      console.log("fundNavUpdates[0]", fundNAVUpdates[0])
+
+      console.log("sharePrice", sharePrice)
+      console.log("initialSharePrice", initialSharePrice)
+
+
       const cumulativeReturnPercent = calculateCumulativeWithSharePrice(
+        initialSharePrice,
         sharePrice,
         fund.baseToken.decimals,
         fund.fundToken.decimals,
@@ -42,9 +52,6 @@ export const calculateFundPerformanceMetricsAction = async (
       fund.cumulativeReturnPercent = cumulativeReturnPercent;
       fund.isNavUpdatesLoading = false;
       fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates, fund.totalDepositBalance);
-
-      fund.isSharePriceLoading = true;
-      fund.isSharePriceLoading = false;
     }
   } catch (error) {
     console.error(
@@ -58,28 +65,31 @@ export const calculateFundPerformanceMetricsAction = async (
 
 const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, fund: IFund) => {
   if(navUpdate?.timestamp) {
-  // 1. get average block time for the chain
+    // 1. get average block time for the chain
     const web3Instance = web3Store.getWeb3Instance(fund.chainId, false);
     const { initializeBlockTimeContext } = useBlockTime()
     const context = await initializeBlockTimeContext(web3Instance)
     const averageBlockTime = context?.averageBlockTime || 0;
 
     // 2. get block number for the timestamp
-    const totalNav = navUpdate.totalNAV ?? 0n;
+    const totalNav = ethers.parseUnits(String(navUpdate.totalNAV || "0"), fund?.baseToken.decimals);
     const blockNumber = Number(await getBlockByTimestamp(web3Store, fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
 
     try {
-      const fundTokenContract = web3Store.getCustomContract(
-        fund.chainId,
-        ERC20,
-        fund.fundToken.address,
-      );
       const totalSupplyRaw = await web3Store.callWithRetry(
         fund.chainId,
-        () => fundTokenContract.methods.totalSupply().call({}, blockNumber),
+        () => {
+          const fundTokenContract = web3Store.getCustomContract(
+            fund.chainId,
+            ERC20,
+            fund.fundToken.address,
+          );
+
+          return fundTokenContract.methods.totalSupply().call({}, blockNumber);
+        },
       );
 
-      const totalSupply = totalSupplyRaw ?? 0n;
+      const totalSupply = ethers.parseUnits(String(totalSupplyRaw || "0"), fund.fundToken.decimals);
 
       // Determine the highest decimals between NAV and Supply
       const navDecimals = fund.baseToken.decimals;
@@ -91,10 +101,11 @@ const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, f
       const adjustedTotalSupply = diffDecimals < 0 ? totalSupply * 10n ** BigInt(-diffDecimals) : totalSupply;
 
       // Perform the division
-      const sharePriceBigInt = totalSupply > 0n ? (adjustedTotalNav * 10n ** 18n) / adjustedTotalSupply : 0n;
+      const scaleFactor = 10n ** 36n; // Scale up before division to avoid precision loss
+      const sharePriceBigInt = totalSupply > 0n ? (adjustedTotalNav * scaleFactor) / adjustedTotalSupply : 0n;
 
       // Convert to float and format the share price correctly
-      const sharePrice = parseFloat(ethers.formatUnits(sharePriceBigInt, 18));
+      const sharePrice = parseFloat(ethers.formatUnits(sharePriceBigInt, 36));
 
       return sharePrice;
     }
