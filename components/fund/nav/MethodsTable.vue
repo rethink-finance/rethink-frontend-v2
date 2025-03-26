@@ -221,14 +221,14 @@
 
             <template #[`item.positionType`]="{ item: itemBaseAsset }">
               <UiPositionTypeBadge
-                :value="itemBaseAsset.displayPositionType || itemBaseAsset.positionType"
-                :disabled="itemBaseAsset.deleted || itemBaseAsset.isAlreadyUsed"
+                :value="(itemBaseAsset as any).displayPositionType || (itemBaseAsset as any).positionType"
+                :disabled="(itemBaseAsset as any).deleted || (itemBaseAsset as any).isAlreadyUsed"
               />
             </template>
 
             <template #[`item.data-table-expand`]="{ item:itemBaseAsset, internalItem, isExpanded, toggleExpand }">
               <UiButtonDetails
-                v-if="itemBaseAsset.detailsJson"
+                v-if="(itemBaseAsset as any).detailsJson"
                 text="Raw"
                 :active="isExpanded(internalItem)"
                 @click.stop="toggleExpand(internalItem)"
@@ -239,7 +239,7 @@
               <tr v-if="item.detailsJson" class="tr_row_expanded">
                 <td :colspan="columnsBaseAsset.length">
                   <div class="nav_entries__json">
-                    {{ itemBaseAsset.detailsJson }}
+                    {{ (itemBaseAsset as any).detailsJson }}
                   </div>
                 </td>
               </tr>
