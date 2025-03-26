@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { ERC20 } from "~/assets/contracts/ERC20";
+import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { calculateCumulativeWithSharePrice } from "~/composables/utils";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
@@ -25,24 +26,36 @@ export const calculateFundPerformanceMetricsAction = async (
 
     if (fund) {
       const web3Store = useWeb3Store();
-      // const lastNAVUpdateTotalDepositBalance = await getTotalDepositBalanceAtNAVUpdate(web3Store, fund, fundLastNavUpdate);
 
-      const sharePrice = await getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund)
-      fund.sharePrice = sharePrice;
+      const isQCLGFund = fund.address.toLowerCase() === "0xABC961AFc18dfE9F062cf9a8046346E92a934D08".toLowerCase();
 
-      const initialSharePrice = await getSharePriceAtNavUpdate(web3Store, fundNAVUpdates[0], fund)
+      if(isQCLGFund){
+        const sharePrice = await getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund)
+        fund.sharePrice = sharePrice;
 
-      const cumulativeReturnPercent = calculateCumulativeWithSharePrice(
-        initialSharePrice,
-        sharePrice,
-        fund.baseToken.decimals,
-        fund.fundToken.decimals,
-      )
+
+        fund.cumulativeReturnPercent = calculateCumulativeWithSharePrice(
+          undefined,
+          sharePrice,
+          fund.baseToken.decimals,
+          fund.fundToken.decimals,
+        )
+      }else{
+        const lastNAVUpdateTotalDepositBalance = await getFundLastNAVUpdateTotalDepositBalance(fund, fundLastNavUpdate);
+
+        const baseTokenDecimals = fund.baseToken.decimals;
+        fund.cumulativeReturnPercent = fundLastNavUpdateExists
+          ? calculateCumulativeReturnPercent(
+            lastNAVUpdateTotalDepositBalance || 0n,
+            fund.lastNAVUpdateTotalNAV || 0n,
+            baseTokenDecimals,
+          )
+          : 0;
+      }
 
       fund.lastNAVUpdateTotalNAV = fundLastNavUpdateExists
         ? fund.lastNAVUpdateTotalNAV
         : fund.totalDepositBalance;
-      fund.cumulativeReturnPercent = cumulativeReturnPercent;
       fund.isNavUpdatesLoading = false;
       fund.sharpeRatio = calculateSharpeRatio(fundNAVUpdates, fund.totalDepositBalance);
     }
@@ -109,4 +122,42 @@ const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, f
   }
 
   return 0;
+}
+
+
+const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavUpdate: any) => {
+  if(fundLastNavUpdate?.timestamp) {
+    const web3Store = useWeb3Store();
+    // 1. get average block time for the chain
+    const web3Instance = web3Store.getWeb3Instance(fund.chainId, false);
+    const { initializeBlockTimeContext } = useBlockTime()
+    const context = await initializeBlockTimeContext(web3Instance)
+    const averageBlockTime = context?.averageBlockTime || 0;
+
+    // 2. estimate the block number of the last NAV update timestamp
+    const lastNavUpdateBlockNumber = Number(await getBlockByTimestamp(web3Store, fund.chainId, fundLastNavUpdate.timestamp / 1000, averageBlockTime) || 0);
+
+    // 3. get total deposit balance at the last NAV update
+    try {
+      const totalDepositBal = await web3Store.callWithRetry(
+        fund.chainId,
+        async () => {
+          const fundContract = web3Store.getCustomContract(
+            fund.chainId,
+            GovernableFund.abi,
+            fund.address,
+          );
+
+          return BigInt(await fundContract.methods._totalDepositBal().call({}, lastNavUpdateBlockNumber) || 0)
+        },
+      );
+
+      return totalDepositBal;
+    } catch (e) {
+      console.error("Error getting total deposit balance at last NAV update", e);
+      return null;
+    }
+  }
+
+  return null;
 }
