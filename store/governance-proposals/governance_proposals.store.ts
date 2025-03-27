@@ -14,9 +14,9 @@ import { cleanComplexWeb3Data } from "~/composables/utils";
 import { useFundStore } from "~/store/fund/fund.store";
 
 import { decodeProposalCallData } from "~/composables/proposal/decodeProposalCallData";
-import { ChainId } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IDelegate from "~/types/delegate";
+import { ChainId } from "~/types/enums/chain_id";
 import { ClockMode } from "~/types/enums/clock_mode";
 import {
   ProposalState,

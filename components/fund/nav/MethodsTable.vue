@@ -1,11 +1,11 @@
 <template>
   <v-skeleton-loader v-if="loading" type="table" />
   <v-data-table
-    v-else-if="computedMethods.length"
+    v-else-if="groupedMethods.length"
     v-model="selected"
     v-model:expanded="expanded"
     :headers="headers"
-    :items="computedMethods"
+    :items="groupedMethods"
     :cell-props="methodProps"
     class="main_table nav_entries"
     show-expand
@@ -187,7 +187,68 @@
     </template>
 
     <template #expanded-row="{ columns, item }">
-      <tr v-if="item.detailsJson" class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
+      <tr v-if="item.isGroupedBaseAssets" class="tr_row_expanded">
+        <td :colspan="columns.length">
+          <v-data-table
+            v-model:expanded="expandedBaseAssets"
+            :items="item.detailsJson"
+            :headers="headers"
+            show-expand
+            item-value="detailsHash"
+            :hide-default-footer="true"
+            @update:expanded="onExpandedBaseAssetsUpdate"
+          >
+            <template #[`header.pastNavValue`]>
+              Last NAV Update
+              <div class="text-right">
+                {{ fundStore.getFormattedBaseTokenValue(item.pastNavValue || 0n, true, false, baseSymbol, baseDecimals) }}
+              </div>
+            </template>
+            <template #[`header.simulatedNavFormatted`]>
+              Simulated NAV
+              <div class="text-right">
+                {{ item.simulatedNavFormatted }}
+              </div>
+            </template>
+
+            <template #[`item.index`]="{ index }">
+              <strong class="td_index">1.{{ index + 1 }}</strong>
+            </template>
+
+            <template #[`item.pastNavValue`]="{ value }">
+              {{ fundStore.getFormattedBaseTokenValue(value) }}
+            </template>
+
+            <template #[`item.positionType`]="{ item: itemBaseAsset }">
+              <UiPositionTypeBadge
+                :value="(itemBaseAsset as any).displayPositionType || (itemBaseAsset as any).positionType"
+                :disabled="(itemBaseAsset as any).deleted || (itemBaseAsset as any).isAlreadyUsed"
+              />
+            </template>
+
+            <template #[`item.data-table-expand`]="{ item:itemBaseAsset, internalItem, isExpanded, toggleExpand }">
+              <UiButtonDetails
+                v-if="(itemBaseAsset as any).detailsJson"
+                text="Raw"
+                :active="isExpanded(internalItem)"
+                @click.stop="toggleExpand(internalItem)"
+              />
+            </template>
+
+            <template #expanded-row="{ columns:columnsBaseAsset, item:itemBaseAsset }">
+              <tr v-if="item.detailsJson" class="tr_row_expanded">
+                <td :colspan="columnsBaseAsset.length">
+                  <div class="nav_entries__json">
+                    {{ (itemBaseAsset as any).detailsJson }}
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </v-data-table>
+        </td>
+      </tr>
+
+      <tr v-else-if="item.detailsJson" class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
         <td :colspan="columns.length" class="pa-0">
           <div class="nav_entries__details">
             <div v-if="!item.isRethinkPosition" :class="['detail_hash', {'has-changed': hasChanged()}]" @click="copyText(item.detailsHash)">
@@ -390,6 +451,7 @@
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
+import { ChainId } from "~/types/enums/chain_id";
 import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 import {
   PositionType,
@@ -403,7 +465,6 @@ import {
 import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import type INAVParts from "~/types/nav_parts";
-import { ChainId } from "~/store/web3/networksMap";
 
 
 export default defineComponent({
@@ -524,6 +585,7 @@ export default defineComponent({
     return {
       expanded: [] as string[],
       selected: [],
+      expandedBaseAssets: [] as string[],
       isNavSimulationLoading: false,
       form: ref(null),
       formIsValid: ref(false),
@@ -665,7 +727,6 @@ export default defineComponent({
       )
     },
     formattedFundContractBaseTokenBalance() {
-
       return this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance), true, false, this.baseSymbol, this.baseDecimals);
     },
     formattedSafeContractBaseTokenBalance() {
@@ -677,13 +738,41 @@ export default defineComponent({
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
     },
+    groupedMethods() {
+      const baseAssets = this.computedMethods.filter(item => item.isRethinkPosition);
+      const otherMethods = this.computedMethods.filter(item => !item.isRethinkPosition);
+
+      const simulatedNav = (BigInt(this.fundContractBaseTokenBalance) || 0n) +
+        (BigInt(this.safeContractBaseTokenBalance) || 0n) +
+        (BigInt(this.feeBalance) || 0n);
+
+      const simulatedNavFormatted = this.fundStore.getFormattedBaseTokenValue(simulatedNav, true, false, this.baseSymbol, this.baseDecimals);
+
+      if (baseAssets.length) {
+        const totalBaseAssets = {
+          positionName: "Base Assets",
+          valuationSource: "rethink.finance",
+          positionType: PositionType.Liquid,
+          pastNavValue: baseAssets.reduce(
+            (sum, item) => sum + BigInt(item.pastNavValue || 0), BigInt(0),
+          ),
+          simulatedNavFormatted,
+          detailsJson: baseAssets,
+          isGroupedBaseAssets: true,
+        };
+
+        return [totalBaseAssets, ...otherMethods];
+      }
+
+      return otherMethods;
+    },
     computedMethods() {
       const methods = [];
 
       if (this.showBaseTokenBalances) {
         methods.push({
           positionName: "Admin Contract Balance",
-          valuationSource: "Rethink",
+          valuationSource: "rethink.finance",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetOIVBal,
           simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
@@ -695,7 +784,7 @@ export default defineComponent({
         } as any)
         methods.push({
           positionName: "Safe Balance",
-          valuationSource: "Rethink",
+          valuationSource: "rethink.finance",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetSafeBal,
           simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
@@ -707,7 +796,7 @@ export default defineComponent({
         } as any)
         methods.push({
           positionName: "Fees Balance",
-          valuationSource: "Rethink",
+          valuationSource: "rethink.finance",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.feeBal,
           simulatedNavFormatted: this.formattedFeeBalance,
@@ -718,7 +807,7 @@ export default defineComponent({
       else if (this.showSafeContractBalance) {
         methods.push({
           positionName: "Safe Balance",
-          valuationSource: "Rethink",
+          valuationSource: "rethink.finance",
           positionType: PositionType.Liquid,
           pastNavValue: this.navParts?.baseAssetSafeBal,
           simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
@@ -765,6 +854,9 @@ export default defineComponent({
     onExpandedUpdate(newExpanded:string) {
       // if newExpanded has a row, keep only the latest one; otherwise, clear the array
       this.expanded = newExpanded.length ? [newExpanded[newExpanded.length - 1]] : [];
+    },
+    onExpandedBaseAssetsUpdate(newExpanded:string) {
+      this.expandedBaseAssets = newExpanded.length ? [newExpanded[newExpanded.length - 1]] : [];
     },
     onRowClick(_: any, item: any) {
       const internalItem = item?.item || undefined

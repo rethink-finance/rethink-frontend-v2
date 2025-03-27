@@ -55,7 +55,7 @@
               class="data_bar__title"
               :class="numberColorClass(fund?.cumulativeReturnPercent || 0)"
             >
-              {{ formatPercent(fund?.cumulativeReturnPercent || 0, true) || "N/A" }}
+              {{ formatPercent(fund.cumulativeReturnPercent, true) ?? "N/A" }}
             </div>
           </template>
         </div>
@@ -100,9 +100,10 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from "@iconify/vue/dist/iconify.js";
 import { formatPercent } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass";
-import { capitalizeFirst } from "~/composables/utils";
+import { capitalizeFirst, getChainIcon } from "~/composables/utils";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";

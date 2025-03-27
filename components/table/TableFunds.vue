@@ -13,8 +13,9 @@
     <template #[`item.name`]="{ item }">
       <FundNameCell
         :image="item.photoUrl"
-        :title="item.fundToken.symbol"
-        :subtitle="item.title"
+        :title="item.title"
+        :strategist-name="item.strategistName"
+        :strategist-url="item.strategistUrl"
       />
     </template>
 
@@ -59,7 +60,7 @@
           indeterminate
         />
         <div v-else :class="numberColorClass(item.cumulativeReturnPercent)">
-          {{ formatPercent(item.cumulativeReturnPercent, true) }}
+          {{ formatPercent(item.cumulativeReturnPercent, true) ?? "N/A" }}
         </div>
       </div>
     </template>
@@ -79,16 +80,16 @@
 </template>
 
 <script lang="ts" setup>
-import { Icon } from "@iconify/vue/dist/iconify.js";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatPercent,
   formatTokenValue,
 } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
+import { getChainIcon } from "~/composables/utils";
 import type IFund from "~/types/fund";
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 
 const { getFundDetailsUrl } = usePageNavigation();
 const router = useRouter();
@@ -175,6 +176,15 @@ const icon = (chainShort: string) => {
 };
 
 const navigateFundDetails = (event: any, row: any) => {
+  // Check if the click target is an anchor (<a>) or any clickable element
+  const target = event.target as HTMLElement;
+
+  if (target.tagName.toLowerCase() === "a" || target.closest("a")) {
+  // If the target is an anchor tag, prevent the row navigation
+    return;
+  }
+
+
   const fundDetailsUrl = getFundDetailsUrl(
     row.item.chainId,
     row.item.fundToken.symbol,

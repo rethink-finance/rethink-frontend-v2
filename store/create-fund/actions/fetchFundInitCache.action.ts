@@ -1,11 +1,11 @@
+import { ERC20 } from "assets/contracts/ERC20";
+import { RethinkFundGovernor } from "assets/contracts/RethinkFundGovernor";
+import { isZeroAddress } from "~/composables/addressUtils";
+import { formatQuorumPercentage } from "~/composables/formatters";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { type ChainId } from "~/types/enums/chain_id";
 import type { IFundInitCache } from "~/types/fund_settings";
-import { RethinkFundGovernor } from "assets/contracts/RethinkFundGovernor";
-import { formatQuorumPercentage } from "~/composables/formatters";
-import { ERC20 } from "assets/contracts/ERC20";
-import { isZeroAddress } from "~/composables/addressUtils";
-import { type ChainId } from "~/store/web3/networksMap";
 
 
 const fetchGovernorData = async (fundChainId: ChainId, governorAddress?: string) => {

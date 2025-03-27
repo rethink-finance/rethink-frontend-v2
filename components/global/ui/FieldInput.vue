@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ChainId } from "~/store/web3/networksMap";
+import type { ChainId } from "~/types/enums/chain_id";
 import { InputType } from "~/types/enums/input_type";
 
 const props = defineProps({

@@ -1,6 +1,6 @@
 
-import type { ChainId } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { ChainId } from "~/types/enums/chain_id";
 
 // at first, this value could be any string (e.g. "5 business days")
 // after that it was the number of days (e.g. 5)

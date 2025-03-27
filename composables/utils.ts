@@ -1,9 +1,13 @@
 import { ethers, FixedNumber } from "ethers";
+import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { ChainId, type ChainId as ChainIdType } from "~/types/enums/chain_id";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 import type { PositionType } from "~/types/enums/position_type";
 import { PositionTypesMap } from "~/types/enums/position_type";
+import type IFund from "~/types/fund";
 import type { IIcon } from "~/types/network";
+
 
 export const variableType = (value: any) =>
   Object.prototype.toString.call(value).slice(8, -1); // accurately returns the parameter type [Array | Object | Number | Boolean | ...]
@@ -201,6 +205,49 @@ export const calculateCumulativeReturnPercent = (
   }
 };
 
+
+export const calculateCumulativeWithSharePrice = (
+  initialSharePrice?: number | undefined,
+  latestSharePrice?: number | undefined,
+  baseTokenDecimals?: number,
+  fundTokenDecimals?: number,
+): number | undefined => {
+  try {
+    if (!baseTokenDecimals || !fundTokenDecimals) {
+      console.error("Base token decimals or fund token decimals are not provided");
+      return undefined;
+    }
+    if (latestSharePrice === undefined) {
+      console.error("Latest share price is not provided", latestSharePrice);
+      return undefined;
+    }
+    if (initialSharePrice === undefined) {
+      console.error("Initial share price is not provided", initialSharePrice);
+
+      const initSharePrice = 10 ** (baseTokenDecimals - fundTokenDecimals);
+
+      // Calculate cumulative return percentage
+      const cumulativeReturnPercent = ((latestSharePrice / initSharePrice) - 1);
+
+      return cumulativeReturnPercent;
+
+    }
+
+    if (latestSharePrice > 0) {
+
+      if (initialSharePrice > 0)
+      // Calculate cumulative return percentage
+        return ((latestSharePrice / initialSharePrice) - 1);
+
+
+    }
+    return 0;
+  } catch (error) {
+    console.error("Error calculating cumulative return using share price:", error);
+    return undefined;
+  }
+};
+
 export const calculateSharpeRatio = (
   fundNAVUpdates: any,
   totalDepositBal: bigint,
@@ -318,4 +365,133 @@ export const getVoteTimeValue = (value: number | bigint, averageBlockTimeInSecon
   }
 
   return formatDuration(Number(value));
+}
+
+
+export const getBlockByTimestamp = async (web3Store: any, chainId: ChainId, timestamp: number, averageBlockTime: number) => {
+  try {
+    // const web3Store = useWeb3Store();
+    const provider = web3Store.chainProviders[chainId]
+
+    const latestBlock = await web3Store
+      .callWithRetry(
+        chainId,
+        async () =>
+          Number(await provider.eth.getBlockNumber()),
+      )
+    const latestBlockData = await web3Store
+      .callWithRetry(
+        chainId,
+        async () =>
+          await provider.eth.getBlock(latestBlock),
+      )
+    const latestTimestamp = Number(latestBlockData.timestamp);
+
+    const estimatedStartBlock = latestBlock - Math.floor((latestTimestamp - timestamp) / averageBlockTime);
+
+
+    if(estimatedStartBlock < 0) {
+      console.error("Estimated start block is negative", estimatedStartBlock);
+      return null;
+    }
+
+    if(estimatedStartBlock > latestBlock) {
+      console.error("Estimated start block is greater than latest block", estimatedStartBlock, latestBlock);
+      return null;
+    }
+
+    return estimatedStartBlock;
+  } catch (e) {
+    console.error("Error getting block by timestamp", e);
+    return null;
+  }
+}
+
+
+export const getL1BlockNumber = async (web3Store: any, l2BlockNumber: number, chainId: ChainIdType) => {
+  try {
+    const provider = web3Store.chainProviders[chainId];
+
+    // Fetch the L2 block details
+    const l2Block = await web3Store.callWithRetry(
+      chainId,
+      async () => await provider.eth.getBlock(l2BlockNumber),
+    );
+
+    if (!l2Block) {
+      console.error(`Block not found on L2: ${l2BlockNumber}`);
+      return null;
+    }
+
+    console.warn("L1 block number not found in L2 metadata. Estimating...");
+
+    // Fetch the latest Ethereum L1 block
+    const ethProvider = web3Store.getWeb3Instance(ChainId.ETHEREUM);
+    const latestL1Block = await web3Store.callWithRetry(
+      ChainId.ETHEREUM,
+      async () => await ethProvider.eth.getBlock("latest"),
+    );
+
+    if (!latestL1Block) {
+      console.error("Failed to fetch latest L1 block.");
+      return null;
+    }
+
+    // Get block times for better estimation
+    const { initializeBlockTimeContext } = useBlockTime();
+    const context = await initializeBlockTimeContext(ethProvider);
+    const averageL1BlockTime = context?.averageBlockTime || 12; // Default fallback to 12s
+
+    // Estimate based on time difference
+    const l2Timestamp = Number(l2Block.timestamp);
+    const l1LatestTimestamp = Number(latestL1Block.timestamp);
+
+    const estimatedL1Block =
+      Number(latestL1Block.number) -
+      Math.floor((l1LatestTimestamp - l2Timestamp) / averageL1BlockTime);
+
+    console.debug("Estimated L1 Block:", estimatedL1Block);
+
+    return estimatedL1Block;
+  } catch (e) {
+    console.error("Error getting L1 block number", e);
+    return null;
+  }
+};
+
+
+export const getTotalDepositBalanceAtNAVUpdate = async (web3Store: any, fund: IFund, navUpdate: any) => {
+  if(navUpdate?.timestamp) {
+    // 1. get average block time for the chain
+    const web3Instance = web3Store.getWeb3Instance(fund.chainId, false);
+    const { initializeBlockTimeContext } = useBlockTime()
+    const context = await initializeBlockTimeContext(web3Instance)
+    const averageBlockTime = context?.averageBlockTime || 0;
+
+    // 2. estimate the block number of the last NAV update timestamp
+    const navUpdateBlockNumber = Number(await getBlockByTimestamp(web3Store, fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
+
+    // 3. get total deposit balance at the last NAV update
+    try {
+      const totalDepositBal = await web3Store.callWithRetry(
+        fund.chainId,
+        async () => {
+          const fundContract = web3Store.getCustomContract(
+            fund.chainId,
+            GovernableFund.abi,
+            fund.address,
+          );
+
+          return BigInt(await fundContract.methods._totalDepositBal().call({}, navUpdateBlockNumber) || 0)
+        },
+      );
+
+      return totalDepositBal;
+    } catch (e) {
+      console.error("Error getting total deposit balance at last NAV update", e);
+      return null;
+    }
+  }
+
+  return null;
 }

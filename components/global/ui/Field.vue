@@ -119,12 +119,12 @@
       />
     </template>
 
-    <InfoBox v-if="field.info && !isPreview" :info="field.info" />
+    <InfoBox v-if="field.info && !isPreview" :info="field.info" class="info_box" />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { ChainId } from "~/store/web3/networksMap";
+import type { ChainId } from "~/types/enums/chain_id";
 import { InputType } from "~/types/enums/input_type";
 import FieldInput from "./FieldInput.vue";
 import InfoBox from "./InfoBox.vue";
@@ -290,4 +290,7 @@ const classes = computed(() => {
   }
 }
 
+.info_box{
+  margin-bottom: 3rem;
+}
 </style>

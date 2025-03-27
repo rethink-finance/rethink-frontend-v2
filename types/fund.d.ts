@@ -1,9 +1,9 @@
+import { type ChainId } from "~/store/web3/networksMap";
 import type IClockMode from "~/types/clock_mode";
 import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 import type IFundSettings from "./fund_settings";
-import { type ChainId } from "~/store/web3/networksMap";
 
 export interface INAVParts {
   baseAssetOIVBal: bigint;
@@ -40,6 +40,9 @@ export default interface IFund {
   chainId: ChainId;
   chainName: string;
   chainShort: string;
+  strategistName?: string;
+  strategistUrl?: string;
+  oivChatUrl?: string;
 
   address: string;
   title: string;
@@ -63,6 +66,9 @@ export default interface IFund {
   monthlyReturnPercent?: number; // TODO
   sharpeRatio?: number; // TODO
   positionTypeCounts: IPositionTypeCount[];
+  
+  // Share Price
+  sharePrice?: number;
 
   // Metadata
   photoUrl: string;

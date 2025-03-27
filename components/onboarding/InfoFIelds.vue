@@ -73,7 +73,7 @@
 import debounce from "lodash.debounce";
 import { fetchBaseTokenDetails } from "~/store/create-fund/actions/fetchFundInitCache.action";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
-import type { ChainId } from "~/store/web3/networksMap";
+import type { ChainId } from "~/types/enums/chain_id";
 import { baseTokenDecimalsField, baseTokenSymbolField } from "~/types/enums/fund_setting_proposal";
 import type { IField } from "~/types/enums/input_type";
 

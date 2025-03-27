@@ -263,10 +263,10 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import type { ChainId } from "~/store/web3/networksMap";
 import { networkChoices, networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
+import type { ChainId } from "~/types/enums/chain_id";
 import { feeFieldKeys, type IWhitelist } from "~/types/enums/fund_setting_proposal";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
 import { InputType } from "~/types/enums/input_type";
@@ -760,6 +760,9 @@ const formatFundMetaData = () => {
     description: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "description"),
     photoUrl: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "photoUrl"),
     plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "plannedSettlementPeriod"),
+    strategistName : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistName"),
+    strategistUrl : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistUrl"),
+    oivChatUrl : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "oivChatUrl"),
     ...Object.fromEntries(customFIelds.map((field) => [field.key, field.value])),
   }
 };
@@ -816,7 +819,7 @@ const formatInitializeData = () => {
     ],
     JSON.stringify(formatFundMetaData()),
     0, // feePerformancePeriod, default to 0
-    parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fee, "managementFeePeriod") as string) || 0, // feeManagePeriod
+    0, // managementFeePeriod, default to 0
   ]
 
   console.log("output", output);
@@ -840,6 +843,9 @@ const initializeFund = async() => {
 
     const formattedData = formatInitializeData();
     console.warn("SUBMIT formatted data", formattedData);
+
+
+    return;
 
     await fundFactoryContract
       .send("initCreateFund", {}, ...formattedData)

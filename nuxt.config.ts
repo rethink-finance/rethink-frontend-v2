@@ -135,6 +135,7 @@ export default defineNuxtConfig({
     "plugins/web3-onboard.ts",
     "plugins/apollo.ts",
     "plugins/localforage.ts",
+    "plugins/init-app-settings.client.ts",
   ],
   nitro: {
     prerender: {
