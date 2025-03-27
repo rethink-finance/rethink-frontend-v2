@@ -46,9 +46,7 @@
 
 <script setup lang="ts">
 import { useFundStore } from "~/store/fund/fund.store";
-import type { IField } from "~/types/enums/input_type";
-
-import { ChainId } from "~/store/web3/networksMap";
+import { ChainId } from "~/types/enums/chain_id";
 import {
   FundSettingsStepFieldsMap,
   FundSettingsStepsMap,
@@ -56,6 +54,7 @@ import {
   type IProposal,
   type IStepperSection,
 } from "~/types/enums/fund_setting_proposal";
+import type { IField } from "~/types/enums/input_type";
 const fundStore = useFundStore();
 
 const props = defineProps<{

@@ -66,6 +66,9 @@ export default interface IFund {
   monthlyReturnPercent?: number; // TODO
   sharpeRatio?: number; // TODO
   positionTypeCounts: IPositionTypeCount[];
+  
+  // Share Price
+  sharePrice?: number;
 
   // Metadata
   photoUrl: string;

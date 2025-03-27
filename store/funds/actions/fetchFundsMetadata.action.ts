@@ -1,8 +1,8 @@
 import defaultAvatar from "@/assets/images/default_avatar.webp";
-import { fundMetaDataHardcoded } from "../config/fundMetadata.config";
-
-import { type ChainId, networksMap } from "~/store/web3/networksMap";
+import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
+import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { type ChainId } from "~/types/enums/chain_id";
 import type IFund from "~/types/fund";
 import type IFundMetaData from "~/types/fund_meta_data";
 import type INAVUpdate from "~/types/nav_update";
@@ -37,6 +37,7 @@ export async function fetchFundsMetaDataAction(
 
       const totalDepositBalance = fundMetaData.totalDepositBal || 0n;
       const baseTokenDecimals = Number(fundMetaData.fundBaseTokenDecimals);
+      const fundTokenDecimals = Number(fundMetaData.fundTokenDecimals);
 
       const fundStartTime = fundMetaData.startTime;
       //  console.log("fundMetaData.updateTimes");
@@ -60,28 +61,35 @@ export async function fetchFundsMetaDataAction(
         fundToken: {
           symbol: fundsInfo[address].fundSymbol,
           address,
-          decimals: -1,
+          decimals: fundTokenDecimals,
         } as IToken,
-        fundTokenTotalSupply: BigInt("0"),
+        fundTokenTotalSupply: fundMetaData.fundTokenSupply || 0n,
         baseToken: {
-          address: "", // Not important here.
+          address: fundMetaData.fundSettings?.baseToken || "",
           symbol: fundMetaData.fundBaseTokenSymbol,
           decimals: baseTokenDecimals,
         },
-        governanceToken: {} as IToken, // Not important here, for now.
-        governanceTokenTotalSupply: BigInt("0"),
+        governanceToken: {
+          symbol: fundMetaData.fundGovernanceTokenSymbol,
+          address: fundMetaData.fundSettings?.governanceToken || "",
+          decimals: Number(fundMetaData.fundGovernanceTokenDecimals),
+        } as IToken, // Not important here, for now.
+        governanceTokenTotalSupply: fundMetaData.fundGovernanceTokenSupply || 0n,
         totalDepositBalance,
         cumulativeReturnPercent: undefined,
         monthlyReturnPercent: undefined,
         sharpeRatio: undefined,
         positionTypeCounts: [] as IPositionTypeCount[],
 
+        // Share Price
+        sharePrice: undefined,
+
         // My Fund Positions
         netDeposits: "",
         // Overview fields
         isWhitelistedDeposits: true,
-        allowedDepositAddresses: [],
-        allowedManagerAddresses: [],
+        allowedDepositAddresses: fundMetaData.fundSettings?.allowedDepositAddrs || [],
+        allowedManagerAddresses: fundMetaData.fundSettings?.allowedManagers || [],
         plannedSettlementPeriod: "",
         minLiquidAssetShare: "",
 
@@ -108,10 +116,10 @@ export async function fetchFundsMetaDataAction(
         performanceFee: "",
         performanceFeeAddress: "",
         performaceHurdleRateBps: "",
-        feeCollectors: [],
-        feeBalance: BigInt(0), // in base token
-        safeContractBaseTokenBalance: BigInt(0),
-        fundContractBaseTokenBalance: BigInt(0),
+        feeCollectors: fundMetaData.fundSettings?.feeCollectors || [],
+        feeBalance: fundMetaData.feeBalance || 0n,
+        safeContractBaseTokenBalance: fundMetaData.safeContractBaseTokenBalance || 0n,
+        fundContractBaseTokenBalance: fundMetaData.fundContractBaseTokenBalance || 0n,
 
         // NAV Updates
         navUpdates: [] as INAVUpdate[],

@@ -451,7 +451,7 @@
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { ChainId } from "~/store/web3/networksMap";
+import { ChainId } from "~/types/enums/chain_id";
 import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 import {
   PositionType,

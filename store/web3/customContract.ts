@@ -1,7 +1,7 @@
-import { Web3, Contract, Web3PromiEvent, type HttpProvider } from "web3";
 import type { TransactionReceipt } from "viem";
+import { Contract, Web3, Web3PromiEvent, type HttpProvider } from "web3";
 import { useAccountStore } from "~/store/account/account.store";
-import { type ChainId } from "~/store/web3/networksMap";
+import { type ChainId } from "~/types/enums/chain_id";
 
 export class CustomContract extends Contract<any> {
   private readonly initialChainId: ChainId;

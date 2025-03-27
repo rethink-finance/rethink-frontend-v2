@@ -149,7 +149,7 @@
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
-import { type ChainId } from "~/store/web3/networksMap";
+import { type ChainId } from "~/types/enums/chain_id";
 import type IRoute from "~/types/route";
 const accountStore = useAccountStore();
 

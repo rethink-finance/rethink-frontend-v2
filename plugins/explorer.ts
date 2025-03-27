@@ -1,8 +1,9 @@
-import memoize from "lodash.memoize"
 import { ethers } from "ethers";
-import { ChainId, networksMap } from "~/store/web3/networksMap";
-import type { ExplorerConfig } from "~/types/explorer";
+import memoize from "lodash.memoize";
 import { Explorer } from "~/services/explorer";
+import { networksMap } from "~/store/web3/networksMap";
+import { ChainId } from "~/types/enums/chain_id";
+import type { ExplorerConfig } from "~/types/explorer";
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
