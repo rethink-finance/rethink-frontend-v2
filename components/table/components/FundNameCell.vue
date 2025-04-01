@@ -11,17 +11,14 @@
     <div class="title_wrapper">
       <h4>{{ title }}</h4>
 
-      <a
+      <div
         v-if="strategistName"
-        :href="strategistUrl"
-        target="_blank"
         class="strategist_url"
-        @click.stop
       >
         <h5>
           by {{ strategistName }}
         </h5>
-      </a>
+      </div>
     </div>
   </div>
 </template>
@@ -82,10 +79,6 @@ const props = defineProps({
     color: $color-light-subtitle;
 
     transition: color 0.2s ease;
-
-    &:hover {
-    color: $color-primary;
-  }
   }
 }
 
