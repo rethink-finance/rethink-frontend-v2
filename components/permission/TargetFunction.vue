@@ -37,6 +37,7 @@
           <PermissionExecutionOptions
             :model-value="localFuncConditions.executionOption"
             :disabled="disabled"
+            :only-show-condition-params="onlyShowConditionParams"
             @update:model-value="updateExecutionOption"
           />
         </div>
@@ -46,6 +47,7 @@
           :func="func"
           :sighash="sighash"
           :disabled="disabled"
+          :only-show-condition-params="onlyShowConditionParams"
         />
       </span>
     </template>
@@ -86,6 +88,10 @@ const props = defineProps({
     default: () => {},
   },
   disabled: {
+    type: Boolean,
+    default: false,
+  },
+  onlyShowConditionParams: {
     type: Boolean,
     default: false,
   },

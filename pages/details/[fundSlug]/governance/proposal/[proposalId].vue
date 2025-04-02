@@ -99,6 +99,12 @@
                           idx="[proposalId]"
                         />
                       </template>
+                      <template v-else-if="calldata?.calldataType === ProposalCalldataType.PERMISSIONS">
+                        <ProposalPermissionEntry
+                          :calldata-decoded="calldata?.calldataDecoded"
+                          :chain-id="fundStore.fund?.chainId"
+                        />
+                      </template>
                       <template v-else-if="calldata?.calldataType === ProposalCalldataType.FUND_SETTINGS">
                         <!-- Show fund setting UI -->
                         <FundSettingsExecutableCode
@@ -120,7 +126,7 @@
                     </template>
                     <template v-else>
                       <div class="code_block">
-                        {{ calldata?.calldata }}
+                        {{ calldata?.calldataDecoded || calldata?.calldata }}
                       </div>
                     </template>
                   </template>
@@ -190,8 +196,8 @@
 </template>
 
 <script setup lang="ts">
-import { useActionStateStore } from "~/store/actionState.store";
 import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
+import { useActionStateStore } from "~/store/actionState.store";
 
 import { formatPercent } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
@@ -202,6 +208,9 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import ProposalPermissionEntry from "~/pages/details/[fundSlug]/governance/proposal/ProposalPermissionEntry.vue";
+import { useRoleStore } from "~/store/role/role.store";
+import type { ChainId } from "~/types/enums/chain_id";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -211,6 +220,9 @@ const proposalSlug = route.params.proposalId as string;
 const [createdBlockNumber, proposalId] = proposalSlug.split("-") as [bigint, string];
 const fundSlug = route.params.fundSlug as string;
 const showRawCalldatas = ref(false);
+
+const roleStore = useRoleStore();
+provide("roleStore", roleStore);
 
 const allMethods = ref<INAVMethod[][]>([]);
 console.log("proposal", proposalId);

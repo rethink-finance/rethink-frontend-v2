@@ -100,6 +100,12 @@ export function getParamComparisonInt(paramComparison: ParamComparison): number 
       return 3
   }
 }
+export const ParamComparisonMap: Record<number, ParamComparison> = {
+  0: ParamComparison.EQUAL_TO,
+  1: ParamComparison.GREATER_THAN,
+  2: ParamComparison.LESS_THAN,
+  3: ParamComparison.ONE_OF,
+};
 
 export function getParameterTypeInt(parameterType: ParameterType): number {
   switch (parameterType) {
@@ -113,3 +119,9 @@ export function getParameterTypeInt(parameterType: ParameterType): number {
       throw new Error("No restriction should not go on chain. This should be unscoped via unscopeParameter")
   }
 }
+export const ParameterTypeMap: Record<number, ParameterType> = {
+  0: ParameterType.STATIC,
+  1: ParameterType.DYNAMIC,
+  2: ParameterType.DYNAMIC32,
+  3: ParameterType.NO_RESTRICTION,
+};

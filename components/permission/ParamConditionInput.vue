@@ -17,7 +17,7 @@
     </div>
 
     <UiButtonAddRow
-      v-if="!condition.type && !disabled"
+      v-if="!condition?.type && !disabled"
       class="ms-3 mt-2"
       @click="addNewCondition"
     >
@@ -37,7 +37,7 @@
         hide-details
       />
     </template>
-    <template v-else-if="condition.type">
+    <template v-else-if="condition?.type">
       <v-select
         v-model="localCondition.condition"
         :items="conditionOptions"
@@ -203,7 +203,7 @@ watch(
     // If previous condition was "One Of" and the new one is not, we will
     // take only the first value from it.
     if (previousCondition.value === ParamComparison.ONE_OF && previousCondition.value !== newLocalFuncConditions.condition) {
-      if (newLocalFuncConditions.type === ParamNativeType.BOOLEAN) {
+      if (newLocalFuncConditions?.type === ParamNativeType.BOOLEAN) {
         // If new condition is boolean, just set default false value.
         newLocalFuncConditions.value = [BooleanValue.FALSE];
       } else {

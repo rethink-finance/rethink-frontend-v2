@@ -124,6 +124,7 @@ watch(
 // Debounced label loader
 const setAddressLabel = debounce(async (value: string) => {
   try {
+    console.log("get address label");
     localValueLabel.value = await fundStore.getAddressLabel(value, chainId)
   } catch (err: any) {
     console.error("Error getAddressLabel", value, err)
