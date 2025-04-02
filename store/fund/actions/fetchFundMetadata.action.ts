@@ -10,8 +10,9 @@ import { formatQuorumPercentage } from "~/composables/formatters";
 import { parseClockMode } from "~/composables/fund/parseClockMode";
 import { parseFundSettings } from "~/composables/fund/parseFundSettings";
 import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
-import { type ChainId, networksMap } from "~/store/web3/networksMap";
+import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { type ChainId } from "~/types/enums/chain_id";
 import type IToken from "~/types/token";
 
 export const fetchFundMetaDataAction = async (

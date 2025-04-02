@@ -76,7 +76,7 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 import { useRoleStore } from "~/store/role/role.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
-import { ChainId } from "~/store/web3/networksMap";
+import { ChainId } from "~/types/enums/chain_id";
 import type { Role } from "~/types/zodiac-roles/role";
 
 const router = useRouter();

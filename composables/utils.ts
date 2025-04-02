@@ -205,6 +205,49 @@ export const calculateCumulativeReturnPercent = (
   }
 };
 
+
+export const calculateCumulativeWithSharePrice = (
+  initialSharePrice?: number | undefined,
+  latestSharePrice?: number | undefined,
+  baseTokenDecimals?: number,
+  fundTokenDecimals?: number,
+): number | undefined => {
+  try {
+    if (!baseTokenDecimals || !fundTokenDecimals) {
+      console.error("Base token decimals or fund token decimals are not provided");
+      return undefined;
+    }
+    if (latestSharePrice === undefined) {
+      console.error("Latest share price is not provided", latestSharePrice);
+      return undefined;
+    }
+    if (initialSharePrice === undefined) {
+      console.error("Initial share price is not provided", initialSharePrice);
+
+      const initSharePrice = 10 ** (baseTokenDecimals - fundTokenDecimals);
+
+      // Calculate cumulative return percentage
+      const cumulativeReturnPercent = ((latestSharePrice / initSharePrice) - 1);
+
+      return cumulativeReturnPercent;
+
+    }
+
+    if (latestSharePrice > 0) {
+
+      if (initialSharePrice > 0)
+      // Calculate cumulative return percentage
+        return ((latestSharePrice / initialSharePrice) - 1);
+
+
+    }
+    return 0;
+  } catch (error) {
+    console.error("Error calculating cumulative return using share price:", error);
+    return undefined;
+  }
+};
+
 export const calculateSharpeRatio = (
   fundNAVUpdates: any,
   totalDepositBal: bigint,

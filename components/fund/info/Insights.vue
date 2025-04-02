@@ -55,7 +55,7 @@
               class="data_bar__title"
               :class="numberColorClass(fund?.cumulativeReturnPercent || 0)"
             >
-              {{ formatPercent(fund?.cumulativeReturnPercent || 0, true) || "N/A" }}
+              {{ formatPercent(fund.cumulativeReturnPercent, true) ?? "N/A" }}
             </div>
           </template>
         </div>

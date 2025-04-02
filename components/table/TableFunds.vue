@@ -60,7 +60,7 @@
           indeterminate
         />
         <div v-else :class="numberColorClass(item.cumulativeReturnPercent)">
-          {{ formatPercent(item.cumulativeReturnPercent, true) }}
+          {{ formatPercent(item.cumulativeReturnPercent, true) ?? "N/A" }}
         </div>
       </div>
     </template>
@@ -80,13 +80,13 @@
 </template>
 
 <script lang="ts" setup>
-import { Icon } from "@iconify/vue/dist/iconify.js";
 import {
   formatPercent,
   formatTokenValue,
 } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
+import { getChainIcon } from "~/composables/utils";
 import type IFund from "~/types/fund";
 import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
 import FundNameCell from "./components/FundNameCell.vue";
