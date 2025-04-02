@@ -15,6 +15,14 @@
         <strong>Yield Distribution: </strong> Investors receive $SYCT tokens (representing future $SNI tokens) directly on Polygon.
       </li>
     </ul>
+
+    <img
+      src="@/assets/images/soonami/soonami-oiv-image.png"
+      alt="soonami Venture Staking Fund"
+      class="img-soonami"
+    >
+
+
     <p>For any questions, book a call with our team: <a class="text-primary" href="https://calendly.com/chris-2848/venture-staking-ama" target="_blank">Schedule a Call</a></p>
   </div>
 </template>
@@ -31,6 +39,13 @@
     .list {
         margin: 0 0 1rem 0;
         padding: 0 0 0 3rem;
+    }
+
+    .img-soonami {
+        display: block;
+        margin: 2rem auto;
+        width: 100%;
+        max-width: 1000px;
     }
 }
 </style>
