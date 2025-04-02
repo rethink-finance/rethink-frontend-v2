@@ -30,7 +30,7 @@
           <v-row class="mb-6">
             <v-text-field
               v-model="proposal.title"
-              placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+              placeholder="Type here"
               required
             />
           </v-row>
