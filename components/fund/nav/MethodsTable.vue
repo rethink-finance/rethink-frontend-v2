@@ -215,6 +215,12 @@
               <strong class="td_index">1.{{ index + 1 }}</strong>
             </template>
 
+            <template #[`item.valuationSource`]="{ value, item: itemBaseAsset }">
+              <Logo v-if="(itemBaseAsset as any).isRethinkPosition" small />
+              <template v-else>
+                {{ value ?? 'N/A' }}
+              </template>
+            </template>
             <template #[`item.pastNavValue`]="{ value }">
               {{ fundStore.getFormattedBaseTokenValue(value) }}
             </template>
@@ -759,6 +765,7 @@ export default defineComponent({
           simulatedNavFormatted,
           detailsJson: baseAssets,
           isGroupedBaseAssets: true,
+          isRethinkPosition: true,
         };
 
         return [totalBaseAssets, ...otherMethods];

@@ -190,11 +190,11 @@
 </template>
 
 <script setup lang="ts">
-import { useActionStateStore } from "~/store/actionState.store";
 import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 
 import { formatPercent } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
+import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
 import { ActionState } from "~/types/enums/action_state";
@@ -202,6 +202,7 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
