@@ -212,6 +212,9 @@ const initProposalEntry = () => {
     plannedSettlementPeriod: fundDeepCopy?.plannedSettlementPeriod ?? "",
     minLiquidAssetShare: fundDeepCopy?.minLiquidAssetShare ?? "",
     description: fundDeepCopy?.description ?? "",
+    strategistName: fundDeepCopy?.strategistName ?? "",
+    strategistUrl: fundDeepCopy?.strategistUrl ?? "",
+    oivChatUrl: fundDeepCopy?.oivChatUrl ?? "",
     // Fund settings
     fundName: fundDeepCopy?.title ?? "",
     fundSymbol: fundDeepCopy?.fundToken?.symbol ?? "",
@@ -310,7 +313,7 @@ const handleButtonClick = () => {
 
 const submit = async () => {
   // trigger form validation to show errors
-  const valid = form.value?.validate();
+  form.value?.validate();
   // check if every step is valid
   formIsValid.value = getStepValidityArray().every((step) => step);
 
@@ -468,7 +471,7 @@ const formatProposalData = () => {
     allowedManagers: originalFundSettings?.allowedManagers, // did not change
     fundAddress: originalFundSettings?.fundAddress, // did not change
     governor: originalFundSettings?.governor, // did not change
-    isWhitelistedDepositsSubmit,
+    isWhitelistedDeposits: isWhitelistedDepositsSubmit,
     depositFee: toggledOffFields.value.includes("depositFee")
       ? 0
       : parseInt(fromPercentageToBps(getFieldValueByFieldKey("depositFee"))),
@@ -512,13 +515,13 @@ const formatProposalData = () => {
   };
   // performance and management periods
   const isPerformancePeriod365 = getFieldValueByFieldKey("performanceFeePeriod") === "365";
-  const isManagementPeriod365 = getFieldValueByFieldKey("managementFeePeriod") === "365";
+  // const isManagementPeriod365 = getFieldValueByFieldKey("managementFeePeriod") === "365";
   const isPerformancePeriodToggledOff = toggledOffFields.value.includes(
     "performanceFeePeriod",
   );
-  const isManagementPeriodToggledOff = toggledOffFields.value.includes(
-    "managementFeePeriod",
-  );
+  // const isManagementPeriodToggledOff = toggledOffFields.value.includes(
+  //   "managementFeePeriod",
+  // );
 
   const performancePeriod =
     isPerformancePeriodToggledOff || isPerformancePeriod365
@@ -565,7 +568,7 @@ const nextStep = () => {
     return;
   }
   // trigger form validation to show errors
-  const valid = form.value?.validate();
+  form.value?.validate();
   // check if step is valid before moving to the next step
   const stepIndex = proposalSteps.indexOf(activeStep.value);
   const stepValidityArray = getStepValidityArray();

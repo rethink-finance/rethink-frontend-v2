@@ -34,11 +34,14 @@
         v-if="fund?.strategistName"
         class="fund_name__subtitle"
       >
+
+        <span>by </span>
         <a
           :href="fund?.strategistUrl"
           target="_blank"
+          class="strategist_url"
         >
-          by {{ fund?.strategistName }}
+          {{ fund?.strategistName }}
         </a>
 
       </div>
@@ -367,16 +370,19 @@ const computedRoutes = computed(() => {
   &__subtitle {
     font-weight: 500;
     font-size: $text-sm;
+    color: $color-light-subtitle;
 
-    a {
-      color: $color-light-subtitle;
-      text-decoration: none;
-      transition: color 0.3s ease;
-    }
 
-    &:hover a{
-      color: $color-primary;
-    }
+  }
+}
+
+.strategist_url {
+  color: $color-light-subtitle;
+  text-decoration: none;
+  transition: color 0.3s ease;
+
+  &:hover {
+    color: $color-primary;
   }
 }
 
