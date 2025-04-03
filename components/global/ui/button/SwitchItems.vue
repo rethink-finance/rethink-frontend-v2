@@ -5,6 +5,7 @@
       :key="item.label"
       :class="classesButton(item)"
       variant="text"
+      :disabled="props.disabled"
       @click="handleClick( item)"
     >
       {{ item.label }}
@@ -32,6 +33,10 @@ const props = defineProps({
   items: {
     type: Array as PropType<Item[]>,
     required: true,
+  },
+  disabled: {
+    type: Boolean,
+    default: false,
   },
 })
 

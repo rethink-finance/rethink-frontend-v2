@@ -69,7 +69,7 @@
       </template>
     </template>
 
-    <template #[`item.positionType`]="{ value, item }">
+    <template #[`item.positionType`]="{  item }">
       <UiPositionTypeBadge
         :value="item.displayPositionType || item.positionType"
         :disabled="item.deleted || item.isAlreadyUsed"
@@ -312,6 +312,7 @@
                   <UiButtonSwitchItems
                     v-model="navEntry.positionType"
                     :items="parsedPositionTypeItems"
+                    :disabled="!isMethodEditable(item)"
                     @update:model-value="navEntry.positionType = $event"
                   />
                 </v-col>
