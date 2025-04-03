@@ -4,7 +4,7 @@ import {
   ParamNativeType,
   ParameterType,
   ParamComparison,
-  ConditionType,
+  ConditionType, ExecutionOption,
 } from "~/types/enums/zodiac-roles";
 import type { FunctionCondition } from "~/types/zodiac-roles/role";
 export function getFunctionConditionType(paramConditions: FunctionCondition["params"]) {
@@ -124,4 +124,11 @@ export const ParameterTypeMap: Record<number, ParameterType> = {
   1: ParameterType.DYNAMIC,
   2: ParameterType.DYNAMIC32,
   3: ParameterType.NO_RESTRICTION,
+};
+
+export const ExecutionOptionMap: Record<number, ExecutionOption> = {
+  0: ExecutionOption.NONE,
+  1: ExecutionOption.SEND,
+  2: ExecutionOption.DELEGATE_CALL,
+  3: ExecutionOption.BOTH,
 };

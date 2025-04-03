@@ -101,6 +101,7 @@
                       </template>
                       <template v-else-if="calldata?.calldataType === ProposalCalldataType.PERMISSIONS">
                         <ProposalPermissionEntry
+                          :function-name="calldata?.functionName"
                           :calldata-decoded="calldata?.calldataDecoded"
                           :chain-id="fundStore.fund?.chainId"
                         />

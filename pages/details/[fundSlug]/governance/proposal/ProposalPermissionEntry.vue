@@ -23,12 +23,18 @@
 import type { FunctionFragment, JsonFragment } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ChainId } from "~/types/enums/chain_id";
-import { getWriteFunctions, ParamComparisonMap, ParameterTypeMap } from "~/composables/zodiac-roles/conditions";
+import {
+  ExecutionOptionMap,
+  getWriteFunctions,
+  ParamComparisonMap,
+  ParameterTypeMap,
+} from "~/composables/zodiac-roles/conditions";
 import type { FunctionCondition, ParamCondition } from "~/types/zodiac-roles/role";
 import { ConditionType, ExecutionOption, ParamComparison, ParameterType } from "~/types/enums/zodiac-roles";
 const fundStore = useFundStore();
 
 const props = defineProps<{
+  functionName: string | undefined;
   calldataDecoded: any;
   chainId: ChainId;
 }>();
@@ -55,20 +61,37 @@ const getFuncCondition = (funcSelector: string): FunctionCondition => {
 }
 
 const decodedCondition = computed(() => {
+  // TODO handle all cases
   const condition: FunctionCondition = {
     sighash: props.calldataDecoded?.functionSig,
     type: ConditionType.SCOPED,
-    executionOption: ExecutionOption.NONE,
-    params: [
+    executionOption: ExecutionOptionMap[props.calldataDecoded?.options] as ExecutionOption,
+    params: [],
+  };
+  if (props.functionName === "scopeParameter") {
+    condition.params = [
       {
         index: props.calldataDecoded?.paramIndex,
         type: ParameterTypeMap[props.calldataDecoded?.paramType] as ParameterType,
         condition: ParamComparisonMap[props.calldataDecoded?.paramComp] as ParamComparison,
         value: [props.calldataDecoded?.compValue],
       } as ParamCondition,
-    ],
-  };
-  console.warn("COND: ", condition);
+    ]
+  } else if (props.functionName === "scopeFunction") {
+    for (let i = 0; i < props.calldataDecoded?.compValue?.length || 0; i++) {
+      condition.params.push(
+        {
+          index: i,
+          type: ParameterTypeMap[props.calldataDecoded?.paramType[i]] as ParameterType,
+          condition: ParamComparisonMap[props.calldataDecoded?.paramComp[i]] as ParamComparison,
+          value: [props.calldataDecoded?.compValue[i]],
+        } as ParamCondition,
+      )
+    }
+  } else if (props.functionName === "scopeAllowFunction") {
+    // use ConditionType.WILDCARDED
+  }
+  console.warn("COND: ", toRaw(condition));
   return condition
 })
 
