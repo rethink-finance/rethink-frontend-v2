@@ -1,0 +1,1 @@
+import{u as l,a as m,c as u}from"./BfGjLsXf.js";import{u as p}from"./K3s0A6mg.js";const T=async(r,s)=>{const i=l(),{initializeBlockTimeContext:c}=p();let e=s??"N/A";const n=i.getWeb3Instance(r);if(!n)return e;const o=await c(n),a=(o==null?void 0:o.averageBlockTime)||0,t=Number(s);return!t||isNaN(t)||t<=0||(t<100?e=m("day",t):a>0&&(e=u(t,a)||e)),e};export{T as p};
