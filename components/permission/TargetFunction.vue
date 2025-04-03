@@ -30,13 +30,17 @@
     </template>
     <template #body>
       <span class="target_function__condition">
-        <div class="d-flex align-center">
+        <div
+          v-if="localFuncConditions.executionOption !== undefined"
+          class="d-flex align-center"
+        >
           <pre
             class="json_field me-4"
           ><strong>sighash:</strong> {{ funcConditions?.sighash }}</pre>
           <PermissionExecutionOptions
             :model-value="localFuncConditions.executionOption"
             :disabled="disabled"
+            :only-show-condition-params="onlyShowConditionParams"
             @update:model-value="updateExecutionOption"
           />
         </div>
@@ -46,6 +50,7 @@
           :func="func"
           :sighash="sighash"
           :disabled="disabled"
+          :only-show-condition-params="onlyShowConditionParams"
         />
       </span>
     </template>
@@ -86,6 +91,10 @@ const props = defineProps({
     default: () => {},
   },
   disabled: {
+    type: Boolean,
+    default: false,
+  },
+  onlyShowConditionParams: {
     type: Boolean,
     default: false,
   },
@@ -138,7 +147,7 @@ const handleFunctionCheck = (checked: boolean) => {
   &__condition {
     display: flex;
     flex-direction: column;
-    padding: 1rem;
+    padding: 0.25rem 1rem 1rem 1rem;
     overflow-y: hidden;
     height: 100%;
   }

@@ -5,18 +5,21 @@
         JSON.stringify(localFuncCondition?.params, null, 2)
       }}</pre>
       <template v-else-if="flattenedInputs.length">
-        <PermissionParamConditionInput
+        <template
           v-for="(funcInputParam, index) in flattenedInputs"
-          :key="index"
-          class="permissions__function"
-          :index="index"
-          :param="funcInputParam"
-          :condition="getParamConditionByIndex(index)"
-          :disabled="disabled"
-          @update:condition="
-            (newValue) => updateParamConditionByIndex(index, newValue)
-          "
-        />
+        >
+          <PermissionParamConditionInput
+            v-if="!onlyShowConditionParams || getParamConditionByIndex(index).type"
+            class="permissions__function"
+            :index="index"
+            :param="funcInputParam"
+            :condition="getParamConditionByIndex(index)"
+            :disabled="disabled"
+            @update:condition="
+              (newValue) => updateParamConditionByIndex(index, newValue)
+            "
+          />
+        </template>
       </template>
       <template v-else>
         <!--
@@ -76,6 +79,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  onlyShowConditionParams: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Create a local reactive copy of funcConditions to allow editing it without mutating props.
@@ -104,7 +111,7 @@ const getParamConditionByIndex = (index: number): ParamCondition => {
   // Try find param by the provided index or return reactive default param if it does not exist.
   return (
     localFuncCondition.value?.params?.find(
-      (param) => param?.index === index,
+      (param) => param?.index?.toString() === index.toString(),
     ) ?? { index, type: "", condition: "", value: [""] }
   );
 };
