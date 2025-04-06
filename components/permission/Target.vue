@@ -200,7 +200,7 @@ const fetchTargetABI = async () => {
   try {
     const sourceCode = await fundStore.fetchAddressSourceCode(props.chainId, target.value.address);
     targetABIJson.value = sourceCode?.ABI || [];
-    console.debug("fetched ABI targetABIJson", targetABIJson.value);
+    // console.debug("fetched ABI targetABIJson", targetABIJson.value);
     isFetchingTargetABI.value = false;
   } catch (error: any) {
     handleABIError(error);

@@ -145,6 +145,9 @@ updates yet, then the total NAV is actually totalDepositBal.
 3) Also add getNavUpdateTime for each navUpdate already when fetching navUpdates (bulk also).
 4) Return rolesModifierAddress 
 
+### Other contracts TODO
+1) when NAV update is done, NAV update event should be emitted and we could get the blocknumber of the NAV update
+
 
 ### Frontend TODO
 1) Until the reader contract cumulative value is implemented:

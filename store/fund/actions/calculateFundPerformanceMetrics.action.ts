@@ -40,7 +40,7 @@ export const calculateFundPerformanceMetricsAction = async (
           fund.baseToken.decimals,
           fund.fundToken.decimals,
         )
-      }else{
+      } else {
         const lastNAVUpdateTotalDepositBalance = await getFundLastNAVUpdateTotalDepositBalance(fund, fundLastNavUpdate);
 
         const baseTokenDecimals = fund.baseToken.decimals;

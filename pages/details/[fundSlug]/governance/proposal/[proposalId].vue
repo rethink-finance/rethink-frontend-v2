@@ -47,7 +47,7 @@
                 :key="calldataIndex"
                 class="mb-6"
               >
-                <strong class="text-primary">{{ calldataIndex }}#</strong>
+                <strong class="text-primary">{{ calldataIndex + 1 }}#</strong>
                 <div>
                   <strong>Contract:</strong> {{ calldata?.contractName ?? "N/A" }}
                 </div>
@@ -100,6 +100,9 @@
                         />
                       </template>
                       <template v-else-if="calldata?.calldataType === ProposalCalldataType.PERMISSIONS">
+                        <UiTextBadge v-if="calldata?.calldataDecoded?.role !== undefined">
+                          <strong>Role ID: {{ calldata?.calldataDecoded?.role }}</strong>
+                        </UiTextBadge>
                         <ProposalPermissionEntry
                           :function-name="calldata?.functionName"
                           :calldata-decoded="calldata?.calldataDecoded"
@@ -199,8 +202,7 @@
 <script setup lang="ts">
 import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { useActionStateStore } from "~/store/actionState.store";
-
-import { formatPercent } from "~/composables/formatters";
+import { formatPercent, formatCalldata } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
@@ -211,7 +213,6 @@ import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import ProposalPermissionEntry from "~/pages/details/[fundSlug]/governance/proposal/ProposalPermissionEntry.vue";
 import { useRoleStore } from "~/store/role/role.store";
-import type { ChainId } from "~/types/enums/chain_id";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -270,6 +271,7 @@ const activeUserVoteSubmission = computed(() => {
 });
 
 const proposal = computed(():IGovernanceProposal | undefined => {
+  console.warn("PROPOSAL_ID", proposalId)
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
   const proposal = governanceProposalStore.getProposal(fundStore.selectedFundChain, fundStore.fundAddress, proposalId);
   if (!proposal) return undefined;
@@ -341,14 +343,6 @@ watch(
   { immediate: true },
 );
 
-const formatCalldata = (calldata: any) => {
-  try {
-    return JSON.stringify(calldata, null, 2)
-  } catch {
-    console.warn("failed to format calldata", calldata);
-    return calldata;
-  }
-}
 /**
 const fetchProposalVoteSubmissions = async () => {
   loadingProposalVoteSubmissions.value = true;
@@ -470,8 +464,11 @@ onMounted(async () => {
   emit("updateBreadcrumbs", breadcrumbItems);
 
   // fetch block proposals based on createdBlockNumber
+  allMethods.value = [];
   try {
+    console.warn("START FETCHINGF", proposalId)
     await governanceProposalStore.fetchGovernanceProposal(proposalId);
+    console.warn("STOP FETCHINGF", proposalId)
 
     // await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
 

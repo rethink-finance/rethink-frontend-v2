@@ -6,16 +6,68 @@
   <!--  <div class="permissions__json">-->
   <!--    {{ functionAbi }}-->
   <!--  </div>-->
-  <div class="d-flex">
-
-    <div v-if="functionAbi?.selector" class="permissions__list flex-grow-1">
-      <PermissionTargetFunction
-        :func="functionAbi as FunctionFragment"
-        disabled
-        :func-conditions="getFuncCondition(functionAbi.selector)"
-        only-show-condition-params
-      />
+  <div v-if="functionName == 'scopeTarget'">
+    Restricted access to target
+    <strong>{{ calldataDecoded?.targetAddress }}</strong>.
+    Only scoped functions are now allowed.
+  </div>
+  <p v-else-if="functionName === 'allowTarget'">
+    Role was
+    <span v-if="calldataDecoded?.options == 1" class="text-success">
+      granted <strong>call</strong> access
+    </span>
+    <span v-else-if="calldataDecoded?.options == 2" class="text-success">
+      granted <strong>delegatecall</strong> access
+    </span>
+    <strong v-else class="text-error">
+      denied access
+    </strong>
+    to contract <strong>{{ calldataDecoded?.targetAddress }}</strong>
+    <template v-if="targetContractLabel">
+      ({{ targetContractLabel }})
+    </template>.
+  </p>
+  <div v-else-if="functionName === 'assignRoles' || functionName === 'grantRoles'">
+    Edit roles for <strong>{{ calldataDecoded?.module }}</strong>:
+    <div class="ms-2">
+      <div
+        v-for="i in calldataDecoded?.memberOf?.length || 0"
+        :key="i"
+      >
+        <span
+          v-if="calldataDecoded?.memberOf[i - 1]"
+          class="d-flex align-center"
+        >
+          <Icon
+            icon="octicon:check-circle-16"
+            height="1.2rem"
+            width="1.2rem"
+            class="text-success"
+          />
+          Added Role {{ calldataDecoded?._roles[i - 1] }}
+        </span>
+        <span v-else>
+          <Icon
+            icon="octicon:x-circle-16"
+            class="text-error"
+            height="1.2rem"
+            width="1.2rem"
+          />
+          Removed Role {{ calldataDecoded?._roles[i - 1] }}
+        </span>
+      </div>
     </div>
+  </div>
+  <div v-else-if="functionAbi?.selector" class="permissions__list flex-grow-1">
+    <PermissionTargetFunction
+      :func="functionAbi as FunctionFragment"
+      disabled
+      :func-conditions="getFuncCondition(functionAbi.selector)"
+      only-show-condition-params
+    />
+  </div>
+  <div v-else>
+    {{ formatCalldata(calldataDecoded) }}
   </div>
 </template>
 
@@ -31,6 +83,7 @@ import {
 } from "~/composables/zodiac-roles/conditions";
 import type { FunctionCondition, ParamCondition } from "~/types/zodiac-roles/role";
 import { ConditionType, ExecutionOption, ParamComparison, ParameterType } from "~/types/enums/zodiac-roles";
+import { formatCalldata } from "~/composables/formatters";
 const fundStore = useFundStore();
 
 const props = defineProps<{
@@ -47,6 +100,7 @@ const isFetchingTargetABI = ref(false);
 const abiWriteFunctions = ref<FunctionFragment[]>([]);
 // Condition sighashes of functions that are not in the detected ABI.
 const functionAbi = ref();
+const targetContractLabel = ref<string | undefined>(undefined);
 
 const getFuncCondition = (funcSelector: string): FunctionCondition => {
   if (funcSelector !== props.calldataDecoded?.functionSig) {
@@ -61,7 +115,9 @@ const getFuncCondition = (funcSelector: string): FunctionCondition => {
 }
 
 const decodedCondition = computed(() => {
+  // TODO move this logic to some other function and write tests!
   // TODO handle all cases
+  // TODO separate UI for allowMember, allowTarget
   const condition: FunctionCondition = {
     sighash: props.calldataDecoded?.functionSig,
     type: ConditionType.SCOPED,
@@ -96,6 +152,8 @@ const decodedCondition = computed(() => {
 })
 
 const decodeData = async () => {
+  targetContractLabel.value = undefined;
+
   // if no decoded data, return
   if (Object.keys(props.calldataDecoded).length === 0) return;
   const targetAddress = props.calldataDecoded?.targetAddress;
@@ -107,12 +165,16 @@ const decodeData = async () => {
   try {
     const sourceCode = await fundStore.fetchAddressSourceCode(props.chainId, targetAddress);
     targetABIJson.value = sourceCode?.ABI || [];
-    console.debug("fetched ABI targetABIJson", targetABIJson.value);
+    // console.debug("fetched ABI targetABIJson", targetABIJson.value);
     isFetchingTargetABI.value = false;
   } catch (error: any) {
     isFetchingTargetABI.value = false;
     console.error("Something went wrong fetching target ABI.", error);
   }
+
+  fundStore.getAddressLabel(targetAddress, props.chainId).then(
+    (label: string | undefined) => targetContractLabel.value = label,
+  )
 };
 
 // populate proposal data on load
