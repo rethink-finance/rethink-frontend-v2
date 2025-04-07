@@ -16,7 +16,22 @@ export const flattenAbiFunctionInputs = (
     if (!inputs) return;
 
     for (const input of inputs) {
-      if (input.isTuple() && input.components) {
+      if (input.isArray() && input.arrayChildren) {
+        // TODO this is problematic now if array as it can have also no items.
+        // console.log("TODO flattenAbi implement input array");
+        // Concatenate parentName with input.name, allowing multiple
+        // tuple levels of parent names to be saved. Name is including
+        // all parent tuple variable names.
+        let newParentName = input.name;
+        if (parentName) {
+          newParentName = `${parentName} ${newParentName}`;
+        }
+        processInputs(
+          [input.arrayChildren] as FlattenedParamType[],
+          indexCounter,
+          newParentName,
+        );
+      } else if (input.isTuple() && input.components) {
         // Concatenate parentName with input.name, allowing multiple
         // tuple levels of parent names to be saved. Name is including
         // all parent tuple variable names.

@@ -5,6 +5,7 @@
         JSON.stringify(localFuncCondition?.params, null, 2)
       }}</pre>
       <template v-else-if="flattenedInputs.length">
+        <!-- TODO IMPORTANT note: this is problematic for dynamic length arrays, it's not displayed correctly... -->
         <template
           v-for="(funcInputParam, index) in flattenedInputs"
         >
