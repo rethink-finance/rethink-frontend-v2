@@ -8,7 +8,10 @@
   <!--  </div>-->
   <div v-if="functionName == 'scopeTarget'">
     Restricted access to target
-    <strong>{{ calldataDecoded?.targetAddress }}</strong>.
+    <strong>{{ calldataDecoded?.targetAddress }}</strong>
+    <template v-if="targetContractLabel">
+      ({{ targetContractLabel }})
+    </template>.
     Only scoped functions are now allowed.
   </div>
   <p v-else-if="functionName === 'allowTarget'">
@@ -135,6 +138,11 @@ const decodedCondition = computed(() => {
     ]
   } else if (props.functionName === "scopeFunction") {
     for (let i = 0; i < props.calldataDecoded?.compValue?.length || 0; i++) {
+      if (!props.calldataDecoded?.isParamScoped[i]) {
+        // Ignore parameters that are not scoped.
+        // This parameter is not being restricted by a condition, any value allowed.
+        continue;
+      }
       condition.params.push(
         {
           index: i,

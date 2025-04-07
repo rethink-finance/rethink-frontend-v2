@@ -250,7 +250,6 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-
 const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
 const actionStateStore = useActionStateStore();
