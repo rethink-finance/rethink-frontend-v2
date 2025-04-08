@@ -204,7 +204,6 @@ import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { useActionStateStore } from "~/store/actionState.store";
 import { formatPercent, formatCalldata } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
-import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
 import { ActionState } from "~/types/enums/action_state";
