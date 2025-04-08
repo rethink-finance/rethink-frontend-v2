@@ -111,13 +111,16 @@ export const useWeb3Store = defineStore({
       ] || "";
     },
     networkRpcUrls(chainId: ChainId): string[] {
+      console.warn("CHAINID", chainId)
       const network = networksMap[chainId];
       return removeDuplicates(network.rpcUrls || []);
     },
     async initializeBlockTimeContext(chainId: ChainId, convertToL1 = true): Promise<BlockTimeContext> {
       const web3Provider = this.getWeb3Instance(chainId, convertToL1);
 
+      console.warn("INIT block time context", chainId);
       const mappedChainId = convertToL1 ? this.getL2ToL1ChainId(chainId) : chainId;
+      console.warn("INIT block time context", chainId, mappedChainId);
 
       if (this.chainBlockTimeContext[mappedChainId]?.currentBlock) {
       // Return cached values
@@ -285,12 +288,12 @@ export const useWeb3Store = defineStore({
       return new Promise((resolve) => setTimeout(resolve, ms));
     },
     getL2ToL1ChainId(chainId: ChainId): ChainId {
-      return L2_TO_L1_CHAIN_ID_MAP[chainId as keyof typeof L2_TO_L1_CHAIN_ID_MAP];
+      return L2_TO_L1_CHAIN_ID_MAP[chainId as keyof typeof L2_TO_L1_CHAIN_ID_MAP] || chainId;
     },
     getWeb3Instance(chainId: ChainId, convertToL1 = true): Web3 {
-      const mappedChainId = this.getL2ToL1ChainId(chainId);
 
-      if (mappedChainId && convertToL1) {
+      if (convertToL1) {
+        const mappedChainId = this.getL2ToL1ChainId(chainId);
         return this.chainProviders[mappedChainId];
       }
 

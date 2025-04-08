@@ -168,7 +168,7 @@ const decodeData = async () => {
   targetABIJson.value = [];
   if (!targetAddress || !props.chainId) return;
   isFetchingTargetABI.value = true;
-  console.log("Fetch target ABI action", props.chainId, targetAddress);
+  // console.log("Fetch target ABI action", props.chainId, targetAddress);
 
   try {
     const sourceCode = await fundStore.fetchAddressSourceCode(props.chainId, targetAddress);
