@@ -68,13 +68,11 @@
             NAV Methods
           </div>
           <div>
-            <nuxt-link
-              class="nav__learn_more_link"
-              href="https://docs.rethink.finance/rethink.finance/protocol/nav-calculator-contract"
-              target="_blank"
-            >
-              Learn more about NAV methods ->
-            </nuxt-link>
+            <UiInfoBox
+              info="Learn more about NAV methods"
+              :icon="true"
+              link="https://docs.rethink.finance/rethink.finance/protocol/nav-calculator-contract"
+            />
           </div>
         </div>
       </UiHeader>

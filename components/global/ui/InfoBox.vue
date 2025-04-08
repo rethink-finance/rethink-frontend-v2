@@ -1,17 +1,36 @@
 <template>
-  <div class="info">
+  <a
+    v-if="props.link"
+    :href="props.link"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="info"
+  >
     <Icon
       icon="material-symbols:info-outline"
       class="info__icon"
       width="1.5rem"
     />
     <span class="info__text" v-html="props.info" />
+  </a>
+
+  <div v-else class="info">
+    <Icon
+      icon="material-symbols:info-outline"
+      class="info__icon"
+      width="1.5rem"
+    />
+    <span
+      class="info__text"
+      v-html="props.info"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 const props = defineProps<{
   info: string;
+  link?: string;
 }>();
 </script>
 

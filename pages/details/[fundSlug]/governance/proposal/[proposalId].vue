@@ -204,6 +204,7 @@ import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { useActionStateStore } from "~/store/actionState.store";
 import { formatPercent, formatCalldata } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
+import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
 import { ActionState } from "~/types/enums/action_state";
@@ -213,6 +214,7 @@ import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import ProposalPermissionEntry from "~/pages/details/[fundSlug]/governance/proposal/ProposalPermissionEntry.vue";
 import { useRoleStore } from "~/store/role/role.store";
+
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);

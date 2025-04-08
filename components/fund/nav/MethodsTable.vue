@@ -69,7 +69,7 @@
       </template>
     </template>
 
-    <template #[`item.positionType`]="{ value, item }">
+    <template #[`item.positionType`]="{  item }">
       <UiPositionTypeBadge
         :value="item.displayPositionType || item.positionType"
         :disabled="item.deleted || item.isAlreadyUsed"
@@ -215,6 +215,12 @@
               <strong class="td_index">1.{{ index + 1 }}</strong>
             </template>
 
+            <template #[`item.valuationSource`]="{ value, item: itemBaseAsset }">
+              <Logo v-if="(itemBaseAsset as any).isRethinkPosition" small />
+              <template v-else>
+                {{ value ?? 'N/A' }}
+              </template>
+            </template>
             <template #[`item.pastNavValue`]="{ value }">
               {{ fundStore.getFormattedBaseTokenValue(value) }}
             </template>
@@ -306,6 +312,7 @@
                   <UiButtonSwitchItems
                     v-model="navEntry.positionType"
                     :items="parsedPositionTypeItems"
+                    :disabled="!isMethodEditable(item)"
                     @update:model-value="navEntry.positionType = $event"
                   />
                 </v-col>
@@ -759,6 +766,7 @@ export default defineComponent({
           simulatedNavFormatted,
           detailsJson: baseAssets,
           isGroupedBaseAssets: true,
+          isRethinkPosition: true,
         };
 
         return [totalBaseAssets, ...otherMethods];
