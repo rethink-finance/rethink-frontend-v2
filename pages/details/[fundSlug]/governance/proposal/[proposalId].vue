@@ -212,7 +212,6 @@ import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import ProposalPermissionEntry from "~/pages/details/[fundSlug]/governance/proposal/ProposalPermissionEntry.vue";
-import { useRoleStore } from "~/store/role/role.store";
 
 
 // emits
@@ -223,9 +222,6 @@ const proposalSlug = route.params.proposalId as string;
 const [createdBlockNumber, proposalId] = proposalSlug.split("-") as [bigint, string];
 const fundSlug = route.params.fundSlug as string;
 const showRawCalldatas = ref(false);
-
-const roleStore = useRoleStore();
-provide("roleStore", roleStore);
 
 const allMethods = ref<INAVMethod[][]>([]);
 console.log("proposal", proposalId);
