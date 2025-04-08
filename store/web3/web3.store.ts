@@ -20,13 +20,14 @@ const L2_TO_L1_CHAIN_ID_MAP = {
 interface IState {
   currentRpcIndex: number;
   retryDelay: number;
-  blockTimeContext: null | BlockTimeContext,
   cachedTokens: Record<string, any>;
   // Determines what RPC url is used for each chain.
   chainSelectedRpcUrl: Record<string, string>;
   chainSelectedRpcIndex: Record<string, number>;
   chainProviders: Record<string, Web3>;
   chainContracts: Record<string, any>;
+  // Store block time data like current block timestamp and number...
+  chainBlockTimeContext: Partial<Record<ChainId, BlockTimeContext>>,
 }
 
 const removeDuplicates = (arr: any[]) => {
@@ -86,7 +87,7 @@ export const useWeb3Store = defineStore({
     return {
       currentRpcIndex: -1,
       retryDelay: 1500,
-      blockTimeContext: null,
+      chainBlockTimeContext: {},
       chainProviders,
       chainContracts,
       chainSelectedRpcUrl,
@@ -118,7 +119,10 @@ export const useWeb3Store = defineStore({
 
       const mappedChainId = convertToL1 ? this.getL2ToL1ChainId(chainId) : chainId;
 
-      // TODO cache values
+      if (this.chainBlockTimeContext[mappedChainId]?.currentBlock) {
+      // Return cached values
+        return this.chainBlockTimeContext[mappedChainId] as BlockTimeContext;
+      }
       const currentBlock = await this.callWithRetry(
         mappedChainId,
         () => web3Provider.eth.getBlock("latest"),
@@ -141,11 +145,10 @@ export const useWeb3Store = defineStore({
         averageBlockTime,
       };
 
-      this.blockTimeContext = context;
+      this.chainBlockTimeContext[mappedChainId] = context;
       return context;
     },
-    async getTimestampForBlock(targetBlock: number): Promise<number> {
-      const context = this.blockTimeContext;
+    async getTimestampForBlock(targetBlock: number, context: BlockTimeContext): Promise<number> {
       if (!context) throw new Error("BlockTimeContext not initialized");
 
       const {
