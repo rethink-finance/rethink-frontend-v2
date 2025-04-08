@@ -103,9 +103,8 @@ export const fetchFundMetaDataAction = async (
     const quorumVotes: bigint = ((((fundGovernanceTokenSupplyFixed as bigint) *
       quorumNumerator) as bigint) / quorumDenominator) as bigint;
 
-    const { initializeBlockTimeContext } = useBlockTime();
-    const context = await initializeBlockTimeContext(web3Instance);
-    const averageBlockTime = context?.averageBlockTime || 0;
+    const blockTimeContext = await web3Store.initializeBlockTimeContext(fundChainId);
+    const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
     const fundNetwork = networksMap[fundChainId];
     // console.log("fundMetadata.updateTimes");
@@ -197,6 +196,7 @@ export const fetchFundMetaDataAction = async (
       // NAV Updates
       navUpdates: [] as INAVUpdate[],
     } as IFund;
+    console.log("fund fund: ", fund);
 
     // Process metadata if available
     if (fundMetadata) {

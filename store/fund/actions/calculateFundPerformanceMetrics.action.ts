@@ -72,10 +72,9 @@ export const calculateFundPerformanceMetricsAction = async (
 const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, fund: IFund) => {
   if(navUpdate?.timestamp) {
     // 1. get average block time for the chain
-    const web3Instance = web3Store.getWeb3Instance(fund.chainId, false);
-    const { initializeBlockTimeContext } = useBlockTime()
-    const context = await initializeBlockTimeContext(web3Instance)
-    const averageBlockTime = context?.averageBlockTime || 0;
+    console.warn("getSharePriceAtNavUpdate")
+    const blockTimeContext = await web3Store.initializeBlockTimeContext(fund.chainId, false);
+    const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
     // 2. get block number for the timestamp
     const totalNav = ethers.parseUnits(String(navUpdate.totalNAV || "0"), fund?.baseToken.decimals);
@@ -128,18 +127,17 @@ const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, f
 const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavUpdate: any) => {
   if(fundLastNavUpdate?.timestamp) {
     const web3Store = useWeb3Store();
+
     // 1. get average block time for the chain
-    const web3Instance = web3Store.getWeb3Instance(fund.chainId, false);
-    const { initializeBlockTimeContext } = useBlockTime()
-    const context = await initializeBlockTimeContext(web3Instance)
-    const averageBlockTime = context?.averageBlockTime || 0;
+    const blockTimeContext = await web3Store.initializeBlockTimeContext(fund.chainId, false);
+    const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
     // 2. estimate the block number of the last NAV update timestamp
     const lastNavUpdateBlockNumber = Number(await getBlockByTimestamp(web3Store, fund.chainId, fundLastNavUpdate.timestamp / 1000, averageBlockTime) || 0);
 
     // 3. get total deposit balance at the last NAV update
     try {
-      const totalDepositBal = await web3Store.callWithRetry(
+      return await web3Store.callWithRetry(
         fund.chainId,
         async () => {
           const fundContract = web3Store.getCustomContract(
@@ -151,8 +149,6 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
           return BigInt(await fundContract.methods._totalDepositBal().call({}, lastNavUpdateBlockNumber) || 0)
         },
       );
-
-      return totalDepositBal;
     } catch (e) {
       console.error("Error getting total deposit balance at last NAV update", e);
       return null;

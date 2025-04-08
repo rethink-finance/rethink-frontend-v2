@@ -14,6 +14,10 @@
       <div class="permissions__function_params">
         ({{ param?.type || condition?.type || "Unknown type" }})
       </div>
+      <div class="permissions__json break-words ">
+        {{ localCondition }}
+      </div>
+
     </div>
 
     <UiButtonAddRow

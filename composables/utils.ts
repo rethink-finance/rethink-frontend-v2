@@ -438,9 +438,8 @@ export const getL1BlockNumber = async (web3Store: any, l2BlockNumber: number, ch
     }
 
     // Get block times for better estimation
-    const { initializeBlockTimeContext } = useBlockTime();
-    const context = await initializeBlockTimeContext(ethProvider);
-    const averageL1BlockTime = context?.averageBlockTime || 12; // Default fallback to 12s
+    const blockTimeContext = await web3Store.initializeBlockTimeContext(chainId);
+    const averageL1BlockTime = blockTimeContext?.averageBlockTime || 12; // Default fallback to 12s
 
     // Estimate based on time difference
     const l2Timestamp = Number(l2Block.timestamp);
@@ -461,19 +460,18 @@ export const getL1BlockNumber = async (web3Store: any, l2BlockNumber: number, ch
 
 
 export const getTotalDepositBalanceAtNAVUpdate = async (web3Store: any, fund: IFund, navUpdate: any) => {
-  if(navUpdate?.timestamp) {
+  if (navUpdate?.timestamp) {
     // 1. get average block time for the chain
-    const web3Instance = web3Store.getWeb3Instance(fund.chainId, false);
-    const { initializeBlockTimeContext } = useBlockTime()
-    const context = await initializeBlockTimeContext(web3Instance)
-    const averageBlockTime = context?.averageBlockTime || 0;
+    console.warn("getTotalDepositBalanceAtNAVUpdate");
+    const blockTimeContext = await web3Store.initializeBlockTimeContext(fund.chainId, false);
+    const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
     // 2. estimate the block number of the last NAV update timestamp
     const navUpdateBlockNumber = Number(await getBlockByTimestamp(web3Store, fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
 
     // 3. get total deposit balance at the last NAV update
     try {
-      const totalDepositBal = await web3Store.callWithRetry(
+      return await web3Store.callWithRetry(
         fund.chainId,
         async () => {
           const fundContract = web3Store.getCustomContract(
@@ -485,8 +483,6 @@ export const getTotalDepositBalanceAtNAVUpdate = async (web3Store: any, fund: IF
           return BigInt(await fundContract.methods._totalDepositBal().call({}, navUpdateBlockNumber) || 0)
         },
       );
-
-      return totalDepositBal;
     } catch (e) {
       console.error("Error getting total deposit balance at last NAV update", e);
       return null;

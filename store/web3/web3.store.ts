@@ -1,13 +1,14 @@
+import { defineStore } from "pinia";
+import { type HttpProvider, Web3 } from "web3";
 import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
 import { NAVCalculator } from "assets/contracts/NAVCalculator";
 import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
 import { RethinkReader } from "assets/contracts/RethinkReader";
 import SafeMultiSendCallOnlyJson from "assets/contracts/safe/SafeMultiSendCallOnly.json";
-import { defineStore } from "pinia";
-import { type HttpProvider, Web3 } from "web3";
 import { CustomContract } from "~/store/web3/customContract";
 import { networksMap } from "~/store/web3/networksMap";
 import { type ChainId, ChainId as ChainIdValue } from "~/types/enums/chain_id";
+import type BlockTimeContext from "~/types/block_time_context";
 const SafeMultiSendCallOnlyAddresses: Partial<Record<string, string>> = SafeMultiSendCallOnlyJson.networkAddresses;
 
 
@@ -19,6 +20,7 @@ const L2_TO_L1_CHAIN_ID_MAP = {
 interface IState {
   currentRpcIndex: number;
   retryDelay: number;
+  blockTimeContext: null | BlockTimeContext,
   cachedTokens: Record<string, any>;
   // Determines what RPC url is used for each chain.
   chainSelectedRpcUrl: Record<string, string>;
@@ -84,6 +86,7 @@ export const useWeb3Store = defineStore({
     return {
       currentRpcIndex: -1,
       retryDelay: 1500,
+      blockTimeContext: null,
       chainProviders,
       chainContracts,
       chainSelectedRpcUrl,
@@ -109,6 +112,68 @@ export const useWeb3Store = defineStore({
     networkRpcUrls(chainId: ChainId): string[] {
       const network = networksMap[chainId];
       return removeDuplicates(network.rpcUrls || []);
+    },
+    async initializeBlockTimeContext(chainId: ChainId, convertToL1 = true): Promise<BlockTimeContext> {
+      const web3Provider = this.getWeb3Instance(chainId, convertToL1);
+
+      const mappedChainId = convertToL1 ? this.getL2ToL1ChainId(chainId) : chainId;
+
+      // TODO cache values
+      const currentBlock = await this.callWithRetry(
+        mappedChainId,
+        () => web3Provider.eth.getBlock("latest"),
+      );
+
+      const previousBlock = await this.callWithRetry(
+        mappedChainId,
+        () => web3Provider.eth.getBlock(Number(currentBlock.number) - 1000),
+      );
+
+      const timeDiff = Number(currentBlock.timestamp) - Number(previousBlock.timestamp);
+      const blockDiff = Number(currentBlock.number) - Number(previousBlock.number);
+      const averageBlockTime = timeDiff / blockDiff;
+
+      const context: BlockTimeContext = {
+        currentBlock: Number(currentBlock.number),
+        currentBlockTimestamp: Number(currentBlock.timestamp),
+        chainId: mappedChainId,
+        web3Provider,
+        averageBlockTime,
+      };
+
+      this.blockTimeContext = context;
+      return context;
+    },
+    async getTimestampForBlock(targetBlock: number): Promise<number> {
+      const context = this.blockTimeContext;
+      if (!context) throw new Error("BlockTimeContext not initialized");
+
+      const {
+        currentBlock,
+        currentBlockTimestamp,
+        averageBlockTime,
+        chainId,
+        web3Provider,
+      } = context;
+
+      console.warn("get blocks getTimestampForBlock");
+
+      if (targetBlock <= currentBlock) {
+        try {
+          const block = await this.callWithRetry(
+            chainId,
+            () => web3Provider.eth.getBlock(targetBlock),
+          );
+          return Number(block?.timestamp || 0);
+        } catch (error) {
+          console.error(`Error fetching block ${targetBlock}:`, error);
+          return 0;
+        }
+      }
+
+      const blockDiff = targetBlock - currentBlock;
+      const secondsUntilTarget = blockDiff * averageBlockTime;
+      return currentBlockTimestamp + secondsUntilTarget;
     },
     getCustomContract(
       chainId: ChainId,
@@ -216,9 +281,11 @@ export const useWeb3Store = defineStore({
     delay(ms: number): Promise<void> {
       return new Promise((resolve) => setTimeout(resolve, ms));
     },
+    getL2ToL1ChainId(chainId: ChainId): ChainId {
+      return L2_TO_L1_CHAIN_ID_MAP[chainId as keyof typeof L2_TO_L1_CHAIN_ID_MAP];
+    },
     getWeb3Instance(chainId: ChainId, convertToL1 = true): Web3 {
-      const mappedChainId =
-        L2_TO_L1_CHAIN_ID_MAP[chainId as keyof typeof L2_TO_L1_CHAIN_ID_MAP];
+      const mappedChainId = this.getL2ToL1ChainId(chainId);
 
       if (mappedChainId && convertToL1) {
         return this.chainProviders[mappedChainId];
