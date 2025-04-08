@@ -390,12 +390,12 @@ export const getBlockByTimestamp = async (web3Store: any, chainId: ChainId, time
     const estimatedStartBlock = latestBlock - Math.floor((latestTimestamp - timestamp) / averageBlockTime);
 
 
-    if(estimatedStartBlock < 0) {
+    if (estimatedStartBlock < 0) {
       console.error("Estimated start block is negative", estimatedStartBlock);
       return null;
     }
 
-    if(estimatedStartBlock > latestBlock) {
+    if (estimatedStartBlock > latestBlock) {
       console.error("Estimated start block is greater than latest block", estimatedStartBlock, latestBlock);
       return null;
     }
