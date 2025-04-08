@@ -61,7 +61,7 @@ const selectedType = ref(ChartType.NAV);
 const sharePriceItems = ref([]) as Ref<number[]>;
 const isSharePriceLoading = ref(true);
 
-// Computeds
+// Computed
 const valueShownInTypeSelector = computed(() => {
   const items: Record<ChartType, string> = {
     [ChartType.NAV]: fundStore.fundTotalNAVFormattedShort,
@@ -290,8 +290,9 @@ const getSharePricePerNav = async () => {
 
 
 // Lifecycle
-watch(() => props.fund, () => {
-  if (props.fund) {
+
+watch(() => selectedType.value, () => {
+  if (selectedType.value === ChartType.SHARE_PRICE && props.fund && !sharePriceItems.value?.length) {
     getSharePricePerNav();
   }
 }, { immediate: true });

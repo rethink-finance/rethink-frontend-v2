@@ -115,13 +115,15 @@ export const useWeb3Store = defineStore({
       return removeDuplicates(network.rpcUrls || []);
     },
     async initializeBlockTimeContext(chainId: ChainId, convertToL1 = true): Promise<BlockTimeContext> {
-      const web3Provider = this.getWeb3Instance(chainId, convertToL1);
       const mappedChainId = convertToL1 ? this.getL2ToL1ChainId(chainId) : chainId;
 
       if (this.chainBlockTimeContext[mappedChainId]?.currentBlock) {
       // Return cached values
         return this.chainBlockTimeContext[mappedChainId] as BlockTimeContext;
       }
+      console.log("initializeBlockTimeContext currentBlock", mappedChainId);
+      const web3Provider = this.getWeb3Instance(mappedChainId, convertToL1);
+
       const currentBlock = await this.callWithRetry(
         mappedChainId,
         () => web3Provider.eth.getBlock("latest"),

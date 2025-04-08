@@ -421,11 +421,8 @@ export const useGovernanceProposalsStore = defineStore({
     },
     async getBlockPerHoursRate() {
       const blockTimeContext = await this.web3Store.initializeBlockTimeContext(this.selectedFundChainId);
-
-      const currentBlock = await this.selectedFundWeb3Provider.eth.getBlock("latest");
-      const currentBlockNumber = Number(currentBlock.number);
-      const currentBlockTimestamp = Number(currentBlock.timestamp);
-
+      const currentBlockNumber = blockTimeContext.currentBlock;
+      const currentBlockTimestamp = blockTimeContext.currentBlockTimestamp;
       console.debug(`Current block number: ${currentBlockNumber}`);
       console.debug(`Current block timestamp: ${currentBlockTimestamp}`);
 

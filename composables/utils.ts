@@ -413,6 +413,7 @@ export const getL1BlockNumber = async (web3Store: any, l2BlockNumber: number, ch
     const provider = web3Store.chainProviders[chainId];
 
     // Fetch the L2 block details
+    console.log("getL1BlockNumber", chainId);
     const l2Block = await web3Store.callWithRetry(
       chainId,
       async () => await provider.eth.getBlock(l2BlockNumber),
@@ -426,6 +427,7 @@ export const getL1BlockNumber = async (web3Store: any, l2BlockNumber: number, ch
     console.warn("L1 block number not found in L2 metadata. Estimating...");
 
     // Fetch the latest Ethereum L1 block
+    console.log("getL1BlockNumber latestL1Block", chainId);
     const ethProvider = web3Store.getWeb3Instance(ChainId.ETHEREUM);
     const latestL1Block = await web3Store.callWithRetry(
       ChainId.ETHEREUM,
