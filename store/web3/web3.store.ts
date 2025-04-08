@@ -111,16 +111,12 @@ export const useWeb3Store = defineStore({
       ] || "";
     },
     networkRpcUrls(chainId: ChainId): string[] {
-      console.warn("CHAINID", chainId)
       const network = networksMap[chainId];
       return removeDuplicates(network.rpcUrls || []);
     },
     async initializeBlockTimeContext(chainId: ChainId, convertToL1 = true): Promise<BlockTimeContext> {
       const web3Provider = this.getWeb3Instance(chainId, convertToL1);
-
-      console.warn("INIT block time context", chainId);
       const mappedChainId = convertToL1 ? this.getL2ToL1ChainId(chainId) : chainId;
-      console.warn("INIT block time context", chainId, mappedChainId);
 
       if (this.chainBlockTimeContext[mappedChainId]?.currentBlock) {
       // Return cached values
@@ -162,8 +158,6 @@ export const useWeb3Store = defineStore({
         web3Provider,
       } = context;
 
-      console.warn("get blocks getTimestampForBlock");
-
       if (targetBlock <= currentBlock) {
         try {
           const block = await this.callWithRetry(
@@ -199,8 +193,6 @@ export const useWeb3Store = defineStore({
       const RPCUrlsLength = this.networkRpcUrls(chainId).length;
       let retries = 0;
       let switchedRPCCount = 0;
-
-      // console.log("callWithRetry");
       if (!method) return;
 
       while (retries <= maxRetries && switchedRPCCount <= RPCUrlsLength) {
