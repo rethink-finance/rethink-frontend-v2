@@ -61,7 +61,7 @@ const selectedType = ref(ChartType.NAV);
 const sharePriceItems = ref([]) as Ref<number[]>;
 const isSharePriceLoading = ref(true);
 
-// Computeds
+// Computed
 const valueShownInTypeSelector = computed(() => {
   const items: Record<ChartType, string> = {
     [ChartType.NAV]: fundStore.fundTotalNAVFormattedShort,
@@ -238,12 +238,10 @@ const getSharePricePerNav = async () => {
   isSharePriceLoading.value = true;
 
   // 1. get average block time for the chain
-  const web3Instance = web3Store.getWeb3Instance(props.fund.chainId, false);
-  const { initializeBlockTimeContext } = useBlockTime()
-  const context = await initializeBlockTimeContext(web3Instance)
-  const averageBlockTime = context?.averageBlockTime || 0;
+  const blockTimeContext = await web3Store.initializeBlockTimeContext(props.fund.chainId, false);
+  const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
-  const output = await Promise.all(props.fund?.navUpdates?.map(async (navUpdate: INAVUpdate) =>  {
+  sharePriceItems.value = await Promise.all(props.fund?.navUpdates?.map(async (navUpdate: INAVUpdate) =>  {
     // 2. get block number for the timestamp
     const totalNav = ethers.parseUnits(String(navUpdate.totalNAV || "0"), props.fund?.baseToken.decimals);
     const blockNumber = Number(await getBlockByTimestamp(web3Store, props.fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
@@ -287,15 +285,14 @@ const getSharePricePerNav = async () => {
       return 0;
     }
   }));
-
-  sharePriceItems.value = output;
   isSharePriceLoading.value = false;
 };
 
 
 // Lifecycle
-watch(() => props.fund, () => {
-  if (props.fund) {
+
+watch(() => selectedType.value, () => {
+  if (selectedType.value === ChartType.SHARE_PRICE && props.fund && !sharePriceItems.value?.length) {
     getSharePricePerNav();
   }
 }, { immediate: true });

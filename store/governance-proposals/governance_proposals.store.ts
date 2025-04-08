@@ -420,12 +420,9 @@ export const useGovernanceProposalsStore = defineStore({
       }
     },
     async getBlockPerHoursRate() {
-      const web3 = this.getWeb3InstanceByChainId();
-
-      const currentBlock = await this.selectedFundWeb3Provider.eth.getBlock("latest");
-      const currentBlockNumber = Number(currentBlock.number);
-      const currentBlockTimestamp = Number(currentBlock.timestamp);
-
+      const blockTimeContext = await this.web3Store.initializeBlockTimeContext(this.selectedFundChainId);
+      const currentBlockNumber = blockTimeContext.currentBlock;
+      const currentBlockTimestamp = blockTimeContext.currentBlockTimestamp;
       console.debug(`Current block number: ${currentBlockNumber}`);
       console.debug(`Current block timestamp: ${currentBlockTimestamp}`);
 
@@ -477,39 +474,6 @@ export const useGovernanceProposalsStore = defineStore({
       console.debug(`Blocks per hour rate: ${blocksPerHour}`);
       return blocksPerHour;
     },
-    async estimateTimestampFromBlockNumber(
-      currentBlockNumber: number,
-      currentBlockTimestamp: number,
-      targetBlockNumber: number,
-    ) {
-      const blockPerHour = await this.getBlockPerHoursRate();
-      // Calculate blocks per second instead of blocks per hour
-      const blocksPerSecond = blockPerHour / 3600;
-      // Calculate the number of blocks remaining
-      const blocksRemaining = targetBlockNumber - currentBlockNumber;
-      // Estimate how much time in seconds until the target block
-      const estimatedTimeInSeconds = blocksRemaining / blocksPerSecond;
-      // Estimate the target timestamp
-      return currentBlockTimestamp + estimatedTimeInSeconds;
-    },
-    getWeb3InstanceByChainId() {
-      // we can list more chainIdMap if needed
-      // for now we know that arb-1 chain should use eth chain to get the block number and all the other stuff because arbi-1 saves events in eth chain
-      const chainIdMap = {
-        "0xa4b1": "0x1",
-      };
-      const chainId = this.fundStore.selectedFundChain as keyof typeof chainIdMap;
-      const chainIdMapKey = chainIdMap[chainId];
-
-      // if the chainIdMapKey is found, use the rpcUrl from the chainIdMap
-      if (chainIdMapKey) {
-        console.debug("chainIdMapKey: ", chainIdMapKey);
-        return this.web3Store.chainProviders[chainIdMapKey];
-      }
-      // if the chainIdMapKey is not found, use the current web3
-      console.debug("use the current web3");
-      return this.web3Store.chainProviders[chainId];
-    },
     async setProposalVoteStartEndTimestamp(proposal: IGovernanceProposal) {
       // If the clock mode is block number, we have to check a timestamp for the block number.
       if (this.fundStore.fund?.clockMode?.mode === ClockMode.Timestamp) {
@@ -523,13 +487,12 @@ export const useGovernanceProposalsStore = defineStore({
         return;
       }
       try {
-        const web3 = this.getWeb3InstanceByChainId();
+        const blockTimeContext = await this.web3Store.initializeBlockTimeContext(this.selectedFundChainId);
 
         // get the latest block
-        const currentBlock = await this.selectedFundWeb3Provider.eth.getBlock("latest");
-        const currentBlockNumber = Number(currentBlock.number);
-        const currentBlockTimestamp = Number(currentBlock.timestamp);
-        console.debug("currentBlock: ", currentBlock);
+        const currentBlockNumber = blockTimeContext.currentBlock;
+        const currentBlockTimestamp = blockTimeContext.currentBlockTimestamp;
+        console.debug("currentBlockNumber: ", currentBlockNumber, "currentBlockTimestamp", currentBlockTimestamp);
 
         // if the voteEnd is in the past, we can fetch the block number
         if (Number(proposal.voteEnd) <= currentBlockNumber) {
@@ -541,9 +504,7 @@ export const useGovernanceProposalsStore = defineStore({
           // if the voteEnd is in the future, we have to estimate the timestamp
           console.log("estimate blockEnd");
           const estimatedEndTimestamp =
-            await this.estimateTimestampFromBlockNumber(
-              currentBlockNumber,
-              currentBlockTimestamp,
+            await this.web3Store.getTimestampForBlock(
               Number(proposal.voteEnd),
             );
           console.log("estimatedEndTimestamp: ", estimatedEndTimestamp);
@@ -560,9 +521,7 @@ export const useGovernanceProposalsStore = defineStore({
           // if the voteStart is in the future, we have to estimate the timestamp
           console.debug("estimate blockStart");
           const estimatedStartTimestamp =
-            await this.estimateTimestampFromBlockNumber(
-              currentBlockNumber,
-              currentBlockTimestamp,
+            await this.web3Store.getTimestampForBlock(
               Number(proposal.voteStart),
             );
           console.debug("estimatedStartTimestamp: ", estimatedStartTimestamp);

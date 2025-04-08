@@ -1,13 +1,14 @@
+import { defineStore } from "pinia";
+import { type HttpProvider, Web3 } from "web3";
 import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
 import { NAVCalculator } from "assets/contracts/NAVCalculator";
 import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
 import { RethinkReader } from "assets/contracts/RethinkReader";
 import SafeMultiSendCallOnlyJson from "assets/contracts/safe/SafeMultiSendCallOnly.json";
-import { defineStore } from "pinia";
-import { type HttpProvider, Web3 } from "web3";
 import { CustomContract } from "~/store/web3/customContract";
 import { networksMap } from "~/store/web3/networksMap";
 import { type ChainId, ChainId as ChainIdValue } from "~/types/enums/chain_id";
+import type BlockTimeContext from "~/types/block_time_context";
 const SafeMultiSendCallOnlyAddresses: Partial<Record<string, string>> = SafeMultiSendCallOnlyJson.networkAddresses;
 
 
@@ -25,6 +26,8 @@ interface IState {
   chainSelectedRpcIndex: Record<string, number>;
   chainProviders: Record<string, Web3>;
   chainContracts: Record<string, any>;
+  // Store block time data like current block timestamp and number...
+  chainBlockTimeContext: Partial<Record<ChainId, BlockTimeContext>>,
 }
 
 const removeDuplicates = (arr: any[]) => {
@@ -84,6 +87,7 @@ export const useWeb3Store = defineStore({
     return {
       currentRpcIndex: -1,
       retryDelay: 1500,
+      chainBlockTimeContext: {},
       chainProviders,
       chainContracts,
       chainSelectedRpcUrl,
@@ -110,6 +114,69 @@ export const useWeb3Store = defineStore({
       const network = networksMap[chainId];
       return removeDuplicates(network.rpcUrls || []);
     },
+    async initializeBlockTimeContext(chainId: ChainId, convertToL1 = true): Promise<BlockTimeContext> {
+      const mappedChainId = convertToL1 ? this.getL2ToL1ChainId(chainId) : chainId;
+
+      if (this.chainBlockTimeContext[mappedChainId]?.currentBlock) {
+      // Return cached values
+        return this.chainBlockTimeContext[mappedChainId] as BlockTimeContext;
+      }
+      console.log("initializeBlockTimeContext currentBlock", mappedChainId);
+      const web3Provider = this.getWeb3Instance(mappedChainId, convertToL1);
+
+      const currentBlock = await this.callWithRetry(
+        mappedChainId,
+        () => web3Provider.eth.getBlock("latest"),
+      );
+
+      const previousBlock = await this.callWithRetry(
+        mappedChainId,
+        () => web3Provider.eth.getBlock(Number(currentBlock.number) - 1000),
+      );
+
+      const timeDiff = Number(currentBlock.timestamp) - Number(previousBlock.timestamp);
+      const blockDiff = Number(currentBlock.number) - Number(previousBlock.number);
+      const averageBlockTime = timeDiff / blockDiff;
+
+      const context: BlockTimeContext = {
+        currentBlock: Number(currentBlock.number),
+        currentBlockTimestamp: Number(currentBlock.timestamp),
+        chainId: mappedChainId,
+        web3Provider,
+        averageBlockTime,
+      };
+
+      this.chainBlockTimeContext[mappedChainId] = context;
+      return context;
+    },
+    async getTimestampForBlock(targetBlock: number, context: BlockTimeContext): Promise<number> {
+      if (!context) throw new Error("BlockTimeContext not initialized");
+
+      const {
+        currentBlock,
+        currentBlockTimestamp,
+        averageBlockTime,
+        chainId,
+        web3Provider,
+      } = context;
+
+      if (targetBlock <= currentBlock) {
+        try {
+          const block = await this.callWithRetry(
+            chainId,
+            () => web3Provider.eth.getBlock(targetBlock),
+          );
+          return Number(block?.timestamp || 0);
+        } catch (error) {
+          console.error(`Error fetching block ${targetBlock}:`, error);
+          return 0;
+        }
+      }
+
+      const blockDiff = targetBlock - currentBlock;
+      const secondsUntilTarget = blockDiff * averageBlockTime;
+      return currentBlockTimestamp + secondsUntilTarget;
+    },
     getCustomContract(
       chainId: ChainId,
       abi: any,
@@ -128,8 +195,6 @@ export const useWeb3Store = defineStore({
       const RPCUrlsLength = this.networkRpcUrls(chainId).length;
       let retries = 0;
       let switchedRPCCount = 0;
-
-      // console.log("callWithRetry");
       if (!method) return;
 
       while (retries <= maxRetries && switchedRPCCount <= RPCUrlsLength) {
@@ -216,11 +281,13 @@ export const useWeb3Store = defineStore({
     delay(ms: number): Promise<void> {
       return new Promise((resolve) => setTimeout(resolve, ms));
     },
+    getL2ToL1ChainId(chainId: ChainId): ChainId {
+      return L2_TO_L1_CHAIN_ID_MAP[chainId as keyof typeof L2_TO_L1_CHAIN_ID_MAP] || chainId;
+    },
     getWeb3Instance(chainId: ChainId, convertToL1 = true): Web3 {
-      const mappedChainId =
-        L2_TO_L1_CHAIN_ID_MAP[chainId as keyof typeof L2_TO_L1_CHAIN_ID_MAP];
 
-      if (mappedChainId && convertToL1) {
+      if (convertToL1) {
+        const mappedChainId = this.getL2ToL1ChainId(chainId);
         return this.chainProviders[mappedChainId];
       }
 

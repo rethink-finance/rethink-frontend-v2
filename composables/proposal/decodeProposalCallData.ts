@@ -26,7 +26,7 @@ export const decodeProposalCallData = (
     calldataDecoded: undefined,
     calldata,
   };
-  console.log("sig", signature, functionAbi)
+  // console.log("sig", signature, functionAbi)
 
   if (!functionAbi?.function?.name) {
     console.warn(

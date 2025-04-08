@@ -81,26 +81,3 @@ const { activeTargetId } = storeToRefs(roleStore);
   }
 }
 </style>
-
-<style lang="scss">
-.permissions {
-  &__list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  &__function {
-    display: flex;
-    flex-direction: row;
-    align-content: center;
-    align-items: center;
-    font-family: monospace;
-    white-space: normal;
-    line-height: 1.2rem;
-  }
-  &__function_params {
-    color: $color-steel-blue;
-    margin-left: 0.3rem;
-  }
-}
-</style>

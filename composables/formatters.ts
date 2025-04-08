@@ -327,3 +327,13 @@ export const formatDuration = (totalSeconds: number): string => {
     .map(({ unit, value }) => pluralizeWord(unit, value))
     .join(", ") || "0 seconds";
 };
+
+
+export const formatCalldata = (calldata: any) => {
+  try {
+    return JSON.stringify(calldata, null, 2)
+  } catch {
+    console.warn("failed to format calldata", calldata);
+    return calldata;
+  }
+}

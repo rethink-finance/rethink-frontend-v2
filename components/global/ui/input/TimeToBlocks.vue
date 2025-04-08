@@ -67,7 +67,6 @@ import {
 
 const emit = defineEmits(["update:modelValue", "update:blocks"]);
 
-const { initializeBlockTimeContext } = useBlockTime();
 const web3Store = useWeb3Store();
 
 const props = defineProps({
@@ -144,11 +143,10 @@ const determineInputValueAndUnit = (
 };
 
 const initializeBlockTime = async () => {
+  if (!props.chainId) return;
   isLoading.value = true;
-  const web3Instance = web3Store.getWeb3Instance(props.chainId);
-  if (!web3Instance) return;
-  const context = await initializeBlockTimeContext(web3Instance);
-  blockTime.value = context?.averageBlockTime || 0;
+  const blockTimeContext = await web3Store.initializeBlockTimeContext(props.chainId);
+  blockTime.value = blockTimeContext?.averageBlockTime || 0;
 
   if (blockTime.value > 0 && props.modelValue > 0) {
     const totalSeconds = props.modelValue * blockTime.value;

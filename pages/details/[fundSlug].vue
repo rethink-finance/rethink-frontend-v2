@@ -85,9 +85,10 @@
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
     <h2 class="mb-2">
-      OIV not found
+      Oops, there was a problem loading the OIV
     </h2>
     <p class="text-center">
+      Network error occurred. <br>
       Are you sure you are on the right network? <br>
       Try switching to a different network.
     </p>

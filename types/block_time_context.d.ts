@@ -4,5 +4,6 @@ export default interface BlockTimeContext {
   currentBlock: number;
   currentBlockTimestamp: number;
   web3Provider: Web3;
+  chainId: ChainId,
   averageBlockTime: number;
 }

@@ -47,7 +47,7 @@
                 :key="calldataIndex"
                 class="mb-6"
               >
-                <strong class="text-primary">{{ calldataIndex }}#</strong>
+                <strong class="text-primary">{{ calldataIndex + 1 }}#</strong>
                 <div>
                   <strong>Contract:</strong> {{ calldata?.contractName ?? "N/A" }}
                 </div>
@@ -99,6 +99,16 @@
                           idx="[proposalId]"
                         />
                       </template>
+                      <template v-else-if="calldata?.calldataType === ProposalCalldataType.PERMISSIONS">
+                        <UiTextBadge v-if="calldata?.calldataDecoded?.role !== undefined">
+                          <strong>Role ID: {{ calldata?.calldataDecoded?.role }}</strong>
+                        </UiTextBadge>
+                        <ProposalPermissionEntry
+                          :function-name="calldata?.functionName"
+                          :calldata-decoded="calldata?.calldataDecoded"
+                          :chain-id="fundStore.fund?.chainId"
+                        />
+                      </template>
                       <template v-else-if="calldata?.calldataType === ProposalCalldataType.FUND_SETTINGS">
                         <!-- Show fund setting UI -->
                         <FundSettingsExecutableCode
@@ -120,7 +130,7 @@
                     </template>
                     <template v-else>
                       <div class="code_block">
-                        {{ calldata?.calldata }}
+                        {{ calldata?.calldataDecoded || calldata?.calldata }}
                       </div>
                     </template>
                   </template>
@@ -191,8 +201,8 @@
 
 <script setup lang="ts">
 import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
-
-import { formatPercent } from "~/composables/formatters";
+import { useActionStateStore } from "~/store/actionState.store";
+import { formatPercent, formatCalldata } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
@@ -202,6 +212,8 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import ProposalPermissionEntry from "~/pages/details/[fundSlug]/governance/proposal/ProposalPermissionEntry.vue";
+import { useRoleStore } from "~/store/role/role.store";
 
 
 // emits
@@ -212,6 +224,9 @@ const proposalSlug = route.params.proposalId as string;
 const [createdBlockNumber, proposalId] = proposalSlug.split("-") as [bigint, string];
 const fundSlug = route.params.fundSlug as string;
 const showRawCalldatas = ref(false);
+
+const roleStore = useRoleStore();
+provide("roleStore", roleStore);
 
 const allMethods = ref<INAVMethod[][]>([]);
 console.log("proposal", proposalId);
@@ -237,7 +252,6 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-
 const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
 const actionStateStore = useActionStateStore();
@@ -258,6 +272,7 @@ const activeUserVoteSubmission = computed(() => {
 });
 
 const proposal = computed(():IGovernanceProposal | undefined => {
+  console.warn("PROPOSAL_ID", proposalId)
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
   const proposal = governanceProposalStore.getProposal(fundStore.selectedFundChain, fundStore.fundAddress, proposalId);
   if (!proposal) return undefined;
@@ -329,14 +344,6 @@ watch(
   { immediate: true },
 );
 
-const formatCalldata = (calldata: any) => {
-  try {
-    return JSON.stringify(calldata, null, 2)
-  } catch {
-    console.warn("failed to format calldata", calldata);
-    return calldata;
-  }
-}
 /**
 const fetchProposalVoteSubmissions = async () => {
   loadingProposalVoteSubmissions.value = true;
@@ -458,8 +465,11 @@ onMounted(async () => {
   emit("updateBreadcrumbs", breadcrumbItems);
 
   // fetch block proposals based on createdBlockNumber
+  allMethods.value = [];
   try {
+    console.warn("START FETCHINGF", proposalId)
     await governanceProposalStore.fetchGovernanceProposal(proposalId);
+    console.warn("STOP FETCHINGF", proposalId)
 
     // await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
 

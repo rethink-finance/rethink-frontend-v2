@@ -21,7 +21,6 @@ import {
   getNativeType,
 } from "~/composables/zodiac-roles/conditions";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useFundsStore } from "~/store/funds/funds.store";
 import type { ChainId } from "~/types/enums/chain_id";
 import { ParamNativeType } from "~/types/enums/zodiac-roles";
 import type { FlattenedParamType } from "~/types/zodiac-roles/role";
@@ -41,7 +40,6 @@ const props = defineProps({
     default: false,
   },
 });
-const fundsStore = useFundsStore();
 const fundStore = useFundStore();
 const chainId = inject<ChainId>("chainId");
 
@@ -61,9 +59,9 @@ const tryAbiEncode = (value: string) => {
   } catch (err: any) {
     console.error("failed abi encode", props.param, "value", value, "err", err);
     console.error(err);
-    // TODO show input error in the form to let user know it fails!
+    // Show input error in the form to let user know it fails!
     errorMessages.value = [err?.message || ""]
-    return null
+    return value
   }
 }
 
@@ -85,8 +83,8 @@ const tryAbiDecode = (value?: string) => {
       : decoded.toString()
   } catch (err) {
     // TODO handle errors, if bad address checksum and so on...
-    console.error("Error decoding value", err, { value })
-    return null
+    console.error("Error decoding value", err, { value, param: toRaw(props.param) })
+    return value
   }
 }
 
@@ -124,6 +122,7 @@ watch(
 // Debounced label loader
 const setAddressLabel = debounce(async (value: string) => {
   try {
+    console.log("get address label");
     localValueLabel.value = await fundStore.getAddressLabel(value, chainId)
   } catch (err: any) {
     console.error("Error getAddressLabel", value, err)

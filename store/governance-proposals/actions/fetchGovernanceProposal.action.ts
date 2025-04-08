@@ -26,11 +26,7 @@ export const fetchGovernanceProposalAction = async (
       governorAddress: fund?.governorAddress,
       proposalId,
     });
-  const { initializeBlockTimeContext, getTimestampForBlock } = useBlockTime();
-  const blockTimeContext = await initializeBlockTimeContext(
-    governanceProposalStore.getWeb3InstanceByChainId(),
-  );
-
+  const blockTimeContext = await web3Store.initializeBlockTimeContext(fund.chainId);
   const roleModAddress = await fundStore.getRoleModAddress(fund.address);
 
   const timepoint =
@@ -67,7 +63,7 @@ export const fetchGovernanceProposalAction = async (
     fund?.governanceToken.decimals ?? 0,
     quorumNumerator,
     quorumDenominator,
-    getTimestampForBlock,
+    web3Store.getTimestampForBlock,
     fund?.clockMode?.mode as ClockMode,
     roleModAddress ?? "",
     fund?.safeAddress ?? "",

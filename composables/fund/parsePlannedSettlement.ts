@@ -1,4 +1,3 @@
-
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
 
@@ -8,16 +7,13 @@ import type { ChainId } from "~/types/enums/chain_id";
 // so we need to consider all these cases and convert them to a human readable string
 export const parsePlannedSettlement = async (chainId: ChainId, plannedSettlementPeriod: string) => {
   const web3Store = useWeb3Store();
-  const { initializeBlockTimeContext } = useBlockTime();
 
   // Default to original plannedSettlementPeriod or "N/A" if not available
   let output = plannedSettlementPeriod ?? "N/A";
+  if (!chainId) return output;
 
-  const web3Instance = web3Store.getWeb3Instance(chainId);
-  if (!web3Instance) return output;
-
-  const context = await initializeBlockTimeContext(web3Instance);
-  const blockTime = context?.averageBlockTime || 0;
+  const blockTimeContext = await web3Store.initializeBlockTimeContext(chainId);
+  const blockTime = blockTimeContext?.averageBlockTime || 0;
   const plannedSettlement = Number(plannedSettlementPeriod);
 
   if (!plannedSettlement || isNaN(plannedSettlement) || plannedSettlement <= 0) {

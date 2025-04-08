@@ -195,12 +195,12 @@ const fetchTargetABI = async () => {
   targetABIJson.value = [];
   if (!target.value?.address) return;
   isFetchingTargetABI.value = true;
-  console.log("Fetch target ABI action", props.chainId, target.value.address);
+  // console.log("Fetch target ABI action", props.chainId, target.value.address);
 
   try {
     const sourceCode = await fundStore.fetchAddressSourceCode(props.chainId, target.value.address);
     targetABIJson.value = sourceCode?.ABI || [];
-    console.debug("fetched ABI targetABIJson", targetABIJson.value);
+    // console.debug("fetched ABI targetABIJson", targetABIJson.value);
     isFetchingTargetABI.value = false;
   } catch (error: any) {
     handleABIError(error);
