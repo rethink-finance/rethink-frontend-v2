@@ -844,9 +844,6 @@ const initializeFund = async() => {
     const formattedData = formatInitializeData();
     console.warn("SUBMIT formatted data", formattedData);
 
-
-    return;
-
     await fundFactoryContract
       .send("initCreateFund", {}, ...formattedData)
       .on("transactionHash", (hash: any) => {
