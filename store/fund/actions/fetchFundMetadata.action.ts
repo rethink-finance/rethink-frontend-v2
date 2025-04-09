@@ -12,6 +12,7 @@ import { parseFundSettings } from "~/composables/fund/parseFundSettings";
 import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 import { type ChainId } from "~/types/enums/chain_id";
 import type IToken from "~/types/token";
 
@@ -20,7 +21,7 @@ export const fetchFundMetaDataAction = async (
   fundAddress: string,
 ): Promise<IFund> => {
   const web3Store = useWeb3Store();
-  const web3Instance = web3Store.getWeb3Instance(fundChainId);
+  const blockTimeStore = useBlockTimeStore();
   const fundStore = useFundStore();
   const rethinkReaderContract =
     web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
@@ -103,7 +104,7 @@ export const fetchFundMetaDataAction = async (
     const quorumVotes: bigint = ((((fundGovernanceTokenSupplyFixed as bigint) *
       quorumNumerator) as bigint) / quorumDenominator) as bigint;
 
-    const blockTimeContext = await web3Store.initializeBlockTimeContext(fundChainId);
+    const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fundChainId);
     const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
     const fundNetwork = networksMap[fundChainId];

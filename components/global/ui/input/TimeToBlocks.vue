@@ -56,8 +56,8 @@
 </template>
 
 <script setup lang="ts">
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { ChainId } from "~/types/enums/chain_id";
+import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 import {
   InputType,
   periodChoices,
@@ -66,8 +66,7 @@ import {
 } from "~/types/enums/input_type";
 
 const emit = defineEmits(["update:modelValue", "update:blocks"]);
-
-const web3Store = useWeb3Store();
+const blockTimeStore = useBlockTimeStore();
 
 const props = defineProps({
   modelValue: {
@@ -145,7 +144,7 @@ const determineInputValueAndUnit = (
 const initializeBlockTime = async () => {
   if (!props.chainId) return;
   isLoading.value = true;
-  const blockTimeContext = await web3Store.initializeBlockTimeContext(props.chainId);
+  const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(props.chainId);
   blockTime.value = blockTimeContext?.averageBlockTime || 0;
 
   if (blockTime.value > 0 && props.modelValue > 0) {

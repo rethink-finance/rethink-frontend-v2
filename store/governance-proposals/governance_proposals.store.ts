@@ -24,6 +24,7 @@ import {
 } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 
 interface IState {
   /* Example fund proposals.
@@ -77,6 +78,9 @@ export const useGovernanceProposalsStore = defineStore({
     },
     web3Store(): any {
       return useWeb3Store();
+    },
+    blockTimeStore(): any {
+      return useBlockTimeStore();
     },
     selectedFundChainId(): any {
       return this.fundStore.selectedFundChain;
@@ -420,7 +424,7 @@ export const useGovernanceProposalsStore = defineStore({
       }
     },
     async getBlockPerHoursRate() {
-      const blockTimeContext = await this.web3Store.initializeBlockTimeContext(this.selectedFundChainId);
+      const blockTimeContext = await this.blockTimeStore.initializeBlockTimeContext(this.selectedFundChainId);
       const currentBlockNumber = blockTimeContext.currentBlock;
       const currentBlockTimestamp = blockTimeContext.currentBlockTimestamp;
       console.debug(`Current block number: ${currentBlockNumber}`);
@@ -487,7 +491,7 @@ export const useGovernanceProposalsStore = defineStore({
         return;
       }
       try {
-        const blockTimeContext = await this.web3Store.initializeBlockTimeContext(this.selectedFundChainId);
+        const blockTimeContext = await this.blockTimeStore.initializeBlockTimeContext(this.selectedFundChainId);
 
         // get the latest block
         const currentBlockNumber = blockTimeContext.currentBlock;
@@ -504,7 +508,7 @@ export const useGovernanceProposalsStore = defineStore({
           // if the voteEnd is in the future, we have to estimate the timestamp
           console.log("estimate blockEnd");
           const estimatedEndTimestamp =
-            await this.web3Store.getTimestampForBlock(
+            await this.blockTimeStore.getTimestampForBlock(
               Number(proposal.voteEnd),
             );
           console.log("estimatedEndTimestamp: ", estimatedEndTimestamp);
@@ -521,7 +525,7 @@ export const useGovernanceProposalsStore = defineStore({
           // if the voteStart is in the future, we have to estimate the timestamp
           console.debug("estimate blockStart");
           const estimatedStartTimestamp =
-            await this.web3Store.getTimestampForBlock(
+            await this.blockTimeStore.getTimestampForBlock(
               Number(proposal.voteStart),
             );
           console.debug("estimatedStartTimestamp: ", estimatedStartTimestamp);

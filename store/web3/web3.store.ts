@@ -114,69 +114,6 @@ export const useWeb3Store = defineStore({
       const network = networksMap[chainId];
       return removeDuplicates(network.rpcUrls || []);
     },
-    async initializeBlockTimeContext(chainId: ChainId, convertToL1 = true): Promise<BlockTimeContext> {
-      const mappedChainId = convertToL1 ? this.getL2ToL1ChainId(chainId) : chainId;
-
-      if (this.chainBlockTimeContext[mappedChainId]?.currentBlock) {
-      // Return cached values
-        return this.chainBlockTimeContext[mappedChainId] as BlockTimeContext;
-      }
-      console.log("initializeBlockTimeContext currentBlock", mappedChainId);
-      const web3Provider = this.getWeb3Instance(mappedChainId, convertToL1);
-
-      const currentBlock = await this.callWithRetry(
-        mappedChainId,
-        () => web3Provider.eth.getBlock("latest"),
-      );
-
-      const previousBlock = await this.callWithRetry(
-        mappedChainId,
-        () => web3Provider.eth.getBlock(Number(currentBlock.number) - 1000),
-      );
-
-      const timeDiff = Number(currentBlock.timestamp) - Number(previousBlock.timestamp);
-      const blockDiff = Number(currentBlock.number) - Number(previousBlock.number);
-      const averageBlockTime = timeDiff / blockDiff;
-
-      const context: BlockTimeContext = {
-        currentBlock: Number(currentBlock.number),
-        currentBlockTimestamp: Number(currentBlock.timestamp),
-        chainId: mappedChainId,
-        web3Provider,
-        averageBlockTime,
-      };
-
-      this.chainBlockTimeContext[mappedChainId] = context;
-      return context;
-    },
-    async getTimestampForBlock(targetBlock: number, context: BlockTimeContext): Promise<number> {
-      if (!context) throw new Error("BlockTimeContext not initialized");
-
-      const {
-        currentBlock,
-        currentBlockTimestamp,
-        averageBlockTime,
-        chainId,
-        web3Provider,
-      } = context;
-
-      if (targetBlock <= currentBlock) {
-        try {
-          const block = await this.callWithRetry(
-            chainId,
-            () => web3Provider.eth.getBlock(targetBlock),
-          );
-          return Number(block?.timestamp || 0);
-        } catch (error) {
-          console.error(`Error fetching block ${targetBlock}:`, error);
-          return 0;
-        }
-      }
-
-      const blockDiff = targetBlock - currentBlock;
-      const secondsUntilTarget = blockDiff * averageBlockTime;
-      return currentBlockTimestamp + secondsUntilTarget;
-    },
     getCustomContract(
       chainId: ChainId,
       abi: any,

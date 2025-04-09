@@ -47,8 +47,10 @@ import { ActionState } from "~/types/enums/action_state";
 import { ChartType, ChartTypesMap, ChartTypeStrokeColors } from "~/types/enums/chart_type";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
+import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 
 const fundStore = useFundStore();
+const blockTimeStore = useBlockTimeStore();
 const web3Store = useWeb3Store();
 const actionStateStore = useActionStateStore();
 
@@ -238,13 +240,13 @@ const getSharePricePerNav = async () => {
   isSharePriceLoading.value = true;
 
   // 1. get average block time for the chain
-  const blockTimeContext = await web3Store.initializeBlockTimeContext(props.fund.chainId, false);
+  const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(props.fund.chainId, false);
   const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
   sharePriceItems.value = await Promise.all(props.fund?.navUpdates?.map(async (navUpdate: INAVUpdate) =>  {
     // 2. get block number for the timestamp
     const totalNav = ethers.parseUnits(String(navUpdate.totalNAV || "0"), props.fund?.baseToken.decimals);
-    const blockNumber = Number(await getBlockByTimestamp(web3Store, props.fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
+    const blockNumber = Number(await blockTimeStore.getBlockByTimestamp(props.fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
 
     try {
       const totalSupplyRaw = await web3Store.callWithRetry(
