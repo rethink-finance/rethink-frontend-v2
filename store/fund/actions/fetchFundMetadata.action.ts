@@ -106,6 +106,7 @@ export const fetchFundMetaDataAction = async (
 
     const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fundChainId);
     const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
+    console.warn("fetchFundMetaDataAction blockTimeContext", blockTimeContext)
 
     const fundNetwork = networksMap[fundChainId];
     // console.log("fundMetadata.updateTimes");

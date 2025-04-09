@@ -13,6 +13,8 @@ export const parsePlannedSettlement = async (chainId: ChainId, plannedSettlement
   if (!chainId) return output;
 
   const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(chainId);
+  console.warn("parsePlannedSettlement blockTimeContext", chainId, blockTimeContext)
+
   const blockTime = blockTimeContext?.averageBlockTime || 0;
   const plannedSettlement = Number(plannedSettlementPeriod);
 

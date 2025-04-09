@@ -49,7 +49,6 @@ export const useBlockTimeStore = defineStore({
         currentBlock: Number(currentBlock.number),
         currentBlockTimestamp: Number(currentBlock.timestamp),
         chainId: mappedChainId,
-        web3Provider,
         averageBlockTime,
       };
 
@@ -64,10 +63,11 @@ export const useBlockTimeStore = defineStore({
         currentBlockTimestamp,
         averageBlockTime,
         chainId,
-        web3Provider,
       } = context;
 
       if (targetBlock <= currentBlock) {
+        const web3Provider = this.web3Store.getWeb3Instance(chainId);
+
         try {
           const block = await this.web3Store.callWithRetry(
             chainId,
