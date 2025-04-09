@@ -5,6 +5,7 @@ import { calculateCumulativeWithSharePrice } from "~/composables/utils";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
+import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 
 
 export const calculateFundPerformanceMetricsAction = async (
@@ -25,14 +26,11 @@ export const calculateFundPerformanceMetricsAction = async (
     console.debug("  [METRICS] last NAV update", fundLastNavUpdate)
 
     if (fund) {
-      const web3Store = useWeb3Store();
-
       const isQCLGFund = fund.address.toLowerCase() === "0xABC961AFc18dfE9F062cf9a8046346E92a934D08".toLowerCase();
 
-      if(isQCLGFund){
-        const sharePrice = await getSharePriceAtNavUpdate(web3Store, fundLastNavUpdate, fund)
+      if (isQCLGFund){
+        const sharePrice = await getSharePriceAtNavUpdate(fundLastNavUpdate, fund)
         fund.sharePrice = sharePrice;
-
 
         fund.cumulativeReturnPercent = calculateCumulativeWithSharePrice(
           undefined,
@@ -69,16 +67,21 @@ export const calculateFundPerformanceMetricsAction = async (
   }
 }
 
-const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, fund: IFund) => {
-  if(navUpdate?.timestamp) {
+const getSharePriceAtNavUpdate = async (navUpdate: INAVUpdate, fund: IFund) => {
+  if (navUpdate?.timestamp) {
+    const web3Store = useWeb3Store();
+    const blockTimeStore = useBlockTimeStore();
+
     // 1. get average block time for the chain
     console.warn("getSharePriceAtNavUpdate")
-    const blockTimeContext = await web3Store.initializeBlockTimeContext(fund.chainId, false);
+    const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId, false);
+    console.warn("getSharePriceAtNavUpdate blockTimeContext", fund.chainId, blockTimeContext)
+
     const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
     // 2. get block number for the timestamp
     const totalNav = ethers.parseUnits(String(navUpdate.totalNAV || "0"), fund?.baseToken.decimals);
-    const blockNumber = Number(await getBlockByTimestamp(web3Store, fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
+    const blockNumber = Number(await blockTimeStore.getBlockByTimestamp(fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
 
     try {
       const totalSupplyRaw = await web3Store.callWithRetry(
@@ -125,15 +128,17 @@ const getSharePriceAtNavUpdate = async (web3Store: any, navUpdate: INAVUpdate, f
 
 
 const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavUpdate: any) => {
-  if(fundLastNavUpdate?.timestamp) {
+  if (fundLastNavUpdate?.timestamp) {
     const web3Store = useWeb3Store();
+    const blockTimeStore = useBlockTimeStore();
 
     // 1. get average block time for the chain
-    const blockTimeContext = await web3Store.initializeBlockTimeContext(fund.chainId, false);
+    const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId, false);
     const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
+    console.warn("getFundLastNAVUpdateTotalDepositBalance blockTimeContext", fund.chainId, blockTimeContext)
 
     // 2. estimate the block number of the last NAV update timestamp
-    const lastNavUpdateBlockNumber = Number(await getBlockByTimestamp(web3Store, fund.chainId, fundLastNavUpdate.timestamp / 1000, averageBlockTime) || 0);
+    const lastNavUpdateBlockNumber = Number(await blockTimeStore.getBlockByTimestamp(fund.chainId, fundLastNavUpdate.timestamp / 1000, averageBlockTime) || 0);
 
     // 3. get total deposit balance at the last NAV update
     try {
@@ -145,7 +150,6 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
             GovernableFund.abi,
             fund.address,
           );
-
           return BigInt(await fundContract.methods._totalDepositBal().call({}, lastNavUpdateBlockNumber) || 0)
         },
       );
