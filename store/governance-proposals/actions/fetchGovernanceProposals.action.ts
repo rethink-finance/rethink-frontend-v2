@@ -95,7 +95,7 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
       fund?.governanceToken?.decimals || 18,
       quorumNumerator,
       quorumDenominator,
-      web3Store.getTimestampForBlock,
+      blockTimeStore.getTimestampForBlock,
       fund?.clockMode?.mode as ClockMode,
       roleModAddress ?? "",
       fund?.safeAddress ?? "",
