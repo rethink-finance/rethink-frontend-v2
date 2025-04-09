@@ -6,6 +6,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 interface IState {
   // Store block time data like current block timestamp and number...
   chainBlockTimeContext: Partial<Record<ChainId, BlockTimeContext>>,
+  initializingContexts: Map<ChainId, Promise<BlockTimeContext>>,
 }
 
 export const useBlockTimeStore = defineStore({
@@ -13,6 +14,7 @@ export const useBlockTimeStore = defineStore({
   state: (): IState => {
     return {
       chainBlockTimeContext: {},
+      initializingContexts: new Map(),
     };
   },
   getters: {
@@ -25,35 +27,51 @@ export const useBlockTimeStore = defineStore({
       const mappedChainId = convertToL1 ? this.web3Store.getL2ToL1ChainId(chainId) : chainId;
 
       if (this.chainBlockTimeContext[mappedChainId]?.currentBlock) {
-      // Return cached values
-        return this.chainBlockTimeContext[mappedChainId] as BlockTimeContext;
+        console.warn("[CACHED] initializeBlockTimeContext chain", mappedChainId);
+        return this.chainBlockTimeContext[mappedChainId]! as BlockTimeContext;
       }
-      console.log("initializeBlockTimeContext currentBlock", mappedChainId);
-      const web3Provider = this.web3Store.getWeb3Instance(mappedChainId, convertToL1);
 
-      const currentBlock = await this.web3Store.callWithRetry(
-        mappedChainId,
-        () => web3Provider.eth.getBlock("latest"),
-      );
+      if (this.initializingContexts.has(mappedChainId)) {
+        console.warn("[CACHED PROMISE] initializeBlockTimeContext chain", mappedChainId);
+        return this.initializingContexts.get(mappedChainId)!;
+      }
 
-      const previousBlock = await this.web3Store.callWithRetry(
-        mappedChainId,
-        () => web3Provider.eth.getBlock(Number(currentBlock.number) - 1000),
-      );
+      const initPromise = (async () => {
+        console.warn("initializeBlockTimeContext chain", mappedChainId);
+        const web3Provider = this.web3Store.getWeb3Instance(mappedChainId, convertToL1);
 
-      const timeDiff = Number(currentBlock.timestamp) - Number(previousBlock.timestamp);
-      const blockDiff = Number(currentBlock.number) - Number(previousBlock.number);
-      const averageBlockTime = timeDiff / blockDiff;
+        const currentBlock = await this.web3Store.callWithRetry(
+          mappedChainId,
+          () => web3Provider.eth.getBlock("latest"),
+        );
 
-      const context: BlockTimeContext = {
-        currentBlock: Number(currentBlock.number),
-        currentBlockTimestamp: Number(currentBlock.timestamp),
-        chainId: mappedChainId,
-        averageBlockTime,
-      };
+        const previousBlock = await this.web3Store.callWithRetry(
+          mappedChainId,
+          () => web3Provider.eth.getBlock(Number(currentBlock.number) - 1000),
+        );
 
-      this.chainBlockTimeContext[mappedChainId] = context;
-      return context;
+        const timeDiff = Number(currentBlock.timestamp) - Number(previousBlock.timestamp);
+        const blockDiff = Number(currentBlock.number) - Number(previousBlock.number);
+        const averageBlockTime = timeDiff / blockDiff;
+
+        const context: BlockTimeContext = {
+          currentBlock: Number(currentBlock.number),
+          currentBlockTimestamp: Number(currentBlock.timestamp),
+          chainId: mappedChainId,
+          averageBlockTime,
+        };
+
+        this.chainBlockTimeContext[mappedChainId] = context;
+        return context;
+      })();
+
+      this.initializingContexts.set(mappedChainId, initPromise);
+
+      try {
+        return await initPromise;
+      } finally {
+        this.initializingContexts.delete(mappedChainId);
+      }
     },
     async getTimestampForBlock(targetBlock: number, context: BlockTimeContext): Promise<number> {
       if (!context) throw new Error("BlockTimeContext not initialized");
@@ -86,33 +104,25 @@ export const useBlockTimeStore = defineStore({
     },
     async getBlockByTimestamp(chainId: ChainId, timestamp: number, averageBlockTime: number) {
       try {
-        // const web3Store = useWeb3Store();
-        const provider = this.web3Store.chainProviders[chainId]
+        const provider = this.web3Store.chainProviders[chainId];
 
-        const latestBlock = await this.web3Store
-          .callWithRetry(
+        const latestBlock = Number(
+          await this.web3Store.callWithRetry(
             chainId,
-            async () =>
-              Number(await provider.eth.getBlockNumber()),
-          )
-        const latestBlockData = await this.web3Store
-          .callWithRetry(
-            chainId,
-            async () =>
-              await provider.eth.getBlock(latestBlock),
-          )
+            () => provider.eth.getBlockNumber(),
+          ),
+        );
+
+        const latestBlockData = await this.web3Store.callWithRetry(
+          chainId,
+          () => provider.eth.getBlock(latestBlock),
+        );
+
         const latestTimestamp = Number(latestBlockData.timestamp);
-
         const estimatedStartBlock = latestBlock - Math.floor((latestTimestamp - timestamp) / averageBlockTime);
 
-
-        if (estimatedStartBlock < 0) {
-          console.error("Estimated start block is negative", estimatedStartBlock);
-          return null;
-        }
-
-        if (estimatedStartBlock > latestBlock) {
-          console.error("Estimated start block is greater than latest block", estimatedStartBlock, latestBlock);
+        if (estimatedStartBlock < 0 || estimatedStartBlock > latestBlock) {
+          console.error("Invalid estimated start block", estimatedStartBlock, latestBlock);
           return null;
         }
 
