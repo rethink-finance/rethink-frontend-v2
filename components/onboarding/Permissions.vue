@@ -61,6 +61,14 @@
       </div>
     </template>
   </FundGovernanceDelegatedPermissions>
+
+  <FundPermissions
+    v-if="roles.length"
+    class="mt-6"
+    :chain-id="fundChainId"
+    :disabled="isEditDisabled"
+    :is-loading="isFetchingPermissions"
+  />
 </template>
 
 <script setup lang="ts">
@@ -79,6 +87,7 @@ import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
 import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
 import { networksMap } from "~/store/web3/networksMap";
 import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
+import { useRoles } from "~/composables/permissions/useRoles";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
@@ -107,13 +116,14 @@ const delegatedPermissionsEntry = ref([
     steps: [defaultMethod],
   },
 ]);
+const roleModAddress = computed(() => fundInitCache?.value?.rolesModifier);
 
 const gnosisPermissionsUrl = computed(() => {
   if (!fundChainId.value) return "";
 
   return getGnosisPermissionsUrl(
     networksMap[fundChainId.value]?.chainShort || "",
-    fundInitCache?.value?.rolesModifier || "",
+    roleModAddress.value || "",
   );
 });
 
@@ -141,7 +151,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
   const encodedScopeParameter = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeParameter,
     [
-      "1", // role
+      "1", // role TODO: it's hardcoded, but in the future it can change
       baseTokenAddress, // targetAddress, base token contract address
       "0xa9059cbb", // functionSig, transfer
       "0", // paramIndex
@@ -156,7 +166,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
   const encodedScopeTarget = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeTarget,
     [
-      "1", // role
+      "1", // role TODO: it's hardcoded, but in the future it can change
       baseTokenAddress, // targetAddress, base token contract address
     ],
   );
@@ -185,7 +195,7 @@ const getAllowManagerToCollectFeesPermission = (
   const encodedScopeParameter = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeParameter,
     [
-      "1", // role
+      "1", // role TODO: it's hardcoded, but in the future it can change
       fundAddress, // targetAddress, OIV contract address
       "0xec68ac8d", // functionSig
       "0", // paramIndex
@@ -200,7 +210,7 @@ const getAllowManagerToCollectFeesPermission = (
   const encodedScopeTarget = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeTarget,
     [
-      "1", // role
+      "1", // role TODO: it's hardcoded, but in the future it can change
       fundAddress, // targetAddress, OIV contract address
     ],
   );
@@ -208,12 +218,21 @@ const getAllowManagerToCollectFeesPermission = (
   return encodedRoleModEntries;
 }
 
+const {
+  roles,
+  selectedRole,
+  isEditDisabled,
+  isFetchingPermissions,
+  fetchPermissions,
+} = useRoles(fundChainId.value, fundInitCache?.value?.fundSettings?.fundAddress);
+
+
 const storePermissions = async () => {
   const fundInitCacheSettings = fundInitCache?.value?.fundSettings;
   console.log("fundInitCacheSettings", fundInitCacheSettings)
   console.log("delegatedPermissionsEntry", delegatedPermissionsEntry.value)
 
-  if (!fundInitCache?.value?.rolesModifier || !fundInitCache?.value?.fundContractAddr || !fundInitCacheSettings?.baseToken) {
+  if (!roleModAddress.value || !fundInitCache?.value?.fundContractAddr || !fundInitCacheSettings?.baseToken) {
     console.error("Missing fund init cache data", fundInitCache)
     loading.value = false;
     return toastStore.errorToast(
@@ -228,13 +247,11 @@ const storePermissions = async () => {
   )?.steps as any[];
   if (!transactions?.length) return;
   loading.value = true;
-
-  const roleModAddress = fundInitCache?.value?.rolesModifier;
-  console.log("roleModAddress", roleModAddress);
+  console.log("roleModAddress", roleModAddress.value);
   console.log("transactions", toRaw(transactions));
 
   const proposalData = prepPermissionsProposalData(
-    roleModAddress,
+    roleModAddress.value,
     transactions,
   );
   console.log(
@@ -296,6 +313,15 @@ const storePermissions = async () => {
     toastStore.errorToast(error.message);
   }
 };
+// TODO refetch permissions when user submits storePermissions
+watch(
+  () => [fundChainId, roleModAddress.value],
+  () => {
+    console.warn("FETCH PERMS")
+    fetchPermissions(roleModAddress.value);
+  },
+  { immediate: true },
+);
 </script>
 
 

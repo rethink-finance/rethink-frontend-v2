@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import type { RoleStoreType } from "~/store/role/role.store";
+import { useRoleStore } from "~/store/role/role.store";
 import type { ChainId } from "~/types/enums/chain_id";
 
 defineProps({
@@ -50,11 +50,7 @@ defineProps({
     default: false,
   },
 });
-// Inject the Role Store
-const roleStore = inject<RoleStoreType>("roleStore");
-if (!roleStore) {
-  throw new Error("roleStore is not provided!");
-}
+const roleStore = useRoleStore();
 const { activeTargetId } = storeToRefs(roleStore);
 </script>
 

@@ -117,7 +117,7 @@
 import type { FunctionFragment, JsonFragment } from "ethers";
 import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
 import { useFundStore } from "~/store/fund/fund.store";
-import type { RoleStoreType } from "~/store/role/role.store";
+import { type RoleStoreType, useRoleStore } from "~/store/role/role.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type { ChainId } from "~/types/enums/chain_id";
 import { ConditionType, ExecutionOption } from "~/types/enums/zodiac-roles";
@@ -138,11 +138,7 @@ const props = defineProps({
   },
 });
 
-// Inject the Role Store
-const roleStore = inject<RoleStoreType>("roleStore");
-if (!roleStore) {
-  throw new Error("roleStore is not provided!");
-}
+const roleStore = useRoleStore();
 provide("chainId", props.chainId);
 
 const target = computed(() => roleStore.activeTarget);
