@@ -27,17 +27,14 @@ export const useBlockTimeStore = defineStore({
       const mappedChainId = convertToL1 ? this.web3Store.getL2ToL1ChainId(chainId) : chainId;
 
       if (this.chainBlockTimeContext[mappedChainId]?.currentBlock) {
-        console.warn("[CACHED] initializeBlockTimeContext chain", mappedChainId);
         return this.chainBlockTimeContext[mappedChainId]! as BlockTimeContext;
       }
 
       if (this.initializingContexts.has(mappedChainId)) {
-        console.warn("[CACHED PROMISE] initializeBlockTimeContext chain", mappedChainId);
         return this.initializingContexts.get(mappedChainId)!;
       }
 
       const initPromise = (async () => {
-        console.warn("initializeBlockTimeContext chain", mappedChainId);
         const web3Provider = this.web3Store.getWeb3Instance(mappedChainId, convertToL1);
 
         const currentBlock = await this.web3Store.callWithRetry(
@@ -60,6 +57,7 @@ export const useBlockTimeStore = defineStore({
           chainId: mappedChainId,
           averageBlockTime,
         };
+        console.log("blockTime context", context);
 
         this.chainBlockTimeContext[mappedChainId] = context;
         return context;
