@@ -8,7 +8,6 @@ import SafeMultiSendCallOnlyJson from "assets/contracts/safe/SafeMultiSendCallOn
 import { CustomContract } from "~/store/web3/customContract";
 import { networksMap } from "~/store/web3/networksMap";
 import { type ChainId, ChainId as ChainIdValue } from "~/types/enums/chain_id";
-import type BlockTimeContext from "~/types/block_time_context";
 const SafeMultiSendCallOnlyAddresses: Partial<Record<string, string>> = SafeMultiSendCallOnlyJson.networkAddresses;
 
 
@@ -26,8 +25,6 @@ interface IState {
   chainSelectedRpcIndex: Record<string, number>;
   chainProviders: Record<string, Web3>;
   chainContracts: Record<string, any>;
-  // Store block time data like current block timestamp and number...
-  chainBlockTimeContext: Partial<Record<ChainId, BlockTimeContext>>,
 }
 
 const removeDuplicates = (arr: any[]) => {
@@ -87,7 +84,6 @@ export const useWeb3Store = defineStore({
     return {
       currentRpcIndex: -1,
       retryDelay: 1500,
-      chainBlockTimeContext: {},
       chainProviders,
       chainContracts,
       chainSelectedRpcUrl,

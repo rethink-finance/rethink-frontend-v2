@@ -107,7 +107,7 @@
 <script setup lang="ts">
 import { truncateAddress } from "~/composables/addressUtils";
 import { useFundStore } from "~/store/fund/fund.store";
-import type { RoleStoreType } from "~/store/role/role.store";
+import { type RoleStoreType, useRoleStore } from "~/store/role/role.store";
 import type { ChainId } from "~/types/enums/chain_id";
 import {
   ConditionType,
@@ -139,11 +139,7 @@ const addressLabels = ref<Record<string, string>>({})
 const isAddMemberModalOpen = ref(false);
 const isAddTargetModalOpen = ref(false);
 
-// Inject the Role Store
-const roleStore = inject<RoleStoreType>("roleStore");
-if (!roleStore) {
-  throw new Error("roleStore is not provided!");
-}
+const roleStore = useRoleStore();
 const { getTargetStatus, getMemberStatus, activeTargetId } = storeToRefs(roleStore);
 
 const allTargets = computed(() => [...roleStore.targets.list, ...roleStore.targets.add]);

@@ -66,40 +66,30 @@
 
 <script setup lang="ts">
 // types
-import type { JsonFragment } from "ethers";
 import type IFund from "~/types/fund";
 // components
-import { GovernableFund } from "assets/contracts/GovernableFund";
-import { fetchRoles } from "~/services/zodiac-subgraph";
-import { useActionState, useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 import { useRoleStore } from "~/store/role/role.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
-import { ChainId } from "~/types/enums/chain_id";
-import type { Role } from "~/types/zodiac-roles/role";
+import { useRoles } from "~/composables/permissions/useRoles";
 
 const router = useRouter();
 const fundStore = useFundStore();
 const permissionsProposalStore = usePermissionsProposalStore();
-const actionStateStore = useActionStateStore();
 const appSettingsStore = useSettingsStore();
-// Provide the store to child components
 const roleStore = useRoleStore();
-provide("roleStore", roleStore);
 
 const fund = useAttrs().fund as IFund;
 const { selectedFundSlug } = storeToRefs(useFundStore());
 
-const roles = ref<Role[]>([]);
-const selectedRole = ref<Role | undefined>(undefined)
-const isEditDisabled = ref(true);
-
-// This is Rethink.finance specific thing now, to hardcode select condition
-// with ID "1". We have to remove this and always select the first one.
-const roleNumberOne = computed<Role|undefined>(
-  () => roles.value.filter(role => role.name === "1")[0],
-);
+const {
+  roles,
+  selectedRole,
+  isEditDisabled,
+  isFetchingPermissions,
+  fetchPermissions,
+} = useRoles(fund.chainId, fund.address);
 
 const updateGnosisLink = async () => {
   if (!fund?.address) {
@@ -115,22 +105,6 @@ const updateGnosisLink = async () => {
   }
 };
 
-const isFetchingPermissions = computed(() =>
-  actionStateStore.isActionStateLoading("fetchRolesAction"),
-);
-
-// TODO move this into roles store.
-function fetchRolesAction(chainId: ChainId, rolesModAddress: string): Promise<Role[]> {
-  return useActionState("fetchRolesAction", () =>
-    fetchRoles(chainId, rolesModAddress),
-  );
-}
-
-const fetchPermissions = async (rolesModAddress: string) => {
-  roles.value = await fetchRolesAction(fund.chainId, rolesModAddress);
-  console.log("Fetched Roles", toRaw(roles.value));
-}
-
 const navigateToCreatePermissions = async () => {
   try {
     permissionsProposalStore.rawTransactions = await roleStore.updateRole(fund.chainId);
@@ -143,45 +117,10 @@ const navigateToCreatePermissions = async () => {
   );
 };
 
-// Whenever role changes reset role store and populate it with this role data.
-// Watch for `roles` change and preselect a role.
-watch(() => roles.value.length, () => {
-  // Pre-select Role with ID: "1" as we use this one now everywhere.
-  // This is hardcoded now at many places and needs
-  // to be adjusted as any ID can be used.
-  if (roles.value.length) {
-    selectedRole.value = roleNumberOne.value || roles.value[0];
-  } else {
-    selectedRole.value = undefined;
-  }
-});
-watch(() => selectedRole.value, () => {
-  // Pre-select Role with ID: "1" as we use this one now everywhere.
-  // This is hardcoded now at many places and needs
-  // to be adjusted as any ID can be used.
-  console.log("selectedRole.value", selectedRole.value);
-  roleStore.initRoleState(
-    roleStore.getRoleId(selectedRole.value?.name, roles.value),
-    toRaw(selectedRole.value),
-  );
-
-  roleStore.activeTargetId = selectedRole.value?.targets?.[0].id;
-});
-
 watch(
   () => [fund.chainShort, fundStore.getRoleModAddress],
   () => {
     updateGnosisLink();
-  },
-  { immediate: true },
-);
-watch(
-  () => fund?.address,
-  () => {
-    // Store GovernableFund ABI for the fund address.
-    if (fund?.address) {
-      roleStore.customAbiMap[fund.address.toLowerCase()] = JSON.parse(JSON.stringify(GovernableFund.abi)) as JsonFragment[];
-    }
   },
   { immediate: true },
 );

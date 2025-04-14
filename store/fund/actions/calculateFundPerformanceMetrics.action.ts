@@ -40,6 +40,7 @@ export const calculateFundPerformanceMetricsAction = async (
         )
       } else {
         const lastNAVUpdateTotalDepositBalance = await getFundLastNAVUpdateTotalDepositBalance(fund, fundLastNavUpdate);
+        console.debug("  [METRICS] lastNAVUpdateTotalDepositBalance", lastNAVUpdateTotalDepositBalance)
 
         const baseTokenDecimals = fund.baseToken.decimals;
         fund.cumulativeReturnPercent = fundLastNavUpdateExists
@@ -73,10 +74,7 @@ const getSharePriceAtNavUpdate = async (navUpdate: INAVUpdate, fund: IFund) => {
     const blockTimeStore = useBlockTimeStore();
 
     // 1. get average block time for the chain
-    console.warn("getSharePriceAtNavUpdate")
     const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId, false);
-    console.warn("getSharePriceAtNavUpdate blockTimeContext", fund.chainId, blockTimeContext)
-
     const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
     // 2. get block number for the timestamp
@@ -135,10 +133,10 @@ const getFundLastNAVUpdateTotalDepositBalance = async (fund: IFund, fundLastNavU
     // 1. get average block time for the chain
     const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId, false);
     const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
-    console.warn("getFundLastNAVUpdateTotalDepositBalance blockTimeContext", fund.chainId, blockTimeContext)
 
     // 2. estimate the block number of the last NAV update timestamp
     const lastNavUpdateBlockNumber = Number(await blockTimeStore.getBlockByTimestamp(fund.chainId, fundLastNavUpdate.timestamp / 1000, averageBlockTime) || 0);
+    console.debug("  [METRICS] lastNavUpdateBlockNumber", lastNavUpdateBlockNumber)
 
     // 3. get total deposit balance at the last NAV update
     try {
