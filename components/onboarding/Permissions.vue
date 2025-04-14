@@ -1,5 +1,23 @@
 <template>
+  <div class="d-flex" :class="isReadonly ? 'justify-end' : 'justify-start'">
+    <v-btn
+      v-if="isReadonly"
+      type="submit"
+      @click="isReadonly = !isReadonly"
+    >
+      Add Permissions
+    </v-btn>
+    <v-btn v-if="!isReadonly" variant="outlined" @click="isReadonly = true">
+      <Icon
+        icon="material-symbols:close"
+        class="di-card__close-icon"
+        width="1.5rem"
+      />
+      Cancel Add Permissions
+    </v-btn>
+  </div>
   <FundGovernanceDelegatedPermissions
+    v-if="!isReadonly"
     ref="delegatedPermissionsRef"
     v-model="delegatedPermissionsEntry"
     :fields-map="DelegatedPermissionFieldsMap"
@@ -63,7 +81,7 @@
   </FundGovernanceDelegatedPermissions>
 
   <FundPermissions
-    v-if="roles.length"
+    v-if="roles.length && isReadonly"
     class="mt-6"
     :chain-id="fundChainId"
     :disabled="isEditDisabled"
@@ -93,6 +111,7 @@ const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
 const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
 
+const isReadonly = ref(true);
 const loading = ref(false);
 const allowManagerToSendFundsToFundContract = ref(false);
 const allowManagerToCollectFees = ref(false);
