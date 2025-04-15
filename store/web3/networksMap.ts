@@ -1,4 +1,3 @@
-import { getChainIcon } from "~/composables/utils";
 import { ChainId } from "~/types/enums/chain_id";
 import type INetwork from "~/types/network";
 

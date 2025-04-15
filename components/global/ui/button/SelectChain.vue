@@ -19,9 +19,8 @@
       item-value="chainId"
     >
       <template #selection="{ item }">
-        <Icon
-          :icon="item.raw.icon?.name ?? 'octicon:question-16'"
-          :color="item.raw.icon?.color"
+        <IconChain
+          :chain-short="item.raw.chainShort"
           class="select_item__icon mr-2"
         />
         <v-list-item-title>

@@ -20,10 +20,8 @@
     </template>
 
     <template #[`item.chainShort`]="{ item }">
-      <Icon
-        :icon="icon(item.chainShort).name"
-        :width="icon(item.chainShort).size"
-        :color="icon(item.chainShort)?.color"
+      <IconChain
+        :chain-short="item.chainShort"
         class="mr-2"
       />
     </template>
@@ -80,16 +78,15 @@
 </template>
 
 <script lang="ts" setup>
+import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatPercent,
   formatTokenValue,
 } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
-import { getChainIcon } from "~/composables/utils";
 import type IFund from "~/types/fund";
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
-import FundNameCell from "./components/FundNameCell.vue";
 
 const { getFundDetailsUrl } = usePageNavigation();
 const router = useRouter();
@@ -166,15 +163,6 @@ const headers: any = computed(() => [
   },
 ]);
 
-const icon = (chainShort: string) => {
-  const icon = getChainIcon(chainShort);
-  return {
-    name: icon?.name,
-    size: icon?.size,
-    color: icon?.color,
-  };
-};
-
 const navigateFundDetails = (event: any, row: any) => {
   // Check if the click target is an anchor (<a>) or any clickable element
   const target = event.target as HTMLElement;
@@ -183,7 +171,6 @@ const navigateFundDetails = (event: any, row: any) => {
   // If the target is an anchor tag, prevent the row navigation
     return;
   }
-
 
   const fundDetailsUrl = getFundDetailsUrl(
     row.item.chainId,

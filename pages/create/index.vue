@@ -35,7 +35,14 @@
           :value="index + 1"
         >
           <template #default>
-            <span>{{ item.name }}</span>
+            <div class="d-flex align-center">
+              <span>{{ item.name }}</span>
+              <IconChain
+                v-if="item.key === OnboardingStep.Chain"
+                :chain-id="selectedChainId"
+                class="ms-2"
+              />
+            </div>
           </template>
         </v-stepper-item>
       </v-stepper-header>
@@ -916,7 +923,6 @@ const initStepperEntry = () => {
     whitelistedAddresses.value = lsWhitelist.whitelistedAddresses ?? [];
   }
 
-
   return generateSteps(lsStepperEntry);
 };
 
@@ -1055,6 +1061,9 @@ onMounted(() => {
 
   &:deep(.v-stepper-header) {
     order: 1;
+  }
+  &:deep(.v-stepper-item__content) {
+    line-height: 2.2rem;
   }
   &:deep(.v-avatar){
     border: 1px solid $color-text-irrelevant;

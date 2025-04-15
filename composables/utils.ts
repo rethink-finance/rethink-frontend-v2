@@ -1,25 +1,8 @@
-import { ethers, FixedNumber } from "ethers";
-import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { FixedNumber } from "ethers";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 import type { PositionType } from "~/types/enums/position_type";
 import { PositionTypesMap } from "~/types/enums/position_type";
-import type IFund from "~/types/fund";
-import type { IIcon } from "~/types/network";
-
-
-export const variableType = (value: any) =>
-  Object.prototype.toString.call(value).slice(8, -1); // accurately returns the parameter type [Array | Object | Number | Boolean | ...]
-
-export const isVariableOfType = (value: any, type: any) =>
-  variableType(value) === type;
-
-export const formatToEther = (wei?: number) => {
-  if (wei == null) return wei;
-  return parseFloat(
-    ethers.formatEther(isVariableOfType(wei, "String") ? wei : wei.toString()),
-  );
-};
 
 export const toKebabCase = (str: string) =>
   str.toLowerCase().split(" ").join("-");
@@ -123,39 +106,10 @@ export const pluralizeWord = (word: string, count?: number | bigint) => {
   return pluralized;
 };
 
-const chainIconMap: Record<string, IIcon> = {
-  matic: {
-    name: "cryptocurrency-color:matic",
-    size: "1.5rem",
-  },
-  arb1: {
-    name: "token-branded:arbitrum",
-    size: "2rem",
-  },
-  eth: {
-    name: "token-branded:eth",
-    size: "2rem",
-  },
-  base: {
-    name: "token:base",
-    size: "2rem",
-    color: "#0052ff",
-  },
-};
-
 export const findIndexByKey = (array: any, keyToFind: string) => {
   if (!Array.isArray(array)) return -1;
   return array.findIndex((item: any) => item.key === keyToFind);
 }
-
-export const getChainIcon = (chainShort: string) => {
-  return (
-    chainIconMap[chainShort] ?? {
-      name: "ph:circle-fill", // default circle fill gray
-      size: "1.5rem",
-    }
-  );
-};
 
 export const getPositionType = (positionType: PositionType) => {
   return PositionTypesMap[positionType];
@@ -226,19 +180,12 @@ export const calculateCumulativeWithSharePrice = (
       const initSharePrice = 10 ** (baseTokenDecimals - fundTokenDecimals);
 
       // Calculate cumulative return percentage
-      const cumulativeReturnPercent = ((latestSharePrice / initSharePrice) - 1);
-
-      return cumulativeReturnPercent;
-
+      return ((latestSharePrice / initSharePrice) - 1);
     }
 
-    if (latestSharePrice > 0) {
-
-      if (initialSharePrice > 0)
+    if (latestSharePrice > 0 && initialSharePrice > 0) {
       // Calculate cumulative return percentage
-        return ((latestSharePrice / initialSharePrice) - 1);
-
-
+      return ((latestSharePrice / initialSharePrice) - 1);
     }
     return 0;
   } catch (error) {
@@ -292,9 +239,7 @@ export const calculateExcessReturns = (fundNavUpdates: any, totalDepositBal: big
   for (const navUpdate of fundNavUpdates) {
     const totalNavAtUpdate = Number(navUpdate?.navParts?.totalNAV) || undefined;
     // const totalDepositBalAtUpdate = Number(navUpdate?.navParts?.baseAssetSafeBal || undefined);
-
     if (totalNavAtUpdate && Number(totalDepositBal) !== 0) {
-
       const excessReturn = (totalNavAtUpdate - Number(totalDepositBal)) / Number(totalDepositBal);
       excessReturns.push(excessReturn);
     }
