@@ -461,58 +461,6 @@ export const oneOfTwoPermissions = [
     ],
     "valueMethodIdx": 22,
   },
-  {
-    "idx": 1,
-    "value": [
-      {
-        "idx": 0,
-        "isArray": false,
-        "data": "1",
-        "internalType": "uint16",
-        "name": "role",
-      },
-      {
-        "idx": 1,
-        "isArray": false,
-        "data": "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
-        "internalType": "address",
-        "name": "targetAddress",
-      },
-      {
-        "idx": 2,
-        "isArray": false,
-        "data": "0x23b872dd",
-        "internalType": "bytes4",
-        "name": "functionSig",
-      },
-      {
-        "idx": 3,
-        "isArray": false,
-        "data": "1",
-        "internalType": "uint256",
-        "name": "paramIndex",
-      },
-      {
-        "idx": 4,
-        "isArray": false,
-        "data": "0",
-        "internalType": "enum ParameterType",
-        "name": "paramType",
-      },
-      {
-        "idx": 5,
-        "isArray": true,
-        "data": [
-          "0x0000000000000000000000002cD5aC19a07518A8092eEFfDA4f1174C72704111",
-          "0x000000000000000000000000211111125421ca6dc452d289314280a0f8842222",
-          "0x000000000000000000000000211111125421ca6dc452d289314280a0f8842333",
-        ],
-        "internalType": "bytes[]",
-        "name": "compValues",
-      },
-    ],
-    "valueMethodIdx": 22,
-  },
 ];
 export const oneOfTwoPermissionsResult = {
   "1": {

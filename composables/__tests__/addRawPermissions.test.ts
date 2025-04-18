@@ -116,7 +116,8 @@ function parseRawTransactions(data: any[]) {
     return target;
   }
 
-
+  // Convert each permission to the Target or Member form.
+  // The format the new permissions UI is using to display current permissions.
   data.forEach((permission: any) => {
     const methodIdx = permission.valueMethodIdx;
     const func = roleModFunctions[methodIdx];
@@ -131,120 +132,82 @@ function parseRawTransactions(data: any[]) {
     const argsNameMap = Object.fromEntries(
       permission.value.map((arg: any) => [arg.name, arg]),
     );
-
-    // Handle scopeTarget
-    // Apply scoping (restrictions) to a targetAddress for a role.
-    let roleId;
+    let roleId: any;
     let targetAddress = "";
     let sighash = "";
     let executionOption: ExecutionOption | undefined;
-    if (funcName === "scopeTarget") {
-      // console.log("Handle scopeTarget", permission);
-      // Assert that all params are matching by type and name
-      func.inputs?.forEach((input: any) => {
-        const arg = argsNameMap[input.name];
-        if (!arg) {
-          throw new ContextError("Raw permission arg is missing", { permission, inputName: input.name });
-        }
-        if (arg.name === "targetAddress") {
-          targetAddress = arg.data;
-        } else if (arg.name === "role") {
-          roleId = arg.data;
-        }
-      })
-      if (roleId) {
-        getOrCreateRoleTarget(roleId, targetAddress);
-      } else {
-        console.log("Missing role for permission", permission);
-        customPermissions.push(permission);
-      }
-    } else if (funcName === "scopeAllowFunction") {
-      console.log("Handle scopeAllowFunction", permission);
-      // Assert that all params are matching by type and name
-      func.inputs?.forEach((input: any) => {
-        const arg = argsNameMap[input.name];
-        if (!arg) {
-          throw new ContextError("Raw permission arg is missing", { permission, inputName: input.name });
-        }
-        if (arg.name === "targetAddress") {
-          targetAddress = arg.data;
-        } else if (arg.name === "role") {
-          roleId = arg.data;
-        } else if (arg.name === "functionSig") {
-          sighash = arg.data;
-        } else if (arg.name === "options") {
-          executionOption = indexToExecutionOption[arg.data.toString()];
-        }
-      })
-      if (roleId && sighash && executionOption !== undefined) {
-        const target = getOrCreateRoleTarget(roleId, targetAddress);
-        getOrCreateTargetFunctionCondition(
-          target,
-          sighash,
-          ConditionType.WILDCARDED,
-          executionOption,
-        );
-      } else {
-        console.warn("Missing role for permission", permission);
-        customPermissions.push(permission);
-      }
-    } else if (funcName === "scopeParameterAsOneOf") {
-      // console.log("Handle scopeParameterAsOneOf", permission);
-      let index: number | undefined;
-      let sighash: string = "";
-      let paramType: ParameterType | undefined;
-      let values: string[] = [];
-      func.inputs?.forEach((input: any) => {
-        const arg = argsNameMap[input.name];
-        if (!arg) {
-          throw new ContextError("Raw permission arg is missing", { permission, inputName: input.name });
-        }
-        if (arg.name === "targetAddress") {
-          targetAddress = arg.data;
-        } else if (arg.name === "role") {
-          roleId = arg.data;
-        } else if (arg.name === "functionSig") {
-          sighash = arg.data;
-        } else if (arg.name === "paramIndex") {
-          index = Number(arg.data);
-        } else if (arg.name === "paramType") {
-          paramType = indexToParameterType[arg.data.toString()];
-        } else if (arg.name === "compValues") {
-          values = arg.data;
-        } else {
-          throw new ContextError("Raw permission unknown input", { permission, func });
-        }
-      })
-      if (index === undefined || sighash === undefined) {
-        throw new ContextError("Raw permission invalid index or sighash", { permission, func });
-      }
-      if (roleId) {
-        const target = getOrCreateRoleTarget(roleId, targetAddress);
-        getOrCreateTargetFunctionCondition(
-          target,
-          sighash,
-          ConditionType.SCOPED,
-          ExecutionOption.NONE,
-        );
 
-        const paramCondition: ParamCondition = {
-          index,
-          type: paramType,
-          condition: ParamComparison.ONE_OF,
-          value: values,
-        };
-        // TODO: instead of just pushing, check if same index param already exists... and remove the first one
-        target.conditions[sighash].params.push(paramCondition)
-      } else {
-        console.log("Missing role for permission", permission);
-        customPermissions.push(permission);
+    const getArg = (name: string) => {
+      const arg = argsNameMap[name];
+      if (!arg) {
+        throw new ContextError("Raw permission arg is missing", { permission, inputName: name });
       }
-    } else if (funcName === "allowTarget") {
-      console.log("Handle allowTarget", permission);
+      return arg.data;
+    };
+
+    const handlers: Record<string, () => void> = {
+      scopeTarget: () => {
+        targetAddress = getArg("targetAddress");
+        roleId = getArg("role");
+        if (roleId) {
+          getOrCreateRoleTarget(roleId, targetAddress);
+        } else {
+          console.log("Missing role for permission", permission);
+          customPermissions.push(permission);
+        }
+      },
+      scopeAllowFunction: () => {
+        targetAddress = getArg("targetAddress");
+        roleId = getArg("role");
+        sighash = getArg("functionSig");
+        executionOption = indexToExecutionOption[getArg("options").toString()];
+        if (roleId && sighash && executionOption !== undefined) {
+          const target = getOrCreateRoleTarget(roleId, targetAddress);
+          getOrCreateTargetFunctionCondition(target, sighash, ConditionType.WILDCARDED, executionOption);
+        } else {
+          console.warn("Missing role for permission", permission);
+          customPermissions.push(permission);
+        }
+      },
+      scopeParameterAsOneOf: () => {
+        targetAddress = getArg("targetAddress");
+        roleId = getArg("role");
+        sighash = getArg("functionSig");
+        const index = Number(getArg("paramIndex"));
+        const paramType = indexToParameterType[getArg("paramType").toString()];
+        const values = getArg("compValues");
+
+        if (index === undefined || sighash === undefined) {
+          throw new ContextError("Raw permission invalid index or sighash", { permission, func });
+        }
+
+        if (roleId) {
+          const target = getOrCreateRoleTarget(roleId, targetAddress);
+          getOrCreateTargetFunctionCondition(target, sighash, ConditionType.SCOPED, ExecutionOption.NONE);
+
+          const paramCondition: ParamCondition = {
+            index,
+            type: paramType,
+            condition: ParamComparison.ONE_OF,
+            value: values,
+          };
+          target.conditions[sighash].params.push(paramCondition);
+        } else {
+          console.log("Missing role for permission", permission);
+          customPermissions.push(permission);
+        }
+      },
+      allowTarget: () => {
+        console.log("Handle allowTarget", permission);
+      },
+    };
+
+    if (funcName && handlers[funcName]) {
+      handlers[funcName]();
     } else {
-      customPermissions.push(permission);
+      customPermissions.push(permission)
     }
-  });
+  })
 
   console.warn("\n------------------FINISHED\n\n")
   console.warn("roleTargets")
