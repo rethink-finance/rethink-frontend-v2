@@ -17,9 +17,6 @@ defineProps({
     default: () => ({}),
   },
 });
-
-const openPanel = ref<string | undefined>(undefined);
-const isOverviewPanelOpen = computed(() => openPanel.value === "overview");
 </script>
 
 <style lang="scss" scoped>
