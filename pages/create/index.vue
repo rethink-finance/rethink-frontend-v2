@@ -349,6 +349,10 @@ const setFieldValue = (field: IField): void => {
   } else {
     console.error(" field key missing", field);
   }
+
+  if (field.type === InputType.Period && ["string", "number"].includes(typeof field.value)) {
+    field.blocks = Number(field?.value || 0);
+  }
 }
 const fetchFundInitCache = async () => {
   if (!selectedChainId.value) return;
