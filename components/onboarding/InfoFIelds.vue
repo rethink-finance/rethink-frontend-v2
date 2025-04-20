@@ -18,6 +18,8 @@
             :field="subField"
             :is-disabled="!field.isToggleOn || isStepDisabled"
             :chain-id="chainId"
+            :tab-index="index"
+            @update:blocks="(val) => subField.blocks = val"
           />
         </template>
       </UiFieldsGroup>
@@ -26,12 +28,12 @@
         <UiField
           v-model="field.value"
           v-model:is-custom-value-toggle-on="field.isCustomValueToggleOn"
-          v-model:default-value="field.defaultValue"
           :field="field"
           :is-disabled="isStepDisabled"
           :custom-error-message="getCustomFieldErrorMessage(field)"
           :show-default-value-info="!isFundInitialized"
           :chain-id="chainId"
+          @update:blocks="(val) => field.blocks = val"
         />
 
         <div

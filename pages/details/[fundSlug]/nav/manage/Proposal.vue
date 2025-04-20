@@ -20,7 +20,7 @@
                 Proposal Title
               </v-label>
               <div class="proposal_title_field__char_limit">
-                <ui-char-limit
+                <UiCharLimit
                   :char-limit="150"
                   :char-number="proposal.title"
                 />

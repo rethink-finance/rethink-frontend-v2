@@ -27,7 +27,7 @@
           </template>
         </v-label>
       </div>
-      <ui-char-limit
+      <UiCharLimit
         v-if="field.charLimit"
         :char-limit="field.charLimit"
         :char-number="valueDetails[field.key]"

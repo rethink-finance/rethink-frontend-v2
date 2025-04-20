@@ -12,10 +12,16 @@
 </template>
 
 <script lang="ts" setup>
-const props = defineProps<{
-  charLimit: number;
-  charNumber: string;
-}>();
+const props = defineProps({
+  charLimit: {
+    type: Number,
+    default: 0,
+  },
+  charNumber: {
+    type: String,
+    default: "",
+  },
+});
 
 const parsedCharLimit = computed(() => {
   return (props.charNumber.length / props.charLimit) * 100;

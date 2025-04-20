@@ -66,7 +66,7 @@
                 :disabled="isFundInitialized || !isCurrentStepValid || !accountStore.isConnected"
                 @click="isInitializeDialogOpen = true"
               >
-                Initialize
+                Initialize OIV
                 <v-tooltip
                   v-if="!accountStore.isConnected"
                   :model-value="true"
@@ -92,7 +92,10 @@
                   </v-btn>
                 </template>
                 <template #default>
-                  Please fill out all required fields
+                  Please fill out all required fields.
+                  <div v-for="error in currentStepValidation?.errors || []">
+                    {{ error }}
+                  </div>
                 </template>
               </v-tooltip>
             </div>
@@ -383,10 +386,13 @@ const fetchFundInitCache = async () => {
       ),
     )
     isWhitelistedDeposits.value = fundInitCache?.value?.fundSettings?.isWhitelistedDeposits || false;
-    // clear local storage for this chain
-    createFundStore.clearFundLocalStorage();
+
     // if fund is initialized, don't ask user to save draft
-    askToSaveDraftBeforeRouteLeave.value = false;
+    if (fundInitCache?.value) {
+      askToSaveDraftBeforeRouteLeave.value = false;
+      // clear local storage for this chain
+      createFundStore.clearFundLocalStorage();
+    }
   } else {
     createFundStore.clearFundInitCache();
   }
@@ -492,7 +498,7 @@ const showInitializeTooltip = computed(() => {
 const showButtonNext = computed(() => {
   const item = stepperEntry.value[step.value - 1];
 
-  if(!accountStore.isConnected) return false;
+  if (!accountStore.isConnected) return false;
 
   const steps = [
     OnboardingStep.Chain,
@@ -553,11 +559,13 @@ const toggledOffFields = computed(() => {
     .flat();
 });
 
+const currentStepValidation = computed(() => {
+  const errors: string[] = [];
 
-const isCurrentStepValid = computed(() => {
-  if (isFundInitialized.value) return true;
+  if (isFundInitialized.value) {
+    return { isValid: true, errors };
+  }
 
-  // Basics, Fees, Management, Governance is validated here
   const stepWithRegularFields = [
     OnboardingStep.Chain,
     OnboardingStep.Basics,
@@ -565,57 +573,60 @@ const isCurrentStepValid = computed(() => {
     OnboardingStep.Governance,
   ];
 
-  let isCurrentStepValid = false;
   const currentStep = stepperEntry.value[step.value - 1];
 
   if (stepWithRegularFields.includes(currentStep.key) && currentStep.fields) {
-    isCurrentStepValid = currentStep.fields.every((field) => {
-      // check if it's a custom value toggle
-      if (field.isCustomValueToggleOn === false) return true;
+    currentStep.fields.forEach((field) => {
+      if (field.isCustomValueToggleOn === false) return;
 
       if (field.fields) {
-        // check if it's toggled off
-        if (!field.isToggleOn) return true;
+        if (!field.isToggleOn) return;
 
-        return field.fields.every((subField) => {
-          return subField?.rules?.every((rule) => {
+        field.fields.forEach((subField) => {
+          subField?.rules?.forEach((rule) => {
             if (Array.isArray(subField.value)) {
-              return subField.value.every((val) => rule(val) === true);
+              subField.value.forEach((val) => {
+                const result = rule(val);
+                if (result !== true) errors.push(subField.label + " " + result);
+              });
+            } else {
+              const result = rule(subField.value);
+              if (result !== true) errors.push(subField.label + " " + result);
             }
-            return rule(subField.value) === true;
           });
         });
 
+      } else {
+        field?.rules?.forEach((rule) => {
+          if (Array.isArray(field.value)) {
+            field.value.forEach((val) => {
+              const result = rule(val);
+              if (result !== true) errors.push(field.label + " " + result);
+            });
+          } else {
+            const result = rule(field.value);
+            if (result !== true) errors.push(field.label + " " + result);
+          }
+        });
       }
-      return field?.rules?.every((rule) => {
-        if (Array.isArray(field.value)) {
-          return field.value.every((val) => rule(val) === true);
-        }
-        return rule(field.value) === true;
-      });
     });
   }
-  // validation for whitelist
   else if (currentStep.key === OnboardingStep.Whitelist) {
-    if (isWhitelistedDeposits.value) {
-      isCurrentStepValid = whitelistedAddresses.value.length > 0;
-    } else {
-      isCurrentStepValid = true;
+    if (isWhitelistedDeposits.value && whitelistedAddresses.value.length === 0) {
+      errors.push("At least one address must be whitelisted.");
     }
-
-    console.warn("FINISHED");
   }
-  // validation for permissions
   else if (currentStep.key === OnboardingStep.Permissions) {
-    isCurrentStepValid = true;
+    // No validation
   }
-  // validation for nav methods
   else if (currentStep.key === OnboardingStep.NavMethods) {
-    isCurrentStepValid = true;
+    // No validation
   }
 
-  return isCurrentStepValid;
+  return { isValid: errors.length === 0, errors };
 });
+
+const isCurrentStepValid = computed(() => currentStepValidation.value?.isValid);
 
 const allowedDepositors = computed(() => {
   if (!isWhitelistedDeposits.value) {
@@ -645,16 +656,18 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
   const stepKey = step.key as OnboardingInitializingSteps;
 
   if (!OnboardingFieldsMap[stepKey]) return [];
+  console.log("generateFields:", stepperEntry);
 
   const output =  OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
     const stepIndex = findIndexByKey(stepperEntry, stepKey);
-    const isToggleOn = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isToggleOn ?? field?.isToggleOn;
+    const stepperEntryField = stepperEntry?.[stepIndex]?.fields?.[fieldIndex];
+    const isToggleOn = stepperEntryField?.isToggleOn ?? field?.isToggleOn;
 
     if (field?.isToggleable) {
       const output = field?.fields?.map((subField, subFieldIndex) => {
 
         // Try to get the value from local storage, if it doesn't exist, use the default value
-        const subFieldValue = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.fields?.[subFieldIndex]?.value;
+        const subFieldValue = stepperEntryField?.fields?.[subFieldIndex]?.value;
 
         return {
           ...subField,
@@ -671,20 +684,21 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
     const fieldTyped = field as IField;
 
     // Try to get the value from local storage, if it doesn't exist, use the default value
-    const fieldValue = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.value;
-    const fieldIsCustomValueToggleOn = stepperEntry?.[stepIndex]?.fields?.[fieldIndex]?.isCustomValueToggleOn;
+    const fieldValue = stepperEntryField?.value;
+    const fieldIsCustomValueToggleOn = stepperEntryField?.isCustomValueToggleOn;
 
     return {
       ...fieldTyped,
       isCustomValueToggleOn: fieldIsCustomValueToggleOn ?? fieldTyped?.isCustomValueToggleOn,
       value: fieldValue ?? fieldTyped?.value,
+      blocks: stepperEntryField?.blocks,
     } as IField;
   });
+  console.log("output:", output);
 
   // find basic step and add custom fields to that step
   if (stepKey === OnboardingStep.Basics) {
-
-    if(Object.keys(stepperEntry).length === 0) return output;
+    if (Object.keys(stepperEntry).length === 0) return output;
 
     const stepIndex = stepperEntry.findIndex(
       (step) => step.key === OnboardingStep.Basics,
@@ -700,14 +714,14 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
         },
       ) ?? [];
 
-      const customFiledsFormatted = customFields?.map((field) => {
+      const customFieldsFormatted = customFields?.map((field) => {
         return {
           ...field,
           rules: [formRules.required],
         };
       }) ?? [];
 
-      return output.concat(customFiledsFormatted);
+      return output.concat(customFieldsFormatted);
     }
   }
 
@@ -729,12 +743,21 @@ const getFieldByStepAndFieldKey =(
     console.error(`Field ${fieldKey} not found in step ${stepKey}`);
     return "";
   }
-
-  if (field?.defaultValue) {
-    return field?.isCustomValueToggleOn ? field?.value : field?.defaultValue;
+  console.log("00field:", stepKey, fieldKey, field, field?.defaultValue)
+  let fieldValue = field?.value;
+  if (field?.type === InputType.Period) {
+    // If field is Period input type, use blocks value instead of raw input.
+    if (field?.blocks == null || Number.isNaN(field.blocks)) {
+      throw new Error(`Field ${field.title} blocks value is missing.`)
+    }
+    fieldValue = field?.blocks.toString();
   }
 
-  return field?.value;
+  if (field?.defaultValue !== undefined && field?.defaultValue !== null) {
+    return field?.isCustomValueToggleOn ? fieldValue : field?.defaultValue;
+  }
+
+  return fieldValue;
 }
 
 
@@ -761,7 +784,7 @@ const findCustomFieldsFromStep = (stepKey: string) => {
 
 const formatFundMetaData = () => {
   // find fields with key "isFieldByUser" from basics step and add them to the fund metadata
-  const customFIelds = findCustomFieldsFromStep(OnboardingStep.Basics);
+  const customFields = findCustomFieldsFromStep(OnboardingStep.Basics);
 
   return  {
     description: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "description"),
@@ -770,7 +793,7 @@ const formatFundMetaData = () => {
     strategistName : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistName"),
     strategistUrl : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistUrl"),
     oivChatUrl : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "oivChatUrl"),
-    ...Object.fromEntries(customFIelds.map((field) => [field.key, field.value])),
+    ...Object.fromEntries(customFields.map((field) => [field.key, field.value])),
   }
 };
 
@@ -1029,7 +1052,7 @@ watch(()=> accountStore.connectedWalletChainId, (newVal, oldVal) =>{
 // Lifecycle Hooks
 onBeforeRouteLeave((to, from, next) => {
   // allow page change if user is not validated (he is seeing the password page)
-  if(!isCreateFundPasswordCorrect.value) {
+  if (!isCreateFundPasswordCorrect.value) {
     next();
     return;
   }

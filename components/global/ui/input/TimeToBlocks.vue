@@ -30,7 +30,7 @@
           label: 'Unit',
           type: InputType.Select,
           choices: periodChoices,
-          isEditable: true,
+          isEditable: true
         }"
         :is-disabled="isDisabled"
       />
@@ -43,12 +43,12 @@
       />
       <UiField
         v-else
-        v-model="blocks"
+        :model-value="blocks"
         class="move-up"
         :field="{
           label: 'Blocks',
-          type: InputType.Text,
-          isEditable: false,
+          type: InputType.Number,
+          isEditable: false
         }"
       />
     </v-col>
@@ -71,7 +71,11 @@ const blockTimeStore = useBlockTimeStore();
 const props = defineProps({
   modelValue: {
     type: Number,
-    default: 0,
+    default: undefined,
+  },
+  blocks: {
+    type: [String, Number],
+    default: undefined,
   },
   chainId: {
     type: String as PropType<ChainId>,
@@ -95,13 +99,21 @@ const props = defineProps({
   },
 });
 
-// we only save the number in blocks and have a local state for the unit which is changing and emiting the blocks
-const inputValue = ref(props.modelValue);
+// we only save the number in blocks and have a local state for the unit which is changing and emitting the blocks
+const inputValue = computed({
+  get: () => props.modelValue,
+  set: (val) => {
+    emit("update:modelValue", Number(val));
+  },
+});
+
 const selectedUnit = ref<PeriodUnits>(PeriodUnits.Days);
 const blockTime = ref(0);
 const isLoading = ref(false);
 
-const blocks = computed(() => {
+const blocksComputed = computed(() => {
+  if (inputValue.value === undefined) return props.blocks || 0;
+
   const timeInSeconds = TimeInSeconds[selectedUnit.value];
   return Math.floor((inputValue.value * timeInSeconds) / blockTime.value);
 });
@@ -135,20 +147,22 @@ const determineInputValueAndUnit = (
   }
 
   return {
-    bestValue: parseFloat(bestValue.toFixed(2)),
+    bestValue: parseFloat(bestValue.toFixed(3)),
     // bestValue,
     bestUnit,
   };
 };
 
+const isInitialized = ref(false);
 const initializeBlockTime = async () => {
   if (!props.chainId) return;
   isLoading.value = true;
   const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(props.chainId);
   blockTime.value = blockTimeContext?.averageBlockTime || 0;
 
-  if (blockTime.value > 0 && props.modelValue > 0) {
-    const totalSeconds = props.modelValue * blockTime.value;
+  console.log("INIT block time", props.modelValue, "blocks", props.blocks, blockTime.value)
+  if (blockTime.value > 0 && !isInitialized.value && props.blocks) {
+    const totalSeconds = Number(props.blocks) * blockTime.value;
     const { bestValue, bestUnit } = determineInputValueAndUnit(
       totalSeconds,
       selectedUnit.value,
@@ -160,14 +174,15 @@ const initializeBlockTime = async () => {
     selectedUnit.value = PeriodUnits.Days;
   }
 
+  isInitialized.value = true;
   isLoading.value = false;
 };
 
 onMounted(initializeBlockTime);
 
 watch([inputValue, selectedUnit], () => {
-  console.log("blocks: ", blocks.value);
-  emit("update:modelValue", blocks.value);
+  if (!isInitialized.value) return;
+  emit("update:blocks", blocksComputed.value);
 });
 
 watch(

@@ -3,17 +3,17 @@ import { ethers } from "ethers";
 export const formRules: Record<string, any> = {
   required: (value: any) =>
     (value !== "" && value !== undefined && value !== null) ||
-    "This field is required.",
+    "Field is required.",
   isValidAddress: (value: any) =>
-    ethers.isAddress(value) || "This address is not valid.",
+    ethers.isAddress(value) || "Address is not valid.",
   isValidHexString: (value: any) =>
-    ethers.isHexString(value) || "This is not a valid hex string.",
+    ethers.isHexString(value) || "Value is not a valid hex string.",
 
   isPositiveNumber: (value: any) =>
-    value > 0 || "This field must be a positive number.",
+    value > 0 || "Value must be a positive number.",
 
   isNonNegativeNumber: (value: any) =>
-    value >= 0 || "This field must be a non-negative number.",
+    value >= 0 || "Value must be a non-negative number.",
 
   isValidUint8: (value: any) => {
     const number = Number(value);
@@ -23,7 +23,7 @@ export const formRules: Record<string, any> = {
     );
   },
   notSameAs: (otherValues: any[], customErrorMsg?: string) => (value: any) => {
-    const errorMsg = customErrorMsg || "This value is not allowed.";
+    const errorMsg = customErrorMsg || "Value is not allowed.";
 
     return !otherValues.includes(value) || errorMsg;
   },
