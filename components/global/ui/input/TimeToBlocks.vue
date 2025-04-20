@@ -14,6 +14,7 @@
         :disabled="isDisabled"
         :rules="rules"
         :error-messages="customErrorMessage"
+        @input="() => { isUserInteracting = true }"
       />
     </v-col>
     <v-col class="column" cols="4">
@@ -33,6 +34,7 @@
           isEditable: true
         }"
         :is-disabled="isDisabled"
+        @input="() => { isUserInteracting = true }"
       />
     </v-col>
     <v-col class="column" cols="3">
@@ -68,6 +70,7 @@ import {
 const emit = defineEmits(["update:modelValue", "update:blocks"]);
 const blockTimeStore = useBlockTimeStore();
 
+// TODO: this component needs further testing and improvements, it's way overcomplicated now!
 const props = defineProps({
   modelValue: {
     type: Number,
@@ -106,17 +109,11 @@ const inputValue = computed({
     emit("update:modelValue", Number(val));
   },
 });
-
+const isUserInteracting = ref(false);
+const blocksLocal = ref<number>(0); // internal working state
 const selectedUnit = ref<PeriodUnits>(PeriodUnits.Days);
 const blockTime = ref(0);
 const isLoading = ref(false);
-
-const blocksComputed = computed(() => {
-  if (inputValue.value === undefined) return props.blocks || 0;
-
-  const timeInSeconds = TimeInSeconds[selectedUnit.value];
-  return Math.floor((inputValue.value * timeInSeconds) / blockTime.value);
-});
 
 const determineInputValueAndUnit = (
   totalSeconds: number,
@@ -169,20 +166,31 @@ const initializeBlockTime = async () => {
     );
     inputValue.value = bestValue;
     selectedUnit.value = bestUnit;
+    blocksLocal.value = Number(props.blocks);
   } else {
     inputValue.value = 0;
     selectedUnit.value = PeriodUnits.Days;
+    blocksLocal.value = 0;
   }
-
   isInitialized.value = true;
   isLoading.value = false;
 };
 
+// TODO: this should be run when the props.blocks changes first time, to be safe
 onMounted(initializeBlockTime);
 
 watch([inputValue, selectedUnit], () => {
-  if (!isInitialized.value) return;
-  emit("update:blocks", blocksComputed.value);
+  if (!isInitialized.value || !isUserInteracting.value) return;
+
+  const timeInSeconds = TimeInSeconds[selectedUnit.value];
+
+  if (blockTime.value > 0 && inputValue.value != null) {
+    blocksLocal.value = Math.floor((inputValue.value * timeInSeconds) / blockTime.value);
+  } else {
+    blocksLocal.value = 0;
+  }
+
+  emit("update:blocks", blocksLocal.value);
 });
 
 watch(

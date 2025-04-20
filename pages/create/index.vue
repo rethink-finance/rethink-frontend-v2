@@ -346,12 +346,12 @@ const setFieldValue = (field: IField): void => {
     field.value = fundMetadata.value[fieldKey];
   } else if (fieldKey in fundGovernorData.value) {
     field.value = fundGovernorData.value[fieldKey];
-  } else {
+  } else if (fundInitCache?.value) {
     console.error(" field key missing", field);
   }
 
   if (field.type === InputType.Period && ["string", "number"].includes(typeof field.value)) {
-    field.blocks = Number(field?.value || 0);
+    field.blocks = Number(field?.blocks || 0);
   }
 }
 const fetchFundInitCache = async () => {
