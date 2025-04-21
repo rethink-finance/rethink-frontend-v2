@@ -349,7 +349,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       label: "Planned Settlement Period",
       key: "plannedSettlementPeriod",
-      tooltip: "Frequency of settling deposit and redemtion requests.",
+      tooltip: "Frequency of settling deposit and redemption requests.",
       type: InputType.Period,
       choices: periodChoices,
       placeholder: "E.g. 0",
@@ -389,8 +389,9 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       key: "votingPeriod",
       type: InputType.Period,
       choices: periodChoices,
-      placeholder: "E.g. 0",
-      rules: [formRules.required],
+      placeholder: "E.g. 1",
+      defaultValue: null, // leave it empty, so that the user is forced to type it!
+      rules: [formRules.required, formRules.isPositiveNumber],
       isEditable: false,
       tooltip: "Amount of time available for voting.",
     },
@@ -444,3 +445,4 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     },
   ],
 };
+

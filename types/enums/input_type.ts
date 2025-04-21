@@ -71,6 +71,7 @@ export interface IField {
   groupName?: string;
   title?: string;
   value?: string | boolean;
+  blocks?: number, // Number of blocks, in the period input type.
   choices?: { value: number | string | boolean; title: string }[],
   tooltip?: string;
   tag?: string;

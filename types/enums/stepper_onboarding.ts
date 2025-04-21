@@ -77,10 +77,10 @@ const OnboardingFieldsMap: FieldsMapType = {
       (field) => {
         const isEditableAfterCreating = field.isEditable;
 
-        if(field.key === "strategistName") {
+        if (field.key === "strategistName") {
           console.log("STRATEGIC NAME FIELD", field.key)
 
-          return[
+          return [
             ...(FundSettingsStepFieldsMap[StepSections.Management] as IField[]).map(
               (fieldManagement: IField) => {
               // Hide some fields.
@@ -109,7 +109,6 @@ const OnboardingFieldsMap: FieldsMapType = {
               isEditable: true,
               info: "",
               tag: isEditableAfterCreating ? "upgradable" : "fixed",
-
             },
           ]
         }

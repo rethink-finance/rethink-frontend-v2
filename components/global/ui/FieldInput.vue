@@ -9,6 +9,7 @@
         :rules="field.rules"
         :disabled="isDisabled"
         :error-messages="errorMessages"
+        :tabindex="tabIndex"
       />
     </template>
 
@@ -20,6 +21,7 @@
         auto-grow
         :disabled="isDisabled"
         :error-messages="errorMessages"
+        :tabindex="tabIndex"
       />
     </template>
 
@@ -33,6 +35,7 @@
         density="compact"
         :disabled="isDisabled"
         :error-messages="errorMessages"
+        :tabindex="tabIndex"
       />
     </template>
 
@@ -41,12 +44,13 @@
         v-model="value"
         :disabled="isDisabled"
         :error-messages="errorMessages"
+        :tabindex="tabIndex"
       />
     </template>
 
     <template v-else-if="field.type === InputType.Image">
-      <div class="image_container">
-        <v-avatar size="12rem" rounded="">
+      <div class="image_container" tabindex="-1">
+        <v-avatar size="12rem" rounded="" tabindex="-1">
           <img :src="value" class="image_container__image" alt="image">
         </v-avatar>
         <v-textarea
@@ -57,20 +61,23 @@
           rows="10"
           :disabled="isDisabled"
           :error-messages="errorMessages"
+          :tabindex="tabIndex"
         />
       </div>
     </template>
     <template v-else-if="field.type === InputType.Period">
       <UiInputTimeToBlocks
         v-model="value"
+        :blocks="field.blocks"
         :rules="field.rules"
         :placeholder="field.placeholder"
         :is-disabled="isDisabled"
         :error-messages="errorMessages"
         :chain-id="chainId"
+        :tabindex="tabIndex"
+        @update:blocks="(val) => emit('update:blocks', val)"
       />
     </template>
-
   </div>
 </template>
 
@@ -85,7 +92,7 @@ const props = defineProps({
   },
   modelValue: {
     type: [String, Number, Array, Boolean] as PropType<any>,
-    default: () => "",
+    default: () => undefined,
   },
   isDisabled: {
     type: Boolean,
@@ -103,9 +110,12 @@ const props = defineProps({
     type: String as PropType<ChainId>,
     default: "",
   },
+  tabIndex: {
+    type: Number,
+    default: undefined,
+  },
 });
-
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue", "update:blocks"]);
 
 const value = computed({
   get: () => props.modelValue,

@@ -1,8 +1,9 @@
 <template>
   <div :class="classes" v-bind="$attrs">
 
-    <div class="field-actions-container">
+    <div class="field-actions-container" tabindex="-1">
       <v-label
+        tabindex="-1"
         :class="
           `row_title` +
             (field.type === InputType.Image ? ' row_title__is-image' : '')
@@ -31,19 +32,21 @@
             ({{ field.tag }})
           </span>
         </div>
-        <ui-char-limit
+        <UiCharLimit
           v-if="field.charLimit && !isPreview"
           :char-limit="field.charLimit"
           :char-number="fieldValue"
+          tabindex="-1"
         />
 
-        <v-tooltip v-if="field?.tooltip" location="top">
+        <v-tooltip v-if="field?.tooltip" location="top" tabindex="-1">
           <template #activator="{ props }">
             <Icon
               v-bind="props"
               icon="octicon:question-16"
               width="1.25rem"
               class="row_title__tooltip"
+              tabindex="-1"
             />
           </template>
           {{ field.tooltip }}
@@ -52,85 +55,50 @@
 
       <!-- toggle for default value and custom value -->
       <v-switch
-        v-if="hasDefaultValue && !isInputDisabled"
+        v-if="!isInputDisabled && isCustomValueToggleOn !== undefined"
         v-model="isCustomValueActive"
         color="primary"
+        :tabindex="tabIndex"
         hide-details
       />
     </div>
 
-    <!--
-      there are two types of fields:
-      1. fields with default value
-      2. fields without default value
-    -->
-
-    <!--
-      1. fields with default value
-      - if the toggle is on, show the custom value input
-      - if the toggle is off, show the default value input or the default value info
-    -->
-    <div v-if="hasDefaultValue && !isInputDisabled" class="field-with-toggle">
-      <template v-if="isCustomValueActive">
-        <!-- Custom value input -->
-        <div class="field-input">
-          <FieldInput
-            v-model="fieldValue"
-            :field="field"
-            :is-disabled="isInputDisabled"
-            :is-preview="isPreview"
-            :custom-error-message="customErrorMessage"
-            :chain-id="chainId"
-          />
-        </div>
-      </template>
-      <template v-else>
-        <!-- Default value input -->
-        <div class="field-input default-value">
-          <template v-if="field.defaultValueInfo">
-            <UiInfoBox :info="field.defaultValueInfo" />
-          </template>
-          <template v-else>
-            <FieldInput
-              v-model="defaultValue"
-              :field="field"
-              :is-disabled="isInputDisabled"
-              :is-preview="isPreview"
-              :custom-error-message="customErrorMessage"
-              :chain-id="chainId"
-            />
-          </template>
-        </div>
-      </template>
+    <div>
+      <div class="field-input">
+        <template v-if="field.defaultValueInfo">
+          <UiInfoBox :info="field.defaultValueInfo" />
+        </template>
+        <UiFieldInput
+          v-if="!(isCustomValueToggleOn !== undefined && !isCustomValueToggleOn)"
+          v-model="fieldValue"
+          :field="field"
+          :is-disabled="isInputDisabled"
+          :is-preview="isPreview"
+          :custom-error-message="customErrorMessage"
+          :chain-id="chainId"
+          :tab-index="tabIndex"
+          @update:blocks="(val) => emit('update:blocks', val)"
+        />
+      </div>
     </div>
-
-    <!--
-        2. fields without default value
-        - show the regular field input without toggle
-     -->
-    <template v-else>
-      <FieldInput
-        v-model="fieldValue"
-        :field="field"
-        :is-disabled="isInputDisabled"
-        :is-preview="isPreview"
-        :custom-error-message="customErrorMessage"
-        :chain-id="chainId"
-      />
-    </template>
 
     <InfoBox v-if="field.info && !isPreview" :info="field.info" class="info_box" />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { ChainId } from "~/types/enums/chain_id";
-import { InputType } from "~/types/enums/input_type";
-import FieldInput from "./FieldInput.vue";
 import InfoBox from "./InfoBox.vue";
+import type { ChainId } from "~/types/enums/chain_id";
+import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 
-const emit = defineEmits(["update:modelValue", "update:isCustomValueToggleOn", "update:defaultValue"]);
-
+const emit = defineEmits([
+  "update:modelValue",
+  "update:isCustomValueToggleOn",
+  "update:blocks",
+]);
+defineOptions({
+  inheritAttrs: false,
+});
 const props = defineProps({
   // chainId is required for time to blocks component
   chainId: {
@@ -143,15 +111,11 @@ const props = defineProps({
   },
   modelValue: {
     type: [String, Number, Array, Boolean] as PropType<any>,
-    default: () => "",
-  },
-  defaultValue: {
-    type: [String, Number, Array, Boolean] as PropType<any>,
-    default: () => "",
+    default: undefined,
   },
   isCustomValueToggleOn: {
     type: Boolean,
-    default: false,
+    default: undefined,
   },
   customErrorMessage: {
     type: String,
@@ -173,15 +137,16 @@ const props = defineProps({
     type: [String, Number, Array, Boolean] as PropType<any>,
     default: undefined,
   },
+  tabIndex: {
+    type: Number,
+    default: undefined,
+  },
 });
 
 const isFieldRequired = computed(() =>
   props?.field?.rules?.includes(formRules.required),
 );
 
-const hasDefaultValue = computed(() => {
-  return props?.defaultValue;
-});
 const isInputDisabled = computed(() =>
   props.isDisabled || !props.field.isEditable || props.isPreview,
 );
@@ -192,17 +157,20 @@ const isCustomValueActive = computed({
 });
 
 const fieldValue = computed({
-  get: () => props.modelValue,
+  get: () => {
+    if (props.modelValue) return props.modelValue;
+    // If defaultValue is set to null, return undefined as we want it to be empty.
+    console.warn("defaultValue", props.field);
+    if (props.field?.defaultValue === null) return undefined;
+
+    // Else return set default value or if it does not exist, just return field's default type value.
+    return props.field?.defaultValue || defaultInputTypeValue[props.field?.type as InputType];
+  },
   set: (val) => emit("update:modelValue", val),
 });
 
-const defaultValue = computed({
-  get: () => props.defaultValue,
-  set: (val) => emit("update:defaultValue", val),
-});
-
 const isFieldModified = computed(() => {
-  if(props.initialValue === undefined) return false;
+  if (props.initialValue === undefined) return false;
 
   return fieldValue.value !== props.initialValue;
 });
