@@ -90,7 +90,6 @@ export const fullPermissions = [
       },
     ],
     "valueMethodIdx": 22,
-
   },
   {
     "idx": 3,
@@ -758,3 +757,78 @@ export const scopeAllowFunctionPermissionsResult = {
     },
   },
 };
+
+export const scopeFunctionPermissions = [
+  {
+    "idx": 3,
+    "value": [
+      {
+        "idx": 0,
+        "isArray": false,
+        "data": "1",
+        "internalType": "uint16",
+        "name": "role",
+      },
+      {
+        "idx": 1,
+        "isArray": false,
+        "data": "0x6cD5aC19a07518A8092eEFfDA4f1174C72704eeb",
+        "internalType": "address",
+        "name": "targetAddress",
+      },
+      {
+        "idx": 2,
+        "isArray": false,
+        "data": "0x4465c3e4",
+        "internalType": "bytes4",
+        "name": "functionSig",
+      },
+      {
+        "idx": 3,
+        "isArray": true,
+        "data": [
+          "true",
+        ],
+        "internalType": "bool[]",
+        "name": "isParamScoped",
+      },
+      {
+        "idx": 4,
+        "isArray": true,
+        "data": [
+          "0",
+        ],
+        "internalType": "enum ParameterType[]",
+        "name": "paramType",
+      },
+      {
+        "idx": 5,
+        "isArray": true,
+        "data": [
+          "0",
+        ],
+        "internalType": "enum Comparison[]",
+        "name": "paramComp",
+      },
+      {
+        "idx": 6,
+        "isArray": true,
+        "data": [
+          "0x000000000000000000000000f554c8Aa6d0F450cC5Ec597cFDECcf743C8f12d3",
+        ],
+        "internalType": "bytes[]",
+        "name": "compValue",
+      },
+      {
+        "idx": 7,
+        "isArray": false,
+        "data": "1",
+        "internalType": "enum ExecutionOptions",
+        "name": "options",
+      },
+    ],
+    "valueMethodIdx": 19,
+  },
+];
+
+export const scopeFunctionPermissionsResult = {};

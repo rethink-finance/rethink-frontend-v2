@@ -11,6 +11,8 @@ import {
   oneOfTwoParamsDifferentFunctionPermissionsResult,
   scopeAllowFunctionPermissions,
   scopeAllowFunctionPermissionsResult,
+  scopeFunctionPermissions,
+  scopeFunctionPermissionsResult,
 } from "~/composables/__tests__/mock_data/mockRawPermissions";
 import { roleModFunctions } from "~/types/enums/delegated_permission";
 import {
@@ -18,7 +20,6 @@ import {
   ExecutionOption, indexToExecutionOption,
   indexToParameterType,
   ParamComparison,
-  ParameterType,
 } from "~/types/enums/zodiac-roles";
 import type { FunctionCondition, ParamCondition, Target, TargetConditions } from "~/types/zodiac-roles/role";
 
@@ -28,6 +29,9 @@ describe("addRawPermissions", () => {
   });
   it ("scopeAllowFunction", () => {
     expect(parseRawTransactions(scopeAllowFunctionPermissions)).toEqual(scopeAllowFunctionPermissionsResult);
+  });
+  it ("scopeFunction", () => {
+    expect(parseRawTransactions(scopeFunctionPermissions)).toEqual(scopeFunctionPermissionsResult);
   });
   it ("scopeParameterAsOneOf", () => {
     expect(parseRawTransactions(oneOfPermissions)).toEqual(oneOfPermissionsResult);
