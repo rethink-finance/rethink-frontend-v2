@@ -253,16 +253,17 @@ function parseRawTransactions(data: any[]) {
         const paramType = ParameterTypeMap[getArg("paramType")];
         const values = getArg("compValues");
         const target = getOrCreateRoleTarget(roleId, targetAddress);
-        getOrCreateTargetFunctionCondition(target, sighash, ConditionType.SCOPED, ExecutionOption.NONE);
+        const funcCondition = getOrCreateTargetFunctionCondition(target, sighash, ConditionType.SCOPED, ExecutionOption.NONE);
 
-        // TODO: handle if it exists already
-        const paramCondition: ParamCondition = {
-          index: paramIndex,
-          type: paramType,
-          condition: ParamComparison.ONE_OF,
-          value: values,
-        };
-        target.conditions[sighash].params.push(paramCondition);
+        getOrCreateTargetFunctionConditionParam(
+          target,
+          sighash,
+          funcCondition,
+          paramIndex,
+          paramType,
+          ParamComparison.ONE_OF,
+          values,
+        )
       },
       scopeFunction: () => {
         const sighash = getArg("functionSig");
