@@ -17,17 +17,29 @@ import {
   scopeFunctionWithUnscopedParamsPermissionsResult,
   scopeFunctionWithTwoParamsPermissionsResult,
   scopeFunctionWithTwoParamsPermissions, scopeFunctionWithOneOfParamPermissions, fullPermissionsResult,
-} from "~/composables/__tests__/mock_data/mockRawPermissions";
+} from "~/composables/__tests__/mock_data/permissions/mockRawPermissions1";
 import { roleModFunctions } from "~/types/enums/delegated_permission";
 import {
   ConditionType,
   ExecutionOption,
-  ParamComparison,
+  ParamComparison, ParameterType,
 } from "~/types/enums/zodiac-roles";
 import type { FunctionCondition, ParamCondition, Target, TargetConditions } from "~/types/zodiac-roles/role";
 import { ExecutionOptionMap, ParamComparisonMap, ParameterTypeMap } from "~/composables/zodiac-roles/conditions";
+import {
+  fullPermissions2,
+  fullPermissions2Result,
+} from "~/composables/__tests__/mock_data/permissions/mockRawPermissions2";
+import {
+  fullPermissions3,
+  fullPermissions3Result, scopeParameterPermissions, scopeParameterPermissionsResult,
+} from "~/composables/__tests__/mock_data/permissions/mockRawPermissions3";
 
+/**
+ * https://github.com/gnosisguild/zodiac-modifier-roles-v1/blob/main/packages/evm/contracts/Permissions.sol
+ */
 describe("addRawPermissions", () => {
+  // TODO also check that it returns an empty array for customPermissions
   it ("scopeTarget", () => {
     const result = testWithParamArrayCheck(() => parseRawTransactions(scopeTargetPermissions));
     expect(result).toEqual(scopeTargetPermissionsResult);
@@ -67,8 +79,22 @@ describe("addRawPermissions", () => {
   })
   it ("full permissions json", () => {
     const result = testWithParamArrayCheck(() => parseRawTransactions(fullPermissions));
-    parseRawTransactions(fullPermissions)
-    // expect(result).toEqual(fullPermissionsResult);
+    expect(result).toEqual(fullPermissionsResult);
+  })
+
+  // PERMS 2
+  it ("full permissions2", () => {
+    const result = testWithParamArrayCheck(() => parseRawTransactions(fullPermissions2));
+    expect(result).toEqual(fullPermissions2Result);
+  })
+  // PERMS 3
+  it ("full permissions3", () => {
+    const result = testWithParamArrayCheck(() => parseRawTransactions(fullPermissions3));
+    expect(result).toEqual(fullPermissions3Result);
+  })
+  it ("scopeParameter", () => {
+    const result = testWithParamArrayCheck(() => parseRawTransactions(scopeParameterPermissions));
+    expect(result).toEqual(scopeParameterPermissionsResult);
   })
 })
 
@@ -116,6 +142,35 @@ function getOrCreateTargetFunctionCondition(
   }
 
   return target.conditions[sighash];
+}
+function getOrCreateTargetFunctionConditionParam(
+  target: Target,
+  sighash: string,
+  funcCondition: any,
+  paramIndex: number,
+  paramType: ParameterType,
+  paramComp: ParamComparison,
+  paramValues: string[],
+): ParamCondition {
+  let paramCondition: ParamCondition | undefined = funcCondition.params.find((param: ParamCondition) => param.index === paramIndex)
+  if (!paramCondition) {
+    paramCondition = {
+      index: paramIndex,
+      type: paramType,
+      condition: paramComp,
+      value: paramValues,
+    };
+    target.conditions[sighash].params.push(paramCondition);
+  } else {
+    if (paramCondition.index !== paramIndex) {
+      throw new Error(`existingParam index mismatch index: ${paramCondition.index} loop index: ${paramIndex}`)
+    }
+    paramCondition.type = paramType;
+    paramCondition.condition = paramComp;
+    paramCondition.value = paramValues; // TODO merge with existing values? better not
+  }
+
+  return paramCondition;
 }
 
 // TODO instead of raising ContextError always push to custom permissions and just log errors
@@ -194,29 +249,20 @@ function parseRawTransactions(data: any[]) {
       },
       scopeParameterAsOneOf: () => {
         const sighash = getArg("functionSig");
-        const index = Number(getArg("paramIndex"));
+        const paramIndex = Number(getArg("paramIndex"));
         const paramType = ParameterTypeMap[getArg("paramType")];
         const values = getArg("compValues");
+        const target = getOrCreateRoleTarget(roleId, targetAddress);
+        getOrCreateTargetFunctionCondition(target, sighash, ConditionType.SCOPED, ExecutionOption.NONE);
 
-        if (index === undefined || sighash === undefined) {
-          throw new ContextError("Raw permission invalid index or sighash", { permission, func });
-        }
-
-        if (roleId) {
-          const target = getOrCreateRoleTarget(roleId, targetAddress);
-          getOrCreateTargetFunctionCondition(target, sighash, ConditionType.SCOPED, ExecutionOption.NONE);
-
-          const paramCondition: ParamCondition = {
-            index,
-            type: paramType,
-            condition: ParamComparison.ONE_OF,
-            value: values,
-          };
-          target.conditions[sighash].params.push(paramCondition);
-        } else {
-          console.log("Missing role for permission", permission);
-          customPermissions.push(permission);
-        }
+        // TODO: handle if it exists already
+        const paramCondition: ParamCondition = {
+          index: paramIndex,
+          type: paramType,
+          condition: ParamComparison.ONE_OF,
+          value: values,
+        };
+        target.conditions[sighash].params.push(paramCondition);
       },
       scopeFunction: () => {
         const sighash = getArg("functionSig");
@@ -229,9 +275,6 @@ function parseRawTransactions(data: any[]) {
         // Make sure that are param lists have the same length.
         validateEqualLengthArrays([isParamScopedList, paramTypeList, paramCompList, compValueList]);
 
-        if (executionOption === undefined || sighash === undefined) {
-          throw new ContextError("Raw permission invalid index or sighash", { permission, func });
-        }
         const target = getOrCreateRoleTarget(roleId, targetAddress);
         const funcCondition = getOrCreateTargetFunctionCondition(target, sighash, ConditionType.SCOPED, ExecutionOption.NONE);
         funcCondition.executionOption = executionOption;
@@ -245,43 +288,47 @@ function parseRawTransactions(data: any[]) {
           const paramType = ParameterTypeMap[paramTypeList[i]];
           const paramComp = ParamComparisonMap[paramCompList[i]];
           const paramValues = [compValueList[i]];
+          assertParamCompIsNotOneOf(paramComp);
 
-          if (paramComp === ParamComparison.ONE_OF) {
-            /**
-             * Because OneOf isn't supported in Zodiac Roles v1:
-             * You must emit multiple permission entries, each with EQUAL_TO + 1 value.
-             * The ONE_OF option is just frontend sugar.
-             */
-            throw new Error("OneOf Comparison must be set via dedicated function")
-          }
-
-          let paramCondition: ParamCondition | undefined = funcCondition.params.find((param: ParamCondition) => param.index === i)
-          if (!paramCondition) {
-            paramCondition = {
-              index: i,
-              type: paramType,
-              condition: paramComp,
-              value: paramValues,
-            };
-            target.conditions[sighash].params.push(paramCondition);
-          } else {
-            if (paramCondition.index !== i) {
-              throw new Error(`existingParam index mismatch index: ${paramCondition.index} loop index: ${i}`)
-            }
-            paramCondition.type = paramType;
-            paramCondition.condition = paramComp;
-            paramCondition.value = paramValues; // TODO merge with existing values? better not
-          }
+          getOrCreateTargetFunctionConditionParam(
+            target,
+            sighash,
+            funcCondition,
+            i,
+            paramType,
+            paramComp,
+            paramValues,
+          )
         }
       },
-      allowTarget: () => {
-        console.log("Handle allowTarget", permission);
+      scopeParameter: () => {
+        const sighash = getArg("functionSig");
+        const paramIndex = Number(getArg("paramIndex"));
+        const paramType = ParameterTypeMap[getArg("paramType")];
+        const paramComp = ParamComparisonMap[getArg("paramComp")];
+        const paramValues = [getArg("compValue")];
+
+        const target = getOrCreateRoleTarget(roleId, targetAddress);
+        const funcCondition = getOrCreateTargetFunctionCondition(target, sighash, ConditionType.SCOPED, ExecutionOption.NONE);
+        getOrCreateTargetFunctionConditionParam(
+          target,
+          sighash,
+          funcCondition,
+          paramIndex,
+          paramType,
+          paramComp,
+          paramValues,
+        )
       },
+      // allowTarget: () => {
+      //   console.log("Handle allowTarget", permission);
+      // },
     };
 
     if (funcName && handlers[funcName] && roleId && targetAddress) {
       handlers[funcName]();
     } else {
+      console.log("Unhandled funcName", permission?.valueMethodIdx, funcName, "idx", permission?.idx);
       customPermissions.push(permission)
     }
   })
@@ -323,6 +370,16 @@ function assertAllParamValuesAreArrays(roleTargets: Record<string, Record<string
         }
       }
     }
+  }
+}
+function assertParamCompIsNotOneOf(paramComp:ParamComparison) {
+  if (paramComp === ParamComparison.ONE_OF) {
+    /**
+     * Because OneOf isn't supported in Zodiac Roles v1:
+     * You must emit multiple permission entries, each with EQUAL_TO + 1 value.
+     * The ONE_OF option is just frontend sugar.
+     */
+    throw new Error("OneOf Comparison must be set via dedicated function")
   }
 }
 
