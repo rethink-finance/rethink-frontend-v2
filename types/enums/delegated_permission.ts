@@ -3,7 +3,7 @@ import { InputType } from "~/types/enums/input_type";
 import type { IStepperStep } from "~/types/stepper";
 
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
-import { getWriteFunctions, isWriteFunction } from "~/composables/zodiac-roles/conditions";
+import { isWriteFunction } from "~/composables/zodiac-roles/conditions";
 
 export enum DelegatedStep {
   Setup = "setup",

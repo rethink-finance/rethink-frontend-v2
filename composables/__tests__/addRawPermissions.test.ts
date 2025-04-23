@@ -332,6 +332,10 @@ function parseRawTransactions(data: any[]) {
           paramValues,
         )
       },
+      assignRoles: () => {
+        console.log("Handle assignRoles", permission?.idx);
+        throw new Error("Not implemented yet");
+      },
       allowTarget: () => {
         console.log("Handle allowTarget", permission?.idx);
         throw new Error("Not implemented yet");
