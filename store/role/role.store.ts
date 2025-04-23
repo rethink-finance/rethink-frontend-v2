@@ -376,6 +376,12 @@ export const useRoleStore = defineStore("role", () => {
 
     for (let i = 0; i < paramsLength; i++) {
       const param = funcCondition.params.find((param: ParamCondition) => param.index === i)
+      // TODO what if it is ONE_OF? unhandled case!
+      /**
+       * Because OneOf isn't supported in Zodiac Roles v1:
+       * You must emit multiple permission entries, each with EQUAL_TO + 1 value.
+       * The ONE_OF option is just frontend sugar.
+       */
       if (param && param.condition !== ParamComparison.ONE_OF) {
         isParamScoped.push(true)
         paramType.push(getParameterTypeInt(param.type))

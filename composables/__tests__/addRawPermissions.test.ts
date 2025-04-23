@@ -13,38 +13,62 @@ import {
   scopeAllowFunctionPermissionsResult,
   scopeFunctionPermissions,
   scopeFunctionPermissionsResult,
+  scopeFunctionWithUnscopedParamsPermissions,
+  scopeFunctionWithUnscopedParamsPermissionsResult,
+  scopeFunctionWithTwoParamsPermissionsResult,
+  scopeFunctionWithTwoParamsPermissions, scopeFunctionWithOneOfParamPermissions, fullPermissionsResult,
 } from "~/composables/__tests__/mock_data/mockRawPermissions";
 import { roleModFunctions } from "~/types/enums/delegated_permission";
 import {
   ConditionType,
-  ExecutionOption, indexToExecutionOption,
-  indexToParameterType,
+  ExecutionOption,
   ParamComparison,
 } from "~/types/enums/zodiac-roles";
 import type { FunctionCondition, ParamCondition, Target, TargetConditions } from "~/types/zodiac-roles/role";
+import { ExecutionOptionMap, ParamComparisonMap, ParameterTypeMap } from "~/composables/zodiac-roles/conditions";
 
 describe("addRawPermissions", () => {
   it ("scopeTarget", () => {
-    expect(parseRawTransactions(scopeTargetPermissions)).toEqual(scopeTargetPermissionsResult);
+    const result = testWithParamArrayCheck(() => parseRawTransactions(scopeTargetPermissions));
+    expect(result).toEqual(scopeTargetPermissionsResult);
   });
   it ("scopeAllowFunction", () => {
-    expect(parseRawTransactions(scopeAllowFunctionPermissions)).toEqual(scopeAllowFunctionPermissionsResult);
+    const result = testWithParamArrayCheck(() => parseRawTransactions(scopeAllowFunctionPermissions));
+    expect(result).toEqual(scopeAllowFunctionPermissionsResult);
   });
   it ("scopeFunction", () => {
-    expect(parseRawTransactions(scopeFunctionPermissions)).toEqual(scopeFunctionPermissionsResult);
+    const result = testWithParamArrayCheck(() => parseRawTransactions(scopeFunctionPermissions));
+    expect(result).toEqual(scopeFunctionPermissionsResult);
+  });
+  it ("scopeFunctionWithUnscopedParams (unscoped param should be ignored)", () => {
+    const result = testWithParamArrayCheck(() => parseRawTransactions(scopeFunctionWithUnscopedParamsPermissions));
+    expect(result).toEqual(scopeFunctionWithUnscopedParamsPermissionsResult);
+  });
+  it ("scopeFunctionWithTwoParams", () => {
+    const result = testWithParamArrayCheck(() => parseRawTransactions(scopeFunctionWithTwoParamsPermissions));
+    expect(result).toEqual(scopeFunctionWithTwoParamsPermissionsResult);
+  });
+  it ("scopeFunctionWithOneOfParam (should throw exc)",  () => {
+    expect(() => {
+      parseRawTransactions(scopeFunctionWithOneOfParamPermissions);
+    }).toThrow("OneOf Comparison must be set via dedicated function");
   });
   it ("scopeParameterAsOneOf", () => {
-    expect(parseRawTransactions(oneOfPermissions)).toEqual(oneOfPermissionsResult);
+    const result = testWithParamArrayCheck(() => parseRawTransactions(oneOfPermissions));
+    expect(result).toEqual(oneOfPermissionsResult);
   })
   it ("scopeParameterAsOneOf two params, same function", () => {
-    expect(parseRawTransactions(oneOfTwoPermissions)).toEqual(oneOfTwoPermissionsResult);
+    const result = testWithParamArrayCheck(() => parseRawTransactions(oneOfTwoPermissions));
+    expect(result).toEqual(oneOfTwoPermissionsResult);
   })
   it ("scopeParameterAsOneOf two params, same function, one param another function", () => {
-    expect(parseRawTransactions(oneOfTwoParamsDifferentFunctionPermissions)).toEqual(oneOfTwoParamsDifferentFunctionPermissionsResult);
+    const result = testWithParamArrayCheck(() => parseRawTransactions(oneOfTwoParamsDifferentFunctionPermissions));
+    expect(result).toEqual(oneOfTwoParamsDifferentFunctionPermissionsResult);
   })
   it ("full permissions json", () => {
+    const result = testWithParamArrayCheck(() => parseRawTransactions(fullPermissions));
     parseRawTransactions(fullPermissions)
-    // expect(parseRawTransactions(fullPermissions)).toEqual(fullPermissionsResult);
+    // expect(result).toEqual(fullPermissionsResult);
   })
 })
 
@@ -136,11 +160,6 @@ function parseRawTransactions(data: any[]) {
     const argsNameMap = Object.fromEntries(
       permission.value.map((arg: any) => [arg.name, arg]),
     );
-    let roleId: any;
-    let targetAddress = "";
-    let sighash = "";
-    let executionOption: ExecutionOption | undefined;
-
     const getArg = (name: string) => {
       const arg = argsNameMap[name];
       if (!arg) {
@@ -149,10 +168,11 @@ function parseRawTransactions(data: any[]) {
       return arg.data;
     };
 
+    const roleId: string = getArg("role");
+    const targetAddress: string = getArg("targetAddress");
+
     const handlers: Record<string, () => void> = {
       scopeTarget: () => {
-        targetAddress = getArg("targetAddress");
-        roleId = getArg("role");
         if (roleId) {
           getOrCreateRoleTarget(roleId, targetAddress);
         } else {
@@ -161,10 +181,9 @@ function parseRawTransactions(data: any[]) {
         }
       },
       scopeAllowFunction: () => {
-        targetAddress = getArg("targetAddress");
-        roleId = getArg("role");
-        sighash = getArg("functionSig");
-        executionOption = indexToExecutionOption[getArg("options").toString()];
+        const sighash = getArg("functionSig");
+        const executionOption: ExecutionOption | undefined = ExecutionOptionMap[getArg("options")];
+
         if (roleId && sighash && executionOption !== undefined) {
           const target = getOrCreateRoleTarget(roleId, targetAddress);
           getOrCreateTargetFunctionCondition(target, sighash, ConditionType.WILDCARDED, executionOption);
@@ -174,11 +193,9 @@ function parseRawTransactions(data: any[]) {
         }
       },
       scopeParameterAsOneOf: () => {
-        targetAddress = getArg("targetAddress");
-        roleId = getArg("role");
-        sighash = getArg("functionSig");
+        const sighash = getArg("functionSig");
         const index = Number(getArg("paramIndex"));
-        const paramType = indexToParameterType[getArg("paramType").toString()];
+        const paramType = ParameterTypeMap[getArg("paramType")];
         const values = getArg("compValues");
 
         if (index === undefined || sighash === undefined) {
@@ -201,12 +218,68 @@ function parseRawTransactions(data: any[]) {
           customPermissions.push(permission);
         }
       },
+      scopeFunction: () => {
+        const sighash = getArg("functionSig");
+        const isParamScopedList = getArg("isParamScoped");
+        const paramTypeList = getArg("paramType");
+        const paramCompList = getArg("paramComp");
+        const compValueList = getArg("compValue");
+        const executionOption: ExecutionOption | undefined = ExecutionOptionMap[getArg("options")];
+
+        // Make sure that are param lists have the same length.
+        validateEqualLengthArrays([isParamScopedList, paramTypeList, paramCompList, compValueList]);
+
+        if (executionOption === undefined || sighash === undefined) {
+          throw new ContextError("Raw permission invalid index or sighash", { permission, func });
+        }
+        const target = getOrCreateRoleTarget(roleId, targetAddress);
+        const funcCondition = getOrCreateTargetFunctionCondition(target, sighash, ConditionType.SCOPED, ExecutionOption.NONE);
+        funcCondition.executionOption = executionOption;
+
+        for (let i = 0; i < compValueList.length; i++) {
+          const isParamScoped = isParamScopedList[paramTypeList[i]];
+          if (isParamScoped !== "true") {
+            console.log(`Skip unscoped parameter ${i}`)
+            continue;
+          }
+          const paramType = ParameterTypeMap[paramTypeList[i]];
+          const paramComp = ParamComparisonMap[paramCompList[i]];
+          const paramValues = [compValueList[i]];
+
+          if (paramComp === ParamComparison.ONE_OF) {
+            /**
+             * Because OneOf isn't supported in Zodiac Roles v1:
+             * You must emit multiple permission entries, each with EQUAL_TO + 1 value.
+             * The ONE_OF option is just frontend sugar.
+             */
+            throw new Error("OneOf Comparison must be set via dedicated function")
+          }
+
+          let paramCondition: ParamCondition | undefined = funcCondition.params.find((param: ParamCondition) => param.index === i)
+          if (!paramCondition) {
+            paramCondition = {
+              index: i,
+              type: paramType,
+              condition: paramComp,
+              value: paramValues,
+            };
+            target.conditions[sighash].params.push(paramCondition);
+          } else {
+            if (paramCondition.index !== i) {
+              throw new Error(`existingParam index mismatch index: ${paramCondition.index} loop index: ${i}`)
+            }
+            paramCondition.type = paramType;
+            paramCondition.condition = paramComp;
+            paramCondition.value = paramValues; // TODO merge with existing values? better not
+          }
+        }
+      },
       allowTarget: () => {
         console.log("Handle allowTarget", permission);
       },
     };
 
-    if (funcName && handlers[funcName]) {
+    if (funcName && handlers[funcName] && roleId && targetAddress) {
       handlers[funcName]();
     } else {
       customPermissions.push(permission)
@@ -230,4 +303,32 @@ class ContextError extends Error {
     super(message);
     this.context = context;
   }
+}
+
+function validateEqualLengthArrays(arrays: any[][]) {
+  const lengths = new Set(arrays.map(arr => arr.length));
+  if (lengths.size !== 1) {
+    // There should only be one element, all items should have be of the same length.
+    throw new Error(`Arrays are not of the same length, there are ${lengths.size} different lengths.`)
+  }
+}
+function assertAllParamValuesAreArrays(roleTargets: Record<string, Record<string, Target>>) {
+  for (const role of Object.values(roleTargets)) {
+    for (const target of Object.values(role)) {
+      for (const fn of Object.values(target.conditions)) {
+        for (const param of fn.params) {
+          if (!Array.isArray(param.value)) {
+            throw new TypeError(`Expected param.value to be an array, but got: ${typeof param.value}`);
+          }
+        }
+      }
+    }
+  }
+}
+
+function testWithParamArrayCheck(testFn: () => Record<string, Record<string, Target>>) {
+  const result = testFn();
+  // Assert that are values in params are arrays, even if they have only one value or none.
+  assertAllParamValuesAreArrays(result);
+  return result;
 }

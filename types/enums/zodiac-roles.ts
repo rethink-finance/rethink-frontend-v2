@@ -4,12 +4,6 @@ export enum ExecutionOption {
   DELEGATE_CALL,
   BOTH,
 }
-export const indexToExecutionOption: { [key: string]: ExecutionOption } = {
-  "0": ExecutionOption.NONE,
-  "1": ExecutionOption.SEND,
-  "2": ExecutionOption.DELEGATE_CALL,
-  "3": ExecutionOption.BOTH,
-};
 
 export enum EntityStatus {
   REMOVE,
@@ -18,10 +12,10 @@ export enum EntityStatus {
 }
 
 export enum ParamComparison {
-  EQUAL_TO = "EqualTo",
-  ONE_OF = "OneOf",
-  GREATER_THAN = "GreaterThan",
-  LESS_THAN = "LessThan",
+  EQUAL_TO = "EqualTo", // 0
+  ONE_OF = "OneOf", // 3
+  GREATER_THAN = "GreaterThan",  // 1
+  LESS_THAN = "LessThan",  // 2
 }
 
 export enum ParameterType {
@@ -30,12 +24,6 @@ export enum ParameterType {
   DYNAMIC32 = "Dynamic32",
   NO_RESTRICTION = "NoRestriction",
 }
-export const indexToParameterType: { [key: string]: ParameterType } = {
-  "0": ParameterType.STATIC,
-  "1": ParameterType.DYNAMIC,
-  "2": ParameterType.DYNAMIC32,
-  "3": ParameterType.NO_RESTRICTION,
-};
 
 export enum ParamNativeType {
   INT,

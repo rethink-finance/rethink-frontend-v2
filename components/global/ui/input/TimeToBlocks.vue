@@ -30,7 +30,7 @@
           label: 'Unit',
           type: InputType.Select,
           choices: periodChoices,
-          isEditable: true,
+          isEditable: true
         }"
         :is-disabled="isDisabled"
       />
@@ -95,7 +95,7 @@ const props = defineProps({
   },
 });
 
-// we only save the number in blocks and have a local state for the unit which is changing and emiting the blocks
+// we only save the number in blocks and have a local state for the unit which is changing and emitting the blocks
 const inputValue = ref(props.modelValue);
 const selectedUnit = ref<PeriodUnits>(PeriodUnits.Days);
 const blockTime = ref(0);

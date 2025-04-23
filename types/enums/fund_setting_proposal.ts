@@ -349,7 +349,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       label: "Planned Settlement Period",
       key: "plannedSettlementPeriod",
-      tooltip: "Frequency of settling deposit and redemtion requests.",
+      tooltip: "Frequency of settling deposit and redemption requests.",
       type: InputType.Period,
       choices: periodChoices,
       placeholder: "E.g. 0",
@@ -420,7 +420,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
-      tooltip: "Amount of time required for porposal to pass, after it reaches quorom.",
+      tooltip: "Amount of time required for proposal to pass, after it reaches quorom.",
     },
   ],
   [StepSections.Details]: [
