@@ -101,7 +101,7 @@ import { encodeFunctionCall } from "web3-eth-abi";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import type { IField } from "~/types/enums/input_type";
+import { type IField, InputType } from "~/types/enums/input_type";
 
 import {
   FundSettingsStepFieldsMap,
@@ -109,7 +109,7 @@ import {
   ProposalStep,
   type IProposal,
   type IStepperSection,
-  type IWhitelist,
+  type IWhitelist, StepSections,
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
@@ -165,6 +165,8 @@ function generateFields(section: IStepperSection, proposal: IProposal) {
       const output = field?.fields?.map((subField) => ({
         ...subField,
         value: proposal[subField?.key] as string,
+        blocks: subField.type === InputType.Period ? Number(proposal[subField?.key]) || 0 : undefined,
+        type: section.key === StepSections.Governance ? InputType.Text : subField.type,
       }));
 
       return {
@@ -176,6 +178,8 @@ function generateFields(section: IStepperSection, proposal: IProposal) {
     return {
       ...fieldTyped,
       value: proposal[fieldTyped.key] as string,
+      blocks: fieldTyped.type === InputType.Period ? Number(proposal[fieldTyped?.key]) || 0 : undefined,
+      type: section.key === StepSections.Governance ? InputType.Text : fieldTyped.type,
     } as IField;
   });
 }

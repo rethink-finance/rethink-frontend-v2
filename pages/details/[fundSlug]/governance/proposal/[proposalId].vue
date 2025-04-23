@@ -267,10 +267,11 @@ const activeUserVoteSubmission = computed(() => {
 });
 
 const proposal = computed(():IGovernanceProposal | undefined => {
-  console.warn("PROPOSAL_ID", proposalId)
+  console.debug("PROPOSAL_ID", proposalId)
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
   const proposal = governanceProposalStore.getProposal(fundStore.selectedFundChain, fundStore.fundAddress, proposalId);
   if (!proposal) return undefined;
+  console.debug("PROPOSAL_ID fetched", proposal)
 
   /**
   if (!proposalFetched.value && proposal?.createdBlockNumber) {
