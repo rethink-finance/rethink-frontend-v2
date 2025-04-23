@@ -34,6 +34,10 @@ import {
   fullPermissions3,
   fullPermissions3Result, scopeParameterPermissions, scopeParameterPermissionsResult,
 } from "~/composables/__tests__/mock_data/permissions/mockRawPermissions3";
+import {
+  fullPermissions4,
+  fullPermissions4Result,
+} from "~/composables/__tests__/mock_data/permissions/mockRawPermissions4";
 
 /**
  * https://github.com/gnosisguild/zodiac-modifier-roles-v1/blob/main/packages/evm/contracts/Permissions.sol
@@ -87,6 +91,7 @@ describe("addRawPermissions", () => {
     const result = testWithParamArrayCheck(() => parseRawTransactions(fullPermissions2));
     expect(result).toEqual(fullPermissions2Result);
   })
+
   // PERMS 3
   it ("full permissions3", () => {
     const result = testWithParamArrayCheck(() => parseRawTransactions(fullPermissions3));
@@ -95,6 +100,12 @@ describe("addRawPermissions", () => {
   it ("scopeParameter", () => {
     const result = testWithParamArrayCheck(() => parseRawTransactions(scopeParameterPermissions));
     expect(result).toEqual(scopeParameterPermissionsResult);
+  })
+
+  // PERMS 4
+  it ("full permissions4", () => {
+    const result = testWithParamArrayCheck(() => parseRawTransactions(fullPermissions4));
+    expect(result).toEqual(fullPermissions4Result);
   })
 })
 
@@ -321,9 +332,22 @@ function parseRawTransactions(data: any[]) {
           paramValues,
         )
       },
-      // allowTarget: () => {
-      //   console.log("Handle allowTarget", permission);
-      // },
+      allowTarget: () => {
+        console.log("Handle allowTarget", permission?.idx);
+        throw new Error("Not implemented yet");
+      },
+      revokeTarget: () => {
+        console.log("Handle revokeTarget", permission?.idx);
+        throw new Error("Not implemented yet");
+      },
+      scopeRevokeFunction: () => {
+        console.log("Handle scopeRevokeFunction", permission?.idx);
+        throw new Error("Not implemented yet");
+      },
+      scopeFunctionExecutionOptions: () => {
+        console.log("Handle scopeFunctionExecutionOptions", permission?.idx);
+        throw new Error("Not implemented yet");
+      },
     };
 
     if (funcName && handlers[funcName] && roleId && targetAddress) {
