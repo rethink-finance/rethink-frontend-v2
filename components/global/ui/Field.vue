@@ -157,16 +157,19 @@ const isCustomValueActive = computed({
 });
 
 const fieldValue = computed({
-  get: () => {
-    if (props.modelValue) return props.modelValue;
-    // If defaultValue is set to null, return undefined as we want it to be empty.
-    console.warn("defaultValue", props.field);
-    if (props.field?.defaultValue === null) return undefined;
-
-    // Else return set default value or if it does not exist, just return field's default type value.
-    return props.field?.defaultValue || defaultInputTypeValue[props.field?.type as InputType];
-  },
+  get: () => props.modelValue,
   set: (val) => emit("update:modelValue", val),
+});
+
+watchEffect(() => {
+  // If defaultValue is set to null, return undefined as we want it to be empty.
+  if (props.field?.defaultValue === null || props.modelValue != null) return;
+  if (props.field?.type === InputType.Period) {
+    console.warn("[Field.vue] field", props.field);
+  }
+
+  // Else return set default value or if it does not exist, just return field's default type value.
+  fieldValue.value = props.field?.defaultValue ?? defaultInputTypeValue[props.field?.type as InputType];
 });
 
 const isFieldModified = computed(() => {

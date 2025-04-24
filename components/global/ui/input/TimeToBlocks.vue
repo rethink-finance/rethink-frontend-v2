@@ -14,7 +14,6 @@
         :disabled="isDisabled"
         :rules="rules"
         :error-messages="customErrorMessage"
-        @input="() => { isUserInteracting = true }"
       />
     </v-col>
     <v-col class="column" cols="4">
@@ -34,7 +33,6 @@
           isEditable: true
         }"
         :is-disabled="isDisabled"
-        @input="() => { isUserInteracting = true }"
       />
     </v-col>
     <v-col class="column" cols="3">
@@ -46,6 +44,7 @@
       <UiField
         v-else
         :model-value="blocks"
+        :rules="rules"
         class="move-up"
         :field="{
           label: 'Blocks',
@@ -73,7 +72,7 @@ const blockTimeStore = useBlockTimeStore();
 // TODO: this component needs further testing and improvements, it's way overcomplicated now!
 const props = defineProps({
   modelValue: {
-    type: Number,
+    type: [Number, String],
     default: undefined,
   },
   blocks: {
@@ -104,13 +103,16 @@ const props = defineProps({
 
 // we only save the number in blocks and have a local state for the unit which is changing and emitting the blocks
 const inputValue = computed({
-  get: () => props.modelValue,
+  get: () => {
+    console.log("GET", props.modelValue, props.modelValue?.toString());
+    return props.modelValue?.toString()
+  },
   set: (val) => {
-    emit("update:modelValue", Number(val));
+    console.log("val", val, Number(val));
+    emit("update:modelValue", val);
   },
 });
-const isUserInteracting = ref(false);
-const blocksLocal = ref<number>(0); // internal working state
+const blocksLocal = ref<number | undefined>(undefined);
 const selectedUnit = ref<PeriodUnits>(PeriodUnits.Days);
 const blockTime = ref(0);
 const isLoading = ref(false);
@@ -154,23 +156,33 @@ const isInitialized = ref(false);
 const initializeBlockTime = async () => {
   if (!props.chainId) return;
   isLoading.value = true;
+  console.log("start INIT block time", props.modelValue, "blocks", props.blocks, blockTime.value)
   const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(props.chainId);
   blockTime.value = blockTimeContext?.averageBlockTime || 0;
 
-  console.log("INIT block time", props.modelValue, "blocks", props.blocks, blockTime.value)
-  if (blockTime.value > 0 && !isInitialized.value && props.blocks) {
-    const totalSeconds = Number(props.blocks) * blockTime.value;
+  if (props.modelValue == null && props.blocks == null) {
+    isInitialized.value = true;
+    isLoading.value = false;
+    return;
+  }
+
+  console.log("end INIT block time", props.modelValue, "blocks", props.blocks, blockTime.value)
+  blocksLocal.value = Number(props.blocks || 0)
+  if (blockTime.value > 0 && !isInitialized.value) {
+    const totalSeconds = blocksLocal.value * blockTime.value;
     const { bestValue, bestUnit } = determineInputValueAndUnit(
       totalSeconds,
       selectedUnit.value,
     );
-    inputValue.value = bestValue;
+    console.log("TimeToBlock props.blocks", props.blocks, "blocksLocal", blocksLocal.value, "bestUnit", bestUnit);
+    inputValue.value = bestValue.toString();
     selectedUnit.value = bestUnit;
     blocksLocal.value = Number(props.blocks);
   } else {
-    inputValue.value = 0;
-    selectedUnit.value = PeriodUnits.Days;
-    blocksLocal.value = 0;
+    console.log("TimeToBlock ELSE blocks", props.blocks, "blocksLocal", blocksLocal.value, "inputValue", inputValue.value);
+    // inputValue.value = "0";
+    // selectedUnit.value = PeriodUnits.Days;
+    // blocksLocal.value = 0;
   }
   isInitialized.value = true;
   isLoading.value = false;
@@ -179,13 +191,18 @@ const initializeBlockTime = async () => {
 // TODO: this should be run when the props.blocks changes first time, to be safe
 onMounted(initializeBlockTime);
 
-watch([inputValue, selectedUnit], () => {
-  if (!isInitialized.value || !isUserInteracting.value) return;
+watch([inputValue, selectedUnit], async () => {
+  console.log("change input", inputValue.value, selectedUnit.value, "isInitialized", isInitialized.value)
+  if (!isInitialized.value) return;
 
   const timeInSeconds = TimeInSeconds[selectedUnit.value];
+  if (blockTime.value == null) {
+    const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(props.chainId);
+    blockTime.value = blockTimeContext?.averageBlockTime || 0;
+  }
 
   if (blockTime.value > 0 && inputValue.value != null) {
-    blocksLocal.value = Math.floor((inputValue.value * timeInSeconds) / blockTime.value);
+    blocksLocal.value = Math.floor((Number(inputValue.value) * timeInSeconds) / blockTime.value);
   } else {
     blocksLocal.value = 0;
   }

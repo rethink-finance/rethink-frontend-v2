@@ -36,16 +36,24 @@ export const useBlockTimeStore = defineStore({
 
       const initPromise = (async () => {
         const web3Provider = this.web3Store.getWeb3Instance(mappedChainId, convertToL1);
-
+        console.log("blockTime get latest block")
         const currentBlock = await this.web3Store.callWithRetry(
           mappedChainId,
           () => web3Provider.eth.getBlock("latest"),
+          0,
+          [],
+          1000,
         );
 
+        console.log("blockTime get previous block", currentBlock)
         const previousBlock = await this.web3Store.callWithRetry(
           mappedChainId,
           () => web3Provider.eth.getBlock(Number(currentBlock.number) - 1000),
+          0,
+          [],
+          1000,
         );
+        console.log("blockTime get blocks DONE", previousBlock)
 
         const timeDiff = Number(currentBlock.timestamp) - Number(previousBlock.timestamp);
         const blockDiff = Number(currentBlock.number) - Number(previousBlock.number);

@@ -46,7 +46,7 @@ export const defaultInputTypeValue: Record<InputType, any> = {
   // wherever we will need them.
   [InputType.Select]: 0,
   [InputType.Image]: "",
-  [InputType.Period]: 0,
+  [InputType.Period]: "0",
   [InputType.Date]: "",
 }
 
