@@ -66,17 +66,12 @@ import {
   TimeInSeconds,
 } from "~/types/enums/input_type";
 
-const emit = defineEmits(["update:modelValue", "update:blocks"]);
+const emit = defineEmits(["update:modelValue"]);
 const blockTimeStore = useBlockTimeStore();
 
-// TODO: this component needs further testing and improvements, it's way overcomplicated now!
 const props = defineProps({
   modelValue: {
     type: [Number, String],
-    default: undefined,
-  },
-  blocks: {
-    type: [String, Number],
     default: undefined,
   },
   chainId: {
@@ -102,118 +97,114 @@ const props = defineProps({
 });
 
 // we only save the number in blocks and have a local state for the unit which is changing and emitting the blocks
-const inputValue = computed({
-  get: () => {
-    console.log("GET", props.modelValue, props.modelValue?.toString());
-    return props.modelValue?.toString()
-  },
-  set: (val) => {
-    console.log("val", val, Number(val));
-    emit("update:modelValue", val);
-  },
-});
-const blocksLocal = ref<number | undefined>(undefined);
+const inputValue = ref("");
+const blocks = ref<number | undefined>(undefined);
 const selectedUnit = ref<PeriodUnits>(PeriodUnits.Days);
 const blockTime = ref(0);
 const isLoading = ref(false);
+const isUpdatingFromBlocks = ref(false);
 
-const determineInputValueAndUnit = (
-  totalSeconds: number,
-  currentUnit: PeriodUnits,
-) => {
-  const currentUnitSeconds = TimeInSeconds[currentUnit];
+
+const findBestTimeUnit = (totalSeconds: number) => {
+  // If the currently selected unit makes sense, keep using it
+  const currentUnitSeconds = TimeInSeconds[selectedUnit.value];
   const currentValue = totalSeconds / currentUnitSeconds;
 
-  if (currentValue >= 1) {
+  if (currentValue >= 1 && currentValue < 1000) {
     return {
       bestValue: parseFloat(currentValue.toFixed(2)),
-      // bestValue: currentValue,
-      bestUnit: currentUnit,
+      bestUnit: selectedUnit.value,
     };
   }
 
-  let bestUnit: PeriodUnits = PeriodUnits.Seconds;
+  // Otherwise find the most appropriate unit
+  let bestUnit = PeriodUnits.Seconds;
   let bestValue = totalSeconds;
 
-  for (const unit of Object.keys(TimeInSeconds) as PeriodUnits[]) {
+  // Start from larger units and work down to find the most appropriate one
+  const units = Object.keys(TimeInSeconds) as PeriodUnits[];
+  for (let i = units.length - 1; i >= 0; i--) {
+    const unit = units[i];
     const secondsPerUnit = TimeInSeconds[unit];
     const value = totalSeconds / secondsPerUnit;
 
-    if (value >= 1 && value < bestValue) {
+    if (value >= 1) {
       bestValue = value;
       bestUnit = unit;
+      break;
     }
   }
 
   return {
     bestValue: parseFloat(bestValue.toFixed(3)),
-    // bestValue,
     bestUnit,
   };
 };
-
-const isInitialized = ref(false);
-const initializeBlockTime = async () => {
-  if (!props.chainId) return;
-  isLoading.value = true;
-  console.log("start INIT block time", props.modelValue, "blocks", props.blocks, blockTime.value)
-  const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(props.chainId);
-  blockTime.value = blockTimeContext?.averageBlockTime || 0;
-
-  if (props.modelValue == null && props.blocks == null) {
-    isInitialized.value = true;
-    isLoading.value = false;
+const getBlockTime = async () => {
+  if (!props.chainId) {
+    blockTime.value = 0;
     return;
   }
 
-  console.log("end INIT block time", props.modelValue, "blocks", props.blocks, blockTime.value)
-  blocksLocal.value = Number(props.blocks || 0)
-  if (blockTime.value > 0 && !isInitialized.value) {
-    const totalSeconds = blocksLocal.value * blockTime.value;
-    const { bestValue, bestUnit } = determineInputValueAndUnit(
-      totalSeconds,
-      selectedUnit.value,
-    );
-    console.log("TimeToBlock props.blocks", props.blocks, "blocksLocal", blocksLocal.value, "bestUnit", bestUnit);
-    inputValue.value = bestValue.toString();
-    selectedUnit.value = bestUnit;
-    blocksLocal.value = Number(props.blocks);
-  } else {
-    console.log("TimeToBlock ELSE blocks", props.blocks, "blocksLocal", blocksLocal.value, "inputValue", inputValue.value);
-    // inputValue.value = "0";
-    // selectedUnit.value = PeriodUnits.Days;
-    // blocksLocal.value = 0;
-  }
-  isInitialized.value = true;
+  isLoading.value = true;
+  const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(props.chainId);
+  blockTime.value = blockTimeContext?.averageBlockTime || 0;
   isLoading.value = false;
-};
+}
 
-// TODO: this should be run when the props.blocks changes first time, to be safe
-onMounted(initializeBlockTime);
-
-watch([inputValue, selectedUnit], async () => {
-  console.log("change input", inputValue.value, selectedUnit.value, "isInitialized", isInitialized.value)
-  if (!isInitialized.value) return;
+// Update input value and emit events when changing input or unit
+const updateFromInput = async () => {
+  console.warn("updateFromInput", inputValue.value)
+  await getBlockTime();
+  if (blockTime.value <= 0) return;
 
   const timeInSeconds = TimeInSeconds[selectedUnit.value];
-  if (blockTime.value == null) {
-    const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(props.chainId);
-    blockTime.value = blockTimeContext?.averageBlockTime || 0;
-  }
+  const inputNumber = Number(inputValue.value);
 
-  if (blockTime.value > 0 && inputValue.value != null) {
-    blocksLocal.value = Math.floor((Number(inputValue.value) * timeInSeconds) / blockTime.value);
+  if (!isNaN(inputNumber)) {
+    blocks.value = Math.floor((inputNumber * timeInSeconds) / blockTime.value);
   } else {
-    blocksLocal.value = 0;
+    blocks.value = undefined;
   }
+  emit("update:modelValue", blocks.value);
+};
 
-  emit("update:blocks", blocksLocal.value);
+const updateFromBlocks = async () => {
+  console.warn("updateFromBlocks")
+  await getBlockTime();
+
+  if (blockTime.value <= 0 || props.modelValue == null) return;
+
+  isUpdatingFromBlocks.value = true; // Set flag before updating
+
+  const totalSeconds = Number(props.modelValue) * blockTime.value;
+  const { bestValue, bestUnit } = findBestTimeUnit(totalSeconds);
+  console.warn("updateFromBlocks", totalSeconds, bestValue.toString());
+
+  inputValue.value = bestValue.toString();
+  selectedUnit.value = bestUnit;
+};
+
+// Watch for changes in the modelValue to update the local state
+watch(
+  () => props.modelValue,
+  () => {
+    if (props.modelValue !== blocks.value) {
+      console.log("props.modelValue changed: ", props.modelValue, "blocks: ", blocks.value)
+      updateFromBlocks();
+    }
+  },
+  { immediate: true },
+);
+
+watch([inputValue, selectedUnit], () => {
+  updateFromInput();
 });
 
 watch(
   () => props.chainId,
   () => {
-    initializeBlockTime();
+    updateFromBlocks();
   },
 );
 </script>

@@ -77,7 +77,6 @@
           :custom-error-message="customErrorMessage"
           :chain-id="chainId"
           :tab-index="tabIndex"
-          @update:blocks="(val) => emit('update:blocks', val)"
         />
       </div>
     </div>
@@ -94,7 +93,6 @@ import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 const emit = defineEmits([
   "update:modelValue",
   "update:isCustomValueToggleOn",
-  "update:blocks",
 ]);
 defineOptions({
   inheritAttrs: false,

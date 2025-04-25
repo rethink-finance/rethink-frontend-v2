@@ -356,25 +356,17 @@ const setFieldValue = (field: IField): void => {
   } else if (fundInitCache?.value) {
     console.error(" field key missing", field);
   }
-
-  if (field.type === InputType.Period && ["string", "number"].includes(typeof field.value)) {
-    console.warn("  InputType.PERIOD", field, fundMetadata.value )
-    field.blocks = Number(cachedValue || field?.blocks || 0);
-    field.value = undefined;
-  }
 }
 const fetchFundInitCache = async () => {
   if (!selectedChainId.value) return;
 
   if (accountStore.activeAccountAddress) {
-    console.warn("FETCH IT BABY", fundInitCache.value)
 
     // Take stepper entry chain id from the local storage
     fundInitCache.value = await createFundStore.fetchFundInitCache(
       selectedChainId.value,
       accountStore.activeAccountAddress,
     );
-    console.warn("CAN IT HAPPEN BEFORE?", fundInitCache.value)
 
     for (const step of stepperEntry.value) {
       for (const field of step.fields || []) {
@@ -597,10 +589,6 @@ const currentStepValidation = computed(() => {
   const validateField = (field: IField) => {
     if (!field?.rules) return;
     validateValue(field.label, field.rules, field.value);
-
-    if (field.type === InputType.Period) {
-      validateValue(field.label + " blocks", field.rules, field.blocks);
-    }
   };
 
   if (stepWithRegularFields.includes(currentStep.key) && currentStep.fields) {
@@ -695,7 +683,6 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
       ...fieldTyped,
       isCustomValueToggleOn: fieldIsCustomValueToggleOn ?? fieldTyped?.isCustomValueToggleOn,
       value: fieldValue ?? fieldTyped?.value,
-      blocks: stepperEntryField?.blocks,
     } as IField;
   });
   console.log("output:", output);
@@ -747,14 +734,7 @@ const getFieldByStepAndFieldKey =(
     console.error(`Field ${fieldKey} not found in step ${stepKey}`);
     return "";
   }
-  let fieldValue = field?.value;
-  if (field?.type === InputType.Period) {
-    // If field is Period input type, use blocks value instead of raw input.
-    if (field?.blocks == null || Number.isNaN(field.blocks)) {
-      throw new Error(`Field ${field.title} blocks value is missing.`)
-    }
-    fieldValue = field?.blocks.toString();
-  }
+  const fieldValue = field?.value;
 
   if (field?.defaultValue !== undefined && field?.defaultValue !== null) {
     return field?.isCustomValueToggleOn ? fieldValue : field?.defaultValue;
