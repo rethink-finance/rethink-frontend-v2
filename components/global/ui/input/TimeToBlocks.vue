@@ -154,7 +154,6 @@ const getBlockTime = async () => {
 
 // Update input value and emit events when changing input or unit
 const updateFromInput = async () => {
-  console.warn("updateFromInput", inputValue.value)
   await getBlockTime();
   if (blockTime.value <= 0) return;
 
@@ -170,7 +169,6 @@ const updateFromInput = async () => {
 };
 
 const updateFromBlocks = async () => {
-  console.warn("updateFromBlocks")
   await getBlockTime();
 
   if (blockTime.value <= 0 || props.modelValue == null) return;
@@ -179,7 +177,6 @@ const updateFromBlocks = async () => {
 
   const totalSeconds = Number(props.modelValue) * blockTime.value;
   const { bestValue, bestUnit } = findBestTimeUnit(totalSeconds);
-  console.warn("updateFromBlocks", totalSeconds, bestValue.toString());
 
   inputValue.value = bestValue.toString();
   selectedUnit.value = bestUnit;
@@ -190,7 +187,6 @@ watch(
   () => props.modelValue,
   () => {
     if (props.modelValue !== blocks.value) {
-      console.log("props.modelValue changed: ", props.modelValue, "blocks: ", blocks.value)
       updateFromBlocks();
     }
   },

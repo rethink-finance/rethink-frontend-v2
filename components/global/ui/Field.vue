@@ -160,9 +160,6 @@ const fieldValue = computed({
 watchEffect(() => {
   // If defaultValue is set to null, return undefined as we want it to be empty.
   if (props.field?.defaultValue === null || props.modelValue != null) return;
-  if (props.field?.type === InputType.Period) {
-    console.warn("[Field.vue] field", props.field);
-  }
 
   // Else return set default value or if it does not exist, just return field's default type value.
   fieldValue.value = props.field?.defaultValue ?? defaultInputTypeValue[props.field?.type as InputType];

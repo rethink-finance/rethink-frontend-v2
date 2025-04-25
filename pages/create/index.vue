@@ -356,7 +356,6 @@ const setFieldValue = (field: IField) => {
   } else if (fundInitCache?.value) {
     console.error(" field key missing", field);
   }
-  console.log("FIELDEK", field, field?.isToggleable)
   return cachedValue
 }
 const fetchFundInitCache = async () => {
@@ -378,7 +377,6 @@ const fetchFundInitCache = async () => {
           let hasValue;
           for (const subField of field.fields || []) {
             const val = setFieldValue(subField);
-            console.warn("VAL", val);
             // This feels like a hack, but we are trying to enable the toggle button for those that are not 0 or 0x0...
             // But it won't handle cases where users want the address to be 0x0.
             if (!hasValue && val != null && val !== ethers.ZeroAddress && val !== 0) {
