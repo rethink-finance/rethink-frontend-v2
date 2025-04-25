@@ -330,7 +330,7 @@ const fundMetadata = computed(() => fundInitCache?.value?.fundMetadata || {});
 const fundGovernorData = computed(() => fundInitCache?.value?.governorData || {});
 
 // Fetch Fund Cache and fill the form data with the fetched fund cache.
-const setFieldValue = (field: IField): void => {
+const setFieldValue = (field: IField) => {
   if (![InputType.Image, InputType.Textarea, InputType.Select, InputType.Period].includes(field.type)) {
     field.type = InputType.Text;
   }
@@ -356,6 +356,8 @@ const setFieldValue = (field: IField): void => {
   } else if (fundInitCache?.value) {
     console.error(" field key missing", field);
   }
+  console.log("FIELDEK", field, field?.isToggleable)
+  return cachedValue
 }
 const fetchFundInitCache = async () => {
   if (!selectedChainId.value) return;
@@ -373,8 +375,18 @@ const fetchFundInitCache = async () => {
         if ("fields" in field) {
           // Field is of type IFieldGroup, has more subfields.
           // TODO here we only go 2 levels deep, but IField can have infinite levels, do recursion for fields.
+          let hasValue;
           for (const subField of field.fields || []) {
-            setFieldValue(subField);
+            const val = setFieldValue(subField);
+            console.warn("VAL", val);
+            // This feels like a hack, but we are trying to enable the toggle button for those that are not 0 or 0x0...
+            // But it won't handle cases where users want the address to be 0x0.
+            if (!hasValue && val != null && val !== ethers.ZeroAddress && val !== 0) {
+              hasValue = true;
+            }
+          }
+          if (field?.isToggleable && hasValue) {
+            field.isToggleOn = true;
           }
         } else {
           // Field is a normal field.

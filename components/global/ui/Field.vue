@@ -63,22 +63,20 @@
       />
     </div>
 
-    <div>
-      <div class="field-input">
-        <template v-if="field.defaultValueInfo">
-          <UiInfoBox :info="field.defaultValueInfo" />
-        </template>
-        <UiFieldInput
-          v-if="!(isCustomValueToggleOn !== undefined && !isCustomValueToggleOn)"
-          v-model="fieldValue"
-          :field="field"
-          :is-disabled="isInputDisabled"
-          :is-preview="isPreview"
-          :custom-error-message="customErrorMessage"
-          :chain-id="chainId"
-          :tab-index="tabIndex"
-        />
-      </div>
+    <div class="field-input">
+      <template v-if="field.defaultValueInfo">
+        <UiInfoBox :info="field.defaultValueInfo" />
+      </template>
+      <UiFieldInput
+        v-if="!(isCustomValueToggleOn !== undefined && !isCustomValueToggleOn)"
+        v-model="fieldValue"
+        :field="field"
+        :is-disabled="isInputDisabled"
+        :is-preview="isPreview"
+        :custom-error-message="customErrorMessage"
+        :chain-id="chainId"
+        :tab-index="tabIndex"
+      />
     </div>
 
     <InfoBox v-if="field.info && !isPreview" :info="field.info" class="info_box" />
