@@ -55,7 +55,7 @@
       max-width="80%"
       confirm-text="Import Raw Permissions"
       cancel-text="Cancel"
-      message="Please enter the raw permissions JSON"
+      message="Please enter raw permissions JSON"
       @confirm="addRawProposal"
     >
       <v-textarea
