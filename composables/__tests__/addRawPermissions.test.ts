@@ -369,7 +369,7 @@ function parseRawTransactions(data: any[]) {
   // console.warn("targetsRemove", targetsRemove)
   console.warn("\n------------------customPermissions\n\n")
   console.warn(customPermissions)
-  return roleTargets;
+  return { roleTargets, customPermissions };
 }
 
 class ContextError extends Error {
@@ -412,9 +412,11 @@ function assertParamCompIsNotOneOf(paramComp:ParamComparison) {
   }
 }
 
-function testWithParamArrayCheck(testFn: () => Record<string, Record<string, Target>>) {
+function testWithParamArrayCheck(testFn: () => { roleTargets: Record<string, Record<string, Target>>, customPermissions: any[] }) {
   const result = testFn();
   // Assert that are values in params are arrays, even if they have only one value or none.
-  assertAllParamValuesAreArrays(result);
-  return result;
+  assertAllParamValuesAreArrays(result.roleTargets);
+  // Check that customPermissions array is empty
+  expect(result.customPermissions).toEqual([]);
+  return result.roleTargets;
 }
