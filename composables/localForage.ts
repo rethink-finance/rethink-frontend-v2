@@ -13,7 +13,7 @@ export const setLocalForageItem = async (key: string, data: any) => {
 export const getLocalForageItem = async (key: string, defaultValue: any = {}) => {
   try {
     const data = await localforage.getItem(key);
-    console.log(`Loaded data from ${key}:`, data);
+    // console.log(`Loaded data from ${key}:`, data);
     return data || defaultValue;
   } catch (error) {
     console.error(`Error loading data from ${key}:`, error);

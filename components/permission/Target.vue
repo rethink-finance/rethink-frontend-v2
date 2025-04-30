@@ -142,7 +142,6 @@ const roleStore = useRoleStore();
 provide("chainId", props.chainId);
 
 const target = computed(() => roleStore.activeTarget);
-
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 

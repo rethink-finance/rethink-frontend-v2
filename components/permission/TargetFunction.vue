@@ -1,5 +1,9 @@
 <template>
+  <!-- Do not display this component if the user is in read-only mode and
+  if there are no condition params set. -->
   <UiDataRowCard
+    v-if="!disabled || (disabled && funcConditions?.params?.length > 0)"
+    :is-expanded="(disabled && funcConditions?.params?.length > 0)"
     no-body-padding
     bg-transparent
     title-full-height
