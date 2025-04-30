@@ -33,7 +33,7 @@ import type {
 export const rolesInterface = RolesFactory.createInterface();
 
 // Define the store
-export const useRoleStore = defineStore("role", () => {
+export const useRoleStore = defineStore("roleStore", () => {
   // State
   const roleId = ref<string>("");
   const role = ref<Role | undefined>(undefined);

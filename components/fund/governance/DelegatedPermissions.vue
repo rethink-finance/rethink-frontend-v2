@@ -44,25 +44,25 @@
           variant="outlined"
           @click="openAddRawDialog"
         >
-          Add Raw
+          Import Raw Permissions
         </v-btn>
       </template>
     </UiStepper>
 
     <UiConfirmDialog
       v-model="showAddRawDialog"
-      title="Add Raw Proposal"
+      title="Import Raw Permissions JSON"
       max-width="80%"
-      confirm-text="Load"
+      confirm-text="Import Raw Permissions"
       cancel-text="Cancel"
-      message="Please enter the raw proposal JSON below"
+      message="Please enter the raw permissions JSON"
       @confirm="addRawProposal"
     >
       <v-textarea
         v-model="rawProposalInput"
         label="Raw proposal"
         outlined
-        placeholder="Enter the raw proposal here"
+        placeholder="Enter the raw permissions JSON here"
         rows="20"
         class="raw-method-textarea"
       />

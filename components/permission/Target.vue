@@ -91,24 +91,30 @@
     </UiDataRowCard>
 
     <div v-if="!isFetchingTargetABI" class="permissions__list">
-      <!-- Display write functions that were found in the ABI -->
-      <PermissionTargetFunction
-        v-for="(func, index) in abiWriteFunctions"
-        :key="index"
-        :func="func as FunctionFragment"
-        :disabled="disabled"
-        :func-conditions="getFuncCondition(func.selector)"
-        @update:func-conditions="(newFuncConditions) => updateConditions(func.selector, newFuncConditions)"
-      />
-      <!-- Display function conditions that were not found in the ABI -->
-      <PermissionTargetFunction
-        v-for="(sighash, index) in sighashesNotInAbi"
-        :key="index"
-        :sighash="sighash"
-        :disabled="disabled"
-        :func-conditions="getFuncCondition(sighash)"
-        @update:func-conditions="(newFuncConditions) => updateConditions(sighash, newFuncConditions)"
-      />
+      <p v-if="disabled && countOfFuncConditionsWithParams === 0" class="text-center my-8">
+        Target is scoped, but no functions are explicitly allowed.
+        All calls to this contract are currently blocked.
+      </p>
+      <template v-else>
+        <!-- Display write functions that were found in the ABI -->
+        <PermissionTargetFunction
+          v-for="(func, index) in abiWriteFunctions"
+          :key="index"
+          :func="func as FunctionFragment"
+          :disabled="disabled"
+          :func-conditions="getFuncCondition(func.selector)"
+          @update:func-conditions="(newFuncConditions) => updateConditions(func.selector, newFuncConditions)"
+        />
+        <!-- Display function conditions that were not found in the ABI -->
+        <PermissionTargetFunction
+          v-for="(sighash, index) in sighashesNotInAbi"
+          :key="index"
+          :sighash="sighash"
+          :disabled="disabled"
+          :func-conditions="getFuncCondition(sighash)"
+          @update:func-conditions="(newFuncConditions) => updateConditions(sighash, newFuncConditions)"
+        />
+      </template>
     </div>
   </div>
 </template>
@@ -148,6 +154,18 @@ const fundStore = useFundStore();
 const targetABIJson = ref<JsonFragment[]>([]);
 const customABI = ref<string>("");
 const isEditingCustomABI = ref(false);
+
+const countOfFuncConditionsWithParams = computed(() => {
+  const funcSelectors = [
+    ...abiWriteFunctions.value.map(f => f.selector),
+    ...sighashesNotInAbi.value,
+  ];
+
+  return funcSelectors.filter(funcSelector => {
+    const funcConditions = getFuncCondition(funcSelector);
+    return funcConditions?.params?.length > 0;
+  }).length;
+});
 
 const getFuncCondition = (funcSelector: string): FunctionCondition => {
   return target?.value?.conditions[funcSelector] || {

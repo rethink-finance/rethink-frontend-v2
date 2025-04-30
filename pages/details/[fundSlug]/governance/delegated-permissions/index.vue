@@ -18,9 +18,7 @@ import {
   DelegatedStepMap, prepPermissionsProposalData,
   proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
-
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-// fund store
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";

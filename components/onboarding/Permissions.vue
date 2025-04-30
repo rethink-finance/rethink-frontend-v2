@@ -1,92 +1,94 @@
 <template>
-  <div class="d-flex" :class="isReadonly ? 'justify-end' : 'justify-start'">
-    <v-btn
-      v-if="isReadonly"
-      type="submit"
-      @click="isReadonly = !isReadonly"
+  <template>
+    <div class="d-flex" :class="isReadonly ? 'justify-end' : 'justify-start'">
+      <v-btn
+        v-if="isReadonly"
+        type="submit"
+        @click="isReadonly = !isReadonly"
+      >
+        Add Permissions
+      </v-btn>
+      <v-btn v-if="!isReadonly" variant="outlined" @click="isReadonly = true">
+        <Icon
+          icon="material-symbols:close"
+          class="di-card__close-icon"
+          width="1.5rem"
+        />
+        Cancel Add Permissions
+      </v-btn>
+    </div>
+    <FundGovernanceDelegatedPermissions
+      v-if="!isReadonly"
+      ref="delegatedPermissionsRef"
+      v-model="delegatedPermissionsEntry"
+      :fields-map="DelegatedPermissionFieldsMap"
+      submit-label="Store Permissions"
+      title="Permissions"
+      :always-show-last-step="true"
+      @entry-updated="entryUpdated"
+      @submit="storePermissions"
     >
-      Add Permissions
-    </v-btn>
-    <v-btn v-if="!isReadonly" variant="outlined" @click="isReadonly = true">
-      <Icon
-        icon="material-symbols:close"
-        class="di-card__close-icon"
-        width="1.5rem"
-      />
-      Cancel Add Permissions
-    </v-btn>
-  </div>
-  <FundGovernanceDelegatedPermissions
-    v-if="!isReadonly"
-    ref="delegatedPermissionsRef"
-    v-model="delegatedPermissionsEntry"
-    :fields-map="DelegatedPermissionFieldsMap"
-    submit-label="Store Permissions"
-    title="Permissions"
-    :always-show-last-step="true"
-    @entry-updated="entryUpdated"
-    @submit="storePermissions"
-  >
-    <template #post-steps-content>
-      <div class="main-step">
-        <div class="info_container">
-          <div class="info_container__buttons">
-            <UiLinkExternalButton
-              title="View OIV Permissions"
-              :href="gnosisPermissionsUrl"
+      <template #post-steps-content>
+        <div class="main-step">
+          <div class="info_container">
+            <div class="info_container__buttons">
+              <UiLinkExternalButton
+                title="View OIV Permissions"
+                :href="gnosisPermissionsUrl"
+              />
+            </div>
+            <p class="info_container__text">
+              Having trouble reading permissions?<br>
+              <a
+                class="info_container__link"
+                href="https://docs.rethink.finance/rethink.finance"
+                target="_blank"
+              >Learn more about permissions here</a>.
+            </p>
+          </div>
+          <div class="info_container mt-6">
+            <p class="info_container__text">
+              <strong>Safe Contract:</strong>
+              {{ fundSettings?.safe || "N/A" }}
+            </p>
+          </div>
+        </div>
+      </template>
+
+      <template #pre-content>
+        <div class="management">
+          <div class="management__row">
+            <div>
+              Prepopulate permissions to allow manager to send funds to the fund contract to settle flows
+            </div>
+            <v-switch
+              v-model="allowManagerToSendFundsToFundContract"
+              color="primary"
+              hide-details
             />
           </div>
-          <p class="info_container__text">
-            Having trouble reading permissions?<br>
-            <a
-              class="info_container__link"
-              href="https://docs.rethink.finance/rethink.finance"
-              target="_blank"
-            >Learn more about permissions here</a>.
-          </p>
-        </div>
-        <div class="info_container mt-6">
-          <p class="info_container__text">
-            <strong>Safe Contract:</strong>
-            {{ fundSettings?.safe || "N/A" }}
-          </p>
-        </div>
-      </div>
-    </template>
-
-    <template #pre-content>
-      <div class="management">
-        <div class="management__row">
-          <div>
-            Prepopulate permissions to allow manager to send funds to the fund contract to settle flows
+          <div class="management__row">
+            <div>
+              Prepopulate permissions to allow manager to collect fees based on default performance fee contract
+            </div>
+            <v-switch
+              v-model="allowManagerToCollectFees"
+              color="primary"
+              hide-details
+            />
           </div>
-          <v-switch
-            v-model="allowManagerToSendFundsToFundContract"
-            color="primary"
-            hide-details
-          />
         </div>
-        <div class="management__row">
-          <div>
-            Prepopulate permissions to allow manager to collect fees based on default performance fee contract
-          </div>
-          <v-switch
-            v-model="allowManagerToCollectFees"
-            color="primary"
-            hide-details
-          />
-        </div>
-      </div>
-    </template>
-  </FundGovernanceDelegatedPermissions>
+      </template>
+    </FundGovernanceDelegatedPermissions>
 
-  <FundPermissions
-    v-if="roles.length && isReadonly"
-    class="mt-6"
-    :chain-id="fundChainId"
-    :disabled="isEditDisabled"
-    :is-loading="isFetchingPermissions"
-  />
+    <FundPermissions
+      v-if="roles.length && isReadonly"
+      class="mt-6"
+      :chain-id="fundChainId"
+      :disabled="isEditDisabled"
+      :is-loading="isFetchingPermissions"
+    />
+  </template>
 </template>
 
 <script setup lang="ts">
