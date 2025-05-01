@@ -37,8 +37,6 @@
             </div>
           </template>
         </UiTooltipClick>
-      </template>
-      <template #buttons>
         <v-btn
           class="text-secondary me-4"
           variant="outlined"
