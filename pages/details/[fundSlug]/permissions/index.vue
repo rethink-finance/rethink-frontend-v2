@@ -53,33 +53,16 @@
           </div>
         </div>
       </div>
-      <v-overlay
-        :model-value="isFetchingPermissions"
-        class="d-flex justify-center align-center"
-        opacity="0.12"
-        contained
-        persistent
-        absolute
-      >
-        <v-progress-circular
-          class="stepper_onboarding__loading_spinner"
-          size="70"
-          width="3"
-          indeterminate
-        />
-      </v-overlay>
 
       <!-- Permissions loaded from zodiac roles modifier -->
       <!-- TODO here it flickers as we first have to fetch fundData and then roleModAddress, prevent flickering -->
       <FundPermissions
-        v-if="roles.length"
         class="mt-6"
         :chain-id="fund.chainId"
         :disabled="isEditDisabled"
-        :is-loading="isFetchingPermissions"
+        :is-loading="isLoading"
       />
     </UiMainCard>
-
   </div>
 </template>
 
@@ -92,6 +75,8 @@ import { useSettingsStore } from "~/store/settings/settings.store";
 import { useRoles } from "~/composables/permissions/useRoles";
 import { useToastStore } from "~/store/toasts/toast.store";
 import PermissionImportRawPermissions from "~/components/permission/ImportRawPermissions.vue";
+import { ActionState } from "~/types/enums/action_state";
+import { useActionStateStore } from "~/store/actionState.store";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -99,9 +84,10 @@ const permissionsProposalStore = usePermissionsProposalStore();
 const appSettingsStore = useSettingsStore();
 const roleStore = useRoleStore();
 const toastStore = useToastStore();
+const actionStateStore = useActionStateStore();
+
 const { selectedFundSlug } = storeToRefs(useFundStore());
 const fund = useAttrs().fund as IFund;
-
 
 const {
   roles,
@@ -111,6 +97,11 @@ const {
   fetchPermissions,
 } = useRoles(fund.chainId, fund.address);
 
+const isLoading = computed(() =>
+  isFetchingPermissions.value ||
+  actionStateStore.isActionState("fetchRoleModAddressAddressAction", ActionState.Loading),
+);
+
 const fetchRolesAndPermissions = async () => {
   if (!fund?.address) {
     roles.value = [];
@@ -118,7 +109,7 @@ const fetchRolesAndPermissions = async () => {
   }
 
   try {
-    const roleModAddress = await fundStore.getRoleModAddress(fund.address);
+    const roleModAddress = await fundStore.fetchRoleModAddress(fund.address);
     await fetchPermissions(roleModAddress);
   } catch (error) {
     console.error(error);
@@ -138,10 +129,8 @@ const navigateToCreatePermissions = async () => {
   );
 };
 
-
-
 watch(
-  () => [fund.chainShort, fundStore.getRoleModAddress],
+  () => [fund.chainShort, fundStore.fetchRoleModAddress],
   () => {
     fetchRolesAndPermissions();
   },

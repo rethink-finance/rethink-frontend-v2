@@ -3,6 +3,9 @@
     <div class="permissions_menu__section">
       <strong>Members</strong>
       <div class="permissions__list">
+        <div v-if="disabled && !allMembers?.length">
+          No members yet.
+        </div>
         <div
           v-for="memberAddress in allMembers"
           :key="memberAddress"
@@ -52,6 +55,9 @@
     <div class="permissions_menu__section">
       <strong>Targets</strong>
       <div class="permissions__list">
+        <div v-if="disabled && !allTargets?.length">
+          No targets yet.
+        </div>
         <div
           v-for="target in allTargets"
           :key="target.id"

@@ -59,6 +59,7 @@ export const useRoleStore = defineStore("roleStore", () => {
 
     roleId.value = id || "";
     role.value = r;
+
     members.value = {
       list: r?.members.map((member: Member) => member.address) || [],
       add: [],

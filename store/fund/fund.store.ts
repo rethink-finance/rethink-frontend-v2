@@ -41,6 +41,7 @@ import type IFundTransactionRequest from "~/types/fund_transaction_request";
 import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
+import { fetchRoleModAddressAddressAction } from "~/store/fund/actions/fetchRoleModAddress.action";
 
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
@@ -739,33 +740,10 @@ export const useFundStore = defineStore({
       this.fund.fundContractBaseTokenBalance = balanceWei;
       this.fund.fundContractBaseTokenBalanceLoading = false;
     },
-    async getRoleModAddress(fundAddress: string): Promise<string> {
-      if (!fundAddress) return "";
-
-      // If we have already fetched the role mod address for the current fund, just return it.
-      let roleModAddress = this.fundRoleModAddress[fundAddress];
-      if (roleModAddress) {
-        return roleModAddress;
-      }
-
-      // If role mod address was not fetched yet, fetch it now.
-      const startAddress = "0x0000000000000000000000000000000000000001";
-      /*
-      function getModulesPaginated(
-        address start,
-        uint256 pageSize
-      )
-       */
-      const safeModules = await this.web3Store.callWithRetry(
-        this.selectedFundChain,
-        () =>
-          this.fundSafeContract.methods
-            .getModulesPaginated(startAddress, 10)
-            .call(),
+    fetchRoleModAddress(fundAddress: string): Promise<string> {
+      return useActionState("fetchRoleModAddressAddressAction", () =>
+        fetchRoleModAddressAddressAction(fundAddress),
       );
-      roleModAddress = safeModules[0][1];
-      this.fundRoleModAddress[fundAddress] = roleModAddress;
-      return roleModAddress;
     },
     postUpdateNAV(): Promise<any> {
       return useActionState("postUpdateNAVAction", () => postUpdateNAVAction());

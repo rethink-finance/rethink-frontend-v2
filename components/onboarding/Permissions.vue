@@ -1,24 +1,10 @@
 <template>
   <div>
     <div class="d-flex" :class="isReadonly ? 'justify-end' : 'justify-start'">
-      <v-btn
-        v-if="isReadonly"
-        type="submit"
-        @click="isReadonly = !isReadonly"
-      >
-        Add Permissions
-      </v-btn>
-      <v-btn v-if="!isReadonly" variant="outlined" @click="isReadonly = true">
-        <Icon
-          icon="material-symbols:close"
-          class="di-card__close-icon"
-          width="1.5rem"
-        />
-        Cancel Add Permissions
-      </v-btn>
+      <PermissionImportRawPermissions />
     </div>
     <FundGovernanceDelegatedPermissions
-      v-if="!isReadonly"
+      v-if="!isReadonly && false"
       ref="delegatedPermissionsRef"
       v-model="delegatedPermissionsEntry"
       :fields-map="DelegatedPermissionFieldsMap"
@@ -82,10 +68,8 @@
     </FundGovernanceDelegatedPermissions>
 
     <FundPermissions
-      v-if="roles.length && isReadonly"
       class="mt-6"
       :chain-id="fundChainId"
-      :disabled="isEditDisabled"
       :is-loading="isFetchingPermissions"
     />
   </div>
@@ -108,11 +92,23 @@ import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPerm
 import { networksMap } from "~/store/web3/networksMap";
 import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
 import { useRoles } from "~/composables/permissions/useRoles";
+import PermissionImportRawPermissions from "~/components/permission/ImportRawPermissions.vue";
+import type { Role } from "~/types/zodiac-roles/role";
+import { useRoleStore } from "~/store/role/role.store";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
-const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
+const roleStore = useRoleStore();
 
+const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
+const {
+  roles,
+  selectedRole,
+  isFetchingPermissions,
+  fetchPermissions,
+} = useRoles(fundChainId.value, fundInitCache?.value?.fundSettings?.fundAddress);
+
+// TODO remove this isReadonly, not needed anymore.
 const isReadonly = ref(true);
 const loading = ref(false);
 const allowManagerToSendFundsToFundContract = ref(false);
@@ -137,8 +133,9 @@ const delegatedPermissionsEntry = ref([
     steps: [defaultMethod],
   },
 ]);
-const roleModAddress = computed(() => fundInitCache?.value?.rolesModifier);
 
+// Computed
+const roleModAddress = computed(() => fundInitCache?.value?.rolesModifier);
 const gnosisPermissionsUrl = computed(() => {
   if (!fundChainId.value) return "";
 
@@ -239,14 +236,6 @@ const getAllowManagerToCollectFeesPermission = (
   return encodedRoleModEntries;
 }
 
-const {
-  roles,
-  selectedRole,
-  isEditDisabled,
-  isFetchingPermissions,
-  fetchPermissions,
-} = useRoles(fundChainId.value, fundInitCache?.value?.fundSettings?.fundAddress);
-
 
 const storePermissions = async () => {
   const fundInitCacheSettings = fundInitCache?.value?.fundSettings;
@@ -341,6 +330,20 @@ watch(
     console.warn("FETCH PERMS")
     await fetchPermissions(roleModAddress.value);
     console.log("fetched roles", roles.value);
+    // If no roles or permissions exist, pre-populate an empty role with roleId 1
+    if (!roles.value?.length) {
+      isReadonly.value = false;
+
+      // Pre-populate an empty role with roleId 1
+      const roleId = "1";
+      const emptyRole: Role = {
+        id: roleId,
+        name: roleId,
+        targets: [],
+        members: [],
+      };
+      roleStore.initRoleState(roleId, emptyRole)
+    }
   },
   { immediate: true },
 );

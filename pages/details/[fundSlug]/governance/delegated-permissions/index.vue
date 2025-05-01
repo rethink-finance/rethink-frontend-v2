@@ -1,13 +1,12 @@
 <template>
-  <div class="delegated-permission">
-    <FundGovernanceDelegatedPermissions
-      v-model="delegatedPermissionsEntry"
-      :fields-map="DelegatedPermissionFieldsMap"
-      submit-label="Create Proposal"
-      @submit="submitProposal"
-      @entry-updated="entryUpdated"
-    />
-  </div>
+  <FundGovernanceDelegatedPermissions
+    v-model="delegatedPermissionsEntry"
+    :fields-map="DelegatedPermissionFieldsMap"
+    submit-label="Create Proposal"
+    class="delegated-permission"
+    @submit="submitProposal"
+    @entry-updated="entryUpdated"
+  />
 </template>
 
 <script setup lang="ts">
@@ -101,7 +100,7 @@ const submitProposal = async () => {
   )?.steps[0];
   if (!details || !transactions?.length) return;
 
-  const roleModAddress = await fundStore.getRoleModAddress(fundStore.fundAddress);
+  const roleModAddress = await fundStore.fetchRoleModAddress(fundStore.fundAddress);
 
   console.log(toRaw(transactions));
   console.log(toRaw(details));

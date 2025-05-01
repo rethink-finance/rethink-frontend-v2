@@ -346,7 +346,7 @@ const submitProposal = async () => {
    */
   loading.value = true;
   if (!proposal.value.allowManagerToUpdateNav) return;
-  const roleModAddress = await fundStore.getRoleModAddress(fundStore.fundAddress);
+  const roleModAddress = await fundStore.fetchRoleModAddress(fundStore.fundAddress);
 
   const allowManagerToUpdateNavProposal = getAllowManagerToUpdateNavProposalData(
     encodedNavUpdateEntries,

@@ -34,7 +34,7 @@ watch(
     if (!props.fund?.address) {
       roleModAddress.value = "";
     } else {
-      roleModAddress.value = await fundStore.getRoleModAddress(props.fund?.address);
+      roleModAddress.value = await fundStore.fetchRoleModAddress(props.fund?.address);
     }
   },
   { deep: true, immediate: true },

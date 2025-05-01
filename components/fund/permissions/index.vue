@@ -1,16 +1,23 @@
 <template>
   <div class="permissions">
     <!-- TODO make this progress spinner in center of div -->
-    <div v-if="isLoading">
-      Loading permissions...
+    <v-overlay
+      :model-value="isLoading"
+      class="d-flex justify-center align-center permissions__overlay"
+      opacity="0.12"
+      contained
+      persistent
+      absolute
+    >
       <v-progress-circular
-        class="d-flex"
-        size="32"
+        class="stepper_onboarding__loading_spinner"
+        size="70"
         width="3"
         indeterminate
       />
-    </div>
-    <template v-else>
+    </v-overlay>
+
+    <template v-if="!isLoading">
       <div class="permissions__menu_left">
         <FundPermissionsMenuLeft
           :selected-target="activeTargetId"
@@ -25,8 +32,8 @@
         :disabled="disabled"
         :chain-id="chainId"
       />
-      <div v-else>
-        Select a target.
+      <div v-else class="text-center w-100">
+        Select or add a new target.
       </div>
     </template>
   </div>
@@ -59,6 +66,9 @@ const { activeTargetId } = storeToRefs(roleStore);
   display: flex;
   flex-direction: row;
 
+  &__overlay {
+    min-height: 30rem;
+  }
   &__menu_left {
     display: flex;
     flex-direction: column;
