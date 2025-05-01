@@ -57,6 +57,10 @@ export function getConditionsPerType(type: ParamNativeType): ParamComparison[] {
   return [ParamComparison.EQUAL_TO, ParamComparison.ONE_OF]
 }
 
+export function isFuncConditionBlocked(funcCondition: FunctionCondition): boolean {
+  return !funcCondition?.type || funcCondition.type === ConditionType.BLOCKED;
+}
+
 export function getConditionType(nativeType: ParamNativeType): ParameterType {
   // Are tuples support?
   if (nativeType === ParamNativeType.ARRAY) return ParameterType.DYNAMIC32

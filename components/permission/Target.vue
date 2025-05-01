@@ -91,7 +91,7 @@
     </UiDataRowCard>
 
     <div v-if="!isFetchingTargetABI" class="permissions__list">
-      <p v-if="disabled && countOfFuncConditionsWithParams === 0" class="text-center my-8">
+      <p v-if="disabled && nonBlockedFunctionCount === 0" class="text-center my-8">
         Target is scoped, but no functions are explicitly allowed.
         All calls to this contract are currently blocked.
       </p>
@@ -121,7 +121,7 @@
 
 <script setup lang="ts">
 import type { FunctionFragment, JsonFragment } from "ethers";
-import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
+import { getWriteFunctions, isFuncConditionBlocked } from "~/composables/zodiac-roles/conditions";
 import { useFundStore } from "~/store/fund/fund.store";
 import { type RoleStoreType, useRoleStore } from "~/store/role/role.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -155,15 +155,16 @@ const targetABIJson = ref<JsonFragment[]>([]);
 const customABI = ref<string>("");
 const isEditingCustomABI = ref(false);
 
-const countOfFuncConditionsWithParams = computed(() => {
+const nonBlockedFunctionCount = computed(() => {
   const funcSelectors = [
     ...abiWriteFunctions.value.map(f => f.selector),
     ...sighashesNotInAbi.value,
   ];
 
+  // Count all func conditions that are not type ConditionType.BLOCKED.
   return funcSelectors.filter(funcSelector => {
     const funcConditions = getFuncCondition(funcSelector);
-    return funcConditions?.params?.length > 0;
+    return !isFuncConditionBlocked(funcConditions);
   }).length;
 });
 

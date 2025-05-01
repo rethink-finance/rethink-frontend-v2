@@ -2,8 +2,8 @@
   <!-- Do not display this component if the user is in read-only mode and
   if there are no condition params set. -->
   <UiDataRowCard
-    v-if="!disabled || (disabled && funcConditions?.params?.length > 0)"
-    :is-expanded="(disabled && funcConditions?.params?.length > 0)"
+    v-if="!disabled || (disabled && !isConditionBlocked)"
+    :is-expanded="(disabled && !isConditionBlocked)"
     no-body-padding
     bg-transparent
     title-full-height
@@ -68,6 +68,7 @@ import cloneDeep from "lodash.clonedeep";
 import type { FunctionCondition } from "~/types/zodiac-roles/role";
 import { getParamsTypesTitle } from "~/composables/zodiac-roles/target";
 import { ConditionType, ExecutionOption } from "~/types/enums/zodiac-roles";
+import { isFuncConditionBlocked } from "~/composables/zodiac-roles/conditions";
 
 /**
  * This component displays function conditions based on ABI detection.
@@ -103,6 +104,7 @@ const props = defineProps({
     default: false,
   },
 });
+const isConditionBlocked = computed(() => isFuncConditionBlocked(localFuncConditions.value))
 
 // Create a local reactive copy of funcConditions to allow editing it without mutating props.
 const localFuncConditions = useVModel(props, "funcConditions", emit, {
