@@ -980,9 +980,7 @@ const getChainDrafts = () => {
 const setDefaultSelectedChainId = () =>{
   const chainDrafts = getChainDrafts();
 
-  if (
-    step.value === 1
-  ) {
+  if (step.value === 1) {
     const chainWithDraftConnectedWallet = chainDrafts.find((chain) => chain.hasDrafts && chain.chainId === accountStore.connectedWalletChainId);
     const chainWithDraft = chainDrafts.find((chain) => chain.hasDrafts);
 
