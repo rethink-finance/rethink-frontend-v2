@@ -21,14 +21,7 @@
                 {{ selectedRole?.name }}
               </strong>
             </div>
-            <v-btn
-              v-if="!isEditDisabled"
-              class="text-secondary me-4"
-              variant="outlined"
-              @click="openImportRawDialog"
-            >
-              Import Raw Permissions
-            </v-btn>
+            <PermissionImportRawPermissions :disabled="isEditDisabled" />
           </div>
 
           <div v-if="appSettingsStore.isManageMode" class="is-manage-mode">
@@ -87,25 +80,6 @@
       />
     </UiMainCard>
 
-    <!-- Import raw permissions JSON modal -->
-    <UiConfirmDialog
-      v-model="showAddRawDialog"
-      title="Import Permissions JSON"
-      max-width="80%"
-      confirm-text="Import Permissions"
-      cancel-text="Cancel"
-      message="Please enter raw permissions JSON below"
-      @confirm="importRawPermissions"
-    >
-      <v-textarea
-        v-model="rawPermissionsJson"
-        label="Raw proposal"
-        outlined
-        placeholder="Enter the raw proposal here"
-        rows="20"
-        class="raw-method-textarea"
-      />
-    </UiConfirmDialog>
   </div>
 </template>
 
@@ -117,7 +91,7 @@ import { useRoleStore } from "~/store/role/role.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
 import { useRoles } from "~/composables/permissions/useRoles";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { parseRawPermissionsJson } from "~/composables/permissions/parseRawPermissionsJson";
+import PermissionImportRawPermissions from "~/components/permission/ImportRawPermissions.vue";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -128,9 +102,6 @@ const toastStore = useToastStore();
 const { selectedFundSlug } = storeToRefs(useFundStore());
 const fund = useAttrs().fund as IFund;
 
-// Import raw permissions:
-const showAddRawDialog = ref(false);
-const rawPermissionsJson = ref("");
 
 const {
   roles,
@@ -167,36 +138,6 @@ const navigateToCreatePermissions = async () => {
   );
 };
 
-// Methods
-const openImportRawDialog = () => (showAddRawDialog.value = true);
-
-const importRawPermissions = () => {
-  try {
-    const parsedRawPermissions = parseRawPermissionsJson(JSON.parse(rawPermissionsJson.value));
-    if (!parsedRawPermissions) {
-      throw new Error("Invalid raw permissions JSON");
-    }
-    console.log("parsedRawPermissions:", parsedRawPermissions)
-
-    // TODO: add warning if any permission couldnt be imported or stayed in the customPermissions array
-    //   eventually it could be displayed below as custom permissions list
-    for (const [roleId, targets] of Object.entries(parsedRawPermissions.roleTargets)) {
-      console.log("roleId", roleId, "targets", targets);
-      if (roleId !== roleStore.roleId) continue;
-      for (const target of Object.values(targets)) {
-        console.debug("Import Role Target:", roleId, target)
-        roleStore.handleAddTarget(target);
-      }
-    }
-
-    showAddRawDialog.value = false;
-    rawPermissionsJson.value = "";
-    toastStore.successToast("Raw proposal added successfully");
-  } catch (e) {
-    console.error(e);
-    toastStore.errorToast("Failed to import raw permissions. Make sure that the input is in the correct format.");
-  }
-};
 
 
 watch(
