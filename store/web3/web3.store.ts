@@ -123,6 +123,7 @@ export const useWeb3Store = defineStore({
       method: () => any,
       maxRetries: number = 1,
       extraIgnorableErrorCodes?: any[],
+      timeoutMs: number = 4000,
     ): Promise<any> {
       // TODO: see the TODO below for the possible upgrade of callWithRetry
       const RPCUrlsLength = this.networkRpcUrls(chainId).length;
@@ -132,7 +133,13 @@ export const useWeb3Store = defineStore({
 
       while (retries <= maxRetries && switchedRPCCount <= RPCUrlsLength) {
         try {
-          return await method();
+          // Call the method, but also do a timeout promise of 1.5 seconds.
+          return await Promise.race([
+            method(),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error(`Method call timed out after ${timeoutMs}ms`)), timeoutMs),
+            ),
+          ]);
         } catch (error: any) {
           const ignorableErrorCodes = [4001];
           // If user passed additional error codes that we don't want to retry, add them to ignorableErrorCodes.

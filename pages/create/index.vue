@@ -288,6 +288,7 @@ import {
   type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
+import type IFundInitCache from "~/types/fund_init_cache";
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
 const web3Store = useWeb3Store();
@@ -297,7 +298,6 @@ const createFundStore = useCreateFundStore();
 // Data
 const {
   fundChainId,
-  fundInitCache,
   askToSaveDraftBeforeRouteLeave,
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
@@ -322,12 +322,15 @@ const isCheckingIfFundInitCacheExists = ref(false);
 const isWhitelistedDeposits = ref(false);
 const selectedChainId = ref<ChainId>(networkChoices[0].value);
 
+// We want to set fundInitCache here when it is updated, and not take it from the store,
+// to prevent race conditions.
+const fundInitCache = ref<IFundInitCache | undefined>(undefined);
 const fundSettings = computed<IFundSettings>(() => fundInitCache?.value?.fundSettings || {} as IFundSettings);
 const fundMetadata = computed(() => fundInitCache?.value?.fundMetadata || {});
 const fundGovernorData = computed(() => fundInitCache?.value?.governorData || {});
 
 // Fetch Fund Cache and fill the form data with the fetched fund cache.
-const setFieldValue = (field: IField): void => {
+const setFieldValue = (field: IField) => {
   if (![InputType.Image, InputType.Textarea, InputType.Select, InputType.Period].includes(field.type)) {
     field.type = InputType.Text;
   }
@@ -335,31 +338,33 @@ const setFieldValue = (field: IField): void => {
 
   const fieldKey = field.key as string;
   // Convert some fields to text fields, as they are all readonly.
+  let cachedValue;
+
   if (fieldKey in fundSettings.value) {
-    let value = fundSettings.value[fieldKey];
+    cachedValue = fundSettings.value[fieldKey];
     if (feeFieldKeys.includes(fieldKey)) {
-      value = Number(fromBpsToPercentage(value));
+      cachedValue = Number(fromBpsToPercentage(cachedValue));
     }
 
-    field.value = value;
+    field.value = cachedValue;
   } else if (fieldKey in fundMetadata.value) {
-    field.value = fundMetadata.value[fieldKey];
+    cachedValue = fundMetadata.value[fieldKey];
+    field.value = cachedValue;
   } else if (fieldKey in fundGovernorData.value) {
-    field.value = fundGovernorData.value[fieldKey];
+    cachedValue = fundGovernorData.value[fieldKey];
+    field.value = cachedValue;
   } else if (fundInitCache?.value) {
     console.error(" field key missing", field);
   }
-
-  if (field.type === InputType.Period && ["string", "number"].includes(typeof field.value)) {
-    field.blocks = Number(field?.blocks || 0);
-  }
+  return cachedValue
 }
 const fetchFundInitCache = async () => {
   if (!selectedChainId.value) return;
 
   if (accountStore.activeAccountAddress) {
+
     // Take stepper entry chain id from the local storage
-    await createFundStore.fetchFundInitCache(
+    fundInitCache.value = await createFundStore.fetchFundInitCache(
       selectedChainId.value,
       accountStore.activeAccountAddress,
     );
@@ -369,8 +374,17 @@ const fetchFundInitCache = async () => {
         if ("fields" in field) {
           // Field is of type IFieldGroup, has more subfields.
           // TODO here we only go 2 levels deep, but IField can have infinite levels, do recursion for fields.
+          let hasValue;
           for (const subField of field.fields || []) {
-            setFieldValue(subField);
+            const val = setFieldValue(subField);
+            // This feels like a hack, but we are trying to enable the toggle button for those that are not 0 or 0x0...
+            // But it won't handle cases where users want the address to be 0x0.
+            if (!hasValue && val != null && val !== ethers.ZeroAddress && val !== 0) {
+              hasValue = true;
+            }
+          }
+          if (field?.isToggleable && hasValue) {
+            field.isToggleOn = true;
           }
         } else {
           // Field is a normal field.
@@ -518,31 +532,19 @@ const showButtonNext = computed(() => {
     return true;
   }
   // 2. button next is available on governance step ONLY IF fund was initialized
-  if (item.key === OnboardingStep.Governance && isFundInitialized.value) {
-    return true;
-  }
-
-  return false;
+  return item.key === OnboardingStep.Governance && isFundInitialized.value;
 });
 
 const showInitializeButton = computed(() => {
   if (isFundInitialized.value) return false;
 
   const item = stepperEntry.value[step.value - 1];
-
-  if (item.key === OnboardingStep.Governance) {
-    return true;
-  }
-  return false;
+  return item.key === OnboardingStep.Governance;
 });
 
 const showClearCacheButton = computed(() => {
   const item = stepperEntry.value[step.value - 1];
-
-  if (item.key === OnboardingStep.Chain && accountStore.isConnected) {
-    return true;
-  }
-  return false;
+  return item.key === OnboardingStep.Chain && accountStore.isConnected;
 });
 
 const toggledOffFields = computed(() => {
@@ -579,39 +581,35 @@ const currentStepValidation = computed(() => {
 
   const currentStep = stepperEntry.value[step.value - 1];
 
+  const validateValue = (label: string, rules: any[], value: any) => {
+    const values = Array.isArray(value) ? value : [value];
+
+    for (const val of values) {
+      for (const rule of rules) {
+        const result = rule(val);
+        if (result !== true) {
+          errors.push(`${label} ${result}`);
+          // Stop after first error, only add the first error to the errors list.
+          return
+        }
+      }
+    }
+  };
+
+  const validateField = (field: IField) => {
+    if (!field?.rules) return;
+    validateValue(field.label, field.rules, field.value);
+  };
+
   if (stepWithRegularFields.includes(currentStep.key) && currentStep.fields) {
     currentStep.fields.forEach((field) => {
       if (field.isCustomValueToggleOn === false) return;
 
       if (field.fields) {
         if (!field.isToggleOn) return;
-
-        field.fields.forEach((subField) => {
-          subField?.rules?.forEach((rule) => {
-            if (Array.isArray(subField.value)) {
-              subField.value.forEach((val) => {
-                const result = rule(val);
-                if (result !== true) errors.push(subField.label + " " + result);
-              });
-            } else {
-              const result = rule(subField.value);
-              if (result !== true) errors.push(subField.label + " " + result);
-            }
-          });
-        });
-
+        field.fields.forEach(validateField);
       } else {
-        field?.rules?.forEach((rule) => {
-          if (Array.isArray(field.value)) {
-            field.value.forEach((val) => {
-              const result = rule(val);
-              if (result !== true) errors.push(field.label + " " + result);
-            });
-          } else {
-            const result = rule(field.value);
-            if (result !== true) errors.push(field.label + " " + result);
-          }
-        });
+        validateField(field);
       }
     });
   }
@@ -695,7 +693,6 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
       ...fieldTyped,
       isCustomValueToggleOn: fieldIsCustomValueToggleOn ?? fieldTyped?.isCustomValueToggleOn,
       value: fieldValue ?? fieldTyped?.value,
-      blocks: stepperEntryField?.blocks,
     } as IField;
   });
   console.log("output:", output);
@@ -747,15 +744,7 @@ const getFieldByStepAndFieldKey =(
     console.error(`Field ${fieldKey} not found in step ${stepKey}`);
     return "";
   }
-  console.log("00field:", stepKey, fieldKey, field, field?.defaultValue)
-  let fieldValue = field?.value;
-  if (field?.type === InputType.Period) {
-    // If field is Period input type, use blocks value instead of raw input.
-    if (field?.blocks == null || Number.isNaN(field.blocks)) {
-      throw new Error(`Field ${field.title} blocks value is missing.`)
-    }
-    fieldValue = field?.blocks.toString();
-  }
+  const fieldValue = field?.value;
 
   if (field?.defaultValue !== undefined && field?.defaultValue !== null) {
     return field?.isCustomValueToggleOn ? fieldValue : field?.defaultValue;
@@ -821,7 +810,6 @@ const formatFeeCollectors = () => {
     getFeeCollectors("performanceFeeRecipientAddress"),
   ]
 };
-
 
 const formatInitializeData = () => {
   const output = [

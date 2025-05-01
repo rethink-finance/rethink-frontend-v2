@@ -1,14 +1,14 @@
 import { defineStore } from "pinia";
 
+import { useActionState } from "../actionState.store";
+import { fetchFundInitCacheAction } from "./actions/fetchFundInitCache.action";
 import { clearLocalStorageItem } from "~/composables/localStorage";
 import { useAccountStore } from "~/store/account/account.store";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ChainId } from "~/types/enums/chain_id";
 import type IFundSettings from "~/types/fund_settings";
-import type { IFundInitCache } from "~/types/fund_settings";
-import { useActionState } from "../actionState.store";
-import { fetchFundInitCacheAction } from "./actions/fetchFundInitCache.action";
+import type IFundInitCache from "~/types/fund_init_cache";
 
 interface IState {
   selectedStepperChainId?: ChainId;

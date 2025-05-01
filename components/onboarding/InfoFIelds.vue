@@ -19,7 +19,6 @@
             :is-disabled="!field.isToggleOn || isStepDisabled"
             :chain-id="chainId"
             :tab-index="index"
-            @update:blocks="(val) => subField.blocks = val"
           />
         </template>
       </UiFieldsGroup>
@@ -33,7 +32,6 @@
           :custom-error-message="getCustomFieldErrorMessage(field)"
           :show-default-value-info="!isFundInitialized"
           :chain-id="chainId"
-          @update:blocks="(val) => field.blocks = val"
         />
 
         <div

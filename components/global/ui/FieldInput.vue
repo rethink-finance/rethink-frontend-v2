@@ -68,14 +68,12 @@
     <template v-else-if="field.type === InputType.Period">
       <UiInputTimeToBlocks
         v-model="value"
-        :blocks="field.blocks"
         :rules="field.rules"
         :placeholder="field.placeholder"
         :is-disabled="isDisabled"
         :error-messages="errorMessages"
         :chain-id="chainId"
         :tabindex="tabIndex"
-        @update:blocks="(val) => emit('update:blocks', val)"
       />
     </template>
   </div>
@@ -115,7 +113,7 @@ const props = defineProps({
     default: undefined,
   },
 });
-const emit = defineEmits(["update:modelValue", "update:blocks"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const value = computed({
   get: () => props.modelValue,

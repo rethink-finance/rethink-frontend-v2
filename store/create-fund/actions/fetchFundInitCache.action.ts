@@ -5,7 +5,7 @@ import { formatQuorumPercentage } from "~/composables/formatters";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { type ChainId } from "~/types/enums/chain_id";
-import type { IFundInitCache } from "~/types/fund_settings";
+import type IFundInitCache from "~/types/fund_init_cache";
 
 
 const fetchGovernorData = async (fundChainId: ChainId, governorAddress?: string) => {

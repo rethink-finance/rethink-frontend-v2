@@ -63,23 +63,20 @@
       />
     </div>
 
-    <div>
-      <div class="field-input">
-        <template v-if="field.defaultValueInfo">
-          <UiInfoBox :info="field.defaultValueInfo" />
-        </template>
-        <UiFieldInput
-          v-if="!(isCustomValueToggleOn !== undefined && !isCustomValueToggleOn)"
-          v-model="fieldValue"
-          :field="field"
-          :is-disabled="isInputDisabled"
-          :is-preview="isPreview"
-          :custom-error-message="customErrorMessage"
-          :chain-id="chainId"
-          :tab-index="tabIndex"
-          @update:blocks="(val) => emit('update:blocks', val)"
-        />
-      </div>
+    <div class="field-input">
+      <template v-if="field.defaultValueInfo">
+        <UiInfoBox :info="field.defaultValueInfo" />
+      </template>
+      <UiFieldInput
+        v-if="!(isCustomValueToggleOn !== undefined && !isCustomValueToggleOn)"
+        v-model="fieldValue"
+        :field="field"
+        :is-disabled="isInputDisabled"
+        :is-preview="isPreview"
+        :custom-error-message="customErrorMessage"
+        :chain-id="chainId"
+        :tab-index="tabIndex"
+      />
     </div>
 
     <InfoBox v-if="field.info && !isPreview" :info="field.info" class="info_box" />
@@ -94,7 +91,6 @@ import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 const emit = defineEmits([
   "update:modelValue",
   "update:isCustomValueToggleOn",
-  "update:blocks",
 ]);
 defineOptions({
   inheritAttrs: false,
@@ -157,16 +153,16 @@ const isCustomValueActive = computed({
 });
 
 const fieldValue = computed({
-  get: () => {
-    if (props.modelValue) return props.modelValue;
-    // If defaultValue is set to null, return undefined as we want it to be empty.
-    console.warn("defaultValue", props.field);
-    if (props.field?.defaultValue === null) return undefined;
-
-    // Else return set default value or if it does not exist, just return field's default type value.
-    return props.field?.defaultValue || defaultInputTypeValue[props.field?.type as InputType];
-  },
+  get: () => props.modelValue,
   set: (val) => emit("update:modelValue", val),
+});
+
+watchEffect(() => {
+  // If defaultValue is set to null, return undefined as we want it to be empty.
+  if (props.field?.defaultValue === null || props.modelValue != null) return;
+
+  // Else return set default value or if it does not exist, just return field's default type value.
+  fieldValue.value = props.field?.defaultValue ?? defaultInputTypeValue[props.field?.type as InputType];
 });
 
 const isFieldModified = computed(() => {

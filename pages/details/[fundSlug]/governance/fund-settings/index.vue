@@ -165,7 +165,6 @@ function generateFields(section: IStepperSection, proposal: IProposal) {
       const output = field?.fields?.map((subField) => ({
         ...subField,
         value: proposal[subField?.key] as string,
-        blocks: subField.type === InputType.Period ? Number(proposal[subField?.key]) || 0 : undefined,
         type: section.key === StepSections.Governance ? InputType.Text : subField.type,
       }));
 
@@ -178,7 +177,6 @@ function generateFields(section: IStepperSection, proposal: IProposal) {
     return {
       ...fieldTyped,
       value: proposal[fieldTyped.key] as string,
-      blocks: fieldTyped.type === InputType.Period ? Number(proposal[fieldTyped?.key]) || 0 : undefined,
       type: section.key === StepSections.Governance ? InputType.Text : fieldTyped.type,
     } as IField;
   });

@@ -77,11 +77,11 @@ export const networksMap: Record<ChainId, INetwork> = {
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
       // "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", // Luka T.
       // "https://eth-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", // Rok
+      "https://rpc.flashbots.net/fast",
+      "https://rpc.flashbots.net",
       "https://ethereum.blockpi.network/v1/rpc/public",
       "https://api.zan.top/node/v1/eth/mainnet/public",
       "https://rpc.ankr.com/eth",
-      "https://rpc.flashbots.net/fast",
-      "https://rpc.flashbots.net",
       "https://rpc.lokibuilder.xyz/wallet",
       "https://api.stateless.solutions/ethereum/v1/demo",
       "https://eth.drpc.org",

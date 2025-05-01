@@ -328,6 +328,10 @@ export const useFundStore = defineStore({
     shouldUserWaitSettlementOrCancelRedemption(): boolean {
       // If there was no NAV update yet, the user can process deposit request.
       // There is no need to wait until the next settlement.
+      console.log(
+        `Should process withdraw: fundLastNAVUpdate.timestamp: ${this.fundLastNAVUpdate?.timestamp} 
+        userDepositRequest.timestamp ${this.fundUserData.redemptionRequest?.timestamp}`,
+      );
       if (
         !this.fundLastNAVUpdate?.timestamp ||
         !this.fundUserData.redemptionRequest?.timestamp
@@ -336,7 +340,7 @@ export const useFundStore = defineStore({
       // User redemption request exists and is valid, but there has to be at least 1 NAV update
       // made after the redemption was requested.
       return (
-        this.fundUserData.redemptionRequest.timestamp < this.fundLastNAVUpdate?.timestamp
+        this.fundUserData.redemptionRequest.timestamp >= this.fundLastNAVUpdate?.timestamp
       );
     },
     totalCurrentSimulatedNAV(): bigint {

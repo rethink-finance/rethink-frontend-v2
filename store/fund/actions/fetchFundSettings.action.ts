@@ -1,7 +1,7 @@
 import { GovernableFund } from "assets/contracts/GovernableFund";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
-import type { IFundInitCache } from "~/types/fund_settings";
+import type IFundInitCache from "~/types/fund_init_cache";
 
 
 export const fetchFundSettingsAction = async (

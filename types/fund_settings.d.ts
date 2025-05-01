@@ -26,14 +26,3 @@ export default interface IFundSettings {
   fundName: string;
   fundSymbol: string;
 }
-
-export interface IFundInitCache {
-  fundContractAddr: string;
-  rolesModifier: string;
-  fundSettings: IFundSettings;
-  _feeManagePeriod: string;
-  _feePerformancePeriod: string;
-  _fundMetadata: string;
-  fundMetadata: Record<string, any>;
-  governorData: Record<string, any>;
-}

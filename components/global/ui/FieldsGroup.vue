@@ -76,34 +76,33 @@ const toggleValue = computed({
 
 <style scoped lang="scss">
 .field_group {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid $color-bg-transparent;
+
+  &__toggle {
     display: flex;
-    flex-direction: column;
-    border: 1px solid $color-bg-transparent;
+    gap: 10px;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  &__fields {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  &__tooltip{
+    cursor: pointer;
+    color: $color-text-irrelevant;
+    transition: color 0.3s ease;
 
-    &__toggle {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-
-      }
-
-    &__fields {
-        display: flex;
-        flex-wrap: wrap;
-        width: 100%;
+    &:hover {
+      color: $color-primary;
     }
-
-    &__tooltip{
-      cursor: pointer;
-      color: $color-text-irrelevant;
-      transition: color 0.3s ease;
-
-      &:hover {
-        color: $color-primary;
-      }
-      &:focus {
-        outline: none;
-      }
+    &:focus {
+      outline: none;
     }
+  }
 }
 </style>
