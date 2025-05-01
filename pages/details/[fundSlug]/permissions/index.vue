@@ -61,7 +61,7 @@
         </div>
       </div>
       <v-overlay
-        :model-value="isLoadingPermissions"
+        :model-value="isFetchingPermissions"
         class="d-flex justify-center align-center"
         opacity="0.12"
         contained
@@ -90,7 +90,7 @@
     <!-- Import raw permissions JSON modal -->
     <UiConfirmDialog
       v-model="showAddRawDialog"
-      title="Add Raw Proposal"
+      title="Import Permissions JSON"
       max-width="80%"
       confirm-text="Import Permissions"
       cancel-text="Cancel"
@@ -128,7 +128,6 @@ const toastStore = useToastStore();
 const { selectedFundSlug } = storeToRefs(useFundStore());
 const fund = useAttrs().fund as IFund;
 
-const isLoadingPermissions = ref(false);
 // Import raw permissions:
 const showAddRawDialog = ref(false);
 const rawPermissionsJson = ref("");
@@ -147,7 +146,6 @@ const fetchRolesAndPermissions = async () => {
     return;
   }
 
-  isLoadingPermissions.value = true;
   try {
     const roleModAddress = await fundStore.getRoleModAddress(fund.address);
     await fetchPermissions(roleModAddress);
@@ -155,7 +153,6 @@ const fetchRolesAndPermissions = async () => {
     console.error(error);
     toastStore.errorToast("Failed loading permissions. Please refresh page.");
   }
-  isLoadingPermissions.value = false;
 };
 
 const navigateToCreatePermissions = async () => {

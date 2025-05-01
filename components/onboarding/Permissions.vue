@@ -1,5 +1,5 @@
 <template>
-  <template>
+  <div>
     <div class="d-flex" :class="isReadonly ? 'justify-end' : 'justify-start'">
       <v-btn
         v-if="isReadonly"
@@ -88,7 +88,7 @@
       :disabled="isEditDisabled"
       :is-loading="isFetchingPermissions"
     />
-  </template>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -337,9 +337,10 @@ const storePermissions = async () => {
 // TODO refetch permissions when user submits storePermissions
 watch(
   () => [fundChainId, roleModAddress.value],
-  () => {
+  async () => {
     console.warn("FETCH PERMS")
-    fetchPermissions(roleModAddress.value);
+    await fetchPermissions(roleModAddress.value);
+    console.log("fetched roles", roles.value);
   },
   { immediate: true },
 );

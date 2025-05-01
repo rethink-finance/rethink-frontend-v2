@@ -190,7 +190,7 @@
 
               <!-- STEP PERMISSIONS -->
               <OnboardingPermissions
-                v-if="item.key=== OnboardingStep.Permissions"
+                v-if="item.key === OnboardingStep.Permissions"
               />
 
               <!-- STEP NAV METHODS -->
