@@ -1,7 +1,7 @@
 <template>
   <UiConfirmDialog
     :model-value="modelValue"
-    title="Add Raw Methods"
+    title="Import Raw Methods"
     max-width="80%"
     confirm-text="Load"
     cancel-text="Cancel"

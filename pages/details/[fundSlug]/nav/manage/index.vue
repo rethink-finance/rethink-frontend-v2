@@ -22,7 +22,7 @@
           variant="outlined"
           @click="addRawDialog = true"
         >
-          Add Raw
+          Import Raw
         </v-btn>
         <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/proposal`">
           <v-btn class="bg-primary text-secondary">

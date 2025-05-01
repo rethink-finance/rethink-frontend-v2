@@ -24,7 +24,7 @@
           variant="outlined"
           @click="isAddRawDialogOpen = true"
         >
-          Add Raw
+          Import Raw
         </v-btn>
         <v-btn
           class="bg-primary text-secondary"
