@@ -1,10 +1,29 @@
 <template>
   <div>
-    <div class="d-flex" :class="isReadonly ? 'justify-end' : 'justify-start'">
-      <PermissionImportRawPermissions />
+    <div class="d-flex align-center justify-space-between">
+      <div v-if="!isPermissionsStepTwo" class="d-flex align-center">
+        <div class="d-flex align-center me-6">
+          <RoleSelectRole v-model="selectedRole" :roles="roles" />
+        </div>
+        <PermissionImportRawPermissions />
+      </div>
+      <v-btn
+        v-if="!isPermissionsStepTwo"
+        variant="outlined"
+        @click="isPermissionsStepTwo = true"
+      >
+        Next
+      </v-btn>
     </div>
+
+    <FundPermissions
+      v-if="!isPermissionsStepTwo"
+      class="mt-6"
+      :chain-id="fundChainId"
+      :is-loading="isFetchingPermissions"
+    />
     <FundGovernanceDelegatedPermissions
-      v-if="!isReadonly && false"
+      v-if="isPermissionsStepTwo"
       ref="delegatedPermissionsRef"
       v-model="delegatedPermissionsEntry"
       :fields-map="DelegatedPermissionFieldsMap"
@@ -66,12 +85,6 @@
         </div>
       </template>
     </FundGovernanceDelegatedPermissions>
-
-    <FundPermissions
-      class="mt-6"
-      :chain-id="fundChainId"
-      :is-loading="isFetchingPermissions"
-    />
   </div>
 </template>
 
@@ -95,6 +108,7 @@ import { useRoles } from "~/composables/permissions/useRoles";
 import PermissionImportRawPermissions from "~/components/permission/ImportRawPermissions.vue";
 import type { Role } from "~/types/zodiac-roles/role";
 import { useRoleStore } from "~/store/role/role.store";
+import RoleSelectRole from "~/components/role/SelectRole.vue";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
@@ -108,8 +122,8 @@ const {
   fetchPermissions,
 } = useRoles(fundChainId.value, fundInitCache?.value?.fundSettings?.fundAddress);
 
-// TODO remove this isReadonly, not needed anymore.
-const isReadonly = ref(true);
+
+const isPermissionsStepTwo = ref(false);
 const loading = ref(false);
 const allowManagerToSendFundsToFundContract = ref(false);
 const allowManagerToCollectFees = ref(false);
@@ -169,7 +183,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
   const encodedScopeParameter = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeParameter,
     [
-      "1", // role TODO: it's hardcoded, but in the future it can change
+      selectedRole.value?.id || "1", // role
       baseTokenAddress, // targetAddress, base token contract address
       "0xa9059cbb", // functionSig, transfer
       "0", // paramIndex
@@ -184,7 +198,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
   const encodedScopeTarget = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeTarget,
     [
-      "1", // role TODO: it's hardcoded, but in the future it can change
+      selectedRole.value?.id || "1", // role
       baseTokenAddress, // targetAddress, base token contract address
     ],
   );
@@ -213,7 +227,7 @@ const getAllowManagerToCollectFeesPermission = (
   const encodedScopeParameter = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeParameter,
     [
-      "1", // role TODO: it's hardcoded, but in the future it can change
+      selectedRole.value?.id || "1", // role
       fundAddress, // targetAddress, OIV contract address
       "0xec68ac8d", // functionSig
       "0", // paramIndex
@@ -224,11 +238,11 @@ const getAllowManagerToCollectFeesPermission = (
   );
   encodedRoleModEntries.push(encodedScopeParameter);
 
-  // Add scopeTarget permission also with target OIV contract address.
+  // Add scopeTarget permission also with the target OIV contract address.
   const encodedScopeTarget = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeTarget,
     [
-      "1", // role TODO: it's hardcoded, but in the future it can change
+      selectedRole.value?.id || "1", // role
       fundAddress, // targetAddress, OIV contract address
     ],
   );
@@ -332,8 +346,6 @@ watch(
     console.log("fetched roles", roles.value);
     // If no roles or permissions exist, pre-populate an empty role with roleId 1
     if (!roles.value?.length) {
-      isReadonly.value = false;
-
       // Pre-populate an empty role with roleId 1
       const roleId = "1";
       const emptyRole: Role = {
@@ -342,7 +354,8 @@ watch(
         targets: [],
         members: [],
       };
-      roleStore.initRoleState(roleId, emptyRole)
+      roles.value = [emptyRole];
+      selectedRole.value = emptyRole;
     }
   },
   { immediate: true },

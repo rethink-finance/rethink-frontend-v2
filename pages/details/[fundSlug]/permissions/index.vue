@@ -5,21 +5,7 @@
         <div class="info_container__buttons">
           <div class="d-flex align-center">
             <div class="d-flex align-center me-6">
-              <strong>Role #</strong>
-              <v-select
-                v-if="roles.length > 1"
-                v-model="selectedRole"
-                :items="roles"
-                item-title="name"
-                density="compact"
-                variant="outlined"
-                hide-details
-                required
-                return-object
-              />
-              <strong v-else>
-                {{ selectedRole?.name }}
-              </strong>
+              <RoleSelectRole v-model="selectedRole" :roles="roles" />
             </div>
             <PermissionImportRawPermissions :disabled="isEditDisabled" />
           </div>
@@ -75,6 +61,7 @@ import { useSettingsStore } from "~/store/settings/settings.store";
 import { useRoles } from "~/composables/permissions/useRoles";
 import { useToastStore } from "~/store/toasts/toast.store";
 import PermissionImportRawPermissions from "~/components/permission/ImportRawPermissions.vue";
+import RoleSelectRole from "~/components/role/SelectRole.vue";
 import { ActionState } from "~/types/enums/action_state";
 import { useActionStateStore } from "~/store/actionState.store";
 
