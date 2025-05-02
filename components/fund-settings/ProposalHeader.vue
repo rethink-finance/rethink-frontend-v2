@@ -37,7 +37,6 @@
       </v-btn>
 
       <v-btn
-        class="button--primary"
         :type="isLastStep ? 'submit' : 'button'"
         :loading="loading"
         :disabled="isLastStep && !accountStore.isConnected"

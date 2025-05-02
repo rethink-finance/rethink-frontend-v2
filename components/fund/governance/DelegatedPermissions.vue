@@ -11,6 +11,9 @@
       class="delegated-permission-stepper"
       @fields-changed="fieldsChanged"
     >
+      <template #title>
+        <slot name="title" />
+      </template>
       <template #post-steps-content>
         <slot name="post-steps-content" />
       </template>
@@ -18,25 +21,7 @@
         <slot name="pre-content" />
       </template>
       <template #subtitle>
-        <UiTooltipClick location="right" :hide-after="6000">
-          <Icon
-            icon="material-symbols:info-outline"
-            class="info-icon"
-            width="1.5rem"
-          />
-          <template #tooltip>
-            <div class="tooltip__content">
-              <a
-                class="tooltip__link"
-                href="https://docs.rethink.finance/rethink.finance"
-                target="_blank"
-              >
-                Learn More
-                <Icon icon="maki:arrow" color="primary" width="1rem" />
-              </a>
-            </div>
-          </template>
-        </UiTooltipClick>
+        <slot name="subtitle" />
         <v-btn
           class="text-secondary me-4"
           variant="outlined"
@@ -111,6 +96,7 @@ const emit = defineEmits([
   "update:modelValue",
   "fieldsChanged",
   "submit",
+  "cancel",
   "addRaw",
   "entryUpdated",
 ]);
@@ -348,7 +334,6 @@ watch(
     color: $color-primary;
   }
 }
-
 .info-icon {
   cursor: pointer;
   display: flex;

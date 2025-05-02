@@ -39,6 +39,8 @@ export const fetchRoles = async (chainId: ChainId, rolesModifierAddress: string)
     if (!roles.data || !roles.data.rolesModifier) {
       return []
     }
+    console.log("roles.data", roles.data.rolesModifier.roles);
+
     return roles.data.rolesModifier.roles.map((role) => ({
       ...role,
       members: role.members.map((roleMember) => roleMember.member),
@@ -54,6 +56,9 @@ export const fetchRoles = async (chainId: ChainId, rolesModifierAddress: string)
               }
               return paramCondition
             })
+
+            console.log("paramConditions", func);
+            console.log("paramConditions func.wildcarded", func.wildcarded);
 
             const funcConditions: FunctionCondition = {
               sighash: func.sighash,

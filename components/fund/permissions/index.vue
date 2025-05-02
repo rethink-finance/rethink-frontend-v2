@@ -32,7 +32,7 @@
         :disabled="disabled"
         :chain-id="chainId"
       />
-      <div v-else class="text-center w-100">
+      <div v-else class="text-center w-100 align-content-center">
         Select or add a new target.
       </div>
     </template>

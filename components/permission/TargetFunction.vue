@@ -12,6 +12,7 @@
     <template #title>
       <div class="permissions__function">
         <div class="mt-1">
+          type: {{ funcConditions?.type }}
           <v-checkbox-btn
             :model-value="
               [ConditionType.WILDCARDED, ConditionType.SCOPED].includes(localFuncConditions?.type)

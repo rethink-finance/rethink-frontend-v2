@@ -1,38 +1,68 @@
 <template>
-  <div>
+  <div class="permissions_wrapper">
+    <div class="d-flex justify-center">
+      <v-stepper v-model="selectedStepIndex">
+        <v-stepper-header>
+          <v-stepper-item
+            v-for="(step, index) in permissionSteps"
+            :key="index"
+            :step="index + 1"
+            :complete="index + 1 < selectedStepIndex"
+            :value="index + 1"
+          >
+            <template #default>
+              <div class="d-flex align-center">
+                <span>{{ step }}</span>
+              </div>
+            </template>
+          </v-stepper-item>
+        </v-stepper-header>
+      </v-stepper>
+    </div>
+
     <div class="d-flex align-center justify-space-between">
-      <div v-if="!isPermissionsStepTwo" class="d-flex align-center">
+      <div v-if="selectedStepIndex === 0" class="d-flex align-center">
         <div class="d-flex align-center me-6">
           <RoleSelectRole v-model="selectedRole" :roles="roles" />
         </div>
         <PermissionImportRawPermissions />
       </div>
       <v-btn
-        v-if="!isPermissionsStepTwo"
+        v-if="selectedStepIndex === 0"
+        class="btn_icon_center"
+        type="button"
         variant="outlined"
-        @click="isPermissionsStepTwo = true"
+        @click="goToPermissionsStepTwo()"
       >
-        Next
+        Finalize Permissions
+        <v-icon right>
+          mdi-chevron-right
+        </v-icon>
       </v-btn>
     </div>
 
     <FundPermissions
-      v-if="!isPermissionsStepTwo"
+      v-if="selectedStepIndex === 0"
       class="mt-6"
       :chain-id="fundChainId"
       :is-loading="isFetchingPermissions"
     />
     <FundGovernanceDelegatedPermissions
-      v-if="isPermissionsStepTwo"
+      v-if="selectedStepIndex === 1"
       ref="delegatedPermissionsRef"
       v-model="delegatedPermissionsEntry"
       :fields-map="DelegatedPermissionFieldsMap"
-      submit-label="Store Permissions"
+      submit-label="Save Permissions"
       title="Permissions"
       :always-show-last-step="true"
       @entry-updated="entryUpdated"
       @submit="storePermissions"
     >
+      <template #title>
+        <UiButtonBack
+          @click="selectedStepIndex = 0"
+        />
+      </template>
       <template #post-steps-content>
         <div class="main-step">
           <div class="info_container">
@@ -109,9 +139,11 @@ import PermissionImportRawPermissions from "~/components/permission/ImportRawPer
 import type { Role } from "~/types/zodiac-roles/role";
 import { useRoleStore } from "~/store/role/role.store";
 import RoleSelectRole from "~/components/role/SelectRole.vue";
+import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
+const permissionsProposalStore = usePermissionsProposalStore();
 const roleStore = useRoleStore();
 
 const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
@@ -123,7 +155,11 @@ const {
 } = useRoles(fundChainId.value, fundInitCache?.value?.fundSettings?.fundAddress);
 
 
-const isPermissionsStepTwo = ref(false);
+const permissionSteps = ref([
+  "Edit Permissions",
+  "Finalize Permissions",
+]);
+const selectedStepIndex = ref(0);
 const loading = ref(false);
 const allowManagerToSendFundsToFundContract = ref(false);
 const allowManagerToCollectFees = ref(false);
@@ -250,6 +286,15 @@ const getAllowManagerToCollectFeesPermission = (
   return encodedRoleModEntries;
 }
 
+const goToPermissionsStepTwo = async () => {
+  // TODO add loading overlay
+  try {
+    permissionsProposalStore.rawTransactions = await roleStore.updateRole(fundChainId.value);
+  } catch (e: any) {
+    console.error("Failed updating role", e);
+  }
+  selectedStepIndex.value = 1;
+}
 
 const storePermissions = async () => {
   const fundInitCacheSettings = fundInitCache?.value?.fundSettings;
@@ -311,7 +356,7 @@ const storePermissions = async () => {
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
-          "Store permissions transaction has been submitted. Please wait for it to be confirmed.",
+          "The save permissions transaction has been submitted. Please wait for confirmation.",
         );
       })
       .on("receipt", (receipt: any) => {
@@ -337,6 +382,7 @@ const storePermissions = async () => {
     toastStore.errorToast(error.message);
   }
 };
+
 // TODO refetch permissions when user submits storePermissions
 watch(
   () => [fundChainId, roleModAddress.value],
@@ -364,6 +410,10 @@ watch(
 
 
 <style scoped lang="scss">
+.permissions_wrapper {
+  padding: 0 1rem 1rem 1rem;
+  border: 4px dashed $color-border-dark;
+}
 .management {
   margin-bottom: 1rem;
   &__row {

@@ -389,6 +389,7 @@ export const useRoleStore = defineStore("roleStore", () => {
         paramComp.push(getParamComparisonInt(param.condition))
         compValue.push(param.value[0])
       } else {
+        console.warn("IS ACTUALLY ONE OF!", param)
         isParamScoped.push(false)
         paramType.push(0)
         paramComp.push(0)
@@ -466,6 +467,7 @@ export const useRoleStore = defineStore("roleStore", () => {
     const targetTxPromises = [...targets.value.list, ...targets.value.add].map(async (target) => {
       console.log("target: ", target)
       const updateEvents = getTargetUpdate(target.id)
+      console.warn("updateEvents", updateEvents);
 
       let functions: Record<string, FunctionFragment> = {}
       try {
@@ -546,7 +548,7 @@ export const useRoleStore = defineStore("roleStore", () => {
             [event.funcSighash]: [...funcParams, event.value],
           }
         }, {} as Record<string, ParamCondition[]>)
-
+      console.log("paramEventsPerFunction", paramEventsPerFunction);
       Object.entries(paramEventsPerFunction)
         .forEach(([sighash, params]) => {
           params.forEach((paramCondition: ParamCondition) => {
