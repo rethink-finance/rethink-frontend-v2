@@ -108,7 +108,7 @@ export const FETCH_GOVERNANCE_PROPOSAL = gql`
           blockNumber
         }
       }
-      calls(orderBy: index, orderDirection: asc) {
+      calls(orderBy: index, orderDirection: asc, first: 1000) {
         calldata
         index
         signature
