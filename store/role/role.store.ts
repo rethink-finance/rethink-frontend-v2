@@ -367,7 +367,7 @@ export const useRoleStore = defineStore("roleStore", () => {
 
     if (!func) {
       throw new Error(
-        `Missing ABI: Function with sighash ${funcCondition.sighash} requires ABI data to determine parameter types. \nPlease update the contract ABI to include this function.`,
+        `Missing ABI for target ${target.address}: Function with sighash ${funcCondition.sighash} requires ABI data to determine parameter types. \nPlease update the contract ABI to include this function.`,
       )
     }
 
