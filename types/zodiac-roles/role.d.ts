@@ -72,13 +72,3 @@ export type UpdateEventParamCondition = {
 }
 
 export type UpdateEvent = UpdateEventScopeTarget | UpdateEventFunctionCondition | UpdateEventParamCondition;
-
-export type RemoveTargetPayload = { target: Target; remove?: boolean }
-
-export type RemoveMemberPayload = { member: string; remove?: boolean }
-
-export type SetTargetExecutionOptionPayload = { targetId: string; option: ExecutionOption }
-
-export type SetTargetConditionsPayload = { targetId: string; conditions: TargetConditions }
-
-export type SetTargetClearancePayload = { targetId: string; option: ConditionType }

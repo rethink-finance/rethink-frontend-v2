@@ -131,8 +131,6 @@ onUnmounted(() => {
 
 const fund = computed(() => fundStore.fund as IFund);
 
-console.log("FUNDFUND: ", fund);
-
 const breadcrumbItems = ref<BreadcrumbItem[]>([]);
 const setBreadcrumbItems = (items: BreadcrumbItem[]) => {
   breadcrumbItems.value = items;

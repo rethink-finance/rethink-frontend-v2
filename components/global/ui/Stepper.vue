@@ -2,14 +2,15 @@
   <section class="section-stepper">
     <UiHeader>
       <div class="main_header__title">
-        {{ title }}
+        <slot name="title">
+          {{ title }}
+        </slot>
         <slot name="subtitle" />
       </div>
 
       <div class="buttons">
         <slot name="buttons" />
         <v-btn
-          class="button--primary"
           :type="isLastStep ? 'submit' : 'button'"
           :loading="isSubmitLoading"
           :disabled="isLastStep && !accountStore.isConnected"

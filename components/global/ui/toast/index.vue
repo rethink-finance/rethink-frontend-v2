@@ -98,12 +98,12 @@ const textColorClass = (level) => {
 }
 .toast-success {
   .icon__toast {
-    color: #38DE38;
+    color: $color-success;
   }
 }
 .toast-danger {
   .icon__toast {
-    color: #DE3838;
+    color: $color-error;
   }
 }
 .toast-warning {

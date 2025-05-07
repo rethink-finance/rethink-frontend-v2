@@ -1,9 +1,14 @@
 <template>
+  <!-- Do not display this component if the user is in read-only mode and
+  if there are no condition params set. -->
   <UiDataRowCard
+    v-if="!disabled || (disabled && !isConditionBlocked)"
+    :is-expanded="(disabled && !isConditionBlocked)"
     no-body-padding
     bg-transparent
     title-full-height
     class="target_function"
+    :class="{ 'target_function--no-abi': isErrorState && !func }"
   >
     <template #title>
       <div class="permissions__function">
@@ -64,6 +69,7 @@ import cloneDeep from "lodash.clonedeep";
 import type { FunctionCondition } from "~/types/zodiac-roles/role";
 import { getParamsTypesTitle } from "~/composables/zodiac-roles/target";
 import { ConditionType, ExecutionOption } from "~/types/enums/zodiac-roles";
+import { isFuncConditionBlocked } from "~/composables/zodiac-roles/conditions";
 
 /**
  * This component displays function conditions based on ABI detection.
@@ -98,7 +104,12 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isErrorState: {
+    type: Boolean,
+    default: false,
+  },
 });
+const isConditionBlocked = computed(() => isFuncConditionBlocked(localFuncConditions.value))
 
 // Create a local reactive copy of funcConditions to allow editing it without mutating props.
 const localFuncConditions = useVModel(props, "funcConditions", emit, {
@@ -150,6 +161,9 @@ const handleFunctionCheck = (checked: boolean) => {
     padding: 0.25rem 1rem 1rem 1rem;
     overflow-y: hidden;
     height: 100%;
+  }
+  &--no-abi {
+    border: 2px dashed $color-warning-text;
   }
 }
 </style>

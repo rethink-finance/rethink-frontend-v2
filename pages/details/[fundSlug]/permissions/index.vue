@@ -1,24 +1,13 @@
 <template>
-  <div class="page-permissions">
-    <UiMainCard>
+  <div class="permissions">
+    <UiMainCard class="permissions__content">
       <div class="info_container">
         <div class="info_container__buttons">
           <div class="d-flex align-center">
-            <strong>Role #</strong>
-            <v-select
-              v-if="roles.length > 1"
-              v-model="selectedRole"
-              :items="roles"
-              item-title="name"
-              density="compact"
-              variant="outlined"
-              hide-details
-              required
-              return-object
-            />
-            <strong v-else>
-              {{ selectedRole?.name }}
-            </strong>
+            <div class="d-flex align-center me-6">
+              <RoleSelectRole v-model="selectedRole" :roles="roles" />
+            </div>
+            <PermissionImportRawPermissions :disabled="isEditDisabled" />
           </div>
 
           <div v-if="appSettingsStore.isManageMode" class="is-manage-mode">
@@ -54,34 +43,38 @@
       <!-- Permissions loaded from zodiac roles modifier -->
       <!-- TODO here it flickers as we first have to fetch fundData and then roleModAddress, prevent flickering -->
       <FundPermissions
-        v-if="roles.length"
         class="mt-6"
         :chain-id="fund.chainId"
         :disabled="isEditDisabled"
-        :is-loading="isFetchingPermissions"
+        :is-loading="isLoading"
       />
     </UiMainCard>
   </div>
 </template>
 
 <script setup lang="ts">
-// types
 import type IFund from "~/types/fund";
-// components
 import { useFundStore } from "~/store/fund/fund.store";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 import { useRoleStore } from "~/store/role/role.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
 import { useRoles } from "~/composables/permissions/useRoles";
+import { useToastStore } from "~/store/toasts/toast.store";
+import PermissionImportRawPermissions from "~/components/permission/ImportRawPermissions.vue";
+import RoleSelectRole from "~/components/role/SelectRole.vue";
+import { ActionState } from "~/types/enums/action_state";
+import { useActionStateStore } from "~/store/actionState.store";
 
 const router = useRouter();
 const fundStore = useFundStore();
 const permissionsProposalStore = usePermissionsProposalStore();
 const appSettingsStore = useSettingsStore();
 const roleStore = useRoleStore();
+const toastStore = useToastStore();
+const actionStateStore = useActionStateStore();
 
-const fund = useAttrs().fund as IFund;
 const { selectedFundSlug } = storeToRefs(useFundStore());
+const fund = useAttrs().fund as IFund;
 
 const {
   roles,
@@ -91,17 +84,23 @@ const {
   fetchPermissions,
 } = useRoles(fund.chainId, fund.address);
 
-const updateGnosisLink = async () => {
+const isLoading = computed(() =>
+  isFetchingPermissions.value ||
+  actionStateStore.isActionState("fetchRoleModAddressAddressAction", ActionState.Loading),
+);
+
+const fetchRolesAndPermissions = async () => {
   if (!fund?.address) {
     roles.value = [];
     return;
   }
 
   try {
-    const roleModAddress = await fundStore.getRoleModAddress(fund.address);
+    const roleModAddress = await fundStore.fetchRoleModAddress(fund.address);
     await fetchPermissions(roleModAddress);
   } catch (error) {
     console.error(error);
+    toastStore.errorToast("Failed loading permissions. Please refresh page.");
   }
 };
 
@@ -118,15 +117,22 @@ const navigateToCreatePermissions = async () => {
 };
 
 watch(
-  () => [fund.chainShort, fundStore.getRoleModAddress],
+  () => [fund.chainShort, fundStore.fetchRoleModAddress],
   () => {
-    updateGnosisLink();
+    fetchRolesAndPermissions();
   },
   { immediate: true },
 );
 </script>
 
 <style scoped lang="scss">
+.permissions {
+  position: relative;
+
+  &__content {
+    min-height: 30rem;
+  }
+}
 .info_container {
   display: flex;
   flex-direction: column;

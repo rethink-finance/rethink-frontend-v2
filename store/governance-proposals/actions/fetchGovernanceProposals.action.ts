@@ -21,7 +21,7 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   }
   const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId);
 
-  const roleModAddress = await fundStore.getRoleModAddress(fund.address); // TODO replace with fetchGovernableFund
+  const roleModAddress = await fundStore.fetchRoleModAddress(fund.address); // TODO replace with fetchGovernableFund
   console.log("roleModAddress", roleModAddress);
 
   const quorumDenominator = await web3Store.callWithRetry(

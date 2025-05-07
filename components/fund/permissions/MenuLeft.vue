@@ -3,6 +3,9 @@
     <div class="permissions_menu__section">
       <strong>Members</strong>
       <div class="permissions__list">
+        <div v-if="disabled && !allMembers?.length">
+          No members yet.
+        </div>
         <div
           v-for="memberAddress in allMembers"
           :key="memberAddress"
@@ -52,6 +55,9 @@
     <div class="permissions_menu__section">
       <strong>Targets</strong>
       <div class="permissions__list">
+        <div v-if="disabled && !allTargets?.length">
+          No targets yet.
+        </div>
         <div
           v-for="target in allTargets"
           :key="target.id"
@@ -151,14 +157,18 @@ const setSelectedTarget = (newTargetId: string) => {
 };
 
 const targetClasses = (target: Target) => {
+  const targetStatus = getTargetStatus.value(target);
   return [
-    { "permissions_menu__list_item--deleted": getTargetStatus.value(target) === EntityStatus.REMOVE },
+    { "permissions_menu__list_item--deleted": targetStatus === EntityStatus.REMOVE },
+    { "permissions_menu__list_item--new": targetStatus === EntityStatus.PENDING },
     { "permissions_menu__list_item--selected": target.id === activeTargetId.value },
   ];
 };
 const memberClasses = (memberAddress: string) => {
+  const memberStatus = getMemberStatus.value(memberAddress);
   return [
-    { "permissions_menu__list_item--deleted": getMemberStatus.value(memberAddress) === EntityStatus.REMOVE },
+    { "permissions_menu__list_item--deleted": memberStatus === EntityStatus.REMOVE },
+    { "permissions_menu__list_item--new": memberStatus === EntityStatus.PENDING },
   ];
 };
 
@@ -185,6 +195,8 @@ watchEffect(async () => {
 
 <style lang="scss" scoped>
 .permissions_menu {
+  width: 100%;
+
   &__section {
     display: flex;
     flex-direction: column;
@@ -214,6 +226,9 @@ watchEffect(async () => {
     &--deleted {
       color: $color-disabled;
       //color: $color-error;
+    }
+    &--new {
+      color: $color-success;
     }
   }
   &__list_item_label {

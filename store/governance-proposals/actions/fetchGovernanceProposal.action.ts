@@ -30,7 +30,7 @@ export const fetchGovernanceProposalAction = async (
       proposalId,
     });
   const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId);
-  const roleModAddress = await fundStore.getRoleModAddress(fund.address);
+  const roleModAddress = await fundStore.fetchRoleModAddress(fund.address);
 
   const timepoint =
     fund?.clockMode?.mode === ClockMode.BlockNumber

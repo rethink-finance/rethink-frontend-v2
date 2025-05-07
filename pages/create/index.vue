@@ -93,7 +93,7 @@
                 </template>
                 <template #default>
                   Please fill out all required fields.
-                  <div v-for="error in currentStepValidation?.errors || []">
+                  <div v-for="(error, index) in currentStepValidation?.errors || []" :key="index">
                     {{ error }}
                   </div>
                 </template>
@@ -102,12 +102,10 @@
           </div>
         </template>
         <template #prev>
-          <v-btn
+          <UiButtonBack
             v-if="step !== 1"
             @click="step--"
-          >
-            Back
-          </v-btn>
+          />
         </template>
       </v-stepper-actions>
 
@@ -190,7 +188,7 @@
 
               <!-- STEP PERMISSIONS -->
               <OnboardingPermissions
-                v-if="item.key=== OnboardingStep.Permissions"
+                v-if="item.key === OnboardingStep.Permissions"
               />
 
               <!-- STEP NAV METHODS -->
@@ -877,7 +875,7 @@ const initializeFund = async() => {
         console.log("receipt: ", receipt);
         if (receipt.status) {
           toastStore.successToast("Fund initialization was successful. Wait for node to sync and go to next step.");
-          // Start fetching fund init cache so that the user can go to next step.
+          // Start fetching fund init cache so that the user can go to the next step.
           // Repeat at least 10 times until the cache is there. Wait 1 sec between each try.
           repeatUntilFundInitCacheExists(20, 1000);
         } else {
@@ -980,9 +978,7 @@ const getChainDrafts = () => {
 const setDefaultSelectedChainId = () =>{
   const chainDrafts = getChainDrafts();
 
-  if (
-    step.value === 1
-  ) {
+  if (step.value === 1) {
     const chainWithDraftConnectedWallet = chainDrafts.find((chain) => chain.hasDrafts && chain.chainId === accountStore.connectedWalletChainId);
     const chainWithDraft = chainDrafts.find((chain) => chain.hasDrafts);
 

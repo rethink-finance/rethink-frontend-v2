@@ -33,7 +33,7 @@ import type {
 export const rolesInterface = RolesFactory.createInterface();
 
 // Define the store
-export const useRoleStore = defineStore("role", () => {
+export const useRoleStore = defineStore("roleStore", () => {
   // State
   const roleId = ref<string>("");
   const role = ref<Role | undefined>(undefined);
@@ -59,6 +59,7 @@ export const useRoleStore = defineStore("role", () => {
 
     roleId.value = id || "";
     role.value = r;
+
     members.value = {
       list: r?.members.map((member: Member) => member.address) || [],
       add: [],
@@ -364,7 +365,11 @@ export const useRoleStore = defineStore("role", () => {
       }
     }
 
-    if (!func) throw new Error("ABI is needed to scope targets")
+    if (!func) {
+      throw new Error(
+        `Missing ABI for target ${target.address}: Function with sighash ${funcCondition.sighash} requires ABI data to determine parameter types. \nPlease update the contract ABI to include this function.`,
+      )
+    }
 
     const paramIndexes = funcCondition.params.map((param: ParamCondition) => param?.index)
     const paramsLength = Math.max(-1, ...paramIndexes) + 1
@@ -376,12 +381,19 @@ export const useRoleStore = defineStore("role", () => {
 
     for (let i = 0; i < paramsLength; i++) {
       const param = funcCondition.params.find((param: ParamCondition) => param.index === i)
+      // TODO what if it is ONE_OF? unhandled case!
+      /**
+       * Because OneOf isn't supported in Zodiac Roles v1:
+       * You must emit multiple permission entries, each with EQUAL_TO + 1 value.
+       * The ONE_OF option is just frontend sugar.
+       */
       if (param && param.condition !== ParamComparison.ONE_OF) {
         isParamScoped.push(true)
         paramType.push(getParameterTypeInt(param.type))
         paramComp.push(getParamComparisonInt(param.condition))
         compValue.push(param.value[0])
       } else {
+        console.warn("IS ACTUALLY ONE OF!", param)
         isParamScoped.push(false)
         paramType.push(0)
         paramComp.push(0)
@@ -459,6 +471,7 @@ export const useRoleStore = defineStore("role", () => {
     const targetTxPromises = [...targets.value.list, ...targets.value.add].map(async (target) => {
       console.log("target: ", target)
       const updateEvents = getTargetUpdate(target.id)
+      console.warn("updateEvents", updateEvents);
 
       let functions: Record<string, FunctionFragment> = {}
       try {
@@ -539,7 +552,7 @@ export const useRoleStore = defineStore("role", () => {
             [event.funcSighash]: [...funcParams, event.value],
           }
         }, {} as Record<string, ParamCondition[]>)
-
+      console.log("paramEventsPerFunction", paramEventsPerFunction);
       Object.entries(paramEventsPerFunction)
         .forEach(([sighash, params]) => {
           params.forEach((paramCondition: ParamCondition) => {

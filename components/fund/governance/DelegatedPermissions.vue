@@ -11,6 +11,9 @@
       class="delegated-permission-stepper"
       @fields-changed="fieldsChanged"
     >
+      <template #title>
+        <slot name="title" />
+      </template>
       <template #post-steps-content>
         <slot name="post-steps-content" />
       </template>
@@ -18,51 +21,31 @@
         <slot name="pre-content" />
       </template>
       <template #subtitle>
-        <UiTooltipClick location="right" :hide-after="6000">
-          <Icon
-            icon="material-symbols:info-outline"
-            class="info-icon"
-            width="1.5rem"
-          />
-          <template #tooltip>
-            <div class="tooltip__content">
-              <a
-                class="tooltip__link"
-                href="https://docs.rethink.finance/rethink.finance"
-                target="_blank"
-              >
-                Learn More
-                <Icon icon="maki:arrow" color="primary" width="1rem" />
-              </a>
-            </div>
-          </template>
-        </UiTooltipClick>
-      </template>
-      <template #buttons>
+        <slot name="subtitle" />
         <v-btn
           class="text-secondary me-4"
           variant="outlined"
           @click="openAddRawDialog"
         >
-          Add Raw
+          Import Raw Permissions
         </v-btn>
       </template>
     </UiStepper>
 
     <UiConfirmDialog
       v-model="showAddRawDialog"
-      title="Add Raw Proposal"
+      title="Import Raw Permissions JSON"
       max-width="80%"
-      confirm-text="Load"
+      confirm-text="Import Raw Permissions"
       cancel-text="Cancel"
-      message="Please enter the raw proposal JSON below"
+      message="Please enter raw permissions JSON"
       @confirm="addRawProposal"
     >
       <v-textarea
         v-model="rawProposalInput"
         label="Raw proposal"
         outlined
-        placeholder="Enter the raw proposal here"
+        placeholder="Enter the raw permissions JSON here"
         rows="20"
         class="raw-method-textarea"
       />
@@ -113,6 +96,7 @@ const emit = defineEmits([
   "update:modelValue",
   "fieldsChanged",
   "submit",
+  "cancel",
   "addRaw",
   "entryUpdated",
 ]);
@@ -350,7 +334,6 @@ watch(
     color: $color-primary;
   }
 }
-
 .info-icon {
   cursor: pointer;
   display: flex;

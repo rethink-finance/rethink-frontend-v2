@@ -725,7 +725,7 @@ export const useGovernanceProposalsStore = defineStore({
 
         proposal.calldatasDecoded = [];
         proposal.calldataTypes = [];
-        const roleModAddress = await this.fundStore.getRoleModAddress(fund.address);
+        const roleModAddress = await this.fundStore.fetchRoleModAddress(fund.address);
 
         proposal.calldatas.forEach((calldata, i) => {
           const calldataDecoded = decodeProposalCallData(

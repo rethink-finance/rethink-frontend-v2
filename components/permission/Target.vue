@@ -91,31 +91,39 @@
     </UiDataRowCard>
 
     <div v-if="!isFetchingTargetABI" class="permissions__list">
-      <!-- Display write functions that were found in the ABI -->
-      <PermissionTargetFunction
-        v-for="(func, index) in abiWriteFunctions"
-        :key="index"
-        :func="func as FunctionFragment"
-        :disabled="disabled"
-        :func-conditions="getFuncCondition(func.selector)"
-        @update:func-conditions="(newFuncConditions) => updateConditions(func.selector, newFuncConditions)"
-      />
-      <!-- Display function conditions that were not found in the ABI -->
-      <PermissionTargetFunction
-        v-for="(sighash, index) in sighashesNotInAbi"
-        :key="index"
-        :sighash="sighash"
-        :disabled="disabled"
-        :func-conditions="getFuncCondition(sighash)"
-        @update:func-conditions="(newFuncConditions) => updateConditions(sighash, newFuncConditions)"
-      />
+      <p v-if="disabled && nonBlockedFunctionCount === 0" class="text-center my-8">
+        Target is scoped, but no functions are explicitly allowed.
+        All calls to this contract are currently blocked.
+      </p>
+      <template v-else>
+        <!-- Display write functions that were found in the ABI -->
+        <PermissionTargetFunction
+          v-for="(func, index) in abiWriteFunctions"
+          :key="index"
+          :func="func as FunctionFragment"
+          :is-error-state="isErrorState"
+          :disabled="disabled"
+          :func-conditions="getFuncCondition(func.selector)"
+          @update:func-conditions="(newFuncConditions) => updateConditions(func.selector, newFuncConditions)"
+        />
+        <!-- Display function conditions that were not found in the ABI -->
+        <PermissionTargetFunction
+          v-for="(sighash, index) in sighashesNotInAbi"
+          :key="index"
+          :sighash="sighash"
+          :is-error-state="isErrorState"
+          :disabled="disabled"
+          :func-conditions="getFuncCondition(sighash)"
+          @update:func-conditions="(newFuncConditions) => updateConditions(sighash, newFuncConditions)"
+        />
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { FunctionFragment, JsonFragment } from "ethers";
-import { getWriteFunctions } from "~/composables/zodiac-roles/conditions";
+import { getWriteFunctions, isFuncConditionBlocked } from "~/composables/zodiac-roles/conditions";
 import { useFundStore } from "~/store/fund/fund.store";
 import { type RoleStoreType, useRoleStore } from "~/store/role/role.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -136,19 +144,35 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isErrorState: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const roleStore = useRoleStore();
 provide("chainId", props.chainId);
 
 const target = computed(() => roleStore.activeTarget);
-
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 
 const targetABIJson = ref<JsonFragment[]>([]);
 const customABI = ref<string>("");
 const isEditingCustomABI = ref(false);
+
+const nonBlockedFunctionCount = computed(() => {
+  const funcSelectors = [
+    ...abiWriteFunctions.value.map(f => f.selector),
+    ...sighashesNotInAbi.value,
+  ];
+
+  // Count all func conditions that are not type ConditionType.BLOCKED.
+  return funcSelectors.filter(funcSelector => {
+    const funcConditions = getFuncCondition(funcSelector);
+    return !isFuncConditionBlocked(funcConditions);
+  }).length;
+});
 
 const getFuncCondition = (funcSelector: string): FunctionCondition => {
   return target?.value?.conditions[funcSelector] || {

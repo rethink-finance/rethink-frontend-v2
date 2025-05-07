@@ -12,10 +12,10 @@ export enum EntityStatus {
 }
 
 export enum ParamComparison {
-  EQUAL_TO = "EqualTo",
-  ONE_OF = "OneOf",
-  GREATER_THAN = "GreaterThan",
-  LESS_THAN = "LessThan",
+  EQUAL_TO = "EqualTo", // 0
+  ONE_OF = "OneOf", // 3
+  GREATER_THAN = "GreaterThan",  // 1
+  LESS_THAN = "LessThan",  // 2
 }
 
 export enum ParameterType {

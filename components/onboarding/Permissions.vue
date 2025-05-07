@@ -1,92 +1,122 @@
 <template>
-  <div class="d-flex" :class="isReadonly ? 'justify-end' : 'justify-start'">
-    <v-btn
-      v-if="isReadonly"
-      type="submit"
-      @click="isReadonly = !isReadonly"
+  <div class="permissions_wrapper">
+    <div class="d-flex justify-center">
+      <v-stepper v-model="selectedStepIndex">
+        <v-stepper-header>
+          <v-stepper-item
+            v-for="(step, index) in permissionSteps"
+            :key="index"
+            :step="index + 1"
+            :complete="index + 1 < selectedStepIndex"
+            :value="index + 1"
+          >
+            <template #default>
+              <div class="d-flex align-center">
+                <span>{{ step }}</span>
+              </div>
+            </template>
+          </v-stepper-item>
+        </v-stepper-header>
+      </v-stepper>
+    </div>
+
+    <div class="d-flex align-center justify-space-between">
+      <div v-if="selectedStepIndex === 0" class="d-flex align-center">
+        <div class="d-flex align-center me-6">
+          <RoleSelectRole v-model="selectedRole" :roles="roles" />
+        </div>
+        <PermissionImportRawPermissions />
+      </div>
+      <v-btn
+        v-if="selectedStepIndex === 0"
+        class="btn_icon_center"
+        type="button"
+        variant="outlined"
+        @click="goToPermissionsStepTwo()"
+      >
+        Finalize Permissions
+        <v-icon right>
+          mdi-chevron-right
+        </v-icon>
+      </v-btn>
+    </div>
+
+    <FundPermissions
+      v-if="selectedStepIndex === 0"
+      class="mt-6"
+      :chain-id="fundChainId"
+      :is-loading="isFetchingPermissions"
+      :error-message="updateRoleError"
+    />
+    <FundGovernanceDelegatedPermissions
+      v-if="selectedStepIndex === 1"
+      ref="delegatedPermissionsRef"
+      v-model="delegatedPermissionsEntry"
+      :fields-map="DelegatedPermissionFieldsMap"
+      submit-label="Save Permissions"
+      title="Permissions"
+      :always-show-last-step="true"
+      @entry-updated="entryUpdated"
+      @submit="storePermissions"
     >
-      Add Permissions
-    </v-btn>
-    <v-btn v-if="!isReadonly" variant="outlined" @click="isReadonly = true">
-      <Icon
-        icon="material-symbols:close"
-        class="di-card__close-icon"
-        width="1.5rem"
-      />
-      Cancel Add Permissions
-    </v-btn>
-  </div>
-  <FundGovernanceDelegatedPermissions
-    v-if="!isReadonly"
-    ref="delegatedPermissionsRef"
-    v-model="delegatedPermissionsEntry"
-    :fields-map="DelegatedPermissionFieldsMap"
-    submit-label="Store Permissions"
-    title="Permissions"
-    :always-show-last-step="true"
-    @entry-updated="entryUpdated"
-    @submit="storePermissions"
-  >
-    <template #post-steps-content>
-      <div class="main-step">
-        <div class="info_container">
-          <div class="info_container__buttons">
-            <UiLinkExternalButton
-              title="View Vault Permissions"
-              :href="gnosisPermissionsUrl"
+      <template #title>
+        <UiButtonBack
+          @click="selectedStepIndex = 0"
+        />
+      </template>
+      <template #post-steps-content>
+        <div class="main-step">
+          <div class="info_container">
+            <div class="info_container__buttons">
+              <UiLinkExternalButton
+                title="View Vault Permissions"
+                :href="gnosisPermissionsUrl"
+              />
+            </div>
+            <p class="info_container__text">
+              Having trouble reading permissions?<br>
+              <a
+                class="info_container__link"
+                href="https://docs.rethink.finance/rethink.finance"
+                target="_blank"
+              >Learn more about permissions here</a>.
+            </p>
+          </div>
+          <div class="info_container mt-6">
+            <p class="info_container__text">
+              <strong>Safe Contract:</strong>
+              {{ fundSettings?.safe || "N/A" }}
+            </p>
+          </div>
+        </div>
+      </template>
+
+      <template #pre-content>
+        <div class="management">
+          <div class="management__row">
+            <div>
+              Prepopulate permissions to allow manager to send funds to the fund contract to settle flows
+            </div>
+            <v-switch
+              v-model="allowManagerToSendFundsToFundContract"
+              color="primary"
+              hide-details
             />
           </div>
-          <p class="info_container__text">
-            Having trouble reading permissions?<br>
-            <a
-              class="info_container__link"
-              href="https://docs.rethink.finance/rethink.finance"
-              target="_blank"
-            >Learn more about permissions here</a>.
-          </p>
-        </div>
-        <div class="info_container mt-6">
-          <p class="info_container__text">
-            <strong>Safe Contract:</strong>
-            {{ fundSettings?.safe || "N/A" }}
-          </p>
-        </div>
-      </div>
-    </template>
-
-    <template #pre-content>
-      <div class="management">
-        <div class="management__row">
-          <div>
-            Prepopulate permissions to allow manager to send funds to the fund contract to settle flows
+          <div class="management__row">
+            <div>
+              Prepopulate permissions to allow manager to collect fees based on default performance fee contract
+            </div>
+            <v-switch
+              v-model="allowManagerToCollectFees"
+              color="primary"
+              hide-details
+            />
           </div>
-          <v-switch
-            v-model="allowManagerToSendFundsToFundContract"
-            color="primary"
-            hide-details
-          />
         </div>
-        <div class="management__row">
-          <div>
-            Prepopulate permissions to allow manager to collect fees based on default performance fee contract
-          </div>
-          <v-switch
-            v-model="allowManagerToCollectFees"
-            color="primary"
-            hide-details
-          />
-        </div>
-      </div>
-    </template>
-  </FundGovernanceDelegatedPermissions>
-
-  <FundPermissions
-    v-if="roles.length && isReadonly"
-    class="mt-6"
-    :chain-id="fundChainId"
-    :disabled="isEditDisabled"
-    :is-loading="isFetchingPermissions"
-  />
+      </template>
+    </FundGovernanceDelegatedPermissions>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -106,12 +136,31 @@ import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPerm
 import { networksMap } from "~/store/web3/networksMap";
 import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
 import { useRoles } from "~/composables/permissions/useRoles";
+import PermissionImportRawPermissions from "~/components/permission/ImportRawPermissions.vue";
+import type { Role } from "~/types/zodiac-roles/role";
+import { useRoleStore } from "~/store/role/role.store";
+import RoleSelectRole from "~/components/role/SelectRole.vue";
+import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
-const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
+const permissionsProposalStore = usePermissionsProposalStore();
+const roleStore = useRoleStore();
 
-const isReadonly = ref(true);
+const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
+const {
+  roles,
+  selectedRole,
+  isFetchingPermissions,
+  fetchPermissions,
+} = useRoles(fundChainId.value, fundInitCache?.value?.fundSettings?.fundAddress);
+
+const updateRoleError = ref("");
+const permissionSteps = ref([
+  "Edit Permissions",
+  "Finalize Permissions",
+]);
+const selectedStepIndex = ref(0);
 const loading = ref(false);
 const allowManagerToSendFundsToFundContract = ref(false);
 const allowManagerToCollectFees = ref(false);
@@ -135,8 +184,9 @@ const delegatedPermissionsEntry = ref([
     steps: [defaultMethod],
   },
 ]);
-const roleModAddress = computed(() => fundInitCache?.value?.rolesModifier);
 
+// Computed
+const roleModAddress = computed(() => fundInitCache?.value?.rolesModifier);
 const gnosisPermissionsUrl = computed(() => {
   if (!fundChainId.value) return "";
 
@@ -170,7 +220,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
   const encodedScopeParameter = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeParameter,
     [
-      "1", // role TODO: it's hardcoded, but in the future it can change
+      selectedRole.value?.id || "1", // role
       baseTokenAddress, // targetAddress, base token contract address
       "0xa9059cbb", // functionSig, transfer
       "0", // paramIndex
@@ -185,7 +235,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
   const encodedScopeTarget = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeTarget,
     [
-      "1", // role TODO: it's hardcoded, but in the future it can change
+      selectedRole.value?.id || "1", // role
       baseTokenAddress, // targetAddress, base token contract address
     ],
   );
@@ -214,7 +264,7 @@ const getAllowManagerToCollectFeesPermission = (
   const encodedScopeParameter = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeParameter,
     [
-      "1", // role TODO: it's hardcoded, but in the future it can change
+      selectedRole.value?.id || "1", // role
       fundAddress, // targetAddress, vault contract address
       "0xec68ac8d", // functionSig
       "0", // paramIndex
@@ -225,11 +275,11 @@ const getAllowManagerToCollectFeesPermission = (
   );
   encodedRoleModEntries.push(encodedScopeParameter);
 
-  // Add scopeTarget permission also with target vault contract address.
+  // Add scopeTarget permission also with the target vault contract address.
   const encodedScopeTarget = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeTarget,
     [
-      "1", // role TODO: it's hardcoded, but in the future it can change
+      selectedRole.value?.id || "1", // role
       fundAddress, // targetAddress, vault contract address
     ],
   );
@@ -237,14 +287,17 @@ const getAllowManagerToCollectFeesPermission = (
   return encodedRoleModEntries;
 }
 
-const {
-  roles,
-  selectedRole,
-  isEditDisabled,
-  isFetchingPermissions,
-  fetchPermissions,
-} = useRoles(fundChainId.value, fundInitCache?.value?.fundSettings?.fundAddress);
-
+const goToPermissionsStepTwo = async () => {
+  // TODO add loading overlay
+  updateRoleError.value = "";
+  try {
+    permissionsProposalStore.rawTransactions = await roleStore.updateRole(fundChainId.value);
+    selectedStepIndex.value = 1;
+  } catch (e: any) {
+    console.error("Failed updating role", e);
+    updateRoleError.value = e.message;
+  }
+}
 
 const storePermissions = async () => {
   const fundInitCacheSettings = fundInitCache?.value?.fundSettings;
@@ -306,7 +359,7 @@ const storePermissions = async () => {
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
-          "Store permissions transaction has been submitted. Please wait for it to be confirmed.",
+          "The save permissions transaction has been submitted. Please wait for confirmation.",
         );
       })
       .on("receipt", (receipt: any) => {
@@ -332,12 +385,27 @@ const storePermissions = async () => {
     toastStore.errorToast(error.message);
   }
 };
+
 // TODO refetch permissions when user submits storePermissions
 watch(
   () => [fundChainId, roleModAddress.value],
-  () => {
+  async () => {
     console.warn("FETCH PERMS")
-    fetchPermissions(roleModAddress.value);
+    await fetchPermissions(roleModAddress.value);
+    console.log("fetched roles", roles.value);
+    // If no roles or permissions exist, pre-populate an empty role with roleId 1
+    if (!roles.value?.length) {
+      // Pre-populate an empty role with roleId 1
+      const roleId = "1";
+      const emptyRole: Role = {
+        id: roleId,
+        name: roleId,
+        targets: [],
+        members: [],
+      };
+      roles.value = [emptyRole];
+      selectedRole.value = emptyRole;
+    }
   },
   { immediate: true },
 );
@@ -345,6 +413,10 @@ watch(
 
 
 <style scoped lang="scss">
+.permissions_wrapper {
+  padding: 0 1rem 1rem 1rem;
+  border: 4px dashed $color-border-dark;
+}
 .management {
   margin-bottom: 1rem;
   &__row {

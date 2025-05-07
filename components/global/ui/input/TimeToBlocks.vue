@@ -1,13 +1,14 @@
 <template>
   <v-row class="time-to-blocks">
     <v-col class="column" cols="5">
+      <!-- Use v-show instead of v-if to prevent losing focus on loading re-render -->
       <v-skeleton-loader
-        v-if="isLoading"
+        v-show="isLoading"
         type="text"
         class="skeleton-text-field"
       />
       <v-text-field
-        v-else
+        v-show="!isLoading"
         v-model="inputValue"
         type="number"
         :placeholder="placeholder"
@@ -57,6 +58,7 @@
 </template>
 
 <script setup lang="ts">
+import debounce from "lodash.debounce";
 import { ChainId } from "~/types/enums/chain_id";
 import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 import {

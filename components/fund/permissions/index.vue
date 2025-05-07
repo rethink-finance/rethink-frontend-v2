@@ -1,34 +1,52 @@
 <template>
-  <div class="permissions">
-    <!-- TODO make this progress spinner in center of div -->
-    <div v-if="isLoading">
-      Loading permissions...
-      <v-progress-circular
-        class="d-flex"
-        size="32"
-        width="3"
-        indeterminate
-      />
-    </div>
-    <template v-else>
-      <div class="permissions__menu_left">
-        <FundPermissionsMenuLeft
-          :selected-target="activeTargetId"
-          :role="roleStore.role"
+  <div>
+    <v-alert
+      v-if="errorMessage"
+      color="warning"
+      class="pa-3 mb-4 text-pre-line"
+    >
+      <template #text>
+        <strong>{{ errorMessage }}</strong>
+      </template>
+    </v-alert>
+    <div class="permissions">
+      <v-overlay
+        :model-value="isLoading"
+        class="d-flex justify-center align-center permissions__overlay"
+        opacity="0.12"
+        contained
+        persistent
+        absolute
+      >
+        <v-progress-circular
+          class="stepper_onboarding__loading_spinner"
+          size="70"
+          width="3"
+          indeterminate
+        />
+      </v-overlay>
+
+      <template v-if="!isLoading">
+        <div class="permissions__menu_left">
+          <FundPermissionsMenuLeft
+            :selected-target="activeTargetId"
+            :role="roleStore.role"
+            :disabled="disabled"
+            :chain-id="chainId"
+          />
+        </div>
+        <PermissionTarget
+          v-if="activeTargetId"
+          class="permissions__content"
           :disabled="disabled"
           :chain-id="chainId"
+          :is-error-state="!!errorMessage"
         />
-      </div>
-      <PermissionTarget
-        v-if="activeTargetId"
-        class="permissions__content"
-        :disabled="disabled"
-        :chain-id="chainId"
-      />
-      <div v-else>
-        Select a target.
-      </div>
-    </template>
+        <div v-else class="text-center w-100 align-content-center">
+          Select or add a new target.
+        </div>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -40,6 +58,10 @@ defineProps({
   chainId: {
     type: String as PropType<ChainId>,
     required: true,
+  },
+  errorMessage: {
+    type: String,
+    default: "",
   },
   isLoading: {
     type: Boolean,
@@ -59,11 +81,13 @@ const { activeTargetId } = storeToRefs(roleStore);
   display: flex;
   flex-direction: row;
 
+  &__overlay {
+    min-height: 30rem;
+  }
   &__menu_left {
     display: flex;
     flex-direction: column;
-    max-width: 30%;
-    min-width: 15rem;
+    width: 20rem;
     gap: 1.5rem;
     margin-right: 1rem;
     border: 1px solid $color-border-dark;

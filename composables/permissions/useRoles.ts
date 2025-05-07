@@ -45,7 +45,7 @@ export function useRoles(fundChainId: ChainId, fundAddress: string | undefined) 
       roleStore.getRoleId(selectedRole.value?.name, roles.value),
       toRaw(selectedRole.value),
     );
-    roleStore.activeTargetId = selectedRole.value?.targets?.[0].id;
+    roleStore.activeTargetId = selectedRole.value?.targets?.[0]?.id;
   });
 
   watch(
