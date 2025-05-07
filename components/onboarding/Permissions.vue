@@ -46,6 +46,7 @@
       class="mt-6"
       :chain-id="fundChainId"
       :is-loading="isFetchingPermissions"
+      :error-message="updateRoleError"
     />
     <FundGovernanceDelegatedPermissions
       v-if="selectedStepIndex === 1"
@@ -154,7 +155,7 @@ const {
   fetchPermissions,
 } = useRoles(fundChainId.value, fundInitCache?.value?.fundSettings?.fundAddress);
 
-
+const updateRoleError = ref("");
 const permissionSteps = ref([
   "Edit Permissions",
   "Finalize Permissions",
@@ -288,12 +289,14 @@ const getAllowManagerToCollectFeesPermission = (
 
 const goToPermissionsStepTwo = async () => {
   // TODO add loading overlay
+  updateRoleError.value = "";
   try {
     permissionsProposalStore.rawTransactions = await roleStore.updateRole(fundChainId.value);
+    selectedStepIndex.value = 1;
   } catch (e: any) {
     console.error("Failed updating role", e);
+    updateRoleError.value = e.message;
   }
-  selectedStepIndex.value = 1;
 }
 
 const storePermissions = async () => {

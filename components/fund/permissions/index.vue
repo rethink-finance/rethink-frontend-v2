@@ -1,41 +1,53 @@
 <template>
-  <div class="permissions">
-    <!-- TODO make this progress spinner in center of div -->
-    <v-overlay
-      :model-value="isLoading"
-      class="d-flex justify-center align-center permissions__overlay"
-      opacity="0.12"
-      contained
-      persistent
-      absolute
+  <div>
+    <v-alert
+      v-if="errorMessage"
+      color="warning"
+      title="Error"
+      class="pa-2 mb-4"
     >
-      <v-progress-circular
-        class="stepper_onboarding__loading_spinner"
-        size="70"
-        width="3"
-        indeterminate
-      />
-    </v-overlay>
+      <template #text>
+        <strong>{{ errorMessage }}</strong>
+      </template>
+    </v-alert>
+    <div class="permissions">
+      <v-overlay
+        :model-value="isLoading"
+        class="d-flex justify-center align-center permissions__overlay"
+        opacity="0.12"
+        contained
+        persistent
+        absolute
+      >
+        <v-progress-circular
+          class="stepper_onboarding__loading_spinner"
+          size="70"
+          width="3"
+          indeterminate
+        />
+      </v-overlay>
 
-    <template v-if="!isLoading">
-      <div class="permissions__menu_left">
-        <FundPermissionsMenuLeft
-          :selected-target="activeTargetId"
-          :role="roleStore.role"
+      <template v-if="!isLoading">
+        <div class="permissions__menu_left">
+          <FundPermissionsMenuLeft
+            :selected-target="activeTargetId"
+            :role="roleStore.role"
+            :disabled="disabled"
+            :chain-id="chainId"
+          />
+        </div>
+        <PermissionTarget
+          v-if="activeTargetId"
+          class="permissions__content"
           :disabled="disabled"
           :chain-id="chainId"
+          :is-error-state="!!errorMessage"
         />
-      </div>
-      <PermissionTarget
-        v-if="activeTargetId"
-        class="permissions__content"
-        :disabled="disabled"
-        :chain-id="chainId"
-      />
-      <div v-else class="text-center w-100 align-content-center">
-        Select or add a new target.
-      </div>
-    </template>
+        <div v-else class="text-center w-100 align-content-center">
+          Select or add a new target.
+        </div>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -47,6 +59,10 @@ defineProps({
   chainId: {
     type: String as PropType<ChainId>,
     required: true,
+  },
+  errorMessage: {
+    type: String,
+    default: "",
   },
   isLoading: {
     type: Boolean,

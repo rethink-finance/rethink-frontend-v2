@@ -365,7 +365,11 @@ export const useRoleStore = defineStore("roleStore", () => {
       }
     }
 
-    if (!func) throw new Error("ABI is needed to scope targets")
+    if (!func) {
+      throw new Error(
+        `Missing ABI: Function with sighash ${funcCondition.sighash} requires ABI data to determine targets. Please update the contract ABI to include this function.`,
+      )
+    }
 
     const paramIndexes = funcCondition.params.map((param: ParamCondition) => param?.index)
     const paramsLength = Math.max(-1, ...paramIndexes) + 1

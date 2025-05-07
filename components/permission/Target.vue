@@ -101,6 +101,7 @@
           v-for="(func, index) in abiWriteFunctions"
           :key="index"
           :func="func as FunctionFragment"
+          :is-error-state="isErrorState"
           :disabled="disabled"
           :func-conditions="getFuncCondition(func.selector)"
           @update:func-conditions="(newFuncConditions) => updateConditions(func.selector, newFuncConditions)"
@@ -110,6 +111,7 @@
           v-for="(sighash, index) in sighashesNotInAbi"
           :key="index"
           :sighash="sighash"
+          :is-error-state="isErrorState"
           :disabled="disabled"
           :func-conditions="getFuncCondition(sighash)"
           @update:func-conditions="(newFuncConditions) => updateConditions(sighash, newFuncConditions)"
@@ -139,6 +141,10 @@ const props = defineProps({
     required: true,
   },
   disabled: {
+    type: Boolean,
+    default: false,
+  },
+  isErrorState: {
     type: Boolean,
     default: false,
   },

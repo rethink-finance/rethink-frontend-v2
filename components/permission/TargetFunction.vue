@@ -8,11 +8,11 @@
     bg-transparent
     title-full-height
     class="target_function"
+    :class="{ 'target_function--no-abi': isErrorState && !func }"
   >
     <template #title>
       <div class="permissions__function">
         <div class="mt-1">
-          type: {{ funcConditions?.type }}
           <v-checkbox-btn
             :model-value="
               [ConditionType.WILDCARDED, ConditionType.SCOPED].includes(localFuncConditions?.type)
@@ -104,6 +104,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isErrorState: {
+    type: Boolean,
+    default: false,
+  },
 });
 const isConditionBlocked = computed(() => isFuncConditionBlocked(localFuncConditions.value))
 
@@ -157,6 +161,9 @@ const handleFunctionCheck = (checked: boolean) => {
     padding: 0.25rem 1rem 1rem 1rem;
     overflow-y: hidden;
     height: 100%;
+  }
+  &--no-abi {
+    border: 2px dashed $color-warning-text;
   }
 }
 </style>
