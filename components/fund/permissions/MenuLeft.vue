@@ -195,6 +195,8 @@ watchEffect(async () => {
 
 <style lang="scss" scoped>
 .permissions_menu {
+  width: 100%;
+
   &__section {
     display: flex;
     flex-direction: column;
