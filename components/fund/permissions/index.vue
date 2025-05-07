@@ -3,8 +3,7 @@
     <v-alert
       v-if="errorMessage"
       color="warning"
-      title="Error"
-      class="pa-2 mb-4"
+      class="pa-3 mb-4"
     >
       <template #text>
         <strong>{{ errorMessage }}</strong>
