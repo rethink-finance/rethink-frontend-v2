@@ -32,7 +32,7 @@
         <div class="info_container">
           <div class="info_container__buttons">
             <UiLinkExternalButton
-              title="View OIV Permissions"
+              title="View Vault Permissions"
               :href="gnosisPermissionsUrl"
             />
           </div>
@@ -215,7 +215,7 @@ const getAllowManagerToCollectFeesPermission = (
     roleModWriteFunctionAbiMap.scopeParameter,
     [
       "1", // role TODO: it's hardcoded, but in the future it can change
-      fundAddress, // targetAddress, OIV contract address
+      fundAddress, // targetAddress, vault contract address
       "0xec68ac8d", // functionSig
       "0", // paramIndex
       "1", // paramType -- Dynamic
@@ -225,12 +225,12 @@ const getAllowManagerToCollectFeesPermission = (
   );
   encodedRoleModEntries.push(encodedScopeParameter);
 
-  // Add scopeTarget permission also with target OIV contract address.
+  // Add scopeTarget permission also with target vault contract address.
   const encodedScopeTarget = encodeFunctionCall(
     roleModWriteFunctionAbiMap.scopeTarget,
     [
       "1", // role TODO: it's hardcoded, but in the future it can change
-      fundAddress, // targetAddress, OIV contract address
+      fundAddress, // targetAddress, vault contract address
     ],
   );
   encodedRoleModEntries.push(encodedScopeTarget);

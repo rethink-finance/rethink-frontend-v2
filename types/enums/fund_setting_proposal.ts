@@ -137,17 +137,17 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       cols: 12,
     },
     {
-      label: "OIV Name",
+      label: "Vault Name",
       key: "fundName",
       type: InputType.Text,
-      placeholder: "E.g. OIV Name",
+      placeholder: "E.g. vault Name",
       rules: [formRules.required],
       isEditable: false,
       cols: 6,
     },
     {
-      label: "OIV Token Symbol",
-      tooltip: "Token ticker representing the tokenized shares of your OIV.",
+      label: "Vault Token Symbol",
+      tooltip: "Token ticker representing the tokenized shares of your vault.",
       key: "fundSymbol",
       type: InputType.Text,
       placeholder: "E.g. ETH",
@@ -181,7 +181,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. rethink.finance",
       isEditable: true,
       rules: [],
-      tooltip: "Strategist will be displayed next to the OIV Name",
+      tooltip: "Strategist will be displayed next to the vault Name",
       cols: 6,
     },
     {
@@ -195,13 +195,13 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       cols: 6,
     },
     {
-      label: "OIV Chat Link",
+      label: "Vault Chat Link",
       key: "oivChatUrl",
       type: InputType.Text,
       placeholder: "E.g. https://discord.com/channels/945238616408481833/946693607216279562",
       isEditable: true,
       rules: [],
-      tooltip: "Link to OIV communication, eg: [Telegram Group Link]",
+      tooltip: "Link to vault communication, eg: [Telegram Group Link]",
       cols: 12,
     },
   ],
@@ -264,7 +264,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       isToggleable: true,
       isToggleOn: true,
       groupName: "Management Fee",
-      tooltip: "Share of minted OIV tokens per management fee period.",
+      tooltip: "Share of minted vault tokens per management fee period.",
       fields: [
         {
           label: "Management Fee (%)",
@@ -303,7 +303,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       isToggleable: true,
       isToggleOn: true,
       groupName: "Performance Fee",
-      tooltip: "Profit share in minted OIV tokens.",
+      tooltip: "Profit share in minted vault tokens.",
       fields: [
         {
           label: "Performance Fee (%)",
@@ -412,7 +412,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
-      tooltip: "Minimum required OIV tokens to create a proposal.",
+      tooltip: "Minimum required vault tokens to create a proposal.",
     },
     {
       label: "Late Quorum",

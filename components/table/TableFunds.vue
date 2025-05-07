@@ -104,7 +104,7 @@ defineProps({
 
 const headers: any = computed(() => [
   {
-    title: "OIV Name",
+    title: "Vault Name",
     key: "name",
     sortable: false,
     maxWidth: 300,

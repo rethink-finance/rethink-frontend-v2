@@ -33,7 +33,7 @@ const props = defineProps(
   },
 )
 
-// Token Symbol - OIV Name
+// Token Symbol - Vault Name
 const parsedTitle = computed(() => {
   return props.symbol ? `${props.symbol} - ${props.fundName}` : props.fundName
 })

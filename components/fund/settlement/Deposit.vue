@@ -68,7 +68,7 @@
           location="bottom"
         >
           <template #default>
-            Your wallet address is not whitelisted to allow deposits into this OIV.
+            Your wallet address is not whitelisted to allow deposits into this vault.
           </template>
           <template #activator="{ props }">
             <span v-bind="props">
@@ -258,8 +258,8 @@
 </template>
 
 <script setup lang="ts">
-import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { ethers } from "ethers";
+import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -479,11 +479,11 @@ const requestDeposit = async () => {
 
 const processDeposit = async () => {
   if (!fundStore.activeAccountAddress) {
-    toastStore.errorToast("Connect your wallet to deposit tokens to the OIV.")
+    toastStore.errorToast("Connect your wallet to deposit tokens to the vault.")
     return;
   }
   if (!fundStore.fund) {
-    toastStore.errorToast("OIV data is missing.")
+    toastStore.errorToast("Vault data is missing.")
     return;
   }
   if (!userDepositRequest?.value?.amount) {
@@ -642,7 +642,7 @@ const buttons = ref([
         return "Deposit request already exists. To change it, you first have to cancel the existing one.";
       }
       if (!fundStore.isUserWalletWhitelisted) {
-        return "Your wallet address is not whitelisted to allow deposits into this OIV.";
+        return "Your wallet address is not whitelisted to allow deposits into this vault.";
       }
       return "";
     }),
@@ -708,7 +708,7 @@ const delegateToMyself = async () => {
 
     if (fundAddress === ethers.ZeroAddress) {
       toastStore.errorToast(
-        "The OIV address is not available. Please contact the Rethink Finance support.",
+        "The vault address is not available. Please contact the Rethink Finance support.",
       );
       return;
     }

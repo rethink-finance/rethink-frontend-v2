@@ -66,7 +66,7 @@
                 :disabled="isFundInitialized || !isCurrentStepValid || !accountStore.isConnected"
                 @click="isInitializeDialogOpen = true"
               >
-                Initialize OIV
+                Initialize vault
                 <v-tooltip
                   v-if="!accountStore.isConnected"
                   :model-value="true"
@@ -74,7 +74,7 @@
                   location="top"
                   @update:model-value="true"
                 >
-                  Connect your wallet to initialize the OIV
+                  Connect your wallet to initialize the vault
                 </v-tooltip>
               </v-btn>
               <v-tooltip
@@ -126,7 +126,7 @@
             width="3"
             indeterminate
           />
-          Loading OIV init cache...
+          Loading vault init cache...
         </div>
       </v-dialog>
       <v-window v-model="step">
@@ -147,7 +147,7 @@
               >
                 <UiButtonSelectChain
                   v-model="selectedChainId"
-                  label="Select OIV Chain"
+                  label="Select vault Chain"
                   label-center
                 />
               </div>
@@ -155,7 +155,7 @@
                 v-else-if="item.key === OnboardingStep.Chain && !accountStore.isConnected"
                 class="connect_wallet"
               >
-                In order to create an OIV, you need to connect your wallet.
+                In order to create a vault, you need to connect your wallet.
 
                 <v-btn
                   class="bg-primary text-secondary"
@@ -216,8 +216,8 @@
             </v-window-item>
           </template>
           <template #default>
-            OIV has been initialized already and cannot be edited.<br>
-            You can add permissions & NAV Methods and finalize OIV creation.
+            Vault has been initialized already and cannot be edited.<br>
+            You can add permissions & NAV Methods and finalize vault creation.
           </template>
         </v-tooltip>
       </v-window>
@@ -238,7 +238,7 @@
         v-model="isInitializeDialogOpen"
         title="Heads Up!"
         confirm-text="Initialize"
-        message="You will not be able to change the OIV settings after you initialize it. Changes will require governance proposal."
+        message="You will not be able to change the vault settings after you initialize it. Changes will require governance proposal."
         class="confirm_dialog"
         max-width="600px"
         :loading="isInitializeLoading"
@@ -258,7 +258,7 @@
         @cancel="isClearCacheDialogOpen = false"
       >
         <p class="mt-4">
-          This action will clear the create OIV form data for the selected chain.
+          This action will clear the create vault form data for the selected chain.
           You will lose all the saved data you have entered so far.
         </p>
       </UiConfirmDialog>
@@ -892,7 +892,7 @@ const initializeFund = async() => {
       });
   } catch (error:any) {
     console.error(error);
-    toastStore.errorToast("There was an error initializing the OIV");
+    toastStore.errorToast("There was an error initializing the vault");
   } finally {
     isInitializeDialogOpen.value = false;
     isInitializeLoading.value = false;

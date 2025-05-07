@@ -195,16 +195,16 @@
       <div v-else class="section_whitelist__no_data">
         Currently there are no addresses in the whitelist.
         <br>
-        This means that all addresses are allowed to participate in the OIV.
+        This means that all addresses are allowed to participate in the vault.
         <br>
       </div>
     </div>
     <div v-else>
       <UiInfoBox
         class="info-box"
-        info="Whitelist is disabled. This means that anyone can deposit into the OIV. <br>
+        info="Whitelist is disabled. This means that anyone can deposit into the vault. <br>
                       If you want to enable the whitelist, please toggle the switch above. <br>
-                      Whitelist is a list of addresses that are allowed to deposit into the OIV."
+                      Whitelist is a list of addresses that are allowed to deposit into the vault."
       />
     </div>
   </div>

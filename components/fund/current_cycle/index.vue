@@ -174,7 +174,7 @@ const depositDisabledTooltipText = computed(() => {
     return "Wait for settlement or cancel the deposit request.";
   }
   if (!fundStore.isUserWalletWhitelisted) {
-    return "Your wallet address is not whitelisted to allow deposits into this OIV."
+    return "Your wallet address is not whitelisted to allow deposits into this vault."
   }
   return "";
 });
@@ -185,13 +185,13 @@ const redemptionDisabledTooltipText = computed(() => {
     return "There is no redemption request.";
   }
   if (fundUserData.value.fundTokenBalance < redemptionRequestAmount) {
-    return "Not enough OIV tokens to process the redemptions request."
+    return "Not enough vault tokens to process the redemptions request."
   }
   if (shouldUserWaitSettlementOrCancelRedemption.value) {
     return "Wait for settlement or cancel the redemption request.";
   }
 
-  // Check if there is even enough liquidity in the OIV contract to redeem the requested amount.
+  // Check if there is even enough liquidity in the vault contract to redeem the requested amount.
   const fundContractBaseTokenBalance = fundStore.fund?.fundContractBaseTokenBalance || 0n;
   // Get the last NAV update exchange rate.
   const lastNAVExchangeRate = FixedNumber.fromString(
@@ -218,10 +218,10 @@ const redemptionDisabledTooltipText = computed(() => {
   // console.log("NSS fundContractBaseTokenBalanceFN", fundContractBaseTokenBalanceFN.toString())
   if (fundContractBaseTokenBalanceFN.lt(redemptionRequestAmountInBaseFN)) {
     // Check if there is enough base token liquidity to perform withdrawal.
-    return "Not enough liquidity in the OIV contract."
+    return "Not enough liquidity in the vault contract."
   }
   if (!fundStore.isUserWalletWhitelisted) {
-    return "Your wallet address is not whitelisted to allow deposits into this OIV."
+    return "Your wallet address is not whitelisted to allow deposits into this vault."
   }
   return "";
 });
@@ -293,11 +293,11 @@ const signDepositAndDelegateBySigTransaction = async () => {
 
 const deposit = async () => {
   if (!fundStore.activeAccountAddress) {
-    toastStore.errorToast("Connect your wallet to deposit tokens to the OIV.")
+    toastStore.errorToast("Connect your wallet to deposit tokens to the vault.")
     return;
   }
   if (!fundStore.fund) {
-    toastStore.errorToast("OIV data is missing.")
+    toastStore.errorToast("vault data is missing.")
     return;
   }
   if (!userDepositRequest?.value?.amount) {
@@ -378,11 +378,11 @@ const deposit = async () => {
 
 const redeem = async () => {
   if (!fundStore.activeAccountAddress) {
-    toastStore.errorToast("Connect your wallet to redeem tokens from the OIV.")
+    toastStore.errorToast("Connect your wallet to redeem tokens from the vault.")
     return;
   }
   if (!fundStore.fund) {
-    toastStore.errorToast("OIV data is missing.")
+    toastStore.errorToast("vault data is missing.")
     return;
   }
   if (!userRedemptionRequest?.value?.amount) {

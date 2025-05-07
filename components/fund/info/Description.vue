@@ -64,7 +64,7 @@ export default {
         },
         {
           isHidden: !this.fund.oivChatUrl,
-          title: "OIV Chat",
+          title: "Vault Chat",
           href: this.fund.oivChatUrl,
           showTooltip: false,
         },

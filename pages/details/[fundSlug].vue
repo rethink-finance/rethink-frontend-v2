@@ -85,7 +85,7 @@
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
     <h2 class="mb-2">
-      Oops, there was a problem loading the OIV
+      Oops, there was a problem loading the vault
     </h2>
     <p class="text-center">
       Network error occurred. <br>
