@@ -130,7 +130,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
     to: `/details/${selectedFundSlug.value}/governance`,
   },
   {
-    title: "OIV Setting Proposal",
+    title: "Vault Setting Proposal",
     disabled: true,
     to: `/details/${selectedFundSlug.value}/governance/fund-settings`,
   },

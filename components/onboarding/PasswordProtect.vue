@@ -1,11 +1,11 @@
 <template>
   <div class="password_protect">
     <h2 class="title">
-      Create OIV
+      Create Vault
     </h2>
     <div class="password_input">
       <v-label class="mb-2">
-        Enter password to proceed to the OIV creation page
+        Enter password to proceed to the vault creation page
       </v-label>
       <v-text-field
         v-model="password"

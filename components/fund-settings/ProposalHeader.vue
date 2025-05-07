@@ -1,7 +1,7 @@
 <template>
   <UiHeader>
     <div class="main_header__title">
-      OIV Settings Proposal
+      Vault Settings Proposal
 
       <UiTooltipClick location="right" :hide-after="6000">
         <Icon
@@ -12,7 +12,7 @@
 
         <template #tooltip>
           <div class="tooltip__content">
-            Update OIV Settings on need!
+            Update vault Settings on need!
             <a
               class="tooltip__link"
               href="https://docs.rethink.finance/rethink.finance"

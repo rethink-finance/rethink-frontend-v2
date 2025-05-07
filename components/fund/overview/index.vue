@@ -1,6 +1,6 @@
 <template>
   <div class="overview">
-    <UiDataRowCard title="OIV Settings" class="data_row_card">
+    <UiDataRowCard title="Vault Settings" class="data_row_card">
       <template #body>
         <FundOverviewSettings :fund="fund" />
       </template>

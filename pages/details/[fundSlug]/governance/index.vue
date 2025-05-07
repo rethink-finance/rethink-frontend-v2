@@ -116,7 +116,7 @@
       :cancel-text="
         updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to existing proposal'
       "
-      message="There is already an active OIV settings proposal. Are you sure you want to create a new one?"
+      message="There is already an active vault settings proposal. Are you sure you want to create a new one?"
       class="confirm_dialog"
       :max-width="updateSettingsProposals.length > 1 ? 'unset' : '600px'"
       @confirm="handleNavigateToCreateProposal"
@@ -516,7 +516,7 @@ const dropdownOptions: Record<string, DropdownOption> = {
       router.push(`/details/${fundStore.selectedFundSlug}/nav/manage`);
     },
   },
-  "OIV Settings": {
+  "Vault Settings": {
     click: () => {
       // if fund settings proposal already exist, open up the dialog
       if (hasUpdateSettingsProposal.value) {

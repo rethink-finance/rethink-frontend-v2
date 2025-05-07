@@ -98,7 +98,7 @@
     <div class="main_card">
       <UiHeader>
         <div class="main_header__title">
-          OIV Contract
+          Vault Contract
           <UiTooltipClick location="right" :hide-after="6000">
             <Icon
               icon="material-symbols:info-outline"
@@ -346,12 +346,12 @@
               </template>
             </div>
             <div class="data_bar__subtitle">
-              OIV Contract Balance
+              Vault Contract Balance
             </div>
           </div>
           <div class="data_bar__item">
             <UiNotification class="fund_contract_notification">
-              OIV Contract Balance should meet Redemption Requests before being
+              Vault Contract Balance should meet Redemption Requests before being
               able to Settle the Flows.
             </UiNotification>
           </div>

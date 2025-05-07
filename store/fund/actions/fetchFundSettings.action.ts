@@ -11,10 +11,10 @@ export const fetchFundSettingsAction = async (
   const web3Store = useWeb3Store();
 
   if (!fundChainId) {
-    throw new Error("No fund chainId provided, cannot fetch fund settings.");
+    throw new Error("No vault chainId provided, cannot fetch vault settings.");
   }
   if (!fundAddress) {
-    throw new Error("No fundAddress provided, cannot fetch fund settings.");
+    throw new Error("No fundAddress provided, cannot fetch vault settings.");
   }
 
   const fundContract = web3Store.getCustomContract(

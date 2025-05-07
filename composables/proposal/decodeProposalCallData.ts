@@ -61,7 +61,7 @@ export const decodeProposalCallData = (
       // storeNAVData has two fields, "oiv" and "data", where "data" is actually NAV methods, so we can try decoding
       // it even further to show NAV methods table.
       try {
-        // Only decode if decoded.oiv address is the same as current fund address.
+        // Only decode if decoded.oiv address is the same as the current fund address.
         if (fundAddress && decoded?.oiv === fundAddress) {
           const decodedNavMethods = decodeProposalCallData(roleModAddress, (decoded?.data ?? "") as string, targetAddress, safeAddress, fundAddress)
           if (decodedNavMethods?.calldataDecoded) {

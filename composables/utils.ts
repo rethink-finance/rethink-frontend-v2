@@ -260,7 +260,7 @@ export const convertBlocksToTime = (blockNumber: number, averageBlockTimeInSecon
   }
 }
 
-// used in create OIV process to determine the best time unit
+// used in create vault process to determine the best time unit
 export const determineTimeValueAndTimeUnit = (totalSeconds: number) => {
   let bestUnit: PeriodUnits = PeriodUnits.Seconds;
   let bestValue = totalSeconds;

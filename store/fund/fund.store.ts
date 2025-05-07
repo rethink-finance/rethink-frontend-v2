@@ -116,7 +116,7 @@ export const useFundStore = defineStore({
         labels[this.fund.safeAddress] = this.fund?.title + " Safe"
       }
       if (this.fund?.address) {
-        labels[this.fund.address] = this.fund?.title + " OIV"
+        labels[this.fund.address] = this.fund?.title + " Vault"
       }
       return labels
     },

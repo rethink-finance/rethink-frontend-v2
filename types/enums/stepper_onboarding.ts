@@ -94,7 +94,7 @@ const OnboardingFieldsMap: FieldsMapType = {
                     ...fieldManagement,
                     isEditable: true,
                     tag: "upgradable",
-                    info: "Please note that <strong>Planned Settlement Period</strong> is not enforced on-chain. Your job as a manager is to make sure OIV is managed accordingly to these parameters. Your management role may otherwise be removed through governance.",
+                    info: "Please note that <strong>Planned Settlement Period</strong> is not enforced on-chain. Your job as a manager is to make sure vault is managed accordingly to these parameters. Your management role may otherwise be removed through governance.",
                   }
                 }
 
@@ -161,7 +161,7 @@ const OnboardingFieldsMap: FieldsMapType = {
           isEditable: true,
           isCustomValueToggleOn: false, // this is used to determine if the value is custom or default
           defaultValue: "0x0000000000000000000000000000000000000000",
-          defaultValueInfo: "By default OIV Token is used as the Governance Token for the OIV.",
+          defaultValueInfo: "By default Vault Token is used as the Governance Token for the vault.",
         }
       }
 
