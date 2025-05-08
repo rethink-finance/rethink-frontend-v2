@@ -5,7 +5,6 @@
     <UiDataRowCard :title="fund.safeAddress" subtitle="Safe Contract" />
     <UiDataRowCard :title="fund.fundToken?.address" subtitle="Token Contract" />
     <UiDataRowCard
-      v-if="appSettingsStore.isManageMode"
       :title="roleModAddress"
       subtitle="Roles Modifier Contract"
     />
@@ -14,9 +13,7 @@
 
 <script setup lang="ts">
 import type IFund from "~/types/fund";
-import { useSettingsStore } from "~/store/settings/settings.store";
 import { useFundStore } from "~/store/fund/fund.store";
-const appSettingsStore = useSettingsStore();
 const fundStore = useFundStore();
 
 const props = defineProps({
