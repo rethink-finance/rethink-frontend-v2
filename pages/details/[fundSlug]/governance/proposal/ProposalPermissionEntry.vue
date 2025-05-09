@@ -133,7 +133,7 @@ const decodedCondition = computed(() => {
       {
         index: props.calldataDecoded?.paramIndex,
         type: ParameterTypeMap[props.calldataDecoded?.paramType] as ParameterType,
-        condition: ParamComparisonMap[props.calldataDecoded?.paramComp] as ParamComparison,
+        condition: ParamComparison.ONE_OF,
         value: props.calldataDecoded?.compValues,
       } as ParamCondition,
     ]
