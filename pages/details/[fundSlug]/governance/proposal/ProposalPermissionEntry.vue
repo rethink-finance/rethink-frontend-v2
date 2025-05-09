@@ -127,7 +127,17 @@ const decodedCondition = computed(() => {
     executionOption: ExecutionOptionMap[props.calldataDecoded?.options] as ExecutionOption,
     params: [],
   };
-  if (props.functionName === "scopeParameter") {
+  console.log("functionName", props.functionName, props.calldataDecoded);
+  if (props.functionName === "scopeParameterAsOneOf") {
+    condition.params = [
+      {
+        index: props.calldataDecoded?.paramIndex,
+        type: ParameterTypeMap[props.calldataDecoded?.paramType] as ParameterType,
+        condition: ParamComparisonMap[props.calldataDecoded?.paramComp] as ParamComparison,
+        value: props.calldataDecoded?.compValues,
+      } as ParamCondition,
+    ]
+  } else if (props.functionName === "scopeParameter") {
     condition.params = [
       {
         index: props.calldataDecoded?.paramIndex,
