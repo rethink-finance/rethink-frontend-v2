@@ -279,11 +279,11 @@ import { feeFieldKeys, type IWhitelist } from "~/types/enums/fund_setting_propos
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
 import { InputType } from "~/types/enums/input_type";
 import {
-OnboardingFieldsMap,
-OnboardingStep,
-OnboardingStepMap,
-type IOnboardingStep,
-type OnboardingInitializingSteps,
+  OnboardingFieldsMap,
+  OnboardingStep,
+  OnboardingStepMap,
+  type IOnboardingStep,
+  type OnboardingInitializingSteps,
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
 import type IFundInitCache from "~/types/fund_init_cache";
@@ -889,6 +889,7 @@ const initializeFund = async() => {
 
     const formattedData = formatInitializeData();
     console.warn("SUBMIT formatted data", formattedData);
+    console.warn("SUBMIT fundFactoryContract", fundFactoryContract);
 
     await fundFactoryContract
       .send("initCreateFund", {}, ...formattedData)

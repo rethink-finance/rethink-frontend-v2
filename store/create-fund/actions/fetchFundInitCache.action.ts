@@ -18,9 +18,10 @@ const fetchGovernorData = async (fundChainId: ChainId, governorAddress?: string)
     "lateQuorum"
    */
   if (!governorAddress) return {};
+  console.debug("governor fetch 1")
 
   const web3Store = useWeb3Store();
-  console.debug("governor fetch")
+  console.debug("governor fetch", governorAddress)
   const fundGovernorContract = web3Store.getCustomContract(
     fundChainId,
     RethinkFundGovernor.abi,
@@ -77,8 +78,8 @@ const fetchGovernorData = async (fundChainId: ChainId, governorAddress?: string)
   };
 }
 export const fetchBaseTokenDetails = async (chainId: ChainId, baseTokenAddress: string) => {
-  const web3Store = useWeb3Store();
   console.debug("fetchBaseTokenDetails")
+  const web3Store = useWeb3Store();
 
   const tokenContract = web3Store.getCustomContract(
     chainId,
@@ -125,6 +126,7 @@ export const fetchFundInitCacheAction = async (
   }
   const fundFactoryContract = web3Store.chainContracts[fundChainId]?.fundFactoryContract;
   console.debug("fetch fundInitCache", fundChainId, "deployer:", deployerAddress)
+  console.debug("fetch fundInitCache fundFactoryContract", fundFactoryContract, web3Store.chainContracts[fundChainId])
 
   const fundInitCache: IFundInitCache = await web3Store.callWithRetry(
     fundChainId,

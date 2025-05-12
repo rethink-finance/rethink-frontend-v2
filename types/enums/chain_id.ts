@@ -3,7 +3,7 @@ export enum ChainId {
   BASE = "0x2105",
   POLYGON = "0x89",
   ARBITRUM = "0xa4b1",
-  LOCAL_NODE = "0x7A69",
+  LOCAL_NODE = "0x211B686D",
   // GOERLI = "0x5",
   // SEPOLIA = "0x6a9",
   // OPTIMISM = "0xa",

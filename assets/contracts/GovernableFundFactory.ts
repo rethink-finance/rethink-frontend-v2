@@ -553,6 +553,48 @@ export const GovernableFundFactory = {
           "name": "_feeManagePeriod",
           "type": "uint256",
         },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "flowVersion",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "minDeposit",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxDeposit",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "minWithdrawal",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxWithdrawal",
+              "type": "uint256",
+            },
+            {
+              "internalType": "bool",
+              "name": "limitsEnabled",
+              "type": "bool",
+            },
+          ],
+          "internalType": "struct IGovernableFundStorage.FlowConfigs",
+          "name": "_flowConfigs",
+          "type": "tuple",
+        },
+        {
+          "internalType": "bool",
+          "name": "_isNonTransferable",
+          "type": "bool",
+        },
       ],
       "name": "initCreateFund",
       "outputs": [

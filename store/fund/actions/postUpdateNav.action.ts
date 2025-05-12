@@ -1,11 +1,10 @@
 import { useFundStore } from "../fund.store";
-import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 
 export const postUpdateNAVAction = async (): Promise<any> => {
   const fundStore = useFundStore();
-
+  const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
   try {
-    const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundStore.selectedFundChain);
+    const navExecutorAddress = getNAVExecutorBeaconProxyAddress(fundStore.selectedFundChain);
 
     if (!navExecutorAddress) {
       fundStore.toastStore.errorToast(
