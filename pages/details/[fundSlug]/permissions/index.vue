@@ -1,83 +1,142 @@
 <template>
-  <div class="page-permissions">
-    <UiMainCard
-      title="🛠️ We are working on displaying permissions within Rethink dApp. Until then please use Gnosis Guild frontend."
-    >
+  <div class="permissions">
+    <UiMainCard class="permissions__content">
       <div class="info_container">
-        <p class="info_container__text">
-          Having trouble understanding how to read permissions?
-          <a
-            class="info_container__link"
-            href="https://docs.rethink.finance/rethink.finance"
-            target="_blank"
-          >Learn more here</a>.
-        </p>
         <div class="info_container__buttons">
-          <UiLinkExternalButton
-            title="View OIV Permissions"
-            :href="navigateToGnosis"
-          />
-          <v-btn color="primary" @click="navigateToCreatePermissions">
-            Create Permissions Proposal
-          </v-btn>
+          <div class="d-flex align-center">
+            <div class="d-flex align-center me-6">
+              <RoleSelectRole v-model="selectedRole" :roles="roles" />
+            </div>
+            <PermissionImportRawPermissions :disabled="isEditDisabled" />
+          </div>
+
+          <div v-if="appSettingsStore.isManageMode" class="is-manage-mode">
+            <v-btn
+              v-if="isEditDisabled"
+              color="primary"
+              @click="isEditDisabled = false"
+            >
+              Edit
+            </v-btn>
+            <div v-else>
+              <v-btn
+                color="primary"
+                @click="navigateToCreatePermissions"
+              >
+                Create Permissions Proposal
+              </v-btn>
+              <v-btn
+                variant="text"
+                color="secondary"
+                @click="isEditDisabled = true"
+              >
+                <Icon
+                  icon="ic:twotone-cancel"
+                  width="1.5rem"
+                />
+              </v-btn>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Permissions loaded from zodiac roles modifier -->
+      <!-- TODO here it flickers as we first have to fetch fundData and then roleModAddress, prevent flickering -->
+      <FundPermissions
+        class="mt-6"
+        :chain-id="fund.chainId"
+        :disabled="isEditDisabled"
+        :is-loading="isLoading"
+      />
     </UiMainCard>
   </div>
 </template>
 
 <script setup lang="ts">
-// types
 import type IFund from "~/types/fund";
-// components
 import { useFundStore } from "~/store/fund/fund.store";
-import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
+import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
+import { useRoleStore } from "~/store/role/role.store";
+import { useSettingsStore } from "~/store/settings/settings.store";
+import { useRoles } from "~/composables/permissions/useRoles";
+import { useToastStore } from "~/store/toasts/toast.store";
+import PermissionImportRawPermissions from "~/components/permission/ImportRawPermissions.vue";
+import RoleSelectRole from "~/components/role/SelectRole.vue";
+import { ActionState } from "~/types/enums/action_state";
+import { useActionStateStore } from "~/store/actionState.store";
 
 const router = useRouter();
 const fundStore = useFundStore();
+const permissionsProposalStore = usePermissionsProposalStore();
+const appSettingsStore = useSettingsStore();
+const roleStore = useRoleStore();
+const toastStore = useToastStore();
+const actionStateStore = useActionStateStore();
 
-const fund = useAttrs().fund as IFund;
 const { selectedFundSlug } = storeToRefs(useFundStore());
+const fund = useAttrs().fund as IFund;
 
+const {
+  roles,
+  selectedRole,
+  isEditDisabled,
+  isFetchingPermissions,
+  fetchPermissions,
+} = useRoles(fund.chainId, fund.address);
 
-const navigateToGnosis = ref("");
+const isLoading = computed(() =>
+  isFetchingPermissions.value ||
+  actionStateStore.isActionState("fetchRoleModAddressAddressAction", ActionState.Loading),
+);
 
-const updateGnosisLink = async () => {
-  if (!fund) {
-    navigateToGnosis.value = "";
+const fetchRolesAndPermissions = async () => {
+  if (!fund?.address) {
+    roles.value = [];
     return;
   }
 
   try {
-    const roleModAddress = await fundStore.getRoleModAddress();
-    navigateToGnosis.value = getGnosisPermissionsUrl(fund.chainShort, roleModAddress);
+    const roleModAddress = await fundStore.fetchRoleModAddress(fund.address);
+    await fetchPermissions(roleModAddress);
   } catch (error) {
     console.error(error);
-    navigateToGnosis.value = "";
+    toastStore.errorToast("Failed loading permissions. Please refresh page.");
   }
 };
 
-watch(
-  () => [fund.chainShort, fundStore.getRoleModAddress],
-  () => {
-    updateGnosisLink();
-  },
-  { immediate: true },
-);
+const navigateToCreatePermissions = async () => {
+  try {
+    permissionsProposalStore.rawTransactions = await roleStore.updateRole(fund.chainId);
+  } catch (e: any) {
+    console.error("Failed updating role", e);
+  }
 
-const navigateToCreatePermissions = () => {
   router.push(
     `/details/${selectedFundSlug.value}/governance/delegated-permissions`,
   );
 };
+
+watch(
+  () => [fund.chainShort, fundStore.fetchRoleModAddress],
+  () => {
+    fetchRolesAndPermissions();
+  },
+  { immediate: true },
+);
 </script>
 
 <style scoped lang="scss">
+.permissions {
+  position: relative;
+
+  &__content {
+    min-height: 30rem;
+  }
+}
 .info_container {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 15px;
+  gap: 1rem;
 
   &__text {
     font-size: $text-sm;
@@ -90,7 +149,8 @@ const navigateToCreatePermissions = () => {
   &__buttons {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    justify-content: space-between;
+    gap: 1rem;
 
     @include md {
       flex-direction: row;

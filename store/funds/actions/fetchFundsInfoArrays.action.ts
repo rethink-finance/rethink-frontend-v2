@@ -1,8 +1,9 @@
 // actions/fetchFundsInfoArrays.action.ts
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { type ChainId } from "~/types/enums/chain_id";
 
 export async function fetchFundsInfoArraysAction(
-  chainId: string,
+  chainId: ChainId,
 ): Promise<any[]> {
   const web3Store = useWeb3Store();
 

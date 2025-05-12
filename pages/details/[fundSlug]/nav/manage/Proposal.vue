@@ -20,7 +20,7 @@
                 Proposal Title
               </v-label>
               <div class="proposal_title_field__char_limit">
-                <ui-char-limit
+                <UiCharLimit
                   :char-limit="150"
                   :char-number="proposal.title"
                 />
@@ -30,7 +30,7 @@
           <v-row class="mb-6">
             <v-text-field
               v-model="proposal.title"
-              placeholder="E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+              placeholder="Type here"
               required
             />
           </v-row>
@@ -133,7 +133,7 @@
                 <v-expansion-panel-text>
                   <FundNavMethodsTable
                     v-model:methods="fundManagedNAVMethods"
-                    :fund-chain-id="fundStore.fundChainId"
+                    :fund-chain-id="fundStore.selectedFundChain"
                     :fund-address="fundStore.fundAddress"
                     :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
                     :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
@@ -181,15 +181,15 @@
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import { useAccountStore } from "~/store/account/account.store";
-import { useFundStore } from "~/store/fund/fund.store";
-import { useToastStore } from "~/store/toasts/toast.store";
-import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import {
   encodeUpdateNavMethods,
   getAllowManagerToUpdateNavProposalData,
   getNavMethodsProposalData,
 } from "~/composables/nav/navProposal";
+import { useAccountStore } from "~/store/account/account.store";
+import { useFundStore } from "~/store/fund/fund.store";
+import { useToastStore } from "~/store/toasts/toast.store";
+import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const router = useRouter();
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
@@ -311,8 +311,6 @@ const submitProposal = async () => {
         toastStore.addToast(
           "The proposal transaction has been submitted. Please wait for it to be confirmed.",
         );
-
-        clearDraft();
       })
       .on("receipt", (receipt: any) => {
         console.log("receipt: ", receipt);
@@ -348,7 +346,7 @@ const submitProposal = async () => {
    */
   loading.value = true;
   if (!proposal.value.allowManagerToUpdateNav) return;
-  const roleModAddress = await fundStore.getRoleModAddress();
+  const roleModAddress = await fundStore.fetchRoleModAddress(fundStore.fundAddress);
 
   const allowManagerToUpdateNavProposal = getAllowManagerToUpdateNavProposalData(
     encodedNavUpdateEntries,
@@ -416,19 +414,19 @@ watch(
   { deep: true },
 );
 
-const clearDraft = () => {
+const clearDraft = async () => {
   try {
     fundManagedNAVMethods.value = JSON.parse(
       JSON.stringify(fundLastNAVUpdateMethods.value, stringifyBigInt),
       parseBigInt,
     );
     // reset the local storage as well
-    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
+    const navUpdateEntries = await getLocalForageItem("navUpdateEntries");
     // navUpdateEntries[selectedFundAddress.value] = fundManagedNAVMethods.value;
     // we need to delete navUpdateEntries[selectedFundAddress.value];
     delete navUpdateEntries[selectedFundAddress.value];
 
-    setLocalStorageItem("navUpdateEntries", navUpdateEntries);
+    setLocalForageItem("navUpdateEntries", navUpdateEntries);
 
     toastStore.successToast("Draft cleared successfully");
   } catch (e) {
@@ -437,15 +435,15 @@ const clearDraft = () => {
   }
 };
 
-const saveDraft = () => {
+const saveDraft = async () => {
   try {
-    const navUpdateEntries = getLocalStorageItem("navUpdateEntries", {});
+    const navUpdateEntries = await getLocalForageItem("navUpdateEntries");
 
     navUpdateEntries[selectedFundAddress.value] = JSON.parse(
       JSON.stringify(fundManagedNAVMethods.value, stringifyBigInt),
     );
 
-    setLocalStorageItem("navUpdateEntries", navUpdateEntries);
+    setLocalForageItem("navUpdateEntries", navUpdateEntries);
   } catch (e) {
     console.error(e);
     toastStore.errorToast("Failed to save NAV draft");

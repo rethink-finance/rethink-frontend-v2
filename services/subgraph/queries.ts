@@ -39,7 +39,7 @@ export const FETCH_GOVERNANCE_PROPOSALS = gql`
           blockNumber
         }
       }
-      calls {
+      calls(orderBy: index, orderDirection: asc) {
         calldata
         index
         signature
@@ -108,7 +108,7 @@ export const FETCH_GOVERNANCE_PROPOSAL = gql`
           blockNumber
         }
       }
-      calls {
+      calls(orderBy: index, orderDirection: asc, first: 1000) {
         calldata
         index
         signature

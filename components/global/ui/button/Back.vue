@@ -1,0 +1,15 @@
+<template>
+  <v-btn
+    variant="tonal"
+    class="btn_icon_center"
+  >
+    <Icon
+      icon="mdi-chevron-left"
+      height="1.5rem"
+      width="1.5rem"
+    />
+    <slot>
+      Back
+    </slot>
+  </v-btn>
+</template>

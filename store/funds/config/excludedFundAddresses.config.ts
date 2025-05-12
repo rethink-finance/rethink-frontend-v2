@@ -39,6 +39,8 @@ const rawExcludedFundAddresses = {
     { address: "0xB9e1dC350af83a3127aDc8CFB48a9B4abADCA184", alwaysExclude: false },
     { address: "0xe3c31b33FCBd905E978aCEa64b2b043Cc81DDA7c", alwaysExclude: true },  // ADEMO2
     { address: "0xC27eE955a44F0A9e7AC509dD54E8221eE06A9592", alwaysExclude: true },  // TESTARB
+    { address: "0x539a56974295B8BF7023F2d85144Ca0010953ee2", alwaysExclude: true },  // QCLG 22. jan 25
+    { address: "0x5A7638b7b831262081804e88657b2D83E8491b1E", alwaysExclude: false },  // carrotfunding.io gCFG 31. mar 25
   ],
   // Fraxtal
   "0xfc": [],
@@ -46,6 +48,7 @@ const rawExcludedFundAddresses = {
   "0x1": [
     { address: "0x7ed95418063d5b61bDE7b40D65F93739c0CFdcf4", alwaysExclude: false },
     { address: "0x51cf0Bc0f5312d824a55B83B2c032Fb8c96c249a", alwaysExclude: false },
+    { address: "0xB6aB76d451B98a992FB84A93602527CC30cd3b22", alwaysExclude: false }, // QCLE
   ],
   // Base
   "0x2105": [
@@ -57,6 +60,9 @@ const rawExcludedFundAddresses = {
     { address: "0x2e40fDbA4d07E6b7aBCcBCCe3f6D28bDea727395", alwaysExclude: false },
     { address: "0x34f1Ec0A0af19d622B281488C1B1ba0B5aE20860", alwaysExclude: true },  // BDAO
     { address: "0x23C44260731B8614aa7F3B28AB0bafDb1610743c", alwaysExclude: true },  // bDEMO4
+    { address: "0x16dd2b60DEc7d3fE7C08f6B29732Fb51dDd2c176", alwaysExclude: true },  // ATF 19. mar 25
+    { address: "0x86acCa1a926FEa47985Df8Ef5A8c0d0cDA650a62", alwaysExclude: true },  // gCFT 19. mar 25
+    { address: "0x457960e6946ed94e82512992ba9dAaBDa5539010", alwaysExclude: true },  // DEMO ABC 25. apr 25
   ],
 } as Record<string, { address: string; alwaysExclude: boolean }[]>;
 

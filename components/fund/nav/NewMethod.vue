@@ -45,18 +45,11 @@
           <v-label class="mb-2">
             Position Type
           </v-label>
-          <div class="toggle_buttons">
-            <v-btn-toggle v-model="navMethod.positionType" group mandatory>
-              <v-btn
-                v-for="positionType in creatablePositionTypes"
-                :key="positionType.key"
-                :value="positionType.key"
-                variant="outlined"
-              >
-                {{ positionType.name }}
-              </v-btn>
-            </v-btn-toggle>
-          </div>
+          <UiButtonSwitchItems
+            v-model="navMethod.positionType"
+            :items="parsedPositionTypeItems"
+            @update:model-value="navMethod.positionType = $event"
+          />
         </v-col>
         <v-col
           v-if="valuationTypes.length"
@@ -66,18 +59,11 @@
           <v-label class="mb-2">
             Valuation Type
           </v-label>
-          <div class="toggle_buttons">
-            <v-btn-toggle v-model="navMethod.valuationType" group mandatory>
-              <v-btn
-                v-for="valuationType in valuationTypes"
-                :key="valuationType.key"
-                :value="valuationType.key"
-                variant="outlined"
-              >
-                {{ valuationType.name }}
-              </v-btn>
-            </v-btn-toggle>
-          </div>
+          <UiButtonSwitchItems
+            v-model="navMethod.valuationType"
+            :items="parsedValuationTypeItems"
+            @update:model-value="navMethod.valuationType = $event"
+          />
         </v-col>
       </v-row>
 
@@ -114,12 +100,12 @@
                       </template>
                     </UiTextBadge>
 
-                    <UiDetailsButton small @click.stop="deleteMethod(index)">
+                    <UiButtonDetails small @click.stop="deleteMethod(index)">
                       <v-icon
                         icon="mdi-delete"
                         color="error"
                       />
-                    </UiDetailsButton>
+                    </UiButtonDetails>
                   </div>
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
@@ -221,6 +207,23 @@ const defaultFields = computed(() =>
 const areAllMethodDetailsValid = computed(() =>
   // Return true if all methods are valid, otherwise false.
   !navMethod.value.details[navMethod.value.positionType].some((method: any) => !method.isValid),
+);
+
+// Switch Buttons Items
+const parsedPositionTypeItems = creatablePositionTypes.map(positionType => {
+  return {
+    key: positionType.key,
+    label: positionType.name,
+  };
+});
+
+const parsedValuationTypeItems = computed(() =>
+  valuationTypes.value.map(valuationType => {
+    return {
+      key: valuationType.key,
+      label: valuationType.name,
+    };
+  }),
 );
 
 const form = ref(null);
@@ -454,24 +457,6 @@ const addMethod = () => {
 
   &--valid {
     color: $color-success;
-  }
-}
-// toggle buttons
-.toggle_buttons {
-  .v-btn-toggle {
-    display: flex;
-    gap: 10px;
-
-    .v-btn {
-      opacity: 0.35;
-      color: $color-text-irrelevant;
-      border-radius: 4px !important;
-      @include borderGray;
-    }
-    .v-btn--active {
-      color: $color-white !important;
-      opacity: 1;
-    }
   }
 }
 </style>

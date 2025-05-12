@@ -1,6 +1,8 @@
+import type { ChainId } from "~/types/enums/chain_id";
+
 export default interface IFundSettings {
   [key: string]: any;
-  chainId?: string; // additionally added field
+  chainId?: ChainId; // additionally added field
   depositFee: string;
   withdrawFee: string;
   performancePeriod: string;
@@ -23,15 +25,4 @@ export default interface IFundSettings {
   fundAddress: string;
   fundName: string;
   fundSymbol: string;
-}
-
-export interface IFundInitCache {
-  fundContractAddr: string;
-  rolesModifier: string;
-  fundSettings: IFundSettings;
-  _feeManagePeriod: string;
-  _feePerformancePeriod: string;
-  _fundMetadata: string;
-  fundMetadata: Record<string, any>;
-  governorData: Record<string, any>;
 }

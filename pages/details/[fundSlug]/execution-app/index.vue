@@ -128,7 +128,7 @@
     <div :class="`main_card ${!isUsingZodiacPilotExtension ? 'disabled' : ''}`">
       <UiHeader>
         <div class="main_header__title">
-          Submit Raw TXN
+          Submit Raw Transaction
           <UiTooltipClick location="right" :hide-after="6000">
             <Icon
               icon="material-symbols:info-outline"
@@ -227,15 +227,14 @@ import { ERC20 } from "~/assets/contracts/ERC20";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import type IFund from "~/types/fund";
+import { useAccountStore } from "~/store/account/account.store";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
+const accountStore = useAccountStore();
 
-const fund = useAttrs().fund as IFund;
 const { isUsingZodiacPilotExtension } = storeToRefs(fundStore);
-
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({
@@ -335,8 +334,14 @@ const submitRawTXN = async () => {
     console.log("from:", fundStore.activeAccountAddress);
     console.log("value:", parseInt(submitRawTXNEntry.amountValue));
 
-    const web3Provider = web3Store.chainProviders[fundStore.fundChainId];
-    await web3Provider.eth.sendTransaction({
+    if (!accountStore.connectedWalletWeb3) {
+      console.log("Send trx raw no connected wallet");
+      toastStore.errorToast(
+        "Connect your wallet.",
+      );
+      return;
+    }
+    await accountStore.connectedWalletWeb3.eth.sendTransaction({
       to: submitRawTXNEntry.contractAddress,
       data: submitRawTXNEntry.txData,
       from: fundStore.activeAccountAddress,
@@ -411,7 +416,7 @@ const fetchTokenDetails = async () => {
 
   try {
     const tokenContract = web3Store.getCustomContract(
-      fundStore.fundChainId,
+      fundStore.selectedFundChain,
       ERC20,
       transferEntry.inputTokenAddress,
     );

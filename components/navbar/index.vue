@@ -18,9 +18,6 @@
       >
         <nuxt-link :to="'/'" class="d-flex">
           <Logo />
-          <v-tooltip activator="parent" location="bottom">
-            Go to homepage
-          </v-tooltip>
         </nuxt-link>
         <div class="navbar__buttons hidden-sm-and-down">
           <nuxt-link
@@ -50,7 +47,24 @@
 
         <ClientOnly>
           <div class="d-flex">
-            <UiSelectChainButton
+            <nuxt-link
+              to="https://docs.rethink.finance"
+              target="_blank"
+              class="mr-2"
+            >
+              <v-btn
+                class="nav-link"
+                variant="plain"
+                color="var(--color-light-subtitle)"
+              >
+                Docs
+                <template #append>
+                  <Icon  icon="mdi:launch" width="0.875rem" />
+                </template>
+              </v-btn>
+            </nuxt-link>
+
+            <UiButtonSelectChain
               v-if="accountStore.isConnected"
               v-model="selectedChainId"
               :loading="accountStore.isSwitchingNetworks"
@@ -89,6 +103,27 @@
                 }}
               </v-tooltip>
             </v-btn>
+
+            <v-menu location="bottom" :close-on-content-click="false">
+              <template #activator="{ props }">
+                <v-btn class="btn_settings" v-bind="props">
+                  <v-icon class="icon_settings" icon="mdi-cog" size="1.5rem" />
+                </v-btn>
+              </template>
+              <v-list>
+                <v-list-item>
+                  <v-list-item-title>
+                    <v-switch
+                      v-model="appSettingsStore.isManageMode"
+                      label="Manage Mode"
+                      color="primary"
+                      hide-details
+                      @change="appSettingsStore.toggleAdvancedMode"
+                    />
+                  </v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
           </div>
         </ClientOnly>
 
@@ -113,6 +148,8 @@
 
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
+import { useSettingsStore } from "~/store/settings/settings.store";
+import { type ChainId } from "~/types/enums/chain_id";
 import type IRoute from "~/types/route";
 const accountStore = useAccountStore();
 
@@ -120,6 +157,7 @@ const route = useRoute();
 
 const currentRoute = ref(route?.path);
 const menuOpen = ref(false);
+const appSettingsStore = useSettingsStore();
 
 const routes : IRoute[] = [
   {
@@ -127,13 +165,13 @@ const routes : IRoute[] = [
     matchPrefix: "/details",
     exactMatch: false,
     title: "Discover",
-    text: "Find the most favorable opportunities",
+    text: "",
   },
   {
     to: "/create",
     exactMatch: true,
     title: "Create",
-    text: "Create your own strategies",
+    text: "",
   },
   {
     to: "/governance",
@@ -142,25 +180,16 @@ const routes : IRoute[] = [
     text: "Coming soon",
     disabled: true,
   },
-  {
-    isExternal: true,
-    exactMatch: true,
-    to: "https://docs.rethink.finance",
-    title: "Docs",
-    text: "Delve into the details of the protocol",
-    icon: "mdi:launch",
-    color: "var(--color-light-subtitle)",
-  },
 ]
 const selectedChainId = ref(accountStore.connectedWalletChainId);
 
 watch(() => accountStore.connectedWalletChainId, (newVal, oldVal) => {
   console.log(`Connected Wallet Cain ID changed from ${oldVal} to ${newVal}`);
-  selectedChainId.value = newVal || "";
+  selectedChainId.value = newVal;
 });
 
 const isSelectInputActive = ref(false);
-const switchNetwork = async (chainId: string) => {
+const switchNetwork = async (chainId: ChainId) => {
   try {
     await accountStore.switchNetwork(chainId)
     isSelectInputActive.value = false;
@@ -191,8 +220,10 @@ const computedRoutes = computed(() => {
       isActive,
       pathColor: getPathColor(isActive, routeItem.color),
       target: routeItem.isExternal ? "_blank" : "",
+      isHidden: routeItem.to === "/create" ? !appSettingsStore.isManageMode : false,
+
     };
-  });
+  }).filter((routeItem: IRoute) => !routeItem.isHidden);
 });
 
 const activeAccount = computed(() => truncateAddress(accountStore.activeAccount?.address));
@@ -237,6 +268,23 @@ const onClickConnect = async () => {
       margin-right: 0;
     }
   }
+
+  .btn_settings {
+    margin-left: .5rem;
+    padding: 0.5rem;
+
+    &:hover {
+      .icon_settings {
+        transform: rotate(90deg);
+      }
+    }
+  }
+  .icon_settings{
+    transition: transform 0.3s ease-in-out;
+    transform: rotate(0deg);
+  }
+
+
 
   &__toolbar {
     letter-spacing: normal;

@@ -3,10 +3,10 @@
     <template #divider>
       <v-icon class="divider" icon="mdi-chevron-right" />
     </template>
-    <template v-slot:prepend>
-      <v-breadcrumbs-item 
-        v-if="prependBreadcrumb?.title && items.length > 0" 
-        :to="prependBreadcrumb?.to" 
+    <template #prepend>
+      <v-breadcrumbs-item
+        v-if="prependBreadcrumb?.title && items.length > 0"
+        :to="prependBreadcrumb?.to"
         class="prepend_breadcrumb"
       >
         <img
@@ -17,14 +17,14 @@
         >
         <span>{{ prependBreadcrumb?.title }}</span>
 
-        
+
 
       </v-breadcrumbs-item>
 
-      <v-icon 
-        v-if="prependBreadcrumb?.title && items.length > 0"  
-        class="divider divider--prepend" 
-        icon="mdi-chevron-right" 
+      <v-icon
+        v-if="prependBreadcrumb?.title && items.length > 0"
+        class="divider divider--prepend"
+        icon="mdi-chevron-right"
       />
     </template>
   </v-breadcrumbs>
@@ -43,7 +43,7 @@ defineProps<{
 <style lang="scss" scoped>
 .breadcrumbs {
  height: 1rem;
- 
+
   :deep(.v-breadcrumbs-item--link) {
     color: $color-steel-blue;
     padding-inline: 0px;
@@ -77,11 +77,11 @@ defineProps<{
   height: 26px;
   border-radius: 50%;
   margin-right: 5px;
-  object-fit: cover;  
+  object-fit: cover;
 }
 .divider{
   color: $color-steel-blue;
-  font-size: 20px;
+  font-size: $text-lg;
 
   &--prepend{
     margin-left: 8px;

@@ -1,15 +1,17 @@
 import { defineStore } from "pinia";
 
-import { clearLocalStorageItem } from "~/composables/localStorage";
-import { useAccountStore } from "~/store/account/account.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import type IFundSettings from "~/types/fund_settings";
-import type { IFundInitCache } from "~/types/fund_settings";
 import { useActionState } from "../actionState.store";
 import { fetchFundInitCacheAction } from "./actions/fetchFundInitCache.action";
+import { clearLocalStorageItem } from "~/composables/localStorage";
+import { useAccountStore } from "~/store/account/account.store";
+import { networksMap } from "~/store/web3/networksMap";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import { ChainId } from "~/types/enums/chain_id";
+import type IFundSettings from "~/types/fund_settings";
+import type IFundInitCache from "~/types/fund_init_cache";
 
 interface IState {
-  selectedStepperChainId?: string;
+  selectedStepperChainId?: ChainId;
   fundInitCache?: IFundInitCache;
   askToSaveDraftBeforeRouteLeave: boolean;
 }
@@ -32,12 +34,18 @@ export const useCreateFundStore = defineStore({
     web3Store(): any {
       return useWeb3Store();
     },
-    fundChainId(): string {
+    fundChainId(): ChainId {
       if (this.fundInitCache?.fundSettings?.chainId) {
         return this.fundInitCache.fundSettings.chainId;
       }
 
-      return this.selectedStepperChainId || ""
+      return this.selectedStepperChainId || ChainId.ETHEREUM;
+    },
+    fundChainName(): string {
+      const defaultValue = this.fundChainId;
+
+      if (!this.fundChainId) return defaultValue;
+      return networksMap[this.fundChainId]?.chainName || defaultValue;
     },
     onboardingWhitelistLocalStorageKey(): string {
       return "onboardingWhitelist_" + this.fundChainId || "undefined";
@@ -51,14 +59,14 @@ export const useCreateFundStore = defineStore({
   },
   actions: {
     fetchFundInitCache(
-      fundChainId: string,
+      fundChainId: ChainId,
       deployerAddress: string,
     ): Promise<IFundInitCache | undefined> {
       return useActionState("fetchFundInitCacheAction", () =>
         fetchFundInitCacheAction(fundChainId, deployerAddress),
       );
     },
-    setSelectedStepperChainId(chainId: string) {
+    setSelectedStepperChainId(chainId: ChainId) {
       this.selectedStepperChainId = chainId;
     },
     clearFundInitCache() {

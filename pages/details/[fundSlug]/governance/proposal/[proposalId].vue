@@ -47,7 +47,7 @@
                 :key="calldataIndex"
                 class="mb-6"
               >
-                <strong class="text-primary">{{ calldataIndex }}#</strong>
+                <strong class="text-primary">{{ calldataIndex + 1 }}#</strong>
                 <div>
                   <strong>Contract:</strong> {{ calldata?.contractName ?? "N/A" }}
                 </div>
@@ -84,7 +84,7 @@
                     <template v-if="!toggledRawProposalCalldatas[calldataIndex]">
                       <template v-if="calldata?.calldataType === ProposalCalldataType.NAV_UPDATE">
                         <FundNavMethodsTable
-                          :fund-chain-id="fundStore.fundChainId"
+                          :fund-chain-id="fundStore.selectedFundChain"
                           :fund-address="fundStore.fundAddress"
                           :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
                           :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
@@ -99,10 +99,22 @@
                           idx="[proposalId]"
                         />
                       </template>
+                      <template v-else-if="calldata?.calldataType === ProposalCalldataType.PERMISSIONS">
+                        <UiTextBadge v-if="calldata?.calldataDecoded?.role !== undefined">
+                          <strong>Role ID: {{ calldata?.calldataDecoded?.role }}</strong>
+                        </UiTextBadge>
+                        <ProposalPermissionEntry
+                          :function-name="calldata?.functionName"
+                          :calldata-decoded="calldata?.calldataDecoded"
+                          :chain-id="fundStore.fund?.chainId"
+                        />
+                      </template>
                       <template v-else-if="calldata?.calldataType === ProposalCalldataType.FUND_SETTINGS">
                         <!-- Show fund setting UI -->
                         <FundSettingsExecutableCode
+                          v-if="calldata?.calldataDecoded && fundStore?.fund?.chainId"
                           :calldata-decoded="calldata?.calldataDecoded"
+                          :chain-id="fundStore.fund?.chainId"
                         />
                       </template>
                       <template v-else>
@@ -118,7 +130,7 @@
                     </template>
                     <template v-else>
                       <div class="code_block">
-                        {{ calldata?.calldata }}
+                        {{ calldata?.calldataDecoded || calldata?.calldata }}
                       </div>
                     </template>
                   </template>
@@ -190,8 +202,7 @@
 <script setup lang="ts">
 import FundSettingsExecutableCode from "./FundSettingsExecutableCode.vue";
 import { useActionStateStore } from "~/store/actionState.store";
-
-import { formatPercent } from "~/composables/formatters";
+import { formatPercent, formatCalldata } from "~/composables/formatters";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
@@ -200,6 +211,8 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import ProposalPermissionEntry from "~/pages/details/[fundSlug]/governance/proposal/ProposalPermissionEntry.vue";
+
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -234,7 +247,6 @@ const breadcrumbItems: BreadcrumbItem[] = [
   },
 ];
 
-
 const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
 const actionStateStore = useActionStateStore();
@@ -255,9 +267,11 @@ const activeUserVoteSubmission = computed(() => {
 });
 
 const proposal = computed(():IGovernanceProposal | undefined => {
+  console.debug("PROPOSAL_ID", proposalId)
   // TODO: refetch proposals after user votes (emit event from ProposalSectionTop)
-  const proposal = governanceProposalStore.getProposal(fundStore.fundChainId, fundStore.fundAddress, proposalId);
+  const proposal = governanceProposalStore.getProposal(fundStore.selectedFundChain, fundStore.fundAddress, proposalId);
   if (!proposal) return undefined;
+  console.debug("PROPOSAL_ID fetched", proposal)
 
   /**
   if (!proposalFetched.value && proposal?.createdBlockNumber) {
@@ -326,14 +340,6 @@ watch(
   { immediate: true },
 );
 
-const formatCalldata = (calldata: any) => {
-  try {
-    return JSON.stringify(calldata, null, 2)
-  } catch {
-    console.warn("failed to format calldata", calldata);
-    return calldata;
-  }
-}
 /**
 const fetchProposalVoteSubmissions = async () => {
   loadingProposalVoteSubmissions.value = true;
@@ -455,8 +461,11 @@ onMounted(async () => {
   emit("updateBreadcrumbs", breadcrumbItems);
 
   // fetch block proposals based on createdBlockNumber
+  allMethods.value = [];
   try {
+    console.warn("START FETCHINGF", proposalId)
     await governanceProposalStore.fetchGovernanceProposal(proposalId);
+    console.warn("STOP FETCHINGF", proposalId)
 
     // await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
 
@@ -500,9 +509,9 @@ const isLoadingProposal = computed(() => {
   margin-bottom: 1rem;
 
   :deep(.data_row__title) {
-    font-size: 16px;
+    font-size: $text-md;
     font-weight: 700;
-    line-height: 24px;
+    line-height: $text-lg;
   }
   // remove outer border
   :deep(.data_row__panel) {

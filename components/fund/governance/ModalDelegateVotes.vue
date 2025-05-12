@@ -170,7 +170,7 @@ const delegate = async (isMyself = false) => {
 
     if (fundAddress === ethers.ZeroAddress) {
       toastStore.errorToast(
-        "The OIV address is not available. Please contact the Rethink Finance support.",
+        "The vault address is not available. Please contact the Rethink Finance support.",
       );
       return;
     }
@@ -263,7 +263,6 @@ const delegate = async (isMyself = false) => {
     width: 100%;
     margin: 0 auto;
     max-width: 350px;
-
     color: $color-light-subtitle !important;
   }
   &__label {

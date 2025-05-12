@@ -6,8 +6,9 @@ import { defineStore } from "pinia";
 import { Web3 } from "web3";
 import { useToastStore } from "../toasts/toast.store";
 
+import { networksMap } from "../web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { networksMap } from "~/store/web3/networksMap";
+import { type ChainId } from "~/types/enums/chain_id";
 
 interface IState {
   web3Onboard?: any;
@@ -30,14 +31,10 @@ export const useAccountStore = defineStore("accounts", {
       return this.web3Onboard?.connectingWallet ?? false;
     },
     connectedWallet(): WalletState | undefined {
-      console.log(
-        "accountStore.connectedWallet ",
-        this.web3Onboard?.connectedWallet,
-      );
       return this.web3Onboard?.connectedWallet || undefined;
     },
-    connectedWalletChainId(): string | undefined {
-      return this.connectedWallet?.chains[0]?.id;
+    connectedWalletChainId(): ChainId | undefined {
+      return this.connectedWallet?.chains[0]?.id as ChainId;
     },
     isConnected(): boolean {
       return !!this.connectedWallet;
@@ -73,7 +70,7 @@ export const useAccountStore = defineStore("accounts", {
       const chainId = this.web3Onboard?.connectedChain?.id || "";
       await this.setActiveChain(chainId);
     },
-    async addNewNetwork(chainId: string) {
+    async addNewNetwork(chainId: ChainId) {
       console.log("Add New Network for chain:", chainId);
       const network = networksMap[chainId];
       console.log({
@@ -99,7 +96,7 @@ export const useAccountStore = defineStore("accounts", {
     checkConnection() {
       return this.connectedWalletWeb3?.eth.getBlockNumber();
     },
-    async switchNetwork(chainId: string) {
+    async switchNetwork(chainId: ChainId) {
       this.isSwitchingNetworks = true;
       let errorToThrow;
 
@@ -147,8 +144,7 @@ export const useAccountStore = defineStore("accounts", {
         throw errorToThrow;
       }
     },
-    async setActiveChain(chainId: string): Promise<void> {
-      console.log("setActiveChain", chainId);
+    async setActiveChain(chainId: ChainId): Promise<void> {
       // If the user is currently on a different
       // network, ask him to switch it.
       if (chainId !== this.connectedWalletChainId) {
@@ -162,7 +158,6 @@ export const useAccountStore = defineStore("accounts", {
           ],
         });
       }
-      console.log("REQUEST FINISH switch network in accountStore")
     },
     async connectWallet() {
       try {

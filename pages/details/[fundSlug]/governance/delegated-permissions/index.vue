@@ -1,13 +1,34 @@
 <template>
-  <div class="delegated-permission">
-    <FundGovernanceDelegatedPermissions
-      v-model="delegatedPermissionsEntry"
-      :fields-map="DelegatedPermissionFieldsMap"
-      submit-label="Create Proposal"
-      @submit="submitProposal"
-      @entry-updated="entryUpdated"
-    />
-  </div>
+  <FundGovernanceDelegatedPermissions
+    v-model="delegatedPermissionsEntry"
+    :fields-map="DelegatedPermissionFieldsMap"
+    submit-label="Create Proposal"
+    class="delegated-permission"
+    @submit="submitProposal"
+    @entry-updated="entryUpdated"
+  >
+    <template #subtitle>
+      <UiTooltipClick location="right" :hide-after="6000">
+        <Icon
+          icon="material-symbols:info-outline"
+          class="info-icon"
+          width="1.5rem"
+        />
+        <template #tooltip>
+          <div class="tooltip__content">
+            <a
+              class="tooltip__link"
+              href="https://docs.rethink.finance/rethink.finance"
+              target="_blank"
+            >
+              Learn More
+              <Icon icon="maki:arrow" color="primary" width="1rem" />
+            </a>
+          </div>
+        </template>
+      </UiTooltipClick>
+    </template>
+  </FundGovernanceDelegatedPermissions>
 </template>
 
 <script setup lang="ts">
@@ -18,9 +39,7 @@ import {
   DelegatedStepMap, prepPermissionsProposalData,
   proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
-
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
-// fund store
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
@@ -79,6 +98,8 @@ const delegatedPermissionsEntry = ref([
       {
         proposalTitle: "",
         proposalDescription: "",
+        transactionsOverview: "",
+        transactionsRawJSON: "",
       },
     ],
   },
@@ -101,7 +122,7 @@ const submitProposal = async () => {
   )?.steps[0];
   if (!details || !transactions?.length) return;
 
-  const roleModAddress = await fundStore.getRoleModAddress();
+  const roleModAddress = await fundStore.fetchRoleModAddress(fundStore.fundAddress);
 
   console.log(toRaw(transactions));
   console.log(toRaw(details));

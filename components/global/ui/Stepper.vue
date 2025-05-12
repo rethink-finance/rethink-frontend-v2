@@ -2,14 +2,15 @@
   <section class="section-stepper">
     <UiHeader>
       <div class="main_header__title">
-        {{ title }}
+        <slot name="title">
+          {{ title }}
+        </slot>
         <slot name="subtitle" />
       </div>
 
       <div class="buttons">
         <slot name="buttons" />
         <v-btn
-          class="button--primary"
           :type="isLastStep ? 'submit' : 'button'"
           :loading="isSubmitLoading"
           :disabled="isLastStep && !accountStore.isConnected"
@@ -63,7 +64,7 @@
               </div>
 
               <div class="sub-steps__icons">
-                <UiDetailsButton
+                <UiButtonDetails
                   v-if="
                     step.steps &&
                       step.steps?.length > 1 &&
@@ -75,7 +76,7 @@
                   @click.stop="deleteSubstep(step, substepIndex)"
                 >
                   <v-icon icon="mdi-delete" color="error" />
-                </UiDetailsButton>
+                </UiButtonDetails>
                 <div v-else class="sub-steps__feedback-icons">
                   <Icon
                     v-if="substep.isValid === false"

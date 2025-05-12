@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import numeral from "numeral";
+import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 
 /**
  * Formats a JavaScript Date object as "24 Jul 23" (day of the month, abbreviated month name, and last two digits of the year).
@@ -140,21 +141,41 @@ export const commify = (value: string | number | bigint) => {
   }
 
   const neg = match[1];
-  const whole = BigInt(match[2] || 0).toLocaleString("en-us");
-  let frac = "";
+  let whole = BigInt(match[2] || 0).toString();
+  let frac = match[4] || "";
 
-  if (match[4]) {
-    const fracDigits = match[4];
-    const asDecimal = parseFloat("0." + fracDigits);
+  // Convert fraction part into a number
+  const asDecimal = frac ? parseFloat(`0.${frac}`) : 0;
 
-    // Retain the first 3 significant digits
-    const significantDigits = Number(asDecimal.toPrecision(3));
 
-    // Convert to string, remove "0." prefix
-    frac = significantDigits.toString().split(".")[1] || "";
+  // if decimales are bigger than 0.9999, we round up the whole number
+  if (asDecimal >= 0.9999) {
+    whole = (BigInt(whole) + 1n).toString();
+    frac = "00"; // Reset fraction to "00"
+  }
+  // if decimals are bigger than .995, we truncate the fraction, because we don't want to round up the whole number based on three decimal places
+  else if (asDecimal > 0.995) {
+    frac = frac.slice(0, 2); // Truncate instead of rounding
+  }
+  // Numbers bigger than 1: Force exactly 2 decimal places
+  else if (Number(match[2]) > 0 && asDecimal > 0) {
+    frac = asDecimal.toFixed(2).split(".")[1];
+  }
+  else if (asDecimal > 0) {
+    // Small numbers: Keep first 3 significant digits
+    if(Number(match[2]) === 0) {
+      frac = Number(asDecimal.toPrecision(3)).toString().split(".")[1] || "";
+    }
+    else {
+      frac = asDecimal.toFixed(2).split(".")[1];
+    }
+  }
+  else {
+    // Remove fraction if it's zero
+    frac = "";
   }
 
-  let commifiedValue = `${neg}${whole}`;
+  let commifiedValue = `${neg}${BigInt(whole).toLocaleString("en-us")}`;
   if (frac) {
     commifiedValue += `.${frac}`;
   }
@@ -260,4 +281,59 @@ export const toCamelCase = (str: string) => {
         : word.charAt(0).toUpperCase() + word.slice(1),
     )
     .join("");
+}
+
+
+/**
+ *
+ * @param totalSeconds - total seconds to convert to human readable duration
+ * @returns human readable duration
+ */
+export const formatDuration = (totalSeconds: number): string => {
+  const orderedUnits: PeriodUnits[] = [
+    // PeriodUnits.Weeks,
+    PeriodUnits.Days,
+    PeriodUnits.Hours,
+    PeriodUnits.Minutes,
+    PeriodUnits.Seconds,
+  ];
+
+  let remainingSeconds = totalSeconds;
+  let result: { unit: PeriodUnits; value: number }[] = [];
+
+  for (const unit of orderedUnits) {
+    const secondsPerUnit = TimeInSeconds[unit];
+    const value = Math.floor(remainingSeconds / secondsPerUnit);
+
+    if (value > 0) {
+      result.push({ unit, value });
+      remainingSeconds %= secondsPerUnit;
+    }
+  }
+
+  // Keep only the first two units
+  if (result.length > 2) {
+    // Check the third unit's value and round up the second if it's large enough
+    const thirdUnit = result[2];
+
+    if (thirdUnit.value >= (TimeInSeconds[thirdUnit.unit] / 2)) {
+      result[1].value += 1;
+    }
+
+    result = result.slice(0, 2);
+  }
+
+  return result
+    .map(({ unit, value }) => pluralizeWord(unit, value))
+    .join(", ") || "0 seconds";
+};
+
+
+export const formatCalldata = (calldata: any) => {
+  try {
+    return JSON.stringify(calldata, null, 2)
+  } catch {
+    console.warn("failed to format calldata", calldata);
+    return calldata;
+  }
 }

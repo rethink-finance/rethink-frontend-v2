@@ -1,10 +1,11 @@
-import { useFundStore } from "../fund.store";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { ChainId } from "~/types/enums/chain_id";
+import { useFundStore } from "../fund.store";
 
 export const fetchSimulateCurrentNAVAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
 ): Promise<void> => {
   const fundStore = useFundStore();

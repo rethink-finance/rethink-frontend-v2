@@ -10,24 +10,23 @@
     items-per-page="-1"
     @mousedown:row="navigateFundDetails"
   >
-    <template #item.name="{ item }">
+    <template #[`item.name`]="{ item }">
       <FundNameCell
         :image="item.photoUrl"
-        :title="item.fundToken.symbol"
-        :subtitle="item.title"
+        :title="item.title"
+        :strategist-name="item.strategistName"
+        :strategist-url="item.strategistUrl"
       />
     </template>
 
-    <template #item.chainShort="{ item }">
-      <Icon
-        :icon="icon(item.chainShort).name"
-        :width="icon(item.chainShort).size"
-        :color="icon(item.chainShort)?.color"
+    <template #[`item.chainShort`]="{ item }">
+      <IconChain
+        :chain-short="item.chainShort"
         class="mr-2"
       />
     </template>
 
-    <template #item.lastNAVUpdateTotalNAV="{ item }">
+    <template #[`item.lastNAVUpdateTotalNAV`]="{ item }">
       <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
         <v-progress-circular
           v-if="item.isNavUpdatesLoading"
@@ -50,7 +49,7 @@
     </template>
 
     <!-- cumulative -->
-    <template #item.cumulativeReturnPercent="{ item }">
+    <template #[`item.cumulativeReturnPercent`]="{ item }">
       <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
         <v-progress-circular
           v-if="item.isNavUpdatesLoading"
@@ -59,13 +58,13 @@
           indeterminate
         />
         <div v-else :class="numberColorClass(item.cumulativeReturnPercent)">
-          {{ formatPercent(item.cumulativeReturnPercent, true) }}
+          {{ formatPercent(item.cumulativeReturnPercent, true) ?? "N/A" }}
         </div>
       </div>
     </template>
 
-    <template #item.positionTypeCounts="{ item }">
-      <PositionTypesBar :position-type-counts="item.positionTypeCounts ?? []" />
+    <template #[`item.positionTypeCounts`]="{ item }">
+      <PositionTypesBar :position-type-counts="item.positionTypeCounts ?? []" class="position_types_bar" />
     </template>
 
     <template #bottom>
@@ -79,7 +78,6 @@
 </template>
 
 <script lang="ts" setup>
-import { Icon } from "@iconify/vue/dist/iconify.js";
 import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
 import FundNameCell from "./components/FundNameCell.vue";
 import {
@@ -87,8 +85,8 @@ import {
   formatTokenValue,
 } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
-import type IFund from "~/types/fund";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
+import type IFund from "~/types/fund";
 
 const { getFundDetailsUrl } = usePageNavigation();
 const router = useRouter();
@@ -106,10 +104,9 @@ defineProps({
 
 const headers: any = computed(() => [
   {
-    title: "OIV Name",
+    title: "Vault Name",
     key: "name",
     sortable: false,
-    width: 200,
     maxWidth: 300,
     minWidth: 200,
   },
@@ -121,12 +118,12 @@ const headers: any = computed(() => [
     align: "end",
   },
   {
-    title: "Lastest NAV",
+    title: "Latest NAV",
     key: "lastNAVUpdateTotalNAV",
     align: "end",
   },
   // {
-  //   title: "Lastest NAV Date",
+  //   title: "Latest NAV Date",
   //   key: "lastNavUpdateTime",
   //   value: (v: IFund) => v.lastNavUpdateTime,
   //   align: "end",
@@ -140,7 +137,6 @@ const headers: any = computed(() => [
   {
     title: "Cumulative",
     key: "cumulativeReturnPercent",
-    maxWidth: 100,
     value: (v: IFund) => formatPercent(v.cumulativeReturnPercent, true),
     align: "end",
   },
@@ -163,28 +159,25 @@ const headers: any = computed(() => [
   {
     title: "Position Types",
     key: "positionTypeCounts",
-    width: 128,
-    maxWidth: 158,
     align: "end",
   },
 ]);
 
-const icon = (chainShort: string) => {
-  const icon = getChainIcon(chainShort);
-  return {
-    name: icon?.name,
-    size: icon?.size,
-    color: icon?.color,
-  };
-};
-
 const navigateFundDetails = (event: any, row: any) => {
+  // Check if the click target is an anchor (<a>) or any clickable element
+  const target = event.target as HTMLElement;
+
+  if (target.tagName.toLowerCase() === "a" || target.closest("a")) {
+  // If the target is an anchor tag, prevent the row navigation
+    return;
+  }
+
   const fundDetailsUrl = getFundDetailsUrl(
     row.item.chainId,
     row.item.fundToken.symbol,
     row.item.address,
   );
-  console.log(event)
+
   // Check if the middle mouse button or a modifier key (e.g., Ctrl/Command) is pressed
   if (event.button === 1 || event.metaKey || event.ctrlKey) {
     // Allow the default behavior (open in a new tab)
@@ -253,5 +246,10 @@ const navigateFundDetails = (event: any, row: any) => {
 
   rotate: 180deg;
   transform: scaleX(-1);
+}
+
+.position_types_bar{
+  max-width: 100px;
+  margin-left: auto;
 }
 </style>

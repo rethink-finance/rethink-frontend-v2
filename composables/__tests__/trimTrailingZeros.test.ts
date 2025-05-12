@@ -1,5 +1,5 @@
 import { it, expect, describe } from "vitest"
-import { formatPercent , trimTrailingZeros } from "../formatters";
+import { trimTrailingZeros } from "../formatters";
 
 describe("trimTrailingZeros", () => {
 

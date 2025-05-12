@@ -1,7 +1,7 @@
 <template>
   <UiConfirmDialog
     :model-value="modelValue"
-    title="Add Raw Methods"
+    title="Import Raw Methods"
     max-width="80%"
     confirm-text="Load"
     cancel-text="Cancel"
@@ -43,16 +43,14 @@ const props = defineProps({
 // Data
 const rawMethods = ref("");
 
-// Computeds
-
 // Methods
 const updateModelValue = (value: boolean) => {
   emits("update:modelValue", value);
 };
 const addRawMethods = () => {
   try {
-    const newEntires = formatRawMethod();
-    emits("added-methods", newEntires);
+    const newEntries = formatRawMethod();
+    emits("added-methods", newEntries);
 
     // clear input and close dialog
     rawMethods.value = "";
@@ -65,7 +63,7 @@ const addRawMethods = () => {
 };
 
 const formatRawMethod = ()=>{
-  const parsedMethod =  JSON.parse(rawMethods.value, (key, value) => {
+  const parsedMethod =  JSON.parse(rawMethods.value, (_, value) => {
     // check if value is a string and exactly "true" or "false" and convert it to boolean
     if (value === "true") return true;
     if (value === "false") return false;
@@ -73,11 +71,7 @@ const formatRawMethod = ()=>{
   });
   const lastIndex = props.methods.length - 1;
 
-  const newEntires = [] as INAVMethod[];
-
-
-  //   TODO: foreach
-  parsedMethod?.map((method: any, index: number) => {
+  return parsedMethod?.map((method: any, index: number) => {
     const newIndex = lastIndex + index + 1;
 
     const details = {
@@ -94,7 +88,7 @@ const formatRawMethod = ()=>{
 
     const detailsJson = formatJson(details) || "{}";
 
-    const newEntry = {
+    return {
       index: newIndex,
       isNew: true,
       details,
@@ -109,18 +103,8 @@ const formatRawMethod = ()=>{
       simulatedNavFormatted: method?.simulatedNavFormatted || "0 USDC",
       valuationSource: method?.description?.valuationSource || "",
     } as INAVMethod;
-
-    // add the new entry
-    newEntires.push(newEntry);
-  });
-
-  return newEntires;
+  }) || [] as INAVMethod[];
 }
-
-
-// Watchers
-
-// Lifecycle Hooks
 </script>
 
 <style scoped lang="scss">

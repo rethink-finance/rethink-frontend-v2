@@ -15,6 +15,34 @@ watch(() => accountStore.connectedWallet?.provider, () => {
   accountStore.setAlreadyConnectedWallet();
 });
 
+// Methods
+useHead(() => {
+  return {
+    titleTemplate(titleChunk) {
+      const title = titleChunk
+      const titlePrefix = "Rethink Finance"
+      const siteTitle = "Rethink Finance | Run Funds On-Chain"
+      let output = titlePrefix
+
+      switch (true) {
+        case siteTitle === title:
+          output = siteTitle
+          break
+        case titlePrefix === title:
+          output = titlePrefix
+          break
+
+        case Boolean(title):
+          // output = `${titlePrefix} | ${title}`
+          output = `${title}`
+          break
+      }
+
+      return output
+    },
+  }
+})
+
 </script>
 
 <template>

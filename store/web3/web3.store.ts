@@ -1,22 +1,24 @@
 import { defineStore } from "pinia";
 import { type HttpProvider, Web3 } from "web3";
-import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
-import type { IContractAddresses } from "~/types/addresses";
-import { networksMap } from "~/store/web3/networksMap";
 import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
-import { RethinkReader } from "assets/contracts/RethinkReader";
-import { CustomContract } from "~/store/web3/customContract";
 import { NAVCalculator } from "assets/contracts/NAVCalculator";
+import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
+import { RethinkReader } from "assets/contracts/RethinkReader";
 import SafeMultiSendCallOnlyJson from "assets/contracts/safe/SafeMultiSendCallOnly.json";
-const SafeMultiSendCallOnlyAddresses: IContractAddresses =
-  SafeMultiSendCallOnlyJson.networkAddresses as IContractAddresses;
+import { CustomContract } from "~/store/web3/customContract";
+import { networksMap } from "~/store/web3/networksMap";
+import { type ChainId, ChainId as ChainIdValue } from "~/types/enums/chain_id";
+const SafeMultiSendCallOnlyAddresses: Partial<Record<string, string>> = SafeMultiSendCallOnlyJson.networkAddresses;
+
+
+const L2_TO_L1_CHAIN_ID_MAP = {
+  // Arbitrum uses L1 ETH as block time.
+  [ChainIdValue.ARBITRUM]: ChainIdValue.ETHEREUM,
+} as const;
 
 interface IState {
   currentRpcIndex: number;
   retryDelay: number;
-  chainId: string;
-  chainName: string;
-  chainShort: string;
   cachedTokens: Record<string, any>;
   // Determines what RPC url is used for each chain.
   chainSelectedRpcUrl: Record<string, string>;
@@ -39,14 +41,18 @@ const removeDuplicates = (arr: any[]) => {
 export const useWeb3Store = defineStore({
   id: "web3store",
   state: (): IState => {
-    const chainSelectedRpcUrl: Record<string, string> = {};
+    const chainSelectedRpcUrl: Partial<Record<ChainId, string>> = {};
     const chainSelectedRpcIndex: Record<string, number> = {};
     const chainProviders: Record<string, Web3> = {};
     const chainContracts: Record<string, any> = {};
 
     for (const network of Object.values(networksMap)) {
-      const chainId = network.chainId;
-      chainSelectedRpcUrl[chainId] = networksMap[chainId]?.rpcUrls[0];
+      const chainId = network.chainId as ChainId;
+      const rpcUrl = networksMap[chainId]?.rpcUrls[0];
+      if (!rpcUrl) {
+        console.error("No RPC url for chainId", chainId);
+      }
+      chainSelectedRpcUrl[chainId] = rpcUrl || "";
       chainSelectedRpcIndex[chainId] = 0;
       // Initialize providers map by iterating over all networks and use the
       // selected chain's RPC url to init the provider.
@@ -63,7 +69,7 @@ export const useWeb3Store = defineStore({
         ),
         // fundFactoryContract: new provider.eth.Contract(
         //   GovernableFundFactory.abi,
-        //   addresses.GovernableFundFactoryBeaconProxy[chainId],
+        //   rethinkContractAddresses.GovernableFundFactoryBeaconProxy[chainId],
         // ),
         rethinkReaderContract: new provider.eth.Contract(
           RethinkReader.abi,
@@ -78,9 +84,6 @@ export const useWeb3Store = defineStore({
     return {
       currentRpcIndex: -1,
       retryDelay: 1500,
-      chainId: "",
-      chainName: "",
-      chainShort: "",
       chainProviders,
       chainContracts,
       chainSelectedRpcUrl,
@@ -98,17 +101,17 @@ export const useWeb3Store = defineStore({
     };
   },
   actions: {
-    safeMultiSendCallOnlyToAddress(chainId: string): string {
+    safeMultiSendCallOnlyToAddress(chainId: ChainId): string {
       return SafeMultiSendCallOnlyAddresses[
         parseInt(chainId).toString()
-      ];
+      ] || "";
     },
-    networkRpcUrls(chainId: string): string[] {
+    networkRpcUrls(chainId: ChainId): string[] {
       const network = networksMap[chainId];
       return removeDuplicates(network.rpcUrls || []);
     },
     getCustomContract(
-      chainId: string,
+      chainId: ChainId,
       abi: any,
       address: string,
     ): CustomContract {
@@ -116,22 +119,27 @@ export const useWeb3Store = defineStore({
       return new CustomContract(abi, address, chainId, this.chainProviders[chainId].provider as HttpProvider);
     },
     async callWithRetry(
-      chainId: string,
+      chainId: ChainId,
       method: () => any,
       maxRetries: number = 1,
       extraIgnorableErrorCodes?: any[],
+      timeoutMs: number = 4000,
     ): Promise<any> {
       // TODO: see the TODO below for the possible upgrade of callWithRetry
       const RPCUrlsLength = this.networkRpcUrls(chainId).length;
       let retries = 0;
       let switchedRPCCount = 0;
-
-      // console.log("callWithRetry");
       if (!method) return;
 
       while (retries <= maxRetries && switchedRPCCount <= RPCUrlsLength) {
         try {
-          return await method();
+          // Call the method, but also do a timeout promise of 1.5 seconds.
+          return await Promise.race([
+            method(),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error(`Method call timed out after ${timeoutMs}ms`)), timeoutMs),
+            ),
+          ]);
         } catch (error: any) {
           const ignorableErrorCodes = [4001];
           // If user passed additional error codes that we don't want to retry, add them to ignorableErrorCodes.
@@ -187,7 +195,7 @@ export const useWeb3Store = defineStore({
       }
       throw new Error("Max retries reached for all RPC URLs");
     },
-    switchRpcUrl(chainId: string): void {
+    switchRpcUrl(chainId: ChainId): void {
       if (!chainId) return;
       const rpcUrls = this.networkRpcUrls(chainId);
       this.chainSelectedRpcIndex[chainId] = (this.chainSelectedRpcIndex[chainId] + 1) % rpcUrls.length;
@@ -202,10 +210,28 @@ export const useWeb3Store = defineStore({
         console.log("set new provider on chain", chainId, " to RPC url", newRpcUrl);
         chainProvider.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
       }
+
+      // Also update the provider for all contracts
+      Object.values(this.chainContracts[chainId]).forEach((contract: any) => {
+        if (contract.setProvider) {
+          contract.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
+        }
+      });
     },
     delay(ms: number): Promise<void> {
       return new Promise((resolve) => setTimeout(resolve, ms));
     },
+    getL2ToL1ChainId(chainId: ChainId): ChainId {
+      return L2_TO_L1_CHAIN_ID_MAP[chainId as keyof typeof L2_TO_L1_CHAIN_ID_MAP] || chainId;
+    },
+    getWeb3Instance(chainId: ChainId, convertToL1 = true): Web3 {
+
+      if (convertToL1) {
+        const mappedChainId = this.getL2ToL1ChainId(chainId);
+        return this.chainProviders[mappedChainId];
+      }
+
+      return this.chainProviders[chainId];
+    },
   },
 });
-

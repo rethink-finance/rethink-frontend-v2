@@ -1,76 +1,80 @@
 <template>
-  <FundSettlementBaseForm
-    v-if="fund"
-    v-model="tokenValue"
-    :token0="fund.fundToken"
-    :token1="fund.baseToken"
-    :token0-user-balance="fundStore.fundUserData.fundTokenBalance"
-    :token1-user-balance="fundStore.fundUserData.baseTokenBalance"
-    :exchange-rate="fundStore.fundToBaseTokenExchangeRate"
-  >
-    <template #buttons>
-      <div v-if="accountStore.isConnected">
-        <div class="buttons_group">
-          <template v-if="shouldUserWaitSettlementOrCancelRedemption">
-            <h3>Wait for settlement or cancel the redemption request.</h3>
-          </template>
-          <template v-else-if="userRedemptionRequestExists">
-            <h3>You can now process or cancel the redemption request.</h3>
-          </template>
-          <template v-for="button in buttons">
-            <v-tooltip
-              v-if="button.isVisible"
-              location="bottom"
-              :disabled="!button.tooltipText"
-              bottom
-            >
-              <template #default>
-                {{ button.tooltipText }}
-              </template>
-              <template #activator="{ props }">
-                <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
-                <span v-bind="props">
-                  <v-btn
-                    class="button"
-                    :disabled="button.disabled"
-                    variant="outlined"
-                    @click="button.onClick"
-                  >
-                    <template #prepend>
-                      <v-progress-circular
-                        v-if="button.loading"
-                        class="d-flex"
-                        size="20"
-                        width="3"
-                        indeterminate
-                      />
-                    </template>
-                    {{ button.name }}
-                  </v-btn>
-                </span>
-              </template>
-            </v-tooltip>
-          </template>
-        </div>
-        <div
-          v-if="visibleErrorMessages && tokenValueChanged"
-          class="text-red mt-4 text-center"
-        >
-          <div v-for="(error, index) in visibleErrorMessages" :key="index">
-            {{ error.message }}
-          </div>
+  <div style="width: 100%">
+    <FundSettlementBaseForm
+      v-if="fund"
+      v-model="tokenValue"
+      :token0="fund.fundToken"
+      :token1="fund.baseToken"
+      :token0-user-balance="fundStore.fundUserData.fundTokenBalance"
+      :token1-user-balance="fundStore.fundUserData.baseTokenBalance"
+      :exchange-rate="fundStore.fundToBaseTokenExchangeRate"
+    />
+
+    <div class="divider" />
+
+
+    <div v-if="accountStore.isConnected">
+      <div class="buttons_group">
+        <template v-if="shouldUserWaitSettlementOrCancelRedemption">
+          <h3>Wait for settlement or cancel the redemption request.</h3>
+        </template>
+        <template v-else-if="userRedemptionRequestExists">
+          <h3>You can now process or cancel the redemption request.</h3>
+        </template>
+        <template v-for="button in buttons">
+          <v-tooltip
+            v-if="button.isVisible"
+            :key="button.name"
+            location="bottom"
+            :disabled="!button.tooltipText"
+            bottom
+          >
+            <template #default>
+              {{ button.tooltipText }}
+            </template>
+            <template #activator="{ props }">
+              <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
+              <span v-bind="props">
+                <v-btn
+                  class="button"
+                  :disabled="button.disabled"
+                  variant="outlined"
+                  @click="button.onClick"
+                >
+                  <template #prepend>
+                    <v-progress-circular
+                      v-if="button.loading"
+                      class="d-flex"
+                      size="20"
+                      width="3"
+                      indeterminate
+                    />
+                  </template>
+                  {{ button.name }}
+                </v-btn>
+              </span>
+            </template>
+          </v-tooltip>
+        </template>
+      </div>
+      <div
+        v-if="visibleErrorMessages && tokenValueChanged"
+        class="text-red mt-4 text-center"
+      >
+        <div v-for="(error, index) in visibleErrorMessages" :key="index">
+          {{ error.message }}
         </div>
       </div>
-      <template v-else>
-        <v-btn
-          class="bg-primary text-secondary"
-          @click="accountStore.connectWallet()"
-        >
-          Connect Wallet
-        </v-btn>
-      </template>
+    </div>
+    <template v-else>
+      <v-btn
+        class="bg-primary text-secondary button_connect_wallet"
+        @click="accountStore.connectWallet()"
+      >
+        Connect Wallet
+      </v-btn>
     </template>
-  </FundSettlementBaseForm>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -187,11 +191,11 @@ const handleError = (error: any, refreshData: boolean = true) => {
 
 const requestRedemption = async () => {
   if (!fundStore.activeAccountAddress) {
-    toastStore.errorToast("Connect your wallet to redeem tokens from the OIV.")
+    toastStore.errorToast("Connect your wallet to redeem tokens from the vault.")
     return;
   }
   if (!fund.value) {
-    toastStore.errorToast("OIV data is missing.")
+    toastStore.errorToast("Vault data is missing.")
     return;
   }
   console.log("[REQUEST REDEMPTION]");
@@ -264,7 +268,7 @@ const buttons = ref([
         return "Redemption request already exists. To change it, you first have to cancel the existing one.";
       }
       if (!fundStore.isUserWalletWhitelisted) {
-        return "Your wallet address is not whitelisted to allow deposits into this OIV."
+        return "Your wallet address is not whitelisted to allow deposits into this vault."
       }
       return "";
     }),
@@ -291,5 +295,16 @@ const buttons = ref([
       border-color: $color-primary !important;
     }
   }
+}
+
+.divider{
+  margin: 1rem auto;
+  height: 0.1px;
+  width: 100%;
+  border: 1px solid rgba(246, 249, 255, 0.08)
+}
+.button_connect_wallet{
+  display: block;
+  margin: 0 auto;
 }
 </style>

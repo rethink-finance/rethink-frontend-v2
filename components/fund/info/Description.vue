@@ -6,11 +6,16 @@
     >
       <template #header-right>
         <div class="fund_description__buttons">
-          <UiLinkExternalButton
-            v-for="buttonLink in buttonLinks"
-            :title="buttonLink.title"
-            :href="buttonLink.href"
-          />
+          <template v-for="buttonLink in buttonLinks">
+            <UiLinkExternalButton
+              v-if="!buttonLink.isHidden"
+              :key="buttonLink.title"
+              :title="buttonLink.title"
+              :href="buttonLink.href"
+              :show-tooltip="buttonLink.showTooltip"
+            />
+          </template>
+
         </div>
       </template>
 
@@ -50,10 +55,18 @@ export default {
         {
           title: "DeBank - NAV",
           href: this.deBankUrl,
+          showTooltip: false,
         },
         {
           title: "Safe - Custody",
           href: this.custodyUrl,
+          showTooltip: false,
+        },
+        {
+          isHidden: !this.fund.oivChatUrl,
+          title: "Vault Chat",
+          href: this.fund.oivChatUrl,
+          showTooltip: false,
         },
       ]
     },

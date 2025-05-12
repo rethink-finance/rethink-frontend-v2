@@ -1,20 +1,8 @@
-import { ethers, FixedNumber } from "ethers";
+import { FixedNumber } from "ethers";
+import { ClockMode } from "~/types/enums/clock_mode";
+import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 import type { PositionType } from "~/types/enums/position_type";
 import { PositionTypesMap } from "~/types/enums/position_type";
-import type { IIcon } from "~/types/network";
-
-export const variableType = (value: any) =>
-  Object.prototype.toString.call(value).slice(8, -1); // accurately returns the parameter type [Array | Object | Number | Boolean | ...]
-
-export const isVariableOfType = (value: any, type: any) =>
-  variableType(value) === type;
-
-export const formatToEther = (wei?: number) => {
-  if (wei == null) return wei;
-  return parseFloat(
-    ethers.formatEther(isVariableOfType(wei, "String") ? wei : wei.toString()),
-  );
-};
 
 export const toKebabCase = (str: string) =>
   str.toLowerCase().split(" ").join("-");
@@ -118,39 +106,10 @@ export const pluralizeWord = (word: string, count?: number | bigint) => {
   return pluralized;
 };
 
-const chainIconMap: Record<string, IIcon> = {
-  matic: {
-    name: "cryptocurrency-color:matic",
-    size: "1.5rem",
-  },
-  arb1: {
-    name: "token-branded:arbitrum",
-    size: "2rem",
-  },
-  eth: {
-    name: "token-branded:eth",
-    size: "2rem",
-  },
-  base: {
-    name: "token:base",
-    size: "2rem",
-    color: "#0052ff",
-  },
-};
-
 export const findIndexByKey = (array: any, keyToFind: string) => {
   if (!Array.isArray(array)) return -1;
   return array.findIndex((item: any) => item.key === keyToFind);
 }
-
-export const getChainIcon = (chainShort: string) => {
-  return (
-    chainIconMap[chainShort] ?? {
-      name: "ph:circle-fill", // default circle fill gray
-      size: "1.5rem",
-    }
-  );
-};
 
 export const getPositionType = (positionType: PositionType) => {
   return PositionTypesMap[positionType];
@@ -174,7 +133,7 @@ export const trimTrailingSlash = (str: string) => {
  */
 export const calculateCumulativeReturnPercent = (
   totalDepositBal: bigint,
-  totalNAV:bigint,
+  totalNAV: bigint,
   baseTokenDecimals: number,
 ): number | undefined => {
   try{
@@ -190,10 +149,47 @@ export const calculateCumulativeReturnPercent = (
         .sub(fixedTotalDepositBal)
         .div(fixedTotalDepositBal);
 
-      cumulativeReturnPercent = cumulativeReturn.toUnsafeFloat();
+      cumulativeReturnPercent = Number(cumulativeReturn.toUnsafeFloat().toFixed(4));
     }
-    return cumulativeReturnPercent;
+    console.log("After calculating cumulativeReturnPercent: ", cumulativeReturnPercent);
+    return cumulativeReturnPercent
   } catch (error) {
+    return undefined;
+  }
+};
+
+
+export const calculateCumulativeWithSharePrice = (
+  initialSharePrice?: number | undefined,
+  latestSharePrice?: number | undefined,
+  baseTokenDecimals?: number,
+  fundTokenDecimals?: number,
+): number | undefined => {
+  try {
+    if (!baseTokenDecimals || !fundTokenDecimals) {
+      console.error("Base token decimals or fund token decimals are not provided");
+      return undefined;
+    }
+    if (latestSharePrice === undefined) {
+      console.error("Latest share price is not provided", latestSharePrice);
+      return undefined;
+    }
+    if (initialSharePrice === undefined) {
+      console.error("Initial share price is not provided", initialSharePrice);
+
+      const initSharePrice = 10 ** (baseTokenDecimals - fundTokenDecimals);
+
+      // Calculate cumulative return percentage
+      return ((latestSharePrice / initSharePrice) - 1);
+    }
+
+    if (latestSharePrice > 0 && initialSharePrice > 0) {
+      // Calculate cumulative return percentage
+      return ((latestSharePrice / initialSharePrice) - 1);
+    }
+    return 0;
+  } catch (error) {
+    console.error("Error calculating cumulative return using share price:", error);
     return undefined;
   }
 };
@@ -243,13 +239,74 @@ export const calculateExcessReturns = (fundNavUpdates: any, totalDepositBal: big
   for (const navUpdate of fundNavUpdates) {
     const totalNavAtUpdate = Number(navUpdate?.navParts?.totalNAV) || undefined;
     // const totalDepositBalAtUpdate = Number(navUpdate?.navParts?.baseAssetSafeBal || undefined);
-
     if (totalNavAtUpdate && Number(totalDepositBal) !== 0) {
-
       const excessReturn = (totalNavAtUpdate - Number(totalDepositBal)) / Number(totalDepositBal);
       excessReturns.push(excessReturn);
     }
   }
 
   return excessReturns;
+}
+
+
+export const convertBlocksToTime = (blockNumber: number, averageBlockTimeInSeconds: number) => {
+  if (!blockNumber || !averageBlockTimeInSeconds) return;
+
+  const totalSeconds = blockNumber * averageBlockTimeInSeconds;
+  const { bestValue, bestUnit } = determineTimeValueAndTimeUnit(totalSeconds);
+
+  if (bestValue && bestUnit) {
+    return pluralizeWord(bestUnit, bestValue);
+  }
+}
+
+// used in create vault process to determine the best time unit
+export const determineTimeValueAndTimeUnit = (totalSeconds: number) => {
+  let bestUnit: PeriodUnits = PeriodUnits.Seconds;
+  let bestValue = totalSeconds;
+
+  for (const unit of Object.keys(TimeInSeconds) as PeriodUnits[]) {
+    const secondsPerUnit = TimeInSeconds[unit];
+    const value = totalSeconds / secondsPerUnit;
+
+    if (value >= 1 && value < bestValue) {
+      bestValue = value;
+      bestUnit = unit;
+    }
+  }
+
+  // allow rounding to the nearest whole number if the difference is less than 0.1
+  const roundedValue = Math.round(bestValue);
+  const difference = Math.abs(bestValue - roundedValue);
+
+  if (difference <= 0.1) {
+    bestValue = roundedValue; // round to the nearest whole number
+  } else if (bestValue > roundedValue) {
+    // ff bestValue is too high (e.g., 2.89), convert to the smaller unit
+    const nextSmallerUnitIndex = Object.keys(TimeInSeconds).indexOf(bestUnit) - 1;
+    if (nextSmallerUnitIndex >= 0) {
+      const nextSmallerUnit = Object.keys(TimeInSeconds)[nextSmallerUnitIndex] as PeriodUnits;
+      bestValue = totalSeconds / TimeInSeconds[nextSmallerUnit];
+      bestUnit = nextSmallerUnit;
+      bestValue = Math.round(bestValue);
+    }
+  }
+
+  return {
+    bestValue,
+    bestUnit,
+  };
+};
+
+export const getVoteTimeValue = (value: number | bigint, averageBlockTimeInSeconds: number, mode: string) => {
+  if(value === undefined || value === null || !mode || !averageBlockTimeInSeconds) {
+    return "N/A";
+  }
+
+  if (mode === ClockMode.BlockNumber) {
+    const totalSeconds = Number(value) * averageBlockTimeInSeconds;
+    return formatDuration(totalSeconds);
+  }
+
+  return formatDuration(Number(value));
 }

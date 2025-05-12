@@ -8,7 +8,7 @@
     loading-text="Loading Trending Delegates"
     items-per-page="-1"
   >
-  <template #[`item.delegatedMember`]="{ item }">
+    <template #[`item.delegatedMember`]="{ item }">
       <div class="data-cell__title">
         <div class="data-cell__text">
           {{ parsedDelegatingToAddress(item.delegatedMember) }}
@@ -31,7 +31,7 @@
     </template>
 
     <template #[`item.delegators`]="{ item }">
-      <div @click="handleRowClick(item)" class="data-cell__delegators">
+      <div class="data-cell__delegators" @click="handleRowClick(item)">
         {{ pluralizeWord("member", item.delegators.length) }}
       </div>
     </template>
@@ -173,7 +173,7 @@ export default defineComponent({
 .data-cell {
   &__title {
     display: flex;
-    gap: 8px;
+    gap: 0.5rem;
     align-items: center;
     padding-block: 1rem;
   }

@@ -81,11 +81,12 @@ export const prepRoleModEntryInput = (value: any) => {
     - int validation
     - enum valudation (int)
   */
-  const dtype = value.internalType;
+  if (!value) return;
+  const dtype = value.internalType ?? "";
 
   if (value.isArray) {
     const retDat = []
-    for (let i = 0; i < value.data.length; i++) {
+    for (let i = 0; i < value.data?.length || 0; i++) {
       if (dtype.startsWith("address")) {
         retDat.push(value.data[i]);
       } else if (dtype.startsWith("bytes")) {

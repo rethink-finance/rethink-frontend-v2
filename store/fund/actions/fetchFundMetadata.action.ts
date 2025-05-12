@@ -5,26 +5,29 @@ import type IFundSettings from "~/types/fund_settings";
 import type INAVUpdate from "~/types/nav_update";
 
 import defaultAvatar from "@/assets/images/default_avatar.webp";
-import { ClockMode } from "~/types/enums/clock_mode";
-import type IToken from "~/types/token";
 import { ERC20 } from "assets/contracts/ERC20";
-import { useWeb3Store } from "~/store/web3/web3.store";
-import { parseFundSettings } from "~/composables/fund/parseFundSettings";
-import { parseClockMode } from "~/composables/fund/parseClockMode";
-import { networksMap } from "~/store/web3/networksMap";
 import { formatQuorumPercentage } from "~/composables/formatters";
+import { parseClockMode } from "~/composables/fund/parseClockMode";
+import { parseFundSettings } from "~/composables/fund/parseFundSettings";
+import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
+import { networksMap } from "~/store/web3/networksMap";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import { useBlockTimeStore } from "~/store/web3/blockTime.store";
+import { type ChainId } from "~/types/enums/chain_id";
+import type IToken from "~/types/token";
 
 export const fetchFundMetaDataAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
 ): Promise<IFund> => {
   const web3Store = useWeb3Store();
+  const blockTimeStore = useBlockTimeStore();
   const fundStore = useFundStore();
   const rethinkReaderContract =
     web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
   try {
-    console.log(
-      "fundNavMetaData000",
+    console.debug(
+      "fundNavMetaData",
       fundAddress,
       fundChainId,
       rethinkReaderContract,
@@ -70,13 +73,13 @@ export const fetchFundMetaDataAction = async (
 
     fundSettings.performancePeriod = feePerformancePeriod;
     fundSettings.managementPeriod = feeManagePeriod;
-    console.warn("fundSettings: ", fundSettings);
+    console.debug("fundSettings: ", fundSettings);
 
     const parsedFundSettings: IFundSettings = parseFundSettings(fundSettings);
     const parsedClockMode = parseClockMode(clockMode);
-    console.log("parsedClockMode: ", parsedClockMode);
+    console.debug("parsedClockMode: ", parsedClockMode);
     console.log("parsedFundSettings: ", parsedFundSettings);
-    console.log("fundGovernanceTokenSupply: ", fundGovernanceTokenSupply);
+    console.debug("fundGovernanceTokenSupply: ", fundGovernanceTokenSupply);
 
     // TODO fundGovernanceTokenSupply is wrong from reader contract, until it is fixed and redeployed there
     //   manually fetch governance token total supply here. Then remove this line.
@@ -91,7 +94,7 @@ export const fetchFundMetaDataAction = async (
         () => fundGovernanceTokenContract.methods.totalSupply().call(),
       );
     if (fundGovernanceTokenSupply !== fundGovernanceTokenSupplyFixed)
-      console.error(
+      console.warn(
         "[MISMATCH] fundGovernanceTokenSupply: ",
         fundGovernanceTokenSupply,
         "fundGovernanceTokenSupplyFixed: ",
@@ -100,12 +103,14 @@ export const fetchFundMetaDataAction = async (
 
     const quorumVotes: bigint = ((((fundGovernanceTokenSupplyFixed as bigint) *
       quorumNumerator) as bigint) / quorumDenominator) as bigint;
-    const votingUnit =
-      parsedClockMode.mode === ClockMode.BlockNumber ? "block" : "second";
+
+    const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fundChainId);
+    const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
+    console.warn("fetchFundMetaDataAction blockTimeContext", blockTimeContext)
 
     const fundNetwork = networksMap[fundChainId];
-    //console.log("fundMetadata.updateTimes");
-    //console.log(fundMetadata.updateTimes);
+    // console.log("fundMetadata.updateTimes");
+    // console.log(fundMetadata.updateTimes);
     const lastNavUpdateTime = undefined;//= fundMetadata.updateTimes[fundMetadata.updateTimes.length-1];
     const fund: IFund = {
       // Original fund settings
@@ -157,8 +162,8 @@ export const fetchFundMetaDataAction = async (
       minLiquidAssetShare: "",
 
       // Governance
-      votingDelay: pluralizeWord(votingUnit, votingDelay),
-      votingPeriod: pluralizeWord(votingUnit, votingPeriod),
+      votingDelay: getVoteTimeValue(votingDelay, averageBlockTime, parsedClockMode.mode),
+      votingPeriod: getVoteTimeValue(votingPeriod, averageBlockTime, parsedClockMode.mode),
       proposalThreshold:
         !proposalThreshold && proposalThreshold !== 0n
           ? "N/A"
@@ -171,7 +176,7 @@ export const fetchFundMetaDataAction = async (
       quorumNumerator,
       quorumDenominator,
       quorumPercentage: formatQuorumPercentage(quorumNumerator, quorumDenominator),
-      lateQuorum: pluralizeWord(votingUnit, lateQuorumVoteExtension),
+      lateQuorum: getVoteTimeValue(lateQuorumVoteExtension, averageBlockTime, parsedClockMode.mode),
 
       // Fees
       depositFee: parsedFundSettings.depositFee.toString(),
@@ -193,14 +198,23 @@ export const fetchFundMetaDataAction = async (
       // NAV Updates
       navUpdates: [] as INAVUpdate[],
     } as IFund;
+    console.log("fund fund: ", fund);
 
     // Process metadata if available
     if (fundMetadata) {
       const metaData = JSON.parse(fundMetadata);
+
+      const { strategistName, strategistUrl, oivChatUrl } = fundMetaDataHardcoded[fundChainId].find(
+        (fund) => fund.address === fundAddress,
+      ) || { strategistName: "", strategistUrl: "", oivChatUrl: "" };
+
       fund.description = metaData.description;
       fund.photoUrl = metaData.photoUrl || defaultAvatar;
       fund.plannedSettlementPeriod = metaData.plannedSettlementPeriod;
       fund.minLiquidAssetShare = metaData.minLiquidAssetShare;
+      fund.strategistName = metaData?.strategistName || strategistName;
+      fund.strategistUrl = metaData?.strategistUrl || strategistUrl;
+      fund.oivChatUrl = metaData?.oivChatUrl || oivChatUrl;
     }
     fundStore.chainFunds[fundChainId][fundAddress] = fund;
     return fund;

@@ -89,14 +89,12 @@ export default {
     padding: 1rem;
     background-color: $color-gray-light-transparent;
     @include borderGray;
-
-    box-shadow: 0px 0px 16px 0px $color-box-shadow;
+    box-shadow: 0 0 1rem 0 $color-box-shadow;
   }
   &__title {
     padding: 0;
     margin-bottom: 0.8rem;
-
-    font-size: 14px;
+    font-size: $text-sm;
     line-height: 1;
     font-weight: 500;
     color: $color-white;
@@ -106,7 +104,7 @@ export default {
   }
   &__progress-text {
     font-weight: 500;
-    font-size: 13px;
+    font-size: $text-sm;
     line-height: 1;
     letter-spacing: 0.03em;
     color: $color-steel-blue;

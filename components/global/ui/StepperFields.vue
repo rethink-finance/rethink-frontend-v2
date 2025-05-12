@@ -15,7 +15,10 @@
     cols="12"
   >
     <v-label class="row-title">
-      <div class="label_required row-title__title">
+      <div
+        :class="field.required ?? true ? 'label_required' : ''"
+        class="row-title__title"
+      >
         {{ field.label }}
         <v-label class="label_required__label_type">
           {{ field.internalType }}
@@ -24,7 +27,7 @@
           </template>
         </v-label>
       </div>
-      <ui-char-limit
+      <UiCharLimit
         v-if="field.charLimit"
         :char-limit="field.charLimit"
         :char-number="valueDetails[field.key]"
@@ -64,6 +67,11 @@
           /></v-text-field>
       </div>
     </template>
+    <template v-else-if="field.type === InputType.ReadonlyJSON">
+      <div class="json_field">
+        {{ valueDetails[field.key] }}
+      </div>
+    </template>
     <template v-else-if="field.type === InputType.Textarea">
       <v-textarea
         v-if="!field.isArray"
@@ -100,7 +108,7 @@
         :items="field.choices"
         item-title="title"
         item-value="value"
-        class="field-select"
+        density="compact"
       />
       <div
         v-for="(value, index) in valueDetails[field.key]"
@@ -117,7 +125,7 @@
           :items="field.choices"
           item-title="title"
           item-value="value"
-          class="field-select"
+          density="compact"
         />
         <Icon
           icon="material-symbols:cancel-outline"
@@ -147,7 +155,7 @@
     </template>
     <!-- check if field "isArray", if yes allow adding new fields -->
     <template v-if="field.isArray">
-      <div class="add-new-field" @click="addNewField(field)">
+      <div class="btn_add_param" @click="addNewField(field)">
         Add Parameters +
       </div>
     </template>
@@ -239,12 +247,12 @@ const removeField = (field: any, index: number) => {
 
 <style lang="scss" scoped>
 .title {
-  font-size: 16px;
+  font-size: $text-md;
   font-weight: 700;
   color: $color-white;
 }
 .text {
-  font-size: 14px;
+  font-size: $text-sm;
   font-weight: 500;
   color: $color-text-irrelevant;
 }
@@ -319,30 +327,22 @@ const removeField = (field: any, index: number) => {
   }
 }
 
-.add-new-field {
-  width: max-content;
-  margin-left: auto;
-  padding: 0.5rem;
+//.btn_add_param {
+//  width: max-content;
+//  margin-left: auto;
+//  padding: 0.5rem;
+//
+//  font-size: $text-sm;
+//  color: $color-text-irrelevant;
+//  cursor: pointer;
+//  user-select: none;
+//  text-align: center;
+//
+//  transition: background-color 0.3s ease;
+//
+//  &:hover {
+//    background-color: $color-gray-light-transparent;
+//  }
+//}
 
-  font-size: $text-sm;
-  color: $color-text-irrelevant;
-  cursor: pointer;
-  user-select: none;
-  text-align: center;
-
-  transition: background-color 0.3s ease;
-
-  &:hover {
-    background-color: $color-gray-light-transparent;
-  }
-}
-
-.field-select {
-  line-height: normal;
-
-  :deep(.v-field__input) {
-    padding: 12px;
-    min-height: 45px;
-  }
-}
 </style>

@@ -1,7 +1,8 @@
+import type { ChainId } from "~/types/enums/chain_id";
 import { useFundStore } from "../fund.store";
 
 export const fetchFundDataAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
 ): Promise<any> => {
   const fundStore = useFundStore();
@@ -13,7 +14,7 @@ export const fetchFundDataAction = async (
     await fundStore.fetchFundMetaData(fundChainId, fundAddress);
     await fundStore.fetchFundNAVData();
 
-    fundStore.calculateFundPerformanceMetrics();
+    fundStore.calculateFundPerformanceMetrics(fundStore.fund);
     fundStore.fetchUserFundData(fundChainId, fundAddress);
 
     fundStore.fetchFundPendingDepositRedemptionBalance();

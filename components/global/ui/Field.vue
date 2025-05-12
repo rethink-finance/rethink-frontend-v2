@@ -1,8 +1,9 @@
 <template>
-  <div :class="`field` + (isPreview ? ' label_preview' : '')" v-bind="$attrs">
+  <div :class="classes" v-bind="$attrs">
 
-    <div class="field-actions-container">
+    <div class="field-actions-container" tabindex="-1">
       <v-label
+        tabindex="-1"
         :class="
           `row_title` +
             (field.type === InputType.Image ? ' row_title__is-image' : '')
@@ -20,95 +21,100 @@
           {{ field.label }}
           <span
             v-if="!field.isEditable && !isPreview"
-            class="row_title__uneditable"
+            class="row_title__small"
           >
-            (Uneditable)
+            (readonly)
+          </span>
+          <span
+            v-if="field.tag"
+            class="row_title__small"
+          >
+            ({{ field.tag }})
           </span>
         </div>
-        <ui-char-limit
+        <UiCharLimit
           v-if="field.charLimit && !isPreview"
           :char-limit="field.charLimit"
-          :char-number="value"
+          :char-number="fieldValue"
+          tabindex="-1"
         />
+
+        <v-tooltip v-if="field?.tooltip" location="top" tabindex="-1">
+          <template #activator="{ props }">
+            <Icon
+              v-bind="props"
+              icon="octicon:question-16"
+              width="1.25rem"
+              class="row_title__tooltip"
+              tabindex="-1"
+            />
+          </template>
+          {{ field.tooltip }}
+        </v-tooltip>
       </v-label>
-      <slot name="field-actions" />
+
+      <!-- toggle for default value and custom value -->
+      <v-switch
+        v-if="!isInputDisabled && isCustomValueToggleOn !== undefined"
+        v-model="isCustomValueActive"
+        color="primary"
+        :tabindex="tabIndex"
+        hide-details
+      />
     </div>
-    <!-- if field has defaultValueInfo, show UiInfoBox instead of input field -->
-    <UiInfoBox v-if="showDefaultValueInfo" :info="field.defaultValueInfo" />
-    <template
-      v-else
-    >
-      <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
-        <v-text-field
-          v-model="value"
-          :placeholder="field.placeholder"
-          :type="field.type"
-          :min="field.min"
-          :rules="field.rules"
-          :disabled="isDisabled || !field.isEditable || isPreview"
-        />
-      </template>
 
-      <template v-else-if="field.type === InputType.Textarea">
-        <v-textarea
-          v-model="value"
-          :placeholder="field.placeholder"
-          :rules="field.rules"
-          auto-grow
-          :disabled="isDisabled || !field.isEditable || isPreview"
-        />
+    <div class="field-input">
+      <template v-if="field.defaultValueInfo">
+        <UiInfoBox :info="field.defaultValueInfo" />
       </template>
+      <UiFieldInput
+        v-if="!(isCustomValueToggleOn !== undefined && !isCustomValueToggleOn)"
+        v-model="fieldValue"
+        :field="field"
+        :is-disabled="isInputDisabled"
+        :is-preview="isPreview"
+        :custom-error-message="customErrorMessage"
+        :chain-id="chainId"
+        :tab-index="tabIndex"
+      />
+    </div>
 
-      <template v-else-if="field.type === InputType.Select">
-        <v-select
-          v-model="value"
-          :rules="field.rules"
-          :items="field.choices"
-          item-title="title"
-          item-value="value"
-          class="field-select"
-          :disabled="isDisabled || !field.isEditable || isPreview"
-        />
-      </template>
-
-      <template v-else-if="field.type === InputType.Checkbox">
-        <v-checkbox v-model="value" :disabled="isDisabled || !field.isEditable" />
-      </template>
-
-      <template v-else-if="field.type === InputType.Image">
-        <div class="image_container">
-          <v-avatar size="12rem" rounded="">
-            <img :src="value" class="image_container__image" alt="image">
-          </v-avatar>
-          <v-textarea
-            v-model="value"
-            class="image_container__textarea"
-            :placeholder="field.placeholder"
-            :rules="field.rules"
-            rows="10"
-            :disabled="isDisabled || !field.isEditable || isPreview"
-          />
-        </div>
-      </template>
-    </template>
-
-    <InfoBox v-if="field.info && !isPreview" :info="field.info" />
+    <InfoBox v-if="field.info && !isPreview" :info="field.info" class="info_box" />
   </div>
 </template>
 
 <script setup lang="ts">
 import InfoBox from "./InfoBox.vue";
-import { InputType } from "~/types/enums/input_type";
+import type { ChainId } from "~/types/enums/chain_id";
+import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
 
-const emit = defineEmits(["update:modelValue"]);
-
+const emit = defineEmits([
+  "update:modelValue",
+  "update:isCustomValueToggleOn",
+]);
+defineOptions({
+  inheritAttrs: false,
+});
 const props = defineProps({
+  // chainId is required for time to blocks component
+  chainId: {
+    type: String as PropType<ChainId>,
+    default: "",
+  },
   field: {
     type: Object as PropType<any>,
     default: () => ({}),
   },
   modelValue: {
     type: [String, Number, Array, Boolean] as PropType<any>,
+    default: undefined,
+  },
+  isCustomValueToggleOn: {
+    type: Boolean,
+    default: undefined,
+  },
+  customErrorMessage: {
+    type: String,
     default: () => "",
   },
   isDisabled: {
@@ -123,16 +129,56 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  initialValue: {
+    type: [String, Number, Array, Boolean] as PropType<any>,
+    default: undefined,
+  },
+  tabIndex: {
+    type: Number,
+    default: undefined,
+  },
 });
 
 const isFieldRequired = computed(() =>
   props?.field?.rules?.includes(formRules.required),
 );
 
-const value = computed({
+const isInputDisabled = computed(() =>
+  props.isDisabled || !props.field.isEditable || props.isPreview,
+);
+
+const isCustomValueActive = computed({
+  get: () => props.isCustomValueToggleOn,
+  set: (val) => emit("update:isCustomValueToggleOn", val),
+});
+
+const fieldValue = computed({
   get: () => props.modelValue,
   set: (val) => emit("update:modelValue", val),
 });
+
+watchEffect(() => {
+  // If defaultValue is set to null, return undefined as we want it to be empty.
+  if (props.field?.defaultValue === null || props.modelValue != null) return;
+
+  // Else return set default value or if it does not exist, just return field's default type value.
+  fieldValue.value = props.field?.defaultValue ?? defaultInputTypeValue[props.field?.type as InputType];
+});
+
+const isFieldModified = computed(() => {
+  if (props.initialValue === undefined) return false;
+
+  return fieldValue.value !== props.initialValue;
+});
+
+const classes = computed(() => {
+  return [
+    "field",
+    { label_preview: props.isPreview },
+    { is_modified: isFieldModified.value },
+  ]
+});
+
 </script>
 
 <style lang="scss" scoped>
@@ -145,17 +191,37 @@ const value = computed({
   justify-content: space-between;
 
   &__title {
-    font-size: 16px;
+    font-size: $text-md;
     font-weight: 500;
     color: $color-text-irrelevant;
 
     &.label_disabled {
       color: $color-disabled;
+
+      // make required label color same as disabled label
+      &.label_required {
+        &::after {
+            color: $color-disabled;
+        }
+      }
     }
   }
+  &__small {
+    font-size: $text-xs;
+  }
 
-  &__uneditable {
-    font-size: 12px;
+  &__tooltip{
+    margin-left: .5rem;
+    cursor: pointer;
+
+    transition: color 0.3s ease;
+
+    &:hover {
+      color: $color-primary;
+    }
+    &:focus {
+      outline: none;
+    }
   }
 
   &__is-image {
@@ -173,6 +239,11 @@ const value = computed({
       opacity: 1;
     }
   }
+  &.is_modified {
+    :deep(.v-field__input) {
+      color: var(--color-success);
+    }
+  }
 }
 .v-label {
   margin-bottom: 5px;
@@ -183,36 +254,7 @@ const value = computed({
   }
 }
 
-.field-select {
-  line-height: normal;
-
-  :deep(.v-field__input) {
-    padding: 12px;
-    min-height: 45px;
-  }
-}
-
-.image_container {
-  display: flex;
-  flex-direction: column-reverse;
-  align-items: center;
-  gap: 0.2rem;
-
-  @include sm {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  &__image {
-    border-radius: 0.25rem;
-    height: 100%;
-    width: 100%;
-    object-fit: cover;
-  }
-
-  &__textarea {
-    width: 100%;
-  }
+.info_box{
+  margin-bottom: 3rem;
 }
 </style>

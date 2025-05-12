@@ -35,10 +35,27 @@ export default defineNuxtConfig({
     public: {
       WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
       BASE_DOMAIN: process.env.BASE_DOMAIN,
+      ENV_EXCLUDE_TEST_FUNDS: process.env.ENV_EXCLUDE_TEST_FUNDS !== "false",  // default value is true
+      // Rethink Subgraph
       GRAPH_BASE_URL: process.env.GRAPH_BASE_URL,
       GRAPH_USERID: process.env.GRAPH_USERID,
       GRAPH_VERSION: process.env.GRAPH_VERSION,
-      ENV_EXCLUDE_TEST_FUNDS: process.env.ENV_EXCLUDE_TEST_FUNDS !== "false",  // default value is true
+      // Zodiac Subgraph
+      ZODIAC_GRAPH_BASE_URL: process.env.ZODIAC_GRAPH_BASE_URL,
+      ZODIAC_GRAPH_SEPOLIA: process.env.ZODIAC_GRAPH_SEPOLIA,
+      ZODIAC_GRAPH_GNOSIS_CHAIN: process.env.ZODIAC_GRAPH_GNOSIS_CHAIN,
+      ZODIAC_GRAPH_ETHEREUM: process.env.ZODIAC_GRAPH_ETHEREUM,
+      ZODIAC_GRAPH_POLYGON: process.env.ZODIAC_GRAPH_POLYGON,
+      ZODIAC_GRAPH_ARBITRUM: process.env.ZODIAC_GRAPH_ARBITRUM,
+      ZODIAC_GRAPH_OPTIMISM: process.env.ZODIAC_GRAPH_OPTIMISM,
+      ZODIAC_GRAPH_AVALANCHE: process.env.ZODIAC_GRAPH_AVALANCHE,
+      ZODIAC_GRAPH_BSC: process.env.ZODIAC_GRAPH_BSC,
+      ZODIAC_GRAPH_BASE: process.env.ZODIAC_GRAPH_BASE,
+      // Explorers for loading ABIs
+      ETHERSCAN_KEY: process.env.ETHERSCAN_KEY,
+      POLYGONSCAN_KEY: process.env.POLYGONSCAN_KEY,
+      ARBISCAN_KEY: process.env.ARBISCAN_KEY,
+      BASESCAN_KEY: process.env.BASESCAN_KEY,
     },
   },
   routeRules: {
@@ -101,11 +118,14 @@ export default defineNuxtConfig({
     ],
   },
   plugins: [
+    "plugins/explorer.ts",
     "plugins/iconify.ts",
     "plugins/apexcharts.client.ts",
     "plugins/numeral.ts",
     "plugins/web3-onboard.ts",
     "plugins/apollo.ts",
+    "plugins/localforage.ts",
+    "plugins/init-app-settings.client.ts",
   ],
   nitro: {
     prerender: {

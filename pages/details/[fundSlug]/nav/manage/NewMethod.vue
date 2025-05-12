@@ -46,8 +46,8 @@
 import { useRouter } from "vue-router";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import type INAVMethod from "~/types/nav_method";
+import type BreadcrumbItem from "~/types/ui/breadcrumb";
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
 const toastStore = useToastStore();
@@ -98,7 +98,7 @@ const onNewNavMethodCreatedHandler = (navMethod: INAVMethod) => {
     display: flex;
     align-items: center;
     align-content: center;
-    gap: 20px;
+    gap: 1.25rem;
   }
 }
 .tooltip{
@@ -148,24 +148,6 @@ const onNewNavMethodCreatedHandler = (navMethod: INAVMethod) => {
 
   &--valid {
     color: $color-success;
-  }
-}
-// toggle buttons
-.toggle_buttons {
-  .v-btn-toggle {
-    display: flex;
-    gap: 10px;
-
-    .v-btn {
-      opacity: 0.35;
-      color: $color-text-irrelevant;
-      border-radius: 4px !important;
-      @include borderGray;
-    }
-    .v-btn--active {
-      color: $color-white !important;
-      opacity: 1;
-    }
   }
 }
 </style>

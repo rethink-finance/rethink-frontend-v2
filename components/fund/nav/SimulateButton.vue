@@ -3,9 +3,9 @@
     <template #activator="{ props }">
       <Icon
         icon="mdi-update"
-        @click="fundStore.refreshSimulateNAVCounter += 1"
         class="icon"
         v-bind="props"
+        @click="fundStore.refreshSimulateNAVCounter += 1"
       />
     </template>
   </v-tooltip>
@@ -19,6 +19,6 @@ const fundStore = useFundStore();
 .icon{
   cursor: pointer;
   color: $color-steel-blue;
-  font-size: 24px;
+  font-size: 1.5rem;
 }
 </style>

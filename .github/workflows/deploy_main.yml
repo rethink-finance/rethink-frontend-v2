@@ -1,0 +1,72 @@
+name: "[PRODUCTION] Deploy to GitHub Pages"
+
+on:
+  workflow_dispatch:
+# Could also be ran everything something is pushed to main with:
+# on:
+#  push:
+#    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: github-pages
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate static site with env vars
+        run: npx nuxi generate
+        env:
+          ENV_EXCLUDE_TEST_FUNDS: true
+          BASE_DOMAIN: "app.rethink.finance"
+          WALLET_CONNECT_PROJECT_ID: ${{ secrets.WALLET_CONNECT_PROJECT_ID }}
+          # Indexer
+          GRAPH_BASE_URL: "https://api.studio.thegraph.com/query/"
+          GRAPH_USERID: "96286"
+          GRAPH_VERSION: "version/latest"
+          # Zodiac Roles
+          ZODIAC_GRAPH_BASE_URL: ${{ secrets.ZODIAC_GRAPH_BASE_URL }}
+          ZODIAC_GRAPH_SEPOLIA: ${{ secrets.ZODIAC_GRAPH_SEPOLIA }}
+          ZODIAC_GRAPH_GNOSIS_CHAIN: ${{ secrets.ZODIAC_GRAPH_GNOSIS_CHAIN }}
+          ZODIAC_GRAPH_ETHEREUM: ${{ secrets.ZODIAC_GRAPH_ETHEREUM }}
+          ZODIAC_GRAPH_POLYGON: ${{ secrets.ZODIAC_GRAPH_POLYGON }}
+          ZODIAC_GRAPH_ARBITRUM: ${{ secrets.ZODIAC_GRAPH_ARBITRUM }}
+          ZODIAC_GRAPH_OPTIMISM: ${{ secrets.ZODIAC_GRAPH_OPTIMISM }}
+          ZODIAC_GRAPH_AVALANCHE: ${{ secrets.ZODIAC_GRAPH_AVALANCHE }}
+          ZODIAC_GRAPH_BSC: ${{ secrets.ZODIAC_GRAPH_BSC }}
+          ZODIAC_GRAPH_BASE: ${{ secrets.ZODIAC_GRAPH_BASE }}
+          ETHERSCAN_KEY: ${{ secrets.ETHERSCAN_KEY }}
+          ARBISCAN_KEY: ${{ secrets.ARBISCAN_KEY }}
+          POLYGONSCAN_KEY: ${{ secrets.POLYGONSCAN_KEY }}
+          BASESCAN_KEY: ${{ secrets.BASESCAN_KEY }}
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.output/public/'
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

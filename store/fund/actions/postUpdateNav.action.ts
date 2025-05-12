@@ -26,11 +26,11 @@ export const postUpdateNAVAction = async (): Promise<any> => {
         console.log(receipt);
         if (receipt.status) {
           fundStore.toastStore.successToast(
-            "The recalculation of OIV NAV has Succeeded",
+            "The recalculation of vault NAV has Succeeded",
           );
         } else {
           fundStore.toastStore.errorToast(
-            "The recalculation of OIV NAV has failed. Please contact the Rethink Finance support.",
+            "The recalculation of vault NAV has failed. Please contact the Rethink Finance support.",
           );
         }
       })

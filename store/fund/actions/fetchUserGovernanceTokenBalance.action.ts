@@ -4,6 +4,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 export const fetchUserGovernanceTokenBalanceAction = async (): Promise<any> => {
   const fundStore = useFundStore();
   const web3Store = useWeb3Store();
+  if (!fundStore.selectedFundChain) return;
 
   fundStore.fundUserData.governanceTokenBalance = BigInt("0");
 
@@ -16,7 +17,7 @@ export const fetchUserGovernanceTokenBalanceAction = async (): Promise<any> => {
     return;
   }
   fundStore.fundUserData.governanceTokenBalance = await web3Store.callWithRetry(
-    fundStore.fundChainId,
+    fundStore.selectedFundChain,
     () =>
       fundStore.fundGovernanceTokenContract.methods
         .balanceOf(fundStore.activeAccountAddress)
@@ -26,5 +27,4 @@ export const fetchUserGovernanceTokenBalanceAction = async (): Promise<any> => {
   console.log(
     `user governance token balance is ${fundStore.fundUserData.governanceTokenBalance} ${fundStore.fund?.fundToken?.symbol}`,
   );
-  return fundStore.fundUserData.governanceTokenBalance;
 };

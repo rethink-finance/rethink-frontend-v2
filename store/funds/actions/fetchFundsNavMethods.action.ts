@@ -1,17 +1,18 @@
-import { excludeNAVDetailsHashes } from "../config/excludedNAVDetailsHashes.config";
-import { useFundsStore } from "../funds.store";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { type ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
+import { excludeNAVDetailsHashes } from "../config/excludedNAVDetailsHashes.config";
+import { useFundsStore } from "../funds.store";
 
 // Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
 const excludeNAVDetails: boolean = true;
 
 export async function fetchFundsNavMethodsAction(
-  chainId: string,
+  chainId: ChainId,
   fundsInfoArrays: any[],
   storeAllMethods: boolean = true,
 ): Promise<any> {
@@ -62,7 +63,7 @@ export async function fetchFundsNavMethodsAction(
 }
 
 async function processFundNavData(
-  chainId: string, // the type of FundNavData
+  chainId: ChainId, // the type of FundNavData
   fundNAVData: any, // the type of FundNavData
   fundAddress: string,
   fundIndex: number,
@@ -87,6 +88,10 @@ async function processFundNavData(
   );
 
   fundsStore.chainFundNAVUpdates[chainId][fundAddress] = navUpdates;
+  if (fundsStore.chainFunds?.[chainId]?.[fundIndex]) {
+    // Save NAV updates to the fund in store.
+    fundsStore.chainFunds[chainId][fundIndex].navUpdates = navUpdates;
+  }
   const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
   const fund = fundsStore.chainFunds[chainId]?.[fundIndex];
@@ -113,7 +118,7 @@ async function processFundNavData(
         if (
           excludeNAVDetails &&
           parsedNavMethod.detailsHash &&
-          excludeNAVDetailsHashes[chainId].includes(
+          excludeNAVDetailsHashes[chainId]?.includes(
             parsedNavMethod.detailsHash,
           )
         ) {

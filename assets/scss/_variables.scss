@@ -17,7 +17,6 @@ $color-table-row: #162039;
 $color-hover: #1a2338;
 $color-badge-navy: #171e30;
 $color-border-dark: #242c40;
-$color-border-light: #252c3d;
 $color-toast: #242e45;
 $color-moonlight-dark: #293041;
 $color-moonlight: rgba(31, 95, 255, 0.16);
@@ -64,7 +63,12 @@ $text-xl: 1.5rem;
 $text-lg: 1.25rem;
 $text-md: 1rem;
 $text-sm: 0.875rem;
-$text-xs: 0.8125rem;
+$text-xs: 0.75rem;
+.text-xl { font-size: $text-xl; }
+.text-lg { font-size: $text-lg; }
+.text-md { font-size: $text-md; }
+.text-sm { font-size: $text-sm; }
+.text-xs { font-size: $text-xs; }
 
 $letter-spacing-lg: 0.03rem;
 // Status Type Colors
@@ -116,6 +120,7 @@ $screen-md: 768px; // Tablet
 $screen-lg: 960px; // Desktop (small)
 $screen-xl: 1200px; // Desktop (large)
 $screen-xxl: 1460px; // Desktop (extra large)
+$screen-xxxl: 1860px; // Desktop (XXXL)
 
 /**
 Define the needed colors as CSS variables, as they can be used in certain
@@ -157,20 +162,20 @@ $default-border-properties: (
     // offset the scrollbar to the left
     padding-right: $offset;
     margin-right: -$offset;
-    
+
     /* Custom scrollbar styles */
     &::-webkit-scrollbar {
-      width: 4px; 
+      width: 4px;
       height: 4px;
     }
     &::-webkit-scrollbar-track {
       background: $color-subtitle;
-      border-radius: 16px; 
+      border-radius: 16px;
     }
 
     &::-webkit-scrollbar-thumb {
       background: $color-primary;
-      border-radius: 16px; 
+      border-radius: 16px;
     }
 
     &::-webkit-scrollbar-thumb:hover {

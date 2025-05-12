@@ -5,6 +5,7 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { _mapSubgraphProposalToProposal } from "~/types/helpers/mappers";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 
 export const fetchGovernanceProposalAction = async (
   proposalId: string,
@@ -12,6 +13,8 @@ export const fetchGovernanceProposalAction = async (
   const governanceProposalStore = useGovernanceProposalsStore();
   const web3Store = useWeb3Store();
   const fundStore = useFundStore();
+  const blockTimeStore = useBlockTimeStore();
+
   const fund = unref(fundStore.fund);
   if (!fund) {
     return;
@@ -26,12 +29,8 @@ export const fetchGovernanceProposalAction = async (
       governorAddress: fund?.governorAddress,
       proposalId,
     });
-  const { initializeBlockTimeContext, getTimestampForBlock } = useBlockTime();
-  const blockTimeContext = await initializeBlockTimeContext(
-    governanceProposalStore.getWeb3InstanceByChainId(),
-  );
-
-  const roleModAddress = await fundStore.getRoleModAddress();
+  const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId);
+  const roleModAddress = await fundStore.fetchRoleModAddress(fund.address);
 
   const timepoint =
     fund?.clockMode?.mode === ClockMode.BlockNumber
@@ -67,7 +66,7 @@ export const fetchGovernanceProposalAction = async (
     fund?.governanceToken.decimals ?? 0,
     quorumNumerator,
     quorumDenominator,
-    getTimestampForBlock,
+    blockTimeStore.getTimestampForBlock,
     fund?.clockMode?.mode as ClockMode,
     roleModAddress ?? "",
     fund?.safeAddress ?? "",

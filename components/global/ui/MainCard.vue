@@ -1,11 +1,17 @@
 <template>
   <div class="main_card">
-    <div class="header">
+    <div v-if="title || subtitle"  class="header">
       <div class="header__title-col">
-        <div class="header__title subtitle_white">
+        <div
+          v-if="title"
+          class="header__title subtitle_white"
+        >
           {{ title }}
         </div>
-        <div class="header__sub-title" v-if="subtitle">
+        <div
+          v-if="subtitle"
+          class="header__sub-title"
+        >
           {{ subtitle }}
         </div>
       </div>
@@ -54,11 +60,11 @@ export default {
   &__title-col {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 1rem;
   }
 
   &__sub-title {
-    font-size: 14px;
+    font-size: $text-sm;
     color: $color-text-irrelevant;
     font-weight: 500;
   }

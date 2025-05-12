@@ -3,10 +3,10 @@
     <div class="transfer__content">
       <div class="transfer__header">
         <div class="transfer__title">
-          Transfer Base Asset to the OIV Contract
+          Transfer Base Asset to the Vault Contract
         </div>
         <div class="transfer__subtitle">
-          Transfer any base asset amount from the custody to the OIV contract.
+          Transfer any base asset amount from the custody to the vault contract.
         </div>
       </div>
       <div class="transfer__token">
@@ -17,7 +17,7 @@
           <div
             class="transfer__token_col pa-0 transfer__token_col--dark text-end"
           >
-            <InputNumber
+            <UiInputNumber
               v-model="tokenValue"
               :rules="tokenValueRules"
               class="transfer__input_amount"
@@ -64,7 +64,7 @@
                     indeterminate
                   />
                 </template>
-                Transfer To OIV
+                Transfer To Vault
               </v-btn>
             </template>
             <template #default>

@@ -45,7 +45,17 @@
         </div>
         <div class="data_bar__item">
           <div class="data_bar__title">
-            {{ fund.plannedSettlementPeriod || "N/A" }}
+            <v-progress-circular
+              v-if="isLoadingParsedPlannedSettlement"
+              class="d-flex"
+              size="18"
+              width="2"
+              indeterminate
+            />
+
+            <template v-else>
+              {{ parsedPlannedSettlement }}
+            </template>
           </div>
           <div class="data_bar__subtitle">
             Planned Settlement Cycle
@@ -88,7 +98,7 @@
     <div class="main_card">
       <UiHeader>
         <div class="main_header__title">
-          OIV Contract
+          Vault Contract
           <UiTooltipClick location="right" :hide-after="6000">
             <Icon
               icon="material-symbols:info-outline"
@@ -145,7 +155,7 @@
                     <div
                       class="transfer__token_col transfer__input pa-0 transfer__token_col--dark text-end"
                     >
-                      <InputNumber
+                      <UiInputNumber
                         v-model="customSimulatedNAVValue"
                         :rules="customSimulatedNAVValueRules"
                         class="transfer__input_amount"
@@ -176,15 +186,15 @@
             </div>
             <div class="data_bar__subtitle d-flex">
               Simulated NAV
-              <UiDetailsButton
+              <UiButtonDetails
                 v-if="!isSimulatedNAVEdit"
                 class="ms-2"
                 xs
                 @click="toggleSimulatedNAVEdit()"
               >
                 <Icon icon="fa-solid:edit" width="1.4em" height="1.4em" />
-              </UiDetailsButton>
-              <UiDetailsButton
+              </UiButtonDetails>
+              <UiButtonDetails
                 v-else
                 class="ms-2"
                 xs
@@ -195,7 +205,7 @@
                   width="1.4em"
                   height="1.4em"
                 />
-              </UiDetailsButton>
+              </UiButtonDetails>
             </div>
           </div>
           <div class="data_bar__item">
@@ -336,12 +346,12 @@
               </template>
             </div>
             <div class="data_bar__subtitle">
-              OIV Contract Balance
+              Vault Contract Balance
             </div>
           </div>
           <div class="data_bar__item">
             <UiNotification class="fund_contract_notification">
-              OIV Contract Balance should meet Redemption Requests before being
+              Vault Contract Balance should meet Redemption Requests before being
               able to Settle the Flows.
             </UiNotification>
           </div>
@@ -392,6 +402,7 @@
 <script setup lang="ts">
 import { ethers, FixedNumber } from "ethers";
 import { formatTokenValue, roundToSignificantDecimals } from "~/composables/formatters";
+import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";
@@ -410,6 +421,8 @@ const {
 
 const customSimulatedNAVValue = ref("");
 const customSimulatedNAVValueChanged = ref(false);
+const parsedPlannedSettlement = ref("");
+const isLoadingParsedPlannedSettlement = ref(false);
 
 watch(
   () => totalCurrentSimulatedNAV.value,
@@ -644,6 +657,20 @@ const isLoadingFetchSimulateCurrentNAVAction = computed(() => {
 const isLoadingFetchSimulatedNAVMethodValueAction = computed(() => {
   return actionStateStore.isActionState("fetchSimulatedNAVMethodValueAction", ActionState.Loading);
 });
+
+onMounted(async () => {
+  isLoadingParsedPlannedSettlement.value = true;
+  await parsePlannedSettlement(fund.chainId, fund.plannedSettlementPeriod)
+    .then((result) => {
+      parsedPlannedSettlement.value = result;
+    })
+    .catch((error) => {
+      console.error("Error parsing planned settlement", error);
+    })
+    .finally(() => {
+      isLoadingParsedPlannedSettlement.value = false;
+    });
+});
 </script>
 
 <style scoped lang="scss">
@@ -801,7 +828,7 @@ const isLoadingFetchSimulatedNAVMethodValueAction = computed(() => {
   }
 }
 .title_balance {
-  font-size: 21px;
+  font-size: $text-lg;
   font-weight: bold;
   line-height: 1;
 }

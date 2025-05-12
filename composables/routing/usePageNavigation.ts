@@ -1,9 +1,11 @@
+import { type ChainId } from "~/types/enums/chain_id";
+
 export const usePageNavigation = () => {
   const router = useRouter();
 
 
   const getFundDetailsUrl = (
-    chainId: string,
+    chainId: ChainId,
     fundTokenSymbol: string,
     fundAddress: string,
   ): string => {
@@ -11,7 +13,7 @@ export const usePageNavigation = () => {
   };
 
   const navigateToFundDetails = (
-    chainId: string,
+    chainId: ChainId,
     fundTokenSymbol: string,
     fundAddress: string,
   ) => {

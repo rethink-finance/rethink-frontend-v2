@@ -16,6 +16,7 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { decodeProposalCallData } from "~/composables/proposal/decodeProposalCallData";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type IDelegate from "~/types/delegate";
+import { ChainId } from "~/types/enums/chain_id";
 import { ClockMode } from "~/types/enums/clock_mode";
 import {
   ProposalState,
@@ -23,6 +24,7 @@ import {
 } from "~/types/enums/governance_proposal";
 import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 
 interface IState {
   /* Example fund proposals.
@@ -61,8 +63,8 @@ interface IState {
 export const useGovernanceProposalsStore = defineStore({
   id: "governanceProposalStore",
   state: (): IState => ({
-    fundProposals: getLocalStorageItem("fundProposals", {}) ?? {},
-    fundDelegates: getLocalStorageItem("fundDelegates", {}) ?? {},
+    fundProposals: {} as Record<string, Record<string, Record<string, IGovernanceProposal>>>,
+    fundDelegates: {} as Record<string, Record<string, Record<string, IDelegate>>>,
     fundProposalsBlockFetchedRanges:
       getLocalStorageItem("fundProposalsBlockFetchedRanges", {}) ?? {},
     connectedAccountProposalsHasVoted: {},
@@ -77,15 +79,26 @@ export const useGovernanceProposalsStore = defineStore({
     web3Store(): any {
       return useWeb3Store();
     },
+    blockTimeStore(): any {
+      return useBlockTimeStore();
+    },
     selectedFundChainId(): any {
-      return this.fundStore.fundChainId;
+      return this.fundStore.selectedFundChain;
     },
     selectedFundWeb3Provider(): Web3 {
       return this.web3Store.chainProviders[this.selectedFundChainId];
     },
   },
   actions: {
-    resetProposals(chainId: string, fundAddress?: string): void {
+    async loadFundProposals() {
+      const storedProposals = await getLocalForageItem("fundProposals", {});
+      this.fundProposals = storedProposals;
+    },
+    async loadFundDelegates() {
+      const storedDelegates = await getLocalForageItem("fundDelegates", {});
+      this.fundDelegates = storedDelegates;
+    },
+    resetProposals(chainId: ChainId, fundAddress?: string): void {
       if (!fundAddress) return;
 
       const chainData = this.fundProposals?.[chainId];
@@ -102,14 +115,14 @@ export const useGovernanceProposalsStore = defineStore({
         this.fundProposalsBlockFetchedRanges[chainId] = {};
       }
       this.fundProposalsBlockFetchedRanges[chainId][fundAddress] = [];
-      setLocalStorageItem("fundProposals", this.fundProposals);
+      setLocalForageItem("fundProposals", this.fundProposals);
       setLocalStorageItem(
         "fundProposalsBlockFetchedRanges",
         this.fundProposalsBlockFetchedRanges,
       );
     },
     storeProposal(
-      chainId: string,
+      chainId: ChainId,
       fundAddress: string,
       proposal: IGovernanceProposal,
     ): void {
@@ -117,10 +130,10 @@ export const useGovernanceProposalsStore = defineStore({
       this.fundProposals[chainId][fundAddress] ??= {};
       this.fundProposals[chainId][fundAddress][proposal.proposalId] =
         cleanComplexWeb3Data(proposal);
-      setLocalStorageItem("fundProposals", this.fundProposals);
+      setLocalForageItem("fundProposals", this.fundProposals);
     },
     storeProposals(
-      chainId: string,
+      chainId: ChainId,
       fundAddress: string,
       proposals: IGovernanceProposal[],
     ): void {
@@ -142,10 +155,10 @@ export const useGovernanceProposalsStore = defineStore({
           cleanComplexWeb3Data(proposal);
       });
 
-      setLocalStorageItem("fundProposals", this.fundProposals);
+      setLocalForageItem("fundProposals", this.fundProposals);
     },
     storeDelegates(
-      chainId: string,
+      chainId: ChainId,
       fundAddress: string,
       delegates: IDelegate[],
     ): void {
@@ -167,9 +180,9 @@ export const useGovernanceProposalsStore = defineStore({
           cleanComplexWeb3Data(delegate);
       });
 
-      setLocalStorageItem("fundDelegates", this.fundDelegates);
+      setLocalForageItem("fundDelegates", this.fundDelegates);
     },
-    getProposals(chainId: string, fundAddress?: string): IGovernanceProposal[] {
+    getProposals(chainId: ChainId, fundAddress?: string): IGovernanceProposal[] {
       if (!fundAddress) return [];
 
       const chainData = this.fundProposals?.[chainId];
@@ -181,7 +194,7 @@ export const useGovernanceProposalsStore = defineStore({
       return Object.values(this.fundProposals[chainId][fundAddress]);
     },
     getProposal(
-      chainId: string,
+      chainId: ChainId,
       fundAddress?: string,
       proposalId?: string,
     ): IGovernanceProposal | undefined {
@@ -195,7 +208,7 @@ export const useGovernanceProposalsStore = defineStore({
 
       return fundData[proposalId];
     },
-    getDelegates(chainId: string, fundAddress?: string): IDelegate[] {
+    getDelegates(chainId: ChainId, fundAddress?: string): IDelegate[] {
       if (!fundAddress) return [];
 
       const chainData = this.fundDelegates?.[chainId];
@@ -207,7 +220,7 @@ export const useGovernanceProposalsStore = defineStore({
       return Object.values(this.fundDelegates[chainId][fundAddress]);
     },
     getDelegate(
-      chainId: string,
+      chainId: ChainId,
       fundAddress?: string,
       delegateAddress?: string,
     ): IDelegate | undefined {
@@ -233,7 +246,7 @@ export const useGovernanceProposalsStore = defineStore({
       ];
     },
     getFundProposalsBlockFetchedRanges(
-      chainId: string,
+      chainId: ChainId,
       fundAddress?: string,
     ): number[] | undefined[] {
       if (!fundAddress) return [undefined, undefined];
@@ -247,7 +260,7 @@ export const useGovernanceProposalsStore = defineStore({
       return fundData;
     },
     setFundProposalsBlockFetchedRanges(
-      chainId: string,
+      chainId: ChainId,
       fundAddress: string,
       latestBlock: number,
       oldestBlock: number,
@@ -411,12 +424,9 @@ export const useGovernanceProposalsStore = defineStore({
       }
     },
     async getBlockPerHoursRate() {
-      const web3 = this.getWeb3InstanceByChainId();
-
-      const currentBlock = await this.selectedFundWeb3Provider.eth.getBlock("latest");
-      const currentBlockNumber = Number(currentBlock.number);
-      const currentBlockTimestamp = Number(currentBlock.timestamp);
-
+      const blockTimeContext = await this.blockTimeStore.initializeBlockTimeContext(this.selectedFundChainId);
+      const currentBlockNumber = blockTimeContext.currentBlock;
+      const currentBlockTimestamp = blockTimeContext.currentBlockTimestamp;
       console.debug(`Current block number: ${currentBlockNumber}`);
       console.debug(`Current block timestamp: ${currentBlockTimestamp}`);
 
@@ -468,39 +478,6 @@ export const useGovernanceProposalsStore = defineStore({
       console.debug(`Blocks per hour rate: ${blocksPerHour}`);
       return blocksPerHour;
     },
-    async estimateTimestampFromBlockNumber(
-      currentBlockNumber: number,
-      currentBlockTimestamp: number,
-      targetBlockNumber: number,
-    ) {
-      const blockPerHour = await this.getBlockPerHoursRate();
-      // Calculate blocks per second instead of blocks per hour
-      const blocksPerSecond = blockPerHour / 3600;
-      // Calculate the number of blocks remaining
-      const blocksRemaining = targetBlockNumber - currentBlockNumber;
-      // Estimate how much time in seconds until the target block
-      const estimatedTimeInSeconds = blocksRemaining / blocksPerSecond;
-      // Estimate the target timestamp
-      return currentBlockTimestamp + estimatedTimeInSeconds;
-    },
-    getWeb3InstanceByChainId() {
-      // we can list more chainIdMap if needed
-      // for now we know that arb-1 chain should use eth chain to get the block number and all the other stuff because arbi-1 saves events in eth chain
-      const chainIdMap = {
-        "0xa4b1": "0x1",
-      };
-      const chainId = this.fundStore.fundChainId as keyof typeof chainIdMap;
-      const chainIdMapKey = chainIdMap[chainId];
-
-      // if the chainIdMapKey is found, use the rpcUrl from the chainIdMap
-      if (chainIdMapKey) {
-        console.debug("chainIdMapKey: ", chainIdMapKey);
-        return this.web3Store.chainProviders[chainIdMapKey];
-      }
-      // if the chainIdMapKey is not found, use the current web3
-      console.debug("use the current web3");
-      return this.web3Store.chainProviders[chainId];
-    },
     async setProposalVoteStartEndTimestamp(proposal: IGovernanceProposal) {
       // If the clock mode is block number, we have to check a timestamp for the block number.
       if (this.fundStore.fund?.clockMode?.mode === ClockMode.Timestamp) {
@@ -514,13 +491,12 @@ export const useGovernanceProposalsStore = defineStore({
         return;
       }
       try {
-        const web3 = this.getWeb3InstanceByChainId();
+        const blockTimeContext = await this.blockTimeStore.initializeBlockTimeContext(this.selectedFundChainId);
 
         // get the latest block
-        const currentBlock = await this.selectedFundWeb3Provider.eth.getBlock("latest");
-        const currentBlockNumber = Number(currentBlock.number);
-        const currentBlockTimestamp = Number(currentBlock.timestamp);
-        console.debug("currentBlock: ", currentBlock);
+        const currentBlockNumber = blockTimeContext.currentBlock;
+        const currentBlockTimestamp = blockTimeContext.currentBlockTimestamp;
+        console.debug("currentBlockNumber: ", currentBlockNumber, "currentBlockTimestamp", currentBlockTimestamp);
 
         // if the voteEnd is in the past, we can fetch the block number
         if (Number(proposal.voteEnd) <= currentBlockNumber) {
@@ -532,9 +508,7 @@ export const useGovernanceProposalsStore = defineStore({
           // if the voteEnd is in the future, we have to estimate the timestamp
           console.log("estimate blockEnd");
           const estimatedEndTimestamp =
-            await this.estimateTimestampFromBlockNumber(
-              currentBlockNumber,
-              currentBlockTimestamp,
+            await this.blockTimeStore.getTimestampForBlock(
               Number(proposal.voteEnd),
             );
           console.log("estimatedEndTimestamp: ", estimatedEndTimestamp);
@@ -551,9 +525,7 @@ export const useGovernanceProposalsStore = defineStore({
           // if the voteStart is in the future, we have to estimate the timestamp
           console.debug("estimate blockStart");
           const estimatedStartTimestamp =
-            await this.estimateTimestampFromBlockNumber(
-              currentBlockNumber,
-              currentBlockTimestamp,
+            await this.blockTimeStore.getTimestampForBlock(
               Number(proposal.voteStart),
             );
           console.debug("estimatedStartTimestamp: ", estimatedStartTimestamp);
@@ -571,13 +543,13 @@ export const useGovernanceProposalsStore = defineStore({
       const fund = this.fundStore.fund;
 
       if (!fund?.governanceToken.decimals) {
-        console.error("No OIV governance token decimals found.");
-        this.toastStore.errorToast("No OIV governance token decimals found.");
+        console.error("No vault governance token decimals found.");
+        this.toastStore.errorToast("No vault governance token decimals found.");
         return;
       }
       if (!fund.clockMode?.mode) {
-        console.error("OIV clock mode is unknown.");
-        this.toastStore.errorToast("OIV clock mode is unknown.");
+        console.error("Vault clock mode is unknown.");
+        this.toastStore.errorToast("Vault clock mode is unknown.");
         return;
       }
 
@@ -753,7 +725,7 @@ export const useGovernanceProposalsStore = defineStore({
 
         proposal.calldatasDecoded = [];
         proposal.calldataTypes = [];
-        const roleModAddress = await this.fundStore.getRoleModAddress();
+        const roleModAddress = await this.fundStore.fetchRoleModAddress(fund.address);
 
         proposal.calldatas.forEach((calldata, i) => {
           const calldataDecoded = decodeProposalCallData(
@@ -792,3 +764,10 @@ const proposalCreatedEventInputs =
         event.name === "ProposalCreated" && event.type === "event",
     ) as any
   )?.inputs ?? [];
+
+// Fetch the proposals and delegates from the localForage when the app is ready.
+onNuxtReady(() => {
+  const governanceProposalsStore = useGovernanceProposalsStore();
+  governanceProposalsStore.loadFundProposals();
+  governanceProposalsStore.loadFundDelegates();
+});

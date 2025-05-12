@@ -4,11 +4,14 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { _mapSubgraphProposalToProposal } from "~/types/helpers/mappers";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 
 export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   const governanceProposalStore = useGovernanceProposalsStore();
   const fundStore = useFundStore();
   const web3Store = useWeb3Store();
+  const blockTimeStore = useBlockTimeStore();
+
   const fund = fundStore.fund;
   if (!fund) {
     return;
@@ -16,13 +19,9 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   if (!fund?.governorAddress) {
     throw new Error("Governor address not found");
   }
+  const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId);
 
-  const { initializeBlockTimeContext, getTimestampForBlock } = useBlockTime();
-  const blockTimeContext = await initializeBlockTimeContext(
-    governanceProposalStore.getWeb3InstanceByChainId(),
-  );
-
-  const roleModAddress = await fundStore.getRoleModAddress(); // TODO replace with fetchGovernableFund
+  const roleModAddress = await fundStore.fetchRoleModAddress(fund.address); // TODO replace with fetchGovernableFund
   console.log("roleModAddress", roleModAddress);
 
   const quorumDenominator = await web3Store.callWithRetry(
@@ -96,7 +95,7 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
       fund?.governanceToken?.decimals || 18,
       quorumNumerator,
       quorumDenominator,
-      getTimestampForBlock,
+      blockTimeStore.getTimestampForBlock,
       fund?.clockMode?.mode as ClockMode,
       roleModAddress ?? "",
       fund?.safeAddress ?? "",

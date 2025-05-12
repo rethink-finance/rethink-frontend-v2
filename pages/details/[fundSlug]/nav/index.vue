@@ -17,14 +17,17 @@
         </div>
       </div>
       <div class="button_container">
-        <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage`">
+        <nuxt-link v-if="appSettingsStore.isManageMode" :to="`/details/${selectedFundSlug}/nav/manage`">
           <v-btn class="text-secondary" variant="outlined">
             Manage NAV Methods
           </v-btn>
         </nuxt-link>
 
 
-        <div class="tooltip-wrapper">
+        <div
+          v-if="appSettingsStore.isManageMode"
+          class="tooltip-wrapper"
+        >
           <v-tooltip
             activator="parent"
             location="bottom"
@@ -48,13 +51,11 @@
                 </template>
                 Update NAV
               </v-btn>
-
             </template>
 
             <template #default>
               Switch to the Zodiac Pilot Extension to Update NAV.
             </template>
-
           </v-tooltip>
         </div>
       </div>
@@ -67,19 +68,17 @@
             NAV Methods
           </div>
           <div>
-            <nuxt-link
-              class="nav__learn_more_link"
-              href="https://docs.rethink.finance/rethink.finance/protocol/nav-calculator-contract"
-              target="_blank"
-            >
-              Learn more about NAV methods ->
-            </nuxt-link>
+            <UiInfoBox
+              info="Learn more about NAV methods"
+              :icon="true"
+              link="https://docs.rethink.finance/rethink.finance/protocol/nav-calculator-contract"
+            />
           </div>
         </div>
       </UiHeader>
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
         <FundNavMethodsTable
-          :fund-chain-id="fundStore.fundChainId"
+          :fund-chain-id="fundStore.selectedFundChain"
           :fund-address="fundStore.fundAddress"
           :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
           :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
@@ -114,12 +113,14 @@
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
+import { useSettingsStore } from "~/store/settings/settings.store";
 import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
 const actionStateStore = useActionStateStore();
+const appSettingsStore = useSettingsStore();
 
 const fund = useAttrs().fund as IFund;
 const {

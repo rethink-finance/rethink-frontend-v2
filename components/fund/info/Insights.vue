@@ -3,11 +3,8 @@
     <UiDataBar class="data_bar">
       <div class="data_bar__item">
         <div class="data_bar__title">
-          <Icon
-            :icon="fundChainIcon.name"
-            :width="fundChainIcon.size"
-            :height="fundChainIcon.size"
-            :color="fundChainIcon.color"
+          <IconChain
+            :chain-short="props.fund?.chainShort"
             class="mr-2"
           />
           {{ capitalizeFirst(fund.chainName) || "N/A" }}
@@ -42,9 +39,9 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': isLoadingFetchFundNAVUpdatesActionState}">
+        <div class="data_bar__title" :class="{'justify-center': isLoadingCalculateFundPerformanceMetricsActionState}">
           <v-progress-circular
-            v-if="isLoadingFetchFundNAVUpdatesActionState"
+            v-if="isLoadingCalculateFundPerformanceMetricsActionState"
             class="d-flex"
             size="18"
             width="2"
@@ -55,7 +52,7 @@
               class="data_bar__title"
               :class="numberColorClass(fund?.cumulativeReturnPercent || 0)"
             >
-              {{ formatPercent(fund?.cumulativeReturnPercent || 0, true) || "N/A" }}
+              {{ formatPercent(fund.cumulativeReturnPercent, true) ?? "N/A" }}
             </div>
           </template>
         </div>
@@ -113,12 +110,14 @@ const actionStateStore = useActionStateStore();
 const isLoadingFetchFundNAVUpdatesActionState =
   computed(() => actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading));
 
+const isLoadingCalculateFundPerformanceMetricsActionState =
+  computed(() => actionStateStore.isActionState("calculateFundPerformanceMetricsAction", ActionState.Loading));
+
+
 const props = defineProps({
   fund: {
     type: Object as PropType<IFund>,
     default: () => {},
   },
 });
-
-const fundChainIcon = computed(() => getChainIcon(props.fund?.chainShort));
 </script>

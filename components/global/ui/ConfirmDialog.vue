@@ -31,7 +31,7 @@
           <slot /> <!-- This is where the content will be injected -->
         </div>
 
-        <div class="di_card__button-container">
+        <div v-if="confirmText || cancelText" class="di_card__button-container">
           <v-btn
             v-if="cancelText"
             class="di_card__cancel-button"
@@ -103,7 +103,7 @@ const confirm = () => {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 16px;
+    font-size: $text-md;
     font-weight: 700;
   }
   &__info-icon {
@@ -118,7 +118,6 @@ const confirm = () => {
     margin-top: 2rem;
   }
   &__text {
-    margin-bottom: 2rem;
     font-size: $text-md;
     font-weight: 500;
     color: $color-light-subtitle;
@@ -127,6 +126,7 @@ const confirm = () => {
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
+    margin-top: 2rem;
   }
 
   &__cancel-button {

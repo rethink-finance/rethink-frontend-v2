@@ -3,16 +3,17 @@ import {
   decodeNavUpdateEntry,
 } from "~/composables/nav/navDecoder";
 
-import type IFundNavData from "~/types/fund_nav_data";
-import type INAVParts from "~/types/nav_parts";
-import type INAVUpdate from "~/types/nav_update";
-import type INAVMethod from "~/types/nav_method";
-import { PositionTypeToNAVCacheMethod } from "~/types/enums/position_type";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { ChainId } from "~/types/enums/chain_id";
+import { PositionTypeToNAVCacheMethod } from "~/types/enums/position_type";
+import type IFundNavData from "~/types/fund_nav_data";
+import type INAVMethod from "~/types/nav_method";
+import type INAVParts from "~/types/nav_parts";
+import type INAVUpdate from "~/types/nav_update";
 
 export const parseFundNAVUpdatesAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundNAVData: IFundNavData,
   fundAddress: string,
 ) => {
@@ -48,7 +49,14 @@ export const parseFundNAVUpdatesAction = async (
 
   // Parse NAV methods and populate entries and pastNavValues for the last update
   fundNAVData.encodedNavUpdate.forEach((navUpdate, navUpdateIndex) => {
-    const navMethods: Record<string, any>[] = decodeNavUpdateEntry(navUpdate);
+    let navMethods: Record<string, any>[] = [];
+
+    try{
+      navMethods = decodeNavUpdateEntry(navUpdate);
+    } catch (error) {
+      console.error("Error decoding navUpdate entry: ", error);
+    }
+
     for (const [navMethodIndex, navMethod] of navMethods.entries()) {
       const parsedNavMethod = parseNAVMethod(navMethodIndex, navMethod);
       navUpdates[navUpdateIndex].entries.push(parsedNavMethod);
@@ -58,7 +66,7 @@ export const parseFundNAVUpdatesAction = async (
   // Only get past NAV update values for all methods for the last NAV update.
   const lastNavUpdateNavMethods =
     navUpdates[navUpdates.length - 1]?.entries ?? [];
-  console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
+  // console.log("lastNavUpdateNavMethods: ", lastNavUpdateNavMethods);
 
   for (let i= 0; i< lastNavUpdateNavMethods.length; i++){
     await updateNavMethodPastNavValue(
@@ -69,23 +77,11 @@ export const parseFundNAVUpdatesAction = async (
     );
   }
 
-
-  /*
-  lastNavUpdateNavMethods.forEach((navMethod, navMethodIndex) => {
-    updateNavMethodPastNavValue(
-      fundChainId,
-      fundAddress,
-      navMethodIndex,
-      navMethod,
-    );
-  });
-  */
-
   return navUpdates;
 };
 
 const updateNavMethodPastNavValue = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
   navMethodIndex: number,
   navMethod: INAVMethod,

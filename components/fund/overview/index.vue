@@ -1,6 +1,6 @@
 <template>
   <div class="overview">
-    <UiDataRowCard title="OIV Settings" class="data_row_card">
+    <UiDataRowCard title="Vault Settings" class="data_row_card">
       <template #body>
         <FundOverviewSettings :fund="fund" />
       </template>
@@ -17,9 +17,6 @@ defineProps({
     default: () => ({}),
   },
 });
-
-const openPanel = ref<string | undefined>(undefined);
-const isOverviewPanelOpen = computed(() => openPanel.value === "overview");
 </script>
 
 <style lang="scss" scoped>

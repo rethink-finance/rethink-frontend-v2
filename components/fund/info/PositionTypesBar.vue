@@ -14,7 +14,15 @@
       </div>
     </template>
     <div v-else class="d-flex flex-grow-1 justify-end">
-      N/A
+      <!-- show 100% liquid if all position types are 0 -->
+      <div
+        class="position_types_bar__item bg_nav_liquid"
+        style="width: 100%"
+      >
+        <v-tooltip activator="parent" location="bottom">
+          Liquid of 100%
+        </v-tooltip>
+      </div>
     </div>
   </div>
 </template>
@@ -41,9 +49,14 @@ export default {
         positionType => positionType.count > 0n,
       ).map((positionType) => {
         const width = Number(positionType.count) / Number(this.totalCountSum);
+
+        // if the width value is very small, it will not be visible in the UI
+        // so we set a minimum width of 0.05
+        const visualWidth = Math.max(width, 0.05);
+
         return {
           width: formatPercent(width, false),
-          style: { width: width * 100 + "%" },
+          style: { width: visualWidth * 100 + "%" },
           class: `bg_nav_${positionType.type?.key || ""}`,
           ...positionType,
         }

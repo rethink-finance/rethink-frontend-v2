@@ -1,9 +1,12 @@
+import { ChainId } from "~/types/enums/chain_id";
 import type INetwork from "~/types/network";
 
-// Create base networks without Hardhat
-const baseNetworksMap: Record<string, INetwork> = {
-  "0x89": {
-    chainId: "0x89",
+// Create base networks without the local node
+type BaseChainId = Exclude<ChainId, ChainId.LOCAL_NODE>;
+
+export const baseNetworksMap: Record<BaseChainId, INetwork> = {
+  [ChainId.POLYGON]: {
+    chainId: ChainId.POLYGON,
     chainName: "Polygon",
     chainNameLong: "Polygon Mainnet",
     chainShort: "matic",
@@ -15,7 +18,8 @@ const baseNetworksMap: Record<string, INetwork> = {
     icon: getChainIcon("matic"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      // "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", Luka T.
+      // "https://polygon-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", Rok
       "https://polygon-rpc.com",
       "https://polygon.drpc.org",
       "https://polygon-pokt.nodies.app",
@@ -23,8 +27,8 @@ const baseNetworksMap: Record<string, INetwork> = {
     ],
     blockExplorerUrls: ["https://polygonscan.com"],
   },
-  "0xa4b1": {
-    chainId: "0xa4b1",
+  [ChainId.ARBITRUM]: {
+    chainId: ChainId.ARBITRUM,
     chainName: "Arbitrum One",
     chainShort: "arb1",
     nativeCurrency: {
@@ -35,7 +39,9 @@ const baseNetworksMap: Record<string, INetwork> = {
     icon: getChainIcon("arb1"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      // "https://arb-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", // Luka T.
+      // "https://arb-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", // Rok
+      // "https://arbitrum-mainnet.infura.io/v3/be388d08c0334adbbabb9cd6555165d1", // Luka V. Infura Arbitrum
       "https://arb1.arbitrum.io/rpc", // Max 10k blocks, if auth: more than 1M
       "https://arbitrum.drpc.org", // Max 10k blocks, if auth: more than 1M
       "https://arbitrum.llamarpc.com", // Max 10k blocks
@@ -44,8 +50,8 @@ const baseNetworksMap: Record<string, INetwork> = {
     ],
     blockExplorerUrls: ["https://arbiscan.io"],
   },
-  // "0xfc": {
-  //   chainId: "0xfc",
+  // [ChainId.FRAXTAL]: {
+  //   chainId: ChainId.FRAXTAL,
   //   chainName: "Fraxtal",
   //   chainShort: "frax",
   //   nativeCurrency: {
@@ -59,8 +65,8 @@ const baseNetworksMap: Record<string, INetwork> = {
   //   ],
   //   blockExplorerUrls: ["https://fraxscan.com"],
   // },
-  "0x1": {
-    chainId: "0x1",
+  [ChainId.ETHEREUM]: {
+    chainId: ChainId.ETHEREUM,
     chainName: "Ethereum",
     chainShort: "eth",
     nativeCurrency: {
@@ -71,21 +77,22 @@ const baseNetworksMap: Record<string, INetwork> = {
     icon: getChainIcon("eth"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
-      "https://eth.drpc.org",
-      "https://endpoints.omniatech.io/v1/eth/mainnet/public",
+      // "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", // Luka T.
+      // "https://eth-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", // Rok
+      "https://rpc.flashbots.net/fast",
+      "https://rpc.flashbots.net",
       "https://ethereum.blockpi.network/v1/rpc/public",
       "https://api.zan.top/node/v1/eth/mainnet/public",
       "https://rpc.ankr.com/eth",
-      "https://rpc.flashbots.net/fast",
-      "https://rpc.flashbots.net",
       "https://rpc.lokibuilder.xyz/wallet",
       "https://api.stateless.solutions/ethereum/v1/demo",
+      "https://eth.drpc.org",
+      "https://endpoints.omniatech.io/v1/eth/mainnet/public",
     ],
     blockExplorerUrls: ["https://etherscan.io"],
   },
-  "0x2105": {
-    chainId: "0x2105",
+  [ChainId.BASE]: {
+    chainId: ChainId.BASE,
     chainName: "Base",
     chainShort: "base",
     nativeCurrency: {
@@ -96,7 +103,8 @@ const baseNetworksMap: Record<string, INetwork> = {
     icon: getChainIcon("base"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW",
+      // "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", Luka T.
+      // "https://base-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", Rok
       "https://mainnet.base.org",
       "https://base.llamarpc.com",
       "https://base-mainnet.public.blastapi.io",
@@ -111,27 +119,28 @@ const baseNetworksMap: Record<string, INetwork> = {
 };
 
 // Add Hardhat network only in development mode
-const hardhatNetwork: INetwork = {
-  chainId: "0x7A69",
-  chainName: "Hardhat",
-  chainShort: "hadhat",
+const localhostNetwork: INetwork = {
+  chainId: ChainId.LOCAL_NODE,
+  chainName: "Local Node",
+  chainShort: "local",
   nativeCurrency: {
-    name: "POL",
-    symbol: "POL",
+    name: "ETH",
+    symbol: "ETH",
     decimals: 18,
   },
-  icon: getChainIcon("hardhat"),
+  icon: getChainIcon("local"),
   rpcUrls: ["http://127.0.0.1:8545"],
   blockExplorerUrls: [],
 };
 
-// Conditionally include Hardhat network based on environment
+// Conditionally include localhost network based on environment
 export const networksMap: Record<string, INetwork> =
   process.env.NODE_ENV === "development"
-    ? { ...baseNetworksMap, "0x7A69": hardhatNetwork }
+    ? { ...baseNetworksMap, [ChainId.LOCAL_NODE]: localhostNetwork }
     : baseNetworksMap;
 
-export const chainIds: string[] = Object.keys(networksMap);
+
+export const chainIds: ChainId[] = Object.keys(networksMap) as ChainId[];
 export const networks: INetwork[] = Object.values(networksMap);
 
 export const networkChoices = networks.map(

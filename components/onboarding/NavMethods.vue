@@ -4,27 +4,27 @@
       <div class="main_header__title">
         Manage NAV Methods
       </div>
-      <div>
+      <div class="main_header__actions">
         <v-btn
-          class="text-secondary me-4"
+          class="text-secondary"
           variant="outlined"
           @click="handleDefineNewMethodDialog(true)"
         >
           Define New Method
         </v-btn>
         <v-btn
-          class="text-secondary me-4"
+          class="text-secondary"
           variant="outlined"
           @click="handleAddFromLibraryDialog(true)"
         >
           Add From Library
         </v-btn>
         <v-btn
-          class="text-secondary me-4"
+          class="text-secondary"
           variant="outlined"
           @click="isAddRawDialogOpen = true"
         >
-          Add Raw
+          Import Raw
         </v-btn>
         <v-btn
           class="bg-primary text-secondary"
@@ -62,6 +62,9 @@
         :safe-address="fundSettings?.safe"
         :base-symbol="fundSettings?.baseSymbol"
         :base-decimals="fundSettings?.baseDecimals"
+        :safe-contract-base-token-balance="safeContractBaseTokenBalance"
+        :show-safe-contract-balance="true"
+        :show-summary-row="true"
         :is-fund-non-init="true"
       />
     </div>
@@ -108,7 +111,6 @@
       title="Store NAV Methods"
       class="confirm_dialog"
       max-width="680px"
-      confirm-text="Got it"
       @cancel="isNotifyDialogOpen = false"
     >
       <p class="mt-4">
@@ -133,18 +135,12 @@
         Please ensure you approve both to complete the process.
       </p>
     </UiConfirmDialog>
-
-    <UiConfirmDialog
-      max-width="80%"
-      confirm-text="Got it"
-      @confirm="storeNavMethods"
-      @cancel="isNotifyDialogOpen = false"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
+import { ERC20 } from "~/assets/contracts/ERC20";
 import {
   encodeUpdateNavMethods,
   getAllowManagerToUpdateNavPermissionsData,
@@ -171,6 +167,7 @@ const isAddRawDialogOpen = ref(false)
 const isNotifyDialogOpen = ref(false)
 const navMethods = ref<INAVMethod[]>([]);
 const allowManagerToUpdateNav = ref(false);
+const safeContractBaseTokenBalance = ref(0);
 
 /**
  * Computed
@@ -310,7 +307,6 @@ const sendAllowManagerToUpdateNavTransaction = async () => {
           );
         }
         isLoadingAllowManagerToUpdateNav.value = false;
-        isNotifyDialogOpen.value = true;
       })
       .on("error", (error: any) => {
         console.error(error);
@@ -363,6 +359,7 @@ const methodsAddedFromLibrary = (methods: INAVMethod[]) => {
 
 onMounted(() => {
   fetchNavMethods();
+  fetchSafeBalance();
 })
 
 watch(() => fundSettings?.value?.fundAddress, (fundAddress?: string) => {
@@ -370,6 +367,39 @@ watch(() => fundSettings?.value?.fundAddress, (fundAddress?: string) => {
     fetchNavMethods();
   }
 })
+
+watch(()=> fundSettings?.value?.safe, (safeAddress?: string) => {
+  if (safeAddress) {
+    fetchSafeBalance();
+  }
+})
+
+
+const fetchSafeBalance = async () => {
+  if (!fundSettings?.value?.safe) return;
+  let balanceWei = BigInt(0)
+
+  const fundBaseTokenContract = web3Store.getCustomContract(
+    fundChainId.value,
+    ERC20,
+    fundSettings.value?.baseToken, // baseToken
+  );
+
+  try {
+    balanceWei = await web3Store.callWithRetry(
+      fundChainId.value,
+      () => fundBaseTokenContract.methods
+        .balanceOf(fundSettings.value?.safe)
+        .call(),
+    );
+
+  } catch (error: any) {
+    toastStore.errorToast("Failed loading safe balance. " + error.message);
+  } finally {
+    console.log("SAFE BALANCE", balanceWei);
+    safeContractBaseTokenBalance.value = Number(balanceWei);
+  }
+}
 
 const fetchNavMethods = async () => {
   if (!fundSettings?.value?.fundAddress) return;
@@ -397,6 +427,13 @@ const fetchNavMethods = async () => {
 </script>
 
 <style scoped lang="scss">
+.main_header {
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+}
 .management {
   margin-bottom: 1rem;
   &__row {

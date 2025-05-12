@@ -1,19 +1,20 @@
-import { useWeb3Store } from "~/store/web3/web3.store";
-import type { IFundInitCache } from "~/types/fund_settings";
 import { GovernableFund } from "assets/contracts/GovernableFund";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import type { ChainId } from "~/types/enums/chain_id";
+import type IFundInitCache from "~/types/fund_init_cache";
 
 
 export const fetchFundSettingsAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
 ): Promise<IFundInitCache> => {
   const web3Store = useWeb3Store();
 
   if (!fundChainId) {
-    throw new Error("No fund chainId provided, cannot fetch fund settings.");
+    throw new Error("No vault chainId provided, cannot fetch vault settings.");
   }
   if (!fundAddress) {
-    throw new Error("No fundAddress provided, cannot fetch fund settings.");
+    throw new Error("No fundAddress provided, cannot fetch vault settings.");
   }
 
   const fundContract = web3Store.getCustomContract(

@@ -1,17 +1,18 @@
+import { NAVExecutor } from "assets/contracts/NAVExecutor";
+import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 import { type AbiFunctionFragment } from "web3";
 import { decodeFunctionCall, encodeFunctionCall } from "web3-eth-abi";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
-import type INAVMethod from "~/types/nav_method";
-import { PositionType } from "~/types/enums/position_type";
-import { generateNAVPermission, getMethodsPastNAVUpdateIndex } from "~/composables/nav/generateNAVPermission";
-import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
-import { NAVExecutor } from "assets/contracts/NAVExecutor";
-import ZodiacRoles from "assets/contracts/zodiac/RolesFull.json";
 import {
   encodedCollectFlowFeesAbiJSON,
   encodedCollectManagerFeesAbiJSON,
   encodedCollectPerformanceFeesAbiJSON,
 } from "~/composables/nav/encodedCollectFees";
+import { generateNAVPermission, getMethodsPastNAVUpdateIndex } from "~/composables/nav/generateNAVPermission";
+import type { ChainId } from "~/types/enums/chain_id";
+import { roleModFunctions } from "~/types/enums/delegated_permission";
+import { PositionType } from "~/types/enums/position_type";
+import type INAVMethod from "~/types/nav_method";
 import type IProposalData from "~/types/proposal/proposalData";
 
 const updateNavABI = GovernableFund.abi.find(
@@ -166,7 +167,7 @@ export const getNavMethodsProposalData = (
 export const getAllowManagerToUpdateNavProposalData = (
   encodedNavUpdateEntries: any,
   fundAddress: string,
-  fundChainId: string,
+  fundChainId: ChainId,
   roleModAddress: string,
 ): IProposalData => {
   const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
@@ -196,7 +197,7 @@ export const getAllowManagerToUpdateNavProposalData = (
 
 export const getAllowManagerToUpdateNavPermissionsData = (
   fundAddress: string,
-  fundChainId: string,
+  fundChainId: ChainId,
   roleModAddress: string,
 ): IProposalData => {
   const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
@@ -219,19 +220,14 @@ const encodeRoleModEntries = (
   proposalEntries: any[],
   roleModAddress: string,
 ): [any[], any[], any[]] => {
-  const proposalRoleModMethods = ZodiacRoles.abi.filter(
-    (val) => val.type === "function",
-  );
   console.log("roleModAddress: ", roleModAddress);
-
   const encodedRoleModEntries = [];
 
   const targets = [];
   const gasValues = [];
 
   for (let i = 0; i < proposalEntries.length; i++) {
-    const roleModFunctionABI =
-      proposalRoleModMethods[proposalEntries[i].valueMethodIdx];
+    const roleModFunctionABI = roleModFunctions[proposalEntries[i].valueMethodIdx];
     console.log(
       "roleModFunctionABI: ",
       JSON.stringify(roleModFunctionABI, null, 2),

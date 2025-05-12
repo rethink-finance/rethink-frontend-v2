@@ -6,8 +6,14 @@
     <v-skeleton-loader type="card" />
   </div>
   <div v-else-if="fund?.address" class="w-100">
+    <FundSEOMetadata
+      :fund-name="fund?.title"
+      :symbol="fund?.fundToken?.symbol"
+      :description="fund?.description"
+      :image-url="fund?.photoUrl"
+    />
     <div v-if="breadcrumbItems.length === 0" class="fund_name">
-      <v-avatar class="fund_name__avatar" :rounded="false">
+      <v-avatar class="fund_name__avatar" :rounded="false" size="3.75rem">
         <img
           :src="fund.photoUrl"
           class="fund_name__avatar_img"
@@ -16,13 +22,28 @@
       </v-avatar>
       <div class="fund_name__title">
         <p>
-          {{ fund?.fundToken.symbol }}
-        </p>
-      </div>
-      <div class="fund_name__subtitle">
-        <p>
           {{ fund?.title }}
         </p>
+      </div>
+      <div v-if="fund?.strategistName" class="fund_name__title">
+        <p>
+          |
+        </p>
+      </div>
+      <div
+        v-if="fund?.strategistName"
+        class="fund_name__subtitle"
+      >
+
+        <span>by </span>
+        <a
+          :href="fund?.strategistUrl"
+          target="_blank"
+          class="strategist_url"
+        >
+          {{ fund?.strategistName }}
+        </a>
+
       </div>
     </div>
     <div v-if="breadcrumbItems.length === 0" class="details_nav_container">
@@ -64,9 +85,10 @@
   </div>
   <div v-else class="d-flex flex-column h-100 align-center">
     <h2 class="mb-2">
-      OIV not found
+      Oops, there was a problem loading the vault
     </h2>
     <p class="text-center">
+      Network error occurred. <br>
       Are you sure you are on the right network? <br>
       Try switching to a different network.
     </p>
@@ -77,23 +99,25 @@
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
+import { useSettingsStore } from "~/store/settings/settings.store";
 import { ActionState } from "~/types/enums/action_state";
+import { ChainId } from "~/types/enums/chain_id";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
-const web3Store = useWeb3Store();
 const actionStateStore = useActionStateStore();
+const appSettingsStore = useSettingsStore();
 const route = useRoute();
-const router = useRouter();
 // fund address is always in the third position of the route
 // e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
-const [fundChainId, fundSymbol, fundAddress] = route.path
-  .split("/")[2]
-  .split("-");
+const parts = route.path.split("/")[2]?.split("-") ?? [];
+
+const fundChainId: ChainId = (parts[0] as ChainId);
+const fundSymbol: string = parts[1] ?? "";
+const fundAddress: string = parts[2] ?? "";
 
 onMounted(() => {
   fetchFund();
@@ -113,7 +137,7 @@ const setBreadcrumbItems = (items: BreadcrumbItem[]) => {
 };
 
 const fetchFund = async () => {
-  if (!fundAddress) {
+  if (!fundAddress || !fundChainId) {
     console.error("No fund address provided in the route.");
     return;
   }
@@ -127,12 +151,10 @@ const fetchFund = async () => {
 const isLoadingFetchFundData = computed(() =>
   actionStateStore.isActionState("fetchFundDataAction", ActionState.Loading),
 );
-console.log("isLoadingFetchFundData", isLoadingFetchFundData.value);
 
 watch(
   () => accountStore.connectedWallet,
   (wallet: any) => {
-    console.warn("CONNECTED WALLET CHANGE, refresh user balances", wallet);
     fundStore.fetchUserFundData(fundChainId, fundAddress);
   },
 );
@@ -218,7 +240,13 @@ const getPathColor = (isActive = false, color = "#77839f") =>
   isActive ? "primary" : color;
 
 const computedRoutes = computed(() => {
+  const showInManageMode = [
+    `${fundDetailsRoute.value}/flows`,
+    `${fundDetailsRoute.value}/execution-app`,
+  ]
   return routes.map((routeItem: IRoute) => {
+    const isHidden = showInManageMode.includes(routeItem.to) ? !appSettingsStore.isManageMode : false;
+
     let isActive;
     if (routeItem.exactMatch) {
       isActive = isPathActive(routeItem.to, true);
@@ -236,8 +264,9 @@ const computedRoutes = computed(() => {
       isActive,
       pathColor: getPathColor(isActive, routeItem.color),
       target: routeItem.isExternal ? "_blank" : "",
+      isHidden,
     };
-  });
+  }).filter((routeItem: IRoute) => !routeItem.isHidden);
 });
 </script>
 
@@ -340,7 +369,19 @@ const computedRoutes = computed(() => {
   &__subtitle {
     font-weight: 500;
     font-size: $text-sm;
-    color: $color-text-irrelevant;
+    color: $color-light-subtitle;
+
+
+  }
+}
+
+.strategist_url {
+  color: $color-light-subtitle;
+  text-decoration: none;
+  transition: color 0.3s ease;
+
+  &:hover {
+    color: $color-primary;
   }
 }
 

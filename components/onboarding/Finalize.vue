@@ -12,7 +12,7 @@
         class="my-2"
       />
 
-      You will be redirected to the OIV details page after the node gets synced.
+      You will be redirected to the vault details page after the node gets synced.
       <div class="d-flex align-items-center align-center flex-column">
         <v-progress-circular
           class="mt-2"
@@ -38,7 +38,7 @@
     </div>
     <template v-else>
       <p>
-        After finalizing the setup users will be able to deposit into your OIV.
+        After finalizing the setup users will be able to deposit into your vault.
       </p>
       <p>
         Please note that any future change after finalization will go through governance.
@@ -119,7 +119,7 @@ const finalizeCreateFund = async () => {
       });
   } catch (error:any) {
     console.error(error);
-    toastStore.errorToast("There was an error initializing the OIV");
+    toastStore.errorToast("There was an error initializing the vault");
   } finally {
     isFinalizingFundCreation.value = false;
   }

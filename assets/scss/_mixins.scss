@@ -40,25 +40,21 @@
     @content;
   }
 }
-
 @mixin sm {
   @media screen and (min-width: $screen-sm) {
     @content;
   }
 }
-
 @mixin md {
   @media screen and (min-width: $screen-md) {
     @content;
   }
 }
-
 @mixin lg {
   @media screen and (min-width: $screen-lg) {
     @content;
   }
 }
-
 @mixin xl {
   @media screen and (min-width: $screen-xl) {
     @content;
@@ -66,6 +62,11 @@
 }
 @mixin xxl {
   @media screen and (min-width: $screen-xxl) {
+    @content;
+  }
+}
+@mixin xxxl {
+  @media screen and (min-width: $screen-xxxl) {
     @content;
   }
 }

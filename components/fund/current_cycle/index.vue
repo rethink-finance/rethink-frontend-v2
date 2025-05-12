@@ -78,10 +78,9 @@
     <UiNotification>
       The deposit and redeem requests are settled within the planned Settlement
       Cycle of
-      <span class="text-primary">{{
-        fund?.plannedSettlementPeriod || "N/A"
-      }}</span>. You can learn more about how settlements work
+      <span class="text-primary">{{ parsedPlannedSettlement }}</span>. You can learn more about how settlements work
       <a
+        class="text-primary"
         href="https://docs.rethink.finance/rethink.finance"
         target="_blank"
       >here</a>.
@@ -91,12 +90,12 @@
 
 <script setup lang="ts">
 import { ethers, FixedNumber } from "ethers";
-import { computed, ref } from "vue";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type IFund from "~/types/fund";
 
 import { createDelegateBySigMessage, encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
+import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -127,7 +126,7 @@ const isLoadingFetchUserFundDepositRedemptionRequestsAction = computed(() =>
   ),
 );
 
-defineProps({
+const props = defineProps({
   fund: {
     type: Object as PropType<IFund>,
     default: () => {},
@@ -157,6 +156,7 @@ const processRequest = () => {
 
 const loadingDeposit = ref(false);
 const loadingRedemption = ref(false);
+const parsedPlannedSettlement = ref("");
 
 const isAnythingLoading = computed(() => {
   return loadingDeposit.value || loadingRedemption.value;
@@ -174,7 +174,7 @@ const depositDisabledTooltipText = computed(() => {
     return "Wait for settlement or cancel the deposit request.";
   }
   if (!fundStore.isUserWalletWhitelisted) {
-    return "Your wallet address is not whitelisted to allow deposits into this OIV."
+    return "Your wallet address is not whitelisted to allow deposits into this vault."
   }
   return "";
 });
@@ -185,13 +185,13 @@ const redemptionDisabledTooltipText = computed(() => {
     return "There is no redemption request.";
   }
   if (fundUserData.value.fundTokenBalance < redemptionRequestAmount) {
-    return "Not enough OIV tokens to process the redemptions request."
+    return "Not enough vault tokens to process the redemptions request."
   }
   if (shouldUserWaitSettlementOrCancelRedemption.value) {
     return "Wait for settlement or cancel the redemption request.";
   }
 
-  // Check if there is even enough liquidity in the OIV contract to redeem the requested amount.
+  // Check if there is even enough liquidity in the vault contract to redeem the requested amount.
   const fundContractBaseTokenBalance = fundStore.fund?.fundContractBaseTokenBalance || 0n;
   // Get the last NAV update exchange rate.
   const lastNAVExchangeRate = FixedNumber.fromString(
@@ -218,17 +218,17 @@ const redemptionDisabledTooltipText = computed(() => {
   // console.log("NSS fundContractBaseTokenBalanceFN", fundContractBaseTokenBalanceFN.toString())
   if (fundContractBaseTokenBalanceFN.lt(redemptionRequestAmountInBaseFN)) {
     // Check if there is enough base token liquidity to perform withdrawal.
-    return "Not enough liquidity in the OIV contract."
+    return "Not enough liquidity in the vault contract."
   }
   if (!fundStore.isUserWalletWhitelisted) {
-    return "Your wallet address is not whitelisted to allow deposits into this OIV."
+    return "Your wallet address is not whitelisted to allow deposits into this vault."
   }
   return "";
 });
 
 const signDepositAndDelegateBySigTransaction = async () => {
   const activeAccountAddress = fundStore.activeAccountAddress ?? "";
-  const fundChainId = fundStore.fundChainId;
+  const fundChainId = fundStore.selectedFundChain;
   if (!activeAccountAddress) {
     toastStore.errorToast("No active account, try re-authenticating.");
     return;
@@ -269,7 +269,7 @@ const signDepositAndDelegateBySigTransaction = async () => {
   let signature;
 
   try {
-    const web3Provider = web3Store.chainProviders[fundStore.fundChainId];
+    const web3Provider = web3Store.chainProviders[fundStore.selectedFundChain];
     const hexSignature = await web3Provider?.eth.signTypedData(
       activeAccountAddress ?? "",
       dataToSign,
@@ -293,11 +293,11 @@ const signDepositAndDelegateBySigTransaction = async () => {
 
 const deposit = async () => {
   if (!fundStore.activeAccountAddress) {
-    toastStore.errorToast("Connect your wallet to deposit tokens to the OIV.")
+    toastStore.errorToast("Connect your wallet to deposit tokens to the vault.")
     return;
   }
   if (!fundStore.fund) {
-    toastStore.errorToast("OIV data is missing.")
+    toastStore.errorToast("vault data is missing.")
     return;
   }
   if (!userDepositRequest?.value?.amount) {
@@ -378,11 +378,11 @@ const deposit = async () => {
 
 const redeem = async () => {
   if (!fundStore.activeAccountAddress) {
-    toastStore.errorToast("Connect your wallet to redeem tokens from the OIV.")
+    toastStore.errorToast("Connect your wallet to redeem tokens from the vault.")
     return;
   }
   if (!fundStore.fund) {
-    toastStore.errorToast("OIV data is missing.")
+    toastStore.errorToast("vault data is missing.")
     return;
   }
   if (!userRedemptionRequest?.value?.amount) {
@@ -452,6 +452,17 @@ const handleError = (error: any) => {
     console.error(error);
   }
 };
+
+
+onMounted(async () => {
+  await parsePlannedSettlement(props.fund?.chainId, props.fund?.plannedSettlementPeriod)
+    .then((result) => {
+      parsedPlannedSettlement.value = result;
+    })
+    .catch((error) => {
+      console.error("Error parsing planned settlement", error);
+    })
+});
 </script>
 
 <style lang="scss" scoped>

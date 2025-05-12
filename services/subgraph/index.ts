@@ -7,6 +7,7 @@ import {
   FETCH_GOVERNANCE_PROPOSALS,
 } from "./queries";
 
+import { type ChainId } from "~/types/enums/chain_id";
 import type ISubgraphFetchDelegatesResponse from "~/types/responses/subgraph_fetch_delegates";
 import type ISubgraphGovernanceProposal from "~/types/subgraph_governance_proposal";
 
@@ -15,7 +16,7 @@ export interface GovernorProposalsResponse {
 }
 
 export const fetchSubgraphGovernorProposals = async (
-  chainId: string,
+  chainId: ChainId,
   values: {
     governorAddress: string;
   },
@@ -49,7 +50,7 @@ export interface GovernorProposalResponse {
 }
 
 export const fetchSubgraphGovernorProposal = async (
-  chainId: string,
+  chainId: ChainId,
   values: {
     governorAddress: string;
     proposalId: string;
@@ -87,7 +88,7 @@ export interface DelegateResponse {
 }
 
 export const fetchSubgraphDelegates = async (
-  chainId: string,
+  chainId: ChainId,
   values: {
     votingContract: string;
   },

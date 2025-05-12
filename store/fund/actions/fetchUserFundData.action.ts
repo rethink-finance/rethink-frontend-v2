@@ -1,10 +1,16 @@
-import { useFundStore } from "../fund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import type { ChainId } from "~/types/enums/chain_id";
+import { useFundStore } from "../fund.store";
 
 export const fetchUserFundDataAction = async (
-  fundChainId: string,
+  fundChainId: ChainId,
   fundAddress: string,
 ): Promise<any> => {
+  console.debug(
+    "fetchUserFundDataAction, refresh user balances",
+    fundChainId,
+    fundAddress,
+  );
   const fundStore = useFundStore();
   const web3Store = useWeb3Store();
 
@@ -45,7 +51,7 @@ export const fetchUserFundDataAction = async (
     );
 
     if (fundDelegateAddress !== fundStore.fundUserData.fundDelegateAddress) {
-      console.error(
+      console.warn(
         "[MISMATCH] wrong delegate to address from reader contract",
         fundDelegateAddress,
         "should be:",

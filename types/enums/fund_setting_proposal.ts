@@ -1,5 +1,7 @@
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
-import { InputType } from "~/types/enums/input_type";
+import { InputType, periodChoices } from "~/types/enums/input_type";
+
+const FeesDocs = "https://docs.rethink.finance/rethink.finance/protocol/architecture/admin-contract/fees"
 
 export enum ProposalStep {
   Setup = "setup",
@@ -8,7 +10,7 @@ export enum ProposalStep {
 
 export enum StepSections {
   Basics = "basic",
-  Fees = "fees",
+  Fee = "fee",
   Whitelist = "whitelist",
   Management = "management",
   Governance = "governance",
@@ -34,6 +36,9 @@ export interface IProposal {
   fundSymbol: string;
   baseToken: string;
   description: string;
+  strategistName: string;
+  strategistUrl: string;
+  oivChatUrl: string;
   depositFee: string;
   depositFeeRecipientAddress: string;
   withdrawFee: string;
@@ -71,7 +76,7 @@ export interface IWhitelist {
   isNew: boolean;
 }
 
-export type FieldsMapType = Record<StepSections, IField[] | IFieldGroup[]>;
+export type FieldsMapType = Record<StepSections, (IField | IFieldGroup)[]>;
 
 
 // 1. define FundSettingsStepsMap which maps each proposal step to its corresponding sections
@@ -83,7 +88,10 @@ export const FundSettingsStepsMap: Record<ProposalStep, IFundSettingProposalStep
         name: "Basic",
         key: StepSections.Basics,
       },
-      { name: "Fees", key: StepSections.Fees },
+      { name: "Fee",
+        key: StepSections.Fee,
+        info: `<span>Please find more about details about fees and alternative fee types in our <a target='_blank' href='${FeesDocs}'>documentation.</a></span>`,
+      },
       { name: "Whitelist", key: StepSections.Whitelist },
       { name: "Management", key: StepSections.Management },
       {
@@ -100,7 +108,29 @@ export const FundSettingsStepsMap: Record<ProposalStep, IFundSettingProposalStep
   },
 };
 
+export const feeFieldKeys = [
+  "depositFee",
+  "withdrawFee",
+  "managementFee",
+  "performanceFee",
+]
+
+export const baseTokenSymbolField =     {
+  label: "Symbol",
+  key: "baseTokenSymbol",
+  type: InputType.Text,
+  isEditable: false,
+}
+export const baseTokenDecimalsField =     {
+  label: "Decimals",
+  key: "baseTokenDecimals",
+  type: InputType.Text,
+  isEditable: false,
+}
+
 // 2. define FundSettingsStepFieldsMap which holds the form fields for each section
+// TODO instead of doing this manually, each field should have here defined function to serialize and deserialize.
+//   for example fee fields are shown in the UI as Number(fromPercentageToBps(
 export const FundSettingsStepFieldsMap: FieldsMapType = {
   [StepSections.Basics]: [
     {
@@ -113,16 +143,17 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       cols: 12,
     },
     {
-      label: "OIV DAO Name",
+      label: "Vault Name",
       key: "fundName",
       type: InputType.Text,
-      placeholder: "E.g. OIV DAO Name",
+      placeholder: "E.g. vault Name",
       rules: [formRules.required],
       isEditable: false,
       cols: 6,
     },
     {
-      label: "OIV Token Symbol",
+      label: "Vault Token Symbol",
+      tooltip: "Token ticker representing the tokenized shares of your vault.",
       key: "fundSymbol",
       type: InputType.Text,
       placeholder: "E.g. ETH",
@@ -134,6 +165,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       label: "Denomination Asset Address",
       key: "baseToken",
       type: InputType.Text,
+      tooltip: "Asset is used for deposits and measuring share price.",
       placeholder: "E.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
       rules: [formRules.isValidAddress, formRules.required],
       isEditable: false,
@@ -148,11 +180,43 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       rules: [formRules.required, formRules.charLimit(5000)],
       isEditable: true,
     },
+    {
+      label: "Strategist Name",
+      key: "strategistName",
+      type: InputType.Text,
+      placeholder: "E.g. rethink.finance",
+      isEditable: true,
+      rules: [],
+      tooltip: "Strategist will be displayed next to the vault Name",
+      cols: 6,
+    },
+    {
+      label: "Strategist Link",
+      key: "strategistUrl",
+      type: InputType.Text,
+      placeholder: "E.g. https://rethink.finance",
+      isEditable: true,
+      rules: [],
+      tooltip: "Strategist name will be clickable and redirect to this link",
+      cols: 6,
+    },
+    {
+      label: "Vault Chat Link",
+      key: "oivChatUrl",
+      type: InputType.Text,
+      placeholder: "E.g. https://discord.com/channels/945238616408481833/946693607216279562",
+      isEditable: true,
+      rules: [],
+      tooltip: "Link to vault communication, eg: [Telegram Group Link]",
+      cols: 12,
+    },
   ],
-  [StepSections.Fees]: [
+  [StepSections.Fee]: [
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Deposit Fee",
+      tooltip: "Share of deposited denomination asset.",
       fields: [
         {
           label: "Deposit Fee (%)",
@@ -178,6 +242,8 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Redemption Fee",
+      tooltip: "Share of redeemed denomination asset.",
       fields: [
         {
           label: "Redemption Fee (%)",
@@ -203,6 +269,8 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Management Fee",
+      tooltip: "Share of minted vault tokens per management fee period.",
       fields: [
         {
           label: "Management Fee (%)",
@@ -223,21 +291,25 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
           isEditable: true,
           cols: 8,
         },
-        {
-          label: "Management Fee Period (Days)",
-          key: "managementFeePeriod",
-          type: InputType.Number,
-          placeholder: "E.g. 0",
-          min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
-          isEditable: true,
-          cols: 12,
-        },
+
+        // // Note from Rok: remove for now
+        // {
+        //   label: "Management Fee Period (Days)",
+        //   key: "managementFeePeriod",
+        //   type: InputType.Number,
+        //   placeholder: "E.g. 0",
+        //   min: 0,
+        //   rules: [formRules.required, formRules.isNonNegativeNumber],
+        //   isEditable: true,
+        //   cols: 12,
+        // },
       ],
     },
     {
       isToggleable: true,
       isToggleOn: true,
+      groupName: "Performance Fee",
+      tooltip: "Profit share in minted vault tokens.",
       fields: [
         {
           label: "Performance Fee (%)",
@@ -281,9 +353,11 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
   ],
   [StepSections.Management]: [
     {
-      label: "Planned Settlement Period (Days)",
+      label: "Planned Settlement Period",
       key: "plannedSettlementPeriod",
-      type: InputType.Number,
+      tooltip: "Frequency of settling deposit and redemption requests.",
+      type: InputType.Period,
+      choices: periodChoices,
       placeholder: "E.g. 0",
       rules: [formRules.required, formRules.isNonNegativeNumber],
       isEditable: true,
@@ -365,6 +439,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. Governance Token",
       rules: [formRules.required],
       isEditable: false,
+      tooltip: "TBD Use any existing ERC20 token",
     },
     {
       label: "Quorum (%)",
@@ -373,22 +448,28 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
+      tooltip: "Required minimum participation form total token supply.",
     },
     {
-      label: "Voting Period (in blocks)",
+      label: "Voting Period",
       key: "votingPeriod",
-      type: InputType.Text,
-      placeholder: "E.g. 0",
-      rules: [formRules.required],
+      type: InputType.Period,
+      choices: periodChoices,
+      placeholder: "E.g. 1",
+      defaultValue: null, // leave it empty, so that the user is forced to type it!
+      rules: [formRules.required, formRules.isPositiveNumber],
       isEditable: false,
+      tooltip: "Amount of time available for voting.",
     },
     {
-      label: "Voting Delay (in seconds)",
+      label: "Voting Delay",
       key: "votingDelay",
-      type: InputType.Text,
+      type: InputType.Period,
+      choices: periodChoices,
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
+      tooltip: "Delay between proposal creation and start of the voting period.",
     },
     {
       label: "Proposal Threshold",
@@ -397,14 +478,16 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
+      tooltip: "Minimum required vault tokens to create a proposal.",
     },
     {
-      label: "Late Quorum (in seconds)",
+      label: "Late Quorum",
       key: "lateQuorum",
-      type: InputType.Text,
+      type: InputType.Period,
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
+      tooltip: "Amount of time required for proposal to pass, after it reaches quorom.",
     },
   ],
   [StepSections.Details]: [
@@ -428,3 +511,4 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     },
   ],
 };
+

@@ -1,8 +1,5 @@
 <template>
   <div class="discover">
-    <h3 class="main_title">
-      Rethink Finance | Run OIVs On-Chain
-    </h3>
     <div
       v-if="isErrorFetchFundsData"
       class="w-100 d-flex justify-center flex-column"

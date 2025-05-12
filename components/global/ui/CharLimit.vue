@@ -1,5 +1,5 @@
 <template>
-  <div class="char-limit" v-if="charLimit">
+  <div v-if="charLimit" class="char-limit">
     MAX {{ charLimit }}
     <v-progress-circular
       v-model="parsedCharLimit"
@@ -12,10 +12,16 @@
 </template>
 
 <script lang="ts" setup>
-const props = defineProps<{
-  charLimit: number;
-  charNumber: string;
-}>();
+const props = defineProps({
+  charLimit: {
+    type: Number,
+    default: 0,
+  },
+  charNumber: {
+    type: String,
+    default: "",
+  },
+});
 
 const parsedCharLimit = computed(() => {
   return (props.charNumber.length / props.charLimit) * 100;
@@ -26,8 +32,7 @@ const parsedCharLimit = computed(() => {
 .char-limit {
   display: flex;
   align-items: center;
-  gap: 10px;
-
-  font-size: 14px;
+  gap: 0.5rem;
+  font-size: $text-sm;
 }
 </style>
