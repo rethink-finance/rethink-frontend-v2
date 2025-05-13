@@ -64,6 +64,7 @@ export interface IProposal {
   isWhitelistedDeposits: boolean;
   isNotTransferable: boolean;
   useLegacyFlows: boolean;
+  limitsEnabled: boolean;
   minDeposit: string;
   maxDeposit: string;
   minWithdrawal: string;
@@ -378,8 +379,15 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       isEditable: true,
     },
     {
-      label: "Use Legacy Flows",
+      label: "Use Legacy Management Flows",
       key: "useLegacyFlows",
+      type: InputType.Checkbox,
+      rules: [],
+      isEditable: true,
+    },
+    {
+      label: "Deposit/withdrawal Limits",
+      key: "limitsEnabled",
       isToggleable: true,
       isToggleOn: false,
       fields: [

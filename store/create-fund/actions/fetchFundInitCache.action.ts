@@ -95,7 +95,7 @@ export const fetchBaseTokenDetails = async (chainId: ChainId, baseTokenAddress: 
     1,
     [205],
   );
-  console.debug("baseDecimals")
+  console.debug("baseDecimals", baseDecimals)
 
   const baseSymbol = await web3Store.callWithRetry(
     chainId,
@@ -104,7 +104,7 @@ export const fetchBaseTokenDetails = async (chainId: ChainId, baseTokenAddress: 
     1,
     [205],
   );
-  console.debug("baseSymbol")
+  console.debug("baseSymbol", baseSymbol)
 
   return [Number(baseDecimals), baseSymbol];
 }
@@ -126,7 +126,6 @@ export const fetchFundInitCacheAction = async (
   }
   const fundFactoryContract = web3Store.chainContracts[fundChainId]?.fundFactoryContract;
   console.debug("fetch fundInitCache", fundChainId, "deployer:", deployerAddress)
-  console.debug("fetch fundInitCache fundFactoryContract", fundFactoryContract, web3Store.chainContracts[fundChainId])
 
   const fundInitCache: IFundInitCache = await web3Store.callWithRetry(
     fundChainId,
@@ -181,6 +180,16 @@ export const fetchFundInitCacheAction = async (
     baseDecimals,
     baseSymbol,
   };
+
+  const flowsConfig = fundInitCache?.flowsConfig || {};
+  fundInitCache.flowsConfig = {
+    ...flowsConfig,
+    minDeposit: flowsConfig?.minDeposit?.toString() || "0",
+    maxDeposit: flowsConfig?.maxDeposit?.toString() || "0",
+    minWithdrawal: flowsConfig?.minWithdrawal?.toString() || "0",
+    maxWithdrawal: flowsConfig?.maxWithdrawal?.toString() || "0",
+    useLegacyFlows: flowsConfig.flowVersion.toString() === "0",
+  }
 
   createFundStore.fundInitCache = fundInitCache;
   console.log("fund init cache parsed", toRaw(createFundStore.fundInitCache));

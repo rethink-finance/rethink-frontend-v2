@@ -287,6 +287,7 @@ import {
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
 import type IFundInitCache from "~/types/fund_init_cache";
+import type IFundFlowsConfig from "~/types/fund_flows_config";
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
 const web3Store = useWeb3Store();
@@ -324,12 +325,13 @@ const selectedChainId = ref<ChainId>(networkChoices[0].value);
 // to prevent race conditions.
 const fundInitCache = ref<IFundInitCache | undefined>(undefined);
 const fundSettings = computed<IFundSettings>(() => fundInitCache?.value?.fundSettings || {} as IFundSettings);
+const fundFlowsConfig = computed<IFundFlowsConfig>(() => fundInitCache?.value?.flowsConfig || {} as IFundFlowsConfig);
 const fundMetadata = computed(() => fundInitCache?.value?.fundMetadata || {});
 const fundGovernorData = computed(() => fundInitCache?.value?.governorData || {});
 
 // Fetch Fund Cache and fill the form data with the fetched fund cache.
 const setFieldValue = (field: IField) => {
-  if (![InputType.Image, InputType.Textarea, InputType.Select, InputType.Period].includes(field.type)) {
+  if (![InputType.Image, InputType.Textarea, InputType.Select, InputType.Period, InputType.Checkbox].includes(field.type)) {
     field.type = InputType.Text;
   }
   field.isToggleable = false;
@@ -345,6 +347,14 @@ const setFieldValue = (field: IField) => {
     }
 
     field.value = cachedValue;
+  } else if (fieldKey in fundFlowsConfig.value) {
+    console.log("Parse flows config field", fieldKey, fundFlowsConfig.value)
+    cachedValue = fundFlowsConfig.value[fieldKey as keyof IFundFlowsConfig];
+    if (typeof cachedValue === "bigint") {
+      field.value = cachedValue.toString();
+    } else {
+      field.value = cachedValue;
+    }
   } else if (fieldKey in fundMetadata.value) {
     cachedValue = fundMetadata.value[fieldKey];
     field.value = cachedValue;
@@ -695,7 +705,7 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
   });
   console.log("output:", output);
 
-  // find basic step and add custom fields to that step
+  // find the basic step and add custom fields to that step
   if (stepKey === OnboardingStep.Basics) {
     if (Object.keys(stepperEntry).length === 0) return output;
 
@@ -729,17 +739,17 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
 
 
 const getFieldByStepAndFieldKey =(
-  stepperEntry: IOnboardingStep[],
   stepKey: string,
   fieldKey: string,
 ) =>{
-  const field = stepperEntry
+  // Find the step key and then find the field key.
+  const field = stepperEntry.value
     ?.find(step => step.key === stepKey)?.fields
-    ?.flatMap(field => field.fields || field)
-    ?.find(field => field.key === fieldKey);
+    ?.flatMap(field => [field, ...field?.fields || []])
+    ?.find(field => field?.key === fieldKey);
 
   if (!field) {
-    console.error(`Field ${fieldKey} not found in step ${stepKey}`);
+    console.error(`Field ${fieldKey} not found in step ${stepKey}`, field);
     return "";
   }
   const fieldValue = field?.value;
@@ -778,12 +788,12 @@ const formatFundMetaData = () => {
   const customFields = findCustomFieldsFromStep(OnboardingStep.Basics);
 
   return  {
-    description: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "description"),
-    photoUrl: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "photoUrl"),
-    plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "plannedSettlementPeriod"),
-    strategistName : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistName"),
-    strategistUrl : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistUrl"),
-    oivChatUrl : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "oivChatUrl"),
+    description: getFieldByStepAndFieldKey(OnboardingStep.Basics, "description"),
+    photoUrl: getFieldByStepAndFieldKey(OnboardingStep.Basics, "photoUrl"),
+    plannedSettlementPeriod: getFieldByStepAndFieldKey(OnboardingStep.Basics, "plannedSettlementPeriod"),
+    strategistName : getFieldByStepAndFieldKey(OnboardingStep.Basics, "strategistName"),
+    strategistUrl : getFieldByStepAndFieldKey(OnboardingStep.Basics, "strategistUrl"),
+    oivChatUrl : getFieldByStepAndFieldKey(OnboardingStep.Basics, "oivChatUrl"),
     ...Object.fromEntries(customFields.map((field) => [field.key, field.value])),
   }
 };
@@ -791,13 +801,13 @@ const formatFundMetaData = () => {
 const getFeeValue = (feeKey: string) => {
   return toggledOffFields.value.includes(feeKey)
     ? 0
-    : Number(fromPercentageToBps(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fee, feeKey)));
+    : Number(fromPercentageToBps(getFieldByStepAndFieldKey(OnboardingStep.Fee, feeKey)));
 };
 
 const getFeeCollectors = (feeKey: string) => {
   return toggledOffFields.value.includes(feeKey)
     ? ethers.ZeroAddress
-    : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fee, feeKey);
+    : getFieldByStepAndFieldKey(OnboardingStep.Fee, feeKey);
 };
 
 const formatFeeCollectors = () => {
@@ -810,20 +820,14 @@ const formatFeeCollectors = () => {
 };
 
 const formatInitializeData = () => {
-  // Helper to get the limits field group from management step
-  const getLimitsFieldGroup = () => {
-    const managementStep = stepperEntry.value.find(step => step.key === OnboardingStep.Management);
-    return managementStep?.fields?.find(field => "isToggleable" in field && field.fields?.some(f => f.key === "minDeposit")) as IFieldGroup | undefined;
-  };
-
-  // Get the limits field group
-  const limitsFieldGroup = getLimitsFieldGroup();
-  const limitsEnabled = limitsFieldGroup?.isToggleOn ?? false;
+  const basicsStep = stepperEntry.value.find(step => step.key === OnboardingStep.Basics);
+  const limitsEnabledGroup = basicsStep?.fields?.find(field => field.key === "limitsEnabled") as IFieldGroup | undefined;
+  const limitsEnabled = limitsEnabledGroup?.isToggleOn ?? false;
 
   // Get limit values, defaulting to 0 if disabled or not set
   const getLimit = (key: string) => {
     if (!limitsEnabled) return 0;
-    const field = limitsFieldGroup?.fields?.find(f => f.key === key);
+    const field = limitsEnabledGroup?.fields?.find(f => f.key === key);
     return field?.value ? parseInt(field.value as string) : 0;
   };
 
@@ -834,40 +838,42 @@ const formatInitializeData = () => {
       getFeeValue("performanceFee"),// performanceFee
       getFeeValue("managementFee"),// managementFee
       0, // performaceHurdleRateBps, default to 0
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "baseToken"), // baseToken
+      getFieldByStepAndFieldKey(OnboardingStep.Basics, "baseToken"), // baseToken
       "0x0000000000000000000000000000000000000000",
       false,
       false,
       allowedDepositors.value, // allowedDepositAddrs
       [], // allowedManagers, default empty array
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "governanceToken"), // governanceToken
+      getFieldByStepAndFieldKey(OnboardingStep.Governance, "governanceToken"), // governanceToken
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "fundName"),
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "fundSymbol"),
+      getFieldByStepAndFieldKey(OnboardingStep.Basics, "fundName"),
+      getFieldByStepAndFieldKey(OnboardingStep.Basics, "fundSymbol"),
       formatFeeCollectors(),
     ],
     [
-      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "quorum") as string), // quorumFraction
-      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "lateQuorum") as string),
-      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "votingDelay") as string),
-      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "votingPeriod") as string),
-      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "proposalThreshold") as string),
+      parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "quorum") as string), // quorumFraction
+      parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "lateQuorum") as string),
+      parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "votingDelay") as string),
+      parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "votingPeriod") as string),
+      parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "proposalThreshold") as string),
     ],
     JSON.stringify(formatFundMetaData()),
     0, // feePerformancePeriod, default to 0
     0, // managementFeePeriod, default to 0
     [
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "useLegacyFlows") ? 0 : 1, // isLegacy (0 for legacy, 1 for non-legacy)
+      getFieldByStepAndFieldKey(OnboardingStep.Basics, "useLegacyFlows") ? 0 : 1, // isLegacy (0 for legacy, 1 for non-legacy)
       getLimit("minDeposit"), // minDeposit
       getLimit("maxDeposit"), // maxDeposit
       getLimit("minWithdrawal"), // minWithdrawal
       getLimit("maxWithdrawal"), // maxWithdrawal
       limitsEnabled, // limitsEnabled
     ],
-    getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "isNotTransferable"), // isNonTransferable
+    getFieldByStepAndFieldKey(OnboardingStep.Basics, "isNotTransferable"), // isNonTransferable
   ]
 
+  console.log("useLegacyFlows", getFieldByStepAndFieldKey(OnboardingStep.Basics, "useLegacyFlows"));
+  console.log("stepperEntry.value", stepperEntry.value);
   console.log("output", output);
   return output;
 }

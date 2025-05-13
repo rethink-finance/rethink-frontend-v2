@@ -47,16 +47,20 @@ export const useBlockTimeStore = defineStore({
         );
 
         console.log("blockTime get current block", currentBlock)
+        const currentBlockNumber = Number(currentBlock.number);
         let previousBlock;
-        try {
-          previousBlock = await this.web3Store.callWithRetry(
-            mappedChainId,
-            () => web3Provider.eth.getBlock(Number(currentBlock.number) - 1000),
-            0,
-            [],
-            1000,
-          );
-        } catch {
+        if (currentBlockNumber - 1000 >= 0) {
+          try {
+            previousBlock = await this.web3Store.callWithRetry(
+              mappedChainId,
+              () => web3Provider.eth.getBlock(currentBlockNumber - 1000),
+              0,
+              [],
+              1000,
+            );
+          } catch {}
+        }
+        if (!previousBlock) {
           previousBlock = await this.web3Store.callWithRetry(
             mappedChainId,
             () => web3Provider.eth.getBlock("earliest"),

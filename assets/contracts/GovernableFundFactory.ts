@@ -7,259 +7,6 @@ export const GovernableFundFactory = {
       "type": "constructor",
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "fundContractAddr",
-          "type": "address",
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "govContractAddr",
-          "type": "address",
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "safeProxyAddr",
-          "type": "address",
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "rolesModifier",
-          "type": "address",
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "governanceToken",
-          "type": "address",
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "fundName",
-          "type": "string",
-        },
-      ],
-      "name": "GovernableFundFactory_CreatedAndInitializedFundEvent",
-      "type": "event",
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint8",
-          "name": "version",
-          "type": "uint8",
-        },
-      ],
-      "name": "Initialized",
-      "type": "event",
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "governor",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "fund",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "safeProxyFactory",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "safeSingleton",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "safeFallbackHandler",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "safeMultisendAddress",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "wrappedTokenFactory",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "navCalculatorAddress",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "zodiacRolesModifierModule",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "fundDelgateCallFlowSingletonAddress",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "fundDelgateCallNavSingletonAddress",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "governableContractFactorySingletonAddress",
-          "type": "address",
-        },
-      ],
-      "name": "initialize",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function",
-    },
-    {
-      "inputs": [],
-      "name": "registeredFundsLength",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256",
-        },
-      ],
-      "stateMutability": "view",
-      "type": "function",
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "start",
-          "type": "uint256",
-        },
-        {
-          "internalType": "uint256",
-          "name": "end",
-          "type": "uint256",
-        },
-      ],
-      "name": "registeredFundsData",
-      "outputs": [
-        {
-          "internalType": "address[]",
-          "name": "",
-          "type": "address[]",
-        },
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "depositFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "withdrawFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "performanceFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "managementFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "performaceHurdleRateBps",
-              "type": "uint256",
-            },
-            {
-              "internalType": "address",
-              "name": "baseToken",
-              "type": "address",
-            },
-            {
-              "internalType": "address",
-              "name": "safe",
-              "type": "address",
-            },
-            {
-              "internalType": "bool",
-              "name": "isExternalGovTokenInUse",
-              "type": "bool",
-            },
-            {
-              "internalType": "bool",
-              "name": "isWhitelistedDeposits",
-              "type": "bool",
-            },
-            {
-              "internalType": "address[]",
-              "name": "allowedDepositAddrs",
-              "type": "address[]",
-            },
-            {
-              "internalType": "address[]",
-              "name": "allowedManagers",
-              "type": "address[]",
-            },
-            {
-              "internalType": "address",
-              "name": "governanceToken",
-              "type": "address",
-            },
-            {
-              "internalType": "address",
-              "name": "fundAddress",
-              "type": "address",
-            },
-            {
-              "internalType": "address",
-              "name": "governor",
-              "type": "address",
-            },
-            {
-              "internalType": "string",
-              "name": "fundName",
-              "type": "string",
-            },
-            {
-              "internalType": "string",
-              "name": "fundSymbol",
-              "type": "string",
-            },
-            {
-              "internalType": "address[4]",
-              "name": "feeCollectors",
-              "type": "address[4]",
-            },
-          ],
-          "internalType": "struct IGovernableFundStorage.Settings[]",
-          "name": "",
-          "type": "tuple[]",
-        },
-      ],
-      "stateMutability": "view",
-      "type": "function",
-    },
-    {
       "inputs": [
         {
           "components": [
@@ -400,6 +147,48 @@ export const GovernableFundFactory = {
           "name": "_feeManagePeriod",
           "type": "uint256",
         },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "flowVersion",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "minDeposit",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxDeposit",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "minWithdrawal",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxWithdrawal",
+              "type": "uint256",
+            },
+            {
+              "internalType": "bool",
+              "name": "limitsEnabled",
+              "type": "bool",
+            },
+          ],
+          "internalType": "struct IGovernableFundStorage.FlowsConfig",
+          "name": "_flowsConfig",
+          "type": "tuple",
+        },
+        {
+          "internalType": "bool",
+          "name": "_isNonTransferable",
+          "type": "bool",
+        },
       ],
       "name": "createFund",
       "outputs": [
@@ -410,6 +199,199 @@ export const GovernableFundFactory = {
         },
       ],
       "stateMutability": "nonpayable",
+      "type": "function",
+    },
+    {
+      "inputs": [],
+      "name": "finalizeCreateFund",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address",
+        },
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function",
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "deployer",
+          "type": "address",
+        },
+      ],
+      "name": "getFundInitializationCache",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "fundContractAddr",
+              "type": "address",
+            },
+            {
+              "internalType": "address",
+              "name": "rolesModifier",
+              "type": "address",
+            },
+            {
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "depositFee",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "withdrawFee",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "performanceFee",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "managementFee",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "performaceHurdleRateBps",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "address",
+                  "name": "baseToken",
+                  "type": "address",
+                },
+                {
+                  "internalType": "address",
+                  "name": "safe",
+                  "type": "address",
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isExternalGovTokenInUse",
+                  "type": "bool",
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isWhitelistedDeposits",
+                  "type": "bool",
+                },
+                {
+                  "internalType": "address[]",
+                  "name": "allowedDepositAddrs",
+                  "type": "address[]",
+                },
+                {
+                  "internalType": "address[]",
+                  "name": "allowedManagers",
+                  "type": "address[]",
+                },
+                {
+                  "internalType": "address",
+                  "name": "governanceToken",
+                  "type": "address",
+                },
+                {
+                  "internalType": "address",
+                  "name": "fundAddress",
+                  "type": "address",
+                },
+                {
+                  "internalType": "address",
+                  "name": "governor",
+                  "type": "address",
+                },
+                {
+                  "internalType": "string",
+                  "name": "fundName",
+                  "type": "string",
+                },
+                {
+                  "internalType": "string",
+                  "name": "fundSymbol",
+                  "type": "string",
+                },
+                {
+                  "internalType": "address[4]",
+                  "name": "feeCollectors",
+                  "type": "address[4]",
+                },
+              ],
+              "internalType": "struct IGovernableFundStorage.Settings",
+              "name": "fundSettings",
+              "type": "tuple",
+            },
+            {
+              "internalType": "string",
+              "name": "_fundMetadata",
+              "type": "string",
+            },
+            {
+              "internalType": "uint256",
+              "name": "_feePerformancePeriod",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "_feeManagePeriod",
+              "type": "uint256",
+            },
+            {
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "flowVersion",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "minDeposit",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "maxDeposit",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "minWithdrawal",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "maxWithdrawal",
+                  "type": "uint256",
+                },
+                {
+                  "internalType": "bool",
+                  "name": "limitsEnabled",
+                  "type": "bool",
+                },
+              ],
+              "internalType": "struct IGovernableFundStorage.FlowsConfig",
+              "name": "flowsConfig",
+              "type": "tuple",
+            },
+            {
+              "internalType": "bool",
+              "name": "isNonTransferable",
+              "type": "bool",
+            },
+          ],
+          "internalType": "struct GovernableFundFactory.InitializationCache",
+          "name": "",
+          "type": "tuple",
+        },
+      ],
+      "stateMutability": "view",
       "type": "function",
     },
     {
@@ -586,8 +568,8 @@ export const GovernableFundFactory = {
               "type": "bool",
             },
           ],
-          "internalType": "struct IGovernableFundStorage.FlowConfigs",
-          "name": "_flowConfigs",
+          "internalType": "struct IGovernableFundStorage.FlowsConfig",
+          "name": "_flowsConfig",
           "type": "tuple",
         },
         {
@@ -610,14 +592,198 @@ export const GovernableFundFactory = {
     {
       "inputs": [
         {
-          "internalType": "bytes[]",
-          "name": "calldatas",
-          "type": "bytes[]",
+          "internalType": "address",
+          "name": "governor",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "fund",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "safeProxyFactory",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "safeSingleton",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "safeFallbackHandler",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "safeMultisendAddress",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "wrappedTokenFactory",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "navCalculatorAddress",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "zodiacRolesModifierModule",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "fundDelgateCallFlowSingletonAddress",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "fundDelgateCallNavSingletonAddress",
+          "type": "address",
+        },
+        {
+          "internalType": "address",
+          "name": "governableContractFactorySingletonAddress",
+          "type": "address",
         },
       ],
-      "name": "submitPermissions",
+      "name": "initialize",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function",
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "start",
+          "type": "uint256",
+        },
+        {
+          "internalType": "uint256",
+          "name": "end",
+          "type": "uint256",
+        },
+      ],
+      "name": "registeredFundsData",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]",
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "depositFee",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "withdrawFee",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "performanceFee",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "managementFee",
+              "type": "uint256",
+            },
+            {
+              "internalType": "uint256",
+              "name": "performaceHurdleRateBps",
+              "type": "uint256",
+            },
+            {
+              "internalType": "address",
+              "name": "baseToken",
+              "type": "address",
+            },
+            {
+              "internalType": "address",
+              "name": "safe",
+              "type": "address",
+            },
+            {
+              "internalType": "bool",
+              "name": "isExternalGovTokenInUse",
+              "type": "bool",
+            },
+            {
+              "internalType": "bool",
+              "name": "isWhitelistedDeposits",
+              "type": "bool",
+            },
+            {
+              "internalType": "address[]",
+              "name": "allowedDepositAddrs",
+              "type": "address[]",
+            },
+            {
+              "internalType": "address[]",
+              "name": "allowedManagers",
+              "type": "address[]",
+            },
+            {
+              "internalType": "address",
+              "name": "governanceToken",
+              "type": "address",
+            },
+            {
+              "internalType": "address",
+              "name": "fundAddress",
+              "type": "address",
+            },
+            {
+              "internalType": "address",
+              "name": "governor",
+              "type": "address",
+            },
+            {
+              "internalType": "string",
+              "name": "fundName",
+              "type": "string",
+            },
+            {
+              "internalType": "string",
+              "name": "fundSymbol",
+              "type": "string",
+            },
+            {
+              "internalType": "address[4]",
+              "name": "feeCollectors",
+              "type": "address[4]",
+            },
+          ],
+          "internalType": "struct IGovernableFundStorage.Settings[]",
+          "name": "",
+          "type": "tuple[]",
+        },
+      ],
+      "stateMutability": "view",
+      "type": "function",
+    },
+    {
+      "inputs": [],
+      "name": "registeredFundsLength",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256",
+        },
+      ],
+      "stateMutability": "view",
       "type": "function",
     },
     {
@@ -639,155 +805,73 @@ export const GovernableFundFactory = {
       "type": "function",
     },
     {
-      "inputs": [],
-      "name": "finalizeCreateFund",
-      "outputs": [
+      "inputs": [
         {
-          "internalType": "address",
-          "name": "",
-          "type": "address",
+          "internalType": "bytes[]",
+          "name": "calldatas",
+          "type": "bytes[]",
         },
       ],
+      "name": "submitPermissions",
+      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function",
     },
     {
+      "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
           "internalType": "address",
-          "name": "deployer",
+          "name": "fundContractAddr",
           "type": "address",
         },
-      ],
-      "name": "getFundInitializationCache",
-      "outputs": [
         {
-          "components": [
-            {
-              "internalType": "address",
-              "name": "fundContractAddr",
-              "type": "address",
-            },
-            {
-              "internalType": "address",
-              "name": "rolesModifier",
-              "type": "address",
-            },
-            {
-              "components": [
-                {
-                  "internalType": "uint256",
-                  "name": "depositFee",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "withdrawFee",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "performanceFee",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "managementFee",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "performaceHurdleRateBps",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "address",
-                  "name": "baseToken",
-                  "type": "address",
-                },
-                {
-                  "internalType": "address",
-                  "name": "safe",
-                  "type": "address",
-                },
-                {
-                  "internalType": "bool",
-                  "name": "isExternalGovTokenInUse",
-                  "type": "bool",
-                },
-                {
-                  "internalType": "bool",
-                  "name": "isWhitelistedDeposits",
-                  "type": "bool",
-                },
-                {
-                  "internalType": "address[]",
-                  "name": "allowedDepositAddrs",
-                  "type": "address[]",
-                },
-                {
-                  "internalType": "address[]",
-                  "name": "allowedManagers",
-                  "type": "address[]",
-                },
-                {
-                  "internalType": "address",
-                  "name": "governanceToken",
-                  "type": "address",
-                },
-                {
-                  "internalType": "address",
-                  "name": "fundAddress",
-                  "type": "address",
-                },
-                {
-                  "internalType": "address",
-                  "name": "governor",
-                  "type": "address",
-                },
-                {
-                  "internalType": "string",
-                  "name": "fundName",
-                  "type": "string",
-                },
-                {
-                  "internalType": "string",
-                  "name": "fundSymbol",
-                  "type": "string",
-                },
-                {
-                  "internalType": "address[4]",
-                  "name": "feeCollectors",
-                  "type": "address[4]",
-                },
-              ],
-              "internalType": "struct IGovernableFundStorage.Settings",
-              "name": "fundSettings",
-              "type": "tuple",
-            },
-            {
-              "internalType": "string",
-              "name": "_fundMetadata",
-              "type": "string",
-            },
-            {
-              "internalType": "uint256",
-              "name": "_feePerformancePeriod",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "_feeManagePeriod",
-              "type": "uint256",
-            },
-          ],
-          "internalType": "struct GovernableFundFactory.InitializationCache",
-          "name": "",
-          "type": "tuple",
+          "indexed": false,
+          "internalType": "address",
+          "name": "govContractAddr",
+          "type": "address",
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "safeProxyAddr",
+          "type": "address",
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "rolesModifier",
+          "type": "address",
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "governanceToken",
+          "type": "address",
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "fundName",
+          "type": "string",
         },
       ],
-      "stateMutability": "view",
-      "type": "function",
+      "name": "GovernableFundFactory_CreatedAndInitializedFundEvent",
+      "type": "event",
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "version",
+          "type": "uint8",
+        },
+      ],
+      "name": "Initialized",
+      "type": "event",
     },
   ],
   "metadata": "{\"compiler\":{\"version\":\"0.8.28+commit.7893614a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fundContractAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"govContractAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"safeProxyAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"rolesModifier\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"governanceToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"fundName\",\"type\":\"string\"}],\"name\":\"GovernableFundFactory_CreatedAndInitializedFundEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"depositFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performanceFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"managementFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performaceHurdleRateBps\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"baseToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"safe\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isExternalGovTokenInUse\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"isWhitelistedDeposits\",\"type\":\"bool\"},{\"internalType\":\"address[]\",\"name\":\"allowedDepositAddrs\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedManagers\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"governanceToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"fundAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"governor\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"fundName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundSymbol\",\"type\":\"string\"},{\"internalType\":\"address[4]\",\"name\":\"feeCollectors\",\"type\":\"address[4]\"}],\"internalType\":\"struct IGovernableFundStorage.Settings\",\"name\":\"fundSettings\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"quorumFraction\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lateQuorum\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"votingDelay\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"votingPeriod\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"proposalThreshold\",\"type\":\"uint256\"}],\"internalType\":\"struct GovernableFundFactory.GovernorParams\",\"name\":\"governorSettings\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"_fundMetadata\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"_feePerformancePeriod\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_feeManagePeriod\",\"type\":\"uint256\"}],\"name\":\"createFund\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"finalizeCreateFund\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"deployer\",\"type\":\"address\"}],\"name\":\"getFundInitializationCache\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"fundContractAddr\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rolesModifier\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"depositFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performanceFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"managementFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performaceHurdleRateBps\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"baseToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"safe\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isExternalGovTokenInUse\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"isWhitelistedDeposits\",\"type\":\"bool\"},{\"internalType\":\"address[]\",\"name\":\"allowedDepositAddrs\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedManagers\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"governanceToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"fundAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"governor\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"fundName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundSymbol\",\"type\":\"string\"},{\"internalType\":\"address[4]\",\"name\":\"feeCollectors\",\"type\":\"address[4]\"}],\"internalType\":\"struct IGovernableFundStorage.Settings\",\"name\":\"fundSettings\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"_fundMetadata\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"_feePerformancePeriod\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_feeManagePeriod\",\"type\":\"uint256\"}],\"internalType\":\"struct GovernableFundFactory.InitializationCache\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"depositFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performanceFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"managementFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performaceHurdleRateBps\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"baseToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"safe\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isExternalGovTokenInUse\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"isWhitelistedDeposits\",\"type\":\"bool\"},{\"internalType\":\"address[]\",\"name\":\"allowedDepositAddrs\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedManagers\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"governanceToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"fundAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"governor\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"fundName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundSymbol\",\"type\":\"string\"},{\"internalType\":\"address[4]\",\"name\":\"feeCollectors\",\"type\":\"address[4]\"}],\"internalType\":\"struct IGovernableFundStorage.Settings\",\"name\":\"fundSettings\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"quorumFraction\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lateQuorum\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"votingDelay\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"votingPeriod\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"proposalThreshold\",\"type\":\"uint256\"}],\"internalType\":\"struct GovernableFundFactory.GovernorParams\",\"name\":\"governorSettings\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"_fundMetadata\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"_feePerformancePeriod\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_feeManagePeriod\",\"type\":\"uint256\"}],\"name\":\"initCreateFund\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"governor\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"fund\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"safeProxyFactory\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"safeSingleton\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"safeFallbackHandler\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"safeMultisendAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"wrappedTokenFactory\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"navCalculatorAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"zodiacRolesModifierModule\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"fundDelgateCallFlowSingletonAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"fundDelgateCallNavSingletonAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"governableContractFactorySingletonAddress\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"start\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"end\",\"type\":\"uint256\"}],\"name\":\"registeredFundsData\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"depositFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performanceFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"managementFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performaceHurdleRateBps\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"baseToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"safe\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isExternalGovTokenInUse\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"isWhitelistedDeposits\",\"type\":\"bool\"},{\"internalType\":\"address[]\",\"name\":\"allowedDepositAddrs\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedManagers\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"governanceToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"fundAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"governor\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"fundName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundSymbol\",\"type\":\"string\"},{\"internalType\":\"address[4]\",\"name\":\"feeCollectors\",\"type\":\"address[4]\"}],\"internalType\":\"struct IGovernableFundStorage.Settings[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registeredFundsLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"navExecutorAddr\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"storeNAV\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes[]\",\"name\":\"calldatas\",\"type\":\"bytes[]\"}],\"name\":\"submitPermissions\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"events\":{\"Initialized(uint8)\":{\"details\":\"Triggered when the contract has been initialized or reinitialized.\"}},\"kind\":\"dev\",\"methods\":{\"constructor\":{\"custom:oz-upgrades-unsafe-allow\":\"constructor\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"project:/contracts/fund/GovernableFundFactory.sol\":\"GovernableFundFactory\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/governance/utils/IVotes.sol\":{\"keccak256\":\"0x1618ddebe73377660f6da71afcba35d5ac4c4600918b3a381d9c6f37eba613eb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://666c8d7c62478b55e082f1835275b7acfc1595491998df6d67183ff2c70eab96\",\"dweb:/ipfs/QmVXmnXfxNaLhoX283dqyKJ8DJbF5thUd9sMuRoFpNMwr7\"]},\"@openzeppelin/contracts/interfaces/IERC1967.sol\":{\"keccak256\":\"0x3cbef5ebc24b415252e2f8c0c9254555d30d9f085603b4b80d9b5ed20ab87e90\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://e8fa670c3bdce78e642cc6ae11c4cb38b133499cdce5e1990a9979d424703263\",\"dweb:/ipfs/QmVxeCUk4jL2pXQyhsoNJwyU874wRufS2WvGe8TgPKPqhE\"]},\"@openzeppelin/contracts/interfaces/draft-IERC1822.sol\":{\"keccak256\":\"0x1d4afe6cb24200cc4545eed814ecf5847277dfe5d613a1707aad5fceecebcfff\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://383fb7b8181016ac5ccf07bc9cdb7c1b5045ea36e2cc4df52bcbf20396fc7688\",\"dweb:/ipfs/QmYJ7Cg4WmE3rR8KGQxjUCXFfTH6TcwZ2Z1f6tPrq7jHFr\"]},\"@openzeppelin/contracts/proxy/ERC1967/ERC1967Upgrade.sol\":{\"keccak256\":\"0x3b21ae06bf5957f73fa16754b0669c77b7abd8ba6c072d35c3281d446fdb86c2\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://2db8e18505e86e02526847005d7287a33e397ed7fb9eaba3fd4a4a197add16e2\",\"dweb:/ipfs/QmW9BSuKTzHWHBNSHF4L8XfVuU1uJrP2vLg84YtBd8mL82\"]},\"@openzeppelin/contracts/proxy/Proxy.sol\":{\"keccak256\":\"0xc130fe33f1b2132158531a87734153293f6d07bc263ff4ac90e85da9c82c0e27\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://8831721b6f4cc26534d190f9f1631c3f59c9ff38efdd911f85e0882b8e360472\",\"dweb:/ipfs/QmQZnLErZNStirSQ13ZNWQgvEYUtGE5tXYwn4QUPaVUfPN\"]},\"@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol\":{\"keccak256\":\"0x85439e74ab467b6a23d45d32bdc9506cbc3760320289afd605f11638c4138e95\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://6e18633c182e445895e5a70f9e79f2558d0f6eac86767fd1d90552177df2955c\",\"dweb:/ipfs/QmagUFUJbiNGRGGajg9CF5LPuopc44XSCtcCaYvQasBuX9\"]},\"@openzeppelin/contracts/proxy/beacon/IBeacon.sol\":{\"keccak256\":\"0xd50a3421ac379ccb1be435fa646d66a65c986b4924f0849839f08692f39dde61\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://ada1e030c0231db8d143b44ce92b4d1158eedb087880cad6d8cc7bd7ebe7b354\",\"dweb:/ipfs/QmWZ2NHZweRpz1U9GF6R1h65ri76dnX7fNxLBeM2t5N5Ce\"]},\"@openzeppelin/contracts/proxy/utils/Initializable.sol\":{\"keccak256\":\"0x3d6069be9b4c01fb81840fb9c2c4dc58dd6a6a4aafaa2c6837de8699574d84c6\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://720d6bb56ea0c4ef781c0bd65c5bd0541f5a46100163b2587170f97658d2deed\",\"dweb:/ipfs/QmTS2biLVPrv8CeeXCaKmkFxonMiRvc1LxiYBRYDAJHQUS\"]},\"@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0x287b55befed2961a7eabd7d7b1b2839cbca8a5b80ef8dcbb25ed3d4c2002c305\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://bd39944e8fc06be6dbe2dd1d8449b5336e23c6a7ba3e8e9ae5ae0f37f35283f5\",\"dweb:/ipfs/QmPV3FGYjVwvKSgAXKUN3r9T9GwniZz83CxBpM7vyj2G53\"]},\"@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol\":{\"keccak256\":\"0x8de418a5503946cabe331f35fe242d3201a73f67f77aaeb7110acb1f30423aca\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5a376d3dda2cb70536c0a45c208b29b34ac560c4cb4f513a42079f96ba47d2dd\",\"dweb:/ipfs/QmZQg6gn1sUpM8wHzwNvSnihumUCAhxD119MpXeKp8B9s8\"]},\"@openzeppelin/contracts/utils/Address.sol\":{\"keccak256\":\"0x006dd67219697fe68d7fbfdea512e7c4cb64a43565ed86171d67e844982da6fa\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://2455248c8ddd9cc6a7af76a13973cddf222072427e7b0e2a7d1aff345145e931\",\"dweb:/ipfs/QmfYjnjRbWqYpuxurqveE6HtzsY1Xx323J428AKQgtBJZm\"]},\"@openzeppelin/contracts/utils/StorageSlot.sol\":{\"keccak256\":\"0xf09e68aa0dc6722a25bc46490e8d48ed864466d17313b8a0b254c36b54e49899\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://e26daf81e2252dc1fe1ce0e4b55c2eb7c6d1ee84ae6558d1a9554432ea1d32da\",\"dweb:/ipfs/Qmb1UANWiWq5pCKbmHSu772hd4nt374dVaghGmwSVNuk8Q\"]},\"project:/contracts/external/safe/SafeProxy.sol\":{\"keccak256\":\"0x0a7b11c0961cfd16b95396e4b290b8f09faadd4bd99edafd6394369de70d9780\",\"license\":\"LGPL-3.0-only\",\"urls\":[\"bzz-raw://cca71a21f7f907b0841dc6e8e799d448eecc09e85cf6cfcd3c934eac7d62607d\",\"dweb:/ipfs/QmPqbnBtwVytExd1kFuY43zeDQrUnDzqQf728PJB4VR4eP\"]},\"project:/contracts/fund/GovernableFundFactory.sol\":{\"keccak256\":\"0xf03a0d6820543d6cd04194a345851a26f193a313bfeddd8f75a010ecae78d0cb\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://d773913cd5746e3a505a0f2ce78e536899738c88032c12649dfd7276ab803250\",\"dweb:/ipfs/QmaF8FsECeh17ghRq7H1ZVVsNy6SD7ERZgFx7WSqmQCgE1\"]},\"project:/contracts/fund/InitSafeRolesModule.sol\":{\"keccak256\":\"0x4b5b8b6f270a9648677f5922db58369ad202e0af828ff377ca102f7e6e2b3d63\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://563e3eef91701623a98ce2c4758966f204e3e0ce0c0f00e449d3f3ffbbdb3a50\",\"dweb:/ipfs/QmNxXUG6bkUy8EAtR7WjXCh289jxt1TLd9jj8WPrCdhiQV\"]},\"project:/contracts/interfaces/external/safe/ISafeProxyFactory.sol\":{\"keccak256\":\"0x944b3024203f49d2c0e17c6a72ec4a27f1c983493adae5cb461f1c90f3970c3e\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://70cbd6460604f57f381287c1331756deb9d056aa829798b9d9d8d65741664170\",\"dweb:/ipfs/QmeCfgJDhKUXU4Q7QWrBW6cJGYCJ9pxGjLPF7ghqjuAY8S\"]},\"project:/contracts/interfaces/fund/IGovernableContractFactory.sol\":{\"keccak256\":\"0x918e1993594d85c5fc7559139fbf93ee9e1e4f736a1430bae1fe05e5a7b8c21b\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://e6f051382f4666d2d2d09a464036f439ff8d05aaa1411a338290f46d84318e65\",\"dweb:/ipfs/QmSCcf7Ha5YSERESAwcPwe1fmvsmfqsSMNqbgaAF8NY7ik\"]},\"project:/contracts/interfaces/fund/IGovernableFund.sol\":{\"keccak256\":\"0x10a56e583a60472d3c38d73f9eb794cba0c1a70def271c1c9438cee4ecddf12f\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://09924149b97c4df04d64c69bfe59a5f1fb40998a1d3f2e3a392169cc11ec0840\",\"dweb:/ipfs/Qmbg4NTnJAdjLJ2HFicrAdFN7rdaPoVVNMLvBCHGuX7wrQ\"]},\"project:/contracts/interfaces/fund/IGovernableFundStorage.sol\":{\"keccak256\":\"0x919df785f5faeab6634999f4ba4ec4d503336871ff17d82f2eec1915d7e74311\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://18b929df3a660dfb0e44717cda7c10d51289030dfbc28ac050c7457de9080dcb\",\"dweb:/ipfs/QmPsNGgq8fZdTPWHC1nc5P5Sta5rajJQsiPShycoXVwA6g\"]},\"project:/contracts/interfaces/fund/IRethinkFundGovernor.sol\":{\"keccak256\":\"0xb87cd64f8e5ede689f3479c1fac60cab10acd5bf2b74ebc711972c647d1678ec\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://dc8c7001f0760f65c369910e507f09685be7a4143943b1f7fe0e8c2e23ac63ba\",\"dweb:/ipfs/QmSZcdmS8J75P7arbjppo2JdfV61tZjn5JSMaCqtSrfeef\"]},\"project:/contracts/interfaces/nav/INAVExecutor.sol\":{\"keccak256\":\"0x665f94b4d37e2ab19def6b860a5af07fb23a2362bac8e683ded7ef4d1a5d6cd1\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://983f88583a0f583cedf620330083643a428ecd7b66a980de20c0d5f1a93e6297\",\"dweb:/ipfs/QmRQX2W2EpJ9oCVndQkRjxcaBrvj3BmNCgBHJf64FLnqAi\"]},\"project:/contracts/interfaces/token/IWrappedTokenFactory.sol\":{\"keccak256\":\"0xb0588aa2ceb073affc167bcf5d7ccbb62bb7ce92a2fc71e393ec5326722514de\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://45f5a68a61d4a0d225031ed9681d3103bc60117285700e03cae68df3194be8af\",\"dweb:/ipfs/QmaZVPdya1YLQQ99YeDShX2bDuXRUGZpY3CvVKy3X2Cpk7\"]}},\"version\":1}",

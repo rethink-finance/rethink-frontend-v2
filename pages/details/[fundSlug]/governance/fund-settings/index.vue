@@ -252,11 +252,11 @@ const initProposalEntry = () => {
     isWhitelistedDeposits: fundDeepCopy?.isWhitelistedDeposits,
     // Management
     isNotTransferable: fundDeepCopy?.isNonTransferable ?? false,
-    useLegacyFlows: fundDeepCopy?.flowConfigs?.flowVersion === 0,
-    minDeposit: fundDeepCopy?.flowConfigs?.minDeposit ?? "",
-    maxDeposit: fundDeepCopy?.flowConfigs?.maxDeposit ?? "",
-    minWithdrawal: fundDeepCopy?.flowConfigs?.minWithdrawal ?? "",
-    maxWithdrawal: fundDeepCopy?.flowConfigs?.maxWithdrawal ?? "",
+    useLegacyFlows: fundDeepCopy?.flowsConfig?.flowVersion === 0,
+    minDeposit: fundDeepCopy?.flowsConfig?.minDeposit ?? "",
+    maxDeposit: fundDeepCopy?.flowsConfig?.maxDeposit ?? "",
+    minWithdrawal: fundDeepCopy?.flowsConfig?.minWithdrawal ?? "",
+    maxWithdrawal: fundDeepCopy?.flowsConfig?.maxWithdrawal ?? "",
   };
 
   whitelistAddresses.value = fundDeepCopy?.allowedDepositAddresses?.map(
@@ -545,7 +545,7 @@ const formatProposalData = () => {
   const maxDeposit = getFieldValueByFieldKey("maxDeposit") as string | undefined;
   const minWithdrawal = getFieldValueByFieldKey("minWithdrawal") as string | undefined;
   const maxWithdrawal = getFieldValueByFieldKey("maxWithdrawal") as string | undefined;
-  const flowConfigs = {
+  const flowsConfig = {
     flowVersion: getFieldValueByFieldKey("useLegacyFlows") ? 0 : 1, // v0 if legacy, v1 if not
     minDeposit: minDeposit ? ethers.parseUnits(minDeposit, 18) : 0,
     maxDeposit: maxDeposit ? ethers.parseUnits(maxDeposit, 18) : 0,
@@ -560,7 +560,7 @@ const formatProposalData = () => {
     JSON.stringify(metaData),
     managementPeriod,
     performancePeriod,
-    flowConfigs,           // Add flow configs
+    flowsConfig,           // Add flows config
     getFieldValueByFieldKey("isNotTransferable"),  // Add transferability flag
   ];
 };
