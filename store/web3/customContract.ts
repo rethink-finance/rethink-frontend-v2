@@ -13,6 +13,9 @@ export class CustomContract extends Contract<any> {
     provider?: HttpProvider,
     options = {},
   ) {
+    if (!address) {
+      console.error("NO ADDRESS for contract", abi);
+    }
     super(abi, address, {
       ...options,
       provider,

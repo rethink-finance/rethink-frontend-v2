@@ -94,6 +94,8 @@
 </template>
 
 <script setup lang="ts">
+
+
 import { ethers } from "ethers";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
@@ -248,6 +250,13 @@ const initProposalEntry = () => {
     // Whitelist
     whitelist: "",
     isWhitelistedDeposits: fundDeepCopy?.isWhitelistedDeposits,
+    // Management
+    isNotTransferable: fundDeepCopy?.isNonTransferable ?? false,
+    useLegacyFlows: fundDeepCopy?.flowConfigs?.flowVersion === 0,
+    minDeposit: fundDeepCopy?.flowConfigs?.minDeposit ?? "",
+    maxDeposit: fundDeepCopy?.flowConfigs?.maxDeposit ?? "",
+    minWithdrawal: fundDeepCopy?.flowConfigs?.minWithdrawal ?? "",
+    maxWithdrawal: fundDeepCopy?.flowConfigs?.maxWithdrawal ?? "",
   };
 
   whitelistAddresses.value = fundDeepCopy?.allowedDepositAddresses?.map(
@@ -531,11 +540,28 @@ const formatProposalData = () => {
       : parseInt(getFieldValueByFieldKey("performanceFeePeriod") as string);
   const managementPeriod = 0; // Note from Rok: always submit 0 here for now
 
+  // Create flow configs object
+  const minDeposit = getFieldValueByFieldKey("minDeposit") as string | undefined;
+  const maxDeposit = getFieldValueByFieldKey("maxDeposit") as string | undefined;
+  const minWithdrawal = getFieldValueByFieldKey("minWithdrawal") as string | undefined;
+  const maxWithdrawal = getFieldValueByFieldKey("maxWithdrawal") as string | undefined;
+  const flowConfigs = {
+    flowVersion: getFieldValueByFieldKey("useLegacyFlows") ? 0 : 1, // v0 if legacy, v1 if not
+    minDeposit: minDeposit ? ethers.parseUnits(minDeposit, 18) : 0,
+    maxDeposit: maxDeposit ? ethers.parseUnits(maxDeposit, 18) : 0,
+    minWithdrawal: minWithdrawal ? ethers.parseUnits(minWithdrawal, 18) : 0,
+    maxWithdrawal: maxWithdrawal ? ethers.parseUnits(maxWithdrawal, 18) : 0,
+    limitsEnabled: true, // Enable limits if any values are set
+  };
+
+  // Format proposal data for contract
   return [
     fundSettings,
     JSON.stringify(metaData),
     managementPeriod,
     performancePeriod,
+    flowConfigs,           // Add flow configs
+    getFieldValueByFieldKey("isNotTransferable"),  // Add transferability flag
   ];
 };
 

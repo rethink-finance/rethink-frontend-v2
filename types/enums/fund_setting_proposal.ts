@@ -62,6 +62,12 @@ export interface IProposal {
   proposalDescription: string;
   whitelist: string;
   isWhitelistedDeposits: boolean;
+  isNotTransferable: boolean;
+  useLegacyFlows: boolean;
+  minDeposit: string;
+  maxDeposit: string;
+  minWithdrawal: string;
+  maxWithdrawal: string;
 }
 
 export interface IWhitelist {
@@ -209,7 +215,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Deposit Fee",
+      label: "Deposit Fee",
       tooltip: "Share of deposited denomination asset.",
       fields: [
         {
@@ -236,7 +242,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Redemption Fee",
+      label: "Redemption Fee",
       tooltip: "Share of redeemed denomination asset.",
       fields: [
         {
@@ -263,7 +269,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Management Fee",
+      label: "Management Fee",
       tooltip: "Share of minted vault tokens per management fee period.",
       fields: [
         {
@@ -302,7 +308,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Performance Fee",
+      label: "Performance Fee",
       tooltip: "Profit share in minted vault tokens.",
       fields: [
         {
@@ -364,7 +370,62 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       rules: [formRules.required, formRules.isNonNegativeNumber],
       isEditable: true,
     },
-  ],
+    {
+      label: "Is Not Transferable",
+      key: "isNotTransferable",
+      type: InputType.Checkbox,
+      rules: [],
+      isEditable: true,
+    },
+    {
+      label: "Use Legacy Flows",
+      key: "useLegacyFlows",
+      isToggleable: true,
+      isToggleOn: false,
+      fields: [
+        {
+          label: "Min. Deposit",
+          key: "minDeposit",
+          type: InputType.Number,
+          placeholder: "E.g. 0",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+        {
+          label: "Max. Deposit",
+          key: "maxDeposit",
+          type: InputType.Number,
+          placeholder: "E.g. 1000",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+        {
+          label: "Min. Withdrawal",
+          key: "minWithdrawal",
+          type: InputType.Number,
+          placeholder: "E.g. 0",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+        {
+          label: "Max. Withdrawal",
+          key: "maxWithdrawal",
+          type: InputType.Number,
+          placeholder: "E.g. 1000",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+      ],
+    } as IField,
+  ] as IField[],
   [StepSections.Governance]: [
     {
       label: "Governance Token",

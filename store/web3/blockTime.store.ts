@@ -8,6 +8,7 @@ interface IState {
   chainBlockTimeContext: Partial<Record<ChainId, BlockTimeContext>>,
   initializingContexts: Map<ChainId, Promise<BlockTimeContext>>,
 }
+const DEFAULT_AVERAGE_BLOCK_TIME_SECONDS = 15; // 15 seconds
 
 export const useBlockTimeStore = defineStore({
   id: "blockTimeStore",
@@ -45,19 +46,32 @@ export const useBlockTimeStore = defineStore({
           1000,
         );
 
-        console.log("blockTime get previous block", currentBlock)
-        const previousBlock = await this.web3Store.callWithRetry(
-          mappedChainId,
-          () => web3Provider.eth.getBlock(Number(currentBlock.number) - 1000),
-          0,
-          [],
-          1000,
-        );
-        console.log("blockTime get blocks DONE", previousBlock)
+        console.log("blockTime get current block", currentBlock)
+        let previousBlock;
+        try {
+          previousBlock = await this.web3Store.callWithRetry(
+            mappedChainId,
+            () => web3Provider.eth.getBlock(Number(currentBlock.number) - 1000),
+            0,
+            [],
+            1000,
+          );
+        } catch {
+          previousBlock = await this.web3Store.callWithRetry(
+            mappedChainId,
+            () => web3Provider.eth.getBlock("earliest"),
+            0,
+            [],
+            1000,
+          );
+        }
+        console.log("blockTime get previous", previousBlock)
 
         const timeDiff = Number(currentBlock.timestamp) - Number(previousBlock.timestamp);
+        console.log("blockTime timeDiff", timeDiff)
         const blockDiff = Number(currentBlock.number) - Number(previousBlock.number);
-        const averageBlockTime = timeDiff / blockDiff;
+        console.log("blockTime blockDiff", blockDiff)
+        const averageBlockTime = blockDiff <= 0 ? DEFAULT_AVERAGE_BLOCK_TIME_SECONDS : timeDiff / blockDiff;
 
         const context: BlockTimeContext = {
           currentBlock: Number(currentBlock.number),

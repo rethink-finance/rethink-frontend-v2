@@ -139,7 +139,6 @@
 </template>
 
 <script setup lang="ts">
-import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 import { ERC20 } from "~/assets/contracts/ERC20";
 import {
   encodeUpdateNavMethods,
@@ -214,7 +213,8 @@ const sendStoreNavMethodsTransaction = async (
   if (!fundSettings?.value?.fundAddress) {
     return toastStore.errorToast("Fund address is missing.");
   }
-  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId.value);
+  const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
+  const navExecutorAddress = getNAVExecutorBeaconProxyAddress(fundChainId.value);
 
   try {
     console.log("STORE NAV DATA",

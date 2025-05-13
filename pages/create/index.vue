@@ -744,7 +744,7 @@ const getFieldByStepAndFieldKey =(
   }
   const fieldValue = field?.value;
 
-  if (field?.defaultValue !== undefined && field?.defaultValue !== null) {
+  if (field?.defaultValue != null) {
     return field?.isCustomValueToggleOn ? fieldValue : field?.defaultValue;
   }
 
@@ -810,6 +810,23 @@ const formatFeeCollectors = () => {
 };
 
 const formatInitializeData = () => {
+  // Helper to get the limits field group from management step
+  const getLimitsFieldGroup = () => {
+    const managementStep = stepperEntry.value.find(step => step.key === OnboardingStep.Management);
+    return managementStep?.fields?.find(field => "isToggleable" in field && field.fields?.some(f => f.key === "minDeposit")) as IFieldGroup | undefined;
+  };
+
+  // Get the limits field group
+  const limitsFieldGroup = getLimitsFieldGroup();
+  const limitsEnabled = limitsFieldGroup?.isToggleOn ?? false;
+
+  // Get limit values, defaulting to 0 if disabled or not set
+  const getLimit = (key: string) => {
+    if (!limitsEnabled) return 0;
+    const field = limitsFieldGroup?.fields?.find(f => f.key === key);
+    return field?.value ? parseInt(field.value as string) : 0;
+  };
+
   const output = [
     [
       getFeeValue("depositFee"),// depositFee
@@ -840,6 +857,15 @@ const formatInitializeData = () => {
     JSON.stringify(formatFundMetaData()),
     0, // feePerformancePeriod, default to 0
     0, // managementFeePeriod, default to 0
+    [
+      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "useLegacyFlows") ? 0 : 1, // isLegacy (0 for legacy, 1 for non-legacy)
+      getLimit("minDeposit"), // minDeposit
+      getLimit("maxDeposit"), // maxDeposit
+      getLimit("minWithdrawal"), // minWithdrawal
+      getLimit("maxWithdrawal"), // maxWithdrawal
+      limitsEnabled, // limitsEnabled
+    ],
+    getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Management, "isNotTransferable"), // isNonTransferable
   ]
 
   console.log("output", output);
@@ -863,6 +889,7 @@ const initializeFund = async() => {
 
     const formattedData = formatInitializeData();
     console.warn("SUBMIT formatted data", formattedData);
+    console.warn("SUBMIT fundFactoryContract", fundFactoryContract);
 
     await fundFactoryContract
       .send("initCreateFund", {}, ...formattedData)
