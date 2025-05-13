@@ -744,7 +744,7 @@ const getFieldByStepAndFieldKey =(
   }
   const fieldValue = field?.value;
 
-  if (field?.defaultValue !== undefined && field?.defaultValue !== null) {
+  if (field?.defaultValue != null) {
     return field?.isCustomValueToggleOn ? fieldValue : field?.defaultValue;
   }
 

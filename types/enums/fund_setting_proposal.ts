@@ -215,7 +215,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Deposit Fee",
+      label: "Deposit Fee",
       tooltip: "Share of deposited denomination asset.",
       fields: [
         {
@@ -242,7 +242,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Redemption Fee",
+      label: "Redemption Fee",
       tooltip: "Share of redeemed denomination asset.",
       fields: [
         {
@@ -269,7 +269,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Management Fee",
+      label: "Management Fee",
       tooltip: "Share of minted vault tokens per management fee period.",
       fields: [
         {
@@ -308,7 +308,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Performance Fee",
+      label: "Performance Fee",
       tooltip: "Profit share in minted vault tokens.",
       fields: [
         {
@@ -380,11 +380,6 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       label: "Use Legacy Flows",
       key: "useLegacyFlows",
-      type: InputType.Checkbox,
-      rules: [],
-      isEditable: true,
-    },
-    {
       isToggleable: true,
       isToggleOn: false,
       fields: [
@@ -429,8 +424,8 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
           cols: 8,
         },
       ],
-    } as IFieldGroup,
-  ] as IFieldGroup[],
+    } as IField,
+  ] as IField[],
   [StepSections.Governance]: [
     {
       label: "Governance Token",

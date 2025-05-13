@@ -68,7 +68,6 @@ export interface IField {
   defaultValueInfo?: string;
   isFieldByUser?: boolean;
   fields?: IField[];
-  groupName?: string;
   title?: string;
   value?: string | boolean;
   choices?: { value: number | string | boolean; title: string }[],

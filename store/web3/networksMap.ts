@@ -121,7 +121,7 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
 // Add Hardhat network only in development mode
 const localhostNetwork: INetwork = {
   chainId: ChainId.LOCAL_NODE,
-  chainName: "Local Node",
+  chainName: "Local Node (31337)",
   chainShort: "local",
   nativeCurrency: {
     name: "ETH",
