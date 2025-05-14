@@ -71,7 +71,7 @@
             <UiInfoBox
               info="Learn more about NAV methods"
               :icon="true"
-              link="https://docs.rethink.finance/rethink.finance/protocol/nav-calculator-contract"
+              link="https://docs.rethink.finance/rethink.finance/protocol/architecture/nav-calculator-contract"
             />
           </div>
         </div>
