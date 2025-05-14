@@ -1,0 +1,1 @@
+import{_ as n,j as a,c,o as r,w as s,a as _,l,m as d,V as i}from"./dtvHnkFv.js";const m={};function f(t,e){const o=a("Icon");return r(),c(i,{variant:"tonal",class:"btn_icon_center"},{default:s(()=>[_(o,{icon:"mdi-chevron-left",height:"1.5rem",width:"1.5rem"}),l(t.$slots,"default",{},()=>[e[0]||(e[0]=d(" Back "))])]),_:3})}const u=n(m,[["render",f]]);export{u as default};
