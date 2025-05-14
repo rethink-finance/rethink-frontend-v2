@@ -1,13 +1,13 @@
-import { NAVExecutor } from "assets/contracts/NAVExecutor";
-import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 import { ERR_CONTRACT_EXECUTION_REVERTED } from "web3";
+import { useFundStore } from "../fund.store";
+import { NAVExecutor } from "assets/contracts/NAVExecutor";
 import { decodeUpdateNavMethods } from "~/composables/nav/navProposal";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
-import { useFundStore } from "../fund.store";
+
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
@@ -96,8 +96,8 @@ export const getNAVData = async (
   const web3Store = useWeb3Store();
   const navMethods: INAVMethod[] = [];
   console.debug("getNAVData", fundChainId, fundAddress);
-
-  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
+  const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
+  const navExecutorAddress = getNAVExecutorBeaconProxyAddress(fundChainId);
   if (!fundAddress) return navMethods;
 
   try {
