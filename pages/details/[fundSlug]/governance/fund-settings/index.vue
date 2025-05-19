@@ -251,7 +251,6 @@ const initProposalEntry = () => {
     whitelist: "",
     isWhitelistedDeposits: fundDeepCopy?.isWhitelistedDeposits,
     // Management
-    isNotTransferable: fundDeepCopy?.isNonTransferable ?? false,
     useLegacyFlows: fundDeepCopy?.flowsConfig?.flowVersion === 0,
     minDeposit: fundDeepCopy?.flowsConfig?.minDeposit ?? "",
     maxDeposit: fundDeepCopy?.flowsConfig?.maxDeposit ?? "",
@@ -561,7 +560,6 @@ const formatProposalData = () => {
     managementPeriod,
     performancePeriod,
     flowsConfig,           // Add flows config
-    getFieldValueByFieldKey("isNotTransferable"),  // Add transferability flag
   ];
 };
 

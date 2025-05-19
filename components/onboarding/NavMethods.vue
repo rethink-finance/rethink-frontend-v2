@@ -111,7 +111,6 @@
       title="Store NAV Methods"
       class="confirm_dialog"
       max-width="680px"
-      @cancel="isNotifyDialogOpen = false"
     >
       <p class="mt-4">
         This action requires sending two transactions:

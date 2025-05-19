@@ -86,7 +86,6 @@
       cancel-text="Close"
       class="confirm_dialog"
       max-width="800px"
-      @cancel="closeDelegatorsDialog"
     >
       <div class="mb-10">
         <div class="title">
@@ -116,7 +115,6 @@
       :cancel-text="
         updateSettingsProposals.length > 1 ? 'Cancel' : 'Go to existing proposal'
       "
-      message="There is already an active vault settings proposal. Are you sure you want to create a new one?"
       class="confirm_dialog"
       :max-width="updateSettingsProposals.length > 1 ? 'unset' : '600px'"
       @confirm="handleNavigateToCreateProposal"
@@ -124,6 +122,9 @@
         updateSettingsProposals.length > 1 ? null : handleGoToProposal()
       "
     >
+      <div class="mb-2">
+        There is already an active vault settings proposal. Are you sure you want to create a new one?
+      </div>
       <FundGovernanceProposalsTable
         v-if="updateSettingsProposals.length > 1"
         :items="updateSettingsProposals"
@@ -484,9 +485,6 @@ const delegatorsDialog = ref(false);
 const activeRow = ref<ITrendingDelegate | null>(null);
 const openDelegatorsDialog = () => {
   delegatorsDialog.value = true;
-};
-const closeDelegatorsDialog = () => {
-  delegatorsDialog.value = false;
 };
 
 type DropdownOption = {

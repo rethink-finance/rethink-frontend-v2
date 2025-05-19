@@ -184,11 +184,6 @@ export const GovernableFundFactory = {
           "name": "_flowsConfig",
           "type": "tuple",
         },
-        {
-          "internalType": "bool",
-          "name": "_isNonTransferable",
-          "type": "bool",
-        },
       ],
       "name": "createFund",
       "outputs": [
@@ -380,11 +375,6 @@ export const GovernableFundFactory = {
               "name": "flowsConfig",
               "type": "tuple",
             },
-            {
-              "internalType": "bool",
-              "name": "isNonTransferable",
-              "type": "bool",
-            },
           ],
           "internalType": "struct GovernableFundFactory.InitializationCache",
           "name": "",
@@ -571,11 +561,6 @@ export const GovernableFundFactory = {
           "internalType": "struct IGovernableFundStorage.FlowsConfig",
           "name": "_flowsConfig",
           "type": "tuple",
-        },
-        {
-          "internalType": "bool",
-          "name": "_isNonTransferable",
-          "type": "bool",
         },
       ],
       "name": "initCreateFund",

@@ -16,7 +16,6 @@
       class="confirm_dialog"
       max-width="600px"
       @confirm="addCustomFieldRow(customFieldName)"
-      @cancel="isAddCustomFieldDialogOpen = false"
     >
       <v-label class="mb-2">
         Enter a name of custom field

@@ -229,7 +229,6 @@
         class="confirm_dialog"
         max-width="600px"
         @confirm="saveDraftToLocalStorage"
-        @cancel="handleCloseSaveChangesDialog"
       />
 
       <UiConfirmDialog
@@ -241,7 +240,6 @@
         max-width="600px"
         :loading="isInitializeLoading"
         @confirm="initializeFund"
-        @cancel="isInitializeDialogOpen = false"
       />
 
       <UiConfirmDialog
@@ -249,12 +247,13 @@
         title="Heads Up!"
         confirm-text="Clear"
         cancel-text="Don't clear"
-        :message="clearCacheMessage"
         class="confirm_dialog"
         max-width="600px"
         @confirm="handleClearCache"
-        @cancel="isClearCacheDialogOpen = false"
       >
+        <div v-if="clearCacheMessage" class="mb-2">
+          {{ clearCacheMessage }}
+        </div>
         <p class="mt-4">
           This action will clear the create vault form data for the selected chain.
           You will lose all the saved data you have entered so far.
@@ -313,7 +312,7 @@ const isCreateFundPasswordCorrect = ref<boolean>(
 );
 
 // store the resolve/reject functions for the save changes dialog
-let nextRouteResolve: Function | null = null;
+let nextRouteResolve: (() => void) | null = null;
 
 // whitelist data
 const whitelistedAddresses = ref<IWhitelist[]>([]);
@@ -321,8 +320,8 @@ const isCheckingIfFundInitCacheExists = ref(false);
 const isWhitelistedDeposits = ref(false);
 const selectedChainId = ref<ChainId>(networkChoices[0].value);
 
-// We want to set fundInitCache here when it is updated, and not take it from the store,
-// to prevent race conditions.
+// We want to set fundInitCache here when it is updated and not take it
+// from the store to prevent race conditions.
 const fundInitCache = ref<IFundInitCache | undefined>(undefined);
 const fundSettings = computed<IFundSettings>(() => fundInitCache?.value?.fundSettings || {} as IFundSettings);
 const fundFlowsConfig = computed<IFundFlowsConfig>(() => fundInitCache?.value?.flowsConfig || {} as IFundFlowsConfig);
@@ -331,7 +330,13 @@ const fundGovernorData = computed(() => fundInitCache?.value?.governorData || {}
 
 // Fetch Fund Cache and fill the form data with the fetched fund cache.
 const setFieldValue = (field: IField) => {
-  if (![InputType.Image, InputType.Textarea, InputType.Select, InputType.Period, InputType.Checkbox].includes(field.type)) {
+  if ([
+    InputType.Text,
+    InputType.ReadonlyJSON,
+    InputType.Number,
+    InputType.Date,
+  ].includes(field.type)) {
+    // Convert these input types to text fields.
     field.type = InputType.Text;
   }
   field.isToggleable = false;
@@ -869,7 +874,6 @@ const formatInitializeData = () => {
       getLimit("maxWithdrawal"), // maxWithdrawal
       limitsEnabled, // limitsEnabled
     ],
-    getFieldByStepAndFieldKey(OnboardingStep.Basics, "isNotTransferable"), // isNonTransferable
   ]
 
   console.log("useLegacyFlows", getFieldByStepAndFieldKey(OnboardingStep.Basics, "useLegacyFlows"));
@@ -895,7 +899,6 @@ const initializeFund = async() => {
 
     const formattedData = formatInitializeData();
     console.warn("SUBMIT formatted data", formattedData);
-    console.warn("SUBMIT fundFactoryContract", fundFactoryContract);
 
     await fundFactoryContract
       .send("initCreateFund", {}, ...formattedData)
@@ -1064,15 +1067,15 @@ watch(() => accountStore.activeAccountAddress, () => {
   }
 });
 
-watch(()=> accountStore.connectedWalletChainId, (newVal, oldVal) =>{
-  if(!oldVal){
+watch(()=> accountStore.connectedWalletChainId, (_, oldVal) =>{
+  if (!oldVal){
     setDefaultSelectedChainId()
   }
 })
 
 // Lifecycle Hooks
-onBeforeRouteLeave((to, from, next) => {
-  // allow page change if user is not validated (he is seeing the password page)
+onBeforeRouteLeave((_to, _from, next) => {
+  // allow page change if the user is not validated (he is seeing the password page)
   if (!isCreateFundPasswordCorrect.value) {
     next();
     return;

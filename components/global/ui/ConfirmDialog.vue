@@ -4,7 +4,7 @@
     scrim="black"
     opacity="0.3"
     :max-width="maxWidth ?? '600px'"
-    @update:model-value="closeDelegateDialog"
+    @update:model-value="closeDialog"
   >
     <div class="main_card di_card">
       <div class="di_card__header-container">
@@ -21,14 +21,15 @@
           icon="material-symbols:close"
           class="di_card__close-icon"
           width="1.5rem"
-          @click="closeDelegateDialog()"
+          @click="closeDialog()"
         />
       </div>
 
       <div class="di_card__content">
         <div class="di_card__text">
-          <div class="mb-2" v-html="message" />
-          <slot /> <!-- This is where the content will be injected -->
+          <slot>
+            {{ message }}
+          </slot>
         </div>
 
         <div v-if="confirmText || cancelText" class="di_card__button-container">
@@ -68,7 +69,8 @@ defineProps({
 });
 const emit = defineEmits(["update:modelValue", "confirm", "cancel"]);
 
-const closeDelegateDialog = () => {
+const closeDialog = () => {
+  console.warn("close dialog");
   emit("update:modelValue", false);
 };
 
