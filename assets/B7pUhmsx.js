@@ -1,0 +1,1 @@
+import{_ as o,e as t,l as n,o as s}from"./DMr2Lov7.js";const _={},c={class:"main_header"};function r(e,a){return s(),t("div",c,[n(e.$slots,"default")])}const d=o(_,[["render",r]]);export{d as default};
