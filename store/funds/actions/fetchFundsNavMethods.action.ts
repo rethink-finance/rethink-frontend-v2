@@ -1,3 +1,5 @@
+import { excludeNAVDetailsHashes } from "../config/excludedNAVDetailsHashes.config";
+import { useFundsStore } from "../funds.store";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
@@ -5,8 +7,6 @@ import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { type ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
-import { excludeNAVDetailsHashes } from "../config/excludedNAVDetailsHashes.config";
-import { useFundsStore } from "../funds.store";
 
 // Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
 const excludeNAVDetails: boolean = true;
@@ -26,6 +26,8 @@ export async function fetchFundsNavMethodsAction(
   if (!rethinkReaderContract) {
     throw new Error(`No reader contract found for chainId: ${chainId}`);
   }
+  console.log("start calculating fund nav data rethinkReaderContract", chainId, rethinkReaderContract);
+
   const allFundsNavData = await rethinkReaderContract.methods
     .getFundsNAVData(fundAddresses)
     .call();

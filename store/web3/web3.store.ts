@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { type HttpProvider, Web3 } from "web3";
 import { GovernableFundFactory } from "assets/contracts/GovernableFundFactory";
 import { NAVCalculator } from "assets/contracts/NAVCalculator";
-import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
+import { useContractAddresses } from "~/composables/useContractAddresses";
 import { RethinkReader } from "assets/contracts/RethinkReader";
 import SafeMultiSendCallOnlyJson from "assets/contracts/safe/SafeMultiSendCallOnly.json";
 import { CustomContract } from "~/store/web3/customContract";
@@ -45,6 +45,7 @@ export const useWeb3Store = defineStore({
     const chainSelectedRpcIndex: Record<string, number> = {};
     const chainProviders: Record<string, Web3> = {};
     const chainContracts: Record<string, any> = {};
+    const { rethinkContractAddresses } = useContractAddresses();
 
     for (const network of Object.values(networksMap)) {
       const chainId = network.chainId as ChainId;

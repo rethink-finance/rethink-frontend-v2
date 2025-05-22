@@ -18,9 +18,10 @@ const fetchGovernorData = async (fundChainId: ChainId, governorAddress?: string)
     "lateQuorum"
    */
   if (!governorAddress) return {};
+  console.debug("governor fetch 1")
 
   const web3Store = useWeb3Store();
-  console.debug("governor fetch")
+  console.debug("governor fetch", governorAddress)
   const fundGovernorContract = web3Store.getCustomContract(
     fundChainId,
     RethinkFundGovernor.abi,
@@ -77,8 +78,8 @@ const fetchGovernorData = async (fundChainId: ChainId, governorAddress?: string)
   };
 }
 export const fetchBaseTokenDetails = async (chainId: ChainId, baseTokenAddress: string) => {
-  const web3Store = useWeb3Store();
   console.debug("fetchBaseTokenDetails")
+  const web3Store = useWeb3Store();
 
   const tokenContract = web3Store.getCustomContract(
     chainId,
@@ -94,7 +95,7 @@ export const fetchBaseTokenDetails = async (chainId: ChainId, baseTokenAddress: 
     1,
     [205],
   );
-  console.debug("baseDecimals")
+  console.debug("baseDecimals", baseDecimals)
 
   const baseSymbol = await web3Store.callWithRetry(
     chainId,
@@ -103,7 +104,7 @@ export const fetchBaseTokenDetails = async (chainId: ChainId, baseTokenAddress: 
     1,
     [205],
   );
-  console.debug("baseSymbol")
+  console.debug("baseSymbol", baseSymbol)
 
   return [Number(baseDecimals), baseSymbol];
 }
@@ -179,6 +180,16 @@ export const fetchFundInitCacheAction = async (
     baseDecimals,
     baseSymbol,
   };
+
+  const flowsConfig = fundInitCache?.flowsConfig || {};
+  fundInitCache.flowsConfig = {
+    ...flowsConfig,
+    minDeposit: flowsConfig?.minDeposit?.toString() || "0",
+    maxDeposit: flowsConfig?.maxDeposit?.toString() || "0",
+    minWithdrawal: flowsConfig?.minWithdrawal?.toString() || "0",
+    maxWithdrawal: flowsConfig?.maxWithdrawal?.toString() || "0",
+    useLegacyFlows: flowsConfig.flowVersion.toString() === "0",
+  }
 
   createFundStore.fundInitCache = fundInitCache;
   console.log("fund init cache parsed", toRaw(createFundStore.fundInitCache));

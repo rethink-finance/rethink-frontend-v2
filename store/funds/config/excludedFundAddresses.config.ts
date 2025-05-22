@@ -1,6 +1,8 @@
 // Some funds are excluded on main base domain app.rethink.finance.
 // But we want to show them on stage.
 // Some of them are bugged, so we don't want to show them anywhere, for those we set alwaysExclude: true.
+import { ChainId } from "~/types/enums/chain_id";
+
 const config = useRuntimeConfig();
 const ENV_EXCLUDE_TEST_FUNDS = config.public.ENV_EXCLUDE_TEST_FUNDS;
 
@@ -11,7 +13,7 @@ const EXCLUDE_TEST_FUNDS = getLocalStorageItem("excludeTestFunds", ENV_EXCLUDE_T
 
 const rawExcludedFundAddresses = {
   // Polygon
-  "0x89": [
+  [ChainId.POLYGON]: [
     { address: "0xf48E3fa13cb2390e472cf1CA64F941eB7BD27475", alwaysExclude: true }, // bug
     { address: "0x0657DC652F88B55Dd16f5D6cE687672264f9b61E", alwaysExclude: true }, // bug
     { address: "0x8fAE33f10854c20a811246849A0d4131caf72125", alwaysExclude: true }, // bug
@@ -29,7 +31,7 @@ const rawExcludedFundAddresses = {
     { address: "0x1673458dDf6C0ea24ce5598918F3cA1e58f2d795", alwaysExclude: false },
   ],
   // Arbitrum One
-  "0xa4b1": [
+  [ChainId.ARBITRUM]: [
     { address: "0xA5138779Bb08C8DE44692e183c586817a0bcEb42", alwaysExclude: false },
     { address: "0x74759a4607B97360956AbFd44cA4B2A0EC2A27C9", alwaysExclude: false },
     { address: "0xd1FCcFb737E1b436Da057011Dc56231035285688", alwaysExclude: false },
@@ -41,17 +43,18 @@ const rawExcludedFundAddresses = {
     { address: "0xC27eE955a44F0A9e7AC509dD54E8221eE06A9592", alwaysExclude: true },  // TESTARB
     { address: "0x539a56974295B8BF7023F2d85144Ca0010953ee2", alwaysExclude: true },  // QCLG 22. jan 25
     { address: "0x5A7638b7b831262081804e88657b2D83E8491b1E", alwaysExclude: false },  // carrotfunding.io gCFG 31. mar 25
+    { address: "0x5E0f37920DDee57dAbAf5A73B21D51075AeDbEBE", alwaysExclude: false },  // Harmonix HES 14. may 25
   ],
   // Fraxtal
   "0xfc": [],
   // ETH Mainnet
-  "0x1": [
+  [ChainId.ETHEREUM]: [
     { address: "0x7ed95418063d5b61bDE7b40D65F93739c0CFdcf4", alwaysExclude: false },
     { address: "0x51cf0Bc0f5312d824a55B83B2c032Fb8c96c249a", alwaysExclude: false },
     { address: "0xB6aB76d451B98a992FB84A93602527CC30cd3b22", alwaysExclude: false }, // QCLE
   ],
   // Base
-  "0x2105": [
+  [ChainId.BASE]: [
     { address: "0x1D66EB6cC3b80c76B6fF08aC13f93a2DAEA4C855", alwaysExclude: false },
     { address: "0xFC5fF4dc70EaEc998863668212B01cBE51000A4b", alwaysExclude: false },
     { address: "0xC38e9E111CCBd435d9DE53ED2Dd7Db3993839238", alwaysExclude: false },

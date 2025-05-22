@@ -175,3 +175,7 @@ done in the contract already?
 the description (should be a string, not an object).
 2) add test to check if current reader contract ABI match the deployed address -> call function and check 
   there are no decoding errors
+
+
+### Flows V2 TODO
+1) Take care of conversion of min & max flows values
