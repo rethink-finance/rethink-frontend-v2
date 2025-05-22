@@ -86,6 +86,7 @@
       cancel-text="Close"
       class="confirm_dialog"
       max-width="800px"
+      @cancel="delegatorsDialog = false"
     >
       <div class="mb-10">
         <div class="title">
@@ -102,6 +103,7 @@
             <FundGovernanceProposalStateChip
               v-if="activeRow?.delegatedMember === delegator"
               value="Self Delegated"
+              close-delegators-dialog
             />
           </li>
         </ul>

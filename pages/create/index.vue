@@ -229,6 +229,7 @@
         class="confirm_dialog"
         max-width="600px"
         @confirm="saveDraftToLocalStorage"
+        @cancel="handleCloseSaveChangesDialog"
       />
 
       <UiConfirmDialog
@@ -240,6 +241,7 @@
         max-width="600px"
         :loading="isInitializeLoading"
         @confirm="initializeFund"
+        @cancel="isInitializeDialogOpen = false"
       />
 
       <UiConfirmDialog
@@ -250,6 +252,7 @@
         class="confirm_dialog"
         max-width="600px"
         @confirm="handleClearCache"
+        @cancel="isClearCacheDialogOpen = false"
       >
         <div v-if="clearCacheMessage" class="mb-2">
           {{ clearCacheMessage }}
