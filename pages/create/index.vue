@@ -881,7 +881,7 @@ const formatInitializeData = () => {
 
   console.log("useLegacyFlows", getFieldByStepAndFieldKey(OnboardingStep.Basics, "useLegacyFlows"));
   console.log("stepperEntry.value", stepperEntry.value);
-  console.log("output", output);
+  console.log("initCreateFund output", output);
   return output;
 }
 

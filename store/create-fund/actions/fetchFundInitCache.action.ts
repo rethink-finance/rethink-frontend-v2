@@ -182,13 +182,14 @@ export const fetchFundInitCacheAction = async (
   };
 
   const flowsConfig = fundInitCache?.flowsConfig || {};
+  console.debug("flowsConfig", flowsConfig)
   fundInitCache.flowsConfig = {
     ...flowsConfig,
     minDeposit: flowsConfig?.minDeposit?.toString() || "0",
     maxDeposit: flowsConfig?.maxDeposit?.toString() || "0",
     minWithdrawal: flowsConfig?.minWithdrawal?.toString() || "0",
     maxWithdrawal: flowsConfig?.maxWithdrawal?.toString() || "0",
-    useLegacyFlows: flowsConfig.flowVersion.toString() === "0",
+    useLegacyFlows: (flowsConfig?.flowVersion?.toString() || "0") === "0",
   }
 
   createFundStore.fundInitCache = fundInitCache;
