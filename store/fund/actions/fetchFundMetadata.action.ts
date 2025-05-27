@@ -2,13 +2,14 @@ import { useFundStore } from "../fund.store";
 
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
+import type IFundFlowsConfig from "~/types/fund_flows_config";
 import type INAVUpdate from "~/types/nav_update";
 
 import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ERC20 } from "assets/contracts/ERC20";
 import { formatQuorumPercentage } from "~/composables/formatters";
 import { parseClockMode } from "~/composables/fund/parseClockMode";
-import { parseFundSettings } from "~/composables/fund/parseFundSettings";
+import { parseBigintsToString } from "~/composables/fund/parseBigintsToString";
 import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -27,18 +28,18 @@ export const fetchFundMetaDataAction = async (
     web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
   try {
     console.debug(
-      "fundNavMetaData",
+      "getFundMetaData",
       fundAddress,
       fundChainId,
       rethinkReaderContract,
     );
 
-    const fundNavMetaData = await web3Store.callWithRetry(
+    const fundMetaData = await web3Store.callWithRetry(
       fundChainId,
       () =>
         rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
     );
-    console.log("fundNavMetaData", fundNavMetaData);
+    console.log("fundMetaData", fundMetaData);
     const {
       startTime,
       totalDepositBal,
@@ -59,7 +60,8 @@ export const fetchFundMetaDataAction = async (
       fundGovernanceTokenSymbol,
       fundGovernanceData,
       fundSettings,
-    } = fundNavMetaData;
+      flowsConfig,
+    } = fundMetaData;
 
     const {
       votingDelay,
@@ -73,9 +75,9 @@ export const fetchFundMetaDataAction = async (
 
     fundSettings.performancePeriod = feePerformancePeriod;
     fundSettings.managementPeriod = feeManagePeriod;
-    console.debug("fundSettings: ", fundSettings);
 
-    const parsedFundSettings: IFundSettings = parseFundSettings(fundSettings);
+    const parsedFundSettings: IFundSettings = parseBigintsToString<IFundSettings>(fundSettings);
+    const parsedFlowsConfig = parseBigintsToString<IFundFlowsConfig>(flowsConfig);
     const parsedClockMode = parseClockMode(clockMode);
     console.debug("parsedClockMode: ", parsedClockMode);
     console.log("parsedFundSettings: ", parsedFundSettings);
@@ -197,6 +199,7 @@ export const fetchFundMetaDataAction = async (
 
       // NAV Updates
       navUpdates: [] as INAVUpdate[],
+      flowsConfig: parsedFlowsConfig,
     } as IFund;
     console.log("fund fund: ", fund);
 

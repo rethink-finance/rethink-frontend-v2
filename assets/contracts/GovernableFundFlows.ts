@@ -1,44 +1,49 @@
-export const GovernableFund = {
-  "contractName": "GovernableFund",
+export const GovernableFundFlows = {
+  "contractName": "GovernableFundFlows",
   "abi": [
     {
       "inputs": [],
-      "stateMutability": "nonpayable",
-      "type": "constructor",
-    },
-    {
-      "inputs": [],
-      "name": "BadBPS",
+      "name": "BadRequest",
       "type": "error",
     },
     {
       "inputs": [],
-      "name": "BadReturnData",
+      "name": "DepositNotRequested",
       "type": "error",
     },
     {
       "inputs": [],
-      "name": "FailedDelegateCall",
+      "name": "ExternalError",
       "type": "error",
     },
     {
       "inputs": [],
-      "name": "FailedOwnerCheck",
+      "name": "InsufficientAllowance",
       "type": "error",
     },
     {
       "inputs": [],
-      "name": "FailedPermissionedNavUpdate",
+      "name": "InvalidBalance",
       "type": "error",
     },
     {
       "inputs": [],
-      "name": "FailedProcessNav",
+      "name": "LimitError",
       "type": "error",
     },
     {
       "inputs": [],
-      "name": "InvalidFlowOperation",
+      "name": "MismatchDims",
+      "type": "error",
+    },
+    {
+      "inputs": [],
+      "name": "NotAllowed",
+      "type": "error",
+    },
+    {
+      "inputs": [],
+      "name": "NotClaimed",
       "type": "error",
     },
     {
@@ -48,22 +53,7 @@ export const GovernableFund = {
     },
     {
       "inputs": [],
-      "name": "OnlyGovernance",
-      "type": "error",
-    },
-    {
-      "inputs": [],
-      "name": "OnlyGovernanceOrSafeOrFund",
-      "type": "error",
-    },
-    {
-      "inputs": [],
-      "name": "OnlyOwner",
-      "type": "error",
-    },
-    {
-      "inputs": [],
-      "name": "TokenTransfersDisabled",
+      "name": "WithdrawalNotRequested",
       "type": "error",
     },
     {
@@ -1473,183 +1463,21 @@ export const GovernableFund = {
       "type": "function",
     },
     {
+      "inputs": [],
+      "name": "claim",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function",
+    },
+    {
       "inputs": [
         {
-          "internalType": "string",
-          "name": "_name_",
-          "type": "string",
-        },
-        {
-          "internalType": "string",
-          "name": "_symbol_",
-          "type": "string",
-        },
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "depositFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "withdrawFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "performanceFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "managementFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "performaceHurdleRateBps",
-              "type": "uint256",
-            },
-            {
-              "internalType": "address",
-              "name": "baseToken",
-              "type": "address",
-            },
-            {
-              "internalType": "address",
-              "name": "safe",
-              "type": "address",
-            },
-            {
-              "internalType": "bool",
-              "name": "isExternalGovTokenInUse",
-              "type": "bool",
-            },
-            {
-              "internalType": "bool",
-              "name": "isWhitelistedDeposits",
-              "type": "bool",
-            },
-            {
-              "internalType": "address[]",
-              "name": "allowedDepositAddrs",
-              "type": "address[]",
-            },
-            {
-              "internalType": "address[]",
-              "name": "allowedManagers",
-              "type": "address[]",
-            },
-            {
-              "internalType": "address",
-              "name": "governanceToken",
-              "type": "address",
-            },
-            {
-              "internalType": "address",
-              "name": "fundAddress",
-              "type": "address",
-            },
-            {
-              "internalType": "address",
-              "name": "governor",
-              "type": "address",
-            },
-            {
-              "internalType": "string",
-              "name": "fundName",
-              "type": "string",
-            },
-            {
-              "internalType": "string",
-              "name": "fundSymbol",
-              "type": "string",
-            },
-            {
-              "internalType": "address[4]",
-              "name": "feeCollectors",
-              "type": "address[4]",
-            },
-          ],
-          "internalType": "struct IGovernableFundStorage.Settings",
-          "name": "_fundSettings",
-          "type": "tuple",
-        },
-        {
-          "internalType": "address",
-          "name": "navCalculatorAddress",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "fundDelgateCallFlowAddress",
-          "type": "address",
-        },
-        {
-          "internalType": "address",
-          "name": "fundDelgateCallNavAddress",
-          "type": "address",
-        },
-        {
-          "internalType": "string",
-          "name": "_fundMetadata",
-          "type": "string",
-        },
-        {
-          "internalType": "uint256",
-          "name": "_feePerformancePeriod",
-          "type": "uint256",
-        },
-        {
-          "internalType": "uint256",
-          "name": "_feeManagePeriod",
-          "type": "uint256",
-        },
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "flowVersion",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "minDeposit",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "maxDeposit",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "minWithdrawal",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "maxWithdrawal",
-              "type": "uint256",
-            },
-            {
-              "internalType": "bool",
-              "name": "limitsEnabled",
-              "type": "bool",
-            },
-          ],
-          "internalType": "struct IGovernableFundStorage.FlowConfigs",
-          "name": "_flowConfigs",
-          "type": "tuple",
-        },
-        {
           "internalType": "bool",
-          "name": "_isNonTransferable",
+          "name": "isDeposit",
           "type": "bool",
         },
       ],
-      "name": "initialize",
+      "name": "revokeDepositWithrawal",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function",
@@ -1657,394 +1485,12 @@ export const GovernableFund = {
     {
       "inputs": [
         {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "depositFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "withdrawFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "performanceFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "managementFee",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "performaceHurdleRateBps",
-              "type": "uint256",
-            },
-            {
-              "internalType": "address",
-              "name": "baseToken",
-              "type": "address",
-            },
-            {
-              "internalType": "address",
-              "name": "safe",
-              "type": "address",
-            },
-            {
-              "internalType": "bool",
-              "name": "isExternalGovTokenInUse",
-              "type": "bool",
-            },
-            {
-              "internalType": "bool",
-              "name": "isWhitelistedDeposits",
-              "type": "bool",
-            },
-            {
-              "internalType": "address[]",
-              "name": "allowedDepositAddrs",
-              "type": "address[]",
-            },
-            {
-              "internalType": "address[]",
-              "name": "allowedManagers",
-              "type": "address[]",
-            },
-            {
-              "internalType": "address",
-              "name": "governanceToken",
-              "type": "address",
-            },
-            {
-              "internalType": "address",
-              "name": "fundAddress",
-              "type": "address",
-            },
-            {
-              "internalType": "address",
-              "name": "governor",
-              "type": "address",
-            },
-            {
-              "internalType": "string",
-              "name": "fundName",
-              "type": "string",
-            },
-            {
-              "internalType": "string",
-              "name": "fundSymbol",
-              "type": "string",
-            },
-            {
-              "internalType": "address[4]",
-              "name": "feeCollectors",
-              "type": "address[4]",
-            },
-          ],
-          "internalType": "struct IGovernableFundStorage.Settings",
-          "name": "_fundSettings",
-          "type": "tuple",
-        },
-        {
-          "internalType": "string",
-          "name": "_fundMetadata",
-          "type": "string",
-        },
-        {
           "internalType": "uint256",
-          "name": "_feePerformancePeriod",
+          "name": "amount",
           "type": "uint256",
         },
-        {
-          "internalType": "uint256",
-          "name": "_feeManagePeriod",
-          "type": "uint256",
-        },
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "flowVersion",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "minDeposit",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "maxDeposit",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "minWithdrawal",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "maxWithdrawal",
-              "type": "uint256",
-            },
-            {
-              "internalType": "bool",
-              "name": "limitsEnabled",
-              "type": "bool",
-            },
-          ],
-          "internalType": "struct IGovernableFundStorage.FlowConfigs",
-          "name": "_flowConfigs",
-          "type": "tuple",
-        },
-        {
-          "internalType": "bool",
-          "name": "_isNonTransferable",
-          "type": "bool",
-        },
       ],
-      "name": "updateSettings",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function",
-    },
-    {
-      "inputs": [
-        {
-          "components": [
-            {
-              "internalType": "enum IGovernableFundStorage.NavUpdateType",
-              "name": "entryType",
-              "type": "uint8",
-            },
-            {
-              "components": [
-                {
-                  "internalType": "address",
-                  "name": "tokenPair",
-                  "type": "address",
-                },
-                {
-                  "internalType": "address",
-                  "name": "aggregatorAddress",
-                  "type": "address",
-                },
-                {
-                  "internalType": "bytes",
-                  "name": "functionSignatureWithEncodedInputs",
-                  "type": "bytes",
-                },
-                {
-                  "internalType": "address",
-                  "name": "assetTokenAddress",
-                  "type": "address",
-                },
-                {
-                  "internalType": "address",
-                  "name": "nonAssetTokenAddress",
-                  "type": "address",
-                },
-                {
-                  "internalType": "bool",
-                  "name": "isReturnArray",
-                  "type": "bool",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "returnLength",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "returnIndex",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "pastNAVUpdateIndex",
-                  "type": "uint256",
-                },
-              ],
-              "internalType": "struct IGovernableFundStorage.NAVLiquidUpdate[]",
-              "name": "liquid",
-              "type": "tuple[]",
-            },
-            {
-              "components": [
-                {
-                  "internalType": "uint256",
-                  "name": "baseCurrencySpent",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "amountAquiredTokens",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "address",
-                  "name": "tokenAddress",
-                  "type": "address",
-                },
-                {
-                  "internalType": "bool",
-                  "name": "isNFT",
-                  "type": "bool",
-                },
-                {
-                  "internalType": "string[]",
-                  "name": "otcTxHashes",
-                  "type": "string[]",
-                },
-                {
-                  "internalType": "enum IGovernableFundStorage.NAVNFTType",
-                  "name": "nftType",
-                  "type": "uint8",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "nftIndex",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "pastNAVUpdateIndex",
-                  "type": "uint256",
-                },
-              ],
-              "internalType": "struct IGovernableFundStorage.NAVIlliquidUpdate[]",
-              "name": "illiquid",
-              "type": "tuple[]",
-            },
-            {
-              "components": [
-                {
-                  "internalType": "address",
-                  "name": "oracleAddress",
-                  "type": "address",
-                },
-                {
-                  "internalType": "address",
-                  "name": "nftAddress",
-                  "type": "address",
-                },
-                {
-                  "internalType": "enum IGovernableFundStorage.NAVNFTType",
-                  "name": "nftType",
-                  "type": "uint8",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "nftIndex",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "pastNAVUpdateIndex",
-                  "type": "uint256",
-                },
-              ],
-              "internalType": "struct IGovernableFundStorage.NAVNFTUpdate[]",
-              "name": "nft",
-              "type": "tuple[]",
-            },
-            {
-              "components": [
-                {
-                  "internalType": "address",
-                  "name": "remoteContractAddress",
-                  "type": "address",
-                },
-                {
-                  "internalType": "string",
-                  "name": "functionSignatures",
-                  "type": "string",
-                },
-                {
-                  "internalType": "bytes",
-                  "name": "encodedFunctionSignatureWithInputs",
-                  "type": "bytes",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "normalizationDecimals",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "bool",
-                  "name": "isReturnArray",
-                  "type": "bool",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "returnValIndex",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "returnArraySize",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "enum IGovernableFundStorage.NAVComposableUpdateReturnType",
-                  "name": "returnValType",
-                  "type": "uint8",
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "pastNAVUpdateIndex",
-                  "type": "uint256",
-                },
-                {
-                  "internalType": "bool",
-                  "name": "isNegative",
-                  "type": "bool",
-                },
-              ],
-              "internalType": "struct IGovernableFundStorage.NAVComposableUpdate[]",
-              "name": "composable",
-              "type": "tuple[]",
-            },
-            {
-              "internalType": "bool",
-              "name": "isPastNAVUpdate",
-              "type": "bool",
-            },
-            {
-              "internalType": "uint256",
-              "name": "pastNAVUpdateIndex",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "pastNAVUpdateEntryIndex",
-              "type": "uint256",
-            },
-            {
-              "internalType": "string",
-              "name": "description",
-              "type": "string",
-            },
-          ],
-          "internalType": "struct IGovernableFundStorage.NavUpdateEntry[]",
-          "name": "navUpdateData",
-          "type": "tuple[]",
-        },
-        {
-          "internalType": "address[]",
-          "name": "pastNAVUpdateEntryFundAddress",
-          "type": "address[]",
-        },
-        {
-          "internalType": "bool",
-          "name": "settleFlows",
-          "type": "bool",
-        },
-      ],
-      "name": "updateNav",
+      "name": "requestDeposit",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function",
@@ -2053,11 +1499,36 @@ export const GovernableFund = {
       "inputs": [
         {
           "internalType": "address",
-          "name": "navExecutor",
+          "name": "delegatee",
           "type": "address",
         },
+        {
+          "internalType": "uint256",
+          "name": "nonce",
+          "type": "uint256",
+        },
+        {
+          "internalType": "uint256",
+          "name": "expiry",
+          "type": "uint256",
+        },
+        {
+          "internalType": "uint8",
+          "name": "v",
+          "type": "uint8",
+        },
+        {
+          "internalType": "bytes32",
+          "name": "r",
+          "type": "bytes32",
+        },
+        {
+          "internalType": "bytes32",
+          "name": "s",
+          "type": "bytes32",
+        },
       ],
-      "name": "executeNAVUpdate",
+      "name": "depositAndDelegateBySig",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function",
@@ -2065,38 +1536,45 @@ export const GovernableFund = {
     {
       "inputs": [
         {
-          "internalType": "bytes",
-          "name": "flowCall",
-          "type": "bytes",
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256",
         },
       ],
-      "name": "fundFlowsCall",
-      "outputs": [
-        {
-          "internalType": "bytes",
-          "name": "",
-          "type": "bytes",
-        },
-      ],
+      "name": "requestWithdraw",
+      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function",
     },
     {
       "inputs": [],
-      "name": "toggleDaoFee",
+      "name": "withdraw",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function",
+    },
+    {
+      "inputs": [],
+      "name": "calculateAccruedManagementFees",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "accruedFees",
+          "type": "uint256",
+        },
+      ],
+      "stateMutability": "view",
       "type": "function",
     },
     {
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "bps",
+          "name": "amountInOIVTokens",
           "type": "uint256",
         },
       ],
-      "name": "setDaoFeeBps",
+      "name": "mintPerformanceFee",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function",
@@ -2105,13 +1583,180 @@ export const GovernableFund = {
       "inputs": [
         {
           "internalType": "address",
-          "name": "addr",
+          "name": "performaceFeeCalculator",
           "type": "address",
         },
       ],
-      "name": "setDaoFeeAddr",
+      "name": "mintPoolPerformanceFeeHWM",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function",
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "amountInOIVTokens",
+          "type": "uint256[]",
+        },
+        {
+          "internalType": "address[]",
+          "name": "recipients",
+          "type": "address[]",
+        },
+      ],
+      "name": "mintToMany",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function",
+    },
+    {
+      "inputs": [],
+      "name": "sweepTokens",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function",
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "enum IGovernableFundStorage.FundFeeType",
+          "name": "feeType",
+          "type": "uint8",
+        },
+      ],
+      "name": "collectFees",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function",
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "ownr",
+          "type": "address",
+        },
+      ],
+      "name": "valueOf",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256",
+        },
+      ],
+      "stateMutability": "view",
+      "type": "function",
+    },
+    {
+      "inputs": [],
+      "name": "totalNAV",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256",
+        },
+      ],
+      "stateMutability": "view",
+      "type": "function",
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "discountedAmount",
+          "type": "uint256",
+        },
+      ],
+      "name": "calculateDepositLPTokens",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "lpTokens",
+          "type": "uint256",
+        },
+      ],
+      "stateMutability": "view",
+      "type": "function",
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256",
+        },
+        {
+          "internalType": "uint256",
+          "name": "feeBps",
+          "type": "uint256",
+        },
+      ],
+      "name": "calculateFees",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "feeAmount",
+          "type": "uint256",
+        },
+        {
+          "internalType": "uint256",
+          "name": "daoFeeAmount",
+          "type": "uint256",
+        },
+        {
+          "internalType": "uint256",
+          "name": "netAmount",
+          "type": "uint256",
+        },
+      ],
+      "stateMutability": "view",
+      "type": "function",
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositLPTokens",
+          "type": "uint256",
+        },
+        {
+          "internalType": "uint256",
+          "name": "discountedWithdrawalAmount",
+          "type": "uint256",
+        },
+      ],
+      "name": "finalizeSettlement",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function",
+    },
+    {
+      "inputs": [],
+      "name": "totalWithdrawalBalance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256",
+        },
+      ],
+      "stateMutability": "view",
+      "type": "function",
+    },
+    {
+      "inputs": [],
+      "name": "withdrawalBaseBalance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256",
+        },
+      ],
+      "stateMutability": "view",
       "type": "function",
     },
   ],

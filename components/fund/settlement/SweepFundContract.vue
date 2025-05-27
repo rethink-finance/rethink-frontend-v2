@@ -101,7 +101,7 @@ const sweepFundContract = async () => {
       .on("receipt", (receipt: any) => {
         console.log("receipt :", receipt);
         if (receipt.status) {
-          toastStore.successToast("Fund contract sweep was successful.");
+          toastStore.successToast("Admin contract sweep was successful.");
           // Refresh balances
           // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
           fundStore.fetchFundContractBaseTokenBalance();

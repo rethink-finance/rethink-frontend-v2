@@ -4,6 +4,7 @@ import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 import type IFundSettings from "./fund_settings";
+import type IFundFlowsConfig from "~/types/fund_flows_config";
 
 export interface INAVParts {
   baseAssetOIVBal: bigint;
@@ -66,7 +67,7 @@ export default interface IFund {
   monthlyReturnPercent?: number; // TODO
   sharpeRatio?: number; // TODO
   positionTypeCounts: IPositionTypeCount[];
-  
+
   // Share Price
   sharePrice?: number;
 
@@ -147,4 +148,5 @@ export default interface IFund {
   pendingDepositBalanceError?: boolean;
   pendingRedemptionBalanceLoading?: boolean;
   pendingRedemptionBalanceError?: boolean;
+  flowsConfig?: IFundFlowsConfig;
 }

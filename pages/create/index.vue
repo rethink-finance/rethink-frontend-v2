@@ -357,7 +357,7 @@ const setFieldValue = (field: IField) => {
     field.value = cachedValue;
   } else if (fieldKey in fundFlowsConfig.value) {
     console.log("Parse flows config field", fieldKey, fundFlowsConfig.value)
-    cachedValue = fundFlowsConfig.value[fieldKey as keyof IFundFlowsConfig];
+    cachedValue = fundFlowsConfig.value[fieldKey as keyof IFundFlowsConfig] as string | bigint | boolean;
     if (typeof cachedValue === "bigint") {
       field.value = cachedValue.toString();
     } else {

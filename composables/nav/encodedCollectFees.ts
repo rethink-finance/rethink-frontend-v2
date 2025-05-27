@@ -1,9 +1,9 @@
 import { type AbiFunctionFragment } from "web3";
 import { encodeFunctionCall } from "web3-eth-abi";
-import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { GovernableFundFlows } from "~/assets/contracts/GovernableFundFlows";
 import { FundFeeType } from "~/types/enums/fee_type";
 
-const collectFeesABI = GovernableFund.abi.find(
+const collectFeesABI = GovernableFundFlows.abi.find(
   (func: any) => func.name === "collectFees" && func.type === "function",
 );
 

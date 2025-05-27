@@ -13,7 +13,6 @@ const FundFlowsCallAbi: Record<string, any[]> = {
   "claim": [ "function claim()" ],
   "sweepTokens": [ "function sweepTokens()" ],
   "collectFees": [ "function collectFees(uint8 feeType)" ],
-
 } as const;
 
 

@@ -95,7 +95,7 @@
         <div class="management">
           <div class="management__row">
             <div>
-              Prepopulate permissions to allow manager to send funds to the fund contract to settle flows
+              Prepopulate permissions to allow manager to send funds to the admin contract to settle flows
             </div>
             <v-switch
               v-model="allowManagerToSendFundsToFundContract"
@@ -344,7 +344,7 @@ const storePermissions = async () => {
     proposalData.encodedRoleModEntries.push(..._encodedRoleModEntries);
   }
 
-  // Add allowManagerToCollectFees permissions if switch button is enabled.
+  // Add allowManagerToCollectFees permissions if the switch button is enabled.
   if (allowManagerToCollectFees.value) {
     const _encodedRoleModEntries = getAllowManagerToCollectFeesPermission(
       fundInitCacheSettings?.fundAddress,

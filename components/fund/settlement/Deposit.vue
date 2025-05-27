@@ -626,6 +626,7 @@ const hasDelegatedToSelf = computed(() => {
 });
 
 const hasProcessedDeposit = computed(() => {
+  // TODO what is going on here?
   return false;
   // return fundStore.fundUserData.depositRequestProcessed;
 });
@@ -657,34 +658,70 @@ const buttons = ref([
 ]);
 
 
-const stepsDeposit = computed(() => [
-  {
-    label: "1. Request Deposit",
-    done: hasRequestedDeposit.value,
-    loading: loadingRequestDeposit.value,
-    isDisabled: false,
-  },
-  {
-    label: "2. Approve Amount",
-    done: hasApprovedAmount.value,
-    loading: loadingApproveAllowance.value,
-    isDisabled: false,
-  },
-  {
-    label: "3. Delegate to Myself",
-    done: hasDelegatedToSelf.value && hasApprovedAmount.value,
-    loading: isLoadingDelegate.value,
-  },
-  {
-    label: "4. Process Deposit",
-    done: hasProcessedDeposit.value,
-    isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
-    tooltip: "Wait for the next NAV update to process the deposit.",
-  },
-]);
+const flowVersion = computed(() => fund.value?.flowsConfig?.flowVersion || "0");
+
+const stepsDeposit = computed(() => {
+  console.warn("flowVersion", flowVersion.value);
+  if (flowVersion.value === "0") {
+    // For version "0" or any other version, use the original order
+    return [
+      {
+        label: "1. Request Deposit",
+        done: hasRequestedDeposit.value,
+        loading: loadingRequestDeposit.value,
+        isDisabled: false,
+      },
+      {
+        label: "2. Approve Amount",
+        done: hasApprovedAmount.value,
+        loading: loadingApproveAllowance.value,
+        isDisabled: false,
+      },
+      {
+        label: "3. Delegate to Myself",
+        done: hasDelegatedToSelf.value && hasApprovedAmount.value,
+        loading: isLoadingDelegate.value,
+      },
+      {
+        label: "4. Process Deposit",
+        done: hasProcessedDeposit.value,
+        isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
+        tooltip: "Wait for the next NAV update to process the deposit.",
+      },
+    ];
+  } else if (flowVersion.value === "1") {
+    // Check if flowVersion is "1", otherwise default to the original order
+    // For version "1", swap the first two steps (Request Deposit and Approve Amount)
+    return [
+      {
+        label: "1. Approve Amount",
+        done: hasApprovedAmount.value,
+        loading: loadingApproveAllowance.value,
+        isDisabled: false,
+      },
+      {
+        label: "2. Request Deposit",
+        done: hasRequestedDeposit.value,
+        loading: loadingRequestDeposit.value,
+        isDisabled: false,
+      },
+      {
+        label: "3. Delegate to Myself",
+        done: hasDelegatedToSelf.value && hasApprovedAmount.value,
+        loading: isLoadingDelegate.value,
+      },
+      {
+        label: "4. Process Deposit",
+        done: hasProcessedDeposit.value,
+        isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
+        tooltip: "Wait for the next NAV update to process the deposit.",
+      },
+    ];
+  }
+});
 
 const handleDepositClick = () =>{
-  if(!hasRequestedDeposit.value){
+  if (!hasRequestedDeposit.value){
     requestDeposit();
   }
   isDepositModalOpen.value = true;
