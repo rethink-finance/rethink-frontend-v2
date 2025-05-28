@@ -5,7 +5,7 @@ export const formRules: Record<string, any> = {
     (value !== "" && value !== undefined && value !== null) ||
     "Field is required.",
   isValidAddress: (value: any) =>
-    ethers.isAddress(value) || "Address is not valid.",
+    ethers.isAddress(value?.toString().toLowerCase()) || "Address is not valid.",
   isValidHexString: (value: any) =>
     ethers.isHexString(value) || "Value is not a valid hex string.",
 

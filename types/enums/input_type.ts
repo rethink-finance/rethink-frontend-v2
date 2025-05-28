@@ -3,6 +3,7 @@ export enum InputType {
   Textarea = "textarea",
   ReadonlyJSON = "readonlyJson",
   Checkbox = "checkbox",
+  ToggleSwitch = "toggleSwitch",
   Number = "number",
   Select = "select",
   Image = "image",
@@ -41,6 +42,7 @@ export const defaultInputTypeValue: Record<InputType, any> = {
   [InputType.Textarea]: "",
   [InputType.ReadonlyJSON]: "",
   [InputType.Checkbox]: false,
+  [InputType.ToggleSwitch]: false,
   [InputType.Number]: 0,
   // If the default value 0 as integer won't work for all, add default values to PositionTypeValuationTypeFieldsMap
   // wherever we will need them.

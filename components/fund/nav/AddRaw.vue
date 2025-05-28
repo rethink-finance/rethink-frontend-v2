@@ -5,10 +5,12 @@
     max-width="80%"
     confirm-text="Load"
     cancel-text="Cancel"
-    message="Please enter the raw methods JSON below"
     @confirm="addRawMethods"
     @update:model-value="updateModelValue"
   >
+    <div class="mb-2">
+      Please enter the raw methods JSON
+    </div>
     <v-textarea
       v-model="rawMethods"
       label="Raw Methods"

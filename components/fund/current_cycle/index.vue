@@ -10,7 +10,7 @@
       >
         <v-tooltip
           :disabled="
-            !(depositDisabledTooltipText || redemptionDisabledTooltipText)
+            !(userDepositRequestExists && depositDisabledTooltipText || userRedemptionRequestExists && redemptionDisabledTooltipText)
           "
           activator="parent"
           location="bottom"
