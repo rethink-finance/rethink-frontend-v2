@@ -41,6 +41,38 @@
       message="Please enter raw permissions JSON"
       @confirm="addRawProposal"
     >
+      <v-text-field
+        v-model="addressInput"
+        label="Address"
+        outlined
+        placeholder="Enter Ethereum address"
+        class="me-4"
+      />
+      <v-text-field
+        v-model.number="startBlockInput"
+        label="Start Block"
+        type="number"
+        outlined
+        placeholder="Enter start block"
+        class="me-4"
+      />
+      <v-text-field
+        v-model.number="endBlockInput"
+        label="End Block"
+        type="number"
+        outlined
+        placeholder="Enter end block"
+        class="me-4"
+      />
+      <v-btn
+        class="text-secondary me-4"
+        variant="outlined"
+        @click="fetchAndGeneratePermissions"
+        :loading="isFetchingPermissions"
+        :disabled="isFetchingPermissions"
+      >
+        Generate Permissions From Address History
+      </v-btn>
       <v-textarea
         v-model="rawProposalInput"
         label="Raw proposal"
@@ -59,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, watch } from 'vue';
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
 import { useToastStore } from "~/store/toasts/toast.store";
 import {
@@ -69,48 +102,394 @@ import {
 } from "~/types/enums/delegated_permission";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 import type { IRawTrx } from "~/types/zodiac-roles/role";
+import Web3 from 'web3';
+import { useWeb3Store } from "~/store/web3/web3.store";
+import { useFundStore } from "~/store/fund/fund.store";
 
-const toastStore = useToastStore();
-const permissionsProposalStore = usePermissionsProposalStore();
+// Interfaces for TypeScript
+interface Transaction {
+  blockNumber: number;
+  hash: string;
+  from: string;
+  to: string;
+  input: string;
+  gasUsed: bigint;
+}
+
+interface ProcessedData {
+  func_sig: string;
+  calldata_len_sans_sig: number;
+  words: string[];
+  indices_of_addr: number[];
+  full_calldata: string;
+  contract: string;
+  token_found_idx: number[];
+}
+
+interface PermissionValue {
+  idx: number;
+  isArray: boolean;
+  data: string | number | string[];
+  internalType: string;
+  name: string;
+}
+
+interface Permission {
+  idx: number;
+  value: PermissionValue[];
+  valueMethodIdx: number;
+}
+
+interface Entry {
+  stepName: string;
+  steps: any[];
+  [key: string]: any;
+}
+
+interface Web3Store {
+  callWithRetry: <T>(
+    chainId: number,
+    method: () => Promise<T>,
+    maxRetries?: number,
+    extraIgnorableErrorCodes?: any[],
+    timeoutMs?: number
+  ) => Promise<T>;
+}
 
 // Props
-const props = defineProps({
-  modelValue: { type: Array, required: true }, // Enables v-model for entry
-  title: { type: String, default: "Delegated Permissions Proposal" },
-  fieldsMap: { type: Object, default: () => DelegatedPermissionFieldsMap },
-  submitLabel: { type: String, default: "Submit" },
-  isLoading: { type: Boolean, default: false },
-  tooltipTitle: {
-    type: String,
-    default: "Create a Delegated Permission Proposal",
-  },
-  tooltipLink: { type: String, default: "#" },
-  alwaysShowLastStep: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = defineProps<{
+  modelValue: Entry[];
+  title?: string;
+  fieldsMap?: typeof DelegatedPermissionFieldsMap;
+  submitLabel?: string;
+  isLoading?: boolean;
+  tooltipTitle?: string;
+  tooltipLink?: string;
+  alwaysShowLastStep?: boolean;
+}>();
 
 // Emits
-const emit = defineEmits([
-  "update:modelValue",
-  "fieldsChanged",
-  "submit",
-  "cancel",
-  "addRaw",
-  "entryUpdated",
-]);
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: Entry[]): void;
+  (e: 'fieldsChanged', stepName: string, subStepIndex: number, step: any): void;
+  (e: 'submit'): void;
+  (e: 'cancel'): void;
+  (e: 'addRaw'): void;
+  (e: 'entryUpdated', value: Entry[]): void;
+}>();
 
-// Local state bound to v-model
-const delegatedEntry = ref(JSON.parse(JSON.stringify(props.modelValue)));
-
-// Local State
+// Local state
+const delegatedEntry = ref<Entry[]>(JSON.parse(JSON.stringify(props.modelValue)));
 const showAddRawDialog = ref(false);
-const rawProposalInput = ref("");
+const rawProposalInput = ref('');
 const keepExistingPermissions = ref(true);
 const isMounted = ref(false);
+const permissions = ref<Permission[]>([]);
+const addressInput = ref('');
+const startBlockInput = ref(0);
+const endBlockInput = ref(0);
+const isFetchingPermissions = ref(false);
 
-// Methods
+// Stores
+const toastStore = useToastStore();
+const permissionsProposalStore = usePermissionsProposalStore();
+const web3Store = useWeb3Store();
+const fundStore = useFundStore();
+
+// Web3 initialization
+const web3 = new Web3(); // Provider managed by web3Store
+
+// Sample scope templates
+const sampleScopeTarget: Permission = {
+  idx: 0,
+  value: [
+    { idx: 0, isArray: false, data: "1", internalType: "uint16", name: "role" },
+    { idx: 1, isArray: false, data: "", internalType: "address", name: "targetAddress" },
+  ],
+  valueMethodIdx: 24,
+};
+
+const sampleScopeAllowFunction: Permission = {
+  idx: 0,
+  value: [
+    { idx: 0, isArray: false, data: 1, internalType: "uint16", name: "role" },
+    { idx: 1, isArray: false, data: "", internalType: "address", name: "targetAddress" },
+    { idx: 2, isArray: false, data: "", internalType: "bytes4", name: "functionSig" },
+    { idx: 3, isArray: false, data: 1, internalType: "enum ExecutionOptions", name: "options" },
+  ],
+  valueMethodIdx: 18,
+};
+
+const sampleScopeParameter: Permission = {
+  idx: 0,
+  value: [
+    { idx: 0, isArray: false, data: "1", internalType: "uint16", name: "role" },
+    { idx: 1, isArray: false, data: "", internalType: "address", name: "targetAddress" },
+    { idx: 2, isArray: false, data: "", internalType: "bytes4", name: "functionSig" },
+    { idx: 3, isArray: false, data: "", internalType: "uint256", name: "paramIndex" },
+    { idx: 4, isArray: false, data: "0", internalType: "enum ParameterType", name: "paramType" },
+    { idx: 5, isArray: false, data: "0", internalType: "enum Comparison", name: "paramComp" },
+    { idx: 6, isArray: false, data: "", internalType: "bytes", name: "compValue" },
+  ],
+  valueMethodIdx: 21,
+};
+
+const sampleScopeParameterAsOneOf: Permission = {
+  idx: 0,
+  value: [
+    { idx: 0, isArray: false, data: "1", internalType: "uint16", name: "role" },
+    { idx: 1, isArray: false, data: "", internalType: "address", name: "targetAddress" },
+    { idx: 2, isArray: false, data: "", internalType: "bytes4", name: "functionSig" },
+    { idx: 3, isArray: false, data: "", internalType: "uint256", name: "paramIndex" },
+    { idx: 4, isArray: false, data: "", internalType: "enum ParameterType", name: "paramType" },
+    { idx: 5, isArray: true, data: [], internalType: "bytes[]", name: "compValues" },
+  ],
+  valueMethodIdx: 22,
+};
+
+// Function to create batch request for blocks
+const createBatchRequest = (blockNumbers: number[]): { jsonrpc: string; method: string; params: [string, boolean]; id: number }[] => {
+  // Validate block numbers to ensure they are non-negative integers
+  if (!blockNumbers.every(num => Number.isInteger(num) && num >= 0)) {
+    throw new Error('Invalid block numbers: must be non-negative integers');
+  }
+  // Generate JSON-RPC requests for eth_getBlockByNumber
+  return blockNumbers.map((blockNumber: number) => ({
+    jsonrpc: '2.0',
+    method: 'eth_getBlockByNumber',
+    params: [web3.utils.toHex(blockNumber), true],
+    id: blockNumber,
+  }));
+};
+
+// Function to send batch request
+const fetchBlocksInBatch = async (blockNumbers: number[]): Promise<any[]> => {
+  const batchRequest = createBatchRequest(blockNumbers);
+  const fundChainId = fundStore.selectedFundChain;
+
+  return web3Store.callWithRetry(fundChainId, async () => {
+    const batch = new web3.eth.BatchRequest();
+    const promises: Promise<any>[] = batchRequest.map((request) => {
+      return new Promise((resolve, reject) => {
+        batch.add({
+          jsonrpc: '2.0',
+          method: request.method,
+          params: request.params,
+          id: request.id
+        });
+      });
+    });
+    // Execute batch request
+    batch.execute();
+    // Wait for all requests to complete
+    return Promise.all(promises);
+  }, 1, [], 4000);
+};
+
+// Function to get transactions for address
+const getTransactionsForAddress = (address: string, blocks: any[]): Transaction[] => {
+  const transactions: Transaction[] = [];
+  for (const block of blocks) {
+    if (block.result && block.result.transactions) {
+      for (const tx of block.result.transactions) {
+        if (tx.from && tx.from.toLowerCase() === address.toLowerCase()) {
+          transactions.push({
+            blockNumber: parseInt(tx.blockNumber, 16),
+            hash: tx.hash,
+            from: tx.from,
+            to: tx.to || '',
+            input: tx.input,
+            gasUsed: BigInt(0), // Will be updated later
+          });
+        }
+      }
+    }
+  }
+  return transactions;
+};
+
+// Function to fetch transactions
+const getTransactionCallData = async (address: string, startBlock: number, endBlock: number): Promise<Transaction[]> => {
+  const blockNumbers = Array.from({ length: endBlock - startBlock + 1 }, (_, i) => startBlock + i);
+  const batchSize = 1000;
+  const fundChainId = fundStore.selectedFundChain;
+
+  const allTransactions: Transaction[] = [];
+  for (let i = 0; i < blockNumbers.length; i += batchSize) {
+    const batchBlockNumbers = blockNumbers.slice(i, i + batchSize);
+    const batchResponse = await fetchBlocksInBatch(batchBlockNumbers);
+    const batchTransactions = getTransactionsForAddress(address, batchResponse);
+    allTransactions.push(...batchTransactions);
+  }
+  for (const tx of allTransactions) {
+    const receipt = await web3Store.callWithRetry(
+      fundChainId,
+      () => web3.eth.getTransactionReceipt(tx.hash),
+      1,
+      [],
+      4000
+    );
+    tx.gasUsed = receipt.gasUsed;
+  }
+  return allTransactions;
+};
+
+// Function to process transaction input
+const processTransactionInput = (input: string, address: string, n: number = 64): ProcessedData | 1 => {
+  const approvalSig = '0x095ea7b3';
+  if (input.slice(0, 10) === approvalSig) {
+    return 1;
+  }
+  const subStr = input.slice(10);
+  const words: string[] = [];
+  for (let i = 0; i < subStr.length; i += n) {
+    words.push(subStr.slice(i, i + n));
+  }
+  const indicesOfAddr = words
+    .map((word, i) => (word.includes(address.slice(2).toLowerCase()) ? i : -1))
+    .filter((i) => i !== -1);
+  return {
+    func_sig: input.slice(0, 10),
+    calldata_len_sans_sig: subStr.length,
+    words,
+    indices_of_addr: indicesOfAddr,
+    full_calldata: input,
+    contract: '',
+    token_found_idx: [],
+  };
+};
+
+// Function to generate permissions
+const generateSimplePermissions = (transactions: Transaction[], custodyAddress: string): Permission[] => {
+  const approvals: string[] = [];
+  const contractInteractions: string[] = [];
+  const processedData: ProcessedData[] = [];
+  for (const tx of transactions) {
+    const result = processTransactionInput(tx.input, custodyAddress);
+    if (result === 1) {
+      approvals.push(tx.to);
+    } else {
+      contractInteractions.push(tx.to);
+      result.contract = tx.to;
+      processedData.push(result);
+    }
+  }
+  const uniqueApprovals = [...new Set(approvals)];
+  for (const p of processedData) {
+    const tokenFound = p.words
+      .map((word, i) => (uniqueApprovals.some((addr) => word.includes(addr.slice(2).toLowerCase())) ? i : -1))
+      .filter((i) => i !== -1);
+    p.token_found_idx = tokenFound;
+  }
+  const uniqueContractInteractions = [...new Set(contractInteractions)];
+  const zeroPaddedTokenList = uniqueApprovals.map((addr) => '0x000000000000000000000000' + addr.slice(2));
+  let permsIdx = 0;
+  const permissions: Permission[] = [];
+  for (const addr of [...uniqueContractInteractions, ...uniqueApprovals]) {
+    const node = JSON.parse(JSON.stringify(sampleScopeTarget)) as Permission;
+    node.value[1].data = addr;
+    node.idx = permsIdx++;
+    permissions.push(node);
+  }
+  for (const p of processedData) {
+    const ioiLen = p.indices_of_addr.length;
+    const tidxLen = p.token_found_idx.length;
+    if (ioiLen === 0 && tidxLen === 0) {
+      const perms = JSON.parse(JSON.stringify(sampleScopeAllowFunction)) as Permission;
+      perms.value[1].data = p.contract;
+      perms.value[2].data = p.func_sig;
+      perms.idx = permsIdx++;
+      permissions.push(perms);
+    } else {
+      if (tidxLen !== 0) {
+        if (tidxLen === 1) {
+          if (uniqueApprovals.length === 1) {
+            const perms = JSON.parse(JSON.stringify(sampleScopeParameter)) as Permission;
+            perms.value[1].data = p.contract;
+            perms.value[2].data = p.func_sig;
+            perms.value[3].data = String(p.token_found_idx[0]);
+            perms.value[4].data = '0';
+            perms.value[5].data = '0';
+            perms.value[6].data = zeroPaddedTokenList[0];
+            perms.idx = permsIdx++;
+            permissions.push(perms);
+          } else {
+            const perms = JSON.parse(JSON.stringify(sampleScopeParameterAsOneOf)) as Permission;
+            perms.value[1].data = p.contract;
+            perms.value[2].data = p.func_sig;
+            perms.value[3].data = String(p.token_found_idx[0]);
+            perms.value[4].data = '0';
+            perms.value[5].data = zeroPaddedTokenList;
+            perms.idx = permsIdx++;
+            permissions.push(perms);
+          }
+        } else {
+          for (const tIdx of p.token_found_idx) {
+            if (uniqueApprovals.length === 1) {
+              const perms = JSON.parse(JSON.stringify(sampleScopeParameter)) as Permission;
+              perms.value[1].data = p.contract;
+              perms.value[2].data = p.func_sig;
+              perms.value[3].data = String(tIdx);
+              perms.value[4].data = '0';
+              perms.value[5].data = '0';
+              perms.value[6].data = zeroPaddedTokenList[0];
+              perms.idx = permsIdx++;
+              permissions.push(perms);
+            } else {
+              const perms = JSON.parse(JSON.stringify(sampleScopeParameterAsOneOf)) as Permission;
+              perms.value[1].data = p.contract;
+              perms.value[2].data = p.func_sig;
+              perms.value[3].data = String(tIdx);
+              perms.value[4].data = '0';
+              perms.value[5].data = zeroPaddedTokenList;
+              perms.idx = permsIdx++;
+              permissions.push(perms);
+            }
+          }
+        }
+      }
+      if (ioiLen !== 0) {
+        for (const tIdx of p.indices_of_addr) {
+          const perms = JSON.parse(JSON.stringify(sampleScopeParameter)) as Permission;
+          perms.value[1].data = p.contract;
+          perms.value[2].data = p.func_sig;
+          perms.value[3].data = String(tIdx);
+          perms.value[4].data = '0';
+          perms.value[5].data = '0';
+          perms.value[6].data = '0x000000000000000000000000' + custodyAddress.slice(2);
+          perms.idx = permsIdx++;
+          permissions.push(perms);
+        }
+      }
+    }
+  }
+  return permissions;
+};
+
+// Fetch and generate permissions
+const fetchAndGeneratePermissions = async () => {
+  try {
+    isFetchingPermissions.value = true;
+    if (!web3.utils.isAddress(addressInput.value)) {
+      throw new Error('Invalid Ethereum address');
+    }
+    if (startBlockInput.value >= endBlockInput.value || startBlockInput.value < 0) {
+      throw new Error('Invalid block range');
+    }
+    const transactions = await getTransactionCallData(addressInput.value, startBlockInput.value, endBlockInput.value);
+    permissions.value = generateSimplePermissions(transactions, addressInput.value);
+    rawProposalInput.value = JSON.stringify(permissions.value);
+    keepExistingPermissions.value = true;
+    addRawProposal();
+  } catch (err: unknown) {
+    console.error('Error generating permissions:', err);
+    toastStore.errorToast('Failed to generate permissions: ' + (err as Error).message);
+  } finally {
+    isFetchingPermissions.value = false;
+  }
+};
+
+// Existing methods
 const openAddRawDialog = () => (showAddRawDialog.value = true);
 
 const addRawProposal = () => {
@@ -119,12 +498,10 @@ const addRawProposal = () => {
     if (!proposal) {
       throw new Error("Invalid JSON");
     }
-    console.log("proposal:", proposal)
+    console.log("proposal:", proposal);
 
-    // format new entries from proposal and roleModMethodChoices
-    const newEntries = [] as any[];
-
-    proposal.forEach((entry: any) => {
+    const newEntries: any[] = [];
+    proposal.forEach((entry: Permission) => {
       const contractMethod = roleModMethodChoices.find(
         (choice) => choice.valueMethodIdx === entry.valueMethodIdx,
       );
@@ -134,15 +511,13 @@ const addRawProposal = () => {
         return;
       }
 
-      // we need to define new method entry based on the contractMethod
       const defaultMethodForEntry = formatInputToObject(
         proposalRoleModMethodStepsMap[contractMethod.value],
       );
       const currentField =
         props.fieldsMap?.setup?.[defaultMethodForEntry.contractMethod];
 
-      // now we need to populate values from the proposal to the defaultMethodForEntry
-      entry.value.forEach((value: any) => {
+      entry.value.forEach((value: PermissionValue) => {
         const valueName = value?.name || "";
         if (!valueName) {
           console.error("Value name not found");
@@ -161,7 +536,7 @@ const addRawProposal = () => {
     });
 
     const mainStepIndex = delegatedEntry.value.findIndex(
-      (entry: any) => entry.stepName === DelegatedStep.Setup,
+      (entry: Entry) => entry.stepName === DelegatedStep.Setup,
     );
     if (mainStepIndex === -1) {
       console.error("Main step not found");
@@ -182,8 +557,7 @@ const addRawProposal = () => {
   }
 };
 
-// Validation logic
-const validateFields = (entry: any, fields: any) => {
+const validateFields = (entry: any, fields: any[]): boolean => {
   let isValid = true;
 
   fields.forEach((field: any) => {
@@ -208,10 +582,10 @@ const updateTransactionsJsonField = () => {
   if (!isMounted.value) return;
 
   const transactions = delegatedEntry.value.find(
-    (entry: any) => entry.stepName === DelegatedStep.Setup,
+    (entry: Entry) => entry.stepName === DelegatedStep.Setup,
   )?.steps ?? [];
   const detailsStep = delegatedEntry.value.find(
-    (entry: any) => entry.stepName === DelegatedStep.Details,
+    (entry: Entry) => entry.stepName === DelegatedStep.Details,
   );
   if (!detailsStep) return;
 
@@ -228,23 +602,26 @@ const updateTransactionsJsonField = () => {
     rawTransactions.push({
       funcName: trx.contractMethod,
       args: trxArgs,
-    })
+    });
 
     permissionsProposalStore.rawTransactions = [...rawTransactions];
-    detailsStep.steps[0].transactionsOverview = JSON.stringify(permissionsProposalStore.rawTransactions.map(trx => [trx.funcName, trx.args]), null, 2);
+    detailsStep.steps[0].transactionsOverview = JSON.stringify(
+      permissionsProposalStore.rawTransactions.map((trx: IRawTrx) => [trx.funcName, trx.args]),
+      null,
+      2
+    );
     detailsStep.steps[0].transactionsRawJSON = permissionsProposalStore.rawTransactionsJson;
   });
-}
-// we need to change the inputs based on the contractMethod
-const fieldsChanged = (stepName: any, subStepIndex: any, step: any) => {
+};
+
+const fieldsChanged = (stepName: string, subStepIndex: number, step: any) => {
   updateTransactionsJsonField();
-  // we need to formatInputToObject for the new substep inputs based on the contractMethod
   const newInput = formatInputToObject(
     proposalRoleModMethodStepsMap[step.contractMethod],
   );
 
   const mainStepIndex = delegatedEntry.value.findIndex(
-    (entry: any) => entry.stepName === stepName,
+    (entry: Entry) => entry.stepName === stepName,
   );
   if (mainStepIndex === -1) {
     console.error("Main step not found");
@@ -261,12 +638,9 @@ const fieldsChanged = (stepName: any, subStepIndex: any, step: any) => {
     (key) => key !== "contractMethod",
   );
 
-  // check if currentInputs has the same keys as newInput
-  // if it does, we don't need to do anything
   const hasSameKeys = Object.keys(newInput).every(
     (key) => key in currentInputs,
   );
-  // check if "isValid" key is NOT present in the currentInputs
   if (!Object.hasOwn(currentInputs, "isValid")) {
     currentInputs.isValid = false;
   }
@@ -274,35 +648,27 @@ const fieldsChanged = (stepName: any, subStepIndex: any, step: any) => {
     return;
   }
 
-  keysToDelete.forEach((key) => {
+  keysToDelete.forEach((key: string) => {
     delete currentInputs[key];
   });
 
-  Object.assign(currentInputs, newInput); // add new input to the current inputs
+  Object.assign(currentInputs, newInput);
 };
 
-
-onMounted(() => {
+onMounted(async () => {
   if (permissionsProposalStore.rawTransactions.length) {
     keepExistingPermissions.value = false;
     rawProposalInput.value = permissionsProposalStore.rawTransactionsJson;
     console.log("mounted raw", rawProposalInput.value);
     addRawProposal();
-
-    // Reset RAW transactions.
     permissionsProposalStore.rawTransactions = [];
   }
   isMounted.value = true;
 });
-// TODO this is not a good way to do that but the stepper and StepperFields
-//  should not be implemented like that, mutating props inside but instead they
-//  should be correctly emitting events. But it's a lot of refactor to fix that
-//  now. This should be a v-model somehow, emitting update:modelValue
+
 watch(
   () => delegatedEntry.value,
-  (newValue) => {
-    // Emit changes back to parent
-    // emit("update:modelValue", newValue);
+  (newValue: Entry[]) => {
     emit("entryUpdated", newValue);
   },
   { deep: true },
@@ -346,5 +712,11 @@ watch(
   :deep(.v-selection-control) {
     flex-direction: row-reverse;
   }
+}
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
 }
 </style>
