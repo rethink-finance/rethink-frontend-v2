@@ -95,7 +95,7 @@
         <div class="management">
           <div class="management__row">
             <div>
-              Prepopulate permissions to allow manager to send funds to the fund contract to settle flows
+              Prepopulate permissions to allow manager to send funds to the admin contract to settle flows
             </div>
             <v-switch
               v-model="allowManagerToSendFundsToFundContract"
@@ -226,7 +226,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
       "0", // paramIndex
       "0", // paramType -- Static
       "0", // paramComp -- EqualTo
-      byteEncodedFundAddress, // compValue, newly created fund contract address
+      byteEncodedFundAddress, // compValue, newly created admin contract address
     ],
   );
   encodedRoleModEntries.push(encodedScopeParameter);

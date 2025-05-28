@@ -89,7 +89,7 @@ const OnboardingFieldsMap: FieldsMapType = {
                 if (fieldsToHide.includes(fieldManagement.key)) return undefined
 
                 // override for minLiquidAssetShare
-                if(fieldManagement.key === "plannedSettlementPeriod") {
+                if (fieldManagement.key === "plannedSettlementPeriod") {
                   return {
                     ...fieldManagement,
                     isEditable: true,

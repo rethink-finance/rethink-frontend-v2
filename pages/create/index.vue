@@ -312,7 +312,7 @@ const isCreateFundPasswordCorrect = ref<boolean>(
 );
 
 // store the resolve/reject functions for the save changes dialog
-let nextRouteResolve: Function | null = null;
+let nextRouteResolve: (() => void) | null = null;
 
 // whitelist data
 const whitelistedAddresses = ref<IWhitelist[]>([]);
@@ -320,8 +320,8 @@ const isCheckingIfFundInitCacheExists = ref(false);
 const isWhitelistedDeposits = ref(false);
 const selectedChainId = ref<ChainId>(networkChoices[0].value);
 
-// We want to set fundInitCache here when it is updated, and not take it from the store,
-// to prevent race conditions.
+// We want to set fundInitCache here when it is updated and not take it
+// from the store to prevent race conditions.
 const fundInitCache = ref<IFundInitCache | undefined>(undefined);
 const fundSettings = computed<IFundSettings>(() => fundInitCache?.value?.fundSettings || {} as IFundSettings);
 const fundMetadata = computed(() => fundInitCache?.value?.fundMetadata || {});
@@ -329,7 +329,12 @@ const fundGovernorData = computed(() => fundInitCache?.value?.governorData || {}
 
 // Fetch Fund Cache and fill the form data with the fetched fund cache.
 const setFieldValue = (field: IField) => {
-  if (![InputType.Image, InputType.Textarea, InputType.Select, InputType.Period].includes(field.type)) {
+  if ([
+    InputType.Text,
+    InputType.ReadonlyJSON,
+    InputType.Number,
+    InputType.Date,
+  ].includes(field.type)) {
     field.type = InputType.Text;
   }
   field.isToggleable = false;

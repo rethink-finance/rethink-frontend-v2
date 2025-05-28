@@ -132,7 +132,7 @@ export async function fetchFundsMetaDataAction(
         const metaData = JSON.parse(metaDataJson);
 
         const { strategistName, strategistUrl, oivChatUrl } = fundMetaDataHardcoded[chainId].find(
-          (fund) => fund.address === address,
+          (fund) => fund?.address === address,
         ) || { strategistName: "", strategistUrl: "", oivChatUrl: "" };
 
         fund.description = metaData.description;
