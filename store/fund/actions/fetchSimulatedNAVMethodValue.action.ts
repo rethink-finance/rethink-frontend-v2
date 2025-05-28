@@ -1,4 +1,4 @@
-import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
+import { useContractAddresses } from "~/composables/useContractAddresses";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -112,6 +112,7 @@ export const fetchSimulatedNAVMethodValueAction = async (
       // Add 2 more parameters to calldata:
       // - governable fund factory contract address
       // - deployer
+      const { rethinkContractAddresses } = useContractAddresses();
       callData.push(
         ...[
           rethinkContractAddresses.GovernableFundFactoryBeaconProxy[fundChainId],

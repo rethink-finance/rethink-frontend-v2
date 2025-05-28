@@ -249,12 +249,14 @@
         title="Heads Up!"
         confirm-text="Clear"
         cancel-text="Don't clear"
-        :message="clearCacheMessage"
         class="confirm_dialog"
         max-width="600px"
         @confirm="handleClearCache"
         @cancel="isClearCacheDialogOpen = false"
       >
+        <div v-if="clearCacheMessage" class="mb-2">
+          {{ clearCacheMessage }}
+        </div>
         <p class="mt-4">
           This action will clear the create vault form data for the selected chain.
           You will lose all the saved data you have entered so far.
@@ -645,27 +647,19 @@ const allowedDepositors = computed(() => {
 
 
 // Methods
-// helper function to generate sections
-const generateSteps = (stepperEntry: IOnboardingStep[]) => {
-  return OnboardingStepMap?.map((step) => ({
-    name: step?.name ?? "",
-    key: step?.key ?? "",
-    info: step?.info ?? "",
-    fields: generateFields(step, stepperEntry),
-  })) as IOnboardingStep[];
-}
-
-
 // helper function to generate fields
-const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) => {
+const generateFields = (step: IOnboardingStep) => {
   const stepKey = step.key as OnboardingInitializingSteps;
+  const lsStepperEntry = getLocalStorageItem(
+    onboardingStepperEntryLocalStorageKey.value,
+  ) || {} as IOnboardingStep[];
 
   if (!OnboardingFieldsMap[stepKey]) return [];
-  console.log("generateFields:", stepperEntry);
+  console.log("generateFields:", lsStepperEntry);
 
   const output =  OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
-    const stepIndex = findIndexByKey(stepperEntry, stepKey);
-    const stepperEntryField = stepperEntry?.[stepIndex]?.fields?.[fieldIndex];
+    const stepIndex = findIndexByKey(lsStepperEntry, stepKey);
+    const stepperEntryField = lsStepperEntry?.[stepIndex]?.fields?.[fieldIndex];
     const isToggleOn = stepperEntryField?.isToggleOn ?? field?.isToggleOn;
 
     if (field?.isToggleable) {
@@ -698,27 +692,28 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
       value: fieldValue ?? fieldTyped?.value,
     } as IField;
   });
-  console.log("output:", output);
+  console.log("lsStepperEntry", lsStepperEntry);
+  console.log("initCreateFund output", output);
 
-  // find basic step and add custom fields to that step
+  // find the basic step and add custom fields to that step
   if (stepKey === OnboardingStep.Basics) {
-    if (Object.keys(stepperEntry).length === 0) return output;
+    if (Object.keys(lsStepperEntry).length === 0) return output;
 
-    const stepIndex = stepperEntry.findIndex(
-      (step) => step.key === OnboardingStep.Basics,
+    const stepIndex = lsStepperEntry.findIndex(
+      (step: IOnboardingStep) => step.key === OnboardingStep.Basics,
     );
 
     if (stepIndex !== -1) {
-      const stepFields = stepperEntry[stepIndex].fields ?? [];
+      const stepFields = lsStepperEntry[stepIndex].fields ?? [];
 
-      // find custom fields (fields that has key "isFieldByUser")
+      // find custom fields (fields that have key "isFieldByUser")
       const customFields = stepFields?.filter(
-        (field) => {
+        (field: IField) => {
           return field.isFieldByUser;
         },
       ) ?? [];
 
-      const customFieldsFormatted = customFields?.map((field) => {
+      const customFieldsFormatted = customFields?.map((field: IField) => {
         return {
           ...field,
           rules: [formRules.required],
@@ -734,22 +729,22 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
 
 
 const getFieldByStepAndFieldKey =(
-  stepperEntry: IOnboardingStep[],
   stepKey: string,
   fieldKey: string,
 ) =>{
-  const field = stepperEntry
+  // Find the step key and then find the field key.
+  const field = stepperEntry.value
     ?.find(step => step.key === stepKey)?.fields
-    ?.flatMap(field => field.fields || field)
-    ?.find(field => field.key === fieldKey);
+    ?.flatMap(field => [field, ...field?.fields || []])
+    ?.find(field => field?.key === fieldKey);
 
   if (!field) {
-    console.error(`Field ${fieldKey} not found in step ${stepKey}`);
+    console.error(`Field ${fieldKey} not found in step ${stepKey}`, field);
     return "";
   }
   const fieldValue = field?.value;
 
-  if (field?.defaultValue !== undefined && field?.defaultValue !== null) {
+  if (field?.defaultValue != null) {
     return field?.isCustomValueToggleOn ? fieldValue : field?.defaultValue;
   }
 
@@ -783,12 +778,12 @@ const formatFundMetaData = () => {
   const customFields = findCustomFieldsFromStep(OnboardingStep.Basics);
 
   return  {
-    description: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "description"),
-    photoUrl: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "photoUrl"),
-    plannedSettlementPeriod: getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "plannedSettlementPeriod"),
-    strategistName : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistName"),
-    strategistUrl : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "strategistUrl"),
-    oivChatUrl : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "oivChatUrl"),
+    description: getFieldByStepAndFieldKey(OnboardingStep.Basics, "description"),
+    photoUrl: getFieldByStepAndFieldKey(OnboardingStep.Basics, "photoUrl"),
+    plannedSettlementPeriod: getFieldByStepAndFieldKey(OnboardingStep.Basics, "plannedSettlementPeriod"),
+    strategistName : getFieldByStepAndFieldKey(OnboardingStep.Basics, "strategistName"),
+    strategistUrl : getFieldByStepAndFieldKey(OnboardingStep.Basics, "strategistUrl"),
+    oivChatUrl : getFieldByStepAndFieldKey(OnboardingStep.Basics, "oivChatUrl"),
     ...Object.fromEntries(customFields.map((field) => [field.key, field.value])),
   }
 };
@@ -796,13 +791,13 @@ const formatFundMetaData = () => {
 const getFeeValue = (feeKey: string) => {
   return toggledOffFields.value.includes(feeKey)
     ? 0
-    : Number(fromPercentageToBps(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fee, feeKey)));
+    : Number(fromPercentageToBps(getFieldByStepAndFieldKey(OnboardingStep.Fee, feeKey)));
 };
 
 const getFeeCollectors = (feeKey: string) => {
   return toggledOffFields.value.includes(feeKey)
     ? ethers.ZeroAddress
-    : getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Fee, feeKey);
+    : getFieldByStepAndFieldKey(OnboardingStep.Fee, feeKey);
 };
 
 const formatFeeCollectors = () => {
@@ -822,25 +817,25 @@ const formatInitializeData = () => {
       getFeeValue("performanceFee"),// performanceFee
       getFeeValue("managementFee"),// managementFee
       0, // performaceHurdleRateBps, default to 0
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "baseToken"), // baseToken
+      getFieldByStepAndFieldKey(OnboardingStep.Basics, "baseToken"), // baseToken
       "0x0000000000000000000000000000000000000000",
       false,
       false,
       allowedDepositors.value, // allowedDepositAddrs
       [], // allowedManagers, default empty array
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "governanceToken"), // governanceToken
+      getFieldByStepAndFieldKey(OnboardingStep.Governance, "governanceToken"), // governanceToken
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "fundName"),
-      getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Basics, "fundSymbol"),
+      getFieldByStepAndFieldKey(OnboardingStep.Basics, "fundName"),
+      getFieldByStepAndFieldKey(OnboardingStep.Basics, "fundSymbol"),
       formatFeeCollectors(),
     ],
     [
-      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "quorum") as string), // quorumFraction
-      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "lateQuorum") as string),
-      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "votingDelay") as string),
-      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "votingPeriod") as string),
-      parseInt(getFieldByStepAndFieldKey(stepperEntry.value, OnboardingStep.Governance, "proposalThreshold") as string),
+      parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "quorum") as string), // quorumFraction
+      parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "lateQuorum") as string),
+      parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "votingDelay") as string),
+      parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "votingPeriod") as string),
+      parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "proposalThreshold") as string),
     ],
     JSON.stringify(formatFundMetaData()),
     0, // feePerformancePeriod, default to 0
@@ -929,19 +924,20 @@ const initStepperEntry = () => {
   const lsWhitelist = getLocalStorageItem(
     onboardingWhitelistLocalStorageKey.value,
   );
-  const lsStepperEntry = getLocalStorageItem(
-    onboardingStepperEntryLocalStorageKey.value,
-  ) || {} as IOnboardingStep[];
-
   console.log("LS whitelist", lsWhitelist);
-  console.log("LS lsStepperEntry", lsStepperEntry);
-  // set whitelist from local storage
+
+  // Set whitelist from local storage.
   if (lsWhitelist){
     isWhitelistedDeposits.value = lsWhitelist.isWhitelistedDeposits ?? false;
     whitelistedAddresses.value = lsWhitelist.whitelistedAddresses ?? [];
   }
 
-  return generateSteps(lsStepperEntry);
+  return OnboardingStepMap?.map((step) => ({
+    name: step?.name ?? "",
+    key: step?.key ?? "",
+    info: step?.info ?? "",
+    fields: generateFields(step),
+  })) as IOnboardingStep[];
 };
 
 
@@ -1036,15 +1032,15 @@ watch(() => accountStore.activeAccountAddress, () => {
   }
 });
 
-watch(()=> accountStore.connectedWalletChainId, (newVal, oldVal) =>{
+watch(()=> accountStore.connectedWalletChainId, (_newVal, oldVal) =>{
   if(!oldVal){
     setDefaultSelectedChainId()
   }
 })
 
 // Lifecycle Hooks
-onBeforeRouteLeave((to, from, next) => {
-  // allow page change if user is not validated (he is seeing the password page)
+onBeforeRouteLeave((_to, _from, next) => {
+  // allow page change if the user is not validated (he is seeing the password page)
   if (!isCreateFundPasswordCorrect.value) {
     next();
     return;
