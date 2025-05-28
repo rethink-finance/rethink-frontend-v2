@@ -80,7 +80,6 @@ export interface IField {
 export interface IFieldGroup {
   isToggleable: boolean;
   isToggleOn: boolean;
-  groupName?: string;
   fields: IField[];
   info?: string;
   tooltip?: string;

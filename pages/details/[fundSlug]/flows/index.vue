@@ -94,11 +94,11 @@
       </UiDataBar>
     </div>
 
-    <!-- Fund Contract -->
+    <!-- Admin Contract -->
     <div class="main_card">
       <UiHeader>
         <div class="main_header__title">
-          Vault Contract
+          Admin Contract
           <UiTooltipClick location="right" :hide-after="6000">
             <Icon
               icon="material-symbols:info-outline"
@@ -316,7 +316,7 @@
         </div>
       </UiDataBar>
 
-      <!-- Fund Contract Balance & Update NAV and Settle flows -->
+      <!-- Admin Contract Balance & Update NAV and Settle flows -->
       <UiDataBar>
         <div class="column-8">
           <div class="data_bar__item">
@@ -346,12 +346,12 @@
               </template>
             </div>
             <div class="data_bar__subtitle">
-              Vault Contract Balance
+              Admin Contract Balance
             </div>
           </div>
           <div class="data_bar__item">
             <UiNotification class="fund_contract_notification">
-              Vault Contract Balance should meet Redemption Requests before being
+              Admin Contract Balance should meet Redemption Requests before being
               able to Settle the Flows.
             </UiNotification>
           </div>
@@ -581,7 +581,7 @@ const fundingGap = computed(() => {
     estimatedPendingRedemptionBalanceInBase.value,
   );
 
-  // Difference between fund contract liquidity and amount of redemption requests.
+  // Difference between admin contract liquidity and the amount of redemption requests.
   let fundContractBaseTokenBalance = FixedNumber.fromString("0");
   if (fundStore.fund?.fundContractBaseTokenBalance) {
     fundContractBaseTokenBalance = FixedNumber.fromString(
@@ -633,7 +633,7 @@ const refreshFlowsInfo = () => {
   // Refresh Deposit & Redemption Requests.
   fundStore.fetchFundPendingDepositRedemptionBalance();
 
-  // Refresh fund contract base token balance.
+  // Refresh the admin contract base token balance.
   fundStore.fetchFundContractBaseTokenBalance();
 };
 

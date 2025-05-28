@@ -440,6 +440,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       label: "Quorum (%)",
       key: "quorum",
       type: InputType.Text,
+      defaultValue: "0",
       placeholder: "E.g. 0",
       defaultValue: "0",
       rules: [formRules.required],

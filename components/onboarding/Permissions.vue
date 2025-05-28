@@ -226,7 +226,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
       "0", // paramIndex
       "0", // paramType -- Static
       "0", // paramComp -- EqualTo
-      byteEncodedFundAddress, // compValue, newly created fund contract address
+      byteEncodedFundAddress, // compValue, newly created admin contract address
     ],
   );
   encodedRoleModEntries.push(encodedScopeParameter);

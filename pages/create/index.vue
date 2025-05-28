@@ -339,7 +339,6 @@ const setFieldValue = (field: IField) => {
     InputType.Number,
     InputType.Date,
   ].includes(field.type)) {
-    // Convert these input types to text fields.
     field.type = InputType.Text;
   }
   field.isToggleable = false;
