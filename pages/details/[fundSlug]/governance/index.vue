@@ -480,15 +480,11 @@ async function getVotingPowerAndImpact(delegatedAddress: string) {
 
 const handleRowClick = (item: ITrendingDelegate) => {
   activeRow.value = item;
-  openDelegatorsDialog();
+  delegatorsDialog.value = true;
 };
 
 const delegatorsDialog = ref(false);
 const activeRow = ref<ITrendingDelegate | null>(null);
-const openDelegatorsDialog = () => {
-  delegatorsDialog.value = true;
-};
-
 type DropdownOption = {
   click: () => void;
   disabled?: boolean;

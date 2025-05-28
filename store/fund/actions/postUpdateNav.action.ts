@@ -3,6 +3,7 @@ import { useFundStore } from "../fund.store";
 export const postUpdateNAVAction = async (): Promise<any> => {
   const fundStore = useFundStore();
   const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
+
   try {
     const navExecutorAddress = getNAVExecutorBeaconProxyAddress(fundStore.selectedFundChain);
 

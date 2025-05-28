@@ -8,7 +8,6 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
 
-
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
   const web3Store = useWeb3Store();

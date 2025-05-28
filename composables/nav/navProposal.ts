@@ -202,6 +202,7 @@ export const getAllowManagerToUpdateNavPermissionsData = (
 ): IProposalData => {
   const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
   const navExecutorAddress = getNAVExecutorBeaconProxyAddress(fundChainId);
+
   const navPermissionEntries = generateNAVPermission(
     fundAddress,
     navExecutorAddress,

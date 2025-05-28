@@ -657,27 +657,19 @@ const allowedDepositors = computed(() => {
 
 
 // Methods
-// helper function to generate sections
-const generateSteps = (stepperEntry: IOnboardingStep[]) => {
-  return OnboardingStepMap?.map((step) => ({
-    name: step?.name ?? "",
-    key: step?.key ?? "",
-    info: step?.info ?? "",
-    fields: generateFields(step, stepperEntry),
-  })) as IOnboardingStep[];
-}
-
-
 // helper function to generate fields
-const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) => {
+const generateFields = (step: IOnboardingStep) => {
   const stepKey = step.key as OnboardingInitializingSteps;
+  const lsStepperEntry = getLocalStorageItem(
+    onboardingStepperEntryLocalStorageKey.value,
+  ) || {} as IOnboardingStep[];
 
   if (!OnboardingFieldsMap[stepKey]) return [];
-  console.log("generateFields:", stepperEntry);
+  console.log("generateFields:", lsStepperEntry);
 
   const output =  OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
-    const stepIndex = findIndexByKey(stepperEntry, stepKey);
-    const stepperEntryField = stepperEntry?.[stepIndex]?.fields?.[fieldIndex];
+    const stepIndex = findIndexByKey(lsStepperEntry, stepKey);
+    const stepperEntryField = lsStepperEntry?.[stepIndex]?.fields?.[fieldIndex];
     const isToggleOn = stepperEntryField?.isToggleOn ?? field?.isToggleOn;
 
     if (field?.isToggleable) {
@@ -710,27 +702,28 @@ const generateFields = (step: IOnboardingStep, stepperEntry: IOnboardingStep[]) 
       value: fieldValue ?? fieldTyped?.value,
     } as IField;
   });
-  console.log("output:", output);
+  console.log("lsStepperEntry", lsStepperEntry);
+  console.log("initCreateFund output", output);
 
   // find the basic step and add custom fields to that step
   if (stepKey === OnboardingStep.Basics) {
-    if (Object.keys(stepperEntry).length === 0) return output;
+    if (Object.keys(lsStepperEntry).length === 0) return output;
 
-    const stepIndex = stepperEntry.findIndex(
-      (step) => step.key === OnboardingStep.Basics,
+    const stepIndex = lsStepperEntry.findIndex(
+      (step: IOnboardingStep) => step.key === OnboardingStep.Basics,
     );
 
     if (stepIndex !== -1) {
-      const stepFields = stepperEntry[stepIndex].fields ?? [];
+      const stepFields = lsStepperEntry[stepIndex].fields ?? [];
 
-      // find custom fields (fields that has key "isFieldByUser")
+      // find custom fields (fields that have key "isFieldByUser")
       const customFields = stepFields?.filter(
-        (field) => {
+        (field: IField) => {
           return field.isFieldByUser;
         },
       ) ?? [];
 
-      const customFieldsFormatted = customFields?.map((field) => {
+      const customFieldsFormatted = customFields?.map((field: IField) => {
         return {
           ...field,
           rules: [formRules.required],
@@ -962,19 +955,20 @@ const initStepperEntry = () => {
   const lsWhitelist = getLocalStorageItem(
     onboardingWhitelistLocalStorageKey.value,
   );
-  const lsStepperEntry = getLocalStorageItem(
-    onboardingStepperEntryLocalStorageKey.value,
-  ) || {} as IOnboardingStep[];
-
   console.log("LS whitelist", lsWhitelist);
-  console.log("LS lsStepperEntry", lsStepperEntry);
-  // set whitelist from local storage
+
+  // Set whitelist from local storage.
   if (lsWhitelist){
     isWhitelistedDeposits.value = lsWhitelist.isWhitelistedDeposits ?? false;
     whitelistedAddresses.value = lsWhitelist.whitelistedAddresses ?? [];
   }
 
-  return generateSteps(lsStepperEntry);
+  return OnboardingStepMap?.map((step) => ({
+    name: step?.name ?? "",
+    key: step?.key ?? "",
+    info: step?.info ?? "",
+    fields: generateFields(step),
+  })) as IOnboardingStep[];
 };
 
 
@@ -1069,7 +1063,7 @@ watch(() => accountStore.activeAccountAddress, () => {
   }
 });
 
-watch(()=> accountStore.connectedWalletChainId, (_, oldVal) =>{
+watch(()=> accountStore.connectedWalletChainId, (_newVal, oldVal) =>{
   if (!oldVal){
     setDefaultSelectedChainId()
   }
