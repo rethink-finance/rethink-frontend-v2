@@ -70,7 +70,6 @@ defineProps({
 const emit = defineEmits(["update:modelValue", "confirm", "cancel"]);
 
 const closeDialog = () => {
-  console.warn("close dialog");
   emit("update:modelValue", false);
 };
 
@@ -92,7 +91,7 @@ const confirm = () => {
   overflow: auto;
 
   background-color: $color-bg-toast;
-  box-shadow: 0px 0px 16px 0px $color-box-shadow;
+  box-shadow: 0 0 16px 0 $color-box-shadow;
 
   color: $color-white;
 

@@ -76,7 +76,7 @@ export const fetchFundMetaDataAction = async (
     fundSettings.performancePeriod = feePerformancePeriod;
     fundSettings.managementPeriod = feeManagePeriod;
 
-    const parsedFundSettings: IFundSettings = parseBigintsToString<IFundSettings>(fundSettings);
+    const parsedFundSettings: IFundSettings = parseBigintsToString(fundSettings);
     const parsedFlowsConfig = parseBigintsToString<IFundFlowsConfig>(flowsConfig);
     const parsedClockMode = parseClockMode(clockMode);
     console.debug("parsedClockMode: ", parsedClockMode);
@@ -208,7 +208,7 @@ export const fetchFundMetaDataAction = async (
       const metaData = JSON.parse(fundMetadata);
 
       const { strategistName, strategistUrl, oivChatUrl } = fundMetaDataHardcoded[fundChainId]?.find(
-        (fund) => fund.address === fundAddress,
+        (fund) => fund?.address === fundAddress,
       ) || { strategistName: "", strategistUrl: "", oivChatUrl: "" };
 
       fund.description = metaData.description;
