@@ -117,7 +117,6 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
     blockExplorerUrls: ["https://basescan.org"],
   },
 };
-
 // Add Hardhat network only in development mode
 const localhostNetwork: INetwork = {
   chainId: ChainId.LOCAL_NODE,

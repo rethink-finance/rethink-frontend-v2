@@ -94,8 +94,6 @@
 </template>
 
 <script setup lang="ts">
-
-
 import { ethers } from "ethers";
 import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";

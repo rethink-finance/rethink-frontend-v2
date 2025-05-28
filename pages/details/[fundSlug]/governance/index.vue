@@ -103,7 +103,6 @@
             <FundGovernanceProposalStateChip
               v-if="activeRow?.delegatedMember === delegator"
               value="Self Delegated"
-              close-delegators-dialog
             />
           </li>
         </ul>
