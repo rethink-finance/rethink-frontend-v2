@@ -114,6 +114,27 @@ export const networksMap: Record<ChainId, INetwork> = {
     ],
     blockExplorerUrls: ["https://basescan.org"],
   },
+  [ChainId.HYPEREVM]: {
+    chainId: ChainId.HYPEREVM,
+    chainName: "HyperEVM",
+    chainShort: "HyperEVM",
+    nativeCurrency: {
+      name: "Hype",
+      symbol: "HYPE",
+      decimals: 18,
+    },
+    icon: getChainIcon("hypeevm"),
+    rpcUrls: [
+      // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
+      // "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", Luka T.
+      // "https://base-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", Rok
+      "https://rpc.hyperliquid.xyz/evm",
+      // "https://base.drpc.org",
+      // "https://base.meowrpc.com",
+      // "https://base.rpc.subquery.network/public",
+    ],
+    blockExplorerUrls: ["https://purrsec.com/"],
+  },
 };
 
 export const chainIds: ChainId[] = Object.keys(networksMap) as ChainId[];

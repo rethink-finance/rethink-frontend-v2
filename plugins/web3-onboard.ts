@@ -82,6 +82,12 @@ export default defineNuxtPlugin(() => {
         label: "BASE",
         rpcUrl: "https://mainnet.base.org/",
       },
+      {
+        id: ChainId.HYPEREVM,
+        token: "HYPE",
+        label: "HYPEREVM",
+        rpcUrl: "https://rpc.hyperliquid.xyz/evm",
+      },
     ],
     theme: "dark",
     appMetadata: {

@@ -9,6 +9,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     // [ChainId.FRAXTAL]: "0x79b15F47640C4e3ac3A9c4B7f1B999a8cccEEeC7",
     [ChainId.BASE]: "0xE16b6C9C2CB8aE15f0872A3A46d2Eb070c27f20D",
     [ChainId.ARBITRUM]: "0x4278a6b150628470F28Af2Df6B43518f372A59E4",
+    [ChainId.HYPEREVM]: "0x79b15F47640C4e3ac3A9c4B7f1B999a8cccEEeC7",
   },
   "GovernableFundFactoryBeaconProxy": {
     [ChainId.ETHEREUM]: "0x9825a09FbC727Bb671f08Fa66e3508a2e8938d45",
@@ -17,6 +18,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     // [ChainId.FRAXTAL]: "0x9825a09FbC727Bb671f08Fa66e3508a2e8938d45",
     [ChainId.BASE]: "0x248a64e3EDd3F521ef2Aa6A3e804845B5A1C8008",
     [ChainId.ARBITRUM]: "0x79b15F47640C4e3ac3A9c4B7f1B999a8cccEEeC7",
+    [ChainId.HYPEREVM]: "0x9825a09FbC727Bb671f08Fa66e3508a2e8938d45",
   },
   "NAVCalculatorBeaconProxy": {
     [ChainId.ETHEREUM]: "0x045d6611b93bC7d046c2bA90a780F4577F78e33A",
@@ -25,6 +27,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     // [ChainId.FRAXTAL]: "0x045d6611b93bC7d046c2bA90a780F4577F78e33A",
     [ChainId.BASE]: "0xA2eC20a1D6139890962989d5F33DBF03BFbf0dD1",
     [ChainId.ARBITRUM]: "0x9825a09FbC727Bb671f08Fa66e3508a2e8938d45",
+    [ChainId.HYPEREVM]: "0x045d6611b93bC7d046c2bA90a780F4577F78e33A",
   },
   "NAVExecutorBeaconProxy": {
     [ChainId.ETHEREUM]:"0x6Bcbc7959CE79b8F27efe1EAe504f98CBe2647A8",
@@ -32,6 +35,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     [ChainId.POLYGON]:"0x540f022CD860c65FD4DF1969553263014C862bbd",
     [ChainId.BASE]: "0x5FA5a70A3A143E3F7B8906cbc08CAd606E4622b3",
     [ChainId.ARBITRUM]: "0xf25af37E48EE46EDE9489f80E73b9669915d8337",
+    [ChainId.HYPEREVM]: "0x49a2Ec2De6CbdB3282c5BdEc3b6ceb0157d84A47",
   },
   "RethinkFundGovernerUpgradeableBeacon": {
     [ChainId.ETHEREUM]: "0xA2eC20a1D6139890962989d5F33DBF03BFbf0dD1",
@@ -40,6 +44,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     // [ChainId.FRAXTAL]: "0xA2eC20a1D6139890962989d5F33DBF03BFbf0dD1",
     [ChainId.BASE]: "0x296203D903178e17DEF9C3891A578278aA230754",
     [ChainId.ARBITRUM]: "0x248a64e3EDd3F521ef2Aa6A3e804845B5A1C8008",
+    [ChainId.HYPEREVM]: "0xA2eC20a1D6139890962989d5F33DBF03BFbf0dD1",
   },
   "GovernableFundUpgradeableBeacon": {
     [ChainId.ETHEREUM]: "0x296203D903178e17DEF9C3891A578278aA230754",
@@ -48,6 +53,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     // [ChainId.FRAXTAL]: "0x296203D903178e17DEF9C3891A578278aA230754",
     [ChainId.BASE]: "0x296203D903178e17DEF9C3891A578278aA230754",
     [ChainId.ARBITRUM]: "0xB4c232f0cF194E530c39174F617Ec4ee9d69398C",
+    [ChainId.HYPEREVM]: "0x296203D903178e17DEF9C3891A578278aA230754",
   },
   "SafeProxyFactory": {
     [ChainId.ETHEREUM]: "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
@@ -56,6 +62,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     // [ChainId.FRAXTAL]: "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
     [ChainId.BASE]: "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
     [ChainId.ARBITRUM]: "0xa6b71e26c5e0845f74c812102ca7114b6a896ab2",
+    [ChainId.HYPEREVM]: "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
   },
   "SafeSingleton": {
     [ChainId.ETHEREUM]: "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
@@ -64,6 +71,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     // [ChainId.FRAXTAL]: "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
     [ChainId.BASE]: "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
     [ChainId.ARBITRUM]: "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
+    [ChainId.HYPEREVM]: "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
   },
   "ZodiacRolesV1ModifierUpgradeableBeacon": {
     [ChainId.ETHEREUM]: "0xbbf156CCc038b405001034573E77F3B2174B762a",
@@ -72,6 +80,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     // [ChainId.FRAXTAL]: "0x463F9eE917F71B7DB1c81fbFe44A95a4f5B540a6",
     [ChainId.BASE]: "0x463F9eE917F71B7DB1c81fbFe44A95a4f5B540a6",
     [ChainId.ARBITRUM]: "0x5A7f717B91c998d5DE9764DEA78c2EF20027bDe4",
+    [ChainId.HYPEREVM]: "0xbbf156CCc038b405001034573E77F3B2174B762a",
   },
   "GovernableFundFlowsUpgradeableBeacon": {
     [ChainId.ETHEREUM]: "0x463F9eE917F71B7DB1c81fbFe44A95a4f5B540a6",
@@ -80,6 +89,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     // [ChainId.FRAXTAL]: "0x5b8137fC792f1d054099fb2B7EEb7e575Ee8403B",
     [ChainId.BASE]: "0x5b8137fC792f1d054099fb2B7EEb7e575Ee8403B",
     [ChainId.ARBITRUM]: "0xdf587D859e76B0a6cE2254f1c0bf64C4aE0eD37f",
+    [ChainId.HYPEREVM]: "0x463F9eE917F71B7DB1c81fbFe44A95a4f5B540a6",
   },
   "GovernableFundNavUpgradeableBeacon": {
     [ChainId.ETHEREUM]: "0x5b8137fC792f1d054099fb2B7EEb7e575Ee8403B",
@@ -88,6 +98,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     // [ChainId.FRAXTAL]: "0x26cEb3873ad8A3dee2e5d3d67d2d0800704B9fb5",
     [ChainId.BASE]: "0x26cEb3873ad8A3dee2e5d3d67d2d0800704B9fb5",
     [ChainId.ARBITRUM]: "0x8fE2e9470ceA2E83e8B89502d636CCAb2D1Ca21B",
+    [ChainId.HYPEREVM]: "0x5b8137fC792f1d054099fb2B7EEb7e575Ee8403B",
   },
   "RethinkReader": {
     [ChainId.ETHEREUM]: "0x7a1f370658b4A17b0B5346fDef8809d5e73DdAa1",
@@ -96,6 +107,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     // [ChainId.FRAXTAL]: "0xA290641Ecce7C0D7835Ca128810B240F74a399Be",
     [ChainId.BASE]: "0xd402f5B63474444970779dC37368A28F386fe984",
     [ChainId.ARBITRUM]: "0xD9a6312F597B97DEF6d56492e12C77D45F740807",
+    [ChainId.HYPEREVM]: "0x751545c0D7F2a696c9975c9d90428225A1e139cd",
   },
   "PoolPerformanceFeeBeaconProxy": {
     [ChainId.ETHEREUM]: "0x6414575854d174dd59392846007deb3369d7480d",
@@ -103,6 +115,7 @@ export const rethinkContractAddresses: IContractAddressesMap = {
     [ChainId.POLYGON]: "0xE9130bed8Ef2d11F1cEA775D1B8104f1A2AFF571",
     [ChainId.BASE]: "0x751545c0D7F2a696c9975c9d90428225A1e139cd",
     [ChainId.ARBITRUM]: "0xb358913726F3bAc8626f18a1b2C007F1a59c4fF4",
+    [ChainId.HYPEREVM]: "0xA290641Ecce7C0D7835Ca128810B240F74a399Be",
   },
 };
 

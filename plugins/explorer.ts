@@ -35,6 +35,10 @@ export default defineNuxtPlugin(() => {
       apiUrl: "https://api.basescan.org/api",
       apiKey: BASESCAN_KEY,
     },
+    [ChainId.HYPEREVM]: {
+      apiUrl: "https://api.purrsec.com/api",
+      apiKey: BASESCAN_KEY,
+    },
   }
 
   const getExplorer = memoize((chainId: ChainId) => {
