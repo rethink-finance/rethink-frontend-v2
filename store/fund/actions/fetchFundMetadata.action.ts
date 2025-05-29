@@ -8,7 +8,7 @@ import defaultAvatar from "@/assets/images/default_avatar.webp";
 import { ERC20 } from "assets/contracts/ERC20";
 import { formatQuorumPercentage } from "~/composables/formatters";
 import { parseClockMode } from "~/composables/fund/parseClockMode";
-import { parseFundSettings } from "~/composables/fund/parseFundSettings";
+import { parseBigintsToString } from "~/composables/fund/parseBigintsToString";
 import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -27,18 +27,18 @@ export const fetchFundMetaDataAction = async (
     web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
   try {
     console.debug(
-      "fundNavMetaData",
+      "getFundMetaData",
       fundAddress,
       fundChainId,
       rethinkReaderContract,
     );
 
-    const fundNavMetaData = await web3Store.callWithRetry(
+    const fundMetaData = await web3Store.callWithRetry(
       fundChainId,
       () =>
         rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
     );
-    console.log("fundNavMetaData", fundNavMetaData);
+    console.log("fundMetaData", fundMetaData);
     const {
       startTime,
       totalDepositBal,
@@ -59,7 +59,7 @@ export const fetchFundMetaDataAction = async (
       fundGovernanceTokenSymbol,
       fundGovernanceData,
       fundSettings,
-    } = fundNavMetaData;
+    } = fundMetaData;
 
     const {
       votingDelay,
@@ -75,7 +75,7 @@ export const fetchFundMetaDataAction = async (
     fundSettings.managementPeriod = feeManagePeriod;
     console.debug("fundSettings: ", fundSettings);
 
-    const parsedFundSettings: IFundSettings = parseFundSettings(fundSettings);
+    const parsedFundSettings: IFundSettings = parseBigintsToString(fundSettings);
     const parsedClockMode = parseClockMode(clockMode);
     console.debug("parsedClockMode: ", parsedClockMode);
     console.log("parsedFundSettings: ", parsedFundSettings);
@@ -204,8 +204,8 @@ export const fetchFundMetaDataAction = async (
     if (fundMetadata) {
       const metaData = JSON.parse(fundMetadata);
 
-      const { strategistName, strategistUrl, oivChatUrl } = fundMetaDataHardcoded[fundChainId].find(
-        (fund) => fund.address === fundAddress,
+      const { strategistName, strategistUrl, oivChatUrl } = fundMetaDataHardcoded[fundChainId]?.find(
+        (fund) => fund?.address === fundAddress,
       ) || { strategistName: "", strategistUrl: "", oivChatUrl: "" };
 
       fund.description = metaData.description;

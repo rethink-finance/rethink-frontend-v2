@@ -48,6 +48,17 @@
       />
     </template>
 
+    <template v-else-if="field.type === InputType.ToggleSwitch">
+      <v-switch
+        v-model="value"
+        :disabled="isDisabled"
+        :error-messages="errorMessages"
+        :tabindex="tabIndex"
+        color="primary"
+        hide-details
+      />
+    </template>
+
     <template v-else-if="field.type === InputType.Image">
       <div class="image_container" tabindex="-1">
         <v-avatar size="12rem" rounded="" tabindex="-1">

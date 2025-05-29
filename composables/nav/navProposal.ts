@@ -1,7 +1,6 @@
-import { NAVExecutor } from "assets/contracts/NAVExecutor";
-import { NAVExecutorBeaconProxyAddress } from "assets/contracts/rethinkContractAddresses";
 import { type AbiFunctionFragment } from "web3";
 import { decodeFunctionCall, encodeFunctionCall } from "web3-eth-abi";
+import { NAVExecutor } from "assets/contracts/NAVExecutor";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import {
   encodedCollectFlowFeesAbiJSON,
@@ -170,7 +169,8 @@ export const getAllowManagerToUpdateNavProposalData = (
   fundChainId: ChainId,
   roleModAddress: string,
 ): IProposalData => {
-  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
+  const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
+  const navExecutorAddress = getNAVExecutorBeaconProxyAddress(fundChainId);
 
   const encodedDataStoreNAVDataNavUpdateEntries =
     encodeFunctionCall(
@@ -200,7 +200,9 @@ export const getAllowManagerToUpdateNavPermissionsData = (
   fundChainId: ChainId,
   roleModAddress: string,
 ): IProposalData => {
-  const navExecutorAddress = NAVExecutorBeaconProxyAddress(fundChainId);
+  const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
+  const navExecutorAddress = getNAVExecutorBeaconProxyAddress(fundChainId);
+
   const navPermissionEntries = generateNAVPermission(
     fundAddress,
     navExecutorAddress,

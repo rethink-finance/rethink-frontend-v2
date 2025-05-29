@@ -708,7 +708,7 @@ export default defineComponent({
       return this.usedMethods.map(method => method.detailsHash || "");
     },
     formattedTotalSimulatedNAV() {
-      // Summated NAV value of all methods & fund contract & safe contract & fees (fees are negative).
+      // Summated NAV value of all methods & admin contract & safe contract & fees (fees are negative).
 
       const totalNAV =
         (this.totalNavMethodsSimulatedNAV || 0n) +

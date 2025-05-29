@@ -95,7 +95,7 @@
         <div class="management">
           <div class="management__row">
             <div>
-              Prepopulate permissions to allow manager to send funds to the fund contract to settle flows
+              Prepopulate permissions to allow manager to send funds to the admin contract to settle flows
             </div>
             <v-switch
               v-model="allowManagerToSendFundsToFundContract"
@@ -134,13 +134,13 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
 import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
 import { networksMap } from "~/store/web3/networksMap";
-import { rethinkContractAddresses } from "assets/contracts/rethinkContractAddresses";
 import { useRoles } from "~/composables/permissions/useRoles";
 import PermissionImportRawPermissions from "~/components/permission/ImportRawPermissions.vue";
 import type { Role } from "~/types/zodiac-roles/role";
 import { useRoleStore } from "~/store/role/role.store";
 import RoleSelectRole from "~/components/role/SelectRole.vue";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
+import { useContractAddresses } from "~/composables/useContractAddresses";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
@@ -226,7 +226,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
       "0", // paramIndex
       "0", // paramType -- Static
       "0", // paramComp -- EqualTo
-      byteEncodedFundAddress, // compValue, newly created fund contract address
+      byteEncodedFundAddress, // compValue, newly created admin contract address
     ],
   );
   encodedRoleModEntries.push(encodedScopeParameter);
@@ -248,6 +248,8 @@ const getAllowManagerToCollectFeesPermission = (
   fundAddress: string,
 ): string[] => {
   const encodedRoleModEntries: string[] = [];
+  const { rethinkContractAddresses } = useContractAddresses();
+
   const poolPerformanceFeeAddress = rethinkContractAddresses.PoolPerformanceFeeBeaconProxy[fundChainId.value];
   if (!poolPerformanceFeeAddress) {
     const errorMsg =  "Missing PoolPerformanceFeeBeaconProxy address. " +
@@ -342,7 +344,7 @@ const storePermissions = async () => {
     proposalData.encodedRoleModEntries.push(..._encodedRoleModEntries);
   }
 
-  // Add allowManagerToCollectFees permissions if switch button is enabled.
+  // Add allowManagerToCollectFees permissions if the switch button is enabled.
   if (allowManagerToCollectFees.value) {
     const _encodedRoleModEntries = getAllowManagerToCollectFeesPermission(
       fundInitCacheSettings?.fundAddress,

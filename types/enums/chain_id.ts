@@ -4,6 +4,7 @@ export enum ChainId {
   POLYGON = "0x89",
   ARBITRUM = "0xa4b1",
   HYPEREVM = "0x3e7",
+  LOCAL_NODE = "0x7A69", // 31337
   // GOERLI = "0x5",
   // SEPOLIA = "0x6a9",
   // OPTIMISM = "0xa",

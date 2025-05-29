@@ -1,8 +1,10 @@
 import { ChainId } from "~/types/enums/chain_id";
 import type INetwork from "~/types/network";
 
+// Create base networks without the local node
+type BaseChainId = Exclude<ChainId, ChainId.LOCAL_NODE>;
 
-export const networksMap: Record<ChainId, INetwork> = {
+export const baseNetworksMap: Record<BaseChainId, INetwork> = {
   [ChainId.POLYGON]: {
     chainId: ChainId.POLYGON,
     chainName: "Polygon",
@@ -136,15 +138,34 @@ export const networksMap: Record<ChainId, INetwork> = {
     blockExplorerUrls: ["https://purrsec.com/"],
   },
 };
+// Add Hardhat network only in development mode
+const localhostNetwork: INetwork = {
+  chainId: ChainId.LOCAL_NODE,
+  chainName: "Local Node (31337)",
+  chainShort: "local",
+  nativeCurrency: {
+    name: "ETH",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  icon: getChainIcon("local"),
+  rpcUrls: ["http://127.0.0.1:8545"],
+  blockExplorerUrls: [],
+};
+
+// Conditionally include localhost network based on environment
+export const networksMap: Record<string, INetwork> =
+  process.env.NODE_ENV === "development"
+    ? { ...baseNetworksMap, [ChainId.LOCAL_NODE]: localhostNetwork }
+    : baseNetworksMap;
+
 
 export const chainIds: ChainId[] = Object.keys(networksMap) as ChainId[];
 export const networks: INetwork[] = Object.values(networksMap);
 
 export const networkChoices = networks.map(
-  (network: INetwork) => (
-    {
-      value: network.chainId,
-      title: network.chainName,
-    }
-  ),
+  (network: INetwork) => ({
+    value: network.chainId,
+    title: network.chainName,
+  }),
 );

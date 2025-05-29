@@ -18,9 +18,10 @@ const fetchGovernorData = async (fundChainId: ChainId, governorAddress?: string)
     "lateQuorum"
    */
   if (!governorAddress) return {};
+  console.debug("governor fetch 1")
 
   const web3Store = useWeb3Store();
-  console.debug("governor fetch")
+  console.debug("governor fetch", governorAddress)
   const fundGovernorContract = web3Store.getCustomContract(
     fundChainId,
     RethinkFundGovernor.abi,
@@ -94,7 +95,7 @@ export const fetchBaseTokenDetails = async (chainId: ChainId, baseTokenAddress: 
     1,
     [205],
   );
-  console.debug("baseDecimals")
+  console.debug("baseDecimals", baseDecimals)
 
   const baseSymbol = await web3Store.callWithRetry(
     chainId,
@@ -103,7 +104,7 @@ export const fetchBaseTokenDetails = async (chainId: ChainId, baseTokenAddress: 
     1,
     [205],
   );
-  console.debug("baseSymbol")
+  console.debug("baseSymbol", baseSymbol)
 
   return [Number(baseDecimals), baseSymbol];
 }

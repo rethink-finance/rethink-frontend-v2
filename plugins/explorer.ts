@@ -12,6 +12,7 @@ export default defineNuxtPlugin(() => {
   const POLYGONSCAN_KEY = config.public.POLYGONSCAN_KEY as string;
   const ARBISCAN_KEY = config.public.ARBISCAN_KEY as string;
   const BASESCAN_KEY = config.public.BASESCAN_KEY as string;
+  const TRY_ETHERNAL_KEY = config.public.TRY_ETHERNAL_KEY as string;
 
   if (!ETHERSCAN_KEY) throw new Error("ETHERSCAN_KEY env is not set");
   if (!POLYGONSCAN_KEY) throw new Error("POLYGONSCAN_KEY env is not set");
@@ -37,7 +38,11 @@ export default defineNuxtPlugin(() => {
     },
     [ChainId.HYPEREVM]: {
       apiUrl: "https://api.purrsec.com/api",
-      apiKey: BASESCAN_KEY,
+      apiKey: BASESCAN_KEY
+    },
+    [ChainId.LOCAL_NODE]: {
+      apiUrl: "https://api.tryethernal.com",
+      apiKey: TRY_ETHERNAL_KEY,
     },
   }
 
