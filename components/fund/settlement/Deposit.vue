@@ -450,11 +450,17 @@ const requestDeposit = async () => {
           // he can approve it without inputting the value himself, for better UX.
           // TODO takes 15-20 sec for node to sync .. fix
           // await fundStore.fetchUserBalances();
-          fundStore.fundUserData.depositRequest = {
-            amount: tokensWei.value,
-            timestamp: Date.now(),
-            type: FundTransactionType.Deposit,
-          };
+
+          // Only do the deposit request if there have been any previous NAV updates and flows v2?
+          const fundLastNavUpdateExists = (fundStore.fund?.navUpdates?.length || 0) > 0;
+
+          if (fundLastNavUpdateExists) {
+            fundStore.fundUserData.depositRequest = {
+              amount: tokensWei.value,
+              timestamp: Date.now(),
+              type: FundTransactionType.Deposit,
+            };
+          }
 
           // deposit-success event is emitted to open the delegate dialog.
           emit("deposit-success");
@@ -593,6 +599,7 @@ const approveAllowance = async () => {
           );
 
           // Refresh allowance value.
+          console.log("set allowance to", allowanceValue)
           fundStore.fundUserData.fundAllowance = allowanceValue;
 
           if (!hasRequestedDeposit.value) {
@@ -628,7 +635,7 @@ const hasApprovedAmount = computed(() => {
     return fundStore.fundUserData?.fundAllowance >= (fundStore.fundUserData?.depositRequest?.amount || 0n);
   }
 
-  return (fundStore.fundUserData?.fundAllowance || 0n) > tokensWei.value
+  return (fundStore.fundUserData?.fundAllowance || 0n) >= tokensWei.value
 });
 
 const hasDelegatedToSelf = computed(() => {
@@ -672,6 +679,7 @@ const buttons = computed(() => [
     onClick: approveAllowance,
     loading: loadingApproveAllowance.value,
     isVisible: shouldUserApproveAllowance.value,
+    disabled: loadingApproveAllowance.value,
     tooltipText: undefined,
   },
 ]);
@@ -723,7 +731,24 @@ const isDepositButtonDisabled = computed(() => {
   );
 });
 
+const isAlreadyDelegatingToMyself = computed(() => fundStore.fundUserData.fundDelegateAddress.toLowerCase() === fundStore?.activeAccountAddress?.toLowerCase());
+
 const delegateToMyself = async () => {
+  // Check if already delegated to myself
+  if (isAlreadyDelegatingToMyself.value) {
+    isDepositModalOpen.value = false;
+
+    // Refresh user balances & allowance & refresh pending requests.
+    fundStore.fetchUserFundData(
+      fundStore.selectedFundChain,
+      fundStore.selectedFundAddress,
+    );
+
+    // emit event to open the delegate votes modal
+    emit("deposit-success");
+    return;
+  }
+
   try {
     isLoadingDelegate.value = true;
 
