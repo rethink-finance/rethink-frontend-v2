@@ -254,6 +254,9 @@ export const useFundStore = defineStore({
     fundLastNAVUpdateMethods(): INAVMethod[] {
       return this.fundLastNAVUpdate?.entries || [];
     },
+    fundFlowVersion(): string {
+      return this.fund?.flowsConfig?.flowVersion || "1";
+    },
     userDepositRequestExists(): boolean {
       return (this.fundUserData.depositRequest?.amount || 0) > 0;
     },
@@ -293,17 +296,29 @@ export const useFundStore = defineStore({
       // User deposit request does not exist yet, he should request deposit.
       return !this.userDepositRequestExists;
     },
-    shouldUserApproveAllowance(): boolean {
-      // User deposit request exists and allowance is bigger.
-      return (
-        this.userDepositRequestExists &&
-        (this.fundUserData?.fundAllowance || 0n) <
-        (this.fundUserData.depositRequest?.amount || 0n)
-      );
+    shouldUserApproveAllowance(): (depositValue?: bigint) => boolean {
+      // Return a function that accepts an optional depositValue parameter
+      return (depositValue?: bigint): boolean => {
+        // To request a deposit, first the user has to approve the allowance.
+        // Check if the allowance is 0 or less than the deposit value
+        if (depositValue !== undefined) {
+          // If depositValue is provided, check if the allowance is less than depositValue
+          return (this.fundUserData?.fundAllowance || 0n) < depositValue;
+        } else if (this.userDepositRequestExists) {
+          // If the deposit request exists, check if the allowance is less than the requested amount
+          return (
+            (this.fundUserData?.fundAllowance || 0n) <
+            (this.fundUserData.depositRequest?.amount || 0n)
+          );
+        }
+
+        // If no deposit request exists and no depositValue provided, check if allowance is 0
+        return (this.fundUserData?.fundAllowance || 0n) === 0n;
+      };
     },
     canUserProcessDeposit(): boolean {
-      // User deposit request exists and allowance is bigger.
-      return !this.shouldUserRequestDeposit && !this.shouldUserApproveAllowance;
+      // User deposit request exists and the allowance is bigger.
+      return !this.shouldUserRequestDeposit && !this.shouldUserApproveAllowance();
     },
     shouldUserWaitSettlementOrCancelDeposit(): boolean {
       // If there was no NAV update yet, the user can process deposit request.

@@ -12,7 +12,6 @@
 
     <div class="divider" />
 
-
     <div v-if="accountStore.isConnected">
       <div class="buttons_group">
         <template v-if="shouldUserWaitSettlementOrCancelRedemption">

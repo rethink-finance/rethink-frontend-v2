@@ -58,7 +58,6 @@
 
     <div class="divider" />
 
-
     <div v-if="accountStore.isConnected" style="width: 100%">
       <div
         class="buttons_group"
@@ -94,10 +93,9 @@
         </div>
       </div>
 
-
       <UiConfirmDialog
         v-model="isDepositModalOpen"
-        title="Deposit Flow"
+        :title="depositModalTitle"
       >
         <div class="deposit-flow mb-4">
           <div v-for="(step, index) in stepsDeposit" :key="index">
@@ -141,7 +139,7 @@
         </div>
 
         <div class="buttons_group">
-          <template v-if="!hasDelegatedToSelf && hasApprovedAmount">
+          <template v-if="!hasDelegatedToSelf && hasApprovedAmount && hasRequestedDeposit">
             <v-btn
               class="button"
               variant="outlined"
@@ -276,7 +274,6 @@ const tokenValueChanged = ref(false);
 const fund = computed(() => fundStore.fund);
 const {
   shouldUserRequestDeposit,
-  shouldUserApproveAllowance,
   canUserProcessDeposit,
   shouldUserWaitSettlementOrCancelDeposit,
   userDepositRequest,
@@ -297,7 +294,9 @@ watch(
     tokenValueChanged.value = true;
   },
 );
-
+const depositModalTitle = computed(() => {
+  return "Deposit " + tokenValue.value + "" + fund.value?.baseToken.symbol;
+})
 const rules = [
   (value: string): boolean | IFormError => {
     if (!fund.value) return { message: "Fund data is missing.", display: true };
@@ -310,8 +309,9 @@ const rules = [
         display: false,
       };
     }
-    if (valueWei <= 0)
+    if (valueWei <= 0) {
       return { message: "Value must be positive.", display: false };
+    }
 
     console.log(
       "[DEPOSIT] check user base token balance wei: ",
@@ -369,7 +369,7 @@ const errorMessages = computed<IFormError[]>(() => {
 const visibleErrorMessages = computed<IFormError[]>(() => {
   return errorMessages.value.filter((error: IFormError) => error.display);
 });
-const tokensWei = computed(() => {
+const tokensWei = computed((): bigint => {
   if (!fund.value?.baseToken) return 0n;
   return ethers.parseUnits(
     tokenValue.value || "0",
@@ -458,6 +458,8 @@ const requestDeposit = async () => {
 
           // deposit-success event is emitted to open the delegate dialog.
           emit("deposit-success");
+
+          delegateToMyself();
         } else {
           toastStore.errorToast(
             "Your deposit request has failed. Please contact the Rethink Finance support.",
@@ -557,10 +559,12 @@ const approveAllowance = async () => {
     toastStore.errorToast("Fund data is missing.");
     return;
   }
-  console.log("APPROVE ALLOWANCE");
-  loadingApproveAllowance.value = true;
+  console.log("APPROVE ALLOWANCE", depositRequestAmountFormatted.value);
 
-  setTokenValueToDepositRequestAmount();
+  if (hasRequestedDeposit.value) {
+    setTokenValueToDepositRequestAmount();
+  }
+  loadingApproveAllowance.value = true;
 
   console.log(
     "Approve allowance tokensWei: ",
@@ -590,6 +594,10 @@ const approveAllowance = async () => {
 
           // Refresh allowance value.
           fundStore.fundUserData.fundAllowance = allowanceValue;
+
+          if (!hasRequestedDeposit.value) {
+            requestDeposit();
+          }
         } else {
           toastStore.errorToast(
             "The transaction has failed. Please contact the Rethink Finance support.",
@@ -612,10 +620,15 @@ const hasRequestedDeposit = computed(() => {
 });
 
 const hasApprovedAmount = computed(() => {
-  if (!fundStore.fundUserData?.fundAllowance) return false;
-  if (!fundStore.fundUserData?.depositRequest?.amount) return false;
+  console.warn("hasRequestedDeposit", hasRequestedDeposit.value);
+  console.warn("fundStore.fundUserData?.fundAllowance", fundStore.fundUserData?.fundAllowance);
+  console.warn("tokensWei", tokensWei.value);
+  if (hasRequestedDeposit.value) {
+    // Has already requested deposit and has enough allowance.
+    return fundStore.fundUserData?.fundAllowance >= (fundStore.fundUserData?.depositRequest?.amount || 0n);
+  }
 
-  return fundStore.fundUserData?.fundAllowance >= fundStore.fundUserData?.depositRequest?.amount && hasRequestedDeposit.value;
+  return (fundStore.fundUserData?.fundAllowance || 0n) > tokensWei.value
 });
 
 const hasDelegatedToSelf = computed(() => {
@@ -631,13 +644,19 @@ const hasProcessedDeposit = computed(() => {
   // return fundStore.fundUserData.depositRequestProcessed;
 });
 
-const buttons = ref([
+// Create a computed property that calls the shouldUserApproveAllowance function
+const shouldUserApproveAllowance = computed(() => {
+  const tokensToApprove = userDepositRequest?.value?.amount || tokensWei.value;
+  return fundStore.shouldUserApproveAllowance(tokensToApprove);
+});
+
+const buttons = computed(() => [
   {
     name: "Request Deposit",
     onClick: requestDeposit,
-    isVisible: shouldUserRequestDeposit,
-    disabled: isRequestDepositDisabled,
-    loading: loadingRequestDeposit,
+    isVisible: shouldUserRequestDeposit.value && hasApprovedAmount.value,
+    disabled: isRequestDepositDisabled.value,
+    loading: loadingRequestDeposit.value,
     tooltipText: computed(() => {
       if (userDepositRequestExists.value) {
         return "Deposit request already exists. To change it, you first have to cancel the existing one.";
@@ -651,77 +670,46 @@ const buttons = ref([
   {
     name: "Approve Amount",
     onClick: approveAllowance,
-    loading: loadingApproveAllowance,
-    isVisible: shouldUserApproveAllowance,
+    loading: loadingApproveAllowance.value,
+    isVisible: shouldUserApproveAllowance.value,
     tooltipText: undefined,
   },
 ]);
 
 
-const flowVersion = computed(() => fund.value?.flowsConfig?.flowVersion || "0");
-
 const stepsDeposit = computed(() => {
-  console.warn("flowVersion", flowVersion.value);
-  if (flowVersion.value === "0") {
-    // For version "0" or any other version, use the original order
-    return [
-      {
-        label: "1. Request Deposit",
-        done: hasRequestedDeposit.value,
-        loading: loadingRequestDeposit.value,
-        isDisabled: false,
-      },
-      {
-        label: "2. Approve Amount",
-        done: hasApprovedAmount.value,
-        loading: loadingApproveAllowance.value,
-        isDisabled: false,
-      },
-      {
-        label: "3. Delegate to Myself",
-        done: hasDelegatedToSelf.value && hasApprovedAmount.value,
-        loading: isLoadingDelegate.value,
-      },
-      {
-        label: "4. Process Deposit",
-        done: hasProcessedDeposit.value,
-        isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
-        tooltip: "Wait for the next NAV update to process the deposit.",
-      },
-    ];
-  } else if (flowVersion.value === "1") {
-    // Check if flowVersion is "1", otherwise default to the original order
-    // For version "1", swap the first two steps (Request Deposit and Approve Amount)
-    return [
-      {
-        label: "1. Approve Amount",
-        done: hasApprovedAmount.value,
-        loading: loadingApproveAllowance.value,
-        isDisabled: false,
-      },
-      {
-        label: "2. Request Deposit",
-        done: hasRequestedDeposit.value,
-        loading: loadingRequestDeposit.value,
-        isDisabled: false,
-      },
-      {
-        label: "3. Delegate to Myself",
-        done: hasDelegatedToSelf.value && hasApprovedAmount.value,
-        loading: isLoadingDelegate.value,
-      },
-      {
-        label: "4. Process Deposit",
-        done: hasProcessedDeposit.value,
-        isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
-        tooltip: "Wait for the next NAV update to process the deposit.",
-      },
-    ];
-  }
+  return [
+    {
+      label: "1. Approve Amount",
+      done: hasApprovedAmount.value,
+      loading: loadingApproveAllowance.value,
+      isDisabled: false,
+    },
+    {
+      label: "2. Request Deposit",
+      done: hasRequestedDeposit.value,
+      loading: loadingRequestDeposit.value,
+      isDisabled: false,
+    },
+    {
+      label: "3. Delegate to Myself",
+      done: hasDelegatedToSelf.value && hasApprovedAmount.value && hasRequestedDeposit.value,
+      loading: isLoadingDelegate.value,
+    },
+    {
+      label: "4. Process Deposit",
+      done: hasProcessedDeposit.value,
+      isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
+      tooltip: "Wait for the next NAV update to process the deposit.",
+    },
+  ]
 });
 
-const handleDepositClick = () =>{
-  if (!hasRequestedDeposit.value){
+const handleDepositClick = () => {
+  // For version "1", first approve, then request deposit
+  if (shouldUserApproveAllowance.value) {
+    approveAllowance();
+  } else if (!hasRequestedDeposit.value) {
     requestDeposit();
   }
   isDepositModalOpen.value = true;
