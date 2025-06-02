@@ -460,12 +460,21 @@ const requestDeposit = async () => {
               timestamp: Date.now(),
               type: FundTransactionType.Deposit,
             };
+          } else {
+            // Refresh user balances & allowance & refresh pending requests.
+            fundStore.fetchUserFundData(
+              fundStore.selectedFundChain,
+              fundStore.selectedFundAddress,
+            );
           }
+
+          tokenValue.value = "";
+          tokenValueChanged.value = false;
 
           // deposit-success event is emitted to open the delegate dialog.
           emit("deposit-success");
-
           delegateToMyself();
+          fundStore.fetchUserFundAllowance();
         } else {
           toastStore.errorToast(
             "Your deposit request has failed. Please contact the Rethink Finance support.",
@@ -529,6 +538,8 @@ const processDeposit = async () => {
           toastStore.successToast("Your deposit was successful.");
           isDepositModalOpen.value = false;
 
+          tokenValue.value = "";
+          tokenValueChanged.value = false;
           // emit event to open the delegate votes modal
           emit("deposit-success");
         } else {
@@ -537,6 +548,7 @@ const processDeposit = async () => {
           );
         }
 
+        fundStore.fetchUserFundAllowance();
         isLoadingProcessDeposit.value = false;
       })
       .on("error", (error: any) => {
@@ -684,9 +696,17 @@ const buttons = computed(() => [
   },
 ]);
 
+const flowVersion = computed(() => fund.value?.flowsConfig?.flowVersion?.toString() || "0")
 
+interface IDepositStep {
+  label: string;
+  done: boolean;
+  loading: boolean;
+  isDisabled: boolean;
+  tooltip?: string;
+}
 const stepsDeposit = computed(() => {
-  return [
+  const steps: IDepositStep[] = [
     {
       label: "1. Approve Amount",
       done: hasApprovedAmount.value,
@@ -699,18 +719,33 @@ const stepsDeposit = computed(() => {
       loading: loadingRequestDeposit.value,
       isDisabled: false,
     },
-    {
-      label: "3. Delegate to Myself",
-      done: hasDelegatedToSelf.value && hasApprovedAmount.value && hasRequestedDeposit.value,
-      loading: isLoadingDelegate.value,
-    },
-    {
-      label: "4. Process Deposit",
-      done: hasProcessedDeposit.value,
-      isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
-      tooltip: "Wait for the next NAV update to process the deposit.",
-    },
   ]
+
+  let stepNumber = 3;
+  if (!isAlreadyDelegatingToMyself.value) {
+    stepNumber += 1;
+    steps.push(
+      {
+        label: "3. Delegate to Myself",
+        done: hasDelegatedToSelf.value && hasApprovedAmount.value && hasRequestedDeposit.value,
+        loading: isLoadingDelegate.value,
+        isDisabled: false,
+      },
+    )
+  }
+
+  if (flowVersion.value === "0") {
+    steps.push(
+      {
+        label: `${stepNumber}. Process Deposit`,
+        done: hasProcessedDeposit.value,
+        isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
+        tooltip: "Wait for the next NAV update to process the deposit.",
+      } as IDepositStep,
+    )
+  }
+
+  return steps;
 });
 
 const handleDepositClick = () => {
