@@ -13,7 +13,7 @@ export async function fetchFundsAction(): Promise<void> {
   async function processChain(chainId?: ChainId): Promise<void> {
     if (!chainId) return;
     // TODO remove this urgent!
-    if (chainId !== ChainId.LOCAL_NODE) return;
+    // if (chainId !== ChainId.LOCAL_NODE) return;
 
     // Fetch the funds info arrays
     let fundsInfoArrays = fundsStore.chainFundsInfoArrays[chainId];

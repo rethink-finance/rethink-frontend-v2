@@ -16,7 +16,6 @@
         <FundSettlementDeposit
           v-if="isSelectedDepositButton"
         />
-        <!-- @deposit-success="openDelegateDialog" -->
         <FundSettlementRedeem v-else-if="isSelectedRedeemButton" />
       </div>
     </div>

@@ -367,10 +367,10 @@ const storePermissions = async () => {
       .on("receipt", (receipt: any) => {
         console.log("receipt: ", receipt);
         if (receipt.status) {
-          toastStore.successToast("Permissions stored successfully.");
+          toastStore.successToast("Permissions saved successfully.");
         } else {
           toastStore.errorToast(
-            "Storing permissions has failed. Please contact the Rethink Finance support.",
+            "Saving permissions has failed. Please contact the Rethink Finance support.",
           );
         }
         loading.value = false;

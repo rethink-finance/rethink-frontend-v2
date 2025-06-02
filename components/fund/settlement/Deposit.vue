@@ -264,7 +264,6 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
 
-const emit = defineEmits(["deposit-success"]);
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
@@ -471,8 +470,6 @@ const requestDeposit = async () => {
           tokenValue.value = "";
           tokenValueChanged.value = false;
 
-          // deposit-success event is emitted to open the delegate dialog.
-          emit("deposit-success");
           delegateToMyself();
           fundStore.fetchUserFundAllowance();
         } else {
@@ -540,8 +537,6 @@ const processDeposit = async () => {
 
           tokenValue.value = "";
           tokenValueChanged.value = false;
-          // emit event to open the delegate votes modal
-          emit("deposit-success");
         } else {
           toastStore.errorToast(
             "The transaction has failed. Please contact the Rethink Finance support.",
@@ -779,8 +774,6 @@ const delegateToMyself = async () => {
       fundStore.selectedFundAddress,
     );
 
-    // emit event to open the delegate votes modal
-    emit("deposit-success");
     return;
   }
 
@@ -824,6 +817,9 @@ const delegateToMyself = async () => {
           );
 
           if (delegateTo) fundStore.fundUserData.fundDelegateAddress = delegateTo;
+
+          isDepositModalOpen.value = false;
+          isDelegateModalOpen.value = false;
         } else {
           toastStore.errorToast(
             "The delegateTo tx has failed. Please contact the Rethink Finance support.",

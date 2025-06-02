@@ -100,7 +100,6 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
-const emit = defineEmits(["deposit-success"]);
 
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
@@ -352,9 +351,6 @@ const deposit = async () => {
 
         if (receipt.status) {
           toastStore.successToast("Your deposit was successful.");
-
-          // emit event to open the delegate votes modal
-          emit("deposit-success");
         } else {
           toastStore.errorToast(
             "The transaction has failed. Please contact the Rethink Finance support.",
