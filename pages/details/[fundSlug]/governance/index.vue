@@ -149,18 +149,24 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import { _mapDelegatesToTrendingDelegates } from "~/types/helpers/mappers";
 import type ITrendingDelegate from "~/types/trending_delegate";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
+import { useSettingsStore } from "~/store/settings/settings.store";
 
 const router = useRouter();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const actionStateStore = useActionStateStore();
 const governanceProposalStore = useGovernanceProposalsStore();
+const appSettingsStore = useSettingsStore();
+const toastStore = useToastStore();
+const web3Store = useWeb3Store();
 
 const confirmDialog = ref(false);
 const updateSettingsProposals = ref([]) as Ref<IGovernanceProposal[]>;
 const { shouldUserDelegate } = storeToRefs(fundStore);
 
-// dummy data governance activity
+// Dummy data governance activity
 const governanceProposals = computed(() => {
   const proposals = governanceProposalStore.getProposals(
     fundStore.selectedFundChain,
@@ -230,17 +236,21 @@ const shouldFetchProposals = ref(false);
 const shouldFetchTrendingDelegates = ref(true);
 
 // trending delegates
+const nonIndexerTrendingDelegates = ref<ITrendingDelegate[]>([]);
 const trendingDelegates = computed(() => {
-  const delegates = governanceProposalStore.getDelegates(
-    fundStore.selectedFundChain,
-    fundStore.fundAddress,
-  );
-  delegates.sort((a, b) => {
-    const votingPowerA = Number(a.votingPower.replace(fundStore.fund?.governanceToken.symbol || "", ""));
-    const votingPowerB = Number(b.votingPower.replace(fundStore.fund?.governanceToken.symbol || "", ""));
-    return votingPowerB - votingPowerA;
-  });
-  return _mapDelegatesToTrendingDelegates(delegates);
+  if (appSettingsStore.useIndexerForGovernance) {
+    const delegates = governanceProposalStore.getDelegates(
+      fundStore.selectedFundChain,
+      fundStore.fundAddress,
+    );
+    delegates.sort((a, b) => {
+      const votingPowerA = Number(a.votingPower.replace(fundStore.fund?.governanceToken.symbol || "", ""));
+      const votingPowerB = Number(b.votingPower.replace(fundStore.fund?.governanceToken.symbol || "", ""));
+      return votingPowerB - votingPowerA;
+    });
+    return _mapDelegatesToTrendingDelegates(delegates);
+  }
+  return nonIndexerTrendingDelegates.value;
 });
 
 /**
@@ -258,13 +268,23 @@ const trendingDelegatesSubtitle = computed(() => {
   return trendingDelegates.value.length + " Delegated Wallets";
 });
 
-// const loadingTrendingDelegate = ref(false);
+const loadingTrendingDelegate = ref(false);
 
-/**
 const fetchTrendingDelegates = async () => {
   try {
     loadingTrendingDelegate.value = true;
-    const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
+    let currentBlock;
+    while (currentBlock === undefined) {
+      try {
+        currentBlock = Number(await governanceProposalStore.selectedFundWeb3Provider.eth.getBlockNumber());
+        console.log("currentBlock: ", currentBlock);
+      } catch (error: any) {
+        console.log("failed fetching currentBlock: ", error);
+      }
+      if (currentBlock === undefined) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
     console.log("currentBlock trending delegates:", currentBlock);
 
     let fromBlock = BigInt(currentBlock);
@@ -303,10 +323,9 @@ const fetchTrendingDelegates = async () => {
         );
 
         // we need to sort the trending delegates by voting power
-        trendingDelegates.value = trendingDelegates.value.concat(newTrendingDelegates).sort((a, b) => {
+        nonIndexerTrendingDelegates.value = nonIndexerTrendingDelegates.value.concat(newTrendingDelegates).sort((a, b) => {
           const votingPowerA = Number(a.votingPower.replace(symbol, ""));
           const votingPowerB = Number(b.votingPower.replace(symbol, ""));
-
           return votingPowerB - votingPowerA;
         });
 
@@ -449,8 +468,8 @@ async function getVotingPowerAndImpact(delegatedAddress: string) {
   try {
     // TODO add chainId to callWithRetry if you uncomment this code
     let votingPower = 0n;
-    votingPower = await web3Store.callWithRetry(() =>
-      fundStore.fundGovernanceTokenContract.methods.getVotes(delegatedAddress).call()
+    votingPower = await web3Store.callWithRetry(fundStore.selectedFundChain,
+      () => fundStore.fundGovernanceTokenContract.methods.getVotes(delegatedAddress).call(),
     );
 
     const totalFundSupply = Number(fundStore?.fund?.fundTokenTotalSupply || 0);
@@ -475,7 +494,6 @@ async function getVotingPowerAndImpact(delegatedAddress: string) {
     };
   }
 }
- */
 
 const handleRowClick = (item: ITrendingDelegate) => {
   activeRow.value = item;
@@ -570,7 +588,6 @@ const openDelegateDialog = () => {
   isDelegateDialogOpen.value = true;
 };
 
-/**
 const fetchProposals = async (
   rangeStartBlock: number,
   rangeEndBlock: number,
@@ -680,7 +697,7 @@ const fetchProposals = async (
           if (chunkSize <= INITIAL_CHUNK_SIZE) {
             console.log("[PROPOSAL FETCH] switch to another RPC")
             waitTimeAfterError = INITIAL_WAIT_TIME_AFTER_ERROR;
-            web3Store.switchRpcUrl();
+            web3Store.switchRpcUrl(fundStore.selectedFundChain);
           }
           await new Promise((resolve) =>
             setTimeout(resolve, waitTimeAfterError),
@@ -778,7 +795,7 @@ const fetchProposals = async (
           if (chunkSize <= INITIAL_CHUNK_SIZE) {
             console.log("[PROPOSAL FETCH] switch to another RPC")
             waitTimeAfterError = INITIAL_WAIT_TIME_AFTER_ERROR;
-            web3Store.switchRpcUrl();
+            web3Store.switchRpcUrl(fundStore.selectedFundChain);
           }
           await new Promise((resolve) =>
             setTimeout(resolve, waitTimeAfterError),
@@ -817,14 +834,18 @@ const fetchProposals = async (
 
   loadingProposals.value = false;
 };
- */
+
 // TODO iterate over all already fetched proposals that are still votable and update their state (createdBlockNumber).
 onMounted(async () => {
-  // fetchTrendingDelegates();
-  await Promise.all([
-    governanceProposalStore.fetchGovernanceProposals(),
-    governanceProposalStore.fetchDelegates(),
-  ]);
+  if (appSettingsStore.useIndexerForGovernance) {
+    await Promise.all([
+      governanceProposalStore.fetchGovernanceProposals(),
+      governanceProposalStore.fetchDelegates(),
+    ]);
+  } else {
+    startFetchingFundProposals();
+    fetchTrendingDelegates();
+  }
 });
 
 onBeforeUnmount(() => {
@@ -835,7 +856,7 @@ onBeforeUnmount(() => {
   // loadingTrendingDelegate.value = false;
 });
 
-/**
+
 const startFetchingFundProposals = async () => {
   const fundAddress = fundStore.fundAddress;
   console.warn("STAAAART governance proposal events for fund: ", fundAddress);
@@ -858,10 +879,13 @@ const startFetchingFundProposals = async () => {
   //   the blockchain, particularly during times of heavy network traffic or when the nodes are under maintenance.
   while (currentBlock === undefined) {
     try {
-      currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
+      currentBlock = Number(await governanceProposalStore.selectedFundWeb3Provider.eth.getBlockNumber());
       console.log("currentBlock: ", currentBlock);
     } catch (error: any) {
       console.log("failed fetching currentBlock: ", error);
+    }
+    if (currentBlock === undefined) {
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
   loadingProposals.value = false;
@@ -915,7 +939,7 @@ const startFetchingFundProposals = async () => {
     await fetchProposals(currentBlock, 0);
   }
 };
- */
+
 const handleDelegateSuccess = async () => {
   // loadingTrendingDelegate.value = true;
   // await 2000ms before fetching
