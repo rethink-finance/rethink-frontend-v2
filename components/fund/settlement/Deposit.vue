@@ -295,7 +295,7 @@ watch(
   },
 );
 const depositModalTitle = computed(() => {
-  return "Deposit " + tokenValue.value + "" + fund.value?.baseToken.symbol;
+  return "Deposit " + tokenValue.value + " " + fund.value?.baseToken.symbol;
 })
 const rules = [
   (value: string): boolean | IFormError => {
