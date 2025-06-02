@@ -510,6 +510,7 @@ export const useGovernanceProposalsStore = defineStore({
           const estimatedEndTimestamp =
             await this.blockTimeStore.getTimestampForBlock(
               Number(proposal.voteEnd),
+              blockTimeContext,
             );
           console.log("estimatedEndTimestamp: ", estimatedEndTimestamp);
           proposal.voteEndTimestamp = estimatedEndTimestamp.toString();
@@ -527,6 +528,7 @@ export const useGovernanceProposalsStore = defineStore({
           const estimatedStartTimestamp =
             await this.blockTimeStore.getTimestampForBlock(
               Number(proposal.voteStart),
+              blockTimeContext,
             );
           console.debug("estimatedStartTimestamp: ", estimatedStartTimestamp);
           proposal.voteStartTimestamp = estimatedStartTimestamp.toString();
