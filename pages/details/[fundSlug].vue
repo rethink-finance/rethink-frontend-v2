@@ -127,7 +127,6 @@ const parts = computed(() => {
 
   // extract fundSymbol (everything in between)
   const fundSymbol = input.substring(firstDash + 1, lastDash);
-  console.warn({ network, fundSymbol, fundAddress });
   return [network, fundSymbol, fundAddress];
 })
 
