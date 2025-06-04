@@ -364,12 +364,12 @@ const processTransactionInput = (input: string, address: string, n: number = 64)
 };
 
 // Function to generate permissions
-const generateSimplePermissions = (transactions: Transaction[], custodyAddress: string): Permission[] => {
+const generateSimplePermissions = (transactions: Transaction[], custodyAddress: string, matchingAddress: string): Permission[] => {
   const approvals: string[] = [];
   const contractInteractions: string[] = [];
   const processedData: ProcessedData[] = [];
   for (const tx of transactions) {
-    const result = processTransactionInput(tx.input, custodyAddress);
+    const result = processTransactionInput(tx.input, matchingAddress);
     if (result === 1) {
       approvals.push(tx.to);
     } else {
@@ -504,7 +504,7 @@ const fetchAndGeneratePermissions = async () => {
     if (custodyContractAddr === '') {
       throw new Error('Bad Custody Addr');
     }
-    permissions.value = generateSimplePermissions(transactions, custodyContractAddr);
+    permissions.value = generateSimplePermissions(transactions, custodyContractAddr, addressInput.value);
     rawProposalInput.value = JSON.stringify(permissions.value);
     keepExistingPermissions.value = false;
     addRawProposal();
