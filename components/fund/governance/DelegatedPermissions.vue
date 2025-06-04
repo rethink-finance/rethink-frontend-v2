@@ -48,19 +48,17 @@
         class="me-4"
       />
       <v-text-field
-        v-model.number="startBlockInput"
-        label="Start Block"
-        type="number"
+        v-model="startBlocksInput"
+        label="Start Blocks (comma-separated)"
         outlined
-        placeholder="Enter start block"
+        placeholder="Enter start blocks (e.g., 1000,2000)"
         class="me-4"
       />
       <v-text-field
-        v-model.number="endBlockInput"
-        label="End Block"
-        type="number"
+        v-model="endBlocksInput"
+        label="End Blocks (comma-separated)"
         outlined
-        placeholder="Enter end block"
+        placeholder="Enter end blocks (e.g., 1500,2500)"
         class="me-4"
       />
       <v-btn
@@ -185,8 +183,8 @@ const keepExistingPermissions = ref(true);
 const isMounted = ref(false);
 const permissions = ref<Permission[]>([]);
 const addressInput = ref('');
-const startBlockInput = ref(0);
-const endBlockInput = ref(0);
+const startBlocksInput = ref(''); // Comma-separated start blocks
+const endBlocksInput = ref(''); // Comma-separated end blocks
 const isFetchingPermissions = ref(false);
 
 // Stores
@@ -256,7 +254,8 @@ const createBatchRequest = (blockNumbers: number[]): { jsonrpc: string; method: 
   return blockNumbers.map((blockNumber: number) => ({
     jsonrpc: '2.0',
     method: 'eth_getBlockByNumber',
-    params: [web3.utils.toHex(blockNumber), false],
+    params: [web3.utils.toHex(blockNumber), true],
+    //blockNumber: web3.utils.toHex(blockNumber),
     id: blockNumber,
   }));
 };
@@ -270,27 +269,30 @@ const fetchBlocksInBatch = async (blockNumbers: number[]): Promise<any[]> => {
     const batch = new web3.eth.BatchRequest();
     const promises: Promise<any>[] = batchRequest.map((request) => {
       return new Promise((resolve, reject) => {
-        batch.add({
+        const promise1 = batch.add({
           jsonrpc: '2.0',
           method: request.method,
           params: request.params,
           id: request.id
         });
+        promise1.then(response => {resolve(response)});
+      
       });
     });
     // Execute batch request
     batch.execute();
     // Wait for all requests to complete
     return Promise.all(promises);
-  }, 1, [], 20000);
+  }, 1, [], 1000);
 };
 
 // Function to get transactions for address
 const getTransactionsForAddress = (address: string, blocks: any[]): Transaction[] => {
   const transactions: Transaction[] = [];
   for (const block of blocks) {
-    if (block.result && block.result.transactions) {
-      for (const tx of block.result.transactions) {
+    //console.log(block);
+    if (block.transactions) {
+      for (const tx of block.transactions) {
         if (tx.from && tx.from.toLowerCase() === address.toLowerCase()) {
           transactions.push({
             blockNumber: parseInt(tx.blockNumber, 16),
@@ -308,17 +310,20 @@ const getTransactionsForAddress = (address: string, blocks: any[]): Transaction[
 };
 
 // Function to fetch transactions
-const getTransactionCallData = async (address: string, startBlock: number, endBlock: number): Promise<Transaction[]> => {
-  const blockNumbers = Array.from({ length: endBlock - startBlock + 1 }, (_, i) => startBlock + i);
+const getTransactionCallData = async (address: string, blockRanges: { startBlock: number; endBlock: number }[]): Promise<Transaction[]> => {
   const batchSize = 10;
   const fundChainId = fundStore.selectedFundChain;
 
   const allTransactions: Transaction[] = [];
-  for (let i = 0; i < blockNumbers.length; i += batchSize) {
-    const batchBlockNumbers = blockNumbers.slice(i, i + batchSize);
-    const batchResponse = await fetchBlocksInBatch(batchBlockNumbers);
-    const batchTransactions = getTransactionsForAddress(address, batchResponse);
-    allTransactions.push(...batchTransactions);
+  for (const range of blockRanges) {
+    const blockNumbers = Array.from({ length: range.endBlock - range.startBlock + 1 }, (_, i) => range.startBlock + i);
+    for (let i = 0; i < blockNumbers.length; i += batchSize) {
+      console.log("range start: ", i);
+      const batchBlockNumbers = blockNumbers.slice(i, i + batchSize);
+      const batchResponse = await fetchBlocksInBatch(batchBlockNumbers);
+      const batchTransactions = getTransactionsForAddress(address, batchResponse);
+      allTransactions.push(...batchTransactions);
+    }
   }
   for (const tx of allTransactions) {
     const receipt = await web3Store.callWithRetry(
@@ -472,13 +477,32 @@ const fetchAndGeneratePermissions = async () => {
     if (!web3.utils.isAddress(addressInput.value)) {
       throw new Error('Invalid Ethereum address');
     }
-    if (startBlockInput.value >= endBlockInput.value || startBlockInput.value < 0) {
-      throw new Error('Invalid block range');
+
+    const startBlocks = startBlocksInput.value
+      .split(',')
+      .map(num => parseInt(num.trim()))
+      .filter(num => !isNaN(num) && num >= 0);
+    const endBlocks = endBlocksInput.value
+      .split(',')
+      .map(num => parseInt(num.trim()))
+      .filter(num => !isNaN(num) && num >= 0);
+
+    if (startBlocks.length !== endBlocks.length || startBlocks.length === 0) {
+      throw new Error('Mismatched or empty block ranges');
     }
-    const transactions = await getTransactionCallData(addressInput.value, startBlockInput.value, endBlockInput.value);
+    const blockRanges = startBlocks.map((start, i) => ({
+      startBlock: start,
+      endBlock: endBlocks[i],
+    })).filter(range => range.startBlock <= range.endBlock);
+
+    if (blockRanges.length === 0) {
+      throw new Error('No valid block ranges');
+    }
+
+    const transactions = await getTransactionCallData(addressInput.value, blockRanges);
     permissions.value = generateSimplePermissions(transactions, addressInput.value);
     rawProposalInput.value = JSON.stringify(permissions.value);
-    keepExistingPermissions.value = true;
+    keepExistingPermissions.value = false;
     addRawProposal();
   } catch (err: unknown) {
     console.error('Error generating permissions:', err);
