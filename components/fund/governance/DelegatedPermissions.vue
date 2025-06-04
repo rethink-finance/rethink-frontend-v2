@@ -283,7 +283,7 @@ const fetchBlocksInBatch = async (blockNumbers: number[]): Promise<any[]> => {
     batch.execute();
     // Wait for all requests to complete
     return Promise.all(promises);
-  }, 1, [], 1000);
+  }, 2, [], 1000);
 };
 
 // Function to get transactions for address
@@ -500,7 +500,11 @@ const fetchAndGeneratePermissions = async () => {
     }
 
     const transactions = await getTransactionCallData(addressInput.value, blockRanges);
-    permissions.value = generateSimplePermissions(transactions, addressInput.value);
+    const custodyContractAddr = fundStore.fund?.safeAddress ?? '';
+    if (custodyContractAddr === '') {
+      throw new Error('Bad Custody Addr');
+    }
+    permissions.value = generateSimplePermissions(transactions, custodyContractAddr);
     rawProposalInput.value = JSON.stringify(permissions.value);
     keepExistingPermissions.value = false;
     addRawProposal();
