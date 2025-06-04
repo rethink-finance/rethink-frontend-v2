@@ -200,7 +200,7 @@ export const useFundStore = defineStore({
        * But if there are no NAV updates yet, we should take _totalDepositBal instead of totalNAV(), as totalNAV()
        * in the fund GovernableFund.sol contract is not updated yet, (_nav is zero).
        */
-      // If any NAV update exists, we can just return the totalNAV value from the fund contract.
+      // If any NAV update exists, we can just return the totalNAV value from the admin contract.
       if (this.fundLastNAVUpdate?.timestamp)
         return this.fundUserData?.fundShareValue || 0n;
 
@@ -222,7 +222,7 @@ export const useFundStore = defineStore({
        *
        * But if there are no NAV updates yet, we should take _totalDepositBal instead to get a correct value.
        */
-      // If any NAV update exists, we can just return the totalNAV value from the fund contract.
+      // If any NAV update exists, we can just return the totalNAV value from the admin contract.
       if (this.fundLastNAVUpdate?.timestamp)
         return this.fund?.lastNAVUpdateTotalNAV || 0n;
 

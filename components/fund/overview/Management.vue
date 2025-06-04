@@ -53,7 +53,7 @@ export default defineComponent({
   async mounted() {
     await parsePlannedSettlement(this.fund?.chainId, this.fund?.plannedSettlementPeriod)
       .then((result) => {
-        this.parsedPlannedSettlement = result;
+        this.parsedPlannedSettlement = result?.toString() || "";
       })
       .catch((error) => {
         console.error("Error parsing planned settlement", error);

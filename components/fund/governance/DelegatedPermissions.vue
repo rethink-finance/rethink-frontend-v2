@@ -38,7 +38,6 @@
       max-width="80%"
       confirm-text="Import Raw Permissions"
       cancel-text="Cancel"
-      message="Please enter raw permissions JSON"
       @confirm="addRawProposal"
     >
       <v-text-field
@@ -257,7 +256,7 @@ const createBatchRequest = (blockNumbers: number[]): { jsonrpc: string; method: 
   return blockNumbers.map((blockNumber: number) => ({
     jsonrpc: '2.0',
     method: 'eth_getBlockByNumber',
-    params: [web3.utils.toHex(blockNumber), true],
+    params: [web3.utils.toHex(blockNumber), false],
     id: blockNumber,
   }));
 };
@@ -283,7 +282,7 @@ const fetchBlocksInBatch = async (blockNumbers: number[]): Promise<any[]> => {
     batch.execute();
     // Wait for all requests to complete
     return Promise.all(promises);
-  }, 1, [], 4000);
+  }, 1, [], 20000);
 };
 
 // Function to get transactions for address
@@ -311,7 +310,7 @@ const getTransactionsForAddress = (address: string, blocks: any[]): Transaction[
 // Function to fetch transactions
 const getTransactionCallData = async (address: string, startBlock: number, endBlock: number): Promise<Transaction[]> => {
   const blockNumbers = Array.from({ length: endBlock - startBlock + 1 }, (_, i) => startBlock + i);
-  const batchSize = 1000;
+  const batchSize = 10;
   const fundChainId = fundStore.selectedFundChain;
 
   const allTransactions: Transaction[] = [];

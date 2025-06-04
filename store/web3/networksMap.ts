@@ -1,8 +1,10 @@
 import { ChainId } from "~/types/enums/chain_id";
 import type INetwork from "~/types/network";
 
+// Create base networks without the local node
+type BaseChainId = Exclude<ChainId, ChainId.LOCAL_NODE>;
 
-export const networksMap: Record<ChainId, INetwork> = {
+export const baseNetworksMap: Record<BaseChainId, INetwork> = {
   [ChainId.POLYGON]: {
     chainId: ChainId.POLYGON,
     chainName: "Polygon",
@@ -114,16 +116,56 @@ export const networksMap: Record<ChainId, INetwork> = {
     ],
     blockExplorerUrls: ["https://basescan.org"],
   },
+  [ChainId.HYPEREVM]: {
+    chainId: ChainId.HYPEREVM,
+    chainName: "HyperEVM",
+    chainShort: "HyperEVM",
+    nativeCurrency: {
+      name: "Hype",
+      symbol: "HYPE",
+      decimals: 18,
+    },
+    icon: getChainIcon("hypeevm"),
+    rpcUrls: [
+      // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
+      // "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", Luka T.
+      // "https://base-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", Rok
+      "https://rpc.hyperliquid.xyz/evm",
+      // "https://base.drpc.org",
+      // "https://base.meowrpc.com",
+      // "https://base.rpc.subquery.network/public",
+    ],
+    blockExplorerUrls: ["https://purrsec.com/"],
+  },
 };
+// Add Hardhat network only in development mode
+const localhostNetwork: INetwork = {
+  chainId: ChainId.LOCAL_NODE,
+  chainName: "Local Node (31337)",
+  chainShort: "local",
+  nativeCurrency: {
+    name: "ETH",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  icon: getChainIcon("local"),
+  rpcUrls: ["http://127.0.0.1:8545"],
+  blockExplorerUrls: [],
+};
+
+// Conditionally include localhost network based on environment
+export const networksMap: Record<string, INetwork> =
+  process.env.NODE_ENV === "development"
+    ? { ...baseNetworksMap, [ChainId.LOCAL_NODE]: localhostNetwork }
+    : baseNetworksMap;
+
 
 export const chainIds: ChainId[] = Object.keys(networksMap) as ChainId[];
 export const networks: INetwork[] = Object.values(networksMap);
 
 export const networkChoices = networks.map(
-  (network: INetwork) => (
-    {
-      value: network.chainId,
-      title: network.chainName,
-    }
-  ),
+  (network: INetwork) => ({
+    value: network.chainId,
+    title: network.chainName,
+  }),
 );

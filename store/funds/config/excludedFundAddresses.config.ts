@@ -41,6 +41,7 @@ const rawExcludedFundAddresses = {
     { address: "0xC27eE955a44F0A9e7AC509dD54E8221eE06A9592", alwaysExclude: true },  // TESTARB
     { address: "0x539a56974295B8BF7023F2d85144Ca0010953ee2", alwaysExclude: true },  // QCLG 22. jan 25
     { address: "0x5A7638b7b831262081804e88657b2D83E8491b1E", alwaysExclude: false },  // carrotfunding.io gCFG 31. mar 25
+    { address: "0x5E0f37920DDee57dAbAf5A73B21D51075AeDbEBE", alwaysExclude: false },  // Harmonix HES 14. may 25
   ],
   // Fraxtal
   "0xfc": [],

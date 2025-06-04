@@ -8,7 +8,7 @@
         color="primary"
         hide-details
         :disabled="isGroupDisabled"
-        :label="fieldGroup.groupName"
+        :label="fieldGroup.label"
       />
       <v-tooltip v-if="fieldGroup?.tooltip" location="top">
         <template #activator="{ props }">

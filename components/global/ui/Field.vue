@@ -1,6 +1,5 @@
 <template>
   <div :class="classes" v-bind="$attrs">
-
     <div class="field-actions-container" tabindex="-1">
       <v-label
         tabindex="-1"

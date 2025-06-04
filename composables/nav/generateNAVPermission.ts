@@ -84,7 +84,7 @@ export const generateNAVPermission = (
     valueMethodIdx: 24,
   };
 
-  // Target address is fund contract
+  // Target address is admin contract
   navEntryPermission.value[1].data = fundAddress;
   // again, need to set target addr for scope target
   recalculateNavEntryPermission.value[1].data = fundAddress;

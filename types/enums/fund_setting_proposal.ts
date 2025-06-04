@@ -209,7 +209,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Deposit Fee",
+      label: "Deposit Fee",
       tooltip: "Share of deposited denomination asset.",
       fields: [
         {
@@ -236,7 +236,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Redemption Fee",
+      label: "Redemption Fee",
       tooltip: "Share of redeemed denomination asset.",
       fields: [
         {
@@ -263,7 +263,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Management Fee",
+      label: "Management Fee",
       tooltip: "Share of minted vault tokens per management fee period.",
       fields: [
         {
@@ -302,7 +302,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     {
       isToggleable: true,
       isToggleOn: true,
-      groupName: "Performance Fee",
+      label: "Performance Fee",
       tooltip: "Profit share in minted vault tokens.",
       fields: [
         {
@@ -379,6 +379,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       label: "Quorum (%)",
       key: "quorum",
       type: InputType.Text,
+      defaultValue: "0",
       placeholder: "E.g. 0",
       rules: [formRules.required],
       isEditable: false,
@@ -410,6 +411,7 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       key: "proposalThreshold",
       type: InputType.Text,
       placeholder: "E.g. 0",
+      defaultValue: "0",
       rules: [formRules.required],
       isEditable: false,
       tooltip: "Minimum required vault tokens to create a proposal.",
