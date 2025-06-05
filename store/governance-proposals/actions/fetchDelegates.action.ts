@@ -24,6 +24,8 @@ export const fetchDelegatesAction = async (): Promise<any> => {
       votingContract: votingContractAddress,
     },
   );
+  if (!fetchedDelegates) return;
+
   const processedDelegates = _mapSubgraphFetchDelegatesToDelegates(
     fetchedDelegates,
     fund?.governanceToken?.decimals || 18,

@@ -291,20 +291,23 @@ const submitProposal = async () => {
    * NAV methods
    */
   loading.value = true;
+  const navProposalCalldata = [
+    navMethodsProposal.targets,
+    navMethodsProposal.gasValues,
+    navMethodsProposal.calldatas,
+    JSON.stringify({
+      title: proposal.value.title,
+      description: proposal.value.description,
+    }),
+  ];
+  console.log("NAV proposal calldata: ", navProposalCalldata);
+
   try {
     await fundStore.fundGovernorContract
       .send(
         "propose",
         {},
-        ...[
-          navMethodsProposal.targets,
-          navMethodsProposal.gasValues,
-          navMethodsProposal.calldatas,
-          JSON.stringify({
-            title: proposal.value.title,
-            description: proposal.value.description,
-          }),
-        ],
+        ...navProposalCalldata,
       )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);

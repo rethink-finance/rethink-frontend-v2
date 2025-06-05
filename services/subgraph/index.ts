@@ -104,7 +104,7 @@ export const fetchSubgraphDelegates = async (
       variables: { votingContract: values.votingContract },
     });
     console.log("fetchSubgraphDelegates data: ", data);
-    if (!data || !data.votingContract) {
+    if (!data) {
       throw new Error("Received no data or events!");
     }
 
