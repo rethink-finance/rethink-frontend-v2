@@ -34,8 +34,8 @@ export const fetchGovernanceProposalAction = async (
 
   const timepoint =
     fund?.clockMode?.mode === ClockMode.BlockNumber
-      ? proposal.proposalCreated?.[0]?.transaction?.blockNumber
-      : proposal.proposalCreated?.[0]?.timestamp;
+      ? proposal?.proposalCreated?.[0]?.transaction?.blockNumber
+      : proposal?.proposalCreated?.[0]?.timestamp;
   const blockNumber = proposal.proposalCreated?.[0]?.transaction?.blockNumber;
 
   const [quorumNumerator, quorumDenominator, totalSupply] = await Promise.all([

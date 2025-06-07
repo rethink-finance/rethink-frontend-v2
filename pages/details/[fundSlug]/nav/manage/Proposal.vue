@@ -78,7 +78,7 @@
                 <div class="management__row">
                   <div>Process withdraws after NAV update</div>
                   <v-switch
-                    v-model="proposal.processWithdraw"
+                    v-model="proposal.settleFlows"
                     color="primary"
                     hide-details
                   />
@@ -208,7 +208,7 @@ const proposal = ref({
   title: "",
   allowManagerToUpdateNav: false,
   collectManagementFees: false,
-  processWithdraw: false,
+  settleFlows: false,
   description: "",
 });
 const breadcrumbItems: BreadcrumbItem[] = [
@@ -276,7 +276,7 @@ const submitProposal = async () => {
   const encodedNavUpdateEntries = encodeUpdateNavMethods(
     fundManagedNAVMethods.value,
     fundStore.fund?.baseToken.decimals,
-    proposal.value.processWithdraw,
+    proposal.value.settleFlows,
   );
   const navMethodsProposal = getNavMethodsProposalData(
     encodedNavUpdateEntries,

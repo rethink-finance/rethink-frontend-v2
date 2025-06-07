@@ -16,7 +16,6 @@ import { fetchUserFundDelegateAddressAction } from "./actions/fetchUserFundDeleg
 import { fetchUserFundDepositRedemptionRequestsAction } from "./actions/fetchUserFundDepositRedemptionRequests.action";
 import { fetchUserFundShareValueAction } from "./actions/fetchUserFundShareValue.action";
 import { fetchUserFundTokenBalanceAction } from "./actions/fetchUserFundTokenBalance.action";
-import { fetchUserFundTransactionRequestAction } from "./actions/fetchUserFundTransactionRequest.action";
 import { fetchUserGovernanceTokenBalanceAction } from "./actions/fetchUserGovernanceTokenBalance.action";
 import { parseFundNAVUpdatesAction } from "./actions/parseFundNAVUpdates.action";
 import { postUpdateNAVAction } from "./actions/postUpdateNav.action";
@@ -34,19 +33,31 @@ import { useFundsStore } from "~/store/funds/funds.store";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ChainId } from "~/types/enums/chain_id";
-import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
+import type IFundTransactionRequest from "~/types/fund/fund_transaction_request";
 import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import { fetchRoleModAddressAddressAction } from "~/store/fund/actions/fetchRoleModAddress.action";
+import { fetchFundSettlementRatesAction } from "~/store/fund/actions/fetchFundSettlementRate.action";
+
+type FundAddress = string;
+type Epoch = string;
+
+type ChainFundEpochRates = Record<
+  ChainId,
+  Record<
+    FundAddress,
+    Record<Epoch, ISettlementRates | undefined>
+  >
+>;
 
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
-  chainFunds: Record<ChainId, Record<string, IFund | undefined>>;
+  chainFunds: Record<ChainId, Record<FundAddress, IFund | undefined>>;
   chainAddressSourceCode: Record<ChainId, Record<string, Record<string, any> | undefined>>;
+  chainFundEpochRates: ChainFundEpochRates;
   fundUserData: IFundUserData;
   userRedemptionRequest?: IFundTransactionRequest;
   selectedFundChain: ChainId;
@@ -55,7 +66,7 @@ interface IState {
   fundManagedNAVMethods: INAVMethod[];
   fundInitialNAVMethods: INAVMethod[];
   // Cached roleMod addresses for each fund.
-  fundRoleModAddress: Record<string, string>;
+  fundRoleModAddress: Record<FundAddress, string>;
   refreshSimulateNAVCounter: number;
 }
 
@@ -76,10 +87,13 @@ export const useFundStore = defineStore({
   state: (): IState => ({
     chainFunds: Object.fromEntries(
       Object.keys(networksMap).map((chainId) => [chainId, {}]),
-    ) as Record<string, Record<string, IFund | undefined>>,
+    ) as Record<ChainId, Record<FundAddress, IFund | undefined>>,
     chainAddressSourceCode: Object.fromEntries(
       Object.keys(networksMap).map((chainId) => [chainId, {}]),
     ) as Record<string, Record<string, Record<string, any> | undefined>>,
+    chainFundEpochRates: Object.fromEntries(
+      Object.keys(networksMap).map((chainId) => [chainId, {}]),
+    ) as ChainFundEpochRates,
     fundUserData: structuredClone(DEFAULT_FUND_USER_DATA),
     selectedFundChain: ChainId.ETHEREUM,
     selectedFundAddress: "",
@@ -258,10 +272,10 @@ export const useFundStore = defineStore({
       return this.fund?.flowsConfig?.flowVersion || "1";
     },
     userDepositRequestExists(): boolean {
-      return (this.fundUserData.depositRequest?.amount || 0) > 0;
+      return (this.fundUserData.depositRequest?.amount || this.fundUserData.depositRequest?.settlementAmount || 0) > 0;
     },
     userRedemptionRequestExists(): boolean {
-      return (this.fundUserData.redemptionRequest?.amount || 0) > 0;
+      return (this.fundUserData.redemptionRequest?.amount || this.fundUserData.redemptionRequest?.settlementAmount || 0) > 0;
     },
     userFundSuggestedAllowance(): bigint {
       const userBaseTokenBalance = this.fundUserData?.baseTokenBalance || 0n;
@@ -318,7 +332,12 @@ export const useFundStore = defineStore({
     },
     canUserProcessDeposit(): boolean {
       // User deposit request exists and the allowance is bigger.
-      return !this.shouldUserRequestDeposit && !this.shouldUserApproveAllowance();
+      if (this.fund?.flowsConfig?.flowVersion === "0") {
+        // Flows V1
+        return !this.shouldUserRequestDeposit && !this.shouldUserApproveAllowance();
+      }
+      // Flows V2
+      return !!this.fundUserData.depositRequest?.settlementRates?.isSettled;
     },
     shouldUserWaitSettlementOrCancelDeposit(): boolean {
       // If there was no NAV update yet, the user can process deposit request.
@@ -346,8 +365,16 @@ export const useFundStore = defineStore({
       // There is no need to wait until the next settlement.
       console.log(
         `Should process withdraw: fundLastNAVUpdate.timestamp: ${this.fundLastNAVUpdate?.timestamp} 
-        userDepositRequest.timestamp ${this.fundUserData.redemptionRequest?.timestamp}`,
+        userDepositRequest ${this.fundUserData.redemptionRequest}`,
       );
+
+      console.warn("Flows V2", this.fund?.flowsConfig, this.fundUserData.redemptionRequest?.settlementRates)
+      if (this.fund?.flowsConfig?.flowVersion === "1") {
+        // Flows V2
+        return !this.fundUserData.redemptionRequest?.settlementRates?.isSettled;
+      }
+
+      // Flows V1
       if (
         !this.fundLastNAVUpdate?.timestamp ||
         !this.fundUserData.redemptionRequest?.timestamp
@@ -690,6 +717,18 @@ export const useFundStore = defineStore({
         parseFundNAVUpdatesAction(chainId, fundNAVData, fundAddress),
       );
     },
+    fetchFundSettlementRates(epoch: number): Promise<ISettlementRates | undefined> {
+      return useActionState("fetchFundSettlementRatesAction", async () => {
+        // If epoch rates exist for this chain and fund, return them.
+        const epochRates: ISettlementRates | undefined = this.chainFundEpochRates[this.selectedFundChain]?.[this.selectedFundAddress]?.[epoch];
+        console.log("epochRates", epochRates);
+        if (epochRates?.baseTokenRate) {
+          return epochRates;
+        }
+        // If they don't exist, fetch rates.
+        return await fetchFundSettlementRatesAction(epoch);
+      });
+    },
     fetchUserBaseTokenBalance() {
       return useActionState("fetchUserBaseTokenBalanceAction", () =>
         fetchUserBaseTokenBalanceAction(),
@@ -724,11 +763,6 @@ export const useFundStore = defineStore({
       return useActionState(
         "fetchUserFundDepositRedemptionRequestsAction",
         () => fetchUserFundDepositRedemptionRequestsAction(),
-      );
-    },
-    fetchUserFundTransactionRequest(fundTransactionType: FundTransactionType) {
-      return useActionState("fetchUserFundTransactionRequestAction", () =>
-        fetchUserFundTransactionRequestAction(fundTransactionType),
       );
     },
     async fetchFundContractBaseTokenBalance() {

@@ -456,6 +456,11 @@ const requestDeposit = async () => {
           if (fundLastNavUpdateExists) {
             fundStore.fundUserData.depositRequest = {
               amount: tokensWei.value,
+              // TODO this is not good, we cant assume the settlement amount anymore, as now the user can do deposit
+              //    more than once and the deposit amount will increase, we also dont know the settlmeent epoch, but
+              //    we can fetch it
+              settlementAmount: tokensWei.value,
+              settlementEpoch: 0,
               timestamp: Date.now(),
               type: FundTransactionType.Deposit,
             };

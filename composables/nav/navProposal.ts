@@ -26,12 +26,12 @@ const storeNAVDataABI = NAVExecutor.abi.find(
  * Use updateNav ABI to encode NAV methods array <INAVMethod>.
  * @param navMethods<INAVMethod>: a list of NAV methods.
  * @param baseDecimals<number>: base token decimals
- * @param processWithdraw<boolean>: set to true to process withdraws after NAV update
+ * @param settleFlows<boolean>: set to true to process withdraws after NAV update
  */
 export const encodeUpdateNavMethods = (
   navMethods: INAVMethod[],
   baseDecimals?: number,
-  processWithdraw: boolean = false,
+  settleFlows: boolean = false,
 ): string => {
   const navUpdateEntries = [];
   const pastNavUpdateEntryAddresses: any[] = [];
@@ -90,13 +90,13 @@ export const encodeUpdateNavMethods = (
   }
   console.log("navUpdateEntries: ", navUpdateEntries);
   console.log("pastNavUpdateEntryAddresses: ", pastNavUpdateEntryAddresses);
-  console.log("processWithdraw: ", processWithdraw);
+  console.log("settleFlows: ", settleFlows);
   const encodedNavUpdateEntries = encodeFunctionCall(
     updateNavABI as AbiFunctionFragment,
     [
       navUpdateEntries,
       pastNavUpdateEntryAddresses,
-      processWithdraw,
+      settleFlows,
     ],
   );
   console.log("encodedNavUpdateEntries: ", encodedNavUpdateEntries);
@@ -123,29 +123,31 @@ export const getNavMethodsProposalData = (
   const gasValues = [0];
   const calldatas = [encodedNavUpdateEntries];
 
+  // TODO collectFees is broken somehow in flows v2? only frontend? should I use
+  // different address?
   // Conditionally include collect Flow fees.
   console.log("NAV collectFlowFees: ", collectFlowFees);
-  if (collectFlowFees) {
-    targets.push(fundAddress);
-    gasValues.push(0);
-    calldatas.push(encodedCollectFlowFeesAbiJSON);
-  }
+  // if (collectFlowFees) {
+  //   targets.push(fundAddress);
+  //   gasValues.push(0);
+  //   calldatas.push(encodedCollectFlowFeesAbiJSON);
+  // }
 
   // Conditionally include collect Management fees.
   console.log("NAV collectManagementFees: ", collectManagementFees);
-  if (collectManagementFees) {
-    targets.push(fundAddress);
-    gasValues.push(0);
-    calldatas.push(encodedCollectManagerFeesAbiJSON);
-  }
+  // if (collectManagementFees) {
+  //   targets.push(fundAddress);
+  //   gasValues.push(0);
+  //   calldatas.push(encodedCollectManagerFeesAbiJSON);
+  // }
 
   // Conditionally include collect Performance fees.
   console.log("NAV collectPerformanceFees: ", collectPerformanceFees);
-  if (collectPerformanceFees) {
-    targets.push(fundAddress);
-    gasValues.push(0);
-    calldatas.push(encodedCollectPerformanceFeesAbiJSON);
-  }
+  // if (collectPerformanceFees) {
+  //   targets.push(fundAddress);
+  //   gasValues.push(0);
+  //   calldatas.push(encodedCollectPerformanceFeesAbiJSON);
+  // }
 
   return {
     targets,

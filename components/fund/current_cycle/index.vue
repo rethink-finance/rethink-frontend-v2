@@ -131,6 +131,8 @@ const props = defineProps({
     default: () => {},
   },
 });
+const flowVersion = computed(() => props.fund?.flowsConfig?.flowVersion?.toString() || "0")
+
 const isProcessRequestDisabled = computed(() => {
   if (isAnythingLoading.value) return true;
 
@@ -165,7 +167,7 @@ const depositDisabledTooltipText = computed(() => {
     return "There is no deposit request.";
   }
   if (
-    fundUserData.value.fundAllowance < (userDepositRequest?.value?.amount || 0n)
+    fundUserData.value.fundAllowance < (userDepositRequest?.value?.amount || userDepositRequest?.value?.settlementAmount || 0n)
   ) {
     return "Not enough allowance to process the deposit request.";
   }
@@ -178,7 +180,7 @@ const depositDisabledTooltipText = computed(() => {
   return "";
 });
 const redemptionDisabledTooltipText = computed(() => {
-  const redemptionRequestAmount = userRedemptionRequest?.value?.amount || 0n;
+  const redemptionRequestAmount = userRedemptionRequest?.value?.amount || userRedemptionRequest?.value?.settlementAmount || 0n;
 
   if (!userRedemptionRequestExists.value) {
     return "There is no redemption request.";
@@ -381,21 +383,28 @@ const redeem = async () => {
     toastStore.errorToast("vault data is missing.")
     return;
   }
-  if (!userRedemptionRequest?.value?.amount) {
+
+  let withdrawFunctionName = "claim";
+  let amount = userRedemptionRequest?.value?.settlementAmount;
+  if (flowVersion.value === "0") {
+    amount = userRedemptionRequest?.value?.amount;
+    withdrawFunctionName = "withdraw";
+  }
+
+  if (!amount) {
     toastStore.errorToast("Redemption request data is missing.");
     return;
   }
-  console.log("[REDEEM]");
+  console.log("[REDEEM] Flows version:", flowVersion.value);
   loadingRedemption.value = true;
   console.log(
     "[REDEEM] tokensWei: ",
-    userRedemptionRequest?.value?.amount,
+    amount,
     "from : ",
     fundStore.activeAccountAddress,
   );
 
-  const encodedFunctionCall = encodeFundFlowsCallFunctionData("withdraw");
-
+  const encodedFunctionCall = encodeFundFlowsCallFunctionData(withdrawFunctionName);
   try {
     await fundStore.fundContract
       .send("fundFlowsCall", {}, encodedFunctionCall)

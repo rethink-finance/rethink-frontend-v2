@@ -173,10 +173,9 @@ export async function _mapSubgraphProposalToProposal(
     voteStartTimestamp: voteStartTimestamp?.toString(),
     voteEndTimestamp: voteEndTimestamp?.toString(),
 
-    createdTimestamp: Number(proposal.proposalCreated?.[0]?.timestamp),
-    executedTimestamp: Number(proposal.proposalExecuted?.[0]?.timestamp),
-
-    createdDatetimeFormatted: proposal.proposalCreated?.[0]?.timestamp
+    createdTimestamp: Number(proposal?.proposalCreated?.[0]?.timestamp),
+    executedTimestamp: Number(proposal?.proposalExecuted?.[0]?.timestamp),
+    createdDatetimeFormatted: proposal?.proposalCreated?.[0]?.timestamp
       ? new Date(
         Number(proposal.proposalCreated[0].timestamp) * 1000,
       ).toDateString()

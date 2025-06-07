@@ -51,14 +51,14 @@
 </template>
 
 <script setup lang="ts">
-import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { ethers, FixedNumber } from "ethers";
 import { ref } from "vue";
+import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { roundToSignificantDecimals } from "~/composables/formatters";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
-import type IFundTransactionRequest from "~/types/fund_transaction_request";
+import type IFundTransactionRequest from "~/types/fund/fund_transaction_request";
 import type IToken from "~/types/token";
 
 const emit = defineEmits(["cancel-request-success"]);
@@ -94,13 +94,32 @@ const props = defineProps({
   },
 });
 
+// Flows V1 use amount, but flows V2 use settlementAmount.
+const transactionRequestAmount = computed(() => props.fundTransactionRequest.amount || props.fundTransactionRequest.settlementAmount);
 const fundTransactionRequestAmountFormatted = computed(() => {
-  return formatTokenValue(props.fundTransactionRequest.amount, props.token0.decimals, false);
+  return formatTokenValue(transactionRequestAmount.value, props.token0.decimals, false);
 });
+
 const claimableTokenValue = computed(() => {
   if (!props.exchangeRate) return 0
-  console.log("exchangeRate:", props.exchangeRate)
-  const amount = ethers.formatUnits(props.fundTransactionRequest.amount, props.token0.decimals);
+  // Flows V2 use settlement amount and settlement epoch
+  // Also they use the settlement rate.
+  // NOTE: settlement rate may not be present, so we have to figure it on our own.
+  const baseTokenRate = props.fundTransactionRequest?.settlementRates?.baseTokenRate || 0n;
+  const settlementAmount = props.fundTransactionRequest?.settlementAmount || 0n;
+
+  // Flows V2
+  if (settlementAmount > 0n) {
+    console.warn("Flows V2 baseTokenRate:", baseTokenRate)
+    const amount = ethers.formatUnits(settlementAmount, props.token0.decimals);
+    // TODO handle case where baseTokenRate is 0n
+    const value = FixedNumber.fromString(baseTokenRate.toString()).mul(FixedNumber.fromString(amount));
+    return roundToSignificantDecimals(value.toString(), 3);
+  }
+
+  // Flows V1
+  console.log("Flows V1 exchangeRate:", props.exchangeRate)
+  const amount = ethers.formatUnits(transactionRequestAmount.value, props.token0.decimals);
   const value = props.exchangeRate.mul(FixedNumber.fromString(amount));
   return roundToSignificantDecimals(value.toString(), 3);
 });
