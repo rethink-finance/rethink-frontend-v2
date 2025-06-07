@@ -20,10 +20,10 @@ export const useSettingsStore = defineStore({
     },
     // load advanced mode from local storage and set it to the store
     loadSettings() {
-      const isManageMode = getLocalStorageItem("isManageMode");
+      const isManageMode = getLocalStorageItem("isManageMode", false);
       this.isManageMode = isManageMode === true;
 
-      const useIndexerForGovernance = getLocalStorageItem("useIndexerForGovernance");
+      const useIndexerForGovernance = getLocalStorageItem("useIndexerForGovernance", true);
       this.useIndexerForGovernance = useIndexerForGovernance === true;
     },
   },

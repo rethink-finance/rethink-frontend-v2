@@ -269,7 +269,7 @@ export const useFundStore = defineStore({
       return this.fundLastNAVUpdate?.entries || [];
     },
     fundFlowVersion(): string {
-      return this.fund?.flowsConfig?.flowVersion || "1";
+      return this.fund?.flowsConfig?.flowVersion?.toString() || "0";
     },
     userDepositRequestExists(): boolean {
       return (this.fundUserData.depositRequest?.amount || this.fundUserData.depositRequest?.settlementAmount || 0) > 0;
@@ -332,7 +332,7 @@ export const useFundStore = defineStore({
     },
     canUserProcessDeposit(): boolean {
       // User deposit request exists and the allowance is bigger.
-      if (this.fund?.flowsConfig?.flowVersion === "0") {
+      if (this.fundFlowVersion === "0") {
         // Flows V1
         return !this.shouldUserRequestDeposit && !this.shouldUserApproveAllowance();
       }
@@ -364,22 +364,26 @@ export const useFundStore = defineStore({
       // If there was no NAV update yet, the user can process deposit request.
       // There is no need to wait until the next settlement.
       console.log(
-        `Should process withdraw: fundLastNAVUpdate.timestamp: ${this.fundLastNAVUpdate?.timestamp} 
-        userDepositRequest ${this.fundUserData.redemptionRequest}`,
+        "Should process withdraw: fundLastNAVUpdate.timestamp:", this.fundLastNAVUpdate?.timestamp,
+        "userDepositRequest", toRaw(this.fundUserData.redemptionRequest),
       );
 
+      if (!this.fundLastNAVUpdate?.timestamp) {
+        return false;
+      }
+
       console.warn("Flows V2", this.fund?.flowsConfig, this.fundUserData.redemptionRequest?.settlementRates)
-      if (this.fund?.flowsConfig?.flowVersion === "1") {
+      if (this.fundFlowVersion === "1") {
         // Flows V2
         return !this.fundUserData.redemptionRequest?.settlementRates?.isSettled;
       }
 
       // Flows V1
       if (
-        !this.fundLastNAVUpdate?.timestamp ||
         !this.fundUserData.redemptionRequest?.timestamp
-      )
+      ) {
         return false;
+      }
       // User redemption request exists and is valid, but there has to be at least 1 NAV update
       // made after the redemption was requested.
       return (

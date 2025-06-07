@@ -95,32 +95,34 @@ const props = defineProps({
 });
 
 // Flows V1 use amount, but flows V2 use settlementAmount.
-const transactionRequestAmount = computed(() => props.fundTransactionRequest.amount || props.fundTransactionRequest.settlementAmount);
+const transactionRequestAmount = computed((): bigint => {
+  if (fundStore.fundFlowVersion === "0") {
+    return props.fundTransactionRequest.amount || 0n;
+  }
+  return props.fundTransactionRequest.settlementAmount || 0n;
+});
+const transactionRequestExchangeRate = computed((): FixedNumber => {
+  if (fundStore.fundFlowVersion === "0") {
+    return props.exchangeRate || FixedNumber.fromValue(0);
+  }
+  // Flows V2 use settlement amount and settlement epoch
+  // Also they use the settlement rate.
+  // NOTE: settlement rate may not be present, so we have to figure it on our own.
+  // if not props.fundTransactionRequest.settlementRates?.isSettled
+  return FixedNumber.fromString(props.fundTransactionRequest.settlementRates?.baseTokenRate || "0");
+});
+
 const fundTransactionRequestAmountFormatted = computed(() => {
   return formatTokenValue(transactionRequestAmount.value, props.token0.decimals, false);
 });
 
 const claimableTokenValue = computed(() => {
-  if (!props.exchangeRate) return 0
-  // Flows V2 use settlement amount and settlement epoch
-  // Also they use the settlement rate.
-  // NOTE: settlement rate may not be present, so we have to figure it on our own.
-  const baseTokenRate = props.fundTransactionRequest?.settlementRates?.baseTokenRate || 0n;
-  const settlementAmount = props.fundTransactionRequest?.settlementAmount || 0n;
-
-  // Flows V2
-  if (settlementAmount > 0n) {
-    console.warn("Flows V2 baseTokenRate:", baseTokenRate)
-    const amount = ethers.formatUnits(settlementAmount, props.token0.decimals);
-    // TODO handle case where baseTokenRate is 0n
-    const value = FixedNumber.fromString(baseTokenRate.toString()).mul(FixedNumber.fromString(amount));
-    return roundToSignificantDecimals(value.toString(), 3);
-  }
-
-  // Flows V1
-  console.log("Flows V1 exchangeRate:", props.exchangeRate)
+  if (!transactionRequestExchangeRate.value) return 0
+  console.log("Claimable Flows Version (0 or 1):", fundStore.fundFlowVersion)
+  console.log("Claimable Amount:", transactionRequestAmount.value)
+  console.log("Claimable ExchangeRate:", transactionRequestExchangeRate.value)
   const amount = ethers.formatUnits(transactionRequestAmount.value, props.token0.decimals);
-  const value = props.exchangeRate.mul(FixedNumber.fromString(amount));
+  const value = transactionRequestExchangeRate.value.mul(FixedNumber.fromString(amount));
   return roundToSignificantDecimals(value.toString(), 3);
 });
 

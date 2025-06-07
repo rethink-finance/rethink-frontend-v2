@@ -108,6 +108,7 @@ const fundStore = useFundStore();
 const accountStore = useAccountStore();
 const {
   fundUserData,
+  fundFlowVersion,
   userDepositRequest,
   userRedemptionRequest,
   baseToFundTokenExchangeRate,
@@ -131,8 +132,6 @@ const props = defineProps({
     default: () => {},
   },
 });
-const flowVersion = computed(() => props.fund?.flowsConfig?.flowVersion?.toString() || "0")
-
 const isProcessRequestDisabled = computed(() => {
   if (isAnythingLoading.value) return true;
 
@@ -194,29 +193,38 @@ const redemptionDisabledTooltipText = computed(() => {
 
   // Check if there is even enough liquidity in the vault contract to redeem the requested amount.
   const fundContractBaseTokenBalance = fundStore.fund?.fundContractBaseTokenBalance || 0n;
-  // Get the last NAV update exchange rate.
-  const lastNAVExchangeRate = FixedNumber.fromString(
-    fundStore.fundToBaseTokenExchangeRate.toString(),
-  );
+  // Get the exchange rate depending on the flows version.
+  let exchangeRate;
+  if (fundFlowVersion.value === "0") {
+    // Flows V1 use last NAV update exchange rate.
+    exchangeRate = FixedNumber.fromString(
+      fundStore.fundToBaseTokenExchangeRate.toString(),
+    );
+  } else {
+    // Flows V2 (use settlementRates)
+    exchangeRate = FixedNumber.fromString(
+      userRedemptionRequest?.value?.settlementRates?.baseTokenRate?.toString() || "0",
+    );
+  }
+
   const redemptionRequestAmountFN = FixedNumber.fromString(
     ethers.formatUnits(
       redemptionRequestAmount,
       fundStore.fund?.fundToken.decimals,
     ),
   );
-  const redemptionRequestAmountInBaseFN = lastNAVExchangeRate.mul(
+
+  const redemptionRequestAmountInBaseFN = exchangeRate.mul(
     redemptionRequestAmountFN,
   );
+
   const fundContractBaseTokenBalanceFN = FixedNumber.fromString(
     ethers.formatUnits(
       fundContractBaseTokenBalance,
       fundStore.fund?.baseToken.decimals,
     ),
   );
-  // console.log("NSS lastNAVExchangeRate", lastNAVExchangeRate.toString())
-  // console.log("NSS redemptionRequestAmountFN", redemptionRequestAmountFN.toString());
-  // console.log("NSS redemptionRequestAmountInBaseFN", redemptionRequestAmountInBaseFN.toString());
-  // console.log("NSS fundContractBaseTokenBalanceFN", fundContractBaseTokenBalanceFN.toString())
+
   if (fundContractBaseTokenBalanceFN.lt(redemptionRequestAmountInBaseFN)) {
     // Check if there is enough base token liquidity to perform withdrawal.
     return "Not enough liquidity in the vault contract."
@@ -386,7 +394,7 @@ const redeem = async () => {
 
   let withdrawFunctionName = "claim";
   let amount = userRedemptionRequest?.value?.settlementAmount;
-  if (flowVersion.value === "0") {
+  if (fundFlowVersion.value === "0") {
     amount = userRedemptionRequest?.value?.amount;
     withdrawFunctionName = "withdraw";
   }
@@ -395,7 +403,7 @@ const redeem = async () => {
     toastStore.errorToast("Redemption request data is missing.");
     return;
   }
-  console.log("[REDEEM] Flows version:", flowVersion.value);
+  console.log("[REDEEM] Flows version:", fundFlowVersion.value);
   loadingRedemption.value = true;
   console.log(
     "[REDEEM] tokensWei: ",

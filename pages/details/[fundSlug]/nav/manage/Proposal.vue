@@ -76,7 +76,7 @@
               </div>
               <div class="management__card--no-margin">
                 <div class="management__row">
-                  <div>Process withdraws after NAV update</div>
+                  <div>Process withdraws after NAV update (settle flows)</div>
                   <v-switch
                     v-model="proposal.settleFlows"
                     color="primary"
