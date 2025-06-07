@@ -58,7 +58,6 @@
 
     <div class="divider" />
 
-
     <div v-if="accountStore.isConnected" style="width: 100%">
       <div
         class="buttons_group"
@@ -94,10 +93,9 @@
         </div>
       </div>
 
-
       <UiConfirmDialog
         v-model="isDepositModalOpen"
-        title="Deposit Flow"
+        :title="depositModalTitle"
       >
         <div class="deposit-flow mb-4">
           <div v-for="(step, index) in stepsDeposit" :key="index">
@@ -141,7 +139,7 @@
         </div>
 
         <div class="buttons_group">
-          <template v-if="!hasDelegatedToSelf && hasApprovedAmount">
+          <template v-if="!hasDelegatedToSelf && hasApprovedAmount && hasRequestedDeposit">
             <v-btn
               class="button"
               variant="outlined"
@@ -266,7 +264,6 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
 
-const emit = defineEmits(["deposit-success"]);
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 const fundStore = useFundStore();
@@ -276,7 +273,6 @@ const tokenValueChanged = ref(false);
 const fund = computed(() => fundStore.fund);
 const {
   shouldUserRequestDeposit,
-  shouldUserApproveAllowance,
   canUserProcessDeposit,
   shouldUserWaitSettlementOrCancelDeposit,
   userDepositRequest,
@@ -297,7 +293,9 @@ watch(
     tokenValueChanged.value = true;
   },
 );
-
+const depositModalTitle = computed(() => {
+  return "Deposit " + tokenValue.value + " " + fund.value?.baseToken.symbol;
+})
 const rules = [
   (value: string): boolean | IFormError => {
     if (!fund.value) return { message: "Fund data is missing.", display: true };
@@ -310,8 +308,9 @@ const rules = [
         display: false,
       };
     }
-    if (valueWei <= 0)
+    if (valueWei <= 0) {
       return { message: "Value must be positive.", display: false };
+    }
 
     console.log(
       "[DEPOSIT] check user base token balance wei: ",
@@ -369,7 +368,7 @@ const errorMessages = computed<IFormError[]>(() => {
 const visibleErrorMessages = computed<IFormError[]>(() => {
   return errorMessages.value.filter((error: IFormError) => error.display);
 });
-const tokensWei = computed(() => {
+const tokensWei = computed((): bigint => {
   if (!fund.value?.baseToken) return 0n;
   return ethers.parseUnits(
     tokenValue.value || "0",
@@ -450,14 +449,34 @@ const requestDeposit = async () => {
           // he can approve it without inputting the value himself, for better UX.
           // TODO takes 15-20 sec for node to sync .. fix
           // await fundStore.fetchUserBalances();
-          fundStore.fundUserData.depositRequest = {
-            amount: tokensWei.value,
-            timestamp: Date.now(),
-            type: FundTransactionType.Deposit,
-          };
 
-          // deposit-success event is emitted to open the delegate dialog.
-          emit("deposit-success");
+          // Only do the deposit request if there have been any previous NAV updates and flows v2?
+          const fundLastNavUpdateExists = (fundStore.fund?.navUpdates?.length || 0) > 0;
+
+          if (fundLastNavUpdateExists) {
+            fundStore.fundUserData.depositRequest = {
+              amount: tokensWei.value,
+              // TODO this is not good, we cant assume the settlement amount anymore, as now the user can do deposit
+              //    more than once and the deposit amount will increase, we also dont know the settlmeent epoch, but
+              //    we can fetch it
+              settlementAmount: tokensWei.value,
+              settlementEpoch: 0,
+              timestamp: Date.now(),
+              type: FundTransactionType.Deposit,
+            };
+          } else {
+            // Refresh user balances & allowance & refresh pending requests.
+            fundStore.fetchUserFundData(
+              fundStore.selectedFundChain,
+              fundStore.selectedFundAddress,
+            );
+          }
+
+          tokenValue.value = "";
+          tokenValueChanged.value = false;
+
+          delegateToMyself();
+          fundStore.fetchUserFundAllowance();
         } else {
           toastStore.errorToast(
             "Your deposit request has failed. Please contact the Rethink Finance support.",
@@ -521,14 +540,15 @@ const processDeposit = async () => {
           toastStore.successToast("Your deposit was successful.");
           isDepositModalOpen.value = false;
 
-          // emit event to open the delegate votes modal
-          emit("deposit-success");
+          tokenValue.value = "";
+          tokenValueChanged.value = false;
         } else {
           toastStore.errorToast(
             "The transaction has failed. Please contact the Rethink Finance support.",
           );
         }
 
+        fundStore.fetchUserFundAllowance();
         isLoadingProcessDeposit.value = false;
       })
       .on("error", (error: any) => {
@@ -557,10 +577,12 @@ const approveAllowance = async () => {
     toastStore.errorToast("Fund data is missing.");
     return;
   }
-  console.log("APPROVE ALLOWANCE");
-  loadingApproveAllowance.value = true;
+  console.log("APPROVE ALLOWANCE", depositRequestAmountFormatted.value);
 
-  setTokenValueToDepositRequestAmount();
+  if (hasRequestedDeposit.value) {
+    setTokenValueToDepositRequestAmount();
+  }
+  loadingApproveAllowance.value = true;
 
   console.log(
     "Approve allowance tokensWei: ",
@@ -589,7 +611,12 @@ const approveAllowance = async () => {
           );
 
           // Refresh allowance value.
+          console.log("set allowance to", allowanceValue)
           fundStore.fundUserData.fundAllowance = allowanceValue;
+
+          if (!hasRequestedDeposit.value) {
+            requestDeposit();
+          }
         } else {
           toastStore.errorToast(
             "The transaction has failed. Please contact the Rethink Finance support.",
@@ -612,10 +639,15 @@ const hasRequestedDeposit = computed(() => {
 });
 
 const hasApprovedAmount = computed(() => {
-  if (!fundStore.fundUserData?.fundAllowance) return false;
-  if (!fundStore.fundUserData?.depositRequest?.amount) return false;
+  console.warn("hasRequestedDeposit", hasRequestedDeposit.value);
+  console.warn("fundStore.fundUserData?.fundAllowance", fundStore.fundUserData?.fundAllowance);
+  console.warn("tokensWei", tokensWei.value);
+  if (hasRequestedDeposit.value) {
+    // Has already requested deposit and has enough allowance.
+    return fundStore.fundUserData?.fundAllowance >= (fundStore.fundUserData?.depositRequest?.amount || 0n);
+  }
 
-  return fundStore.fundUserData?.fundAllowance >= fundStore.fundUserData?.depositRequest?.amount && hasRequestedDeposit.value;
+  return (fundStore.fundUserData?.fundAllowance || 0n) >= tokensWei.value
 });
 
 const hasDelegatedToSelf = computed(() => {
@@ -626,17 +658,24 @@ const hasDelegatedToSelf = computed(() => {
 });
 
 const hasProcessedDeposit = computed(() => {
+  // TODO what is going on here?
   return false;
   // return fundStore.fundUserData.depositRequestProcessed;
 });
 
-const buttons = ref([
+// Create a computed property that calls the shouldUserApproveAllowance function
+const shouldUserApproveAllowance = computed(() => {
+  const tokensToApprove = userDepositRequest?.value?.amount || tokensWei.value;
+  return fundStore.shouldUserApproveAllowance(tokensToApprove);
+});
+
+const buttons = computed(() => [
   {
     name: "Request Deposit",
     onClick: requestDeposit,
-    isVisible: shouldUserRequestDeposit,
-    disabled: isRequestDepositDisabled,
-    loading: loadingRequestDeposit,
+    isVisible: shouldUserRequestDeposit.value && hasApprovedAmount.value,
+    disabled: isRequestDepositDisabled.value,
+    loading: loadingRequestDeposit.value,
     tooltipText: computed(() => {
       if (userDepositRequestExists.value) {
         return "Deposit request already exists. To change it, you first have to cancel the existing one.";
@@ -650,41 +689,70 @@ const buttons = ref([
   {
     name: "Approve Amount",
     onClick: approveAllowance,
-    loading: loadingApproveAllowance,
-    isVisible: shouldUserApproveAllowance,
+    loading: loadingApproveAllowance.value,
+    isVisible: shouldUserApproveAllowance.value,
+    disabled: loadingApproveAllowance.value,
     tooltipText: undefined,
   },
 ]);
 
+const flowVersion = computed(() => fund.value?.flowsConfig?.flowVersion?.toString() || "0")
 
-const stepsDeposit = computed(() => [
-  {
-    label: "1. Request Deposit",
-    done: hasRequestedDeposit.value,
-    loading: loadingRequestDeposit.value,
-    isDisabled: false,
-  },
-  {
-    label: "2. Approve Amount",
-    done: hasApprovedAmount.value,
-    loading: loadingApproveAllowance.value,
-    isDisabled: false,
-  },
-  {
-    label: "3. Delegate to Myself",
-    done: hasDelegatedToSelf.value && hasApprovedAmount.value,
-    loading: isLoadingDelegate.value,
-  },
-  {
-    label: "4. Process Deposit",
-    done: hasProcessedDeposit.value,
-    isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
-    tooltip: "Wait for the next NAV update to process the deposit.",
-  },
-]);
+interface IDepositStep {
+  label: string;
+  done: boolean;
+  loading: boolean;
+  isDisabled: boolean;
+  tooltip?: string;
+}
+const stepsDeposit = computed(() => {
+  const steps: IDepositStep[] = [
+    {
+      label: "1. Approve Amount",
+      done: hasApprovedAmount.value,
+      loading: loadingApproveAllowance.value,
+      isDisabled: false,
+    },
+    {
+      label: "2. Request Deposit",
+      done: hasRequestedDeposit.value,
+      loading: loadingRequestDeposit.value,
+      isDisabled: false,
+    },
+  ]
 
-const handleDepositClick = () =>{
-  if(!hasRequestedDeposit.value){
+  let stepNumber = 3;
+  if (!isAlreadyDelegatingToMyself.value) {
+    stepNumber += 1;
+    steps.push(
+      {
+        label: "3. Delegate to Myself",
+        done: hasDelegatedToSelf.value && hasApprovedAmount.value && hasRequestedDeposit.value,
+        loading: isLoadingDelegate.value,
+        isDisabled: false,
+      },
+    )
+  }
+
+  if (flowVersion.value === "0") {
+    steps.push(
+      {
+        label: `${stepNumber}. Process Deposit`,
+        done: hasProcessedDeposit.value,
+        isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
+        tooltip: "Wait for the next NAV update to process the deposit.",
+      } as IDepositStep,
+    )
+  }
+
+  return steps;
+});
+
+const handleDepositClick = () => {
+  // For version "1", first approve, then request deposit
+  if (shouldUserApproveAllowance.value) {
+    approveAllowance();
+  } else if (!hasRequestedDeposit.value) {
     requestDeposit();
   }
   isDepositModalOpen.value = true;
@@ -698,7 +766,22 @@ const isDepositButtonDisabled = computed(() => {
   );
 });
 
+const isAlreadyDelegatingToMyself = computed(() => fundStore.fundUserData.fundDelegateAddress.toLowerCase() === fundStore?.activeAccountAddress?.toLowerCase());
+
 const delegateToMyself = async () => {
+  // Check if already delegated to myself
+  if (isAlreadyDelegatingToMyself.value) {
+    isDepositModalOpen.value = false;
+
+    // Refresh user balances & allowance & refresh pending requests.
+    fundStore.fetchUserFundData(
+      fundStore.selectedFundChain,
+      fundStore.selectedFundAddress,
+    );
+
+    return;
+  }
+
   try {
     isLoadingDelegate.value = true;
 
@@ -739,6 +822,9 @@ const delegateToMyself = async () => {
           );
 
           if (delegateTo) fundStore.fundUserData.fundDelegateAddress = delegateTo;
+
+          isDepositModalOpen.value = false;
+          isDelegateModalOpen.value = false;
         } else {
           toastStore.errorToast(
             "The delegateTo tx has failed. Please contact the Rethink Finance support.",

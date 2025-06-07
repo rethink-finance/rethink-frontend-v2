@@ -100,7 +100,6 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
-const emit = defineEmits(["deposit-success"]);
 
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
@@ -109,6 +108,7 @@ const fundStore = useFundStore();
 const accountStore = useAccountStore();
 const {
   fundUserData,
+  fundFlowVersion,
   userDepositRequest,
   userRedemptionRequest,
   baseToFundTokenExchangeRate,
@@ -166,7 +166,7 @@ const depositDisabledTooltipText = computed(() => {
     return "There is no deposit request.";
   }
   if (
-    fundUserData.value.fundAllowance < (userDepositRequest?.value?.amount || 0n)
+    fundUserData.value.fundAllowance < (userDepositRequest?.value?.amount || userDepositRequest?.value?.settlementAmount || 0n)
   ) {
     return "Not enough allowance to process the deposit request.";
   }
@@ -179,7 +179,7 @@ const depositDisabledTooltipText = computed(() => {
   return "";
 });
 const redemptionDisabledTooltipText = computed(() => {
-  const redemptionRequestAmount = userRedemptionRequest?.value?.amount || 0n;
+  const redemptionRequestAmount = userRedemptionRequest?.value?.amount || userRedemptionRequest?.value?.settlementAmount || 0n;
 
   if (!userRedemptionRequestExists.value) {
     return "There is no redemption request.";
@@ -193,29 +193,38 @@ const redemptionDisabledTooltipText = computed(() => {
 
   // Check if there is even enough liquidity in the vault contract to redeem the requested amount.
   const fundContractBaseTokenBalance = fundStore.fund?.fundContractBaseTokenBalance || 0n;
-  // Get the last NAV update exchange rate.
-  const lastNAVExchangeRate = FixedNumber.fromString(
-    fundStore.fundToBaseTokenExchangeRate.toString(),
-  );
+  // Get the exchange rate depending on the flows version.
+  let exchangeRate;
+  if (fundFlowVersion.value === "0") {
+    // Flows V1 use last NAV update exchange rate.
+    exchangeRate = FixedNumber.fromString(
+      fundStore.fundToBaseTokenExchangeRate.toString(),
+    );
+  } else {
+    // Flows V2 (use settlementRates)
+    exchangeRate = FixedNumber.fromString(
+      userRedemptionRequest?.value?.settlementRates?.baseTokenRate?.toString() || "0",
+    );
+  }
+
   const redemptionRequestAmountFN = FixedNumber.fromString(
     ethers.formatUnits(
       redemptionRequestAmount,
       fundStore.fund?.fundToken.decimals,
     ),
   );
-  const redemptionRequestAmountInBaseFN = lastNAVExchangeRate.mul(
+
+  const redemptionRequestAmountInBaseFN = exchangeRate.mul(
     redemptionRequestAmountFN,
   );
+
   const fundContractBaseTokenBalanceFN = FixedNumber.fromString(
     ethers.formatUnits(
       fundContractBaseTokenBalance,
       fundStore.fund?.baseToken.decimals,
     ),
   );
-  // console.log("NSS lastNAVExchangeRate", lastNAVExchangeRate.toString())
-  // console.log("NSS redemptionRequestAmountFN", redemptionRequestAmountFN.toString());
-  // console.log("NSS redemptionRequestAmountInBaseFN", redemptionRequestAmountInBaseFN.toString());
-  // console.log("NSS fundContractBaseTokenBalanceFN", fundContractBaseTokenBalanceFN.toString())
+
   if (fundContractBaseTokenBalanceFN.lt(redemptionRequestAmountInBaseFN)) {
     // Check if there is enough base token liquidity to perform withdrawal.
     return "Not enough liquidity in the vault contract."
@@ -352,9 +361,6 @@ const deposit = async () => {
 
         if (receipt.status) {
           toastStore.successToast("Your deposit was successful.");
-
-          // emit event to open the delegate votes modal
-          emit("deposit-success");
         } else {
           toastStore.errorToast(
             "The transaction has failed. Please contact the Rethink Finance support.",
@@ -385,21 +391,28 @@ const redeem = async () => {
     toastStore.errorToast("vault data is missing.")
     return;
   }
-  if (!userRedemptionRequest?.value?.amount) {
+
+  let withdrawFunctionName = "claim";
+  let amount = userRedemptionRequest?.value?.settlementAmount;
+  if (fundFlowVersion.value === "0") {
+    amount = userRedemptionRequest?.value?.amount;
+    withdrawFunctionName = "withdraw";
+  }
+
+  if (!amount) {
     toastStore.errorToast("Redemption request data is missing.");
     return;
   }
-  console.log("[REDEEM]");
+  console.log("[REDEEM] Flows version:", fundFlowVersion.value);
   loadingRedemption.value = true;
   console.log(
     "[REDEEM] tokensWei: ",
-    userRedemptionRequest?.value?.amount,
+    amount,
     "from : ",
     fundStore.activeAccountAddress,
   );
 
-  const encodedFunctionCall = encodeFundFlowsCallFunctionData("withdraw");
-
+  const encodedFunctionCall = encodeFundFlowsCallFunctionData(withdrawFunctionName);
   try {
     await fundStore.fundContract
       .send("fundFlowsCall", {}, encodedFunctionCall)

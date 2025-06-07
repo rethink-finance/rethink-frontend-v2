@@ -212,11 +212,14 @@ import type IGovernanceProposal from "~/types/governance_proposal";
 import type INAVMethod from "~/types/nav_method";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import ProposalPermissionEntry from "~/pages/details/[fundSlug]/governance/proposal/ProposalPermissionEntry.vue";
+import { VoteTypeMapping } from "~/types/enums/governance_proposal";
+import { useSettingsStore } from "~/store/settings/settings.store";
 
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
+const appSettingsStore = useSettingsStore();
 const route = useRoute();
 const proposalSlug = route.params.proposalId as string;
 const [createdBlockNumber, proposalId] = proposalSlug.split("-") as [bigint, string];
@@ -250,20 +253,28 @@ const breadcrumbItems: BreadcrumbItem[] = [
 const selectedTab = ref("description");
 const governanceProposalStore = useGovernanceProposalsStore();
 const actionStateStore = useActionStateStore();
-// const proposalFetched = ref(false);
+const proposalFetched = ref(false);
 const shouldFetchProposalVoteSubmissions = ref(true);
 
-const proposalVoteSubmissions = computed(() =>
-  proposal.value?.voteSubmissions,
-);
+const nonIndexerProposalVoteSubmissions = ref<any[]>([]);
+const nonIndexerActiveUserVoteSubmission = ref<any>();
+const proposalVoteSubmissions = computed(() => {
+  if (appSettingsStore.useIndexerForGovernance) {
+    return proposal.value?.voteSubmissions;
+  }
+  return nonIndexerProposalVoteSubmissions.value;
+});
 
 const activeUserVoteSubmission = computed(() => {
-  const activeAddress = fundStore.activeAccountAddress?.toLowerCase();
-  return activeAddress ?
-    proposalVoteSubmissions.value?.find(
-      sub => sub.proposer.toLowerCase() === activeAddress,
-    ) :
-    undefined;
+  if (appSettingsStore.useIndexerForGovernance) {
+    const activeAddress = fundStore.activeAccountAddress?.toLowerCase();
+    return activeAddress ?
+      proposalVoteSubmissions.value?.find(
+        sub => sub.proposer.toLowerCase() === activeAddress,
+      ) :
+      undefined;
+  }
+  return nonIndexerActiveUserVoteSubmission.value;
 });
 
 const proposal = computed(():IGovernanceProposal | undefined => {
@@ -273,13 +284,11 @@ const proposal = computed(():IGovernanceProposal | undefined => {
   if (!proposal) return undefined;
   console.debug("PROPOSAL_ID fetched", proposal)
 
-  /**
-  if (!proposalFetched.value && proposal?.createdBlockNumber) {
+  if (appSettingsStore.useIndexerForGovernance && !proposalFetched.value && proposal?.createdBlockNumber) {
     // Refetch it to update it, maybe it came from local storage.
     governanceProposalStore.fetchBlockProposals(proposal.createdBlockNumber);
     proposalFetched.value = true;
   }
-  */
 
   return proposal;
 })
@@ -340,11 +349,23 @@ watch(
   { immediate: true },
 );
 
-/**
+const loadingProposalVoteSubmissions = ref(false);
+
 const fetchProposalVoteSubmissions = async () => {
   loadingProposalVoteSubmissions.value = true;
   try {
-    const currentBlock = Number(await fundStore.web3.eth.getBlockNumber());
+    let currentBlock;
+    while (currentBlock === undefined) {
+      try {
+        currentBlock = Number(await governanceProposalStore.selectedFundWeb3Provider.eth.getBlockNumber());
+        console.log("currentBlock: ", currentBlock);
+      } catch (error: any) {
+        console.log("failed fetching currentBlock: ", error);
+      }
+      if (currentBlock === undefined) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
     const proposalBlock = proposal.value?.createdBlockNumber ?? 0;
     const proposalId = proposal.value?.proposalId ?? "";
 
@@ -387,7 +408,7 @@ const fetchProposalVoteSubmissions = async () => {
           const { voter, support, weight } = event?.returnValues; // reason is not used
 
           // fetch block details to get the timestamp
-          const blockVoteCast = await fundStore.web3.eth.getBlock( event?.blockNumber);
+          const blockVoteCast = await governanceProposalStore.selectedFundWeb3Provider.eth.getBlock(event?.blockNumber);
           const voteTimestamp = blockVoteCast?.timestamp ? new Date(Number(blockVoteCast?.timestamp) * 1000) : null;
           const myVote = fundStore?.activeAccountAddress?.toLowerCase() === voter?.toLowerCase();
 
@@ -407,10 +428,11 @@ const fetchProposalVoteSubmissions = async () => {
           }
 
           // append new submission to proposalVoteSubmissions
-          proposalVoteSubmissions.value.push(newVote);
+          console.warn("VOTE", newVote);
+          nonIndexerProposalVoteSubmissions.value.push(newVote);
 
           if (myVote) {
-            activeUserVoteSubmission.value = newVote;
+            nonIndexerActiveUserVoteSubmission.value = newVote;
           }
         }
 
@@ -446,32 +468,38 @@ const fetchProposalVoteSubmissions = async () => {
     loadingProposalVoteSubmissions.value = false;
   }
 };
- */
+
 // when the user vote, refetch the votes submissions
 const handleVoteSuccess = async () => {
   shouldFetchProposalVoteSubmissions.value = true;
   // await 2000ms before fetching
   await new Promise((resolve) => setTimeout(resolve, 2000));
-  await governanceProposalStore.fetchGovernanceProposal(proposalId);
-  // fetchProposalVoteSubmissions();
+
+  if (appSettingsStore.useIndexerForGovernance) {
+    await governanceProposalStore.fetchGovernanceProposal(proposalId);
+  } else {
+    await fetchProposalVoteSubmissions();
+  }
 }
 
 onMounted(async () => {
-  // fetchProposalVoteSubmissions();
   emit("updateBreadcrumbs", breadcrumbItems);
 
   // fetch block proposals based on createdBlockNumber
   allMethods.value = [];
   try {
     console.warn("START FETCHINGF", proposalId)
-    await governanceProposalStore.fetchGovernanceProposal(proposalId);
+    if (appSettingsStore.useIndexerForGovernance) {
+      await governanceProposalStore.fetchGovernanceProposal(proposalId);
+    } else {
+      await fetchProposalVoteSubmissions();
+      await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
+
+      if (proposal.value && !proposal.value?.executedBlockNumber) {
+        await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
+      }
+    }
     console.warn("STOP FETCHINGF", proposalId)
-
-    // await governanceProposalStore.fetchBlockProposals(createdBlockNumber);
-
-    // if (proposal.value && !proposal.value?.executedBlockNumber) {
-    //    await governanceProposalStore.proposalExecutedBlockNumber(proposal.value);
-    // }
   } catch {}
   console.log("gov prop fetched", proposal.value)
 

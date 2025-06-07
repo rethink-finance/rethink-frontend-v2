@@ -178,6 +178,9 @@ const fundFactoryContract = computed(() => web3Store.chainContracts[fundChainId.
  * Methods
  */
 const handleClickStoreNavMethods = () => {
+  if (navMethods.value.length === 0) {
+    return toastStore.warningToast("No methods to store.");
+  }
   if (allowManagerToUpdateNav.value) {
     isNotifyDialogOpen.value = true;
   }

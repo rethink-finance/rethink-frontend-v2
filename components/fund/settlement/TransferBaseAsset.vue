@@ -81,10 +81,8 @@
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 const toastStore = useToastStore();
 const fundStore = useFundStore();
-const web3Store = useWeb3Store();
 
 const { isUsingZodiacPilotExtension } = storeToRefs(fundStore);
 

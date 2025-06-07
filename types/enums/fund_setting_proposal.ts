@@ -62,6 +62,12 @@ export interface IProposal {
   proposalDescription: string;
   whitelist: string;
   isWhitelistedDeposits: boolean;
+  useLegacyFlows: boolean;
+  limitsEnabled: boolean;
+  minDeposit: string;
+  maxDeposit: string;
+  minWithdrawal: string;
+  maxWithdrawal: string;
 }
 
 export interface IWhitelist {
@@ -364,7 +370,62 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       rules: [formRules.required, formRules.isNonNegativeNumber],
       isEditable: true,
     },
-  ],
+    {
+      label: "Use Legacy Management Flows",
+      key: "useLegacyFlows",
+      type: InputType.ToggleSwitch,
+      rules: [],
+      isEditable: true,
+    },
+    {
+      label: "Deposit/withdrawal Limits",
+      key: "limitsEnabled",
+      isToggleable: true,
+      isToggleOn: false,
+      fields: [
+        {
+          label: "Min. Deposit",
+          key: "minDeposit",
+          type: InputType.Number,
+          placeholder: "E.g. 0",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+        {
+          label: "Max. Deposit",
+          key: "maxDeposit",
+          type: InputType.Number,
+          placeholder: "E.g. 1000",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+        {
+          label: "Min. Withdrawal",
+          key: "minWithdrawal",
+          type: InputType.Number,
+          placeholder: "E.g. 0",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+        {
+          label: "Max. Withdrawal",
+          key: "maxWithdrawal",
+          type: InputType.Number,
+          placeholder: "E.g. 1000",
+          min: 0,
+          rules: [formRules.isNonNegativeNumber],
+          isEditable: true,
+          cols: 8,
+        },
+      ],
+    } as IField,
+  ] as IField[],
   [StepSections.Governance]: [
     {
       label: "Governance Token",
@@ -379,8 +440,8 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
       label: "Quorum (%)",
       key: "quorum",
       type: InputType.Text,
-      defaultValue: "0",
       placeholder: "E.g. 0",
+      defaultValue: "0",
       rules: [formRules.required],
       isEditable: false,
       tooltip: "Required minimum participation form total token supply.",
@@ -447,4 +508,3 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
     },
   ],
 };
-

@@ -1,4 +1,4 @@
-import type IFundTransactionRequest from "./fund_transaction_request";
+import type IFundTransactionRequest from "./fund/fund_transaction_request";
 
 export default interface IFundUserData {
   baseTokenBalance: bigint;

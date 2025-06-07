@@ -2,6 +2,7 @@ import { useFundStore } from "../fund.store";
 
 import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
+import type IFundFlowsConfig from "~/types/fund_flows_config";
 import type INAVUpdate from "~/types/nav_update";
 
 import defaultAvatar from "@/assets/images/default_avatar.webp";
@@ -59,6 +60,7 @@ export const fetchFundMetaDataAction = async (
       fundGovernanceTokenSymbol,
       fundGovernanceData,
       fundSettings,
+      flowsConfig,
     } = fundMetaData;
 
     const {
@@ -73,9 +75,9 @@ export const fetchFundMetaDataAction = async (
 
     fundSettings.performancePeriod = feePerformancePeriod;
     fundSettings.managementPeriod = feeManagePeriod;
-    console.debug("fundSettings: ", fundSettings);
 
     const parsedFundSettings: IFundSettings = parseBigintsToString(fundSettings);
+    const parsedFlowsConfig = parseBigintsToString<IFundFlowsConfig>(flowsConfig);
     const parsedClockMode = parseClockMode(clockMode);
     console.debug("parsedClockMode: ", parsedClockMode);
     console.log("parsedFundSettings: ", parsedFundSettings);
@@ -197,6 +199,7 @@ export const fetchFundMetaDataAction = async (
 
       // NAV Updates
       navUpdates: [] as INAVUpdate[],
+      flowsConfig: parsedFlowsConfig,
     } as IFund;
     console.log("fund fund: ", fund);
 

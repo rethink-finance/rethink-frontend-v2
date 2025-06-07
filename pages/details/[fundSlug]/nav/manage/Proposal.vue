@@ -76,9 +76,9 @@
               </div>
               <div class="management__card--no-margin">
                 <div class="management__row">
-                  <div>Process withdraws after NAV update</div>
+                  <div>Process withdraws after NAV update (settle flows)</div>
                   <v-switch
-                    v-model="proposal.processWithdraw"
+                    v-model="proposal.settleFlows"
                     color="primary"
                     hide-details
                   />
@@ -208,7 +208,7 @@ const proposal = ref({
   title: "",
   allowManagerToUpdateNav: false,
   collectManagementFees: false,
-  processWithdraw: false,
+  settleFlows: false,
   description: "",
 });
 const breadcrumbItems: BreadcrumbItem[] = [
@@ -276,7 +276,7 @@ const submitProposal = async () => {
   const encodedNavUpdateEntries = encodeUpdateNavMethods(
     fundManagedNAVMethods.value,
     fundStore.fund?.baseToken.decimals,
-    proposal.value.processWithdraw,
+    proposal.value.settleFlows,
   );
   const navMethodsProposal = getNavMethodsProposalData(
     encodedNavUpdateEntries,
@@ -291,20 +291,23 @@ const submitProposal = async () => {
    * NAV methods
    */
   loading.value = true;
+  const navProposalCalldata = [
+    navMethodsProposal.targets,
+    navMethodsProposal.gasValues,
+    navMethodsProposal.calldatas,
+    JSON.stringify({
+      title: proposal.value.title,
+      description: proposal.value.description,
+    }),
+  ];
+  console.log("NAV proposal calldata: ", navProposalCalldata);
+
   try {
     await fundStore.fundGovernorContract
       .send(
         "propose",
         {},
-        ...[
-          navMethodsProposal.targets,
-          navMethodsProposal.gasValues,
-          navMethodsProposal.calldatas,
-          JSON.stringify({
-            title: proposal.value.title,
-            description: proposal.value.description,
-          }),
-        ],
+        ...navProposalCalldata,
       )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);

@@ -676,7 +676,7 @@ const mockFunc3 = FunctionFragment.from({
     },
     {
       "internalType": "bool",
-      "name": "processWithdraw",
+      "name": "settleFlows",
       "type": "bool",
     },
   ],
@@ -1107,7 +1107,7 @@ const mockResult3 = [
     "parentName": "pastNAVUpdateEntryFundAddress",
   },
   {
-    "name": "processWithdraw",
+    "name": "settleFlows",
     "type": "bool",
     "baseType": "bool",
     "components": null,

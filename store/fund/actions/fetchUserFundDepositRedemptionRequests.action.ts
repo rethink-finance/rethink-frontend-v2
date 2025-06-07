@@ -1,38 +1,36 @@
 import { useFundStore } from "../fund.store";
-
-import { FundTransactionType } from "~/types/enums/fund_transaction_type";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 export const fetchUserFundDepositRedemptionRequestsAction =
   async (): Promise<any> => {
     const fundStore = useFundStore();
+    const web3Store = useWeb3Store();
+
+    const fundAddress = fundStore.fundAddress;
+    const fundChainId = fundStore.selectedFundChain;
 
     if (!fundStore.activeAccountAddress) return console.error("Active account not found");
-    if (!fundStore.selectedFundAddress) return "";
-    const [depositRequestResult, redemptionRequestResult] =
-      await Promise.allSettled(
-        [
-          () =>
-            fundStore.fetchUserFundTransactionRequest(
-              FundTransactionType.Deposit,
-            ),
-          () =>
-            fundStore.fetchUserFundTransactionRequest(
-              FundTransactionType.Redemption,
-            ),
-        ].map((fn) => fundStore.accountStore.requestConcurrencyLimit(fn)),
-      );
+    if (!fundAddress) return "";
 
-    // Extract the results or handle errors
-    // TODO also if not fulfilled set that it had error and display error in place of the failed request
-    const depositRequest =
-      depositRequestResult.status === "fulfilled"
-        ? depositRequestResult.value
-        : undefined;
-    const redemptionRequest =
-      redemptionRequestResult.status === "fulfilled"
-        ? redemptionRequestResult.value
-        : undefined;
+    const rethinkReaderContract =
+      web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
 
-    fundStore.fundUserData.depositRequest = depositRequest;
-    fundStore.fundUserData.redemptionRequest = redemptionRequest;
+    const transactionRequests = await web3Store.callWithRetry(
+      fundChainId,
+      () =>
+        rethinkReaderContract.methods
+          .getUserFundTransactionRequests(fundAddress, fundStore.activeAccountAddress)
+          .call(),
+    );
+    console.warn("transactionRequests", transactionRequests)
+
+    // Extract the results
+    fundStore.fundUserData.depositRequest = {
+      ...transactionRequests.depositRequest,
+      settlementRates: transactionRequests.depositSettlementRates,
+    };
+    fundStore.fundUserData.redemptionRequest = {
+      ...transactionRequests.withdrawalRequest,
+      settlementRates: transactionRequests.withdrawalSettlementRates,
+    };
   };

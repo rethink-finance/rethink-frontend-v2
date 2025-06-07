@@ -537,6 +537,7 @@ export const useGovernanceProposalsStore = defineStore({
         console.error(
           "failed fetching proposal vote start end timestamps for ",
           proposal,
+          error,
         );
       }
     },

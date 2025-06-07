@@ -120,6 +120,13 @@
                       hide-details
                       @change="appSettingsStore.toggleAdvancedMode"
                     />
+                    <v-switch
+                      v-model="appSettingsStore.useIndexerForGovernance"
+                      label="Use Governance Proposals Indexer"
+                      color="primary"
+                      hide-details
+                      @change="appSettingsStore.toggleUseIndexerForGovernance"
+                    />
                   </v-list-item-title>
                 </v-list-item>
               </v-list>

@@ -134,6 +134,8 @@ const setTokenValue = (value: any) => {
 // Merge default rules with custom provided rules.
 const tokenValueRules = [
   (value: string) => {
+    // allow empty
+    if (value === "") return true;
     let valueWei;
     try {
       valueWei = ethers.parseUnits(value || "0", props.token0.decimals);

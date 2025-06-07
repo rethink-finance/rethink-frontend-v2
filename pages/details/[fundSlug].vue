@@ -113,11 +113,26 @@ const appSettingsStore = useSettingsStore();
 const route = useRoute();
 // fund address is always in the third position of the route
 // e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
-const parts = route.path.split("/")[2]?.split("-") ?? [];
 
-const fundChainId: ChainId = (parts[0] as ChainId);
-const fundSymbol: string = parts[1] ?? "";
-const fundAddress: string = parts[2] ?? "";
+const parts = computed(() => {
+  const input = route.path.split("/")[2] || "";
+  // Since fundSymbol may contain dashes, you can't just do .split("-") blindly.
+  // 1️extract network (before first dash)
+  const firstDash = input.indexOf("-");
+  const network = input.substring(0, firstDash);
+
+  // extract address (after last dash)
+  const lastDash = input.lastIndexOf("-");
+  const fundAddress = input.substring(lastDash + 1);
+
+  // extract fundSymbol (everything in between)
+  const fundSymbol = input.substring(firstDash + 1, lastDash);
+  return [network, fundSymbol, fundAddress];
+})
+
+const fundChainId: ChainId = (parts.value[0] as ChainId);
+const fundSymbol: string = parts.value[1] ?? "";
+const fundAddress: string = parts.value[2] ?? "";
 
 onMounted(() => {
   fetchFund();

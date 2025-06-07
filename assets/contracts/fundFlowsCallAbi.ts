@@ -10,6 +10,9 @@ const FundFlowsCallAbi: Record<string, any[]> = {
   "revokeDepositWithrawal": [ "function revokeDepositWithrawal(bool isDeposit)" ],
   "requestWithdraw": [ "function requestWithdraw(uint256 amount)" ],
   "withdraw": [ "function withdraw()" ],
+  "claim": [ "function claim()" ],
+  "sweepTokens": [ "function sweepTokens()" ],
+  "collectFees": [ "function collectFees(uint8 feeType)" ],
 } as const;
 
 

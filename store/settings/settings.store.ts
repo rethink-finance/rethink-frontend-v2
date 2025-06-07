@@ -1,28 +1,30 @@
 import { defineStore } from "pinia";
 
 interface IState {
-    isManageMode: boolean;
+  isManageMode: boolean;
+  useIndexerForGovernance: boolean;
 }
 
 export const useSettingsStore = defineStore({
   id: "app-settings",
   state: (): IState => ({
     isManageMode: false,
-
+    useIndexerForGovernance: true,
   }),
   actions: {
     toggleAdvancedMode() {
       setLocalStorageItem("isManageMode", this.isManageMode);
     },
+    toggleUseIndexerForGovernance() {
+      setLocalStorageItem("useIndexerForGovernance", this.useIndexerForGovernance);
+    },
     // load advanced mode from local storage and set it to the store
-    loadAdvancedMode() {
-      const storedValue = getLocalStorageItem("isManageMode");
+    loadSettings() {
+      const isManageMode = getLocalStorageItem("isManageMode", false);
+      this.isManageMode = isManageMode === true;
 
-      if (storedValue === true) {
-        this.isManageMode = true;
-      } else {
-        this.isManageMode = false;
-      }
+      const useIndexerForGovernance = getLocalStorageItem("useIndexerForGovernance", true);
+      this.useIndexerForGovernance = useIndexerForGovernance === true;
     },
   },
 });

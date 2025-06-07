@@ -1,39 +1,41 @@
 <template>
-  <v-snackbar
-    v-for="toast in toasts"
-    :key="toast.id"
-    :model-value="true"
-    :timeout="toast.duration"
-    :class="['toast', backgroundClass(toast.level), 'text'+textColorClass(toast.level)]"
-    multi-line
-  >
-    <div class="toast_content">
-      <Icon
-        v-if="toastIcon(toast.level)"
-        :icon="toastIcon(toast.level)"
-        width="1.5rem"
-        class="icon__toast"
-      />
-
-      <div class="message">
-        {{ toast.message }}
-      </div>
-    </div>
-
-    <template #actions>
-      <v-btn
-        :class="['btn-close', 'btn-close'+textColorClass(toast.level)]"
-        icon
-        @click="toastStore.closeToast(toast.id)"
-      >
+  <div>
+    <v-snackbar
+      v-for="toast in toasts"
+      :key="toast.id"
+      :model-value="true"
+      :timeout="toast.duration"
+      :class="['toast', backgroundClass(toast.level), 'text'+textColorClass(toast.level)]"
+      multi-line
+    >
+      <div class="toast_content">
         <Icon
-          icon="octicon:x-16"
+          v-if="toastIcon(toast.level)"
+          :icon="toastIcon(toast.level)"
           width="1.5rem"
-          class="icon"
+          class="icon__toast"
         />
-      </v-btn>
-    </template>
-  </v-snackbar>
+
+        <div class="message">
+          {{ toast.message }}
+        </div>
+      </div>
+
+      <template #actions>
+        <v-btn
+          :class="['btn-close', 'btn-close'+textColorClass(toast.level)]"
+          icon
+          @click="toastStore.closeToast(toast.id)"
+        >
+          <Icon
+            icon="octicon:x-16"
+            width="1.5rem"
+            class="icon"
+          />
+        </v-btn>
+      </template>
+    </v-snackbar>
+  </div>
 </template>
 
 <script setup>
@@ -80,7 +82,7 @@ const textColorClass = (level) => {
   background-color: $color-bg-toast;
   color: $color-white;
 
-  box-shadow: 0px 0px 16px 0px $color-box-shadow;
+  box-shadow: 0 0 16px 0 $color-box-shadow;
 }
 
 .toast_content {

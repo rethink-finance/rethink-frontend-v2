@@ -12,7 +12,6 @@
 
     <div class="divider" />
 
-
     <div v-if="accountStore.isConnected">
       <div class="buttons_group">
         <template v-if="shouldUserWaitSettlementOrCancelRedemption">
@@ -237,6 +236,11 @@ const requestRedemption = async () => {
           fundStore.fundUserData.redemptionRequest = {
             amount: tokensWei,
             timestamp: Date.now(),
+            // TODO this is not good, we cant assume the settlement amount anymore, as now the user can do deposit
+            //    more than once and the deposit amount will increase, we also dont know the settlmeent epoch, but
+            //    we can fetch it
+            settlementAmount: tokensWei,
+            settlementEpoch: 0,
             type: FundTransactionType.Redemption,
           };
           tokenValue.value = "";

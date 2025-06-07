@@ -289,6 +289,7 @@ import {
 } from "~/types/enums/stepper_onboarding";
 import type IFundSettings from "~/types/fund_settings";
 import type IFundInitCache from "~/types/fund_init_cache";
+import type IFundFlowsConfig from "~/types/fund_flows_config";
 const toastStore = useToastStore();
 const actionStateStore = useActionStateStore();
 const web3Store = useWeb3Store();
@@ -326,6 +327,7 @@ const selectedChainId = ref<ChainId>(networkChoices[0].value);
 // from the store to prevent race conditions.
 const fundInitCache = ref<IFundInitCache | undefined>(undefined);
 const fundSettings = computed<IFundSettings>(() => fundInitCache?.value?.fundSettings || {} as IFundSettings);
+const fundFlowsConfig = computed<IFundFlowsConfig>(() => fundInitCache?.value?.flowsConfig || {} as IFundFlowsConfig);
 const fundMetadata = computed(() => fundInitCache?.value?.fundMetadata || {});
 const fundGovernorData = computed(() => fundInitCache?.value?.governorData || {});
 
@@ -352,6 +354,14 @@ const setFieldValue = (field: IField) => {
     }
 
     field.value = cachedValue;
+  } else if (fieldKey in fundFlowsConfig.value) {
+    console.log("Parse flows config field", fieldKey, fundFlowsConfig.value)
+    cachedValue = fundFlowsConfig.value[fieldKey as keyof IFundFlowsConfig] as string | bigint | boolean;
+    if (typeof cachedValue === "bigint") {
+      field.value = cachedValue.toString();
+    } else {
+      field.value = cachedValue;
+    }
   } else if (fieldKey in fundMetadata.value) {
     cachedValue = fundMetadata.value[fieldKey];
     field.value = cachedValue;
@@ -810,6 +820,17 @@ const formatFeeCollectors = () => {
 };
 
 const formatInitializeData = () => {
+  const basicsStep = stepperEntry.value.find(step => step.key === OnboardingStep.Basics);
+  const limitsEnabledGroup = basicsStep?.fields?.find(field => field.key === "limitsEnabled") as IFieldGroup | undefined;
+  const limitsEnabled = limitsEnabledGroup?.isToggleOn ?? false;
+
+  // Get limit values, defaulting to 0 if disabled or not set
+  const getLimit = (key: string) => {
+    if (!limitsEnabled) return 0;
+    const field = limitsEnabledGroup?.fields?.find(f => f.key === key);
+    return field?.value ? parseInt(field.value as string) : 0;
+  };
+
   const output = [
     [
       getFeeValue("depositFee"),// depositFee
@@ -840,9 +861,19 @@ const formatInitializeData = () => {
     JSON.stringify(formatFundMetaData()),
     0, // feePerformancePeriod, default to 0
     0, // managementFeePeriod, default to 0
+    [
+      getFieldByStepAndFieldKey(OnboardingStep.Basics, "useLegacyFlows") ? 0 : 1, // isLegacy (0 for legacy, 1 for non-legacy)
+      getLimit("minDeposit"), // minDeposit
+      getLimit("maxDeposit"), // maxDeposit
+      getLimit("minWithdrawal"), // minWithdrawal
+      getLimit("maxWithdrawal"), // maxWithdrawal
+      limitsEnabled, // limitsEnabled
+    ],
   ]
 
-  console.log("output", output);
+  console.log("useLegacyFlows", getFieldByStepAndFieldKey(OnboardingStep.Basics, "useLegacyFlows"));
+  console.log("stepperEntry.value", stepperEntry.value);
+  console.log("initCreateFund output", output);
   return output;
 }
 
@@ -1033,7 +1064,7 @@ watch(() => accountStore.activeAccountAddress, () => {
 });
 
 watch(()=> accountStore.connectedWalletChainId, (_newVal, oldVal) =>{
-  if(!oldVal){
+  if (!oldVal){
     setDefaultSelectedChainId()
   }
 })
