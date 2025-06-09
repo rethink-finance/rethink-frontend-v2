@@ -48,7 +48,11 @@ export class CustomContract extends Contract<any> {
             this.options,
           );
 
-          console.warn("Sending transaction with user provider...");
+          console.warn("Sending transaction with user provider from: ", accountStore.activeAccountAddress);
+          // TODO previously we used gasPrice: ""
+          // let's se if it works without gasPrice: ""
+          // has to test with multiple people first, remove the gasPrice and uncomment ignoreGasPricing = true
+          // contractWithUserProvider.config.ignoreGasPricing = true;
           return contractWithUserProvider.methods[methodName](...calldataArgs).send({
             from: accountStore.activeAccountAddress,
             gasPrice: "",

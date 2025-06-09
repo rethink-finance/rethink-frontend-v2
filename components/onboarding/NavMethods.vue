@@ -193,13 +193,26 @@ const storeNavMethods = async () => {
   // TPrepare NAV methods data.
   isLoadingStoreNavMethods.value = true;
 
-  const encodedNavUpdateEntries = encodeUpdateNavMethods(
-    navMethods.value,
-    fundSettings?.value?.baseDecimals,
-  );
+  let encodedNavUpdateEntries;
+  try {
+    encodedNavUpdateEntries = encodeUpdateNavMethods(
+      navMethods.value,
+      fundSettings?.value?.baseDecimals,
+    );
+  } catch (error: any) {
+    console.error("Failed encoding NAV methods (encodeUpdateNavMethods): ", error);
+    isLoadingStoreNavMethods.value = false;
+    return toastStore.errorToast("Failed encoding NAV methods, " + error.message);
+  }
 
-  // TODO if this trx fails, there is no need to send the next one.
-  await sendStoreNavMethodsTransaction(encodedNavUpdateEntries);
+  try {
+    // TODO if this trx fails, there is no need to send the next one.
+    await sendStoreNavMethodsTransaction(encodedNavUpdateEntries);
+  } catch (error: any) {
+    console.error("Failed storing NAV methods ", error);
+    isLoadingStoreNavMethods.value = false;
+    return toastStore.errorToast("Failed storing NAV methods, " + error.message);
+  }
 
   if (allowManagerToUpdateNav.value) {
     // Submit permission to allow manager to keep updating NAV.
