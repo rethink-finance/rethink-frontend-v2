@@ -99,9 +99,11 @@ import {
 } from "~/types/enums/delegated_permission";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 import type { IRawTrx } from "~/types/zodiac-roles/role";
+import type IFundSettings from "~/types/fund_settings";
 import Web3 from 'web3';
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { useFundStore } from "~/store/fund/fund.store";
+import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 
 // Interfaces for TypeScript
 interface Transaction {
@@ -192,6 +194,10 @@ const toastStore = useToastStore();
 const permissionsProposalStore = usePermissionsProposalStore();
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
+const createFundStore = useCreateFundStore();
+
+
+const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
 
 // Web3 initialization
 const web3 = new Web3(); // Provider managed by web3Store
@@ -283,7 +289,7 @@ const fetchBlocksInBatch = async (blockNumbers: number[]): Promise<any[]> => {
     batch.execute();
     // Wait for all requests to complete
     return Promise.all(promises);
-  }, 2, [], 1000);
+  }, 8, [], 1000);
 };
 
 // Function to get transactions for address
@@ -500,9 +506,12 @@ const fetchAndGeneratePermissions = async () => {
     }
 
     const transactions = await getTransactionCallData(addressInput.value, blockRanges);
-    const custodyContractAddr = fundStore.fund?.safeAddress ?? '';
+    let custodyContractAddr = fundStore.fund?.safeAddress ?? '';
     if (custodyContractAddr === '') {
-      throw new Error('Bad Custody Addr');
+      custodyContractAddr = fundSettings?.value?.safe ?? '';
+      if (custodyContractAddr === '') {
+        throw new Error('Bad Custody Addr');
+      }
     }
     permissions.value = generateSimplePermissions(transactions, custodyContractAddr, addressInput.value);
     rawProposalInput.value = JSON.stringify(permissions.value);
