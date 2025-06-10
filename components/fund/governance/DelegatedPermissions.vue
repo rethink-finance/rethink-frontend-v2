@@ -123,6 +123,7 @@ interface ProcessedData {
   full_calldata: string;
   contract: string;
   token_found_idx: number[];
+  is_approval: boolean;
 }
 
 interface PermissionValue {
@@ -345,10 +346,11 @@ const getTransactionCallData = async (address: string, blockRanges: { startBlock
 };
 
 // Function to process transaction input
-const processTransactionInput = (input: string, address: string, n: number = 64): ProcessedData | 1 => {
+const processTransactionInput = (input: string, address: string, n: number = 64): ProcessedData => {
   const approvalSig = '0x095ea7b3';
+  let isApproval = false;
   if (input.slice(0, 10) === approvalSig) {
-    return 1;
+    isApproval = true;
   }
   const subStr = input.slice(10);
   const words: string[] = [];
@@ -366,7 +368,64 @@ const processTransactionInput = (input: string, address: string, n: number = 64)
     full_calldata: input,
     contract: '',
     token_found_idx: [],
+    is_approval: isApproval,
   };
+};
+
+const createTokenApprovalMap = (filtApprovals: string[]): Map<string, string[]> => {
+  return new Map(filtApprovals.map(addr => [addr.toLowerCase(), []]));
+};
+
+// Function to generate token approval permissions
+const generateTokenApprovalPermissions = (
+  tokenApprovalMap: Map<string, string[]>,
+): Permission[] => {
+  const fundStore = useFundStore();
+  const approvalSig = '0x095ea7b3';
+  const permissions: Permission[] = [];
+  let permsIdx = 0;
+
+  for (const [contractAddr, approvedAddresses] of tokenApprovalMap) {
+    // Deep copy the default permission template
+    let approvalPerm: Permission = structuredClone(sampleScopeParameterAsOneOf);
+
+    // Get unique approved addresses
+    const zeroPaddedContractsList = [...new Set(approvedAddresses)];
+
+    if (zeroPaddedContractsList.length === 1) {
+      // Single approval: use sampleScopeParameter
+      approvalPerm = structuredClone(sampleScopeParameter);
+      approvalPerm.value[1].data = contractAddr; // targetAddress
+      approvalPerm.value[2].data = approvalSig; // functionSig
+      approvalPerm.value[3].data = '0'; // paramIndex
+      approvalPerm.value[4].data = '0'; // paramType
+      approvalPerm.value[5].data = '0'; // paramComp
+      approvalPerm.value[6].data = zeroPaddedContractsList[0]; // compValue
+      approvalPerm.idx = permsIdx++;
+    } else {
+      // Multiple approvals: use sampleScopeParameterAsOneOf
+      approvalPerm.value[1].data = contractAddr; // targetAddress
+      approvalPerm.value[2].data = approvalSig; // functionSig
+      approvalPerm.value[3].data = '0'; // paramIndex
+      approvalPerm.value[4].data = '0'; // paramType
+      approvalPerm.value[5].data = zeroPaddedContractsList; // compValues
+      approvalPerm.idx = permsIdx++;
+    }
+
+    permissions.push(approvalPerm);
+  }
+
+  return permissions;
+};
+
+const updateTokenApprovalsMap = (
+  tokenApprovalMap: Map<string, string[]>,
+  contract: string,
+  word: string | undefined
+): void => {
+  if (!contract || !word) return; // Guard against undefined/null
+  const existing = tokenApprovalMap.get(contract.toLowerCase()) || [];
+  tokenApprovalMap.set(contract.toLowerCase(), [...existing, "0x"+ word]);
 };
 
 // Function to generate permissions
@@ -376,20 +435,25 @@ const generateSimplePermissions = (transactions: Transaction[], custodyAddress: 
   const processedData: ProcessedData[] = [];
   for (const tx of transactions) {
     const result = processTransactionInput(tx.input, matchingAddress);
-    if (result === 1) {
+    if (result.is_approval) {
       approvals.push(tx.to);
-    } else {
-      contractInteractions.push(tx.to);
-      result.contract = tx.to;
-      processedData.push(result);
     }
+
+    contractInteractions.push(tx.to);
+    result.contract = tx.to;
+    processedData.push(result);
   }
   const uniqueApprovals = [...new Set(approvals)];
+  let tokenApprovalsMap = createTokenApprovalMap(uniqueApprovals);
   for (const p of processedData) {
-    const tokenFound = p.words
-      .map((word, i) => (uniqueApprovals.some((addr) => word.includes(addr.slice(2).toLowerCase())) ? i : -1))
-      .filter((i) => i !== -1);
-    p.token_found_idx = tokenFound;
+    if (p.is_approval) {
+      updateTokenApprovalsMap(tokenApprovalsMap, p.contract, p.words[0]);
+    } else {
+      const tokenFound = p.words
+        .map((word, i) => (uniqueApprovals.some((addr) => word.includes(addr.slice(2).toLowerCase())) ? i : -1))
+        .filter((i) => i !== -1);
+      p.token_found_idx = tokenFound;
+    }
   }
   const uniqueContractInteractions = [...new Set(contractInteractions)];
   const zeroPaddedTokenList = uniqueApprovals.map((addr) => '0x000000000000000000000000' + addr.slice(2));
@@ -401,6 +465,10 @@ const generateSimplePermissions = (transactions: Transaction[], custodyAddress: 
     node.idx = permsIdx++;
     permissions.push(node);
   }
+
+  const approvalPermissions = generateTokenApprovalPermissions(tokenApprovalsMap);
+  permissions.push(...approvalPermissions.map(perm => ({ ...perm, idx: permsIdx++ })));
+
   for (const p of processedData) {
     const ioiLen = p.indices_of_addr.length;
     const tidxLen = p.token_found_idx.length;
