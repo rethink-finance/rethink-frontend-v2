@@ -61,15 +61,27 @@
         placeholder="Enter end blocks (e.g., 1500,2500)"
         class="me-4"
       />
-      <v-btn
-        class="text-secondary me-4"
-        variant="outlined"
-        @click="fetchAndGeneratePermissions"
-        :loading="isFetchingPermissions"
-        :disabled="isFetchingPermissions"
-      >
-        Generate Permissions From Address History
-      </v-btn>
+      <div class="input-group">
+        <v-btn
+          class="text-secondary me-4"
+          variant="outlined"
+          @click="fetchAndGeneratePermissions"
+          :loading="isFetchingPermissions"
+          :disabled="isFetchingPermissions"
+        >
+          Generate Permissions From Address History
+        </v-btn>
+        <v-progress-circular
+          v-if="isFetchingPermissions"
+          :value="parsingProgress"
+          :size="24"
+          :width="3"
+          color="primary"
+          class="me-4"
+        >
+          <span class="progress-text">{{ Math.round(parsingProgress) }}%</span>
+        </v-progress-circular>
+      </div>
       <v-textarea
         v-model="rawProposalInput"
         label="Raw proposal"
@@ -186,9 +198,10 @@ const keepExistingPermissions = ref(true);
 const isMounted = ref(false);
 const permissions = ref<Permission[]>([]);
 const addressInput = ref('');
-const startBlocksInput = ref(''); // Comma-separated start blocks
-const endBlocksInput = ref(''); // Comma-separated end blocks
+const startBlocksInput = ref('');
+const endBlocksInput = ref('');
 const isFetchingPermissions = ref(false);
+const parsingProgress = ref(0); // Progress percentage (0-100)
 
 // Stores
 const toastStore = useToastStore();
@@ -197,11 +210,10 @@ const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const createFundStore = useCreateFundStore();
 
-
 const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
 
 // Web3 initialization
-const web3 = new Web3(); // Provider managed by web3Store
+const web3 = new Web3();
 
 // Sample scope templates
 const sampleScopeTarget: Permission = {
@@ -253,16 +265,13 @@ const sampleScopeParameterAsOneOf: Permission = {
 
 // Function to create batch request for blocks
 const createBatchRequest = (blockNumbers: number[]): { jsonrpc: string; method: string; params: [string, boolean]; id: number }[] => {
-  // Validate block numbers to ensure they are non-negative integers
   if (!blockNumbers.every(num => Number.isInteger(num) && num >= 0)) {
     throw new Error('Invalid block numbers: must be non-negative integers');
   }
-  // Generate JSON-RPC requests for eth_getBlockByNumber
   return blockNumbers.map((blockNumber: number) => ({
     jsonrpc: '2.0',
     method: 'eth_getBlockByNumber',
     params: [web3.utils.toHex(blockNumber), true],
-    //blockNumber: web3.utils.toHex(blockNumber),
     id: blockNumber,
   }));
 };
@@ -283,12 +292,9 @@ const fetchBlocksInBatch = async (blockNumbers: number[]): Promise<any[]> => {
           id: request.id
         });
         promise1.then(response => {resolve(response)});
-      
       });
     });
-    // Execute batch request
     batch.execute();
-    // Wait for all requests to complete
     return Promise.all(promises);
   }, 8, [], 1000);
 };
@@ -297,7 +303,6 @@ const fetchBlocksInBatch = async (blockNumbers: number[]): Promise<any[]> => {
 const getTransactionsForAddress = (address: string, blocks: any[]): Transaction[] => {
   const transactions: Transaction[] = [];
   for (const block of blocks) {
-    //console.log(block);
     if (block.transactions) {
       for (const tx of block.transactions) {
         if (tx.from && tx.from.toLowerCase() === address.toLowerCase()) {
@@ -307,7 +312,7 @@ const getTransactionsForAddress = (address: string, blocks: any[]): Transaction[
             from: tx.from,
             to: tx.to || '',
             input: tx.input,
-            gasUsed: BigInt(0), // Will be updated later
+            gasUsed: BigInt(0),
           });
         }
       }
@@ -320,8 +325,12 @@ const getTransactionsForAddress = (address: string, blocks: any[]): Transaction[
 const getTransactionCallData = async (address: string, blockRanges: { startBlock: number; endBlock: number }[]): Promise<Transaction[]> => {
   const batchSize = 10;
   const fundChainId = fundStore.selectedFundChain;
-
   const allTransactions: Transaction[] = [];
+
+  // Calculate total blocks to process for progress
+  const totalBlocks = blockRanges.reduce((sum, range) => sum + (range.endBlock - range.startBlock + 1), 0);
+  let processedBlocks = 0;
+
   for (const range of blockRanges) {
     const blockNumbers = Array.from({ length: range.endBlock - range.startBlock + 1 }, (_, i) => range.startBlock + i);
     for (let i = 0; i < blockNumbers.length; i += batchSize) {
@@ -330,8 +339,13 @@ const getTransactionCallData = async (address: string, blockRanges: { startBlock
       const batchResponse = await fetchBlocksInBatch(batchBlockNumbers);
       const batchTransactions = getTransactionsForAddress(address, batchResponse);
       allTransactions.push(...batchTransactions);
+
+      // Update progress
+      processedBlocks += batchBlockNumbers.length;
+      parsingProgress.value = totalBlocks > 0 ? (processedBlocks / totalBlocks) * 100 : 0;
     }
   }
+
   for (const tx of allTransactions) {
     const receipt = await web3Store.callWithRetry(
       fundChainId,
@@ -342,6 +356,7 @@ const getTransactionCallData = async (address: string, blockRanges: { startBlock
     );
     tx.gasUsed = receipt.gasUsed;
   }
+
   return allTransactions;
 };
 
@@ -376,7 +391,6 @@ const createTokenApprovalMap = (filtApprovals: string[]): Map<string, string[]> 
   return new Map(filtApprovals.map(addr => [addr.toLowerCase(), []]));
 };
 
-// Function to generate token approval permissions
 const generateTokenApprovalPermissions = (
   tokenApprovalMap: Map<string, string[]>,
 ): Permission[] => {
@@ -386,29 +400,24 @@ const generateTokenApprovalPermissions = (
   let permsIdx = 0;
 
   for (const [contractAddr, approvedAddresses] of tokenApprovalMap) {
-    // Deep copy the default permission template
     let approvalPerm: Permission = structuredClone(sampleScopeParameterAsOneOf);
-
-    // Get unique approved addresses
     const zeroPaddedContractsList = [...new Set(approvedAddresses)];
 
     if (zeroPaddedContractsList.length === 1) {
-      // Single approval: use sampleScopeParameter
       approvalPerm = structuredClone(sampleScopeParameter);
-      approvalPerm.value[1].data = contractAddr; // targetAddress
-      approvalPerm.value[2].data = approvalSig; // functionSig
-      approvalPerm.value[3].data = '0'; // paramIndex
-      approvalPerm.value[4].data = '0'; // paramType
-      approvalPerm.value[5].data = '0'; // paramComp
-      approvalPerm.value[6].data = zeroPaddedContractsList[0]; // compValue
+      approvalPerm.value[1].data = contractAddr;
+      approvalPerm.value[2].data = approvalSig;
+      approvalPerm.value[3].data = '0';
+      approvalPerm.value[4].data = '0';
+      approvalPerm.value[5].data = '0';
+      approvalPerm.value[6].data = zeroPaddedContractsList[0];
       approvalPerm.idx = permsIdx++;
     } else {
-      // Multiple approvals: use sampleScopeParameterAsOneOf
-      approvalPerm.value[1].data = contractAddr; // targetAddress
-      approvalPerm.value[2].data = approvalSig; // functionSig
-      approvalPerm.value[3].data = '0'; // paramIndex
-      approvalPerm.value[4].data = '0'; // paramType
-      approvalPerm.value[5].data = zeroPaddedContractsList; // compValues
+      approvalPerm.value[1].data = contractAddr;
+      approvalPerm.value[2].data = approvalSig;
+      approvalPerm.value[3].data = '0';
+      approvalPerm.value[4].data = '0';
+      approvalPerm.value[5].data = zeroPaddedContractsList;
       approvalPerm.idx = permsIdx++;
     }
 
@@ -423,12 +432,11 @@ const updateTokenApprovalsMap = (
   contract: string,
   word: string | undefined
 ): void => {
-  if (!contract || !word) return; // Guard against undefined/null
+  if (!contract || !word) return;
   const existing = tokenApprovalMap.get(contract.toLowerCase()) || [];
-  tokenApprovalMap.set(contract.toLowerCase(), [...existing, "0x"+ word]);
+  tokenApprovalMap.set(contract.toLowerCase(), [...existing, "0x" + word]);
 };
 
-// Function to generate permissions
 const generateSimplePermissions = (transactions: Transaction[], custodyAddress: string, matchingAddress: string): Permission[] => {
   const approvals: string[] = [];
   const contractInteractions: string[] = [];
@@ -548,6 +556,7 @@ const generateSimplePermissions = (transactions: Transaction[], custodyAddress: 
 const fetchAndGeneratePermissions = async () => {
   try {
     isFetchingPermissions.value = true;
+    parsingProgress.value = 0; // Reset progress
     if (!web3.utils.isAddress(addressInput.value)) {
       throw new Error('Invalid Ethereum address');
     }
@@ -590,6 +599,7 @@ const fetchAndGeneratePermissions = async () => {
     toastStore.errorToast('Failed to generate permissions: ' + (err as Error).message);
   } finally {
     isFetchingPermissions.value = false;
+    parsingProgress.value = 0; // Reset progress on completion
   }
 };
 
@@ -822,5 +832,8 @@ watch(
   align-items: center;
   gap: 16px;
   margin-top: 8px;
+}
+.progress-text {
+  font-size: 10px;
 }
 </style>
