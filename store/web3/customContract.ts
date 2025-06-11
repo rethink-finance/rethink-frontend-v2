@@ -52,10 +52,9 @@ export class CustomContract extends Contract<any> {
           // TODO previously we used gasPrice: ""
           // let's se if it works without gasPrice: ""
           // has to test with multiple people first, remove the gasPrice and uncomment ignoreGasPricing = true
-          // contractWithUserProvider.config.ignoreGasPricing = true;
+          contractWithUserProvider.config.ignoreGasPricing = true;
           return contractWithUserProvider.methods[methodName](...calldataArgs).send({
             from: accountStore.activeAccountAddress,
-            gasPrice: "",
             ...options,
           }).on("transactionHash", (hash: any) => promiEvent.emit("transactionHash", hash))
             .on("receipt", (receipt: any) => {
