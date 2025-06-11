@@ -1,0 +1,20 @@
+export default interface INetwork {
+  chainId:  ChainId,
+  chainName: string,
+  chainNameLong?: string,
+  chainShort: string,
+  nativeCurrency: INativeCurrency,
+  rpcUrls: string[],
+  blockExplorerUrls: string[],
+}
+
+export interface IIcon {
+  name: string,
+  size: string,
+  color?: string,
+}
+export interface INativeCurrency {
+  name: string,
+  symbol: string,
+  decimals: number,
+}

@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_DATABASE=rethink_nav
+      - DB_SYNC=true
+      - PORT=3001
+      - CHAINS=ethereum,polygon
+      - RPC_URLS=https://mainnet.infura.io/v3/your-key,https://polygon-rpc.com
+      - NAV_CALCULATOR_ethereum=0x1234567890123456789012345678901234567890
+      - NAV_CALCULATOR_polygon=0x1234567890123456789012345678901234567890
+      - GOVERNABLE_FUND_FACTORY_ethereum=0x1234567890123456789012345678901234567890
+      - GOVERNABLE_FUND_FACTORY_polygon=0x1234567890123456789012345678901234567890
+      - DEPLOYER_ADDRESS=0x1234567890123456789012345678901234567890
+      - FUNDS=0x1234567890123456789012345678901234567890:ethereum:0x1234567890123456789012345678901234567890:18:ETH,0x1234567890123456789012345678901234567890:polygon:0x1234567890123456789012345678901234567890:18:MATIC
+    volumes:
+      - .:/usr/src/app
+      - ../types:/usr/src/app/types
+      - backend_node_modules:/usr/src/app/node_modules
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=rethink_nav
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  backend_node_modules:
