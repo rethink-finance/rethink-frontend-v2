@@ -13,6 +13,10 @@ export class NavValue {
   @Index()
     fundChainId: string;
 
+  @Column()
+  @Index()
+    navUpdateIndex: number;
+
   @Column({ type: "varchar", length: 78 })
     safeAddress: string;
 
@@ -31,7 +35,19 @@ export class NavValue {
   @Column()
     baseSymbol: string;
 
-  @Column({ type: "simple-json", nullable: true })
+  @Column({
+    type: "simple-json",
+    nullable: true,
+    transformer: {
+      // Convert bigint to string when serializing
+      to: (value: Record<string, any>) => {
+        return value
+          ? JSON.parse(JSON.stringify(value, (_, v) => typeof v === "bigint" ? v.toString() : v))
+          : null;
+      },
+      from: (value: any) => value, // Keep as-is when reading
+    },
+  })
     navMethodDetails: Record<string, any>;
 
   @Column({ type: "varchar", length: 66, nullable: true })

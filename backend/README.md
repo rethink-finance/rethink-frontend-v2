@@ -247,20 +247,6 @@ DB_SYNC=true
 
 # Server Configuration
 PORT=3001
-
-# Blockchain Configuration
-CHAINS=ethereum,polygon
-RPC_URLS=https://mainnet.infura.io/v3/your-key,https://polygon-rpc.com
-
-# Contract Addresses
-NAV_CALCULATOR_ethereum=0x1234567890123456789012345678901234567890
-NAV_CALCULATOR_polygon=0x1234567890123456789012345678901234567890
-GOVERNABLE_FUND_FACTORY_ethereum=0x1234567890123456789012345678901234567890
-GOVERNABLE_FUND_FACTORY_polygon=0x1234567890123456789012345678901234567890
-DEPLOYER_ADDRESS=0x1234567890123456789012345678901234567890
-
-# Funds Configuration (format: fundAddress:chainId:safeAddress:baseDecimals:baseSymbol)
-FUNDS=0x1234567890123456789012345678901234567890:ethereum:0x1234567890123456789012345678901234567890:18:ETH,0x1234567890123456789012345678901234567890:polygon:0x1234567890123456789012345678901234567890:18:MATIC
 ```
 
 ## Running the Application
@@ -379,7 +365,7 @@ Retrieves the latest NAV value for a fund.
 
 ## Scheduled Tasks
 
-The backend automatically calculates NAV values for all configured funds every minute. The list of funds is configured in the `FUNDS` environment variable.
+The backend automatically calculates NAV values for all configured funds every 5 minutes.
 
 ## Integration with Frontend
 

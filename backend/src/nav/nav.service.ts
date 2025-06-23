@@ -103,6 +103,7 @@ export class NavService {
     baseDecimals: number,
     baseSymbol: string,
     navEntry: INAVMethod,
+    navUpdateIndex: number,
   ): Promise<NavValueResponseDto> {
     this.logger.log(
       `Calculating NAV for fund ${fundAddress} on chain ${fundChainId}`,
@@ -192,6 +193,7 @@ export class NavService {
       const navValue = new NavValue();
       navValue.fundAddress = fundAddress;
       navValue.fundChainId = fundChainId;
+      navValue.navUpdateIndex = navUpdateIndex;
       navValue.safeAddress = safeAddress;
       navValue.simulatedNav = simulatedVal.toString();
       navValue.simulatedNavFormatted = navEntry.simulatedNavFormatted;
@@ -378,12 +380,87 @@ export class NavService {
     }));
   }
 
-  @Cron("0 */1 * * * *") // Run every 5 minutes
+  async getLatestNavUpdateTotalValue(fundAddress: string, fundChainId?: ChainId): Promise<{
+    totalValue: string,
+    formattedValue: string,
+    baseSymbol: string
+  }> {
+    // Create query to find the fund
+    const query: any = { fundAddress };
+
+    if (fundChainId) {
+      query.fundChainId = fundChainId;
+    }
+
+    // First, find the latest navUpdateIndex for this fund
+    const latestNavValue = await this.navValueRepository.findOne({
+      where: query,
+      order: { navUpdateIndex: "DESC" },
+      select: ["navUpdateIndex"]
+    });
+
+    if (!latestNavValue) {
+      return {
+        totalValue: "0",
+        formattedValue: "0",
+        baseSymbol: ""
+      };
+    }
+
+    // Now, fetch only the NAV values with the latest index
+    const allLatestNavValues = await this.navValueRepository.find({
+      where: {
+        ...query,
+        navUpdateIndex: latestNavValue.navUpdateIndex
+      },
+      order: { calculatedAt: "DESC" }
+    });
+
+    // Group by detailsHash to get distinct values
+    const distinctNavValues = new Map<string, any>();
+
+    // TODO better to use postgres and to this with a query...
+    for (const navValue of allLatestNavValues) {
+      // Create a unique key based on the required distinct fields
+      const distinctKey = `${navValue.fundAddress}_${navValue.fundChainId}_${navValue.navUpdateIndex}_${navValue.detailsHash || ''}`;
+
+      // Only add if this key doesn't exist yet or if this value is more recent
+      if (!distinctNavValues.has(distinctKey) ||
+          (navValue.calculatedAt > distinctNavValues.get(distinctKey).calculatedAt)) {
+        distinctNavValues.set(distinctKey, navValue);
+      }
+    }
+
+    // Get the distinct values
+    const latestNavValues = Array.from(distinctNavValues.values());
+
+    // Sum the values
+    let totalValue = BigInt(0);
+    for (const navValue of latestNavValues) {
+      totalValue += BigInt(navValue.simulatedNav);
+    }
+
+    // Get base symbol from any of the entries (they should all have the same)
+    const baseSymbol = latestNavValues.length > 0 ? latestNavValues[0].baseSymbol : '';
+    const baseDecimals = latestNavValues.length > 0 ? latestNavValues[0].baseDecimals : 18;
+
+    // Format the total value
+    const formattedValue = formatTokenValue(totalValue, baseDecimals, true, false);
+
+    return {
+      totalValue: totalValue.toString(),
+      formattedValue: `${formattedValue} ${baseSymbol}`,
+      baseSymbol
+    };
+  }
+
+  @Cron("0 */5 * * * *") // Run every 5 minutes
   async calculateNavForAllFunds() {
     this.logger.log("Running scheduled NAV calculation for all funds");
 
     try {
-      for (const chainId of chainIds) {
+      // TODO: remove this ChainId filter
+      for (const chainId of chainIds.filter(chainId => chainId === ChainId.POLYGON)) {
         this.logger.log("Running scheduled NAV calculation for chain", chainId);
 
         try {
@@ -487,10 +564,10 @@ export class NavService {
 
     try {
       console.log("process fund fundsMetaData", chainId, fundAddresses);
-      const fundsMetaData: IFundMetaData[] = await rethinkReaderContract.methods
-        .getFundsMetaData(fundAddresses)
-        .call();
-      console.log(
+      const fundsMetaData: IFundMetaData[] = await this.callWithRetry(chainId, () =>
+        rethinkReaderContract.methods.getFundsMetaData(fundAddresses).call(),
+      );
+      console.debug(
         "process fund fundsMetaData done",
         chainId,
         "fundsMetaData:",
@@ -511,8 +588,8 @@ export class NavService {
           address,
           title: fundMetaData.fundName || "N/A",
           description: "N/A",
-          safeAddress: "",
-          governorAddress: "",
+          safeAddress: fundMetaData?.fundSettings?.safe || "",
+          governorAddress: fundMetaData?.fundSettings?.governor || "",
           photoUrl: "",
           lastNavUpdateTime: "",
           inceptionDate: "",
@@ -642,18 +719,31 @@ export class NavService {
     fundAddress: string,
   ): Promise<void> => {
     console.log("[CURRENT NAV] START SIMULATE:");
-    const fund = this.chainFunds[fundChainId][fundAddress];
+    const fund = this.chainFunds[fundChainId].find(fund => fund.address === fundAddress);
     const safeAddress = fund?.safeAddress || "";
     const baseDecimals = fund?.baseToken?.decimals || 18;
     const baseSymbol = fund?.baseToken?.symbol || "";
+    if (!fund) {
+      throw new Error(`Fund not found for chainId: ${fundChainId} address: ${fundAddress}`);
+    }
+    if (!safeAddress || !baseDecimals || !baseSymbol) {
+      throw new Error(`Fund safeAddress or baseDecimals or baseSymbol not found for chainId: ${fundChainId} ` +
+      `address: ${fundAddress} safeAddress: ${safeAddress} baseDecimals: ${baseDecimals} baseSymbol: ${baseSymbol}`);
+    }
 
     // Simulate all at once as many promises instead of one by one.
     const promises = [];
+    console.log("[CURRENT NAV] START SIMULATE fundLastNavUpdate:");
 
-    const fundLastNAVUpdate = fund?.navUpdates?.at(-1);
-    const fundLastNAVUpdateMethods = fundLastNAVUpdate?.entries || [];
+    const fundNAVUpdates = fund.navUpdates || [];
+    // Note: here we are intentionally taking index + 1, as they start with 1 and not 0.
+    const lastNavUpdateIndex = fundNAVUpdates?.length;
+    const fundLastNavUpdate = fundNAVUpdates?.length ? fundNAVUpdates[lastNavUpdateIndex - 1] : undefined;
+    const fundLastNAVUpdateMethods = fundLastNavUpdate?.entries || [];
+    console.log("[CURRENT NAV] START SIMULATE fundLastNavUpdate forloop");
 
     for (const navEntry of fundLastNAVUpdateMethods) {
+      // TODO first just save the nav entry data and save it to the database, then we can use another script to simulate values
       promises.push(
         this.requestConcurrencyLimit(() =>
           this.callWithRetry(
@@ -666,6 +756,7 @@ export class NavService {
                 baseDecimals,
                 baseSymbol,
                 navEntry,
+                lastNavUpdateIndex,
               ),
             1,
             // Do not retry internal errors (probably invalid NAV method), better to fail on 1st try.
@@ -675,6 +766,7 @@ export class NavService {
         ),
       );
     }
+    console.log("[CURRENT NAV] START SIMULATE fundLastNavUpdate forloop await settled");
     await Promise.allSettled(promises);
   };
 
