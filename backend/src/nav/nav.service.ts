@@ -38,11 +38,9 @@ export class NavService {
   private chainContracts: Record<string, any> = {};
   private chainSelectedRpcUrl: Partial<Record<ChainId, string>> = {};
   private chainSelectedRpcIndex: Record<string, number> = {};
-  private chainFunds: Record<string, IFund[]> = {};
+  private chainFunds: Record<string, Record<string, IFund>> = {};
   private chainFundNAVUpdates: Record<string, Record<string, INAVUpdate[]>> = {};
 
-  // Get the address of the original fund of all original NAV methods.
-  private navMethodDetailsHashToFundAddress: Record<string, string> = {};
   // We want to limit concurrent requests to 2.
   // 2 was chosen arbitrary, it needs to be a low number as RPC nodes block requests if too many are made
   // at the same time.
@@ -59,10 +57,12 @@ export class NavService {
     // Initialize providers for different chains
     this.initializeProviders();
 
+    this.chainFunds = Object.fromEntries(
+      chainIds.map((chainId) => [chainId, {}]),
+    ) as Record<string, Record<string, IFund>>;
     this.chainFundNAVUpdates = Object.fromEntries(
-      Object.keys(networksMap).map((chainId) => [chainId, {}]),
+      chainIds.map((chainId) => [chainId, {}]),
     ) as Record<string, Record<string, INAVUpdate[]>>;
-    this.navMethodDetailsHashToFundAddress = {} as Record<string, string>;
   }
 
   private initializeProviders() {
@@ -131,8 +131,7 @@ export class NavService {
 
       // Set up navEntry properties
       navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
-      navEntry.pastNAVUpdateEntryFundAddress =
-        navEntry.pastNAVUpdateEntryFundAddress || fundAddress;
+      // navEntry.pastNAVUpdateEntryFundAddress = navEntry.pastNAVUpdateEntryFundAddress || fundAddress;
 
       // Determine NAV calculation method
       const navCalculationMethod =
@@ -392,7 +391,9 @@ export class NavService {
   async getLatestNavUpdateTotalValue(fundAddress: string, fundChainId?: ChainId): Promise<{
     totalValue: string,
     formattedValue: string,
-    baseSymbol: string
+    baseSymbol: string,
+    baseDecimals: number,
+    areAllNavMethodsFetched: boolean,
   }> {
     // Create query to find the fund
     const query: any = { fundAddress };
@@ -401,54 +402,80 @@ export class NavService {
       query.fundChainId = fundChainId;
     }
 
+    // TODO check fund nav updates on chain if this is really the latest nav update index,
+    //    if not, fetch them to prevent serving stale data
     // Find the latest navUpdateIndex for this fund using NavUpdate
     const latestNavUpdate = await this.navUpdateRepository.findOne({
       where: query,
       order: { navUpdateIndex: "DESC" },
-      select: ["id", "navUpdateIndex", "baseSymbol", "baseDecimals"],
+      select: ["id", "navUpdateIndex", "baseSymbol", "baseDecimals", "areAllNavMethodsFetched"],
     });
 
     if (!latestNavUpdate) {
+      // If no value in cache and chainId is provided, try calculating NAV for this fund
+      if (fundChainId) {
+        this.logger.log(`No NAV data found for fund ${fundAddress} on chain ${fundChainId}, calculating now...`);
+        try {
+          await this.calculateNavForFund(fundChainId, fundAddress);
+
+          // Try to get the data again after calculation
+          return this.getLatestNavUpdateTotalValue(fundAddress, fundChainId);
+        } catch (error) {
+          this.logger.error(`Failed to calculate NAV for fund ${fundAddress} on chain ${fundChainId}: ${error.message}`);
+        }
+      }
+
       return {
         totalValue: "0",
         formattedValue: "0",
         baseSymbol: "",
+        baseDecimals: 0,
+        areAllNavMethodsFetched: false,
       };
     }
 
-    // Now, fetch only the NavMethodValue entities with the latest update
-    const allLatestNavMethodValues = await this.navMethodValueRepository.find({
-      where: {
-        ...query,
-        navUpdateId: latestNavUpdate.id,
-      },
-      order: { calculatedAt: "DESC" },
-    });
+    // If methods haven't been fetched yet and chainId is provided, try calculating NAV
+    if (!latestNavUpdate.areAllNavMethodsFetched && fundChainId) {
+      this.logger.log(`NAV methods not fully fetched for fund ${fundAddress} on chain ${fundChainId}, calculating now...`);
+      try {
+        await this.calculateNavForFund(fundChainId, fundAddress);
 
-    if (allLatestNavMethodValues.length === 0) {
+        // Try to get the data again after calculation
+        return this.getLatestNavUpdateTotalValue(fundAddress, fundChainId);
+      } catch (error) {
+        this.logger.error(`Failed to calculate NAV for fund ${fundAddress} on chain ${fundChainId}: ${error.message}`);
+      }
+    }
+
+    // Use a direct query to get the latest NavMethodValue for each navMethodId
+    const latestNavMethodValues = await this.navMethodValueRepository
+      .createQueryBuilder("nmv")
+      .select("nmv.*")
+      .where("nmv.fundAddress = :fundAddress", { fundAddress })
+      .andWhere("nmv.navUpdateId = :navUpdateId", { navUpdateId: latestNavUpdate.id })
+      .andWhere(qb => {
+        const subQuery = qb
+          .subQuery()
+          .select("MAX(nmv2.calculatedAt)")
+          .from(NavMethodValue, "nmv2")
+          .where("nmv2.fundAddress = nmv.fundAddress")
+          .andWhere("nmv2.fundChainId = nmv.fundChainId")
+          .andWhere("nmv2.navUpdateId = nmv.navUpdateId")
+          .andWhere("nmv2.navMethodId = nmv.navMethodId")
+          .getQuery();
+        return "nmv.calculatedAt = " + subQuery;
+      })
+      .getRawMany();
+
+    if (latestNavMethodValues.length === 0) {
       return {
         totalValue: "0",
         formattedValue: "0",
         baseSymbol: latestNavUpdate.baseSymbol || "",
+        baseDecimals: latestNavUpdate.baseDecimals || 0,
+        areAllNavMethodsFetched: latestNavUpdate.areAllNavMethodsFetched || false,
       };
     }
-
-    // Group by navMethodId to get distinct values (one value per method)
-    const distinctNavMethodValues = new Map<string, any>();
-
-    for (const navMethodValue of allLatestNavMethodValues) {
-      // Create a unique key based on the required distinct fields
-      const distinctKey = `${navMethodValue.fundAddress}_${navMethodValue.fundChainId}_${String(navMethodValue.navMethodId)}`;
-
-      // Only add if this key doesn't exist yet or if this value is more recent
-      if (!distinctNavMethodValues.has(distinctKey) ||
-          (navMethodValue.calculatedAt > distinctNavMethodValues.get(distinctKey).calculatedAt)) {
-        distinctNavMethodValues.set(distinctKey, navMethodValue);
-      }
-    }
-
-    // Get the distinct values
-    const latestNavMethodValues = Array.from(distinctNavMethodValues.values());
 
     // Sum the values
     let totalValue = BigInt(0);
@@ -463,7 +490,37 @@ export class NavService {
       totalValue: totalValue.toString(),
       formattedValue: `${formattedValue} ${latestNavUpdate.baseSymbol}`,
       baseSymbol: latestNavUpdate.baseSymbol,
+      baseDecimals: latestNavUpdate.baseDecimals || 0,
+      areAllNavMethodsFetched: latestNavUpdate.areAllNavMethodsFetched || false,
     };
+  }
+
+  /**
+   * Process NAV data for funds
+   * @param chainId The chain ID
+   * @param fundsInfo Record of fund info
+   */
+  private async processNavForFunds(
+    chainId: ChainId,
+    fundsInfo: Record<string, any>,
+  ): Promise<void> {
+    // Fetch metadata for the funds
+    const fetchedFunds = await this.fetchFundsMetaDataAction(
+      chainId,
+      fundsInfo,
+    );
+
+    this.chainFunds[chainId] = {
+      ...(this.chainFunds[chainId] || {}),
+      ...fetchedFunds,
+    };
+
+    // If fundsInfoArrays is provided, use:
+    await this.fetchFundsNavMethods(chainId, fundsInfo);
+
+    //   // Simulate current NAV
+    //   await this.fetchSimulateCurrentNAVAction(chainId, fundAddress);
+    // }
   }
 
   @Cron("0 */5 * * * *") // Run every 5 minutes
@@ -516,8 +573,6 @@ export class NavService {
           this.logger.log(`Found ${fundsLength} funds on chain ${chainId}`);
 
           // NOTE: SAME AS processChain in fetchFundsAction
-          const fundAddresses: string[] = [];
-          const filteredFundsInfoArrays: any[] = [[], []];
           const fundsInfo: Record<string, any> = {};
           // Filter out excluded test funds if necessary
           for (let i = 0; i < fundsInfoArrays[0].length; i++) {
@@ -530,22 +585,11 @@ export class NavService {
             ) {
               continue;
             }
-            filteredFundsInfoArrays[0].push(fundAddress);
-            filteredFundsInfoArrays[1].push(fundInfo);
             fundsInfo[fundAddress] = fundInfo;
-            fundAddresses.push(fundAddress);
           }
 
-          // Fetch metadata for the filtered funds
-          console.log("Fetch funds metadata");
-          this.chainFunds[chainId] = await this.fetchFundsMetaDataAction(
-            chainId,
-            fundAddresses,
-            fundsInfo,
-          );
-
-          console.log("[CURRENT NAV] simulate fetch all nav methods");
-          await this.fetchFundsNavMethods(chainId, filteredFundsInfoArrays);
+          // Process NAV for the filtered funds
+          await this.processNavForFunds(chainId, fundsInfo);
         } catch (error) {
           this.logger.error(
             `Error in scheduled NAV calculation for chain ${chainId}: ${error.message}`,
@@ -557,22 +601,57 @@ export class NavService {
     }
   }
 
+  async calculateNavForFund(
+    fundChainId: ChainId,
+    fundAddress: string,
+  ): Promise<void> {
+    this.logger.log(`Calculating NAV for fund ${fundAddress} on chain ${fundChainId}`);
+
+    try {
+      // Get the rethink reader contract
+      const rethinkReaderContract =
+        this.chainContracts[fundChainId]?.rethinkReaderContract;
+      if (!rethinkReaderContract) {
+        throw new Error(`No reader contract found for chainId: ${fundChainId}`);
+      }
+
+      // Fetch fund metadata
+      const fundMetaData = await this.callWithRetry(fundChainId, () =>
+        rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
+      );
+
+      // Create a fundsInfo object with just this fund
+      const fundsInfo: Record<string, any> = {};
+      fundsInfo[fundAddress] = {
+        fundSymbol: fundMetaData.fundSettings.fundSymbol,
+      };
+
+      // Process NAV for the single fund
+      await this.processNavForFunds(fundChainId, fundsInfo);
+
+      this.logger.log(`Completed NAV calculation for fund ${fundAddress} on chain ${fundChainId}`);
+    } catch (error) {
+      this.logger.error(`Error calculating NAV for fund ${fundAddress} on chain ${fundChainId}: ${error.message}`);
+      throw error;
+    }
+  }
+
   async fetchFundsMetaDataAction(
     chainId: ChainId,
-    fundAddresses: string[],
-    fundsInfo: any,
-  ): Promise<IFund[]> {
+    fundsInfo: Record<string, any>,
+  ): Promise<Record<string, IFund>> {
     console.log(
       "process fund fetchFundsMetaDataAction fetchFundsMetaDataAction fetchFundsMetaDataAction ",
       chainId,
     );
-    const funds: IFund[] = [];
+    const funds: Record<string, IFund> = {};
     const rethinkReaderContract =
       this.chainContracts[chainId]?.rethinkReaderContract;
     if (!rethinkReaderContract) {
       throw new Error(`No reader contract found for chainId: ${chainId}`);
     }
     const fundNetwork = networksMap[chainId];
+    const fundAddresses: string[] = Object.keys(fundsInfo);
 
     try {
       console.log("process fund fundsMetaData", chainId, fundAddresses);
@@ -588,12 +667,11 @@ export class NavService {
 
       for (const [index, address] of fundAddresses.entries()) {
         const fundMetaData: IFundMetaData = fundsMetaData[index];
-
         const totalDepositBalance = fundMetaData.totalDepositBal || 0n;
         const baseTokenDecimals = Number(fundMetaData.fundBaseTokenDecimals);
         const fundTokenDecimals = Number(fundMetaData.fundTokenDecimals);
 
-        const fund: IFund = {
+        funds[address] = {
           chainId,
           chainName: fundNetwork.chainName,
           chainShort: fundNetwork.chainShort,
@@ -676,11 +754,8 @@ export class NavService {
           // NAV Updates
           navUpdates: [] as INAVUpdate[],
           isNavUpdatesLoading: true,
-        };
-
-        funds.push(fund);
+        } as IFund;
       }
-      return funds;
     } catch (error) {
       console.error(
         "Error calling getFundNavMetaData: ",
@@ -688,28 +763,24 @@ export class NavService {
         " addresses: ",
         fundAddresses,
       );
-      return funds;
     }
+    return funds;
   }
 
-  async fetchFundsNavMethods(chainId: ChainId, fundsInfoArrays: any[]) {
+  async fetchFundsNavMethods(chainId: ChainId, fundsInfo: Record<string, any>) {
     this.logger.log("start calculating fund nav data ", chainId);
 
-    const fundAddresses: string[] = fundsInfoArrays[0];
-
-    // Create fund factory contract instance
+    // Create a fund factory contract instance
     const rethinkReaderContract =
       this.chainContracts[chainId]?.rethinkReaderContract;
     if (!rethinkReaderContract) {
       throw new Error(`No reader contract found for chainId: ${chainId}`);
     }
     console.log("get nav data", chainId);
+    const fundAddresses: string[] = Object.keys(fundsInfo);
     const allFundsNavData = await this.callWithRetry(chainId, () =>
       rethinkReaderContract.methods.getFundsNAVData(fundAddresses).call(),
     );
-
-    const allMethods: INAVMethod[] = [];
-    this.navMethodDetailsHashToFundAddress = {};
 
     // Process each fund's NAV data
     for (const [fundIndex, fundNavData] of allFundsNavData.entries()) {
@@ -718,9 +789,7 @@ export class NavService {
         chainId,
         fundNavData,
         fundAddress,
-        fundIndex,
-        fundsInfoArrays,
-        allMethods,
+        fundsInfo,
       );
       await this.fetchSimulateCurrentNAVAction(chainId, fundAddress);
     }
@@ -731,7 +800,7 @@ export class NavService {
     fundAddress: string,
   ): Promise<void> => {
     console.log("[CURRENT NAV] START SIMULATE:");
-    const fund = this.chainFunds[fundChainId].find(fund => fund.address === fundAddress);
+    const fund = this.chainFunds[fundChainId]?.[fundAddress];
     const safeAddress = fund?.safeAddress || "";
     const baseDecimals = fund?.baseToken?.decimals || 18;
     const baseSymbol = fund?.baseToken?.symbol || "";
@@ -752,7 +821,7 @@ export class NavService {
     const lastNavUpdateIndex = fundNAVUpdates?.length;
     const fundLastNavUpdate = fundNAVUpdates?.length ? fundNAVUpdates[lastNavUpdateIndex - 1] : undefined;
     const fundLastNAVUpdateMethods = fundLastNavUpdate?.entries || [];
-    console.log("[CURRENT NAV] START SIMULATE fundLastNavUpdate forloop");
+    console.log("[CURRENT NAV] START SIMULATE fundLastNavUpdate for loop");
 
     for (const navEntry of fundLastNAVUpdateMethods) {
       // TODO first just save the nav entry data and save it to the database, then we can use another script to simulate values
@@ -779,84 +848,53 @@ export class NavService {
       );
     }
     console.log("[CURRENT NAV] START SIMULATE fundLastNavUpdate forloop await settled");
-    await Promise.allSettled(promises);
+    const results = await Promise.allSettled(promises);
+    const allSuccessful = results.every(r => r.status === "fulfilled");
+
+    // Note: Methods can be successfully fetched and be 0 in length.
+    // For now skip handling this edge case, we will not mark the navUpdate with the
+    // areAllNavMethodsFetched to true, and we'll always refetch them.
+    if (fundLastNAVUpdateMethods.length === 0) {
+      // this.logger.log(`NavUpdate for fund ${fundChainId} ${fundAddress} has no NAV methods`);
+      return
+    }
+
+    // After all methods have been fetched, mark the NavUpdate as having all methods fetched
+    const navUpdate = await this.navUpdateRepository.findOne({
+      where: {
+        fundAddress,
+        fundChainId,
+        navUpdateIndex: lastNavUpdateIndex,
+      },
+    });
+
+    if (navUpdate && !navUpdate.areAllNavMethodsFetched) {
+      navUpdate.areAllNavMethodsFetched = true;
+      await this.navUpdateRepository.save(navUpdate);
+      this.logger.log(`Marked NavUpdate ${navUpdate.id} for fund ${fundAddress} as having all methods fetched`);
+    }
   };
 
   processFundNavData(
     chainId: ChainId, // the type of FundNavData
     fundNAVData: any, // the type of FundNavData
     fundAddress: string,
-    fundIndex: number,
-    fundsInfoArrays: any[],
-    allMethods: INAVMethod[],
+    fundsInfo: Record<string, any>,
   ) {
     this.chainFundNAVUpdates[chainId][fundAddress] = [];
 
     if (!fundNAVData.encodedNavUpdate?.length) return;
     const navUpdates = this.parseFundNAVUpdates(fundNAVData);
+    // TODO save navUpdates here to the database
 
     this.chainFundNAVUpdates[chainId][fundAddress] = navUpdates;
-    if (this.chainFunds?.[chainId]?.[fundIndex]) {
+    if (this.chainFunds?.[chainId]?.[fundAddress]) {
       // Save NAV updates to the fund in store.
-      this.chainFunds[chainId][fundIndex].navUpdates = navUpdates;
+      this.chainFunds[chainId][fundAddress].navUpdates = navUpdates;
     }
     const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
-    const fund = this.chainFunds[chainId]?.[fundIndex];
-
-    for (const [
-      navUpdateIndex,
-      encodedNavUpdate,
-    ] of fundNAVData.encodedNavUpdate.entries()) {
-      try {
-        // Decode NAV update methods data.
-        const navMethods: Record<string, any>[] =
-          decodeNavUpdateEntry(encodedNavUpdate);
-
-        for (const [navMethodIndex, navMethod] of navMethods.entries()) {
-          // Ignore NAV methods that are not original NAV entries.
-          if (
-            navMethod.isPastNAVUpdate ||
-            navMethod.pastNAVUpdateIndex !== 0n
-          ) {
-            continue;
-          }
-          const parsedNavMethod: INAVMethod = parseNAVMethod(
-            navMethodIndex,
-            navMethod,
-          );
-
-          if (
-            parsedNavMethod.detailsHash &&
-            excludeNAVDetailsHashes[chainId]?.includes(
-              parsedNavMethod.detailsHash,
-            )
-          ) {
-            continue;
-          }
-
-          // Set the past NAV update fund address to the original fund address
-          // the entry was created on.
-          parsedNavMethod.pastNAVUpdateEntryFundAddress = fundAddress;
-          parsedNavMethod.pastNAVUpdateEntrySafeAddress =
-            fundsInfoArrays[1][fundIndex].safe;
-          allMethods.push(parsedNavMethod);
-          if (parsedNavMethod.detailsHash) {
-            this.navMethodDetailsHashToFundAddress[
-              parsedNavMethod.detailsHash as string
-            ] = fundAddress;
-          } else {
-            console.error(
-              "Missing detailsHash for NAV method ",
-              navUpdateIndex,
-              navMethod,
-            );
-          }
-        }
-      } catch (error: any) {
-        console.log("Error processing NAV methods: ", error);
-      }
-    }
+    const fund = this.chainFunds[chainId]?.[fundAddress];
 
     if (fund) {
       // fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
@@ -1051,6 +1089,8 @@ export const parseNAVMethod = (index: number, navMethodData: Record<string, any>
     details,
     detailsJson,
     detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
+    pastNAVUpdateEntryFundAddress: ethers.ZeroAddress,
+    pastNAVUpdateEntrySafeAddress: ethers.ZeroAddress,
   } as INAVMethod;
 }
 

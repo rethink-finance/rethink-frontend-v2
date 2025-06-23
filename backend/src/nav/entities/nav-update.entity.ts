@@ -4,7 +4,7 @@ import { NavMethod } from "./nav-method.entity";
 @Entity()
 export class NavUpdate {
   @PrimaryGeneratedColumn()
-  id: number;
+    id: number;
 
   @Column()
   @Index()
@@ -26,6 +26,9 @@ export class NavUpdate {
 
   @Column()
     baseSymbol: string;
+
+  @Column({ default: false })
+    areAllNavMethodsFetched: boolean;
 
   @OneToMany(() => NavMethod, navMethod => navMethod.navUpdate)
     navMethods: NavMethod[];
