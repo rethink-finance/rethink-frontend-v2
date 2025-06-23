@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from "typeorm";
 import { NavUpdate } from "./nav-update.entity";
 import { NavMethod } from "./nav-method.entity";
+import { TotalNavSnapshot } from "./total-nav-snapshot.entity";
 
 @Entity()
 export class NavMethodValue {
@@ -34,6 +35,14 @@ export class NavMethodValue {
   @ManyToOne(() => NavMethod, navMethod => navMethod.navMethodValues)
   @JoinColumn({ name: "navMethodId" })
     navMethod: NavMethod;
+
+  @Column({ nullable: true })
+  @Index()
+    totalNavSnapshotId: number;
+
+  @ManyToOne(() => TotalNavSnapshot)
+  @JoinColumn({ name: "totalNavSnapshotId" })
+    totalNavSnapshot: TotalNavSnapshot;
 
   @Column({ type: "varchar", length: 66, nullable: true })
   @Index()

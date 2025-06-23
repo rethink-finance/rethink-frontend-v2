@@ -27,9 +27,6 @@ export class NavUpdate {
   @Column()
     baseSymbol: string;
 
-  @Column({ default: false })
-    areAllNavMethodsFetched: boolean;
-
   @OneToMany(() => NavMethod, navMethod => navMethod.navUpdate)
     navMethods: NavMethod[];
 

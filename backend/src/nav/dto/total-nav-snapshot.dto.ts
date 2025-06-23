@@ -1,7 +1,7 @@
 import { IsString, IsNumber, IsOptional, IsDate } from "class-validator";
 import { ChainId } from "../../types/enums/chain_id";
 
-export class CreateNavMethodValueDto {
+export class CreateTotalNavSnapshotDto {
   @IsString()
     fundAddress: string;
 
@@ -14,29 +14,18 @@ export class CreateNavMethodValueDto {
   @IsNumber()
     navUpdateIndex: number;
 
-  @IsNumber()
-    navMethodId: number;
-
-  @IsNumber()
-  @IsOptional()
-    totalNavSnapshotId?: number;
+  @IsString()
+    totalSimulatedNav: string;
 
   @IsString()
-  @IsOptional()
-    detailsHash?: string;
-
-  @IsString()
-    simulatedNav: string;
-
-  @IsString()
-    simulatedNavFormatted: string;
+    totalSimulatedNavFormatted: string;
 
   @IsDate()
   @IsOptional()
     calculatedAt?: Date;
 }
 
-export class GetNavMethodValueDto {
+export class GetTotalNavSnapshotDto {
   @IsNumber()
   @IsOptional()
     id?: number;
@@ -53,18 +42,6 @@ export class GetNavMethodValueDto {
   @IsOptional()
     navUpdateId?: number;
 
-  @IsNumber()
-  @IsOptional()
-    navMethodId?: number;
-
-  @IsNumber()
-  @IsOptional()
-    totalNavSnapshotId?: number;
-
-  @IsString()
-  @IsOptional()
-    detailsHash?: string;
-
   @IsString()
   @IsOptional()
     fromDate?: string;
@@ -74,17 +51,14 @@ export class GetNavMethodValueDto {
     toDate?: string;
 }
 
-export class NavMethodValueResponseDto {
+export class TotalNavSnapshotResponseDto {
   id: number;
   fundAddress: string;
   fundChainId: string;
   navUpdateId: number;
   navUpdateIndex: number;
-  navMethodId: number;
-  totalNavSnapshotId?: number;
-  detailsHash?: string;
-  simulatedNav: string;
-  simulatedNavFormatted: string;
+  totalSimulatedNav: string;
+  totalSimulatedNavFormatted: string;
   calculatedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
