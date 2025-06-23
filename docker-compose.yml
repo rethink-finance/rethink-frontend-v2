@@ -1,12 +1,10 @@
-version: '3.8'
-
 services:
-  backend:
+  app:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "3001:3001"
+      - "8000:8000"
     depends_on:
       - postgres
     environment:
@@ -14,27 +12,26 @@ services:
       - DB_PORT=5432
       - DB_USERNAME=postgres
       - DB_PASSWORD=postgres
-      - DB_DATABASE=rethink_nav
-      - DB_SYNC=true
+      - DB_DATABASE=rethink_db
       - PORT=8000
+      - DB_SYNC=true
     volumes:
-      - .:/usr/src/app
-      - ../types:/usr/src/app/types
-      - backend_node_modules:/usr/src/app/node_modules
-    restart: unless-stopped
+      - ./backend:/app
+      - /app/node_modules
+      # TODO: use monorepo structure with shared functions and types, not doing this now
+      #    because there is another big PR open for flows V2 which will cause a lot of conflicts now...
+      # - ../types:/app/types
 
   postgres:
-    image: postgres:14-alpine
+    image: postgres:16-alpine
     ports:
       - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=rethink_nav
+      - POSTGRES_DB=rethink_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
 
 volumes:
   postgres_data:
-  backend_node_modules:

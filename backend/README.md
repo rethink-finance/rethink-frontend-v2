@@ -2,6 +2,10 @@
 
 This backend service calculates and stores simulated NAV (Net Asset Value) for funds in the Rethink Finance platform.
 
+## TODO: use monorepo structure with shared functions and types, not doing this now because there is another big PR open for flows V2 which will cause a lot of conflicts now...
+### TODO: optimize code, first save fund data, then save nav updates data and then have a separate structure for calculated/simulated NAV values
+
+
 ## Features
 
 - Calculate simulated NAV values for funds using blockchain data
@@ -12,47 +16,25 @@ This backend service calculates and stores simulated NAV (Net Asset Value) for f
 
 ## Prerequisites
 
-### Running Locally
-- Node.js (v14 or higher)
-- PostgreSQL
-- Access to Ethereum and Polygon RPC endpoints
-
-### Running with Docker
 - Docker
 - Docker Compose
 
 ## Installation
 
-### Local Installation
+### Local Docker Installation
 
-1. Clone the repository
-2. Navigate to the backend directory
-3. Install dependencies:
+Make sure Docker and Docker Compose are installed.
 
+This will start both the backend service and a PostgreSQL database:
 ```bash
-npm install
+# Configure environment variables in `.env` file (see Configuration section)
+# (Optional) Modify the environment variables in the `docker compose.yml` file in the backend directory
+
+# From the rethink-frontend-v2 repository root run
+docker compose up --build
+# Add -d to run in a detached mode
+docker compose up --build -d
 ```
-
-4. Configure environment variables in `.env` file (see Configuration section)
-5. Build the application:
-
-```bash
-npm run build
-```
-
-### Docker Installation
-
-1. Clone the repository
-2. Make sure Docker and Docker Compose are installed
-3. (Optional) Modify the environment variables in the `docker compose.yml` file in the backend directory
-4. Navigate to the backend directory and run the application using Docker Compose:
-
-```bash
-cd backend
-docker compose up -d
-```
-
-This will start both the backend service and a PostgreSQL database.
 
 #### Development vs Production
 
@@ -64,7 +46,6 @@ Two Docker Compose files are provided in the backend directory:
 To use the production configuration:
 
 ```bash
-cd backend
 docker compose -f docker compose.prod.yml up -d
 ```
 
@@ -224,7 +205,7 @@ The PostgreSQL database is also accessible at:
 - Port: 5432
 - Username: postgres
 - Password: postgres
-- Database: rethink_nav
+- Database: rethink_db
 
 ## Configuration
 
@@ -242,8 +223,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=postgres
-DB_DATABASE=rethink_nav
-DB_SYNC=true
+DB_DATABASE=rethink_db
 
 # Server Configuration
 PORT=3001

@@ -3,8 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Between, Repository } from "typeorm";
 import { Cron } from "@nestjs/schedule";
 import { ethers } from "ethers";
-import { AbiInput, Web3 } from "web3";
-import { decodeParameters } from "web3-eth-abi";
+import { Web3 } from "web3";
 import pLimit, { LimitFunction } from "p-limit";
 import { GovernableFundFactory } from "../../assets/contracts/GovernableFundFactory";
 import { GovernableFund } from "../../assets/contracts/GovernableFund";
@@ -14,7 +13,9 @@ import { chainIds, networks, networksMap } from "../shared/networksMap";
 import { getContractAddress } from "../types/contract_addresses";
 import INetwork from "../types/network";
 import { ChainId } from "../types/enums/chain_id";
+import IFundMetaData from "../types/fund_meta_data";
 import type INAVMethod from "../types/nav_method";
+import type IToken from "../types/token";
 import type INAVUpdate from "../types/nav_update";
 import type IFund from "../types/fund";
 import type IFundNavData from "../types/fund_nav_data";
@@ -26,9 +27,6 @@ import {
 } from "../types/enums/position_type";
 import { GetNavValuesDto, NavValueResponseDto } from "./dto/nav.dto";
 import { NavValue } from "./nav.entity";
-import type IFundMetaData from "../../../types/fund_meta_data";
-import type IToken from "../../../types/token";
-import type IPositionTypeCount from "../../../types/position_type";
 
 @Injectable()
 export class NavService {
@@ -39,8 +37,8 @@ export class NavService {
   private chainSelectedRpcUrl: Partial<Record<ChainId, string>> = {};
   private chainSelectedRpcIndex: Record<string, number> = {};
   private chainFunds: Record<string, IFund[]> = {};
-  private chainFundNAVUpdates: Record<string, Record<string, INAVUpdate[]>> =
-    {};
+  private chainFundNAVUpdates: Record<string, Record<string, INAVUpdate[]>> = {};
+
   // Get the address of the original fund of all original NAV methods.
   private navMethodDetailsHashToFundAddress: Record<string, string> = {};
   // We want to limit concurrent requests to 2.
@@ -396,14 +394,14 @@ export class NavService {
     const latestNavValue = await this.navValueRepository.findOne({
       where: query,
       order: { navUpdateIndex: "DESC" },
-      select: ["navUpdateIndex"]
+      select: ["navUpdateIndex"],
     });
 
     if (!latestNavValue) {
       return {
         totalValue: "0",
         formattedValue: "0",
-        baseSymbol: ""
+        baseSymbol: "",
       };
     }
 
@@ -411,9 +409,9 @@ export class NavService {
     const allLatestNavValues = await this.navValueRepository.find({
       where: {
         ...query,
-        navUpdateIndex: latestNavValue.navUpdateIndex
+        navUpdateIndex: latestNavValue.navUpdateIndex,
       },
-      order: { calculatedAt: "DESC" }
+      order: { calculatedAt: "DESC" },
     });
 
     // Group by detailsHash to get distinct values
@@ -422,7 +420,7 @@ export class NavService {
     // TODO better to use postgres and to this with a query...
     for (const navValue of allLatestNavValues) {
       // Create a unique key based on the required distinct fields
-      const distinctKey = `${navValue.fundAddress}_${navValue.fundChainId}_${navValue.navUpdateIndex}_${navValue.detailsHash || ''}`;
+      const distinctKey = `${navValue.fundAddress}_${navValue.fundChainId}_${navValue.navUpdateIndex}_${navValue.detailsHash || ""}`;
 
       // Only add if this key doesn't exist yet or if this value is more recent
       if (!distinctNavValues.has(distinctKey) ||
@@ -441,7 +439,7 @@ export class NavService {
     }
 
     // Get base symbol from any of the entries (they should all have the same)
-    const baseSymbol = latestNavValues.length > 0 ? latestNavValues[0].baseSymbol : '';
+    const baseSymbol = latestNavValues.length > 0 ? latestNavValues[0].baseSymbol : "";
     const baseDecimals = latestNavValues.length > 0 ? latestNavValues[0].baseDecimals : 18;
 
     // Format the total value
@@ -450,7 +448,7 @@ export class NavService {
     return {
       totalValue: totalValue.toString(),
       formattedValue: `${formattedValue} ${baseSymbol}`,
-      baseSymbol
+      baseSymbol,
     };
   }
 
@@ -615,7 +613,7 @@ export class NavService {
           cumulativeReturnPercent: undefined,
           monthlyReturnPercent: undefined,
           sharpeRatio: undefined,
-          positionTypeCounts: [] as IPositionTypeCount[],
+          positionTypeCounts: [],
 
           // Share Price
           sharePrice: undefined,
@@ -963,11 +961,11 @@ export class NavService {
 /**
  * From: frontend/composables/nav/navDecoder.ts
  */
-export const getNavUpdateEntryFunctionABI: AbiInput[] = (GovernableFund.abi.find(
+export const getNavUpdateEntryFunctionABI: any[] = (GovernableFund.abi.find(
   (func:any) => func.name === "getNavEntry" && func.type === "function",
 ) as any )?.outputs || [];
 
-export const getNavPartsFunctionABI: AbiInput[] =
+export const getNavPartsFunctionABI: any[] =
   (
     NAVCalculator.abi.find(
       (func: any) => func.name === "getNAVParts" && func.type === "function",
@@ -975,7 +973,8 @@ export const getNavPartsFunctionABI: AbiInput[] =
   )?.outputs || [];
 
 export const decodeNavUpdateEntry = (encodedNavUpdate: string):Record<string, any>[] => {
-  return decodeParameters(
+  const web3 = new Web3();
+  return web3.eth.abi.decodeParameters(
     getNavUpdateEntryFunctionABI,
     encodedNavUpdate,
   )[0] as any[];
@@ -984,7 +983,8 @@ export const decodeNavUpdateEntry = (encodedNavUpdate: string):Record<string, an
 export const decodeNavPart = (
   encodedNavUpdate: string,
 ): Record<string, any>[] => {
-  return decodeParameters(
+  const web3 = new Web3();
+  return web3.eth.abi.decodeParameters(
     getNavPartsFunctionABI,
     encodedNavUpdate,
   )[0] as any[];

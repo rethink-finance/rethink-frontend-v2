@@ -60,7 +60,7 @@ export class NavValue {
   @UpdateDateColumn()
     updatedAt: Date;
 
-  @Column({ type: "datetime", nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   @Index()
     calculatedAt: Date;
 }

@@ -18,7 +18,9 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
-    "esModuleInterop": true
-  },
-  "exclude": ["types"]
+    "esModuleInterop": true,
+    "paths": {
+      "../../../types/*": ["../types/*"]
+    }
+  }
 }
