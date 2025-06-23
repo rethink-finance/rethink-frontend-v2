@@ -3,11 +3,13 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { SharedModule } from "../shared/shared.module";
 import { NavController } from "./nav.controller";
 import { NavService } from "./nav.service";
-import { NavValue } from "./nav.entity";
+import { NavUpdate } from "./entities/nav-update.entity";
+import { NavMethod } from "./entities/nav-method.entity";
+import { NavMethodValue } from "./entities/nav-method-value.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([NavValue]),
+    TypeOrmModule.forFeature([NavUpdate, NavMethod, NavMethodValue]),
     SharedModule,
   ],
   controllers: [NavController],

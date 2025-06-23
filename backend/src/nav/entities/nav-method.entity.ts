@@ -1,9 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from "typeorm";
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, OneToMany, JoinColumn } from "typeorm";
+import { NavUpdate } from "./nav-update.entity";
+import { NavMethodValue } from "./nav-method-value.entity";
 
 @Entity()
-export class NavValue {
-  @PrimaryGeneratedColumn("uuid")
-    id: string;
+export class NavMethod {
+  @PrimaryGeneratedColumn()
+    id: number;
 
   @Column()
   @Index()
@@ -17,23 +19,13 @@ export class NavValue {
   @Index()
     navUpdateIndex: number;
 
-  @Column({ type: "varchar", length: 78 })
-    safeAddress: string;
-
-  @Column({ type: "numeric", precision: 78, scale: 0, transformer: {
-    to: (value: bigint) => value.toString(),
-    from: (value: string) => BigInt(value),
-  } })
-    simulatedNav: string; // Stored as string to handle BigInt
-
   @Column()
-    simulatedNavFormatted: string;
+  @Index()
+    navUpdateId: number;
 
-  @Column()
-    baseDecimals: number;
-
-  @Column()
-    baseSymbol: string;
+  @ManyToOne(() => NavUpdate, navUpdate => navUpdate.navMethods)
+  @JoinColumn({ name: "navUpdateId" })
+    navUpdate: NavUpdate;
 
   @Column({
     type: "simple-json",
@@ -48,10 +40,14 @@ export class NavValue {
       from: (value: any) => value, // Keep as-is when reading
     },
   })
-    navMethodDetails: Record<string, any>;
+    methodDetails: Record<string, any>;
 
   @Column({ type: "varchar", length: 66, nullable: true })
+  @Index()
     detailsHash: string;
+
+  @OneToMany(() => NavMethodValue, navMethodValue => navMethodValue.navMethod)
+    navMethodValues: NavMethodValue[];
 
   @CreateDateColumn()
   @Index()
@@ -59,8 +55,4 @@ export class NavValue {
 
   @UpdateDateColumn()
     updatedAt: Date;
-
-  @Column({ type: "timestamp", nullable: true })
-  @Index()
-    calculatedAt: Date;
 }

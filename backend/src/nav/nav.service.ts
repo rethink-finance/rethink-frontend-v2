@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Between, Repository } from "typeorm";
+import { Repository } from "typeorm";
 import { Cron } from "@nestjs/schedule";
 import { ethers } from "ethers";
 import { Web3 } from "web3";
@@ -25,8 +25,10 @@ import {
   PositionType,
   PositionTypeToNAVCalculationMethod,
 } from "../types/enums/position_type";
-import { GetNavValuesDto, NavValueResponseDto } from "./dto/nav.dto";
-import { NavValue } from "./nav.entity";
+import { NavUpdate } from "./entities/nav-update.entity";
+import { NavMethod } from "./entities/nav-method.entity";
+import { NavMethodValue } from "./entities/nav-method-value.entity";
+import { NavMethodValueResponseDto } from "./dto/nav-method-value.dto";
 
 @Injectable()
 export class NavService {
@@ -47,8 +49,12 @@ export class NavService {
   private requestConcurrencyLimit: LimitFunction = pLimit(2);
 
   constructor(
-    @InjectRepository(NavValue)
-    private navValueRepository: Repository<NavValue>,
+    @InjectRepository(NavUpdate)
+    private navUpdateRepository: Repository<NavUpdate>,
+    @InjectRepository(NavMethod)
+    private navMethodRepository: Repository<NavMethod>,
+    @InjectRepository(NavMethodValue)
+    private navMethodValueRepository: Repository<NavMethodValue>,
   ) {
     // Initialize providers for different chains
     this.initializeProviders();
@@ -102,7 +108,7 @@ export class NavService {
     baseSymbol: string,
     navEntry: INAVMethod,
     navUpdateIndex: number,
-  ): Promise<NavValueResponseDto> {
+  ): Promise<NavMethodValueResponseDto> {
     this.logger.log(
       `Calculating NAV for fund ${fundAddress} on chain ${fundChainId}`,
     );
@@ -187,33 +193,74 @@ export class NavService {
       navEntry.simulatedNavFormatted = `${valueFormatted} ${baseSymbol}`;
       navEntry.simulatedNav = simulatedVal;
 
-      // Save to database
-      const navValue = new NavValue();
-      navValue.fundAddress = fundAddress;
-      navValue.fundChainId = fundChainId;
-      navValue.navUpdateIndex = navUpdateIndex;
-      navValue.safeAddress = safeAddress;
-      navValue.simulatedNav = simulatedVal.toString();
-      navValue.simulatedNavFormatted = navEntry.simulatedNavFormatted;
-      navValue.baseDecimals = baseDecimals;
-      navValue.baseSymbol = baseSymbol;
-      navValue.navMethodDetails = navEntry;
-      navValue.detailsHash = navEntry.detailsHash;
-      navValue.calculatedAt = new Date();
+      // 1. Find or create NavUpdate
+      let navUpdate = await this.navUpdateRepository.findOne({
+        where: {
+          fundAddress,
+          fundChainId,
+          navUpdateIndex,
+        },
+      });
 
-      const savedNavValue = await this.navValueRepository.save(navValue);
+      if (!navUpdate) {
+        navUpdate = new NavUpdate();
+        navUpdate.fundAddress = fundAddress;
+        navUpdate.fundChainId = fundChainId;
+        navUpdate.navUpdateIndex = navUpdateIndex;
+        navUpdate.safeAddress = safeAddress;
+        navUpdate.baseDecimals = baseDecimals;
+        navUpdate.baseSymbol = baseSymbol;
+        navUpdate = await this.navUpdateRepository.save(navUpdate);
+      }
+
+      // 2. Find or create NavMethod
+      let navMethod = await this.navMethodRepository.findOne({
+        where: {
+          fundAddress,
+          fundChainId,
+          navUpdateId: navUpdate.id,
+          detailsHash: navEntry.detailsHash,
+        },
+      });
+
+      if (!navMethod) {
+        navMethod = new NavMethod();
+        navMethod.fundAddress = fundAddress;
+        navMethod.fundChainId = fundChainId;
+        navMethod.navUpdateIndex = navUpdateIndex;
+        navMethod.navUpdateId = navUpdate.id;
+        navMethod.methodDetails = navEntry;
+        navMethod.detailsHash = navEntry.detailsHash;
+        navMethod = await this.navMethodRepository.save(navMethod);
+      }
+
+      // 3. Create NavMethodValue
+      const navMethodValue = new NavMethodValue();
+      navMethodValue.fundAddress = fundAddress;
+      navMethodValue.fundChainId = fundChainId;
+      navMethodValue.navUpdateId = navUpdate.id;
+      navMethodValue.navUpdateIndex = navUpdateIndex;
+      navMethodValue.navMethodId = navMethod.id;
+      navMethodValue.detailsHash = navEntry.detailsHash;
+      navMethodValue.simulatedNav = simulatedVal.toString();
+      navMethodValue.simulatedNavFormatted = navEntry.simulatedNavFormatted;
+      navMethodValue.calculatedAt = new Date();
+
+      const savedNavMethodValue = await this.navMethodValueRepository.save(navMethodValue);
 
       return {
-        id: savedNavValue.id,
-        fundAddress: savedNavValue.fundAddress,
-        fundChainId: savedNavValue.fundChainId,
-        safeAddress: savedNavValue.safeAddress,
-        simulatedNav: savedNavValue.simulatedNav,
-        simulatedNavFormatted: savedNavValue.simulatedNavFormatted,
-        baseDecimals: savedNavValue.baseDecimals,
-        baseSymbol: savedNavValue.baseSymbol,
-        detailsHash: savedNavValue.detailsHash,
-        calculatedAt: savedNavValue.calculatedAt,
+        id: savedNavMethodValue.id,
+        fundAddress: savedNavMethodValue.fundAddress,
+        fundChainId: savedNavMethodValue.fundChainId,
+        navUpdateId: savedNavMethodValue.navUpdateId,
+        navUpdateIndex: savedNavMethodValue.navUpdateIndex,
+        navMethodId: savedNavMethodValue.navMethodId,
+        detailsHash: savedNavMethodValue.detailsHash,
+        simulatedNav: savedNavMethodValue.simulatedNav,
+        simulatedNavFormatted: savedNavMethodValue.simulatedNavFormatted,
+        calculatedAt: savedNavMethodValue.calculatedAt,
+        createdAt: savedNavMethodValue.createdAt,
+        updatedAt: savedNavMethodValue.updatedAt,
       };
     } catch (error) {
       this.logger.error(`Error calculating NAV: ${error.message}`, error.stack);
@@ -342,42 +389,6 @@ export class NavService {
     });
   }
 
-  async getNavValues(dto: GetNavValuesDto): Promise<NavValueResponseDto[]> {
-    const { fundAddress, fundChainId, detailsHash, fromDate, toDate } = dto;
-
-    const query: any = { fundAddress };
-
-    if (fundChainId) {
-      query.fundChainId = fundChainId;
-    }
-
-    if (detailsHash) {
-      query.detailsHash = detailsHash;
-    }
-
-    if (fromDate && toDate) {
-      query.calculatedAt = Between(new Date(fromDate), new Date(toDate));
-    }
-
-    const navValues = await this.navValueRepository.find({
-      where: query,
-      order: { calculatedAt: "DESC" },
-    });
-
-    return navValues.map((navValue) => ({
-      id: navValue.id,
-      fundAddress: navValue.fundAddress,
-      fundChainId: navValue.fundChainId,
-      safeAddress: navValue.safeAddress,
-      simulatedNav: navValue.simulatedNav,
-      simulatedNavFormatted: navValue.simulatedNavFormatted,
-      baseDecimals: navValue.baseDecimals,
-      baseSymbol: navValue.baseSymbol,
-      detailsHash: navValue.detailsHash,
-      calculatedAt: navValue.calculatedAt,
-    }));
-  }
-
   async getLatestNavUpdateTotalValue(fundAddress: string, fundChainId?: ChainId): Promise<{
     totalValue: string,
     formattedValue: string,
@@ -390,14 +401,14 @@ export class NavService {
       query.fundChainId = fundChainId;
     }
 
-    // First, find the latest navUpdateIndex for this fund
-    const latestNavValue = await this.navValueRepository.findOne({
+    // Find the latest navUpdateIndex for this fund using NavUpdate
+    const latestNavUpdate = await this.navUpdateRepository.findOne({
       where: query,
       order: { navUpdateIndex: "DESC" },
-      select: ["navUpdateIndex"],
+      select: ["id", "navUpdateIndex", "baseSymbol", "baseDecimals"],
     });
 
-    if (!latestNavValue) {
+    if (!latestNavUpdate) {
       return {
         totalValue: "0",
         formattedValue: "0",
@@ -405,50 +416,53 @@ export class NavService {
       };
     }
 
-    // Now, fetch only the NAV values with the latest index
-    const allLatestNavValues = await this.navValueRepository.find({
+    // Now, fetch only the NavMethodValue entities with the latest update
+    const allLatestNavMethodValues = await this.navMethodValueRepository.find({
       where: {
         ...query,
-        navUpdateIndex: latestNavValue.navUpdateIndex,
+        navUpdateId: latestNavUpdate.id,
       },
       order: { calculatedAt: "DESC" },
     });
 
-    // Group by detailsHash to get distinct values
-    const distinctNavValues = new Map<string, any>();
+    if (allLatestNavMethodValues.length === 0) {
+      return {
+        totalValue: "0",
+        formattedValue: "0",
+        baseSymbol: latestNavUpdate.baseSymbol || "",
+      };
+    }
 
-    // TODO better to use postgres and to this with a query...
-    for (const navValue of allLatestNavValues) {
+    // Group by navMethodId to get distinct values (one value per method)
+    const distinctNavMethodValues = new Map<string, any>();
+
+    for (const navMethodValue of allLatestNavMethodValues) {
       // Create a unique key based on the required distinct fields
-      const distinctKey = `${navValue.fundAddress}_${navValue.fundChainId}_${navValue.navUpdateIndex}_${navValue.detailsHash || ""}`;
+      const distinctKey = `${navMethodValue.fundAddress}_${navMethodValue.fundChainId}_${String(navMethodValue.navMethodId)}`;
 
       // Only add if this key doesn't exist yet or if this value is more recent
-      if (!distinctNavValues.has(distinctKey) ||
-          (navValue.calculatedAt > distinctNavValues.get(distinctKey).calculatedAt)) {
-        distinctNavValues.set(distinctKey, navValue);
+      if (!distinctNavMethodValues.has(distinctKey) ||
+          (navMethodValue.calculatedAt > distinctNavMethodValues.get(distinctKey).calculatedAt)) {
+        distinctNavMethodValues.set(distinctKey, navMethodValue);
       }
     }
 
     // Get the distinct values
-    const latestNavValues = Array.from(distinctNavValues.values());
+    const latestNavMethodValues = Array.from(distinctNavMethodValues.values());
 
     // Sum the values
     let totalValue = BigInt(0);
-    for (const navValue of latestNavValues) {
-      totalValue += BigInt(navValue.simulatedNav);
+    for (const navMethodValue of latestNavMethodValues) {
+      totalValue += BigInt(navMethodValue.simulatedNav);
     }
 
-    // Get base symbol from any of the entries (they should all have the same)
-    const baseSymbol = latestNavValues.length > 0 ? latestNavValues[0].baseSymbol : "";
-    const baseDecimals = latestNavValues.length > 0 ? latestNavValues[0].baseDecimals : 18;
-
     // Format the total value
-    const formattedValue = formatTokenValue(totalValue, baseDecimals, true, false);
+    const formattedValue = formatTokenValue(totalValue, latestNavUpdate.baseDecimals, true, false);
 
     return {
       totalValue: totalValue.toString(),
-      formattedValue: `${formattedValue} ${baseSymbol}`,
-      baseSymbol,
+      formattedValue: `${formattedValue} ${latestNavUpdate.baseSymbol}`,
+      baseSymbol: latestNavUpdate.baseSymbol,
     };
   }
 
