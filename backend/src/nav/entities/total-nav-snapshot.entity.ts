@@ -1,5 +1,15 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from "typeorm";
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from "typeorm";
 import { NavUpdate } from "./nav-update.entity";
+import { NavMethodValue } from "./nav-method-value.entity";
 
 @Entity()
 export class TotalNavSnapshot {
@@ -32,7 +42,10 @@ export class TotalNavSnapshot {
   @Column()
     totalSimulatedNavFormatted: string;
 
-  @Column({ type: "timestamp", nullable: true })
+  @OneToMany(() => NavMethodValue, value => value.totalNavSnapshot)
+    navMethodValues: NavMethodValue[];
+
+  @Column()
   @Index()
     calculatedAt: Date;
 

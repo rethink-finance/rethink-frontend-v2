@@ -37,14 +37,6 @@ export class GetTotalNavSnapshotDto {
   @IsNumber()
   @IsOptional()
     navUpdateId?: number;
-
-  @IsString()
-  @IsOptional()
-    fromDate?: string;
-
-  @IsString()
-  @IsOptional()
-    toDate?: string;
 }
 
 export class TotalNavSnapshotResponseDto {

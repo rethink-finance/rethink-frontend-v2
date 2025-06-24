@@ -37,14 +37,6 @@ export class GetNavUpdateDto {
   @IsNumber()
   @IsOptional()
     navUpdateIndex?: number;
-
-  @IsString()
-  @IsOptional()
-    fromDate?: string;
-
-  @IsString()
-  @IsOptional()
-    toDate?: string;
 }
 
 export class NavUpdateResponseDto {

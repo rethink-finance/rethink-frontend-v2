@@ -42,14 +42,6 @@ export class GetNavMethodDto {
   @IsString()
   @IsOptional()
     detailsHash?: string;
-
-  @IsString()
-  @IsOptional()
-    fromDate?: string;
-
-  @IsString()
-  @IsOptional()
-    toDate?: string;
 }
 
 export class NavMethodResponseDto {

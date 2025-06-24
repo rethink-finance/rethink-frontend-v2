@@ -48,11 +48,8 @@ export class NavMethodValue {
   @Index()
     detailsHash: string;
 
-  @Column({ type: "numeric", precision: 78, scale: 0, transformer: {
-    to: (value: bigint) => value.toString(),
-    from: (value: string) => BigInt(value),
-  } })
-    simulatedNav: string; // Stored as string to handle BigInt
+  @Column()
+    simulatedNav: string;
 
   @Column()
     simulatedNavFormatted: string;

@@ -18,12 +18,10 @@ export class CreateNavMethodValueDto {
     navMethodId: number;
 
   @IsNumber()
-  @IsOptional()
-    totalNavSnapshotId?: number;
+    totalNavSnapshotId: number;
 
   @IsString()
-  @IsOptional()
-    detailsHash?: string;
+    detailsHash: string;
 
   @IsString()
     simulatedNav: string;
@@ -32,8 +30,7 @@ export class CreateNavMethodValueDto {
     simulatedNavFormatted: string;
 
   @IsDate()
-  @IsOptional()
-    calculatedAt?: Date;
+    calculatedAt: Date;
 }
 
 export class GetNavMethodValueDto {
@@ -47,31 +44,23 @@ export class GetNavMethodValueDto {
 
   @IsString()
   @IsOptional()
-    fundChainId?: ChainId;
+    fundChainId: ChainId;
 
   @IsNumber()
   @IsOptional()
-    navUpdateId?: number;
+    navUpdateId: number;
 
   @IsNumber()
   @IsOptional()
-    navMethodId?: number;
+    navMethodId: number;
 
   @IsNumber()
   @IsOptional()
-    totalNavSnapshotId?: number;
+    totalNavSnapshotId: number;
 
   @IsString()
   @IsOptional()
-    detailsHash?: string;
-
-  @IsString()
-  @IsOptional()
-    fromDate?: string;
-
-  @IsString()
-  @IsOptional()
-    toDate?: string;
+    detailsHash: string;
 }
 
 export class NavMethodValueResponseDto {
@@ -81,11 +70,11 @@ export class NavMethodValueResponseDto {
   navUpdateId: number;
   navUpdateIndex: number;
   navMethodId: number;
-  totalNavSnapshotId?: number;
-  detailsHash?: string;
+  totalNavSnapshotId: number;
+  detailsHash: string;
   simulatedNav: string;
   simulatedNavFormatted: string;
-  calculatedAt?: Date;
+  calculatedAt: Date;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -429,7 +429,7 @@ export class NavService {
     const latestSnapshot = await this.totalNavSnapshotRepository.findOne({
       where: query,
       order: { navUpdateIndex: "DESC" },
-      relations: ["navUpdate"],
+      relations: ["navUpdate", "navMethodValues"],
     });
 
     if (!latestSnapshot) {
@@ -883,7 +883,7 @@ export class NavService {
       navMethodValue.navUpdateIndex = lastNavUpdateIndex;
       navMethodValue.navMethodId = navMethod.id;
       navMethodValue.detailsHash = navEntry.detailsHash;
-      navMethodValue.simulatedNav = navEntry.simulatedNav;
+      navMethodValue.simulatedNav = navEntry.simulatedNav.toString();
       navMethodValue.simulatedNavFormatted = navEntry.simulatedNavFormatted;
       navMethodValue.calculatedAt = calculationTime;
       navMethodValue.totalNavSnapshotId = savedTotalNavSnapshot.id;
