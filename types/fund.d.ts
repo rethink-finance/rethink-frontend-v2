@@ -61,12 +61,14 @@ export default interface IFund {
   governanceToken: IToken;
   governanceTokenTotalSupply: bigint;
   lastNAVUpdateTotalNAV?: bigint;
+  currentValue?: bigint;
+  currentValueFormatted?: string;
   totalDepositBalance: bigint;
   cumulativeReturnPercent?: number;
   monthlyReturnPercent?: number; // TODO
   sharpeRatio?: number; // TODO
   positionTypeCounts: IPositionTypeCount[];
-  
+
   // Share Price
   sharePrice?: number;
 
