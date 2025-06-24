@@ -2,8 +2,10 @@
 
 This backend service calculates and stores simulated NAV (Net Asset Value) for funds in the Rethink Finance platform.
 
-## TODO: use monorepo structure with shared functions and types, not doing this now because there is another big PR open for flows V2 which will cause a lot of conflicts now...
-### TODO: optimize code, first save fund data, then save nav updates data and then have a separate structure for calculated/simulated NAV values
+### TODO: 
+- [ ] always check if in the database is the latest navUpdate for each fund, check current nav update index, if not refresh data
+- [ ] use monorepo structure with shared functions and types, not doing this now because there is another big PR open for flows V2 which will cause a lot of conflicts now...
+- [ ] optimize code
 
 ## Prerequisites
 
@@ -18,9 +20,6 @@ Make sure Docker and Docker Compose are installed.
 
 This will start both the backend service and a PostgreSQL database:
 ```bash
-# Configure environment variables in `.env` file (see Configuration section)
-# (Optional) Modify the environment variables in the `docker compose.yml` file in the backend directory
-
 # From the rethink-frontend-v2 repository root run
 docker compose up --build
 # Add -d to run in a detached mode
@@ -106,11 +105,6 @@ For production:
   docker compose -f docker compose.prod.yml restart backend
   ```
 
-#### Docker Environment Configuration
-
-When using Docker, environment variables are defined in the `docker compose.yml` file in the backend directory instead of the `.env` file. 
-You can modify these variables directly in the `docker compose.yml` file.
-
 #### Docker Volumes
 
 The Docker Compose configuration uses the following volumes:
@@ -133,13 +127,6 @@ The PostgreSQL database is also accessible at:
 - Password: postgres
 - Database: rethink_db
 
-## Configuration
-
-A `.env.example` file is provided as a template. Copy it to create your own `.env` file:
-
-```bash
-cp .env.example .env
-```
 
 ## API Endpoints
 

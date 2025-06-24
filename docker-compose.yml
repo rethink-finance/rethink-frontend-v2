@@ -1,5 +1,5 @@
 services:
-  app:
+  backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -7,6 +7,7 @@ services:
       - "8000:8000"
     depends_on:
       - postgres
+    command: sh -c "until nc -z postgres 5432; do sleep 1; done && npm run migration:run && npm run dev"
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -16,12 +17,11 @@ services:
       - PORT=8000
       - DB_SYNC=true
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - ./backend:/backend
+      - /backend/node_modules
       # TODO: use monorepo structure with shared functions and types, not doing this now
       #    because there is another big PR open for flows V2 which will cause a lot of conflicts now...
-      # - ../types:/app/types
-
+      # - ../types:/backend/types
   postgres:
     image: postgres:16-alpine
     ports:
