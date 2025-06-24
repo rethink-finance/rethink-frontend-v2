@@ -56,6 +56,9 @@
           width="2"
           indeterminate
         />
+        <template v-else-if="!item.currentValue">
+          N/A
+        </template>
         <template v-else>
           {{
             formatTokenValue(
