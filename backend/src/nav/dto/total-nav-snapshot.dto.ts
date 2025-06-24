@@ -19,10 +19,6 @@ export class CreateTotalNavSnapshotDto {
 
   @IsString()
     totalSimulatedNavFormatted: string;
-
-  @IsDate()
-  @IsOptional()
-    calculatedAt?: Date;
 }
 
 export class GetTotalNavSnapshotDto {
@@ -59,7 +55,5 @@ export class TotalNavSnapshotResponseDto {
   navUpdateIndex: number;
   totalSimulatedNav: string;
   totalSimulatedNavFormatted: string;
-  calculatedAt?: Date;
   createdAt: Date;
-  updatedAt: Date;
 }

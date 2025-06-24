@@ -26,7 +26,7 @@ export class TotalNavSnapshot {
   @Index()
     navUpdateIndex: number;
 
-  @Column({ type: "string" })
+  @Column()
     totalSimulatedNav: string;
 
   @Column()
@@ -39,7 +39,4 @@ export class TotalNavSnapshot {
   @CreateDateColumn()
   @Index()
     createdAt: Date;
-
-  @UpdateDateColumn()
-    updatedAt: Date;
 }

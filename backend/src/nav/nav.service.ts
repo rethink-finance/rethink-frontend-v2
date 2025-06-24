@@ -412,6 +412,48 @@ export class NavService {
   }
 
   /**
+   * Get the latest NAV update snapshot for a fund
+   * @param fundAddress The fund address
+   * @param fundChainId The fund chain ID
+   * @returns The latest NAV update snapshot
+   */
+  async getLatestNavUpdateSnapshot(fundAddress: string, fundChainId?: ChainId): Promise<TotalNavSnapshot> {
+    // Create a query to find the fund
+    const query: any = { fundAddress };
+
+    if (fundChainId) {
+      query.fundChainId = fundChainId;
+    }
+
+    // Find the latest NAV update snapshot for this fund
+    const latestSnapshot = await this.totalNavSnapshotRepository.findOne({
+      where: query,
+      order: { navUpdateIndex: "DESC" },
+      relations: ["navUpdate"],
+    });
+
+    if (!latestSnapshot) {
+      // If no snapshot in cache and chainId is provided, try calculating NAV for this fund
+      if (fundChainId) {
+        this.logger.log(`No NAV snapshot found for fund ${fundAddress} on chain ${fundChainId}, calculating now...`);
+        try {
+          await this.calculateNavForFund(fundChainId, fundAddress);
+
+          // Try to get the data again after calculation
+          return this.getLatestNavUpdateSnapshot(fundAddress, fundChainId);
+        } catch (error) {
+          this.logger.error(`Failed to calculate NAV for fund ${fundAddress} on chain ${fundChainId}: ${error.message}`);
+          throw error;
+        }
+      }
+
+      throw new Error(`No NAV snapshot found for fund ${fundAddress}`);
+    }
+
+    return latestSnapshot;
+  }
+
+  /**
    * Process NAV data for funds
    * @param chainId The chain ID
    * @param fundsInfo Record of fund info
@@ -794,7 +836,7 @@ export class NavService {
 
     const calculationTime = new Date();
 
-    // Createthe totalNavSnapshot with 0 values.
+    // Create the totalNavSnapshot with 0 values.
     const totalNavSnapshot = new TotalNavSnapshot();
     totalNavSnapshot.fundAddress = fundAddress;
     totalNavSnapshot.fundChainId = fundChainId;

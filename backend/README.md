@@ -381,3 +381,20 @@ const response = await fetch('http://localhost:3001/nav/calculate', {
 });
 const result = await response.json();
 ```
+
+
+## Database & ORM
+
+Create a new migration when changing/creating models.
+```shell
+npm run migration:generate -- src/migrations/<MigrationName>
+```
+
+Run/apply the migration to the database.
+```shell
+# Locally
+npm run migration:run
+
+# In the docker container (production)
+docker compose exec backend npm run migration:run
+```
