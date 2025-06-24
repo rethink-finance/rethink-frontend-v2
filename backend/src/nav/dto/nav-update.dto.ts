@@ -1,4 +1,5 @@
 import { IsString, IsNumber, IsOptional } from "class-validator";
+import { Exclude } from "class-transformer";
 import { ChainId } from "../../types/enums/chain_id";
 
 export class CreateNavUpdateDto {
@@ -40,13 +41,23 @@ export class GetNavUpdateDto {
 }
 
 export class NavUpdateResponseDto {
-  id: number;
-  fundAddress: string;
-  fundChainId: string;
+  @Exclude()
+    id: number;
+
+  @Exclude()
+    fundAddress: string;
+
+  @Exclude()
+    fundChainId: string;
+
   navUpdateIndex: number;
   safeAddress: string;
   baseDecimals: number;
   baseSymbol: string;
-  createdAt: Date;
-  updatedAt: Date;
+
+  @Exclude()
+    createdAt: Date;
+
+  @Exclude()
+    updatedAt: Date;
 }

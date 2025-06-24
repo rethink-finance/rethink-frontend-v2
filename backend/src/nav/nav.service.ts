@@ -5,6 +5,7 @@ import { Cron } from "@nestjs/schedule";
 import { ethers } from "ethers";
 import { Web3 } from "web3";
 import pLimit, { LimitFunction } from "p-limit";
+import { plainToInstance } from "class-transformer";
 import { GovernableFundFactory } from "../../assets/contracts/GovernableFundFactory";
 import { GovernableFund } from "../../assets/contracts/GovernableFund";
 import { NAVCalculator } from "../../assets/contracts/NAVCalculator";
@@ -29,6 +30,8 @@ import { NavUpdate } from "./entities/nav-update.entity";
 import { NavMethod } from "./entities/nav-method.entity";
 import { NavMethodValue } from "./entities/nav-method-value.entity";
 import { TotalNavSnapshot } from "./entities/total-nav-snapshot.entity";
+import { NavMethodValueResponseDto } from "./dto/nav-method-value.dto";
+import { TotalNavSnapshotResponseDto } from "./dto/total-nav-snapshot.dto";
 
 @Injectable()
 export class NavService {
@@ -417,7 +420,7 @@ export class NavService {
    * @param fundChainId The fund chain ID
    * @returns The latest NAV update snapshot
    */
-  async getLatestNavUpdateSnapshot(fundAddress: string, fundChainId?: ChainId): Promise<TotalNavSnapshot> {
+  async getLatestNavUpdateSnapshot(fundAddress: string, fundChainId?: ChainId): Promise<TotalNavSnapshotResponseDto> {
     // Create a query to find the fund
     const query: any = { fundAddress };
 
@@ -429,7 +432,11 @@ export class NavService {
     const latestSnapshot = await this.totalNavSnapshotRepository.findOne({
       where: query,
       order: { navUpdateIndex: "DESC" },
-      relations: ["navUpdate", "navMethodValues"],
+      relations: {
+        navUpdate: true,
+        navMethodValues: true,
+      },
+      relationLoadStrategy: "query",
     });
 
     if (!latestSnapshot) {
@@ -450,7 +457,7 @@ export class NavService {
       throw new Error(`No NAV snapshot found for fund ${fundAddress}`);
     }
 
-    return latestSnapshot;
+    return plainToInstance(TotalNavSnapshotResponseDto, latestSnapshot);
   }
 
   /**

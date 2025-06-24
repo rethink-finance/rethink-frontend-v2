@@ -1,5 +1,8 @@
-import { IsString, IsNumber, IsOptional, IsDate } from "class-validator";
+import { IsString, IsNumber, IsOptional } from "class-validator";
+import { Exclude, Type } from "class-transformer";
 import { ChainId } from "../../types/enums/chain_id";
+import { NavMethodValueResponseDto } from "./nav-method-value.dto";
+import { NavUpdateResponseDto } from "./nav-update.dto";
 
 export class CreateTotalNavSnapshotDto {
   @IsString()
@@ -40,12 +43,27 @@ export class GetTotalNavSnapshotDto {
 }
 
 export class TotalNavSnapshotResponseDto {
-  id: number;
+  @Exclude()
+    id: number;
+
   fundAddress: string;
   fundChainId: string;
-  navUpdateId: number;
+
+  @Exclude()
+    navUpdateId: number;
+
   navUpdateIndex: number;
   totalSimulatedNav: string;
   totalSimulatedNavFormatted: string;
-  createdAt: Date;
+
+  @Type(() => NavUpdateResponseDto)
+    navUpdate?: NavUpdateResponseDto;
+
+  @Type(() => NavMethodValueResponseDto)
+    navMethodValues?: NavMethodValueResponseDto[];
+
+  calculatedAt: Date;
+
+  @Exclude()
+    createdAt: Date;
 }

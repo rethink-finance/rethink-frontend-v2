@@ -1,4 +1,5 @@
 import { IsString, IsNumber, IsOptional, IsDate } from "class-validator";
+import { Exclude } from "class-transformer";
 import { ChainId } from "../../types/enums/chain_id";
 
 export class CreateNavMethodValueDto {
@@ -64,17 +65,32 @@ export class GetNavMethodValueDto {
 }
 
 export class NavMethodValueResponseDto {
-  id: number;
-  fundAddress: string;
-  fundChainId: string;
-  navUpdateId: number;
-  navUpdateIndex: number;
-  navMethodId: number;
-  totalNavSnapshotId: number;
+  @Exclude()
+    id: number;
+
+  @Exclude()
+    fundAddress: string;
+
+  @Exclude()
+    fundChainId: string;
+
+  @Exclude()
+    navUpdateId: number;
+
+  @Exclude()
+    navUpdateIndex: number;
+
+  @Exclude()
+    navMethodId: number;
+
+  @Exclude()
+    totalNavSnapshotId: number;
+
   detailsHash: string;
   simulatedNav: string;
   simulatedNavFormatted: string;
   calculatedAt: Date;
   createdAt: Date;
-  updatedAt: Date;
+  @Exclude()
+    updatedAt: Date;
 }
