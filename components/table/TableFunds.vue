@@ -48,6 +48,31 @@
       </div>
     </template>
 
+    <template #[`item.currentValue`]="{ item }">
+      <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
+        <v-progress-circular
+          v-if="item.isNavUpdatesLoading"
+          size="18"
+          width="2"
+          indeterminate
+        />
+        <template v-else-if="!item.currentValue">
+          N/A
+        </template>
+        <template v-else>
+          {{
+            formatTokenValue(
+              item.currentValue,
+              item.baseToken.decimals,
+            )
+              +
+              " " +
+              item.baseToken.symbol
+          }}
+        </template>
+      </div>
+    </template>
+
     <!-- cumulative -->
     <template #[`item.cumulativeReturnPercent`]="{ item }">
       <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
@@ -120,6 +145,11 @@ const headers: any = computed(() => [
   {
     title: "Latest NAV",
     key: "lastNAVUpdateTotalNAV",
+    align: "end",
+  },
+  {
+    title: "Current Value",
+    key: "currentValue",
     align: "end",
   },
   // {

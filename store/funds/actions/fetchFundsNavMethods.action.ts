@@ -1,12 +1,11 @@
-import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { excludeNAVDetailsHashes } from "../config/excludedNAVDetailsHashes.config";
+import { useFundsStore } from "../funds.store";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { type ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
-import { excludeNAVDetailsHashes } from "../config/excludedNAVDetailsHashes.config";
-import { useFundsStore } from "../funds.store";
 
 // Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
 const excludeNAVDetails: boolean = true;
@@ -71,20 +70,13 @@ async function processFundNavData(
   fundsInfoArrays: any[],
   allMethods: INAVMethod[],
 ) {
-  const web3Store = useWeb3Store();
   fundsStore.chainFundNAVUpdates[chainId][fundAddress] = [];
 
   if (!fundNAVData.encodedNavUpdate?.length) return;
-  const fundContract = web3Store.getCustomContract(
-    chainId,
-    GovernableFund.abi,
-    fundAddress,
-  );
   const navUpdates = await fundsStore.fundStore.parseFundNAVUpdates(
     chainId,
     fundNAVData,
     fundAddress,
-    fundContract,
   );
 
   fundsStore.chainFundNAVUpdates[chainId][fundAddress] = navUpdates;

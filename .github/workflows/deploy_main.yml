@@ -34,6 +34,7 @@ jobs:
           ENV_EXCLUDE_TEST_FUNDS: true
           BASE_DOMAIN: "app.rethink.finance"
           WALLET_CONNECT_PROJECT_ID: ${{ secrets.WALLET_CONNECT_PROJECT_ID }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
           # Indexer
           GRAPH_BASE_URL: "https://api.studio.thegraph.com/query/"
           GRAPH_USERID: "96286"

@@ -1,7 +1,8 @@
-import { chainIds } from "~/store/web3/networksMap";
-import type { ChainId } from "~/types/enums/chain_id";
 import { excludedFundAddresses } from "../config/excludedFundAddresses.config";
 import { useFundsStore } from "../funds.store";
+import { fetchFundsLatestSnapshotsAction } from "./fetchFundLatestSnapshot.action";
+import type { ChainId } from "~/types/enums/chain_id";
+import { chainIds } from "~/store/web3/networksMap";
 // You can see test funds by storing:
 // excludeTestFunds: false
 // to local storage.
@@ -51,8 +52,17 @@ export async function fetchFundsAction(): Promise<void> {
       fundAddresses,
       fundsInfo,
     );
-    fundsStore.chainFunds[chainId] = funds;
-    console.debug(`Chain ${chainId} - Funds Metadata: `, funds);
+
+    // Fetch latest snapshot for each fund to get current value
+    try {
+      const fundsWithCurrentValue = await fetchFundsLatestSnapshotsAction(funds);
+      fundsStore.chainFunds[chainId] = fundsWithCurrentValue;
+      console.debug(`Chain ${chainId} - Funds with Current Value: `, fundsWithCurrentValue);
+    } catch (error: any) {
+      console.error("Failed to fetch latest snapshots", chainId, error);
+      fundsStore.chainFunds[chainId] = funds;
+      console.debug(`Chain ${chainId} - Funds Metadata (without Current Value): `, funds);
+    }
 
     // Fetch NAV data and calculate performance metrics
     try {

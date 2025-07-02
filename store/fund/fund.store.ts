@@ -717,7 +717,6 @@ export const useFundStore = defineStore({
       );
     },
     async fetchFundContractBaseTokenBalance() {
-      if (!this.activeAccountAddress) return;
       if (!this.fund?.address) return;
 
       this.fund.fundContractBaseTokenBalanceLoading = true;

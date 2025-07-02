@@ -51,6 +51,8 @@ export default defineNuxtConfig({
       ZODIAC_GRAPH_AVALANCHE: process.env.ZODIAC_GRAPH_AVALANCHE,
       ZODIAC_GRAPH_BSC: process.env.ZODIAC_GRAPH_BSC,
       ZODIAC_GRAPH_BASE: process.env.ZODIAC_GRAPH_BASE,
+      // Backend URL for API calls
+      BACKEND_URL: process.env.BACKEND_URL || "http://localhost:8000",
       // Explorers for loading ABIs
       ETHERSCAN_KEY: process.env.ETHERSCAN_KEY,
       POLYGONSCAN_KEY: process.env.POLYGONSCAN_KEY,
@@ -155,4 +157,3 @@ export default defineNuxtConfig({
   },
   compatibilityDate: "2024-08-20",
 });
-
