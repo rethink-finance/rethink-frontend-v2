@@ -62,6 +62,7 @@ export default interface IFund {
   governanceTokenTotalSupply: bigint;
   lastNAVUpdateTotalNAV?: bigint;
   currentValue?: bigint;
+  currentValueCalculatedAt?: string;
   currentValueFormatted?: string;
   totalDepositBalance: bigint;
   cumulativeReturnPercent?: number;

@@ -22,8 +22,17 @@ export async function fetchFundLatestSnapshotAction(fund: IFund): Promise<IFund>
     console.warn("Fund ", fund.chainId, fund.address," NAV SNAPSHOT", data);
 
     // Add the current value to the fund object
+    let currentValueCalculatedAt;
+    try {
+      if (data?.calculatedAt) {
+        currentValueCalculatedAt = formatDateToLocaleString(new Date(data.calculatedAt));
+      }
+    } catch (error: any) {
+      console.error(error);
+    }
     return {
       ...fund,
+      currentValueCalculatedAt,
       currentValue: BigInt(data.totalSimulatedNav),
       currentValueFormatted: data.totalSimulatedNavFormatted,
     };

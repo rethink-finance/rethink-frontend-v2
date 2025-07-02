@@ -26,28 +26,6 @@
       />
     </template>
 
-    <template #[`item.lastNAVUpdateTotalNAV`]="{ item }">
-      <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
-        <v-progress-circular
-          v-if="item.isNavUpdatesLoading"
-          size="18"
-          width="2"
-          indeterminate
-        />
-        <template v-else>
-          {{
-            formatTokenValue(
-              item.lastNAVUpdateTotalNAV,
-              item.baseToken.decimals,
-            )
-              +
-              " " +
-              item.baseToken.symbol
-          }}
-        </template>
-      </div>
-    </template>
-
     <template #[`item.currentValue`]="{ item }">
       <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
         <v-progress-circular
@@ -56,19 +34,38 @@
           width="2"
           indeterminate
         />
-        <template v-else-if="!item.currentValue">
+        <template v-else-if="!item.currentValue || !item.lastNAVUpdateTotalNAV">
           N/A
         </template>
         <template v-else>
-          {{
-            formatTokenValue(
-              item.currentValue,
-              item.baseToken.decimals,
-            )
-              +
-              " " +
-              item.baseToken.symbol
-          }}
+          <v-tooltip v-if="item.currentValue && item.currentValueCalculatedAt" location="bottom">
+            <template #activator="{ props }">
+              <span v-bind="props">
+                {{
+                  formatTokenValue(
+                    item.currentValue || item.lastNAVUpdateTotalNAV,
+                    item.baseToken.decimals,
+                  )
+                    +
+                    " " +
+                    item.baseToken.symbol
+                }}
+              </span>
+            </template>
+            Calculated on:
+            <strong>{{ item.currentValueCalculatedAt }}</strong>
+          </v-tooltip>
+          <span v-else>
+            {{
+              formatTokenValue(
+                item.currentValue || item.lastNAVUpdateTotalNAV,
+                item.baseToken.decimals,
+              )
+                +
+                " " +
+                item.baseToken.symbol
+            }}
+          </span>
         </template>
       </div>
     </template>
@@ -140,11 +137,6 @@ const headers: any = computed(() => [
     key: "chainShort",
     width: 62,
     maxWidth: 62,
-    align: "end",
-  },
-  {
-    title: "Latest NAV",
-    key: "lastNAVUpdateTotalNAV",
     align: "end",
   },
   {
