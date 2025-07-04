@@ -34,7 +34,7 @@
           width="2"
           indeterminate
         />
-        <template v-else-if="!item.currentValue || !item.lastNAVUpdateTotalNAV">
+        <template v-else-if="!item.currentValue && !item.lastNAVUpdateTotalNAV">
           N/A
         </template>
         <template v-else>
@@ -55,17 +55,29 @@
             Calculated on:
             <strong>{{ item.currentValueCalculatedAt }}</strong>
           </v-tooltip>
-          <span v-else>
-            {{
-              formatTokenValue(
-                item.currentValue || item.lastNAVUpdateTotalNAV,
-                item.baseToken.decimals,
-              )
-                +
-                " " +
-                item.baseToken.symbol
-            }}
-          </span>
+          <v-tooltip v-else location="bottom">
+            <template #activator="{ props }">
+              <span v-bind="props">
+                {{
+                  formatTokenValue(
+                    item.currentValue || item.lastNAVUpdateTotalNAV,
+                    item.baseToken.decimals,
+                  )
+                    +
+                    " " +
+                    item.baseToken.symbol
+                }}
+              </span>
+            </template>
+            <strong>
+              <template v-if="item?.navUpdates?.length > 0">
+                Based on the last NAV update
+              </template>
+              <template  v-else>
+                Based on the current NAV methods.
+              </template>
+            </strong>
+          </v-tooltip>
         </template>
       </div>
     </template>
