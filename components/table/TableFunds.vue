@@ -26,7 +26,7 @@
       />
     </template>
 
-    <template #[`item.currentValue`]="{ item }">
+    <template #[`item.totalSimulatedNav`]="{ item }">
       <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
         <v-progress-circular
           v-if="item.isNavUpdatesLoading"
@@ -34,33 +34,38 @@
           width="2"
           indeterminate
         />
-        <template v-else-if="!item.currentValue && !item.lastNAVUpdateTotalNAV">
+        <template v-else-if="!item.totalSimulatedNav && !item.lastNAVUpdateTotalNAV">
           N/A
         </template>
         <template v-else>
-          <v-tooltip v-if="item.currentValue && item.currentValueCalculatedAt" location="bottom">
+          <v-tooltip v-if="item.totalSimulatedNav && item.totalSimulatedNavCalculatedAt" location="bottom">
             <template #activator="{ props }">
-              <span v-bind="props">
-                {{
-                  formatTokenValue(
-                    item.currentValue || item.lastNAVUpdateTotalNAV,
-                    item.baseToken.decimals,
-                  )
-                    +
-                    " " +
-                    item.baseToken.symbol
-                }}
-              </span>
+              <div class="d-flex flex-column align-center" v-bind="props">
+                <div class="text-white">
+                  {{
+                    formatTokenValue(
+                      item.totalSimulatedNav || item.lastNAVUpdateTotalNAV,
+                      item.baseToken.decimals,
+                    )
+                      +
+                      " " +
+                      item.baseToken.symbol
+                  }}
+                </div>
+                <div v-if="item.totalSimulatedNavUSDFormatted" class="nav_usd_value">
+                  {{ item.totalSimulatedNavUSDFormatted }}
+                </div>
+              </div>
             </template>
-            Calculated on:
-            <strong>{{ item.currentValueCalculatedAt }}</strong>
+            Calculated on
+            <strong>{{ item.totalSimulatedNavCalculatedAt }}</strong>
           </v-tooltip>
           <v-tooltip v-else location="bottom">
             <template #activator="{ props }">
               <span v-bind="props">
                 {{
                   formatTokenValue(
-                    item.currentValue || item.lastNAVUpdateTotalNAV,
+                    item.totalSimulatedNav || item.lastNAVUpdateTotalNAV,
                     item.baseToken.decimals,
                   )
                     +
@@ -153,7 +158,7 @@ const headers: any = computed(() => [
   },
   {
     title: "Current Value",
-    key: "currentValue",
+    key: "totalSimulatedNav",
     align: "end",
   },
   // {
@@ -263,6 +268,10 @@ const navigateFundDetails = (event: any, row: any) => {
     align-items: center;
     gap: 8px;
   }
+}
+
+.nav_usd_value {
+  color: $color-text-irrelevant;
 }
 
 .loading_skeleton {

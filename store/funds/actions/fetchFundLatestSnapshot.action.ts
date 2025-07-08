@@ -22,19 +22,21 @@ export async function fetchFundLatestSnapshotAction(fund: IFund): Promise<IFund>
     console.warn("Fund ", fund.chainId, fund.address," NAV SNAPSHOT", data);
 
     // Add the current value to the fund object
-    let currentValueCalculatedAt;
+    let totalSimulatedNavCalculatedAt;
     try {
       if (data?.calculatedAt) {
-        currentValueCalculatedAt = formatDateToLocaleString(new Date(data.calculatedAt));
+        totalSimulatedNavCalculatedAt = formatDateToLocaleString(new Date(data.calculatedAt));
       }
     } catch (error: any) {
       console.error(error);
     }
     return {
       ...fund,
-      currentValueCalculatedAt,
-      currentValue: BigInt(data.totalSimulatedNav),
-      currentValueFormatted: data.totalSimulatedNavFormatted,
+      totalSimulatedNavCalculatedAt,
+      totalSimulatedNav: BigInt(data.totalSimulatedNav),
+      totalSimulatedNavFormatted: data.totalSimulatedNavFormatted,
+      totalSimulatedNavUSD: data.totalSimulatedNavUSD,
+      totalSimulatedNavUSDFormatted: data.totalSimulatedNavUSDFormatted,
     };
   } catch (error) {
     console.error(`Error fetching latest snapshot for fund ${fund.chainId} ${fund.address}:`, error);
