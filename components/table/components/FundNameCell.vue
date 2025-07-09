@@ -4,7 +4,9 @@
       <img cover :src="props.image" />
     </v-avatar>
     <div class="title_wrapper">
-      <h4>{{ title }}</h4>
+      <h4 class="text-white">
+        {{ title }}
+      </h4>
 
       <div v-if="strategistName" class="strategist_url">
         <h5>by {{ strategistName }}</h5>

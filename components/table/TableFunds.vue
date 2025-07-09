@@ -256,7 +256,7 @@ const navigateFundDetails = (event: any, row: any) => {
       transition:
         background-color 0.3s ease,
         box-shadow 0.3s ease;
-      color: $color-white;
+      color: $color-light-subtitle;
       outline: 2px solid #111c35;
       background-color: $color-table-row;
 
