@@ -43,8 +43,9 @@ const props = defineProps({
 .title_wrapper {
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
-  gap: 0.25rem;
+  justify-content: center;
+  //justify-content: space-around;
+  gap: 0.125rem;
   flex-grow: 1; /* Allow the title wrapper to fill available space */
   min-width: 0; /* Prevents flex items from growing past their content size */
 
