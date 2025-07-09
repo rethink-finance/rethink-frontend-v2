@@ -20,10 +20,7 @@
     </template>
 
     <template #[`item.chainShort`]="{ item }">
-      <IconChain
-        :chain-short="item.chainShort"
-        class="mr-2"
-      />
+      <IconChain :chain-short="item.chainShort" class="mr-2" />
     </template>
 
     <template #[`item.totalSimulatedNav`]="{ item }">
@@ -34,43 +31,57 @@
           width="2"
           indeterminate
         />
-        <template v-else-if="!item.totalSimulatedNav && !item.lastNAVUpdateTotalNAV">
+        <template
+          v-else-if="!item.totalSimulatedNav && !item.lastNAVUpdateTotalNAV"
+        >
           N/A
         </template>
         <template v-else>
-          <v-tooltip v-if="item.totalSimulatedNav && item.totalSimulatedNavCalculatedAt" location="bottom">
+          <v-tooltip
+            v-if="item.totalSimulatedNav && item.totalSimulatedNavCalculatedAt"
+            :disabled="!appSettingsStore.isManageMode"
+            location="bottom"
+          >
             <template #activator="{ props }">
-              <div class="d-flex flex-column align-center" v-bind="props">
+              <div class="d-flex flex-column" v-bind="props">
                 <div class="text-white">
                   {{
-                    formatTokenValue(
-                      item.totalSimulatedNav || item.lastNAVUpdateTotalNAV,
-                      item.baseToken.decimals,
-                    )
-                      +
-                      " " +
-                      item.baseToken.symbol
+                    formatNumberShort(
+                      formatTokenValue(
+                        item.totalSimulatedNav || item.lastNAVUpdateTotalNAV,
+                        item.baseToken.decimals,
+                        false,
+                        false,
+                      ),
+                    ) +
+                    " " +
+                    item.baseToken.symbol
                   }}
                 </div>
-                <div v-if="item.totalSimulatedNavUSDFormatted" class="nav_usd_value">
-                  {{ item.totalSimulatedNavUSDFormatted }}
+                <div v-if="item.totalSimulatedNavUSD" class="nav_usd_value">
+                  ${{ formatNumberShort(item.totalSimulatedNavUSD) }}
                 </div>
               </div>
             </template>
             Calculated on
             <strong>{{ item.totalSimulatedNavCalculatedAt }}</strong>
           </v-tooltip>
-          <v-tooltip v-else location="bottom">
+          <v-tooltip
+            v-else
+            location="bottom"
+            :disabled="!appSettingsStore.isManageMode"
+          >
             <template #activator="{ props }">
               <span v-bind="props">
                 {{
-                  formatTokenValue(
-                    item.totalSimulatedNav || item.lastNAVUpdateTotalNAV,
-                    item.baseToken.decimals,
-                  )
-                    +
-                    " " +
-                    item.baseToken.symbol
+                  formatNumberShort(
+                    formatTokenValue(
+                      item.totalSimulatedNav || item.lastNAVUpdateTotalNAV,
+                      item.baseToken.decimals,
+                    ),
+                  ) +
+                  " " +
+                  item.baseToken.symbol
                 }}
               </span>
             </template>
@@ -78,9 +89,7 @@
               <template v-if="item?.navUpdates?.length > 0">
                 Based on the last NAV update
               </template>
-              <template  v-else>
-                Based on the current NAV methods.
-              </template>
+              <template v-else> Based on the current NAV methods. </template>
             </strong>
           </v-tooltip>
         </template>
@@ -103,7 +112,10 @@
     </template>
 
     <template #[`item.positionTypeCounts`]="{ item }">
-      <PositionTypesBar :position-type-counts="item.positionTypeCounts ?? []" class="position_types_bar" />
+      <PositionTypesBar
+        :position-type-counts="item.positionTypeCounts ?? []"
+        class="position_types_bar"
+      />
     </template>
 
     <template #bottom>
@@ -120,15 +132,18 @@
 import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
 import FundNameCell from "./components/FundNameCell.vue";
 import {
+  formatNumberShort,
   formatPercent,
   formatTokenValue,
 } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 import type IFund from "~/types/fund";
+import { useSettingsStore } from "~/store/settings/settings.store";
 
 const { getFundDetailsUrl } = usePageNavigation();
 const router = useRouter();
+const appSettingsStore = useSettingsStore();
 
 defineProps({
   items: {
@@ -207,7 +222,7 @@ const navigateFundDetails = (event: any, row: any) => {
   const target = event.target as HTMLElement;
 
   if (target.tagName.toLowerCase() === "a" || target.closest("a")) {
-  // If the target is an anchor tag, prevent the row navigation
+    // If the target is an anchor tag, prevent the row navigation
     return;
   }
 
@@ -239,8 +254,10 @@ const navigateFundDetails = (event: any, row: any) => {
     .v-data-table__tr {
       height: 72px;
       cursor: pointer;
-      transition: background-color 0.3s ease, box-shadow 0.3s ease;
-      color: $color-steel-blue;
+      transition:
+        background-color 0.3s ease,
+        box-shadow 0.3s ease;
+      color: $color-white;
       outline: 2px solid #111c35;
       background-color: $color-table-row;
 
@@ -271,7 +288,7 @@ const navigateFundDetails = (event: any, row: any) => {
 }
 
 .nav_usd_value {
-  color: $color-text-irrelevant;
+  color: $color-light-subtitle;
 }
 
 .loading_skeleton {
@@ -291,7 +308,7 @@ const navigateFundDetails = (event: any, row: any) => {
   transform: scaleX(-1);
 }
 
-.position_types_bar{
+.position_types_bar {
   max-width: 100px;
   margin-left: auto;
 }
