@@ -1,0 +1,1 @@
+import{_ as o,f as t,m as n,o as s}from"./DCvlFMIw.js";const _={},c={class:"main_header"};function r(e,a){return s(),t("div",c,[n(e.$slots,"default")])}const f=o(_,[["render",r]]);export{f as default};
