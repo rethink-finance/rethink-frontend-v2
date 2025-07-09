@@ -23,7 +23,7 @@
       <IconChain :chain-short="item.chainShort" class="mr-2" />
     </template>
 
-    <template #[`item.totalSimulatedNav`]="{ item }">
+    <template #[`item.totalSimulatedNavUSD`]="{ item }">
       <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
         <v-progress-circular
           v-if="item.isNavUpdatesLoading"
@@ -173,7 +173,7 @@ const headers: any = computed(() => [
   },
   {
     title: "Current Value",
-    key: "totalSimulatedNav",
+    key: "totalSimulatedNavUSD",
     align: "end",
   },
   // {
@@ -191,7 +191,6 @@ const headers: any = computed(() => [
   {
     title: "Cumulative",
     key: "cumulativeReturnPercent",
-    value: (v: IFund) => formatPercent(v.cumulativeReturnPercent, true),
     align: "end",
   },
   // {
