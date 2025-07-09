@@ -25,7 +25,7 @@ export const formatDate = (date: Date) => {
  * @returns {string} The formatted date string.
  */
 export const formatDateLong = (date: Date) => {
-  if(!date) return "";
+  if (!date) return "";
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -57,12 +57,12 @@ export const formatDateToLocaleString = (date: Date, includeWeekday = true) => {
 
   // TODO: we can add a locale parameter to this function to allow for custom locale formatting.
   const options: Intl.DateTimeFormatOptions = {
-    year: "numeric",    // e.g., "2023"
-    month: "short",     // e.g., "Jan"
-    day: "numeric",     // e.g., "5"
-    hour: "numeric",    // e.g., "5 PM"
-    minute: "2-digit",  // e.g., "05"
-    hour12: false,        // 12-hour clock, "AM/PM"
+    year: "numeric", // e.g., "2023"
+    month: "short", // e.g., "Jan"
+    day: "numeric", // e.g., "5"
+    hour: "numeric", // e.g., "5 PM"
+    minute: "2-digit", // e.g., "05"
+    hour12: false, // 12-hour clock, "AM/PM"
   };
 
   if (includeWeekday) {
@@ -70,7 +70,7 @@ export const formatDateToLocaleString = (date: Date, includeWeekday = true) => {
   }
 
   return date.toLocaleString("en-US", options);
-}
+};
 
 /**
  * Converts a decimal number to a percentage string.
@@ -82,7 +82,11 @@ export const formatDateToLocaleString = (date: Date, includeWeekday = true) => {
  * @param defaultValue - Optional. Default return value if the passed value is null or undefined.
  * @returns {string} A string representing the converted percentage with two decimal places.
  */
-export const formatPercent = (value?: number | bigint, includeSign: boolean = false, defaultValue: any = undefined): string => {
+export const formatPercent = (
+  value?: number | bigint,
+  includeSign: boolean = false,
+  defaultValue: any = undefined,
+): string => {
   if (value === undefined || value === null) return defaultValue;
   value = Number(value);
 
@@ -107,7 +111,8 @@ export const formatNumberShort = (number?: number | bigint | string | null) => {
   // Convert to uppercase.
   // Remove trailing ".00";
   try {
-    if (number === undefined || number === null || isNaN(Number(number))) return "N/A";
+    if (number === undefined || number === null || isNaN(Number(number)))
+      return "N/A";
 
     const numericValue = Number(number);
 
@@ -124,7 +129,7 @@ export const formatNumberShort = (number?: number | bigint | string | null) => {
 
     // Remove unnecessary ".0" from abbreviations like '1.0T' -> '1T'
     formatted = formatted.replace(/(\.\d)0(?=[KMBT])/g, "$1"); // Handles decimals like 1.50K -> 1.5K
-    formatted = formatted.replace(/\.0(?=[KMBT])/g, "");       // Handles exact whole numbers like 1.0T -> 1T
+    formatted = formatted.replace(/\.0(?=[KMBT])/g, ""); // Handles exact whole numbers like 1.0T -> 1T
     return formatted;
   } catch (error: any) {
     console.error("failed formatNumberShort ", number, error);
@@ -147,7 +152,6 @@ export const commify = (value: string | number | bigint) => {
   // Convert fraction part into a number
   const asDecimal = frac ? parseFloat(`0.${frac}`) : 0;
 
-
   // if decimales are bigger than 0.9999, we round up the whole number
   if (asDecimal >= 0.9999) {
     whole = (BigInt(whole) + 1n).toString();
@@ -160,17 +164,14 @@ export const commify = (value: string | number | bigint) => {
   // Numbers bigger than 1: Force exactly 2 decimal places
   else if (Number(match[2]) > 0 && asDecimal > 0) {
     frac = asDecimal.toFixed(2).split(".")[1];
-  }
-  else if (asDecimal > 0) {
+  } else if (asDecimal > 0) {
     // Small numbers: Keep first 3 significant digits
-    if(Number(match[2]) === 0) {
+    if (Number(match[2]) === 0) {
       frac = Number(asDecimal.toPrecision(3)).toString().split(".")[1] || "";
-    }
-    else {
+    } else {
       frac = asDecimal.toFixed(2).split(".")[1];
     }
-  }
-  else {
+  } else {
     // Remove fraction if it's zero
     frac = "";
   }
@@ -180,7 +181,7 @@ export const commify = (value: string | number | bigint) => {
     commifiedValue += `.${frac}`;
   }
   return commifiedValue;
-}
+};
 
 /**
  * Formats a token value based on its decimals.
@@ -203,17 +204,21 @@ export const formatTokenValue = (
   try {
     if (Number(value) === 0) return "0";
     let formattedValue = ethers.formatUnits(value, decimals);
+    console.log("governance token balance formattedValue: ", formattedValue);
     if (shouldRoundToSignificantDecimals) {
-      formattedValue = roundToSignificantDecimals(formattedValue, 3);
+      formattedValue = roundToSignificantDecimals(formattedValue, 2);
     }
 
     return shouldCommify ? commify(formattedValue) : formattedValue;
   } catch (error: any) {
     return ethers.formatUnits(value, decimals);
   }
-}
+};
 
-export const roundToSignificantDecimals = (value: number | string, precision: number = 3): string => {
+export const roundToSignificantDecimals = (
+  value: number | string,
+  fractionalSigDigits: number = 3,
+): string => {
   if (value === 0 || value === "0" || !value) return "0";
 
   // Convert the string to a number in scientific notation
@@ -221,22 +226,25 @@ export const roundToSignificantDecimals = (value: number | string, precision: nu
   if (isNaN(num)) return "0";
   if (Number.isInteger(num)) return num.toString();
 
-  // Convert to scientific notation
-  const scientificNotation = num.toExponential();
+  if (!isFinite(num)) return "0";
 
-  // Split into the coefficient and the exponent
-  const [coefficient, exponent] = scientificNotation.split("e");
+  const intPart = Math.trunc(num);
+  const decimalPart = Math.abs(num - intPart);
 
-  // Round the coefficient to the desired precision
-  const roundedCoefficient = parseFloat(parseFloat(coefficient).toPrecision(precision)).toString();
+  if (decimalPart === 0) return intPart.toString();
 
-  // Combine the rounded coefficient with the exponent
-  const roundedNumber = roundedCoefficient + "e" + exponent;
+  // Shift fractional part into whole number to extract significant digits
+  const shifted = decimalPart.toExponential(fractionalSigDigits - 1);
+  const roundedDecimal = parseFloat(shifted);
 
-  // Convert back to a string in standard notation
-  return parseFloat(roundedNumber).toString();
-}
+  const roundedTotal = intPart + (num < 0 ? -roundedDecimal : roundedDecimal);
 
+  // Prevent scientific notation in result
+  return roundedTotal.toLocaleString("fullwide", {
+    useGrouping: false,
+    maximumSignificantDigits: 21,
+  });
+};
 
 // we use this to convert the fee from bps to percentage and vice versa
 export const fromBpsToPercentage = (feeBps?: any) => {
@@ -257,14 +265,11 @@ export const formatQuorumPercentage = (
   quorumDenominator: string | number | bigint,
 ) => {
   return formatPercent(
-    quorumDenominator
-      ? Number(quorumNumerator) / Number(quorumDenominator)
-      : 0,
+    quorumDenominator ? Number(quorumNumerator) / Number(quorumDenominator) : 0,
     false,
     "N/A",
   )
-};
-
+}
 
 /**
  *
@@ -276,13 +281,10 @@ export const toCamelCase = (str: string) => {
     .toLowerCase()
     .split(" ")
     .map((word, index) =>
-      index === 0
-        ? word
-        : word.charAt(0).toUpperCase() + word.slice(1),
+      index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1),
     )
     .join("");
 }
-
 
 /**
  *
@@ -316,22 +318,22 @@ export const formatDuration = (totalSeconds: number): string => {
     // Check the third unit's value and round up the second if it's large enough
     const thirdUnit = result[2];
 
-    if (thirdUnit.value >= (TimeInSeconds[thirdUnit.unit] / 2)) {
+    if (thirdUnit.value >= TimeInSeconds[thirdUnit.unit] / 2) {
       result[1].value += 1;
     }
 
     result = result.slice(0, 2);
   }
 
-  return result
-    .map(({ unit, value }) => pluralizeWord(unit, value))
-    .join(", ") || "0 seconds";
+  return (
+    result.map(({ unit, value }) => pluralizeWord(unit, value)).join(", ") ||
+    "0 seconds"
+  );
 };
-
 
 export const formatCalldata = (calldata: any) => {
   try {
-    return JSON.stringify(calldata, null, 2)
+    return JSON.stringify(calldata, null, 2);
   } catch {
     console.warn("failed to format calldata", calldata);
     return calldata;
