@@ -100,6 +100,7 @@ export default defineComponent({
         key: "votingPower",
         sortable: true,
         align: "end",
+        value: (v: ITrendingDelegate) => roundToSignificantDecimals(v.votingPower),
       },
     ] as const),
   }),
