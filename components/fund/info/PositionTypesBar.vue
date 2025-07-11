@@ -41,12 +41,12 @@ export default {
   computed: {
     totalCountSum() {
       return this.positionTypeCounts.reduce((sum, current) => {
-        return sum + current.count;
+        return sum + BigInt(current.count);
       }, 0n);
     },
     calculatedPositionTypes() {
       return this.positionTypeCounts.filter(
-        positionType => positionType.count > 0n,
+        positionType => BigInt(positionType.count) > 0n,
       ).map((positionType) => {
         const width = Number(positionType.count) / Number(this.totalCountSum);
 

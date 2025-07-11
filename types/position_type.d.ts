@@ -4,6 +4,6 @@ export interface IPositionType {
 }
 
 export default interface IPositionTypeCount {
-  type: IPositionTypeRecord;
-  count: bigint;
+  type: IPositionType;
+  count: string; // Is bigint actually, but comes as string when serialized.
 }

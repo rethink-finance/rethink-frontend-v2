@@ -50,7 +50,7 @@ export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[], nav
 
     return {
       type: PositionTypesMap[positionType],
-      count: counts[positionType],
+      count: counts[positionType].toString(),
     }
   })
 }

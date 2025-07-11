@@ -46,7 +46,10 @@ import { fetchRoleModAddressAddressAction } from "~/store/fund/actions/fetchRole
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
   chainFunds: Record<ChainId, Record<string, IFund | undefined>>;
-  chainAddressSourceCode: Record<ChainId, Record<string, Record<string, any> | undefined>>;
+  chainAddressSourceCode: Record<
+    ChainId,
+    Record<string, Record<string, any> | undefined>
+  >;
   fundUserData: IFundUserData;
   userRedemptionRequest?: IFundTransactionRequest;
   selectedFundChain: ChainId;
@@ -108,17 +111,19 @@ export const useFundStore = defineStore({
       return this.fund?.address ?? this.selectedFundAddress ?? "";
     },
     fund(): IFund | undefined {
-      return this.chainFunds?.[this.selectedFundChain]?.[this.selectedFundAddress];
+      return this.chainFunds?.[this.selectedFundChain]?.[
+        this.selectedFundAddress
+      ];
     },
     addressLabelMap(): Record<string, string> {
       const labels: Record<string, string> = {};
       if (this.fund?.safeAddress) {
-        labels[this.fund.safeAddress] = this.fund?.title + " Safe"
+        labels[this.fund.safeAddress] = this.fund?.title + " Safe";
       }
       if (this.fund?.address) {
-        labels[this.fund.address] = this.fund?.title + " Vault"
+        labels[this.fund.address] = this.fund?.title + " Vault";
       }
-      return labels
+      return labels;
     },
     isUsingZodiacPilotExtension(): boolean {
       // Check if user is using Zodiac Pilot extension.
@@ -186,7 +191,7 @@ export const useFundStore = defineStore({
 
       return FixedNumber.fromString("1").div(this.baseToFundTokenExchangeRate);
     },
-    userDepositRequest(): IFundTransactionRequest  | undefined{
+    userDepositRequest(): IFundTransactionRequest | undefined {
       return this.fundUserData.depositRequest;
     },
     userRedemptionRequest(): IFundTransactionRequest | undefined {
@@ -473,7 +478,10 @@ export const useFundStore = defineStore({
       this.fundRoleModAddress = {};
       this.fundUserData = structuredClone(DEFAULT_FUND_USER_DATA);
     },
-    async fetchAddressSourceCode(chainId: ChainId, address: string): Promise<Record<string, any> | undefined> {
+    async fetchAddressSourceCode(
+      chainId: ChainId,
+      address: string,
+    ): Promise<Record<string, any> | undefined> {
       if (!address) return;
       if (this.chainAddressSourceCode[chainId][address]) {
         return this.chainAddressSourceCode[chainId][address];
@@ -492,8 +500,8 @@ export const useFundStore = defineStore({
       // Check if address is same as the fund address.
       if (address.toLowerCase() === this.fund?.address.toLowerCase()) {
         const governableFundSourceCode = {
-          "ContractName": this.fund.title + " (GovernableFund)",
-          "ABI": JSON.stringify(GovernableFund.abi),
+          ContractName: this.fund.title + " (GovernableFund)",
+          ABI: JSON.stringify(GovernableFund.abi),
         };
         this.chainAddressSourceCode[chainId][address] = governableFundSourceCode;
         return governableFundSourceCode;
@@ -521,12 +529,15 @@ export const useFundStore = defineStore({
         return undefined;
       }
     },
-    async getAddressLabel(address: string, chainId?: ChainId): Promise<string | undefined> {
+    async getAddressLabel(
+      address: string,
+      chainId?: ChainId,
+    ): Promise<string | undefined> {
       if (!chainId) return undefined;
       if (this.addressLabelMap[address]) {
         return this.addressLabelMap[address];
       }
-      if (this.fundsStore.chainAddressLabelMap[chainId]?.[address])  {
+      if (this.fundsStore.chainAddressLabelMap[chainId]?.[address]) {
         return this.fundsStore.chainAddressLabelMap[chainId]?.[address];
       }
 
@@ -535,7 +546,7 @@ export const useFundStore = defineStore({
       if (sourceCode?.symbol) {
         let label = sourceCode?.symbol;
         if (sourceCode?.ContractName) {
-          label += ` (${sourceCode.ContractName})`
+          label += ` (${sourceCode.ContractName})`;
           return label;
         }
       }
@@ -558,7 +569,10 @@ export const useFundStore = defineStore({
         fetchFundDataAction(fundChainId, fundAddress),
       );
     },
-    fetchFundSettings(fundChainId: ChainId, fundAddress: string): Promise<IFundSettings> {
+    fetchFundSettings(
+      fundChainId: ChainId,
+      fundAddress: string,
+    ): Promise<IFundSettings> {
       return useActionState("fetchFundSettingsAction", () =>
         fetchFundSettingsAction(fundChainId, fundAddress),
       );
@@ -593,10 +607,10 @@ export const useFundStore = defineStore({
       this.fund.pendingDepositBalanceLoading = true;
       this.fund.pendingRedemptionBalanceLoading = true;
 
-      this.web3Store.callWithRetry(
-        this.selectedFundChain,
-        () => this.fundContract.methods.getCurrentPendingDepositBal().call(),
-      )
+      this.web3Store
+        .callWithRetry(this.selectedFundChain, () =>
+          this.fundContract.methods.getCurrentPendingDepositBal().call(),
+        )
         .then((value: any) => {
           if (this.fund) {
             this.fund.pendingDepositBalance = value;
@@ -616,10 +630,10 @@ export const useFundStore = defineStore({
             this.fund.pendingDepositBalanceLoading = false;
           }
         });
-      this.web3Store.callWithRetry(
-        this.selectedFundChain,
-        () => this.fundContract.methods.getCurrentPendingWithdrawalBal().call(),
-      )
+      this.web3Store
+        .callWithRetry(this.selectedFundChain, () =>
+          this.fundContract.methods.getCurrentPendingWithdrawalBal().call(),
+        )
         .then((value: any) => {
           if (this.fund) {
             this.fund.pendingRedemptionBalance = value;
@@ -724,9 +738,10 @@ export const useFundStore = defineStore({
       try {
         balanceWei = await this.web3Store.callWithRetry(
           this.selectedFundChain,
-          () => this.fundBaseTokenContract.methods
-            .balanceOf(this.fund?.address)
-            .call(),
+          () =>
+            this.fundBaseTokenContract.methods
+              .balanceOf(this.fund?.address)
+              .call(),
         );
         this.fund.fundContractBaseTokenBalanceError = false;
       } catch (e) {
