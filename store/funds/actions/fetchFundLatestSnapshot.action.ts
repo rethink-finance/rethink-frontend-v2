@@ -30,6 +30,8 @@ export async function fetchFundLatestSnapshotAction(fund: IFund): Promise<IFund>
     } catch (error: any) {
       console.error(error);
     }
+
+    const positionTypesCounts = fund?.positionTypeCounts?.length ? fund?.positionTypeCounts : data?.positionTypeCounts?.length ? data.positionTypeCounts : [];
     return {
       ...fund,
       totalSimulatedNavCalculatedAt,
@@ -37,6 +39,13 @@ export async function fetchFundLatestSnapshotAction(fund: IFund): Promise<IFund>
       totalSimulatedNavFormatted: data.totalSimulatedNavFormatted,
       totalSimulatedNavUSD: data.totalSimulatedNavUSD,
       totalSimulatedNavUSDFormatted: data.totalSimulatedNavUSDFormatted,
+      // Metrics
+      totalDepositBalance: data.totalDepositBalance,
+      sharpeRatio: data.sharpeRatio,
+      lastNAVUpdateTotalNAV: data.totalNAV,
+      cumulativeReturnPercent: data.cumulativeReturnPercent,
+      positionTypeCounts: positionTypesCounts,
+      isNavUpdatesLoading: false,
     };
   } catch (error) {
     console.error(`Error fetching latest snapshot for fund ${fund.chainId} ${fund.address}:`, error);
@@ -54,7 +63,5 @@ export async function fetchFundsLatestSnapshotsAction(funds: IFund[]): Promise<I
   const updatedFundsPromises = funds.map(fund => fetchFundLatestSnapshotAction(fund));
 
   // Wait for all promises to resolve
-  const updatedFunds = await Promise.all(updatedFundsPromises);
-
-  return updatedFunds;
+  return await Promise.all(updatedFundsPromises);
 }

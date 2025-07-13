@@ -53,7 +53,7 @@ export async function fetchFundsAction(): Promise<void> {
       fundsInfo,
     );
 
-    // Fetch latest snapshot for each fund to get current value
+    // Fetch the latest snapshot for each fund to get current value
     try {
       const fundsWithCurrentValue = await fetchFundsLatestSnapshotsAction(funds);
       fundsStore.chainFunds[chainId] = fundsWithCurrentValue;
@@ -62,22 +62,24 @@ export async function fetchFundsAction(): Promise<void> {
       console.error("Failed to fetch latest snapshots", chainId, error);
       fundsStore.chainFunds[chainId] = funds;
       console.debug(`Chain ${chainId} - Funds Metadata (without Current Value): `, funds);
+
+      // BACKUP if backend data is not available, query chain
+      // Fetch NAV data and calculate performance metrics
+      try {
+        // Pass storeAllMethods: false as we don't want to save methods to all methods as they
+        // are not all there, because we pass filtered addresses instead of all addresses.
+        await fundsStore.fetchFundsNavMethods(chainId, filteredFundsInfoArrays, false);
+      } catch (error: any) {
+        console.error("Failed fetchFundsNavMethods", chainId, filteredFundsInfoArrays, error);
+        return
+      }
+      try {
+        await fundsStore.calculateFundsPerformanceMetrics(chainId);
+      } catch (error: any) {
+        console.error("Failed calculateFundsPerformanceMetrics", chainId, error);
+      }
     }
 
-    // Fetch NAV data and calculate performance metrics
-    try {
-      // Pass storeAllMethods: false as we don't want to save methods to all methods as they
-      // are not all there, because we pass filtered addresses instead of all addresses.
-      await fundsStore.fetchFundsNavMethods(chainId, filteredFundsInfoArrays, false);
-    } catch (error: any) {
-      console.error("Failed fetchFundsNavMethods", chainId, filteredFundsInfoArrays, error);
-      return
-    }
-    try {
-      await fundsStore.calculateFundsPerformanceMetrics(chainId);
-    } catch (error: any) {
-      console.error("Failed calculateFundsPerformanceMetrics", chainId, error);
-    }
     console.debug(`Funds fetched for chain: ${chainId}`);
   }
 
