@@ -77,7 +77,7 @@
                 >
                   <v-icon icon="mdi-delete" color="error" />
                 </UiButtonDetails>
-                <div v-else class="sub-steps__feedback-icons">
+                <div class="sub-steps__feedback-icons">
                   <Icon
                     v-if="substep.isValid === false"
                     icon="weui:error-outlined"

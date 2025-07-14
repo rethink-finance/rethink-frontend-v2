@@ -5,6 +5,11 @@ import detectProxyTarget from "evm-proxy-detection"
 import pLimit from "p-limit";
 import type { ExplorerConfig } from "~/types/explorer";
 import { configureAxios } from "~/services/http";
+import type {
+  IExplorerTokenTransfer,
+  IExplorerTransaction,
+  ITokenTransfer, ITransaction,
+} from "~/types/ethereum";
 
 // Make only 2 parallel requests at once.
 const explorerApiLimit = pLimit(1)
@@ -78,6 +83,83 @@ export class Explorer {
     return response.data.result[0] as any;
   }
 
+  /**
+   * Fetches transactions for a specific wallet address starting from a given block
+   * @param walletAddress The Ethereum wallet address to fetch transactions for
+   * @param startBlock The block number to start fetching transactions from
+   * @param endBlock The end block number to stop fetching transactions
+   * @returns An array of transactions
+   */
+  async fetchWalletTransactions(
+    walletAddress: string,
+    startBlock: number,
+    endBlock: number,
+  ): Promise<ITransaction[]> {
+    // Normalize wallet address
+    const address = walletAddress.toLowerCase();
+    const client = await this.getHttpClient()
+    const response = await client.get<{ status: string; result: string }>(this.apiUrl, {
+      params: {
+        module: "account",
+        action: "txlist",
+        startblock: startBlock,
+        endblock: endBlock,
+        sort: "desc",
+        address,
+      },
+    })
+    if (response.data.status !== "1") {
+      // remove from cache so we can try again later
+      this.removeResponseFromCache(response)
+      throw new Error(response.data.result)
+    }
+
+    const transactionsData: IExplorerTransaction[] = response.data.result as any;
+    console.log("transactionsData data", transactionsData);
+
+    // Process and return transactions
+    return processExplorerTransactions(transactionsData, address);
+  }
+
+  /**
+   * Fetches token transfers for a specific wallet address starting from a given block
+   * @param walletAddress The Ethereum wallet address to fetch token transfers for
+   * @param startBlock The block number to start fetching token transfers from
+   * @param endBlock The end block number to stop fetching transactions
+   * @returns An array of token transfers
+   */
+  async fetchWalletTokenTransfers(
+    walletAddress: string,
+    startBlock: number,
+    endBlock: number,
+  ): Promise<ITokenTransfer[]> {
+    // Normalize wallet address
+    // const address = walletAddress.toLowerCase();
+    //
+    // // Fetch ERC-20 token transfers
+    // const tokenTxUrl = `https://api.etherscan.io/api?module=account&action=tokentx&address=${address}&startblock=${startBlock}&endblock=${endBlock}&sort=desc&apikey=${apiKey}`;
+    //
+    // let response;
+    // try {
+    //   response = await fetch(tokenTxUrl);
+    //   if (!response.ok) {
+    //     throw new Error(`HTTP error! status: ${response.status}`);
+    //   }
+    // } catch (fetchError: any) {
+    //   throw new Error(`Network error: ${fetchError.message}`);
+    // }
+    //
+    // const data: EtherscanTokenTransferResponse = await response.json();
+    //
+    // if (data.status !== "1" && data.message !== "No transactions found") {
+    //   throw new Error(`Etherscan API error: ${data.message}`);
+    // }
+
+    // Process and return token transfers
+    // return processExplorerTokenTransfers(data.result || [], address);
+    return []
+  }
+
   async detectProxyTarget(address: string): Promise<string | null> {
     const key = `proxyTarget:${address.toLowerCase()}`
     const cached = await this.cache?.getItem<{ target: string | null; timestamp: number }>(key)
@@ -143,3 +225,58 @@ const looksLike = (abi: JsonFragment[], expectedFunctions: string[]) => {
   return expectedFunctions.every((sig) => iface.hasFunction(sig))
 }
 
+
+/**
+ * Processes raw Explorer (etherscan) transactions into our application's format
+ */
+function processExplorerTransactions(
+  transactions: IExplorerTransaction[],
+  walletAddress: string,
+): ITransaction[] {
+  return transactions
+    .filter(tx => tx.isError === "0") // Filter out failed transactions
+    .map(tx => {
+      const isIncoming = tx.to.toLowerCase() === walletAddress.toLowerCase();
+
+      return {
+        hash: tx.hash,
+        blockNumber: parseInt(tx.blockNumber),
+        timestamp: parseInt(tx.timeStamp),
+        from: tx.from,
+        to: tx.to,
+        value: tx.value,
+        input: tx.input,
+        gasPrice: tx.gasPrice,
+        gasUsed: tx.gasUsed,
+        isIncoming,
+      };
+    });
+}
+
+/**
+ * Processes raw Explorer (etherscan) token transfers into our application's format
+ */
+function processExplorerTokenTransfers(
+  tokenTransfers: IExplorerTokenTransfer[],
+  walletAddress: string,
+): ITokenTransfer[] {
+  return tokenTransfers.map(transfer => {
+    const isIncoming = transfer.to.toLowerCase() === walletAddress.toLowerCase();
+
+    return {
+      hash: transfer.hash,
+      blockNumber: parseInt(transfer.blockNumber),
+      timestamp: parseInt(transfer.timeStamp),
+      from: transfer.from,
+      to: transfer.to,
+      value: transfer.value,
+      tokenName: transfer.tokenName,
+      tokenSymbol: transfer.tokenSymbol,
+      tokenDecimals: parseInt(transfer.tokenDecimal),
+      tokenContract: transfer.contractAddress,
+      gasPrice: transfer.gasPrice,
+      gasUsed: transfer.gasUsed,
+      isIncoming,
+    };
+  });
+}

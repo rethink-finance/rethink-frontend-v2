@@ -2,6 +2,8 @@
   <FundGovernanceDelegatedPermissions
     v-model="delegatedPermissionsEntry"
     :fields-map="DelegatedPermissionFieldsMap"
+    :chain-id="fundStore.selectedFundChain"
+    :safe-address="fundStore.fund?.safeAddress ?? ''"
     submit-label="Create Proposal"
     class="delegated-permission"
     @submit="submitProposal"

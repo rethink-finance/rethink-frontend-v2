@@ -52,6 +52,8 @@
       v-if="selectedStepIndex === 1"
       ref="delegatedPermissionsRef"
       v-model="delegatedPermissionsEntry"
+      :chain-id="fundChainId"
+      :safe-address="fundSettings?.safe ?? ''"
       :fields-map="DelegatedPermissionFieldsMap"
       submit-label="Save Permissions"
       title="Permissions"

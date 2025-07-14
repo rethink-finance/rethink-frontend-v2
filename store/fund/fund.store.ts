@@ -488,7 +488,7 @@ export const useFundStore = defineStore({
       }
       // console.log("Fetch target ABI action", chainId, address);
 
-      const { $getExplorer } = useNuxtApp(); // ✅ Works here
+      const { $getExplorer } = useNuxtApp();
       let explorer: Explorer;
       try {
         explorer = $getExplorer(chainId);

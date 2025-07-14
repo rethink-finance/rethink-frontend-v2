@@ -112,20 +112,12 @@ import {
 } from "~/types/enums/delegated_permission";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 import type { IRawTrx } from "~/types/zodiac-roles/role";
-import type IFundSettings from "~/types/fund_settings";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { useFundStore } from "~/store/fund/fund.store";
-import { useCreateFundStore } from "~/store/create-fund/createFund.store";
-
-// Interfaces for TypeScript
-interface Transaction {
-  blockNumber: number;
-  hash: string;
-  from: string;
-  to: string;
-  input: string;
-  gasUsed: bigint;
-}
+import {
+  useExplorerTransactionsFetcher,
+} from "~/composables/transactionsFetcher/useExplorerTransactionsFetcher";
+import type { ITransaction } from "~/types/ethereum";
+import type { ChainId } from "~/types/enums/chain_id";
 
 interface ProcessedData {
   func_sig: string;
@@ -158,19 +150,11 @@ interface Entry {
   [key: string]: any;
 }
 
-interface Web3Store {
-  callWithRetry: <T>(
-    chainId: number,
-    method: () => Promise<T>,
-    maxRetries?: number,
-    extraIgnorableErrorCodes?: any[],
-    timeoutMs?: number
-  ) => Promise<T>;
-}
-
 // Props
 const props = defineProps<{
   modelValue: Entry[];
+  chainId: ChainId,
+  safeAddress: string;
   title?: string;
   fieldsMap?: typeof DelegatedPermissionFieldsMap;
   submitLabel?: string;
@@ -207,10 +191,6 @@ const parsingProgress = ref(0); // Progress percentage (0-100)
 const toastStore = useToastStore();
 const permissionsProposalStore = usePermissionsProposalStore();
 const web3Store = useWeb3Store();
-const fundStore = useFundStore();
-const createFundStore = useCreateFundStore();
-
-const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
 
 // Web3 initialization
 const web3 = new Web3();
@@ -277,14 +257,17 @@ const createBatchRequest = (blockNumbers: number[]): { jsonrpc: string; method: 
 };
 
 // Function to send batch request
-const fetchBlocksInBatch = async (blockNumbers: number[]): Promise<any[]> => {
+// TODO it looks like something is wrong on ARB1, probably L1 and L2 blocks.. you can try input:
+//   address: 0x6EC175951624e1E1e6367Fa3dB90a1829E032Ec3
+//   start: 344556646
+//   end: 357623327
+const fetchBlocksInBatch = (blockNumbers: number[]): Promise<any[]> => {
   const batchRequest = createBatchRequest(blockNumbers);
-  const fundChainId = fundStore.selectedFundChain;
 
-  return web3Store.callWithRetry(fundChainId, async () => {
+  return web3Store.callWithRetry(props.chainId,  () => {
     const batch = new web3.eth.BatchRequest();
     const promises: Promise<any>[] = batchRequest.map((request) => {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => {
         const promise1 = batch.add({
           jsonrpc: "2.0",
           method: request.method,
@@ -300,19 +283,24 @@ const fetchBlocksInBatch = async (blockNumbers: number[]): Promise<any[]> => {
 };
 
 // Function to get transactions for address
-const getTransactionsForAddress = (address: string, blocks: any[]): Transaction[] => {
-  const transactions: Transaction[] = [];
+const getTransactionsForAddress = (address: string, blocks: any[]): ITransaction[] => {
+  const transactions: ITransaction[] = [];
+  console.log("BLOCKS ", blocks);
   for (const block of blocks) {
     if (block.transactions) {
       for (const tx of block.transactions) {
         if (tx.from && tx.from.toLowerCase() === address.toLowerCase()) {
+          console.log("tx", tx);
           transactions.push({
             blockNumber: parseInt(tx.blockNumber, 16),
             hash: tx.hash,
             from: tx.from,
             to: tx.to || "",
             input: tx.input,
-            gasUsed: BigInt(0),
+            timestamp: 0, // TODO Get timestamp from block, use block.timestamp
+            value: tx.value,
+            gasUsed: "0",
+            gasPrice: "0",
           });
         }
       }
@@ -320,12 +308,31 @@ const getTransactionsForAddress = (address: string, blocks: any[]): Transaction[
   }
   return transactions;
 };
+const { loading, error, fetchTransactions, fetchTokenTransfers } = useExplorerTransactionsFetcher();
 
 // Function to fetch transactions
-const getTransactionCallData = async (address: string, blockRanges: { startBlock: number; endBlock: number }[]): Promise<Transaction[]> => {
+const getExplorerTransactions = async (
+  address: string,
+  blockRanges: { startBlock: number; endBlock: number }[],
+): Promise<ITransaction[]> => {
+  console.warn("getExplorerTransactions", address, blockRanges);
+  const transactionPromises = blockRanges.map((range) => {
+    return fetchTransactions(props.chainId, address, range.startBlock, range.endBlock);
+  });
+
+  const transactions = (await Promise.all(transactionPromises)).flat();
+  // TODO Are token transfers even needed?
+  // const tokenTransfers = await fetchTokenTransfers(props.chainId, address, startBlock, endBlock);
+  console.warn("getExplorerTransactions transactions", transactions);
+  return transactions as ITransaction[];
+}
+
+const getTransactionCallData = async (
+  address: string,
+  blockRanges: { startBlock: number; endBlock: number }[],
+): Promise<ITransaction[]> => {
   const batchSize = 10;
-  const fundChainId = fundStore.selectedFundChain;
-  const allTransactions: Transaction[] = [];
+  const allTransactions: ITransaction[] = [];
 
   // Calculate total blocks to process for progress
   const totalBlocks = blockRanges.reduce((sum, range) => sum + (range.endBlock - range.startBlock + 1), 0);
@@ -346,16 +353,17 @@ const getTransactionCallData = async (address: string, blockRanges: { startBlock
     }
   }
 
-  for (const tx of allTransactions) {
-    const receipt = await web3Store.callWithRetry(
-      fundChainId,
-      () => web3.eth.getTransactionReceipt(tx.hash),
-      1,
-      [],
-      4000,
-    );
-    tx.gasUsed = receipt.gasUsed;
-  }
+  // TODO is this needed? why do we need to know how much gas was used?
+  // for (const tx of allTransactions) {
+  //   const receipt = await web3Store.callWithRetry(
+  //     props.chainId,
+  //     () => web3.eth.getTransactionReceipt(tx.hash),
+  //     1,
+  //     [],
+  //     4000,
+  //   );
+  //   tx.gasUsed = receipt.gasUsed;
+  // }
 
   return allTransactions;
 };
@@ -394,7 +402,6 @@ const createTokenApprovalMap = (filtApprovals: string[]): Map<string, string[]> 
 const generateTokenApprovalPermissions = (
   tokenApprovalMap: Map<string, string[]>,
 ): Permission[] => {
-  const fundStore = useFundStore();
   const approvalSig = "0x095ea7b3";
   const permissions: Permission[] = [];
   let permsIdx = 0;
@@ -437,7 +444,7 @@ const updateTokenApprovalsMap = (
   tokenApprovalMap.set(contract.toLowerCase(), [...existing, "0x" + word]);
 };
 
-const generateSimplePermissions = (transactions: Transaction[], custodyAddress: string, matchingAddress: string): Permission[] => {
+const generateSimplePermissions = (transactions: ITransaction[], custodyAddress: string, matchingAddress: string): Permission[] => {
   const approvals: string[] = [];
   const contractInteractions: string[] = [];
   const processedData: ProcessedData[] = [];
@@ -581,19 +588,25 @@ const fetchAndGeneratePermissions = async () => {
     if (blockRanges.length === 0) {
       throw new Error("No valid block ranges");
     }
-
-    const transactions = await getTransactionCallData(addressInput.value, blockRanges);
-    let custodyContractAddr = fundStore.fund?.safeAddress ?? "";
-    if (custodyContractAddr === "") {
-      custodyContractAddr = fundSettings?.value?.safe ?? "";
-      if (custodyContractAddr === "") {
-        throw new Error("Bad Custody Addr");
-      }
+    if (!props.safeAddress) {
+      throw new Error(`Bad Custody Address ${props.safeAddress}`);
     }
-    permissions.value = generateSimplePermissions(transactions, custodyContractAddr, addressInput.value);
+
+    // Instead of fetching everything on-chain, first try to fetch from the explorer API.
+    let transactions: ITransaction[] = [];
+    try {
+      // First try to fetch transactions from the explorer (etherscan, arbscan...)
+      transactions = await getExplorerTransactions(addressInput.value, blockRanges);
+    } catch (e) {
+      console.error("Failed fetching explorer transactions -> ", e);
+      // Try fetching transactions directly from the chain.
+      transactions = await getTransactionCallData(addressInput.value, blockRanges);
+    }
+
+    permissions.value = generateSimplePermissions(transactions, props.safeAddress, addressInput.value);
     rawProposalInput.value = JSON.stringify(permissions.value);
     keepExistingPermissions.value = false;
-    addRawProposal();
+    // addRawProposal();
   } catch (err: unknown) {
     console.error("Error generating permissions:", err);
     toastStore.errorToast("Failed to generate permissions: " + (err as Error).message);
@@ -769,7 +782,7 @@ const fieldsChanged = (stepName: string, subStepIndex: number, step: any) => {
   Object.assign(currentInputs, newInput);
 };
 
-onMounted(async () => {
+onMounted( () => {
   if (permissionsProposalStore.rawTransactions.length) {
     keepExistingPermissions.value = false;
     rawProposalInput.value = permissionsProposalStore.rawTransactionsJson;
