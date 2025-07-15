@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type IRoute from "~/types/route";
-import { useSettingsStore } from "~/store/settings/settings.store";
 import { computed } from "vue";
 import { useRoute } from "vue-router";
+import type IRoute from "~/types/route";
+import { useSettingsStore } from "~/store/settings/settings.store";
 
 const props = defineProps<{
   routes: IRoute[];

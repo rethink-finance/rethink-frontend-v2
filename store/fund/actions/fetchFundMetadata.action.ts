@@ -104,6 +104,7 @@ export const fetchFundMetaDataAction = async (
     const quorumVotes: bigint = ((((fundGovernanceTokenSupplyFixed as bigint) *
       quorumNumerator) as bigint) / quorumDenominator) as bigint;
 
+    // TOOD no need to fetch this here, it would be better to fetch it when needed for formatting.
     const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fundChainId);
     const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
     console.warn("fetchFundMetaDataAction blockTimeContext", blockTimeContext)
