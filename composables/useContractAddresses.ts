@@ -1,10 +1,8 @@
-// composables/useContractAddresses.ts
 import type IContractAddressesMap from "~/types/addresses";
 import { ChainId } from "~/types/enums/chain_id";
 
 export function useContractAddresses() {
   const config = useRuntimeConfig();
-  console.log("config", config.public);
 
   const rethinkContractAddresses: IContractAddressesMap = {
     "WrappedTokenFactory": {

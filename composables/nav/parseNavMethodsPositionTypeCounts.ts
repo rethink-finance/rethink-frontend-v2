@@ -4,7 +4,7 @@ import type INAVUpdate from "~/types/nav_update";
 import { PositionType, PositionTypeKeys, PositionTypesMap } from "~/types/enums/position_type";
 
 
-export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[], navUpdate?: INAVUpdate): IPositionTypeCount[] => {
+export const parseNavMethodsPositionTypeCounts = (navUpdate: INAVUpdate): IPositionTypeCount[] => {
   /**
    * Counts occurrences of each position type in the provided NAV methods.
    * Example response:
@@ -15,6 +15,7 @@ export const parseNavMethodsPositionTypeCounts = (navMethods?: INAVMethod[], nav
    *   { type: PositionType.Illiquid, count: 0 }
    * ]
    */
+  const navMethods: INAVMethod[] = navUpdate?.entries || [];
   const counts =  PositionTypeKeys.reduce((acc, positionType) => {
     acc[positionType] = 0n;
     return acc;

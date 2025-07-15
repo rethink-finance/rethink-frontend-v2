@@ -2,7 +2,6 @@ import { ERR_CONTRACT_EXECUTION_REVERTED } from "web3";
 import { useFundStore } from "../fund.store";
 import { NAVExecutor } from "assets/contracts/NAVExecutor";
 import { decodeUpdateNavMethods } from "~/composables/nav/navProposal";
-import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
@@ -38,6 +37,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
       // No NAV updates yet, try fetching NAV methods directly.
       // This means that fund was freshly created and no NAV updates have been
       // made, but NAV methods were stored on fund create.
+      // TODO ReaderContract should do this, return this if there are no updates!
       const newNavMethods = await getNAVData(
         fund.chainId,
         fund.address,
@@ -52,11 +52,6 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
       fundStore.refreshSimulateNAVCounter++;
     }
     const lastNavUpdate = navUpdates[navUpdates.length - 1];
-
-    fund.positionTypeCounts = parseNavMethodsPositionTypeCounts(
-      lastNavUpdate?.entries,
-      lastNavUpdate,
-    );
 
     fund.lastNAVUpdateTotalNAV = navUpdates.length
       ? lastNavUpdate.totalNAV || 0n

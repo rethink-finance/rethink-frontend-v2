@@ -107,8 +107,9 @@ export default defineComponent({
     .data_bar__subtitle {
       font-size: $text-sm;
       line-height: 1;
-      color: $color-steel-blue;
+      color: $color-light-subtitle;
       align-items: center;
+      font-weight: 500;
     }
   }
 }
