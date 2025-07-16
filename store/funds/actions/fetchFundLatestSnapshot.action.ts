@@ -109,7 +109,7 @@ const parseFundSnapshotResponse = (fund: IFund, data: any): IFund => {
     lastNAVUpdateTotalNAV: data.totalNAV,
     cumulativeReturnPercent: data.cumulativeReturnPercent,
     positionTypeCounts: positionTypesCounts,
-    // isNavUpdatesLoading: false,
+    isNavUpdatesLoading: false,
   };
 }
 
