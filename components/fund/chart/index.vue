@@ -270,8 +270,8 @@ const getSharePricePerNav = async () => {
       const diffDecimals = navDecimals - supplyDecimals;
 
       // Scale totalNav to the same decimals as totalSupply for proper division
-      const adjustedTotalNav = diffDecimals > 0 ? totalNav * 10n ** BigInt(diffDecimals) : totalNav;
-      const adjustedTotalSupply = diffDecimals < 0 ? totalSupply * 10n ** BigInt(-diffDecimals) : totalSupply;
+      const adjustedTotalNav = diffDecimals < 0 ? totalNav * 10n ** BigInt(-diffDecimals) : totalNav;
+      const adjustedTotalSupply = diffDecimals > 0 ? totalSupply * 10n ** BigInt(diffDecimals) : totalSupply;
 
       // Perform the division
       const scaleFactor = 10n ** 36n; // Scale up before division to avoid rounding errors
