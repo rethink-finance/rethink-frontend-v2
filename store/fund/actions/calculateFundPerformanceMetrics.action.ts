@@ -10,6 +10,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
 import { useBlockTimeStore } from "~/store/web3/blockTime.store";
+import type { Explorer } from "~/services/explorer";
 
 // Define interface for fund metrics calculator
 interface IFundMetricsCalculator {
@@ -196,26 +197,39 @@ const getFundLastNAVUpdateTotalDepositBalance = async (
 ) => {
   if (fundLastNavUpdate?.timestamp) {
     const web3Store = useWeb3Store();
-    const blockTimeStore = useBlockTimeStore();
-
+    // const blockTimeStore = useBlockTimeStore();
     // 1. get average block time for the chain
-    const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(
-      fund.chainId,
-      false,
-    );
-    const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
+    // const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(
+    //   fund.chainId,
+    //   false,
+    // );
+    // const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
     // 2. estimate the block number of the last NAV update timestamp
-    const lastNavUpdateBlockNumber = Number(
-      (await blockTimeStore.getBlockByTimestamp(
-        fund.chainId,
-        fundLastNavUpdate.timestamp / 1000,
-        averageBlockTime,
-      )) || 0,
-    );
+    // const lastNavUpdateBlockNumber = Number(
+    //   (await blockTimeStore.getBlockByTimestamp(
+    //     fund.chainId,
+    //     fundLastNavUpdate.timestamp / 1000,
+    //     averageBlockTime,
+    //   )) || 0,
+    // );
+    // console.debug(
+    //   "  [METRICS] lastNavUpdateBlockNumber",
+    //   lastNavUpdateBlockNumber,
+    // );
+
+    let blockNumber: number = 0;
+    const { $getExplorer } = useNuxtApp();
+    try {
+      const explorer: Explorer = $getExplorer(fund.chainId);
+      blockNumber = await explorer.getBlockNumberFromTimestamp(fundLastNavUpdate.timestamp / 1000);
+    } catch (error: any) {
+      // blockNumber = Number(await blockTimeStore.getBlockByTimestamp(props.fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
+      console.error("Error getting block number from timestamp", error);
+    }
     console.debug(
-      "  [METRICS] lastNavUpdateBlockNumber",
-      lastNavUpdateBlockNumber,
+      "  [METRICS] lastNavUpdateBlockNumber from EXPLORER",
+      blockNumber,
     );
 
     // 3. get total deposit balance at the last NAV update
@@ -229,7 +243,7 @@ const getFundLastNAVUpdateTotalDepositBalance = async (
         return BigInt(
           (await fundContract.methods
             ._totalDepositBal()
-            .call({}, lastNavUpdateBlockNumber)) || 0,
+            .call({}, blockNumber)) || 0,
         );
       });
     } catch (e) {

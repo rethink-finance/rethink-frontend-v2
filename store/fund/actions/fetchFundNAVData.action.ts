@@ -4,15 +4,18 @@ import { NAVExecutor } from "assets/contracts/NAVExecutor";
 import { decodeUpdateNavMethods } from "~/composables/nav/navProposal";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { excludeNAVUpdateIndexes } from "~/store/funds/config/excludedNAVUpdates.config";
 import type { ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
+import type INAVUpdate from "~/types/nav_update";
+import type IFund from "~/types/fund";
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
   const web3Store = useWeb3Store();
-  const fund = fundStore.fund;
+  const fund : IFund | undefined = fundStore.fund;
 
-  if (!fund?.address) return;
+  if (!fund || !fund?.address) return;
 
   const rethinkReaderContract =
     web3Store.chainContracts[fund.chainId]?.rethinkReaderContract;
@@ -26,12 +29,20 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
           .call(),
     );
 
-    const navUpdates = await fundStore.parseFundNAVUpdates(
+    let navUpdates = await fundStore.parseFundNAVUpdates(
       fund.chainId,
       fundNAVData,
       fundStore.selectedFundAddress,
     );
     console.log("FUND NAV DATA", navUpdates);
+
+    // Filter out NAV updates if their index is in the excludeNAVUpdateIndexes for that fund
+    const excludedIndexes = excludeNAVUpdateIndexes[(fund.chainId as ChainId)]?.[fund.address] || [];
+    console.log("EXCLUDED INDEXES", fund.chainId, fund.address, excludedIndexes);
+    navUpdates = excludedIndexes.length
+      ? navUpdates.filter((navUpdate: INAVUpdate) => !excludedIndexes.includes(navUpdate.index))
+      : navUpdates;
+    console.log("FILTERED FUND NAV DATA", navUpdates);
 
     if (!navUpdates.length) {
       // No NAV updates yet, try fetching NAV methods directly.

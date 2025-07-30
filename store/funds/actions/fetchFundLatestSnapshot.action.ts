@@ -23,28 +23,23 @@ export function fetchFundLatestSnapshotsAction(chainId: ChainId, funds: IFund[])
 export async function fetchFundLatestSnapshot(fund: IFund): Promise<IFund> {
   console.warn("FETCH LATEST SNAPSHOT Fund ", fund.chainId, fund.address);
   const config = useRuntimeConfig();
-  try {
-    const start = performance.now(); // Start timer
+  const start = performance.now(); // Start timer
 
-    const response = await fetch(
-      `${config.public.BACKEND_URL}/nav/latest-snapshot/${fund.address}?fundChainId=${fund.chainId}`,
-    );
-    const end = performance.now(); // End timer
-    console.log(
-      `⏱ Fetch latest snapshot for fund ${fund.chainId} ${fund.address} took ${Math.round(end - start)}ms`,
-    );
-    if (!response.ok) {
-      console.error(`Failed to fetch latest snapshot for fund ${fund.chainId} ${fund.address}:`, response.statusText);
-      return fund;
-    }
-
-    const data = await response.json();
-    console.warn("Fund ", fund.chainId, fund.address," NAV SNAPSHOT", data);
-    return parseFundSnapshotResponse(fund, data);
-  } catch (error) {
-    console.error(`Error fetching latest snapshot for fund ${fund.chainId} ${fund.address}:`, error);
+  const response = await fetch(
+    `${config.public.BACKEND_URL}/nav/latest-snapshot/${fund.address}?fundChainId=${fund.chainId}`,
+  );
+  const end = performance.now(); // End timer
+  console.log(
+    `⏱ Fetch latest snapshot for fund ${fund.chainId} ${fund.address} took ${Math.round(end - start)}ms`,
+  );
+  if (!response.ok) {
+    console.error(`Failed to fetch latest snapshot for fund ${fund.chainId} ${fund.address}:`, response.statusText);
     return fund;
   }
+
+  const data = await response.json();
+  console.warn("Fund ", fund.chainId, fund.address," NAV SNAPSHOT", data);
+  return parseFundSnapshotResponse(fund, data);
 }
 
 export async function fetchFundLatestSnapshots(chainId: ChainId, funds: IFund[]): Promise<IFund[]> {

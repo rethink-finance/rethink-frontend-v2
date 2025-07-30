@@ -1,4 +1,5 @@
 import { excludeNAVDetailsHashes } from "../config/excludedNAVDetailsHashes.config";
+import { excludeNAVUpdateIndexes } from "../config/excludedNAVUpdates.config";
 import { useFundsStore } from "../funds.store";
 import { decodeNavUpdateEntry } from "~/composables/nav/navDecoder";
 import { parseNavMethodsPositionTypeCounts } from "~/composables/nav/parseNavMethodsPositionTypeCounts";
@@ -6,6 +7,7 @@ import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { type ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
+import type INAVUpdate from "~/types/nav_update";
 
 // Set to true if you want to exclude NAV methods that are defined excludeNAVDetailsHashes.
 const excludeNAVDetails: boolean = true;
@@ -73,11 +75,19 @@ async function processFundNavData(
   fundsStore.chainFundNAVUpdates[chainId][fundAddress] = [];
 
   if (!fundNAVData.encodedNavUpdate?.length) return;
-  const navUpdates = await fundsStore.fundStore.parseFundNAVUpdates(
+  let navUpdates = await fundsStore.fundStore.parseFundNAVUpdates(
     chainId,
     fundNAVData,
     fundAddress,
   );
+
+  // Filter out NAV updates if their index is in the excludeNAVUpdateIndexes for that fund
+  const excludedIndexes = excludeNAVUpdateIndexes[chainId]?.[fundAddress] || [];
+  console.log("EXCLUDED INDEXES2", excludedIndexes);
+
+  navUpdates = excludedIndexes.length
+    ? navUpdates.filter((navUpdate: INAVUpdate) => !excludedIndexes.includes(navUpdate.index))
+    : navUpdates;
 
   fundsStore.chainFundNAVUpdates[chainId][fundAddress] = navUpdates;
   if (fundsStore.chainFunds?.[chainId]?.[fundIndex]) {
