@@ -52,13 +52,14 @@ export async function fetchFundsAction(): Promise<void> {
       fundAddresses,
       fundsInfo,
     );
+    fundsStore.chainFunds[chainId] = funds;
 
     // Fetch the latest snapshot for each fund to get current value
-    try {
-      const fundsWithCurrentValue = await fetchFundsLatestSnapshotsAction(funds);
+    // Make sure to load this data async, to not block the UI from at least loading fund names and metadata.
+    fetchFundsLatestSnapshotsAction(funds).then(fundsWithCurrentValue => {
       fundsStore.chainFunds[chainId] = fundsWithCurrentValue;
       console.debug(`Chain ${chainId} - Funds with Current Value: `, fundsWithCurrentValue);
-    } catch (error: any) {
+    }).catch(async (error: any) => {
       console.error("Failed to fetch latest snapshots", chainId, error);
       fundsStore.chainFunds[chainId] = funds;
       console.debug(`Chain ${chainId} - Funds Metadata (without Current Value): `, funds);
@@ -78,7 +79,7 @@ export async function fetchFundsAction(): Promise<void> {
       } catch (error: any) {
         console.error("Failed calculateFundsPerformanceMetrics", chainId, error);
       }
-    }
+    });
 
     console.debug(`Funds fetched for chain: ${chainId}`);
   }
