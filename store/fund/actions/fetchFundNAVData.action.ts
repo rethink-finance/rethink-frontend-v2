@@ -38,11 +38,9 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
 
     // Filter out NAV updates if their index is in the excludeNAVUpdateIndexes for that fund
     const excludedIndexes = excludeNAVUpdateIndexes[(fund.chainId as ChainId)]?.[fund.address] || [];
-    console.log("EXCLUDED INDEXES", fund.chainId, fund.address, excludedIndexes);
     navUpdates = excludedIndexes.length
       ? navUpdates.filter((navUpdate: INAVUpdate) => !excludedIndexes.includes(navUpdate.index))
       : navUpdates;
-    console.log("FILTERED FUND NAV DATA", navUpdates);
 
     if (!navUpdates.length) {
       // No NAV updates yet, try fetching NAV methods directly.

@@ -160,6 +160,38 @@ export class Explorer {
     return []
   }
 
+  /**
+   * Gets the block number for a given timestamp using binary search via RPC calls
+   * @param timestamp Unix timestamp in seconds
+   * @returns The block number closest to the given timestamp
+   */
+  async getBlockNumberFromTimestamp(timestamp: number): Promise<number> {
+    const client = await this.getHttpClient()
+    console.log("SHARE_PRICE getBlockNumberFromTimestamp", timestamp);
+    // const timestampInSeconds = Math.floor(Date.now() / 1000);
+
+    try {
+      const response = await client.get(this.apiUrl, {
+        params: {
+          module: "block",
+          action: "getblocknobytime",
+          timestamp,
+          closest: "after",
+        },
+      });
+      console.log("SHARE_PRICE getBlockNumberFromTimestamp response", response);
+      if (response.data.status === "1") {
+        return parseInt(response.data.result);
+      }
+      throw new Error(`Etherscan API error: ${response.data.message}`);
+
+    } catch (error) {
+      console.error("Error fetching block number:", error);
+      throw error;
+    }
+  }
+
+
   async detectProxyTarget(address: string): Promise<string | null> {
     const key = `proxyTarget:${address.toLowerCase()}`
     const cached = await this.cache?.getItem<{ target: string | null; timestamp: number }>(key)
