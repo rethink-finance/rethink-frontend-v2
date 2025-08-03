@@ -4,7 +4,7 @@ export const stringifyBigInt = (_: string, value: any) => {
 };
 
 export const parseBigInt = (_: string, value: any) => {
-  if (typeof value === "string" && /^\d+n$/.test(value)) {
+  if (value != null && typeof value === "string" && /^\d+n$/.test(value)) {
     return BigInt(value.slice(0, -1));
   }
   return value;

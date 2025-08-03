@@ -12,7 +12,7 @@ export enum ChartType {
 // Stroke Colors
 export const ChartTypeStrokeColors = {
   [ChartType.NAV]: "var(--color-primary)",
-  [ChartType.SHARE_PRICE]: "#00CEC8",
+  [ChartType.SHARE_PRICE]: "var(--color-primary)",
 };
 
 export const ChartTypesMap: Record<ChartType, IChartType> = {

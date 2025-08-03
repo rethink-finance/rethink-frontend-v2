@@ -48,6 +48,7 @@ import { ChartType, ChartTypesMap, ChartTypeStrokeColors } from "~/types/enums/c
 import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
 import { useBlockTimeStore } from "~/store/web3/blockTime.store";
+import { fetchFundNavUpdatesAction, type ParsedNavUpdateDto } from "~/store/funds/actions/fetchFundNavUpdates.action";
 
 const fundStore = useFundStore();
 const blockTimeStore = useBlockTimeStore();
@@ -159,7 +160,8 @@ const options = computed(() => {
     },
     stroke: {
       show: true,
-      curve: selectedType.value === ChartType.SHARE_PRICE ? "stepline" : "straight",
+      // curve: selectedType.value === ChartType.SHARE_PRICE ? "stepline" : "straight",
+      curve: "straight",
       lineCap: "round",
       width: 2,
       colors: [ChartTypeStrokeColors[selectedType.value]],
@@ -290,12 +292,25 @@ const getSharePricePerNav = async () => {
   isSharePriceLoading.value = false;
 };
 
+const getNavUpdates = () => {
+  isSharePriceLoading.value = true;
+
+  fetchFundNavUpdatesAction(props.fund.chainId, props.fund.address).then((navUpdates: ParsedNavUpdateDto[]) => {
+    console.warn("TTT fetchFundNavUpdatesAction ", props.fund.chainId, props.fund.address, navUpdates);
+    sharePriceItems.value = navUpdates.map(navUpdate => navUpdate.sharePrice);
+    console.debug("TTT fetchFundNavUpdatesAction ", props.fund.chainId, props.fund.address, navUpdates);
+    isSharePriceLoading.value = false;
+  }).catch((error) => {
+    console.error(`Failed fetchFundNavUpdatesAction for ${props.fund.address}`, error);
+    isSharePriceLoading.value = false;
+    getSharePricePerNav();
+  });
+}
 
 // Lifecycle
-
 watch(() => selectedType.value, () => {
   if (selectedType.value === ChartType.SHARE_PRICE && props.fund && !sharePriceItems.value?.length) {
-    getSharePricePerNav();
+    getNavUpdates();
   }
 }, { immediate: true });
 </script>
