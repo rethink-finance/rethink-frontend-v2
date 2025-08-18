@@ -43,6 +43,8 @@ const rawExcludedFundAddresses = {
     { address: "0x5A7638b7b831262081804e88657b2D83E8491b1E", alwaysExclude: false },  // carrotfunding.io gCFG 31. mar 25
     { address: "0x5E0f37920DDee57dAbAf5A73B21D51075AeDbEBE", alwaysExclude: false },  // Harmonix HES 14. may 25
     { address: "0x1D672d59724082EeeB575d1c7f42A6e5d1e327be", alwaysExclude: true },  // TEST 2025-07-01
+    { address: "0x9674B98e146c6bB120604a12E2EB03AC957BB6C6", alwaysExclude: true },  // Altcoin Swing Trade Vault 2025-08-15
+    { address: "0xDD0B24e283f9084129380a1aEc325e05e691E47A", alwaysExclude: true },  // Altcoin Swing Trade Vault 2025-08-15
   ],
   // Fraxtal
   "0xfc": [],
