@@ -272,16 +272,35 @@ const initProposalEntry = () => {
 // main proposalEntry array
 const proposalEntry = ref(initProposalEntry());
 
+// Helper function to determine if a field should bypass validation
+const shouldBypassValidation = (fieldKey: string) => {
+  // List of fields that should bypass validation
+  // These fields cannot be changed in this form but are still displayed,
+  // so we need to bypass their validation to allow form submission
+  const fieldsToBypass = ["votingPeriod", "votingDelay", "proposalThreshold", "lateQuorum", "quorum"];
+  return fieldsToBypass.includes(fieldKey);
+};
+
 const getStepValidityArray = () => {
+
   const output = proposalEntry.value.map((step) => {
     return step.sections.every((section) => {
       return section.fields.every((field) => {
+        // Skip validation for fields that cannot be changed
+        if (shouldBypassValidation(field.key)) {
+          return true;
+        }
+
         if (field?.isToggleable) {
           // disabled fields should be considered valid
           if(!field.isToggleOn) {
             return true;
           }
           return field?.fields?.every((subField) => {
+            // Skip validation for subfields that cannot be changed
+            if (shouldBypassValidation(subField.key)) {
+              return true;
+            }
             return (
               subField?.rules?.every((rule) => {
                 return rule(subField.value) === true;
@@ -402,6 +421,7 @@ const submit = async () => {
     }
   } else {
     toastStore.warningToast("Please fill all the required fields");
+    console.error("invalid fields", getStepValidityArray());
   }
 };
 
@@ -576,6 +596,7 @@ const nextStep = () => {
   const stepValidityArray = getStepValidityArray();
   if (!stepValidityArray[stepIndex]) {
     toastStore.warningToast("Please fill all the required fields");
+    console.error("invalid fields", stepValidityArray, proposalSteps, form.value);
     return;
   }
 
