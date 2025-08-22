@@ -731,8 +731,9 @@ const generateFields = (step: IOnboardingStep) => {
 const getFieldByStepAndFieldKey =(
   stepKey: string,
   fieldKey: string,
-) =>{
+) => {
   // Find the step key and then find the field key.
+  // TODO this flat map will break if nesting gets deeper than one level
   const field = stepperEntry.value
     ?.find(step => step.key === stepKey)?.fields
     ?.flatMap(field => [field, ...field?.fields || []])
@@ -740,15 +741,15 @@ const getFieldByStepAndFieldKey =(
 
   if (!field) {
     console.error(`Field ${fieldKey} not found in step ${stepKey}`, field);
-    return "";
+    return;
   }
   const fieldValue = field?.value;
 
-  if (field?.defaultValue != null) {
-    return field?.isCustomValueToggleOn ? fieldValue : field?.defaultValue;
+  if (field?.isCustomValueToggleOn === false) {
+    return field?.defaultValue;
   }
 
-  return fieldValue;
+  return fieldValue ?? field?.defaultValue;
 }
 
 
