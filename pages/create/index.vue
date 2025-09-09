@@ -67,7 +67,7 @@
                   class="me-2"
                   :disabled="isFundInitialized"
                 />
-                <span class="text-caption">Use V2 Governable Contract</span>
+                <span class="text-caption">Use Roles V2</span>
               </div>
               <v-btn
                 v-if="showInitializeButton"
