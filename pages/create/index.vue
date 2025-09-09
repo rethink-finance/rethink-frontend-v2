@@ -50,7 +50,7 @@
       <v-stepper-actions>
         <template #next>
           <div class="buttons">
-            <div class="item">
+            <div class="item d-flex align-center">
               <v-btn
                 v-if="showClearCacheButton"
                 class="me-8"
@@ -59,6 +59,16 @@
               >
                 Clear Draft
               </v-btn>
+              <div v-if="showInitializeButton && selectedChainId === ChainId.ARBITRUM" class="d-inline-flex align-center me-4">
+                <v-switch
+                  v-model="useV2Contract"
+                  color="primary"
+                  hide-details
+                  class="me-2"
+                  :disabled="isFundInitialized"
+                />
+                <span class="text-caption">Use V2 Governable Contract</span>
+              </div>
               <v-btn
                 v-if="showInitializeButton"
                 :loading="isInitializeLoading"
@@ -276,7 +286,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { networkChoices, networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ActionState } from "~/types/enums/action_state";
-import type { ChainId } from "~/types/enums/chain_id";
+import { ChainId } from "~/types/enums/chain_id";
 import { feeFieldKeys, type IWhitelist } from "~/types/enums/fund_setting_proposal";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
 import { InputType } from "~/types/enums/input_type";
@@ -308,6 +318,7 @@ const saveChangesDialog = ref(false);
 const isInitializeDialogOpen = ref(false);
 const isInitializeLoading = ref(false);
 const isClearCacheDialogOpen = ref(false);
+const useV2Contract = ref(false);
 // If user already authenticated before set isCreateFundPasswordCorrect to true.
 const isCreateFundPasswordCorrect = ref<boolean>(
   getLocalStorageItem("isCreateFundPasswordCorrect", false),
@@ -854,11 +865,15 @@ const initializeFund = async() => {
 
   try {
     isInitializeLoading.value = true;
-    const fundFactoryContract = web3Store.chainContracts[fundChainId]?.fundFactoryContract;
+    // Use V2 contract if toggle is enabled, otherwise use regular contract
+    const contractKey = useV2Contract.value ? "fundFactoryContractV2" : "fundFactoryContract";
+    const fundFactoryContract = web3Store.chainContracts[fundChainId]?.[contractKey];
+
+    console.log(`Using ${useV2Contract.value ? "V2" : "V1"} contract for fund initialization`);
 
     if (!fundFactoryContract) {
       return toastStore.errorToast(
-        `Cannot create fund on chain ${fundChainId}.`,
+        `Cannot create fund on chain ${fundChainId}. ${useV2Contract.value ? "V2 contract" : "Contract"} not available.`,
       );
     }
 

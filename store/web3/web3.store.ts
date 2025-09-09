@@ -68,6 +68,12 @@ export const useWeb3Store = defineStore({
           chainId,
           chainProviders[chainId].provider as HttpProvider,
         ),
+        fundFactoryContractV2: new CustomContract(
+          GovernableFundFactory.abi,
+          rethinkContractAddresses["GovernableFundFactoryV1.5BeaconProxy"][chainId],
+          chainId,
+          chainProviders[chainId].provider as HttpProvider,
+        ),
         // fundFactoryContract: new provider.eth.Contract(
         //   GovernableFundFactory.abi,
         //   rethinkContractAddresses.GovernableFundFactoryBeaconProxy[chainId],
