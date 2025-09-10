@@ -45,6 +45,7 @@ const rawExcludedFundAddresses = {
     { address: "0x1D672d59724082EeeB575d1c7f42A6e5d1e327be", alwaysExclude: true },  // TEST 2025-07-01
     { address: "0x9674B98e146c6bB120604a12E2EB03AC957BB6C6", alwaysExclude: true },  // Altcoin Swing Trade Vault 2025-08-15
     { address: "0xDD0B24e283f9084129380a1aEc325e05e691E47A", alwaysExclude: true },  // Altcoin Swing Trade Vault 2025-08-15
+    { address: "0xB637Af0447faABDc10151152DD359cf947584120", alwaysExclude: true },  // carrotfunding test
   ],
   // Fraxtal
   "0xfc": [],
