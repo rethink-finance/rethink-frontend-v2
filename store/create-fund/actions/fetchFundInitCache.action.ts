@@ -125,17 +125,31 @@ export const fetchFundInitCacheAction = async (
     throw new Error("No deployerAddress provided, cannot fetch fund cache.");
   }
   const fundFactoryContract = web3Store.chainContracts[fundChainId]?.fundFactoryContract;
+  const fundFactoryContractV2 = web3Store.chainContracts[fundChainId]?.fundFactoryContractV2;
   console.debug("fetch fundInitCache", fundChainId, "deployer:", deployerAddress)
 
-  const fundInitCache: IFundInitCache = await web3Store.callWithRetry(
+  let fundInitCache: IFundInitCache = await web3Store.callWithRetry(
     fundChainId,
     () =>
-      fundFactoryContract.methods.getFundInitializationCache(
+      fundFactoryContractV2.methods.getFundInitializationCache(
         deployerAddress,
       ).call(),
     0,
     [205, undefined, -32000],
   ) || {};
+
+  if (!fundInitCache?.fundSettings?.baseToken || fundInitCache?.fundSettings?.baseToken === "0x0000000000000000000000000000000000000000") {
+    console.warn("fetch fundInitCache NORMAL v1", fundChainId, "deployer:", deployerAddress)
+    fundInitCache = await web3Store.callWithRetry(
+      fundChainId,
+      () =>
+        fundFactoryContract.methods.getFundInitializationCache(
+          deployerAddress,
+        ).call(),
+      0,
+      [205, undefined, -32000],
+    ) || {};
+  }
   console.warn("fundInitCache", fundInitCache)
 
   if (isZeroAddress(fundInitCache.fundContractAddr)) {
