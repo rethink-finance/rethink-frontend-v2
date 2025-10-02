@@ -26,7 +26,7 @@ export function useContractAddresses() {
       [ChainId.LOCAL_NODE]: config.public.GOVERNABLE_FUND_FACTORY_PROXY as string ?? "",
     },
     "GovernableFundFactoryV1.5BeaconProxy": {
-      [ChainId.ETHEREUM]: "",
+      [ChainId.ETHEREUM]: "0x0F46b4A1B4C794fc078A87A8118dB47ab76B25A7",
       // [ChainId.GOERLI]: "",
       [ChainId.POLYGON]: "",
       // [ChainId.FRAXTAL]: "",
@@ -105,7 +105,7 @@ export function useContractAddresses() {
       [ChainId.LOCAL_NODE]: config.public.ZODIAC_ROLES_V1_PROXY as string ?? "",
     },
     "ZodiacRolesV2ModifierUpgradeableBeacon": {
-      [ChainId.ETHEREUM]: "",
+      [ChainId.ETHEREUM]: "0x52ccf6dc5668d5e80bc450cecac5f3c05b9e19e8",
       // [ChainId.GOERLI]: "",
       [ChainId.POLYGON]: "",
       // [ChainId.FRAXTAL]: "",
