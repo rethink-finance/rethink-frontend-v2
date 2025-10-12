@@ -59,7 +59,7 @@
               >
                 Clear Draft
               </v-btn>
-              <div v-if="showInitializeButton && selectedChainId === ChainId.ARBITRUM" class="d-inline-flex align-center me-4">
+              <div v-if="showInitializeButton && fundFactoryContractV2AddressExists" class="d-inline-flex align-center me-4">
                 <v-switch
                   v-model="useV2Contract"
                   color="primary"
@@ -858,6 +858,9 @@ const formatInitializeData = () => {
   return output;
 }
 
+const fundFactoryContractV2AddressExists = computed(() => {
+  return !!web3Store.chainContracts[selectedChainId.value]?.fundFactoryContractV2;
+})
 
 const initializeFund = async() => {
   const fundChainId = selectedChainId.value;
