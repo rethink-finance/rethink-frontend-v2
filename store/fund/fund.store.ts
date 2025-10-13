@@ -168,13 +168,16 @@ export const useFundStore = defineStore({
         return FixedNumber.fromString("0");
 
       // Create FixedNumber instances
+      // Use totalSimulatedNav if present, otherwise fall back to totalNAV
+      const navValue = this.fund?.totalSimulatedNav || this.fundLastNAVUpdate.totalNAV;
+      console.warn("Total Simulated NAV: ", this.fund?.totalSimulatedNav, "Last NAV: ", this.fundLastNAVUpdate.totalNAV);
       const totalNAV = FixedNumber.fromString(
         ethers.formatUnits(
-          this.fundLastNAVUpdate.totalNAV,
+          navValue,
           this.fund.baseToken.decimals,
         ),
       );
-      // TODO get the fundTokenTotalSupply total supply from the last NAV update also!
+      // TODO get the fundTokenTotalSupply total supply from the last NAV update also if the NAV value is being taken from the last NAV update!
       const fundTokenTotalSupply = FixedNumber.fromString(
         ethers.formatUnits(
           this.fund.fundTokenTotalSupply,
