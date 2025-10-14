@@ -76,25 +76,25 @@ const parseFundSnapshotResponse = (fund: IFund, data: any): IFund => {
   let totalSimulatedNavCalculatedAt;
   try {
     if (data?.calculatedAt) {
-      totalSimulatedNavCalculatedAt = formatDateToLocaleString(new Date(data.calculatedAt));
+      totalSimulatedNavCalculatedAt = formatDateToLocaleString(new Date(data?.calculatedAt));
     }
   } catch (error: any) {
     console.error(error);
   }
 
-  const positionTypesCounts = fund?.positionTypeCounts?.length ? fund?.positionTypeCounts : data?.positionTypeCounts?.length ? data.positionTypeCounts : [];
+  const positionTypesCounts = fund?.positionTypeCounts?.length ? fund?.positionTypeCounts : data?.positionTypeCounts?.length ? data?.positionTypeCounts : [];
   return {
     ...fund,
     totalSimulatedNavCalculatedAt,
-    totalSimulatedNav: BigInt(data.totalSimulatedNav),
-    totalSimulatedNavFormatted: data.totalSimulatedNavFormatted,
-    totalSimulatedNavUSD: data.totalSimulatedNavUSD,
-    totalSimulatedNavUSDFormatted: data.totalSimulatedNavUSDFormatted,
+    totalSimulatedNav: BigInt(data?.totalSimulatedNav),
+    totalSimulatedNavFormatted: data?.totalSimulatedNavFormatted,
+    totalSimulatedNavUSD: data?.totalSimulatedNavUSD,
+    totalSimulatedNavUSDFormatted: data?.totalSimulatedNavUSDFormatted,
     // Metrics
-    totalDepositBalance: data.totalDepositBalance,
-    sharpeRatio: data.sharpeRatio,
-    lastNAVUpdateTotalNAV: data.totalNAV,
-    cumulativeReturnPercent: data.cumulativeReturnPercent,
+    totalDepositBalance: data?.totalDepositBalance,
+    sharpeRatio: data?.sharpeRatio,
+    lastNAVUpdateTotalNAV: data?.totalNAV,
+    cumulativeReturnPercent: data?.cumulativeReturnPercent,
     positionTypeCounts: positionTypesCounts,
     isNavUpdatesLoading: false,
   };
