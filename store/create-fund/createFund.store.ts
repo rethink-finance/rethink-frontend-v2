@@ -56,6 +56,9 @@ export const useCreateFundStore = defineStore({
     fundSettings(): IFundSettings | undefined {
       return this.fundInitCache?.fundSettings;
     },
+    fundFactoryContractV2Used(): boolean {
+      return this.fundInitCache?.fundFactoryContractV2Used || false;
+    },
   },
   actions: {
     fetchFundInitCache(

@@ -126,6 +126,7 @@ export const fetchFundInitCacheAction = async (
   }
   const fundFactoryContract = web3Store.chainContracts[fundChainId]?.fundFactoryContract;
   const fundFactoryContractV2 = web3Store.chainContracts[fundChainId]?.fundFactoryContractV2;
+  let fundFactoryContractV2Used = true;
   console.debug("fetch fundInitCache", fundChainId, "deployer:", deployerAddress)
 
   let fundInitCache: IFundInitCache = await web3Store.callWithRetry(
@@ -140,6 +141,7 @@ export const fetchFundInitCacheAction = async (
 
   if (!fundInitCache?.fundSettings?.baseToken || fundInitCache?.fundSettings?.baseToken === "0x0000000000000000000000000000000000000000") {
     console.warn("fetch fundInitCache NORMAL v1", fundChainId, "deployer:", deployerAddress)
+    fundFactoryContractV2Used = false;
     fundInitCache = await web3Store.callWithRetry(
       fundChainId,
       () =>
@@ -191,6 +193,7 @@ export const fetchFundInitCacheAction = async (
     performanceFee: (fundSettings?.performanceFee || 0).toString(),
     performanceFeePeriod: Number(fundInitCache._feePerformancePeriod || 0),
     performanceFeeRecipientAddress: feeCollectors[3] || "",
+    fundFactoryContractV2Used,
     baseDecimals,
     baseSymbol,
   };

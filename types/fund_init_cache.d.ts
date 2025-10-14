@@ -9,4 +9,5 @@ export default interface IFundInitCache {
   _fundMetadata: string;
   fundMetadata: Record<string, any>;
   governorData: Record<string, any>;
+  fundFactoryContractV2Used: boolean;
 }

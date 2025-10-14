@@ -70,6 +70,7 @@ const {
   fundChainId,
   fundSettings,
   askToSaveDraftBeforeRouteLeave,
+  fundFactoryContractV2Used,
 } = storeToRefs(createFundStore);
 const { navigateToFundDetails } = usePageNavigation();
 
@@ -82,7 +83,9 @@ const finalizeCreateFund = async () => {
   if (!fundChainId.value) {
     return toastStore.errorToast("Fund chain ID not set.")
   }
-  const fundFactoryContract = web3Store.chainContracts[fundChainId.value]?.fundFactoryContract;
+
+  const contractKey = fundFactoryContractV2Used ? "fundFactoryContractV2" : "fundFactoryContract";
+  const fundFactoryContract = web3Store.chainContracts[fundChainId.value]?.[contractKey];
 
   if (!fundFactoryContract) {
     return toastStore.errorToast(
