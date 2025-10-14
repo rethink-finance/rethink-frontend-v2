@@ -29,6 +29,7 @@ export const fetchGovernanceProposalAction = async (
       governorAddress: fund?.governorAddress,
       proposalId,
     });
+  console.log("indexer raw fetched proposal", proposal);
   const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId);
   const roleModAddress = await fundStore.fetchRoleModAddress(fund.address);
 
