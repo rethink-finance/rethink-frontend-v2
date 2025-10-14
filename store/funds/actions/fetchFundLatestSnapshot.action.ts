@@ -86,7 +86,7 @@ const parseFundSnapshotResponse = (fund: IFund, data: any): IFund => {
   return {
     ...fund,
     totalSimulatedNavCalculatedAt,
-    totalSimulatedNav: BigInt(data?.totalSimulatedNav),
+    totalSimulatedNav: BigInt(data?.totalSimulatedNav || 0),
     totalSimulatedNavFormatted: data?.totalSimulatedNavFormatted,
     totalSimulatedNavUSD: data?.totalSimulatedNavUSD,
     totalSimulatedNavUSDFormatted: data?.totalSimulatedNavUSDFormatted,
