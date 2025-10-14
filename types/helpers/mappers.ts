@@ -30,12 +30,16 @@ export async function _mapSubgraphProposalToProposal(
   safeAddress: string,
   fundAddress: string,
 ): Promise<Promise<IGovernanceProposal>> {
-  let voteStartTimestamp: number | undefined;
-  let voteEndTimestamp: number | undefined;
+  let voteStartTimestamp: number = Number(proposal.voteStart);
+  let voteEndTimestamp: number = Number(proposal.voteEnd);
+  let nowValue = blockTimeContext.currentBlock;
+
   if (clockMode === ClockMode.Timestamp) {
-    voteStartTimestamp = proposal.voteStart;
-    voteEndTimestamp = proposal.voteEnd;
+    nowValue = Math.floor(Date.now() / 1000);
   } else if (clockMode === ClockMode.BlockNumber) {
+    // Try to estimate timestamps from block numbers.
+    // NOTE: Arb1 network is problematic as the block time is not consistent.
+    // Do not rely on these values.
     voteStartTimestamp = await getTimestampForBlock(
       Number(proposal.voteStart),
       blockTimeContext,
@@ -47,6 +51,7 @@ export async function _mapSubgraphProposalToProposal(
   } else {
     voteStartTimestamp = 0;
     voteEndTimestamp = 0;
+    console.error("Invalid clock mode in _mapSubgraphProposalToProposal", clockMode, proposal);
   }
 
   const parseDescription = (descriptionStr: string) => {
@@ -119,7 +124,6 @@ export async function _mapSubgraphProposalToProposal(
 
   // Derive state
   let state: ProposalState;
-  const now = Math.floor(Date.now() / 1000);
 
   if (proposal.proposalCanceled?.[0]?.timestamp) {
     state = ProposalState.Canceled;
@@ -127,14 +131,14 @@ export async function _mapSubgraphProposalToProposal(
     state = ProposalState.Executed;
   } else if (proposal.proposalQueued?.[0]?.timestamp) {
     state = ProposalState.Queued;
-  } else if (now < Number(voteStartTimestamp)) {
+  } else if (nowValue < Number(proposal.voteStart)) {
     state = ProposalState.Pending;
   } else if (
-    now >= Number(voteStartTimestamp) &&
-    now < Number(voteEndTimestamp)
+    nowValue >= Number(proposal.voteStart) &&
+    nowValue < Number(proposal.voteEnd)
   ) {
     state = ProposalState.Active;
-  } else if (now >= Number(voteEndTimestamp)) {
+  } else if (nowValue >= Number(proposal.voteEnd)) {
     const quorumReached = totalWeight >= quorumVotes;
 
     state =
@@ -170,9 +174,8 @@ export async function _mapSubgraphProposalToProposal(
     description: parsedDescription.description,
     voteStart: proposal.voteStart.toString(),
     voteEnd: proposal.voteEnd.toString(),
-    voteStartTimestamp: voteStartTimestamp?.toString(),
-    voteEndTimestamp: voteEndTimestamp?.toString(),
-
+    voteStartTimestamp: voteStartTimestamp?.toString(), // TODO: may not be accurate for arbitrum1
+    voteEndTimestamp: voteEndTimestamp?.toString(), // TODO: may not be accurate for arbitrum1
     createdTimestamp: Number(proposal.proposalCreated?.[0]?.timestamp),
     executedTimestamp: Number(proposal.proposalExecuted?.[0]?.timestamp),
 

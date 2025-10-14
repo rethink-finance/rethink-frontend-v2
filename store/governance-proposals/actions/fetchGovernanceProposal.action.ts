@@ -37,7 +37,13 @@ export const fetchGovernanceProposalAction = async (
     fund?.clockMode?.mode === ClockMode.BlockNumber
       ? proposal.proposalCreated?.[0]?.transaction?.blockNumber
       : proposal.proposalCreated?.[0]?.timestamp;
-  const blockNumber = proposal.proposalCreated?.[0]?.transaction?.blockNumber;
+  const blockNumber = await web3Store.callWithRetry(
+    fund?.chainId,
+    () =>
+      fundStore.fundGovernorContract.methods
+        .proposalSnapshot(proposal.proposalId)
+        .call(),
+  );
 
   const [quorumNumerator, quorumDenominator, totalSupply] = await Promise.all([
     web3Store.callWithRetry(
@@ -55,8 +61,8 @@ export const fetchGovernanceProposalAction = async (
       fund?.chainId,
       () =>
         fundStore.fundGovernanceTokenContract.methods
-          .totalSupply()
-          .call({ blockNumber }),
+          .getPastTotalSupply(blockNumber)
+          .call(),
     ),
   ]);
 
