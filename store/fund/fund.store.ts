@@ -657,9 +657,9 @@ export const useFundStore = defineStore({
           }
         });
     },
-    simulateCurrentNAV(): Promise<void> {
+    simulateCurrentNAV(fundFactoryContractV2Used: boolean = false): Promise<void> {
       return useActionState("fetchSimulateCurrentNAVAction", () =>
-        fetchSimulateCurrentNAVAction(this.selectedFundChain, this.fundAddress),
+        fetchSimulateCurrentNAVAction(this.selectedFundChain, this.fundAddress, fundFactoryContractV2Used),
       );
     },
     fetchSimulatedNAVMethodValue(
@@ -670,6 +670,7 @@ export const useFundStore = defineStore({
       baseSymbol: string,
       navEntry: INAVMethod,
       isFundNonInit: boolean = false,
+      fundFactoryContractV2Used: boolean = false,
     ) {
       return useActionState("fetchSimulatedNAVMethodValueAction", () =>
         fetchSimulatedNAVMethodValueAction(
@@ -680,6 +681,7 @@ export const useFundStore = defineStore({
           baseSymbol,
           navEntry,
           isFundNonInit,
+          fundFactoryContractV2Used,
         ),
       );
     },

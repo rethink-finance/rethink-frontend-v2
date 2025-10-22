@@ -560,6 +560,11 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    // Whether to use V2 fund factory contract
+    fundFactoryContractV2Used: {
+      type: Boolean,
+      default: false,
+    },
     fundContractBaseTokenBalance: {
       type: Number,
       default: 0,
@@ -850,7 +855,6 @@ export default defineComponent({
     "fundStore.refreshSimulateNAVCounter": {
       handler() {
         // Simulate NAV method values everytime Simulate NAV button is pressed and triggerSimulateNav changes.
-        console.log("fundStore.refreshSimulateNAVCounter:")
         this.simulateNAV();
       },
     },
@@ -886,13 +890,13 @@ export default defineComponent({
         return;
       }
       this.isNavSimulationLoading = true;
-      console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
+      // console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
 
       // Simulate all methods at once as many promises.
       const promises = [];
 
       for (const navEntry of this.methods) {
-        console.log("FUND CHAIN ID:", fundChainId, "FUND ADDRESS:", fundAddress, "NAV ENTRY:", navEntry)
+        // console.log("FUND CHAIN ID:", fundChainId, "FUND ADDRESS:", fundAddress, "NAV ENTRY:", navEntry)
         promises.push(this.fundStore.fetchSimulatedNAVMethodValue(
           fundChainId,
           fundAddress,
@@ -901,11 +905,12 @@ export default defineComponent({
           this.baseSymbol,
           navEntry,
           this.isFundNonInit,
+          this.fundFactoryContractV2Used,
         ));
       }
       const settled = await Promise.allSettled(promises);
       this.isNavSimulationLoading = false;
-      console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
+      // console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
     },
     simulatedNAVIconColor(method: INAVMethod) {
       if (!method.foundMatchingPastNAVUpdateEntryFundAddress) {
@@ -951,7 +956,6 @@ export default defineComponent({
       }
     },
     deleteEditMethod(index: number) {
-      console.log("remove0 method: ", index);
       this.navEntry.details[this.navEntry.positionType].splice(index, 1);
     },
     addEditMethodDetails() {
@@ -1014,8 +1018,6 @@ export default defineComponent({
         if (!this.hasChanged()) {
           return this.toastStore.warningToast("No changes detected.");
         }
-
-        console.log("New Method: ", newNavEntry);
 
         // Do not include the pastNAVUpdateEntryFundAddress in the details, as when we fetch entries
         // they don't include this data and details hash would be broken if we included it.

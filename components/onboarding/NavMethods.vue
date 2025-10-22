@@ -66,6 +66,7 @@
         :show-safe-contract-balance="true"
         :show-summary-row="true"
         :is-fund-non-init="true"
+        :fund-factory-contract-v2-used="fundFactoryContractV2Used"
       />
     </div>
 
@@ -154,7 +155,7 @@ const createFundStore = useCreateFundStore();
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 
-const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
+const { fundChainId, fundInitCache, fundSettings, fundFactoryContractV2Used } = storeToRefs(createFundStore);
 
 // Data
 const isFetchingNavMethods = ref(false);

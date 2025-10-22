@@ -17,6 +17,7 @@ export const fetchSimulatedNAVMethodValueAction = async (
   baseSymbol: string,
   navEntry: INAVMethod,
   isFundNonInit: boolean = false,
+  fundFactoryContractV2Used: boolean = false,
 ): Promise<void> => {
   const fundsStore = useFundsStore();
   const web3Store = useWeb3Store();
@@ -86,7 +87,7 @@ export const fetchSimulatedNAVMethodValueAction = async (
           navEntry.details,
         ),
       );
-
+      console.warn("IS NON INIT TRUE")
       // If it is non init, we call different NAV composable simulation method.
       // Non init means that the fund was not yet created.
       if (isFundNonInit) {
@@ -113,9 +114,11 @@ export const fetchSimulatedNAVMethodValueAction = async (
       // - governable fund factory contract address
       // - deployer
       const { rethinkContractAddresses } = useContractAddresses();
+      const contractKey = fundFactoryContractV2Used ? "GovernableFundFactoryV1.5BeaconProxy" : "GovernableFundFactoryBeaconProxy";
+
       callData.push(
         ...[
-          rethinkContractAddresses.GovernableFundFactoryBeaconProxy[fundChainId],
+          rethinkContractAddresses[contractKey][fundChainId],
           accountStore.activeAccountAddress,
         ],
       )

@@ -1,12 +1,13 @@
+import { useFundStore } from "../fund.store";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
-import { useFundStore } from "../fund.store";
 
 export const fetchSimulateCurrentNAVAction = async (
   fundChainId: ChainId,
   fundAddress: string,
+  fundFactoryContractV2Used: boolean = false,
 ): Promise<void> => {
   const fundStore = useFundStore();
   const fundsStore = useFundsStore();
@@ -43,6 +44,7 @@ export const fetchSimulateCurrentNAVAction = async (
             baseSymbol,
             navEntry,
             false,
+            fundFactoryContractV2Used,
           ),
           1,
           // Do not retry internal errors (probably invalid NAV method), better to fail on 1st try.

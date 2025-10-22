@@ -152,7 +152,7 @@ export const fetchFundInitCacheAction = async (
       [205, undefined, -32000],
     ) || {};
   }
-  console.warn("fundInitCache", fundInitCache)
+  console.warn("fundInitCache", fundInitCache, "fundFactoryContractV2Used", fundFactoryContractV2Used)
 
   if (isZeroAddress(fundInitCache.fundContractAddr)) {
     console.log("Fund cache doesn't exist.");

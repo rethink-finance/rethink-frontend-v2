@@ -55,14 +55,12 @@
 </template>
 
 <script setup lang="ts">
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 
 const fundStore = useFundStore();
-const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
 
@@ -70,7 +68,7 @@ const {
   fundChainId,
   fundSettings,
   askToSaveDraftBeforeRouteLeave,
-  fundFactoryContractV2Used,
+  fundFactoryContract,
 } = storeToRefs(createFundStore);
 const { navigateToFundDetails } = usePageNavigation();
 
@@ -84,10 +82,7 @@ const finalizeCreateFund = async () => {
     return toastStore.errorToast("Fund chain ID not set.")
   }
 
-  const contractKey = fundFactoryContractV2Used ? "fundFactoryContractV2" : "fundFactoryContract";
-  const fundFactoryContract = web3Store.chainContracts[fundChainId.value]?.[contractKey];
-
-  if (!fundFactoryContract) {
+  if (!fundFactoryContract.value) {
     return toastStore.errorToast(
       `Cannot create fund on chain ${fundChainId.value}.`,
     );
@@ -95,7 +90,7 @@ const finalizeCreateFund = async () => {
   isFinalizingFundCreation.value = true;
 
   try {
-    await fundFactoryContract
+    await fundFactoryContract.value
       .send("finalizeCreateFund", {}, [])
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);

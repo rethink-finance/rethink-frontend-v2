@@ -69,6 +69,9 @@
                 />
                 <span class="text-caption">Use Roles V2</span>
               </div>
+              <div v-if="fundFactoryContractV2Used" class="d-inline-flex align-center me-6">
+                <UiTextBadge value="Roles V2 Used" />
+              </div>
               <v-btn
                 v-if="showInitializeButton"
                 :loading="isInitializeLoading"
@@ -311,6 +314,7 @@ const {
   askToSaveDraftBeforeRouteLeave,
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
+  fundFactoryContractV2Used,
 } = storeToRefs(createFundStore);
 const step = ref(1);
 
@@ -521,7 +525,6 @@ const handleClearCache = () => {
 // Computed
 const isFundInitialized = computed(() => {
   // Return true if fund was initialized already
-  console.log("isFundInitialized", !!fundInitCache?.value?.fundContractAddr)
   return !!fundInitCache?.value?.fundContractAddr;
 })
 
