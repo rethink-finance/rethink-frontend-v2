@@ -172,9 +172,10 @@ const safeContractBaseTokenBalance = ref(0);
 /**
  * Computed
  */
-const fundFactoryContract = computed(() => web3Store.chainContracts[fundChainId.value]?.fundFactoryContract)
-const fundFactoryContractV2 = computed(() => web3Store.chainContracts[fundChainId.value]?.fundFactoryContractV2)
-
+const fundFactoryContract = computed(() => {
+  const chainContracts = web3Store.chainContracts[fundChainId.value];
+  return fundFactoryContractV2Used? chainContracts?.fundFactoryContractV2 : chainContracts?.fundFactoryContract
+})
 
 /**
  * Methods
@@ -242,7 +243,7 @@ const sendStoreNavMethodsTransaction = async (
         2,
       ),
     );
-    await fundFactoryContractV2Used ? fundFactoryContractV2.value : fundFactoryContract.value
+    await fundFactoryContract.value
       .send(
         "storeNAV",
         {},
@@ -299,9 +300,9 @@ const sendAllowManagerToUpdateNavTransaction = async () => {
     );
 
   try {
-    //TODO: the permissions also need to change for Roles v1 vs Roles v2
+    // TODO: the permissions also need to change for Roles v1 vs Roles v2
     console.log("submitPermissions allowManagerToUpdateNavPermission", allowManagerToUpdateNavPermission);
-    await fundFactoryContractV2Used ? fundFactoryContractV2.value : fundFactoryContract.value
+    await fundFactoryContract.value
       .send(
         "submitPermissions",
         {},
