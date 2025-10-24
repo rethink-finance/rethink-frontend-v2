@@ -174,7 +174,7 @@ const safeContractBaseTokenBalance = ref(0);
  */
 const fundFactoryContract = computed(() => {
   const chainContracts = web3Store.chainContracts[fundChainId.value];
-  return fundFactoryContractV2Used? chainContracts?.fundFactoryContractV2 : chainContracts?.fundFactoryContract
+  return fundFactoryContractV2Used.value ? chainContracts?.fundFactoryContractV2 : chainContracts?.fundFactoryContract
 })
 
 /**
