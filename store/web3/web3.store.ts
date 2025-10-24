@@ -59,6 +59,7 @@ export const useWeb3Store = defineStore({
       // selected chain's RPC url to init the provider.
       const provider = new Web3(chainSelectedRpcUrl[chainId]);
       chainProviders[chainId] = provider;
+      const fundFactoryContractV2Address = rethinkContractAddresses["GovernableFundFactoryV1.5BeaconProxy"][chainId];
 
       // Initialize contracts if addresses are available
       chainContracts[chainId] = {
@@ -68,12 +69,12 @@ export const useWeb3Store = defineStore({
           chainId,
           chainProviders[chainId].provider as HttpProvider,
         ),
-        fundFactoryContractV2: new CustomContract(
+        fundFactoryContractV2: fundFactoryContractV2Address ? new CustomContract(
           GovernableFundFactory.abi,
           rethinkContractAddresses["GovernableFundFactoryV1.5BeaconProxy"][chainId],
           chainId,
           chainProviders[chainId].provider as HttpProvider,
-        ),
+        ) : null,
         // fundFactoryContract: new provider.eth.Contract(
         //   GovernableFundFactory.abi,
         //   rethinkContractAddresses.GovernableFundFactoryBeaconProxy[chainId],
