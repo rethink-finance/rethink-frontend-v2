@@ -68,7 +68,7 @@ const rawExcludedFundAddresses = {
     { address: "0x51cf0Bc0f5312d824a55B83B2c032Fb8c96c249a", alwaysExclude: false },
     { address: "0xB6aB76d451B98a992FB84A93602527CC30cd3b22", alwaysExclude: false }, // QCLE
     { address: "0x938f2a213464e7307aD19CeD57D3F809A2B0a3Df", alwaysExclude: false }, // DEMO ETH NEW
-    { address: "0xB8686BA67E17b986F4b57A089789CE8A9Ac7ECB0", alwaysExclude: false }, // Leveraged Avant+ DeFi Yield
+    { address: "0xB8686BA67E17b986F4b57A089789CE8A9Ac7ECB0", alwaysExclude: false }, // Leveraged Avant+ DeFi Yield: boreal
   ],
   // Base
   "0x2105": [
@@ -83,6 +83,10 @@ const rawExcludedFundAddresses = {
     { address: "0x16dd2b60DEc7d3fE7C08f6B29732Fb51dDd2c176", alwaysExclude: true },  // ATF 19. mar 25
     { address: "0x86acCa1a926FEa47985Df8Ef5A8c0d0cDA650a62", alwaysExclude: true },  // gCFT 19. mar 25
     { address: "0x457960e6946ed94e82512992ba9dAaBDa5539010", alwaysExclude: true },  // DEMO ABC 25. apr 25
+  ],
+  // Hyper EVM
+  "0x3e7": [
+    { address: "0x7ed95418063d5b61bDE7b40D65F93739c0CFdcf4", alwaysExclude: true }, // Rethink test vault
   ],
 } as Record<string, { address: string; alwaysExclude: boolean }[]>;
 

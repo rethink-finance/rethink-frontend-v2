@@ -1,5 +1,6 @@
 import { ChainId } from "~/types/enums/chain_id";
 import type INetwork from "~/types/network";
+import type { IIcon } from "~/types/network";
 
 // Create base networks without the local node
 type BaseChainId = Exclude<ChainId, ChainId.LOCAL_NODE>;
@@ -169,3 +170,68 @@ export const networkChoices = networks.map(
     title: network.chainName,
   }),
 );
+
+
+export const assetIconMap: Record<string, IIcon> = {
+  USDC: {
+    name: "cryptocurrency-color:usdc",
+    size: "1.5rem",
+  },
+  WETH: {
+    name: "token-branded:eth",
+    size: "1.5rem",
+  },
+  DAI: {
+    name: "cryptocurrency-color:dai",
+    size: "1.5rem",
+  },
+};
+const TOKEN_ADDRESS_TO_NAME: any = {
+  [ChainId.ETHEREUM]: {
+    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "USDC",
+    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": "WETH",
+    "0x6b175474e89094c44da98b954eedeac495271d0f": "DAI",
+  },
+  [ChainId.BASE]: {
+    "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": "USDC",
+    "0x4200000000000000000000000000000000000006": "WETH",
+    "0x50c5725949a6f0c72e6c4a641f24049a917db0cb": "DAI",
+  },
+  [ChainId.POLYGON]: {
+    "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359": "USDC",
+    "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619": "WETH",
+    "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063": "DAI",
+  },
+  [ChainId.ARBITRUM]: {
+    "0xaf88d065e77c8cc2239327c5edb3a432268e5831": "USDC",
+    "0x82af49447d8a07e3bd95bd0d56f35241523fbab1": "WETH",
+    "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1": "DAI",
+  },
+  [ChainId.HYPEREVM]: {
+    // Verify addresses from official sources
+  },
+};
+
+/**
+ * Get asset icon based on chainId and tokenAddress
+ * @param chainId - The chain ID
+ * @param tokenAddress - The token address
+ * @returns IIcon object with name, size, and optional color properties
+ */
+export const getAssetIcon = (chainId: string, tokenAddress: string): IIcon => {
+  // If we have a tokenAddress and chainId, use TOKEN_ADDRESS_TO_NAME to get the token name
+  const tokenAddressLowercase = tokenAddress?.toLowerCase();
+  if (tokenAddress && chainId && TOKEN_ADDRESS_TO_NAME[chainId]?.[tokenAddressLowercase]) {
+    const tokenName = TOKEN_ADDRESS_TO_NAME[chainId][tokenAddressLowercase];
+    return assetIconMap[tokenName] || {
+      name: "ph:circle-fill", // default circle fill gray
+      size: "1.5rem",
+    };
+  }
+
+  // When tokenAddress is not provided or not found, return default icon
+  return {
+    name: "ph:circle-fill", // default circle fill gray
+    size: "1.5rem",
+  };
+};

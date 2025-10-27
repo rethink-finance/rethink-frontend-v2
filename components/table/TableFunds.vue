@@ -14,13 +14,41 @@
       <FundNameCell
         :image="item.photoUrl"
         :title="item.title"
-        :strategist-name="item.strategistName"
-        :strategist-url="item.strategistUrl"
+        :subtitle="item.description"
       />
+    </template>
+
+    <template #[`item.curator`]="{ item }">
+      <div v-if="item.strategistName" class="curator-cell">
+        <a
+          v-if="item.strategistUrl"
+          :href="item.strategistUrl"
+          target="_blank"
+          class="curator-link"
+        >
+          {{ item.strategistName }}
+        </a>
+        <span v-else>{{ item.strategistName }}</span>
+      </div>
+      <div v-else>
+        -
+      </div>
     </template>
 
     <template #[`item.chainShort`]="{ item }">
       <IconChain :chain-short="item.chainShort" class="mr-2" />
+    </template>
+
+    <template #[`item.baseAsset`]="{ item }">
+      <div class="base-asset-cell">
+        <BaseAssetIcon
+          :chain-id="item.chainId"
+          :chain-short="item.chainShort"
+          :token-address="item.baseToken.address"
+          class="mr-2"
+        />
+        <span>{{ item.baseToken.symbol }}</span>
+      </div>
     </template>
 
     <template #[`item.totalSimulatedNavUSD`]="{ item }">
@@ -54,8 +82,8 @@
                         false,
                       ),
                     ) +
-                    " " +
-                    item.baseToken.symbol
+                      " " +
+                      item.baseToken.symbol
                   }}
                 </div>
                 <div v-if="item.totalSimulatedNavUSD" class="nav_usd_value">
@@ -80,8 +108,8 @@
                       item.baseToken.decimals,
                     ),
                   ) +
-                  " " +
-                  item.baseToken.symbol
+                    " " +
+                    item.baseToken.symbol
                 }}
               </span>
             </template>
@@ -111,12 +139,12 @@
       </div>
     </template>
 
-    <template #[`item.positionTypeCounts`]="{ item }">
-      <PositionTypesBar
-        :position-type-counts="item.positionTypeCounts ?? []"
-        class="position_types_bar"
-      />
-    </template>
+    <!--    <template #[`item.positionTypeCounts`]="{ item }">-->
+    <!--      <PositionTypesBar-->
+    <!--        :position-type-counts="item.positionTypeCounts ?? []"-->
+    <!--        class="position_types_bar"-->
+    <!--      />-->
+    <!--    </template>-->
 
     <template #bottom>
       <!-- Leave this slot empty to hide pagination controls -->
@@ -129,7 +157,7 @@
 </template>
 
 <script lang="ts" setup>
-import PositionTypesBar from "../fund/info/PositionTypesBar.vue";
+import BaseAssetIcon from "../global/icon/BaseAsset.vue";
 import FundNameCell from "./components/FundNameCell.vue";
 import {
   formatNumberShort,
@@ -162,7 +190,26 @@ const headers: any = computed(() => [
     key: "name",
     sortable: false,
     maxWidth: 300,
-    minWidth: 200,
+    minWidth: 150,
+  },
+  {
+    title: "Current NAV",
+    key: "totalSimulatedNavUSD",
+    align: "end",
+  },
+  {
+    title: "Curator",
+    key: "curator",
+    sortable: false,
+    maxWidth: 200,
+    minWidth: 150,
+  },
+  {
+    title: "Base Asset",
+    key: "baseAsset",
+    width: 150,
+    maxWidth: 150,
+    align: "start",
   },
   {
     title: "Chain",
@@ -171,23 +218,18 @@ const headers: any = computed(() => [
     maxWidth: 62,
     align: "end",
   },
-  {
-    title: "Current Value",
-    key: "totalSimulatedNavUSD",
-    align: "end",
-  },
   // {
   //   title: "Latest NAV Date",
   //   key: "lastNavUpdateTime",
   //   value: (v: IFund) => v.lastNavUpdateTime,
   //   align: "end",
   // },
-  {
-    title: "Inception",
-    key: "inceptionDate",
-    value: (v: IFund) => v.inceptionDate,
-    align: "end",
-  },
+  // {
+  //   title: "Inception",
+  //   key: "inceptionDate",
+  //   value: (v: IFund) => v.inceptionDate,
+  //   align: "end",
+  // },
   {
     title: "Cumulative",
     key: "cumulativeReturnPercent",
@@ -209,11 +251,11 @@ const headers: any = computed(() => [
   //   value: (v: IFund) => v.sharpeRatio || "N/A",
   //   align: "end",
   // },
-  {
-    title: "Position Types",
-    key: "positionTypeCounts",
-    align: "end",
-  },
+  // {
+  //   title: "Position Types",
+  //   key: "positionTypeCounts",
+  //   align: "end",
+  // },
 ]);
 
 const navigateFundDetails = (event: any, row: any) => {
@@ -251,7 +293,7 @@ const navigateFundDetails = (event: any, row: any) => {
     @include customScrollbar(0);
 
     .v-data-table__tr {
-      height: 72px;
+      height: 85px;
       cursor: pointer;
       transition:
         background-color 0.3s ease,
@@ -310,5 +352,22 @@ const navigateFundDetails = (event: any, row: any) => {
 .position_types_bar {
   max-width: 100px;
   margin-left: auto;
+}
+
+.curator-cell {
+  .curator-link {
+    color: $color-light-subtitle;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: $color-primary;
+      text-decoration: underline;
+    }
+  }
+}
+
+.base-asset-cell {
+  display: flex;
 }
 </style>

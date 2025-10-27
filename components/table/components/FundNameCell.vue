@@ -1,7 +1,7 @@
 <template>
   <div class="fund_name">
-    <v-avatar size="3.75rem" :rounded="true" class="fund_name__avatar">
-      <img cover :src="props.image" />
+    <v-avatar size="4.5rem" :rounded="false" class="fund_name__avatar">
+      <img cover :src="props.image">
     </v-avatar>
     <div class="title_wrapper">
       <h4 class="text-white">
@@ -11,19 +11,33 @@
       <div v-if="strategistName" class="strategist_url">
         <h5>by {{ strategistName }}</h5>
       </div>
+      <div v-else-if="subtitle" class="strategist_url">
+        <h5>{{ truncatedSubtitle }}</h5>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
+
 const props = defineProps({
   image: {
     type: String,
     default: "",
   },
   title: { type: String, default: "" },
+  subtitle: { type: String, default: "" },
   strategistName: { type: String, default: "" },
   strategistUrl: { type: String, default: "" },
+});
+
+const truncatedSubtitle = computed(() => {
+  const maxLen = 80;
+  if (props.subtitle.length <= maxLen) {
+    return props.subtitle;
+  }
+  return props.subtitle.substring(0, maxLen) + "...";
 });
 </script>
 
@@ -34,11 +48,12 @@ const props = defineProps({
   padding-block: 0.25rem;
 
   &__avatar {
-    border-radius: 50%;
+    border-radius: 0;
     margin-right: 0.75rem;
     img {
       width: 100%;
       height: 100%;
+      object-fit: cover;
     }
   }
 }
@@ -61,10 +76,11 @@ const props = defineProps({
     font-style: normal;
     font-weight: 700;
     letter-spacing: 0.0525rem;
+    max-width: 100%;
   }
 
   h5 {
-    width: fit-content;
+    max-width: 100%;
     font-size: 0.875rem;
     font-style: normal;
     font-weight: 500;
@@ -75,6 +91,6 @@ const props = defineProps({
 }
 
 .strategist_url {
-  width: fit-content;
+  max-width: 100%;
 }
 </style>
