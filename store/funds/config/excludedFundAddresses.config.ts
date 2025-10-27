@@ -48,6 +48,17 @@ const rawExcludedFundAddresses = {
     { address: "0xB637Af0447faABDc10151152DD359cf947584120", alwaysExclude: true },  // carrotfunding test
     { address: "0xACfc595Fb72b530323E13D231B7B1849184a616c", alwaysExclude: true },  // Test
     { address: "0x64e64f1EFfF211E253f0F6C7de64E575F32c1076", alwaysExclude: true },  // Arbitrum Demo OIV
+    { address: "0x47bFca13dBcEDc40B0911c2440e11eafea102f16", alwaysExclude: true },  // test
+    { address: "0x37b2237594C3D72718bEEBFeE46B9c9FbdE4eAdc", alwaysExclude: true },  // test
+    { address: "0x6D69C6cdacDD56b45FF0040042Ef776AB8E7e208", alwaysExclude: true },  // test 1
+    { address: "0x76f30a490cCA1fC054B878cC93608471cA7683d3", alwaysExclude: true },  // test 2
+    { address: "0xe338BEF930AD5F47B2dAB67c6690470e6a42aeFB", alwaysExclude: true },  // test 3
+    { address: "0x6F8d5123A4aDB30ea9a2149b290e6b4421f6770A", alwaysExclude: true },  // test 4
+    { address: "0x390DDAb10363a10c9B848dfa3AF4E800544D0476", alwaysExclude: true },  // test 5
+    { address: "0x7e030800a54B501904798322a81dDe1D9DFEc121", alwaysExclude: true },  // test 6
+    { address: "0xe9286fF990279De1F2305C626775b40EBd9d5c5a", alwaysExclude: true },  // test 7
+    { address: "0x41633a238A1e7f7Dd19A8fe391AA9C6d38aD477a", alwaysExclude: true },  // test 8
+    { address: "0xd1A5500f1776b306cA820C4408CA95922e1BDe98", alwaysExclude: true },  // test 9
   ],
   // Fraxtal
   "0xfc": [],
