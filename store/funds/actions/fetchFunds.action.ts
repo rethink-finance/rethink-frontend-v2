@@ -13,6 +13,7 @@ export async function fetchFundsAction(): Promise<void> {
   // Function to process each chain asynchronously
   async function processChain(chainId?: ChainId): Promise<void> {
     if (!chainId) return;
+    // if (chainId !== ChainId.ARBITRUM) return;
 
     // Fetch the funds info arrays
     let fundsInfoArrays = fundsStore.chainFundsInfoArrays[chainId];
