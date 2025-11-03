@@ -14,7 +14,7 @@
       <FundNameCell
         :image="item.photoUrl"
         :title="item.title"
-        :subtitle="item.description"
+        :subtitle="getItemSubtitle(item)"
       />
     </template>
 
@@ -156,6 +156,7 @@
 </template>
 
 <script lang="ts" setup>
+import { computed } from "vue";
 import BaseAssetIcon from "../global/icon/BaseAsset.vue";
 import FundNameCell from "./components/FundNameCell.vue";
 import {
@@ -167,6 +168,8 @@ import { numberColorClass } from "~/composables/numberColorClass.js";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 import type IFund from "~/types/fund";
 import { useSettingsStore } from "~/store/settings/settings.store";
+import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
+import { ChainId } from "~/types/enums/chain_id";
 
 const { getFundDetailsUrl } = usePageNavigation();
 const router = useRouter();
@@ -256,6 +259,23 @@ const headers: any = computed(() => [
   //   align: "end",
   // },
 ]);
+
+const getItemSubtitle = (fund: IFund) => {
+  // Get subtitle from fundMetadata if available, otherwise use the provided subtitle
+  if (fund.address && fund.chainId) {
+    // Find the fund in the metadata by address
+    const chainFunds = fundMetaDataHardcoded[fund.chainId as ChainId] || [];
+    const fundMetadata = chainFunds.find(fundMetadata => fundMetadata.address.toLowerCase() === fund.address.toLowerCase());
+
+    // If found and has a subtitle, use it
+    if (fundMetadata?.subtitle) {
+      return fundMetadata.subtitle;
+    }
+  }
+
+  // Fallback to the provided subtitle
+  return fund.description;
+}
 
 const navigateFundDetails = (event: any, row: any) => {
   // Check if the click target is an anchor (<a>) or any clickable element
