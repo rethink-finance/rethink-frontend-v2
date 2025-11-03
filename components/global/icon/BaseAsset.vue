@@ -8,9 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import { Icon } from "@iconify/vue";
 import { ChainId } from "~/types/enums/chain_id";
-import type { IIcon } from "~/types/network";
 import { getAssetIcon } from "~/store/web3/networksMap";
 
 const props = defineProps({

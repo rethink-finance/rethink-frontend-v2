@@ -8,7 +8,6 @@
 </template>
 
 <script setup lang="ts">
-import { Icon } from "@iconify/vue";
 import { ChainId } from "~/types/enums/chain_id";
 import { networksMap } from "~/store/web3/networksMap";
 

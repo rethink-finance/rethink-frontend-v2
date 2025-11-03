@@ -178,7 +178,7 @@ export const assetIconMap: Record<string, IIcon> = {
     size: "1.5rem",
   },
   WETH: {
-    name: "token-branded:eth",
+    name: "custom:weth",
     size: "1.5rem",
   },
   DAI: {
