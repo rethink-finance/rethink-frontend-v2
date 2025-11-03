@@ -47,7 +47,6 @@
           :token-address="item.baseToken.address"
           class="mr-2"
         />
-        <span>{{ item.baseToken.symbol }}</span>
       </div>
     </template>
 

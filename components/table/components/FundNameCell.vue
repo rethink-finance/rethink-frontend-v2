@@ -28,7 +28,6 @@ const props = defineProps({
   },
   title: { type: String, default: "" },
   subtitle: { type: String, default: "" },
-  hardcodedSubtitle: { type: String, default: "" },
   strategistName: { type: String, default: "" },
   strategistUrl: { type: String, default: "" },
 });
