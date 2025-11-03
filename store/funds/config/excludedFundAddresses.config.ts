@@ -55,10 +55,12 @@ const rawExcludedFundAddresses = {
     { address: "0xe338BEF930AD5F47B2dAB67c6690470e6a42aeFB", alwaysExclude: true },  // test 3
     { address: "0x6F8d5123A4aDB30ea9a2149b290e6b4421f6770A", alwaysExclude: true },  // test 4
     { address: "0x390DDAb10363a10c9B848dfa3AF4E800544D0476", alwaysExclude: true },  // test 5
-    { address: "0x7e030800a54B501904798322a81dDe1D9DFEc121", alwaysExclude: true },  // test 6
-    { address: "0xe9286fF990279De1F2305C626775b40EBd9d5c5a", alwaysExclude: true },  // test 7
-    { address: "0x41633a238A1e7f7Dd19A8fe391AA9C6d38aD477a", alwaysExclude: true },  // test 8
-    { address: "0xd1A5500f1776b306cA820C4408CA95922e1BDe98", alwaysExclude: true },  // test 9
+    { address: "0x7e030800a54B501904798322a81dDe1D9DFEc121", alwaysExclude: false },  // test 6
+    { address: "0xe9286fF990279De1F2305C626775b40EBd9d5c5a", alwaysExclude: false },  // test 7
+    { address: "0x41633a238A1e7f7Dd19A8fe391AA9C6d38aD477a", alwaysExclude: false },  // test 8
+    { address: "0xd1A5500f1776b306cA820C4408CA95922e1BDe98", alwaysExclude: false },  // test 9
+    { address: "0xbaA05704375dC04a540f0abfE1c4cbA352397777", alwaysExclude: true },  // test 10
+    { address: "0x70F79b65b36ecB3947D4d50d7A991edC94b980b7", alwaysExclude: true },  // test 11
   ],
   // Fraxtal
   "0xfc": [],
@@ -69,6 +71,7 @@ const rawExcludedFundAddresses = {
     { address: "0xB6aB76d451B98a992FB84A93602527CC30cd3b22", alwaysExclude: false }, // QCLE
     { address: "0x938f2a213464e7307aD19CeD57D3F809A2B0a3Df", alwaysExclude: false }, // DEMO ETH NEW
     { address: "0xB8686BA67E17b986F4b57A089789CE8A9Ac7ECB0", alwaysExclude: false }, // Leveraged Avant+ DeFi Yield: boreal
+    { address: "0xFcA1004B60DcEC14E7dC17E39f37ADfC2c62678D", alwaysExclude: false }, // Boreal USD Yield
   ],
   // Base
   "0x2105": [
