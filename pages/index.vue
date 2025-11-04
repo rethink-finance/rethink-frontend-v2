@@ -35,5 +35,15 @@ fundsStore.fetchFunds()
 <style lang="scss">
 .discover {
   width: 100%;
+
+  // Media queries for responsive width adjustments
+  @media (min-width: 1800px) {
+    width: 90%;
+    max-width: 1500px;
+  }
+  @media (min-width: 2200px) {
+    width: 84%;
+    max-width: 1500px;
+  }
 }
 </style>

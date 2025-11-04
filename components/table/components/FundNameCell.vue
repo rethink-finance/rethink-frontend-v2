@@ -37,7 +37,8 @@ const truncatedSubtitle = computed(() => {
   if (props.subtitle.length <= maxLen) {
     return props.subtitle;
   }
-  return props.subtitle.substring(0, maxLen) + "...";
+  return props.subtitle;
+  // return props.subtitle.substring(0, maxLen) + "...";
 });
 </script>
 
@@ -92,5 +93,14 @@ const truncatedSubtitle = computed(() => {
 
 .strategist_url {
   max-width: 100%;
+
+  h5 {
+    white-space: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
+  }
 }
 </style>

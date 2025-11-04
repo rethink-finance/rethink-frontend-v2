@@ -191,33 +191,29 @@ const headers: any = computed(() => [
     title: "Vault Name",
     key: "name",
     sortable: false,
-    maxWidth: 300,
-    minWidth: 150,
   },
   {
     title: "Current NAV",
     key: "totalSimulatedNavUSD",
     align: "end",
+    width: 150,
   },
   {
     title: "Curator",
     key: "curator",
     sortable: false,
-    maxWidth: 200,
-    minWidth: 150,
+    width: 180,
   },
   {
     title: "Base Asset",
     key: "baseAsset",
-    width: 150,
-    maxWidth: 150,
+    width: 125,
     align: "start",
   },
   {
     title: "Chain",
     key: "chainShort",
-    width: 62,
-    maxWidth: 62,
+    width: 65,
     align: "end",
   },
   // {
@@ -236,6 +232,7 @@ const headers: any = computed(() => [
     title: "Cumulative",
     key: "cumulativeReturnPercent",
     align: "end",
+    width: 170,
   },
   // {
   //   title: "Monthly",
@@ -307,9 +304,13 @@ const navigateFundDetails = (event: any, row: any) => {
 .table_all_funds {
   @include borderGray;
   border-color: $color-bg-transparent;
+  max-width: 100%;
   // add table max height
   :deep(.v-table__wrapper) {
     @include customScrollbar(0);
+    table {
+      table-layout: fixed;
+    }
 
     .v-data-table__tr {
       height: 85px;
