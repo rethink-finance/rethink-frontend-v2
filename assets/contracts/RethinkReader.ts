@@ -256,7 +256,6 @@ export const RethinkReader = {
       ],
       "stateMutability": "view",
       "type": "function",
-      "constant": true,
     },
     {
       "inputs": [
@@ -497,7 +496,30 @@ export const RethinkReader = {
       ],
       "stateMutability": "view",
       "type": "function",
-      "constant": true,
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "targets",
+          "type": "address[]",
+        },
+        {
+          "internalType": "bytes[]",
+          "name": "_cd",
+          "type": "bytes[]",
+        },
+      ],
+      "name": "multiStaticCall",
+      "outputs": [
+        {
+          "internalType": "bytes[]",
+          "name": "",
+          "type": "bytes[]",
+        },
+      ],
+      "stateMutability": "view",
+      "type": "function",
     },
     {
       "inputs": [
@@ -517,54 +539,9 @@ export const RethinkReader = {
               "type": "uint256",
             },
             {
-              "internalType": "uint256",
-              "name": "totalNav",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "illiquidLen",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "liquidLen",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "nftLen",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "composableLen",
-              "type": "uint256",
-            },
-            {
               "internalType": "uint256[]",
               "name": "updateTimes",
               "type": "uint256[]",
-            },
-            {
-              "internalType": "uint256[][]",
-              "name": "illiquid",
-              "type": "uint256[][]",
-            },
-            {
-              "internalType": "uint256[][]",
-              "name": "liquid",
-              "type": "uint256[][]",
-            },
-            {
-              "internalType": "int256[][]",
-              "name": "nft",
-              "type": "int256[][]",
-            },
-            {
-              "internalType": "int256[][]",
-              "name": "composable",
-              "type": "int256[][]",
             },
             {
               "internalType": "bytes[]",
@@ -584,7 +561,6 @@ export const RethinkReader = {
       ],
       "stateMutability": "view",
       "type": "function",
-      "constant": true,
     },
     {
       "inputs": [
@@ -604,54 +580,9 @@ export const RethinkReader = {
               "type": "uint256",
             },
             {
-              "internalType": "uint256",
-              "name": "totalNav",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "illiquidLen",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "liquidLen",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "nftLen",
-              "type": "uint256",
-            },
-            {
-              "internalType": "uint256",
-              "name": "composableLen",
-              "type": "uint256",
-            },
-            {
               "internalType": "uint256[]",
               "name": "updateTimes",
               "type": "uint256[]",
-            },
-            {
-              "internalType": "uint256[][]",
-              "name": "illiquid",
-              "type": "uint256[][]",
-            },
-            {
-              "internalType": "uint256[][]",
-              "name": "liquid",
-              "type": "uint256[][]",
-            },
-            {
-              "internalType": "int256[][]",
-              "name": "nft",
-              "type": "int256[][]",
-            },
-            {
-              "internalType": "int256[][]",
-              "name": "composable",
-              "type": "int256[][]",
             },
             {
               "internalType": "bytes[]",
@@ -671,7 +602,6 @@ export const RethinkReader = {
       ],
       "stateMutability": "view",
       "type": "function",
-      "constant": true,
     },
     {
       "inputs": [
@@ -728,7 +658,6 @@ export const RethinkReader = {
       ],
       "stateMutability": "view",
       "type": "function",
-      "constant": true,
     },
   ],
   "metadata": "{\"compiler\":{\"version\":\"0.8.28+commit.7893614a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"governableFundFactory\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"navCalculator\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"fund\",\"type\":\"address\"}],\"name\":\"getFundMetaData\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalDepositBal\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"feeBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"feePerformancePeriod\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"feeManagePeriod\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundTokenDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundBaseTokenDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundGovernanceTokenDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundTokenSupply\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundBaseTokenSupply\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundGovernanceTokenSupply\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"safeContractBaseTokenBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundContractBaseTokenBalance\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"fundMetadata\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundBaseTokenSymbol\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundGovernanceTokenSymbol\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"votingDelay\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"votingPeriod\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"proposalThreshold\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lateQuorumVoteExtension\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"quorumNumerator\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"quorumDenominator\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"clockMode\",\"type\":\"string\"}],\"internalType\":\"struct RethinkReader.FundGovernanceData\",\"name\":\"fundGovernanceData\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"depositFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performanceFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"managementFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performaceHurdleRateBps\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"baseToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"safe\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isExternalGovTokenInUse\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"isWhitelistedDeposits\",\"type\":\"bool\"},{\"internalType\":\"address[]\",\"name\":\"allowedDepositAddrs\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedManagers\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"governanceToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"fundAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"governor\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"fundName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundSymbol\",\"type\":\"string\"},{\"internalType\":\"address[4]\",\"name\":\"feeCollectors\",\"type\":\"address[4]\"}],\"internalType\":\"struct IGovernableFundStorage.Settings\",\"name\":\"fundSettings\",\"type\":\"tuple\"}],\"internalType\":\"struct RethinkReader.FundMetaData\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"fund\",\"type\":\"address\"}],\"name\":\"getFundNAVData\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"latestIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalNav\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"illiquidLen\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"liquidLen\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nftLen\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"composableLen\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"updateTimes\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[][]\",\"name\":\"illiquid\",\"type\":\"uint256[][]\"},{\"internalType\":\"uint256[][]\",\"name\":\"liquid\",\"type\":\"uint256[][]\"},{\"internalType\":\"int256[][]\",\"name\":\"nft\",\"type\":\"int256[][]\"},{\"internalType\":\"int256[][]\",\"name\":\"composable\",\"type\":\"int256[][]\"},{\"internalType\":\"bytes[]\",\"name\":\"encodedNavUpdate\",\"type\":\"bytes[]\"},{\"internalType\":\"bytes[]\",\"name\":\"encodedNavParts\",\"type\":\"bytes[]\"}],\"internalType\":\"struct RethinkReader.FundNavData\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"fund\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"getFundUserData\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"baseTokenBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundTokenBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"governanceTokenBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundAllowance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundShareValue\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"fundDelegateAddress\",\"type\":\"address\"}],\"internalType\":\"struct RethinkReader.FundUserData\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"funds\",\"type\":\"address[]\"}],\"name\":\"getFundsMetaData\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"startTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalDepositBal\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"feeBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"feePerformancePeriod\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"feeManagePeriod\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundTokenDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundBaseTokenDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundGovernanceTokenDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundTokenSupply\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundBaseTokenSupply\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundGovernanceTokenSupply\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"safeContractBaseTokenBalance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"fundContractBaseTokenBalance\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"fundMetadata\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundBaseTokenSymbol\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundGovernanceTokenSymbol\",\"type\":\"string\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"votingDelay\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"votingPeriod\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"proposalThreshold\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lateQuorumVoteExtension\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"quorumNumerator\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"quorumDenominator\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"clockMode\",\"type\":\"string\"}],\"internalType\":\"struct RethinkReader.FundGovernanceData\",\"name\":\"fundGovernanceData\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"depositFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performanceFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"managementFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"performaceHurdleRateBps\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"baseToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"safe\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isExternalGovTokenInUse\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"isWhitelistedDeposits\",\"type\":\"bool\"},{\"internalType\":\"address[]\",\"name\":\"allowedDepositAddrs\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedManagers\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"governanceToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"fundAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"governor\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"fundName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"fundSymbol\",\"type\":\"string\"},{\"internalType\":\"address[4]\",\"name\":\"feeCollectors\",\"type\":\"address[4]\"}],\"internalType\":\"struct IGovernableFundStorage.Settings\",\"name\":\"fundSettings\",\"type\":\"tuple\"}],\"internalType\":\"struct RethinkReader.FundMetaData[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"funds\",\"type\":\"address[]\"}],\"name\":\"getFundsNAVData\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"latestIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"totalNav\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"illiquidLen\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"liquidLen\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nftLen\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"composableLen\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"updateTimes\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[][]\",\"name\":\"illiquid\",\"type\":\"uint256[][]\"},{\"internalType\":\"uint256[][]\",\"name\":\"liquid\",\"type\":\"uint256[][]\"},{\"internalType\":\"int256[][]\",\"name\":\"nft\",\"type\":\"int256[][]\"},{\"internalType\":\"int256[][]\",\"name\":\"composable\",\"type\":\"int256[][]\"},{\"internalType\":\"bytes[]\",\"name\":\"encodedNavUpdate\",\"type\":\"bytes[]\"},{\"internalType\":\"bytes[]\",\"name\":\"encodedNavParts\",\"type\":\"bytes[]\"}],\"internalType\":\"struct RethinkReader.FundNavData[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"project:/contracts/utils/RethinkReader.sol\":\"RethinkReader\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0x287b55befed2961a7eabd7d7b1b2839cbca8a5b80ef8dcbb25ed3d4c2002c305\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://bd39944e8fc06be6dbe2dd1d8449b5336e23c6a7ba3e8e9ae5ae0f37f35283f5\",\"dweb:/ipfs/QmPV3FGYjVwvKSgAXKUN3r9T9GwniZz83CxBpM7vyj2G53\"]},\"@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol\":{\"keccak256\":\"0x8de418a5503946cabe331f35fe242d3201a73f67f77aaeb7110acb1f30423aca\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5a376d3dda2cb70536c0a45c208b29b34ac560c4cb4f513a42079f96ba47d2dd\",\"dweb:/ipfs/QmZQg6gn1sUpM8wHzwNvSnihumUCAhxD119MpXeKp8B9s8\"]},\"project:/contracts/interfaces/fund/IGovernableFund.sol\":{\"keccak256\":\"0x10a56e583a60472d3c38d73f9eb794cba0c1a70def271c1c9438cee4ecddf12f\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://09924149b97c4df04d64c69bfe59a5f1fb40998a1d3f2e3a392169cc11ec0840\",\"dweb:/ipfs/Qmbg4NTnJAdjLJ2HFicrAdFN7rdaPoVVNMLvBCHGuX7wrQ\"]},\"project:/contracts/interfaces/fund/IGovernableFundStorage.sol\":{\"keccak256\":\"0x919df785f5faeab6634999f4ba4ec4d503336871ff17d82f2eec1915d7e74311\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://18b929df3a660dfb0e44717cda7c10d51289030dfbc28ac050c7457de9080dcb\",\"dweb:/ipfs/QmPsNGgq8fZdTPWHC1nc5P5Sta5rajJQsiPShycoXVwA6g\"]},\"project:/contracts/interfaces/nav/INAVCalculator.sol\":{\"keccak256\":\"0x56e4149ccc9de54ecef78296516a42c97be4649fb0e62388d384de37aa28a0c8\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://b1ed7567c023216ba005fbde89407f72108d6fa6502565fd34a58e8007fb66b5\",\"dweb:/ipfs/QmNi51D85uThx98vU1td8LboNxgQ2avBPiERQAampszx8M\"]},\"project:/contracts/utils/RethinkReader.sol\":{\"keccak256\":\"0xf4dff976b1b76d33b42c8c840e5439aff3f0ce2eff33227de1ef9bd87cf62d61\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://bab0fb10dd833beb952d57765cb4b524c6efa0e47eaa4d0687384e292699c304\",\"dweb:/ipfs/Qme7jw7fDyUgv6C4NVMgVMM21quReuqi2S3nkwPKXUK6YA\"]}},\"version\":1}",
