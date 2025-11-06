@@ -65,7 +65,7 @@
           </template>
         </div>
         <div class="data_bar__subtitle">
-          NAV
+          Current NAV
         </div>
       </div>
       <div class="data_bar__item">
