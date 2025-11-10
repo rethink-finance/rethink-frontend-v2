@@ -43,6 +43,14 @@
         </v-tooltip>
       </div>
     </div>
+
+    <ProcessDepositModal
+      v-model="isProcessDepositModalOpen"
+      :token-value="''"
+      :token-value-changed="false"
+      :visible-error-messages="[]"
+      @deposit-success="$emit('deposit-success')"
+    />
     <div
       v-if="!accountStore.isConnected"
       class="fund_settlement__no_pending_requests"
@@ -93,6 +101,7 @@ import { ethers, FixedNumber } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type IFund from "~/types/fund";
+import ProcessDepositModal from "~/components/fund/settlement/ProcessDepositModal.vue";
 
 import { createDelegateBySigMessage, encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
@@ -145,9 +154,11 @@ const isProcessRequestDisabled = computed(() => {
   return true;
 });
 
+const isProcessDepositModalOpen = ref(false);
+
 const processRequest = () => {
   if (userDepositRequestExists.value) {
-    deposit();
+    isProcessDepositModalOpen.value = true;
   }
   if (userRedemptionRequestExists.value) {
     redeem();
@@ -165,11 +176,11 @@ const depositDisabledTooltipText = computed(() => {
   if (!userDepositRequestExists.value) {
     return "There is no deposit request.";
   }
-  if (
-    fundUserData.value.fundAllowance < (userDepositRequest?.value?.amount || 0n)
-  ) {
-    return "Not enough allowance to process the deposit request.";
-  }
+  // if (
+  //   fundUserData.value.fundAllowance < (userDepositRequest?.value?.amount || 0n)
+  // ) {
+  //   return "Not enough allowance to process the deposit request.";
+  // }
   if (shouldUserWaitSettlementOrCancelDeposit.value) {
     return "Wait for settlement or cancel the deposit request.";
   }
