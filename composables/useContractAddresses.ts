@@ -135,13 +135,13 @@ export function useContractAddresses() {
       [ChainId.LOCAL_NODE]: config.public.GOVERNABLE_FUND_NAV_PROXY as string ?? "",
     },
     "RethinkReader": {
-      [ChainId.ETHEREUM]: "0x7a1f370658b4A17b0B5346fDef8809d5e73DdAa1",
+      [ChainId.ETHEREUM]: "0x19C6D8194584684dE8D689847BDFe989a081E029",
       // [ChainId.GOERLI]: "",
-      [ChainId.POLYGON]: "0x4791f1F4994d9d224B89134cd628F0F27FA4a326",
+      [ChainId.POLYGON]: "0xB87Df3E4ED16861cD2E315A7b96471F1583C401B",
       // [ChainId.FRAXTAL]: "0xA290641Ecce7C0D7835Ca128810B240F74a399Be",
-      [ChainId.BASE]: "0xd402f5B63474444970779dC37368A28F386fe984",
+      [ChainId.BASE]: "0x533245B9DC448d617d9a27b904A4736795a37113",
       [ChainId.ARBITRUM]: "0x65968398b192110ffc3a374876f0f2549cb22c82",
-      [ChainId.HYPEREVM]: "0x751545c0D7F2a696c9975c9d90428225A1e139cd",
+      [ChainId.HYPEREVM]: "0x7913c5A19BF40f63C3EBc4e8928AfEd7d07F8456",
       [ChainId.LOCAL_NODE]: config.public.RETHINK_READER as string ?? "",
     },
     "PoolPerformanceFeeBeaconProxy": {
