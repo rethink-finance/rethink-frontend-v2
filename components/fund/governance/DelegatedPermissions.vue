@@ -290,7 +290,7 @@ const getTransactionsForAddress = (address: string, blocks: any[]): ITransaction
     if (block.transactions) {
       for (const tx of block.transactions) {
         if (tx.from && tx.from.toLowerCase() === address.toLowerCase()) {
-          console.log("tx", tx);
+          // console.log("tx", tx);
           transactions.push({
             blockNumber: parseInt(tx.blockNumber, 16),
             hash: tx.hash,
@@ -341,7 +341,7 @@ const getTransactionCallData = async (
   for (const range of blockRanges) {
     const blockNumbers = Array.from({ length: range.endBlock - range.startBlock + 1 }, (_, i) => range.startBlock + i);
     for (let i = 0; i < blockNumbers.length; i += batchSize) {
-      console.log("range start: ", i);
+      // console.log("range start: ", i);
       const batchBlockNumbers = blockNumbers.slice(i, i + batchSize);
       const batchResponse = await fetchBlocksInBatch(batchBlockNumbers);
       const batchTransactions = getTransactionsForAddress(address, batchResponse);

@@ -64,8 +64,8 @@ export const fundMetaDataHardcoded = {
     },
     {
       address: "0x58BA86cF363De2Bdbe57ad885B47F1B985EA9F31",
-      strategistName: "Trader Funding",
-      strategistUrl: "",
+      strategistName: "carrotfunding.io",
+      strategistUrl: "https://carrotfunding.io",
       subtitle: "Trader funding vault backing consistently profitable perps traders.",
     },
   ],
