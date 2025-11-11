@@ -1,0 +1,1 @@
+import{_ as n,l as a,c,o as r,w as s,b as _,p as l,q as d,V as i}from"./_BmmGIGi.js";const f={};function m(t,e){const o=a("Icon");return r(),c(i,{variant:"tonal",class:"btn_icon_center"},{default:s(()=>[_(o,{icon:"mdi-chevron-left",height:"1.5rem",width:"1.5rem"}),l(t.$slots,"default",{},()=>[e[0]||(e[0]=d(" Back "))])]),_:3})}const u=n(f,[["render",m]]);export{u as default};

@@ -1,0 +1,1 @@
+import{_ as o,f as t,p as n,o as s}from"./_BmmGIGi.js";const _={},c={class:"main_header"};function r(e,a){return s(),t("div",c,[n(e.$slots,"default")])}const f=o(_,[["render",r]]);export{f as default};

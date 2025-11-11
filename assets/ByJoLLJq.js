@@ -1,0 +1,1 @@
+import{u as n}from"./DxTlZv4G.js";import{p as c,c as l}from"./BwiW5Nlt.js";const p=async(r,i)=>{const a=n();let e=i??"N/A";if(!r)return e;const o=await a.initializeBlockTimeContext(r),s=(o==null?void 0:o.averageBlockTime)||0,t=Number(i);return!t||isNaN(t)||t<=0||(t<100?e=c("day",t):s>0&&(e=l(t,s)||e)),e};export{p};

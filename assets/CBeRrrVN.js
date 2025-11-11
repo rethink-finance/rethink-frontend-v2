@@ -1,0 +1,1 @@
+import{d as e,c,G as t,l as a,o as s,_}from"./_BmmGIGi.js";const r=e({__name:"Dropdown",props:{active:{type:Boolean,default:!1}},setup(o){return(p,l)=>{const n=a("Icon");return s(),c(n,{class:t(["dropdown_icon",{"dropdown_icon--active":o.active}]),icon:"octicon:triangle-down-16",width:"2rem"},null,8,["class"])}}}),i=_(r,[["__scopeId","data-v-5f331329"]]);export{i as default};
