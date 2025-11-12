@@ -68,6 +68,11 @@ export const fundMetaDataHardcoded = {
       strategistUrl: "https://carrotfunding.io",
       subtitle: "Trader funding vault backing consistently profitable perps traders.",
     },
+    {
+      // Eliot wave
+      address: "0x55f4949AF6356BBb71aeCC23eb36aBA4171Ffdaa",
+      subtitle: "Adaptive trading system that identifies market regimes and swing trade opportunities.",
+    },
   ],
   // ETH Mainnet
   [ChainId.ETHEREUM]: [
@@ -76,6 +81,11 @@ export const fundMetaDataHardcoded = {
       strategistName: "soonami.io",
       strategistUrl: "https://soonami.io/venture-staking",
       subtitle: "Native ETH staking and reinvesting yield into soonami.io ecosystem.",
+    },
+    {
+      // Boreal USD Yield
+      address: "0xd245A74898124ae10DE4DB5ec842032042654F0d",
+      subtitle: "Yield on leveraged bravUSDC on Morpho, to access DeFi opportunities through arbitrage, basis trades, and liquidity provision.",
     },
   ],
 } as Record<ChainId, { address: string; strategistName?: string; strategistUrl?: string; oivChatUrl?: string; subtitle?: string }[]>;

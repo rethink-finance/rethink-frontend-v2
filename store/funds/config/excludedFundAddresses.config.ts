@@ -61,6 +61,8 @@ const rawExcludedFundAddresses = {
     { address: "0xd1A5500f1776b306cA820C4408CA95922e1BDe98", alwaysExclude: false },  // test 9
     { address: "0xbaA05704375dC04a540f0abfE1c4cbA352397777", alwaysExclude: true },  // test 10
     { address: "0x70F79b65b36ecB3947D4d50d7A991edC94b980b7", alwaysExclude: true },  // test 11
+    { address: "0x93B40D286045114234834eada89bADA90AeA1E52", alwaysExclude: false },  // AlphaBTC
+    { address: "0xE083dFdc709B72EF14C0d0581ac889Cfcb215699", alwaysExclude: false },  // LiquiFund
   ],
   // Fraxtal
   "0xfc": [],
