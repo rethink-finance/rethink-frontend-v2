@@ -63,6 +63,14 @@ const rawExcludedFundAddresses = {
     { address: "0x70F79b65b36ecB3947D4d50d7A991edC94b980b7", alwaysExclude: true },  // test 11
     { address: "0x93B40D286045114234834eada89bADA90AeA1E52", alwaysExclude: false },  // AlphaBTC
     { address: "0xE083dFdc709B72EF14C0d0581ac889Cfcb215699", alwaysExclude: false },  // LiquiFund
+    { address: "0x0e1c09CFa777e9DE23Aa6d07cF2f2846C1e6E89E", alwaysExclude: false },  // test 12
+    { address: "0x336E8Ed6c6EE6BBE2709AF3E707B7A378B839837", alwaysExclude: false },  // test 13
+    { address: "0xf47C83410d7C7765bAC2d8e8094fc9eF427df7Bb", alwaysExclude: false },  // test 14
+    { address: "0x93be8A82DbED5aa4Acc7Fd9C4C02a33C4cEe4593", alwaysExclude: false },  // test 15
+    { address: "0x52AA4EE8bfe7B06923B82E255fC224Ff2f6B1397", alwaysExclude: false },  // test 16
+    { address: "0x7AEd57B594B31814e3539bC721C864c606bB8e0E", alwaysExclude: false },  // test 17
+    { address: "0x351d2E8107628630eeED5B256A5e8bEE87535792", alwaysExclude: false },  // test 18
+    { address: "0xE0587fb6DA413b1192297788E26C09E9DD0EFE92", alwaysExclude: false },  // test 19
   ],
   // Fraxtal
   "0xfc": [],
