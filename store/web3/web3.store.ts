@@ -217,7 +217,7 @@ export const useWeb3Store = defineStore({
 
       // Also update the provider for all contracts
       Object.values(this.chainContracts[chainId]).forEach((contract: any) => {
-        if (contract.setProvider) {
+        if (contract?.setProvider) {
           contract.setProvider(new Web3.providers.HttpProvider(newRpcUrl));
         }
       });
