@@ -204,7 +204,7 @@ export const formatTokenValue = (
   try {
     if (Number(value) === 0) return "0";
     let formattedValue = ethers.formatUnits(value, decimals);
-    console.log("governance token balance formattedValue: ", formattedValue);
+
     if (shouldRoundToSignificantDecimals) {
       formattedValue = roundToSignificantDecimals(formattedValue, 2);
     }
