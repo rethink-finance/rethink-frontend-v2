@@ -28,9 +28,13 @@ export async function fetchFundsMetaDataAction(
   let fundsMetaData: IFundMetaData[];
   console.log("process fund fundsMetaData", chainId, fundAddresses)
   try {
-    fundsMetaData = await rethinkReaderContract.methods
-      .getFundsMetaData(fundAddresses)
-      .call();
+    fundsMetaData = await web3Store.callWithRetry(
+      chainId,
+      () =>
+        rethinkReaderContract.methods
+          .getFundsMetaData(fundAddresses)
+          .call(),
+    );
   } catch {
     fundsMetaData = await getFundsMetaDataBatch(chainId, fundAddresses, fundsInfo, 1);
   }
@@ -198,6 +202,7 @@ async function getFundsMetaDataBatch(
     console.log("Fetching metadata for batch:", batch);
 
     try {
+      // TODO use callWithRetry
       const batchData = await rethinkReaderContract.methods
         .getFundsMetaData(batch)
         .call();
