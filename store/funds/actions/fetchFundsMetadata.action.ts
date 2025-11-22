@@ -32,7 +32,7 @@ export async function fetchFundsMetaDataAction(
       .getFundsMetaData(fundAddresses)
       .call();
   } catch {
-    fundsMetaData = await getFundsMetaDataBatch(chainId, fundAddresses, 1);
+    fundsMetaData = await getFundsMetaDataBatch(chainId, fundAddresses, fundsInfo, 1);
   }
 
   try {
@@ -178,7 +178,12 @@ export async function fetchFundsMetaDataAction(
   }
 }
 
-async function getFundsMetaDataBatch(chainId: ChainId, fundAddresses: string[], batchSize = 3) {
+async function getFundsMetaDataBatch(
+  chainId: ChainId,
+  fundAddresses: string[],
+  fundsInfo: any,
+  batchSize = 3,
+) {
   const web3Store = useWeb3Store();
 
   const rethinkReaderContract =
@@ -199,6 +204,11 @@ async function getFundsMetaDataBatch(chainId: ChainId, fundAddresses: string[], 
       results.push(...batchData);
     } catch (err: any) {
       console.error("Batch failed:", batch, err);
+      // At least push something, original fund infos...
+      for (const batchAddress of batch) {
+        if (!fundsInfo[batchAddress]) continue;
+        results.push(fundsInfo[batchAddress]);
+      }
     }
   }
 
