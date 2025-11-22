@@ -75,10 +75,6 @@ export const useWeb3Store = defineStore({
           chainId,
           chainProviders[chainId].provider as HttpProvider,
         ) : null,
-        // fundFactoryContract: new provider.eth.Contract(
-        //   GovernableFundFactory.abi,
-        //   rethinkContractAddresses.GovernableFundFactoryBeaconProxy[chainId],
-        // ),
         rethinkReaderContract: new provider.eth.Contract(
           RethinkReader.abi,
           rethinkContractAddresses.RethinkReader[chainId],
