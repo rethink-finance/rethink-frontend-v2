@@ -100,6 +100,13 @@ const rawExcludedFundAddresses = {
   // Hyper EVM
   "0x3e7": [
     { address: "0x7ed95418063d5b61bDE7b40D65F93739c0CFdcf4", alwaysExclude: true }, // Rethink test vault
+    { address: "0xB6aB76d451B98a992FB84A93602527CC30cd3b22", alwaysExclude: true }, // Stealth
+    { address: "0x51cf0Bc0f5312d824a55B83B2c032Fb8c96c249a", alwaysExclude: true }, // Stealth
+    { address: "0x13F7B1834A1C1a9768283394172C6037339F446a", alwaysExclude: true }, // Stealth
+    { address: "0x55311Ff9CB1D335F8Db14211469457B707205edf", alwaysExclude: true }, // Stealth
+    { address: "0xB8686BA67E17b986F4b57A089789CE8A9Ac7ECB0", alwaysExclude: true }, // Stealth
+    { address: "0x938f2a213464e7307aD19CeD57D3F809A2B0a3Df", alwaysExclude: true }, // Stealth
+    { address: "0xaC3D76E29f866702E17f571cccb15937E5A17303", alwaysExclude: true }, // Stealth
   ],
 } as Record<string, { address: string; alwaysExclude: boolean }[]>;
 
