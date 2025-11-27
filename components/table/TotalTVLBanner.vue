@@ -18,17 +18,22 @@
           </template>
         </div>
       </div>
-      <div class="total-tvl-fund-count">
-        <v-progress-circular
-          v-if="isLoadingTotalTVL"
-          class="d-flex"
-          size="18"
-          width="2"
-          indeterminate
-        />
-        <template v-else>
-          {{ totalTVL?.fundCount }} Vaults
-        </template>
+      <div class="total_tvl">
+        <div class="total_tvl__label">
+          Vaults:
+        </div>
+        <div class="total_tvl__value">
+          <v-progress-circular
+            v-if="isLoadingTotalTVL"
+            class="d-flex"
+            size="18"
+            width="2"
+            indeterminate
+          />
+          <template v-else>
+            {{ totalTVL?.fundCount }}
+          </template>
+        </div>
       </div>
     </div>
   </div>
@@ -70,7 +75,7 @@ const isLoadingTotalTVL =
   justify-content: center;
   flex-direction: row;
   display: flex;
-  gap: 0.825rem;
+  gap: 0.5rem;
 
   &__label {
     font-size: $text-lg;
