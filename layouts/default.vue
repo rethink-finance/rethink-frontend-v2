@@ -30,7 +30,7 @@ main {
     padding-right: 0;
     width: 90%;
     min-height: calc(100vh - ($navbar-height));
-    padding-top: calc($navbar-height + 3.5rem);
+    padding-top: calc($navbar-height + 2rem);
   }
   @include xl {
     width: 90%;

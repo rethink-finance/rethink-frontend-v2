@@ -25,9 +25,8 @@ const { totalTVL } = storeToRefs(fundsStore);
 .total-tvl-banner {
   width: 100%;
   background-color: var(--v-surface-variant);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 24px;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
   display: flex;
   justify-content: center;
   align-items: center;
