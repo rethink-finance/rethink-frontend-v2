@@ -10,6 +10,9 @@ import { chainIds } from "~/store/web3/networksMap";
 export async function fetchFundsAction(): Promise<void> {
   const fundsStore = useFundsStore();
 
+  // Fetch total TVL data
+  fundsStore.fetchTotalTVL();
+
   // Function to process each chain asynchronously
   async function processChain(chainId?: ChainId): Promise<void> {
     if (!chainId) return;

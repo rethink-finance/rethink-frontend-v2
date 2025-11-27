@@ -9,7 +9,10 @@
         Maybe the current RPC is down?
       </span>
     </div>
-    <TableFunds v-else :loading="isLoadingFetchFundsData" :items="funds" />
+    <template v-else>
+      <TableTotalTVLBanner />
+      <TableFunds :loading="isLoadingFetchFundsData" :items="funds" />
+    </template>
   </div>
 </template>
 

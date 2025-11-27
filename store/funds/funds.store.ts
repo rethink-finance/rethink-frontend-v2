@@ -7,6 +7,7 @@ import { fetchFundsAction } from "./actions/fetchFunds.action";
 import { fetchFundsInfoArraysAction } from "./actions/fetchFundsInfoArrays.action";
 import { fetchFundsMetaDataAction } from "./actions/fetchFundsMetadata.action";
 import { fetchFundsNavMethodsAction } from "./actions/fetchFundsNavMethods.action";
+import { fetchTotalTVLAction, type TotalTVLResponse } from "./actions/fetchTotalTVL.action";
 import type INAVUpdate from "~/types/nav_update";
 import type INAVMethod from "~/types/nav_method";
 import type IFund from "~/types/fund";
@@ -25,6 +26,8 @@ interface IState {
   uniqueNavMethods: Record<string, INAVMethod[]>;
   // Get the address of the original fund of all original NAV methods.
   navMethodDetailsHashToFundAddress: Record<string, string>;
+  // Total TVL data
+  totalTVL: TotalTVLResponse | null;
 }
 
 export const useFundsStore = defineStore({
@@ -42,6 +45,7 @@ export const useFundsStore = defineStore({
       Object.keys(networksMap).map((chainId) => [chainId, []]),
     ) as Record<string, INAVMethod[]>,
     navMethodDetailsHashToFundAddress: {} as Record<string, string>,
+    totalTVL: null,
   }),
   getters: {
     funds(): IFund[] {
@@ -81,6 +85,14 @@ export const useFundsStore = defineStore({
      */
     fetchFunds() {
       return useActionState("fetchFundsAction", () => fetchFundsAction());
+    },
+    /**
+     * Fetches the total TVL data from the backend
+     */
+    async fetchTotalTVL() {
+      const data = await fetchTotalTVLAction();
+      this.totalTVL = data;
+      return data;
     },
     /**
      * Fetch funds and their metadata and NAV data.

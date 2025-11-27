@@ -135,9 +135,6 @@ const tokenValue = ref("");
 const tokenValueChanged = ref(false);
 const fund = computed(() => fundStore.fund);
 const {
-  shouldUserRequestDeposit,
-  shouldUserApproveAllowance,
-  canUserProcessDeposit,
   shouldUserWaitSettlementOrCancelDeposit,
   userDepositRequest,
   userDepositRequestExists,
@@ -149,7 +146,6 @@ const isLoadingDelegate = ref(false);
 const isLoadingProcessDeposit = ref(false);
 
 const isDepositModalOpen = ref(false);
-const isDelegateModalOpen = ref(false);
 
 watch(
   () => tokenValue.value,
@@ -467,7 +463,6 @@ const approveAllowance = async () => {
 
 
 const hasRequestedDeposit = computed(() => {
-  console.log("fundStore.fundUserDataStore.fundUserDataStore.fundUserData: ", fundStore.fundUserData);
   return !!fundStore.fundUserData.depositRequest?.timestamp
 });
 
@@ -489,33 +484,6 @@ const hasProcessedDeposit = computed(() => {
   return false;
   // return fundStore.fundUserData.depositRequestProcessed;
 });
-
-const buttons = ref([
-  {
-    name: "Request Deposit",
-    onClick: requestDeposit,
-    isVisible: shouldUserRequestDeposit,
-    disabled: isRequestDepositDisabled,
-    loading: loadingRequestDeposit,
-    tooltipText: computed(() => {
-      if (userDepositRequestExists.value) {
-        return "Deposit request already exists. To change it, you first have to cancel the existing one.";
-      }
-      if (!fundStore.isUserWalletWhitelisted) {
-        return "Your wallet address is not whitelisted to allow deposits into this vault.";
-      }
-      return "";
-    }),
-  },
-  {
-    name: "Approve Amount",
-    onClick: approveAllowance,
-    loading: loadingApproveAllowance,
-    isVisible: shouldUserApproveAllowance,
-    tooltipText: undefined,
-  },
-]);
-
 
 const stepsDeposit = computed(() => [
   {
