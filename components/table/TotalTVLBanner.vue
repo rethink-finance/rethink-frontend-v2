@@ -56,6 +56,7 @@ const isLoadingTotalTVL =
   margin-bottom: 2rem;
   display: flex;
   align-items: center;
+  border: 1px solid $color-border-dark;
 }
 
 .total-tvl-content {
