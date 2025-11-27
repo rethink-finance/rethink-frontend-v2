@@ -1,14 +1,34 @@
 <template>
   <div class="total-tvl-banner">
     <div class="total-tvl-content">
-      <div class="total-tvl-label">
-        TVL:
-      </div>
-      <div class="total-tvl-value">
-        ${{ totalTVL?.totalTvlUSDFormatted }}
+      <div class="total_tvl">
+        <div class="total_tvl__label">
+          TVL:
+        </div>
+        <div class="total_tvl__value">
+          <v-progress-circular
+            v-if="isLoadingTotalTVL"
+            class="d-flex"
+            size="18"
+            width="2"
+            indeterminate
+          />
+          <template v-else>
+            ${{ totalTVL?.totalTvlUSDFormatted }}
+          </template>
+        </div>
       </div>
       <div class="total-tvl-fund-count">
-        {{ totalTVL?.fundCount }} Vaults
+        <v-progress-circular
+          v-if="isLoadingTotalTVL"
+          class="d-flex"
+          size="18"
+          width="2"
+          indeterminate
+        />
+        <template v-else>
+          {{ totalTVL?.fundCount }} Vaults
+        </template>
       </div>
     </div>
   </div>
@@ -16,41 +36,52 @@
 
 <script lang="ts" setup>
 import { useFundsStore } from "~/store/funds/funds.store";
+import { ActionState } from "~/types/enums/action_state";
+import { useActionStateStore } from "~/store/actionState.store";
 
+const actionStateStore = useActionStateStore();
 const fundsStore = useFundsStore();
 const { totalTVL } = storeToRefs(fundsStore);
+
+const isLoadingTotalTVL =
+  computed(() => actionStateStore.isActionState("fetchTotalTVLAction", ActionState.Loading));
 </script>
 
 <style lang="scss" scoped>
 .total-tvl-banner {
   width: 100%;
-  background-color: var(--v-surface-variant);
+  background-color: $color-surface;
+  padding: 1rem;
   border-radius: 0.5rem;
   margin-bottom: 2rem;
   display: flex;
-  justify-content: center;
   align-items: center;
 }
 
 .total-tvl-content {
+  flex-grow: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
 }
+.total_tvl {
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+  display: flex;
+  gap: 0.825rem;
 
-.total-tvl-label {
-  font-size: 16px;
-  color: var(--v-on-surface-variant);
+  &__label {
+    font-size: $text-lg;
+    color: var(--v-on-surface-variant);
+  }
+  &__value {
+    font-size: $text-lg;
+    font-weight: 600;
+    color: var(--v-on-surface);
+  }
 }
-
-.total-tvl-value {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--v-on-surface);
-}
-
 .total-tvl-fund-count {
-  font-size: 14px;
   color: var(--v-on-surface-variant);
   margin-left: 8px;
 }

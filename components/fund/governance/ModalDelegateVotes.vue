@@ -107,14 +107,12 @@
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 
 defineProps({ modelValue: Boolean });
 const emit = defineEmits(["update:modelValue", "delegate-success"]);
 
 const fundStore = useFundStore();
 const toastStore = useToastStore();
-const web3Store = useWeb3Store();
 
 // delegate dialog
 const loadingDelegates = ref(false);
