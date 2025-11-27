@@ -13,8 +13,11 @@
             width="2"
             indeterminate
           />
-          <template v-else>
+          <template v-else-if="totalTVL?.totalTvlUSDFormatted">
             ${{ totalTVL?.totalTvlUSDFormatted }}
+          </template>
+          <template v-else>
+            N/A
           </template>
         </div>
       </div>
@@ -31,7 +34,7 @@
             indeterminate
           />
           <template v-else>
-            {{ totalTVL?.fundCount }}
+            {{ totalTVL?.fundCount || "N/A" }}
           </template>
         </div>
       </div>
