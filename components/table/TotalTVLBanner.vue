@@ -2,10 +2,10 @@
   <div class="total-tvl-banner">
     <div class="total-tvl-content">
       <div class="total-tvl-label">
-        Total Value Locked:
+        TVL:
       </div>
       <div class="total-tvl-value">
-        {{ totalTVL?.totalTvlUSDFormatted }}
+        ${{ totalTVL?.totalTvlUSDFormatted }}
       </div>
       <div class="total-tvl-fund-count">
         {{ totalTVL?.fundCount }} Vaults
