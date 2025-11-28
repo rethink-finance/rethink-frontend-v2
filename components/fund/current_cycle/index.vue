@@ -68,7 +68,7 @@
       <FundCurrentCyclePendingRequest
         v-if="userDepositRequestExists"
         :fund-transaction-request="userDepositRequest"
-        :exchange-rate="baseToFundTokenExchangeRate"
+        :exchange-rate="baseToFundTokenExchangeRateSimulatedNav"
         :token0="fund.baseToken"
         :token1="fund.fundToken"
       />
@@ -120,7 +120,7 @@ const {
   fundUserData,
   userDepositRequest,
   userRedemptionRequest,
-  baseToFundTokenExchangeRate,
+  baseToFundTokenExchangeRateSimulatedNav,
   fundToBaseTokenExchangeRate,
   shouldUserWaitSettlementOrCancelDeposit,
   shouldUserWaitSettlementOrCancelRedemption,

@@ -61,7 +61,9 @@
               width="2"
               indeterminate
             />
-            {{ fundStore.fundTotalNAVFormattedShort ?? "N/A" }}
+            <template v-else>
+              {{ fundStore.fundTotalNAVFormattedShort ?? "N/A" }}
+            </template>
           </template>
         </div>
         <div class="data_bar__subtitle">

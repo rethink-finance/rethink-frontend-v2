@@ -71,19 +71,14 @@
           <v-skeleton-loader type="text" class="request_deposit__text_skeleton" />
           <v-skeleton-loader type="text" class="request_deposit__text_skeleton" />
         </div>
-        <div v-else-if="fundStore.fundLastNAVUpdate">
-          <div>
-            <strong>
-              {{ exchangeRateText }}
-            </strong>
-          </div>
-          <span class="request_deposit__info_text">
-            {{ isExchangeRateUsingSimulatedNav ? "Based on the Current NAV" : "Based on the Last NAV Update" }}
-          </span>
+        <div>
+          <strong>
+            {{ exchangeRateText }}
+          </strong>
         </div>
-        <div v-else>
-          There was no NAV update yet: 1 {{ token0?.symbol }} = {{ noNavUpdateToken1Value }} {{ token1?.symbol }}
-        </div>
+        <span class="request_deposit__info_text">
+          {{ isExchangeRateUsingSimulatedNav ? "Based on the Current NAV" : "Based on the Last NAV Update" }}
+        </span>
       </div>
     </div>
     <div class="buttons_container">

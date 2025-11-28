@@ -8,7 +8,7 @@
         :token1="fund.fundToken"
         :token0-user-balance="fundStore.fundUserData.baseTokenBalance"
         :token1-user-balance="fundStore.fundUserData.fundTokenBalance"
-        :exchange-rate="fundStore.baseToFundTokenExchangeRate"
+        :exchange-rate="calculatedExchangeRate"
         :is-exchange-rate-using-simulated-nav="true"
       />
     </template>
@@ -200,18 +200,8 @@ const depositRequestAmountFormatted = computed(() => {
   );
 });
 
-const isAnythingLoading = computed(() => {
-  // Object.values returns an array of values from the actions object
-  // some() checks if at least one element passes the test implemented by the provided function
-  return loadingRequestDeposit.value || loadingApproveAllowance.value;
-});
-
-const isRequestDepositDisabled = computed(() => {
-  return (
-    errorMessages.value.length > 0 ||
-    isAnythingLoading.value ||
-    !fundStore.isUserWalletWhitelisted
-  );
+const calculatedExchangeRate = computed(() => {
+  return fundStore.baseToFundTokenExchangeRateSimulatedNav || fundStore.baseToFundTokenExchangeRate
 });
 
 const errorMessages = computed<IFormError[]>(() => {
