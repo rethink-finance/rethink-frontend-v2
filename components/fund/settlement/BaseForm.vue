@@ -50,21 +50,36 @@
           {{ token1.symbol }}
         </div>
         <div class="request_deposit__token_col text-end">
-          ≈ {{ calculatedToken1Value }}
+          ≈
+          <v-progress-circular
+            v-if="isExchangeRateLoading"
+            size="14"
+            width="2"
+            indeterminate
+          />
+          <template v-else>
+            {{ calculatedToken1Value }}
+          </template>
         </div>
       </div>
       <div class="request_deposit__balance">
-        <div>
+        <div class="mb-2">
           Balance:
           <strong>{{ token1UserBalanceFormatted }} {{ token1.symbol }}</strong>
         </div>
-        <div v-if="fundStore.fundLastNAVUpdate">
-          Based on Last NAV Update:
+        <div v-if="isExchangeRateLoading">
+          <v-skeleton-loader type="text" class="request_deposit__text_skeleton" />
+          <v-skeleton-loader type="text" class="request_deposit__text_skeleton" />
+        </div>
+        <div v-else-if="fundStore.fundLastNAVUpdate">
           <div>
             <strong>
               {{ exchangeRateText }}
             </strong>
           </div>
+          <span class="request_deposit__info_text">
+            {{ isExchangeRateUsingSimulatedNav ? "Based on the Current NAV" : "Based on the Last NAV Update" }}
+          </span>
         </div>
         <div v-else>
           There was no NAV update yet: 1 {{ token0?.symbol }} = {{ noNavUpdateToken1Value }} {{ token1?.symbol }}
@@ -110,6 +125,14 @@ const props = defineProps({
   exchangeRate: {
     type: FixedNumber,
     default: FixedNumber.fromValue(0),
+  },
+  isExchangeRateLoading: {
+    type: Boolean,
+    default: false,
+  },
+  isExchangeRateUsingSimulatedNav: {
+    type: Boolean,
+    default: false,
   },
   rules: {
     type: Array as PropType<RulesArray>,
@@ -222,6 +245,16 @@ const noNavUpdateToken1Value = computed(() => {
     }
     &--dark {
       background: $color-navy-gray-dark;
+    }
+  }
+  &__info_text {
+    color: $color-text-irrelevant;
+  }
+  &__text_skeleton {
+    max-width: 15rem;
+
+    ::v-deep(.v-skeleton-loader__text) {
+      margin: 0.25rem 0;
     }
   }
   &__balance {

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!isLoadingFetchFundNAVUpdatesActionState" class="chart">
+  <div class="chart">
     <div class="chart__toolbar">
       <div>
         <FundChartTypeSelector
@@ -13,16 +13,22 @@
     </div>
     <div class="chart__chart_wrapper">
       <v-skeleton-loader
-        v-if="isSharePriceLoading && selectedType === ChartType.SHARE_PRICE"
+        v-if="isLoadingFetchFundNAVUpdatesActionState"
         type="ossein"
-        height="400px"
+        height="370px"
+        width="100%"
+      />
+      <v-skeleton-loader
+        v-else-if="isSharePriceLoading && selectedType === ChartType.SHARE_PRICE"
+        type="ossein"
+        height="370px"
         width="100%"
       />
       <div v-else class="meta">
         <ClientOnly>
           <apexchart
             v-if="chartItems.length > 0"
-            height="400"
+            height="370"
             width="100%"
             :options="options"
             :series="series"
@@ -327,8 +333,8 @@ watch(() => selectedType.value, () => {
     margin-bottom: 1rem;
   }
   &__chart_wrapper {
-    height: 400px;
-    min-height: 400px;
+    height: 370px;
+    min-height: 370px;
   }
   ::v-deep(.custom_tooltip) {
     display: flex;

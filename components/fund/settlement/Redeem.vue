@@ -8,10 +8,8 @@
       :token0-user-balance="fundStore.fundUserData.fundTokenBalance"
       :token1-user-balance="fundStore.fundUserData.baseTokenBalance"
       :exchange-rate="fundStore.fundToBaseTokenExchangeRate"
+      :is-exchange-rate-loading="isLoadingFetchFundNAVUpdatesActionState"
     />
-
-    <div class="divider" />
-
 
     <div v-if="accountStore.isConnected">
       <div class="buttons_group">
@@ -85,9 +83,12 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
+import { ActionState } from "~/types/enums/action_state";
+import { useActionStateStore } from "~/store/actionState.store";
 
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
+const actionStateStore = useActionStateStore();
 const fundStore = useFundStore();
 const tokenValue = ref("");
 const tokenValueChanged = ref(false);
@@ -107,6 +108,10 @@ watch(
     tokenValueChanged.value = true;
   },
 );
+
+const isLoadingFetchFundNAVUpdatesActionState = computed(() => {
+  return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
+});
 
 const rules = [
   (value: string): boolean | IFormError => {

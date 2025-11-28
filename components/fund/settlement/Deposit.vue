@@ -9,6 +9,7 @@
         :token0-user-balance="fundStore.fundUserData.baseTokenBalance"
         :token1-user-balance="fundStore.fundUserData.fundTokenBalance"
         :exchange-rate="fundStore.baseToFundTokenExchangeRate"
+        :is-exchange-rate-using-simulated-nav="true"
       />
     </template>
     <div v-else class="deposit-flow" @click="handleDepositClick">
@@ -55,9 +56,6 @@
         </v-tooltip>
       </div>
     </div>
-
-    <div class="divider" />
-
 
     <div v-if="accountStore.isConnected" style="width: 100%">
       <div

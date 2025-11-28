@@ -17,7 +17,7 @@ export const fetchFundDataAction = async (
     await fundStore.fetchFundMetaData(fundChainId, fundAddress);
     // TODO everything necessary is already fetched in the fundLatestSnapshotAction, so use this only as a fallback
     // Refactor the fetchFundNAVDataAction, as there are still some things that need to be set like: fundManagedNAVMethods
-    await fundStore.fetchFundNAVData();
+    fundStore.fetchFundNAVData();
 
     if (fundStore.fund) {
       fetchFundLatestSnapshotAction(fundStore.fund).then((fundWithSnapshotData: IFund) => {
