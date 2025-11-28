@@ -229,7 +229,7 @@ const headers: any = computed(() => [
   //   align: "end",
   // },
   {
-    title: "Cumulative",
+    title: "Cumulative Return",
     key: "cumulativeReturnPercent",
     align: "end",
     width: 170,

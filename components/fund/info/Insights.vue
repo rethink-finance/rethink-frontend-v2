@@ -70,6 +70,19 @@
       </div>
       <div class="data_bar__item">
         <div class="data_bar__title">
+          <BaseAssetIcon
+            :chain-id="fund.chainId"
+            :chain-short="fund.chainShort"
+            :token-address="fund.baseToken.address"
+            class="mr-2"
+          />
+        </div>
+        <div class="data_bar__subtitle">
+          Base Asset
+        </div>
+      </div>
+      <div class="data_bar__item">
+        <div class="data_bar__title">
           {{ fund.inceptionDate }}
         </div>
         <div class="data_bar__subtitle">
@@ -95,7 +108,7 @@
           </template>
         </div>
         <div class="data_bar__subtitle">
-          Cumulative
+          Cumulative Return
         </div>
       </div>
       <!-- Remove Monthly Return for now -->
@@ -120,16 +133,16 @@
           Sharpe Ratio
         </div>
       </div> -->
-      <div class="data_bar__item">
-        <div class="data_bar__title">
-          <FundInfoPositionTypesBar
-            :position-type-counts="fund?.positionTypeCounts ?? []"
-          />
-        </div>
-        <div class="data_bar__subtitle">
-          Position Types
-        </div>
-      </div>
+      <!--      <div class="data_bar__item">-->
+      <!--        <div class="data_bar__title">-->
+      <!--          <FundInfoPositionTypesBar-->
+      <!--            :position-type-counts="fund?.positionTypeCounts ?? []"-->
+      <!--          />-->
+      <!--        </div>-->
+      <!--        <div class="data_bar__subtitle">-->
+      <!--          Position Types-->
+      <!--        </div>-->
+      <!--      </div>-->
     </UiDataBar>
   </div>
 </template>
@@ -144,6 +157,7 @@ import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 import { useSettingsStore } from "~/store/settings/settings.store";
 import { fetchFundLatestSnapshotAction } from "~/store/funds/actions/fetchFundLatestSnapshot.action";
+import BaseAssetIcon from "~/components/global/icon/BaseAsset.vue";
 const fundStore = useFundStore();
 const actionStateStore = useActionStateStore();
 const appSettingsStore = useSettingsStore();
