@@ -59,7 +59,7 @@ const isLoadingTotalTVL =
 .total-tvl-banner {
   width: 100%;
   background-color: $color-surface;
-  padding: 1rem;
+  padding: 0.8rem;
   border-radius: 0.5rem;
   margin-bottom: 2rem;
   display: flex;
