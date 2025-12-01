@@ -92,14 +92,32 @@ const isLoadingFetchFundNAVUpdatesActionState = computed(() => {
 });
 
 const totalNAVItems = computed(() => {
-  return props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n) || [];
+  // Get NAV values from navUpdates
+  let navItems = props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n) || [];
+
+  // Add simulated NAV if available
+  if (props.fund?.totalSimulatedNav && selectedType.value === ChartType.NAV) {
+    navItems = [...navItems, props.fund.totalSimulatedNav];
+  }
+
+  return navItems;
 });
 
 const chartItems = computed(() => {
+  // Get NAV values from navUpdates
+  let navValues = props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => parseFloat(
+    ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals),
+  )) || [];
+
+  // Add simulated NAV if available
+  if (props.fund?.totalSimulatedNav && selectedType.value === ChartType.NAV) {
+    navValues = [...navValues, parseFloat(
+      ethers.formatUnits(props.fund.totalSimulatedNav, props.fund?.baseToken.decimals),
+    )];
+  }
+
   const items: Record<ChartType, number[]> = {
-    [ChartType.NAV]: props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => parseFloat(
-      ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals),
-    )) || [],
+    [ChartType.NAV]: navValues,
     [ChartType.SHARE_PRICE]: sharePriceItems.value,
   };
 
@@ -107,8 +125,16 @@ const chartItems = computed(() => {
 })
 
 const chartDates = computed(() => {
+  // Get dates from navUpdates
+  let navDates = props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [];
+
+  // Add simulated NAV date if available
+  if (props.fund?.totalSimulatedNavCalculatedAt && selectedType.value === ChartType.NAV) {
+    navDates = [...navDates, props.fund.totalSimulatedNavCalculatedAt];
+  }
+
   const items: Record<ChartType, string[]> = {
-    [ChartType.NAV]: props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [],
+    [ChartType.NAV]: navDates,
     [ChartType.SHARE_PRICE]: props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [],
   };
 
@@ -219,17 +245,23 @@ const options = computed(() => {
     tooltip: {
       theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
       // TODO when multiple series use:
-      custom: ({ series, seriesIndex, dataPointIndex, w }: any) => {
+      custom: ({ _series, _seriesIndex, dataPointIndex, w }: { _series: any, _seriesIndex: number, dataPointIndex: number, w: any }) => {
         const valueNav = totalNAVItems.value[dataPointIndex];
         const valueSharePrice = sharePriceItems.value[dataPointIndex];
 
+        // Check if this is the simulated NAV data point
+        const isSimulatedNav = selectedType.value === ChartType.NAV &&
+                              props.fund?.totalSimulatedNav &&
+                              dataPointIndex === totalNAVItems.value.length - 1 &&
+                              dataPointIndex >= props.fund?.navUpdates?.length;
+
         return `
-          <div class='custom_tooltip'>
-            <div class='tooltip_row'>
-              <div class='label'>Date:</div> ${w.globals.categoryLabels[dataPointIndex]}
+          <div class="custom_tooltip">
+            <div class="tooltip_row">
+              <div class="label">Date:</div> ${w.globals.categoryLabels[dataPointIndex]}
             </div>
-            <div class='tooltip_row'>
-              <div class='label'>${selectedType.value === ChartType.NAV ? "NAV" : "Share Price"}:</div>
+            <div class="tooltip_row">
+              <div class="label">${selectedType.value === ChartType.NAV ? (isSimulatedNav ? "Simulated NAV" : "NAV") : "Share Price"}:</div>
               ${selectedType.value === ChartType.NAV ? formatWei(valueNav) : valueSharePrice}
             </div>
           </div>
