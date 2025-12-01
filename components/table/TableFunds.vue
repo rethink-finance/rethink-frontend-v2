@@ -156,7 +156,6 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from "vue";
 import BaseAssetIcon from "../global/icon/BaseAsset.vue";
 import FundNameCell from "./components/FundNameCell.vue";
 import {
