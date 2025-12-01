@@ -2,18 +2,28 @@
   <div class="main_grid">
     <UiDataRowCard :title="fund.fundToken?.symbol" subtitle="Vault Token Symbol" />
     <UiDataRowCard :title="fund.baseToken?.symbol" subtitle="Denomination Asset" />
-    <UiDataRowCard :title="fund.safeAddress" subtitle="Safe Contract" />
-    <UiDataRowCard :title="fund.fundToken?.address" subtitle="Admin Contract" />
-    <UiDataRowCard
-      :title="roleModAddress"
-      subtitle="Roles Modifier Contract"
-    />
+    <UiDataRowCard subtitle="Safe Contract">
+      <template #title>
+        <AddressLink :address="fund.safeAddress" :chain-id="fund.chainId" />
+      </template>
+    </UiDataRowCard>
+    <UiDataRowCard subtitle="Admin Contract">
+      <template #title>
+        <AddressLink :address="fund.fundToken?.address" :chain-id="fund.chainId" />
+      </template>
+    </UiDataRowCard>
+    <UiDataRowCard subtitle="Roles Modifier Contract">
+      <template #title>
+        <AddressLink :address="roleModAddress" :chain-id="fund.chainId" />
+      </template>
+    </UiDataRowCard>
   </div>
 </template>
 
 <script setup lang="ts">
 import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund/fund.store";
+import AddressLink from "~/components/common/AddressLink.vue";
 const fundStore = useFundStore();
 
 const props = defineProps({

@@ -1,7 +1,15 @@
 <template>
   <div class="main_grid accordion_content">
-    <UiDataRowCard :title="fund.governorAddress" subtitle="Governance Contract" />
-    <UiDataRowCard :title="fund.governanceToken?.address" subtitle="Governance Token" />
+    <UiDataRowCard subtitle="Governance Contract">
+      <template #title>
+        <AddressLink :address="fund.governorAddress" :chain-id="fund.chainId" />
+      </template>
+    </UiDataRowCard>
+    <UiDataRowCard subtitle="Governance Token">
+      <template #title>
+        <AddressLink :address="fund.governanceToken?.address" :chain-id="fund.chainId" />
+      </template>
+    </UiDataRowCard>
     <UiDataRowCard :title="fund.votingDelay" subtitle="Voting Delay" />
     <UiDataRowCard :title="fund.votingPeriod" subtitle="Voting Period" />
     <UiDataRowCard :title="fund.proposalThreshold" subtitle="Proposal Threshold" />
@@ -11,28 +19,29 @@
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
+import { computed } from "vue";
 import type IFund from "~/types/fund";
+import AddressLink from "~/components/common/AddressLink.vue";
+import { formatTokenValue } from "~/composables/formatters";
 
-export default defineComponent({
-  name: "Governance",
-  props: {
-    fund: {
-      type: Object as PropType<IFund>,
-      default: () => {},
-    },
+const props = defineProps({
+  fund: {
+    type: Object as PropType<IFund>,
+    default: () => ({}),
   },
-  computed: {
-    governanceTokenTotalSupplyFormatted() {
-      return formatTokenValue(
-        this.fund.governanceTokenTotalSupply,
-        this.fund.governanceToken.decimals) + " " + this.fund.governanceToken.symbol;
-    },
-    quorumFormatted() {
-      return `${this.fund.quorumPercentage} (${this.fund.quorumVotesFormatted} ${this.fund.governanceToken.symbol})`
-    },
-  },
-})
+});
+
+const governanceTokenTotalSupplyFormatted = computed(() => {
+  return formatTokenValue(
+    props.fund.governanceTokenTotalSupply,
+    props.fund.governanceToken.decimals,
+  ) + " " + props.fund.governanceToken.symbol;
+});
+
+const quorumFormatted = computed(() => {
+  return `${props.fund.quorumPercentage} (${props.fund.quorumVotesFormatted} ${props.fund.governanceToken.symbol})`;
+});
 </script>
 
 <style lang="scss" scoped>

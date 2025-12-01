@@ -28,9 +28,11 @@
               {{ subtitle }}
             </div>
           </div>
-          <div v-if="title2" class="data_row__column" :class="{'data_row__column--grow': growColumn2}">
+          <div v-if="title2 || $slots.title2" class="data_row__column" :class="{'data_row__column--grow': growColumn2}">
             <div class="data_row__title">
-              {{ title2 }}
+              <slot name="title2">
+                {{ title2 }}
+              </slot>
             </div>
             <div v-if="subtitle2" class="data_row__subtitle">
               {{ subtitle2 }}

@@ -8,60 +8,63 @@
       :title="fund.minLiquidAssetShare || 'N/A'"
       subtitle="Min. Liquid Asset Share "
     />
-    <!-- We don’t have to show Address, just Planned Settlement Cycle and Planned Liq. Asset Share -->
-    <!-- <UiDataRowCard
-      :title="managementTitle"
-      :body="managementBody"
-      subtitle="Management"
-    /> -->
+    <UiDataRowCard :title="managementTitle" subtitle="Management">
+      <template #body>
+        <div v-if="fund?.allowedManagerAddresses?.length">
+          <div v-for="(address, index) in fund.allowedManagerAddresses" :key="index" class="address-item">
+            <AddressLink :address="address" :chain-id="fund.chainId" />
+          </div>
+        </div>
+        <div v-else>
+          There are currently no manager addresses.
+        </div>
+      </template>
+    </UiDataRowCard>
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, type PropType } from "vue";
+<script setup lang="ts">
+import { ref, computed, onMounted } from "vue";
 import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
 import type IFund from "~/types/fund";
+import AddressLink from "~/components/common/AddressLink.vue";
 
-export default defineComponent({
-  name: "Management",
-  props: {
-    fund: {
-      type: Object as PropType<IFund>,
-      default: () => {},
-    },
+const props = defineProps({
+  fund: {
+    type: Object as PropType<IFund>,
+    default: () => ({}),
   },
-  data() {
-    return {
-      parsedPlannedSettlement: "",
-    };
-  },
-  computed: {
-    managementTitle() {
-      const addressCount = this.fund?.allowedManagerAddresses?.length ?? 0;
-      if (addressCount === 1) {
-        return `${addressCount} Address`
-      }
-      return `${addressCount} Addresses`
-    },
-    managementBody() {
-      if (this.fund?.allowedManagerAddresses?.length) {
-        return this.fund.allowedManagerAddresses.join("\n");
-      }
-      return "There are currently no addresses."
-    },
-  },
-  async mounted() {
-    await parsePlannedSettlement(this.fund?.chainId, this.fund?.plannedSettlementPeriod)
-      .then((result) => {
-        this.parsedPlannedSettlement = result?.toString() || "";
-      })
-      .catch((error) => {
-        console.error("Error parsing planned settlement", error);
-      })
-  },
-})
+});
+
+const parsedPlannedSettlement = ref("");
+
+const managementTitle = computed(() => {
+  const addressCount = props.fund?.allowedManagerAddresses?.length ?? 0;
+  if (addressCount === 1) {
+    return `${addressCount} Address`;
+  }
+  return `${addressCount} Addresses`;
+});
+
+onMounted(async () => {
+  try {
+    const result = await parsePlannedSettlement(
+      props.fund?.chainId,
+      props.fund?.plannedSettlementPeriod,
+    );
+    parsedPlannedSettlement.value = result?.toString() || "";
+  } catch (error) {
+    console.error("Error parsing planned settlement", error);
+  }
+});
 </script>
 
 <style lang="scss" scoped>
+.address-item {
+  margin-bottom: 0.5rem;
 
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
 </style>

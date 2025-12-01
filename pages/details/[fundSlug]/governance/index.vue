@@ -91,7 +91,15 @@
       <div class="mb-10">
         <div class="title">
           Delegated Member:
-        </div> {{ activeRow?.delegatedMember }}
+        </div>
+        <AddressLink
+          v-if="activeRow?.delegatedMember"
+          :address="activeRow?.delegatedMember"
+          :chain-id="fundStore?.fund?.chainId"
+        />
+        <template v-else>
+          N/A
+        </template>
       </div>
       <div>
         <div class="title">
@@ -99,7 +107,7 @@
         </div>
         <ul>
           <li v-for="delegator in activeRow?.delegators" :key="delegator" class="delegator-item">
-            {{ delegator }}
+            <AddressLink :address="delegator" :chain-id="fundStore?.fund?.chainId" />
             <FundGovernanceProposalStateChip
               v-if="activeRow?.delegatedMember === delegator"
               value="Self Delegated"
@@ -149,6 +157,7 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import { _mapDelegatesToTrendingDelegates } from "~/types/helpers/mappers";
 import type ITrendingDelegate from "~/types/trending_delegate";
+import AddressLink from "~/components/common/AddressLink.vue";
 
 const router = useRouter();
 const accountStore = useAccountStore();
