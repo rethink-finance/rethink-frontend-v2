@@ -106,12 +106,12 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
       // "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", Luka T.
       // "https://base-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", Rok
-      "https://base.llamarpc.com",
+      // "https://base.llamarpc.com", // TODO don't use llama, it returns latest block 5 days in the past
       "https://base-mainnet.public.blastapi.io",
       "https://1rpc.io/base",
       "https://gateway.tenderly.co/public/base",
       "https://mainnet.base.org",
-      // "https://base.drpc.org",
+      "https://base.drpc.org",
       // "https://base.meowrpc.com",
       // "https://base.rpc.subquery.network/public",
     ],

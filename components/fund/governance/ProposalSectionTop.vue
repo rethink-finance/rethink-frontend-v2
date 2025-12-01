@@ -97,14 +97,14 @@
 
         <template v-else>
           <v-btn
-            v-if="isProposalActive && !hasAccountVotedAlready"
+            v-if="(isProposalActive || isProposalPending) && !hasAccountVotedAlready"
             class="section-top__submit-button"
-            :disabled="!accountStore.isConnected"
+            :disabled="!accountStore.isConnected || isProposalPending"
             @click="openVoteDialog"
           >
             Submit Vote
             <v-tooltip
-              v-if="!accountStore.isConnected || hasAccountVotedAlready"
+              v-if="!accountStore.isConnected || hasAccountVotedAlready || isProposalPending"
               :model-value="true"
               activator="parent"
               location="top"
@@ -112,6 +112,9 @@
             >
               <template v-if="!accountStore.isConnected">
                 Connect your wallet.
+              </template>
+              <template v-else-if="isProposalPending">
+                Proposal is pending. Wait for it to be become active.
               </template>
             </v-tooltip>
           </v-btn>
@@ -310,6 +313,9 @@ const metaCopyTags = computed((): IMetaItem[] => {
 
 const isProposalActive = computed(() => {
   return props.proposal?.state === ProposalState.Active;
+});
+const isProposalPending = computed(() => {
+  return props.proposal?.state === ProposalState.Pending;
 });
 
 const hasProposalSucceeded = computed(() => {
