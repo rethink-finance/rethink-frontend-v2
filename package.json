@@ -61,7 +61,7 @@
     "@web3-onboard/ledger": "^2.7.1",
     "@web3-onboard/vue": "^2.7.12",
     "@web3-onboard/walletconnect": "^2.6.1",
-    "apexcharts": "^3.47.0",
+    "apexcharts": "^5.3.6",
     "axios": "^0.21.4",
     "axios-cache-adapter": "^2.7.3",
     "esbuild": "^0.20.2",
@@ -79,7 +79,7 @@
     "p-limit": "^6.1.0",
     "pinia": "^2.1.7",
     "rxjs": "^7.8.1",
-    "vue3-apexcharts": "^1.4.4",
+    "vue3-apexcharts": "^1.10.0",
     "web3": "^4.16.0"
   }
 }

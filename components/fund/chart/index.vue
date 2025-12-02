@@ -56,6 +56,7 @@ import type INAVUpdate from "~/types/nav_update";
 import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 import { fetchFundNavUpdatesAction, type ParsedNavUpdateDto } from "~/store/funds/actions/fetchFundNavUpdates.action";
 import { formatDate } from "~/composables/formatters";
+import { abbreviateNumber } from "~/composables/abbreviateNumber";
 
 const fundStore = useFundStore();
 const blockTimeStore = useBlockTimeStore();
@@ -190,11 +191,9 @@ const options = computed(() => {
     grid: {
       show: false,
       padding: {
-        // This removes the right padding. Without removing it, we have a lot of
-        // space on the right of the chart.
-        // TODO if you use here -26 it extends the chart until the end of the div, but the last label
-        //   is not entirely visible.
-        right: 0,
+      // This removes the right padding. Without removing it, we have a lot of
+      // space on the right of the chart.
+        right: 8,
       },
     },
     fill: {
@@ -242,6 +241,7 @@ const options = computed(() => {
     },
     xaxis: {
       categories: chartDates.value,
+      type: "datetime",
       tickAmount: 4,
       axisBorder: {
         show: false,
@@ -263,7 +263,9 @@ const options = computed(() => {
     },
     tooltip: {
       theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
-      custom: ({ _series, _seriesIndex, dataPointIndex, w }: { _series: any, _seriesIndex: number, dataPointIndex: number, w: any }) => {
+      custom: function({ seriesIndex, dataPointIndex, w }: { seriesIndex: number, dataPointIndex: number, w: any }) {
+        const formattedDate = formatDate(new Date(w.globals.seriesX[seriesIndex][dataPointIndex]));
+
         const valueNav = totalNAVItems.value[dataPointIndex];
         const valueSharePrice = selectedType.value === ChartType.SHARE_PRICE &&
           dataPointIndex === chartItems.value.length - 1 &&
@@ -290,7 +292,7 @@ const options = computed(() => {
         return `
           <div class="custom_tooltip">
             <div class="tooltip_row">
-              <div class="label">Date:</div> ${w.globals.categoryLabels[dataPointIndex]}
+              <div class="label">Date:</div> ${formattedDate}
             </div>
             <div class="tooltip_row">
               <div class="label">${labelText}:</div>
