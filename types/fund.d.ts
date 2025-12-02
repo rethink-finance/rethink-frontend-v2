@@ -63,6 +63,7 @@ export default interface IFund {
   lastNAVUpdateTotalNAV?: bigint;
   totalSimulatedNav?: bigint;
   totalSimulatedNavCalculatedAt?: string;
+  totalSimulatedNavCalculatedAtISO?: string;
   totalSimulatedNavFormatted?: string;
   totalSimulatedNavUSD?: string;
   totalSimulatedNavUSDFormatted?: string;
