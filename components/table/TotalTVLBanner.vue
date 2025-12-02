@@ -60,11 +60,11 @@ const isLoadingTotalTVL =
   width: 100%;
   background-color: $color-surface;
   padding: 0.8rem;
-  border-radius: 0.5rem;
   margin-bottom: 2rem;
   display: flex;
   align-items: center;
-  border: 1px solid $color-border-dark;
+  @include borderGray;
+  border-color: $color-bg-transparent;
 }
 
 .total-tvl-content {
@@ -81,11 +81,11 @@ const isLoadingTotalTVL =
   gap: 0.5rem;
 
   &__label {
-    font-size: $text-lg;
+    font-size: $text-md;
     color: var(--v-on-surface-variant);
   }
   &__value {
-    font-size: $text-lg;
+    font-size: $text-md;
     font-weight: 600;
     color: var(--v-on-surface);
   }
