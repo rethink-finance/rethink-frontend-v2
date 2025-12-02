@@ -2,6 +2,9 @@ import { ethers } from "ethers";
 import numeral from "numeral";
 import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 
+const daysShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const monthsShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 /**
  * Formats a JavaScript Date object as "24 Jul 23" (day of the month, abbreviated month name, and last two digits of the year).
  *
@@ -11,8 +14,7 @@ import { PeriodUnits, TimeInSeconds } from "~/types/enums/input_type";
 export const formatDate = (date: Date) => {
   if (!date) return "";
   const day = date.getDate().toString(); // Day of the month.
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const month = monthNames[date.getMonth()]; // Abbreviated month name
+  const month = monthsShort[date.getMonth()]; // Abbreviated month name
   const year = date.getFullYear().toString().slice(-2); // Last two digits of the year
 
   return `${day} ${month} ${year}`;
@@ -22,24 +24,20 @@ export const formatDate = (date: Date) => {
  * Formats a date string into "Day Mon dd, yyyy, hh:mm am/pm" format.
  *
  * @param {Date} date - The Date object to be formatted.
+ * @param {boolean} includeDayName - Flag to include the day name in the final result.
  * @returns {string} The formatted date string.
  */
-export const formatDateLong = (date: Date) => {
+export const formatDateLong = (date: Date, includeDayName: boolean = false) => {
   if (!date) return "";
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const dayName = days[date.getUTCDay()];
-  const monthName = months[date.getUTCMonth()];
+  const dayName = includeDayName ? daysShort[date.getUTCDay()] + " " : "";
+  const monthName = monthsShort[date.getUTCMonth()];
   const day = date.getUTCDate();
-  const year = date.getUTCFullYear(); // Full year
-  let hour = date.getUTCHours();
+  const year = date.getUTCFullYear().toString().slice(-2); // Last two digits of the year
+  const hour = date.getUTCHours().toString().padStart(2, "0");
   const minutes = date.getUTCMinutes().toString().padStart(2, "0");
-  const ampm = hour >= 12 ? "pm" : "am";
-  hour = hour % 12;
-  hour = hour || 12; // the hour '0' should be '12'
 
-  return `${dayName} ${monthName} ${day}, ${year}, ${hour}:${minutes} ${ampm}`;
+  return `${dayName}${day} ${monthName} ${year}, ${hour}:${minutes}`;
 }
 
 /**

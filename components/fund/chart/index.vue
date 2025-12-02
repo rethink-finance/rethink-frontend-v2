@@ -55,7 +55,7 @@ import type IFund from "~/types/fund";
 import type INAVUpdate from "~/types/nav_update";
 import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 import { fetchFundNavUpdatesAction, type ParsedNavUpdateDto } from "~/store/funds/actions/fetchFundNavUpdates.action";
-import { formatDate } from "~/composables/formatters";
+import { formatDate, formatDateLong } from "~/composables/formatters";
 import { abbreviateNumber } from "~/composables/abbreviateNumber";
 
 const fundStore = useFundStore();
@@ -264,7 +264,7 @@ const options = computed(() => {
     tooltip: {
       theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
       custom: function({ seriesIndex, dataPointIndex, w }: { seriesIndex: number, dataPointIndex: number, w: any }) {
-        const formattedDate = formatDate(new Date(w.globals.seriesX[seriesIndex][dataPointIndex]));
+        let formattedDate = formatDate(new Date(w.globals.seriesX[seriesIndex][dataPointIndex]));
 
         const valueNav = totalNAVItems.value[dataPointIndex];
         const valueSharePrice = selectedType.value === ChartType.SHARE_PRICE &&
@@ -288,6 +288,11 @@ const options = computed(() => {
         const labelText = selectedType.value === ChartType.NAV
           ? (isSimulatedNav ? "Simulated NAV" : "NAV")
           : (isSimulatedSharePrice ? "Simulated Share Price" : "Share Price");
+
+        if ((isSimulatedNav || isSimulatedSharePrice) && props.fund?.totalSimulatedNavCalculatedAtISO) {
+          // Use long datetime format with hour and minutes for the simulated value.
+          formattedDate = formatDateLong(new Date(props.fund?.totalSimulatedNavCalculatedAtISO));
+        }
 
         return `
           <div class="custom_tooltip">
