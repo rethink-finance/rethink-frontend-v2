@@ -1033,9 +1033,9 @@ watch(() => isCreateFundPasswordCorrect.value, (isPasswordCorrect) => {
 });
 
 // TODO: remove this watcher
-watch(stepperEntry.value, (newVal) => {
-  console.log("stepperEntry changes", newVal);
-});
+// watch(stepperEntry.value, (newVal) => {
+//   console.log("stepperEntry changes", newVal);
+// });
 
 watch(() => selectedChainId.value, () => {
   askToSaveDraftBeforeRouteLeave.value = true;

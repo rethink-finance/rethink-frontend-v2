@@ -353,18 +353,6 @@ const getTransactionCallData = async (
     }
   }
 
-  // TODO is this needed? why do we need to know how much gas was used?
-  // for (const tx of allTransactions) {
-  //   const receipt = await web3Store.callWithRetry(
-  //     props.chainId,
-  //     () => web3.eth.getTransactionReceipt(tx.hash),
-  //     1,
-  //     [],
-  //     4000,
-  //   );
-  //   tx.gasUsed = receipt.gasUsed;
-  // }
-
   return allTransactions;
 };
 
