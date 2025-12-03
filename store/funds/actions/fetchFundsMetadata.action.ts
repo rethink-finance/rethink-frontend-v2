@@ -139,6 +139,7 @@ export async function fetchFundsMetaDataAction(
           // NAV Updates
           navUpdates: [] as INAVUpdate[],
           isNavUpdatesLoading: true,
+          fundFactoryContractV2Used: fundsInfo[address].fundFactoryContractV2Used,
         });
 
         const metaDataJson = fundMetaData.fundMetadata;

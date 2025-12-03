@@ -107,8 +107,6 @@ export const fetchFundMetaDataAction = async (
     console.warn("fetchFundMetaDataAction blockTimeContext", blockTimeContext)
 
     const fundNetwork = networksMap[fundChainId];
-    // console.log("fundMetadata.updateTimes");
-    // console.log(fundMetadata.updateTimes);
     const lastNavUpdateTime = undefined;//= fundMetadata.updateTimes[fundMetadata.updateTimes.length-1];
     const fund: IFund = {
       // Original fund settings
@@ -195,6 +193,9 @@ export const fetchFundMetaDataAction = async (
 
       // NAV Updates
       navUpdates: [] as INAVUpdate[],
+
+      // Check later in the code if it is V2
+      fundFactoryContractV2Used: false,
     } as IFund;
     console.log("fund fund: ", fund);
 
@@ -214,7 +215,19 @@ export const fetchFundMetaDataAction = async (
       fund.strategistUrl = metaData?.strategistUrl || strategistUrl;
       fund.oivChatUrl = metaData?.oivChatUrl || oivChatUrl;
     }
-    fundStore.chainFunds[fundChainId][fundAddress] = fund;
+
+    Object.assign(
+      fundStore.chainFunds[fundChainId][fundAddress] ??= {} as IFund,
+      fund,
+    );
+
+    fundStore.fetchGovernableFundFactoryVersion(fundChainId, fundAddress).then(
+      version => {
+        if (fundStore.chainFunds[fundChainId]?.[fundAddress]) {
+          fundStore.chainFunds[fundChainId][fundAddress].fundFactoryContractV2Used = version === "v2"
+        }
+      },
+    )
     return fund;
   } catch (error) {
     console.error("Error in promises: ", error, "fund: ", fundAddress);

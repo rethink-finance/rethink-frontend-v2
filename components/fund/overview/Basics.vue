@@ -14,7 +14,18 @@
     </UiDataRowCard>
     <UiDataRowCard subtitle="Roles Modifier Contract">
       <template #title>
-        <AddressLink :address="roleModAddress" :chain-id="fund.chainId" />
+        <div class="d-flex align-center justify-space-between">
+          <AddressLink :address="roleModAddress" :chain-id="fund.chainId" />
+
+          <UiLinkExternalButton
+            v-if="fund.fundFactoryContractV2Used"
+            title="Roles V2"
+            density="compact"
+            size="sm"
+            :href="gnosisRolesUrl"
+            class="ml-2 pa-2"
+          />
+        </div>
       </template>
     </UiDataRowCard>
   </div>
@@ -24,6 +35,7 @@
 import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund/fund.store";
 import AddressLink from "~/components/common/AddressLink.vue";
+import UiLinkExternalButton from "~/components/global/ui/LinkExternalButton.vue";
 const fundStore = useFundStore();
 
 const props = defineProps({
@@ -34,6 +46,12 @@ const props = defineProps({
 });
 
 const roleModAddress = ref("");
+
+const gnosisRolesUrl = computed(() => {
+  if (!props.fund?.chainShort || !roleModAddress.value) return "";
+  return `https://roles.gnosisguild.org/${props.fund.chainShort}:${roleModAddress.value}`;
+});
+
 
 watch(
   () => props.fund?.address,

@@ -15,6 +15,7 @@ import { fetchUserFundDataAction } from "./actions/fetchUserFundData.action";
 import { fetchUserFundDelegateAddressAction } from "./actions/fetchUserFundDelegateAddress.action";
 import { fetchUserFundDepositRedemptionRequestsAction } from "./actions/fetchUserFundDepositRedemptionRequests.action";
 import { fetchUserFundShareValueAction } from "./actions/fetchUserFundShareValue.action";
+import { fetchGovernableFundFactoryVersionAction } from "./actions/fetchGovernableFundFactoryVersion.action";
 import { fetchUserFundTokenBalanceAction } from "./actions/fetchUserFundTokenBalance.action";
 import { fetchUserFundTransactionRequestAction } from "./actions/fetchUserFundTransactionRequest.action";
 import { fetchUserGovernanceTokenBalanceAction } from "./actions/fetchUserGovernanceTokenBalance.action";
@@ -192,7 +193,6 @@ export const useFundStore = defineStore({
       );
 
       // Perform the division
-      console.log("baseToFundTokenExchangeRateSimulatedNav exchangeRate: ", fundTokenTotalSupply.div(totalNAV));
       return fundTokenTotalSupply.div(totalNAV);
     },
     baseToFundTokenExchangeRateDefault(): FixedNumber {
@@ -352,10 +352,10 @@ export const useFundStore = defineStore({
     shouldUserWaitSettlementOrCancelDeposit(): boolean {
       // If there was no NAV update yet, the user can process deposit request.
       // There is no need to wait until the next settlement.
-      console.log(
-        `Should process deposit: fundLastNAVUpdate.timestamp: ${this.fundLastNAVUpdate?.timestamp} 
-        userDepositRequest.timestamp ${this.fundUserData.depositRequest?.timestamp}`,
-      );
+      // console.log(
+      //   `Should process deposit: fundLastNAVUpdate.timestamp: ${this.fundLastNAVUpdate?.timestamp}
+      //   userDepositRequest.timestamp ${this.fundUserData.depositRequest?.timestamp}`,
+      // );
       if (
         !this.canUserProcessDeposit ||
         !this.fundLastNAVUpdate?.timestamp ||
@@ -373,10 +373,10 @@ export const useFundStore = defineStore({
     shouldUserWaitSettlementOrCancelRedemption(): boolean {
       // If there was no NAV update yet, the user can process deposit request.
       // There is no need to wait until the next settlement.
-      console.log(
-        `Should process withdraw: fundLastNAVUpdate.timestamp: ${this.fundLastNAVUpdate?.timestamp} 
-        userDepositRequest.timestamp ${this.fundUserData.redemptionRequest?.timestamp}`,
-      );
+      // console.log(
+      //   `Should process withdraw: fundLastNAVUpdate.timestamp: ${this.fundLastNAVUpdate?.timestamp}
+      //   userDepositRequest.timestamp ${this.fundUserData.redemptionRequest?.timestamp}`,
+      // );
       if (
         !this.fundLastNAVUpdate?.timestamp ||
         !this.fundUserData.redemptionRequest?.timestamp
@@ -758,6 +758,14 @@ export const useFundStore = defineStore({
     fetchUserFundShareValue() {
       return useActionState("fetchUserFundShareValueAction", () =>
         fetchUserFundShareValueAction(),
+      );
+    },
+    fetchGovernableFundFactoryVersion(
+      fundChainId: ChainId,
+      fundAddress: string,
+    ) {
+      return useActionState("fetchGovernableFundFactoryVersionAction", () =>
+        fetchGovernableFundFactoryVersionAction(fundChainId, fundAddress),
       );
     },
     fetchUserFundDepositRedemptionRequests() {

@@ -1,6 +1,18 @@
 <template>
   <div class="permissions">
-    <UiMainCard class="permissions__content">
+    <div
+      v-if="fund?.fundFactoryContractV2Used"
+      class="d-flex flex-column flex-grow-1 justify-center align-center"
+    >
+      This OIV is using Roles Modifier V2.
+      <UiLinkExternalButton
+        title="View or Edit Roles V2"
+        :href="gnosisRolesUrl"
+        width="230px"
+        class="mt-4"
+      />
+    </div>
+    <UiMainCard v-else class="permissions__content">
       <div class="info_container">
         <div class="info_container__buttons">
           <div class="d-flex align-center">
@@ -64,6 +76,7 @@ import PermissionImportRawPermissions from "~/components/permission/ImportRawPer
 import RoleSelectRole from "~/components/role/SelectRole.vue";
 import { ActionState } from "~/types/enums/action_state";
 import { useActionStateStore } from "~/store/actionState.store";
+import UiLinkExternalButton from "~/components/global/ui/LinkExternalButton.vue";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -88,6 +101,12 @@ const isLoading = computed(() =>
   isFetchingPermissions.value ||
   actionStateStore.isActionState("fetchRoleModAddressAddressAction", ActionState.Loading),
 );
+const roleModAddress = ref("");
+
+const gnosisRolesUrl = computed(() => {
+  if (!fund?.chainShort || !roleModAddress.value) return "";
+  return `https://roles.gnosisguild.org/${fund.chainShort}:${roleModAddress.value}`;
+});
 
 const fetchRolesAndPermissions = async () => {
   if (!fund?.address) {
@@ -96,8 +115,8 @@ const fetchRolesAndPermissions = async () => {
   }
 
   try {
-    const roleModAddress = await fundStore.fetchRoleModAddress(fund.address);
-    await fetchPermissions(roleModAddress);
+    roleModAddress.value = await fundStore.fetchRoleModAddress(fund.address);
+    await fetchPermissions(roleModAddress.value);
   } catch (error) {
     console.error(error);
     toastStore.errorToast("Failed loading permissions. Please refresh page.");
@@ -117,7 +136,7 @@ const navigateToCreatePermissions = async () => {
 };
 
 watch(
-  () => [fund.chainShort, fundStore.fetchRoleModAddress],
+  () => [fund?.chainShort, fund?.address],
   () => {
     fetchRolesAndPermissions();
   },

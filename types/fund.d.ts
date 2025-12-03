@@ -153,4 +153,7 @@ export default interface IFund {
   pendingDepositBalanceError?: boolean;
   pendingRedemptionBalanceLoading?: boolean;
   pendingRedemptionBalanceError?: boolean;
+
+  // Misc
+  fundFactoryContractV2Used: boolean,
 }
