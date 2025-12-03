@@ -56,21 +56,21 @@ const rawExcludedFundAddresses = {
     { address: "0x6F8d5123A4aDB30ea9a2149b290e6b4421f6770A", alwaysExclude: true },  // test 4
     { address: "0x390DDAb10363a10c9B848dfa3AF4E800544D0476", alwaysExclude: true },  // test 5
     { address: "0x7e030800a54B501904798322a81dDe1D9DFEc121", alwaysExclude: false },  // test 6
-    { address: "0xe9286fF990279De1F2305C626775b40EBd9d5c5a", alwaysExclude: false },  // test 7
-    { address: "0x41633a238A1e7f7Dd19A8fe391AA9C6d38aD477a", alwaysExclude: false },  // test 8
-    { address: "0xd1A5500f1776b306cA820C4408CA95922e1BDe98", alwaysExclude: false },  // test 9
+    { address: "0xe9286fF990279De1F2305C626775b40EBd9d5c5a", alwaysExclude: true },  // test 7
+    { address: "0x41633a238A1e7f7Dd19A8fe391AA9C6d38aD477a", alwaysExclude: true },  // test 8
+    { address: "0xd1A5500f1776b306cA820C4408CA95922e1BDe98", alwaysExclude: true },  // test 9
     { address: "0xbaA05704375dC04a540f0abfE1c4cbA352397777", alwaysExclude: true },  // test 10
     { address: "0x70F79b65b36ecB3947D4d50d7A991edC94b980b7", alwaysExclude: true },  // test 11
     { address: "0x93B40D286045114234834eada89bADA90AeA1E52", alwaysExclude: false },  // AlphaBTC
     { address: "0xE083dFdc709B72EF14C0d0581ac889Cfcb215699", alwaysExclude: false },  // LiquiFund
-    { address: "0x0e1c09CFa777e9DE23Aa6d07cF2f2846C1e6E89E", alwaysExclude: false },  // test 12
-    { address: "0x336E8Ed6c6EE6BBE2709AF3E707B7A378B839837", alwaysExclude: false },  // test 13
-    { address: "0xf47C83410d7C7765bAC2d8e8094fc9eF427df7Bb", alwaysExclude: false },  // test 14
-    { address: "0x93be8A82DbED5aa4Acc7Fd9C4C02a33C4cEe4593", alwaysExclude: false },  // test 15
-    { address: "0x52AA4EE8bfe7B06923B82E255fC224Ff2f6B1397", alwaysExclude: false },  // test 16
-    { address: "0x7AEd57B594B31814e3539bC721C864c606bB8e0E", alwaysExclude: false },  // test 17
-    { address: "0x351d2E8107628630eeED5B256A5e8bEE87535792", alwaysExclude: false },  // test 18
-    { address: "0xE0587fb6DA413b1192297788E26C09E9DD0EFE92", alwaysExclude: false },  // test 19
+    { address: "0x0e1c09CFa777e9DE23Aa6d07cF2f2846C1e6E89E", alwaysExclude: true },  // test 12
+    { address: "0x336E8Ed6c6EE6BBE2709AF3E707B7A378B839837", alwaysExclude: true },  // test 13
+    { address: "0xf47C83410d7C7765bAC2d8e8094fc9eF427df7Bb", alwaysExclude: true },  // test 14
+    { address: "0x93be8A82DbED5aa4Acc7Fd9C4C02a33C4cEe4593", alwaysExclude: true },  // test 15
+    { address: "0x52AA4EE8bfe7B06923B82E255fC224Ff2f6B1397", alwaysExclude: true },  // test 16
+    { address: "0x7AEd57B594B31814e3539bC721C864c606bB8e0E", alwaysExclude: true },  // test 17
+    { address: "0x351d2E8107628630eeED5B256A5e8bEE87535792", alwaysExclude: true },  // test 18
+    { address: "0xE0587fb6DA413b1192297788E26C09E9DD0EFE92", alwaysExclude: true },  // test 19
   ],
   // Fraxtal
   "0xfc": [],
@@ -81,7 +81,8 @@ const rawExcludedFundAddresses = {
     { address: "0xB6aB76d451B98a992FB84A93602527CC30cd3b22", alwaysExclude: false }, // QCLE
     { address: "0x938f2a213464e7307aD19CeD57D3F809A2B0a3Df", alwaysExclude: false }, // DEMO ETH NEW
     { address: "0xB8686BA67E17b986F4b57A089789CE8A9Ac7ECB0", alwaysExclude: false }, // Leveraged Avant+ DeFi Yield: boreal
-    { address: "0xFcA1004B60DcEC14E7dC17E39f37ADfC2c62678D", alwaysExclude: false }, // Boreal USD Yield
+    { address: "0xFcA1004B60DcEC14E7dC17E39f37ADfC2c62678D", alwaysExclude: true }, // Boreal USD Yield
+    { address: "0xd245A74898124ae10DE4DB5ec842032042654F0d", alwaysExclude: false }, // Boreal USD Yield
   ],
   // Base
   "0x2105": [
