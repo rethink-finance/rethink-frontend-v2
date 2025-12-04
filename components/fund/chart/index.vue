@@ -178,10 +178,6 @@ const options = computed(() => {
     dataLabels: {
       enabled: false,
     },
-    context: {
-      // Store additional context data here.
-      navUpdates: props.fund?.navUpdates || [],
-    },
     markers: {
       size: 0,
       colors: ["transparent"],
@@ -266,7 +262,8 @@ const options = computed(() => {
       custom: function({ seriesIndex, dataPointIndex, w }: { seriesIndex: number, dataPointIndex: number, w: any }) {
         let formattedDate = formatDate(new Date(w.globals.seriesX[seriesIndex][dataPointIndex]));
 
-        const valueNav = totalNAVItems.value[dataPointIndex];
+        // Convert BigInt to string to avoid serialization issues
+        const valueNav = totalNAVItems.value[dataPointIndex] ? totalNAVItems.value[dataPointIndex].toString() : "0";
         const valueSharePrice = selectedType.value === ChartType.SHARE_PRICE &&
           dataPointIndex === chartItems.value.length - 1 &&
           props.fund?.sharePrice ?
@@ -353,9 +350,7 @@ const getSharePricePerNav = async () => {
       const sharePriceBigInt = totalSupply > 0n ? (adjustedTotalNav * scaleFactor) / adjustedTotalSupply : 0n;
 
       // Convert to float and format the share price correctly
-      const sharePrice = parseFloat(ethers.formatUnits(sharePriceBigInt, 36));
-
-      return sharePrice;
+      return parseFloat(ethers.formatUnits(sharePriceBigInt, 36));
     }
     catch(e){
       console.error("Error getting share price", e)
