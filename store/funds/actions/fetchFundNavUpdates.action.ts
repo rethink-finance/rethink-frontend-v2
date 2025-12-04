@@ -11,7 +11,7 @@ interface NavUpdateDto {
   baseDecimals: number;
   baseSymbol: string;
   baseTokenAddress: string;
-  totalDepositBalance: string;
+  totalDepositBalance: bigint;
   sharePrice: string;
   totalNAV: string;
   navParts: string; // or: Record<string, string> if parsed

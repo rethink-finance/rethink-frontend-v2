@@ -94,10 +94,13 @@ const series = computed(() => [
 const isLoadingFetchFundNAVUpdatesActionState = computed(() => {
   return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
 });
+const fundNavUpdates = computed(() => {
+  return props.fund?.navUpdates || [];
+});
 
 const totalNAVItems = computed(() => {
   // Get NAV values from navUpdates
-  let navItems = props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n) || [];
+  let navItems = fundNavUpdates.value?.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n) || [];
 
   // Add simulated NAV if available
   if (props.fund?.totalSimulatedNav && selectedType.value === ChartType.NAV) {
@@ -109,7 +112,7 @@ const totalNAVItems = computed(() => {
 
 const chartItems = computed(() => {
   // Get NAV values from navUpdates
-  let navValues = props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => parseFloat(
+  let navValues = fundNavUpdates.value?.map((navUpdate: INAVUpdate) => parseFloat(
     ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals),
   )) || [];
 
@@ -138,7 +141,7 @@ const chartItems = computed(() => {
 
 const chartDates = computed(() => {
   // Get dates from navUpdates
-  let navDates = props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [];
+  let navDates = fundNavUpdates.value?.map((navUpdate: INAVUpdate) => navUpdate.date) || [];
 
   // Add simulated NAV date if available
   if (props.fund?.totalSimulatedNavCalculatedAtISO && selectedType.value === ChartType.NAV) {
@@ -146,7 +149,7 @@ const chartDates = computed(() => {
   }
 
   // Get share price dates
-  let sharePriceDates = props.fund?.navUpdates?.map((navUpdate: INAVUpdate) => navUpdate.date) || [];
+  let sharePriceDates = fundNavUpdates.value?.map((navUpdate: INAVUpdate) => navUpdate.date) || [];
 
   // Add simulated share price date if available
   if (props.fund?.totalSimulatedNavCalculatedAtISO && selectedType.value === ChartType.SHARE_PRICE && props.fund?.sharePrice) {
@@ -274,7 +277,7 @@ const options = computed(() => {
         const isSimulatedNav = selectedType.value === ChartType.NAV &&
           props.fund?.totalSimulatedNav &&
           dataPointIndex === totalNAVItems.value.length - 1 &&
-          dataPointIndex >= props.fund?.navUpdates?.length;
+          dataPointIndex >= fundNavUpdates.value?.length;
 
         // Check if this is the simulated share price data point
         const isSimulatedSharePrice = selectedType.value === ChartType.SHARE_PRICE &&
@@ -315,7 +318,7 @@ const getSharePricePerNav = async () => {
   const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(props.fund.chainId, false);
   const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
-  sharePriceItems.value = await Promise.all(props.fund?.navUpdates?.map(async (navUpdate: INAVUpdate) =>  {
+  sharePriceItems.value = await Promise.all(fundNavUpdates.value?.map(async (navUpdate: INAVUpdate) =>  {
     // 2. get block number for the timestamp
     const totalNav = ethers.parseUnits(String(navUpdate.totalNAV || "0"), props.fund?.baseToken.decimals);
     const blockNumber = Number(await blockTimeStore.getBlockByTimestamp(props.fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);

@@ -93,7 +93,7 @@ const parseFundSnapshotResponse = (fund: IFund, data: any): IFund => {
     totalSimulatedNavUSD: data?.totalSimulatedNavUSD,
     totalSimulatedNavUSDFormatted: data?.totalSimulatedNavUSDFormatted,
     // Metrics
-    totalDepositBalance: data?.totalDepositBalance,
+    totalDepositBalance: BigInt(data?.totalDepositBalance),
     sharpeRatio: data?.sharpeRatio,
     lastNAVUpdateTotalNAV: data?.totalNAV,
     cumulativeReturnPercent: data?.cumulativeReturnPercent,

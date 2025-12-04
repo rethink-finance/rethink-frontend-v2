@@ -289,10 +289,6 @@ export const useFundStore = defineStore({
     fundLastNAVUpdate(): INAVUpdate | undefined {
       const fundNavUpdatesLength = this.fund?.navUpdates?.length;
       if (!fundNavUpdatesLength) return undefined;
-      console.warn(
-        "fundLastNAVUpdate",
-        this.fund?.navUpdates[fundNavUpdatesLength - 1],
-      );
       return this.fund?.navUpdates[fundNavUpdatesLength - 1];
     },
     fundLastNAVUpdateMethods(): INAVMethod[] {
