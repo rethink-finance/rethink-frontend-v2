@@ -104,7 +104,6 @@ export const fetchFundMetaDataAction = async (
     // TOOD no need to fetch this here, it would be better to fetch it when needed for formatting.
     const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fundChainId);
     const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
-    console.warn("fetchFundMetaDataAction blockTimeContext", blockTimeContext)
 
     const fundNetwork = networksMap[fundChainId];
     const lastNavUpdateTime = undefined;//= fundMetadata.updateTimes[fundMetadata.updateTimes.length-1];

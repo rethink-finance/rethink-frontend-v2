@@ -21,9 +21,8 @@ export const fetchFundDataAction = async (
 
     if (fundStore.fund) {
       fetchFundLatestSnapshotAction(fundStore.fund).then((fundWithSnapshotData: IFund) => {
-        console.warn("TTT fetchFundLatestSnapshotAction DONE111", fundChainId, fundAddress, fundWithSnapshotData);
+        console.debug("fetchFundLatestSnapshotAction", fundChainId, fundAddress, fundWithSnapshotData);
         Object.assign(fundStore.fund!, fundWithSnapshotData);
-        console.warn("TTT fetchFundLatestSnapshotAction DONE222", fundChainId, fundAddress, fundStore.fund);
       }).catch((error) => {
         console.error(`Failed fetching latest snapshot for ${fundAddress}`, error);
 
