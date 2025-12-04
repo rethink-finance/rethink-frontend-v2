@@ -1,8 +1,6 @@
 import { useActionState } from "~/store/actionState.store";
 import { parseBigInt } from "~/composables/localStorage";
 import type { ChainId } from "~/types/enums/chain_id";
-import { excludeNAVUpdateIndexes } from "~/store/funds/config/excludedNAVUpdates.config";
-import type INAVUpdate from "~/types/nav_update";
 
 interface NavUpdateDto {
   id: number;
@@ -23,12 +21,10 @@ interface NavUpdateDto {
   navMethods: any[]; // or a specific type[]
   positionTypeCounts: any | null; // or a specific type | null
 }
-export interface ParsedNavUpdateDto extends Omit<NavUpdateDto, "totalNAV" | "totalDepositBalance" | "sharePrice" | "navParts" | "timestamp"> {
+export interface ParsedNavUpdateDto extends Omit<NavUpdateDto, "totalNAV" | "totalDepositBalance" | "sharePrice" | "navParts"> {
   totalNAV: bigint;
   totalDepositBalance: bigint;
   sharePrice: number;
-  date: string;
-  timestamp: number;
   navParts: Record<string, any>;
 }
 
@@ -54,28 +50,17 @@ export async function fetchFundNavUpdates(fundChainId: ChainId, fundAddress: str
   }
 
   const data = await response.json();
-  console.debug("[BACEKND] Fund ", fundChainId, fundAddress," NAV UPDATES", data);
-  return parseFundNavUpdatesResponse(fundChainId, fundAddress, data);
+  console.debug("[BACEKDN] Fund ", fundChainId, fundAddress," NAV UPDATES", data);
+  return parseFundNavUpdatesResponse(data);
 }
 
 
-const parseFundNavUpdatesResponse = (fundChainId: ChainId, fundAddress: string, navUpdatesData: NavUpdateDto[]): ParsedNavUpdateDto[] => {
-  // Filter out NAV updates if their index is in the excludeNAVUpdateIndexes for that fund
-  const excludedIndexes = excludeNAVUpdateIndexes[(fundChainId)]?.[fundAddress] || [];
-  return navUpdatesData
-    .filter((navUpdate: NavUpdateDto) => !excludedIndexes.includes(navUpdate.navUpdateIndex))
-    .map((navUpdate: any) => {
-      const timestamp = Number(navUpdate.timestamp) * 1000;
-      console.log("PARSED DATE NAV UPDATE", timestamp, formatDate(new Date(timestamp)))
-
-      return {
-        ...navUpdate,
-        totalNAV: navUpdate.totalNAV != null ? BigInt(navUpdate.totalNAV) : null,
-        sharePrice: Number(navUpdate.sharePrice),
-        totalDepositBalance: navUpdate.totalDepositBalance != null ? BigInt(navUpdate.totalDepositBalance) : null,
-        timestamp,
-        date: formatDate(new Date(timestamp)),
-        navParts: typeof navUpdate.navParts === "string" ? JSON.parse(navUpdate.navParts, parseBigInt) : (navUpdate.navParts || {}),
-      }
-    });
+const parseFundNavUpdatesResponse = (navUpdatesData: NavUpdateDto[]): ParsedNavUpdateDto[] => {
+  return navUpdatesData.map((navUpdate: any) => ({
+    ...navUpdate,
+    totalNAV: navUpdate.totalNAV != null ? BigInt(navUpdate.totalNAV) : null,
+    sharePrice: Number(navUpdate.sharePrice),
+    totalDepositBalance: navUpdate.totalDepositBalance != null ? BigInt(navUpdate.totalDepositBalance) : null,
+    navParts: typeof navUpdate.navParts === "string" ? JSON.parse(navUpdate.navParts, parseBigInt) : (navUpdate.navParts || {}),
+  }));
 }

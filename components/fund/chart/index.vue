@@ -5,7 +5,7 @@
         <FundChartTypeSelector
           v-model:selected="selectedType"
           :value="valueShownInTypeSelector"
-          :is-loading="areBackendNavUpdatesLoading && selectedType === ChartType.SHARE_PRICE"
+          :is-loading="isSharePriceLoading && selectedType === ChartType.SHARE_PRICE"
           :type-options="ChartTypesMap"
         />
       </div>
@@ -13,17 +13,17 @@
     </div>
     <div class="chart__chart_wrapper">
       <v-skeleton-loader
-        v-if="areBackendNavUpdatesLoading"
+        v-if="isLoadingFetchFundNAVUpdatesActionState"
         type="ossein"
         height="370px"
         width="100%"
       />
-      <!--      <v-skeleton-loader-->
-      <!--        v-else-if="areBackendNavUpdatesLoading && selectedType === ChartType.SHARE_PRICE"-->
-      <!--        type="ossein"-->
-      <!--        height="370px"-->
-      <!--        width="100%"-->
-      <!--      />-->
+      <v-skeleton-loader
+        v-else-if="isSharePriceLoading && selectedType === ChartType.SHARE_PRICE"
+        type="ossein"
+        height="370px"
+        width="100%"
+      />
       <div v-else class="meta">
         <ClientOnly>
           <apexchart
@@ -69,9 +69,8 @@ const props = defineProps<{
 
 const selectedType = ref(ChartType.NAV);
 
-const sharePriceItemsFromChain = ref([]) as Ref<number[]>;
-const areBackendNavUpdatesLoading = ref(true);
-const navUpdatesFromBackend = ref<ParsedNavUpdateDto[]>([]);
+const sharePriceItems = ref([]) as Ref<number[]>;
+const isSharePriceLoading = ref(true);
 
 // Computed
 const valueShownInTypeSelector = computed(() => {
@@ -96,16 +95,12 @@ const isLoadingFetchFundNAVUpdatesActionState = computed(() => {
   return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
 });
 const fundNavUpdates = computed(() => {
-  return navUpdatesFromBackend.value || props.fund?.navUpdates || [];
-});
-
-const sharePriceItems = computed<number[]>(() => {
-  return (navUpdatesFromBackend || sharePriceItemsFromChain).value.map(navUpdate => navUpdate.sharePrice);
+  return props.fund?.navUpdates || [];
 });
 
 const totalNAVItems = computed(() => {
   // Get NAV values from navUpdates
-  let navItems = fundNavUpdates.value?.map((navUpdate: INAVUpdate | ParsedNavUpdateDto) => navUpdate.totalNAV || 0n) || [];
+  let navItems = fundNavUpdates.value?.map((navUpdate: INAVUpdate) => navUpdate.totalNAV || 0n) || [];
 
   // Add simulated NAV if available
   if (props.fund?.totalSimulatedNav && selectedType.value === ChartType.NAV) {
@@ -117,7 +112,7 @@ const totalNAVItems = computed(() => {
 
 const chartItems = computed(() => {
   // Get NAV values from navUpdates
-  let navValues = fundNavUpdates.value?.map((navUpdate: INAVUpdate | ParsedNavUpdateDto) => parseFloat(
+  let navValues = fundNavUpdates.value?.map((navUpdate: INAVUpdate) => parseFloat(
     ethers.formatUnits(navUpdate.totalNAV || 0n, props.fund?.baseToken.decimals),
   )) || [];
 
@@ -146,8 +141,7 @@ const chartItems = computed(() => {
 
 const chartDates = computed(() => {
   // Get dates from navUpdates
-  let navDates = fundNavUpdates.value?.map((navUpdate: INAVUpdate | ParsedNavUpdateDto) => navUpdate.date) || [];
-  console.warn("TTT chartDates ", navDates);
+  let navDates = fundNavUpdates.value?.map((navUpdate: INAVUpdate) => navUpdate.date) || [];
 
   // Add simulated NAV date if available
   if (props.fund?.totalSimulatedNavCalculatedAtISO && selectedType.value === ChartType.NAV) {
@@ -155,9 +149,9 @@ const chartDates = computed(() => {
   }
 
   // Get share price dates
-  let sharePriceDates = fundNavUpdates.value?.map((navUpdate: INAVUpdate | ParsedNavUpdateDto) => navUpdate.date) || [];
+  let sharePriceDates = fundNavUpdates.value?.map((navUpdate: INAVUpdate) => navUpdate.date) || [];
 
-  // Add the simulated share price date if available
+  // Add simulated share price date if available
   if (props.fund?.totalSimulatedNavCalculatedAtISO && selectedType.value === ChartType.SHARE_PRICE && props.fund?.sharePrice) {
     sharePriceDates = [...sharePriceDates, formatDate(new Date(props.fund.totalSimulatedNavCalculatedAtISO))];
   }
@@ -318,13 +312,13 @@ const options = computed(() => {
 
 // Methods
 const getSharePricePerNav = async () => {
-  areBackendNavUpdatesLoading.value = true;
+  isSharePriceLoading.value = true;
 
   // 1. get average block time for the chain
   const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(props.fund.chainId, false);
   const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
 
-  sharePriceItemsFromChain.value = await Promise.all(fundNavUpdates.value?.map(async (navUpdate: INAVUpdate | ParsedNavUpdateDto) =>  {
+  sharePriceItems.value = await Promise.all(fundNavUpdates.value?.map(async (navUpdate: INAVUpdate) =>  {
     // 2. get block number for the timestamp
     const totalNav = ethers.parseUnits(String(navUpdate.totalNAV || "0"), props.fund?.baseToken.decimals);
     const blockNumber = Number(await blockTimeStore.getBlockByTimestamp(props.fund.chainId, navUpdate.timestamp / 1000, averageBlockTime) || 0);
@@ -366,34 +360,29 @@ const getSharePricePerNav = async () => {
       return 0;
     }
   }));
-  areBackendNavUpdatesLoading.value = false;
+  isSharePriceLoading.value = false;
 };
 
 const getNavUpdates = () => {
-  areBackendNavUpdatesLoading.value = true;
+  isSharePriceLoading.value = true;
 
   fetchFundNavUpdatesAction(props.fund.chainId, props.fund.address).then((navUpdates: ParsedNavUpdateDto[]) => {
-    navUpdatesFromBackend.value = navUpdates;
     console.warn("TTT fetchFundNavUpdatesAction ", props.fund.chainId, props.fund.address, navUpdates);
-    // sharePriceItems.value = navUpdates.map(navUpdate => navUpdate.sharePrice);
-    // sharePriceItems.value = navUpdatesFromBackend.map(navUpdate => navUpdate.sharePrice);
-    areBackendNavUpdatesLoading.value = false;
+    sharePriceItems.value = navUpdates.map(navUpdate => navUpdate.sharePrice);
+    console.debug("TTT fetchFundNavUpdatesAction ", props.fund.chainId, props.fund.address, navUpdates);
+    isSharePriceLoading.value = false;
   }).catch((error) => {
     console.error(`Failed fetchFundNavUpdatesAction for ${props.fund.address}`, error);
-    areBackendNavUpdatesLoading.value = false;
+    isSharePriceLoading.value = false;
     getSharePricePerNav();
   });
 }
 
 // Lifecycle
-watch(() => fundStore?.fund?.address, () => {
-  // TODO: Could do this and use only this, is much faster, but gets synced only every 5 minutes.
-  // watch: fundStore?.fund?.address
-  if (!fundStore?.fund?.address) return;
-  getNavUpdates();
-  // if (selectedType.value === ChartType.SHARE_PRICE && props.fund && !sharePriceItems.value?.length) {
-  //   getNavUpdates();
-  // }
+watch(() => selectedType.value, () => {
+  if (selectedType.value === ChartType.SHARE_PRICE && props.fund && !sharePriceItems.value?.length) {
+    getNavUpdates();
+  }
 }, { immediate: true });
 </script>
 

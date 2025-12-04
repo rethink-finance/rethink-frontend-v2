@@ -9,7 +9,6 @@ import type { ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IFund from "~/types/fund";
-// import { fetchFundNavUpdatesAction, type ParsedNavUpdateDto } from "~/store/funds/actions/fetchFundNavUpdates.action";
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
@@ -22,10 +21,6 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     web3Store.chainContracts[fund.chainId]?.rethinkReaderContract;
 
   try {
-    // TODO use this from the backend first! it is much faster, but syncs only every 5 minutes
-    // const navUpdates: ParsedNavUpdateDto[] = fetchFundNavUpdatesAction(fund.chainId, fund.address);
-    // console.warn("TTT fetchFundNavUpdatesAction ", fund.chainId, fund.address, navUpdates);
-
     const fundNAVData = await web3Store.callWithRetry(
       fund.chainId,
       () =>
@@ -93,7 +88,6 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
   );
   fundStore.refreshSimulateNAVCounter++;
 };
-
 
 /**
  * This function calls getNAVData directly to NAV executor contract.

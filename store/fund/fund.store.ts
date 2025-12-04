@@ -217,20 +217,17 @@ export const useFundStore = defineStore({
       let exp = FixedNumber.fromString(
         "1" + "0".repeat(Math.abs(decimalDiff)),
       );
-      console.log("BASEBAS decimalDiff: ", decimalDiff, "exp: ", exp);
+
       if (decimalDiff >= 0) {
         exp = FixedNumber.fromString("1").div(exp);
       }
-      console.log("BASEBAS exp: ", exp);
       // This is now defined as the ratio of 1 FUND token / x BASE tokens
       return exp;
     },
     fundToBaseTokenExchangeRate(): FixedNumber {
-      if (this.baseToFundTokenExchangeRate.eq(FixedNumber.fromString("0"))) {
-        return FixedNumber.fromString("0");
-      }
+      if (this.baseToFundTokenExchangeRate.eq(FixedNumber.fromString("0")))
+        return this.baseToFundTokenExchangeRate;
 
-      console.log("BASEBAS fund to base exchange rate: ", this.baseToFundTokenExchangeRate, FixedNumber.fromString("1").div(this.baseToFundTokenExchangeRate));
       return FixedNumber.fromString("1").div(this.baseToFundTokenExchangeRate);
     },
     userDepositRequest(): IFundTransactionRequest | undefined {
