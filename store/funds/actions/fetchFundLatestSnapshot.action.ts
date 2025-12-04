@@ -34,7 +34,6 @@ export async function fetchFundLatestSnapshot(fund: IFund): Promise<IFund> {
   }
 
   const data = await response.json();
-  console.warn("Fund ", fund.chainId, fund.address," NAV SNAPSHOT", data);
   return parseFundSnapshotResponse(fund, data);
 }
 

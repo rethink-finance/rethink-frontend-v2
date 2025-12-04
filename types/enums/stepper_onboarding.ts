@@ -78,8 +78,6 @@ const OnboardingFieldsMap: FieldsMapType = {
         const isEditableAfterCreating = field.isEditable;
 
         if (field.key === "strategistName") {
-          console.log("STRATEGIC NAME FIELD", field.key)
-
           return [
             ...(FundSettingsStepFieldsMap[StepSections.Management] as IField[]).map(
               (fieldManagement: IField) => {
