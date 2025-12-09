@@ -61,6 +61,7 @@ export default interface IFund {
   governanceToken: IToken;
   governanceTokenTotalSupply: bigint;
   lastNAVUpdateTotalNAV?: bigint;
+  lastNAVUpdateTotalSupply?: bigint;
   totalSimulatedNav?: bigint;
   totalSimulatedNavCalculatedAt?: string;
   totalSimulatedNavCalculatedAtISO?: string;
@@ -144,6 +145,7 @@ export default interface IFund {
 
   // NAV Updates
   navUpdates: INAVUpdate[];
+  backendNavUpdates?: ParsedNavUpdateDto[];
   isNavUpdatesLoading?: boolean;
 
   // Deposit & Redemption Requests Balance

@@ -12,19 +12,28 @@ export const abbreviateNumber = (value: any, toFixed = 1): string => {
     return value; // Return as is if not a valid number
   }
 
+  const sign = num < 0 ? -1 : 1;
+  const absNum = Math.abs(num);
+
+  // If number is not bigger than 1000, do not modify it (no abbreviation, no rounding)
+  if (absNum <= 1000) {
+    return typeof value === "string" ? value : String(value);
+  }
+
   const abbreviations = ["K", "M", "B", "T"];
-  let roundedValue = num;
+  let roundedValue = absNum;
   let abbreviation = "";
 
   for (let i = abbreviations.length - 1; i >= 0; i--) {
     const lower = Math.pow(1000, i + 1);
-    if (num >= lower) {
-      roundedValue = num / lower;
+    if (absNum >= lower) {
+      roundedValue = absNum / lower;
       abbreviation = abbreviations[i];
       break;
     }
   }
 
   // Round to 1 decimal and cut trailing zeros.
-  return trimTrailingZeros(roundedValue.toFixed(toFixed)) + abbreviation;
+  const withSign = roundedValue * sign;
+  return trimTrailingZeros(withSign.toFixed(toFixed)) + abbreviation;
 }

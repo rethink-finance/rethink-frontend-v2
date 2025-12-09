@@ -72,10 +72,11 @@
         :token0="fund.baseToken"
         :token1="fund.fundToken"
       />
+      <!-- TODO only take the fundToBaseTokenExchangeRateLastNavUpdate if the NAV update was done after the redemption request -->
       <FundCurrentCyclePendingRequest
         v-if="userRedemptionRequestExists"
         :fund-transaction-request="userRedemptionRequest"
-        :exchange-rate="fundToBaseTokenExchangeRate"
+        :exchange-rate="fundToBaseTokenExchangeRateLastNavUpdate"
         :token1="fund.baseToken"
         :token0="fund.fundToken"
       />
@@ -121,7 +122,7 @@ const {
   userDepositRequest,
   userRedemptionRequest,
   baseToFundTokenExchangeRateSimulatedNav,
-  fundToBaseTokenExchangeRate,
+  fundToBaseTokenExchangeRateLastNavUpdate,
   shouldUserWaitSettlementOrCancelDeposit,
   shouldUserWaitSettlementOrCancelRedemption,
   userDepositRequestExists,
@@ -206,7 +207,7 @@ const redemptionDisabledTooltipText = computed(() => {
   const fundContractBaseTokenBalance = fundStore.fund?.fundContractBaseTokenBalance || 0n;
   // Get the last NAV update exchange rate.
   const lastNAVExchangeRate = FixedNumber.fromString(
-    fundStore.fundToBaseTokenExchangeRate.toString(),
+    fundStore.fundToBaseTokenExchangeRateLastNavUpdate.toString(),
   );
   const redemptionRequestAmountFN = FixedNumber.fromString(
     ethers.formatUnits(

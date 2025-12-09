@@ -16,6 +16,7 @@ export const excludeNAVUpdateIndexes: IExcludeNAVUpdates = {
       5,
       6,
       7,
+      28, // 31. jan 2025, big spike
       69,
     ], // NDFI
   },

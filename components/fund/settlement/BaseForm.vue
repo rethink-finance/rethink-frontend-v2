@@ -77,7 +77,7 @@
           </strong>
         </div>
         <span class="request_deposit__info_text">
-          {{ isExchangeRateUsingSimulatedNav ? "Based on the Current NAV" : "Based on the Last NAV Update" }}
+          {{ isExchangeRateUsingLastNavUpdate ? "Based on the Last NAV Update" : "Based on the Current NAV" }}
         </span>
       </div>
     </div>
@@ -91,7 +91,6 @@
 import { ethers, FixedNumber } from "ethers";
 import type { PropType } from "vue";
 import type IToken from "~/types/token";
-import { useFundStore } from "~/store/fund/fund.store";
 
 type RuleFunction = (...args: any[]) => boolean | string;
 type RulesArray = RuleFunction[];
@@ -125,7 +124,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  isExchangeRateUsingSimulatedNav: {
+  isExchangeRateUsingLastNavUpdate: {
     type: Boolean,
     default: false,
   },
@@ -134,7 +133,6 @@ const props = defineProps({
     default: () => [],
   },
 });
-const fundStore = useFundStore();
 
 const emit = defineEmits(["update:modelValue"]);
 

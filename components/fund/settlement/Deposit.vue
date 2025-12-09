@@ -9,7 +9,6 @@
         :token0-user-balance="fundStore.fundUserData.baseTokenBalance"
         :token1-user-balance="fundStore.fundUserData.fundTokenBalance"
         :exchange-rate="calculatedExchangeRate"
-        :is-exchange-rate-using-simulated-nav="true"
       />
     </template>
     <div v-else class="deposit-flow" @click="handleDepositClick">
@@ -201,7 +200,7 @@ const depositRequestAmountFormatted = computed(() => {
 });
 
 const calculatedExchangeRate = computed(() => {
-  return fundStore.baseToFundTokenExchangeRateSimulatedNav || fundStore.baseToFundTokenExchangeRate
+  return fundStore.baseToFundTokenExchangeRateSimulatedNav || fundStore.baseToFundTokenExchangeRateLastNavUpdate
 });
 
 const errorMessages = computed<IFormError[]>(() => {

@@ -98,7 +98,7 @@
         <FundCurrentCyclePendingRequest
           v-if="userDepositRequestExists && fund"
           :fund-transaction-request="userDepositRequest"
-          :exchange-rate="fundStore.baseToFundTokenExchangeRate"
+          :exchange-rate="fundStore.baseToFundTokenExchangeRateLastNavUpdate"
           :token0="fund.baseToken"
           :token1="fund.fundToken"
           style="width: 100%;"

@@ -9,36 +9,23 @@ import type { ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IFund from "~/types/fund";
-// import { fetchFundNavUpdatesAction, type ParsedNavUpdateDto } from "~/store/funds/actions/fetchFundNavUpdates.action";
+import { fetchFundNavUpdatesAction, type ParsedNavUpdateDto } from "~/store/funds/actions/fetchFundNavUpdates.action";
+
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
   const fundStore = useFundStore();
-  const web3Store = useWeb3Store();
   const fund : IFund | undefined = fundStore.fund;
 
   if (!fund || !fund?.address) return;
 
-  const rethinkReaderContract =
-    web3Store.chainContracts[fund.chainId]?.rethinkReaderContract;
-
   try {
-    // TODO use this from the backend first! it is much faster, but syncs only every 5 minutes
-    // const navUpdates: ParsedNavUpdateDto[] = fetchFundNavUpdatesAction(fund.chainId, fund.address);
-    // console.warn("TTT fetchFundNavUpdatesAction ", fund.chainId, fund.address, navUpdates);
-
-    const fundNAVData = await web3Store.callWithRetry(
+    const navUpdatesPromise = fetchFundNAVDataWeb3(
       fund.chainId,
-      () =>
-        rethinkReaderContract.methods
-          .getFundNAVData(fund?.address)
-          .call(),
+      fund.address,
     );
+    const backendNavUpdatesPromise = fetchFundNavUpdatesAction(fund.chainId, fund.address);
 
-    let navUpdates = await fundStore.parseFundNAVUpdates(
-      fund.chainId,
-      fundNAVData,
-      fundStore.selectedFundAddress,
-    );
+    let navUpdates = await navUpdatesPromise;
     console.log("FUND NAV DATA", navUpdates);
 
     // Filter out NAV updates if their index is in the excludeNAVUpdateIndexes for that fund
@@ -71,6 +58,14 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
       ? lastNavUpdate.totalNAV || 0n
       : fund.totalDepositBalance || 0n;
     fund.navUpdates = navUpdates;
+
+    backendNavUpdatesPromise.then((backendNavUpdates: ParsedNavUpdateDto[]) => {
+      console.log("backendNavUpdates", backendNavUpdates);
+      const lastBackendNavUpdate = backendNavUpdates.find(backendNavUpdate => backendNavUpdate.navUpdateIndex === lastNavUpdate.index);
+      fund.lastNAVUpdateTotalSupply = lastBackendNavUpdate?.totalSupply;
+      fund.backendNavUpdates = backendNavUpdates;
+    });
+    // console.warn("TTT fetchFundNavUpdatesAction ", fund.chainId, fund.address, navUpdates);
   } catch (error) {
     console.error(
       "Error calling getNAVDataForFund: ",
@@ -94,7 +89,27 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
   fundStore.refreshSimulateNAVCounter++;
 };
 
+const fetchFundNAVDataWeb3 = async (fundChainId: ChainId, fundAddress: string): Promise<INAVUpdate[]> => {
+  const fundStore = useFundStore();
+  const web3Store = useWeb3Store();
 
+  const rethinkReaderContract =
+    web3Store.chainContracts[fundChainId]?.rethinkReaderContract;
+
+  const fundNAVData = await web3Store.callWithRetry(
+    fundChainId,
+    () =>
+      rethinkReaderContract.methods
+        .getFundNAVData(fundAddress)
+        .call(),
+  );
+
+  return await fundStore.parseFundNAVUpdates(
+    fundChainId,
+    fundNAVData,
+    fundStore.selectedFundAddress,
+  );
+}
 /**
  * This function calls getNAVData directly to NAV executor contract.
  **/

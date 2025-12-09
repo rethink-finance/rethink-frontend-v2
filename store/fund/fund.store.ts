@@ -43,6 +43,7 @@ import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import { fetchRoleModAddressAddressAction } from "~/store/fund/actions/fetchRoleModAddress.action";
+import { calculateSharePrice } from "~/composables/exchangeRate";
 
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
@@ -111,9 +112,9 @@ export const useFundStore = defineStore({
     fundAddress(): string {
       return this.fund?.address ?? this.selectedFundAddress ?? "";
     },
-    fund(): IFund | undefined {
-      return this.chainFunds?.[this.selectedFundChain]?.[
-        this.selectedFundAddress
+    fund: (state): IFund | undefined => {
+      return state.chainFunds?.[state.selectedFundChain]?.[
+        state.selectedFundAddress
       ];
     },
     addressLabelMap(): Record<string, string> {
@@ -134,68 +135,49 @@ export const useFundStore = defineStore({
         this.fund?.safeAddress.toLowerCase()
       );
     },
-    baseToFundTokenExchangeRate(): FixedNumber {
+    fundToBaseTokenExchangeRateLastNavUpdate(): FixedNumber {
       if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals)
         return FixedNumber.fromString("0");
 
       // If there was any NAV update already, we use it to calculate the exchange rate.
       // If there was no NAV update yet, the exchange rate is 1:1.
       if (!this.fundLastNAVUpdate) {
-        return this.baseToFundTokenExchangeRateDefault;
+        return this.fundToBaseTokenExchangeRateDefault;
       }
-      if (!this.fundLastNAVUpdate.totalNAV || !this.fund?.fundTokenTotalSupply)
+      if (!this.fundLastNAVUpdate.totalNAV || !this.fund?.lastNAVUpdateTotalSupply)
         return FixedNumber.fromString("0");
+      const sharePrice = calculateSharePrice(
+        this.fundLastNAVUpdate.totalNAV,
+        this.fund.lastNAVUpdateTotalSupply,
+        this.fund.baseToken.decimals,
+        this.fund.fundToken.decimals,
+      )
 
-      // Create FixedNumber instances.
-      // Use totalSimulatedNav if present.
-      // console.log("baseToFundTokenExchangeRate Last NAV: ", this.fundLastNAVUpdate.totalNAV);
-      const totalNAV = FixedNumber.fromString(
-        ethers.formatUnits(
-          this.fundLastNAVUpdate.totalNAV,
-          this.fund.baseToken.decimals,
-        ),
-      );
-      // TODO get the fundTokenTotalSupply total supply from the last NAV update also if the NAV value is being taken from the last NAV update!
-      const fundTokenTotalSupply = FixedNumber.fromString(
-        ethers.formatUnits(
-          this.fund.fundTokenTotalSupply,
-          this.fund.fundToken.decimals,
-        ),
-      );
+      console.warn("CURRENT lastNavUpdate sharePrice: ", sharePrice.toFixed(18));
 
       // Perform the division
-      return fundTokenTotalSupply.div(totalNAV);
+      return FixedNumber.fromString(sharePrice.toFixed(18))
     },
-    baseToFundTokenExchangeRateSimulatedNav(): FixedNumber {
+    fundToBaseTokenExchangeRateSimulatedNav(): FixedNumber {
       if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals)
         return FixedNumber.fromString("0");
-      // console.warn("baseToFundTokenExchangeRateSimulatedNav Total Simulated NAV: ", this.fund?.totalSimulatedNav);
 
       if (!this.fund?.totalSimulatedNav) {
-        return this.baseToFundTokenExchangeRate;
+        return this.fundToBaseTokenExchangeRateLastNavUpdate;
       }
 
-      // Create FixedNumber instances
-      // Use totalSimulatedNav if present, otherwise fall back to totalNAV
-      // console.warn("baseToFundTokenExchangeRateSimulatedNav Total Simulated NAV: ", this.fund?.totalSimulatedNav);
-      const totalNAV = FixedNumber.fromString(
-        ethers.formatUnits(
-          this.fund?.totalSimulatedNav,
-          this.fund.baseToken.decimals,
-        ),
+      const sharePrice = calculateSharePrice(
+        this.fund?.totalSimulatedNav,
+        this.fund.fundTokenTotalSupply,
+        this.fund.baseToken.decimals,
+        this.fund.fundToken.decimals,
       );
 
-      const fundTokenTotalSupply = FixedNumber.fromString(
-        ethers.formatUnits(
-          this.fund.fundTokenTotalSupply,
-          this.fund.fundToken.decimals,
-        ),
-      );
-
-      // Perform the division
-      return fundTokenTotalSupply.div(totalNAV);
+      console.warn("CURRENT SIMULATED sharePrice function: ", sharePrice.toFixed(18));
+      return FixedNumber.fromString(sharePrice.toFixed(18))
     },
-    baseToFundTokenExchangeRateDefault(): FixedNumber {
+    // TODO Reverse
+    fundToBaseTokenExchangeRateDefault(): FixedNumber {
       if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals)
         return FixedNumber.fromString("0");
 
@@ -217,21 +199,23 @@ export const useFundStore = defineStore({
       let exp = FixedNumber.fromString(
         "1" + "0".repeat(Math.abs(decimalDiff)),
       );
-      console.log("BASEBAS decimalDiff: ", decimalDiff, "exp: ", exp);
+
       if (decimalDiff >= 0) {
         exp = FixedNumber.fromString("1").div(exp);
       }
-      console.log("BASEBAS exp: ", exp);
+
       // This is now defined as the ratio of 1 FUND token / x BASE tokens
       return exp;
     },
-    fundToBaseTokenExchangeRate(): FixedNumber {
-      if (this.baseToFundTokenExchangeRate.eq(FixedNumber.fromString("0"))) {
+    baseToFundTokenExchangeRateLastNavUpdate(): FixedNumber {
+      if (this.fundToBaseTokenExchangeRateLastNavUpdate.eq(FixedNumber.fromString("0"))) {
         return FixedNumber.fromString("0");
       }
 
-      console.log("BASEBAS fund to base exchange rate: ", this.baseToFundTokenExchangeRate, FixedNumber.fromString("1").div(this.baseToFundTokenExchangeRate));
-      return FixedNumber.fromString("1").div(this.baseToFundTokenExchangeRate);
+      return FixedNumber.fromString("1").div(this.fundToBaseTokenExchangeRateLastNavUpdate);
+    },
+    baseToFundTokenExchangeRateSimulatedNav(): FixedNumber {
+      return FixedNumber.fromString("1").div(this.fundToBaseTokenExchangeRateSimulatedNav);
     },
     userDepositRequest(): IFundTransactionRequest | undefined {
       return this.fundUserData.depositRequest;

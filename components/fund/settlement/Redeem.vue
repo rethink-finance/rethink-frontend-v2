@@ -7,7 +7,7 @@
       :token1="fund.baseToken"
       :token0-user-balance="fundStore.fundUserData.fundTokenBalance"
       :token1-user-balance="fundStore.fundUserData.baseTokenBalance"
-      :exchange-rate="fundStore.fundToBaseTokenExchangeRate"
+      :exchange-rate="calculatedExchangeRate"
       :is-exchange-rate-loading="isLoadingFetchFundNAVUpdatesActionState"
     />
 
@@ -111,6 +111,10 @@ watch(
 
 const isLoadingFetchFundNAVUpdatesActionState = computed(() => {
   return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
+});
+
+const calculatedExchangeRate = computed(() => {
+  return fundStore.fundToBaseTokenExchangeRateSimulatedNav || fundStore.fundToBaseTokenExchangeRateLastNavUpdate
 });
 
 const rules = [

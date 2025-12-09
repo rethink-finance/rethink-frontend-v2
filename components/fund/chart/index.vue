@@ -147,7 +147,6 @@ const chartItems = computed(() => {
 const chartDates = computed(() => {
   // Get dates from navUpdates
   let navDates = fundNavUpdates.value?.map((navUpdate: INAVUpdate | ParsedNavUpdateDto) => navUpdate.date) || [];
-  console.warn("TTT chartDates ", navDates);
 
   // Add simulated NAV date if available
   if (props.fund?.totalSimulatedNavCalculatedAtISO && selectedType.value === ChartType.NAV) {
@@ -307,7 +306,7 @@ const options = computed(() => {
             </div>
             <div class="tooltip_row">
               <div class="label">${labelText}:</div>
-              ${selectedType.value === ChartType.NAV ? fundStore.getFormattedBaseTokenValue(valueNav) : valueSharePrice}
+              ${selectedType.value === ChartType.NAV ? fundStore.getFormattedBaseTokenValue(valueNav) : abbreviateNumber(valueSharePrice, 3)}
             </div>
           </div>
         `;

@@ -16,6 +16,7 @@ interface NavUpdateDto {
   totalDepositBalance: bigint;
   sharePrice: string;
   totalNAV: string;
+  totalSupply: string;
   navParts: string; // or: Record<string, string> if parsed
   timestamp: string; // or number if you parse it
   createdAt: string; // ISO date string
@@ -23,8 +24,9 @@ interface NavUpdateDto {
   navMethods: any[]; // or a specific type[]
   positionTypeCounts: any | null; // or a specific type | null
 }
-export interface ParsedNavUpdateDto extends Omit<NavUpdateDto, "totalNAV" | "totalDepositBalance" | "sharePrice" | "navParts" | "timestamp"> {
+export interface ParsedNavUpdateDto extends Omit<NavUpdateDto, "totalNAV" | "totalSupply" | "totalDepositBalance" | "sharePrice" | "navParts" | "timestamp"> {
   totalNAV: bigint;
+  totalSupply: bigint;
   totalDepositBalance: bigint;
   sharePrice: number;
   date: string;
@@ -65,12 +67,12 @@ const parseFundNavUpdatesResponse = (fundChainId: ChainId, fundAddress: string, 
   return navUpdatesData
     .filter((navUpdate: NavUpdateDto) => !excludedIndexes.includes(navUpdate.navUpdateIndex))
     .map((navUpdate: any) => {
-      const timestamp = Number(navUpdate.timestamp) * 1000;
-      console.log("PARSED DATE NAV UPDATE", timestamp, formatDate(new Date(timestamp)))
+      const timestamp = Number(navUpdate.timestamp);
 
       return {
         ...navUpdate,
         totalNAV: navUpdate.totalNAV != null ? BigInt(navUpdate.totalNAV) : null,
+        totalSupply: navUpdate.totalSupply != null ? BigInt(navUpdate.totalSupply) : null,
         sharePrice: Number(navUpdate.sharePrice),
         totalDepositBalance: navUpdate.totalDepositBalance != null ? BigInt(navUpdate.totalDepositBalance) : null,
         timestamp,
