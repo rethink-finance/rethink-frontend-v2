@@ -71,6 +71,10 @@ const rawExcludedFundAddresses = {
     { address: "0x7AEd57B594B31814e3539bC721C864c606bB8e0E", alwaysExclude: true },  // test 17
     { address: "0x351d2E8107628630eeED5B256A5e8bEE87535792", alwaysExclude: true },  // test 18
     { address: "0xE0587fb6DA413b1192297788E26C09E9DD0EFE92", alwaysExclude: true },  // test 19
+    { address: "0xB55B5a93e9517eaCe91c8471c72546630cd9b902", alwaysExclude: true },  // test16
+    { address: "0x3dADFEe05656C9D7D2B1017d83c8c210788FaDE3", alwaysExclude: true },  // test17
+    { address: "0x9Eb4243bEB12d885989ABFA185DAFc542E17eE71", alwaysExclude: true },  // test18
+    { address: "0xd8c108a474771d74A280CF4a8c54E902B3aF4542", alwaysExclude: true },  // test19
   ],
   // Fraxtal
   "0xfc": [],
