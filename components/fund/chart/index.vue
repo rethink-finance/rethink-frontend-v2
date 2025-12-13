@@ -248,6 +248,13 @@ const chartPoints = computed<ChartPoint[]>(() =>
 
 const chartPointValues = computed(() => chartPoints.value.map(p => p.y))
 
+// Indices of points that correspond to real NAV updates (have navUpdateIndex)
+const navUpdateMarkerIndexes = computed<number[]>(() =>
+  chartPoints.value
+    .map((p, idx) => (p.navUpdateIndex != null ? idx : -1))
+    .filter(idx => idx >= 0),
+);
+
 const options = computed(() => {
   return {
     chart: {
@@ -270,6 +277,15 @@ const options = computed(() => {
       colors: ["transparent"],
       strokeColors: ChartTypeStrokeColors[selectedType.value],
       strokeWidth: 2,
+      // Show markers only on points that have navUpdateIndex
+      discrete: navUpdateMarkerIndexes.value.map((dataPointIndex) => ({
+        seriesIndex: 0,
+        dataPointIndex,
+        size: 2,
+        fillColor: "#ffffff",
+        strokeColor: ChartTypeStrokeColors[selectedType.value],
+        shape: "circle",
+      })),
     },
     grid: {
       show: false,
@@ -348,7 +364,7 @@ const options = computed(() => {
       custom: function({ seriesIndex, dataPointIndex, w }: { seriesIndex: number, dataPointIndex: number, w: any }) {
         const dataPoint = w.config.series[seriesIndex].data[dataPointIndex]
         let formattedDate = formatDate(new Date(dataPoint.x));
-
+        const navUpdateIndex = dataPoint.navUpdateIndex;
         // Convert BigInt to string to avoid serialization issues
         const valueNav = dataPoint?.valueRaw?.toString() || "0";
         const valueSharePrice = dataPoint?.y || props.fund.sharePrice;
@@ -362,24 +378,34 @@ const options = computed(() => {
           [ChartType.SHARE_PRICE]: "Share Price",
         }
 
-        let labelText = labelTextMap[selectedType.value];
-        if (isSimulatedValue) {
-          labelText = "Simulated " + labelText;
-        }
+        const labelText = labelTextMap[selectedType.value];
+        // if (isSimulatedValue) {
+        //   labelText = "Simulated " + labelText;
+        // }
 
         if (isSimulatedValue && isLastValue && props.fund?.totalSimulatedNavCalculatedAtISO) {
           // Use long datetime format with hour and minutes for the simulated value.
           formattedDate = formatDateLong(new Date(props.fund?.totalSimulatedNavCalculatedAtISO));
         }
 
+        const navRow =
+          navUpdateIndex != null
+            ? `
+      <div class="tooltip_row">
+        <div class="label">NAV Update:</div>
+        #${navUpdateIndex}
+      </div>
+    ` : "";
+
         return `
           <div class="custom_tooltip">
             <div class="tooltip_row">
-              <div class="label">Date:</div> ${formattedDate}
-            </div>
-            <div class="tooltip_row">
               <div class="label">${labelText}:</div>
               ${selectedType.value === ChartType.NAV ? fundStore.getFormattedBaseTokenValue(valueNav) : abbreviateNumber(valueSharePrice, 3)}
+            </div>
+            ${navRow}
+            <div class="tooltip_row">
+              ${formattedDate}
             </div>
           </div>
         `;
