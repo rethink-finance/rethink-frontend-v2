@@ -9,7 +9,7 @@ import type { ChainId } from "~/types/enums/chain_id";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IFund from "~/types/fund";
-import { fetchFundNavUpdatesAction, type ParsedNavUpdateDto, fetchFundDailySnapshotsAction, type ParsedDailyNavSnapshotDto } from "~/store/funds/actions/fetchFundNavUpdates.action";
+import { fetchFundNavUpdatesAction, type ParsedNavUpdateDto, fetchFundDailyNavSnapshotsAction, type ParsedDailyNavSnapshotDto } from "~/store/funds/actions/fetchFundNavUpdates.action";
 
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
@@ -24,7 +24,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
       fund.address,
     );
     const backendNavUpdatesPromise = fetchFundNavUpdatesAction(fund.chainId, fund.address);
-    const backendDailySnapshotsPromise = fetchFundDailySnapshotsAction(fund.chainId, fund.address);
+    const backendDailyNavSnapshotsPromise = fetchFundDailyNavSnapshotsAction(fund.chainId, fund.address);
 
     let navUpdates = await navUpdatesPromise;
     console.log("FUND NAV DATA", navUpdates);
@@ -66,12 +66,10 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
       fund.lastNAVUpdateTotalSupply = lastBackendNavUpdate?.totalSupply;
       fund.backendNavUpdates = backendNavUpdates;
     });
-    backendDailySnapshotsPromise.then((backendDailySnapshots: ParsedDailyNavSnapshotDto[]) => {
-      console.log("backendDailySnapshots", backendDailySnapshots);
-      fund.backendDailySnapshots = backendDailySnapshots;
+    backendDailyNavSnapshotsPromise.then((backendDailyNavSnapshots: ParsedDailyNavSnapshotDto[]) => {
+      console.log("backendDailyNavSnapshots", backendDailyNavSnapshots);
+      fund.backendDailyNavSnapshots = backendDailyNavSnapshots;
     });
-    // TODO RESOLVE IT HERE the response from daily-snapshots/:fundAddress and console.log response
-    // console.warn("TTT fetchFundNavUpdatesAction ", fund.chainId, fund.address, navUpdates);
   } catch (error) {
     console.error(
       "Error calling getNAVDataForFund: ",

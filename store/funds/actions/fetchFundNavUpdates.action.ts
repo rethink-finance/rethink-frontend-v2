@@ -58,9 +58,9 @@ export interface ParsedDailyNavSnapshotDto extends Omit<DailyNavSnapshotDto, "to
   date: string;
 }
 
-export function fetchFundDailySnapshotsAction(fundChainId: ChainId, fundAddress: string): Promise<ParsedDailyNavSnapshotDto[]> {
-  return useActionState(`fetchFundDailySnapshots_${fundChainId}_${fundAddress}`, () =>
-    fetchFundDailySnapshots(fundChainId, fundAddress),
+export function fetchFundDailyNavSnapshotsAction(fundChainId: ChainId, fundAddress: string): Promise<ParsedDailyNavSnapshotDto[]> {
+  return useActionState(`fetchFundDailyNavSnapshots_${fundChainId}_${fundAddress}`, () =>
+    fetchFundDailyNavSnapshots(fundChainId, fundAddress),
   );
 }
 
@@ -87,7 +87,7 @@ export async function fetchFundNavUpdates(fundChainId: ChainId, fundAddress: str
 /**
  * Fetch fund daily NAV snapshots from the backend.
  */
-export async function fetchFundDailySnapshots(
+export async function fetchFundDailyNavSnapshots(
   fundChainId: ChainId,
   fundAddress: string,
 ): Promise<ParsedDailyNavSnapshotDto[]> {

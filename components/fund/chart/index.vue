@@ -93,10 +93,8 @@ const series = computed(() => [
   },
 ]);
 
-const isLoadingFetchFundNAVUpdatesActionState = computed(() => {
-  return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
-});
-const fundNavUpdates = computed(() =>
+const fundNavUpdates = computed<INAVUpdate[] | ParsedNavUpdateDto[]>(() =>
+  // INAVUpdate comes from the chain, and ParseNavUpdateDto is from the backend.
   navUpdatesFromBackend.value.length
     ? navUpdatesFromBackend.value
     : props.fund?.navUpdates ?? [],
@@ -114,7 +112,7 @@ const sharePriceItems = computed<number[]>(() => {
 // Check loading state for daily snapshots action
 const isLoadingDailySnapshots = computed(() =>
   actionStateStore.isActionState(
-    `fetchFundDailySnapshots_${props.fund.chainId}_${props.fund.address}`,
+    `fetchFundDailyNavSnapshots_${props.fund.chainId}_${props.fund.address}`,
     ActionState.Loading,
   ),
 );
@@ -125,93 +123,128 @@ type ChartPoint = {
   date: string
   x: number
   y: number
-  valueRaw: bigint | number
+  valueRaw?: bigint
   isSimulated: boolean
   navUpdateIndex: number | null
 }
 
-const chartPoints = computed<ChartPoint[]>(() => {
-  // Build base points from NAV updates (backend or chain), carrying timestamps
-  const basePoints = (fundNavUpdates.value || []).map((navUpdate: INAVUpdate | ParsedNavUpdateDto, idx: number) => ({
-    timestamp: navUpdate.timestamp,
-    x: navUpdate.timestamp,
-    date: navUpdate.date,
-    navValue: parseFloat(ethers.formatUnits((navUpdate.totalNAV || 0n) as bigint, props.fund?.baseToken.decimals)),
-    valueRaw: (navUpdate.totalNAV || 0n) as bigint,
-    sharePriceValue: sharePriceItems.value[idx],  // TODO This is problematic, nothing assures the same number of share prices and nav updates, possible misalignment problem
-    navUpdateIndex: navUpdate.index,
-    isSimulated: false,
-  }));
+// NAV-only chart points
+const navChartPoints = computed<ChartPoint[]>(() => {
+  // NAV updates.
+  // INAVUpdate comes from the chain, and ParseNavUpdateDto is from the backend.
+  const navUpdates = (fundNavUpdates.value || []).map((navUpdate: INAVUpdate | ParsedNavUpdateDto) => {
+    const ts = navUpdate.timestamp;
+    const navBig = (navUpdate.totalNAV || 0n) as bigint;
+    return {
+      timestamp: ts,
+      date: navUpdate.date,
+      x: ts,
+      y: parseFloat(ethers.formatUnits(navBig, props.fund?.baseToken.decimals)),
+      valueRaw: navBig,
+      isSimulated: false,
+      navUpdateIndex: navUpdate.index,
+    } as ChartPoint;
+  });
 
-  // Points from backend daily snapshots (if not loading)
-  const snapshotPoints = !isLoadingDailySnapshots.value && props.fund?.backendDailySnapshots?.length
-    ? props.fund.backendDailySnapshots.map((s) => ({
-      timestamp: Number(s.timestamp),
-      x: Number(s.timestamp),
-      date: formatDate(new Date(Number(s.timestamp))),
-      navValue: s.totalSimulatedNav != null
-        ? parseFloat(ethers.formatUnits((s.totalSimulatedNav as bigint), props.fund?.baseToken.decimals))
-        : undefined,
-      valueRaw: (s.totalSimulatedNav ?? undefined) as bigint | undefined,
-      sharePriceValue: s.sharePrice != null ? Number(s.sharePrice) : undefined,
-      isSimulated: true,
-      navUpdateIndex: null,
-    }))
+  // Daily NAV snapshots fetched from the backend.
+  const dailyNavSnapshots: ChartPoint[] = (!isLoadingDailySnapshots.value && props.fund?.backendDailyNavSnapshots?.length)
+    ? props.fund.backendDailyNavSnapshots
+      .filter(s => s.totalSimulatedNav != null)
+      .map((s) => {
+        const ts = Number(s.timestamp);
+        const navBig = s.totalSimulatedNav as bigint;
+        return {
+          timestamp: ts,
+          date: formatDate(new Date(ts)),
+          x: ts,
+          y: parseFloat(ethers.formatUnits(navBig, props.fund?.baseToken.decimals)),
+          valueRaw: navBig,
+          isSimulated: true,
+          navUpdateIndex: null,
+        } as ChartPoint;
+      })
     : [];
 
-  let points: ChartPoint[] = [];
+  const points: ChartPoint[] = [...navUpdates, ...dailyNavSnapshots];
 
-  if (selectedType.value === ChartType.NAV) {
-    points = [
-      ...basePoints,
-      ...snapshotPoints,
-    ].filter((p) => p.navValue !== undefined)
-      .map((p) => ({ ...p, y: p.navValue, valueRaw: p.valueRaw } as ChartPoint));
-
-    // Add simulated NAV if available
-    if (props.fund?.totalSimulatedNav) {
-      const ts = props.fund.totalSimulatedNavCalculatedAtISO ? Date.parse(props.fund.totalSimulatedNavCalculatedAtISO) : Date.now();
-      points.push({
-        timestamp: ts,
-        date: formatDate(new Date(ts)),
-        x: ts,
-        y: parseFloat(ethers.formatUnits(props.fund.totalSimulatedNav, props.fund?.baseToken.decimals)),
-        valueRaw: props.fund.totalSimulatedNav,
-        isSimulated: true,
-        navUpdateIndex: null,
-      });
-    }
-  } else {
-    // Share price
-    points = [
-      ...basePoints
-        .filter((p) => p.sharePriceValue != null)
-        .map((p) => ({ ...p, y: p.sharePriceValue as number, valueRaw: p.sharePriceValue } as ChartPoint)),
-      ...snapshotPoints
-        .filter((p) => p.sharePriceValue !== undefined)
-        .map((p) => ({ ...p, y: p.sharePriceValue as number, valueRaw: p.sharePriceValue } as ChartPoint)),
-    ];
-
-    // Add simulated share price if available
-    if (props.fund?.sharePrice) {
-      const ts = props.fund.totalSimulatedNavCalculatedAtISO ? Date.parse(props.fund.totalSimulatedNavCalculatedAtISO) : Date.now();
-      points.push({
-        timestamp: ts,
-        date: formatDate(new Date(ts)),
-        x: ts,
-        y: props.fund.sharePrice,
-        valueRaw: props.fund.sharePrice,
-        isSimulated: true,
-        navUpdateIndex: null,
-      });
-    }
+  // Add simulated NAV if available
+  if (props.fund?.totalSimulatedNav) {
+    const ts = props.fund.totalSimulatedNavCalculatedAtISO ? Date.parse(props.fund.totalSimulatedNavCalculatedAtISO) : Date.now();
+    points.push({
+      timestamp: ts,
+      date: formatDate(new Date(ts)),
+      x: ts,
+      y: parseFloat(ethers.formatUnits(props.fund.totalSimulatedNav, props.fund?.baseToken.decimals)),
+      valueRaw: props.fund.totalSimulatedNav,
+      isSimulated: true,
+      navUpdateIndex: null,
+    });
   }
 
-  // Sort by timestamp for alignment
   points.sort((a, b) => a.timestamp - b.timestamp);
-  console.log("TTT chartPoints ", points);
   return points;
 });
+
+// Share-price-only chart points
+const sharePriceChartPoints = computed<ChartPoint[]>(() => {
+  // Base points from NAV updates timestamps and sharePrice items aligned by index
+  const base: ChartPoint[] = (fundNavUpdates.value || [])
+    .map((navUpdate: INAVUpdate | ParsedNavUpdateDto, idx: number) => {
+      const price = sharePriceItems.value[idx];
+      if (price == null) return null;
+      const ts = navUpdate.timestamp;
+      return {
+        timestamp: ts,
+        date: navUpdate.date,
+        x: ts,
+        y: price as number,
+        isSimulated: false,
+        navUpdateIndex: navUpdate.index,
+      } as ChartPoint;
+    })
+    .filter(Boolean) as ChartPoint[];
+
+  // Daily snapshots
+  const snapshots: ChartPoint[] = (!isLoadingDailySnapshots.value && props.fund?.backendDailyNavSnapshots?.length)
+    ? props.fund.backendDailyNavSnapshots
+      .filter(s => s.sharePrice != null)
+      .map((s) => {
+        const ts = Number(s.timestamp);
+        const price = Number(s.sharePrice);
+        return {
+          timestamp: ts,
+          date: formatDate(new Date(ts)),
+          x: ts,
+          y: price,
+          isSimulated: true,
+          navUpdateIndex: null,
+        } as ChartPoint;
+      })
+    : [];
+
+  const points: ChartPoint[] = [...base, ...snapshots];
+
+  // Add the current simulated share price if available
+  if (props.fund?.sharePrice) {
+    const ts = props.fund.totalSimulatedNavCalculatedAtISO ? Date.parse(props.fund.totalSimulatedNavCalculatedAtISO) : Date.now();
+    points.push({
+      timestamp: ts,
+      date: formatDate(new Date(ts)),
+      x: ts,
+      y: props.fund.sharePrice,
+      isSimulated: true,
+      navUpdateIndex: null,
+    });
+  }
+
+  points.sort((a, b) => a.timestamp - b.timestamp);
+  return points;
+});
+
+// Selector depending on the chosen type
+const chartPoints = computed<ChartPoint[]>(() =>
+  selectedType.value === ChartType.NAV ? navChartPoints.value : sharePriceChartPoints.value,
+);
 
 const chartPointValues = computed(() => chartPoints.value.map(p => p.y))
 
@@ -314,7 +347,6 @@ const options = computed(() => {
       theme: "dark", // You can set the tooltip theme to 'dark' or 'light'
       custom: function({ seriesIndex, dataPointIndex, w }: { seriesIndex: number, dataPointIndex: number, w: any }) {
         const dataPoint = w.config.series[seriesIndex].data[dataPointIndex]
-        console.log(dataPoint);
         let formattedDate = formatDate(new Date(dataPoint.x));
 
         // Convert BigInt to string to avoid serialization issues

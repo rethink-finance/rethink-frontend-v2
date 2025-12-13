@@ -147,7 +147,7 @@ export default interface IFund {
   // NAV Updates
   navUpdates: INAVUpdate[];
   backendNavUpdates?: ParsedNavUpdateDto[];
-  backendDailySnapshots?: ParsedDailyNavSnapshotDto[];
+  backendDailyNavSnapshots?: ParsedDailyNavSnapshotDto[];
   isNavUpdatesLoading?: boolean;
 
   // Deposit & Redemption Requests Balance
