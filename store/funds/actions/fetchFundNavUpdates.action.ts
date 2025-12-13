@@ -2,7 +2,7 @@ import { useActionState } from "~/store/actionState.store";
 import { parseBigInt } from "~/composables/localStorage";
 import type { ChainId } from "~/types/enums/chain_id";
 import { excludeNAVUpdateIndexes } from "~/store/funds/config/excludedNAVUpdates.config";
-import type INAVUpdate from "~/types/nav_update";
+
 
 interface NavUpdateDto {
   id: number;
@@ -24,7 +24,8 @@ interface NavUpdateDto {
   navMethods: any[]; // or a specific type[]
   positionTypeCounts: any | null; // or a specific type | null
 }
-export interface ParsedNavUpdateDto extends Omit<NavUpdateDto, "totalNAV" | "totalSupply" | "totalDepositBalance" | "sharePrice" | "navParts" | "timestamp"> {
+export interface ParsedNavUpdateDto extends Omit<NavUpdateDto, "totalNAV" | "totalSupply" | "totalDepositBalance" | "sharePrice" | "navParts" | "timestamp" | "navUpdateIndex" > {
+  index: number;
   totalNAV: bigint;
   totalSupply: bigint;
   totalDepositBalance: bigint;
@@ -37,6 +38,29 @@ export interface ParsedNavUpdateDto extends Omit<NavUpdateDto, "totalNAV" | "tot
 export function fetchFundNavUpdatesAction(fundChainId: ChainId, fundAddress: string): Promise<ParsedNavUpdateDto[]> {
   return useActionState(`fetchFundNavUpdates_${fundChainId}_${fundAddress}`, () =>
     fetchFundNavUpdates(fundChainId, fundAddress),
+  );
+}
+
+// Daily snapshots
+interface DailyNavSnapshotDto {
+  timestamp: string | number;
+  sharePrice?: string | number | null;
+  totalSimulatedNav?: string | number | null;
+  totalSupply?: string | number | null;
+  [key: string]: any;
+}
+
+export interface ParsedDailyNavSnapshotDto extends Omit<DailyNavSnapshotDto, "totalSimulatedNav" | "totalSupply" | "sharePrice" | "timestamp"> {
+  timestamp: number;
+  sharePrice?: number | null;
+  totalSimulatedNav?: bigint | null;
+  totalSupply?: bigint | null;
+  date: string;
+}
+
+export function fetchFundDailySnapshotsAction(fundChainId: ChainId, fundAddress: string): Promise<ParsedDailyNavSnapshotDto[]> {
+  return useActionState(`fetchFundDailySnapshots_${fundChainId}_${fundAddress}`, () =>
+    fetchFundDailySnapshots(fundChainId, fundAddress),
   );
 }
 
@@ -60,6 +84,48 @@ export async function fetchFundNavUpdates(fundChainId: ChainId, fundAddress: str
   return parseFundNavUpdatesResponse(fundChainId, fundAddress, data);
 }
 
+/**
+ * Fetch fund daily NAV snapshots from the backend.
+ */
+export async function fetchFundDailySnapshots(
+  fundChainId: ChainId,
+  fundAddress: string,
+): Promise<ParsedDailyNavSnapshotDto[]> {
+  console.debug("[BACKEND] FETCH Fund daily NAV snapshots ", fundChainId, fundAddress);
+  const config = useRuntimeConfig();
+  const response = await fetch(
+    `${config.public.BACKEND_URL}/nav/daily-snapshots/${fundAddress}?fundChainId=${fundChainId}`,
+  );
+
+  if (!response.ok) {
+    console.error(`[BACKEND] Failed to fetch daily NAV snapshots for fund ${fundChainId} ${fundAddress}:`, response.statusText);
+    return [];
+  }
+
+  const data: DailyNavSnapshotDto[] = await response.json();
+  console.debug("[BACKEND] Fund ", fundChainId, fundAddress, " DAILY SNAPSHOTS", data);
+  return data.map((snapshot) => {
+    const timestamp = Number(snapshot.timestamp);
+    let totalSupply = snapshot.totalSupply;
+    let totalSimulatedNav = snapshot.totalSimulatedNav;
+    if (typeof totalSupply === "string") {
+      totalSupply = totalSupply.replace(/n$/, "");
+    }
+    if (typeof totalSimulatedNav === "string") {
+      totalSimulatedNav = totalSimulatedNav.replace(/n$/, "");
+    }
+
+    return {
+      ...(snapshot as any),
+      totalSimulatedNav: snapshot.totalSimulatedNav != null ? BigInt(totalSimulatedNav as any) : null,
+      totalSupply: snapshot.totalSupply != null ? BigInt(totalSupply as any) : null,
+      sharePrice: snapshot.sharePrice != null ? Number(snapshot.sharePrice as any) : null,
+      timestamp,
+      date: formatDate(new Date(timestamp)),
+    } as ParsedDailyNavSnapshotDto;
+  });
+}
+
 
 const parseFundNavUpdatesResponse = (fundChainId: ChainId, fundAddress: string, navUpdatesData: NavUpdateDto[]): ParsedNavUpdateDto[] => {
   // Filter out NAV updates if their index is in the excludeNAVUpdateIndexes for that fund
@@ -71,6 +137,7 @@ const parseFundNavUpdatesResponse = (fundChainId: ChainId, fundAddress: string, 
 
       return {
         ...navUpdate,
+        index: navUpdate.navUpdateIndex,
         totalNAV: navUpdate.totalNAV != null ? BigInt(navUpdate.totalNAV) : null,
         totalSupply: navUpdate.totalSupply != null ? BigInt(navUpdate.totalSupply) : null,
         sharePrice: Number(navUpdate.sharePrice),

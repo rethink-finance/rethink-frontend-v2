@@ -4,6 +4,7 @@ import type INAVUpdate from "~/types/nav_update";
 import type IPositionTypeCount from "~/types/position_type";
 import type IToken from "~/types/token";
 import type IFundSettings from "./fund_settings";
+import type { ParsedDailyNavSnapshotDto } from "~/store/funds/actions/fetchFundNavUpdates.action";
 
 export interface INAVParts {
   baseAssetOIVBal: bigint;
@@ -146,6 +147,7 @@ export default interface IFund {
   // NAV Updates
   navUpdates: INAVUpdate[];
   backendNavUpdates?: ParsedNavUpdateDto[];
+  backendDailySnapshots?: ParsedDailyNavSnapshotDto[];
   isNavUpdatesLoading?: boolean;
 
   // Deposit & Redemption Requests Balance

@@ -13,6 +13,7 @@ export const fetchUserFundDataAction = async (
   );
   const fundStore = useFundStore();
   const web3Store = useWeb3Store();
+  fundStore.resetFundUserData();
 
   // Fetch user deposit & redemption requests async, no need to wait for it to finish.
   fundStore.fetchUserFundDepositRedemptionRequests();

@@ -498,7 +498,10 @@ export const useFundStore = defineStore({
       this.fundManagedNAVMethods = [];
       this.fundInitialNAVMethods = [];
       this.fundRoleModAddress = {};
-      this.fundUserData = structuredClone(DEFAULT_FUND_USER_DATA);
+      this.resetFundUserData();
+    },
+    resetFundUserData() {
+      this.fundUserData = structuredClone(DEFAULT_FUND_USER_DATA)
     },
     async fetchAddressSourceCode(
       chainId: ChainId,
