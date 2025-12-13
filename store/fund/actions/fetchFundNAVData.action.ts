@@ -27,7 +27,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     const backendDailyNavSnapshotsPromise = fetchFundDailyNavSnapshotsAction(fund.chainId, fund.address);
 
     let navUpdates = await navUpdatesPromise;
-    console.log("FUND NAV DATA", navUpdates);
+    // console.log("FUND NAV DATA", navUpdates);
 
     // Filter out NAV updates if their index is in the excludeNAVUpdateIndexes for that fund
     const excludedIndexes = excludeNAVUpdateIndexes[(fund.chainId as ChainId)]?.[fund.address] || [];
@@ -44,7 +44,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
         fund.chainId,
         fund.address,
       );
-      console.log("FETCHED GET NAV DATA", newNavMethods);
+      // console.log("FETCHED GET NAV DATA", newNavMethods);
 
       fundStore.fundInitialNAVMethods = await mergeNAVMethodsFromLocalStorage(
         fundStore.selectedFundAddress,
@@ -61,13 +61,13 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     fund.navUpdates = navUpdates;
 
     backendNavUpdatesPromise.then((backendNavUpdates: ParsedNavUpdateDto[]) => {
-      console.log("backendNavUpdates", backendNavUpdates);
+      // console.log("backendNavUpdates", backendNavUpdates);
       const lastBackendNavUpdate = backendNavUpdates.find(backendNavUpdate => backendNavUpdate.index === lastNavUpdate.index);
       fund.lastNAVUpdateTotalSupply = lastBackendNavUpdate?.totalSupply;
       fund.backendNavUpdates = backendNavUpdates;
     });
     backendDailyNavSnapshotsPromise.then((backendDailyNavSnapshots: ParsedDailyNavSnapshotDto[]) => {
-      console.log("backendDailyNavSnapshots", backendDailyNavSnapshots);
+      // console.log("backendDailyNavSnapshots", backendDailyNavSnapshots);
       fund.backendDailyNavSnapshots = backendDailyNavSnapshots;
     });
   } catch (error) {
