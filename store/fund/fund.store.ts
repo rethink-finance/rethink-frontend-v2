@@ -144,11 +144,13 @@ export const useFundStore = defineStore({
       if (!this.fundLastNAVUpdate) {
         return this.fundToBaseTokenExchangeRateDefault;
       }
-      if (!this.fundLastNAVUpdate.totalNAV || !this.fund?.lastNAVUpdateTotalSupply)
+      if (!this.fundLastNAVUpdate.totalNAV) {
         return FixedNumber.fromString("0");
+      }
+      // TODO we should not take the current fund token total supply, it's a hack if backend does not work...
       const sharePrice = calculateSharePrice(
         this.fundLastNAVUpdate.totalNAV,
-        this.fund.lastNAVUpdateTotalSupply,
+        this.fund.lastNAVUpdateTotalSupply || this.fund.fundTokenTotalSupply,
         this.fund.baseToken.decimals,
         this.fund.fundToken.decimals,
       )
@@ -159,15 +161,16 @@ export const useFundStore = defineStore({
       return FixedNumber.fromString(sharePrice.toFixed(18))
     },
     fundToBaseTokenExchangeRateSimulatedNav(): FixedNumber {
-      if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals)
+      if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals) {
         return FixedNumber.fromString("0");
+      }
 
-      if (!this.fund?.totalSimulatedNav) {
+      if (!this.fund?.totalSimulatedNav || !this.fund?.fundTokenTotalSupply) {
         return this.fundToBaseTokenExchangeRateLastNavUpdate;
       }
 
       const sharePrice = calculateSharePrice(
-        this.fund?.totalSimulatedNav,
+        this.fund.totalSimulatedNav,
         this.fund.fundTokenTotalSupply,
         this.fund.baseToken.decimals,
         this.fund.fundToken.decimals,
@@ -176,17 +179,15 @@ export const useFundStore = defineStore({
       console.warn("CURRENT SIMULATED sharePrice function: ", sharePrice.toFixed(18));
       return FixedNumber.fromString(sharePrice.toFixed(18))
     },
-    // TODO Reverse
     fundToBaseTokenExchangeRateDefault(): FixedNumber {
-      if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals)
+      if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals) {
         return FixedNumber.fromString("0");
+      }
 
-      // If there was no NAV update yet, the exchange rate is 1:1.
-      if (!this.fund?.baseToken || !this.fund?.fundToken)
-        return FixedNumber.fromString("0");
       // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
-      if (this.fund?.fundToken.decimals === this.fund?.baseToken.decimals)
+      if (this.fund?.fundToken?.decimals === this.fund?.baseToken?.decimals) {
         return FixedNumber.fromString("1");
+      }
       // If decimals are not the same, we have to calculate it.
       const decimalDiff =
         Number(this.fund?.fundToken.decimals) -
@@ -215,6 +216,9 @@ export const useFundStore = defineStore({
       return FixedNumber.fromString("1").div(this.fundToBaseTokenExchangeRateLastNavUpdate);
     },
     baseToFundTokenExchangeRateSimulatedNav(): FixedNumber {
+      if (this.fundToBaseTokenExchangeRateSimulatedNav.eq(FixedNumber.fromString("0"))) {
+        return FixedNumber.fromString("0");
+      }
       return FixedNumber.fromString("1").div(this.fundToBaseTokenExchangeRateSimulatedNav);
     },
     userDepositRequest(): IFundTransactionRequest | undefined {

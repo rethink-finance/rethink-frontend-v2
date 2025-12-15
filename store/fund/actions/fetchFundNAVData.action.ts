@@ -60,16 +60,26 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
       : fund.totalDepositBalance || 0n;
     fund.navUpdates = navUpdates;
 
-    backendNavUpdatesPromise.then((backendNavUpdates: ParsedNavUpdateDto[]) => {
-      // console.log("backendNavUpdates", backendNavUpdates);
-      const lastBackendNavUpdate = backendNavUpdates.find(backendNavUpdate => backendNavUpdate.index === lastNavUpdate.index);
-      fund.lastNAVUpdateTotalSupply = lastBackendNavUpdate?.totalSupply;
-      fund.backendNavUpdates = backendNavUpdates;
-    });
-    backendDailyNavSnapshotsPromise.then((backendDailyNavSnapshots: ParsedDailyNavSnapshotDto[]) => {
-      // console.log("backendDailyNavSnapshots", backendDailyNavSnapshots);
-      fund.backendDailyNavSnapshots = backendDailyNavSnapshots;
-    });
+    backendNavUpdatesPromise
+      .then((backendNavUpdates: ParsedNavUpdateDto[]) => {
+        // console.log("backendNavUpdates", backendNavUpdates);
+        const lastBackendNavUpdate = backendNavUpdates.find(
+          (backendNavUpdate) => backendNavUpdate.index === lastNavUpdate.index,
+        );
+        fund.lastNAVUpdateTotalSupply = lastBackendNavUpdate?.totalSupply;
+        fund.backendNavUpdates = backendNavUpdates;
+      })
+      .catch((error: any) =>
+        console.error("Failed fetching backendNavUpdatesPromise", error),
+      );
+    backendDailyNavSnapshotsPromise
+      .then((backendDailyNavSnapshots: ParsedDailyNavSnapshotDto[]) => {
+        // console.log("backendDailyNavSnapshots", backendDailyNavSnapshots);
+        fund.backendDailyNavSnapshots = backendDailyNavSnapshots;
+      })
+      .catch((error: any) =>
+        console.error("Failed fetching backendDailyNavSnapshotsPromise", error),
+      );
   } catch (error) {
     console.error(
       "Error calling getNAVDataForFund: ",

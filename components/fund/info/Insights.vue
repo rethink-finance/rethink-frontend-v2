@@ -3,10 +3,7 @@
     <UiDataBar class="data_bar">
       <div class="data_bar__item">
         <div class="data_bar__title">
-          <IconChain
-            :chain-short="props.fund?.chainShort"
-            class="mr-2"
-          />
+          <IconChain :chain-short="props.fund?.chainShort" class="mr-2" />
           {{ capitalizeFirst(fund.chainName) || "N/A" }}
         </div>
         <div class="data_bar__subtitle">
@@ -14,7 +11,10 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': isLoadingFetchFundNAVUpdatesActionState}">
+        <div
+          class="data_bar__title"
+          :class="{ 'justify-center': isLoadingFetchFundNAVUpdatesActionState }"
+        >
           <v-progress-circular
             v-if="isLoadingFetchFundLatestSnapshotActionState"
             class="d-flex"
@@ -44,8 +44,15 @@
                         fund.baseToken.symbol
                     }}
                   </div>
-                  <div v-if="fund.totalSimulatedNavUSD" class="nav_usd_value ms-2">
-                    ({{ fund.totalSimulatedNavUSD ? "$" + formatNumberShort(fund.totalSimulatedNavUSD) :  "N/A" }})
+                  <div
+                    v-if="fund.totalSimulatedNavUSD"
+                    class="nav_usd_value ms-2"
+                  >
+                    ({{
+                      fund.totalSimulatedNavUSD
+                        ? "$" + formatNumberShort(fund.totalSimulatedNavUSD)
+                        : "N/A"
+                    }})
                   </div>
                 </div>
               </template>
@@ -92,7 +99,13 @@
         </div>
       </div>
       <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': isLoadingCalculateFundPerformanceMetricsActionState}">
+        <div
+          class="data_bar__title"
+          :class="{
+            'justify-center':
+              isLoadingCalculateFundPerformanceMetricsActionState,
+          }"
+        >
           <v-progress-circular
             v-if="isLoadingCalculateFundPerformanceMetricsActionState"
             class="d-flex"
@@ -150,7 +163,11 @@
 </template>
 
 <script setup lang="ts">
-import { formatNumberShort, formatPercent, formatTokenValue } from "~/composables/formatters";
+import {
+  formatNumberShort,
+  formatPercent,
+  formatTokenValue,
+} from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass";
 import { capitalizeFirst } from "~/composables/utils";
 import { useActionStateStore } from "~/store/actionState.store";
@@ -158,21 +175,28 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 import { useSettingsStore } from "~/store/settings/settings.store";
-import { fetchFundLatestSnapshotAction } from "~/store/funds/actions/fetchFundLatestSnapshot.action";
 import BaseAssetIcon from "~/components/global/icon/BaseAsset.vue";
 const fundStore = useFundStore();
 const actionStateStore = useActionStateStore();
 const appSettingsStore = useSettingsStore();
 
-const isLoadingFetchFundNAVUpdatesActionState =
-  computed(() => actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading));
+const isLoadingFetchFundNAVUpdatesActionState = computed(() =>
+  actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading),
+);
 
-const isLoadingCalculateFundPerformanceMetricsActionState =
-  computed(() => actionStateStore.isActionState("calculateFundPerformanceMetricsAction", ActionState.Loading));
+const isLoadingCalculateFundPerformanceMetricsActionState = computed(() =>
+  actionStateStore.isActionState(
+    "calculateFundPerformanceMetricsAction",
+    ActionState.Loading,
+  ),
+);
 
-const isLoadingFetchFundLatestSnapshotActionState =
-  computed(() => actionStateStore.isActionState(`fetchFundLatestSnapshot_${props.fund?.chainId}_${props.fund?.address}`, ActionState.Loading));
-
+const isLoadingFetchFundLatestSnapshotActionState = computed(() =>
+  actionStateStore.isActionState(
+    `fetchFundLatestSnapshot_${props.fund?.chainId}_${props.fund?.address}`,
+    ActionState.Loading,
+  ),
+);
 
 const props = defineProps({
   fund: {
