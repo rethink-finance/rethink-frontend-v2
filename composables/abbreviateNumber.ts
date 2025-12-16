@@ -6,7 +6,7 @@ import { trimTrailingZeros } from "~/composables/formatters";
  * console.log(formatNumber(1025000)); // Outputs: "1.0M"
  * console.log(formatNumber(1300000000)); // Outputs: "1.3B"
  */
-export const abbreviateNumber = (value: any, toFixed = 1): string => {
+export const abbreviateNumber = (value: any, toPrecision?: number): string => {
   const num = parseFloat(value);
   if (isNaN(num)) {
     return value; // Return as is if not a valid number
@@ -16,8 +16,14 @@ export const abbreviateNumber = (value: any, toFixed = 1): string => {
   const absNum = Math.abs(num);
 
   // If number is not bigger than 1000, do not modify it (no abbreviation, no rounding)
-  if (absNum <= 1000) {
-    return typeof value === "string" ? value : String(value);
+  // For exactly 1000, always return as-is without formatting
+  if (absNum < 1000) {
+    // If precision not provided, return original formatting (no changes)
+    if (toPrecision === undefined) {
+      return typeof value === "string" ? value : String(value);
+    }
+    // Precision provided: format using Number.toPrecision on the numeric value
+    return num.toPrecision(toPrecision);
   }
 
   const abbreviations = ["K", "M", "B", "T"];
@@ -33,7 +39,35 @@ export const abbreviateNumber = (value: any, toFixed = 1): string => {
     }
   }
 
-  // Round to 1 decimal and cut trailing zeros.
+  // Abbreviation formatting:
+  // - Default: 1 decimal place, then trim all trailing zeros
+  // - If toPrecision provided: keep decimals up to (toPrecision - 1) places.
+  //   Trim entire decimal part only if it's all zeros (e.g., 10.00 -> 10),
+  //   but preserve trailing zeros if there is any non-zero decimal (e.g., 1.50 -> 1.50).
+  const decimalPlaces = Math.max(0, (toPrecision ?? 2) - 1);
   const withSign = roundedValue * sign;
-  return trimTrailingZeros(withSign.toFixed(toFixed)) + abbreviation;
+  const fixedAbs = Math.abs(withSign).toFixed(decimalPlaces);
+
+  let numericPart: string;
+  if (toPrecision === undefined) {
+    numericPart = trimTrailingZeros(fixedAbs);
+  } else if (decimalPlaces === 0) {
+    numericPart = fixedAbs; // integer
+  } else {
+    const [intPart, fracPart] = fixedAbs.split(".");
+    if (/^0+$/.test(fracPart)) {
+      numericPart = intPart; // all zeros -> trim decimals entirely
+    } else {
+      numericPart = intPart + "." + fracPart; // preserve provided precision (including trailing zeros)
+    }
+  }
+
+  // For larger units (M, B, T), trim trailing zeros in the fractional part
+  // when precision is provided. For K, keep the provided fractional zeros.
+  if (toPrecision !== undefined && abbreviation && abbreviation !== "K") {
+    numericPart = trimTrailingZeros(numericPart);
+  }
+
+  const signed = (sign < 0 ? "-" : "") + numericPart;
+  return signed + abbreviation;
 }

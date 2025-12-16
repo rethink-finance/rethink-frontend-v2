@@ -132,8 +132,14 @@
           width="2"
           indeterminate
         />
-        <div v-else :class="numberColorClass(item.cumulativeReturnPercent)">
-          {{ formatPercent(item.cumulativeReturnPercent, true) ?? "N/A" }}
+        <div
+          v-else
+          :class="numberColorClass(roundPercent(item.cumulativeReturnPercent))"
+        >
+          {{
+            formatPercent(roundPercent(item.cumulativeReturnPercent), true) ??
+              "N/A"
+          }}
         </div>
       </div>
     </template>
@@ -184,6 +190,8 @@ defineProps({
     default: false,
   },
 });
+
+const roundPercent = (value?: number): number => parseFloat(value?.toFixed(2) || "0");
 
 const headers: any = computed(() => [
   {
@@ -261,7 +269,10 @@ const getItemSubtitle = (fund: IFund) => {
   if (fund.address && fund.chainId) {
     // Find the fund in the metadata by address
     const chainFunds = fundMetaDataHardcoded[fund.chainId as ChainId] || [];
-    const fundMetadata = chainFunds.find(fundMetadata => fundMetadata.address.toLowerCase() === fund.address.toLowerCase());
+    const fundMetadata = chainFunds.find(
+      (fundMetadata) =>
+        fundMetadata.address.toLowerCase() === fund.address.toLowerCase(),
+    );
 
     // If found and has a subtitle, use it
     if (fundMetadata?.subtitle) {
@@ -271,7 +282,7 @@ const getItemSubtitle = (fund: IFund) => {
 
   // Fallback to the provided subtitle
   return fund.description;
-}
+};
 
 const navigateFundDetails = (event: any, row: any) => {
   // Check if the click target is an anchor (<a>) or any clickable element

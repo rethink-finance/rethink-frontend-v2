@@ -185,14 +185,6 @@ const calculatedToken1Value = computed(() => {
     return "0";
   }
 });
-const noNavUpdateToken1Value = computed(() => {
-  if (!props?.token0?.decimals || !props?.token1?.decimals) return "--";
-  // If there was no NAV update, the exchange rate is 1:1 if the token0 decimals are the same as token1 decimals.
-  // If decimals are different, the ratio equals to token0 decimals / token1 decimals.
-  const decimals = Number(props.token1.decimals - props.token0.decimals)
-  const exchangeRate = 10 ** -decimals;
-  return trimTrailingZeros(exchangeRate.toFixed(18));
-});
 </script>
 
 <style lang="scss" scoped>
