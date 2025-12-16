@@ -35,9 +35,7 @@
         @click="goToPermissionsStepTwo()"
       >
         Finalize Permissions
-        <v-icon right>
-          mdi-chevron-right
-        </v-icon>
+        <v-icon right> mdi-chevron-right </v-icon>
       </v-btn>
     </div>
 
@@ -62,9 +60,7 @@
       @submit="storePermissions"
     >
       <template #title>
-        <UiButtonBack
-          @click="selectedStepIndex = 0"
-        />
+        <UiButtonBack @click="selectedStepIndex = 0" />
       </template>
       <template #post-steps-content>
         <div class="main-step">
@@ -76,12 +72,13 @@
               />
             </div>
             <p class="info_container__text">
-              Having trouble reading permissions?<br>
+              Having trouble reading permissions?<br />
               <a
                 class="info_container__link"
                 href="https://docs.rethink.finance/rethink.finance"
                 target="_blank"
-              >Learn more about permissions here</a>.
+                >Learn more about permissions here</a
+              >.
             </p>
           </div>
           <div class="info_container mt-6">
@@ -97,7 +94,8 @@
         <div class="management">
           <div class="management__row">
             <div>
-              Prepopulate permissions to allow manager to send funds to the admin contract to settle flows
+              Prepopulate permissions to allow manager to send funds to the
+              admin contract to settle flows
             </div>
             <v-switch
               v-model="allowManagerToSendFundsToFundContract"
@@ -107,10 +105,19 @@
           </div>
           <div class="management__row">
             <div>
-              Prepopulate permissions to allow manager to collect fees based on default performance fee contract
+              Prepopulate permissions to allow manager to collect fees based on
+              default performance fee contract
             </div>
             <v-switch
               v-model="allowManagerToCollectFees"
+              color="primary"
+              hide-details
+            />
+          </div>
+          <div v-if="fundFactoryContractV2Used" class="management__row">
+            <div>Allow manager to keep updating NAV</div>
+            <v-switch
+              v-model="allowManagerToUpdateNav"
               color="primary"
               hide-details
             />
@@ -124,10 +131,13 @@
 <script setup lang="ts">
 import { encodeFunctionCall, encodeParameter } from "web3-eth-abi";
 import { padLeft } from "web3-utils";
+import { ethers } from "ethers";
 import {
   DelegatedPermissionFieldsMap,
   DelegatedStep,
-  DelegatedStepMap, prepPermissionsProposalData, roleModWriteFunctionAbiMap,
+  DelegatedStepMap,
+  prepPermissionsProposalData,
+  roleModWriteFunctionAbiMap,
   proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -143,29 +153,29 @@ import { useRoleStore } from "~/store/role/role.store";
 import RoleSelectRole from "~/components/role/SelectRole.vue";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 import { useContractAddresses } from "~/composables/useContractAddresses";
+import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
+import {
+  defaultScopedTargetPermissionRolesV2,
+  generateNAVPermissionRolesV2,
+} from "~/composables/nav/generateNAVPermission";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
 const permissionsProposalStore = usePermissionsProposalStore();
 const roleStore = useRoleStore();
 
-const { fundChainId, fundInitCache, fundSettings } = storeToRefs(createFundStore);
-const {
-  roles,
-  selectedRole,
-  isFetchingPermissions,
-  fetchPermissions,
-} = useRoles(fundChainId.value, fundInitCache?.value?.fundSettings?.fundAddress);
+const { fundChainId, fundInitCache, fundSettings, fundFactoryContractV2Used } =
+  storeToRefs(createFundStore);
+const { roles, selectedRole, isFetchingPermissions, fetchPermissions } =
+  useRoles(fundChainId.value, fundInitCache?.value?.fundSettings?.fundAddress);
 
 const updateRoleError = ref("");
-const permissionSteps = ref([
-  "Edit Permissions",
-  "Finalize Permissions",
-]);
+const permissionSteps = ref(["Edit Permissions", "Finalize Permissions"]);
 const selectedStepIndex = ref(0);
 const loading = ref(false);
 const allowManagerToSendFundsToFundContract = ref(false);
 const allowManagerToCollectFees = ref(false);
+const allowManagerToUpdateNav = ref(true);
 const defaultMethod = formatInputToObject(
   proposalRoleModMethodStepsMap.scopeFunction,
 );
@@ -204,7 +214,7 @@ const gnosisPermissionsUrl = computed(() => {
 //  now.
 const entryUpdated = (val: any) => {
   delegatedPermissionsEntry.value = val;
-}
+};
 
 const getAllowManagerToSendFundsToFundContractPermission = (
   baseTokenAddress: string,
@@ -243,8 +253,7 @@ const getAllowManagerToSendFundsToFundContractPermission = (
   );
   encodedRoleModEntries.push(encodedScopeTarget);
   return encodedRoleModEntries;
-}
-
+};
 
 const getAllowManagerToCollectFeesPermission = (
   fundAddress: string,
@@ -252,11 +261,13 @@ const getAllowManagerToCollectFeesPermission = (
   const encodedRoleModEntries: string[] = [];
   const { rethinkContractAddresses } = useContractAddresses();
 
-  const poolPerformanceFeeAddress = rethinkContractAddresses.PoolPerformanceFeeBeaconProxy[fundChainId.value];
+  const poolPerformanceFeeAddress =
+    rethinkContractAddresses.PoolPerformanceFeeBeaconProxy[fundChainId.value];
   if (!poolPerformanceFeeAddress) {
-    const errorMsg =  "Missing PoolPerformanceFeeBeaconProxy address. " +
-        "Please contact Rethink support.";
-    toastStore.errorToast(errorMsg)
+    const errorMsg =
+      "Missing PoolPerformanceFeeBeaconProxy address. " +
+      "Please contact Rethink support.";
+    toastStore.errorToast(errorMsg);
     console.error(errorMsg);
     throw new Error(errorMsg);
   }
@@ -289,32 +300,43 @@ const getAllowManagerToCollectFeesPermission = (
   );
   encodedRoleModEntries.push(encodedScopeTarget);
   return encodedRoleModEntries;
-}
+};
 
 const goToPermissionsStepTwo = async () => {
   // TODO add loading overlay
   updateRoleError.value = "";
   try {
-    permissionsProposalStore.rawTransactions = await roleStore.updateRole(fundChainId.value);
+    permissionsProposalStore.rawTransactions = await roleStore.updateRole(
+      fundChainId.value,
+    );
     selectedStepIndex.value = 1;
   } catch (e: any) {
     console.error("Failed updating role", e);
     updateRoleError.value = e.message;
   }
-}
-
+};
+const navExecutorAddress = computed(() => {
+  return "0x222d690F540788b87FC63BD975e6B398da775222";
+  // const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
+  // return getNAVExecutorBeaconProxyAddress(fundChainId.value);
+});
 const storePermissions = async () => {
   const fundInitCacheSettings = fundInitCache?.value?.fundSettings;
-  console.log("fundInitCacheSettings", fundInitCacheSettings)
-  console.log("delegatedPermissionsEntry", delegatedPermissionsEntry.value)
+  console.log("fundInitCacheSettings", fundInitCacheSettings);
+  console.log("delegatedPermissionsEntry", delegatedPermissionsEntry.value);
+  const fundAddress = fundInitCache?.value?.fundContractAddr;
 
-  if (!roleModAddress.value || !fundInitCache?.value?.fundContractAddr || !fundInitCacheSettings?.baseToken) {
-    console.error("Missing fund init cache data", fundInitCache)
+  if (
+    !roleModAddress.value ||
+    !fundAddress ||
+    !fundInitCacheSettings?.baseToken
+  ) {
+    console.error("Missing fund init cache data", fundInitCache);
     loading.value = false;
     return toastStore.errorToast(
       "Something went wrong while storing permissions. " +
-      "Missing fund init cache data.",
-    )
+        "Missing fund init cache data.",
+    );
   }
 
   // TODO transactions dont get updated... when imported raw
@@ -332,29 +354,59 @@ const storePermissions = async () => {
   );
   console.log(
     "storePermissions data:",
-    JSON.stringify(
-      proposalData.encodedRoleModEntries,
-      null,
-      2,
-    ),
+    JSON.stringify(proposalData.encodedRoleModEntries, null, 2),
   );
 
-  if (allowManagerToSendFundsToFundContract.value) {
-    const _encodedRoleModEntries = getAllowManagerToSendFundsToFundContractPermission(
-      fundInitCacheSettings?.baseToken,
-    );
-    proposalData.encodedRoleModEntries.push(..._encodedRoleModEntries);
+  if (fundFactoryContractV2Used.value) {
+    if (allowManagerToUpdateNav.value) {
+      if (!navExecutorAddress.value || !fundAddress) {
+        console.error(
+          "Missing navExecutorAddress or fundAddress for Roles V2 permission",
+          { navExecutorAddress: navExecutorAddress.value, fundAddress },
+        );
+        loading.value = false;
+        return toastStore.errorToast(
+          "Could not create Roles V2 permission: missing NAV executor or fund address.",
+        );
+      }
+      const _encodedRoleModEntries = generateNAVPermissionRolesV2(
+        fundAddress,
+        navExecutorAddress.value,
+      );
+      proposalData.encodedRoleModEntries.push(..._encodedRoleModEntries);
+    }
+    if (allowManagerToSendFundsToFundContract.value) {
+      proposalData.encodedRoleModEntries.push(
+        defaultScopedTargetPermissionRolesV2(
+          "defaulManagerRole",
+          fundAddress,
+          "0xa9059cbb", // 4-byte function selector of "transfer(address,uint256)"
+          fundInitCacheSettings?.baseToken,
+        ),
+      );
+    }
+    // if (allowManagerToCollectFees.value) {
+    // TODO: add allowManagerToCollectFees V2
+    // }
+  } else {
+    if (allowManagerToSendFundsToFundContract.value) {
+      const _encodedRoleModEntries =
+        getAllowManagerToSendFundsToFundContractPermission(
+          fundInitCacheSettings?.baseToken,
+        );
+      proposalData.encodedRoleModEntries.push(..._encodedRoleModEntries);
+    }
+
+    // Add allowManagerToCollectFees permissions if the switch button is enabled.
+    if (allowManagerToCollectFees.value) {
+      const _encodedRoleModEntries =
+        getAllowManagerToCollectFeesPermission(fundAddress);
+      proposalData.encodedRoleModEntries.push(..._encodedRoleModEntries);
+    }
   }
 
-  // Add allowManagerToCollectFees permissions if the switch button is enabled.
-  if (allowManagerToCollectFees.value) {
-    const _encodedRoleModEntries = getAllowManagerToCollectFeesPermission(
-      fundInitCacheSettings?.fundAddress,
-    );
-    proposalData.encodedRoleModEntries.push(..._encodedRoleModEntries);
-  }
-
-  const fundFactoryContract = web3Store.chainContracts[fundChainId.value]?.fundFactoryContract;
+  const fundFactoryContract =
+    web3Store.chainContracts[fundChainId.value]?.fundFactoryContract;
 
   try {
     console.log("SUBMIT PERMISSIONS DATA", proposalData.encodedRoleModEntries);
@@ -394,7 +446,6 @@ const storePermissions = async () => {
 watch(
   () => [fundChainId, roleModAddress.value],
   async () => {
-    console.warn("FETCH PERMS")
     await fetchPermissions(roleModAddress.value);
     console.log("fetched roles", roles.value);
     // If no roles or permissions exist, pre-populate an empty role with roleId 1
@@ -414,7 +465,6 @@ watch(
   { immediate: true },
 );
 </script>
-
 
 <style scoped lang="scss">
 .permissions_wrapper {
