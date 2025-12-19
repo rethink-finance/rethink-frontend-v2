@@ -1,6 +1,6 @@
 <template>
   <div class="d-flex align-center">
-    <strong>Role #</strong>
+    <strong>Role &nbsp;</strong>
     <v-select
       v-if="roles.length > 1"
       :model-value="modelValue"

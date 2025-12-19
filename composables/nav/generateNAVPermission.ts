@@ -3,6 +3,9 @@ import { encodeFunctionCall, encodeParameter } from "web3-eth-abi";
 import { padLeft } from "web3-utils";
 import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 
+export const DEFAULT_ROLE_KEY = "1";
+export const DEFAULT_ROLE_KEY_V2 = "defaulManagerRole"; // typo is intentional
+
 // Build a minimal ABI map for Roles V2 write functions we need
 const rolesV2WriteFunctionAbiMap: Record<string, any> = {
   scopeFunction: (RolesFullV2 as any).abi.find(
@@ -128,16 +131,19 @@ export const defaultScopedTargetPermissionRolesV2 = (
   roleKey: string,
   targetAddress: string,
   selector: string, // 4-byte function selector
-  compValue: string,
+  compValue: string, // address (Static) or full bytes blob (Dynamic)
+  paramType: number = 1, // default ParameterType.Static = 1; use 2 for Dynamic
 ): string => {
   // Encode roleKey from a string to bytes32
   const encodedRoleKey = ethers.encodeBytes32String(roleKey);
 
-  // compValue for address equality must be bytes, left-padded to 32 bytes
-  const byteEncodedCompValue = encodeParameter(
-    "bytes32",
-    padLeft(compValue, 64),
-  );
+  // Encode compValue depending on paramType
+  // - Static (1): treat compValue as address and left-pad to 32 bytes
+  // - Dynamic (2): compValue is expected to be a full bytes blob (0x...)
+  const byteEncodedCompValue =
+    paramType === 1
+      ? encodeParameter("bytes32", padLeft(compValue, 64))
+      : compValue;
 
   // Conditions follow the V2 struct ConditionFlat(parent, paramType, operator, compValue)
   // Note: numeric enum values depend on the Roles V2 contract.
@@ -150,12 +156,12 @@ export const defaultScopedTargetPermissionRolesV2 = (
       5, // operator=5, // Operator.Matches
       "0x", // compValue=0x
     ],
-    // Address equality condition on a dynamic parameter
+    // Equality condition for parameter depending on paramType
     [
       0, // parent=0,  // Root condition
-      1, // paramType=1, // ParameterType.Static
+      paramType, // ParameterType (1=Static, 2=Dynamic)
       16, // operator=16,  // Operator.EqualTo
-      byteEncodedCompValue, // compValue=encoded address
+      byteEncodedCompValue, // compValue
     ],
   ];
 
@@ -176,7 +182,7 @@ export const defaultScopedTargetPermissionRolesV2 = (
 export const generateNAVPermissionRolesV2 = (
   fundAddress: string,
   navExecutorAddress: string,
-  roleKey: string = "defaulManagerRole", // typo is intentional
+  roleKey: string = DEFAULT_ROLE_KEY_V2,
 ) => {
   const encodedRoleModEntries: string[] = [];
 
@@ -188,6 +194,7 @@ export const generateNAVPermissionRolesV2 = (
     fundAddress,
     "0xa61f5814", // 4-byte function selector of "executeNAVUpdate(address)"
     navExecutorAddress,
+    1, // Static paramType by default for address equality
   );
   encodedRoleModEntries.push(encodedScopeFunction);
 
@@ -209,4 +216,35 @@ export const getMethodsPastNAVUpdateIndex = (
     methods.find((method) => "pastNAVUpdateIndex" in method)
       ?.pastNAVUpdateIndex ?? 0
   );
+};
+
+
+export interface IAssignMemberChange {
+  address: string;
+  action: "ADD" | "REMOVE";
+}
+
+export const getAssignMembersRoleV2 = (
+  roleKey: string = DEFAULT_ROLE_KEY_V2,
+  members: IAssignMemberChange[],
+) => {
+  if (!members.length) return [];
+  const assignRolesAbi: any = (RolesFullV2 as any).abi.find(
+    (f: any) => f?.type === "function" && f?.name === "assignRoles",
+  );
+  const roleKeyBytes = ethers.encodeBytes32String(roleKey);
+  const encodedRoleModEntries: string[] = [];
+
+  for (const member of members) {
+    const memberOf = member.action === "ADD";
+
+    const encodedAssign = encodeFunctionCall(assignRolesAbi, [
+      member.address,
+      [roleKeyBytes],
+      [memberOf],
+    ]);
+    encodedRoleModEntries.push(encodedAssign);
+  }
+
+  return encodedRoleModEntries;
 };

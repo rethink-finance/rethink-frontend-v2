@@ -1,7 +1,7 @@
 <template>
   <FundGovernanceDelegatedPermissions
     v-model="delegatedPermissionsEntry"
-    :fields-map="DelegatedPermissionFieldsMap"
+    :fields-map="delegatedPermissionFieldsMap"
     :chain-id="fundStore.selectedFundChain"
     :safe-address="fundStore.fund?.safeAddress ?? ''"
     submit-label="Create Proposal"
@@ -37,8 +37,10 @@
 import { useRouter } from "vue-router";
 import {
   DelegatedPermissionFieldsMap,
+  DelegatedPermissionFieldsMapV2,
   DelegatedStep,
-  DelegatedStepMap, prepPermissionsProposalData,
+  DelegatedStepMap,
+  prepPermissionsProposalData,
   proposalRoleModMethodStepsMap,
 } from "~/types/enums/delegated_permission";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
@@ -66,7 +68,11 @@ const breadcrumbItems: BreadcrumbItem[] = [
     to: `/details/${selectedFundSlug.value}/governance/delegated-permissions`,
   },
 ];
-
+const delegatedPermissionFieldsMap = computed(() =>
+  fundStore.fund?.fundFactoryContractV2Used
+    ? DelegatedPermissionFieldsMapV2
+    : DelegatedPermissionFieldsMap,
+);
 const defaultMethod = formatInputToObject(
   proposalRoleModMethodStepsMap.scopeFunction,
 );
@@ -113,9 +119,9 @@ const delegatedPermissionsEntry = ref([
 //  now.
 const entryUpdated = (val: any) => {
   delegatedPermissionsEntry.value = val;
-}
+};
 const submitProposal = async () => {
-  console.log("submit", delegatedPermissionsEntry.value)
+  console.log("submit", delegatedPermissionsEntry.value);
   const transactions = delegatedPermissionsEntry.value.find(
     (step) => step.stepName === DelegatedStep.Setup,
   )?.steps as any[];
@@ -124,14 +130,14 @@ const submitProposal = async () => {
   )?.steps[0];
   if (!details || !transactions?.length) return;
 
-  const roleModAddress = await fundStore.fetchRoleModAddress(fundStore.fundAddress);
+  const roleModAddress = await fundStore.fetchRoleModAddress(
+    fundStore.fundAddress,
+  );
 
   console.log(toRaw(transactions));
   console.log(toRaw(details));
-  const { encodedRoleModEntries, targets, gasValues } = prepPermissionsProposalData(
-    roleModAddress,
-    transactions,
-  );
+  const { encodedRoleModEntries, targets, gasValues } =
+    prepPermissionsProposalData(roleModAddress, transactions);
   console.log(
     "propose:",
     JSON.stringify(
@@ -203,19 +209,19 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.delegated-permission-stepper{
-  :deep(.main_header__title){
+.delegated-permission-stepper {
+  :deep(.main_header__title) {
     width: 100%;
   }
 }
-.header{
+.header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 70%;
 }
-.tooltip{
-  &__content{
+.tooltip {
+  &__content {
     display: flex;
     gap: 40px;
   }
@@ -233,13 +239,12 @@ onMounted(() => {
   display: flex;
   color: $color-text-irrelevant;
 }
-.checkbox-keep-existing-permissions{
+.checkbox-keep-existing-permissions {
   display: flex;
   flex-direction: row-reverse;
 
-  :deep(.v-selection-control){
+  :deep(.v-selection-control) {
     flex-direction: row-reverse;
-
   }
 }
 </style>

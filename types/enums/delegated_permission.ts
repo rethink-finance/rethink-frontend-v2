@@ -3,6 +3,7 @@ import { InputType } from "~/types/enums/input_type";
 import type { IStepperStep } from "~/types/stepper";
 
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
+import ZodiacRolesV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 import { isWriteFunction } from "~/composables/zodiac-roles/conditions";
 
 export enum DelegatedStep {
@@ -24,26 +25,38 @@ export const DelegatedStepMap: Record<DelegatedStep, IStepperStep> = {
   },
 };
 
-
 // get all methods from ZodiacRoles contract
 export const roleModFunctions = ZodiacRoles.abi.filter(
   (func) => func.type === "function",
 );
+export const roleModFunctionsV2 = ZodiacRolesV2.abi.filter(
+  (func) => func.type === "function",
+);
 // Note: should not use the getWriteFunctions as it is not returning internalType.
-const roleModWriteFunctions = roleModFunctions.filter(
-  func => isWriteFunction(func as any),
+const roleModWriteFunctions = roleModFunctions.filter((func) =>
+  isWriteFunction(func as any),
+);
+const roleModWriteFunctionsV2 = roleModFunctionsV2.filter((func) =>
+  isWriteFunction(func as any),
 );
 export const roleModFunctionNameIndexMap: Record<string, number> = {};
 roleModFunctions.forEach((func, index) => {
   if (func.name) {
     roleModFunctionNameIndexMap[func.name as string] = index;
   }
-})
+});
 
 // make a list of choices for the select field out of the methods
-export const roleModMethodChoices = roleModFunctions.map((func,i) => {
-  return { title: func.name, value: func.name, valueMethodIdx: i, isWriteFunction: isWriteFunction(func as any) };
-}).filter(choice => choice.isWriteFunction);
+export const roleModMethodChoices = roleModFunctions
+  .map((func, i) => {
+    return {
+      title: func.name,
+      value: func.name,
+      valueMethodIdx: i,
+      isWriteFunction: isWriteFunction(func as any),
+    };
+  })
+  .filter((choice) => choice.isWriteFunction);
 
 // define select field that will be used in all sub steps
 const defaultSelectField = {
@@ -112,10 +125,13 @@ const parseFuncInputDetails = (input: any) => {
     isArray: input.type.includes("[]"),
     choices,
     defaultValue,
-  }
+  };
 };
 
-export const prepPermissionsProposalData = (roleModAddress: string, transactions: any[]) => {
+export const prepPermissionsProposalData = (
+  roleModAddress: string,
+  transactions: any[],
+) => {
   const encodedRoleModEntries = [];
   const targets = [];
   const gasValues = [];
@@ -134,8 +150,15 @@ export const prepPermissionsProposalData = (roleModAddress: string, transactions
           data: trx[method.key],
         }),
       );
-    console.warn("roleModFunctionData", trx.contractMethod, roleModFunctionData);
-    console.warn("roleModWriteFunctionAbiMap[trx.contractMethod]", roleModWriteFunctionAbiMap[trx.contractMethod]);
+    console.warn(
+      "roleModFunctionData",
+      trx.contractMethod,
+      roleModFunctionData,
+    );
+    console.warn(
+      "roleModWriteFunctionAbiMap[trx.contractMethod]",
+      roleModWriteFunctionAbiMap[trx.contractMethod],
+    );
     const encodedRoleModFunction = encodeFunctionCall(
       roleModWriteFunctionAbiMap[trx.contractMethod],
       roleModFunctionData,
@@ -146,21 +169,43 @@ export const prepPermissionsProposalData = (roleModAddress: string, transactions
   }
 
   return { encodedRoleModEntries, targets, gasValues };
-}
+};
 
 // shape sub step fields for each method from ZodiacRoles contract
 export const roleModWriteFunctionAbiMap: Record<string, any> = {};
-export const proposalRoleModMethodStepsMap = roleModWriteFunctions.reduce((acc: any, functionAbi: any) => {
-  roleModWriteFunctionAbiMap[functionAbi.name] = functionAbi;
-  const subStepFields = functionAbi.inputs.map(parseFuncInputDetails);
+export const roleModWriteFunctionAbiMapV2: Record<string, any> = {};
+export const proposalRoleModMethodStepsMap = roleModWriteFunctions.reduce(
+  (acc: any, functionAbi: any) => {
+    roleModWriteFunctionAbiMap[functionAbi.name] = functionAbi;
+    const subStepFields = functionAbi.inputs.map(parseFuncInputDetails);
 
-  const selectFieldForSubStep = JSON.parse(JSON.stringify(defaultSelectField));
-  selectFieldForSubStep.defaultValue = functionAbi.name;
+    const selectFieldForSubStep = JSON.parse(
+      JSON.stringify(defaultSelectField),
+    );
+    selectFieldForSubStep.defaultValue = functionAbi.name;
 
-  // add select field to the beginning of each sub-step
-  acc[functionAbi.name] = [selectFieldForSubStep, ...subStepFields];
-  return acc;
-}, {});
+    // add select field to the beginning of each sub-step
+    acc[functionAbi.name] = [selectFieldForSubStep, ...subStepFields];
+    return acc;
+  },
+  {},
+);
+export const proposalRoleModMethodStepsMapV2 = roleModWriteFunctionsV2.reduce(
+  (acc: any, functionAbi: any) => {
+    roleModWriteFunctionAbiMapV2[functionAbi.name] = functionAbi;
+    const subStepFields = functionAbi.inputs.map(parseFuncInputDetails);
+
+    const selectFieldForSubStep = JSON.parse(
+      JSON.stringify(defaultSelectField),
+    );
+    selectFieldForSubStep.defaultValue = functionAbi.name;
+
+    // add select field to the beginning of each sub-step
+    acc[functionAbi.name] = [selectFieldForSubStep, ...subStepFields];
+    return acc;
+  },
+  {},
+);
 
 // define fields map
 export const DelegatedPermissionFieldsMap: any = {
@@ -196,3 +241,8 @@ export const DelegatedPermissionFieldsMap: any = {
     },
   ],
 };
+
+export const DelegatedPermissionFieldsMapV2 = {
+  ...DelegatedPermissionFieldsMap,
+  [DelegatedStep.Setup]: proposalRoleModMethodStepsMapV2,
+}
