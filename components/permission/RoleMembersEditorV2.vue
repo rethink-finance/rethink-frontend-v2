@@ -1,6 +1,6 @@
 <template>
   <div class="role-members-editor">
-    <div class="d-flex align-center gap-3 flex-wrap">
+    <div class="role-members-editor__inputs d-flex align-center flex-wrap">
       <div>
         <v-label class="label mb-2">
           Member Address
@@ -19,22 +19,24 @@
         <v-label class="label mb-2">
           Action
         </v-label>
-        <v-select
-          v-model="actionInput"
-          :items="actionItems"
-          hide-details
-          density="compact"
-          class="role-members-editor__action"
-        />
+        <div class="d-flex">
+          <v-select
+            v-model="actionInput"
+            :items="actionItems"
+            hide-details
+            density="compact"
+            class="role-members-editor__action"
+          />
+          <v-btn
+            color="primary"
+            variant="flat"
+            :disabled="!canQueue"
+            @click="queueChange"
+          >
+            {{ actionLabel  }}
+          </v-btn>
+        </div>
       </div>
-      <v-btn
-        color="primary"
-        variant="flat"
-        :disabled="!canQueue"
-        @click="queueChange"
-      >
-        Queue
-      </v-btn>
     </div>
 
     <div v-if="modelValue?.length" class="mt-4">
@@ -91,6 +93,10 @@ const actionItems = [
   { title: "REMOVE", value: "REMOVE" },
 ] as const;
 
+const actionLabel = computed(() =>
+  actionInput.value === "ADD" ? "Add member" : "Remove member",
+);
+
 const addressError = computed(() => {
   if (!addressInput.value) return [] as string[];
   return ethers.isAddress(addressInput.value) ? [] : ["Invalid address"];
@@ -133,13 +139,16 @@ const removeAt = (idx: number) => {
 .role-members-editor {
   // Keep controls from breaking the layout on long input values
   &__address {
-    min-width: 280px;
+    min-width: 30rem;
     max-width: 520px;
     flex: 1 1 320px;
   }
+  &__inputs {
+    gap: 1rem;
+  }
   &__action {
-    min-width: 160px;
-    flex: 0 0 160px;
+    flex: 0 0 8rem;
+    margin-right: 1rem;
   }
   .subtitle {
     color: $color-light-subtitle;
