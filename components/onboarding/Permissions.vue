@@ -556,7 +556,7 @@ const storePermissionsV2 = async () => {
     );
   }
   const fundFactoryContract =
-    web3Store.chainContracts[fundChainId.value]?.fundFactoryContract;
+    web3Store.chainContracts[fundChainId.value]?.fundFactoryContractV2;
 
   try {
     console.log("SUBMIT PERMISSIONS DATA", proposalData.encodedRoleModEntries);
