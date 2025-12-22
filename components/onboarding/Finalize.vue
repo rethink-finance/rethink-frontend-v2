@@ -44,10 +44,7 @@
         Please note that any future change after finalization will go through governance.
       </p>
 
-      <v-btn
-        color="primary"
-        @click="finalizeCreateFund"
-      >
+      <v-btn color="primary" @click="finalizeCreateFund">
         Finalize
       </v-btn>
     </template>
@@ -79,10 +76,11 @@ const isFundCreateFinalized = ref(false);
 const finalizeCreateFund = async () => {
   console.warn("finalizeCreateFund");
   if (!fundChainId.value) {
-    return toastStore.errorToast("Fund chain ID not set.")
+    return toastStore.errorToast("Fund chain ID not set.");
   }
 
   if (!fundFactoryContract.value) {
+    console.error("No fund factory contract value");
     return toastStore.errorToast(
       `Cannot create fund on chain ${fundChainId.value}.`,
     );
@@ -97,7 +95,8 @@ const finalizeCreateFund = async () => {
         toastStore.addToast(
           "The transaction has been submitted. Please wait for it to be confirmed.",
         );
-      }).on("receipt", (receipt: any) => {
+      })
+      .on("receipt", (receipt: any) => {
         console.log("receipt: ", receipt);
         if (receipt.status) {
           toastStore.successToast("Fund was created successfully.");
@@ -106,16 +105,19 @@ const finalizeCreateFund = async () => {
           // Clear local storage for this chain.
           createFundStore.clearFundLocalStorage();
         } else {
-          toastStore.errorToast("The Create Fund tx has failed. Please contact the Rethink Finance community for support.");
+          toastStore.errorToast(
+            "The Create Fund tx has failed. Please contact the Rethink Finance community for support.",
+          );
         }
-      }).on("error", (error: any) => {
+      })
+      .on("error", (error: any) => {
         console.error("error when initializing", error);
         isFinalizingFundCreation.value = false;
         toastStore.errorToast(
           "There has been an error. Please contact the Rethink Finance community for support.",
         );
       });
-  } catch (error:any) {
+  } catch (error: any) {
     console.error(error);
     toastStore.errorToast("There was an error initializing the vault");
   } finally {
@@ -124,12 +126,15 @@ const finalizeCreateFund = async () => {
 };
 
 // TODO to be safe we could already start doing this check after: isFinalizingFundCreation
-watch(() => isFundCreateFinalized.value, (isFinalized: boolean) => {
-  if (!isFinalized) return;
-  // If fund was finalized, we can try fetching fund settings and if the node
-  // is synced already we can redirect the user to the fund details page.
-  navigateToFundDetailsAfterFinalizedSuccessfully()
-})
+watch(
+  () => isFundCreateFinalized.value,
+  (isFinalized: boolean) => {
+    if (!isFinalized) return;
+    // If fund was finalized, we can try fetching fund settings and if the node
+    // is synced already we can redirect the user to the fund details page.
+    navigateToFundDetailsAfterFinalizedSuccessfully();
+  },
+);
 
 const navigateToFundDetailsAfterFinalizedSuccessfully = async () => {
   if (!isFundCreateFinalized.value) return;
@@ -159,9 +164,9 @@ const navigateToFundDetailsAfterFinalizedSuccessfully = async () => {
       fundChainId.value,
       fundSettings?.value?.fundSymbol || "",
       fundSettings?.value?.fundAddress || "",
-    )
+    );
   }
-}
+};
 </script>
 
 <style scoped lang="scss">

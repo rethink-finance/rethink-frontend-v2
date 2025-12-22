@@ -57,7 +57,7 @@ export const useCreateFundStore = defineStore({
       return this.fundInitCache?.fundSettings;
     },
     fundFactoryContractV2Used(): boolean {
-      return this.fundSettings?.fundFactoryContractV2Used || false;
+      return this.fundInitCache?.fundFactoryContractV2Used || false;
     },
     fundFactoryContract() {
       // If V2 roles are used, use the v2 fund factory contract.
