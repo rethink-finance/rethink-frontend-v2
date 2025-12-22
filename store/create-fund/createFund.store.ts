@@ -57,12 +57,12 @@ export const useCreateFundStore = defineStore({
       return this.fundInitCache?.fundSettings;
     },
     fundFactoryContractV2Used(): boolean {
-      return this.fundInitCache?.fundFactoryContractV2Used || false;
+      return this.fundSettings?.fundFactoryContractV2Used || false;
     },
-    fundFactoryContract() {
+    fundFactoryContract(): any {
       // If V2 roles are used, use the v2 fund factory contract.
-      const contractKey = this.fundFactoryContractV2Used() ? "fundFactoryContractV2" : "fundFactoryContract";
-      return this.web3Store().chainContracts[this.fundChainId()]?.[contractKey];
+      const contractKey = this.fundFactoryContractV2Used ? "fundFactoryContractV2" : "fundFactoryContract";
+      return this.web3Store.chainContracts[this.fundChainId]?.[contractKey];
     },
   },
   actions: {
