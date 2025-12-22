@@ -1,6 +1,6 @@
 <template>
   <div class="permissions_wrapper">
-    <div class="d-flex justify-center">
+    <div v-if="!fundFactoryContractV2Used" class="d-flex justify-center">
       <v-stepper v-model="selectedStepIndex">
         <v-stepper-header>
           <v-stepper-item
@@ -19,6 +19,7 @@
         </v-stepper-header>
       </v-stepper>
     </div>
+    <div v-else class="pb-4" />
 
     <div class="d-flex align-center justify-space-between">
       <div v-if="selectedStepIndex === 0" class="d-flex align-center">
@@ -548,7 +549,10 @@ const storePermissionsV2 = async () => {
       proposalData.encodedRoleModEntries,
     );
     proposalData.encodedRoleModEntries.push(
-      ...getAssignMembersRoleV2(DEFAULT_ROLE_KEY_V2, pendingRoleMembershipChanges.value),
+      ...getAssignMembersRoleV2(
+        DEFAULT_ROLE_KEY_V2,
+        pendingRoleMembershipChanges.value,
+      ),
     );
   }
   const fundFactoryContract =
