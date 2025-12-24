@@ -147,7 +147,6 @@ import { useRoleStore } from "~/store/role/role.store";
 import RoleSelectRole from "~/components/role/SelectRole.vue";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
 import { useContractAddresses } from "~/composables/useContractAddresses";
-import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 import {
   DEFAULT_ROLE_KEY,
   DEFAULT_ROLE_KEY_V2,
@@ -156,6 +155,7 @@ import {
   getAssignMembersRoleV2,
   getScopeTargetV2,
   type IAssignMemberChange,
+  rolesV2WriteFunctionAbiMap,
 } from "~/composables/nav/generateNAVPermission";
 import RoleMembersEditorV2 from "~/components/permission/RoleMembersEditorV2.vue";
 import PermissionsManagement from "~/components/onboarding/PermissionsManagement.vue";
@@ -495,22 +495,22 @@ const storePermissionsV2 = async () => {
       // Role key used in V2 helpers elsewhere
       const roleKeyBytes = ethers.encodeBytes32String(DEFAULT_ROLE_KEY_V2);
 
-      // scopeFunction ABI from Roles V2
-      const scopeFunctionAbi: any = (RolesFullV2 as any).abi.find(
-        (f: any) => f?.type === "function" && f?.name === "scopeFunction",
-      );
-      const scopeTargetAbi: any = (RolesFullV2 as any).abi.find(
-        (f: any) => f?.type === "function" && f?.name === "scopeTarget",
-      );
-
       // Build compValue for Dynamic EqualTo condition:
       // concat(inner selector (mintPoolPerformanceFeeHWM) + abiEncoded(address poolPerformanceFeeAddress))
       const mintPoolPerformanceFeeHWMSelector = "0xa52eb8be";
       const abiEncodedPoolPerformanceFeeAddress = (ethers.AbiCoder as any)
         .defaultAbiCoder()
         .encode(["address"], [poolPerformanceFeeAddress.value]);
-      const compValue = (mintPoolPerformanceFeeHWMSelector +
-        abiEncodedPoolPerformanceFeeAddress.slice(2)) as `0x${string}`;
+
+      const innerBytes =
+        mintPoolPerformanceFeeHWMSelector +
+        abiEncodedPoolPerformanceFeeAddress.slice(2);
+      const compValue = ethers.AbiCoder.defaultAbiCoder().encode(
+        ["bytes"],
+        [innerBytes],
+      );
+      // const compValue = (mintPoolPerformanceFeeHWMSelector +
+      //   abiEncodedPoolPerformanceFeeAddress.slice(2)) as `0x${string}`;
 
       // Conditions (V2 flat conditions):
       // [parent, paramType, operator, compValue]
@@ -521,19 +521,22 @@ const storePermissionsV2 = async () => {
         [0, 2, 16, compValue], // Dynamic + EqualTo
       ];
 
-      const encodedScopeFunction = encodeFunctionCall(scopeFunctionAbi, [
-        roleKeyBytes,
-        fundAddress,
-        "0xec68ac8d", // functionSig "fundFlowsCall(bytes)"
-        conditions,
-        0, // ExecutionOptions.None
-      ]);
+      const encodedScopeFunction = encodeFunctionCall(
+        rolesV2WriteFunctionAbiMap.scopeFunctionAbi,
+        [
+          roleKeyBytes,
+          fundAddress,
+          "0xec68ac8d", // functionSig "fundFlowsCall(bytes)"
+          conditions,
+          0, // ExecutionOptions.None
+        ],
+      );
       proposalData.encodedRoleModEntries.push(encodedScopeFunction);
 
-      const encodedScopeTarget = encodeFunctionCall(scopeTargetAbi, [
-        roleKeyBytes,
-        fundAddress,
-      ]);
+      const encodedScopeTarget = encodeFunctionCall(
+        rolesV2WriteFunctionAbiMap.scopeTargetAbi,
+        [roleKeyBytes, fundAddress],
+      );
       proposalData.encodedRoleModEntries.push(encodedScopeTarget);
     } catch (e) {
       console.error("Failed to add allowManagerToCollectFees V2 permission", e);

@@ -7,7 +7,7 @@ export const DEFAULT_ROLE_KEY = "1";
 export const DEFAULT_ROLE_KEY_V2 = "defaulManagerRole"; // typo is intentional
 
 // Build a minimal ABI map for Roles V2 write functions we need
-const rolesV2WriteFunctionAbiMap: Record<string, any> = {
+export const rolesV2WriteFunctionAbiMap: Record<string, any> = {
   scopeFunction: (RolesFullV2 as any).abi.find(
     (f: any) => f.name === "scopeFunction",
   ),
