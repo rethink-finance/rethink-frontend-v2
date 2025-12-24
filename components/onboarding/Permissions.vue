@@ -471,7 +471,7 @@ const storePermissionsV2 = async () => {
   }
   if (allowManagerToSendFundsToFundContract.value) {
     proposalData.encodedRoleModEntries.push(
-      getScopeTargetV2(DEFAULT_ROLE_KEY_V2, fundAddress),
+      getScopeTargetV2(DEFAULT_ROLE_KEY_V2, fundInitCacheSettings?.baseToken),
     );
 
     proposalData.encodedRoleModEntries.push(
