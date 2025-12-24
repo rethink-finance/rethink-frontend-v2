@@ -154,6 +154,7 @@ import {
   defaultScopedTargetPermissionRolesV2,
   generateNAVPermissionRolesV2,
   getAssignMembersRoleV2,
+  getScopeTargetV2,
   type IAssignMemberChange,
 } from "~/composables/nav/generateNAVPermission";
 import RoleMembersEditorV2 from "~/components/permission/RoleMembersEditorV2.vue";
@@ -470,11 +471,15 @@ const storePermissionsV2 = async () => {
   }
   if (allowManagerToSendFundsToFundContract.value) {
     proposalData.encodedRoleModEntries.push(
+      getScopeTargetV2(DEFAULT_ROLE_KEY_V2, fundAddress),
+    );
+
+    proposalData.encodedRoleModEntries.push(
       defaultScopedTargetPermissionRolesV2(
         DEFAULT_ROLE_KEY_V2,
-        fundAddress,
-        "0xa9059cbb", // 4-byte function selector of "transfer(address,uint256)"
         fundInitCacheSettings?.baseToken,
+        "0xa9059cbb", // 4-byte function selector of "transfer(address,uint256)"
+        fundAddress,
       ),
     );
   }

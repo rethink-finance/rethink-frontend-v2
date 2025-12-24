@@ -186,9 +186,6 @@ export const generateNAVPermissionRolesV2 = (
 ) => {
   const encodedRoleModEntries: string[] = [];
 
-  // Encode roleKey from a string to bytes32
-  const encodedRoleKey = ethers.encodeBytes32String(roleKey);
-
   const encodedScopeFunction = defaultScopedTargetPermissionRolesV2(
     roleKey,
     fundAddress,
@@ -199,11 +196,7 @@ export const generateNAVPermissionRolesV2 = (
   encodedRoleModEntries.push(encodedScopeFunction);
 
   // Scope the target as well for the same roleKey
-  const encodedScopeTargetV2 = encodeFunctionCall(
-    rolesV2WriteFunctionAbiMap.scopeTarget,
-    [encodedRoleKey, fundAddress],
-  );
-  encodedRoleModEntries.push(encodedScopeTargetV2);
+  encodedRoleModEntries.push(getScopeTargetV2(roleKey, fundAddress));
 
   return encodedRoleModEntries;
 };
@@ -223,6 +216,19 @@ export interface IAssignMemberChange {
   address: string;
   action: "ADD" | "REMOVE";
 }
+
+export const getScopeTargetV2 = (
+  roleKey: string = DEFAULT_ROLE_KEY_V2,
+  target: string,
+)=> {
+  const encodedRoleKey = ethers.encodeBytes32String(roleKey);
+
+  return encodeFunctionCall(rolesV2WriteFunctionAbiMap.scopeTarget, [
+    encodedRoleKey,
+    target,
+  ]);
+}
+
 
 export const getAssignMembersRoleV2 = (
   roleKey: string = DEFAULT_ROLE_KEY_V2,
