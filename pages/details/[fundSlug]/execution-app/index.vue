@@ -102,7 +102,7 @@
                 location="bottom"
                 :disabled="isUsingZodiacPilotExtension"
               >
-                <template #activator="{ props }">
+                <template #activator>
                   <v-btn
                     :disabled="
                       !formTransferIsValid || !isUsingZodiacPilotExtension
@@ -194,7 +194,7 @@
                 location="bottom"
                 :disabled="isUsingZodiacPilotExtension"
               >
-                <template #activator="{ props }">
+                <template #activator>
                   <v-btn
                     :disabled="
                       !formSubmitRawTXNIsValid || !isUsingZodiacPilotExtension
@@ -214,6 +214,18 @@
               </v-tooltip>
             </v-col>
           </v-row>
+          <v-row>
+            <v-col class="btn-submit">
+              <v-btn
+                :disabled="!isUsingZodiacPilotExtension"
+                color="primary"
+                variant="text"
+                @click="prefillPerformanceFeeTx"
+              >
+                Execute Performance Fee (HWM)
+              </v-btn>
+            </v-col>
+          </v-row>
         </v-form>
       </div>
     </div>
@@ -228,6 +240,7 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { useAccountStore } from "~/store/account/account.store";
+import { useContractAddresses } from "~/composables/useContractAddresses";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
@@ -290,6 +303,52 @@ const rules = {
   },
 };
 
+// Address of PoolPerformanceFeeBeaconProxy per chain
+const { rethinkContractAddresses } = useContractAddresses();
+const poolPerformanceFeeAddress = computed(() => {
+  // Prefer fundStore.selectedFundChain as current chain id
+  const chainId = fundStore.selectedFundChain;
+  return rethinkContractAddresses.PoolPerformanceFeeBeaconProxy[chainId];
+});
+
+// Prefill the Raw TXN form with calldata for
+// fundFlowsCall(mintPoolPerformanceFeeHWM(address performanceFeeCalculator))
+const prefillPerformanceFeeTx = () => {
+  try {
+    const gfAddress = fundStore.fund?.address ?? fundStore.activeAccountAddress;
+    if (!gfAddress) {
+      toastStore.errorToast("Fund address is not available.");
+      return;
+    }
+    const perfAddr = poolPerformanceFeeAddress.value;
+    if (!perfAddr) {
+      toastStore.errorToast(
+        "Pool Performance Fee address is not configured for this chain.",
+      );
+      return;
+    }
+
+    // Build interface for both functions
+    const iface = new ethers.Interface([
+      "function fundFlowsCall(bytes data)",
+      "function mintPoolPerformanceFeeHWM(address performanceFeeCalculator)",
+    ]);
+    const innerData = iface.encodeFunctionData("mintPoolPerformanceFeeHWM", [
+      perfAddr,
+    ]);
+    const outerData = iface.encodeFunctionData("fundFlowsCall", [innerData]);
+
+    submitRawTXNEntry.contractAddress = gfAddress;
+    submitRawTXNEntry.txData = outerData;
+    submitRawTXNEntry.amountValue = "0";
+
+    submitRawTXN();
+  } catch (e) {
+    console.error(e);
+    toastStore.errorToast("Failed to prepare transaction calldata.");
+  }
+};
+
 const handleTransfer = async () => {
   loadingTransfer.value = true;
 
@@ -336,25 +395,25 @@ const submitRawTXN = async () => {
 
     if (!accountStore.connectedWalletWeb3) {
       console.log("Send trx raw no connected wallet");
-      toastStore.errorToast(
-        "Connect your wallet.",
-      );
+      toastStore.errorToast("Connect your wallet.");
       return;
     }
-    await accountStore.connectedWalletWeb3.eth.sendTransaction({
-      to: submitRawTXNEntry.contractAddress,
-      data: submitRawTXNEntry.txData,
-      from: fundStore.activeAccountAddress,
-      // maxPriorityFeePerGas: "",
-      maxFeePerGas: "",
-      value: parseInt(submitRawTXNEntry.amountValue),
-    },
-    DEFAULT_RETURN_FORMAT,
-    {
-      // Disable revert check
-      checkRevertBeforeSending: false,
-    },
-    )
+    await accountStore.connectedWalletWeb3.eth
+      .sendTransaction(
+        {
+          to: submitRawTXNEntry.contractAddress,
+          data: submitRawTXNEntry.txData,
+          from: fundStore.activeAccountAddress,
+          // maxPriorityFeePerGas: "",
+          maxFeePerGas: "",
+          value: parseInt(submitRawTXNEntry.amountValue),
+        },
+        DEFAULT_RETURN_FORMAT,
+        {
+          // Disable revert check
+          checkRevertBeforeSending: false,
+        },
+      )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
@@ -387,7 +446,6 @@ const submitRawTXN = async () => {
 
     if (error?.data?.message) {
       toastStore.errorToast(error.data.message, 15000);
-
     } else {
       toastStore.errorToast(
         "There has been an error. Please contact the Rethink Finance support.",
@@ -464,7 +522,7 @@ const validateInputTokenAddress = computed(() => {
 // watch the inputTokenAddress and fetch token details if it is valid
 watch(
   () => transferEntry.inputTokenAddress,
-  async (newVal) => {
+  async (_newVal) => {
     if (validateInputTokenAddress.value) {
       await fetchTokenDetails();
     } else {
