@@ -271,6 +271,14 @@ const rawExcludedFundAddresses = {
       address: "0x0c76Cc131a75295550697022B72Bd9aE1f4eCFeB",
       alwaysExclude: true,
     }, // test1
+    {
+      address: "0x5FEc7da372cE2D533eA4cD151E8964691D008e64",
+      alwaysExclude: true,
+    }, // elliot wave
+    {
+      address: "0x524a993ff9120feCEf34B32fb501E763B40336D3",
+      alwaysExclude: true,
+    }, // Hyperliquid POC Vault
   ],
   // Fraxtal
   "0xfc": [],
@@ -386,6 +394,10 @@ const rawExcludedFundAddresses = {
       address: "0xaC3D76E29f866702E17f571cccb15937E5A17303",
       alwaysExclude: true,
     }, // Stealth
+    {
+      address: "0xFcA1004B60DcEC14E7dC17E39f37ADfC2c62678D",
+      alwaysExclude: true,
+    }, // Hyperliquid POC Vault
   ],
 } as Record<string, { address: string; alwaysExclude: boolean }[]>;
 
