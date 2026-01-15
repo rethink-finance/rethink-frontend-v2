@@ -50,6 +50,31 @@
       :error-message="updateRoleError"
     />
     <div v-else-if="selectedStepIndex === 0 && fundFactoryContractV2Used">
+      <!-- Info row: show fund Safe address and Roles Modifier address using AddressLink -->
+      <div class="info_row mt-6">
+        <div class="info_row__item">
+          <span class="info_container__text"><strong>Safe Contract:</strong></span>
+          <AddressLink
+            v-if="fundSettings?.safe"
+            :address="fundSettings.safe"
+            :chain-id="fundChainId"
+          />
+          <template v-else>
+            N/A
+          </template>
+        </div>
+        <div class="info_row__item">
+          <span class="info_container__text"><strong>Roles Modifier:</strong></span>
+          <AddressLink
+            v-if="roleModAddress"
+            :address="roleModAddress"
+            :chain-id="fundChainId"
+          />
+          <template v-else>
+            N/A
+          </template>
+        </div>
+      </div>
       <PermissionsManagement
         v-model:allow-manager-to-send-funds-to-fund-contract="
           allowManagerToSendFundsToFundContract
@@ -159,6 +184,7 @@ import {
 } from "~/composables/nav/generateNAVPermission";
 import RoleMembersEditorV2 from "~/components/permission/RoleMembersEditorV2.vue";
 import PermissionsManagement from "~/components/onboarding/PermissionsManagement.vue";
+import AddressLink from "~/components/common/AddressLink.vue";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
@@ -660,6 +686,20 @@ watch(
     @include md {
       flex-direction: row;
     }
+  }
+}
+
+.info_row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3rem;
+
+  &__item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }
 </style>
