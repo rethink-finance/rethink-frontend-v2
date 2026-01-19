@@ -5,6 +5,7 @@ import {
   FETCH_DELEGATES,
   FETCH_GOVERNANCE_PROPOSAL,
   FETCH_GOVERNANCE_PROPOSALS,
+  FETCH_FUND_FLOWS,
 } from "./queries";
 
 import { type ChainId } from "~/types/enums/chain_id";
@@ -111,6 +112,67 @@ export const fetchSubgraphDelegates = async (
     return data.votingContract;
   } catch (error) {
     console.error("Error fetching subgraph delegates response:", error);
+    throw error;
+  }
+};
+
+// Fund Flows
+export interface FundFlow {
+  id: string;
+  timestamp: string;
+  blockNumber: string;
+  transaction: { id: string };
+  caller: { id: string };
+  raw: string;
+  selector: string;
+  selectorHex: string;
+  name: string;
+  amount: string | null;
+  amount2?: string | null;
+  feeKind?: string | null;
+  flag?: boolean | null;
+  account: { id: string } | null;
+  fund: {
+    id: string;
+    fundName?: string | null;
+    fundContractAddr?: string | null;
+    govContractAddr?: string | null;
+  };
+}
+
+export interface FundFlowsResponse {
+  fundFlows: FundFlow[];
+}
+
+export const fetchSubgraphFundFlows = async (
+  chainId: ChainId,
+  values: { fundAddress: string; first: number; skip: number },
+): Promise<FundFlow[]> => {
+  const client = useNuxtApp().$getApolloClient(chainId) as ApolloClient<any>;
+
+  if (!client) {
+    throw new Error("Apollo client not found");
+  }
+  console.warn("values:", values);
+
+  try {
+    const { data } = await client.query<FundFlowsResponse>({
+      query: FETCH_FUND_FLOWS,
+      variables: {
+        fundAddress: values.fundAddress.toLowerCase(),
+        first: values.first,
+        skip: values.skip,
+      },
+      fetchPolicy: "network-only",
+    });
+
+    if (!data || !data.fundFlows) {
+      throw new Error("Received no data or events!");
+    }
+
+    return data.fundFlows;
+  } catch (error) {
+    console.error("Error fetching fund flows:", error);
     throw error;
   }
 };

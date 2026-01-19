@@ -161,3 +161,42 @@ export const FETCH_DELEGATES = gql`
     }
   }
 `;
+
+export const FETCH_FUND_FLOWS = gql`
+  query FetchFundFlows($fundAddress: String!, $first: Int!, $skip: Int!) {
+    fundFlows(
+      first: $first
+      skip: $skip
+      where: { fund_: { fundContractAddr: $fundAddress } }
+      orderBy: timestamp
+      orderDirection: desc
+    ) {
+      id
+      timestamp
+      blockNumber
+      transaction {
+        id
+      }
+      caller {
+        id
+      }
+      raw
+      selector
+      selectorHex
+      name
+      amount
+      amount2
+      feeKind
+      flag
+      account {
+        id
+      }
+      fund {
+        id
+        fundName
+        fundContractAddr
+        govContractAddr
+      }
+    }
+  }
+`;
