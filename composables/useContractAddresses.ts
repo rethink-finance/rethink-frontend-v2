@@ -30,7 +30,7 @@ export function useContractAddresses() {
       // [ChainId.GOERLI]: "",
       [ChainId.POLYGON]: "",
       // [ChainId.FRAXTAL]: "",
-      [ChainId.BASE]: "",
+      [ChainId.BASE]: "0xf42694C10a80b36D51Fe6b6F0590a0d8949C4C1e",
       [ChainId.ARBITRUM]: "0x37E5E0ec7Fde0d8794db1FF54A3C2e69E801A9dE",
       [ChainId.HYPEREVM]: "",
       [ChainId.LOCAL_NODE]: config.public.GOVERNABLE_FUND_FACTORYV1_5_PROXY as string ?? "",
