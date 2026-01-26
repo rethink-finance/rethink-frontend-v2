@@ -198,8 +198,5 @@ export const FETCH_FUND_FLOWS = gql`
         govContractAddr
       }
     }
-    fundFlowsConnection(where: { fund_: { fundContractAddr: $fundAddress } }) {
-      totalCount
-    }
   }
 `;

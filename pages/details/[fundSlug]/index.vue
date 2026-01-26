@@ -130,8 +130,6 @@ import { useFundStore } from "~/store/fund/fund.store";
 import type IFund from "~/types/fund";
 import { fetchSubgraphFundFlows, type FundFlow } from "~/services/subgraph";
 import { ChainId } from "~/types/enums/chain_id";
-import { isZeroAddress } from "~/composables/addressUtils";
-import AddressLink from "~/components/common/AddressLink.vue";
 import {
   formatDateToLocaleString,
   formatTokenValue,
