@@ -33,16 +33,29 @@
             :disabled="page === 1 || isLoading"
             @click="prevPage"
           >
-            < Prev
+            Prev
           </v-btn>
-          <span class="text-caption">Page {{ page }}</span>
+
+          <template v-for="p in pagesToShow" :key="`p-${p}`">
+            <v-btn
+              v-if="typeof p === 'number'"
+              size="small"
+              :variant="p === page ? 'tonal' : 'text'"
+              :disabled="isLoading || p === page"
+              @click="goToPage(p as number)"
+            >
+              {{ p }}
+            </v-btn>
+            <span v-else class="mx-1">…</span>
+          </template>
+
           <v-btn
             size="small"
             variant="outlined"
-            :disabled="!hasNextPage || isLoading"
+            :disabled="page >= totalPages || isLoading"
             @click="nextPage"
           >
-            Next >
+            Next
           </v-btn>
         </div>
       </div>
@@ -139,7 +152,29 @@ const pageSize = 10;
 const isLoading = ref(false);
 const error = ref("");
 const rows = ref<FundFlow[]>([]);
-const hasNextPage = ref(false);
+const totalCount = ref(0);
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(totalCount.value / pageSize)),
+);
+const pagesToShow = computed<(number | string)[]>(() => {
+  const maxToShow = 7; // including ends and current neighbors
+  const pages: (number | string)[] = [];
+  const tp = totalPages.value;
+  if (tp <= maxToShow) {
+    for (let i = 1; i <= tp; i++) pages.push(i);
+    return pages;
+  }
+  const cur = page.value;
+  const add = (n: number | string) => pages.push(n);
+  add(1);
+  if (cur > 4) add("...");
+  const start = Math.max(2, cur - 1);
+  const end = Math.min(tp - 1, cur + 1);
+  for (let i = start; i <= end; i++) add(i);
+  if (cur < tp - 3) add("...");
+  add(tp);
+  return pages;
+});
 
 const loadFundFlows = async () => {
   error.value = "";
@@ -155,9 +190,8 @@ const loadFundFlows = async () => {
       skip,
     });
     console.log("FundFlows", data);
-    rows.value = data;
-    // determine if there is a next page by checking count == pageSize
-    hasNextPage.value = data.length === pageSize;
+    rows.value = data.items;
+    totalCount.value = data.totalCount || data.items.length;
   } catch (e: any) {
     console.error("Failed to load fund flows", e);
     error.value = e?.message || "Failed to load activity";
@@ -167,12 +201,17 @@ const loadFundFlows = async () => {
 };
 
 const nextPage = () => {
-  if (!hasNextPage.value) return;
+  if (page.value >= totalPages.value) return;
   page.value += 1;
 };
 const prevPage = () => {
   if (page.value === 1) return;
   page.value -= 1;
+};
+
+const goToPage = (p: number) => {
+  if (p < 1 || p > totalPages.value) return;
+  page.value = p;
 };
 
 watch(() => page.value, loadFundFlows);

@@ -142,12 +142,13 @@ export interface FundFlow {
 
 export interface FundFlowsResponse {
   fundFlows: FundFlow[];
+  fundFlowsConnection?: { totalCount: number };
 }
 
 export const fetchSubgraphFundFlows = async (
   chainId: ChainId,
   values: { fundAddress: string; first: number; skip: number },
-): Promise<FundFlow[]> => {
+): Promise<{ items: FundFlow[]; totalCount: number }> => {
   const client = useNuxtApp().$getApolloClient(chainId) as ApolloClient<any>;
 
   if (!client) {
@@ -170,7 +171,10 @@ export const fetchSubgraphFundFlows = async (
       throw new Error("Received no data or events!");
     }
 
-    return data.fundFlows;
+    const totalCount =
+      (data as any)?.fundFlowsConnection?.totalCount ?? data.fundFlows.length;
+
+    return { items: data.fundFlows, totalCount };
   } catch (error) {
     console.error("Error fetching fund flows:", error);
     throw error;
