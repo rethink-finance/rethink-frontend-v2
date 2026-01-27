@@ -6,10 +6,14 @@
     rel="noopener noreferrer"
     class="address-link"
   >
-    {{ displayAddress }}
+    <slot>
+      {{ displayAddress }}
+    </slot>
   </a>
   <span v-else class="address-text">
-    {{ displayAddress }}
+    <slot>
+      {{ displayAddress }}
+    </slot>
   </span>
 </template>
 
