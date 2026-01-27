@@ -134,6 +134,7 @@ import {
   formatDateToLocaleString,
   formatTokenValue,
 } from "~/composables/formatters";
+import AddressLink from "~/components/common/AddressLink.vue";
 
 const fundStore = useFundStore();
 const {
