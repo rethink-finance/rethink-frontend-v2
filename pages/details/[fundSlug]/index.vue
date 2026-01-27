@@ -65,7 +65,8 @@
         {{ error }}
       </div>
 
-      <v-table density="compact">
+      <!-- TODO HIDE ACTIVITY FOR NOW-->
+      <v-table v-if="false" density="compact">
         <thead>
           <tr>
             <th class="text-left">
