@@ -23,6 +23,11 @@ import { getBlockscoutUrl } from "~/types/enums/chain_id";
 import { isZeroAddress } from "~/composables/addressUtils";
 
 const props = defineProps({
+  title: {
+    type: String,
+    required: false,
+    default: "",
+  },
   address: {
     type: String,
     required: true,
@@ -46,6 +51,8 @@ const blockscoutUrl = computed(() => {
 });
 
 const displayAddress = computed(() => {
+  if (props.title) return props.title;
+
   if (!props.address) return "N/A";
   if (isZeroAddress(props.address)) return "N/A";
 

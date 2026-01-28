@@ -1,7 +1,21 @@
 <template>
   <div class="main_grid">
-    <UiDataRowCard :title="fund.fundToken?.symbol" subtitle="Vault Token Symbol" />
-    <UiDataRowCard :title="fund.baseToken?.symbol" subtitle="Denomination Asset" />
+    <UiDataRowCard
+      :title="fund.fundToken?.symbol"
+      subtitle="Vault Token Symbol"
+    >
+      <template #title>
+        <AddressLink
+          :title="fund.baseToken?.symbol"
+          :address="fund.address"
+          :chain-id="fund.chainId"
+        />
+      </template>
+    </UiDataRowCard>
+    <UiDataRowCard
+      :title="fund.baseToken?.symbol"
+      subtitle="Denomination Asset"
+    />
     <UiDataRowCard subtitle="Safe Contract">
       <template #title>
         <AddressLink :address="fund.safeAddress" :chain-id="fund.chainId" />
@@ -9,7 +23,10 @@
     </UiDataRowCard>
     <UiDataRowCard subtitle="Admin Contract">
       <template #title>
-        <AddressLink :address="fund.fundToken?.address" :chain-id="fund.chainId" />
+        <AddressLink
+          :address="fund.fundToken?.address"
+          :chain-id="fund.chainId"
+        />
       </template>
     </UiDataRowCard>
     <UiDataRowCard subtitle="Roles Modifier Contract">
@@ -52,19 +69,19 @@ const gnosisRolesUrl = computed(() => {
   return `https://roles.gnosisguild.org/${props.fund.chainShort}:${roleModAddress.value}`;
 });
 
-
 watch(
   () => props.fund?.address,
   async () => {
     if (!props.fund?.address) {
       roleModAddress.value = "";
     } else {
-      roleModAddress.value = await fundStore.fetchRoleModAddress(props.fund?.address);
+      roleModAddress.value = await fundStore.fetchRoleModAddress(
+        props.fund?.address,
+      );
     }
   },
   { deep: true, immediate: true },
 );
 </script>
 
-<style lang="scss" scoped>
-</style>
+<style lang="scss" scoped></style>

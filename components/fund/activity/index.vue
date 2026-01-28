@@ -13,25 +13,10 @@
         >
           Prev
         </v-btn>
-
-        <template v-for="(p, idx) in pagesToShow">
-          <v-btn
-            v-if="typeof p === 'number'"
-            :key="`p-${p}`"
-            size="small"
-            :variant="p === page ? 'tonal' : 'text'"
-            :disabled="isLoading || p === page"
-            @click="goToPage(p)"
-          >
-            {{ p }}
-          </v-btn>
-          <span v-else :key="`ellipsis-${idx}`" class="mx-1">…</span>
-        </template>
-
         <v-btn
           size="small"
           variant="outlined"
-          :disabled="page >= totalPages || isLoading"
+          :disabled="isLoading || !hasMore"
           @click="nextPage"
         >
           Next
@@ -86,7 +71,11 @@
               >
                 <span class="ts-link">
                   {{ formatTimestamp(row.timestamp) }}
-                  <v-icon icon="mdi-open-in-new" size="16" class="ts-link__icon" />
+                  <v-icon
+                    icon="mdi-open-in-new"
+                    size="16"
+                    class="ts-link__icon"
+                  />
                 </span>
               </AddressLink>
             </template>
@@ -123,29 +112,7 @@ const pageSize = 10;
 const isLoading = ref(false);
 const error = ref("");
 const rows = ref<FundFlow[]>([]);
-const totalCount = ref(0);
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(totalCount.value / pageSize)),
-);
-const pagesToShow = computed<(number | string)[]>(() => {
-  const maxToShow = 7; // including ends and current neighbors
-  const pages: (number | string)[] = [];
-  const tp = totalPages.value;
-  if (tp <= maxToShow) {
-    for (let i = 1; i <= tp; i++) pages.push(i);
-    return pages;
-  }
-  const cur = page.value;
-  const add = (n: number | string) => pages.push(n);
-  add(1);
-  if (cur > 4) add("...");
-  const start = Math.max(2, cur - 1);
-  const end = Math.min(tp - 1, cur + 1);
-  for (let i = start; i <= end; i++) add(i);
-  if (cur < tp - 3) add("...");
-  add(tp);
-  return pages;
-});
+const hasMore = ref(false);
 
 const loadFundFlows = async () => {
   error.value = "";
@@ -162,7 +129,8 @@ const loadFundFlows = async () => {
       skip,
     });
     rows.value = data.items;
-    totalCount.value = data.totalCount || data.items.length;
+    // We don't rely on totalCount; determine if there's another page
+    hasMore.value = Array.isArray(data.items) && data.items.length === pageSize;
   } catch (e: any) {
     console.error("Failed to load fund flows", e);
     error.value = e?.message || "Failed to load activity";
@@ -172,16 +140,12 @@ const loadFundFlows = async () => {
 };
 
 const nextPage = () => {
-  if (page.value >= totalPages.value) return;
+  if (!hasMore.value) return;
   page.value += 1;
 };
 const prevPage = () => {
   if (page.value === 1) return;
   page.value -= 1;
-};
-const goToPage = (p: number) => {
-  if (p < 1 || p > totalPages.value) return;
-  page.value = p;
 };
 
 watch(() => page.value, loadFundFlows);
@@ -214,8 +178,8 @@ const formatFlowAmount = (row: FundFlow) => {
       | null;
     if (name.includes("deposit")) {
       token = (props.fund as IFund)?.baseToken || null;
-    } else if (name.includes("redeem")) {
-      token = (props.fund as IFund)?.fundToken || null;
+    } else if (name.includes("withdraw")) {
+      token = (props.fund as IFund)?.baseToken || null;
     }
 
     if (!token || typeof token.decimals !== "number") return amtStr;
@@ -330,13 +294,23 @@ const toneClass = (raw?: string) => {
 
 /* Slightly stronger (less pastel) tones */
 /* Greens */
-.tone-light-green { background-color: #A5D6A7; /* Green 200 */ }
-.tone-green { background-color: #5dbb62; /* Green 300 */ }
+.tone-light-green {
+  background-color: #a5d6a7; /* Green 200 */
+}
+.tone-green {
+  background-color: #5dbb62; /* Green 300 */
+}
 /* Reds */
-.tone-light-red { background-color: #EF9A9A; /* Red 200 */ }
-.tone-red { background-color: #de6666; /* Red 300 */ }
+.tone-light-red {
+  background-color: #ef9a9a; /* Red 200 */
+}
+.tone-red {
+  background-color: #de6666; /* Red 300 */
+}
 /* Neutral */
-.tone-neutral { background-color: #B0BEC5; /* Blue Grey 300 */ }
+.tone-neutral {
+  background-color: #b0bec5; /* Blue Grey 300 */
+}
 
 /* Timestamp link with icon */
 .ts-link {

@@ -21,8 +21,8 @@
       </div>
     </div>
 
-    <!-- Activity moved to a separate component; TODO kept hidden for now -->
-    <FundActivity v-if="false" :fund="fund" />
+    <!-- Activity moved to a separate component -->
+    <FundActivity :fund="fund" />
   </div>
 </template>
 
