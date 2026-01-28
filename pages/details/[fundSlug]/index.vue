@@ -22,7 +22,7 @@
     </div>
 
     <!-- Activity moved to a separate component -->
-    <FundActivity :fund="fund" />
+    <FundActivity v-if="false" :fund="fund" />
   </div>
 </template>
 
