@@ -121,6 +121,7 @@ export interface FundFlow {
   id: string;
   timestamp: string;
   blockNumber: string;
+  txFrom: { id: string } | null;
   transaction: { id: string };
   caller: { id: string };
   raw: string;
@@ -166,7 +167,7 @@ export const fetchSubgraphFundFlows = async (
       },
       fetchPolicy: "network-only",
     });
-
+    console.log("fetchSubgraphFundFlows data: ", data);
     if (!data || !data.fundFlows) {
       throw new Error("Received no data or events!");
     }

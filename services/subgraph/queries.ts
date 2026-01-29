@@ -174,6 +174,9 @@ export const FETCH_FUND_FLOWS = gql`
       id
       timestamp
       blockNumber
+      txFrom {
+        id
+      }
       transaction {
         id
       }

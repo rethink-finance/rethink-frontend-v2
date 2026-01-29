@@ -19,34 +19,50 @@ export enum ChainId {
 }
 
 /**
- * Get Blockscout URL for a given chain ID and address
+ * Get Blockscout URL for a given chain ID and resource (address or tx hash)
+ *
+ * Examples:
+ *  - Address: 0xabc...123 -> https://<chain>.blockscout.com/address/0xabc...123
+ *  - Tx hash: 0xdef...456 (66 chars) -> https://<chain>.blockscout.com/tx/0xdef...456
+ *
  * @param chainId - The chain ID
- * @param address - The address to link to
- * @returns URL string or the passed address if not available for the chain
+ * @param resource - Address (0x + 40 hex) or transaction hash (0x + 64 hex)
+ * @returns URL string, or the passed resource if Blockscout is not available for the chain
  */
-export const getBlockscoutUrl = (chainId: string, address: string): string => {
-  if (!address || !chainId) {
-    return address;
+export const getBlockscoutUrl = (chainId: string, resource: string): string => {
+  if (!resource || !chainId) {
+    return resource;
   }
 
-  // Ensure we're working with a valid address
-  if (address.trim() === "") {
-    return address;
+  const value = resource.trim();
+  if (value === "") {
+    return resource;
   }
 
+  const isTxHash = /^0x[0-9a-fA-F]{64}$/.test(value);
+  // We still default to address path when not a tx hash
+  const path = isTxHash ? "tx" : "address";
+
+  let base = "";
   switch (chainId) {
     case ChainId.ETHEREUM:
-      return `https://eth.blockscout.com/address/${address}`;
+      base = "https://eth.blockscout.com";
+      break;
     case ChainId.POLYGON:
-      return `https://polygon.blockscout.com/address/${address}`;
+      base = "https://polygon.blockscout.com";
+      break;
     case ChainId.BASE:
-      return `https://base.blockscout.com/address/${address}`;
+      base = "https://base.blockscout.com";
+      break;
     case ChainId.ARBITRUM:
-      return `https://arbitrum.blockscout.com/address/${address}`;
+      base = "https://arbitrum.blockscout.com";
+      break;
     case ChainId.HYPEREVM:
       // No Blockscout URL for HyperEVM
-      return address;
+      return resource;
     default:
-      return address;
+      return resource;
   }
+
+  return `${base}/${path}/${value}`;
 };

@@ -50,8 +50,8 @@
         <tr v-for="row in rows" :key="row.id">
           <td>
             <AddressLink
-              v-if="row.caller?.id"
-              :address="row.caller.id"
+              v-if="row.txFrom?.id"
+              :address="row.txFrom.id"
               :chain-id="fund.chainId"
             />
             <template v-else>
