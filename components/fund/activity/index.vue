@@ -103,6 +103,7 @@ import {
   formatTokenValue,
 } from "~/composables/formatters";
 import AddressLink from "~/components/common/AddressLink.vue";
+import type IToken from "~/types/token";
 
 const props = defineProps<{ fund: IFund }>();
 
@@ -172,17 +173,14 @@ const formatFlowAmount = (row: FundFlow) => {
     const amtStr = row?.amount;
     if (!amtStr) return "-";
 
-    let token = null as unknown as
-      | IFund["baseToken"]
-      | IFund["fundToken"]
-      | null;
+    let token: IToken | null = null;
     if (name.includes("deposit")) {
       token = (props.fund as IFund)?.baseToken || null;
     } else if (name.includes("withdraw")) {
-      token = (props.fund as IFund)?.baseToken || null;
+      token = (props.fund as IFund)?.fundToken || null;
     }
 
-    if (!token || typeof token.decimals !== "number") return amtStr;
+    if (!token) return amtStr;
 
     let value: bigint;
     try {
