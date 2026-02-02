@@ -22,13 +22,14 @@
     </div>
 
     <!-- Activity moved to a separate component -->
-    <FundActivity v-if="false" :fund="fund" />
+    <FundActivity v-if="fund.chainId !== ChainId.ARBITRUM" :fund="fund" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { useFundStore } from "~/store/fund/fund.store";
 import type IFund from "~/types/fund";
+import { ChainId } from "~/types/enums/chain_id";
 
 const fundStore = useFundStore();
 const {
