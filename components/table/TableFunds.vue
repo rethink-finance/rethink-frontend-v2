@@ -5,6 +5,7 @@
     :headers="headers"
     hover
     :items="items"
+    :sort-by="[{ key: 'totalSimulatedNavUSD', order: 'desc' }]"
     :loading="loading && items.length === 0"
     loading-text="Loading OIVs"
     items-per-page="-1"
