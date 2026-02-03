@@ -279,6 +279,14 @@ const rawExcludedFundAddresses = {
       address: "0x524a993ff9120feCEf34B32fb501E763B40336D3",
       alwaysExclude: true,
     }, // Hyperliquid POC Vault
+    {
+      address: "0xa42af97a630b19a02a35e0EC8F2EC35B18A5f661",
+      alwaysExclude: true,
+    }, // SmartBTC
+    {
+      address: "0xF629a05c7BCFd82AA587A2470609a366c61366F4",
+      alwaysExclude: true,
+    }, // SmartBTC
   ],
   // Fraxtal
   "0xfc": [],
@@ -359,6 +367,10 @@ const rawExcludedFundAddresses = {
       address: "0x457960e6946ed94e82512992ba9dAaBDa5539010",
       alwaysExclude: true,
     }, // DEMO ABC 25. apr 25
+    {
+      address: "0x47fF9be8d33f3955Ab8481b7B5b32A728fc99343",
+      alwaysExclude: true,
+    }, // USD Base Vault by Helios
   ],
   // Hyper EVM
   "0x3e7": [
