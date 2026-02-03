@@ -8,9 +8,9 @@
     :items="groupedMethods"
     :cell-props="methodProps"
     class="main_table nav_entries"
-    show-expand
+    :show-expand="settingsStore.isManageMode"
     :search="search"
-    expand-on-click
+    :expand-on-click="settingsStore.isManageMode"
     item-value="detailsHash"
     :show-select="selectable"
     items-per-page="-1"
@@ -193,7 +193,7 @@
             v-model:expanded="expandedBaseAssets"
             :items="item.detailsJson"
             :headers="headers"
-            show-expand
+            :show-expand="settingsStore.isManageMode"
             item-value="detailsHash"
             :hide-default-footer="true"
             @update:expanded="onExpandedBaseAssetsUpdate"
@@ -457,6 +457,7 @@
 <script lang="ts">
 import { ethers } from "ethers";
 import { useFundStore } from "~/store/fund/fund.store";
+import { useSettingsStore } from "~/store/settings/settings.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { ChainId } from "~/types/enums/chain_id";
 import { defaultInputTypeValue, InputType } from "~/types/enums/input_type";
@@ -582,9 +583,12 @@ export default defineComponent({
   setup() {
     const fundStore = useFundStore();
     const toastStore = useToastStore();
+    const settingsStore = useSettingsStore();
+
     return {
       toastStore,
       fundStore,
+      settingsStore,
       creatablePositionTypes: computed(() =>
         PositionTypes.filter(
           (positionType) => positionType.key !== PositionType.NFT,
@@ -671,7 +675,9 @@ export default defineComponent({
       }
 
       // Expand details button
-      headers.push({ key: "data-table-expand", sortable: false, align: "center" });
+      if (this.settingsStore.isManageMode) {
+        headers.push({ key: "data-table-expand", sortable: false, align: "center" });
+      }
       if (this.deletable) {
         headers.push({ key: "delete", sortable: false, align: "center", width: "40px" })
       }

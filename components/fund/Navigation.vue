@@ -22,6 +22,7 @@ const computedRoutes = computed(() => {
   const showInManageMode = [
     `${props.fundDetailsRoute}/flows`,
     `${props.fundDetailsRoute}/execution-app`,
+    `${props.fundDetailsRoute}/permissions`,
   ]
   return props.routes.map((routeItem: IRoute) => {
     const isHidden = showInManageMode.includes(routeItem.to) ? !appSettingsStore.isManageMode : false;

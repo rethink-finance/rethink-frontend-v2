@@ -1,5 +1,5 @@
 <template>
-  <div class="permissions">
+  <div v-if="appSettingsStore.isManageMode" class="permissions">
     <div
       v-if="fund?.fundFactoryContractV2Used"
       class="d-flex flex-column flex-grow-1 justify-center align-center"
