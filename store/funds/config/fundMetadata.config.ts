@@ -82,7 +82,7 @@ export const fundMetaDataHardcoded = {
       // SmartBTC
       address: "0x202Cf222611B827B3Ae5a3Ee055e38Bae18256F5",
       strategistName: "Open Alpha",
-      strategistUrl: "https://openalpha.vc/",
+      strategistUrl: "https://openalpha.io/",
       subtitle: "Smart Investing, Powered by a Global Intelligence Network.",
     },
   ],
