@@ -287,6 +287,18 @@ const rawExcludedFundAddresses = {
       address: "0xF629a05c7BCFd82AA587A2470609a366c61366F4",
       alwaysExclude: true,
     }, // SmartBTC
+    {
+      address: "0xde3b1F67d8539C937626db6AEe75EFD1b8b0Fe10",
+      alwaysExclude: true,
+    },
+    {
+      address: "0xCCf3644e8CeCaE749e35C3f73A3bd2f5f5AD41Fb",
+      alwaysExclude: true,
+    },
+    {
+      address: "0x2388f0E1E3199250Ab688A565Fe2BbFD8fBEE168",
+      alwaysExclude: true,
+    },
   ],
   // Fraxtal
   "0xfc": [],
