@@ -81,14 +81,17 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
       // "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", // Luka T.
       // "https://eth-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", // Rok
-      "https://rpc.flashbots.net/fast",
-      "https://rpc.flashbots.net",
-      "https://ethereum.blockpi.network/v1/rpc/public",
-      "https://api.zan.top/node/v1/eth/mainnet/public",
+      "https://ethereum.publicnode.com",
+      "https://cloudflare-eth.com",
       "https://rpc.ankr.com/eth",
-      "https://rpc.lokibuilder.xyz/wallet",
-      "https://api.stateless.solutions/ethereum/v1/demo",
-      "https://endpoints.omniatech.io/v1/eth/mainnet/public",
+      "https://eth.llamarpc.com",
+      "https://1rpc.io/eth",
+      "https://mainnet.gateway.tenderly.co",
+      // CORS-blocked, do not use:
+      // "https://endpoints.omniatech.io/v1/eth/mainnet/public",
+      // "https://api.zan.top/node/v1/eth/mainnet/public",
+      // "https://rpc.lokibuilder.xyz/wallet",
+      // "https://api.stateless.solutions/ethereum/v1/demo",
     ],
     blockExplorerUrls: ["https://etherscan.io"],
   },
