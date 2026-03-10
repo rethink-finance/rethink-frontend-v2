@@ -3,7 +3,7 @@ import { gql } from "@apollo/client/core";
 
 export const FETCH_GOVERNANCE_PROPOSALS = gql`
   query FetchGovernanceProposals($governorAddress: String!) {
-    proposals(where: { governor_: { id: $governorAddress } }) {
+    proposals(first: 1000, where: { governor_: { id: $governorAddress } }) {
       id
       proposalId
       voteStart
@@ -39,7 +39,7 @@ export const FETCH_GOVERNANCE_PROPOSALS = gql`
           blockNumber
         }
       }
-      calls(orderBy: index, orderDirection: asc) {
+      calls(first: 1000, orderBy: index, orderDirection: asc) {
         calldata
         index
         signature
@@ -48,7 +48,7 @@ export const FETCH_GOVERNANCE_PROPOSALS = gql`
           id
         }
       }
-      receipts {
+      receipts(first: 1000) {
         id
         voter {
           id
