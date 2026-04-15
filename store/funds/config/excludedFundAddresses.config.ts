@@ -76,6 +76,42 @@ const rawExcludedFundAddresses = {
   // Arbitrum One
   "0xa4b1": [
     {
+    address: "0x9fBCb2F71229dDF7F11459ce2F8E73DE3A60bb6d",
+    alwaysExclude: false,
+    },
+    {
+    address: "0xc73Bda1B4d6b8596d6EdEa152D8D2436b630B5c8",
+    alwaysExclude: false,
+    },
+    {
+    address: "0xFb218666B5baD531c3517c4838d0C43361a1CA02",
+    alwaysExclude: false,
+    },
+    {
+    address: "0x69C634a0C90a1C1D349E65Be36F525F0B3a1D859",
+    alwaysExclude: false,
+    },
+    {
+    address: "0x39a9a11b99A4bF5c074986c6e0A546277AF9cD9A",
+    alwaysExclude: false,
+    },
+    {
+    address: "0x6e6e9357AE9Ad468D8AE42125ad094E83AbC62c3",
+    alwaysExclude: false,
+    },
+    {
+    address: "0x0cCDed4aBa89116473A7672F834281f6812448f0",
+    alwaysExclude: false,
+    },
+    {
+    address: "0x2BD8FCe3420625686E13a6643dc13e5d35208548",
+    alwaysExclude: false,
+    },
+    {
+    address: "0x5aD8AA22C80db9f131a541B40E1854D3dFa1e775",
+    alwaysExclude: false,
+    },
+    {
       address: "0xA5138779Bb08C8DE44692e183c586817a0bcEb42",
       alwaysExclude: false,
     },
