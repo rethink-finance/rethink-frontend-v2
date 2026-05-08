@@ -335,6 +335,22 @@ const rawExcludedFundAddresses = {
       address: "0x2388f0E1E3199250Ab688A565Fe2BbFD8fBEE168",
       alwaysExclude: true,
     },
+    {
+      address: "0x5754fF536ea9B75e33aE33a8ae91c61c75f49CED",
+      alwaysExclude: true,
+    }, // Smart 10 (Risk Parity)
+    {
+      address: "0xeEFEA34d98b056c4b74EC552113ed42B8E364B14",
+      alwaysExclude: true,
+    }, // Smart 10 (Risk Parity)
+    {
+      address: "0x6027583774f51F8bc855b10a33FFd4cB24501F26",
+      alwaysExclude: true,
+    }, // Smart 10
+    {
+      address: "0x9d31eb2cC2b6314b228eF1A80640B128A3653D66",
+      alwaysExclude: true,
+    }, // Smart10 Cash Smoke
   ],
   // Fraxtal
   "0xfc": [],
@@ -458,6 +474,50 @@ const rawExcludedFundAddresses = {
       address: "0xFcA1004B60DcEC14E7dC17E39f37ADfC2c62678D",
       alwaysExclude: true,
     }, // Hyperliquid POC Vault
+    {
+      address: "0xd245A74898124ae10DE4DB5ec842032042654F0d",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid PoC
+    {
+      address: "0xCC3F40e6C7E9A3B214E524B88a5f47Fece1a8Acb",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid PoC 3
+    {
+      address: "0x7f25c0E992e71f5fDaDDd85f965845520AAfDE03",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid PoC 3
+    {
+      address: "0x5439F9f8125895A86949E96588E9fb7E5950a89d",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid
+    {
+      address: "0x2741408077cd7C7D3943D0142bafAE28c97EAA35",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid
+    {
+      address: "0x8998d90d8b1CeF7a78BC4F318056c690d11CD2C0",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid
+    {
+      address: "0xdbaA893A47f8eeC495909c847AaC6Ec5Ffd05032",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid
+    {
+      address: "0xb72C8302BCcBacE6624150E9F27343e21D88456D",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid
+    {
+      address: "0xAE54216c5e9032fd73c5D517c288235534f6B2e5",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid
+    {
+      address: "0xa13548eb8F55f9d929cf216CaE8B58B9E9aac81B",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid
+    {
+      address: "0x04624a3E774446f72738a03a6fF30b8f177f2C42",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid
   ],
 } as Record<string, { address: string; alwaysExclude: boolean }[]>;
 
