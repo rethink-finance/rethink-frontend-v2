@@ -155,8 +155,12 @@
           indeterminate
         />
         <template v-else>
-          <div :class="numberColorClass(getApr(item) ?? 0)">
-            {{ formatPercent(getApr(item), true) ?? "--" }}
+          <div :class="numberColorClass(roundPercent(getApr(item)))">
+            {{
+              getApr(item) === undefined
+                ? "--"
+                : formatPercent(roundPercent(getApr(item)), true)
+            }}
           </div>
         </template>
       </div>

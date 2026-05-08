@@ -144,9 +144,9 @@
           <template v-else>
             <div
               class="data_bar__title"
-              :class="numberColorClass(apr ?? 0)"
+              :class="numberColorClass(roundedApr)"
             >
-              {{ formatPercent(apr, true) ?? "--" }}
+              {{ apr === undefined ? "--" : formatPercent(roundedApr, true) }}
             </div>
           </template>
         </div>
@@ -238,6 +238,10 @@ const apr = computed(() =>
     props.fund?.cumulativeReturnPercent,
     props.fund?.inceptionDateTimestamp,
   ),
+);
+
+const roundedApr = computed(() =>
+  apr.value === undefined ? undefined : parseFloat(apr.value.toFixed(2)),
 );
 </script>
 
