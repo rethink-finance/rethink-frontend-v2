@@ -126,6 +126,34 @@
           Cumulative Return
         </div>
       </div>
+      <div class="data_bar__item">
+        <div
+          class="data_bar__title"
+          :class="{
+            'justify-center':
+              isLoadingCalculateFundPerformanceMetricsActionState,
+          }"
+        >
+          <v-progress-circular
+            v-if="isLoadingCalculateFundPerformanceMetricsActionState"
+            class="d-flex"
+            size="18"
+            width="2"
+            indeterminate
+          />
+          <template v-else>
+            <div
+              class="data_bar__title"
+              :class="numberColorClass(apr ?? 0)"
+            >
+              {{ formatPercent(apr, true) ?? "--" }}
+            </div>
+          </template>
+        </div>
+        <div class="data_bar__subtitle">
+          APR
+        </div>
+      </div>
       <!-- Remove Monthly Return for now -->
       <!-- <div class="data_bar__item">
         <div
@@ -169,7 +197,7 @@ import {
   formatTokenValue,
 } from "~/composables/formatters";
 import { numberColorClass } from "~/composables/numberColorClass";
-import { capitalizeFirst } from "~/composables/utils";
+import { calculateAPR, capitalizeFirst } from "~/composables/utils";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";
@@ -204,6 +232,13 @@ const props = defineProps({
     default: () => {},
   },
 });
+
+const apr = computed(() =>
+  calculateAPR(
+    props.fund?.cumulativeReturnPercent,
+    props.fund?.inceptionDateTimestamp,
+  ),
+);
 </script>
 
 <style lang="scss" scoped>

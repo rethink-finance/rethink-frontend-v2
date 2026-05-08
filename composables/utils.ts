@@ -159,6 +159,35 @@ export const calculateCumulativeReturnPercent = (
 };
 
 
+/**
+ * Annualized return (APR) from a cumulative return decimal and an inception timestamp.
+ *
+ * Formula: APR = (1 + cumulativeReturn) ^ (365 / daysSinceInception) - 1
+ *
+ * Returns undefined when too early to annualize meaningfully (< 7 calendar days),
+ * when inputs are missing, or when (1 + cumulativeReturn) <= 0 (would NaN on fractional exponent).
+ *
+ * @param cumulativeReturn - Decimal cumulative return (e.g. 0.08 for 8%).
+ * @param inceptionTimestampSec - Vault inception time in unix seconds.
+ * @returns Decimal APR (e.g. 0.12 for 12%) or undefined.
+ */
+export const calculateAPR = (
+  cumulativeReturn: number | undefined,
+  inceptionTimestampSec: number | undefined,
+): number | undefined => {
+  if (cumulativeReturn === undefined || cumulativeReturn === null) return undefined;
+  if (!inceptionTimestampSec) return undefined;
+
+  const daysSinceInception =
+    (Date.now() / 1000 - inceptionTimestampSec) / 86_400;
+
+  if (daysSinceInception < 7) return undefined;
+  if (1 + cumulativeReturn <= 0) return undefined;
+
+  return (1 + cumulativeReturn) ** (365 / daysSinceInception) - 1;
+};
+
+
 export const calculateCumulativeWithSharePrice = (
   initialSharePrice?: number | undefined,
   latestSharePrice?: number | undefined,

@@ -70,6 +70,7 @@ export async function fetchFundsMetaDataAction(
           inceptionDate: fundStartTime
             ? formatDate(new Date(Number(fundStartTime) * 1000))
             : "",
+          inceptionDateTimestamp: fundStartTime ? Number(fundStartTime) : undefined,
           lastNavUpdateTime: lastNavUpdateTime
             ? formatDate(new Date(Number(lastNavUpdateTime) * 1000))
             : "",

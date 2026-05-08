@@ -145,6 +145,23 @@
       </div>
     </template>
 
+    <!-- apr -->
+    <template #[`item.apr`]="{ item }">
+      <div :class="{ 'justify-center': item.isNavUpdatesLoading }">
+        <v-progress-circular
+          v-if="item.isNavUpdatesLoading"
+          size="18"
+          width="2"
+          indeterminate
+        />
+        <template v-else>
+          <div :class="numberColorClass(getApr(item) ?? 0)">
+            {{ formatPercent(getApr(item), true) ?? "--" }}
+          </div>
+        </template>
+      </div>
+    </template>
+
     <!--    <template #[`item.positionTypeCounts`]="{ item }">-->
     <!--      <PositionTypesBar-->
     <!--        :position-type-counts="item.positionTypeCounts ?? []"-->
@@ -170,6 +187,7 @@ import {
   formatPercent,
   formatTokenValue,
 } from "~/composables/formatters";
+import { calculateAPR } from "~/composables/utils";
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 import type IFund from "~/types/fund";
@@ -193,6 +211,9 @@ defineProps({
 });
 
 const roundPercent = (value?: number): number => parseFloat(value?.toFixed(2) || "0");
+
+const getApr = (fund: IFund): number | undefined =>
+  calculateAPR(fund.cumulativeReturnPercent, fund.inceptionDateTimestamp);
 
 const headers: any = computed(() => [
   {
@@ -241,6 +262,13 @@ const headers: any = computed(() => [
     key: "cumulativeReturnPercent",
     align: "end",
     width: 170,
+  },
+  {
+    title: "APR",
+    key: "apr",
+    align: "end",
+    width: 100,
+    sortable: false,
   },
   // {
   //   title: "Monthly",

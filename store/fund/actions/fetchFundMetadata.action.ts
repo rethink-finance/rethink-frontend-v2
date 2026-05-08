@@ -124,6 +124,7 @@ export const fetchFundMetaDataAction = async (
       inceptionDate: startTime
         ? formatDate(new Date(Number(startTime) * 1000))
         : "",
+      inceptionDateTimestamp: startTime ? Number(startTime) : undefined,
       lastNavUpdateTime: lastNavUpdateTime
         ? formatDate(new Date(Number(lastNavUpdateTime) * 1000))
         : "",
