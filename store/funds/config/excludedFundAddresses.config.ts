@@ -72,6 +72,10 @@ const rawExcludedFundAddresses = {
       address: "0x1673458dDf6C0ea24ce5598918F3cA1e58f2d795",
       alwaysExclude: false,
     },
+    {
+      address: "0x1953ac2f2e276729940761E55D9E5B937f2635Bd",
+      alwaysExclude: false,
+    }, // DOCSY
   ],
   // Arbitrum One
   "0xa4b1": [
@@ -352,7 +356,7 @@ const rawExcludedFundAddresses = {
       alwaysExclude: true,
     }, // Smart10 Cash Smoke    
     {
-      address: "0xeEFEA34d98b056c4b74EC552113ed42B8E364B14",
+      address: "0x1953ac2f2e276729940761E55D9E5B937f2635Bd",
       alwaysExclude: true,
     }, // OA Fee Study 1778500718435
        {
