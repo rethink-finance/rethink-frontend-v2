@@ -350,7 +350,15 @@ const rawExcludedFundAddresses = {
     {
       address: "0x9d31eb2cC2b6314b228eF1A80640B128A3653D66",
       alwaysExclude: true,
-    }, // Smart10 Cash Smoke
+    }, // Smart10 Cash Smoke    
+    {
+      address: "0xeEFEA34d98b056c4b74EC552113ed42B8E364B14",
+      alwaysExclude: true,
+    }, // OA Fee Study 1778500718435
+       {
+      address: "0xd7D0202D5311C0b5dF18D8D7D51a16CC4bA10F40",
+      alwaysExclude: true,
+    }, // OA Fee Study 1778539454383
   ],
   // Fraxtal
   "0xfc": [],
@@ -514,8 +522,17 @@ const rawExcludedFundAddresses = {
       address: "0xa13548eb8F55f9d929cf216CaE8B58B9E9aac81B",
       alwaysExclude: true,
     }, // Smart 10 Hyperliquid
+
+    {
+      address: "0x104dca4A54Cfb3e480174e19C96d79D4CB651685",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid
     {
       address: "0x04624a3E774446f72738a03a6fF30b8f177f2C42",
+      alwaysExclude: true,
+    }, // Smart 10 Hyperliquid    
+    {
+      address: "0x9561361b9886B5064abe56ee65780964BE090726",
       alwaysExclude: true,
     }, // Smart 10 Hyperliquid
   ],
