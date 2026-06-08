@@ -15,7 +15,7 @@ const appSettingsStore = useSettingsStore();
 const isPathActive = (path: string = "", exactMatch = true) =>
   exactMatch ? route?.path === path : route?.path.startsWith(path);
 
-const getPathColor = (isActive = false, color = "#77839f") =>
+const getPathColor = (isActive = false, color = "#808898") =>
   isActive ? "primary" : color;
 
 const computedRoutes = computed(() => {

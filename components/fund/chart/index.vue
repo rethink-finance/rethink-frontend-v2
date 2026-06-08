@@ -329,7 +329,7 @@ const options = computed(() => {
         seriesIndex: 0,
         dataPointIndex,
         size: 2,
-        fillColor: "#3e5283",
+        fillColor: "#1d212d",
         strokeColor: ChartTypeStrokeColors[selectedType.value],
         shape: "circle",
       })),
@@ -624,10 +624,10 @@ watch(
     opacity: 1;
     gap: 0.5rem;
     line-height: 1;
-    background: #242e45;
+    background: #1d212d;
     font-size: $text-sm;
     font-weight: 500;
-    @include borderGray("border", true, #aec5ff);
+    @include borderGray("border", true, rgba(255, 255, 255, 0.11));
     border-width: 2px;
     //box-shadow: 4px 46px 16px 0 rgba(31, 95, 255, 0.16);
 

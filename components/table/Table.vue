@@ -177,7 +177,7 @@ const props = defineProps({
 
 const filtering = ref("");
 const tableHeadDefaultStyle = ref({
-  borderBottom: "3px solid #111C35",
+  borderBottom: "3px solid #1D212D",
 });
 
 const table = useVueTable({
@@ -278,12 +278,12 @@ watch([() => props.data, () => props.columns], () => {
   input[type="text"] {
     background: transparent;
     border: none;
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     padding: 5px;
     width: 100%;
   }
   thead {
-   border-bottom: 1px solid #f2f2f2;
+   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     th {
       padding-inline: $cell-padding-inlinee;
       background: $color-surface;
@@ -320,8 +320,8 @@ watch([() => props.data, () => props.columns], () => {
   }
   tbody {
     tr {
-      outline: 2px solid #111c35;
-      border-bottom: 2px solid #213566;
+      outline: 2px solid #1d212d;
+      border-bottom: 2px solid #242833;
       cursor: pointer;
       color: $color-white;
 

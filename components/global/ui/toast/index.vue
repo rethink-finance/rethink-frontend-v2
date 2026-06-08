@@ -108,7 +108,7 @@ const textColorClass = (level) => {
 }
 .toast-warning {
   .icon__toast {
-    color: #FB8C00;
+    color: $color-warning;
   }
 }
 
@@ -119,7 +119,7 @@ const textColorClass = (level) => {
   }
 }
 :deep(.v-btn){
-  color: #AEC5FF !important;
+  color: $color-secondary !important;
   height: 2.5rem !important;
   width: 2.5rem !important;
   padding: 0 !important;
