@@ -76,7 +76,7 @@ const ACCESS_PASSWORD = "rethinkCreate";
 const STORAGE_KEY = "rethink_app_access";
 
 // Google Apps Script web app URL — see implementation/google-apps-script/Code.gs
-const SUBSCRIBE_ENDPOINT = "https://script.google.com/macros/s/AKfycbye9wUzFO4VxQ7xj3scr9S0cTtDgVPKBNjUyxN26hH3hGaHrj9XfaThg2ptDJD6jNK4CQ/exec";
+const SUBSCRIBE_ENDPOINT = "https://script.google.com/macros/s/AKfycbzHYr4p2TrANCPa0f4re8q8mLQUnJUU4e0o8l8pMbptepn0Q9UQOx597Jo0h-tEGt7QcQ/exec";
 
 const hasAccess = ref(true); // true until mounted to avoid SSR flash
 const password = ref("");
