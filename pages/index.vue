@@ -1,5 +1,6 @@
 <template>
   <div class="discover">
+    <AppAccessGate />
     <div
       v-if="isErrorFetchFundsData"
       class="w-100 d-flex justify-center flex-column"
