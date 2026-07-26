@@ -129,16 +129,22 @@ export const fetchFundInitCacheAction = async (
   let fundFactoryContractV2Used = true;
   console.debug("fetch fundInitCache", fundChainId, "deployer:", deployerAddress)
 
-  let fundInitCache: IFundInitCache = await web3Store.callWithRetry(
-    fundChainId,
-    () =>
-      fundFactoryContractV2.methods.getFundInitializationCache(
-        deployerAddress,
-      ).call(),
-    0,
-    [205, undefined, -32000],
-  ) || {};
+    // Some chains (e.g. HyperEVM, Polygon) have no V1.5 factory deployed, so
+  // fundFactoryContractV2 is null. Skip the V2 lookup instead of throwing on null.
+  let fundInitCache: IFundInitCache = {} as IFundInitCache;
 
+  if (fundFactoryContractV2) {
+    fundInitCache = await web3Store.callWithRetry(
+      fundChainId,
+      () =>
+        fundFactoryContractV2.methods.getFundInitializationCache(
+          deployerAddress,
+        ).call(),
+      0,
+      [205, undefined, -32000],
+    ) || {};
+  }
+  
   if (!fundInitCache?.fundSettings?.baseToken || fundInitCache?.fundSettings?.baseToken === "0x0000000000000000000000000000000000000000") {
     console.warn("fetch fundInitCache NORMAL v1", fundChainId, "deployer:", deployerAddress)
     fundFactoryContractV2Used = false;
