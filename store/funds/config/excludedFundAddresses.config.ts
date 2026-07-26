@@ -76,6 +76,10 @@ const rawExcludedFundAddresses = {
       address: "0x1953ac2f2e276729940761E55D9E5B937f2635Bd",
       alwaysExclude: false,
     }, // DOCSY
+    {
+      address: "0xFc3de74eA28474FF02e378F5F8658354E481d7B9",
+      alwaysExclude: true,
+    }, // DOCSY
   ],
   // Arbitrum One
   "0xa4b1": [
@@ -359,6 +363,34 @@ const rawExcludedFundAddresses = {
       address: "0x1953ac2f2e276729940761E55D9E5B937f2635Bd",
       alwaysExclude: true,
     }, // OA Fee Study 1778500718435
+     {
+      address: "0x50D7b310B7f531AC0Ab3537Ced3a89a9C8f50e27",
+      alwaysExclude: true,
+    }, // SMART10
+    {
+      address: "0xf9656B136a983c29d15caF32052B987e71289c19",
+      alwaysExclude: true,
+    }, // SMARTBTC-WBTC
+    {
+      address: "0x5F742Ee741C94faFC2bae840047fc416f573f5Cd",
+      alwaysExclude: true,
+    }, // SMARTBTC-WBTC-2
+    {
+      address: "0x7d7E2Ff6EeE2921Bd268c5739d82954DCF493096",
+      alwaysExclude: true,
+    }, // SMARTBTC-WBTC-3
+    {
+      address: "0x1dF0Ad6c14452d4808adc8E7ab5EE01edC7206e6",
+      alwaysExclude: true,
+    }, // SMARTWBTC
+    {
+      address: "0xa0CAa33232014c58D9017130BdC14451727e998C",
+      alwaysExclude: true,
+    }, // SMARTWBTC
+    {
+      address: "0x666d3888970fcc1E958c9C27CF8ae3F3A4f6bd18",
+      alwaysExclude: true,
+    }, // SMARTWBTC
        {
       address: "0xd7D0202D5311C0b5dF18D8D7D51a16CC4bA10F40",
       alwaysExclude: true,
