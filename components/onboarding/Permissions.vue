@@ -340,9 +340,14 @@ const goToPermissionsStepTwo = async () => {
     selectedStepIndex.value = 1;
   } catch (e: any) {
     console.error("Failed updating role", e);
-    updateRoleError.value = e.message;
-  }
-};
+    if (e.message === "No role") {
+      // No role edits were made; continue with no prepared transactions.
+      permissionsProposalStore.rawTransactions = [];
+      selectedStepIndex.value = 1;
+    } else {
+      updateRoleError.value = e.message;
+    }
+  };
 
 const navExecutorAddress = computed(() => {
   const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
