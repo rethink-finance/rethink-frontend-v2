@@ -1,5 +1,6 @@
 import { Icon, addIcon } from "@iconify/vue";
 import weth from "@/assets/images/icons/weth.svg?raw";
+import hyperevm from "@/assets/images/icons/hyperevm.svg?raw";
 
 
 export default defineNuxtPlugin((nuxtApp: any) => {
@@ -15,5 +16,15 @@ export default defineNuxtPlugin((nuxtApp: any) => {
     body: inner,
     width: 70,  // match original viewBox
     height: 70,
+  });
+
+  const hyperevmInner = hyperevm
+    .replace(/<svg[^>]*>/, "")
+    .replace("</svg>", "");
+
+  addIcon("custom:hyperevm", {
+    body: hyperevmInner,
+    width: 512,  // match original viewBox
+    height: 512,
   });
 });
