@@ -18,6 +18,10 @@ const chainIconMap: Record<string, IIcon> = {
     size: "2rem",
     color: "#0052ff",
   },
+    hypeevm: {
+    name: "custom:hyperevm",
+    size: "1.5rem",
+  },
 };
 
 
