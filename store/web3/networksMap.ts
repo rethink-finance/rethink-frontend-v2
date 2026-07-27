@@ -129,7 +129,7 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
       symbol: "HYPE",
       decimals: 18,
     },
-    icon: getChainIcon("hypeevm"),
+    icon: getChainIcon("HyperEVM"),
     rpcUrls: [
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
       // "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", Luka T.
