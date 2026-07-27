@@ -347,6 +347,7 @@ const goToPermissionsStepTwo = async () => {
     } else {
       updateRoleError.value = e.message;
     }
+   }
   };
 
 const navExecutorAddress = computed(() => {
