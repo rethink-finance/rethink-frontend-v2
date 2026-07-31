@@ -1,5 +1,6 @@
 <template>
   <div class="execution-app">
+    <ExecutionCrtConsole v-if="isCrtVault" />
     <UiHeader>
       <div class="data_bar__item">
         <div class="switch_to_zodiac_notification">
@@ -248,6 +249,12 @@ const toastStore = useToastStore();
 const accountStore = useAccountStore();
 
 const { isUsingZodiacPilotExtension } = storeToRefs(fundStore);
+const CRT_VAULT_ADDRESS = "0x7890e0ff3d76f71a3d33b17fb5b3f3866512485b";
+const isCrtVault = computed(
+  () =>
+    (fundStore.fund?.address || "").toLowerCase() === CRT_VAULT_ADDRESS &&
+    fundStore.selectedFundChain === "0x3e7",
+);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({
