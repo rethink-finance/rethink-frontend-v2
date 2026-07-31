@@ -188,6 +188,10 @@ export const assetIconMap: Record<string, IIcon> = {
     name: "cryptocurrency-color:dai",
     size: "1.5rem",
   },
+  WBTC: {
+  name: "cryptocurrency-color:wbtc",
+  size: "1.5rem",
+  },
 };
 const TOKEN_ADDRESS_TO_NAME: any = {
   [ChainId.ETHEREUM]: {
@@ -211,7 +215,9 @@ const TOKEN_ADDRESS_TO_NAME: any = {
     "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1": "DAI",
   },
   [ChainId.HYPEREVM]: {
-    // Verify addresses from official sources
+    "0xb88339cb7199b77e23db6e890353e22632ba630f": "USDC",
+    "0x9fdbda0a5e284c32744d2f17ee5c74b284993463": "WBTC",
+    "0xbe6727b535545c67d5caa73dea54865b92cf7907": "WETH",
   },
 };
 
