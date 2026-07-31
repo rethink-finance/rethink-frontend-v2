@@ -4,7 +4,6 @@
       <div v-for="s in statItems" :key="s.label" class="crt_stat">
         <div class="crt_stat__label">{{ s.label }}</div>
         <div class="crt_stat__value">{{ s.value }}</div>
-        <div v-if="s.sub" class="crt_stat__sub">{{ s.sub }}</div>
       </div>
       <div class="crt_status__right">
         <div class="crt_stat crt_stat--right">
