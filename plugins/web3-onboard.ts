@@ -15,7 +15,11 @@ export default defineNuxtPlugin(() => {
 
   // Wallets
   const safe = safeModule({
-    whitelistedDomains: [new RegExp(baseDomain)],
+   whitelistedDomains: [
+     /^https:\/\/app\.safe\.global$/,
+     /^https:\/\/safe\.global$/,
+  new RegExp(baseDomain),
+    ],
   })
   const walletConnect = walletConnectModule({
     /**
@@ -54,28 +58,33 @@ export default defineNuxtPlugin(() => {
     chains: [
       {
         id: ChainId.POLYGON,
-        token: "MATIC",
+        token: "POL",
         label: "Polygon",
+        rpcUrl: "https://polygon-rpc.com",
       },
       {
         id: ChainId.ARBITRUM,
-        token: "ARB1",
+        token: "ETH",
         label: "Arbitrum One",
+        rpcUrl: "https://arb1.arbitrum.io/rpc",
       },
       {
         id: ChainId.ETHEREUM,
         token: "ETH",
         label: "Ethereum",
+        rpcUrl: "https://eth.drpc.org",
       },
       {
         id: ChainId.BASE,
         token: "ETH",
         label: "BASE",
+        rpcUrl: "https://mainnet.base.org",
       },
       {
         id: ChainId.HYPEREVM,
         token: "HYPE",
-        label: "HYPEREVM",
+        label: "HyperEVM",
+        rpcUrl: "https://rpc.hyperliquid.xyz/evm",
       },
     ],
     theme: "dark",
