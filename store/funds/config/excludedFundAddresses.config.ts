@@ -395,6 +395,22 @@ const rawExcludedFundAddresses = {
       address: "0xd7D0202D5311C0b5dF18D8D7D51a16CC4bA10F40",
       alwaysExclude: true,
     }, // OA Fee Study 1778539454383
+    {
+      address: "0xC771EFA18fadA24ED666f50C6c7569Ed5F2d9ffD",
+      alwaysExclude: true,
+    }, // SX-ARB-USDC-01
+    {
+      address: "0x2430Fab2fCdb847d4FC6e6058c345A8f9743AD3d",
+      alwaysExclude: true,
+    }, // SX-ARB-USDC-01-TEST
+    {
+      address: "0xA14BB2452fAAD16173d445b8F7e0faCaa21BEe27",
+      alwaysExclude: true,
+    }, // SBTC-ARB-WBTC-01
+    {
+      address: "0x420691e8264f008059c29065796514AFE3C82B97",
+      alwaysExclude: true,
+    }, // SBTC-ARB-WBTC-01-TEST
   ],
   // Fraxtal
   "0xfc": [],
