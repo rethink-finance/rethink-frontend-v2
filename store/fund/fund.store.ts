@@ -31,6 +31,7 @@ import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import type { Explorer } from "~/services/explorer";
 import { useAccountStore } from "~/store/account/account.store";
 import { fetchFundSettingsAction } from "~/store/fund/actions/fetchFundSettings.action";
+import { resolveEffectiveTotalSupply } from "~/store/funds/config/syntheticSupply.config";
 import { useFundsStore } from "~/store/funds/funds.store";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -150,7 +151,11 @@ export const useFundStore = defineStore({
       // TODO we should not take the current fund token total supply, it's a hack if backend does not work...
       const sharePrice = calculateSharePrice(
         this.fundLastNAVUpdate.totalNAV,
-        this.fund.lastNAVUpdateTotalSupply || this.fund.fundTokenTotalSupply,
+        resolveEffectiveTotalSupply(
+          this.fund.chainId,
+          this.fund.fundToken.address,
+          this.fund.lastNAVUpdateTotalSupply || this.fund.fundTokenTotalSupply,
+        ) ?? 0n,
         this.fund.baseToken.decimals,
         this.fund.fundToken.decimals,
       )
@@ -165,13 +170,21 @@ export const useFundStore = defineStore({
         return FixedNumber.fromString("0");
       }
 
-      if (!this.fund?.totalSimulatedNav || !this.fund?.fundTokenTotalSupply) {
+      // A vault with no shares minted still has a priceable NAV — it borrows a
+      // stand-in share count rather than falling back to the last NAV update, which
+      // would divide by the same zero supply and land on 0 anyway.
+      const effectiveTotalSupply = resolveEffectiveTotalSupply(
+        this.fund?.chainId,
+        this.fund?.fundToken?.address,
+        this.fund?.fundTokenTotalSupply,
+      );
+      if (!this.fund?.totalSimulatedNav || !effectiveTotalSupply) {
         return this.fundToBaseTokenExchangeRateLastNavUpdate;
       }
 
       const sharePrice = calculateSharePrice(
         this.fund.totalSimulatedNav,
-        this.fund.fundTokenTotalSupply,
+        effectiveTotalSupply,
         this.fund.baseToken.decimals,
         this.fund.fundToken.decimals,
       );
@@ -285,6 +298,17 @@ export const useFundStore = defineStore({
     fundLastNAVUpdateMethods(): INAVMethod[] {
       return this.fundLastNAVUpdate?.entries || [];
     },
+    /**
+     * Every valuation method the vault currently has, wherever they live.
+     * A vault that has had a NAV update carries them on that update; one that
+     * has not yet been updated only has the methods stored at creation, which
+     * fetchFundNAVData puts in fundInitialNAVMethods. Reading only the former
+     * makes a vault with positions but no NAV update look empty.
+     */
+    fundNavMethods(): INAVMethod[] {
+      if (this.fundLastNAVUpdate?.date) return this.fundLastNAVUpdateMethods;
+      return this.fundInitialNAVMethods || [];
+    },
     userDepositRequestExists(): boolean {
       return (this.fundUserData.depositRequest?.amount || 0) > 0;
     },
@@ -377,7 +401,7 @@ export const useFundStore = defineStore({
     },
     totalCurrentSimulatedNAV(): bigint {
       // Sum simulated NAV value of all methods.
-      const totalNavMethodsSimulatedNAV = this.fundLastNAVUpdateMethods.reduce(
+      const totalNavMethodsSimulatedNAV = this.fundNavMethods.reduce(
         (totalValue: bigint, method: any) => {
           return totalValue + (method.simulatedNav || 0n);
         },
