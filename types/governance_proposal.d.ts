@@ -74,6 +74,9 @@ export default interface IGovernanceProposal {
   createdTimestamp: number;
   createdBlockNumber: bigint;
   createdDatetimeFormatted: string;
+  // The ProposalCreated transaction. Optional: proposals cached before this was
+  // recorded have only the block, which is what links fall back to.
+  createdTxHash?: string;
 
   // Executed timestamp is fetched from the event's block timestamp.
   executedTimestamp: number;

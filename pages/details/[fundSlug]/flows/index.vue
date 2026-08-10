@@ -680,15 +680,19 @@ onMounted(async () => {
     max-width: 420px;
   }
 }
+/* Design's zodiac status pill: mono caption with a state dot. */
 .switch_to_zodiac_notification {
   align-items: center;
   display: flex;
-  border: 1px solid $color-border-dark;
-  background: $color-gray-light-transparent;
-  padding: 1rem;
+  border: 1px solid $color-line-2;
+  padding: 0.5625rem 0.8125rem;
   flex-direction: row;
   border-radius: $default-border-radius;
-  font-weight: 600;
+  font-family: $font-mono;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  font-weight: 400;
+  color: $color-text-irrelevant;
   gap: 0.6rem;
 }
 .nav_simulated_value {
@@ -812,9 +816,42 @@ onMounted(async () => {
     color: $color-primary;
   }
 }
-// data bar style
+/**
+ * Data bar — design stat treatment: mono figure over mono caption.
+ *
+ * 15px is the in-card stat size the governance activity card and the execution
+ * console both use. These were 22px, which was the only thing on the page above
+ * 13px and left the figures shouting over their own captions.
+ */
 :deep(.data_bar__title) {
-  font-weight: 400 !important;
+  font-family: $font-mono;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  line-height: 1.3;
+  color: $color-white;
+  font-variant-numeric: tabular-nums;
+}
+:deep(.data_bar__subtitle) {
+  font-family: $font-mono;
+  font-size: 11px !important;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: $color-steel-blue;
+}
+// the zodiac pill lives inside a data_bar__item but is not a stat
+:deep(.switch_to_zodiac_notification) {
+  font-family: $font-mono;
+  font-size: 12px;
+}
+// section headings as design eyebrows
+.main_header__title {
+  font-family: $font-mono;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $color-steel-blue;
 }
 
 // data bar style
@@ -827,10 +864,14 @@ onMounted(async () => {
     flex-direction: row;
   }
 }
+/* The admin contract balance is a stat like any other in the bar above it. */
 .title_balance {
-  font-size: $text-lg;
-  font-weight: bold;
-  line-height: 1;
+  font-family: $font-mono;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: $color-white;
+  font-variant-numeric: tabular-nums;
 }
 // make even columns
 .column-8 {

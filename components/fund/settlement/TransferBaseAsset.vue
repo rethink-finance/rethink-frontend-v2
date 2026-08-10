@@ -253,15 +253,20 @@ const handleError = (error: any) => {
     font-weight: 500;
     width: 100%;
   }
+  /* Design card head: mono uppercase eyebrow over a quiet description. */
   &__title {
-    font-size: $text-md;
+    font-family: $font-mono;
+    font-size: 11px;
     font-weight: 500;
-    color: $color-title;
-    margin-bottom: 0.5rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    margin-bottom: 0.625rem;
   }
   &__subtitle {
-    font-size: $text-md;
-    color: $color-light-subtitle;
+    font-size: 13px;
+    line-height: 1.5;
+    color: $color-steel-blue;
   }
   &__token_header {
     display: flex;

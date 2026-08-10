@@ -1,122 +1,118 @@
 <template>
-  <div class="my_deposits">
-    <UiDataBar title="My Deposits">
-      <!-- TODO: Currently Hide Net Deposits until we start fetching them. -->
-      <!--      <div class="data_bar__item">-->
-      <!--        <div class="data_bar__title" :class="{'justify-center': fundStore.loadingUserBalances}">-->
-      <!--          <v-progress-circular-->
-      <!--            v-if="fundStore.loadingUserBalances"-->
-      <!--            class="d-flex"-->
-      <!--            size="18"-->
-      <!--            width="2"-->
-      <!--            indeterminate-->
-      <!--          />-->
-      <!--          <template v-else>-->
-      <!--            {{ fund?.netDeposits || "N/A" }}-->
-      <!--          </template>-->
-      <!--        </div>-->
-      <!--        <div class="data_bar__subtitle">-->
-      <!--          Net Deposits-->
-      <!--        </div>-->
-      <!--      </div>-->
-      <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': isLoadingUserBalances}">
+  <div class="my_deposits brand_card">
+    <div class="brand_card__eyebrow my_deposits__title">
+      My deposits
+    </div>
+
+    <div class="my_deposits__rows">
+      <div v-for="row in rows" :key="row.label" class="my_deposits__row">
+        <div class="my_deposits__label">
+          {{ row.label }}
+        </div>
+        <div class="my_deposits__value">
           <v-progress-circular
             v-if="isLoadingUserBalances"
-            class="d-flex"
-            size="18"
+            size="16"
             width="2"
             indeterminate
           />
           <template v-else>
-            {{ userFundTokenBalanceFormatted }}
+            {{ row.value }}
           </template>
         </div>
-        <div class="data_bar__subtitle">
-          LP Tokens
-        </div>
       </div>
-      <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': isLoadingUserBalances}">
-          <v-progress-circular
-            v-if="isLoadingUserBalances"
-            class="d-flex"
-            size="18"
-            width="2"
-            indeterminate
-          />
-          <template v-else>
-            {{ userCurrentValueFormatted }}
-          </template>
-        </div>
-        <div class="data_bar__subtitle">
-          Current Value
-        </div>
-      </div>
-      <div class="data_bar__item">
-        <div class="data_bar__title" :class="{'justify-center': isLoadingUserBalances}">
-          <v-progress-circular
-            v-if="isLoadingUserBalances"
-            class="d-flex"
-            size="18"
-            width="2"
-            indeterminate
-          />
-          <template v-else>
-            {{ userFundAllowanceFormatted }}
-          </template>
-        </div>
-        <div class="data_bar__subtitle">
-          Allowance
-        </div>
-      </div>
-    </UiDataBar>
+    </div>
   </div>
 </template>
 
-<script lang="ts">
-import { numberColorClass } from "~/composables/numberColorClass";
+<script setup lang="ts">
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 
-export default {
-  name: "FundInfoMyDeposits",
-  props: {
-    fund: {
-      type: Object as PropType<IFund>,
-      default: () => {},
-    },
+defineProps({
+  fund: {
+    type: Object as PropType<IFund>,
+    default: () => {},
   },
-  setup() {
-    const fundStore = useFundStore();
-    const actionStateStore = useActionStateStore();
-    return { fundStore, actionStateStore };
+});
+
+const fundStore = useFundStore();
+const actionStateStore = useActionStateStore();
+
+const isLoadingUserBalances = computed(() =>
+  actionStateStore.isActionState("fetchUserBalancesAction", ActionState.Loading),
+);
+
+const rows = computed(() => [
+  {
+    label: "Current value",
+    value: fundStore.fund?.baseToken
+      ? fundStore.getFormattedBaseTokenValue(fundStore.userCurrentValue)
+      : "N/A",
   },
-  computed: {
-    fundBaseToken() {
-      return this.fundStore.fund?.baseToken;
-    },
-    fundToken() {
-      return this.fundStore.fund?.fundToken;
-    },
-    userFundTokenBalanceFormatted() {
-      if (!this.fundToken) return "N/A";
-      return this.fundStore.getFormattedFundTokenValue(this.fundStore.fundUserData.fundTokenBalance);
-    },
-    userFundAllowanceFormatted() {
-      if (!this.fundBaseToken) return "N/A";
-      return this.fundStore.getFormattedBaseTokenValue(this.fundStore.fundUserData.fundAllowance);
-    },
-    userCurrentValueFormatted() {
-      if (!this.fundBaseToken) return "N/A";
-      return this.fundStore.getFormattedBaseTokenValue(this.fundStore.userCurrentValue);
-    },
-    isLoadingUserBalances() {
-      return this.actionStateStore.isActionState("fetchUserBalancesAction", ActionState.Loading);
-    },
+  {
+    label: "LP tokens",
+    value: fundStore.fund?.fundToken
+      ? fundStore.getFormattedFundTokenValue(
+        fundStore.fundUserData.fundTokenBalance,
+      )
+      : "N/A",
   },
-  methods: { numberColorClass },
-};
+  {
+    label: "Allowance",
+    value: fundStore.fund?.baseToken
+      ? fundStore.getFormattedBaseTokenValue(fundStore.fundUserData.fundAllowance)
+      : "N/A",
+  },
+]);
 </script>
+
+<style lang="scss" scoped>
+/**
+ * Rail card: label/value rows stacked, because the 380px column the design
+ * gives this has no room for the horizontal data bar it used to be.
+ */
+.my_deposits {
+  padding: 1.375rem 1.5rem;
+
+  &__title {
+    margin-bottom: 0.875rem;
+  }
+
+  &__rows {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid $color-line;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+
+  &__label {
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__value {
+    font-family: $font-mono;
+    font-size: 12.5px;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+  }
+}
+</style>

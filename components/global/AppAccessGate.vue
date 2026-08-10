@@ -47,7 +47,7 @@
 
       <div v-if="isSubscribed" class="access_gate__subscribed">
         <v-icon icon="mdi-check" size="20" color="info" />
-        <p>You're on the list — we'll email you when access opens.</p>
+        <p>You're on the list - we'll email you when access opens.</p>
       </div>
       <div v-else class="access_gate__subscribe">
         <p>No password yet? Subscribe for updates.</p>

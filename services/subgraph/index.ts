@@ -6,6 +6,8 @@ import {
   FETCH_GOVERNANCE_PROPOSAL,
   FETCH_GOVERNANCE_PROPOSALS,
   FETCH_FUND_FLOWS,
+  FETCH_FUND_FLOWS_BY_NAMES,
+  FETCH_USER_FLOWS,
 } from "./queries";
 
 import { type ChainId } from "~/types/enums/chain_id";
@@ -148,22 +150,24 @@ export interface FundFlowsResponse {
 
 export const fetchSubgraphFundFlows = async (
   chainId: ChainId,
-  values: { fundAddress: string; first: number; skip: number },
+  values: { fundAddress: string; first: number; skip: number; names?: string[] },
 ): Promise<{ items: FundFlow[]; totalCount: number }> => {
   const client = useNuxtApp().$getApolloClient(chainId) as ApolloClient<any>;
 
   if (!client) {
     throw new Error("Apollo client not found");
   }
-  console.warn("values:", values);
 
   try {
     const { data } = await client.query<FundFlowsResponse>({
-      query: FETCH_FUND_FLOWS,
+      // The filtered query only exists because The Graph cannot express an
+      // optional name_in — see FETCH_FUND_FLOWS_BY_NAMES.
+      query: values.names?.length ? FETCH_FUND_FLOWS_BY_NAMES : FETCH_FUND_FLOWS,
       variables: {
         fundAddress: values.fundAddress.toLowerCase(),
         first: values.first,
         skip: values.skip,
+        ...(values.names?.length ? { names: values.names } : {}),
       },
       fetchPolicy: "network-only",
     });
@@ -180,4 +184,63 @@ export const fetchSubgraphFundFlows = async (
     console.error("Error fetching fund flows:", error);
     throw error;
   }
+};
+
+/**
+ * Flows signed by one wallet on a chain, newest first. Feeds the portfolio's
+ * activity card; callers query each chain's subgraph separately and merge,
+ * since every chain runs its own deployment.
+ */
+export const fetchSubgraphUserFlows = async (
+  chainId: ChainId,
+  values: { userAddress: string; first: number; skip?: number },
+): Promise<FundFlow[]> => {
+  const client = useNuxtApp().$getApolloClient(chainId) as ApolloClient<any>;
+
+  if (!client) {
+    throw new Error("Apollo client not found");
+  }
+
+  const { data } = await client.query<FundFlowsResponse>({
+    query: FETCH_USER_FLOWS,
+    variables: {
+      userAddress: values.userAddress.toLowerCase(),
+      first: values.first,
+      skip: values.skip ?? 0,
+    },
+    fetchPolicy: "network-only",
+  });
+
+  return data?.fundFlows ?? [];
+};
+
+/** The Graph refuses a page larger than this. */
+const SUBGRAPH_MAX_PAGE = 1000;
+
+/**
+ * Every flow a wallet has signed on a chain, followed through to the end.
+ *
+ * The portfolio measures return against what was actually paid in, so it needs
+ * the whole history rather than a recent window — a wallet's first deposit is
+ * the one figure it cannot do without. Pages are followed until one comes back
+ * short, with a ceiling so a runaway response cannot loop forever.
+ */
+export const fetchAllSubgraphUserFlows = async (
+  chainId: ChainId,
+  userAddress: string,
+  maxPages = 10,
+): Promise<FundFlow[]> => {
+  const flows: FundFlow[] = [];
+
+  for (let page = 0; page < maxPages; page++) {
+    const batch = await fetchSubgraphUserFlows(chainId, {
+      userAddress,
+      first: SUBGRAPH_MAX_PAGE,
+      skip: page * SUBGRAPH_MAX_PAGE,
+    });
+    flows.push(...batch);
+    if (batch.length < SUBGRAPH_MAX_PAGE) break;
+  }
+
+  return flows;
 };

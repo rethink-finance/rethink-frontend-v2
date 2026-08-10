@@ -13,7 +13,6 @@ import type IFundInitCache from "~/types/fund_init_cache";
 interface IState {
   selectedStepperChainId?: ChainId;
   fundInitCache?: IFundInitCache;
-  askToSaveDraftBeforeRouteLeave: boolean;
 }
 
 
@@ -22,7 +21,6 @@ export const useCreateFundStore = defineStore({
   id: "createFund",
   state: (): IState => ({
     fundInitCache: undefined,
-    askToSaveDraftBeforeRouteLeave: true,
   }),
   getters: {
     accountStore(): any {

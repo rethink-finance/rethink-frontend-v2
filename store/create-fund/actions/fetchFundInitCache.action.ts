@@ -129,7 +129,7 @@ export const fetchFundInitCacheAction = async (
   let fundFactoryContractV2Used = true;
   console.debug("fetch fundInitCache", fundChainId, "deployer:", deployerAddress)
 
-    // Some chains (e.g. HyperEVM, Polygon) have no V1.5 factory deployed, so
+    // Some chains (e.g. Polygon) have no V1.5 factory deployed, so
   // fundFactoryContractV2 is null. Skip the V2 lookup instead of throwing on null.
   let fundInitCache: IFundInitCache = {} as IFundInitCache;
 

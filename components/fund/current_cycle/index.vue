@@ -1,46 +1,8 @@
 <template>
-  <div class="fund_settlement">
+  <div class="fund_settlement brand_card">
     <div class="card_header">
-      <div class="card_header__title subtitle_white">
-        Pending Requests
-      </div>
-      <div
-        v-if="userDepositRequestExists || userRedemptionRequestExists"
-        class="fund_settlement__buttons"
-      >
-        <v-tooltip
-          :disabled="
-            !(userDepositRequestExists && depositDisabledTooltipText || userRedemptionRequestExists && redemptionDisabledTooltipText)
-          "
-          activator="parent"
-          location="bottom"
-        >
-          <template #activator="props">
-            <v-btn
-              v-bind="props"
-              :disabled="isProcessRequestDisabled"
-              @click="processRequest"
-            >
-              <template #prepend>
-                <v-progress-circular
-                  v-if="isAnythingLoading"
-                  class="d-flex"
-                  size="20"
-                  width="3"
-                  indeterminate
-                />
-              </template>
-              Process Request
-            </v-btn>
-          </template>
-          <template v-if="userDepositRequestExists">
-            {{ depositDisabledTooltipText }}
-          </template>
-          <br v-if="userDepositRequestExists && userRedemptionRequestExists">
-          <template v-if="userRedemptionRequestExists">
-            {{ redemptionDisabledTooltipText }}
-          </template>
-        </v-tooltip>
+      <div class="card_header__title brand_card__eyebrow">
+        Pending requests
       </div>
     </div>
 
@@ -84,16 +46,51 @@
     <div v-else class="fund_settlement__no_pending_requests">
       Currently there are no deposit or redemption requests.
     </div>
-    <UiNotification>
-      The deposit and redeem requests are settled within the planned Settlement
-      Cycle of
-      <span class="text-primary">{{ parsedPlannedSettlement }}</span>. You can learn more about how settlements work
-      <a
-        class="text-primary"
-        href="https://docs.rethink.finance/rethink.finance"
-        target="_blank"
-      >here</a>.
-    </UiNotification>
+    <!-- Once a request is in, the cycle is the only part of that explanation
+         still worth saying, and it says it in one line. -->
+    <FundSettlementCycle :period="parsedPlannedSettlement" />
+
+    <!-- Below the cycle and hard left, where the deposit card puts the button
+         that starts the same journey this one finishes. -->
+    <div
+      v-if="userDepositRequestExists || userRedemptionRequestExists"
+      class="fund_settlement__buttons"
+    >
+      <v-tooltip
+        :disabled="
+          !(userDepositRequestExists && depositDisabledTooltipText || userRedemptionRequestExists && redemptionDisabledTooltipText)
+        "
+        activator="parent"
+        location="bottom"
+      >
+        <template #activator="props">
+          <v-btn
+            v-bind="props"
+            class="bg-primary text-secondary"
+            :disabled="isProcessRequestDisabled"
+            @click="processRequest"
+          >
+            <template #prepend>
+              <v-progress-circular
+                v-if="isAnythingLoading"
+                class="d-flex"
+                size="20"
+                width="3"
+                indeterminate
+              />
+            </template>
+            Process request
+          </v-btn>
+        </template>
+        <template v-if="userDepositRequestExists">
+          {{ depositDisabledTooltipText }}
+        </template>
+        <br v-if="userDepositRequestExists && userRedemptionRequestExists">
+        <template v-if="userRedemptionRequestExists">
+          {{ redemptionDisabledTooltipText }}
+        </template>
+      </v-tooltip>
+    </div>
   </div>
 </template>
 
@@ -482,12 +479,13 @@ onMounted(async () => {
   width: 100%;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 15rem;
+  padding: 1.375rem 1.5rem;
 
   &__buttons {
     display: flex;
+    justify-content: flex-start;
     gap: 1rem;
+    margin-top: 1.25rem;
   }
   &__pending_requests {
     display: flex;

@@ -201,25 +201,41 @@ watchEffect(async () => {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+
+    > strong {
+      font-family: $font-mono;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: $color-steel-blue;
+      padding: 0.5rem 0;
+    }
   }
 
+  /* Design sidebar rows: quiet until hovered, raised when selected. */
   &__list_item {
-    border: 1px solid $color-border-dark;
-    padding: 0.5rem;
-    background-color: $color-hover;
+    border-bottom: 1px solid $color-line;
+    padding: 0.625rem 0.75rem;
+    background-color: transparent;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    font-size: 13.5px;
+    color: $color-text-irrelevant;
+    transition: background-color 0.2s ease, color 0.2s ease;
 
     &:hover {
-      background-color: $color-moonlight-dark;
+      background-color: $color-navy-gray-light;
+      color: $color-white;
       cursor: pointer;
     }
     &--selected {
-      background-color: $color-moonlight-light;
-      font-weight: bold;
+      background-color: $color-navy-gray-light;
+      color: $color-white;
+      font-weight: 600;
       &:hover {
-        background-color: $color-moonlight-light;
+        background-color: $color-navy-gray-light;
         cursor: auto;
       }
     }

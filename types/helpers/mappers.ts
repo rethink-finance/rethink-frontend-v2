@@ -164,6 +164,7 @@ export async function _mapSubgraphProposalToProposal(
             false,
           ),
           blockNumber: receipt.voteCasts[0].transaction.blockNumber,
+          txHash: receipt.voteCasts[0]?.transaction?.id,
         }) as IProposalVoteSubmission,
     );
 

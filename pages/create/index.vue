@@ -1,294 +1,279 @@
 <template>
-  <div class="d-flex" style="width: 100%; flex-direction: column; height: 100%;">
+  <div class="create page_shell">
     <OnboardingPasswordProtect
       v-if="!isCreateFundPasswordCorrect"
       v-model:is-password-correct="isCreateFundPasswordCorrect"
     />
 
-    <v-stepper
-      v-else
-      ref="stepper"
-      v-model="step"
-      class="stepper_onboarding"
-    >
-      <v-overlay
-        :model-value="isLoadingFetchFundCache"
-        class="d-flex justify-center align-center"
-        opacity="0.12"
-        contained
-        persistent
-      >
-        <v-progress-circular
-          class="stepper_onboarding__loading_spinner"
-          size="70"
-          width="3"
-          indeterminate
-        />
-      </v-overlay>
+    <template v-else>
+      <header class="create__header">
+        <h1 class="create__title">
+          Launch a vault
+        </h1>
+        <div class="create__header_actions">
+          <!-- The workspace switcher, not a vault setting: it chooses which
+               chain's draft or deployed vault is on screen. Stays enabled after
+               initialization, where the Basics field is locked — otherwise a
+               curator with a live vault on one chain could never start one on
+               another. -->
+          <OnboardingSelectMenu
+            class="create__chain_select"
+            :model-value="selectedChainId"
+            :options="chainOptions"
+            @update:model-value="(value: any) => onChainSelected(value)"
+          >
+            <template #trigger="{ option }">
+              <IconChain :chain-id="(option?.value as ChainId)" :size="18" />
+              <span>{{ option?.label ?? selectedChainName }}</span>
+            </template>
+            <template #option="{ option }">
+              <IconChain :chain-id="(option.value as ChainId)" :size="20" />
+              <span class="create__chain_option">{{ option.label }}</span>
+              <!-- Drafts are per chain, so without this the only way to find
+                   one is to switch to every network and look. -->
+              <span v-if="option.hasDraft" class="create__chain_draft">Draft</span>
+            </template>
+          </OnboardingSelectMenu>
+          <!-- Reports rather than acts. The draft is written on every change,
+               and a Save button beside it would imply it was not. -->
+          <span
+            v-if="!isFundInitialized && hasDraftContent"
+            class="create__saved"
+          >
+            {{ isSavingDraft ? "Saving…" : "Draft saved" }}
+          </span>
+        </div>
+      </header>
 
-      <v-stepper-header>
-        <v-stepper-item
-          v-for="(item, index) in stepperEntry"
-          :key="index"
-          :step="index + 1"
-          :complete="index + 1 < step"
-          :value="index + 1"
+      <OnboardingStepper
+        :steps="stepperEntry"
+        :current="step"
+        :max-reached="maxStepUnlocked"
+        :chain-id="selectedChainId"
+        @select="goToStep"
+      />
+
+      <div v-if="isFundInitialized" class="create__banner">
+        <span class="create__banner_badge">Initialized</span>
+        <span>
+          Vault has been initialized already and cannot be edited. You can add
+          permissions &amp; NAV methods and finalize vault creation.
+        </span>
+      </div>
+
+      <div class="create__card">
+        <div v-if="!accountStore.isConnected" class="create__gate">
+          <p>In order to create a vault, you need to connect your wallet.</p>
+          <v-btn class="bg-primary text-white" @click="accountStore.connectWallet()">
+            Connect wallet
+          </v-btn>
+        </div>
+
+        <div
+          v-else
+          class="create__body"
+          :class="{ 'create__body--locked': isStepReadOnly }"
         >
-          <template #default>
-            <div class="d-flex align-center">
-              <span>{{ item.name }}</span>
-              <IconChain
-                v-if="item.key === OnboardingStep.Chain"
-                :chain-id="selectedChainId"
-                class="ms-2"
-              />
-            </div>
-          </template>
-        </v-stepper-item>
-      </v-stepper-header>
-
-      <v-stepper-actions>
-        <template #next>
-          <div class="buttons">
-            <div class="item d-flex align-center">
-              <v-btn
-                v-if="showClearCacheButton"
-                class="me-8"
-                variant="outlined"
-                @click="isClearCacheDialogOpen = true"
-              >
-                Clear Draft
-              </v-btn>
-              <div v-if="showInitializeButton && fundFactoryContractV2AddressExists" class="d-inline-flex align-center me-4">
-                <v-switch
-                  v-model="useV2Contract"
-                  color="primary"
-                  hide-details
-                  class="me-2"
-                  :disabled="isFundInitialized"
-                />
-                <span class="text-caption">Use Roles V2</span>
-              </div>
-              <div v-if="fundFactoryContractV2Used" class="d-inline-flex align-center me-6">
-                <UiTextBadge value="Roles V2 Used" />
-              </div>
-              <v-btn
-                v-if="showInitializeButton"
-                :loading="isInitializeLoading"
-                class="bg-primary text-white"
-                :disabled="isFundInitialized || !isCurrentStepValid || !accountStore.isConnected"
-                @click="isInitializeDialogOpen = true"
-              >
-                Initialize vault
-                <v-tooltip
-                  v-if="!accountStore.isConnected"
-                  :model-value="true"
-                  activator="parent"
-                  location="top"
-                  @update:model-value="true"
-                >
-                  Connect your wallet to initialize the vault
-                </v-tooltip>
-              </v-btn>
-              <v-tooltip
-                activator="parent"
-                location="bottom"
-                :disabled="isCurrentStepValid"
-              >
-                <template #activator>
-                  <v-btn
-                    v-if="showButtonNext"
-                    :disabled="!isCurrentStepValid"
-                    @click="goToNextStep"
-                  >
-                    Next
-                  </v-btn>
-                </template>
-                <template #default>
-                  Please fill out all required fields.
-                  <div v-for="(error, index) in currentStepValidation?.errors || []" :key="index">
-                    {{ error }}
-                  </div>
-                </template>
-              </v-tooltip>
-            </div>
-          </div>
-        </template>
-        <template #prev>
-          <UiButtonBack
-            v-if="step !== 1"
-            @click="step--"
+          <OnboardingBasics
+            v-if="currentStepKey === OnboardingStep.Basics"
+            :fields="currentStepFields"
+            :chain-id="selectedChainId"
+            :is-disabled="isStepReadOnly"
+            @update:chain-id="onChainSelected"
+            @delete-row="(field: IField) => deleteCustomFieldRow(field, OnboardingStep.Basics)"
+            @add-custom-field="(field: IField) => addCustomFieldRow(field, OnboardingStep.Basics)"
           />
-        </template>
-      </v-stepper-actions>
+
+          <OnboardingFee
+            v-else-if="currentStepKey === OnboardingStep.Fee"
+            :groups="currentStepFields as any"
+            :is-disabled="isStepReadOnly"
+          />
+
+          <OnboardingWhitelist
+            v-else-if="currentStepKey === OnboardingStep.Whitelist"
+            v-model="whitelistedAddresses"
+            v-model:whitelist-enabled="isWhitelistedDeposits"
+            :is-editable="!isStepReadOnly"
+          />
+
+          <OnboardingGovernance
+            v-else-if="currentStepKey === OnboardingStep.Governance"
+            :fields="currentStepFields"
+            :vault-symbol="vaultSymbol"
+            :chain-id="selectedChainId"
+            :is-disabled="isStepReadOnly"
+          />
+
+          <OnboardingPermissions
+            v-else-if="currentStepKey === OnboardingStep.Permissions"
+            ref="permissionsRef"
+          />
+
+          <OnboardingNavMethods
+            v-else-if="currentStepKey === OnboardingStep.NavMethods"
+            ref="navMethodsRef"
+            :chain-id="fundChainId"
+            :fund-settings="fundSettings"
+          />
+
+          <OnboardingFinalize
+            v-else-if="currentStepKey === OnboardingStep.Finalize"
+            ref="finalizeRef"
+            :fund-chain-id="fundChainId"
+          />
+        </div>
+      </div>
+
+      <div class="create__footer">
+        <div class="create__footer_side">
+          <button
+            v-if="step > 1"
+            type="button"
+            class="create__ghost"
+            @click="step--"
+          >
+            &#8592; Back
+          </button>
+          <button
+            v-if="!isFundInitialized && accountStore.isConnected"
+            type="button"
+            class="create__ghost create__ghost--danger"
+            @click="isClearCacheDialogOpen = true"
+          >
+            Clear draft
+          </button>
+        </div>
+
+        <div class="create__footer_side create__footer_side--end">
+          <!-- Nothing to list while the body shows the wallet gate: the form
+               those errors belong to is not on screen yet. -->
+          <ul
+            v-if="validationErrors.length && accountStore.isConnected"
+            class="create__errors"
+          >
+            <li v-for="(error, index) in validationErrors" :key="index">
+              {{ error }}
+            </li>
+          </ul>
+
+          <div v-if="showRolesToggle" class="create__roles">
+            <OnboardingToggle
+              v-model="rolesToggleValue"
+              :disabled="isFundInitialized"
+              label="Use legacy Roles V1"
+            />
+            <span class="create__roles_label">Use legacy Roles V1</span>
+          </div>
+
+          <button
+            v-if="showSkipButton"
+            type="button"
+            class="create__ghost"
+            @click="goToNextStep"
+          >
+            Next
+          </button>
+
+          <v-btn
+            v-if="primaryAction"
+            class="create__primary bg-primary text-white"
+            :class="{ 'create__primary--off': !primaryAction.enabled }"
+            :loading="primaryAction.loading"
+            @click="primaryAction.run"
+          >
+            {{ primaryAction.label }}
+          </v-btn>
+        </div>
+      </div>
 
       <v-dialog
         :model-value="isCheckingIfFundInitCacheExists"
-        scrim="black"
-        opacity="0.3"
-        max-width="600px"
+        max-width="360px"
         persistent
         @update:model-value="isCheckingIfFundInitCacheExists = false"
       >
-        <div class="main_card di_card d-flex">
-          <v-progress-circular
-            class="d-flex me-3"
-            size="20"
-            width="3"
-            indeterminate
-          />
-          Loading vault init cache...
+        <div class="brand_modal brand_modal--bare">
+          <div class="brand_modal__body">
+            <v-progress-circular size="18" width="2" indeterminate />
+            Loading vault init cache…
+          </div>
         </div>
       </v-dialog>
-      <v-window v-model="step">
-        <v-tooltip
-          activator="parent"
-          location="top"
-          :disabled="!showInitializeTooltip"
-        >
-          <template #activator>
-            <v-window-item
-              v-for="(item, stepIndex) in stepperEntry"
-              :key="stepIndex"
-              :value="stepIndex + 1"
-            >
-              <div
-                v-if="item.key === OnboardingStep.Chain && accountStore.isConnected"
-                class="d-flex justify-center mb-6"
-              >
-                <UiButtonSelectChain
-                  v-model="selectedChainId"
-                  label="Select vault Chain"
-                  label-center
-                />
-              </div>
-              <div
-                v-else-if="item.key === OnboardingStep.Chain && !accountStore.isConnected"
-                class="connect_wallet"
-              >
-                In order to create a vault, you need to connect your wallet.
 
-                <v-btn
-                  class="bg-primary text-secondary"
-                  @click="accountStore.connectWallet()"
-                >
-                  Connect Wallet
-                </v-btn>
-              </div>
-
-              <OnboardingInfoFIelds
-                v-if="item.fields"
-                :fields="item.fields"
-                :is-fund-initialized="isFundInitialized"
-                :step="step"
-                :chain-id="selectedChainId"
-                @delete-row="(e) => deleteCustomFieldRow(e, item.key)"
-              />
-
-              <!-- STEP BASICS -->
-              <OnboardingAddNewField
-                v-if="item.key === OnboardingStep.Basics && !isFundInitialized"
-                @add-custom-field="(e) =>addCustomFieldRow(e, OnboardingStep.Basics)"
-              />
-
-              <!-- STEP WHITELIST -->
-              <OnboardingWhitelist
-                v-if="item.key === OnboardingStep.Whitelist"
-                v-model="whitelistedAddresses"
-                v-model:whitelist-enabled="isWhitelistedDeposits"
-                :is-editable="!isFundInitialized"
-              />
-
-              <!-- STEP PERMISSIONS -->
-              <OnboardingPermissions
-                v-if="item.key === OnboardingStep.Permissions"
-              />
-
-              <!-- STEP NAV METHODS -->
-              <OnboardingNavMethods
-                v-if="item.key === OnboardingStep.NavMethods"
-                :chain-id="fundChainId"
-                :fund-settings="fundSettings"
-              />
-
-              <!-- STEP FINALISE -->
-              <OnboardingFinalize
-                v-if="item.key === OnboardingStep.Finalize"
-                :fund-chain-id="fundChainId"
-              />
-
-              <v-col>
-                <UiInfoBox
-                  v-if="item.info"
-                  class="info-box"
-                  :info="item.info"
-                />
-              </v-col>
-            </v-window-item>
-          </template>
-          <template #default>
-            Vault has been initialized already and cannot be edited.<br>
-            You can add permissions & NAV Methods and finalize vault creation.
-          </template>
-        </v-tooltip>
-      </v-window>
-
-      <UiConfirmDialog
-        v-model="saveChangesDialog"
-        title="Heads Up!"
-        confirm-text="Save"
-        cancel-text="Don't save"
-        message="Do you want to save the changes?"
-        class="confirm_dialog"
-        max-width="600px"
-        @confirm="saveDraftToLocalStorage"
-        @cancel="handleCloseSaveChangesDialog"
-      />
-
+      <!-- The last screen before the vault and its governor are deployed, so it
+           is a review rather than a warning: the values that stop being
+           editable are printed with what they are about to be set to. -->
       <UiConfirmDialog
         v-model="isInitializeDialogOpen"
-        title="Heads Up!"
+        eyebrow="Initialize vault"
+        title="These settings are permanent"
         confirm-text="Initialize"
-        message="You will not be able to change the vault settings after you initialize it. Changes will require governance proposal."
+        cancel-text="Go back"
         class="confirm_dialog"
-        max-width="600px"
+        max-width="560px"
         :loading="isInitializeLoading"
         @confirm="initializeFund"
         @cancel="isInitializeDialogOpen = false"
-      />
+      >
+        <section
+          v-for="group in immutableSummary"
+          :key="group.title"
+          class="init_review__group"
+        >
+          <div class="init_review__group_title">
+            {{ group.title }}
+          </div>
+          <dl class="init_review__rows">
+            <div
+              v-for="row in group.rows"
+              :key="row.label"
+              class="init_review__row"
+            >
+              <dt class="init_review__label">
+                {{ row.label }}
+              </dt>
+              <dd class="init_review__value">
+                <span :class="{ 'init_review__value--empty': !row.value }">
+                  {{ row.value || "Not set" }}
+                </span>
+                <span v-if="row.note" class="init_review__note">{{ row.note }}</span>
+              </dd>
+            </div>
+          </dl>
+        </section>
+      </UiConfirmDialog>
 
       <UiConfirmDialog
         v-model="isClearCacheDialogOpen"
-        title="Heads Up!"
+        title="Heads up"
         confirm-text="Clear"
         cancel-text="Don't clear"
         class="confirm_dialog"
-        max-width="600px"
+        max-width="520px"
+        :message="clearCacheMessage"
         @confirm="handleClearCache"
         @cancel="isClearCacheDialogOpen = false"
-      >
-        <div v-if="clearCacheMessage" class="mb-2">
-          {{ clearCacheMessage }}
-        </div>
-        <p class="mt-4">
-          This action will clear the create vault form data for the selected chain.
-          You will lose all the saved data you have entered so far.
-        </p>
-      </UiConfirmDialog>
-    </v-stepper>
+      />
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ethers } from "ethers";
-import { fromBpsToPercentage } from "~/composables/formatters";
+import debounce from "lodash.debounce";
+import { truncateAddressEllipsis } from "~/composables/addressUtils";
+import {
+  formatApproximateDuration,
+  fromBpsToPercentage,
+} from "~/composables/formatters";
 import { useAccountStore } from "~/store/account/account.store";
-import { useActionStateStore } from "~/store/actionState.store";
+import { fetchBaseTokenDetails } from "~/store/create-fund/actions/fetchFundInitCache.action";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { networkChoices, networksMap } from "~/store/web3/networksMap";
+import { useBlockTimeStore } from "~/store/web3/blockTime.store";
+import { networkChoices, networks, networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { ActionState } from "~/types/enums/action_state";
 import { ChainId } from "~/types/enums/chain_id";
 import { feeFieldKeys, type IWhitelist } from "~/types/enums/fund_setting_proposal";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
@@ -303,33 +288,39 @@ import {
 import type IFundSettings from "~/types/fund_settings";
 import type IFundInitCache from "~/types/fund_init_cache";
 const toastStore = useToastStore();
-const actionStateStore = useActionStateStore();
 const web3Store = useWeb3Store();
 const accountStore = useAccountStore();
 const createFundStore = useCreateFundStore();
+const blockTimeStore = useBlockTimeStore();
 
 // Data
 const {
   fundChainId,
-  askToSaveDraftBeforeRouteLeave,
   onboardingWhitelistLocalStorageKey,
   onboardingStepperEntryLocalStorageKey,
-  fundFactoryContractV2Used,
 } = storeToRefs(createFundStore);
 const step = ref(1);
+/** The furthest step reached; everything up to it stays clickable on the rail. */
+const maxStepReached = ref(1);
 
-const saveChangesDialog = ref(false);
 const isInitializeDialogOpen = ref(false);
 const isInitializeLoading = ref(false);
 const isClearCacheDialogOpen = ref(false);
-const useV2Contract = ref(false);
+/**
+ * Roles V2 is what a new vault gets; the toggle is the way back to V1, not the
+ * way in to V2. Kept as an opt-out so the older modifier stays reachable for a
+ * curator who needs to match an existing setup, and off by default so nobody
+ * launches on it by not noticing a switch.
+ */
+const useLegacyRolesV1 = ref(false);
 // If user already authenticated before set isCreateFundPasswordCorrect to true.
 const isCreateFundPasswordCorrect = ref<boolean>(
   getLocalStorageItem("isCreateFundPasswordCorrect", false),
 );
 
-// store the resolve/reject functions for the save changes dialog
-let nextRouteResolve: (() => void) | null = null;
+const permissionsRef = ref<any>(null);
+const navMethodsRef = ref<any>(null);
+const finalizeRef = ref<any>(null);
 
 // whitelist data
 const whitelistedAddresses = ref<IWhitelist[]>([]);
@@ -347,9 +338,7 @@ const fundGovernorData = computed(() => fundInitCache?.value?.governorData || {}
 // Fetch Fund Cache and fill the form data with the fetched fund cache.
 const setFieldValue = (field: IField) => {
   if ([
-    InputType.Text,
     InputType.ReadonlyJSON,
-    InputType.Number,
     InputType.Date,
   ].includes(field.type)) {
     field.type = InputType.Text;
@@ -425,30 +414,26 @@ const fetchFundInitCache = async () => {
     )
     isWhitelistedDeposits.value = fundInitCache?.value?.fundSettings?.isWhitelistedDeposits || false;
 
-    // if fund is initialized, don't ask user to save draft
+    // An initialized vault is no longer a draft: what is on screen now comes
+    // from the chain, so the stored copy is stale and would only reappear as a
+    // ghost of the form on the next visit.
     if (fundInitCache?.value) {
-      askToSaveDraftBeforeRouteLeave.value = false;
-      // clear local storage for this chain
       createFundStore.clearFundLocalStorage();
+      refreshChainDrafts();
     }
   } else {
     createFundStore.clearFundInitCache();
   }
 }
 
+const selectedChainName = computed(
+  () => networksMap[selectedChainId.value]?.chainName ?? selectedChainId.value,
+);
 
-const clearCacheMessage = computed(() => {
-  const selectedChainName = networksMap[selectedChainId.value]?.chainName;
-  if (!selectedChainName) return "Are you sure you want to clear the cache for this chain?";
-
-  return `Are you sure you want to clear the cache for <strong>${selectedChainName}</strong>?`
-});
-
-const isLoadingFetchFundCache = computed(() =>
-  actionStateStore.isActionState(
-    "fetchFundInitCacheAction",
-    ActionState.Loading,
-  ),
+const clearCacheMessage = computed(
+  () =>
+    `Are you sure you want to clear the draft for <strong>${selectedChainName.value}</strong>? ` +
+    "This clears the create vault form data for the selected chain and you lose everything entered so far.",
 );
 
 const deleteCustomFieldRow = (field: IField, stepKey: string) => {
@@ -499,26 +484,117 @@ const addCustomFieldRow = (customField: IField, stepKey: string) => {
 };
 
 const goToNextStep = () => {
-  step.value += 1;
-  // Going from step 1) Chain to 2) Basics, we fetch fund init cache if it exsits.
-  if (step.value === 2) {
-    // Reset stepper entry if chain has changed.
-    // TODO do both only if chain has changed!!
-    stepperEntry.value = initStepperEntry();
-
-    fetchFundInitCache();
-  }
+  // Same ceiling the rail obeys, so no path forward — the Next button or a
+  // click on the rail — lands on a step that needs a vault before there is one.
+  step.value = Math.min(step.value + 1, lastReachableStep.value);
 }
+
+/**
+ * The rail offers every step already reached, not only those before the
+ * current one — stepping back to check something written on Basics should not
+ * cost four clicks to undo.
+ */
+const goToStep = (target: number) => {
+  if (target > maxStepUnlocked.value) return;
+  step.value = target;
+};
+
+/**
+ * Which chains currently hold a draft. Read out of local storage and refreshed
+ * on every write rather than kept in lockstep with it, which is enough for a
+ * list that only has to be right when the dropdown is looked at.
+ */
+const chainsWithDrafts = ref<ChainId[]>([]);
+
+const refreshChainDrafts = () => {
+  chainsWithDrafts.value = getChainDrafts()
+    .filter((chain) => chain.hasDrafts)
+    .map((chain) => chain.chainId);
+};
+
+const chainOptions = computed(() =>
+  networks.map((network) => ({
+    value: network.chainId,
+    label: network.chainName,
+    hasDraft: chainsWithDrafts.value.includes(network.chainId),
+  })),
+);
+
+/**
+ * Is there anything on this chain worth keeping? Guards the autosave below:
+ * writing a pristine form to local storage would make setDefaultSelectedChainId
+ * treat the chain as having work in progress and open there next time, and
+ * would put a Draft marker on a network nothing was ever typed for.
+ */
+const hasDraftContent = computed(() =>
+  whitelistedAddresses.value.length > 0 ||
+  stepperEntry.value.some((entry) =>
+    (entry.fields ?? []).some((field) => {
+      if (field.fields) return !!field.isToggleOn;
+      return field.value !== undefined && field.value !== null && field.value !== "";
+    }),
+  ),
+);
+
+/** True between a change and the moment it reaches local storage. */
+const isSavingDraft = ref(false);
+
+/**
+ * Autosave. A form this long should not make keeping your work an explicit act
+ * — least of all through a dialog on the way out, which asks a question whose
+ * answer is always yes.
+ *
+ * Debounced because every keystroke lands here.
+ */
+const autoSaveDraft = debounce(() => {
+  isSavingDraft.value = false;
+  if (isFundInitialized.value || !hasDraftContent.value) return;
+
+  writeDraftToLocalStorage();
+  refreshChainDrafts();
+}, 600);
+
+/** Writes immediately and drops any pending debounce, for moments with no 600ms to spare. */
+const flushDraft = () => {
+  autoSaveDraft.cancel();
+  isSavingDraft.value = false;
+  if (isFundInitialized.value || !hasDraftContent.value) return;
+
+  writeDraftToLocalStorage();
+  refreshChainDrafts();
+};
+
+const onChainSelected = (chainId: ChainId) => {
+  if (chainId === selectedChainId.value) return;
+
+  // Each chain keeps its own workspace, so what has been typed for the one being
+  // left is written on the way out. Flushed rather than left to the debounce:
+  // the pending save would otherwise land after the switch and file this chain's
+  // work under the next chain's key.
+  flushDraft();
+
+  selectedChainId.value = chainId;
+};
 
 const handleClearCache = () => {
   try {
+    // Before the reset, or the pending save would put back what was cleared.
+    autoSaveDraft.cancel();
+    isSavingDraft.value = false;
+
     createFundStore.clearFundLocalStorage();
     stepperEntry.value = initStepperEntry();
+    // The whitelist is stored alongside the form and has to go with it;
+    // otherwise autosave sees content still in memory and rewrites the draft.
+    whitelistedAddresses.value = [];
+    isWhitelistedDeposits.value = false;
+
     isClearCacheDialogOpen.value = false;
-    toastStore.successToast("Cache cleared successfully");
+    refreshChainDrafts();
+    toastStore.successToast("Draft cleared successfully");
   } catch (error) {
-    console.error("Error clearing cache", error);
-    toastStore.errorToast("Error clearing cache");
+    console.error("Error clearing draft", error);
+    toastStore.errorToast("Error clearing draft");
   }
 }
 
@@ -528,43 +604,122 @@ const isFundInitialized = computed(() => {
   return !!fundInitCache?.value?.fundContractAddr;
 })
 
-const showInitializeTooltip = computed(() => {
-  return isFundInitialized.value && step.value > 1 && step.value < 6;
-});
+const currentStep = computed(() => stepperEntry.value[step.value - 1]);
+const currentStepKey = computed(() => currentStep.value?.key);
+const currentStepFields = computed(() => currentStep.value?.fields ?? []);
 
-const showButtonNext = computed(() => {
-  const item = stepperEntry.value[step.value - 1];
+const permissionsStepNumber = computed(
+  () =>
+    stepperEntry.value.findIndex(
+      (entry) => entry.key === OnboardingStep.Permissions,
+    ) + 1,
+);
 
-  if (!accountStore.isConnected) return false;
-
-  const steps = [
-    OnboardingStep.Chain,
-    OnboardingStep.Basics,
-    OnboardingStep.Fee,
-    OnboardingStep.Whitelist,
-    OnboardingStep.Permissions,
-    OnboardingStep.NavMethods,
-  ];
-
-  // 1. button next is available steps in "steps" array
-  if (steps.includes(item.key)) {
-    return true;
+/**
+ * The last step the flow can reach at all. Permissions and the two steps after
+ * it act on a deployed vault — there is no roles modifier to scope, no NAV
+ * storage to write to and nothing to finalize until initialize has run — so
+ * they stay shut until it has.
+ */
+const lastReachableStep = computed(() => {
+  // The step before Permissions is Governance, which is where initializing
+  // happens. Falls back to the whole flow if Permissions ever goes missing,
+  // rather than locking a curator out of their own vault.
+  if (isFundInitialized.value || permissionsStepNumber.value <= 1) {
+    return stepperEntry.value.length;
   }
-  // 2. button next is available on governance step ONLY IF fund was initialized
-  return item.key === OnboardingStep.Governance && isFundInitialized.value;
+  return permissionsStepNumber.value - 1;
 });
 
-const showInitializeButton = computed(() => {
-  if (isFundInitialized.value) return false;
+/**
+ * How far the rail opens: everything reached so far, capped by the above. The
+ * cap lives here rather than everywhere maxStepReached is written — that one
+ * only ever grows, and has to keep remembering the steps behind it for when the
+ * vault does come up.
+ */
+const maxStepUnlocked = computed(() =>
+  Math.min(maxStepReached.value, lastReachableStep.value),
+);
 
-  const item = stepperEntry.value[step.value - 1];
-  return item.key === OnboardingStep.Governance;
+/**
+ * The four steps that describe the vault are settled at initialization; after
+ * that they are a record of what was sent, not a form.
+ */
+const isStepReadOnly = computed(
+  () =>
+    isFundInitialized.value &&
+    [
+      OnboardingStep.Basics,
+      OnboardingStep.Fee,
+      OnboardingStep.Whitelist,
+      OnboardingStep.Governance,
+    ].includes(currentStepKey.value),
+);
+
+const vaultSymbol = computed(() => {
+  const field = stepperEntry.value
+    .find((entry) => entry.key === OnboardingStep.Basics)
+    ?.fields?.find((f) => f.key === "fundSymbol");
+  return String(field?.value ?? "");
 });
 
-const showClearCacheButton = computed(() => {
-  const item = stepperEntry.value[step.value - 1];
-  return item.key === OnboardingStep.Chain && accountStore.isConnected;
+const fundFactoryContractV2AddressExists = computed(() => {
+  return !!web3Store.chainContracts[selectedChainId.value]?.fundFactoryContractV2;
+})
+
+/**
+ * Which factory initializes the vault. V2 unless the curator opted back to V1
+ * — or unless this chain has no V2 factory deployed, where V1 is the only
+ * thing there is and the toggle is not offered at all.
+ */
+const useV2Contract = computed(
+  () => fundFactoryContractV2AddressExists.value && !useLegacyRolesV1.value,
+);
+
+/**
+ * The toggle decides which factory initializes the vault, so it has to be
+ * reachable on the step that initializes; the design also shows it beside the
+ * permissions action, where it reports which roles version the vault ended up
+ * on. Locked once initialized, in both places.
+ */
+const showRolesToggle = computed(
+  () =>
+    fundFactoryContractV2AddressExists.value &&
+    [OnboardingStep.Governance, OnboardingStep.Permissions].includes(
+      currentStepKey.value,
+    ),
+);
+
+/**
+ * What the toggle shows. Before initialization it is the curator's own choice;
+ * afterwards it reports the vault that exists, read off the factory it actually
+ * came from — a draft preference would otherwise keep being displayed as fact
+ * on a vault someone else, or an earlier session, deployed.
+ *
+ * The setter only ever runs before initialization: the control is disabled once
+ * there is a vault to disagree with.
+ */
+const rolesToggleValue = computed({
+  get: () =>
+    isFundInitialized.value
+      ? !createFundStore.fundFactoryContractV2Used
+      : useLegacyRolesV1.value,
+  set: (value: boolean) => {
+    useLegacyRolesV1.value = value;
+  },
 });
+
+/**
+ * Permissions and NAV methods both send transactions of their own and are then
+ * done; the ghost button beside the primary is how the flow moves on from them.
+ */
+const showSkipButton = computed(() =>
+  [OnboardingStep.Permissions, OnboardingStep.NavMethods].includes(
+    currentStepKey.value,
+  ),
+);
+
+const validationErrors = computed(() => currentStepValidation.value.errors);
 
 const toggledOffFields = computed(() => {
   // check which fields are toggled off, and set them to 0 or null address
@@ -592,13 +747,10 @@ const currentStepValidation = computed(() => {
   }
 
   const stepWithRegularFields = [
-    OnboardingStep.Chain,
     OnboardingStep.Basics,
     OnboardingStep.Fee,
     OnboardingStep.Governance,
   ];
-
-  const currentStep = stepperEntry.value[step.value - 1];
 
   const validateValue = (label: string, rules: any[], value: any) => {
     const values = Array.isArray(value) ? value : [value];
@@ -607,7 +759,13 @@ const currentStepValidation = computed(() => {
       for (const rule of rules) {
         const result = rule(val);
         if (result !== true) {
-          errors.push(`${label} ${result}`);
+          // Rule messages are written to stand alone ("Field is required.",
+          // "Address is not valid."), so the generic subject is dropped once a
+          // field name is put in front of it — otherwise the footer reads
+          // "Recipient address Address is not valid."
+          errors.push(
+            `${label} ${String(result).replace(/^(This field|Field|Address|Value) /, "")}`,
+          );
           // Stop after first error, only add the first error to the errors list.
           return
         }
@@ -620,8 +778,12 @@ const currentStepValidation = computed(() => {
     validateValue(field.label, field.rules, field.value);
   };
 
-  if (stepWithRegularFields.includes(currentStep.key) && currentStep.fields) {
-    currentStep.fields.forEach((field) => {
+  if (currentStepKey.value === OnboardingStep.Basics && !selectedChainId.value) {
+    errors.push("Chain is required.");
+  }
+
+  if (stepWithRegularFields.includes(currentStepKey.value) && currentStep.value?.fields) {
+    currentStep.value.fields.forEach((field) => {
       if (field.isCustomValueToggleOn === false) return;
 
       if (field.fields) {
@@ -632,22 +794,20 @@ const currentStepValidation = computed(() => {
       }
     });
   }
-  else if (currentStep.key === OnboardingStep.Whitelist) {
-    if (isWhitelistedDeposits.value && whitelistedAddresses.value.length === 0) {
+  else if (currentStepKey.value === OnboardingStep.Whitelist) {
+    if (isWhitelistedDeposits.value && activeWhitelistCount.value === 0) {
       errors.push("At least one address must be whitelisted.");
     }
-  }
-  else if (currentStep.key === OnboardingStep.Permissions) {
-    // No validation
-  }
-  else if (currentStep.key === OnboardingStep.NavMethods) {
-    // No validation
   }
 
   return { isValid: errors.length === 0, errors };
 });
 
 const isCurrentStepValid = computed(() => currentStepValidation.value?.isValid);
+
+const activeWhitelistCount = computed(
+  () => whitelistedAddresses.value.filter((item) => !item.deleted).length,
+);
 
 const allowedDepositors = computed(() => {
   if (!isWhitelistedDeposits.value) {
@@ -659,6 +819,64 @@ const allowedDepositors = computed(() => {
     .map((item) => item.address);
 });
 
+/**
+ * What the sticky footer's primary button does on this step. One descriptor
+ * rather than five buttons with overlapping v-ifs, so the bar always has
+ * exactly one primary and the label, the loading flag and the handler cannot
+ * drift apart.
+ */
+const primaryAction = computed(() => {
+  if (!accountStore.isConnected) return undefined;
+
+  switch (currentStepKey.value) {
+    case OnboardingStep.Governance:
+      if (!isFundInitialized.value) {
+        return {
+          label: "Initialize vault",
+          enabled: isCurrentStepValid.value,
+          loading: isInitializeLoading.value,
+          run: () => {
+            isInitializeDialogOpen.value = true;
+            loadReviewBaseTokenSymbol();
+          },
+        };
+      }
+      return nextAction.value;
+    case OnboardingStep.Permissions:
+      return {
+        label: "Finalize permissions",
+        enabled: true,
+        loading: !!permissionsRef.value?.isFinalizing,
+        run: () => permissionsRef.value?.finalizePermissions(),
+      };
+    case OnboardingStep.NavMethods:
+      return {
+        label: "Store NAV methods",
+        enabled: true,
+        loading: !!navMethodsRef.value?.isStoring,
+        run: () => navMethodsRef.value?.storeNavMethods(),
+      };
+    case OnboardingStep.Finalize:
+      // Once it is done the step shows its own confirmation and a link out;
+      // there is nothing left for the bar to offer.
+      if (finalizeRef.value?.isDone) return undefined;
+      return {
+        label: "Finalize",
+        enabled: true,
+        loading: !!finalizeRef.value?.isFinalizing,
+        run: () => finalizeRef.value?.finalize(),
+      };
+    default:
+      return nextAction.value;
+  }
+});
+
+const nextAction = computed(() => ({
+  label: "Next",
+  enabled: isCurrentStepValid.value,
+  loading: false,
+  run: goToNextStep,
+}));
 
 // Methods
 // helper function to generate fields
@@ -669,73 +887,68 @@ const generateFields = (step: IOnboardingStep) => {
   ) || {} as IOnboardingStep[];
 
   if (!OnboardingFieldsMap[stepKey]) return [];
-  console.log("generateFields:", lsStepperEntry);
 
-  const output =  OnboardingFieldsMap[stepKey]?.map((field, fieldIndex) => {
-    const stepIndex = findIndexByKey(lsStepperEntry, stepKey);
-    const stepperEntryField = lsStepperEntry?.[stepIndex]?.fields?.[fieldIndex];
-    const isToggleOn = stepperEntryField?.isToggleOn ?? field?.isToggleOn;
+  const savedStep = Array.isArray(lsStepperEntry)
+    ? lsStepperEntry.find((entry: IOnboardingStep) => entry.key === stepKey)
+    : undefined;
 
+  /**
+   * Saved values are matched by key, never by position. A draft written before
+   * a field was added, removed or reordered — the Basics step now leads with
+   * the asset, and the fee groups no longer start with Deposit — would
+   * otherwise pour each saved value into whatever field happens to sit at that
+   * index now.
+   */
+  const savedFieldByKey = (key?: string) =>
+    savedStep?.fields?.find((f: IField) => f.key === key);
+
+  const savedGroupFor = (group: IFieldGroup) => {
+    const groupKey = group.fields?.[0]?.key;
+    return savedStep?.fields?.find(
+      (f: IField) => f.fields?.[0]?.key === groupKey,
+    );
+  };
+
+  const output = OnboardingFieldsMap[stepKey]?.map((field) => {
     if (field?.isToggleable) {
-      const output = field?.fields?.map((subField, subFieldIndex) => {
-
-        // Try to get the value from local storage, if it doesn't exist, use the default value
-        const subFieldValue = stepperEntryField?.fields?.[subFieldIndex]?.value;
-
-        return {
-          ...subField,
-          value: subFieldValue ?? subField?.value,
-        }
-      });
+      const group = field as IFieldGroup;
+      const savedGroup = savedGroupFor(group);
 
       return {
-        ...field,
-        isToggleOn,
-        fields: output,
+        ...group,
+        isToggleOn: savedGroup?.isToggleOn ?? group?.isToggleOn,
+        fields: group?.fields?.map((subField: IField) => ({
+          ...subField,
+          value:
+            savedGroup?.fields?.find((f: IField) => f.key === subField.key)
+              ?.value ?? subField?.value,
+        })),
       } as IFieldGroup;
     }
-    const fieldTyped = field as IField;
 
-    // Try to get the value from local storage, if it doesn't exist, use the default value
-    const fieldValue = stepperEntryField?.value;
-    const fieldIsCustomValueToggleOn = stepperEntryField?.isCustomValueToggleOn;
+    const fieldTyped = field as IField;
+    const saved = savedFieldByKey(fieldTyped.key);
 
     return {
       ...fieldTyped,
-      isCustomValueToggleOn: fieldIsCustomValueToggleOn ?? fieldTyped?.isCustomValueToggleOn,
-      value: fieldValue ?? fieldTyped?.value,
+      isCustomValueToggleOn:
+        saved?.isCustomValueToggleOn ?? fieldTyped?.isCustomValueToggleOn,
+      value: saved?.value ?? fieldTyped?.value,
     } as IField;
   });
-  console.log("lsStepperEntry", lsStepperEntry);
-  console.log("initCreateFund output", output);
 
   // find the basic step and add custom fields to that step
   if (stepKey === OnboardingStep.Basics) {
-    if (Object.keys(lsStepperEntry).length === 0) return output;
-
-    const stepIndex = lsStepperEntry.findIndex(
-      (step: IOnboardingStep) => step.key === OnboardingStep.Basics,
+    const customFields = (savedStep?.fields ?? []).filter(
+      (field: IField) => field.isFieldByUser,
     );
 
-    if (stepIndex !== -1) {
-      const stepFields = lsStepperEntry[stepIndex].fields ?? [];
-
-      // find custom fields (fields that have key "isFieldByUser")
-      const customFields = stepFields?.filter(
-        (field: IField) => {
-          return field.isFieldByUser;
-        },
-      ) ?? [];
-
-      const customFieldsFormatted = customFields?.map((field: IField) => {
-        return {
-          ...field,
-          rules: [formRules.required],
-        };
-      }) ?? [];
-
-      return output.concat(customFieldsFormatted);
-    }
+    return output.concat(
+      customFields.map((field: IField) => ({
+        ...field,
+        rules: [formRules.required],
+      })),
+    );
   }
 
   return output;
@@ -767,9 +980,159 @@ const getFieldByStepAndFieldKey =(
 }
 
 
-const findCustomFieldsFromStep = (stepKey: string) => {
-  if(Object.keys(stepperEntry).length === 0) return [];
+/**
+ * Symbol of the chosen denomination asset, read on the chain when the
+ * initialize dialog opens. The Basics step reads it too, but into its own
+ * state — and the dialog only needs it for the one second it is on screen.
+ */
+const reviewBaseTokenSymbol = ref("");
 
+const loadReviewBaseTokenSymbol = async () => {
+  reviewBaseTokenSymbol.value = "";
+  const address = String(
+    getFieldByStepAndFieldKey(OnboardingStep.Basics, "baseToken") ?? "",
+  );
+  if (!ethers.isAddress(address)) return;
+
+  try {
+    const [, symbol] = await fetchBaseTokenDetails(selectedChainId.value, address);
+    reviewBaseTokenSymbol.value = String(symbol ?? "");
+  } catch (error) {
+    // The address is still printed in full; a missing ticker only costs the
+    // curator the friendlier half of the line.
+    console.error("Failed reading denomination asset symbol for review", error);
+  }
+};
+
+/**
+ * Governance durations are stored as block counts, so a duration beside one is
+ * only ever an estimate — and only possible on a chain whose block time has
+ * already been read. PeriodControl fills that cache on the Governance step,
+ * which is the step this dialog opens from.
+ */
+const averageBlockTime = computed(
+  () =>
+    blockTimeStore.chainBlockTimeContext[
+      web3Store.getL2ToL1ChainId(selectedChainId.value)
+    ]?.averageBlockTime ?? 0,
+);
+
+const formatBlocks = (value: unknown) => {
+  const blocks = Number(value);
+  if (!Number.isFinite(blocks)) return "";
+  return `${blocks.toLocaleString("en-US")} ${blocks === 1 ? "block" : "blocks"}`;
+};
+
+const blocksAsDuration = (value: unknown) => {
+  const blocks = Number(value);
+  if (!Number.isFinite(blocks) || blocks <= 0 || averageBlockTime.value <= 0) {
+    return "";
+  }
+  return formatApproximateDuration(blocks * averageBlockTime.value);
+};
+
+/**
+ * What initializing decides for good, printed with the value it is about to
+ * take. Mirrors the FIXED chips the steps carry beside these same fields: the
+ * vault's identity and denomination are written into the deployment, and the
+ * governor is constructed with its voting rules rather than configured after.
+ */
+const immutableSummary = computed(() => {
+  const basics = (key: string) =>
+    getFieldByStepAndFieldKey(OnboardingStep.Basics, key);
+  const governance = (key: string) =>
+    getFieldByStepAndFieldKey(OnboardingStep.Governance, key);
+
+  const baseToken = String(basics("baseToken") ?? "");
+  const governanceToken = String(governance("governanceToken") ?? "");
+  const quorum = governance("quorum");
+
+  return [
+    {
+      title: "Vault",
+      rows: [
+        { label: "Network", value: selectedChainName.value },
+        {
+          label: "Denomination asset",
+          value: reviewBaseTokenSymbol.value || truncateAddressEllipsis(baseToken),
+          note: reviewBaseTokenSymbol.value ? truncateAddressEllipsis(baseToken) : "",
+        },
+        { label: "Vault name", value: String(basics("fundName") ?? "") },
+        { label: "Vault token symbol", value: String(basics("fundSymbol") ?? "") },
+      ],
+    },
+    {
+      title: "Governance",
+      rows: [
+        {
+          label: "Governance token",
+          // Zero means the vault's own share token carries the votes, which is
+          // the default and reads as nothing at all when printed as an address.
+          value: isZeroAddress(governanceToken)
+            ? "Vault token"
+            : truncateAddressEllipsis(governanceToken),
+          note: "",
+        },
+        {
+          label: "Quorum",
+          value: quorum == null || quorum === "" ? "" : `${quorum}%`,
+          note: "",
+        },
+        {
+          label: "Proposal threshold",
+          value: `${Number(governance("proposalThreshold") ?? 0).toLocaleString("en-US")} tokens`,
+          note: "",
+        },
+        {
+          label: "Voting period",
+          value: formatBlocks(governance("votingPeriod")),
+          note: blocksAsDuration(governance("votingPeriod")),
+        },
+        {
+          label: "Voting delay",
+          value: formatBlocks(governance("votingDelay")),
+          note: blocksAsDuration(governance("votingDelay")),
+        },
+        {
+          label: "Late quorum",
+          value: formatBlocks(governance("lateQuorum")),
+          note: blocksAsDuration(governance("lateQuorum")),
+        },
+      ],
+    },
+  ];
+});
+
+/**
+ * The field itself, where getFieldByStepAndFieldKey resolves to a value. Only
+ * the vault image needs this: it is the one field whose stored value is
+ * rewritten on the way to the contract.
+ */
+const findFieldByStepAndFieldKey = (stepKey: string, fieldKey: string) =>
+  stepperEntry.value
+    ?.find(step => step.key === stepKey)?.fields
+    ?.flatMap(field => [field, ...field?.fields || []])
+    ?.find(field => field?.key === fieldKey);
+
+/**
+ * Turns the pending vault image into a hosted URL.
+ *
+ * The image is carried through the whole flow as a data URL and only posted
+ * here, one step before the transaction. The upload endpoint takes no auth, so
+ * the thing keeping it from filling up with the logos of drafts nobody launched
+ * is that it never sees them — it only hears from curators about to spend gas.
+ * Writing the result back into the field also means the draft stops carrying
+ * the base64 copy.
+ */
+const uploadPendingVaultImage = async () => {
+  const field = findFieldByStepAndFieldKey(OnboardingStep.Basics, "photoUrl");
+  if (!field || !isPendingVaultImage(field.value)) return;
+
+  field.value = await uploadVaultImage(field.value as string);
+};
+
+
+const findCustomFieldsFromStep = (stepKey: string) => {
   const stepIndex = stepperEntry.value.findIndex(
     (step) => step.key === stepKey,
   );
@@ -857,17 +1220,11 @@ const formatInitializeData = () => {
     0, // managementFeePeriod, default to 0
   ]
 
-  console.log("output", output);
   return output;
 }
 
-const fundFactoryContractV2AddressExists = computed(() => {
-  return !!web3Store.chainContracts[selectedChainId.value]?.fundFactoryContractV2;
-})
-
 const initializeFund = async() => {
   const fundChainId = selectedChainId.value;
-  console.log("FUND CHAIN ID", fundChainId);
 
   try {
     isInitializeLoading.value = true;
@@ -875,16 +1232,26 @@ const initializeFund = async() => {
     const contractKey = useV2Contract.value ? "fundFactoryContractV2" : "fundFactoryContract";
     const fundFactoryContract = web3Store.chainContracts[fundChainId]?.[contractKey];
 
-    console.log(`Using ${useV2Contract.value ? "V2" : "V1"} contract for fund initialization`);
-
     if (!fundFactoryContract) {
       return toastStore.errorToast(
         `Cannot create fund on chain ${fundChainId}. ${useV2Contract.value ? "V2 contract" : "Contract"} not available.`,
       );
     }
 
+    // Aborts on failure rather than carrying on: the metadata is written once
+    // and cannot be edited afterwards, so a data URL that slipped through would
+    // be a permanent, unfixable blob in the vault's on-chain record.
+    try {
+      await uploadPendingVaultImage();
+    } catch (error: any) {
+      console.error("Failed uploading the vault image", error);
+      return toastStore.errorToast(
+        `Could not upload the vault image — ${error?.message || "the image service did not respond"}. ` +
+        "Try again, or paste a hosted image URL on the Basics step.",
+      );
+    }
+
     const formattedData = formatInitializeData();
-    console.warn("SUBMIT formatted data", formattedData);
 
     await fundFactoryContract
       .send("initCreateFund", {}, ...formattedData)
@@ -894,7 +1261,6 @@ const initializeFund = async() => {
           "The transaction has been submitted. Please wait for it to be confirmed.",
         );
       }).on("receipt", (receipt: any) => {
-        console.log("receipt: ", receipt);
         if (receipt.status) {
           toastStore.successToast("Fund initialization was successful. Wait for node to sync and go to next step.");
           // Start fetching fund init cache so that the user can go to the next step.
@@ -925,7 +1291,6 @@ const repeatUntilFundInitCacheExists = async (maxRetries: number, intervalMs: nu
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     await fetchFundInitCache();
     if (fundInitCache?.value?.fundContractAddr) {
-      console.log("Cache is now available!");
       // Redirect to next step, permissions.
       isCheckingIfFundInitCacheExists.value = false;
       goToNextStep()
@@ -946,7 +1311,6 @@ const initStepperEntry = () => {
   const lsWhitelist = getLocalStorageItem(
     onboardingWhitelistLocalStorageKey.value,
   );
-  console.log("LS whitelist", lsWhitelist);
 
   // Set whitelist from local storage.
   if (lsWhitelist){
@@ -963,7 +1327,8 @@ const initStepperEntry = () => {
 };
 
 
-const saveDraftToLocalStorage = () => {
+/** Writes the current form to the selected chain's draft, silently. */
+const writeDraftToLocalStorage = () => {
   setLocalStorageItem(
     onboardingStepperEntryLocalStorageKey.value,
     stepperEntry.value,
@@ -977,14 +1342,6 @@ const saveDraftToLocalStorage = () => {
       isWhitelistedDeposits: isWhitelistedDeposits.value,
     },
   );
-
-  toastStore.successToast("Draft saved successfully");
-  handleCloseSaveChangesDialog();
-};
-
-const handleCloseSaveChangesDialog = () => {
-  saveChangesDialog.value = false; // close the dialog
-  if (nextRouteResolve) nextRouteResolve(); // continue navigation
 };
 
 const getChainDrafts = () => {
@@ -1032,26 +1389,37 @@ watch(() => isCreateFundPasswordCorrect.value, (isPasswordCorrect) => {
   }
 });
 
-// TODO: remove this watcher
-// watch(stepperEntry.value, (newVal) => {
-//   console.log("stepperEntry changes", newVal);
-// });
-
 watch(() => selectedChainId.value, () => {
-  askToSaveDraftBeforeRouteLeave.value = true;
   createFundStore.setSelectedStepperChainId(selectedChainId.value);
 
   // clear fetched fund if we change the chain
   createFundStore.clearFundInitCache();
+  fundInitCache.value = undefined;
+  // Reloads this chain's draft, or an empty form where it has none.
   stepperEntry.value = initStepperEntry();
+  // A different chain is a different workspace — its own draft, its own vault,
+  // its own progress — so the rail starts at the top rather than sitting on a
+  // step that belonged to the chain just left.
+  step.value = 1;
+  maxStepReached.value = 1;
+  // The chain is picked on the first step now, so there is no later step to
+  // fetch the cache on the way into — it has to happen here.
+  fetchFundInitCache();
+});
+
+/**
+ * An initialized vault has nothing left to fill in on the first four steps, so
+ * the rail opens as far as the work that remains. Keyed off the flag rather
+ * than the fetch call, so it covers the first load and every chain switch alike.
+ */
+watch(isFundInitialized, (initialized) => {
+  if (!initialized) return;
+  maxStepReached.value = Math.max(maxStepReached.value, permissionsStepNumber.value);
 });
 
 watch(() => accountStore.activeAccountAddress, () => {
-  console.log("Watcher: connected wallet changed fetchFundInitCache");
-  if (step.value > 1) {
-    stepperEntry.value = initStepperEntry();
-    fetchFundInitCache();
-  }
+  stepperEntry.value = initStepperEntry();
+  fetchFundInitCache();
 });
 
 watch(()=> accountStore.connectedWalletChainId, (_newVal, oldVal) =>{
@@ -1059,6 +1427,22 @@ watch(()=> accountStore.connectedWalletChainId, (_newVal, oldVal) =>{
     setDefaultSelectedChainId()
   }
 })
+
+/**
+ * Every change to the form or the whitelist is a change to the draft. Deep,
+ * because the values live inside the field tree rather than on refs of their
+ * own, and gated on initialization because an initialized vault is read from
+ * the chain and has nothing left to draft.
+ */
+watch(
+  [stepperEntry, whitelistedAddresses, isWhitelistedDeposits],
+  () => {
+    if (isFundInitialized.value) return;
+    isSavingDraft.value = true;
+    autoSaveDraft();
+  },
+  { deep: true },
+);
 
 // Lifecycle Hooks
 onBeforeRouteLeave((_to, _from, next) => {
@@ -1068,99 +1452,346 @@ onBeforeRouteLeave((_to, _from, next) => {
     return;
   }
 
-  if (askToSaveDraftBeforeRouteLeave.value) {
-    saveChangesDialog.value = true; // show the dialog
-    nextRouteResolve = next; // store the resolve function for later
-  } else {
-    // Reset askToSaveDraftBeforeRouteLeave value.
-    askToSaveDraftBeforeRouteLeave.value = true;
+  // Leaving used to ask whether to keep the work; it is already kept. The flush
+  // is only here because a change made in the last 600ms may still be waiting.
+  flushDraft();
+  next();
+});
 
-    if (next) next();
-  }
+watch(step, (value) => {
+  maxStepReached.value = Math.max(maxStepReached.value, value);
+});
+
+/**
+ * A vault can stop being initialized underfoot — a switched account, a cleared
+ * cache — and leave the flow standing on Permissions with nothing to point at.
+ * Walk it back to the last step that still has something to do.
+ */
+watch(lastReachableStep, (last) => {
+  if (step.value > last) step.value = last;
 });
 
 const chainIdValues = computed(() => networkChoices.map((choice: any) => choice.value));
 
 onMounted(() => {
+  refreshChainDrafts();
   // Set selected chain to user's current network.
   setDefaultSelectedChainId()
+  // The draft key hangs off the store's chain, which the line above has only
+  // just settled — and the form was built before that, against whatever the
+  // store defaulted to. The chain watcher would normally rebuild it, but it
+  // does not fire when the resolved chain already equals the initial one, which
+  // is exactly the common case. Rebuilding here is what puts a saved draft on
+  // screen instead of an empty form sitting on top of one.
+  stepperEntry.value = initStepperEntry();
+  fetchFundInitCache();
 });
+
+// A tab closed or reloaded mid-edit still gets the last 600ms of work.
+onBeforeUnmount(() => flushDraft());
 </script>
 
 <style scoped lang="scss">
-.stepper_onboarding {
+.create {
   display: flex;
   flex-direction: column;
-  position: relative;
-
-  &:deep(.v-stepper-header) {
-    order: 1;
-  }
-  &:deep(.v-stepper-item__content) {
-    line-height: 2.2rem;
-  }
-  &:deep(.v-avatar){
-    border: 1px solid $color-text-irrelevant;
-    background-color: transparent;
-    font-size: $text-md;
-    font-weight: 700;
-  }
-  &:deep(.v-stepper-item--selected){
-    font-weight: 800;
-  }
-  &:deep(.v-stepper-item--selected .v-avatar) {
-    color: $color-primary;
-    border: none;
-    background-color: transparent;
-  }
-  &:deep(.v-stepper-item--complete .v-avatar) {
-    color: $color-success;
-    background-color: transparent;
-  }
-  &:deep(.v-stepper-actions){
-    order: 2;
-    padding: 1.25rem;
-  }
-  &:deep(.v-window){
-    padding: 1.25rem;
-    order: 3;
-  }
-}
-
-.buttons {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 1.25rem;
-  margin-left: auto;
-}
+  padding-bottom: 1rem;
 
-.tooltip {
-  &__content {
+  &__header {
     display: flex;
-    gap: 40px;
-  }
-  &__link {
-    display: flex;
-    gap: 10px;
     align-items: center;
-    justify-content: center;
-    color: $color-primary;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__title {
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: $color-white;
+  }
+
+  &__header_actions {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  /* Sized to its content rather than to a column, the way the ghost button
+     beside it is — the shared dropdown fills its cell by default. */
+  &__chain_select {
+    width: auto;
+
+    :deep(.select_menu__trigger) {
+      padding: 8px 12px;
+      font-size: 11.5px;
+    }
+    :deep(.select_menu__panel) {
+      left: auto;
+      right: 0;
+      min-width: 15rem;
+    }
+  }
+
+  &__chain_option {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  /* Reads as a marker on the row, not as an action: no border, no hit area,
+     just the one word that says there is something waiting on that chain. */
+  &__chain_draft {
+    flex: none;
+    font-family: $font-mono;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-cyan;
+  }
+
+  &__saved {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: $color-steel-blue;
+  }
+
+  /**
+   * The page's secondary buttons. Typed like the primary beside them rather
+   * than like a mono field label — Back and Next are read as a pair, and a
+   * letterspaced uppercase Back next to a sentence-case Next reads as two
+   * different kinds of control. Matches .v-btn: sans, $text-sm, no transform.
+   */
+  &__ghost {
+    padding: 9px 14px;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: transparent;
+    font-family: $font-sans;
+    font-size: $text-sm;
+    font-weight: 600;
+    color: $color-white;
+    cursor: pointer;
+    transition: border-color $default-transition-time ease,
+      color $default-transition-time ease;
+
+    &:hover {
+      border-color: $color-line-3;
+    }
+    &--danger:hover {
+      border-color: $color-neg-line;
+      color: $color-neg;
+    }
+  }
+
+  &__banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.875rem 1.125rem;
+    border: 1px solid $color-cyan-line;
+    border-radius: $default-border-radius;
+    background: $color-cyan-tint;
+    font-size: 13px;
+    line-height: 1.5;
+    color: $color-white;
+  }
+
+  &__banner_badge {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid $color-cyan-line;
+    border-radius: $default-border-radius;
+    font-family: $font-mono;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-cyan;
+  }
+
+  &__card {
+    padding: 30px 32px;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+    background: $color-surface;
+  }
+
+  &__body--locked {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  &__gate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 3rem 0;
+    text-align: center;
+    font-size: 14px;
+    color: $color-steel-blue;
+  }
+
+  &__footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    padding: 1rem 0;
+    /* The bar has no surface of its own; the page colour sits behind it and
+       fades out over the strip above, so what it covers reads as scrolling
+       under rather than as cut off. Opaque under the bar itself, because the
+       error list can grow to eight lines and every one of them has to stay
+       legible over whatever field it happens to sit on. */
+    background: $color-dark;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 100%;
+      height: 1.5rem;
+      background: linear-gradient(to top, $color-dark, transparent);
+      pointer-events: none;
+    }
+  }
+
+  &__footer_side {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+
+    &--end {
+      margin-left: auto;
+      justify-content: flex-end;
+    }
+  }
+
+  &__errors {
+    max-width: 40ch;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: $font-mono;
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: right;
+    color: $color-neg;
+  }
+
+  &__roles {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__roles_label {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  /* Kept in place rather than hidden: a button that vanishes when a field is
+     wrong takes the explanation of what to do next with it. */
+  &__primary--off {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__ghost {
+      transition: none;
+    }
   }
 }
 
-.connect_wallet {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  font-size: $text-md;
-  color: $color-text-irrelevant;
-  text-align: center;
-}
+/**
+ * The initialize review inside the confirm dialog. Label on the left in the
+ * app's mono eyebrow, value on the right in white — the same two-part reading
+ * the data tooltips and the field labels already use, so a curator scanning it
+ * is scanning something familiar rather than a new kind of table.
+ */
+.init_review {
+  &__group + &__group {
+    margin-top: 1.125rem;
+  }
 
-.info-box{
-  margin-top: 1.25rem;
+  &__group_title {
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid $color-line-2;
+    font-family: $font-mono;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__rows {
+    margin: 0;
+  }
+
+  /* Two columns rather than a definition list's stacked default: the value is
+     the thing being checked, and it should line up down the panel. */
+  &__row {
+    display: grid;
+    grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.4375rem 0;
+
+    & + & {
+      border-top: 1px solid $color-line;
+    }
+  }
+
+  &__label {
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: $color-steel-blue;
+  }
+
+  &__value {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 0;
+    font-family: $font-mono;
+    font-size: 12.5px;
+    line-height: 1.45;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    word-break: break-word;
+    color: $color-white;
+
+    /* A required field cannot reach this dialog empty, but an optional one
+       can, and a blank cell reads as a rendering failure. */
+    &--empty {
+      color: $color-steel-blue;
+    }
+  }
+
+  /* The second half of a value that has one — a ticker's address, a block
+     count's duration. Quieter, because it is the derived half. */
+  &__note {
+    font-size: 11px;
+    color: $color-steel-blue;
+  }
 }
 </style>

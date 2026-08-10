@@ -1,42 +1,41 @@
 <template>
-  <div class="total-tvl-banner">
-    <div class="total-tvl-content">
-      <div class="total_tvl">
-        <div class="total_tvl__label">
-          TVL:
-        </div>
-        <div class="total_tvl__value">
-          <v-progress-circular
-            v-if="isLoadingTotalTVL"
-            class="d-flex"
-            size="18"
-            width="2"
-            indeterminate
-          />
-          <template v-else-if="totalTVL?.totalTvlUSDFormatted">
-            ${{ totalTVL?.totalTvlUSDFormatted }}
-          </template>
-          <template v-else>
-            N/A
-          </template>
-        </div>
+  <div class="total_tvl_stats">
+    <div class="total_tvl">
+      <div class="total_tvl__value">
+        <v-progress-circular
+          v-if="isLoadingTotalTVL"
+          class="d-flex"
+          size="18"
+          width="2"
+          indeterminate
+        />
+        <template v-else-if="totalTVL?.totalTvlUSDFormatted">
+          ${{ totalTVL?.totalTvlUSDFormatted }}
+        </template>
+        <template v-else>
+          N/A
+        </template>
       </div>
-      <div class="total_tvl">
-        <div class="total_tvl__label">
-          Vaults:
-        </div>
-        <div class="total_tvl__value">
-          <v-progress-circular
-            v-if="isLoadingTotalTVL"
-            class="d-flex"
-            size="18"
-            width="2"
-            indeterminate
-          />
-          <template v-else>
-            {{ totalTVL?.fundCount || "N/A" }}
-          </template>
-        </div>
+      <div class="total_tvl__label">
+        Total value locked
+      </div>
+    </div>
+    <div class="total_tvl_stats__divider"></div>
+    <div class="total_tvl">
+      <div class="total_tvl__value">
+        <v-progress-circular
+          v-if="isLoadingVaultCount"
+          class="d-flex"
+          size="18"
+          width="2"
+          indeterminate
+        />
+        <template v-else>
+          {{ vaultCount || "N/A" }}
+        </template>
+      </div>
+      <div class="total_tvl__label">
+        Vaults
       </div>
     </div>
   </div>
@@ -49,49 +48,61 @@ import { useActionStateStore } from "~/store/actionState.store";
 
 const actionStateStore = useActionStateStore();
 const fundsStore = useFundsStore();
-const { totalTVL } = storeToRefs(fundsStore);
+const { totalTVL, funds } = storeToRefs(fundsStore);
 
 const isLoadingTotalTVL =
   computed(() => actionStateStore.isActionState("fetchTotalTVLAction", ActionState.Loading));
+
+/**
+ * Count the vaults actually listed rather than the backend's fundCount:
+ * that figure includes the test and bugged vaults the discover table
+ * filters out (see excludedFundAddresses.config), so it reads higher than
+ * the list below it. The TVL figure is unaffected — those vaults hold
+ * nothing, so the backend total already matches the rows on screen.
+ */
+const vaultCount = computed(() => funds.value.length);
+
+const isLoadingVaultCount = computed(
+  () =>
+    !funds.value.length &&
+    actionStateStore.isActionState("fetchFundsAction", ActionState.Loading),
+);
 </script>
 
 <style lang="scss" scoped>
-.total-tvl-banner {
-  width: 100%;
-  background-color: $color-surface;
-  padding: 0.8rem;
-  margin-bottom: 2rem;
+/* Brand stat block (design-file "Stat"): mono value over mono
+   uppercase label, stats separated by a vertical hairline. */
+.total_tvl_stats {
   display: flex;
-  align-items: center;
-  @include borderGray;
-  border-color: $color-bg-transparent;
-}
+  align-items: stretch;
+  gap: 2rem;
 
-.total-tvl-content {
-  flex-grow: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  &__divider {
+    width: 1px;
+    background: $color-line;
+  }
 }
 .total_tvl {
-  align-items: center;
-  justify-content: center;
-  flex-direction: row;
   display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   gap: 0.5rem;
 
-  &__label {
-    font-size: $text-md;
-    color: var(--v-on-surface-variant);
-  }
   &__value {
-    font-size: $text-md;
+    font-family: $font-mono;
+    font-size: 1.625rem;
     font-weight: 600;
-    color: var(--v-on-surface);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: $color-white;
   }
-}
-.total-tvl-fund-count {
-  color: var(--v-on-surface-variant);
-  margin-left: 8px;
+  &__label {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
 }
 </style>

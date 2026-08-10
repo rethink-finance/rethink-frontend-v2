@@ -11,6 +11,8 @@
       :is-exchange-rate-loading="isLoadingFetchFundNAVUpdatesActionState"
     />
 
+    <slot name="before-actions" />
+
     <div v-if="accountStore.isConnected">
       <div class="buttons_group">
         <template v-if="shouldUserWaitSettlementOrCancelRedemption">
@@ -33,10 +35,12 @@
             <template #activator="{ props }">
               <!-- Wrap it in the span to show the tooltip even if the button is disabled. -->
               <span v-bind="props">
+                <!-- The same CTA the deposit tab uses: one filled primary
+                     button, so the two sides of the same card do not offer
+                     the same kind of action in two different weights. -->
                 <v-btn
-                  class="button"
+                  class="button_redeem bg-primary text-secondary"
                   :disabled="button.disabled"
-                  variant="outlined"
                   @click="button.onClick"
                 >
                   <template #prepend>
@@ -267,7 +271,7 @@ const requestRedemption = async () => {
 
 const buttons = ref([
   {
-    name: "Request Redemption",
+    name: "Request redemption",
     onClick: requestRedemption,
     disabled: isRequestRedeemDisabled,
     loading: loadingRequestRedeem,
@@ -286,24 +290,20 @@ const buttons = ref([
 </script>
 
 <style lang="scss" scoped>
+/* Matches the deposit tab down to the alignment, so switching between them
+   does not shift the card or move the button under the cursor. */
 .buttons_group {
   gap: 1rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
+  margin-top: 1.25rem;
+}
 
-  .button {
-    color: $color-primary !important;
-    border-color: $color-primary !important;
-
-    &:hover {
-      background: $color-primary !important;
-      color: $color-white !important;
-      border-color: $color-primary !important;
-    }
-  }
+.button_redeem {
+  display: block;
 }
 
 .divider{
@@ -312,8 +312,10 @@ const buttons = ref([
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.08)
 }
+/* Sits where the redeem CTA it stands in for sits, so connecting a wallet does
+   not shuffle the card. */
 .button_connect_wallet{
   display: block;
-  margin: 0 auto;
+  margin-top: 1.25rem;
 }
 </style>

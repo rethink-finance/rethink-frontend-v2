@@ -59,6 +59,7 @@ export const FETCH_GOVERNANCE_PROPOSALS = gql`
         weight
         voteCasts {
           transaction {
+            id
             timestamp
             blockNumber
           }
@@ -128,6 +129,7 @@ export const FETCH_GOVERNANCE_PROPOSAL = gql`
         weight
         voteCasts {
           transaction {
+            id
             timestamp
             blockNumber
           }
@@ -168,6 +170,102 @@ export const FETCH_FUND_FLOWS = gql`
       first: $first
       skip: $skip
       where: { fund_: { fundContractAddr: $fundAddress } }
+      orderBy: timestamp
+      orderDirection: desc
+    ) {
+      id
+      timestamp
+      blockNumber
+      txFrom {
+        id
+      }
+      transaction {
+        id
+      }
+      caller {
+        id
+      }
+      raw
+      selector
+      selectorHex
+      name
+      amount
+      amount2
+      feeKind
+      flag
+      account {
+        id
+      }
+      fund {
+        id
+        fundName
+        fundContractAddr
+        govContractAddr
+      }
+    }
+  }
+`;
+
+/**
+ * Same feed narrowed to an operation family. A separate query because The
+ * Graph has no optional filters — passing an empty $names list would match
+ * nothing rather than everything.
+ */
+export const FETCH_FUND_FLOWS_BY_NAMES = gql`
+  query FetchFundFlowsByNames($fundAddress: String!, $first: Int!, $skip: Int!, $names: [String!]!) {
+    fundFlows(
+      first: $first
+      skip: $skip
+      where: { fund_: { fundContractAddr: $fundAddress }, name_in: $names }
+      orderBy: timestamp
+      orderDirection: desc
+    ) {
+      id
+      timestamp
+      blockNumber
+      txFrom {
+        id
+      }
+      transaction {
+        id
+      }
+      caller {
+        id
+      }
+      raw
+      selector
+      selectorHex
+      name
+      amount
+      amount2
+      feeKind
+      flag
+      account {
+        id
+      }
+      fund {
+        id
+        fundName
+        fundContractAddr
+        govContractAddr
+      }
+    }
+  }
+`;
+
+/**
+ * Every flow a wallet has signed, newest first — feeds the portfolio page.
+ *
+ * Paged, because the portfolio measures a wallet's return from its whole
+ * history: a capped query would quietly leave out early deposits and overstate
+ * every figure derived from them.
+ */
+export const FETCH_USER_FLOWS = gql`
+  query FetchUserFlows($userAddress: String!, $first: Int!, $skip: Int!) {
+    fundFlows(
+      first: $first
+      skip: $skip
+      where: { txFrom: $userAddress }
       orderBy: timestamp
       orderDirection: desc
     ) {

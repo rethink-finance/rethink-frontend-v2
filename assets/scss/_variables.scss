@@ -3,6 +3,50 @@ $default-transition-time: 0.28s;
 $color-white: #eceef4; // Approx 95% white
 $color-black: #333333;
 
+/* Brand fonts (same as rethink.finance homepage) */
+$font-sans: "Satoshi", system-ui, -apple-system, sans-serif;
+$font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+/* Brand hairline borders */
+$color-line: rgba(255, 255, 255, 0.06);
+$color-line-2: rgba(255, 255, 255, 0.11);
+$color-line-3: rgba(255, 255, 255, 0.17);
+
+/* Brand accents */
+$color-cyan: #16c8ff;
+$color-cyan-soft: #5bddff;
+/* Tint and hairline for a confirmed / passing state, paired with the two sets
+   below so an affirmative panel and a warning one carry the same weight. */
+$color-cyan-tint: rgba(22, 200, 255, 0.1);
+$color-cyan-line: rgba(22, 200, 255, 0.32);
+/* Halo behind a dot that is asking for something — the portfolio's
+   "needs your vote" marker. The only shadow in the design system. */
+$color-cyan-glow: rgba(22, 200, 255, 0.55);
+$color-accent-soft: rgba(31, 95, 255, 0.13);
+$color-accent-line: rgba(64, 140, 255, 0.32);
+$color-blue-bright: #4e81ff;
+$color-pos: #2fd7ff;
+$color-neg: #e66a60;
+/* Tint and hairline for anything that has to read as a hazard — a break-glass
+   action, a reverted simulation, a warning callout. Same alphas as the yield
+   pair below, so a red panel and a green one carry identical weight. */
+$color-neg-soft: rgba(230, 106, 96, 0.1);
+$color-neg-line: rgba(230, 106, 96, 0.32);
+/* Same pair for the amber caution state, so a warning callout weighs exactly
+   what an error, an affirmative and a yield one do. */
+$color-warn: #ffd33d;
+$color-warn-soft: rgba(255, 211, 61, 0.1);
+$color-warn-line: rgba(255, 211, 61, 0.32);
+/* Yield that accrues outside the vault: the chart overlay and the rewards
+   callout. Kept off the cyan accent so it reads as a separate stream rather
+   than as part of the vault's own performance. The chart mirrors this hex in
+   JS — components/fund/chart/index.vue. */
+$color-yield: #38de8e;
+$color-yield-soft: rgba(56, 222, 142, 0.1);
+$color-yield-line: rgba(56, 222, 142, 0.32);
+$gradient-brand: linear-gradient(118deg, #2fd7ff 0%, #2c8bff 46%, #1f5fff 100%);
+$gradient-brand-soft: linear-gradient(135deg, rgba(47, 215, 255, 0.16), rgba(31, 95, 255, 0.10));
+
 /* Utility colors */
 /*
   TODO THIS PALLETE NEEDS REFACTOR
@@ -127,6 +171,13 @@ Define the needed colors as CSS variables, as they can be used in certain
 plugins like Apexcharts with "var(--color-something)" to prevent redefining colors.
  */
 :root {
+  --font-sans: #{$font-sans};
+  --font-mono: #{$font-mono};
+  --grad: #{$gradient-brand};
+  --color-cyan: #{$color-cyan};
+  --color-line: #{$color-line};
+  --color-line-2: #{$color-line-2};
+  --color-line-3: #{$color-line-3};
   --color-primary: #{$color-primary};
   --color-subtitle: #{$color-subtitle};
   --color-divider: #{$color-divider};

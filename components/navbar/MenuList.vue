@@ -23,6 +23,9 @@
             <div class="navbar_menu_list__item">
               <div class="navbar_menu_list__title">
                 {{ route.title }}
+                <span v-if="route.badge" class="navbar_menu_list__badge">
+                  {{ route.badge }}
+                </span>
               </div>
               <div class="navbar_menu_list__subtitle">
                 {{ route.text }}
@@ -42,6 +45,7 @@ interface RouteItem {
   title: string; // Title of the route
   text: string; // Description text
   disabled?: boolean; // Optional, indicates if the route is disabled
+  badge?: string; // Optional, short mono tag next to the title (e.g. "SOON")
   isExternal?: boolean; // Optional, indicates if it's an external link
   isActive?: boolean;
   icon?: string; // Optional, icon for external links
@@ -85,8 +89,22 @@ const isMenuOpen = computed({
 
   }
   &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     text-decoration: none;
     font-weight: 700;
+  }
+  &__badge {
+    font-family: $font-mono;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    line-height: 1.4;
+    font-weight: 500;
+    color: $color-steel-blue;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    padding: 2px 6px;
   }
   &__subtitle {
     color: $color-subtitle !important;

@@ -4,15 +4,20 @@
   "type": "module",
   "scripts": {
     "test": "vitest",
-    "build": "npx vitest run && nuxt build",
-    "build_stage": "npx vitest run && ENV_EXCLUDE_TEST_FUNDS=false BASE_DOMAIN=stage.rethink.finance nuxi generate",
+    "typecheck": "nuxt typecheck",
+    "build": "npx vitest run && npm run typecheck && nuxt build",
+    "build_stage": "npx vitest run && npm run typecheck && ENV_EXCLUDE_TEST_FUNDS=false BASE_DOMAIN=stage.rethink.finance nuxi generate",
     "dev": "npx vitest run && nuxt dev",
-    "generate": "npx vitest run && nuxt generate",
+    "generate": "npx vitest run && npm run typecheck && nuxt generate",
     "preview": "npx vitest run && nuxt preview",
+    "test:roles-v2-acceptance": "esbuild scripts/rolesV2RuntimeAcceptance.ts --bundle --platform=node --format=esm --alias:~=\"$PWD\" --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" --outfile=node_modules/.cache/rolesV2RuntimeAcceptance.mjs && node node_modules/.cache/rolesV2RuntimeAcceptance.mjs",
     "postinstall": "nuxt prepare"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.22.15",
+    "@ethereumjs/common": "^4.4.0",
+    "@ethereumjs/util": "^9.1.0",
+    "@ethereumjs/vm": "^8.1.1",
     "@iconify/vue": "^4.1.2",
     "@nuxt/devtools": "^1.0.6",
     "@nuxt/test-utils": "^3.14.1",
@@ -40,7 +45,8 @@
     "vue": "^3.4.38",
     "vue-router": "^4.4.3",
     "vue-tsc": "^2.0.29",
-    "vuetify": "^3.4.10"
+    "vuetify": "^3.4.10",
+    "zodiac-roles-sdk": "^4.0.0"
   },
   "dependencies": {
     "@apollo/client": "^3.11.8",

@@ -1,31 +1,37 @@
 <template>
   <v-dialog
     :model-value="modelValue"
-    scrim="black"
-    opacity="0.3"
-    max-width="600"
+    max-width="520"
     @update:model-value="closeModal"
   >
-    <div class="main_card di-card">
-      <div class="di-card__header-container">
-        <div class="di-card__header">
-          Add a {{ type }}
+    <div class="brand_modal">
+      <div class="brand_modal__head">
+        <div class="brand_modal__heading">
+          <div class="brand_modal__eyebrow">
+            Permissions
+          </div>
+          <h2 class="brand_modal__title">
+            Add a {{ type }}
+          </h2>
         </div>
-        <Icon
-          icon="material-symbols:close"
-          class="di-card__close-icon"
-          width="1.5rem"
+
+        <button
+          type="button"
+          class="brand_modal__close"
+          aria-label="Close"
           @click="closeModal"
-        />
+        >
+          <Icon icon="material-symbols:close" width="1.125rem" />
+        </button>
       </div>
 
-      <div class="di-card__content">
-        <div class="di-card">
+      <div class="brand_modal__body">
+        <div v-if="$slots.description" class="add_address__description">
           <slot name="description" />
         </div>
 
-        <div class="di-card__someone-else-container">
-          <v-label class="di-card__label label_required">
+        <div class="brand_modal__form">
+          <v-label class="brand_modal__label label_required">
             {{ type }} Address
           </v-label>
           <v-text-field
@@ -34,17 +40,17 @@
             :rules="rules"
             required
           />
-
-          <v-btn
-            :disabled="!isTargetAddressValid"
-            class="di-card__submit_button"
-            variant="flat"
-            color="rgba(210, 223, 255, 1)"
-            @click="addAddress"
-          >
-            Add {{ type }}
-          </v-btn>
         </div>
+      </div>
+
+      <div class="brand_modal__footer brand_modal__footer--stacked">
+        <v-btn
+          :disabled="!isTargetAddressValid"
+          color="primary"
+          @click="addAddress"
+        >
+          Add {{ type }}
+        </v-btn>
       </div>
     </div>
   </v-dialog>
@@ -84,37 +90,12 @@ const addAddress = () => {
 </script>
 
 <style scoped lang="scss">
-.di-card {
-  margin: 0 auto;
-  padding: 1rem;
-  margin-bottom: 2rem;
-  width: 100%;
-  max-width: 500px;
-  color: white;
-  @include borderGray;
-
-  &__header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  &__header {
-    font-size: $text-lg;
-    font-weight: 700;
-  }
-  &__close-icon {
-    cursor: pointer;
-    color: $color-steel-blue;
-  }
-  &__content {
-    margin-top: 2rem;
-  }
-  &__label {
-    margin-bottom: 0.25rem;
-  }
-  &__submit_button {
-    width: 100%;
-    margin-top: 1rem;
-  }
+/* Prose above the field, when the caller supplies any — separated from the
+   input so the explanation does not read as the field's own label. */
+.add_address__description {
+  margin-bottom: 1.25rem;
+  font-size: $text-sm;
+  line-height: 1.55;
+  color: $color-light-subtitle;
 }
 </style>

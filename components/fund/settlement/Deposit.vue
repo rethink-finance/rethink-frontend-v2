@@ -56,6 +56,10 @@
       </div>
     </div>
 
+    <!-- The settlement cycle belongs above the action: it is the last thing a
+         depositor should read before committing, not a footnote after it. -->
+    <slot name="before-actions" />
+
     <div v-if="accountStore.isConnected" style="width: 100%">
       <div
         class="buttons_group"
@@ -69,13 +73,15 @@
           </template>
           <template #activator="{ props }">
             <span v-bind="props">
+              <!-- A deposit is requested first and settles later, so the first
+                   step says so; calling it "Deposit" promises an immediacy the
+                   vault cannot give. -->
               <v-btn
-                class="button_deposit button"
-                variant="outlined"
+                class="button_deposit bg-primary text-secondary"
                 :disabled="isDepositButtonDisabled"
                 @click="handleDepositClick"
               >
-                {{ hasRequestedDeposit ? 'Continue Deposit' : 'Deposit' }}
+                {{ hasRequestedDeposit ? 'Continue deposit' : 'Request deposit' }}
               </v-btn>
             </span>
           </template>
@@ -586,7 +592,12 @@ const delegateToMyself = async () => {
   flex-direction: column;
   justify-content: center;
   flex-wrap: wrap;
-  align-items: center;
+  /* Left, with the form fields and the settlement line above it, rather than
+     floating in the middle of the card. */
+  align-items: flex-start;
+  /* Clear of the settlement line: the button acts on the whole form, so it
+     should not read as part of the row directly above it. */
+  margin-top: 1.25rem;
 
   .button {
     color: $color-primary !important;
@@ -628,10 +639,11 @@ const delegateToMyself = async () => {
 }
 .button_deposit {
   display: block;
-  margin: 0 auto;
 }
+/* Sits where the deposit CTA it stands in for sits, so connecting a wallet does
+   not shuffle the card. */
 .button_connect_wallet{
   display: block;
-  margin: 0 auto;
+  margin-top: 1.25rem;
 }
 </style>

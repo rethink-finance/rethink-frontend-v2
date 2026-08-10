@@ -21,16 +21,22 @@ export const parsePlannedSettlement = async (chainId: ChainId, plannedSettlement
     return output;
   }
 
-  // If planned settlement is between 1 and 100, display in days
+  // Settlement is always quoted as a whole number of units: a depositor cares
+  // that their request lands within 3 days, not within 2.7. Hence the rounding
+  // here rather than convertBlocksToTime, which other callers use as-is.
   if (plannedSettlement < 100) {
-    output = pluralizeWord("day", plannedSettlement)
+    // If planned settlement is between 1 and 100, display in days
+    output = pluralizeWord("day", Math.round(plannedSettlement));
   } else if (blockTime > 0) {
     // Otherwise, convert blocks to time if block time is available
-    output = convertBlocksToTime(plannedSettlement, blockTime) || output;
+    const { bestValue, bestUnit } = determineTimeValueAndTimeUnit(
+      plannedSettlement * blockTime,
+    );
 
-    // // always show in days
-    // const days = Math.round(plannedSettlement * blockTime / 86400);
-    // output = pluralizeWord("day", days);
+    if (bestValue && bestUnit) {
+      // Never round down to "0 days" — anything non-zero settles within one unit.
+      output = pluralizeWord(bestUnit, Math.max(1, Math.round(bestValue)));
+    }
   }
 
   return output;

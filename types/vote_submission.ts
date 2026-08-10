@@ -8,4 +8,6 @@ export default interface IProposalVoteSubmission {
     submission_status: VoteType.For | VoteType.Against | VoteType.Abstain,
     quorumVotes: string,
     date: string,
+    // The transaction the vote was cast in, where the subgraph reported one.
+    txHash?: string,
 }

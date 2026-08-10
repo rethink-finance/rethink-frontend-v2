@@ -1,5 +1,6 @@
 import { useGovernanceProposalsStore } from "../governance_proposals.store";
 
+import { fetchBackendProposals } from "~/services/backend/governance";
 import { fetchSubgraphGovernorProposal } from "~/services/subgraph";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ClockMode } from "~/types/enums/clock_mode";
@@ -22,6 +23,32 @@ export const fetchGovernanceProposalAction = async (
   if (!fund?.governorAddress)
     throw new Error("Governor address not found");
   if (!proposalId) throw new Error("Proposal ID not found");
+
+  // Tier 1: the backend snapshot embeds the quorum inputs, so the three RPC
+  // reads below are skipped entirely. Soft-fails to null, never throws.
+  const backendSnapshot = await fetchBackendProposals(fund.chainId, fund.address);
+  const backendProposal = backendSnapshot?.proposals?.find(
+    (p: any) => String(p.proposalId) === String(proposalId),
+  );
+  if (backendSnapshot && backendProposal) {
+    const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId);
+    const roleModAddress = await fundStore.fetchRoleModAddress(fund.address);
+    const mappedProposal = await _mapSubgraphProposalToProposal(
+      backendProposal,
+      BigInt(backendProposal.totalSupply || "0") as unknown as number,
+      blockTimeContext,
+      fund?.governanceToken.decimals ?? 0,
+      BigInt(backendProposal.quorumNumerator || "0"),
+      BigInt(backendSnapshot.quorumDenominator || "1"),
+      blockTimeStore.getTimestampForBlock,
+      fund?.clockMode?.mode as ClockMode,
+      roleModAddress ?? "",
+      fund?.safeAddress ?? "",
+      fund?.address ?? "",
+    );
+    governanceProposalStore.storeProposal(fund.chainId, fund.address, mappedProposal);
+    return mappedProposal;
+  }
 
   const proposal = await fetchSubgraphGovernorProposal(
     fund?.chainId,

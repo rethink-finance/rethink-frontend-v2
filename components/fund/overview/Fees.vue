@@ -10,7 +10,7 @@
     >
       <template #title2>
         <AddressLink
-          v-if="fund?.managementFeeAddress && !isZeroAddress(fund.managementFeeAddress)"
+          v-if="hasFee(fund?.managementFee) && fund?.managementFeeAddress && !isZeroAddress(fund.managementFeeAddress)"
           :address="fund.managementFeeAddress"
           :chain-id="fund.chainId"
         />
@@ -28,7 +28,7 @@
     >
       <template #title2>
         <AddressLink
-          v-if="fund?.performanceFeeAddress && !isZeroAddress(fund.performanceFeeAddress)"
+          v-if="hasFee(fund?.performanceFee) && fund?.performanceFeeAddress && !isZeroAddress(fund.performanceFeeAddress)"
           :address="fund.performanceFeeAddress"
           :chain-id="fund.chainId"
         />
@@ -43,7 +43,7 @@
     >
       <template #title2>
         <AddressLink
-          v-if="fund?.depositFeeAddress && !isZeroAddress(fund.depositFeeAddress)"
+          v-if="hasFee(fund?.depositFee) && fund?.depositFeeAddress && !isZeroAddress(fund.depositFeeAddress)"
           :address="fund.depositFeeAddress"
           :chain-id="fund.chainId"
         />
@@ -58,7 +58,7 @@
     >
       <template #title2>
         <AddressLink
-          v-if="fund?.withdrawFeeAddress && !isZeroAddress(fund.withdrawFeeAddress)"
+          v-if="hasFee(fund?.withdrawFee) && fund?.withdrawFeeAddress && !isZeroAddress(fund.withdrawFeeAddress)"
           :address="fund.withdrawFeeAddress"
           :chain-id="fund.chainId"
         />
@@ -91,6 +91,13 @@ const formatFee = (feeBps?: any) => {
   const feePercent = (Number(feeBps) / 100).toString();
   return `${feePercent}%`;
 };
+
+/**
+ * A recipient only means something when there is a fee to receive. A vault
+ * that leaves a collector address configured at a 0% rate still collects
+ * nothing, so the address would read as a claim the numbers contradict.
+ */
+const hasFee = (feeBps?: any) => Number(feeBps) > 0;
 </script>
 
 <style lang="scss" scoped>

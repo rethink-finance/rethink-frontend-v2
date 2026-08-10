@@ -2,43 +2,82 @@
   <UiConfirmDialog
     :model-value="modelValue"
     :title="modalTitle"
+    max-width="480px"
     @update:model-value="$emit('update:modelValue', $event)"
   >
-    <div class="deposit-flow mb-4">
-      <div v-for="(step, index) in stepsDeposit" :key="index">
+    <!-- The amount is the headline: it is the number the depositor is about to
+         commit, and the flow it is committed through is the label above it. -->
+    <template #title>
+      <div class="deposit_head">
+        <div class="deposit_head__eyebrow">
+          Deposit flow
+          <span class="deposit_head__step">
+            Step {{ stepNumber }} of {{ stepsDeposit.length }}
+          </span>
+        </div>
+        <div v-if="headlineAmount" class="deposit_head__amount">
+          {{ headlineAmount }}
+          <span class="deposit_head__symbol">{{ baseSymbol }}</span>
+          <template v-if="fundSymbol">
+            <span class="deposit_head__arrow">→</span>
+            <span class="deposit_head__symbol">{{ fundSymbol }}</span>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <!-- A deposit takes four transactions, and the only question worth
+         answering here is "where am I?". So the steps carry their own state
+         rather than being a numbered list that never changes. -->
+    <div class="deposit_flow">
+      <div class="deposit_flow__bar">
+        <span
+          v-for="(step, index) in stepsDeposit"
+          :key="`seg-${index}`"
+          class="deposit_flow__segment"
+          :class="{
+            'deposit_flow__segment--done': step.done,
+            'deposit_flow__segment--current': index === currentStepIndex,
+          }"
+        />
+      </div>
+
+      <div
+        v-for="(step, index) in stepsDeposit"
+        :key="index"
+        class="deposit_flow__step"
+        :class="{
+          'deposit_flow__step--done': step.done,
+          'deposit_flow__step--current': index === currentStepIndex,
+          'deposit_flow__step--blocked': step.isDisabled,
+        }"
+      >
         <v-tooltip
           :disabled="!step.isDisabled"
-          activator="parent"
           location="top"
         >
           <template #default>
             {{ step.tooltip }}
           </template>
           <template #activator="{ props }">
-            <div v-bind="props">
-              <div
-                :key="index"
-                class="step"
-                :class="{ 'is_disabled': step.isDisabled }"
-              >
-                <span class="label">
-                  {{ step.label }}
-                </span>
-                <Icon
-                  v-if="step.done && !step.isDisabled"
-                  icon="material-symbols:done"
-                  class="text-success me-2"
-                  height="1.2rem"
-                  width="1.2rem"
-                />
+            <div v-bind="props" class="deposit_flow__row">
+              <span class="deposit_flow__marker">
                 <v-progress-circular
                   v-if="step.loading"
-                  class="d-flex ms-2"
-                  size="20"
-                  width="3"
+                  size="13"
+                  width="2"
                   indeterminate
                 />
-              </div>
+                <Icon
+                  v-else-if="step.done"
+                  icon="material-symbols:check"
+                  height="0.875rem"
+                  width="0.875rem"
+                />
+                <template v-else>{{ index + 1 }}</template>
+              </span>
+              <span class="deposit_flow__label">{{ step.label }}</span>
+              <span class="deposit_flow__state">{{ stepState(step, index) }}</span>
             </div>
           </template>
         </v-tooltip>
@@ -46,10 +85,31 @@
     </div>
 
     <div class="buttons_group">
-      <template v-if="!hasDelegatedToSelf && hasApprovedAmount">
+      <!-- The flow is done and the dialog is still up, so it has to say so —
+           otherwise it reads as a form waiting for another signature. -->
+      <template v-if="hasProcessedDeposit">
+        <div class="deposit_done">
+          <Icon
+            icon="material-symbols:check"
+            class="deposit_done__icon"
+            height="1rem"
+            width="1rem"
+          />
+          <span>
+            Deposit processed. Your {{ fundSymbol }} balance has been updated.
+          </span>
+        </div>
+
         <v-btn
-          class="button"
-          variant="outlined"
+          class="button bg-primary text-secondary"
+          @click="$emit('update:modelValue', false)"
+        >
+          Close
+        </v-btn>
+      </template>
+      <template v-else-if="!hasDelegatedToSelf && hasApprovedAmount">
+        <v-btn
+          class="button bg-primary text-secondary"
           @click="delegateToMyself"
         >
           <template #prepend>
@@ -61,7 +121,7 @@
               indeterminate
             />
           </template>
-          Delegate to Myself
+          Delegate to myself
         </v-btn>
 
         <FundGovernanceModalDelegateVotes
@@ -70,16 +130,15 @@
 
       </template>
       <template v-else-if="canUserProcessDeposit || shouldUserWaitSettlementOrCancelDeposit">
-        <h3 v-if="shouldUserWaitSettlementOrCancelDeposit">
+        <p v-if="shouldUserWaitSettlementOrCancelDeposit" class="buttons_group__note">
           Wait for settlement or cancel the deposit request.
-        </h3>
-        <h3 v-else-if="canUserProcessDeposit">
+        </p>
+        <p v-else-if="canUserProcessDeposit" class="buttons_group__note">
           You can now process or cancel the deposit request.
-        </h3>
+        </p>
 
         <v-btn
-          class="button"
-          variant="outlined"
+          class="button bg-primary text-secondary"
           :disabled="shouldUserWaitSettlementOrCancelDeposit"
           @click="processDeposit"
         >
@@ -92,7 +151,7 @@
               indeterminate
             />
           </template>
-          Process Deposit
+          Process deposit
         </v-btn>
 
         <FundCurrentCyclePendingRequest
@@ -106,9 +165,12 @@
         />
 
       </template>
+      <!-- Processing consumes the request, which puts the vault straight back
+           into "should request a deposit" — so without the guard the finished
+           flow offers to start another one under its own Close button. -->
       <template v-for="button in buttons">
         <v-tooltip
-          v-if="button.isVisible"
+          v-if="button.isVisible && !hasProcessedDeposit"
           :key="button.name"
           :disabled="!button.tooltipText"
           bottom
@@ -117,11 +179,10 @@
             {{ button.tooltipText }}
           </template>
           <template #activator="{ props }">
-            <span v-bind="props">
+            <span v-bind="props" class="buttons_group__wrap">
               <v-btn
-                class="button"
+                class="button bg-primary text-secondary"
                 :disabled="button.disabled"
-                variant="outlined"
                 @click="button.onClick"
               >
                 <template #prepend>
@@ -200,6 +261,21 @@ const isLoadingDelegate = ref(false);
 const isLoadingProcessDeposit = ref(false);
 const isDelegateModalOpen = ref(false);
 
+/**
+ * Set once the deposit lands, and cleared when the dialog is opened again.
+ * Nothing on chain records that a request was processed — the request is simply
+ * consumed — so the completed state has to be held here for as long as the
+ * depositor is still looking at it.
+ */
+const hasProcessedDeposit = ref(false);
+
+watch(
+  () => props.modelValue,
+  (isOpen) => {
+    if (isOpen) hasProcessedDeposit.value = false;
+  },
+);
+
 const hasApprovedAmount = computed(() => {
   if (!fundStore.fundUserData?.fundAllowance) return false;
   if (!fundStore.fundUserData?.depositRequest?.amount) return false;
@@ -231,16 +307,31 @@ const modalTitle = computed(() => {
 
   // If we have a deposit request, show its amount and token symbol
   if (userDepositRequestExists.value && userDepositRequest?.value?.amount && baseToken) {
-    return `Deposit Flow: ${depositRequestAmountFormatted.value} ${baseToken.symbol}`;
+    return `Deposit flow · ${depositRequestAmountFormatted.value} ${baseToken.symbol}`;
   }
 
   // If we're in the request deposit phase and have a token value, show that
   if (shouldUserRequestDeposit.value && props.tokenValue && baseToken) {
-    return `Deposit Flow: ${props.tokenValue} ${baseToken.symbol}`;
+    return `Deposit flow · ${props.tokenValue} ${baseToken.symbol}`;
   }
 
   // Default title
-  return "Deposit Flow";
+  return "Deposit flow";
+});
+
+const baseSymbol = computed(() => fundStore.fund?.baseToken?.symbol ?? "");
+const fundSymbol = computed(() => fundStore.fund?.fundToken?.symbol ?? "");
+
+/**
+ * What the depositor is committing. The request's own amount once it exists —
+ * the form can be edited after the request is made, and the number on screen
+ * has to be the one the chain is holding.
+ */
+const headlineAmount = computed(() => {
+  if (userDepositRequestExists.value && userDepositRequest?.value?.amount) {
+    return depositRequestAmountFormatted.value;
+  }
+  return props.tokenValue || "";
 });
 
 const handleError = (error: any, refreshData: boolean = true) => {
@@ -415,7 +506,7 @@ const isRequestDepositDisabled = computed(() => {
 
 const buttons = ref([
   {
-    name: "Request Deposit",
+    name: "Request deposit",
     onClick: requestDeposit,
     isVisible: shouldUserRequestDeposit,
     disabled: isRequestDepositDisabled,
@@ -431,7 +522,7 @@ const buttons = ref([
     }),
   },
   {
-    name: "Approve Amount",
+    name: "Approve amount",
     onClick: approveAllowance,
     loading: loadingApproveAllowance,
     isVisible: shouldUserApproveAllowance,
@@ -439,31 +530,75 @@ const buttons = ref([
   },
 ]);
 
-const stepsDeposit = computed(() => [
-  {
-    label: "1. Request Deposit",
-    done: userDepositRequestExists.value,
-    loading: loadingRequestDeposit.value,
-    isDisabled: false,
-  },
-  {
-    label: "2. Approve Amount",
-    done: hasApprovedAmount.value,
-    loading: loadingApproveAllowance.value,
-    isDisabled: false,
-  },
-  {
-    label: "3. Delegate to Myself",
-    done: hasDelegatedToSelf.value && hasApprovedAmount.value,
-    loading: isLoadingDelegate.value,
-  },
-  {
-    label: "4. Process Deposit",
-    done: false, // hasProcessedDeposit.value
-    isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
-    tooltip: "Wait for the next NAV update to process the deposit.",
-  },
-]);
+/**
+ * The numbers are drawn by the markers now, so they are not in the labels.
+ *
+ * Processing a deposit consumes the request the earlier steps are read from, so
+ * the moment it lands every one of those flags goes false again. Held open past
+ * that, the rail would reset to step one and read as though nothing had
+ * happened — hence the completed flag standing in for all four.
+ */
+const stepsDeposit = computed(() => {
+  const complete = hasProcessedDeposit.value;
+
+  return [
+    {
+      label: "Request deposit",
+      done: complete || userDepositRequestExists.value,
+      loading: loadingRequestDeposit.value,
+      isDisabled: false,
+    },
+    {
+      label: "Approve amount",
+      done: complete || hasApprovedAmount.value,
+      loading: loadingApproveAllowance.value,
+      isDisabled: false,
+    },
+    {
+      label: "Delegate to myself",
+      done: complete || (hasDelegatedToSelf.value && hasApprovedAmount.value),
+      loading: isLoadingDelegate.value,
+    },
+    {
+      label: "Process deposit",
+      done: complete,
+      loading: isLoadingProcessDeposit.value,
+      isDisabled:
+        !complete &&
+        shouldUserWaitSettlementOrCancelDeposit.value &&
+        hasDelegatedToSelf.value,
+      tooltip: "Wait for the next NAV update to process the deposit.",
+    },
+  ];
+});
+
+/**
+ * Where the depositor is: the first step still outstanding. The steps are
+ * strictly sequential, so anything before it is finished and anything after it
+ * has not been reached.
+ */
+const currentStepIndex = computed(() =>
+  stepsDeposit.value.findIndex((step) => !step.done),
+);
+
+/** Counts from one, and stops at the last step rather than running past it. */
+const stepNumber = computed(() =>
+  currentStepIndex.value === -1
+    ? stepsDeposit.value.length
+    : currentStepIndex.value + 1,
+);
+
+/**
+ * A word per row, so the rail says what each step is doing and not only where
+ * it sits. "Waiting" is left off the steps further down — four rows all
+ * saying the same thing is noise, and their dimming already says it.
+ */
+const stepState = (step: { done?: boolean; loading?: boolean; isDisabled?: boolean }, index: number) => {
+  if (step.loading) return "Signing";
+  if (step.done) return "Done";
+  if (step.isDisabled) return "Locked";
+  return index === currentStepIndex.value ? "Now" : "";
+};
 
 const processDeposit = async () => {
   if (!fundStore.activeAccountAddress) {
@@ -507,7 +642,10 @@ const processDeposit = async () => {
 
         if (receipt.status) {
           toastStore.successToast("Your deposit was successful.");
-          emit("update:modelValue", false);
+          // The dialog stays up: every other step in this flow leaves it open,
+          // and the last one closing out from under the depositor takes the
+          // record of what just happened with it.
+          hasProcessedDeposit.value = true;
 
           // emit event to open the delegate votes modal
           emit("deposit-success");
@@ -598,34 +736,247 @@ const delegateToMyself = async () => {
 </script>
 
 <style lang="scss" scoped>
-.buttons_group {
-  gap: 1rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  flex-wrap: wrap;
-  align-items: center;
+/**
+ * Label above, figure below: the eyebrow names the flow and carries the
+ * position in it, and the amount gets the weight because it is the thing being
+ * committed.
+ */
+.deposit_head {
+  min-width: 0;
 
-  .button {
-    color: $color-primary !important;
-    border-color: $color-primary !important;
+  &__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
 
-    &:hover {
-      background: $color-primary !important;
-      color: $color-white !important;
-      border-color: $color-primary !important;
-    }
+  &__step {
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: $color-text-irrelevant;
+  }
+
+  &__amount {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    color: $color-white;
+  }
+
+  &__symbol {
+    font-family: $font-mono;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: $color-text-irrelevant;
+  }
+
+  &__arrow {
+    font-size: 13px;
+    color: $color-steel-blue;
   }
 }
 
-.step {
+.buttons_group {
   display: flex;
-  align-items: center;
-  margin: 0.25rem 0;
-  width: fit-content;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
 
-  &.is_disabled {
-    opacity: 0.5;
+  /* One action at a time, so it takes the width rather than sitting as a small
+     outline in the middle of a large dialog. */
+  .button {
+    width: 100%;
+    min-height: 2.75rem;
+    font-weight: 600;
+  }
+
+  &__wrap {
+    display: block;
+    width: 100%;
+  }
+
+  &__note {
+    margin: 0;
+    font-size: $text-sm;
+    color: $color-steel-blue;
+  }
+}
+
+/* The outcome, in the accent the finished steps above it are already using. */
+.deposit_done {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid $color-accent-line;
+  border-radius: $default-border-radius;
+  background: $color-accent-soft;
+  font-size: $text-sm;
+  line-height: 1.5;
+  color: $color-light-subtitle;
+
+  &__icon {
+    flex: none;
+    margin-top: 0.125rem;
+    color: $color-cyan;
+  }
+}
+
+/**
+ * The four transactions as a rail: done above, current in front of you,
+ * the rest waiting. The connecting line is what makes it a sequence rather
+ * than a list of options.
+ */
+.deposit_flow {
+  margin-bottom: 1.75rem;
+
+  /**
+   * One segment per transaction, filling as they land. The rail below says
+   * which step is which; this says how much of the flow is left, which is the
+   * question being asked before the wallet opens.
+   */
+  &__bar {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  &__segment {
+    flex: 1 1 0;
+    height: 3px;
+    border-radius: 999px;
+    background: $color-line-2;
+    transition: background-color $default-transition-time ease;
+
+    &--done {
+      background: $color-cyan;
+    }
+
+    &--current {
+      background: $color-accent-line;
+    }
+  }
+
+  &__step {
+    position: relative;
+
+    &:not(:last-child) {
+      padding-bottom: 0.875rem;
+
+      /* Joins the markers rather than running the height of the row, so the
+         rail reads as one line threaded through them. */
+      &::after {
+        content: "";
+        position: absolute;
+        left: 0.75rem;
+        top: 1.625rem;
+        bottom: 0.1875rem;
+        width: 1px;
+        margin-left: -0.5px;
+        background: $color-line-2;
+      }
+    }
+
+    &--done {
+      /* Matches the specificity of the base connector rule above, which is
+         written with :not(:last-child) and would otherwise win. */
+      &:not(:last-child)::after {
+        background: $color-accent-line;
+      }
+
+      .deposit_flow__marker {
+        color: $color-cyan;
+        border-color: $color-accent-line;
+        background: $color-accent-soft;
+      }
+
+      .deposit_flow__label {
+        color: $color-text-irrelevant;
+      }
+
+      .deposit_flow__state {
+        color: $color-cyan;
+      }
+    }
+
+    &--current {
+      .deposit_flow__marker {
+        color: $color-cyan;
+        border-color: $color-cyan;
+        /* A flat ring, not a blur: it lifts the live step off the rail without
+           putting a shadow into a design that has one. */
+        box-shadow: 0 0 0 4px $color-accent-soft;
+      }
+
+      .deposit_flow__label {
+        color: $color-white;
+        font-weight: 600;
+      }
+
+      .deposit_flow__state {
+        color: $color-cyan;
+      }
+    }
+
+    /* Reachable, but not yet — the tooltip on the row says why. */
+    &--blocked {
+      opacity: 0.5;
+    }
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__marker {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid $color-line-2;
+    border-radius: 999px;
+    font-family: $font-mono;
+    font-size: 11px;
+    line-height: 1;
+    color: $color-steel-blue;
+    transition: color $default-transition-time ease,
+      border-color $default-transition-time ease,
+      box-shadow $default-transition-time ease;
+  }
+
+  &__label {
+    font-size: $text-sm;
+    color: $color-steel-blue;
+  }
+
+  /* Pushed to the right edge so the words line up in a column of their own. */
+  &__state {
+    margin-left: auto;
+    font-family: $font-mono;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
   }
 }
 </style>

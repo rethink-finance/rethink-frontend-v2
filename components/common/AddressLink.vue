@@ -1,7 +1,7 @@
 <template>
   <a
-    v-if="blockscoutUrl"
-    :href="blockscoutUrl"
+    v-if="explorerUrl"
+    :href="explorerUrl"
     target="_blank"
     rel="noopener noreferrer"
     class="address-link"
@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { getBlockscoutUrl } from "~/types/enums/chain_id";
+import { getExplorerUrl } from "~/types/enums/chain_id";
 import { isZeroAddress } from "~/composables/addressUtils";
 
 const props = defineProps({
@@ -42,12 +42,12 @@ const props = defineProps({
   },
 });
 
-const blockscoutUrl = computed(() => {
+const explorerUrl = computed(() => {
   if (!props.address || isZeroAddress(props.address)) {
     return null;
   }
 
-  return getBlockscoutUrl(props.chainId, props.address);
+  return getExplorerUrl(props.chainId, props.address);
 });
 
 const displayAddress = computed(() => {
@@ -65,7 +65,10 @@ const displayAddress = computed(() => {
 </script>
 
 <style lang="scss" scoped>
+/* Brand: hex data (addresses, tx hashes) renders in mono */
 .address-link {
+  font-family: $font-mono;
+  font-size: 0.9em;
   text-decoration: none;
 
   &:hover {
@@ -74,6 +77,8 @@ const displayAddress = computed(() => {
 }
 
 .address-text {
+  font-family: $font-mono;
+  font-size: 0.9em;
   color: inherit;
 }
 </style>

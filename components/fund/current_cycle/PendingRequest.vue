@@ -1,51 +1,41 @@
 <template>
-  <div class="pending_request card_box card_box--no-padding">
-    <div class="pending_request__header">
-      <div class="pending_request__pending_tokens">
-        Pending {{ fundTransactionRequest?.type }} Request
-        <div>
-          {{ fundTransactionRequestAmountFormatted }} {{ token0?.symbol }}
-        </div>
-      </div>
-      <div class="pending_request__icon_more">
-        <v-tooltip activator="parent" location="left">
-          <template #activator="{ props }">
-            <Icon
-              v-bind="props"
-              icon="ic:twotone-cancel"
-              width="1.5rem"
-              @click="toggleCancelButton"
-            />
-          </template>
-          Cancel {{ fundTransactionRequest.type }} Request
-        </v-tooltip>
-      </div>
-      <v-btn
-        v-if="showCancelButton"
+  <div class="pending_request">
+    <div class="pending_request__head">
+      <span class="pending_request__kind">
+        {{ fundTransactionRequest?.type }} request
+      </span>
+
+      <!-- Cancelling costs a transaction and cannot be undone, so the control
+           asks twice — in place, rather than by revealing a button on top of
+           the card. Clicking anywhere else takes the question back. -->
+      <button
         v-click-outside="hideCancelButton"
+        type="button"
+        class="pending_request__cancel"
+        :class="{ 'pending_request__cancel--armed': showCancelButton }"
         :disabled="isLoadingCancelRequest"
-        class="pending_request__cancel_button bg-primary text-secondary"
-        @click="cancelPendingRequest"
+        @click="showCancelButton ? cancelPendingRequest() : toggleCancelButton()"
       >
-        <template #prepend>
-          <v-progress-circular
-            v-if="isLoadingCancelRequest"
-            class="d-flex"
-            size="20"
-            width="3"
-            indeterminate
-          />
-        </template>
-        Cancel {{ fundTransactionRequest.type }} Request
-      </v-btn>
+        <v-progress-circular
+          v-if="isLoadingCancelRequest"
+          size="12"
+          width="2"
+          indeterminate
+        />
+        {{ showCancelButton ? "Confirm cancel" : "Cancel" }}
+      </button>
     </div>
-    <div class="pending_request__header pending_request__header--bg-light">
-      <div>
-        Claimable
-      </div>
-      <div class="pending_request__available_token">
+
+    <div class="pending_request__amount">
+      {{ fundTransactionRequestAmountFormatted }}
+      <span class="pending_request__amount_symbol">{{ token0?.symbol }}</span>
+    </div>
+
+    <div class="pending_request__claimable">
+      <span class="pending_request__claimable_label">Claimable</span>
+      <span class="pending_request__claimable_value">
         {{ claimableTokenValue }} {{ token1?.symbol }}
-      </div>
+      </span>
     </div>
   </div>
 </template>
@@ -176,53 +166,113 @@ const handleError = (error: any, refreshData: boolean=true) => {
 </script>
 
 <style lang="scss" scoped>
+/**
+ * One outstanding request, read top to bottom: what it is, how much, and what
+ * it turns into. The amount carries the weight — it is the only thing here a
+ * depositor has to check — so it is set large and the rest recedes.
+ */
 .pending_request {
   display: flex;
-  color: $color-light-subtitle;
-  font-size: $text-sm;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid $color-line-2;
+  border-radius: $default-border-radius;
+  background: $color-navy-gray-light;
 
-  &__available_token {
-    color: $color-white;
-  }
-  &__pending_tokens {
+  &__head {
     display: flex;
-    flex-direction: row;
+    align-items: center;
     justify-content: space-between;
-    width: 100%;
+    gap: 0.75rem;
   }
-  &__cancel_button {
-    position: absolute;
-    right: 32px;
-    top: 0;
-    z-index: 3000;
+
+  &__kind {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-cyan;
   }
-  &__icon_more {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+
+  /* Quiet until asked, then red: the destructive step is the one that should
+     look destructive, not the way in to it. */
+  &__cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    margin: -0.25rem -0.5rem -0.25rem 0;
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: $default-border-radius;
+    white-space: nowrap;
     cursor: pointer;
-    //color: $color-moonlight-light;
-    color: $color-error;
-    :hover {
-      //color: lighten($color-moonlight-light, 10%);
-      color: darken($color-error, 10%);
+    transition: color $default-transition-time ease,
+      border-color $default-transition-time ease;
+
+    &:hover:not(:disabled) {
+      color: $color-error;
+    }
+
+    &--armed {
+      color: $color-error;
+      border-color: $color-error;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: default;
     }
   }
-  &__header {
-    position: relative;
-    width: 100%;
-    min-height: 2rem;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    border-bottom: 1px solid $color-gray-transparent;
-    line-height: 1;
-    padding: 0.5rem 2rem 0.5rem 1rem;
 
-    &--bg-light {
-      background: $color-gray-light-transparent;
-    }
+  &__amount {
+    font-family: $font-mono;
+    font-size: 21px;
+    font-weight: 500;
+    line-height: 1.1;
+    color: $color-white;
+    overflow-wrap: anywhere;
+  }
+
+  &__amount_symbol {
+    font-size: 13px;
+    color: $color-steel-blue;
+  }
+
+  &__claimable {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid $color-line;
+  }
+
+  &__claimable_label {
+    flex: none;
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  /* A claimable figure can run to a dozen decimals when the share price is
+     tiny; let it wrap rather than push the label off the card. */
+  &__claimable_value {
+    font-family: $font-mono;
+    font-size: 12.5px;
+    color: $color-white;
+    text-align: right;
+    overflow-wrap: anywhere;
   }
 }
 </style>

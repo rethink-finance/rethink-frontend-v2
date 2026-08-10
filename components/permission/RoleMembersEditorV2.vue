@@ -162,7 +162,7 @@ const removeAt = (idx: number) => {
     gap: 6px;
   }
   .address {
-    font-family: monospace;
+    font-family: var(--font-mono);
     display: inline-block;
     max-width: 60ch; // keep long addresses from pushing layout
     overflow: hidden;

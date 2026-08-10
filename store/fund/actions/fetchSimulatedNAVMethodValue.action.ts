@@ -1,3 +1,8 @@
+import {
+  decodeValueOfHolder,
+  fetchRethinkVaultPositionValue,
+  isValueOfSignature,
+} from "./fetchRethinkVaultPositionValue.action";
 import { useContractAddresses } from "~/composables/useContractAddresses";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
@@ -8,6 +13,35 @@ import {
   PositionTypeToNAVCalculationMethod,
 } from "~/types/enums/position_type";
 import type INAVMethod from "~/types/nav_method";
+
+/**
+ * The other Rethink vault this NAV method holds a position in, or undefined if
+ * it is any other kind of position.
+ *
+ * Deliberately narrow: one composable call, that call being the vault's own
+ * `valueOf(holder)` share accessor, and no sign flip. Anything more elaborate is
+ * left to the on-chain calculator, which knows how to combine it.
+ */
+const resolveVaultPositionCall = (
+  navEntry: INAVMethod,
+): { vaultAddress: string; holderAddress: string } | undefined => {
+  if (navEntry.positionType !== PositionType.Composable) return undefined;
+
+  const calls = navEntry.details?.composable ?? [];
+  if (calls.length !== 1) return undefined;
+
+  const [call] = calls;
+  if (call.isNegative) return undefined;
+  if (!isValueOfSignature(call.functionSignatures)) return undefined;
+  if (!call.remoteContractAddress) return undefined;
+
+  const holderAddress = decodeValueOfHolder(
+    call.encodedFunctionSignatureWithInputs,
+  );
+  if (!holderAddress) return undefined;
+
+  return { vaultAddress: call.remoteContractAddress, holderAddress };
+};
 
 export const fetchSimulatedNAVMethodValueAction = async (
   fundChainId: ChainId,
@@ -44,6 +78,32 @@ export const fetchSimulatedNAVMethodValueAction = async (
   }
   const navCalculatorContract =
     web3Store.chainContracts[fundChainId]?.navCalculatorContract;
+
+  // Positions in other Rethink vaults are valued from that vault's current
+  // simulated NAV instead of by calling into it, because the vault prices its
+  // own shares against the last NAV update it executed — see
+  // fetchRethinkVaultPositionValue. Any address the backend does not know as a
+  // vault falls through to the on-chain simulation below.
+  const vaultPositionCall = resolveVaultPositionCall(navEntry);
+  if (vaultPositionCall) {
+    const vaultPositionValue = await fetchRethinkVaultPositionValue(
+      fundChainId,
+      vaultPositionCall.vaultAddress,
+      vaultPositionCall.holderAddress,
+      baseDecimals,
+    );
+
+    if (vaultPositionValue !== undefined) {
+      navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;
+      navEntry.simulatedNav = vaultPositionValue;
+      navEntry.simulatedNavFormatted =
+        formatTokenValue(vaultPositionValue, baseDecimals, true, false) +
+        " " +
+        baseSymbol;
+      navEntry.isSimulatedNavError = false;
+      return;
+    }
+  }
 
   try {
     navEntry.foundMatchingPastNAVUpdateEntryFundAddress = true;

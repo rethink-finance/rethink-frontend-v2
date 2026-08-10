@@ -1,205 +1,230 @@
 <template>
-  <v-data-table
-    v-if="items.length || loading"
-    class="table-trending-delegates main_table"
-    :headers="headers"
-    :items="items"
-    :loading="loading && items.length === 0"
-    loading-text="Loading Trending Delegates"
-    items-per-page="-1"
-  >
-    <template #[`item.delegatedMember`]="{ item }">
-      <div class="data-cell__title">
-        <div class="data-cell__text">
-          {{ parsedDelegatingToAddress(item.delegatedMember) }}
+  <div class="delegates_table">
+    <div class="delegates_table__scroll">
+      <div class="delegates_table__grid">
+        <div class="delegates_table__row delegates_table__row--head">
+          <div class="delegates_table__th">
+            Delegated member
+          </div>
+          <div class="delegates_table__th delegates_table__th--center">
+            Delegators
+          </div>
+          <div class="delegates_table__th delegates_table__th--right">
+            Impact
+          </div>
+          <div class="delegates_table__th delegates_table__th--right">
+            Voting power
+          </div>
         </div>
-        <ui-tooltip-click location="right">
-          <Icon
-            icon="clarity:copy-line"
-            class="copy-icon"
-            width="1rem"
-            @click="copyText(item.delegatedMember)"
-          />
 
-          <template #tooltip>
-            <div class="tooltip__content">
-              <span>Copied</span>
-            </div>
-          </template>
-        </ui-tooltip-click>
+        <div
+          v-for="item in items"
+          :key="item.delegatedMember"
+          class="delegates_table__row"
+        >
+          <div class="delegates_table__member">
+            <!-- The address is the handle for the wallet, so it is what copies;
+                 there is no second control to hunt for. -->
+            <UiTooltipClick location="right">
+              <button
+                type="button"
+                class="delegates_table__address"
+                :title="item.delegatedMember"
+                @click="copyText(item.delegatedMember)"
+              >
+                {{ truncateAddressEllipsis(item.delegatedMember) }}
+              </button>
+
+              <template #tooltip>
+                <div class="tooltip__content">
+                  <span>Copied</span>
+                </div>
+              </template>
+            </UiTooltipClick>
+
+            <span v-if="isActiveAccount(item.delegatedMember)" class="delegates_table__you">
+              You
+            </span>
+          </div>
+
+          <button
+            type="button"
+            class="delegates_table__delegators"
+            @click="handleRowClick(item)"
+          >
+            {{ pluralizeWord("member", item.delegators.length) }}
+          </button>
+
+          <div class="delegates_table__number">
+            {{ item.impact }}
+          </div>
+
+          <div class="delegates_table__number">
+            {{ roundToSignificantDecimals(item.votingPower) }}
+          </div>
+        </div>
+
+        <div v-if="loading" class="delegates_table__row delegates_table__row--skeleton">
+          <div v-for="cell in 4" :key="cell">
+            <v-skeleton-loader type="text" class="delegates_table__skeleton" />
+          </div>
+        </div>
       </div>
-    </template>
+    </div>
 
-    <template #[`item.delegators`]="{ item }">
-      <div class="data-cell__delegators" @click="handleRowClick(item)">
-        {{ pluralizeWord("member", item.delegators.length) }}
-      </div>
-    </template>
-
-    <template #[`body.append`]>
-      <tr v-if="items.length && loading">
-        <td v-for="header in headers">
-          <v-skeleton-loader type="text" />
-        </td>
-      </tr>
-    </template>
-
-    <template #bottom>
-      <!-- Leave this slot empty to hide pagination controls -->
-    </template>
-  </v-data-table>
-  <div v-else-if="items.length === 0 && !loading" class="nav_entries__no_data">
-    No trending delegates found
+    <div v-if="!items.length && !loading" class="delegates_table__empty">
+      No delegated wallets yet.
+    </div>
   </div>
 </template>
 
-<script lang="ts">
-import { truncateAddress } from "~/composables/addressUtils";
+<script setup lang="ts">
+import { truncateAddressEllipsis } from "~/composables/addressUtils";
+import { roundToSignificantDecimals } from "~/composables/formatters";
 import { pluralizeWord } from "~/composables/utils";
 import type ITrendingDelegate from "~/types/trending_delegate";
 
-export default defineComponent({
-  name: "TableTrengingDelegates",
-  props: {
-    items: {
-      type: Array as () => ITrendingDelegate[],
-      default: () => [],
-    },
-    activeAccountAddress: {
-      type: String,
-      default: "",
-    },
-    loading: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  data: () => ({
-    // bug fix for vuetify table headers property 'align'
-    // https://github.com/vuetifyjs/vuetify/issues/18901
-    headers: ref([
-      {
-        title: "Delegated Members",
-        key: "delegatedMember",
-        sorable: false,
-      },
-      {
-        title: "Delegators",
-        key: "delegators",
-        align: "center",
-        sortable: true,
-      },
-      {
-        title: "Impact",
-        key: "impact",
-        sortable: true,
-        align: "end",
-      },
-      {
-        title: "Voting Power",
-        key: "votingPower",
-        sortable: true,
-        align: "end",
-        value: (v: ITrendingDelegate) => roundToSignificantDecimals(v.votingPower),
-      },
-    ] as const),
-  }),
-  methods: {
-    truncateAddress,
-    pluralizeWord,
-    copyText(text: string) {
-      navigator.clipboard.writeText(text);
-    },
-    handleRowClick(item: ITrendingDelegate) {
-      this.$emit("row-click", item);
-    },
-    parsedDelegatingToAddress(delegatedMember: string) {
-      // check if the user delegated to himself
-      if (delegatedMember?.toLowerCase() === this.activeAccountAddress?.toLowerCase()) {
-        return "Myself";
-      }
+const emit = defineEmits(["row-click"]);
 
-      return truncateAddress(delegatedMember);
-    },
+const props = defineProps({
+  items: {
+    type: Array as () => ITrendingDelegate[],
+    default: () => [],
+  },
+  activeAccountAddress: {
+    type: String,
+    default: "",
+  },
+  loading: {
+    type: Boolean,
+    default: false,
   },
 });
+
+const isActiveAccount = (address: string) =>
+  Boolean(props.activeAccountAddress) &&
+  address?.toLowerCase() === props.activeAccountAddress?.toLowerCase();
+
+const copyText = (text: string) => {
+  navigator.clipboard.writeText(text);
+};
+
+const handleRowClick = (item: ITrendingDelegate) => {
+  emit("row-click", item);
+};
 </script>
 
 <style lang="scss" scoped>
-.table-trending-delegates {
-  &__no_data {
-    text-align: center;
-    padding: 1.5rem;
-    background: $color-badge-navy;
+/**
+ * Only two things in a row are targets — the address and the delegator count —
+ * so the row itself is not clickable. A row that highlights on hover but leads
+ * nowhere reads as broken.
+ */
+.delegates_table {
+  &__scroll {
+    overflow-x: auto;
   }
 
-  &:deep(.v-table__wrapper table) {
-    // add border spacing only between rows
-    --row-spacing: 1.5rem;
-    border-spacing: 0 var(--row-spacing);
-    margin-top: calc(-1 * var(--row-spacing));
-
-    // remove header bg-color and border
-    thead {
-      border-spacing: 0;
-      background-color: unset;
-      th {
-        border: none;
-      }
-    }
-
-    tbody {
-      tr {
-        td {
-          // add border between rows
-          border: 1px solid $color-gray-transparent;
-          border-left: none;
-          border-right: none;
-
-          // first and last child border radius
-          &:first-child {
-            border-left: 1px solid $color-gray-transparent;
-            border-radius: $default-border-radius 0 0 $default-border-radius;
-          }
-          &:last-child {
-            border-right: 1px solid $color-gray-transparent;
-            border-radius: 0 $default-border-radius $default-border-radius 0;
-          }
-        }
-      }
-    }
+  &__grid {
+    min-width: 620px;
   }
-}
 
-.data-cell {
-  &__title {
-    display: flex;
-    gap: 0.5rem;
+  &__row {
+    display: grid;
+    grid-template-columns: 1.5fr 150px 110px 170px;
     align-items: center;
-    padding-block: 1rem;
+    gap: 1rem;
+    padding: 0.8125rem 1.5rem;
+    border-bottom: 1px solid $color-line;
+
+    &--head {
+      height: 40px;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-top: 1px solid $color-line;
+    }
   }
-  &__text {
-    width: 40%;
-    max-width: 120px;
-    min-width: 110px;
+
+  &__th {
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+
+    &--right {
+      text-align: right;
+    }
+
+    &--center {
+      text-align: center;
+    }
+  }
+
+  &__member {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  &__address {
+    font-family: $font-mono;
+    font-size: 13px;
+    color: $color-white;
+    cursor: pointer;
+    transition: color $default-transition-time ease;
+
+    &:hover {
+      color: $color-cyan;
+    }
+  }
+
+  &__you {
+    padding: 0.125rem 0.375rem;
+    border: 1px solid $color-accent-line;
+    border-radius: $default-border-radius;
+    background: $color-accent-soft;
+    font-family: $font-mono;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-cyan;
   }
 
   &__delegators {
-    cursor: pointer;
+    font-family: $font-mono;
+    font-size: 12.5px;
     text-align: center;
+    color: $color-text-irrelevant;
+    cursor: pointer;
+    transition: color $default-transition-time ease;
 
     &:hover {
+      color: $color-cyan;
       text-decoration: underline;
     }
   }
-}
 
-.copy-icon {
-  margin-bottom: -0.2rem;
-  cursor: pointer;
-  color: $color-steel-blue;
+  &__number {
+    font-family: $font-mono;
+    font-size: 12.5px;
+    text-align: right;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+  }
 
-  rotate: 180deg;
-  transform: scaleX(-1);
+  &__skeleton :deep(*) {
+    margin: 0;
+  }
+
+  &__empty {
+    padding: 1.5rem;
+    text-align: center;
+    font-size: $text-sm;
+    color: $color-steel-blue;
+  }
 }
 </style>
+

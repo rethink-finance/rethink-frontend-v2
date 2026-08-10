@@ -7,9 +7,26 @@ export default defineNuxtConfig({
   ssr: false,
   app: {
     head: {
-      title: "Rethink Finance | Run Funds On-Chain",
+      // Default tab title. Vault detail pages override it with
+      // "<SYMBOL> - <Vault name>" via useSeoMeta (FundSEOMetadata.vue).
+      title: "rethink.finance",
       link: [
-        { rel: "icon", type: "image/png", href: "/favicon.png" },
+        // Same favicon set as the rethink.finance homepage.
+        { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png" },
+        { rel: "icon", type: "image/png", sizes: "512x512", href: "/favicon-512.png" },
+        { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+        // Brand fonts — same sources as rethink.finance homepage.
+        { rel: "preconnect", href: "https://api.fontshare.com" },
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
+        {
+          rel: "stylesheet",
+          href: "https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap",
+        },
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap",
+        },
       ],
     },
     // baseURL: '/rethink-frontend-v2/',
@@ -23,6 +40,23 @@ export default defineNuxtConfig({
     typeCheck: true,
     strict: true,
   },
+  // In build mode, vite-plugin-checker runs vue-tsc by string-joining its
+  // arguments into a shell command without quoting them. Nuxt hands it an
+  // absolute path to tsconfig.json, so on any checkout living under a
+  // directory with a space in its name the shell splits that path and tsc
+  // aborts with "TS5042: Option 'project' cannot be mixed with source files"
+  // before compiling a thing. Still unfixed upstream as of 0.14.5.
+  //
+  // So: no checker during the build. Types are still checked on every build
+  // through the `typecheck` script, which goes via `nuxt typecheck` — that
+  // one spawns vue-tsc directly with an argument array and no shell, so the
+  // path never gets re-parsed. Dev keeps its live checker (the watcher runs
+  // in-process and never shells out).
+  $production: {
+    typescript: {
+      typeCheck: false,
+    },
+  },
   build: {
     transpile: ["vuetify"],
   },
@@ -30,6 +64,7 @@ export default defineNuxtConfig({
     "vuetify/styles",
     "~/assets/scss/vuetify_overrides.scss",
     "~/assets/scss/app.scss",
+    "~/assets/scss/overlays.scss",
   ],
   runtimeConfig: {
     public: {
@@ -153,6 +188,37 @@ export default defineNuxtConfig({
   nitro: {
     prerender: {
       failOnError: false,
+    },
+    // Dev-only proxy so the frontend can talk to the production backend
+    // from localhost without CORS (the backend only allows the
+    // app.rethink.finance origin). Point BACKEND_URL at
+    // http://localhost:3000/backend-api to use it. No effect on builds.
+    devProxy: {
+      // The governance indexer is not deployed to the production backend yet,
+      // so /governance 404s there and the vault governance page falls all the
+      // way through to the (dead on Polygon) subgraph. Route just those calls
+      // to a local backend on :8000 and leave everything else on production —
+      // pointing BACKEND_URL wholesale at localhost instead starves every
+      // NAV-snapshot surface, whose history only exists in the production DB.
+      // Remove this entry once the governance module ships to production.
+      "/backend-api/governance": {
+        target: "http://localhost:8000/governance",
+        changeOrigin: true,
+      },
+      // Same story as governance: the vault-image module is not on the
+      // production backend yet, so the create flow's upload 404s there.
+      // Note the local driver hands back a localhost URL, and that URL is what
+      // the initialize transaction writes into the vault metadata — fine for
+      // walking the flow, not for a vault anyone else will look at.
+      // Remove this entry once the module ships to production.
+      "/backend-api/vault-image": {
+        target: "http://localhost:8000/vault-image",
+        changeOrigin: true,
+      },
+      "/backend-api": {
+        target: "https://backend.rethink.finance",
+        changeOrigin: true,
+      },
     },
   },
   compatibilityDate: "2024-08-20",

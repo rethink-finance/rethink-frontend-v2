@@ -327,6 +327,14 @@ export const determineTimeValueAndTimeUnit = (totalSeconds: number) => {
   };
 };
 
+/**
+ * A governance period as a duration. Always approximate: in block-number mode
+ * it is blocks multiplied by an average block time, so see
+ * formatApproximateDuration for why it is reported as one rounded unit. Timestamp
+ * mode is exact on chain, but is shown the same way so the settings read
+ * consistently rather than implying one vault is measured more finely than
+ * another.
+ */
 export const getVoteTimeValue = (value: number | bigint, averageBlockTimeInSeconds: number, mode: string) => {
   if(value === undefined || value === null || !mode || !averageBlockTimeInSeconds) {
     return "N/A";
@@ -334,8 +342,8 @@ export const getVoteTimeValue = (value: number | bigint, averageBlockTimeInSecon
 
   if (mode === ClockMode.BlockNumber) {
     const totalSeconds = Number(value) * averageBlockTimeInSeconds;
-    return formatDuration(totalSeconds);
+    return formatApproximateDuration(totalSeconds);
   }
 
-  return formatDuration(Number(value));
+  return formatApproximateDuration(Number(value));
 }

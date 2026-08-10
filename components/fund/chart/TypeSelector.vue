@@ -1,37 +1,27 @@
 <template>
-  <div class="price_type_selector">
-    <div
-      class="price_type_selector__select_button"
-      :class="{ 'price_type_selector__select_button--hover': hasMultipleTypeOptions }"
-      @click="toggleMenuOpen"
-    >
-      <div>
-        <div class="price_type_selector__price">
-          <v-progress-circular
-            v-if="isLoading"
-            class="d-flex"
-            size="20"
-            width="3"
-            indeterminate
-          />
-          <span v-else>{{ value }}</span>
-        </div>
-        <div class="price_type_selector__selected">
-          {{ selectedTypeValue }}
-        </div>
-      </div>
-      <IconDropdown v-if="hasMultipleTypeOptions" :active="menuOpen" />
+  <div class="chart_type">
+    <UiSegmented
+      v-if="hasMultipleTypeOptions"
+      :model-value="selected"
+      :options="segmentedOptions"
+      @update:model-value="emit('update:selected', $event)"
+    />
+    <div v-else class="chart_type__eyebrow">
+      {{ selectedTypeValue }}
     </div>
-    <div v-if="menuOpen" class="price_type_selector__options">
-      <div
-        v-for="(option) in typeOptions"
-        :key="option.key"
-        class="price_type_selector__option"
-        :class="{ 'option-active': selected === option.key }"
-        @click="selectType(option)"
-      >
-        {{ option.value }}
-      </div>
+
+    <div class="chart_type__headline">
+      <v-progress-circular
+        v-if="isLoading"
+        class="d-flex"
+        size="22"
+        width="2"
+        indeterminate
+      />
+      <template v-else>
+        <span class="chart_type__value">{{ value }}</span>
+        <span class="chart_type__note">{{ selectedTypeValue }}</span>
+      </template>
     </div>
   </div>
 </template>
@@ -51,87 +41,57 @@ const emit = defineEmits<{
   (e: "update:selected", value: string): void;
 }>();
 
-const menuOpen = ref(false);
-
-
 const selectedTypeValue = computed(() => ChartTypesMap[props.selected].value);
 const hasMultipleTypeOptions = computed(() => Object.keys(props.typeOptions).length > 1);
 
-const selectType = (option: IChartType) => {
-
-  emit("update:selected", option.key);
-  menuOpen.value = false;
-};
-
-const toggleMenuOpen = () => {
-  if (!hasMultipleTypeOptions.value) return;
-  menuOpen.value = !menuOpen.value;
-};
+const segmentedOptions = computed(() =>
+  Object.values(props.typeOptions).map((option: IChartType) => ({
+    key: option.key,
+    label: option.value,
+  })),
+);
 </script>
 
 <style lang="scss" scoped>
-.price_type_selector {
+/**
+ * The design surfaces the chart series as a segmented control with the current
+ * figure spelled out underneath, rather than the dropdown this used to be —
+ * with only two series there is nothing worth hiding behind a menu.
+ */
+.chart_type {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  font-weight: 500;
-  min-width: 10rem;
-  @include borderGray("border");
-  position: relative;
+  gap: 0.625rem;
 
-  &__select_button {
+  &__eyebrow {
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__headline {
     display: flex;
-    flex-direction: row;
-    padding: 0.5rem 0.75rem 0.5rem 1rem;
-    justify-content: space-between;
-    align-items: center;
-
-    &--hover:hover {
-      background: $color-hover;
-      cursor: pointer;
-    }
-  }
-  &__price {
-    font-size: $text-md;
-  }
-  &__selected {
-    font-size: $text-sm;
-    color: $color-light-subtitle;
+    align-items: baseline;
+    gap: 0.75rem;
   }
 
-  &__options {
-    display: flex;
-    flex-direction: column;
-    @include borderGray("border");
-    position: absolute;
-    margin-top: 0.5rem;
-    top: 100%;
-    left: 0;
-    z-index: 20;
-    width: 100%;
+  &__value {
+    font-family: $font-mono;
+    font-size: 30px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
   }
 
-  &__option {
-    padding: 0.75rem 1rem;
-    cursor: pointer;
-    color: white;
-    background: $color-dark;
-    align-content: center;
-    height: 3rem;
-
-    @include sm {
-      padding: 0.5rem 1rem;
-      height: 2.5rem;
-    }
-
-    &.option-active {
-      background-color: $color-navy-gray-light;
-      color: $color-primary;
-      font-weight: 700;
-    }
-    &:not(.option-active):hover {
-      background: $color-hover;
-    }
+  &__note {
+    font-family: $font-mono;
+    font-size: 12px;
+    color: $color-steel-blue;
   }
 }
 </style>

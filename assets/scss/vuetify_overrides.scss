@@ -15,11 +15,13 @@ $vuetify-border-width: 1px;
   .v-btn.v-btn {
     text-transform: none;
     font-size: $text-sm;
+    border-radius: $default-border-radius;
 
-    /* Default */
+    /* Default — flat brand blue, brightens on hover (homepage .btn-primary) */
     &--variant-elevated {
-      // I think it looks better without the border.
-      border: $vuetify-border-width solid $color-primary;
+      border: none;
+      box-shadow: none;
+      transition: background $default-transition-time ease;
       &.v-btn--disabled {
         background: $color-primary-darker !important;
         opacity: 1;
@@ -34,25 +36,29 @@ $vuetify-border-width: 1px;
         }
       }
       &:hover {
-        background: $color-primary-dark !important;
+        background: $color-blue-bright !important;
       }
     }
+    /* Ghost — hairline border, light text (homepage .btn-ghost) */
     &--variant-outlined {
       border-width: $vuetify-border-width;
-      border-color: $color-steel-blue;
-      color: $color-text-irrelevant !important;
-      font-weight: bold;
-      transition: border-color $default-transition-time ease;
+      border-color: $color-line-2;
+      color: $color-white !important;
+      background: rgba(255, 255, 255, 0.02);
+      font-weight: 600;
+      transition: border-color $default-transition-time ease,
+        background $default-transition-time ease;
 
       &:hover {
-        border-color: $color-secondary-dark !important;
+        border-color: $color-line-3 !important;
+        background: rgba(255, 255, 255, 0.05);
       }
     }
     &--size-default {
       line-height: 1;
       font-style: normal;
-      font-weight: 700;
-      letter-spacing: 0.0525rem;
+      font-weight: 600;
+      letter-spacing: 0;
       padding-right: 1.5rem;
       padding-left: 1.5rem;
     }
@@ -116,6 +122,23 @@ $vuetify-border-width: 1px;
     }
     .v-field__outline {
       display: none;
+    }
+  }
+
+  /* DATA TABLES — brand: mono uppercase letterspaced column labels,
+     tabular numerals in cells. */
+  .v-table {
+    th,
+    .v-data-table__th {
+      font-family: $font-mono;
+      font-size: $text-xs;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: $color-text-irrelevant;
+      font-weight: 500;
+    }
+    td {
+      font-variant-numeric: tabular-nums;
     }
   }
 

@@ -57,3 +57,4 @@ vendor/
 # Misc
 *.swp
 *.swo
+.claude/

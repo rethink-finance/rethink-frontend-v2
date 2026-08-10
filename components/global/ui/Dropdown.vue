@@ -86,13 +86,18 @@ export default {
   }
 }
 
+/* Same floating panel as a v-menu — raised surface, hairline, neutral shadow.
+   This one is hand-rolled rather than teleported, so it restates the treatment
+   instead of inheriting it from overlays.scss. */
 .dropdown-menu {
-  @include borderGray;
-  border-color: $color-light-border;
   position: absolute;
   width: 100%;
-  background-color: $color-dark;
-  box-shadow: 0px 0px 16px 0px $color-box-shadow;
+  margin-top: 0.375rem;
+  padding: 0.375rem;
+  background-color: $color-navy-gray-light;
+  border: 1px solid $color-line-2;
+  border-radius: $default-border-radius;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
   z-index: 1;
   transition:
     opacity 0.3s ease,
@@ -102,14 +107,15 @@ export default {
 .dropdown-item {
   display: flex;
   flex-direction: row;
-  padding: 1rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: $default-border-radius;
   cursor: pointer;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   font-weight: 500;
   font-size: $text-sm;
-  border-top: 1px solid $color-border-dark;
   user-select: none;
+  transition: background-color $default-transition-time ease;
 
   &.disabled {
     opacity: 0.5;
@@ -118,7 +124,7 @@ export default {
 }
 
 .dropdown-item:not(.disabled):hover {
-  background-color: $color-background-button;
+  background-color: $color-gray-light-transparent;
 
   .arrow-icon {
     opacity: 1;

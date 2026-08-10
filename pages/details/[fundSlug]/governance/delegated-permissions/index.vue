@@ -47,6 +47,7 @@ import type BreadcrumbItem from "~/types/ui/breadcrumb";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
+import { fetchActivationState } from "~/composables/permissions/activationProposal";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -133,6 +134,40 @@ const submitProposal = async () => {
   const roleModAddress = await fundStore.fetchRoleModAddress(
     fundStore.fundAddress,
   );
+
+  // Governance proposals call the Roles modifier directly, which only works
+  // while the governor owns it. After the one-time activation
+  // (transferOwnership to the Safe) permission changes must be executed
+  // through the Safe instead — a proposal created here would just fail on
+  // execution, so refuse loudly. (Routing such proposals through the Safe is
+  // a follow-up; see the activation notice on the Permissions page.)
+  try {
+    const chainId = fundStore.fund?.chainId;
+    const owner: string = chainId
+      ? await fetchActivationState(
+        chainId,
+        fundStore.fundAddress,
+        roleModAddress,
+      ).then((s) => s.modifierOwner ?? "")
+      : "";
+    const governorAddress = fundStore.fund?.governorAddress ?? "";
+    if (
+      owner &&
+      governorAddress &&
+      owner.toLowerCase() !== governorAddress.toLowerCase()
+    ) {
+      toastStore.errorToast(
+        "The Roles modifier is no longer owned by the governor (ownership " +
+          "was transferred to the Safe during permission activation). A " +
+          "governance proposal targeting the modifier directly would fail " +
+          "to execute — permission changes must be executed through the " +
+          "Safe instead.",
+      );
+      return;
+    }
+  } catch (e) {
+    console.error("Failed checking roles modifier owner", e);
+  }
 
   console.log(toRaw(transactions));
   console.log(toRaw(details));

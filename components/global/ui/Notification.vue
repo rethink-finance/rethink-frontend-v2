@@ -1,14 +1,11 @@
 <template>
-  <div v-if="fund" class="deposit_redeem_notification">
-    <div class="d-flex">
-      <Icon
-        icon="zondicons:exclamation-outline"
-        width="1.5rem"
-        color="var(--color-primary)"
-      />
-    </div>
+  <div v-if="fund" class="brand_note brand_note--info deposit_redeem_notification">
+    <Icon
+      icon="material-symbols:info-outline"
+      class="brand_note__icon"
+    />
 
-    <p>
+    <p class="brand_note__body brand_note__text">
       <slot />
     </p>
   </div>
@@ -21,16 +18,14 @@ const { fund } = storeToRefs(useFundStore());
 </script>
 
 <style lang="scss" scoped>
+/* Panel treatment comes from the shared .brand_note; only the spacing this
+   notice takes inside the settlement forms is local. */
 .deposit_redeem_notification {
-  display: flex;
-  align-items: center;
-  padding: 16px;
-  gap: 26px;
-  font-size: $text-sm;
-  color: $color-white;
-  background: $color-card-background;
+  p {
+    margin: 0;
+  }
+
   @include sm {
-    @include borderGray();
     margin: 1.5rem 0;
   }
 }

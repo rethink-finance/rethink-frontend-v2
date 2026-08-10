@@ -2,72 +2,52 @@
   <div class="page-governance">
     <v-dialog
       :model-value="modelValue"
-      scrim="black"
-      opacity="0.3"
-      max-width="600"
+      max-width="520"
       @update:model-value="closeDelegateDialog"
     >
-      <div class="main_card di-card">
-        <div class="di-card__header-container">
-          <div class="di-card__header">
-            Delegate
+      <div class="brand_modal">
+        <div class="brand_modal__head">
+          <div class="brand_modal__heading">
+            <div class="brand_modal__eyebrow">
+              Governance
+            </div>
+            <h2 class="brand_modal__title">
+              {{ delegateToSomeoneElse ? "Delegate to an address" : "Delegate votes" }}
+            </h2>
           </div>
 
-          <Icon
-            icon="material-symbols:close"
-            class="di-card__close-icon"
-            width="1.5rem"
+          <button
+            type="button"
+            class="brand_modal__close"
+            :aria-label="delegateToSomeoneElse ? 'Back' : 'Close'"
             @click="
               delegateToSomeoneElse
                 ? (delegateToSomeoneElse = false)
                 : closeDelegateDialog()
             "
-          />
+          >
+            <Icon
+              :icon="
+                delegateToSomeoneElse
+                  ? 'material-symbols:arrow-back'
+                  : 'material-symbols:close'
+              "
+              width="1.125rem"
+            />
+          </button>
         </div>
 
-        <div class="di-card__content">
+        <div class="brand_modal__body">
           <div
             v-if="
               !delegateToSomeoneElse ||
                 (delegateToSomeoneElse && fundStore?.shouldUserDelegate)
             "
-            class="di-card"
             v-html="parsedDelegateMessage"
           />
 
-          <div v-if="!delegateToSomeoneElse" class="di-card__button-container">
-            <v-btn
-              v-if="!hasDelegatedToYourself"
-              :disabled="loadingDelegates"
-              class="di-card__submit-button"
-              variant="outlined"
-              @click="delegate(true)"
-            >
-              <template #prepend>
-                <v-progress-circular
-                  v-if="loadingDelegates"
-                  class="d-flex"
-                  size="20"
-                  width="3"
-                  indeterminate
-                />
-              </template>
-              Myself
-            </v-btn>
-
-            <v-btn
-              v-if="!fundStore?.shouldUserDelegate"
-              :disabled="loadingDelegates"
-              class="di-card__submit-button"
-              variant="outlined"
-              @click="delegateToSomeoneElse = true"
-            >
-              Someone else
-            </v-btn>
-          </div>
-
-          <div v-else class="di-card__someone-else-container">
-            <v-label class="di-card__label label_required">
+          <div v-if="delegateToSomeoneElse" class="brand_modal__form delegate__form">
+            <v-label class="brand_modal__label label_required">
               Address
             </v-label>
             <v-text-field
@@ -76,26 +56,40 @@
               :rules="rules"
               required
             />
+          </div>
+        </div>
+
+        <div class="brand_modal__footer brand_modal__footer--stacked">
+          <template v-if="!delegateToSomeoneElse">
+            <v-btn
+              v-if="!hasDelegatedToYourself"
+              :disabled="loadingDelegates"
+              :loading="loadingDelegates"
+              color="primary"
+              @click="delegate(true)"
+            >
+              Delegate to myself
+            </v-btn>
 
             <v-btn
-              :disabled="!isDelegatedAddressValid || loadingDelegates"
-              class="di-card__delegate-votes"
-              variant="flat"
-              color="rgba(210, 223, 255, 1)"
-              @click="delegate()"
+              v-if="!fundStore?.shouldUserDelegate"
+              :disabled="loadingDelegates"
+              variant="outlined"
+              @click="delegateToSomeoneElse = true"
             >
-              <template #prepend>
-                <v-progress-circular
-                  v-if="loadingDelegates"
-                  class="d-flex"
-                  size="20"
-                  width="3"
-                  indeterminate
-                />
-              </template>
-              Delegate votes
+              Someone else
             </v-btn>
-          </div>
+          </template>
+
+          <v-btn
+            v-else
+            :disabled="!isDelegatedAddressValid || loadingDelegates"
+            :loading="loadingDelegates"
+            color="primary"
+            @click="delegate()"
+          >
+            Delegate votes
+          </v-btn>
         </div>
       </div>
     </v-dialog>
@@ -225,51 +219,13 @@ const delegate = async (isMyself = false) => {
 </script>
 
 <style scoped lang="scss">
-.di-card {
-  margin: 0 auto;
-  padding: 1rem;
-  margin-bottom: 2rem;
-  width: 100%;
-  max-width: 500px;
-  color: white;
+/* The form follows the standing-delegation note when there is one, so it needs
+   the gap the note would otherwise leave. */
+.delegate__form {
+  margin-top: 1.25rem;
 
-  @include borderGray;
-
-  &__header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  &__header {
-    font-size: $text-lg;
-    font-weight: 700;
-  }
-  &__close-icon {
-    cursor: pointer;
-    color: $color-steel-blue;
-  }
-  &__content {
-    margin-top: 2rem;
-  }
-  &__button-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-  &__submit-button {
-    width: 100%;
-    margin: 0 auto;
-    max-width: 350px;
-    color: $color-light-subtitle !important;
-  }
-  &__label {
-    color: $color-light-subtitle;
-    margin-bottom: 0.25rem;
-  }
-  &__delegate-votes {
-    width: 100%;
-    margin-top: 1rem;
+  &:first-child {
+    margin-top: 0;
   }
 }
 </style>

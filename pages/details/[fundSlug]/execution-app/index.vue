@@ -1,6 +1,5 @@
 <template>
   <div class="execution-app">
-    <ExecutionCrtConsole v-if="isCrtVault" />
     <UiHeader>
       <div class="data_bar__item">
         <div class="switch_to_zodiac_notification">
@@ -23,6 +22,14 @@
         </div>
       </div>
     </UiHeader>
+
+    <!-- The design puts the Zodiac status first on this screen, so the console
+         follows it rather than sitting above the page's own header. -->
+    <ExecutionCrtConsole v-if="isCrtVault" />
+
+    <div class="group_title execution-app__section">
+      General
+    </div>
 
     <div :class="`main_card ${!isUsingZodiacPilotExtension ? 'disabled' : ''}`">
       <UiHeader>
@@ -546,16 +553,25 @@ watch(
 </script>
 
 <style scoped lang="scss">
+/* Design's zodiac status pill: mono caption with a state marker. */
 .switch_to_zodiac_notification {
   align-items: center;
   display: flex;
-  border: 1px solid $color-border-dark;
-  background: $color-gray-light-transparent;
-  padding: 1rem;
+  border: 1px solid $color-line-2;
+  padding: 0.5625rem 0.8125rem;
   flex-direction: row;
   border-radius: $default-border-radius;
-  font-weight: 600;
+  font-family: $font-mono;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  font-weight: 400;
+  color: $color-text-irrelevant;
   gap: 0.6rem;
+}
+
+/* Same distance from its cards as the console's own group headings keep. */
+.execution-app__section {
+  margin-bottom: 1rem;
 }
 
 .main_card {
@@ -563,13 +579,14 @@ watch(
   flex-direction: column;
   gap: 32px;
 
+  /* Design keeps disabled cards readable — dimmed, not interactive. */
   &.disabled {
-    opacity: 0.5;
+    opacity: 0.55;
     pointer-events: none;
   }
 }
 
-// main header style
+// main header style — card titles as design eyebrows
 .main_header {
   flex-wrap: wrap;
   gap: 15px;
@@ -581,6 +598,12 @@ watch(
     align-items: center;
     align-content: center;
     gap: 20px;
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
   }
   &__info-icon {
     cursor: pointer;
@@ -600,6 +623,19 @@ watch(
 }
 .available_balance {
   white-space: wrap;
+  font-family: $font-mono;
+  font-size: 11px;
+  color: $color-cyan;
+}
+/* Field labels as the design's mono uppercase captions. */
+.inputs :deep(.v-label) {
+  font-family: $font-mono;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: $color-steel-blue;
+  opacity: 1;
 }
 .btn-submit {
   display: flex;

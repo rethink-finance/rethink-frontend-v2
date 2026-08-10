@@ -54,6 +54,8 @@ export default interface ISubgraphGovernanceProposal {
     weight: string;
     voteCasts: Array<{
       transaction: {
+        // The transaction hash: the subgraph keys Transaction entities by it.
+        id: string;
         timestamp: string;
         blockNumber: number;
       };

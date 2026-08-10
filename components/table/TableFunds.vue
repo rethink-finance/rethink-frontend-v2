@@ -21,15 +21,7 @@
 
     <template #[`item.curator`]="{ item }">
       <div v-if="item.strategistName" class="curator-cell">
-        <a
-          v-if="item.strategistUrl"
-          :href="item.strategistUrl"
-          target="_blank"
-          class="curator-link"
-        >
-          {{ item.strategistName }}
-        </a>
-        <span v-else>{{ item.strategistName }}</span>
+        {{ item.strategistName }}
       </div>
       <div v-else>
         -
@@ -37,7 +29,9 @@
     </template>
 
     <template #[`item.chainShort`]="{ item }">
-      <IconChain :chain-short="item.chainShort" class="mr-2" />
+      <div class="chain-cell">
+        <IconChain :chain-short="item.chainShort" />
+      </div>
     </template>
 
     <template #[`item.baseAsset`]="{ item }">
@@ -46,8 +40,10 @@
           :chain-id="item.chainId"
           :chain-short="item.chainShort"
           :token-address="item.baseToken.address"
+          :symbol="item.baseToken.symbol"
           class="mr-2"
         />
+        <span class="base-asset-cell__symbol">{{ item.baseToken.symbol }}</span>
       </div>
     </template>
 
@@ -69,9 +65,10 @@
             v-if="item.totalSimulatedNav && item.totalSimulatedNavCalculatedAt"
             :disabled="!appSettingsStore.isManageMode"
             location="bottom"
+            content-class="brand_tooltip"
           >
             <template #activator="{ props }">
-              <div class="d-flex flex-column" v-bind="props">
+              <div class="d-flex flex-column align-end nav_cell" v-bind="props">
                 <div class="text-white">
                   {{
                     formatNumberShort(
@@ -86,41 +83,64 @@
                       item.baseToken.symbol
                   }}
                 </div>
-                <div v-if="item.totalSimulatedNavUSD" class="nav_usd_value">
-                  ${{ formatNumberShort(item.totalSimulatedNavUSD) }}
+                <div v-if="navUsd(item)" class="nav_usd_value">
+                  ${{ formatNumberShort(navUsd(item)) }}
                 </div>
               </div>
             </template>
-            Calculated on
-            <strong>{{ item.totalSimulatedNavCalculatedAt }}</strong>
+            <div class="brand_tooltip__label">
+              Calculated on
+            </div>
+            <div class="brand_tooltip__value">
+              {{ item.totalSimulatedNavCalculatedAt }}
+            </div>
           </v-tooltip>
           <v-tooltip
             v-else
             location="bottom"
             :disabled="!appSettingsStore.isManageMode"
+            content-class="brand_tooltip"
           >
             <template #activator="{ props }">
-              <span v-bind="props">
-                {{
-                  formatNumberShort(
-                    formatTokenValue(
-                      item.totalSimulatedNav || item.lastNAVUpdateTotalNAV,
-                      item.baseToken.decimals,
-                    ),
-                  ) +
-                    " " +
-                    item.baseToken.symbol
-                }}
-              </span>
+              <div class="d-flex flex-column align-end nav_cell" v-bind="props">
+                <div>
+                  {{
+                    formatNumberShort(
+                      formatTokenValue(
+                        item.totalSimulatedNav || item.lastNAVUpdateTotalNAV,
+                        item.baseToken.decimals,
+                      ),
+                    ) +
+                      " " +
+                      item.baseToken.symbol
+                  }}
+                </div>
+                <div v-if="navUsd(item)" class="nav_usd_value">
+                  ${{ formatNumberShort(navUsd(item)) }}
+                </div>
+              </div>
             </template>
-            <strong>
+            <div class="brand_tooltip__value">
               <template v-if="item?.navUpdates?.length > 0">
                 Based on the last NAV update
               </template>
-              <template v-else> Based on the current NAV methods. </template>
-            </strong>
+              <template v-else>
+                Based on the current NAV methods
+              </template>
+            </div>
           </v-tooltip>
         </template>
+      </div>
+    </template>
+
+    <!-- 30D share price trend -->
+    <template #[`item.sparkline`]="{ item }">
+      <div class="sparkline-cell">
+        <SparklineCell
+          :chain-id="item.chainId"
+          :address="item.address"
+          @performance="(item as any).thirtyDayPerformance = $event"
+        />
       </div>
     </template>
 
@@ -135,10 +155,10 @@
         />
         <div
           v-else
-          :class="numberColorClass(roundPercent(item.cumulativeReturnPercent))"
+          :class="numberColorClass(roundPercent(getCumulativeReturn(item)))"
         >
           {{
-            formatPercent(roundPercent(item.cumulativeReturnPercent), true) ??
+            formatPercent(roundPercent(getCumulativeReturn(item)), true) ??
               "N/A"
           }}
         </div>
@@ -186,17 +206,20 @@
 <script lang="ts" setup>
 import BaseAssetIcon from "../global/icon/BaseAsset.vue";
 import FundNameCell from "./components/FundNameCell.vue";
+import SparklineCell from "./components/SparklineCell.vue";
 import {
   formatNumberShort,
   formatPercent,
   formatTokenValue,
 } from "~/composables/formatters";
 import { calculateAPR } from "~/composables/utils";
+import { usdPerBaseToken } from "~/composables/portfolioPositions";
 import { numberColorClass } from "~/composables/numberColorClass.js";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 import type IFund from "~/types/fund";
 import { useSettingsStore } from "~/store/settings/settings.store";
 import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
+import { resolveStakingPerformance } from "~/store/funds/config/stakingRewards.config";
 import { ChainId } from "~/types/enums/chain_id";
 
 const { getFundDetailsUrl } = usePageNavigation();
@@ -214,9 +237,57 @@ defineProps({
   },
 });
 
-const roundPercent = (value?: number): number => parseFloat(value?.toFixed(2) || "0");
+/**
+ * Round to the precision the cell prints: two decimals of a *percentage*, so
+ * four of the underlying fraction. Rounding here rather than leaving it to
+ * formatPercent keeps a figure that displays as 0% from being coloured as a
+ * gain or a loss.
+ */
+const roundPercent = (value?: number): number =>
+  parseFloat((value ?? 0).toFixed(4));
+
+/**
+ * The vault's NAV in dollars.
+ *
+ * Prefers the backend's own quote. Where there is none, usdPerBaseToken values a
+ * stablecoin-denominated vault at par rather than at nothing, so a USDC vault
+ * gets a dollar figure instead of a blank line — the answer is the number
+ * already printed above it, and omitting it reads as missing data.
+ *
+ * Returns undefined for a vault whose base asset cannot be priced at all;
+ * a wrong number is worse there than none.
+ */
+const navUsd = (fund: IFund): number | undefined => {
+  if (fund.totalSimulatedNavUSD) return Number(fund.totalSimulatedNavUSD);
+
+  const nav = fund.totalSimulatedNav ?? fund.lastNAVUpdateTotalNAV;
+  const decimals = fund.baseToken?.decimals;
+  if (nav == null || decimals == null) return undefined;
+
+  const rate = usdPerBaseToken(fund);
+  if (!rate) return undefined;
+
+  return (Number(nav) / 10 ** decimals) * rate;
+};
+
+/**
+ * A vault that pays its yield out in another token has a share price that never
+ * moves, so its measured return and APR are 0% forever. Where we know what the
+ * underlying position earns, both columns come from that instead — the same
+ * figures its own page shows.
+ */
+const getStakingPerformance = (fund: IFund) =>
+  resolveStakingPerformance(
+    fund.chainId,
+    fund.address,
+    fund.inceptionDateTimestamp,
+  );
+
+const getCumulativeReturn = (fund: IFund): number | undefined =>
+  getStakingPerformance(fund)?.cumulativeReturn ?? fund.cumulativeReturnPercent;
 
 const getApr = (fund: IFund): number | undefined =>
+  getStakingPerformance(fund)?.apr ??
   calculateAPR(fund.cumulativeReturnPercent, fund.inceptionDateTimestamp);
 
 const headers: any = computed(() => [
@@ -224,30 +295,36 @@ const headers: any = computed(() => [
     title: "Vault Name",
     key: "name",
     sortable: false,
+    align: "start",
+    width: 380,
   },
   {
     title: "Current NAV",
     key: "totalSimulatedNavUSD",
     align: "end",
-    width: 150,
+    width: 130,
   },
   {
     title: "Curator",
     key: "curator",
-    sortable: false,
+    value: (v: IFund) => v.strategistName || "",
+    sortable: true,
+    align: "start",
     width: 180,
   },
   {
     title: "Base Asset",
     key: "baseAsset",
+    value: (v: IFund) => v.baseToken?.symbol || "",
+    sortable: true,
     width: 125,
-    align: "start",
+    align: "center",
   },
   {
     title: "Chain",
     key: "chainShort",
-    width: 65,
-    align: "end",
+    width: 80,
+    align: "center",
   },
   // {
   //   title: "Latest NAV Date",
@@ -262,16 +339,27 @@ const headers: any = computed(() => [
   //   align: "end",
   // },
   {
-    title: "Cumulative Return",
+    title: "30D",
+    key: "sparkline",
+    value: (v: any) => v.thirtyDayPerformance ?? -Infinity,
+    align: "center",
+    width: 130,
+    sortable: true,
+  },
+  {
+    title: "Cum. Return",
     key: "cumulativeReturnPercent",
+    // Sort on what the column actually shows, so the staking vault does not
+    // sort as 0% while displaying its yield-derived return.
+    value: (v: IFund) => getCumulativeReturn(v) ?? -Infinity,
     align: "end",
-    width: 170,
+    width: 120,
   },
   {
     title: "APR",
     key: "apr",
     align: "end",
-    width: 100,
+    width: 80,
     sortable: false,
   },
   // {
@@ -344,34 +432,107 @@ const navigateFundDetails = (event: any, row: any) => {
 </script>
 
 <style lang="scss" scoped>
+/* Design-file table: card surface with hairline borders, quiet rows
+   that raise to surface-2 on hover, mono data cells. */
 .table_all_funds {
-  @include borderGray;
-  border-color: $color-bg-transparent;
+  border: 1px solid $color-line;
+  border-radius: $default-border-radius;
+  background: $color-surface;
   max-width: 100%;
   // add table max height
   :deep(.v-table__wrapper) {
     @include customScrollbar(0);
+    overflow-x: auto;
     table {
       table-layout: fixed;
+      background: transparent;
+      /* Columns keep their designed widths; the card scrolls
+         horizontally on narrow viewports (design-file behavior). */
+      min-width: 1180px;
+    }
+
+    thead th {
+      height: 46px !important;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+      color: $color-steel-blue;
+      background: transparent;
+      border-bottom: 1px solid $color-line !important;
+
+      /* Sort arrow always sits AFTER the label (Vuetify reverses it
+         on right-aligned columns), and only appears on hover — the
+         hover state reveals the current sort direction. */
+      .v-data-table-header__content {
+        gap: 4px;
+      }
+      &.v-data-table-column--align-end .v-data-table-header__content,
+      .v-data-table-header__content {
+        flex-direction: row;
+      }
+      /* row (not row-reverse) breaks Vuetify's alignment trick, so
+         restore each alignment explicitly to match the cells below. */
+      &.v-data-table-column--align-end .v-data-table-header__content {
+        justify-content: flex-end;
+      }
+      &.v-data-table-column--align-center .v-data-table-header__content {
+        justify-content: center;
+      }
+      &.v-data-table-column--align-start .v-data-table-header__content {
+        justify-content: flex-start;
+      }
+      /* Negative end-margin cancels the icon's own width + the gap, so
+         the hidden icon takes no layout space and labels line up
+         exactly with the values below. */
+      .v-data-table-header__sort-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+        margin-inline-end: -18px;
+        opacity: 0 !important;
+        transition: opacity 0.2s ease;
+      }
+      &:hover .v-data-table-header__sort-icon {
+        opacity: 1 !important;
+      }
     }
 
     .v-data-table__tr {
-      height: 85px;
+      height: 72px;
       cursor: pointer;
-      transition:
-        background-color 0.3s ease,
-        box-shadow 0.3s ease;
+      transition: background-color 0.2s ease;
       color: $color-light-subtitle;
-      outline: 2px solid #1d212d;
-      background-color: $color-table-row;
+      background-color: transparent;
 
       &:hover {
-        background-color: $color-gray-transparent;
-        box-shadow: 0px 0px 10px 0px #1f5fff29;
+        background-color: $color-navy-gray-light;
+        box-shadow: none;
       }
     }
     .v-data-table__td {
-      border-color: $color-bg-transparent !important;
+      border-color: $color-line !important;
+    }
+
+    /* Curator column (3rd) sits a touch further right for breathing
+       room after the right-aligned NAV figures. */
+    thead th:nth-child(3),
+    tbody td:nth-child(3) {
+      padding-left: 28px;
+    }
+
+    /* Numeric data cells in mono (design-file rows) */
+    .nav_cell,
+    .nav_usd_value {
+      font-family: $font-mono;
+      font-size: 13.5px;
+    }
+    /* Cumulative return + APR columns */
+    tbody .v-data-table__td:nth-last-child(-n + 2) {
+      font-family: $font-mono;
+      font-size: 13.5px;
+    }
+    .text-success {
+      color: $color-pos !important;
     }
   }
   &__no_data {
@@ -392,7 +553,8 @@ const navigateFundDetails = (event: any, row: any) => {
 }
 
 .nav_usd_value {
-  color: $color-light-subtitle;
+  color: $color-steel-blue;
+  font-size: 11.5px;
 }
 
 .loading_skeleton {
@@ -418,19 +580,26 @@ const navigateFundDetails = (event: any, row: any) => {
 }
 
 .curator-cell {
-  .curator-link {
-    color: $color-light-subtitle;
-    text-decoration: none;
-    transition: color 0.2s ease;
+  font-size: 13px;
+  color: $color-text-irrelevant;
+}
 
-    &:hover {
-      color: $color-primary;
-      text-decoration: underline;
-    }
-  }
+/* Icon + trend cells centre under their centred headers. */
+.sparkline-cell,
+.chain-cell {
+  display: flex;
+  justify-content: center;
 }
 
 .base-asset-cell {
   display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &__symbol {
+    font-family: $font-mono;
+    font-size: 12.5px;
+    color: $color-text-irrelevant;
+  }
 }
 </style>

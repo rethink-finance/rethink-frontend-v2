@@ -1,96 +1,336 @@
 <template>
   <div class="crt_console">
-    <div class="crt_card crt_status">
-      <div v-for="s in statItems" :key="s.label" class="crt_stat">
-        <div class="crt_stat__label">{{ s.label }}</div>
-        <div class="crt_stat__value">{{ s.value }}</div>
-      </div>
-      <div class="crt_status__right">
-        <div class="crt_stat crt_stat--right">
-          <div class="crt_stat__label">Total NAV</div>
-          <div class="crt_stat__value">{{ totalNav }}</div>
+    <!--
+      Headline balances, laid out as the vault overview's stat strip: the total
+      carried at display size on the left, the seven places that money actually
+      sits stepped down beside it. No card — it reads as page furniture.
+    -->
+    <div class="crt_summary">
+      <div class="crt_summary__hero">
+        <div class="crt_label crt_label--accent">
+          Current NAV
         </div>
-        <v-btn color="primary" variant="outlined" size="small" :loading="loadingBal" @click="refresh">Refresh</v-btn>
+        <div class="crt_summary__value_row">
+          <span class="crt_summary__figure">{{ totalNav }}</span>
+          <span class="crt_summary__unit">USDC</span>
+        </div>
       </div>
+
+      <div class="crt_summary__divider" />
+
+      <div class="crt_summary__breakdown">
+        <div v-for="s in statItems" :key="s.label" class="crt_stat">
+          <div class="crt_label">
+            {{ s.label }}
+          </div>
+          <div class="crt_stat__value">
+            {{ s.value }}
+          </div>
+        </div>
+      </div>
+
+      <v-btn
+        class="crt_summary__refresh"
+        variant="outlined"
+        size="small"
+        :loading="loadingBal"
+        @click="refresh"
+      >
+        Refresh
+      </v-btn>
     </div>
 
     <div class="crt_layout">
       <div class="crt_main">
-        <h2 class="crt_h2">Move capital</h2>
-        <div class="crt_card">
-          <div class="crt_card__title">EVM &#8596; HyperCore bridge</div>
-          <div class="crt_card__sub">{{ bridgeDir === "toCore" ? "approve → depositFor · receiver pinned to the Safe · credits perp margin" : "sendAsset from Core spot to the Safe's EVM balance · fixed amounts only" }}</div>
-          <div class="crt_row">
-            <v-select v-model="bridgeDir" :items="[{ title: 'EVM → Core', value: 'toCore' }, { title: 'Core → EVM', value: 'toEvm' }]" density="compact" hide-details style="max-width: 180px" />
-            <v-text-field v-if="bridgeDir === 'toCore'" v-model="bridgeAmt" placeholder="Amount" suffix="USDC" density="compact" hide-details />
-            <v-select v-else v-model="bridgeFixed" :items="fixedItems" density="compact" hide-details />
-            <v-btn color="primary" variant="outlined" :disabled="bridgeDir === 'toCore' && !validAmt(bridgeAmt)" @click="stageBridge">Review</v-btn>
-          </div>
+        <div class="group_title crt_section">
+          Move capital
         </div>
-        <div class="crt_card">
-          <div class="crt_card__title">Spot &#8596; perp (usdClassTransfer)</div>
-          <div class="crt_card__sub">Whitelist is exact-match: fixed amounts only</div>
+
+        <div class="brand_card crt_card">
+          <div class="crt_card__head">
+            <div class="crt_card__titles">
+              <div class="brand_card__eyebrow">
+                EVM &#8596; HyperCore bridge
+              </div>
+              <div class="crt_card__sub">
+                {{ bridgeDir === "toCore"
+                  ? "approve → depositFor · receiver pinned to the Safe · credits perp margin"
+                  : "sendAsset from Core spot to the Safe's EVM balance · fixed amounts only" }}
+              </div>
+            </div>
+          </div>
           <div class="crt_row">
-            <v-select v-model="ctDir" :items="[{ title: 'Spot → perp', value: 'toPerp' }, { title: 'Perp → spot', value: 'toSpot' }]" density="compact" hide-details style="max-width: 180px" />
-            <v-select v-model="ctAmt" :items="fixedItems" density="compact" hide-details />
-            <v-select v-model="ctReps" :items="['1', '2', '3', '4', '5'].map(v => ({ title: '×' + v, value: v }))" density="compact" hide-details style="max-width: 110px" />
-            <v-btn color="primary" variant="outlined" @click="stageClassTransfer">Review</v-btn>
+            <v-select
+              v-model="bridgeDir"
+              :items="[{ title: 'EVM → Core', value: 'toCore' }, { title: 'Core → EVM', value: 'toEvm' }]"
+              density="compact"
+              hide-details
+              class="crt_field--narrow"
+            />
+            <v-text-field
+              v-if="bridgeDir === 'toCore'"
+              v-model="bridgeAmt"
+              placeholder="Amount"
+              suffix="USDC"
+              density="compact"
+              hide-details
+            />
+            <v-select
+              v-else
+              v-model="bridgeFixed"
+              :items="fixedItems"
+              density="compact"
+              hide-details
+            />
+            <v-btn
+              variant="outlined"
+              :disabled="bridgeDir === 'toCore' && !validAmt(bridgeAmt)"
+              @click="stageBridge"
+            >
+              Review
+            </v-btn>
           </div>
         </div>
 
-        <h2 class="crt_h2">Payout <span class="crt_role2_tag">ROLE 2 · PAYOUT SAFE 2-OF-4</span></h2>
-        <div class="crt_card crt_card--payout">
-          <div class="crt_stat" style="margin-bottom: 14px">
-            <div class="crt_stat__label">Destination · pinned</div>
-            <div class="crt_stat__value">{{ shortAddr(CRT.ADDR.payoutEOA) }}</div>
-            <div class="crt_stat__sub">Payout EOA. Every other address reverts</div>
+        <div class="brand_card crt_card">
+          <div class="crt_card__head">
+            <div class="crt_card__titles">
+              <div class="brand_card__eyebrow">
+                Spot &#8596; perp (usdClassTransfer)
+              </div>
+              <div class="crt_card__sub">
+                Whitelist is exact-match: fixed amounts only
+              </div>
+            </div>
           </div>
           <div class="crt_row">
-            <v-text-field v-model="payoutAmt" placeholder="Amount" suffix="USDC" density="compact" hide-details />
-            <v-btn color="primary" variant="outlined" :disabled="!validAmt(payoutAmt)" @click="stagePayout">Review</v-btn>
+            <v-select
+              v-model="ctDir"
+              :items="[{ title: 'Spot → perp', value: 'toPerp' }, { title: 'Perp → spot', value: 'toSpot' }]"
+              density="compact"
+              hide-details
+              class="crt_field--narrow"
+            />
+            <v-select
+              v-model="ctAmt"
+              :items="fixedItems"
+              density="compact"
+              hide-details
+            />
+            <v-select
+              v-model="ctReps"
+              :items="['1', '2', '3', '4', '5'].map(v => ({ title: '×' + v, value: v }))"
+              density="compact"
+              hide-details
+              class="crt_field--tiny"
+            />
+            <v-btn variant="outlined" @click="stageClassTransfer">
+              Review
+            </v-btn>
           </div>
         </div>
 
-        <h2 class="crt_h2">Yield venues</h2>
+        <div class="group_title crt_section">
+          Payout
+          <span class="crt_tag crt_tag--danger">Role 2 · payout safe 2-of-4</span>
+        </div>
+
+        <div class="brand_card crt_card crt_card--payout">
+          <div class="crt_stat">
+            <div class="crt_label">
+              Destination · pinned
+            </div>
+            <div class="crt_stat__value">
+              {{ shortAddr(CRT.ADDR.payoutEOA) }}
+            </div>
+            <div class="crt_card__sub">
+              Payout EOA. Every other address reverts
+            </div>
+          </div>
+          <div class="crt_row">
+            <v-text-field
+              v-model="payoutAmt"
+              placeholder="Amount"
+              suffix="USDC"
+              density="compact"
+              hide-details
+            />
+            <v-btn
+              variant="outlined"
+              :disabled="!validAmt(payoutAmt)"
+              @click="stagePayout"
+            >
+              Review
+            </v-btn>
+          </div>
+        </div>
+
+        <div class="group_title crt_section">
+          Yield venues
+        </div>
+
         <div class="crt_grid2">
-          <div class="crt_card">
+          <div class="brand_card crt_card">
             <div class="crt_card__head">
-              <div class="crt_card__title">Felix</div>
+              <div class="crt_card__titles">
+                <div class="brand_card__eyebrow">
+                  Felix
+                </div>
+              </div>
               <div class="crt_stat crt_stat--right">
-                <div class="crt_stat__label">Position</div>
-                <div class="crt_stat__value">{{ bal ? fmt6(bal.felixAssets) + " USDC" : "—" }}</div>
-                <div v-if="bal" class="crt_stat__sub">{{ Number(formatUnits(bal.felixShares, 18)).toFixed(4) }} {{ bal.felixSymbol }}</div>
+                <div class="crt_label">
+                  Position
+                </div>
+                <div class="crt_stat__value">
+                  {{ bal ? fmt6(bal.felixAssets) + " USDC" : "—" }}
+                </div>
+                <div v-if="bal" class="crt_card__sub">
+                  {{ Number(formatUnits(bal.felixShares, 18)).toFixed(4) }} {{ bal.felixSymbol }}
+                </div>
               </div>
             </div>
-            <div class="crt_row"><v-text-field v-model="felixDep" placeholder="Deposit" suffix="USDC" density="compact" hide-details /><v-btn color="primary" variant="outlined" :disabled="!validAmt(felixDep, CRT.APPROVE_CAP)" @click="stageFelixDeposit">Review</v-btn></div>
-            <div class="crt_row"><v-text-field v-model="felixWd" placeholder="Withdraw" suffix="USDC" density="compact" hide-details /><v-btn color="primary" variant="outlined" :disabled="!validAmt(felixWd)" @click="stageFelixWithdraw">Review</v-btn><v-btn variant="text" color="primary" @click="stageFelixRedeemAll">Redeem all</v-btn></div>
+            <div class="crt_row">
+              <v-text-field
+                v-model="felixDep"
+                placeholder="Deposit"
+                suffix="USDC"
+                density="compact"
+                hide-details
+              />
+              <v-btn
+                variant="outlined"
+                :disabled="!validAmt(felixDep, CRT.APPROVE_CAP)"
+                @click="stageFelixDeposit"
+              >
+                Review
+              </v-btn>
+            </div>
+            <div class="crt_row">
+              <v-text-field
+                v-model="felixWd"
+                placeholder="Withdraw"
+                suffix="USDC"
+                density="compact"
+                hide-details
+              />
+              <v-btn
+                variant="outlined"
+                :disabled="!validAmt(felixWd)"
+                @click="stageFelixWithdraw"
+              >
+                Review
+              </v-btn>
+            </div>
+            <div class="crt_card__foot">
+              <v-btn
+                variant="text"
+                size="small"
+                class="crt_text_action"
+                @click="stageFelixRedeemAll"
+              >
+                Redeem all
+              </v-btn>
+            </div>
           </div>
-          <div class="crt_card">
+
+          <div class="brand_card crt_card">
             <div class="crt_card__head">
-              <div class="crt_card__title">HyperLend</div>
+              <div class="crt_card__titles">
+                <div class="brand_card__eyebrow">
+                  HyperLend
+                </div>
+              </div>
               <div class="crt_stat crt_stat--right">
-                <div class="crt_stat__label">Position</div>
-                <div class="crt_stat__value">{{ bal ? fmt6(bal.hlend) + " USDC" : "—" }}</div>
-                <div v-if="bal" class="crt_stat__sub">{{ Number(formatUnits(bal.hlend, 6)).toFixed(4) }} hUSDC</div>
+                <div class="crt_label">
+                  Position
+                </div>
+                <div class="crt_stat__value">
+                  {{ bal ? fmt6(bal.hlend) + " USDC" : "—" }}
+                </div>
+                <div v-if="bal" class="crt_card__sub">
+                  {{ Number(formatUnits(bal.hlend, 6)).toFixed(4) }} hUSDC
+                </div>
               </div>
             </div>
-            <div class="crt_row"><v-text-field v-model="hlSup" placeholder="Supply" suffix="USDC" density="compact" hide-details /><v-btn color="primary" variant="outlined" :disabled="!validAmt(hlSup, CRT.APPROVE_CAP)" @click="stageHlSupply">Review</v-btn></div>
-            <div class="crt_row"><v-text-field v-model="hlWd" placeholder="Withdraw" suffix="USDC" density="compact" hide-details /><v-btn color="primary" variant="outlined" :disabled="!validAmt(hlWd)" @click="stageHlWithdraw(false)">Review</v-btn><v-btn variant="text" color="primary" @click="stageHlWithdraw(true)">Withdraw all</v-btn></div>
+            <div class="crt_row">
+              <v-text-field
+                v-model="hlSup"
+                placeholder="Supply"
+                suffix="USDC"
+                density="compact"
+                hide-details
+              />
+              <v-btn
+                variant="outlined"
+                :disabled="!validAmt(hlSup, CRT.APPROVE_CAP)"
+                @click="stageHlSupply"
+              >
+                Review
+              </v-btn>
+            </div>
+            <div class="crt_row">
+              <v-text-field
+                v-model="hlWd"
+                placeholder="Withdraw"
+                suffix="USDC"
+                density="compact"
+                hide-details
+              />
+              <v-btn
+                variant="outlined"
+                :disabled="!validAmt(hlWd)"
+                @click="stageHlWithdraw(false)"
+              >
+                Review
+              </v-btn>
+            </div>
+            <div class="crt_card__foot">
+              <v-btn
+                variant="text"
+                size="small"
+                class="crt_text_action"
+                @click="stageHlWithdraw(true)"
+              >
+                Withdraw all
+              </v-btn>
+            </div>
           </div>
         </div>
 
-        <h2 class="crt_h2">Agents</h2>
-        <div class="crt_card">
+        <div class="group_title crt_section">
+          Agents
+        </div>
+
+        <div class="brand_card crt_card">
           <div v-for="a in CRT.AGENTS" :key="a.addr" class="crt_agent">
-            <div>
-              <div class="crt_agent__name">{{ a.label }} <span v-if="a.kind === 'backup'" class="crt_danger_tag">BREAK-GLASS</span></div>
-              <div class="crt_stat__sub">{{ shortAddr(a.addr) }} · {{ a.desc }}</div>
+            <div class="crt_agent__body">
+              <div class="crt_agent__name">
+                {{ a.label }}
+                <span v-if="a.kind === 'backup'" class="crt_tag crt_tag--danger">Break-glass</span>
+              </div>
+              <div class="crt_card__sub">
+                <span class="crt_mono">{{ shortAddr(a.addr) }}</span> · {{ a.desc }}
+              </div>
             </div>
-            <div class="crt_agent__status">{{ agentBadge(a.addr) }}</div>
+            <div class="crt_agent__status">
+              <span class="crt_dot" :class="`crt_dot--${agentState(a.addr).tone}`" />
+              {{ agentState(a.addr).text }}
+            </div>
             <div class="crt_agent__actions">
               <template v-if="a.kind === 'backup'">
-                <input v-model="backupArm" placeholder="type DEREGISTER" class="crt_arm_input">
-                <v-btn color="primary" variant="outlined" size="small" :disabled="backupArm.trim().toUpperCase() !== 'DEREGISTER'" @click="stageAgent(a)">Register</v-btn>
+                <input
+                  v-model="backupArm"
+                  placeholder="type DEREGISTER"
+                  class="crt_arm_input"
+                >
+                <v-btn
+                  variant="outlined"
+                  size="small"
+                  :disabled="backupArm.trim().toUpperCase() !== 'DEREGISTER'"
+                  @click="stageAgent(a)"
+                >
+                  Register
+                </v-btn>
               </template>
             </div>
           </div>
@@ -98,47 +338,147 @@
       </div>
 
       <aside class="crt_aside">
-        <div v-if="!staged" class="crt_card crt_card--empty">
-          <div class="crt_stat__label">Simulate &amp; sign</div>
-          <p>Pick an action on the left. Every call is assembled programmatically, wrapped for the Roles modifier, simulated from the whitelisted sender, and only then handed to the wallet. No copy-pasting hex.</p>
+        <!-- Carries the same section caption the left column does, so the panel
+             below starts level with the first card over there. -->
+        <div class="group_title crt_section">
+          Simulate &amp; sign
         </div>
-        <div v-else class="crt_card">
-          <div class="crt_panel_head">
-            <div>
-              <div class="crt_stat__label">Simulate &amp; sign</div>
-              <div class="crt_panel_title">{{ staged.title }}</div>
+
+        <div v-if="!staged" class="brand_card crt_panel crt_panel--empty">
+          <p class="crt_panel__intro">
+            Pick an action on the left. Every call is assembled programmatically,
+            wrapped for the Roles modifier, simulated from the whitelisted sender,
+            and only then handed to the wallet. No copy-pasting hex.
+          </p>
+        </div>
+
+        <div v-else class="brand_card crt_panel">
+          <div class="crt_panel__head">
+            <div class="crt_panel__titles">
+              <div class="crt_panel__title">
+                {{ staged.title }}
+              </div>
             </div>
-            <v-btn variant="text" size="small" @click="staged = null">✕</v-btn>
+            <button
+              class="crt_panel__close"
+              aria-label="Discard staged action"
+              @click="staged = null"
+            >
+              <Icon icon="material-symbols:close" width="1.125rem" height="1.125rem" />
+            </button>
           </div>
-          <div v-for="wtext in staged.warns || []" :key="wtext" class="crt_warn">{{ wtext }}</div>
+
+          <div v-for="wtext in staged.warns || []" :key="wtext" class="crt_warn">
+            {{ wtext }}
+          </div>
+
           <label v-if="staged.confirmPhrase" class="crt_confirm">
             <input v-model="confirmed" type="checkbox">
             <span>I understand: {{ staged.confirmPhrase }}</span>
           </label>
-          <div :class="{ crt_gated: staged.confirmPhrase && !confirmed }">
+
+          <div
+            class="crt_steps"
+            :class="{ 'crt_steps--gated': staged.confirmPhrase && !confirmed }"
+          >
             <div v-for="(step, i) in staged.steps" :key="i" class="crt_step">
-              <div class="crt_step__head"><b>{{ step.label }}</b><span class="crt_mono_dim">{{ step.wrapped.inner.sig }}</span></div>
-              <div v-for="p in step.wrapped.inner.params" :key="p.k" class="crt_param"><span>{{ p.k }}</span><span>{{ p.v }}<em v-if="p.pinned" class="crt_pinned"> · pinned</em></span></div>
-              <div class="crt_mono_dim">to Roles {{ shortAddr(CRT.ADDR.roles) }} · execTransactionWithRole(role {{ staged.role }}) {{ crtValidateWrapped(step.wrapped.data) ? "· 0x6928e74b ✓" : "· BAD PREFIX" }}</div>
-              <div class="crt_hex">{{ step.wrapped.data }}</div>
-              <div v-if="step.sim" class="crt_sim" :class="step.sim === 'pending' ? '' : step.sim.ok ? 'crt_sim--ok' : step.sim.soft && step.expectSoftFail ? 'crt_sim--soft' : 'crt_sim--bad'">
-                <template v-if="step.sim === 'pending'">simulating from the whitelisted sender…</template>
-                <template v-else-if="step.sim.ok">✓ simulation passed</template>
-                <template v-else>✗ {{ step.sim.name }}<div class="crt_sim__hint">{{ step.sim.soft && step.expectSoftFail ? "Expected before the approve step is mined. Not a permission failure." : step.sim.hint }}</div></template>
+              <div class="crt_step__head">
+                <b>{{ step.label }}</b>
+                <span class="crt_mono_dim">{{ step.wrapped.inner.sig }}</span>
+              </div>
+              <div v-for="p in step.wrapped.inner.params" :key="p.k" class="crt_param">
+                <span>{{ p.k }}</span>
+                <span>{{ p.v }}<em v-if="p.pinned" class="crt_pinned"> · pinned</em></span>
+              </div>
+              <div class="crt_mono_dim">
+                to Roles {{ shortAddr(CRT.ADDR.roles) }} ·
+                execTransactionWithRole(role {{ staged.role }})
+                {{ crtValidateWrapped(step.wrapped.data) ? "· 0x6928e74b ✓" : "· BAD PREFIX" }}
+              </div>
+              <div class="crt_hex">
+                {{ step.wrapped.data }}
+              </div>
+              <div
+                v-if="step.sim"
+                class="crt_sim"
+                :class="step.sim === 'pending'
+                  ? ''
+                  : step.sim.ok
+                    ? 'crt_sim--ok'
+                    : step.sim.soft && step.expectSoftFail
+                      ? 'crt_sim--soft'
+                      : 'crt_sim--bad'"
+              >
+                <template v-if="step.sim === 'pending'">
+                  simulating from the whitelisted sender…
+                </template>
+                <template v-else-if="step.sim.ok">
+                  ✓ simulation passed
+                </template>
+                <template v-else>
+                  ✗ {{ step.sim.name }}
+                  <div class="crt_sim__hint">
+                    {{ step.sim.soft && step.expectSoftFail
+                      ? "Expected before the approve step is mined. Not a permission failure."
+                      : step.sim.hint }}
+                  </div>
+                </template>
               </div>
               <div class="crt_step__actions">
-                <span v-if="step.txStatus === 'pending'" class="crt_mono_dim">pending {{ shortAddr(step.txHash) }}…</span>
-                <a v-if="step.txStatus === 'ok'" :href="CRT.EXPLORER + '/tx/' + step.txHash" target="_blank" class="crt_ok">✓ mined · view</a>
+                <span v-if="step.txStatus === 'pending'" class="crt_mono_dim">
+                  pending {{ shortAddr(step.txHash) }}…
+                </span>
+                <a
+                  v-if="step.txStatus === 'ok'"
+                  :href="CRT.EXPLORER + '/tx/' + step.txHash"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="crt_ok"
+                >
+                  ✓ mined · view
+                </a>
                 <span v-if="step.txStatus === 'fail'" class="crt_bad">✗ reverted on-chain</span>
-                <v-btn variant="text" size="small" @click="simulateStep(step)">Re-simulate</v-btn>
-                <v-btn v-if="staged.role === 1" color="primary" variant="outlined" size="small" :disabled="!isManager || step.txStatus === 'pending' || step.txStatus === 'ok'" :title="isManager ? '' : 'Connect the manager EOA'" @click="exec(step)">{{ step.txStatus === "ok" ? "Executed" : "Execute" }}</v-btn>
-                <v-btn v-else color="primary" variant="outlined" size="small" @click="copyText(step.wrapped.data)">Copy for Safe</v-btn>
+                <v-btn
+                  variant="text"
+                  size="small"
+                  class="crt_text_action"
+                  @click="simulateStep(step)"
+                >
+                  Re-simulate
+                </v-btn>
+                <v-btn
+                  v-if="staged.role === 1"
+                  class="bg-primary text-secondary"
+                  size="small"
+                  :disabled="!isManager || step.txStatus === 'pending' || step.txStatus === 'ok'"
+                  :title="isManager ? '' : 'Connect the manager EOA'"
+                  @click="exec(step)"
+                >
+                  {{ step.txStatus === "ok" ? "Executed" : "Execute" }}
+                </v-btn>
+                <v-btn
+                  v-else
+                  variant="outlined"
+                  size="small"
+                  @click="copyText(step.wrapped.data)"
+                >
+                  Copy for Safe
+                </v-btn>
               </div>
             </div>
           </div>
-          <div v-if="staged.steps.length > 1" class="crt_stat__sub" style="margin-top: 10px">Step 2 always fails simulation until step 1 is mined; the pre-flight ✗ on it is expected, not an error.</div>
+
+          <div v-if="staged.steps.length > 1" class="crt_panel__note">
+            Step 2 always fails simulation until step 1 is mined; the pre-flight ✗
+            on it is expected, not an error.
+          </div>
         </div>
-        <p class="crt_footnote">Every transaction goes to the Roles modifier {{ shortAddr(CRT.ADDR.roles) }} as execTransactionWithRole: value 0, operation Call, shouldRevert true. Nothing here can reach an arbitrary address.</p>
+
+        <p class="crt_footnote">
+          Every transaction goes to the Roles modifier {{ shortAddr(CRT.ADDR.roles) }}
+          as execTransactionWithRole: value 0, operation Call, shouldRevert true.
+          Nothing here can reach an arbitrary address.
+        </p>
       </aside>
     </div>
   </div>
@@ -183,10 +523,11 @@ const statItems = computed(() => [
   { label: "Felix", value: bal.value ? fmt6(bal.value.felixAssets) : "—" },
   { label: "HyperLend", value: bal.value ? fmt6(bal.value.hlend) : "—" },
 ]);
+// The unit is rendered beside the figure, so this is the number alone.
 const totalNav = computed(() => {
   if (!bal.value || !core.value) return "—";
   const evm = Number(ethers.formatUnits(bal.value.safeUsdc + bal.value.felixAssets + bal.value.hlend + bal.value.fundUsdc, 6));
-  return n2(evm + core.value.spotUsdc + core.value.perpValue) + " USDC";
+  return n2(evm + core.value.spotUsdc + core.value.perpValue);
 });
 
 const refresh = async () => {
@@ -201,13 +542,19 @@ onMounted(() => {
   refresh();
   CRT.AGENTS.forEach(async (a) => { agentsStatus[a.addr.toLowerCase()] = await crtAgentStatus(a.addr); });
 });
-const agentBadge = (addr: string) => {
+
+/**
+ * Registration status as a tone plus its wording, so the row can carry a
+ * coloured dot the way the rest of the app marks state rather than a bullet
+ * baked into the string.
+ */
+const agentState = (addr: string): { tone: string; text: string } => {
   const s = agentsStatus[addr.toLowerCase()];
-  if (!s) return "checking…";
-  if (s.error) return "unknown";
-  if (s.live && s.ours) return "● live · agent of Safe";
-  if (s.live) return "● agent of another user";
-  return "○ not registered";
+  if (!s) return { tone: "idle", text: "checking…" };
+  if (s.error) return { tone: "idle", text: "unknown" };
+  if (s.live && s.ours) return { tone: "on", text: "live · agent of Safe" };
+  if (s.live) return { tone: "warn", text: "agent of another user" };
+  return { tone: "off", text: "not registered" };
 };
 
 const simulateStep = async (step: any) => {
@@ -299,56 +646,587 @@ const exec = async (step: any) => {
 </script>
 
 <style scoped lang="scss">
-.crt_console { display: flex; flex-direction: column; gap: 24px; margin-bottom: 40px; }
-.crt_card { border: 1px solid $color-border-dark; background: $color-gray-light-transparent; border-radius: $default-border-radius; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-.crt_card--payout { border-color: rgba(230, 106, 96, 0.35); }
-.crt_card--empty p { color: $color-light-subtitle; font-size: 13.5px; line-height: 1.6; margin: 8px 0 0; }
-.crt_status { flex-direction: row; align-items: center; gap: 34px; flex-wrap: wrap; }
-.crt_status__right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
-.crt_stat { display: flex; flex-direction: column; gap: 3px; }
-.crt_stat--right { text-align: right; }
-.crt_stat__label { font-family: monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: $color-text-irrelevant; }
-.crt_stat__value { font-family: monospace; font-size: 17px; }
-.crt_stat__sub { font-size: 12px; color: $color-light-subtitle; }
-.crt_layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 24px; align-items: start; }
-@media (max-width: 1180px) { .crt_layout { grid-template-columns: 1fr; } }
-.crt_main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.crt_aside { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 12px; }
-.crt_h2 { font-size: 20px; font-weight: 700; margin: 20px 0 0; display: flex; align-items: center; gap: 12px; }
-.crt_role2_tag { font-family: monospace; font-size: 11px; letter-spacing: 0.06em; color: var(--color-error, #e66a60); border: 1px solid rgba(230, 106, 96, 0.35); border-radius: $default-border-radius; padding: 4px 9px; }
-.crt_danger_tag { font-family: monospace; font-size: 10.5px; letter-spacing: 0.08em; color: var(--color-error, #e66a60); margin-left: 6px; }
-.crt_card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.crt_card__title { font-weight: 700; font-size: 15px; }
-.crt_card__sub { font-size: 12.5px; color: $color-light-subtitle; }
-.crt_row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.crt_row > * { flex: 1; min-width: 120px; }
-.crt_row > .v-btn { flex: 0 0 auto; min-width: 0; }
-.crt_grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
-.crt_agent { display: grid; grid-template-columns: minmax(0, 1.6fr) auto auto; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid $color-border-dark; }
-.crt_agent:first-of-type { border-top: 0; padding-top: 0; }
-.crt_agent__name { font-weight: 700; font-size: 14px; }
-.crt_agent__status { font-family: monospace; font-size: 12px; color: $color-light-subtitle; white-space: nowrap; }
-.crt_agent__actions { display: flex; gap: 8px; align-items: center; }
-.crt_arm_input { width: 150px; background: transparent; border: 1px solid $color-border-dark; border-radius: $default-border-radius; color: var(--color-error, #e66a60); font-family: monospace; font-size: 11.5px; padding: 7px 10px; outline: none; }
-.crt_panel_head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-.crt_panel_title { font-weight: 700; font-size: 15.5px; margin-top: 4px; }
-.crt_warn { border: 1px solid rgba(230, 106, 96, 0.35); background: rgba(230, 106, 96, 0.1); border-radius: $default-border-radius; padding: 9px 12px; font-size: 12.5px; line-height: 1.5; color: var(--color-error, #e66a60); }
-.crt_confirm { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; line-height: 1.5; color: $color-light-subtitle; cursor: pointer; }
-.crt_gated { opacity: 0.35; pointer-events: none; }
-.crt_gated, .crt_step { display: flex; flex-direction: column; gap: 10px; }
-.crt_step { border: 1px solid $color-border-dark; border-radius: $default-border-radius; padding: 12px; margin-top: 10px; }
-.crt_step__head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; font-size: 13px; }
-.crt_mono_dim { font-family: monospace; font-size: 11px; color: $color-text-irrelevant; word-break: break-all; }
-.crt_pinned { font-style: normal; color: $color-text-irrelevant; font-size: 10.5px; }
-.crt_param { display: flex; justify-content: space-between; gap: 12px; font-family: monospace; font-size: 12px; span:first-child { color: $color-text-irrelevant; text-transform: uppercase; letter-spacing: 0.05em; } }
-.crt_hex { font-family: monospace; font-size: 10.5px; line-height: 1.6; color: $color-light-subtitle; word-break: break-all; max-height: 96px; overflow: auto; border: 1px solid $color-border-dark; border-radius: $default-border-radius; padding: 8px 10px; }
-.crt_sim { border-radius: $default-border-radius; padding: 8px 11px; font-family: monospace; font-size: 12px; line-height: 1.5; border: 1px solid $color-border-dark; color: $color-light-subtitle; }
-.crt_sim--ok { color: var(--color-success); border-color: rgba(47, 215, 255, 0.3); }
-.crt_sim--bad { color: var(--color-error, #e66a60); border-color: rgba(230, 106, 96, 0.35); }
-.crt_sim--soft { color: $color-light-subtitle; }
-.crt_sim__hint { font-family: inherit; font-size: 11.5px; opacity: 0.85; }
-.crt_step__actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
-.crt_ok { color: var(--color-success); font-family: monospace; font-size: 12px; }
-.crt_bad { color: var(--color-error, #e66a60); font-family: monospace; font-size: 12px; }
-.crt_footnote { font-size: 11.5px; line-height: 1.6; color: $color-text-irrelevant; margin: 0; }
+.crt_console {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  margin-bottom: 2.5rem;
+}
+
+/* The mono uppercase caption the whole design system labels figures with. */
+.crt_label {
+  font-family: $font-mono;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: $color-steel-blue;
+
+  &--accent {
+    letter-spacing: 0.16em;
+    color: $color-cyan;
+  }
+}
+
+.crt_mono {
+  font-family: $font-mono;
+}
+
+/**
+ * Headline balances. Same construction as the vault overview's stat strip —
+ * hero figure keeping the left edge, hairline divider pushing the derived
+ * numbers away from it, no card behind any of it.
+ */
+.crt_summary {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1.5rem 2rem;
+
+  &__hero {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8125rem;
+  }
+
+  &__value_row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  &__figure {
+    font-family: $font-mono;
+    font-size: clamp(30px, 3.4vw, 42px);
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    line-height: 0.95;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__unit {
+    font-family: $font-mono;
+    font-size: 17px;
+    color: $color-text-irrelevant;
+  }
+
+  /* Seven balances plus the total only fit on one line on a wide desktop;
+     below that the divider would be left hanging at the end of the row. */
+  &__divider {
+    display: none;
+    width: 1px;
+    align-self: stretch;
+    background: $color-line;
+
+    /* 1360px is where the total and all seven balances measurably share a
+       line with room to spare; .crt_layout below is keyed off the viewport
+       the same way. */
+    @media (min-width: 1360px) {
+      display: block;
+      margin-left: auto;
+    }
+  }
+
+  &__breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem 1.75rem;
+  }
+
+  &__refresh {
+    align-self: flex-end;
+  }
+}
+
+.crt_stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+
+  &--right {
+    text-align: right;
+  }
+
+  &__value {
+    font-family: $font-mono;
+    font-size: 15px;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/**
+ * Group heading. Type comes from the global .group_title — the same 16px
+ * title the governance activity card carries; this only adds the space a
+ * heading needs above the cards it introduces.
+ */
+.crt_section {
+  margin-top: 0.75rem;
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.crt_tag {
+  font-family: $font-mono;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 0.1875rem 0.4375rem;
+  border-radius: 3px;
+
+  &--danger {
+    color: $color-neg;
+    background: $color-neg-soft;
+    border: 1px solid $color-neg-line;
+  }
+}
+
+/* .brand_card supplies the chrome; this is only the internal rhythm. */
+.crt_card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+
+  &--payout {
+    border-color: $color-neg-line;
+  }
+
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__titles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  &__sub {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+
+  /* The "do the whole position" escape hatch, kept out of the amount row so
+     the field it sits beside does not get squeezed to seven characters. */
+  &__foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -0.375rem;
+  }
+}
+
+.crt_layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 1.75rem;
+  align-items: start;
+
+  @media (max-width: 1180px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.crt_main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.crt_row {
+  display: flex;
+  gap: 0.625rem;
+  align-items: center;
+  flex-wrap: wrap;
+
+  > * {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  > .v-btn {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+}
+
+.crt_field {
+  &--narrow {
+    max-width: 180px;
+  }
+
+  &--tiny {
+    max-width: 110px;
+  }
+}
+
+.crt_grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+/**
+ * A text action reads as a link, the way "Execute performance fee (HWM)" does
+ * on the design's Execution App screen. !important because the md2 blueprint
+ * gives every v-btn color="primary", and Vuetify's text-primary utility class
+ * carries !important of its own.
+ */
+.crt_text_action.v-btn {
+  color: $color-cyan !important;
+  font-weight: 600;
+}
+
+.crt_agent {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) auto auto;
+  gap: 0.875rem;
+  align-items: center;
+  padding: 0.875rem 0;
+  border-top: 1px solid $color-line;
+
+  &:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: $color-white;
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: $font-mono;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: $color-steel-blue;
+    white-space: nowrap;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+}
+
+/* State marker, same 7px disc the Zodiac pill uses. */
+.crt_dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex: none;
+  background: $color-steel-blue;
+
+  &--on {
+    background: $color-pos;
+  }
+
+  &--warn {
+    background: $color-warning;
+  }
+
+  &--off {
+    background: $color-inactive;
+  }
+}
+
+.crt_aside {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  /* Same rhythm as .crt_main, so the section caption puts this column's first
+     card on exactly the baseline the left column's first card sits on. */
+  gap: 1rem;
+}
+
+.crt_panel {
+  /**
+   * Squared off against the bridge card opposite it — brand_card padding, an
+   * eyebrow, a line of description and a control row measure 151px there, and
+   * the two are read as a pair. In px because the two cards have no shared
+   * unit to derive it from. Only a floor: a staged action grows past it.
+   */
+  &--empty {
+    min-height: 151px;
+    /* Centred rather than top-set: the slack the min-height creates should
+       read as deliberate, not as a card that ran out of content. */
+    display: grid;
+    align-content: center;
+  }
+
+  &__intro {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: $color-light-subtitle;
+  }
+
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.625rem;
+  }
+
+  &__titles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: $color-white;
+  }
+
+  /* Matches the dialog close control: a 32px hit area that lights up, not a
+     bare glyph. */
+  &__close {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    margin: -0.375rem -0.5rem 0 0;
+    border-radius: $default-border-radius;
+    color: $color-steel-blue;
+    cursor: pointer;
+    transition: background-color $default-transition-time ease,
+      color $default-transition-time ease;
+
+    &:hover {
+      background: $color-gray-light-transparent;
+      color: $color-white;
+    }
+  }
+
+  &__note {
+    margin-top: 0.625rem;
+    font-size: 12px;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+}
+
+.crt_warn {
+  margin-top: 0.875rem;
+  border: 1px solid $color-neg-line;
+  background: $color-neg-soft;
+  border-radius: $default-border-radius;
+  padding: 0.5625rem 0.75rem;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: $color-neg;
+}
+
+.crt_confirm {
+  display: flex;
+  gap: 0.625rem;
+  align-items: flex-start;
+  margin-top: 0.875rem;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: $color-light-subtitle;
+  cursor: pointer;
+
+  input {
+    /* The global input rule sizes text fields; a checkbox needs none of it. */
+    min-height: 0;
+    height: auto;
+    padding: 0;
+    margin-top: 2px;
+    accent-color: $color-cyan;
+  }
+}
+
+.crt_steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+
+  &--gated {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+}
+
+.crt_step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  border: 1px solid $color-line;
+  border-radius: $default-border-radius;
+  background: $color-card-background;
+  padding: 0.875rem;
+  margin-top: 0.625rem;
+
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.625rem;
+    align-items: baseline;
+    font-size: 13px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+}
+
+.crt_mono_dim {
+  font-family: $font-mono;
+  font-size: 11px;
+  color: $color-steel-blue;
+  word-break: break-all;
+}
+
+.crt_pinned {
+  font-style: normal;
+  color: $color-text-irrelevant;
+  font-size: 10.5px;
+}
+
+.crt_param {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-family: $font-mono;
+  font-size: 12px;
+
+  span:first-child {
+    color: $color-steel-blue;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.crt_hex {
+  font-family: $font-mono;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: $color-light-subtitle;
+  word-break: break-all;
+  max-height: 96px;
+  overflow: auto;
+  border: 1px solid $color-line;
+  border-radius: $default-border-radius;
+  padding: 0.5rem 0.625rem;
+}
+
+.crt_sim {
+  border-radius: $default-border-radius;
+  padding: 0.5rem 0.6875rem;
+  font-family: $font-mono;
+  font-size: 12px;
+  line-height: 1.5;
+  border: 1px solid $color-line;
+  color: $color-steel-blue;
+
+  /* Cyan, not green: in this palette an affirmative reading is the accent. */
+  &--ok {
+    color: $color-cyan;
+    border-color: $color-cyan-line;
+    background: $color-cyan-tint;
+  }
+
+  &--bad {
+    color: $color-neg;
+    border-color: $color-neg-line;
+    background: $color-neg-soft;
+  }
+
+  &--soft {
+    color: $color-light-subtitle;
+  }
+
+  &__hint {
+    font-family: inherit;
+    font-size: 11.5px;
+    opacity: 0.85;
+  }
+}
+
+/* Break-glass field: red text on the design's inset input, not a bare box. */
+.crt_arm_input {
+  width: 150px;
+  min-height: 0;
+  height: auto;
+  background: $color-card-background;
+  border: 1px solid $color-line-2;
+  border-radius: $default-border-radius;
+  color: $color-neg;
+  font-family: $font-mono;
+  font-size: 11.5px;
+  padding: 0.5rem 0.625rem;
+  outline: none;
+  transition: border-color $default-transition-time ease;
+
+  &::placeholder {
+    color: $color-steel-blue;
+  }
+
+  &:focus {
+    border-color: $color-line-3;
+  }
+}
+
+.crt_ok {
+  color: $color-cyan;
+  font-family: $font-mono;
+  font-size: 12px;
+
+  &:hover {
+    color: $color-cyan;
+    text-decoration: underline;
+  }
+}
+
+.crt_bad {
+  color: $color-neg;
+  font-family: $font-mono;
+  font-size: 12px;
+}
+
+.crt_footnote {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: $color-steel-blue;
+}
 </style>

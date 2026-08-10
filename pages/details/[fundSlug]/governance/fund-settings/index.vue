@@ -551,11 +551,12 @@ const formatProposalData = () => {
       : parseInt(getFieldValueByFieldKey("performanceFeePeriod") as string);
   const managementPeriod = 0; // Note from Rok: always submit 0 here for now
 
+  // ABI order: _feePerformancePeriod then _feeManagePeriod.
   return [
     fundSettings,
     JSON.stringify(metaData),
-    managementPeriod,
     performancePeriod,
+    managementPeriod,
   ];
 };
 
@@ -573,11 +574,12 @@ const formatProposalDataOld = () => {
   const performancePeriod = fund.performancePeriod;
   const managementPeriod = fund.managementPeriod;
 
+  // ABI order: _feePerformancePeriod then _feeManagePeriod.
   return [
     fundSettings,
     JSON.stringify(metaData),
-    managementPeriod,
     performancePeriod,
+    managementPeriod,
   ];
 };
 

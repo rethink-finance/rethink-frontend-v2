@@ -1,15 +1,34 @@
 import { useGovernanceProposalsStore } from "../governance_proposals.store";
+import { fetchBackendProposals } from "~/services/backend/governance";
 import { fetchSubgraphGovernorProposals } from "~/services/subgraph";
 import { useFundStore } from "~/store/fund/fund.store";
+import { ChainId } from "~/types/enums/chain_id";
 import { ClockMode } from "~/types/enums/clock_mode";
+import { DelegatesSource } from "~/types/enums/delegates_source";
 import { _mapSubgraphProposalToProposal } from "~/types/helpers/mappers";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { useBlockTimeStore } from "~/store/web3/blockTime.store";
 
+/**
+ * Written straight onto state, not via a store action: this module and the
+ * store import each other, and inside that cycle TypeScript only sees a
+ * partially-inferred action list. State on IState resolves either way.
+ */
+export const setProposalsSource = (
+  chainId: ChainId,
+  fundAddress: string,
+  source: DelegatesSource,
+): void => {
+  const governanceProposalStore = useGovernanceProposalsStore();
+  if (!chainId || !fundAddress) return;
+
+  governanceProposalStore.fundProposalsSource[chainId] ??= {};
+  governanceProposalStore.fundProposalsSource[chainId][fundAddress] = source;
+};
+
 export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   const governanceProposalStore = useGovernanceProposalsStore();
   const fundStore = useFundStore();
-  const web3Store = useWeb3Store();
   const blockTimeStore = useBlockTimeStore();
 
   const fund = fundStore.fund;
@@ -22,7 +41,59 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId);
 
   const roleModAddress = await fundStore.fetchRoleModAddress(fund.address); // TODO replace with fetchGovernableFund
-  console.log("roleModAddress", roleModAddress);
+
+  // Tier 1: the backend's precomputed on-chain index. It embeds the
+  // per-proposal quorum inputs, so the whole per-timepoint RPC loop below is
+  // skipped. Soft-fails to null, never throws.
+  const backendSnapshot = await fetchBackendProposals(fund.chainId, fund.address);
+  if (backendSnapshot?.proposals) {
+    setProposalsSource(fund.chainId, fund.address, DelegatesSource.Backend);
+    const mappedProposals = await Promise.all(
+      backendSnapshot.proposals.map((proposal: any) =>
+        _mapSubgraphProposalToProposal(
+          proposal,
+          // Declared `number` but consumed via BigInt()/Number() — the
+          // subgraph path passes a runtime bigint here too.
+          BigInt(proposal.totalSupply || "0") as unknown as number,
+          blockTimeContext,
+          fund?.governanceToken?.decimals || 18,
+          BigInt(proposal.quorumNumerator || "0"),
+          BigInt(backendSnapshot.quorumDenominator || "1"),
+          blockTimeStore.getTimestampForBlock,
+          fund?.clockMode?.mode as ClockMode,
+          roleModAddress ?? "",
+          fund?.safeAddress ?? "",
+          fund?.address ?? "",
+        ),
+      ),
+    );
+    governanceProposalStore.storeProposals(fund.chainId, fund.address, mappedProposals);
+    return mappedProposals;
+  }
+  setProposalsSource(fund.chainId, fund.address, DelegatesSource.Subgraph);
+  try {
+    return await fetchProposalsFromSubgraph(
+      fund,
+      blockTimeContext,
+      roleModAddress,
+    );
+  } catch (error) {
+    // Neither backend nor subgraph could answer. Whatever localForage
+    // hydrated stays visible; the page shows a "couldn't refresh" note.
+    setProposalsSource(fund.chainId, fund.address, DelegatesSource.Unavailable);
+    throw error;
+  }
+};
+
+const fetchProposalsFromSubgraph = async (
+  fund: any,
+  blockTimeContext: any,
+  roleModAddress: string | undefined,
+): Promise<any> => {
+  const governanceProposalStore = useGovernanceProposalsStore();
+  const fundStore = useFundStore();
+  const web3Store = useWeb3Store();
+  const blockTimeStore = useBlockTimeStore();
 
   const quorumDenominator = await web3Store.callWithRetry(
     fund.chainId,

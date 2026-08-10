@@ -50,7 +50,9 @@ const IF = {
 };
 
 export const usdc6 = (v: string | number) => ethers.parseUnits(String(v).trim(), 6);
-export const fmt6 = (bi: bigint, dp = 2) => Number(ethers.formatUnits(bi ?? 0n, 6)).toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: Math.max(dp, 6) });
+// Fixed at dp on both ends: USDC is quoted to the cent everywhere it is read,
+// and the full six decimals only ever made the balance strip hard to scan.
+export const fmt6 = (bi: bigint, dp = 2) => Number(ethers.formatUnits(bi ?? 0n, 6)).toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp });
 export const shortAddr = (a?: string) => (a ? a.slice(0, 6) + "\u2026" + a.slice(-4) : "\u2014");
 
 export interface CrtParam { k: string; v: string; pinned?: boolean }
@@ -72,7 +74,7 @@ export const crtInner = {
   cdwDepositFor: (amt: string): CrtInner => ({ to: A.cdw, data: IF.cdw.encodeFunctionData("depositFor", [A.safe, usdc6(amt), 0]), sig: "CoreDepositWallet.depositFor(receiver, amount, dex)", params: [{ k: "receiver", v: "Main Safe " + shortAddr(A.safe), pinned: true }, { k: "amount", v: amt + " USDC" }, { k: "dex", v: "0", pinned: true }] }),
   usdClassTransfer: (usdcInt: number, toPerp: boolean): CrtInner => ({ to: A.coreWriter, data: IF.writer.encodeFunctionData("sendRawAction", [pUsdClassTransfer(usdcInt, toPerp)]), sig: "CoreWriter.sendRawAction(usdClassTransfer)", params: [{ k: "amount", v: usdcInt.toLocaleString("en-US") + " USDC", pinned: true }, { k: "direction", v: toPerp ? "spot \u2192 perp" : "perp \u2192 spot" }] }),
   sendAssetToEvm: (usdcInt: number): CrtInner => ({ to: A.coreWriter, data: IF.writer.encodeFunctionData("sendRawAction", [pSendAsset(usdcInt)]), sig: "CoreWriter.sendRawAction(sendAsset)", params: [{ k: "amount", v: usdcInt.toLocaleString("en-US") + " USDC", pinned: true }, { k: "route", v: "Core spot \u2192 EVM Safe", pinned: true }] }),
-  addApiWallet: (agent: string, name: string): CrtInner => ({ to: A.coreWriter, data: IF.writer.encodeFunctionData("sendRawAction", [pAddApiWallet(agent, name)]), sig: "CoreWriter.sendRawAction(addApiWallet)", params: [{ k: "agent", v: shortAddr(agent), pinned: true }, { k: "name", v: name === "" ? "(unnamed)" : "\u201c" + name + "\u201d", pinned: true }] }),
+  addApiWallet: (agent: string, name: string): CrtInner => ({ to: A.coreWriter, data: IF.writer.encodeFunctionData("sendRawAction", [pAddApiWallet(agent, name)]), sig: "CoreWriter.sendRawAction(addApiWallet)", params: [{ k: "agent", v: shortAddr(agent), pinned: true }, { k: "name", v: name === "" ? "(unnamed)" : "\u201C" + name + "\u201D", pinned: true }] }),
 };
 
 export const crtWrap = (inner: CrtInner, role: 1 | 2) => ({

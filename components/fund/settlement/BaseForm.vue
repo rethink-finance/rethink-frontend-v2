@@ -1,55 +1,61 @@
 <template>
   <div class="request_deposit">
-    <div class="request_deposit__token">
-      <div class="request_deposit__token_header">
-        Token
-        <span>
-          <Icon icon="octicon:question-16" width="1rem" />
-          <v-tooltip v-if="token0" activator="parent" location="right">
-            {{ token0.symbol }} ({{ token0.address }}).
-          </v-tooltip>
-        </span>
-      </div>
-
-      <div class="request_deposit__token_data">
-        <div class="request_deposit__token_col">
+    <div class="request_deposit__field">
+      <div class="request_deposit__control">
+        <div class="request_deposit__symbol">
           {{ token0.symbol }}
+          <v-tooltip
+            v-if="token0"
+            activator="parent"
+            location="top"
+            content-class="brand_tooltip"
+          >
+            <div class="brand_tooltip__label">
+              {{ token0.symbol }}
+            </div>
+            <div class="brand_tooltip__value">
+              {{ token0.address }}
+            </div>
+          </v-tooltip>
         </div>
-        <div class="request_deposit__token_col pa-0 request_deposit__token_col--dark text-end">
-          <UiInputNumber
-            v-model="tokenValue"
-            :rules="tokenValueRules"
-            class="request_deposit__input_amount"
-          />
-        </div>
+        <UiInputNumber
+          v-model="tokenValue"
+          :rules="tokenValueRules"
+          hide-details="auto"
+          class="request_deposit__input_amount"
+        />
       </div>
-      <div class="request_deposit__balance request_deposit__balance--row">
-        Balance:
-        <strong
-          class="set_token_value_button mx-1"
+      <div class="request_deposit__caption">
+        Balance ·
+        <button
+          type="button"
+          class="request_deposit__balance_button"
           @click="setTokenValue(token0UserBalanceFormatted)"
         >
           {{ token0UserBalanceFormatted }} {{ token0.symbol }}
-        </strong>
+        </button>
       </div>
     </div>
 
-    <div class="request_deposit__token">
-      <div class="request_deposit__token_header">
-        Token
-        <span>
-          <Icon icon="octicon:question-16" width="1rem" />
-          <v-tooltip v-if="token1" activator="parent" location="right">
-            {{ token1.symbol }} ({{ token1.address }}).
-          </v-tooltip>
-        </span>
-      </div>
-
-      <div class="request_deposit__token_data">
-        <div class="request_deposit__token_col">
+    <div class="request_deposit__field">
+      <div class="request_deposit__control request_deposit__control--readonly">
+        <div class="request_deposit__symbol">
           {{ token1.symbol }}
+          <v-tooltip
+            v-if="token1"
+            activator="parent"
+            location="top"
+            content-class="brand_tooltip"
+          >
+            <div class="brand_tooltip__label">
+              {{ token1.symbol }}
+            </div>
+            <div class="brand_tooltip__value">
+              {{ token1.address }}
+            </div>
+          </v-tooltip>
         </div>
-        <div class="request_deposit__token_col text-end">
+        <div class="request_deposit__estimate">
           ≈
           <v-progress-circular
             v-if="isExchangeRateLoading"
@@ -62,25 +68,17 @@
           </template>
         </div>
       </div>
-      <div class="request_deposit__balance">
-        <div class="mb-2">
-          Balance:
-          <strong>{{ token1UserBalanceFormatted }} {{ token1.symbol }}</strong>
-        </div>
-        <div v-if="isExchangeRateLoading">
-          <v-skeleton-loader type="text" class="request_deposit__text_skeleton" />
-          <v-skeleton-loader type="text" class="request_deposit__text_skeleton" />
-        </div>
-        <div>
-          <strong>
-            {{ exchangeRateText }}
-          </strong>
-        </div>
-        <span class="request_deposit__info_text">
-          {{ isExchangeRateUsingLastNavUpdate ? "Based on the Last NAV Update" : "Based on the Current NAV" }}
-        </span>
+      <div class="request_deposit__caption">
+        Balance · {{ token1UserBalanceFormatted }} {{ token1.symbol }}
+      </div>
+      <div v-if="isExchangeRateLoading" class="request_deposit__caption">
+        <v-skeleton-loader type="text" class="request_deposit__text_skeleton" />
+      </div>
+      <div v-else class="request_deposit__caption">
+        {{ exchangeRateText }}
       </div>
     </div>
+
     <div class="buttons_container">
       <slot name="buttons" />
     </div>
@@ -121,10 +119,6 @@ const props = defineProps({
     default: FixedNumber.fromValue(0),
   },
   isExchangeRateLoading: {
-    type: Boolean,
-    default: false,
-  },
-  isExchangeRateUsingLastNavUpdate: {
     type: Boolean,
     default: false,
   },
@@ -194,69 +188,111 @@ const calculatedToken1Value = computed(() => {
   justify-content: space-around;
   margin-top: 0.5rem;
 }
+
+/**
+ * Deposit / redeem form, following the design's amount control: the token
+ * symbol lives in a raised prefix box welded to the input, and the balance and
+ * rate sit under it as mono captions rather than labelled fields.
+ */
 .request_deposit {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  font-size: $text-sm;
-  line-height: 1;
+  gap: 1.125rem;
 
-  &__token {
-    font-weight: 500;
-    width: 100%;
-  }
-  &__token_header {
+  &__field {
     display: flex;
-    flex-direction: row;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-    color: $color-light-subtitle
+    flex-direction: column;
+    gap: 0.375rem;
   }
-  &__token_data {
-    @include borderGray;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    margin-bottom: 0.5rem;
-    color: $color-white;
-  }
-  &__token_col {
-    padding: 0.75rem;
-    height: 2.5rem;
-    background: $color-navy-gray;
 
-    &:first-of-type {
-      @include borderGray("border-right", false);
-    }
-    &--dark {
-      background: $color-navy-gray-dark;
+  &__control {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    overflow: hidden;
+
+    /* The estimated output is derived, never typed into — the flatter fill
+       marks it as read-only without needing a disabled input. */
+    &--readonly {
+      background: rgba(255, 255, 255, 0.015);
     }
   }
-  &__info_text {
+
+  &__symbol {
+    display: flex;
+    align-items: center;
+    min-width: 58px;
+    padding: 0.625rem 0.875rem;
+    background: $color-navy-gray-light;
+    border-right: 1px solid $color-line-2;
+    font-family: $font-mono;
+    font-size: 13px;
+    color: $color-text-irrelevant;
+    cursor: help;
+  }
+
+  &__estimate {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    flex: 1;
+    padding: 0.625rem 0.875rem;
+    font-family: $font-mono;
+    font-size: 14px;
     color: $color-text-irrelevant;
   }
+
+  &__input_amount {
+    flex: 1;
+    min-width: 0;
+
+    :deep(.v-field) {
+      background: transparent;
+      box-shadow: none;
+    }
+
+    :deep(.v-field__input) {
+      min-height: 0;
+      padding: 0.625rem 0.875rem;
+    }
+
+    :deep(input) {
+      font-family: $font-mono;
+      font-size: 14px;
+      color: $color-white;
+    }
+
+    :deep(.v-input__details) {
+      padding-inline: 0;
+    }
+  }
+
+  &__caption {
+    font-family: $font-mono;
+    font-size: 11.5px;
+    color: $color-steel-blue;
+  }
+
+  &__balance_button {
+    font-family: inherit;
+    font-size: inherit;
+    color: $color-cyan;
+    transition: color $default-transition-time ease;
+
+    &:hover {
+      color: $color-cyan-soft;
+    }
+  }
+
   &__text_skeleton {
     max-width: 15rem;
+    background: transparent;
 
     ::v-deep(.v-skeleton-loader__text) {
       margin: 0.25rem 0;
-    }
-  }
-  &__balance {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-
-    &--row {
-      gap: 0.15rem;
-      align-items: center;
-      flex-direction: row;
-    }
-    .set_token_value_button {
-      &:hover {
-        cursor: pointer;
-        text-decoration: underline;
-      }
     }
   }
 }
