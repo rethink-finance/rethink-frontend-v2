@@ -194,27 +194,6 @@ export default defineNuxtConfig({
     // app.rethink.finance origin). Point BACKEND_URL at
     // http://localhost:3000/backend-api to use it. No effect on builds.
     devProxy: {
-      // The governance indexer is not deployed to the production backend yet,
-      // so /governance 404s there and the vault governance page falls all the
-      // way through to the (dead on Polygon) subgraph. Route just those calls
-      // to a local backend on :8000 and leave everything else on production —
-      // pointing BACKEND_URL wholesale at localhost instead starves every
-      // NAV-snapshot surface, whose history only exists in the production DB.
-      // Remove this entry once the governance module ships to production.
-      "/backend-api/governance": {
-        target: "http://localhost:8000/governance",
-        changeOrigin: true,
-      },
-      // Same story as governance: the vault-image module is not on the
-      // production backend yet, so the create flow's upload 404s there.
-      // Note the local driver hands back a localhost URL, and that URL is what
-      // the initialize transaction writes into the vault metadata — fine for
-      // walking the flow, not for a vault anyone else will look at.
-      // Remove this entry once the module ships to production.
-      "/backend-api/vault-image": {
-        target: "http://localhost:8000/vault-image",
-        changeOrigin: true,
-      },
       "/backend-api": {
         target: "https://backend.rethink.finance",
         changeOrigin: true,

@@ -57,25 +57,6 @@
         class="mt-6"
         :fund-factory-contract-v2-used="fundFactoryContractV2Used"
       />
-      <div
-        v-if="allowManagerToUpdateSettings || allowManagerToManageRoleMembers"
-        class="activation_notice"
-      >
-        <strong>Granted — pending activation via governance.</strong>
-        <span v-if="allowManagerToUpdateSettings">
-          "Update vault settings" stays inert until a one-time governance
-          proposal hands settings authority to the Safe (sets the vault's
-          governor to the Safe address).
-        </span>
-        <span v-if="allowManagerToManageRoleMembers">
-          "Manage role members" stays inert until a one-time governance
-          proposal transfers the Roles modifier's ownership to the Safe.
-        </span>
-        <span>
-          After the vault is finalized, create the activation proposal with
-          one click from the vault's Permissions page.
-        </span>
-      </div>
       <OnboardingRoleMembers
         v-model="pendingRoleMembershipChanges"
         class="mt-4"
@@ -224,17 +205,16 @@ const { roles, selectedRole, isFetchingPermissions, fetchPermissions } =
 const updateRoleError = ref("");
 const selectedStepIndex = ref(0);
 const loading = ref(false);
-// All three start on: the design presents them as the permissions a vault
-// normally needs to run, and a curator who does not want one turns it off here
-// rather than discovering later that the manager cannot settle a flow.
+// Every prepopulated permission starts on: they are what a vault normally
+// needs to run, and a curator who does not want one turns it off here rather
+// than discovering later that the manager cannot settle a flow. The last two
+// are Roles V2 only and stay inert until the one-time governance activation
+// offered from the vault's Permissions page after finalizing.
 const allowManagerToSendFundsToFundContract = ref(true);
 const allowManagerToCollectFees = ref(true);
 const allowManagerToUpdateNav = ref(true);
-// The two below start off: they widen the manager's authority (settings +
-// role membership) and need a one-time governance activation anyway, so
-// they are strictly opt-in.
-const allowManagerToUpdateSettings = ref(false);
-const allowManagerToManageRoleMembers = ref(false);
+const allowManagerToUpdateSettings = ref(true);
+const allowManagerToManageRoleMembers = ref(true);
 const pendingRoleMembershipChanges = ref<IAssignMemberChange[]>([]);
 const rawPermissionCodeEntries = ref<IRawPermissionCodeEntry[]>([]);
 const defaultMethod = formatInputToObject(
@@ -785,23 +765,6 @@ watch(
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: $color-steel-blue;
-  }
-}
-
-.activation_notice {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  margin-top: 0.75rem;
-  padding: 0.875rem 1.125rem;
-  border: 1px solid $color-line-2;
-  border-radius: $default-border-radius;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: $color-steel-blue;
-
-  strong {
-    color: $color-white;
   }
 }
 
