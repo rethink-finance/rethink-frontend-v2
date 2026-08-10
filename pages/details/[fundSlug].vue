@@ -1,34 +1,80 @@
 <template>
-  <div v-if="isLoadingFetchFundData" class="w-100">
+  <!-- .page_shell, not .w-100: Vuetify's utility is !important and would beat
+       the shared page width cap. -->
+  <div v-if="isLoadingFetchFundData" class="page_shell">
     <!-- TODO Create better skeletons in the future. -->
     <v-skeleton-loader type="card" />
     <v-skeleton-loader type="card" />
     <v-skeleton-loader type="card" />
   </div>
-  <div v-else-if="fund?.address" class="w-100">
+  <div v-else-if="fund?.address" class="page_shell">
     <FundSEOMetadata
       :fund-name="fund?.title"
       :symbol="fund?.fundToken?.symbol"
       :description="fund?.description"
       :image-url="fund?.photoUrl"
     />
-    <FundHeader
-      :fund="fund"
-      :breadcrumb-items="breadcrumbItems"
-    />
-    <FundNavigation
-      v-if="breadcrumbItems.length === 0"
-      :routes="routes"
-      :fund-details-route="fundDetailsRoute"
-    />
-    <UiBreadcrumbs
-      v-if="breadcrumbItems.length > 0"
-      :items="breadcrumbItems"
-      class="breadcrumbs"
-      :prepend-breadcrumb="prependBreadcrumb"
-    />
+    <div class="fund_topbar">
+      <NuxtLink to="/" class="fund_topbar__back">
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M19 12H5" />
+          <path d="M12 19l-7-7 7-7" />
+        </svg>
+        All vaults
+      </NuxtLink>
+      <FundNavigation
+        v-if="breadcrumbItems.length === 0"
+        class="fund_topbar__nav"
+        :routes="routes"
+        :fund-details-route="fundDetailsRoute"
+      />
+    </div>
+    <!-- Identity, page body and the deposit rail share one grid so the rail can
+         start level with the vault title and stay pinned while the long left
+         column scrolls. The rail belongs to the overview only; every other
+         section runs the full width. -->
+    <div class="fund_layout" :class="{ 'fund_layout--split': isOverviewRoute }">
+      <FundHeader
+        class="fund_layout__header"
+        :fund="fund"
+        :breadcrumb-items="breadcrumbItems"
+        :section-title="sectionTitle"
+        :overview-route="fundDetailsRoute"
+      />
+      <UiBreadcrumbs
+        v-if="breadcrumbItems.length > 0"
+        :items="breadcrumbItems"
+        class="fund_layout__header breadcrumbs"
+        :prepend-breadcrumb="prependBreadcrumb"
+      />
 
-    <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
+      <aside v-if="isOverviewRoute" class="fund_layout__rail">
+        <FundCurrentCycle
+          v-if="userDepositRequestExists || userRedemptionRequestExists"
+          :fund="fund"
+        />
+        <FundSettlement
+          v-else
+          :fund="fund"
+          :should-user-delegate="shouldUserDelegate"
+        />
+
+        <FundInfoMyDeposits v-if="isConnected" :fund="fund" />
+      </aside>
+
+      <div class="fund_layout__body">
+        <NuxtPage :fund="fund" @update-breadcrumbs="setBreadcrumbItems" />
+      </div>
+    </div>
   </div>
   <div
     v-else-if="accountStore.isSwitchingNetworks"
@@ -64,6 +110,15 @@ const accountStore = useAccountStore();
 const fundStore = useFundStore();
 const actionStateStore = useActionStateStore();
 const route = useRoute();
+
+// State for the deposit rail, which the shell renders so it can sit alongside
+// the vault identity rather than below it.
+const {
+  shouldUserDelegate,
+  userDepositRequestExists,
+  userRedemptionRequestExists,
+} = storeToRefs(fundStore);
+const { isConnected } = storeToRefs(accountStore);
 // fund address is always in the third position of the route
 // e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
 const parts = route.path.split("/")[2]?.split("-") ?? [];
@@ -133,6 +188,8 @@ const fundDetailsRoute = computed(
   () => `/details/${fundChainId}-${fundSymbol}-${fundAddress}`,
 );
 
+const isOverviewRoute = computed(() => route.path === fundDetailsRoute.value);
+
 // show icon + title in the breadcrumb for the fund
 const prependBreadcrumb = computed(() => {
   const output = {
@@ -145,13 +202,10 @@ const prependBreadcrumb = computed(() => {
   return output;
 });
 
+// Overview is not among these: the header's "back to overview" button is how
+// you leave a section, so listing it here as well would give the same
+// destination two controls a few pixels apart.
 const routes: IRoute[] = [
-  {
-    to: fundDetailsRoute.value,
-    exactMatch: true,
-    title: "Overview",
-    text: "",
-  },
   {
     to: `${fundDetailsRoute.value}/governance`,
     exactMatch: false,
@@ -186,6 +240,20 @@ const routes: IRoute[] = [
   },
 ];
 
+/**
+ * The section currently open, read off the same list the curator row is built
+ * from so renaming a tab renames the heading with it. Deeper pages inside a
+ * section still name the section, not themselves.
+ */
+const sectionTitle = computed(() => {
+  if (isOverviewRoute.value) return "";
+  const match = routes.find(
+    (routeItem) =>
+      route.path === routeItem.to || route.path.startsWith(`${routeItem.to}/`),
+  );
+  return match?.title ?? "";
+});
+
 </script>
 
 <style lang="scss" scoped>
@@ -194,5 +262,89 @@ const routes: IRoute[] = [
 }
 .breadcrumbs {
   margin-bottom: 2rem;
+}
+
+/**
+ * Overview layout: identity in the top-left, the vault's own content beneath
+ * it, and the deposit rail occupying the full right column from the title
+ * down. Spanning both rows is what lets the rail stay sticky for the whole
+ * scroll of the left column. Below desktop it is a plain stack, with the rail
+ * right after the identity so depositing is never buried under the page.
+ */
+.fund_layout {
+  &--split {
+    @include xl {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      column-gap: 1.375rem;
+      align-items: start;
+    }
+  }
+
+  &__header {
+    @include xl {
+      grid-column: 1;
+      grid-row: 1;
+    }
+  }
+
+  &__body {
+    min-width: 0;
+
+    @include xl {
+      grid-column: 1;
+      grid-row: 2;
+    }
+  }
+
+  &__rail {
+    display: flex;
+    flex-direction: column;
+    gap: 1.375rem;
+    min-width: 0;
+    margin-bottom: 1.375rem;
+
+    @include xl {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      /* Without this the item stretches over both rows and has no room left
+         to slide, which reads as "sticky is broken". */
+      align-self: start;
+      position: sticky;
+      top: calc($navbar-height + 1rem);
+      margin-bottom: 0;
+    }
+  }
+}
+
+/* Design puts the "all vaults" escape hatch and the section switcher on one
+   row above the vault identity, so the identity block owns the full width. */
+.fund_topbar {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+
+  &__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: $font-mono;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    text-decoration: none;
+    transition: color $default-transition-time ease;
+
+    &:hover {
+      color: $color-white;
+    }
+  }
+
+  &__nav {
+    margin-left: auto;
+  }
 }
 </style>

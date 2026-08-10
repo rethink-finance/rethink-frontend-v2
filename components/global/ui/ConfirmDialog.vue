@@ -1,57 +1,58 @@
 <template>
   <v-dialog
     :model-value="modelValue"
-    scrim="black"
-    opacity="0.3"
-    :max-width="maxWidth ?? '600px'"
+    :max-width="maxWidth ?? '520px'"
     @update:model-value="closeDialog"
   >
-    <div class="main_card di_card">
-      <div class="di_card__header-container">
-        <div class="di_card__header">
-          <Icon
-            icon="material-symbols:info-outline"
-            class="di_card__info-icon"
-            width="1.5rem"
-          />
-          {{ title }}
-        </div>
-
-        <Icon
-          icon="material-symbols:close"
-          class="di_card__close-icon"
-          width="1.5rem"
-          @click="closeDialog()"
-        />
-      </div>
-
-      <div class="di_card__content">
-        <div class="di_card__text">
-          <slot>
-            {{ message }}
+    <div class="brand_modal">
+      <div class="brand_modal__head">
+        <div class="brand_modal__heading">
+          <!-- Dialogs that want a richer heading than one line of text fill
+               this in; everything else keeps the eyebrow-and-title default. -->
+          <slot name="title">
+            <div class="brand_modal__eyebrow">
+              {{ eyebrow ?? "Confirm" }}
+            </div>
+            <h2 class="brand_modal__title">
+              {{ title }}
+            </h2>
           </slot>
         </div>
 
-        <div v-if="confirmText || cancelText" class="di_card__button-container">
-          <v-btn
-            v-if="cancelText"
-            class="di_card__cancel-button"
-            variant="text"
-            @click="cancel()"
-          >
-            {{ cancelText ?? "Cancel" }}
-          </v-btn>
+        <button
+          type="button"
+          class="brand_modal__close"
+          aria-label="Close"
+          @click="closeDialog()"
+        >
+          <Icon icon="material-symbols:close" width="1.125rem" />
+        </button>
+      </div>
 
-          <v-btn
-            v-if="confirmText"
-            class="di_card__submit-button"
-            color="primary"
-            :loading="loading"
-            @click="confirm()"
-          >
-            {{ confirmText }}
-          </v-btn>
-        </div>
+      <div class="brand_modal__body">
+        <slot>
+          {{ message }}
+        </slot>
+      </div>
+
+      <div v-if="confirmText || cancelText" class="brand_modal__footer">
+        <v-btn
+          v-if="cancelText"
+          class="di_card__cancel-button"
+          variant="text"
+          @click="cancel()"
+        >
+          {{ cancelText ?? "Cancel" }}
+        </v-btn>
+
+        <v-btn
+          v-if="confirmText"
+          color="primary"
+          :loading="loading"
+          @click="confirm()"
+        >
+          {{ confirmText }}
+        </v-btn>
       </div>
     </div>
   </v-dialog>
@@ -62,6 +63,7 @@ defineProps({
   modelValue: Boolean,
   message: String,
   title: String,
+  eyebrow: String,
   confirmText: String,
   loading: Boolean,
   cancelText: String,
@@ -83,56 +85,10 @@ const confirm = () => {
 </script>
 
 <style scoped lang="scss">
-.di_card {
-  margin: 0 auto;
-  padding: 40px;
-  width: 100%;
-  max-height: 95vh;
-  overflow: auto;
-
-  background-color: $color-bg-toast;
-  box-shadow: 0 0 16px 0 $color-box-shadow;
-
-  color: $color-white;
-
-  &__header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  &__header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: $text-md;
-    font-weight: 700;
-  }
-  &__info-icon {
-    color: $color-primary;
-    rotate: 180deg;
-  }
-  &__close-icon {
-    cursor: pointer;
-    color: $color-steel-blue;
-  }
-  &__content {
-    margin-top: 2rem;
-  }
-  &__text {
-    font-size: $text-md;
-    font-weight: 500;
-    color: $color-light-subtitle;
-  }
-  &__button-container {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 2rem;
-  }
-
-  &__cancel-button {
-    color: $color-text-irrelevant !important;
-    font-weight: 500;
-  }
+/* The dismissing action is quieter than the committing one — it is the option
+   you take by not deciding. */
+.di_card__cancel-button {
+  color: $color-text-irrelevant !important;
+  font-weight: 500;
 }
 </style>

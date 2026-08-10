@@ -1,164 +1,128 @@
 <template>
-  <v-data-table
-    v-if="items.length || loading"
-    class="table_governance"
-    :headers="headers"
-    hover
-    :items="items"
-    :loading="loading && items.length === 0"
-    loading-text="Loading Activity"
-    items-per-page="-1"
-  >
-    <template #[`header.approval`]="{ column }">
-      <!-- HEADERS -->
-      <div class="table_governance__header_cell justify-end">
-        {{ column.title }}
-        <span class="d-flex align-center ms-1">
-          <Icon icon="octicon:question-16" width="1rem" />
-        </span>
-        <v-tooltip activator="parent" location="top">
-          Calculated as: <br>
-          <strong>votes for / total casted votes</strong><br>
-        </v-tooltip>
-      </div>
-    </template>
-    <template #[`header.participation`]="{ column }">
-      <div class="table_governance__header_cell justify-end">
-        {{ column.title }}
-        <span class="d-flex align-center ms-1">
-          <Icon icon="octicon:question-16" width="1rem" />
-        </span>
-        <v-tooltip activator="parent" location="top">
-          Calculated as: <br>
-          <strong>total votes / total supply</strong>
-        </v-tooltip>
-      </div>
-    </template>
+  <div class="proposals_table">
+    <div class="proposals_table__scroll">
+      <div class="proposals_table__grid">
+        <div class="proposals_table__row proposals_table__row--head">
+          <div class="proposals_table__th">
+            #
+          </div>
+          <div class="proposals_table__th">
+            Proposal
+          </div>
+          <div class="proposals_table__th">
+            Created
+          </div>
+          <div class="proposals_table__th proposals_table__th--center">
+            Voted
+          </div>
+          <div
+            class="proposals_table__th proposals_table__th--right"
+            title="Votes for / total cast votes"
+          >
+            Approval
+          </div>
+          <div
+            class="proposals_table__th proposals_table__th--right"
+            title="Total votes / total supply"
+          >
+            Participation
+          </div>
+        </div>
 
-    <!-- BODY -->
-    <template #item="{ item, index }">
-      <tr :class="getRowClass(item)" @click="rowClick($event, item)">
-        <td><strong>{{ index + 1 }}</strong></td>
-        <td>
-          <div class="proposal__title">
-            <div class="proposal__title__text">
-              <div>{{ item.title }}</div>
+        <div
+          v-if="loading && loadingVariant === 'prepend'"
+          class="proposals_table__row proposals_table__row--skeleton"
+        >
+          <div v-for="cell in 6" :key="cell">
+            <v-skeleton-loader type="text" class="proposals_table__skeleton" />
+          </div>
+        </div>
+
+        <div
+          v-for="(item, index) in items"
+          :key="item.proposalId"
+          class="proposals_table__row proposals_table__row--clickable"
+          @click="rowClick(item)"
+        >
+          <div class="proposals_table__index">
+            {{ String(index + 1).padStart(2, "0") }}
+          </div>
+
+          <div class="proposals_table__proposal">
+            <div class="proposals_table__title">
+              {{ item.title }}
             </div>
-            <div class="proposal__tags">
-              <FundGovernanceProposalStateChip
-                :value="item.state"
-                class="proposal__tag"
-              />
-              <FundGovernanceProposalStateChip
-                v-for="(calldataTag, index) of item.calldataTags ?? []"
-                :key="index"
+            <div class="proposals_table__badges">
+              <FundGovernanceStateBadge :value="item.state" />
+              <FundGovernanceStateBadge
+                v-for="(calldataTag, tagIndex) of item.calldataTags ?? []"
+                :key="tagIndex"
                 :value="calldataTag"
-                class="proposal__tag"
+                neutral
               />
             </div>
           </div>
-        </td>
-        <td>{{ item.createdDatetimeFormatted }}</td>
-        <td v-if="accountStore.isConnected">
-          <div class="table_governance__voted_cell">
-            <div v-if="item.hasVotedLoading">
-              <v-progress-circular
-                indeterminate
-                color="gray"
-                size="16"
-                width="2"
-              />
-            </div>
-            <div v-else-if="governanceProposalStore.hasAccountVoted(item.proposalId) === undefined">
-              N/A
-            </div>
-            <div v-else>
-              <Icon
-                v-if="governanceProposalStore.hasAccountVoted(item.proposalId)"
-                icon="weui:done-filled"
-                width="1rem"
-                height="1rem"
-                color="var(--color-success)"
-              />
-              <icon
-                v-else
-                icon="mingcute:close-fill"
-                color="var(--color-error)"
-              />
-            </div>
-          </div>
-        </td>
-        <td>
-          <div class="d-flex justify-end">
-            {{ item.approvalFormatted }}
-            <v-tooltip activator="parent" location="bottom">
-              {{ item.forVotesFormatted }} of {{ item.totalVotesFormatted }}
-            </v-tooltip>
-          </div>
-        </td>
-        <td>
-          <div class="d-flex justify-end">
-            {{ item.participationFormatted }}
-            <v-tooltip activator="parent" location="bottom">
-              {{ item.totalVotesFormatted }} of {{ item.totalSupplyFormatted }}
-            </v-tooltip>
-          </div>
-        </td>
-      </tr>
-    </template>
 
-    <!-- LOADER SKELETON -->
-    <!-- Conditionally render the loading skeleton at the beginning or end -->
-    <template v-if="loadingVariant === 'prepend'" #[`body.prepend`]>
-      <tr v-if="items.length && loading">
-        <td>1</td>
-        <td v-for="header in headers.length - 1" :key="header">
-          <v-skeleton-loader type="text" class="table_governance__skeleton_loader" />
-        </td>
-      </tr>
-    </template>
-    <template v-if="loadingVariant === 'append'" #[`body.append`]>
-      <tr v-if="items.length && loading">
-        <td>
-          {{ items.length + 1 }}
-        </td>
-        <td v-for="header in headers.length - 1" :key="header">
-          <v-skeleton-loader type="text" class="table_governance__skeleton_loader" />
-        </td>
-      </tr>
-    </template>
-    <template #bottom>
-      <!-- Leave this slot empty to hide pagination controls -->
-    </template>
-  </v-data-table>
-  <div v-else class="table_governance__no_data">
-    No Governance Activity details available.
+          <div class="proposals_table__created">
+            {{ item.createdDatetimeFormatted }}
+          </div>
+
+          <div class="proposals_table__voted">
+            <v-progress-circular
+              v-if="item.hasVotedLoading"
+              size="14"
+              width="2"
+              indeterminate
+            />
+            <span
+              v-else-if="hasVoted(item)"
+              class="proposals_table__voted_yes"
+            >✓</span>
+            <span v-else class="proposals_table__voted_no">✗</span>
+          </div>
+
+          <div
+            class="proposals_table__number"
+            :title="`${item.forVotesFormatted} of ${item.totalVotesFormatted}`"
+          >
+            {{ approvalOf(item) }}
+          </div>
+
+          <div
+            class="proposals_table__number"
+            :title="`${item.totalVotesFormatted} of ${item.totalSupplyFormatted}`"
+          >
+            {{ participationOf(item) }}
+          </div>
+        </div>
+
+        <div
+          v-if="loading && loadingVariant === 'append'"
+          class="proposals_table__row proposals_table__row--skeleton"
+        >
+          <div v-for="cell in 6" :key="cell">
+            <v-skeleton-loader type="text" class="proposals_table__skeleton" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="!items.length && !loading" class="proposals_table__empty">
+      No governance activity yet.
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// types
-import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useGovernanceProposalsStore } from "~/store/governance-proposals/governance_proposals.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { ProposalState } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
 
 const router = useRouter();
 const web3Store = useWeb3Store();
 const fundStore = useFundStore();
 const governanceProposalStore = useGovernanceProposalsStore();
-const accountStore = useAccountStore();
-
-// defined icons for submission_status
-const icons = {
-  Pending: "material-symbols:timer-outline",
-  Missed: "material-symbols:priority-high",
-  Abstained: "material-symbols:question-mark",
-  Rejected: "material-symbols:close",
-  Approved: "material-symbols:done",
-};
 
 const props = defineProps({
   items: {
@@ -175,16 +139,24 @@ const props = defineProps({
   },
 });
 
+const hasVoted = (item: IGovernanceProposal) =>
+  governanceProposalStore.hasAccountVoted(item.proposalId) ?? false;
 
-const getRowClass = (item: IGovernanceProposal) => {
-  const hasVoted = governanceProposalStore.hasAccountVoted(item?.proposalId) ?? false;
-  const isActionRequired = item.state === ProposalState.Active && !hasVoted || item.state === ProposalState.Pending;
+/**
+ * Two decimals in the table, where the figures are read against each other,
+ * and a dash rather than 0.00% where no vote has been cast at all — a proposal
+ * nobody voted on has no approval rate, which is not the same as zero approval.
+ */
+const asPercent = (value?: number) =>
+  value === undefined || value === null || Number.isNaN(value)
+    ? "—"
+    : `${(value * 100).toFixed(2)}%`;
 
-  return [
-    "v-data-table__row",
-    { "row-active": isActionRequired },
-  ];
-};
+const approvalOf = (item: IGovernanceProposal) =>
+  item.totalVotes ? asPercent(item.approval) : "—";
+
+const participationOf = (item: IGovernanceProposal) =>
+  asPercent(item.participation);
 
 watch([() => props.items, () => fundStore.activeAccountAddress], () => {
   if (fundStore.activeAccountAddress === undefined) {
@@ -198,14 +170,12 @@ watch([() => props.items, () => fundStore.activeAccountAddress], () => {
     // Do not fetch the hasVoted again if we already know he has voted.
     if (governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress]) continue;
 
-    // console.log("get votes for ", proposal.proposalId);
     proposal.hasVotedLoading = true;
     web3Store.callWithRetry(
       fundChainId, () =>
         fundStore.fundGovernorContract.methods.hasVoted(proposal.proposalId, activeAccountAddress).call(),
     ).then(
       (hasVoted: boolean) => {
-        // console.log("has voted: ", proposal.proposalId, proposal.state, hasVoted)
         governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress] = hasVoted;
       },
     ).finally(() => {
@@ -216,106 +186,135 @@ watch([() => props.items, () => fundStore.activeAccountAddress], () => {
 { immediate: true },
 );
 
-const headers = computed(() => {
-  const headers: any[] = [
-    { title: "#", key: "index", sortable: false },
-    { title: "Proposal Title", key: "title", sortable: true },
-    { title: "Created", key: "createdDatetime", sortable: true },
-  ];
-  if (accountStore.isConnected) {
-    headers.push({ title: "Voted", key: "submission_status", sortable: true, align: "center" });
-  }
-
-  headers.push(...[
-    { title: "Approval", key: "approval", sortable: true },
-    {
-      title: "Participation",
-      key: "participation",
-      sortable: true,
-    },
-  ]);
-
-  return headers;
-});
-
 // navigate to proposal detail page
-const rowClick = (_:any, item: any) => {
+const rowClick = (item: IGovernanceProposal) => {
   const { createdBlockNumber, proposalId } = item;
   router.push(`governance/proposal/${createdBlockNumber}-${proposalId}`);
 };
 </script>
 
 <style lang="scss" scoped>
-.table_governance {
-
-  @include borderGray;
-  border-color: $color-bg-transparent;
-  // add table max height
-  :deep(.v-table__wrapper) {
-    max-height: 500px;
-
-    @include customScrollbar;
+/**
+ * A grid rather than a table: the proposal cell stacks a title over a wrapping
+ * row of badges, which a table cell can do but not while keeping every other
+ * column aligned to the same tracks.
+ */
+.proposals_table {
+  &__scroll {
+    overflow-x: auto;
   }
-  .v-data-table__row {
-    cursor: pointer;
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+
+  &__grid {
+    min-width: 920px;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 44px 1.9fr 130px 80px 110px 130px;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.875rem 1.5rem;
+    border-bottom: 1px solid $color-line;
+
+    &--head {
+      height: 40px;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-top: 1px solid $color-line;
+    }
+
+    &--clickable {
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background: $color-navy-gray-light;
+      }
+    }
+  }
+
+  &__th {
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     color: $color-steel-blue;
 
-    &.row-active {
-      background-color: $color-navy-gray-light;
-      color: $color-white;
+    &--right {
+      text-align: right;
     }
 
-    &:hover {
-      background-color: $color-gray-light-transparent;
-      box-shadow: 0px 0px 10px 0px #1f5fff29;
+    &--center {
+      text-align: center;
     }
   }
-  &__no_data {
-    text-align: center;
-    padding: 1.5rem;
-    background: $color-badge-navy;
+
+  &__index {
+    font-family: $font-mono;
+    font-size: 12px;
+    color: $color-steel-blue;
   }
 
-  &__skeleton_loader :deep(*) {
+  &__proposal {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: $color-white;
+    overflow-wrap: anywhere;
+  }
+
+  &__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  &__created {
+    font-family: $font-mono;
+    font-size: 12px;
+    color: $color-text-irrelevant;
+  }
+
+  &__voted {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: $font-mono;
+    font-size: 13px;
+  }
+
+  &__voted_yes {
+    color: $color-cyan;
+  }
+
+  &__voted_no {
+    color: $color-steel-blue;
+  }
+
+  &__number {
+    font-family: $font-mono;
+    font-size: 12.5px;
+    text-align: right;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__skeleton :deep(*) {
     margin: 0;
   }
 
-  &__header_cell{
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  &__voted_cell {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    // move the voted cell because of the icon in the header
-    margin-right: 21px;
+  &__empty {
+    padding: 1.5rem;
+    text-align: center;
+    font-size: $text-sm;
+    color: $color-steel-blue;
   }
 }
-
-.proposal {
-  &__title {
-    padding-block: 0.5rem;
-  }
-  &__title__text {
-    max-width: 400px;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-wrap: break-word;
-  }
-  &__tags {
-    display: flex;
-    align-items: center;
-    margin-top: 0.5rem;
-  }
-  &__tag {
-    margin-right: 0.5rem;
-  }
-}
-
 </style>

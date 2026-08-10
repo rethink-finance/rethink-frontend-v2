@@ -1,128 +1,107 @@
 <template>
   <div class="fund_description">
-    <UiMainCard
-      title="Information"
-      class="fund_description__header"
-    >
-      <template #header-right>
-        <div class="fund_description__buttons">
-          <template v-for="buttonLink in buttonLinks">
-            <UiLinkExternalButton
-              v-if="!buttonLink.isHidden"
-              :key="buttonLink.title"
-              :title="buttonLink.title"
-              :href="buttonLink.href"
-              :show-tooltip="buttonLink.showTooltip"
-            />
-          </template>
+    <p v-if="fund?.description" class="fund_description__text">
+      {{ fundDescriptionText }}
+      <UiShowMoreButton v-if="isDescriptionTooLong" v-model="showMore" />
+    </p>
 
-        </div>
-      </template>
-
-      <template #tools>
-        <p class="text-secondary">
-          {{ fundDescriptionText }}
-          <UiShowMoreButton
-            v-if="isDescriptionToLong"
-            v-model="showMore"
-          />
-        </p>
-      </template>
-    </UiMainCard>
+    <div v-if="fund?.oivChatUrl" class="fund_description__links">
+      <a
+        :href="fund.oivChatUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="fund_description__link"
+      >
+        Vault Chat
+        <svg
+          width="11"
+          height="11"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M7 17L17 7" />
+          <path d="M8 7h9v9" />
+        </svg>
+      </a>
+    </div>
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import type IFund from "~/types/fund";
 
-export default {
-  name: "FundInfoDescription",
-  props: {
-    fund: {
-      type: Object as PropType<IFund>,
-      default: () => {},
-    },
+const MAX_DESCRIPTION_LENGTH = 300;
+
+const props = defineProps({
+  fund: {
+    type: Object as PropType<IFund>,
+    default: () => {},
   },
-  data() {
-    return {
-      maxDescriptionLength: 300,
-      showMore: false,
-    };
-  },
-  computed: {
-    buttonLinks() {
-      return [
-        {
-          title: "DeBank - NAV",
-          href: this.deBankUrl,
-          showTooltip: false,
-        },
-        {
-          title: "Safe - Custody",
-          href: this.custodyUrl,
-          showTooltip: false,
-        },
-        {
-          isHidden: !this.fund.oivChatUrl,
-          title: "Vault Chat",
-          href: this.fund.oivChatUrl,
-          showTooltip: false,
-        },
-      ]
-    },
-    deBankUrl(): string {
-      /** Example:
-       * https://debank.com/profile/0x54b491bb5e59CD974dDc9b5a52478f54c07Aee78
-       * **/
-      return `https://debank.com/profile/${this.fund.safeAddress}`;
-    },
-    custodyUrl(): string {
-      /** Example:
-       * https://app.safe.global/balances?safe=matic:0x54b491bb5e59CD974dDc9b5a52478f54c07Aee78
-       * **/
-      return `https://app.safe.global/balances?safe=${this.fund.chainShort}:${this.fund.safeAddress}`;
-    },
-    isDescriptionToLong(): boolean {
-      if (!this.fund?.description) return false;
-      return this.fund.description.length > this.maxDescriptionLength
-    },
-    fundDescriptionText(): string {
-      if (!this.fund?.description) return "";
-      if (this.isDescriptionToLong && !this.showMore) {
-        return this.fund?.description?.slice(0, this.maxDescriptionLength) + "...";
-      }
-      return this.fund?.description;
-    },
-  },
-};
+});
+
+const showMore = ref(false);
+
+const isDescriptionTooLong = computed(
+  () => (props.fund?.description?.length ?? 0) > MAX_DESCRIPTION_LENGTH,
+);
+
+const fundDescriptionText = computed(() => {
+  if (!props.fund?.description) return "";
+  if (isDescriptionTooLong.value && !showMore.value) {
+    return props.fund.description.slice(0, MAX_DESCRIPTION_LENGTH) + "...";
+  }
+  return props.fund.description;
+});
 </script>
 
 <style lang="scss" scoped>
+/**
+ * The design runs the vault blurb as plain body copy on the page background —
+ * no card, no "Information" heading. Vaults that publish a chat link get a
+ * quiet mono chip for it underneath.
+ */
 .fund_description {
   display: flex;
-  gap: 1.5rem;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 1rem;
 
-
-  &__header{
-    padding: 0;
+  &__text {
     margin: 0;
+    max-width: 780px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: $color-text-irrelevant;
+    text-wrap: pretty;
   }
 
-  &__buttons {
+  &__links {
     display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
     flex-wrap: wrap;
-    gap: 1.5rem;
+    gap: 0.5rem;
+  }
 
-    @include sm{
-      flex-direction: row;
-    }
+  &__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4375rem;
+    padding: 0.3125rem 0.6875rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: $color-steel-blue;
+    white-space: nowrap;
+    transition: color $default-transition-time ease,
+      border-color $default-transition-time ease;
 
-    button {
-      text-transform: none;
+    &:hover {
+      color: $color-white;
+      border-color: $color-line-3;
     }
   }
 }

@@ -97,7 +97,12 @@ describe("commify", () => {
   it("should handle very small decimals correctly", () => {
     expect(commify(0.00000123)).toBe("0.00000123");
     expect(commify(-0.00000123)).toBe("-0.00000123");
-    expect(commify("0.0000000001")).toBe("0");
+    // Below 1e-6 a Number stringifies to an exponent. These used to be read as
+    // if they were plain decimals, which turned 1e-10 into "0" and 4.69e-8 into
+    // "0.7e-8"; three significant digits are kept in full instead. Vault shares
+    // land in this range whenever a vault's share price runs into the billions.
+    expect(commify("0.0000000001")).toBe("0.0000000001");
+    expect(commify("0.000000046940293442")).toBe("0.0000000469");
   });
 
   // Test edge cases for large decimals

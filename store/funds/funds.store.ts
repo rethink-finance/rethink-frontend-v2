@@ -8,6 +8,7 @@ import { fetchFundsInfoArraysAction } from "./actions/fetchFundsInfoArrays.actio
 import { fetchFundsMetaDataAction } from "./actions/fetchFundsMetadata.action";
 import { fetchFundsNavMethodsAction } from "./actions/fetchFundsNavMethods.action";
 import { fetchTotalTVLAction, type TotalTVLResponse } from "./actions/fetchTotalTVL.action";
+import { readCachedTotalTVL, writeCachedTotalTVL } from "./fundsCache";
 import type INAVUpdate from "~/types/nav_update";
 import type INAVMethod from "~/types/nav_method";
 import type IFund from "~/types/fund";
@@ -90,8 +91,14 @@ export const useFundsStore = defineStore({
      * Fetches the total TVL data from the backend
      */
     async fetchTotalTVL() {
+      // Show the last known figure while the request is in flight, so the
+      // stat block does not sit blank for a second on every page load.
+      if (!this.totalTVL) {
+        this.totalTVL = readCachedTotalTVL<TotalTVLResponse>();
+      }
       const data = await fetchTotalTVLAction();
       this.totalTVL = data;
+      writeCachedTotalTVL(data);
       return data;
     },
     /**

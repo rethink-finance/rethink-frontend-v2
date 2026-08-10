@@ -1,8 +1,8 @@
 <template>
-  <div class="fund_settlement">
-    <div class="card_header">
-      <div class="card_header__title subtitle_white">
-        Manage Deposits
+  <div class="fund_settlement brand_card">
+    <div class="brand_card__head">
+      <div class="brand_card__eyebrow">
+        Manage deposits
       </div>
       <UiButtonSwitchItems
         v-model="selectedActionButtonValue"
@@ -12,12 +12,24 @@
       />
     </div>
     <div class="fund_settlement__card_boxes">
-      <div v-if="selectedActionButtonValue" class="card_box">
+      <div v-if="selectedActionButtonValue">
+        <!-- The settlement cycle is handed to the form rather than drawn after
+             it, so it lands between the amount and the button that commits it.
+             Both forms take it in the same place, so switching tabs does not
+             move it. -->
         <FundSettlementDeposit
           v-if="isSelectedDepositButton"
-        />
+        >
+          <template #before-actions>
+            <FundSettlementCycle :period="plannedSettlement" />
+          </template>
+        </FundSettlementDeposit>
         <!-- @deposit-success="openDelegateDialog" -->
-        <FundSettlementRedeem v-else-if="isSelectedRedeemButton" />
+        <FundSettlementRedeem v-else-if="isSelectedRedeemButton">
+          <template #before-actions>
+            <FundSettlementCycle :period="plannedSettlement" />
+          </template>
+        </FundSettlementRedeem>
       </div>
     </div>
 
@@ -27,6 +39,7 @@
 
 <script lang="ts">
 import type IFund from "~/types/fund";
+import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
 
 export default {
   name: "Settlement",
@@ -44,6 +57,7 @@ export default {
     return {
       selectedActionButtonValue: "deposit",
       isDelegateDialogOpen: false,
+      plannedSettlement: "",
       selectItems: [
         {
           key: "deposit",
@@ -55,6 +69,28 @@ export default {
         },
       ],
     };
+  },
+  watch: {
+    // Design footnotes the form with the planned settlement cycle, so a
+    // depositor knows when the request they are about to submit will settle.
+    "fund.address": {
+      immediate: true,
+      async handler() {
+        if (!this.fund?.chainId || !this.fund?.plannedSettlementPeriod) {
+          this.plannedSettlement = "";
+          return;
+        }
+        try {
+          const parsed = await parsePlannedSettlement(
+            this.fund.chainId,
+            this.fund.plannedSettlementPeriod,
+          );
+          this.plannedSettlement = parsed ?? "";
+        } catch {
+          this.plannedSettlement = "";
+        }
+      },
+    },
   },
   computed: {
     isSelectedDepositButton() {
@@ -83,37 +119,44 @@ export default {
 
 <style lang="scss" scoped>
 .fund_settlement {
-  overflow: auto;
-  &__buttons {
-    width: 100%;
+  padding: 1.625rem 1.875rem;
 
-    @include lg {
-      width: 80%;
-      margin-right: 5px;
+  /* Design draws this as one segmented control — a hairline pill split down
+     the middle — rather than the app's usual spaced tab group. Scoped here so
+     the shared switch keeps its own look everywhere else it is used. */
+  &__buttons {
+    padding: 0;
+    gap: 0;
+    background-color: transparent;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    overflow: hidden;
+
+    :deep(.v-btn) {
+      min-width: 0;
+      height: auto;
+      padding: 0.4375rem 1rem;
+      border-radius: 0;
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: normal;
+      text-transform: none;
+
+      + .v-btn {
+        border-left: 1px solid $color-line-2;
+      }
+
+      &.active {
+        background-color: $color-navy-gray-light;
+      }
     }
   }
+
   &__card_boxes {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
   }
 
-  .card_header {
-    flex-direction: column;
-    gap: 1.5rem;
-
-    @include lg {
-      flex-direction: row;
-    }
-    &__title {
-      margin-bottom: 0.75rem;
-      white-space: nowrap;
-      width: fit-content;
-
-      @include lg {
-        margin-bottom: 0;
-      }
-    }
-  }
 }
 </style>

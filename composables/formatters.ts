@@ -165,7 +165,16 @@ export const commify = (value: string | number | bigint) => {
   } else if (asDecimal > 0) {
     // Small numbers: Keep first 3 significant digits
     if (Number(match[2]) === 0) {
-      frac = Number(asDecimal.toPrecision(3)).toString().split(".")[1] || "";
+      // toString() switches to exponent notation below 1e-6, and splitting on
+      // "." would then leave the exponent behind as the fraction — 4.69e-8
+      // printing as "0.7e-8". Ask for the digits in full instead.
+      frac =
+        Number(asDecimal.toPrecision(3))
+          .toLocaleString("fullwide", {
+            useGrouping: false,
+            maximumFractionDigits: 20,
+          })
+          .split(".")[1] || "";
     } else {
       frac = asDecimal.toFixed(2).split(".")[1];
     }
@@ -285,48 +294,42 @@ export const toCamelCase = (str: string) => {
 }
 
 /**
+ * A duration as a single rounded unit, marked as the estimate it is.
  *
- * @param totalSeconds - total seconds to convert to human readable duration
- * @returns human readable duration
+ * Governance periods are counted in blocks, not seconds, so converting one back
+ * to a duration multiplies by an *average* block time. The second unit that
+ * came out of that — "5 days, 8 minutes" — was never real precision, just the
+ * average's error rendered as if it were a measurement. One rounded unit behind
+ * a "≈" says what is actually known.
+ *
+ * @param totalSeconds - total seconds to convert to a human readable duration
+ * @returns e.g. "≈ 5 days"
  */
-export const formatDuration = (totalSeconds: number): string => {
+export const formatApproximateDuration = (totalSeconds: number): string => {
   const orderedUnits: PeriodUnits[] = [
-    // PeriodUnits.Weeks,
     PeriodUnits.Days,
     PeriodUnits.Hours,
     PeriodUnits.Minutes,
     PeriodUnits.Seconds,
   ];
 
-  let remainingSeconds = totalSeconds;
-  let result: { unit: PeriodUnits; value: number }[] = [];
+  for (const [index, unit] of orderedUnits.entries()) {
+    if (totalSeconds < TimeInSeconds[unit]) continue;
 
-  for (const unit of orderedUnits) {
-    const secondsPerUnit = TimeInSeconds[unit];
-    const value = Math.floor(remainingSeconds / secondsPerUnit);
+    const value = Math.round(totalSeconds / TimeInSeconds[unit]);
+    const largerUnit = orderedUnits[index - 1];
 
-    if (value > 0) {
-      result.push({ unit, value });
-      remainingSeconds %= secondsPerUnit;
-    }
-  }
-
-  // Keep only the first two units
-  if (result.length > 2) {
-    // Check the third unit's value and round up the second if it's large enough
-    const thirdUnit = result[2];
-
-    if (thirdUnit.value >= TimeInSeconds[thirdUnit.unit] / 2) {
-      result[1].value += 1;
+    // Rounding can fill the unit above exactly: 23 hours 40 minutes rounds to
+    // 24 hours, which is worth saying as a day.
+    if (largerUnit && value * TimeInSeconds[unit] >= TimeInSeconds[largerUnit]) {
+      const largerValue = Math.round(totalSeconds / TimeInSeconds[largerUnit]);
+      return `≈ ${pluralizeWord(largerUnit, largerValue)}`;
     }
 
-    result = result.slice(0, 2);
+    return `≈ ${pluralizeWord(unit, value)}`;
   }
 
-  return (
-    result.map(({ unit, value }) => pluralizeWord(unit, value)).join(", ") ||
-    "0 seconds"
-  );
+  return "0 seconds";
 };
 
 export const formatCalldata = (calldata: any) => {

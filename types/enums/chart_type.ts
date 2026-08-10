@@ -16,13 +16,13 @@ export const ChartTypeStrokeColors = {
 };
 
 export const ChartTypesMap: Record<ChartType, IChartType> = {
-  [ChartType.NAV]: {
-    value: "NAV",
-    key: ChartType.NAV,
-  },
   [ChartType.SHARE_PRICE]: {
-    value: "Share Price",
+    value: "Share price",
     key: ChartType.SHARE_PRICE,
   },
-
+  // The design labels total NAV as "TVL" — same series, clearer name.
+  [ChartType.NAV]: {
+    value: "TVL",
+    key: ChartType.NAV,
+  },
 };

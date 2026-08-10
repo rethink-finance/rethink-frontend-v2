@@ -4,34 +4,33 @@
     :key="toast.id"
     :model-value="true"
     :timeout="toast.duration"
-    :class="['toast', backgroundClass(toast.level), 'text'+textColorClass(toast.level)]"
+    :class="['toast', backgroundClass(toast.level)]"
     multi-line
   >
     <div class="toast_content">
       <Icon
-        v-if="toastIcon(toast.level)"
         :icon="toastIcon(toast.level)"
-        width="1.5rem"
+        width="1.125rem"
         class="icon__toast"
       />
 
       <div class="message">
+        <div class="message__eyebrow">
+          {{ toastLabel(toast.level) }}
+        </div>
         {{ toast.message }}
       </div>
     </div>
 
     <template #actions>
-      <v-btn
-        :class="['btn-close', 'btn-close'+textColorClass(toast.level)]"
-        icon
+      <button
+        type="button"
+        class="btn-close"
+        aria-label="Dismiss"
         @click="toastStore.closeToast(toast.id)"
       >
-        <Icon
-          icon="octicon:x-16"
-          width="1.5rem"
-          class="icon"
-        />
-      </v-btn>
+        <Icon icon="material-symbols:close" width="1.125rem" />
+      </button>
     </template>
   </v-snackbar>
 </template>
@@ -65,63 +64,84 @@ const toastIcon = (level) => {
     error: "material-symbols:error-outline",
   };
 
-  // Return the corresponding icon for the given level
-  return levelIcons[level] || "";
+  // An info toast still gets a mark, so every toast reads the same shape and
+  // only the hue distinguishes them.
+  return levelIcons[level] || "material-symbols:info-outline";
 };
 
-const textColorClass = (level) => {
-  // Set text color to white for levels other than info
-  return level && level !== "info" ? "-white" : "";
+/* The mono eyebrow above the message — the level named in words rather than
+   carried only by colour. */
+const toastLabel = (level) => {
+  const levelLabels = {
+    success: "Success",
+    warning: "Warning",
+    error: "Error",
+  };
+
+  return levelLabels[level] || "Notice";
 };
 </script>
 
 <style lang="scss" scoped>
-:deep(.v-overlay__content.v-snackbar__wrapper){
-  background-color: $color-bg-toast;
-  color: $color-white;
-
-  box-shadow: 0px 0px 16px 0px $color-box-shadow;
-}
+/* The panel itself — surface, hairline and the level rule down the leading
+   edge — is in assets/scss/overlays.scss: the snackbar teleports out of this
+   component, so its wrapper cannot be reached from a scoped block. */
 
 .toast_content {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  align-items: flex-start;
+  gap: 0.75rem;
 
   .icon__toast {
-    width: 30px;
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.125rem;
+    color: $color-steel-blue;
   }
 
-  .message{
-    max-width: calc(100% - 30px);
-  }
-}
-.toast-success {
-  .icon__toast {
-    color: $color-success;
-  }
-}
-.toast-danger {
-  .icon__toast {
-    color: $color-error;
-  }
-}
-.toast-warning {
-  .icon__toast {
-    color: $color-warning;
+  .message {
+    min-width: 0;
+    flex: 1 1 auto;
+
+    &__eyebrow {
+      margin-bottom: 0.125rem;
+      font-family: $font-mono;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: $color-steel-blue;
+    }
   }
 }
 
-:deep(.v-overlay__content.v-snackbar__wrapper) {
-  .v-snackbar__content {
-    font-weight: 500;
-    line-height: 150%;
-  }
+/* The icon takes the level's hue; the message stays white so it is read as
+   information rather than as a colour. */
+.toast-success .icon__toast {
+  color: $color-success-light;
 }
-:deep(.v-btn){
-  color: $color-secondary !important;
-  height: 2.5rem !important;
-  width: 2.5rem !important;
-  padding: 0 !important;
+.toast-danger .icon__toast {
+  color: $color-neg;
+}
+.toast-warning .icon__toast {
+  color: $color-warn;
+}
+
+.btn-close {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: $default-border-radius;
+  color: $color-steel-blue;
+  cursor: pointer;
+  transition: background-color $default-transition-time ease,
+    color $default-transition-time ease;
+
+  &:hover {
+    background: $color-gray-light-transparent;
+    color: $color-white;
+  }
 }
 </style>

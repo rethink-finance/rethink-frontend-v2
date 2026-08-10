@@ -1,14 +1,16 @@
 <template>
   <div>
-    <v-alert
-      v-if="errorMessage"
-      color="warning"
-      class="pa-3 mb-4 text-pre-line"
-    >
-      <template #text>
-        <strong>{{ errorMessage }}</strong>
-      </template>
-    </v-alert>
+    <div v-if="errorMessage" class="brand_note brand_note--warning mb-4">
+      <Icon
+        icon="material-symbols:warning-outline"
+        class="brand_note__icon"
+      />
+      <div class="brand_note__body">
+        <div class="brand_note__text">
+          {{ errorMessage }}
+        </div>
+      </div>
+    </div>
     <div class="permissions">
       <v-overlay
         :model-value="isLoading"
@@ -90,8 +92,8 @@ const { activeTargetId } = storeToRefs(roleStore);
     width: 20rem;
     gap: 1.5rem;
     margin-right: 1rem;
-    border: 1px solid $color-border-dark;
-    padding: 0.5rem;
+    border-right: 1px solid $color-line;
+    padding: 0.5rem 1rem 0.5rem 0;
   }
   &__content {
     display: flex;

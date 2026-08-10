@@ -10,7 +10,10 @@ const chainIconMap: Record<string, IIcon> = {
     size: "2rem",
   },
   eth: {
-    name: "token-branded:eth",
+    // cryptocurrency-color draws the mark on its own full-bleed disc, the
+    // same silhouette as matic. token-branded:eth is a bare pastel diamond
+    // that reads as a floating shape rather than a token chip.
+    name: "cryptocurrency-color:eth",
     size: "2rem",
   },
   base: {

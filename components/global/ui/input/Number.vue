@@ -21,8 +21,13 @@ const props = defineProps({
     type: String,
     default: "0",
   },
+  /**
+   * Passed straight to v-text-field, so "auto" is allowed as well as a
+   * boolean — that variant keeps the message row out of the layout until a
+   * rule actually fails.
+   */
   hideDetails: {
-    type: Boolean,
+    type: [Boolean, String] as PropType<boolean | "auto">,
     default: false,
   },
 });

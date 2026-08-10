@@ -21,8 +21,12 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
       // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
       // "https://polygon-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", Luka T.
       // "https://polygon-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", Rok
-      "https://polygon-rpc.com",
-      "https://polygon.drpc.org",
+      // Serves UNBOUNDED eth_getLogs ranges (verified 2026-08-10) — the only
+      // configured Polygon RPC that does, so the on-chain delegates fallback
+      // (services/onchain/delegates.ts) picks this one. Everything below caps.
+      "https://polygon.gateway.tenderly.co",
+      "https://polygon-rpc.com", // Dead: "API key disabled, tenant disabled" (2026-08-10)
+      "https://polygon.drpc.org", // Max 10k blocks on the free plan
       "https://polygon-pokt.nodies.app",
       "https://polygon.rpc.blxrbdn.com",
     ],
@@ -139,7 +143,7 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
       // "https://base.meowrpc.com",
       // "https://base.rpc.subquery.network/public",
     ],
-    blockExplorerUrls: ["https://purrsec.com/"],
+    blockExplorerUrls: ["https://hyperevmscan.io"],
   },
 };
 // Add Hardhat network only in development mode
@@ -189,10 +193,18 @@ export const assetIconMap: Record<string, IIcon> = {
     size: "1.5rem",
   },
   WBTC: {
-  name: "cryptocurrency-color:wbtc",
-  size: "1.5rem",
+    name: "cryptocurrency-color:wbtc",
+    size: "1.5rem",
   },
 };
+
+/**
+ * The mark for a token symbol. The map above is keyed by symbol already;
+ * getAssetIcon only reaches it by address, which half the callers do not have —
+ * a row that knows it is showing DAI and nothing more still has an icon coming.
+ */
+export const getAssetIconBySymbol = (symbol?: string): IIcon | undefined =>
+  symbol ? assetIconMap[symbol.toUpperCase()] : undefined;
 const TOKEN_ADDRESS_TO_NAME: any = {
   [ChainId.ETHEREUM]: {
     "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "USDC",
@@ -222,25 +234,34 @@ const TOKEN_ADDRESS_TO_NAME: any = {
 };
 
 /**
- * Get asset icon based on chainId and tokenAddress
+ * The symbol a base asset is known by, from its address. Only covers the base
+ * assets the app lists, so callers that already hold a symbol should use that.
+ */
+export const getTokenSymbolByAddress = (
+  chainId: string,
+  tokenAddress: string,
+): string | undefined => {
+  if (!chainId || !tokenAddress) return undefined;
+  return TOKEN_ADDRESS_TO_NAME[chainId]?.[tokenAddress.toLowerCase()];
+};
+
+/**
+ * The mark for a token by address, or undefined when there is none.
+ *
+ * Undefined rather than a grey disc: most of what this is asked about is a
+ * vault's own share token, which no icon set will ever carry, and a blank disc
+ * beside it says nothing a reader did not already know from the symbol.
+ *
  * @param chainId - The chain ID
  * @param tokenAddress - The token address
- * @returns IIcon object with name, size, and optional color properties
  */
-export const getAssetIcon = (chainId: string, tokenAddress: string): IIcon => {
-  // If we have a tokenAddress and chainId, use TOKEN_ADDRESS_TO_NAME to get the token name
+export const getAssetIcon = (
+  chainId: string,
+  tokenAddress: string,
+): IIcon | undefined => {
   const tokenAddressLowercase = tokenAddress?.toLowerCase();
-  if (tokenAddress && chainId && TOKEN_ADDRESS_TO_NAME[chainId]?.[tokenAddressLowercase]) {
-    const tokenName = TOKEN_ADDRESS_TO_NAME[chainId][tokenAddressLowercase];
-    return assetIconMap[tokenName] || {
-      name: "ph:circle-fill", // default circle fill gray
-      size: "1.5rem",
-    };
-  }
+  if (!tokenAddress || !chainId) return undefined;
 
-  // When tokenAddress is not provided or not found, return default icon
-  return {
-    name: "ph:circle-fill", // default circle fill gray
-    size: "1.5rem",
-  };
+  const tokenName = TOKEN_ADDRESS_TO_NAME[chainId]?.[tokenAddressLowercase];
+  return tokenName ? assetIconMap[tokenName] : undefined;
 };

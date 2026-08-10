@@ -11,8 +11,43 @@
         width="230px"
         class="mt-4"
       />
+
+      <div v-if="activationState" class="activation_card mt-8">
+        <template v-if="needsActivation">
+          <strong>Manager permissions pending activation</strong>
+          <p v-if="activationState.needsGovernorMigration">
+            The "update vault settings" permission stays inert until
+            governance hands settings authority to the Safe (one-time
+            <code>governor&nbsp;→&nbsp;Safe</code> settings change).
+          </p>
+          <p v-if="activationState.needsOwnershipTransfer">
+            The "manage role members" permission stays inert until governance
+            transfers the Roles modifier's ownership to the Safe.
+          </p>
+          <p class="activation_card__hint">
+            One proposal covers everything still pending. The whitelist is
+            untouched: the proposal echoes current settings with empty
+            depositor/manager arrays (those arrays are toggle deltas, not
+            absolute lists).
+          </p>
+          <v-btn
+            color="primary"
+            :loading="isCreatingActivationProposal"
+            @click="createActivationProposal"
+          >
+            Create activation proposal
+          </v-btn>
+        </template>
+        <template v-else>
+          <strong>Manager permissions activated</strong>
+          <p>
+            Settings authority and Roles modifier ownership are held by the
+            Safe.
+          </p>
+        </template>
+      </div>
     </div>
-    <UiMainCard v-else class="permissions__content">
+    <UiMainCard v-else class="permissions__content brand_card">
       <div class="info_container">
         <div class="info_container__buttons">
           <div class="d-flex align-center">
@@ -77,6 +112,11 @@ import RoleSelectRole from "~/components/role/SelectRole.vue";
 import { ActionState } from "~/types/enums/action_state";
 import { useActionStateStore } from "~/store/actionState.store";
 import UiLinkExternalButton from "~/components/global/ui/LinkExternalButton.vue";
+import {
+  buildActivationProposalActions,
+  fetchActivationState,
+  type IActivationState,
+} from "~/composables/permissions/activationProposal";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -108,6 +148,93 @@ const gnosisRolesUrl = computed(() => {
   return `https://roles.gnosisguild.org/${fund.chainShort}:${roleModAddress.value}`;
 });
 
+// One-time governance activation of the manager's update-settings /
+// role-members permissions (Roles V2 vaults only).
+const activationState = ref<IActivationState | null>(null);
+const isCreatingActivationProposal = ref(false);
+const needsActivation = computed(
+  () =>
+    activationState.value?.needsGovernorMigration ||
+    activationState.value?.needsOwnershipTransfer,
+);
+
+const refreshActivationState = async () => {
+  if (!fund?.fundFactoryContractV2Used || !fund?.address) return;
+  try {
+    activationState.value = await fetchActivationState(
+      fund.chainId,
+      fund.address,
+      roleModAddress.value || null,
+    );
+  } catch (error) {
+    console.error("Failed reading activation state", error);
+  }
+};
+
+const createActivationProposal = async () => {
+  isCreatingActivationProposal.value = true;
+  try {
+    const { actions } = await buildActivationProposalActions(
+      fund.chainId,
+      fund.address,
+      roleModAddress.value || null,
+      fund.governorAddress,
+    );
+    if (!actions.targets.length) {
+      toastStore.addToast("Nothing left to activate.");
+      await refreshActivationState();
+      return;
+    }
+    await fundStore.fundGovernorContract
+      .send(
+        "propose",
+        {},
+        actions.targets,
+        actions.gasValues,
+        actions.calldatas,
+        JSON.stringify({
+          title: "Activate manager vault-settings & role-member permissions",
+          description:
+            "One-time activation: hand settings authority to the Safe " +
+            "(governor = safe, whitelist arrays left empty on purpose — " +
+            "they are toggle deltas) and/or transfer Roles modifier " +
+            "ownership to the Safe, so the manager's granted Roles V2 " +
+            "permissions become executable.",
+        }),
+      )
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The activation proposal has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", (receipt: any) => {
+        if (receipt.status) {
+          toastStore.successToast(
+            "Activation proposal created. You can now vote on it in the governance page.",
+          );
+        } else {
+          toastStore.errorToast(
+            "The activation proposal transaction failed. Please contact the Rethink Finance support.",
+          );
+        }
+        isCreatingActivationProposal.value = false;
+      })
+      .on("error", (error: any) => {
+        console.error(error);
+        isCreatingActivationProposal.value = false;
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      });
+  } catch (error: any) {
+    console.error(error);
+    toastStore.errorToast(error.message);
+  } finally {
+    isCreatingActivationProposal.value = false;
+  }
+};
+
 const fetchRolesAndPermissions = async () => {
   if (!fund?.address) {
     roles.value = [];
@@ -121,6 +248,7 @@ const fetchRolesAndPermissions = async () => {
     console.error(error);
     toastStore.errorToast("Failed loading permissions. Please refresh page.");
   }
+  await refreshActivationState();
 };
 
 const navigateToCreatePermissions = async () => {
@@ -150,6 +278,28 @@ watch(
 
   &__content {
     min-height: 30rem;
+  }
+}
+
+.activation_card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.625rem;
+  max-width: 44rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid $color-line-2;
+  border-radius: $default-border-radius;
+  font-size: 13px;
+  line-height: 1.5;
+  color: $color-steel-blue;
+
+  strong {
+    color: $color-white;
+  }
+
+  &__hint {
+    font-size: 12px;
   }
 }
 .info_container {

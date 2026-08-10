@@ -18,6 +18,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import type IDelegate from "~/types/delegate";
 import { ChainId } from "~/types/enums/chain_id";
 import { ClockMode } from "~/types/enums/clock_mode";
+import { DelegatesSource } from "~/types/enums/delegates_source";
 import {
   ProposalState,
   ProposalStateMapping,
@@ -44,6 +45,10 @@ interface IState {
     Record<string, Record<string, IGovernanceProposal>>
   >;
   fundDelegates: Record<string, Record<string, Record<string, IDelegate>>>;
+  /* Which source last served each fund's delegates/proposals, so the UI can
+     tell "there is nothing" apart from "we could not find out". */
+  fundDelegatesSource: Record<string, Record<string, DelegatesSource>>;
+  fundProposalsSource: Record<string, Record<string, DelegatesSource>>;
   /* Example from what to what range block history events were already fetched..
   {
     // Chain ID
@@ -65,6 +70,8 @@ export const useGovernanceProposalsStore = defineStore({
   state: (): IState => ({
     fundProposals: {} as Record<string, Record<string, Record<string, IGovernanceProposal>>>,
     fundDelegates: {} as Record<string, Record<string, Record<string, IDelegate>>>,
+    fundDelegatesSource: {} as Record<string, Record<string, DelegatesSource>>,
+    fundProposalsSource: {} as Record<string, Record<string, DelegatesSource>>,
     fundProposalsBlockFetchedRanges:
       getLocalStorageItem("fundProposalsBlockFetchedRanges", {}) ?? {},
     connectedAccountProposalsHasVoted: {},
@@ -173,14 +180,33 @@ export const useGovernanceProposalsStore = defineStore({
       }
 
       this.fundDelegates[chainId] ??= {};
-      this.fundDelegates[chainId][fundAddress] ??= {};
-
-      delegates.forEach((delegate) => {
-        this.fundDelegates[chainId][fundAddress][delegate.address] =
-          cleanComplexWeb3Data(delegate);
-      });
+      // Replace rather than merge: a delegate's voting power drops to zero when
+      // their delegator redeems, and both sources filter those rows out. Merging
+      // would keep resurrecting them from the previous fetch.
+      this.fundDelegates[chainId][fundAddress] = Object.fromEntries(
+        delegates.map((delegate) => [
+          delegate.address,
+          cleanComplexWeb3Data(delegate),
+        ]),
+      );
 
       setLocalForageItem("fundDelegates", this.fundDelegates);
+    },
+    getDelegatesSource(chainId: ChainId, fundAddress?: string): DelegatesSource {
+      if (!fundAddress) return DelegatesSource.Subgraph;
+
+      return (
+        this.fundDelegatesSource?.[chainId]?.[fundAddress] ??
+        DelegatesSource.Subgraph
+      );
+    },
+    getProposalsSource(chainId: ChainId, fundAddress?: string): DelegatesSource {
+      if (!fundAddress) return DelegatesSource.Subgraph;
+
+      return (
+        this.fundProposalsSource?.[chainId]?.[fundAddress] ??
+        DelegatesSource.Subgraph
+      );
     },
     getProposals(chainId: ChainId, fundAddress?: string): IGovernanceProposal[] {
       if (!fundAddress) return [];
@@ -567,6 +593,7 @@ export const useGovernanceProposalsStore = defineStore({
           new Date(Number(block.timestamp) * 1000),
         );
         proposal.createdBlockNumber = event.blockNumber;
+        proposal.createdTxHash = event.transactionHash;
 
         // keep track of the proposal executed timestamp and block number if the proposal is executed
         const executedProposal =

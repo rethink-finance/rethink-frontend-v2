@@ -91,23 +91,30 @@ export default defineComponent({
         }
       }
     }
+    /* Brand: data values in mono (homepage .stat .sv) */
     .data_bar__title {
       display: flex;
       width: 100%;
       align-items: center;
+      font-family: $font-mono;
       font-size: 1rem;
       height: 1rem;
       line-height: 1;
-      font-weight: 700;
+      font-weight: 600;
       color: $color-title;
+      font-variant-numeric: tabular-nums;
       @include lg {
         width: 100%;
       }
     }
+    /* Brand: mono uppercase letterspaced stat labels (homepage eyebrow) */
     .data_bar__subtitle {
-      font-size: $text-sm;
+      font-family: $font-mono;
+      font-size: $text-xs;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       line-height: 1;
-      color: $color-light-subtitle;
+      color: $color-text-irrelevant;
       align-items: center;
       font-weight: 500;
     }

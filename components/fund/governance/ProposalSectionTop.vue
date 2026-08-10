@@ -148,82 +148,85 @@
         </template>
       </div>
 
-      <v-dialog
-        v-model="isVoteDialogOpen"
-        scrim="black"
-        opacity="0.25"
-        max-width="500"
-      >
-        <div class="main_card di-card">
-          <div class="di-card__header-container">
-            <div class="di-card__header">
-              Vote Submission
+      <v-dialog v-model="isVoteDialogOpen" max-width="520">
+        <div class="brand_modal">
+          <div class="brand_modal__head">
+            <div class="brand_modal__heading">
+              <div class="brand_modal__eyebrow">
+                Vote submission
+              </div>
+              <h2 class="brand_modal__title">
+                {{ proposal.title }}
+              </h2>
             </div>
 
-            <Icon
-              :icon="VoteTypeIcon[VoteType.Against]"
-              class="di-card__close-icon"
-              width="1.5rem"
+            <button
+              type="button"
+              class="brand_modal__close"
+              aria-label="Close"
               @click="closeVoteDialog"
-            />
-          </div>
-
-          <div
-            v-for="item in metaCopyTags.slice(0, 1)"
-            :key="item.label"
-            class="di-card__subtext"
-          >
-            <div class="meta-label">
-              {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
-            </div>
-            <ui-tooltip-click tooltip-text="Copied">
-              <Icon
-                icon="clarity:copy-line"
-                class="section-top__copy-icon"
-                width="0.8rem"
-                @click="copyText(item.value)"
-              />
-            </ui-tooltip-click>
-          </div>
-
-          <h2 class="di-card__title">
-            {{ proposal.title }}
-          </h2>
-
-          <div class="di-card__voting-power meta-label meta-label--uppercase">
-            Voting Power: N/A (TODO)
-          </div>
-
-          <v-radio-group
-            v-model="selectedVoteOption"
-            class="di-card__radio-group"
-          >
-            <v-radio
-              v-for="option in voteOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-              class="di-card__radio"
             >
-              <template #label>
-                <Icon
-                  :icon="option.icon"
-                  width="1.4rem"
-                  :class="voteOptionIcon(option.value)"
-                />
-                {{ option.label }}
-              </template>
-            </v-radio>
-          </v-radio-group>
+              <Icon icon="material-symbols:close" width="1.125rem" />
+            </button>
+          </div>
 
-          <v-btn
-            class="di-card__submit-button"
-            :disabled="selectedVoteOption === -1"
-            :loading="loadingSubmitVote"
-            @click="submitVote"
-          >
-            Submit Vote
-          </v-btn>
+          <div class="brand_modal__body">
+            <div
+              v-for="item in metaCopyTags.slice(0, 1)"
+              :key="item.label"
+              class="di-card__subtext"
+            >
+              <div class="meta-label">
+                {{ item.label }} {{ item?.format?.(item.value) ?? item.value }}
+              </div>
+              <ui-tooltip-click tooltip-text="Copied">
+                <Icon
+                  icon="clarity:copy-line"
+                  class="section-top__copy-icon"
+                  width="0.8rem"
+                  @click="copyText(item.value)"
+                />
+              </ui-tooltip-click>
+            </div>
+
+            <div class="di-card__voting-power meta-label meta-label--uppercase">
+              Voting Power: N/A (TODO)
+            </div>
+
+            <v-radio-group
+              v-model="selectedVoteOption"
+              class="di-card__radio-group"
+              hide-details
+            >
+              <v-radio
+                v-for="option in voteOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+                class="di-card__radio"
+              >
+                <template #label>
+                  <Icon
+                    :icon="option.icon"
+                    width="1.4rem"
+                    :class="voteOptionIcon(option.value)"
+                  />
+                  {{ option.label }}
+                </template>
+              </v-radio>
+            </v-radio-group>
+          </div>
+
+          <div class="brand_modal__footer brand_modal__footer--stacked">
+            <v-btn
+              color="primary"
+              :disabled="selectedVoteOption === -1"
+              :loading="loadingSubmitVote"
+              @click="submitVote"
+            >
+              Submit Vote
+            </v-btn>
+          </div>
         </div>
       </v-dialog>
     </div>
@@ -597,70 +600,54 @@ onMounted(() => {
 }
 
 .di-card {
-  @include borderGray;
-  margin: 0 auto;
-  color: white;
-  width: 100%;
-
-  &__header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  &__header,
-  &__title {
-    font-size: $text-lg;
-    font-weight: 700;
-  }
-
   &__subtext {
     display: flex;
     align-items: center;
     gap: 0.15rem;
 
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
     color: $color-steel-blue;
-  }
-
-  &__title {
-    margin-bottom: 1rem;
   }
 
   &__voting-power {
     display: block;
-    margin-bottom: 0.5rem;
-  }
-
-  &__close-icon {
-    cursor: pointer;
-    color: $color-steel-blue;
-  }
-
-  &__submit-button {
-    width: 100%;
+    margin-bottom: 1rem;
   }
 
   // overrides for radio group
   &__radio-group {
-    margin-bottom: 1.5rem;
-
     :deep(.v-selection-control-group) {
-      gap: 1rem;
+      gap: 0.5rem;
     }
+    /* Each option is its own hit target: a hairline row that lights up on
+       hover and takes the brand accent once it is the chosen one. */
     :deep(.v-selection-control) {
       flex-direction: row-reverse;
       justify-content: space-between;
 
-      padding: 0.25rem 0.5rem;
+      padding: 0.625rem 0.75rem;
+      border: 1px solid $color-line-2;
+      border-radius: $default-border-radius;
       color: $color-white;
+      cursor: pointer;
+      transition: border-color $default-transition-time ease,
+        background $default-transition-time ease;
 
-      @include borderGray;
+      &:hover {
+        border-color: $color-line-3;
+        background: $color-gray-light-transparent;
+      }
+    }
+    :deep(.v-selection-control--dirty) {
+      border-color: $color-accent-line;
+      background: $color-accent-soft;
     }
     :deep(.v-label) {
       opacity: 1;
       width: 100%;
       gap: 0.5rem;
+      font-size: $text-sm;
+      font-weight: 500;
     }
   }
   // color for icons

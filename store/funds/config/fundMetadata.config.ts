@@ -81,9 +81,15 @@ export const fundMetaDataHardcoded = {
     {
       // SmartBTC
       address: "0x202Cf222611B827B3Ae5a3Ee055e38Bae18256F5",
-      strategistName: "Open Alpha",
+      strategistName: "openalpha",
       strategistUrl: "https://openalpha.io/",
       subtitle: "Smart Investing, Powered by a Global Intelligence Network.",
+    },
+    {
+      // Smart 10
+      address: "0x9920e3F7f5f9bF650f546185Cfd6a13602cB6C07",
+      strategistName: "openalpha",
+      strategistUrl: "https://openalpha.io/",
     },
   ],
   // ETH Mainnet
@@ -108,7 +114,7 @@ export const fundMetaDataHardcoded = {
       // CarrotFunding Vault (vCFT)
       address: "0x7890e0fF3d76f71a3d33b17fb5B3F3866512485b",
       subtitle:
-        "Capital layer — funding traders, hedging risk, and automating payouts.",
+        "Capital layer - funding traders, hedging risk, and automating payouts.",
     },
   ],
 } as Record<

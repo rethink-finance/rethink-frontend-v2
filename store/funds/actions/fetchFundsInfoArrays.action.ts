@@ -37,24 +37,30 @@ export async function fetchFundsInfoArraysAction(
     throw new Error(`No fund factory contract found for chainId: ${chainId}`);
   }
 
-  // Fetch V1 funds data
-  const v1Data = await fetchFundsInfoArrays(chainId, "v1");
+  // V1 and V2 are independent factories, so query them at the same time
+  // rather than back to back — this is on the critical path before a single
+  // row can render, and each call is a full RPC round trip.
+  const [v1Result, v2Result] = await Promise.allSettled([
+    fetchFundsInfoArrays(chainId, "v1"),
+    fetchFundsInfoArrays(chainId, "v2"),
+  ]);
 
-  // Fetch V2 funds data if the V2 contract is available
-  try {
-    const v2Data = await fetchFundsInfoArrays(chainId, "v2");
-    console.warn("V2 funds", v2Data)
-
-    // Merge V1 + V2 results
-    return [
-      [...v1Data[0], ...v2Data[0]],
-      [...v1Data[1], ...v2Data[1]],
-    ];
-
-  } catch (err) {
-    console.warn(`Error fetching/merging V2 data: ${err}`);
+  if (v1Result.status === "rejected") {
+    throw v1Result.reason;
   }
-  return v1Data;
+  const v1Data = v1Result.value;
+
+  if (v2Result.status === "rejected") {
+    console.warn(`Error fetching/merging V2 data: ${v2Result.reason}`);
+    return v1Data;
+  }
+  console.warn("V2 funds", v2Result.value)
+
+  // Merge V1 + V2 results
+  return [
+    [...v1Data[0], ...v2Result.value[0]],
+    [...v1Data[1], ...v2Result.value[1]],
+  ];
 }
 
 

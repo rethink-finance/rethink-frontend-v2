@@ -32,7 +32,7 @@ export function useContractAddresses() {
       // [ChainId.FRAXTAL]: "",
       [ChainId.BASE]: "0xf42694C10a80b36D51Fe6b6F0590a0d8949C4C1e",
       [ChainId.ARBITRUM]: "0x37E5E0ec7Fde0d8794db1FF54A3C2e69E801A9dE",
-      [ChainId.HYPEREVM]: "",
+      [ChainId.HYPEREVM]: "0x8Ac19ed0280c3ea1A89C6209ACA862Db0Cb5Ffa8",
       [ChainId.LOCAL_NODE]: config.public.GOVERNABLE_FUND_FACTORYV1_5_PROXY as string ?? "",
     },
     "NAVCalculatorBeaconProxy": {
@@ -111,7 +111,7 @@ export function useContractAddresses() {
       // [ChainId.FRAXTAL]: "",
       [ChainId.BASE]: "",
       [ChainId.ARBITRUM]: "0x5b25Ad35BA684A85EBF02A032678884F94eEfd89",
-      [ChainId.HYPEREVM]: "",
+      [ChainId.HYPEREVM]: "0x12f237116acb50444c88e8af5da9845783e1c584",
       [ChainId.LOCAL_NODE]: config.public.ZODIAC_ROLES_V1_PROXY as string ?? "",
     },
     "GovernableFundFlowsUpgradeableBeacon": {

@@ -1,5 +1,5 @@
 <template>
-  <div class="discover">
+  <div class="discover page_shell">
     <AppAccessGate />
     <div
       v-if="isErrorFetchFundsData"
@@ -11,7 +11,12 @@
       </span>
     </div>
     <template v-else>
-      <TableTotalTVLBanner />
+      <div class="discover__head">
+        <h1 class="discover__title">
+          On-chain <span class="gradient_text">vaults</span>
+        </h1>
+        <TableTotalTVLBanner />
+      </div>
       <TableFunds :loading="isLoadingFetchFundsData" :items="funds" />
     </template>
   </div>
@@ -38,16 +43,26 @@ fundsStore.fetchFunds()
 
 <style lang="scss">
 .discover {
-  width: 100%;
+  // Width comes from the shared .page_shell class in app.scss.
 
-  // Media queries for responsive width adjustments
-  @media (min-width: 1800px) {
-    width: 90%;
-    max-width: 1500px;
+  &__head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2.5rem;
+    flex-wrap: wrap;
+    margin: 1rem 0 2.25rem;
   }
-  @media (min-width: 2200px) {
-    width: 84%;
-    max-width: 1500px;
+
+  &__title {
+    font-size: clamp(30px, 3.4vw, 44px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin: 0;
+    color: $color-white;
+    min-width: 280px;
   }
+
 }
 </style>

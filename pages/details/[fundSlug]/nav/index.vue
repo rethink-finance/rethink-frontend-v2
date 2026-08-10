@@ -1,33 +1,30 @@
 <template>
   <div class="nav">
-    <UiHeader>
-      <div>
-        <div class="main_header__title">
-          <v-skeleton-loader v-if="isLoadingFetchFundNAVUpdatesAction" type="text" class="total_nav_skeleton" />
-          <template v-else>
-            {{ fundTotalNAVFormatted }}
-          </template>
+    <div class="nav__header">
+      <div class="nav__headline">
+        <v-skeleton-loader
+          v-if="isLoadingFetchFundNAVUpdatesAction"
+          type="text"
+          class="total_nav_skeleton"
+        />
+        <div v-else class="nav__total">
+          {{ fundTotalNAVFormatted }}
         </div>
-        <div class="main_header__subtitle">
-          <div>
-            Last updated on
-          </div>
-          <v-skeleton-loader v-if="isLoadingFetchFundNAVUpdatesAction" type="text" class="last_nav_update_skeleton" />
-          <strong v-else class="ms-2">{{ fundLastNAVUpdateDate }}</strong>
+        <div class="nav__caption">
+          Total NAV · last updated {{ fundLastNAVUpdateDate }}
         </div>
       </div>
-      <div class="button_container">
-        <nuxt-link v-if="appSettingsStore.isManageMode" :to="`/details/${selectedFundSlug}/nav/manage`">
-          <v-btn class="text-secondary" variant="outlined">
-            Manage NAV Methods
-          </v-btn>
+
+      <div class="nav__actions">
+        <nuxt-link
+          v-if="appSettingsStore.isManageMode"
+          :to="`/details/${selectedFundSlug}/nav/manage`"
+          class="nav__manage_link"
+        >
+          Manage NAV methods
         </nuxt-link>
 
-
-        <div
-          v-if="appSettingsStore.isManageMode"
-          class="tooltip-wrapper"
-        >
+        <div v-if="appSettingsStore.isManageMode" class="tooltip-wrapper">
           <v-tooltip
             activator="parent"
             location="bottom"
@@ -59,23 +56,19 @@
           </v-tooltip>
         </div>
       </div>
-    </UiHeader>
+    </div>
 
-    <div class="main_card">
-      <UiHeader>
-        <div>
-          <div class="subtitle_white mb-4">
-            NAV Methods
-          </div>
-          <div>
-            <UiInfoBox
-              info="Learn more about NAV methods"
-              :icon="true"
-              link="https://docs.rethink.finance/rethink.finance/protocol/architecture/nav-calculator-contract"
-            />
-          </div>
+    <div class="nav__card brand_card">
+      <div class="brand_card__head">
+        <div class="brand_card__eyebrow">
+          NAV methods
         </div>
-      </UiHeader>
+        <UiInfoBox
+          info="Learn more about NAV methods"
+          :icon="true"
+          link="https://docs.rethink.finance/rethink.finance/protocol/architecture/nav-calculator-contract"
+        />
+      </div>
       <div class="methods main_grid main_grid--full-width main_grid--no-gap">
         <FundNavMethodsTable
           :fund-chain-id="fundStore.selectedFundChain"
@@ -98,13 +91,11 @@
       </div>
     </div>
 
-    <div class="main_card">
-      <div class="subtitle_white mb-4">
-        NAV Updates
+    <div class="nav__card brand_card">
+      <div class="brand_card__eyebrow nav__updates_title">
+        NAV updates
       </div>
-      <div>
-        <FundNavUpdates :fund="reversedFundNavUpdates" />
-      </div>
+      <FundNavUpdates :fund="reversedFundNavUpdates" />
     </div>
   </div>
 </template>
@@ -165,34 +156,80 @@ const isLoadingFetchFundNAVUpdatesAction = computed(() => {
 
 <style scoped lang="scss">
 .nav {
-  &__learn_more_link {
-    font-weight: 500;
-    color: $color-primary;
-  }
-}
-.total_nav_skeleton :deep(.v-skeleton-loader__bone) {
-  height: 2rem;
-  margin: 0;
-}
-.last_nav_update_skeleton :deep(.v-skeleton-loader__bone) {
-  height: 1rem;
-  width: 4rem;
-  margin: 0.5rem 0 0 0.5rem;
-}
-.main_header__subtitle {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-content: center;
-}
-
-.button_container {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.375rem;
 
-  @include sm {
-    flex-direction: row;
+  /* Design's page head: the figure carries the row, buttons sit at the end. */
+  &__header {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.75rem;
+    flex-wrap: wrap;
   }
+
+  &__headline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4375rem;
+    margin-right: auto;
+  }
+
+  &__total {
+    font-family: $font-mono;
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__caption {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  &__manage_link {
+    padding: 0.5625rem 0.875rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    font-size: 13px;
+    font-weight: 600;
+    color: $color-text-irrelevant;
+    white-space: nowrap;
+    transition: color $default-transition-time ease,
+      border-color $default-transition-time ease;
+
+    &:hover {
+      color: $color-white;
+      border-color: $color-line-3;
+    }
+  }
+
+  &__card {
+    /* brand_card provides chrome; margins come from the page flex gap. */
+    margin-bottom: 0;
+  }
+
+  &__updates_title {
+    margin-bottom: 1rem;
+  }
+}
+
+.total_nav_skeleton :deep(.v-skeleton-loader__bone) {
+  height: 2rem;
+  width: 12rem;
+  margin: 0;
 }
 </style>

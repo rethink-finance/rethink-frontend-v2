@@ -1,58 +1,55 @@
 <template>
   <v-footer color="transparent" class="footer">
-    <v-col
-      class="footer__buttons order-1 order-sm-0"
-      cols="12"
-      md="4"
-    >
-      <v-btn href="https://twitter.com/RethinkProtocol" target="_blank" variant="plain">
-        <Icon
-          icon="ri:twitter-x-line"
-          color="white"
-          width="1rem"
-        />
-      </v-btn>
-      <v-btn href="https://discord.gg/A7NukjjrRg" target="_blank" variant="plain">
-        <Icon
-          icon="ic:baseline-discord"
-          color="white"
-          width="1rem"
-        />
-      </v-btn>
-      <v-btn href="https://github.com/rethink-finance" target="_blank" variant="plain">
-        <Icon
-          icon="uil:github"
-          color="white"
-          width="1rem"
-          class="mr-3"
-        />
-      </v-btn>
-    </v-col>
-    <v-col
-      class="footer__terms_of_service"
-      cols="12"
-      md="4"
-    >
-      <nuxt-link
-        to="https://docs.rethink.finance/rethink.finance/links/terms-of-service"
-        class="d-flex"
-      >
-        Terms of Services & Privacy
-      </nuxt-link>
-    </v-col>
-    <v-col
-      class="footer__copyright d-flex align-center"
-      cols="12"
-      md="4"
-    >
-      <Icon
-        icon="ic:baseline-copyright"
-        color="white"
-        width="1rem"
-        class="me-1"
-      />
-      rethink.finance, {{ currentYear }}. All rights reserved.
-    </v-col>
+    <div class="footer__inner">
+      <div class="footer__social">
+        <a
+          href="https://twitter.com/RethinkProtocol"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="X"
+        >
+          <Icon icon="ri:twitter-x-line" width="1rem" />
+        </a>
+        <a
+          href="https://discord.gg/A7NukjjrRg"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Discord"
+        >
+          <Icon icon="ic:baseline-discord" width="1rem" />
+        </a>
+        <a
+          href="https://github.com/rethink-finance"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub"
+        >
+          <Icon icon="uil:github" width="1rem" />
+        </a>
+      </div>
+
+      <div class="footer__legal">
+        <a
+          href="https://rethink.finance/terms"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Terms of Service
+        </a>
+        <span class="footer__separator">·</span>
+        <a
+          href="https://rethink.finance/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Privacy
+        </a>
+      </div>
+
+      <div class="footer__copyright">
+        © rethink.finance, {{ currentYear }}. All rights reserved.
+      </div>
+    </div>
   </v-footer>
 </template>
 
@@ -62,54 +59,75 @@ const currentYear = new Date().getFullYear();
 
 <style scoped lang="scss">
 .footer {
-  font-size: $text-sm;
-  flex-direction: column;
+  padding: 0;
+  border-top: 1px solid $color-line;
 
-  @include sm {
-    flex-direction: row;
-    padding: 0 4rem;
-  }
-
-  &__terms_of_service {
-    display: flex;
-    justify-content: flex-start;
-    font-weight: 700;
-
-    @include sm {
-      align-items: center;
-      justify-content: center;
-    }
-  }
-  &__copyright {
-    padding-top: 0;
-
-    @include sm {
-      justify-content: flex-end;
-      padding-top: 0.75rem;
-      padding-right: 4rem;
-    }
-  }
-  &__buttons {
-    display: flex;
-    flex-direction: row;
-    gap: 1.5rem;
+  /* Mirrors the navbar / <main> container so all three line up. */
+  &__inner {
     width: 100%;
-    justify-content: space-between;
+    margin: 0 auto;
+    padding: 1.625rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
 
     @include sm {
-      justify-content: flex-start;
-      padding-left: 4rem;
+      width: 90%;
+      padding-inline: 0;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
     }
+    @include xxl {
+      width: 80%;
+    }
+    @include xxxl {
+      width: 75%;
+    }
+  }
+
+  &__social {
+    display: flex;
+    align-items: center;
+    gap: 1.375rem;
 
     a {
-      min-width: 1rem;
-      padding: 0 !important;
+      display: flex;
+      color: $color-steel-blue;
+      transition: color $default-transition-time ease;
 
-      svg {
-        width: 1.25rem;
-        height: 1.25rem;
+      &:hover {
+        color: $color-white;
       }
     }
+  }
+
+  &__legal,
+  &__copyright {
+    font-size: 12.5px;
+    color: $color-steel-blue;
+  }
+
+  &__legal {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    a {
+      color: $color-steel-blue;
+      text-decoration: none;
+      transition: color $default-transition-time ease;
+
+      &:hover {
+        color: $color-white;
+      }
+    }
+  }
+
+  &__separator {
+    opacity: 0.45;
   }
 }
 </style>

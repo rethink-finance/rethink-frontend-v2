@@ -19,29 +19,27 @@
         <nuxt-link :to="'/'" class="d-flex">
           <Logo />
         </nuxt-link>
-        <div class="navbar__buttons hidden-sm-and-down">
-          <nuxt-link
-            v-for="route in computedRoutes"
-            :key="route.to"
-            :to="route.disabled ? undefined : route.to"
-            :target="route.target"
-          >
-            <v-btn
-              :class="`nav-link ${route.disabled ? 'disabled' : ''}`"
-              variant="plain"
-              :active="route.isActive"
-              :color="route.pathColor"
+        <nav class="navbar__buttons hidden-sm-and-down">
+          <template v-for="route in computedRoutes" :key="route.to">
+            <!-- Disabled entries are plain text with a mono tag. -->
+            <div v-if="route.disabled" class="nav_item nav_item--disabled">
+              {{ route.title }}
+              <span v-if="route.badge" class="nav_item__badge">
+                {{ route.badge }}
+              </span>
+            </div>
+            <nuxt-link
+              v-else
+              class="nav_item"
+              :class="{ 'nav_item--active': route.isActive }"
+              :to="route.to"
+              :target="route.target"
             >
               {{ route.title }}
-              <template #append>
-                <Icon v-if="route.icon" :icon="route.icon" width="0.875rem" />
-              </template>
-              <v-tooltip v-if="route.text" activator="parent" location="bottom">
-                {{ route.text }}
-              </v-tooltip>
-            </v-btn>
-          </nuxt-link>
-        </div>
+              <Icon v-if="route.icon" :icon="route.icon" width="0.875rem" />
+            </nuxt-link>
+          </template>
+        </nav>
 
         <v-spacer class="hidden-sm-and-down" />
 
@@ -50,26 +48,15 @@
             <nuxt-link
               to="https://docs.rethink.finance"
               target="_blank"
-              class="mr-2"
+              class="nav_item nav_item--compact mr-2"
             >
-              <v-btn
-                class="nav-link"
-                variant="plain"
-                color="var(--color-light-subtitle)"
-              >
-                Docs
-                <template #append>
-                  <Icon  icon="mdi:launch" width="0.875rem" />
-                </template>
-              </v-btn>
+              Docs
+              <Icon icon="mdi:launch" width="0.8125rem" />
             </nuxt-link>
 
-            <UiButtonSelectChain
-              v-if="accountStore.isConnected"
-              v-model="selectedChainId"
-              :loading="accountStore.isSwitchingNetworks"
-              @selected-chain-changed="switchNetwork"
-            />
+            <!-- No network picker: a contract call switches the wallet itself
+                 (see CustomContract.ensureCorrectNetwork), so choosing a chain
+                 by hand was work the wallet already does. -->
             <v-btn
               class="connect_wallet_btn nav-link px-4"
               :class="{'connect_wallet_btn--connected': connectedWallet}"
@@ -104,25 +91,48 @@
               </v-tooltip>
             </v-btn>
 
-            <v-menu location="bottom" :close-on-content-click="false">
+            <v-menu
+              location="bottom end"
+              offset="10"
+              :close-on-content-click="false"
+            >
               <template #activator="{ props }">
-                <v-btn class="btn_settings" v-bind="props">
-                  <v-icon class="icon_settings" icon="mdi-cog" size="1.5rem" />
-                </v-btn>
+                <button
+                  class="settings_btn"
+                  :class="{ 'settings_btn--on': appSettingsStore.isManageMode }"
+                  type="button"
+                  aria-label="Settings"
+                  v-bind="props"
+                >
+                  <v-icon class="settings_btn__icon" icon="mdi-cog-outline" size="18" />
+                </button>
               </template>
-              <v-list>
-                <v-list-item>
-                  <v-list-item-title>
-                    <v-switch
-                      v-model="appSettingsStore.isManageMode"
-                      label="Manage Mode"
-                      color="primary"
-                      hide-details
-                      @change="appSettingsStore.toggleAdvancedMode"
-                    />
-                  </v-list-item-title>
-                </v-list-item>
-              </v-list>
+
+              <div class="settings_menu">
+                <div class="settings_menu__eyebrow">
+                  Mode
+                </div>
+                <div class="settings_toggle" @click="toggleCuratorMode">
+                  <div class="settings_toggle__text">
+                    <div class="settings_toggle__title">
+                      Curator Mode
+                    </div>
+                    <div class="settings_toggle__hint">
+                      Create and manage vaults
+                    </div>
+                  </div>
+                  <v-switch
+                    v-model="appSettingsStore.isManageMode"
+                    class="settings_toggle__switch"
+                    color="primary"
+                    density="compact"
+                    hide-details
+                    inset
+                    @click.stop
+                    @change="appSettingsStore.toggleAdvancedMode"
+                  />
+                </div>
+              </div>
             </v-menu>
           </div>
         </ClientOnly>
@@ -136,20 +146,30 @@
     </v-row>
   </v-app-bar>
 
-  <v-alert
-    v-if="accountStore.isConnected && !selectedChainId"
-    color="error"
-    title="Unsupported Network"
-    class="unsupported_network_alert"
-    text="You are on an unsupported network, please switch to one of the supported ones."
-  />
+  <div
+    v-if="accountStore.isConnected && !connectedChainId"
+    class="brand_note brand_note--warning unsupported_network_alert"
+  >
+    <Icon
+      icon="material-symbols:warning-outline"
+      class="brand_note__icon"
+    />
+    <div class="brand_note__body">
+      <div class="brand_note__title">
+        Unsupported network
+      </div>
+      <div class="brand_note__text">
+        You are on an unsupported network. Switch to a supported one in your wallet,
+        or open a vault and the app will ask your wallet to switch.
+      </div>
+    </div>
+  </div>
   <NavbarMenuList v-model="menuOpen" :routes="computedRoutes" />
 </template>
 
 <script lang="ts" setup>
 import { useAccountStore } from "~/store/account/account.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
-import { type ChainId } from "~/types/enums/chain_id";
 import type IRoute from "~/types/route";
 const accountStore = useAccountStore();
 
@@ -159,7 +179,7 @@ const currentRoute = ref(route?.path);
 const menuOpen = ref(false);
 const appSettingsStore = useSettingsStore();
 
-const routes : IRoute[] = [
+const routes = computed<IRoute[]>(() => [
   {
     to: "/",
     matchPrefix: "/details",
@@ -167,6 +187,16 @@ const routes : IRoute[] = [
     title: "Discover",
     text: "",
   },
+  // Positions only exist for a wallet, so the design shows Portfolio
+  // exclusively while one is connected.
+  ...(accountStore.isConnected
+    ? [{
+      to: "/portfolio",
+      exactMatch: true,
+      title: "Portfolio",
+      text: "",
+    }]
+    : []),
   {
     to: "/create",
     exactMatch: true,
@@ -179,31 +209,27 @@ const routes : IRoute[] = [
     title: "Governance",
     text: "Coming soon",
     disabled: true,
+    badge: "SOON",
   },
-]
-const selectedChainId = ref(accountStore.connectedWalletChainId);
+])
+/**
+ * Only the unsupported-network warning reads this now. It was a writable ref
+ * while the picker could set it; nothing writes to it since, so it just
+ * follows the wallet.
+ */
+const connectedChainId = computed(() => accountStore.connectedWalletChainId);
 
-watch(() => accountStore.connectedWalletChainId, (newVal, oldVal) => {
-  console.log(`Connected Wallet Cain ID changed from ${oldVal} to ${newVal}`);
-  selectedChainId.value = newVal;
-});
+/** Toggling anywhere on the row, not just the switch itself. */
+const toggleCuratorMode = () => {
+  appSettingsStore.isManageMode = !appSettingsStore.isManageMode;
+  appSettingsStore.toggleAdvancedMode();
+};
 
-const isSelectInputActive = ref(false);
-const switchNetwork = async (chainId: ChainId) => {
-  try {
-    await accountStore.switchNetwork(chainId)
-    isSelectInputActive.value = false;
-  } catch (error: any) {
-    // Revert the selected value to the previously selected chain.
-    selectedChainId.value = accountStore.connectedWalletChainId;
-    isSelectInputActive.value = true;
-  }
-}
 const isPathActive = (path: string = "", exactMatch = true) => exactMatch ? route?.path === path : route?.path.startsWith(path);
 const getPathColor = (isActive = false, color = "var(--color-subtitle)") => (isActive ? "primary" : color);
 
 const computedRoutes = computed(() => {
-  return routes.map((routeItem: IRoute) => {
+  return routes.value.map((routeItem: IRoute) => {
     let isActive;
     if (routeItem.exactMatch) {
       isActive = isPathActive(routeItem.to, true)
@@ -269,60 +295,136 @@ const onClickConnect = async () => {
     }
   }
 
-  .btn_settings {
-    margin-left: .5rem;
-    padding: 0.5rem;
+  /* Settings trigger: quiet square that lights up in brand cyan while
+     Curator Mode is on, so the active state is readable at a glance. */
+  .settings_btn {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    margin-left: 0.5rem;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: $default-border-radius;
+    color: $color-steel-blue;
+    cursor: pointer;
+    transition:
+      color $default-transition-time ease,
+      border-color $default-transition-time ease,
+      background $default-transition-time ease,
+      box-shadow $default-transition-time ease;
+
+    &__icon {
+      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
     &:hover {
-      .icon_settings {
+      color: $color-white;
+      border-color: $color-line-2;
+
+      .settings_btn__icon {
         transform: rotate(90deg);
       }
     }
+
+    &--on {
+      color: $color-cyan;
+      background: $color-accent-soft;
+      border-color: $color-accent-line;
+
+      &:hover {
+        color: $color-cyan-soft;
+        border-color: $color-accent-line;
+        box-shadow: 0 0 0 3px rgba(22, 200, 255, 0.08);
+      }
+    }
   }
-  .icon_settings{
-    transition: transform 0.3s ease-in-out;
-    transform: rotate(0deg);
-  }
 
 
 
+  /* Mirrors the <main> container in layouts/default.vue so the navbar's
+     outer edges line up with the page content at every breakpoint. */
   &__toolbar {
     letter-spacing: normal;
     gap: 2rem;
     display: flex;
     flex-direction: row;
-    padding: 0 0 0 1.5rem;
+    width: 100%;
+    margin: 0 auto;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
 
     @include sm {
-      padding: 0 2rem;
+      width: 90%;
+      padding-left: 0;
+      padding-right: 0;
     }
-
-    @include lg {
-      padding: 0 7.25rem;
+    @include xxl {
+      width: 80%;
+    }
+    @include xxxl {
+      width: 75%;
     }
   }
 
   &__buttons {
     display: flex;
     flex-direction: row;
-    gap: 0.5rem;
-    margin-left: 2.5rem;
+    align-items: center;
+    gap: 6px;
+    margin-left: 1.25rem;
     height: 100%;
   }
 
-  .nav-link {
+  /* Design-file nav item: 14px semibold, dim by default,
+     brand blue when active, faint + SOON tag when disabled. */
+  .nav_item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     height: 100%;
-    text-transform: Capitalize;
-    font-size: 1rem;
-    font-weight: 700;
-    padding: 0.5rem;
+    box-sizing: border-box;
+    padding: 6px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    color: $color-text-irrelevant;
+    transition: color $default-transition-time ease;
 
-    &:not(:hover) {
-      opacity: 0.85;
+    /* Selected and hovered both read as white; unselected sits dim. */
+    &:hover,
+    &--active,
+    &--active:hover {
+      color: $color-white;
     }
-  }
-  .nav-link.disabled {
-    opacity: 0.5;
+
+    /* Right-side links (Docs) sit inline rather than full height. */
+    &--compact {
+      height: auto;
+      gap: 6px;
+      padding: 8px 10px;
+    }
+
+    /* Not available yet — dimmer still, and inert: no hover response. */
+    &--disabled,
+    &--disabled:hover {
+      color: $color-steel-blue;
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    &__badge {
+      font-family: $font-mono;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+      color: $color-steel-blue;
+      border: 1px solid $color-line-2;
+      border-radius: $default-border-radius;
+      padding: 2px 6px;
+    }
   }
 
   .connect_wallet_btn {
@@ -348,14 +450,94 @@ const onClickConnect = async () => {
     }
   }
 }
+/* Dropdown panel — raised surface with a hairline, matching the
+   design system's menu treatment. Lives in an overlay, so it sits
+   outside .navbar. */
+.settings_menu {
+  min-width: 264px;
+  padding: 0.75rem;
+  background: $color-navy-gray-light;
+  border: 1px solid $color-line-2;
+  border-radius: $default-border-radius;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+
+  &__eyebrow {
+    font-family: $font-mono;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    padding: 0 0.25rem 0.5rem;
+  }
+}
+
+.settings_toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.25rem;
+  border-radius: $default-border-radius;
+  cursor: pointer;
+  user-select: none;
+  transition: background $default-transition-time ease;
+
+  &:hover {
+    background: $color-gray-light-transparent;
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  &__title {
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: $color-white;
+  }
+
+  &__hint {
+    font-size: 11.5px;
+    line-height: 1.3;
+    color: $color-steel-blue;
+  }
+
+  &__switch {
+    flex: none;
+
+    :deep(.v-selection-control) {
+      min-height: 0;
+    }
+    :deep(.v-switch__track) {
+      opacity: 1;
+      background: $color-moonlight-light;
+    }
+    :deep(.v-switch__thumb) {
+      box-shadow: none;
+    }
+    :deep(.v-selection-control__wrapper),
+    :deep(.v-selection-control__input) {
+      width: auto;
+      height: auto;
+    }
+    :deep(.v-selection-control__input::before) {
+      display: none;
+    }
+  }
+}
+
+/* Spans the viewport under the bar rather than sitting in a page's column —
+   the network is wrong for the whole app, not for one screen. */
 .unsupported_network_alert {
   position: absolute;
-  margin: auto;
   top: $navbar-height;
   width: 100%;
-
-  :deep(.v-alert__content) {
-    margin: auto;
-  }
+  border-inline: none;
+  border-radius: 0;
+  padding-inline: 1.5rem;
+  z-index: 1004;
 }
 </style>

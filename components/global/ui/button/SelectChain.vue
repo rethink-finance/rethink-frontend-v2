@@ -21,6 +21,7 @@
       <template #selection="{ item }">
         <IconChain
           :chain-short="item.raw.chainShort"
+          :size="20"
           class="select_item__icon mr-2"
         />
         <v-list-item-title>
@@ -33,9 +34,9 @@
           :class="{'select_item--active': item.raw.chainId === selectedChainId}"
           @click="changeSelectedChainId(item.raw.chainId)"
         >
-          <Icon
-            :icon="item.raw.icon?.name"
-            :color="item.raw.icon?.color"
+          <IconChain
+            :chain-short="item.raw.chainShort"
+            :size="20"
             class="select_item__icon"
           />
           <div>

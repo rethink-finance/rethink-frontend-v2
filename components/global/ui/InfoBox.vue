@@ -4,24 +4,22 @@
     :href="props.link"
     target="_blank"
     rel="noopener noreferrer"
-    class="info"
+    class="brand_note info"
   >
     <Icon
       icon="material-symbols:info-outline"
-      class="info__icon"
-      width="1.5rem"
+      class="brand_note__icon"
     />
-    <span class="info__text" v-html="props.info" />
+    <span class="brand_note__body brand_note__text" v-html="props.info" />
   </a>
 
-  <div v-else class="info">
+  <div v-else class="brand_note info">
     <Icon
       icon="material-symbols:info-outline"
-      class="info__icon"
-      width="1.5rem"
+      class="brand_note__icon"
     />
     <span
-      class="info__text"
+      class="brand_note__body brand_note__text"
       v-html="props.info"
     />
   </div>
@@ -35,27 +33,12 @@ const props = defineProps<{
 </script>
 
 <style lang="scss" scoped>
+/* The callout treatment itself is the shared .brand_note in
+   assets/scss/overlays.scss — this only keeps the link's own affordances,
+   since the whole box is clickable when a link is passed. */
 .info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 1rem;
-  background-color: $color-gray-light-transparent;
-  @include borderGray;
-  font-size: $text-sm;
-  font-weight: 400;
-
-  &__icon {
-    rotate: 180deg;
-    color: var(--color-primary);
-    width: 30px;
-  }
-  &__text{
-    width: calc(100% - 30px);
-    :deep(a){
-      color: var(--color-primary);
-    }
+  &[href]:hover {
+    border-color: $color-line-3;
   }
 }
 </style>

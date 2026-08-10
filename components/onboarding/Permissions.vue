@@ -1,46 +1,40 @@
 <template>
   <div class="permissions_wrapper">
-    <div v-if="!fundFactoryContractV2Used" class="d-flex justify-center">
-      <v-stepper v-model="selectedStepIndex">
-        <v-stepper-header>
-          <v-stepper-item
-            v-for="(step, index) in permissionSteps"
-            :key="index"
-            :step="index + 1"
-            :complete="index + 1 < selectedStepIndex"
-            :value="index + 1"
-          >
-            <template #default>
-              <div class="d-flex align-center">
-                <span>{{ step }}</span>
-              </div>
-            </template>
-          </v-stepper-item>
-        </v-stepper-header>
-      </v-stepper>
-    </div>
-    <div v-else class="pb-4" />
-
-    <div class="d-flex align-center justify-space-between">
-      <div v-if="selectedStepIndex === 0" class="d-flex align-center">
-        <div class="d-flex align-center me-6">
-          <RoleSelectRole v-model="selectedRole" :roles="roles" />
+    <template v-if="selectedStepIndex === 0">
+      <!-- The two contracts every permission on this page is written against.
+           They exist from the moment the vault was initialized, so they head
+           the step rather than sitting in a footnote under it. -->
+      <div class="perm_head">
+        <div class="perm_head__pairs">
+          <div class="perm_head__pair">
+            <span class="perm_head__label">Safe contract</span>
+            <AddressLink
+              v-if="fundSettings?.safe"
+              :address="fundSettings.safe"
+              :chain-id="fundChainId"
+            />
+            <span v-else class="perm_head__value">N/A</span>
+          </div>
+          <div class="perm_head__pair">
+            <span class="perm_head__label">Roles modifier</span>
+            <AddressLink
+              v-if="roleModAddress"
+              :address="roleModAddress"
+              :chain-id="fundChainId"
+            />
+            <span v-else class="perm_head__value">N/A</span>
+          </div>
         </div>
-        <PermissionImportRawPermissions v-if="!fundFactoryContractV2Used" />
+        <span class="perm_head__badge">
+          {{ fundFactoryContractV2Used ? "Roles V2" : "Roles V1" }}
+        </span>
       </div>
-      <v-btn
-        v-if="selectedStepIndex === 0"
-        class="btn_icon_center"
-        type="button"
-        variant="outlined"
-        @click="goToPermissionsStepTwo()"
-      >
-        Finalize Permissions
-        <v-icon right>
-          mdi-chevron-right
-        </v-icon>
-      </v-btn>
-    </div>
+
+      <div v-if="!fundFactoryContractV2Used" class="perm_role_row">
+        <RoleSelectRole v-model="selectedRole" :roles="roles" />
+        <PermissionImportRawPermissions />
+      </div>
+    </template>
 
     <FundPermissions
       v-if="selectedStepIndex === 0 && !fundFactoryContractV2Used"
@@ -50,45 +44,47 @@
       :error-message="updateRoleError"
     />
     <div v-else-if="selectedStepIndex === 0 && fundFactoryContractV2Used">
-      <!-- Info row: show fund Safe address and Roles Modifier address using AddressLink -->
-      <div class="info_row mt-6">
-        <div class="info_row__item">
-          <span class="info_container__text"><strong>Safe Contract:</strong></span>
-          <AddressLink
-            v-if="fundSettings?.safe"
-            :address="fundSettings.safe"
-            :chain-id="fundChainId"
-          />
-          <template v-else>
-            N/A
-          </template>
-        </div>
-        <div class="info_row__item">
-          <span class="info_container__text"><strong>Roles Modifier:</strong></span>
-          <AddressLink
-            v-if="roleModAddress"
-            :address="roleModAddress"
-            :chain-id="fundChainId"
-          />
-          <template v-else>
-            N/A
-          </template>
-        </div>
-      </div>
       <PermissionsManagement
         v-model:allow-manager-to-send-funds-to-fund-contract="
           allowManagerToSendFundsToFundContract
         "
         v-model:allow-manager-to-collect-fees="allowManagerToCollectFees"
         v-model:allow-manager-to-update-nav="allowManagerToUpdateNav"
+        v-model:allow-manager-to-update-settings="allowManagerToUpdateSettings"
+        v-model:allow-manager-to-manage-role-members="
+          allowManagerToManageRoleMembers
+        "
         class="mt-6"
         :fund-factory-contract-v2-used="fundFactoryContractV2Used"
       />
-      <RoleMembersEditorV2
+      <OnboardingRoleMembers
         v-model="pendingRoleMembershipChanges"
-        class="mt-6"
+        class="mt-4"
       />
     </div>
+
+    <div v-if="selectedStepIndex === 0" class="perm_foot">
+      <div class="perm_foot__buttons">
+        <UiLinkExternalButton
+          title="View vault permissions"
+          :href="gnosisPermissionsUrl"
+        />
+        <OnboardingRawPermissionsCode
+          v-if="fundFactoryContractV2Used"
+          v-model="rawPermissionCodeEntries"
+        />
+      </div>
+      <p class="perm_foot__text">
+        Having trouble reading permissions?
+        <a
+          class="perm_foot__link"
+          href="https://docs.rethink.finance/rethink.finance"
+          target="_blank"
+          rel="noopener"
+        >Learn more about permissions</a>
+      </p>
+    </div>
+
     <FundGovernanceDelegatedPermissions
       v-else-if="selectedStepIndex === 1"
       ref="delegatedPermissionsRef"
@@ -139,6 +135,10 @@
           "
           v-model:allow-manager-to-collect-fees="allowManagerToCollectFees"
           v-model:allow-manager-to-update-nav="allowManagerToUpdateNav"
+          v-model:allow-manager-to-update-settings="allowManagerToUpdateSettings"
+          v-model:allow-manager-to-manage-role-members="
+            allowManagerToManageRoleMembers
+          "
           :fund-factory-contract-v2-used="fundFactoryContractV2Used"
         />
       </template>
@@ -182,9 +182,15 @@ import {
   type IAssignMemberChange,
   rolesV2WriteFunctionAbiMap,
 } from "~/composables/nav/generateNAVPermission";
-import RoleMembersEditorV2 from "~/components/permission/RoleMembersEditorV2.vue";
 import PermissionsManagement from "~/components/onboarding/PermissionsManagement.vue";
 import AddressLink from "~/components/common/AddressLink.vue";
+import {
+  generateManageRoleMembersPermissionRolesV2,
+  generateUpdateSettingsPermissionRolesV2,
+  parseUpdateSettingsPinnedValues,
+} from "~/composables/permissions/rolesV2Permissions";
+import OnboardingRawPermissionsCode from "~/components/onboarding/RawPermissionsCode.vue";
+import type { IRawPermissionCodeEntry } from "~/composables/permissions/parseRawPermissionCode";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
@@ -197,13 +203,20 @@ const { roles, selectedRole, isFetchingPermissions, fetchPermissions } =
   useRoles(fundChainId.value, fundInitCache?.value?.fundSettings?.fundAddress);
 
 const updateRoleError = ref("");
-const permissionSteps = ref(["Edit Permissions", "Finalize Permissions"]);
 const selectedStepIndex = ref(0);
 const loading = ref(false);
-const allowManagerToSendFundsToFundContract = ref(false);
-const allowManagerToCollectFees = ref(false);
+// Every prepopulated permission starts on: they are what a vault normally
+// needs to run, and a curator who does not want one turns it off here rather
+// than discovering later that the manager cannot settle a flow. The last two
+// are Roles V2 only and stay inert until the one-time governance activation
+// offered from the vault's Permissions page after finalizing.
+const allowManagerToSendFundsToFundContract = ref(true);
+const allowManagerToCollectFees = ref(true);
 const allowManagerToUpdateNav = ref(true);
+const allowManagerToUpdateSettings = ref(true);
+const allowManagerToManageRoleMembers = ref(true);
 const pendingRoleMembershipChanges = ref<IAssignMemberChange[]>([]);
+const rawPermissionCodeEntries = ref<IRawPermissionCodeEntry[]>([]);
 const defaultMethod = formatInputToObject(
   proposalRoleModMethodStepsMap.scopeFunction,
 );
@@ -238,6 +251,7 @@ const gnosisPermissionsUrl = computed(() => {
   return getGnosisPermissionsUrl(
     networksMap[fundChainId.value]?.chainShort || "",
     roleModAddress.value || "",
+    fundFactoryContractV2Used.value,
   );
 });
 
@@ -347,8 +361,16 @@ const goToPermissionsStepTwo = async () => {
     } else {
       updateRoleError.value = e.message;
     }
-   }
-  };
+  }
+};
+
+// The step's primary action lives in the page's sticky footer, where every
+// other step's does; this is what that button calls.
+defineExpose({
+  finalizePermissions: goToPermissionsStepTwo,
+  isFinalizing: loading,
+  isOnFirstSubStep: computed(() => selectedStepIndex.value === 0),
+});
 
 const navExecutorAddress = computed(() => {
   const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
@@ -576,6 +598,36 @@ const storePermissionsV2 = async () => {
     }
   }
 
+  if (allowManagerToUpdateSettings.value) {
+    try {
+      // Pin to the values the factory will store — the raw init-cache
+      // settings struct plus the two fee periods, never derived frontend
+      // state. (The init-cache rewrite in fetchFundInitCache only ADDS
+      // frontend keys; the raw struct fields used here are untouched.)
+      const pinned = parseUpdateSettingsPinnedValues(
+        fundInitCacheSettings,
+        fundInitCache?.value?._feePerformancePeriod,
+        fundInitCache?.value?._feeManagePeriod,
+      );
+      proposalData.encodedRoleModEntries.push(
+        ...generateUpdateSettingsPermissionRolesV2(fundAddress, pinned),
+      );
+    } catch (e: any) {
+      console.error("Failed to add updateSettings V2 permission", e);
+      toastStore.errorToast(
+        "Failed to add the update-vault-settings permission: " + e.message,
+      );
+      loading.value = false;
+      return;
+    }
+  }
+
+  if (allowManagerToManageRoleMembers.value) {
+    proposalData.encodedRoleModEntries.push(
+      ...generateManageRoleMembersPermissionRolesV2(roleModAddress.value),
+    );
+  }
+
   // Add/Remove members widget (Roles V2 assignRoles)
   console.log(
     "pendingRoleMembershipChanges.value",
@@ -591,6 +643,14 @@ const storePermissionsV2 = async () => {
         DEFAULT_ROLE_KEY_V2,
         pendingRoleMembershipChanges.value,
       ),
+    );
+  }
+
+  // Raw permissions pasted as code — already validated against the Roles V2
+  // ABI by the input component; submitted verbatim.
+  if (rawPermissionCodeEntries.value.length) {
+    proposalData.encodedRoleModEntries.push(
+      ...rawPermissionCodeEntries.value.map((entry) => entry.data),
     );
   }
   const fundFactoryContract =
@@ -639,7 +699,7 @@ watch(
     // If no roles or permissions exist, pre-populate an empty role with roleId 1
     if (!roles.value?.length) {
       // Pre-populate an empty role with roleId 1
-      const roleId = fundFactoryContractV2Used
+      const roleId = fundFactoryContractV2Used.value
         ? DEFAULT_ROLE_KEY_V2
         : DEFAULT_ROLE_KEY;
       const emptyRole: Role = {
@@ -658,9 +718,98 @@ watch(
 
 <style scoped lang="scss">
 .permissions_wrapper {
-  padding: 0 1rem 1rem 1rem;
-  border: 4px dashed $color-border-dark;
+  display: flex;
+  flex-direction: column;
 }
+
+.perm_head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+
+  &__pairs {
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+  }
+
+  &__pair {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  &__label {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__value {
+    font-family: $font-mono;
+    font-size: 12.5px;
+    color: $color-steel-blue;
+  }
+
+  &__badge {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    font-family: $font-mono;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+}
+
+.perm_role_row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.perm_foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+
+  &__buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  &__text {
+    margin-left: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+
+  &__link {
+    color: $color-cyan;
+    text-decoration: underline;
+
+    &:visited,
+    &:hover,
+    &:active {
+      color: $color-cyan;
+    }
+  }
+}
+
 .management {
   margin-bottom: 1rem;
   &__row {

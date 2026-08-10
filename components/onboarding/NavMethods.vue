@@ -1,56 +1,45 @@
 <template>
   <div class="nav-methods">
-    <UiHeader>
-      <div class="main_header__title">
-        Manage NAV Methods
-      </div>
-      <div class="main_header__actions">
-        <v-btn
-          class="text-secondary"
-          variant="outlined"
+    <div class="nav_head">
+      <h2 class="nav_head__title">
+        Manage NAV methods
+      </h2>
+      <div class="nav_head__actions">
+        <button
+          type="button"
+          class="nav_head__action"
           @click="handleDefineNewMethodDialog(true)"
         >
-          Define New Method
-        </v-btn>
-        <v-btn
-          class="text-secondary"
-          variant="outlined"
+          Define new method
+        </button>
+        <button
+          type="button"
+          class="nav_head__action"
           @click="handleAddFromLibraryDialog(true)"
         >
-          Add From Library
-        </v-btn>
-        <v-btn
-          class="text-secondary"
-          variant="outlined"
+          Add from library
+        </button>
+        <button
+          type="button"
+          class="nav_head__action"
           @click="isAddRawDialogOpen = true"
         >
-          Import Raw
-        </v-btn>
-        <v-btn
-          class="bg-primary text-secondary"
-          :loading="isLoadingStoreNavMethods"
-          @click="handleClickStoreNavMethods"
-        >
-          Store NAV Methods
-        </v-btn>
-
+          Import raw
+        </button>
       </div>
-    </UiHeader>
-    <div class="main_card">
+    </div>
 
-      <div class="management">
-        <div class="management__row">
-          <div>
-            Allow manager to keep updating NAV based on approved methods
-          </div>
-          <v-switch
-            v-model="allowManagerToUpdateNav"
-            color="primary"
-            hide-details
-          />
-        </div>
-      </div>
+    <div class="nav_toggle_row">
+      <span class="nav_toggle_row__text">
+        Allow manager to keep updating NAV based on approved methods
+      </span>
+      <OnboardingToggle
+        v-model="allowManagerToUpdateNav"
+        label="Allow the manager to keep updating NAV"
+      />
+    </div>
 
+    <div class="nav_table">
       <FundNavMethodsTable
         v-model:methods="navMethods"
         deletable
@@ -78,8 +67,8 @@
 
     <UiConfirmDialog
       :model-value="isDefineNewMethodDialogOpen"
-      title="Add New Method"
-      max-width="80%"
+      title="Define new method"
+      max-width="560px"
       @update:model-value="handleDefineNewMethodDialog"
     >
       <FundNavNewMethod
@@ -91,8 +80,8 @@
 
     <UiConfirmDialog
       :model-value="isAddFromLibraryDialogOpen"
-      title="Add New Method"
-      max-width="80%"
+      title="Add from library"
+      max-width="760px"
       @update:model-value="handleAddFromLibraryDialog"
     >
       <FundNavAddFromLibrary
@@ -109,30 +98,29 @@
 
     <UiConfirmDialog
       v-model="isNotifyDialogOpen"
-      title="Store NAV Methods"
+      title="Store NAV methods"
+      confirm-text="Send both"
       class="confirm_dialog"
-      max-width="680px"
+      max-width="640px"
+      @confirm="isNotifyDialogOpen = false"
       @cancel="isNotifyDialogOpen = false"
     >
-      <p class="mt-4">
+      <p class="nav_notify__lead">
         This action requires sending two transactions:
       </p>
 
-      <div class="d-flex flex-column mt-2">
-        <div class="d-flex flex-row align-items-center">
-          <Icon icon="mynaui:one-circle" width="24" height="24" />
-          <strong class="ms-1">
-            Store the NAV methods.
-          </strong>
-        </div>
-        <div class="d-flex flex-row align-items-center mt-1">
-          <Icon icon="mynaui:two-circle" width="24" height="24" />
-          <strong class="ms-1">
-            Allow the manager to keep updating NAV based on approved methods.
-          </strong>
-        </div>
-      </div>
-      <p class="mt-4">
+      <ol class="nav_notify__list">
+        <li class="nav_notify__item">
+          <span class="nav_notify__number">1</span>
+          Store the NAV methods.
+        </li>
+        <li class="nav_notify__item">
+          <span class="nav_notify__number">2</span>
+          Allow the manager to keep updating NAV based on approved methods.
+        </li>
+      </ol>
+
+      <p class="nav_notify__lead">
         Please ensure you approve both to complete the process.
       </p>
     </UiConfirmDialog>
@@ -441,24 +429,125 @@ const fetchNavMethods = async () => {
   }
   isFetchingNavMethods.value = false;
 }
+
+// The step's primary action sits in the page's sticky footer with every other
+// step's, so the page drives it from there.
+defineExpose({
+  storeNavMethods: handleClickStoreNavMethods,
+  isStoring: isLoadingStoreNavMethods,
+});
 </script>
 
 <style scoped lang="scss">
-.main_header {
+.nav_head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+
+  &__title {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: $color-white;
+  }
+
   &__actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 0.625rem;
+    margin-left: auto;
+  }
+
+  &__action {
+    padding: 9px 14px;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: transparent;
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-white;
+    cursor: pointer;
+    transition: border-color $default-transition-time ease;
+
+    &:hover {
+      border-color: $color-line-3;
+    }
   }
 }
-.management {
-  margin-bottom: 1rem;
-  &__row {
+
+.nav_toggle_row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.875rem 1.125rem;
+  margin-top: 1.375rem;
+  border: 1px solid $color-line;
+  border-radius: $default-border-radius;
+  background: $color-card-background;
+
+  &__text {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: $color-white;
+  }
+}
+
+.nav_table {
+  margin-top: 1rem;
+  /* The table is shared with the vault's own NAV page and brings its own
+     column widths; this only gives it somewhere to scroll on a narrow screen. */
+  overflow-x: auto;
+}
+
+.nav_notify {
+  &__lead {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: $color-white;
+  }
+
+  &__list {
     display: flex;
-    flex-direction: row;
-    justify-content: flex-end;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    display: flex;
     align-items: center;
-    gap: 2rem;
+    gap: 0.625rem;
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: $color-white;
+  }
+
+  &__number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border: 1px solid $color-cyan-line;
+    border-radius: 999px;
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-cyan;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav_head__action {
+    transition: none;
   }
 }
 </style>

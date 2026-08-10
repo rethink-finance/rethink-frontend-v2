@@ -1,29 +1,19 @@
 <template>
+  <!-- Fees and contract addresses graduated to their own cards on the
+       overview, so the accordion only keeps what has no card of its own. -->
   <div class="accordion_content">
-    <div class="main_card">
-      <div class="subtitle_steel_blue">
-        Basics
-      </div>
-      <FundOverviewBasics :fund="fund" />
-    </div>
-    <div class="main_card">
-      <div class="subtitle_steel_blue">
+    <section class="accordion_content__section">
+      <div class="accordion_content__title">
         Whitelist
       </div>
       <FundOverviewDeposits :fund="fund" class="whitelist_card" />
-    </div>
-    <div class="main_card">
-      <div class="subtitle_steel_blue">
+    </section>
+    <section class="accordion_content__section">
+      <div class="accordion_content__title">
         Management
       </div>
       <FundOverviewManagement :fund="fund" />
-    </div>
-    <div class="main_card">
-      <div class="subtitle_steel_blue">
-        Fees
-      </div>
-      <FundOverviewFees :fund="fund" />
-    </div>
+    </section>
   </div>
 </template>
 
@@ -57,10 +47,31 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+/* Sections sit flat inside the Vault settings card — nesting cards inside a
+   card is what the design specifically avoids. */
 .accordion_content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+
   :deep(.v-expansion-panel-title) {
     padding: 0.625rem 0.5rem !important;
     font-size: $text-sm !important;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  &__title {
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-cyan;
   }
 }
 .whitelist_card {

@@ -1,6 +1,6 @@
 <template>
   <div class="fund_name">
-    <v-avatar size="4.5rem" :rounded="false" class="fund_name__avatar">
+    <v-avatar size="52" class="fund_name__avatar">
       <img cover :src="props.image">
     </v-avatar>
     <div class="title_wrapper">
@@ -43,14 +43,21 @@ const truncatedSubtitle = computed(() => {
 </script>
 
 <style lang="scss" scoped>
+/* Design-file vault cell: 44px rounded logo tile, tight two-line text */
 .fund_name {
   display: flex;
   flex-direction: row;
+  align-items: center;
   padding-block: 0.25rem;
 
   &__avatar {
-    border-radius: 0;
-    margin-right: 0.75rem;
+    width: 52px !important;
+    height: 52px !important;
+    /* Same corner radius as the table card */
+    border-radius: $default-border-radius !important;
+    overflow: hidden;
+    margin-right: 0.875rem;
+    border: 1px solid $color-line;
     img {
       width: 100%;
       height: 100%;
@@ -62,8 +69,7 @@ const truncatedSubtitle = computed(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  //justify-content: space-around;
-  gap: 0.125rem;
+  gap: 0.1875rem;
   flex-grow: 1; /* Allow the title wrapper to fill available space */
   min-width: 0; /* Prevents flex items from growing past their content size */
 
@@ -73,20 +79,20 @@ const truncatedSubtitle = computed(() => {
     width: 100%;
   }
   h4 {
-    font-size: 0.875rem;
+    font-size: 14.5px;
     font-style: normal;
     font-weight: 700;
-    letter-spacing: 0.0525rem;
+    letter-spacing: normal;
     max-width: 100%;
   }
 
   h5 {
     max-width: 100%;
-    font-size: 0.875rem;
+    font-size: 12.5px;
     font-style: normal;
     font-weight: 500;
-    letter-spacing: 0.02625rem;
-    color: $color-light-subtitle;
+    letter-spacing: normal;
+    color: $color-steel-blue;
     transition: color 0.2s ease;
   }
 }
@@ -94,6 +100,8 @@ const truncatedSubtitle = computed(() => {
 .strategist_url {
   max-width: 100%;
 
+  /* Description can wrap onto two lines before truncating.
+     Capped width so lines break earlier and stay easy to scan. */
   h5 {
     white-space: normal;
     overflow: hidden;
@@ -101,6 +109,8 @@ const truncatedSubtitle = computed(() => {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     text-overflow: ellipsis;
+    line-height: 1.45;
+    max-width: 28ch;
   }
 }
 </style>
