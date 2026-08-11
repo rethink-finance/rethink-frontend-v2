@@ -411,6 +411,10 @@ const rawExcludedFundAddresses = {
       address: "0x420691e8264f008059c29065796514AFE3C82B97",
       alwaysExclude: true,
     }, // SBTC-ARB-WBTC-01-TEST
+    {
+      address: "0xe38E50D5504Afbc19317C20F484C1C8Ea70C7C37",
+      alwaysExclude: true,
+    }, // Test (TSTttt)
   ],
   // Fraxtal
   "0xfc": [],
