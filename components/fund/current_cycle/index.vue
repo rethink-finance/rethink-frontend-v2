@@ -103,6 +103,7 @@ import ProcessDepositModal from "~/components/fund/settlement/ProcessDepositModa
 
 import { createDelegateBySigMessage, encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallAbi";
 import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
+import { useDepositFlowOpen } from "~/composables/fund/useDepositFlow";
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -152,7 +153,12 @@ const isProcessRequestDisabled = computed(() => {
   return true;
 });
 
-const isProcessDepositModalOpen = ref(false);
+// Shared with the "Manage deposits" card: a request deposit made there swaps
+// that card out for this one, and the flow has to carry over — see
+// useDepositFlowOpen.
+const isProcessDepositModalOpen = useDepositFlowOpen(
+  () => fundStore.selectedFundAddress,
+);
 
 const processRequest = () => {
   if (userDepositRequestExists.value) {

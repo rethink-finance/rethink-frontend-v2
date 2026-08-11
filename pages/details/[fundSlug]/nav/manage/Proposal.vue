@@ -10,6 +10,9 @@
         </div>
       </div>
     </UiHeader>
+
+    <FundGovernanceDelegationNotice />
+
     <div class="main_card">
       <v-form ref="form" v-model="formIsValid">
         <v-container fluid>
@@ -157,18 +160,22 @@
             <div class="action_buttons">
               <v-btn
                 class="bg-primary text-secondary ms-6"
-                :disabled="!accountStore.isConnected"
+                :disabled="!accountStore.isConnected || !canCreateProposal"
                 @click="submitProposal"
               >
                 Create Proposal
                 <v-tooltip
-                  v-if="!accountStore.isConnected"
+                  v-if="!accountStore.isConnected || !canCreateProposal"
                   :model-value="true"
                   activator="parent"
                   location="top"
                   @update:model-value="true"
                 >
-                  Connect your wallet to create a proposal.
+                  {{
+                    accountStore.isConnected
+                      ? NO_DELEGATES_TITLE
+                      : "Connect your wallet to create a proposal."
+                  }}
                 </v-tooltip>
               </v-btn>
             </div>
@@ -190,10 +197,15 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import {
+  NO_DELEGATES_TITLE,
+  useProposalDelegation,
+} from "~/composables/governance/useProposalDelegation";
 const router = useRouter();
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
 const toastStore = useToastStore();
+const { canCreateProposal, assertCanCreateProposal } = useProposalDelegation();
 const emit = defineEmits(["updateBreadcrumbs"]);
 
 const {
@@ -273,6 +285,10 @@ const fundLastNAVUpdateDate = computed(() => {
  *   )
  */
 const submitProposal = async () => {
+  // Guards the click as well as the button: the delegate read can still be in
+  // flight when the form is filled in.
+  if (!(await assertCanCreateProposal())) return;
+
   const encodedNavUpdateEntries = encodeUpdateNavMethods(
     fundManagedNAVMethods.value,
     fundStore.fund?.baseToken.decimals,

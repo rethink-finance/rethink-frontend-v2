@@ -35,11 +35,8 @@
         </div>
       </div>
 
-      <FundSettlementAlert
-        v-if="!isUsingZodiacPilotExtension"
-        class="switch_alert"
-      >
-        Switch to the Zodiac Pilot extension!
+      <FundSettlementAlert v-if="!canExecuteAsCurator" class="switch_alert">
+        {{ curatorDisabledReason }}
       </FundSettlementAlert>
       <div class="buttons_container">
         <div>
@@ -79,12 +76,22 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
+import { ERC20 } from "~/assets/contracts/ERC20";
+import { useCuratorExecution } from "~/composables/permissions/useCuratorExecution";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 
-const { isUsingZodiacPilotExtension } = storeToRefs(fundStore);
+// The transfer moves the custody Safe's base asset, so a curator sends it
+// wrapped in the vault's Roles modifier rather than from a Pilot session.
+const {
+  canExecute: canExecuteAsCurator,
+  disabledReason: curatorDisabledReason,
+  sendAsCurator,
+} = useCuratorExecution();
+
+const erc20Iface = new ethers.Interface(ERC20 as any);
 
 const baseToken = computed(() => {
   return fundStore.fund?.baseToken;
@@ -149,13 +156,11 @@ const isTransferDisabled = computed(() => {
   return (
     errorMessages.value.length > 0 ||
     isTransferLoading.value ||
-    !isUsingZodiacPilotExtension.value
+    !canExecuteAsCurator.value
   );
 });
 const transferTooltipText = computed(() => {
-  if (!isUsingZodiacPilotExtension.value) {
-    return "Switch to the Zodiac Pilot Extension to make a transfer.";
-  }
+  if (curatorDisabledReason.value) return curatorDisabledReason.value;
   if (errorMessages.value.length && tokenValueChanged.value)
     return errorMessages.value[0];
   return "";
@@ -177,8 +182,15 @@ const transfer = async () => {
   isTransferLoading.value = true;
 
   try {
-    await fundStore.fundBaseTokenContract
-      .send("transfer", {}, fundStore?.fundAddress, tokensWei.value)
+    const transaction = await sendAsCurator({
+      to: fundStore.fund?.baseToken?.address ?? "",
+      data: erc20Iface.encodeFunctionData("transfer", [
+        fundStore.fundAddress,
+        tokensWei.value,
+      ]),
+    });
+
+    await transaction
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: ", hash);
         toastStore.addToast(
@@ -218,8 +230,12 @@ const handleError = (error: any) => {
   if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Transaction was rejected.");
   } else {
+    // A Roles pre-flight failure arrives as a plain Error carrying the
+    // modifier's own reason — that names the missing permission, so it beats
+    // the generic message.
     toastStore.errorToast(
-      "There has been an error. Please contact the Rethink Finance support.",
+      error?.message ||
+        "There has been an error. Please contact the Rethink Finance support.",
     );
     console.error(error);
   }

@@ -1,7 +1,10 @@
 <template>
   <div class="request_deposit">
     <div class="request_deposit__field">
-      <div class="request_deposit__control">
+      <div
+        class="request_deposit__control"
+        :class="{ 'request_deposit__control--invalid': validationError }"
+      >
         <div class="request_deposit__symbol">
           {{ token0.symbol }}
           <v-tooltip
@@ -18,12 +21,19 @@
             </div>
           </v-tooltip>
         </div>
+        <!-- The message row is suppressed here on purpose: Vuetify renders it
+             inside the field, which is inside this bordered control, so it
+             landed crammed against the border. It is rendered below the box
+             instead — see request_deposit__error. -->
         <UiInputNumber
           v-model="tokenValue"
           :rules="tokenValueRules"
-          hide-details="auto"
+          hide-details
           class="request_deposit__input_amount"
         />
+      </div>
+      <div v-if="validationError" class="request_deposit__error">
+        {{ validationError }}
       </div>
       <div class="request_deposit__caption">
         Balance ·
@@ -156,6 +166,33 @@ const tokenValueRules = [
   ...props.rules,
 ];
 
+/**
+ * The first failing rule, shown under the control rather than inside it.
+ *
+ * An untouched field says nothing: it holds no amount because nobody has
+ * typed one yet, which is the starting state and not a mistake to report.
+ * The action button is already gated on the same rules by the parent, so
+ * silence here costs nothing. Once something has been entered, whatever is
+ * wrong with it is worth saying.
+ */
+const validationError = computed<string | null>(() => {
+  const value = tokenValue.value?.toString().trim();
+  if (!value) return null;
+
+  for (const rule of tokenValueRules) {
+    const result = rule(value);
+    if (result === true) continue;
+    // Parent rules carry a display flag: a value the parent will report
+    // itself, below the buttons, is not repeated here.
+    if (typeof result === "string") return result;
+    if (result && typeof result === "object" && "message" in result) {
+      const error = result as { message: string; display?: boolean };
+      return error.display ? null : error.message;
+    }
+  }
+  return null;
+});
+
 const token0UserBalanceFormatted = computed(() => {
   return formatTokenValue(props.token0UserBalance, props.token0.decimals, false);
 });
@@ -218,6 +255,12 @@ const calculatedToken1Value = computed(() => {
     &--readonly {
       background: rgba(255, 255, 255, 0.015);
     }
+
+    /* The box carries the invalid state, so the message underneath does not
+       have to be welded to it to be understood as belonging to this field. */
+    &--invalid {
+      border-color: $color-neg-line;
+    }
   }
 
   &__symbol {
@@ -274,6 +317,16 @@ const calculatedToken1Value = computed(() => {
     font-family: $font-mono;
     font-size: 11.5px;
     color: $color-steel-blue;
+  }
+
+  /* Same mono caption as the balance line below it, in the negative hue —
+     one column of small type under the field rather than a message wedged
+     into the control. */
+  &__error {
+    font-family: $font-mono;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: $color-neg;
   }
 
   &__balance_button {
