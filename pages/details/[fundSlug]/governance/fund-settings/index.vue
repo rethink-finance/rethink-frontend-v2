@@ -4,9 +4,13 @@
       :show-prev-step="showPrevStep"
       :is-last-step="isLastStep"
       :loading="loading"
+      :submit-disabled="!canCreateProposal"
+      :submit-disabled-reason="NO_DELEGATES_TITLE"
       @prev-step="prevStep"
       @handle-click="handleButtonClick"
     />
+
+    <FundGovernanceDelegationNotice />
 
     <v-form ref="form">
       <div v-for="(step, indexStep) in proposalEntry" :key="indexStep">
@@ -113,11 +117,16 @@ import {
 } from "~/types/enums/fund_setting_proposal";
 import type IFund from "~/types/fund";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import {
+  NO_DELEGATES_TITLE,
+  useProposalDelegation,
+} from "~/composables/governance/useProposalDelegation";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const router = useRouter();
+const { canCreateProposal, assertCanCreateProposal } = useProposalDelegation();
 
 const fund = useAttrs().fund as IFund;
 const { selectedFundSlug } = storeToRefs(fundStore);
@@ -333,6 +342,10 @@ const handleButtonClick = () => {
 };
 
 const submit = async () => {
+  // Guards the click as well as the button: the delegate read can still be in
+  // flight when the last step is reached.
+  if (!(await assertCanCreateProposal())) return;
+
   // trigger form validation to show errors
   form.value?.validate();
   // check if every step is valid

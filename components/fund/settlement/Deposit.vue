@@ -128,6 +128,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
 import ProcessDepositModal from "~/components/fund/settlement/ProcessDepositModal.vue";
+import { useDepositFlowOpen } from "~/composables/fund/useDepositFlow";
 
 const emit = defineEmits(["deposit-success"]);
 const toastStore = useToastStore();
@@ -148,7 +149,11 @@ const loadingApproveAllowance = ref(false);
 const isLoadingDelegate = ref(false);
 const isLoadingProcessDeposit = ref(false);
 
-const isDepositModalOpen = ref(false);
+// Shared with the "Pending requests" card, because a successful request
+// deposit swaps this card out for that one mid-flow — see useDepositFlowOpen.
+const isDepositModalOpen = useDepositFlowOpen(
+  () => fundStore.selectedFundAddress,
+);
 
 watch(
   () => tokenValue.value,

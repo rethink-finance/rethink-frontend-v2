@@ -23,6 +23,8 @@ const computedRoutes = computed(() => {
     `${props.fundDetailsRoute}/governance`,
     `${props.fundDetailsRoute}/nav`,
     `${props.fundDetailsRoute}/flows`,
+    `${props.fundDetailsRoute}/whitelist`,
+    `${props.fundDetailsRoute}/profile`,
     `${props.fundDetailsRoute}/execution-app`,
     `${props.fundDetailsRoute}/permissions`,
   ]

@@ -2,36 +2,38 @@
   <div class="execution-app">
     <UiHeader>
       <div class="data_bar__item">
-        <div class="switch_to_zodiac_notification">
-          <img
-            src="@/assets/images/zodiac_pilot.svg"
-            class="img_zodiac_pilot"
-          >
-          <template v-if="isUsingZodiacPilotExtension">
-            <div>Connected to the Zodiac Pilot</div>
+        <div class="curator_status">
+          <template v-if="canExecuteAsCurator">
             <Icon
               icon="octicon:check-circle-fill-16"
               width="1rem"
               height="1rem"
               color="var(--color-success)"
             />
+            <div>
+              {{
+                isConnectedAsSafe
+                  ? "Connected as the custody Safe"
+                  : "Connected as a vault curator"
+              }}
+            </div>
           </template>
           <div v-else>
-            Switch to the Zodiac Pilot extension to activate the execution app
+            {{ curatorDisabledReason }}
           </div>
         </div>
       </div>
     </UiHeader>
 
-    <!-- The design puts the Zodiac status first on this screen, so the console
-         follows it rather than sitting above the page's own header. -->
+    <!-- The design puts the execution status first on this screen, so the
+         console follows it rather than sitting above the page's own header. -->
     <ExecutionCrtConsole v-if="isCrtVault" />
 
     <div class="group_title execution-app__section">
       General
     </div>
 
-    <div :class="`main_card ${!isUsingZodiacPilotExtension ? 'disabled' : ''}`">
+    <div :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`">
       <UiHeader>
         <div class="main_header__title">
           Transfer
@@ -108,23 +110,21 @@
               <v-tooltip
                 activator="parent"
                 location="bottom"
-                :disabled="isUsingZodiacPilotExtension"
+                :disabled="!curatorDisabledReason"
               >
                 <template #activator>
                   <v-btn
-                    :disabled="
-                      !formTransferIsValid || !isUsingZodiacPilotExtension
-                    "
+                    :disabled="!formTransferIsValid || !canExecuteAsCurator"
                     color="primary"
                     variant="outlined"
+                    :loading="loadingTransfer"
                     @click="handleTransfer"
                   >
                     Transfer
                   </v-btn>
                 </template>
                 <template #default>
-                  Switch to the Zodiac Pilot Extension to Update NAV and Settle
-                  Flows.
+                  {{ curatorDisabledReason }}
                 </template>
               </v-tooltip>
             </v-col>
@@ -133,7 +133,7 @@
       </div>
     </div>
 
-    <div :class="`main_card ${!isUsingZodiacPilotExtension ? 'disabled' : ''}`">
+    <div :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`">
       <UiHeader>
         <div class="main_header__title">
           Submit Raw Transaction
@@ -200,13 +200,11 @@
               <v-tooltip
                 activator="parent"
                 location="bottom"
-                :disabled="isUsingZodiacPilotExtension"
+                :disabled="!curatorDisabledReason"
               >
                 <template #activator>
                   <v-btn
-                    :disabled="
-                      !formSubmitRawTXNIsValid || !isUsingZodiacPilotExtension
-                    "
+                    :disabled="!formSubmitRawTXNIsValid || !canExecuteAsCurator"
                     color="primary"
                     variant="outlined"
                     :loading="loadingSubmitRawTXN"
@@ -216,8 +214,7 @@
                   </v-btn>
                 </template>
                 <template #default>
-                  Switch to the Zodiac Pilot Extension to Update NAV and Settle
-                  Flows.
+                  {{ curatorDisabledReason }}
                 </template>
               </v-tooltip>
             </v-col>
@@ -225,7 +222,7 @@
           <v-row>
             <v-col class="btn-submit">
               <v-btn
-                :disabled="!isUsingZodiacPilotExtension"
+                :disabled="!canExecuteAsCurator"
                 color="primary"
                 variant="text"
                 @click="prefillPerformanceFeeTx"
@@ -242,20 +239,28 @@
 
 <script setup lang="ts">
 import { ethers } from "ethers";
-import { DEFAULT_RETURN_FORMAT } from "web3";
 import { ERC20 } from "~/assets/contracts/ERC20";
+import { useCuratorExecution } from "~/composables/permissions/useCuratorExecution";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { useAccountStore } from "~/store/account/account.store";
 import { useContractAddresses } from "~/composables/useContractAddresses";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
-const accountStore = useAccountStore();
 
-const { isUsingZodiacPilotExtension } = storeToRefs(fundStore);
+// Every action on this page acts with the Safe's authority. A curator signs
+// from their own wallet and the calldata is forwarded by the vault's Roles
+// modifier; a wallet connected as the Safe still sends it unwrapped.
+const {
+  canExecute: canExecuteAsCurator,
+  isConnectedAsSafe,
+  disabledReason: curatorDisabledReason,
+  sendAsCurator,
+} = useCuratorExecution();
+
+const erc20Iface = new ethers.Interface(ERC20 as any);
 const CRT_VAULT_ADDRESS = "0x7890e0ff3d76f71a3d33b17fb5b3f3866512485b";
 const isCrtVault = computed(
   () =>
@@ -369,33 +374,51 @@ const handleTransfer = async () => {
   const decimals = inputTokenDetais.value.decimals;
   const tokensWei = ethers.parseUnits(transferEntry.depositValue, decimals);
 
-  // call the transfer method
-  await inputTokenContract.value
-    .send("transfer", {}, transferEntry.to, tokensWei)
-    .on("transactionHash", (hash: any) => {
-      console.log("tx hash: " + hash);
-      toastStore.addToast(
-        "The transaction has been submitted. Please wait for it to be confirmed.",
-      );
-    })
-    .on("receipt", (receipt: any) => {
-      console.log(receipt);
-      if (receipt.status) {
-        toastStore.successToast("The transfer was successfull.");
-      } else {
-        toastStore.errorToast(
-          "The transaction has failed. Please contact the Rethink Finance support.",
-        );
-      }
-      loadingTransfer.value = false;
-    })
-    .on("error", (error: any) => {
-      console.log("error: ", error);
-      loadingTransfer.value = false;
-      toastStore.errorToast(
-        "There has been an error. Please contact the Rethink Finance support.",
-      );
+  try {
+    // The tokens belong to the Safe, so the transfer calldata is what goes
+    // through the modifier — not a send from the connected wallet.
+    const transaction = await sendAsCurator({
+      to: transferEntry.inputTokenAddress,
+      data: erc20Iface.encodeFunctionData("transfer", [
+        transferEntry.to,
+        tokensWei,
+      ]),
     });
+
+    await transaction
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "The transaction has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", (receipt: any) => {
+        console.log(receipt);
+        if (receipt.status) {
+          toastStore.successToast("The transfer was successfull.");
+        } else {
+          toastStore.errorToast(
+            "The transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        loadingTransfer.value = false;
+      })
+      .on("error", (error: any) => {
+        console.log("error: ", error);
+        loadingTransfer.value = false;
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      });
+  } catch (error: any) {
+    console.error(error);
+    loadingTransfer.value = false;
+    // Roles pre-flight failures carry the modifier's own reason.
+    toastStore.errorToast(
+      error?.message ||
+        "There has been an error. Please contact the Rethink Finance support.",
+    );
+  }
 };
 
 const submitRawTXN = async () => {
@@ -405,29 +428,32 @@ const submitRawTXN = async () => {
     console.log("to:", submitRawTXNEntry.contractAddress);
     console.log("data:", submitRawTXNEntry.txData);
     console.log("from:", fundStore.activeAccountAddress);
-    console.log("value:", parseInt(submitRawTXNEntry.amountValue));
+    console.log("value:", submitRawTXNEntry.amountValue);
 
-    if (!accountStore.connectedWalletWeb3) {
-      console.log("Send trx raw no connected wallet");
-      toastStore.errorToast("Connect your wallet.");
+    // Amount is wei, as it always was on this form. It used to go through
+    // parseInt, which silently turned anything fractional into 0 — say so
+    // instead of sending a different transaction than the one typed.
+    let value = "0";
+    try {
+      value = BigInt(submitRawTXNEntry.amountValue || "0").toString();
+    } catch {
+      toastStore.errorToast(
+        "Amount must be a whole number of wei (no decimals).",
+      );
+      loadingSubmitRawTXN.value = false;
       return;
     }
-    await accountStore.connectedWalletWeb3.eth
-      .sendTransaction(
-        {
-          to: submitRawTXNEntry.contractAddress,
-          data: submitRawTXNEntry.txData,
-          from: fundStore.activeAccountAddress,
-          // maxPriorityFeePerGas: "",
-          maxFeePerGas: "",
-          value: parseInt(submitRawTXNEntry.amountValue),
-        },
-        DEFAULT_RETURN_FORMAT,
-        {
-          // Disable revert check
-          checkRevertBeforeSending: false,
-        },
-      )
+
+    // The raw transaction is executed with the Safe's authority: the value
+    // is sent by the Safe, and the modifier is what has to allow it (a
+    // manager role scoped with ExecutionOptions.None will refuse any value).
+    const transaction = await sendAsCurator({
+      to: submitRawTXNEntry.contractAddress,
+      data: submitRawTXNEntry.txData,
+      value,
+    });
+
+    await transaction
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
@@ -458,8 +484,11 @@ const submitRawTXN = async () => {
     console.error(error);
     loadingSubmitRawTXN.value = false;
 
-    if (error?.data?.message) {
-      toastStore.errorToast(error.data.message, 15000);
+    // Roles pre-flight failures arrive as a plain Error naming the denied
+    // permission — more useful than the generic message.
+    const message = error?.data?.message || error?.message;
+    if (message) {
+      toastStore.errorToast(message, 15000);
     } else {
       toastStore.errorToast(
         "There has been an error. Please contact the Rethink Finance support.",
@@ -553,8 +582,8 @@ watch(
 </script>
 
 <style scoped lang="scss">
-/* Design's zodiac status pill: mono caption with a state marker. */
-.switch_to_zodiac_notification {
+/* Design's status pill: mono caption with a state marker. */
+.curator_status {
   align-items: center;
   display: flex;
   border: 1px solid $color-line-2;

@@ -415,6 +415,22 @@ const rawExcludedFundAddresses = {
       address: "0xe38E50D5504Afbc19317C20F484C1C8Ea70C7C37",
       alwaysExclude: true,
     }, // Test (TSTttt)
+    {
+      address: "0x55C439144C626F074749425c9bf340191399Afe9",
+      alwaysExclude: false,
+    }, // test2 — Roles v2 test vault
+    {
+      address: "0xC4B48271e8939746805b9509D00045D261631F3E",
+      alwaysExclude: false,
+    }, // test3 — Roles v2 test vault
+    {
+      address: "0x955A860c6c28a52097c2d07adde670Ffddf341cC",
+      alwaysExclude: false,
+    }, // test4 — Roles v2 test vault
+    {
+      address: "0x18049f1039183901E5f02185a611142AA80cD473",
+      alwaysExclude: false,
+    }, // test5 — Roles v2 test vault
   ],
   // Fraxtal
   "0xfc": [],

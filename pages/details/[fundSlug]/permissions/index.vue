@@ -1,52 +1,91 @@
 <template>
   <div v-if="appSettingsStore.isManageMode" class="permissions">
-    <div
+    <UiMainCard
       v-if="fund?.fundFactoryContractV2Used"
-      class="d-flex flex-column flex-grow-1 justify-center align-center"
+      class="permissions__content brand_card"
     >
-      This OIV is using Roles Modifier V2.
-      <UiLinkExternalButton
-        title="View or Edit Roles V2"
-        :href="gnosisRolesUrl"
-        width="230px"
-        class="mt-4"
-      />
-
-      <div v-if="activationState" class="activation_card mt-8">
-        <template v-if="needsActivation">
-          <strong>Manager permissions pending activation</strong>
-          <p v-if="activationState.needsGovernorMigration">
-            The "update vault settings" permission stays inert until
-            governance hands settings authority to the Safe (one-time
-            <code>governor&nbsp;→&nbsp;Safe</code> settings change).
-          </p>
-          <p v-if="activationState.needsOwnershipTransfer">
-            The "manage role members" permission stays inert until governance
-            transfers the Roles modifier's ownership to the Safe.
-          </p>
-          <p class="activation_card__hint">
-            One proposal covers everything still pending. The whitelist is
-            untouched: the proposal echoes current settings with empty
-            depositor/manager arrays (those arrays are toggle deltas, not
-            absolute lists).
-          </p>
+      <div class="v2_head">
+        <span class="v2_head__badge">Roles V2</span>
+        <div class="v2_head__buttons">
+          <UiLinkExternalButton
+            title="View vault permissions"
+            :href="gnosisRolesUrl"
+          />
           <v-btn
             color="primary"
-            :loading="isCreatingActivationProposal"
-            @click="createActivationProposal"
+            variant="outlined"
+            @click="navigateToCreatePermissions"
           >
-            Create activation proposal
+            Generate permissions proposal
           </v-btn>
-        </template>
-        <template v-else>
-          <strong>Manager permissions activated</strong>
-          <p>
-            Settings authority and Roles modifier ownership are held by the
-            Safe.
-          </p>
-        </template>
+        </div>
       </div>
-    </div>
+      <p class="v2_hint">
+        Permission changes (targets, functions, pinned parameters) go through
+        governance. Role membership below executes directly through the
+        manager role.
+      </p>
+
+      <div v-if="needsActivation" class="activation_card mt-6">
+        <strong>Manager permissions pending activation</strong>
+        <p v-if="activationState?.needsGovernorMigration">
+          The "update vault settings" permission stays inert until
+          governance hands settings authority to the Safe (one-time
+          <code>governor&nbsp;→&nbsp;Safe</code> settings change).
+        </p>
+        <p v-if="activationState?.needsOwnershipTransfer">
+          The "manage role members" permission stays inert until governance
+          transfers the Roles modifier's ownership to the Safe.
+        </p>
+        <p class="activation_card__hint">
+          One proposal covers everything still pending. The whitelist is
+          untouched: the proposal echoes current settings with empty
+          depositor/manager arrays (those arrays are toggle deltas, not
+          absolute lists).
+        </p>
+        <v-btn
+          color="primary"
+          :loading="isCreatingActivationProposal"
+          :disabled="!canCreateProposal"
+          @click="createActivationProposal"
+        >
+          Create activation proposal
+          <v-tooltip
+            v-if="!canCreateProposal"
+            :model-value="true"
+            activator="parent"
+            location="top"
+            @update:model-value="true"
+          >
+            {{ NO_DELEGATES_TITLE }}
+          </v-tooltip>
+        </v-btn>
+
+        <FundGovernanceDelegationNotice />
+      </div>
+
+      <!-- Membership: reads straight off the modifier, writes through the
+           manager role's own assignRoles permission. -->
+      <div class="members mt-6">
+        <OnboardingRoleMembers
+          ref="roleMembersRef"
+          v-model="pendingMemberChanges"
+          :chain-id="fund.chainId"
+          :roles-mod-address="roleModAddress"
+        />
+
+        <div class="members__actions">
+          <v-btn
+            color="primary"
+            :disabled="!pendingMemberChanges.length"
+            :loading="isExecutingMemberChanges"
+            @click="executeMemberChanges"
+          >
+            Execute member changes
+          </v-btn>
+        </div>
+      </div>
+    </UiMainCard>
     <UiMainCard v-else class="permissions__content brand_card">
       <div class="info_container">
         <div class="info_container__buttons">
@@ -117,6 +156,17 @@ import {
   fetchActivationState,
   type IActivationState,
 } from "~/composables/permissions/activationProposal";
+import {
+  buildAssignRolesCalldata,
+  sendRoleExecution,
+  simulateRoleExecution,
+} from "~/composables/permissions/useRoleExecution";
+import { clearCuratorRoleCache } from "~/composables/permissions/useCuratorExecution";
+import type { IAssignMemberChange } from "~/composables/nav/generateNAVPermission";
+import {
+  NO_DELEGATES_TITLE,
+  useProposalDelegation,
+} from "~/composables/governance/useProposalDelegation";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -128,6 +178,7 @@ const actionStateStore = useActionStateStore();
 
 const { selectedFundSlug } = storeToRefs(useFundStore());
 const fund = useAttrs().fund as IFund;
+const { canCreateProposal, assertCanCreateProposal } = useProposalDelegation();
 
 const {
   roles,
@@ -172,6 +223,10 @@ const refreshActivationState = async () => {
 };
 
 const createActivationProposal = async () => {
+  // Guards the click as well as the button: the delegate read can still be in
+  // flight when the card renders.
+  if (!(await assertCanCreateProposal())) return;
+
   isCreatingActivationProposal.value = true;
   try {
     const { actions } = await buildActivationProposalActions(
@@ -235,6 +290,69 @@ const createActivationProposal = async () => {
   }
 };
 
+// Role membership (Roles V2): the shared component lists current members
+// off the modifier's AssignRoles history and queues the changes; executing
+// them goes through the manager role's own assignRoles permission.
+const roleMembersRef = ref<{ reload: () => Promise<void> } | null>(null);
+const pendingMemberChanges = ref<IAssignMemberChange[]>([]);
+const isExecutingMemberChanges = ref(false);
+
+const executeMemberChanges = async () => {
+  if (!roleModAddress.value || !pendingMemberChanges.value.length) return;
+  isExecutingMemberChanges.value = true;
+  try {
+    // One execTransactionWithRole per change, sequentially — each is its own
+    // wallet signature, and a failure stops the queue so nothing is skipped
+    // silently.
+    for (const change of [...pendingMemberChanges.value]) {
+      const call = {
+        to: roleModAddress.value,
+        data: buildAssignRolesCalldata(change.address, change.action === "ADD"),
+      };
+      const simulation = await simulateRoleExecution(
+        fund.chainId,
+        roleModAddress.value,
+        call,
+      );
+      if (!simulation.ok) {
+        toastStore.errorToast(
+          simulation.innerRevert
+            ? "The modifier rejected this change — role-member management " +
+              "is likely still pending governance activation (see above)."
+            : simulation.reason || "The Roles modifier denied this call.",
+          10000,
+        );
+        return;
+      }
+      await sendRoleExecution(fund.chainId, roleModAddress.value, call).on(
+        "transactionHash",
+        () => {
+          toastStore.addToast(
+            `Membership change for ${change.address} submitted.`,
+          );
+        },
+      );
+      // Drop the executed change so a mid-queue failure keeps the rest.
+      pendingMemberChanges.value = pendingMemberChanges.value.filter(
+        (item) => item !== change,
+      );
+    }
+    toastStore.successToast("Role membership updated.");
+  } catch (error: any) {
+    console.error(error);
+    toastStore.errorToast(
+      error?.message ||
+        "There has been an error. Please contact the Rethink Finance support.",
+    );
+  } finally {
+    isExecutingMemberChanges.value = false;
+    roleMembersRef.value?.reload();
+    // Membership drives the execution buttons on the NAV / settlement /
+    // execution pages, so drop what they cached about it.
+    clearCuratorRoleCache();
+  }
+};
+
 const fetchRolesAndPermissions = async () => {
   if (!fund?.address) {
     roles.value = [];
@@ -243,7 +361,12 @@ const fetchRolesAndPermissions = async () => {
 
   try {
     roleModAddress.value = await fundStore.fetchRoleModAddress(fund.address);
-    await fetchPermissions(roleModAddress.value);
+    // The V1 zodiac subgraph knows nothing about V2 modifiers; on V2 the
+    // members component reads membership straight off the chain once it has
+    // the address, so there is nothing to fetch here.
+    if (!fund?.fundFactoryContractV2Used) {
+      await fetchPermissions(roleModAddress.value);
+    }
   } catch (error) {
     console.error(error);
     toastStore.errorToast("Failed loading permissions. Please refresh page.");
@@ -252,10 +375,14 @@ const fetchRolesAndPermissions = async () => {
 };
 
 const navigateToCreatePermissions = async () => {
-  try {
-    permissionsProposalStore.rawTransactions = await roleStore.updateRole(fund.chainId);
-  } catch (e: any) {
-    console.error("Failed updating role", e);
+  // V1 pre-populates the proposal from the subgraph-backed role editor; a V2
+  // proposal starts from a clean slate on the delegated-permissions page.
+  if (!fund?.fundFactoryContractV2Used) {
+    try {
+      permissionsProposalStore.rawTransactions = await roleStore.updateRole(fund.chainId);
+    } catch (e: any) {
+      console.error("Failed updating role", e);
+    }
   }
 
   router.push(
@@ -264,7 +391,11 @@ const navigateToCreatePermissions = async () => {
 };
 
 watch(
-  () => [fund?.chainShort, fund?.address],
+  // fundFactoryContractV2Used arrives async (a separate version fetch after
+  // the fund loads), so it must be a dependency here: the immediate run sees
+  // it still false and takes the V1 path, and only this re-run flips the V2
+  // page onto its on-chain member loading.
+  () => [fund?.chainShort, fund?.address, fund?.fundFactoryContractV2Used],
   () => {
     fetchRolesAndPermissions();
   },
@@ -278,6 +409,50 @@ watch(
 
   &__content {
     min-height: 30rem;
+  }
+}
+
+.v2_head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  &__badge {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.3125rem 0.625rem;
+    border: 1px solid $color-accent-line;
+    border-radius: $default-border-radius;
+    color: $color-cyan;
+    background: $color-accent-soft;
+  }
+
+  &__buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+}
+
+.v2_hint {
+  margin-top: 0.75rem;
+  max-width: 62ch;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: $color-steel-blue;
+}
+
+.members {
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
   }
 }
 

@@ -93,9 +93,29 @@
             :error-messages="parsedBulkAddressErrors"
           />
 
+          <!-- Fills the textarea rather than committing straight to the list,
+               so the CSV goes through the same review and confirm step as a
+               pasted one. -->
+          <input
+            ref="csvInputRef"
+            class="csv_file"
+            type="file"
+            accept=".csv,.txt,text/csv,text/plain"
+            @change="onCsvChosen"
+          >
+
           <div class="header__actions">
             <v-btn color="red" variant="text" @click="toggleAddAddressList">
               Cancel
+            </v-btn>
+
+            <v-btn
+              color="#ffffff"
+              variant="text"
+              :loading="isImporting"
+              @click="browseCsv"
+            >
+              Upload CSV
             </v-btn>
 
             <v-btn
@@ -261,6 +281,8 @@ const isAddAddressListActive = ref(false);
 const newAddress = ref("");
 const parsedBulkAddressErrors = ref<string[]>([]);
 const confirmDialog = ref(false);
+const csvInputRef = ref<HTMLInputElement>();
+const isImporting = ref(false);
 
 // Validation rules for a single address
 const singleAddressRules = computed(() => [
@@ -378,6 +400,49 @@ const isBulkAddressValid = computed(() => {
 
 const openConfirmDialog = () => {
   confirmDialog.value = true;
+};
+
+const browseCsv = () => {
+  csvInputRef.value?.click();
+};
+
+const onCsvChosen = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (file) importCsv(file);
+  // Lets the same file be picked again after a fix.
+  input.value = "";
+};
+
+const importCsv = async (file: File) => {
+  if (file.size > MAX_ADDRESS_CSV_BYTES) {
+    toastStore.errorToast("The file must be 1 MB or smaller.");
+    return;
+  }
+
+  isImporting.value = true;
+  try {
+    const parsed = parseAddressCsv(await file.text());
+
+    if (!parsed.addresses.length) {
+      toastStore.errorToast("No addresses found in that file.");
+      return;
+    }
+
+    newAddress.value = parsed.addresses.join("\n");
+
+    const skipped = parsed.invalid.length + parsed.duplicateCount;
+    toastStore.successToast(
+      `${parsed.addresses.length} addresses read from ${file.name}` +
+        (skipped ? `, ${skipped} rows skipped` : "") +
+        ".",
+    );
+  } catch (e) {
+    console.error("Failed reading the whitelist CSV", e);
+    toastStore.errorToast("The file could not be read.");
+  } finally {
+    isImporting.value = false;
+  }
 };
 
 const toggleAddAddress = () => {
@@ -532,6 +597,10 @@ const handleAddNewAddressList = () => {
     flex-direction: column;
     gap: 1rem;
   }
+}
+
+.csv_file {
+  display: none;
 }
 
 .disabled {

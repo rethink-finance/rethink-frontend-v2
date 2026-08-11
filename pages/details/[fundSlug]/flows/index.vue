@@ -71,23 +71,24 @@
         <!--          </div>-->
         <!--        </div>-->
         <div class="data_bar__item">
-          <div class="switch_to_zodiac_notification">
-            <img
-              src="@/assets/images/zodiac_pilot.svg"
-              class="img_zodiac_pilot"
-            >
-            <template v-if="isUsingZodiacPilotExtension">
-              <div>Connected to the Zodiac Pilot</div>
+          <div class="curator_status">
+            <template v-if="canExecuteAsCurator">
               <Icon
                 icon="octicon:check-circle-fill-16"
                 width="1rem"
                 height="1rem"
                 color="var(--color-success)"
               />
+              <div>
+                {{
+                  isConnectedAsSafe
+                    ? "Connected as the custody Safe"
+                    : "Connected as a vault curator"
+                }}
+              </div>
             </template>
             <div v-else>
-              Switch to the Zodiac Pilot extension to complete the transfer and
-              settle flows.
+              {{ curatorDisabledReason }}
             </div>
           </div>
         </div>
@@ -361,12 +362,12 @@
             <v-tooltip
               activator="parent"
               location="bottom"
-              :disabled="isUsingZodiacPilotExtension"
+              :disabled="!curatorDisabledReason"
             >
               <template #activator="{ props }">
                 <v-btn
                   v-bind="props"
-                  :disabled="!isUsingZodiacPilotExtension || isLoadingPostUpdateNAV"
+                  :disabled="!canExecuteAsCurator || isLoadingPostUpdateNAV"
                   class="bg-primary text-secondary"
                   @click="fundStore.postUpdateNAV()"
                 >
@@ -383,8 +384,7 @@
                 </v-btn>
               </template>
               <template #default>
-                Switch to the Zodiac Pilot Extension to Update NAV and Settle
-                Flows.
+                {{ curatorDisabledReason }}
               </template>
             </v-tooltip>
           </div>
@@ -403,6 +403,7 @@
 import { ethers, FixedNumber } from "ethers";
 import { formatTokenValue, roundToSignificantDecimals } from "~/composables/formatters";
 import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
+import { useCuratorExecution } from "~/composables/permissions/useCuratorExecution";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ActionState } from "~/types/enums/action_state";
@@ -413,11 +414,18 @@ const actionStateStore = useActionStateStore();
 
 const fund = useAttrs().fund as IFund;
 const {
-  isUsingZodiacPilotExtension,
   totalCurrentSimulatedNAV,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
 } = storeToRefs(fundStore);
+
+// Settlement runs from the curator's own wallet through the vault's Roles
+// modifier; a wallet connected as the Safe keeps sending calls unwrapped.
+const {
+  canExecute: canExecuteAsCurator,
+  isConnectedAsSafe,
+  disabledReason: curatorDisabledReason,
+} = useCuratorExecution();
 
 const customSimulatedNAVValue = ref("");
 const customSimulatedNAVValueChanged = ref(false);
@@ -680,8 +688,8 @@ onMounted(async () => {
     max-width: 420px;
   }
 }
-/* Design's zodiac status pill: mono caption with a state dot. */
-.switch_to_zodiac_notification {
+/* Design's status pill: mono caption with a state dot. */
+.curator_status {
   align-items: center;
   display: flex;
   border: 1px solid $color-line-2;
@@ -839,8 +847,8 @@ onMounted(async () => {
   text-transform: uppercase;
   color: $color-steel-blue;
 }
-// the zodiac pill lives inside a data_bar__item but is not a stat
-:deep(.switch_to_zodiac_notification) {
+// the curator pill lives inside a data_bar__item but is not a stat
+:deep(.curator_status) {
   font-family: $font-mono;
   font-size: 12px;
 }

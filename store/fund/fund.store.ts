@@ -128,12 +128,15 @@ export const useFundStore = defineStore({
       }
       return labels;
     },
-    isUsingZodiacPilotExtension(): boolean {
-      // Check if user is using Zodiac Pilot extension.
-      // The connected wallet address is the same as custody (safe address).
+    isConnectedWalletTheSafe(): boolean {
+      // The connected wallet IS the custody (safe) address — either a Safe
+      // connected directly or a Zodiac-Pilot-style session impersonating it.
+      // Curators no longer need this: they execute through the Roles
+      // modifier instead (see composables/permissions/useCuratorExecution).
+      if (!this.fund?.safeAddress || !this.activeAccountAddress) return false;
       return (
-        this.activeAccountAddress?.toLowerCase() ===
-        this.fund?.safeAddress.toLowerCase()
+        this.activeAccountAddress.toLowerCase() ===
+        this.fund.safeAddress.toLowerCase()
       );
     },
     fundToBaseTokenExchangeRateLastNavUpdate(): FixedNumber {

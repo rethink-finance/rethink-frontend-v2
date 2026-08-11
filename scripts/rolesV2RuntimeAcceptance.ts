@@ -262,7 +262,11 @@ const main = async () => {
     ["governor echoed as old governor", FUND, updateSettingsData((s) => { s.governor = OLD_GOVERNOR; }), false],
     ["baseToken changed", FUND, updateSettingsData((s) => { s.baseToken = MANAGER; }), false],
     ["safe changed", FUND, updateSettingsData((s) => { s.safe = MANAGER; }), false],
-    ["isWhitelistedDeposits flipped", FUND, updateSettingsData((s) => { s.isWhitelistedDeposits = false; }), false],
+    // Whitelist enforcement is manager-owned: both directions are allowed,
+    // with or without an address delta in the same call.
+    ["isWhitelistedDeposits off", FUND, updateSettingsData((s) => { s.isWhitelistedDeposits = false; }), true],
+    ["isWhitelistedDeposits on", FUND, updateSettingsData((s) => { s.isWhitelistedDeposits = true; }), true],
+    ["isWhitelistedDeposits off + whitelist delta", FUND, updateSettingsData((s) => { s.isWhitelistedDeposits = false; s.allowedDepositAddrs = [MANAGER]; }), true],
     ["feeCollectors[0] changed", FUND, updateSettingsData((s) => { s.feeCollectors = [MANAGER, ...s.feeCollectors.slice(1)]; }), false],
     ["allowedManagers non-empty", FUND, updateSettingsData((s) => { s.allowedManagers = [MANAGER]; }), false],
     ["feePerformancePeriod +1", FUND, updateSettingsData(() => {}, "{\"m\":1}", 91n, 0n), false],

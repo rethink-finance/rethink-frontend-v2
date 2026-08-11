@@ -5,6 +5,11 @@ import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 export default defineNuxtConfig({
   // TODO set to true in production.
   ssr: false,
+  // Background-task git worktrees are checked out under .claude/, each with
+  // its own node_modules. Watching those exhausts the process's file handles
+  // and puts the dev server into an EMFILE restart loop, so it never comes
+  // up while one exists. They are copies of this project, never inputs to it.
+  ignore: [".claude/**"],
   app: {
     head: {
       // Default tab title. Vault detail pages override it with
@@ -194,6 +199,15 @@ export default defineNuxtConfig({
     // app.rethink.finance origin). Point BACKEND_URL at
     // http://localhost:3000/backend-api to use it. No effect on builds.
     devProxy: {
+      // Image uploads are the one call production cannot serve — it has no
+      // bucket configured and answers 503 by design (the returned URL goes
+      // on chain, so a disposable fallback is worse than a refusal). Send
+      // just that path to a local backend, if one is running, and leave
+      // every other call on production data. More specific route first.
+      "/backend-api/vault-image": {
+        target: "http://localhost:8000/vault-image",
+        changeOrigin: true,
+      },
       "/backend-api": {
         target: "https://backend.rethink.finance",
         changeOrigin: true,

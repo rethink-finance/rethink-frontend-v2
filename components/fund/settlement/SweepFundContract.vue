@@ -59,6 +59,9 @@ const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 
+// No curator gate here on purpose: fundFlowsCall(sweepTokens()) is
+// permissionless on the deployed vaults — verified by eth_call from an
+// unrelated EOA — so the only requirement is a connected wallet to pay gas.
 const { isConnected } = storeToRefs(accountStore);
 const isSweepLoading = ref(false);
 

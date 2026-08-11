@@ -30,7 +30,7 @@
         </div>
 
         <div
-          v-if="loading && loadingVariant === 'prepend'"
+          v-if="loading && loadingVariant === 'prepend' && page === 1"
           class="proposals_table__row proposals_table__row--skeleton"
         >
           <div v-for="cell in 6" :key="cell">
@@ -39,13 +39,13 @@
         </div>
 
         <div
-          v-for="(item, index) in items"
+          v-for="(item, index) in pagedItems"
           :key="item.proposalId"
           class="proposals_table__row proposals_table__row--clickable"
           @click="rowClick(item)"
         >
           <div class="proposals_table__index">
-            {{ String(index + 1).padStart(2, "0") }}
+            {{ String(rowNumber(index)).padStart(2, "0") }}
           </div>
 
           <div class="proposals_table__proposal">
@@ -97,7 +97,7 @@
         </div>
 
         <div
-          v-if="loading && loadingVariant === 'append'"
+          v-if="loading && loadingVariant === 'append' && page === pageCount"
           class="proposals_table__row proposals_table__row--skeleton"
         >
           <div v-for="cell in 6" :key="cell">
@@ -105,6 +105,10 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div v-if="pageCount > 1" class="proposals_table__pager">
+      <UiPager v-model:page="page" :page-count="pageCount" />
     </div>
 
     <div v-if="!items.length && !loading" class="proposals_table__empty">
@@ -137,6 +141,35 @@ const props = defineProps({
     type: String,
     default: "append", // append, prepend
   },
+  pageSize: {
+    type: Number,
+    default: 5,
+  },
+});
+
+/**
+ * The list arrives newest first, so the first page is the last five proposals —
+ * what a reader came for — and everything older stays one chevron away rather
+ * than turning the card into a scroll.
+ */
+const page = ref(1);
+
+const pageCount = computed(() =>
+  Math.max(1, Math.ceil(props.items.length / props.pageSize)),
+);
+
+const pagedItems = computed(() =>
+  props.items.slice((page.value - 1) * props.pageSize, page.value * props.pageSize),
+);
+
+/** The # column counts through the whole list, not through the page. */
+const rowNumber = (index: number) =>
+  (page.value - 1) * props.pageSize + index + 1;
+
+// Proposals load in batches, so the list can shrink under a reader who has
+// already paged into it.
+watch(pageCount, (count) => {
+  if (page.value > count) page.value = count;
 });
 
 const hasVoted = (item: IGovernanceProposal) =>
@@ -158,14 +191,17 @@ const approvalOf = (item: IGovernanceProposal) =>
 const participationOf = (item: IGovernanceProposal) =>
   asPercent(item.participation);
 
-watch([() => props.items, () => fundStore.activeAccountAddress], () => {
+// Only the visible page is asked about: hasVoted is one RPC call per proposal,
+// and a vault with a long history would spend them on rows nobody has scrolled
+// to yet. Paging forward fetches that page's rows.
+watch([pagedItems, () => fundStore.activeAccountAddress], () => {
   if (fundStore.activeAccountAddress === undefined) {
     return
   }
   const activeAccountAddress = fundStore.activeAccountAddress;
   const fundChainId = fundStore.selectedFundChain;
 
-  for (const proposal of props.items) {
+  for (const proposal of pagedItems.value) {
     governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId] ??= {};
     // Do not fetch the hasVoted again if we already know he has voted.
     if (governanceProposalStore.connectedAccountProposalsHasVoted[proposal.proposalId][activeAccountAddress]) continue;
@@ -308,6 +344,17 @@ const rowClick = (item: IGovernanceProposal) => {
 
   &__skeleton :deep(*) {
     margin: 0;
+  }
+
+  /* The card draws its own gutters, so the pager insets itself to the same
+     1.5rem the rows sit on. The rows already close with a hairline, so the
+     pager drops the one it would otherwise draw for itself. */
+  &__pager {
+    padding: 0 1.5rem 1.25rem;
+
+    :deep(.pager) {
+      border-top: none;
+    }
   }
 
   &__empty {

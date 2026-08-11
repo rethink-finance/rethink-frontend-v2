@@ -844,7 +844,7 @@ const primaryAction = computed(() => {
       return nextAction.value;
     case OnboardingStep.Permissions:
       return {
-        label: "Finalize permissions",
+        label: "Store permissions",
         enabled: true,
         loading: !!permissionsRef.value?.isFinalizing,
         run: () => permissionsRef.value?.finalizePermissions(),

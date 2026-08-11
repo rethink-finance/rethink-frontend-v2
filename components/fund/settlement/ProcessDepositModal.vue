@@ -220,6 +220,7 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import { formatTokenValue } from "~/composables/formatters";
+import { useDepositFlowProcessed } from "~/composables/fund/useDepositFlow";
 import type IFormError from "~/types/form_error";
 
 const props = defineProps({
@@ -264,10 +265,14 @@ const isDelegateModalOpen = ref(false);
 /**
  * Set once the deposit lands, and cleared when the dialog is opened again.
  * Nothing on chain records that a request was processed — the request is simply
- * consumed — so the completed state has to be held here for as long as the
- * depositor is still looking at it.
+ * consumed — so the completed state has to be held for as long as the
+ * depositor is still looking at it. It is held outside this component because
+ * consuming the request swaps the card that renders this dialog, taking any
+ * local state with it — see useDepositFlowProcessed.
  */
-const hasProcessedDeposit = ref(false);
+const hasProcessedDeposit = useDepositFlowProcessed(
+  () => fundStore.selectedFundAddress,
+);
 
 watch(
   () => props.modelValue,

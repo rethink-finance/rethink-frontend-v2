@@ -1,5 +1,18 @@
+import { ethers } from "ethers";
 import { useFundStore } from "../fund.store";
+import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { sendCuratorTransaction } from "~/composables/permissions/useCuratorExecution";
 
+const fundIface = new ethers.Interface(GovernableFund.abi as any);
+
+/**
+ * Update NAV (and, on the flows page, settle) as the vault's curator.
+ *
+ * executeNAVUpdate is Safe authority, so the calldata is wrapped in the
+ * vault's Roles modifier — a curator signs from their own wallet and the
+ * modifier forwards the call as the Safe. A wallet connected as the Safe
+ * itself still sends it unwrapped.
+ */
 export const postUpdateNAVAction = async (): Promise<any> => {
   const fundStore = useFundStore();
   const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
@@ -14,8 +27,14 @@ export const postUpdateNAVAction = async (): Promise<any> => {
       return;
     }
 
-    return await fundStore.fundContract
-      .send("executeNAVUpdate", {}, navExecutorAddress)
+    const transaction = await sendCuratorTransaction({
+      to: fundStore.fundAddress,
+      data: fundIface.encodeFunctionData("executeNAVUpdate", [
+        navExecutorAddress,
+      ]),
+    });
+
+    return await transaction
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         fundStore.toastStore.warningToast(
@@ -41,10 +60,14 @@ export const postUpdateNAVAction = async (): Promise<any> => {
         );
         throw error;
       });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating NAV: ", error);
+    // Roles pre-flight failures arrive here with the modifier's own reason —
+    // surface it instead of the generic message, it is what tells the
+    // curator which permission is missing.
     fundStore.toastStore.errorToast(
-      "There has been an error. Please contact the Rethink Finance support.",
+      error?.message ||
+        "There has been an error. Please contact the Rethink Finance support.",
     );
     throw error;
   }

@@ -28,14 +28,14 @@
           <v-tooltip
             activator="parent"
             location="bottom"
-            :disabled="isUsingZodiacPilotExtension"
+            :disabled="!curatorDisabledReason"
           >
             <template #activator="{ props }">
               <v-btn
                 v-bind="props"
-                :disabled="!isUsingZodiacPilotExtension || isLoadingPostUpdateNAV"
+                :disabled="!canExecuteAsCurator || isLoadingPostUpdateNAV"
                 class="bg-primary text-secondary"
-                @click="accountStore.isConnected ? fundStore.postUpdateNAV() : null"
+                @click="canExecuteAsCurator ? fundStore.postUpdateNAV() : null"
               >
                 <template #prepend>
                   <v-progress-circular
@@ -51,7 +51,7 @@
             </template>
 
             <template #default>
-              Switch to the Zodiac Pilot Extension to Update NAV.
+              {{ curatorDisabledReason }}
             </template>
           </v-tooltip>
         </div>
@@ -101,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { useAccountStore } from "~/store/account/account.store";
+import { useCuratorExecution } from "~/composables/permissions/useCuratorExecution";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
@@ -109,17 +109,22 @@ import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();
-const accountStore = useAccountStore();
 const actionStateStore = useActionStateStore();
 const appSettingsStore = useSettingsStore();
 
 const fund = useAttrs().fund as IFund;
 const {
-  isUsingZodiacPilotExtension,
   selectedFundSlug,
   fundLastNAVUpdate,
   fundLastNAVUpdateMethods,
 } = storeToRefs(useFundStore());
+
+// Curators execute straight from their own wallet — the calldata is wrapped
+// in the vault's Roles modifier, no Zodiac Pilot session needed.
+const {
+  canExecute: canExecuteAsCurator,
+  disabledReason: curatorDisabledReason,
+} = useCuratorExecution();
 
 const fundLastNAVUpdateDate = computed(() => {
   if (!fundLastNAVUpdate?.value?.date) return "N/A";
