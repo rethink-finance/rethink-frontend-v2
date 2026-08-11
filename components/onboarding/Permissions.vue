@@ -60,6 +60,8 @@
       <OnboardingRoleMembers
         v-model="pendingRoleMembershipChanges"
         class="mt-4"
+        :chain-id="fundChainId"
+        :roles-mod-address="roleModAddress"
       />
     </div>
 
@@ -185,10 +187,21 @@ import {
 import PermissionsManagement from "~/components/onboarding/PermissionsManagement.vue";
 import AddressLink from "~/components/common/AddressLink.vue";
 import {
+  ASSIGN_ROLES_SELECTOR,
+  EXECUTE_NAV_UPDATE_SELECTOR,
+  FUND_FLOWS_CALL_SELECTOR,
+  TRANSFER_SELECTOR,
+  UPDATE_SETTINGS_SELECTOR,
   generateManageRoleMembersPermissionRolesV2,
   generateUpdateSettingsPermissionRolesV2,
   parseUpdateSettingsPinnedValues,
 } from "~/composables/permissions/rolesV2Permissions";
+import {
+  buildRevokeEntriesV1,
+  buildRevokeEntriesV2,
+  decodeRolesV2Targets,
+  type IPermissionScope,
+} from "~/composables/permissions/revokePermissions";
 import OnboardingRawPermissionsCode from "~/components/onboarding/RawPermissionsCode.vue";
 import type { IRawPermissionCodeEntry } from "~/composables/permissions/parseRawPermissionCode";
 const web3Store = useWeb3Store();
@@ -443,6 +456,29 @@ const storePermissions = async () => {
     proposalData.encodedRoleModEntries.push(..._encodedRoleModEntries);
   }
 
+  // A switch that is off is revoked rather than skipped — same rule as V2.
+  // Prepended so the role editor's own calls, which sit at the head of this
+  // batch, keep the last word on anything they touch explicitly.
+  const revokedScopesV1: IPermissionScope[] = [];
+  if (!allowManagerToSendFundsToFundContract.value) {
+    revokedScopesV1.push({
+      target: fundInitCacheSettings.baseToken,
+      selector: TRANSFER_SELECTOR,
+    });
+  }
+  if (!allowManagerToCollectFees.value) {
+    revokedScopesV1.push({
+      target: fundAddress,
+      selector: FUND_FLOWS_CALL_SELECTOR,
+    });
+  }
+  proposalData.encodedRoleModEntries.unshift(
+    ...buildRevokeEntriesV1(
+      revokedScopesV1,
+      selectedRole.value?.id || DEFAULT_ROLE_KEY,
+    ),
+  );
+
   const fundFactoryContract =
     web3Store.chainContracts[fundChainId.value]?.fundFactoryContract;
 
@@ -506,6 +542,47 @@ const storePermissionsV2 = async () => {
     JSON.stringify(proposalData.encodedRoleModEntries, null, 2),
   );
 
+  // Saving makes the modifier match these switches, in both directions: a
+  // permission that is off is revoked, not merely left out. Skipping this
+  // would silently keep whatever an earlier save already granted.
+  // Revocations go in first so an explicit grant later in the same batch
+  // (pasted raw code) still wins over a switch.
+  const prepopulatedScopes: Record<string, IPermissionScope> = {
+    sendFunds: {
+      target: fundInitCacheSettings.baseToken,
+      selector: TRANSFER_SELECTOR,
+    },
+    collectFees: { target: fundAddress, selector: FUND_FLOWS_CALL_SELECTOR },
+    updateNav: { target: fundAddress, selector: EXECUTE_NAV_UPDATE_SELECTOR },
+    updateSettings: { target: fundAddress, selector: UPDATE_SETTINGS_SELECTOR },
+    manageRoleMembers: {
+      target: roleModAddress.value,
+      selector: ASSIGN_ROLES_SELECTOR,
+    },
+  };
+  const isPrepopulatedEnabled: Record<string, boolean> = {
+    sendFunds: allowManagerToSendFundsToFundContract.value,
+    collectFees: allowManagerToCollectFees.value,
+    updateNav: allowManagerToUpdateNav.value,
+    updateSettings: allowManagerToUpdateSettings.value,
+    manageRoleMembers: allowManagerToManageRoleMembers.value,
+  };
+  proposalData.encodedRoleModEntries.push(
+    ...buildRevokeEntriesV2(
+      Object.keys(prepopulatedScopes)
+        .filter((key) => !isPrepopulatedEnabled[key])
+        .map((key) => prepopulatedScopes[key]),
+      [
+        ...Object.keys(prepopulatedScopes)
+          .filter((key) => isPrepopulatedEnabled[key])
+          .map((key) => prepopulatedScopes[key].target),
+        ...decodeRolesV2Targets(
+          rawPermissionCodeEntries.value.map((entry) => entry.data),
+        ),
+      ],
+    ),
+  );
+
   if (allowManagerToUpdateNav.value) {
     if (!navExecutorAddress.value || !fundAddress) {
       console.error(
@@ -532,7 +609,7 @@ const storePermissionsV2 = async () => {
       defaultScopedTargetPermissionRolesV2(
         DEFAULT_ROLE_KEY_V2,
         fundInitCacheSettings?.baseToken,
-        "0xa9059cbb", // 4-byte function selector of "transfer(address,uint256)"
+        TRANSFER_SELECTOR, // "transfer(address,uint256)"
         fundAddress,
       ),
     );
@@ -578,7 +655,7 @@ const storePermissionsV2 = async () => {
         [
           roleKeyBytes,
           fundAddress,
-          "0xec68ac8d", // functionSig "fundFlowsCall(bytes)"
+          FUND_FLOWS_CALL_SELECTOR, // "fundFlowsCall(bytes)"
           conditions,
           0, // ExecutionOptions.None
         ],

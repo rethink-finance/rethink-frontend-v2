@@ -1,5 +1,7 @@
 <template>
   <div class="direct_execution">
+    <FundGovernanceDelegationNotice />
+
     <!-- Stepper with header -->
     <UiStepper
       :entry="executionEntry"
@@ -9,6 +11,8 @@
       tooltip-text="Create a Direct Execution Proposal"
       :submit-event="submitProposal"
       :is-submit-loading="loading"
+      :submit-disabled="!canCreateProposal"
+      :submit-disabled-reason="NO_DELEGATES_TITLE"
     >
       <template #subtitle>
         <UiTooltipClick location="right" :hide-after="6000">
@@ -55,10 +59,16 @@ import SafeMultiSendCallOnly from "~/assets/contracts/safe/SafeMultiSendCallOnly
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import {
+  NO_DELEGATES_TITLE,
+  useProposalDelegation,
+} from "~/composables/governance/useProposalDelegation";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 const loading = ref(false);
+
+const { canCreateProposal, assertCanCreateProposal } = useProposalDelegation();
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -124,6 +134,10 @@ const executionEntry = ref([
 const fieldsMap = ref(DirectExecutionFieldsMap);
 
 const submitProposal = async () => {
+  // Guards the click as well as the button: the delegate read can still be in
+  // flight when the last step is reached.
+  if (!(await assertCanCreateProposal())) return;
+
   const transactions = executionEntry.value.find(
     (step) => step.stepName === ExecutionStep.Setup,
   )?.steps as any[];

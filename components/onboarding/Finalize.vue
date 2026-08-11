@@ -38,24 +38,9 @@
         Finalize vault creation
       </h2>
       <p class="onboarding_finalize__body">
-        After finalizing the setup users will be able to deposit into your
-        vault. Any change after finalization goes through governance.
+        Finalising opens the vault for deposits and locks the setup. Changing
+        permissions and NAV methods will require a governance vote.
       </p>
-
-      <div class="onboarding_finalize__summary">
-        <div
-          v-for="item in summary"
-          :key="item.label"
-          class="onboarding_finalize__cell"
-        >
-          <div class="onboarding_finalize__cell_label">
-            {{ item.label }}
-          </div>
-          <div class="onboarding_finalize__cell_value">
-            {{ item.value }}
-          </div>
-        </div>
-      </div>
     </template>
   </div>
 </template>
@@ -64,87 +49,19 @@
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useFundStore } from "~/store/fund/fund.store";
-import { getNAVData } from "~/store/fund/actions/fetchFundNAVData.action";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
-import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
-import { networksMap } from "~/store/web3/networksMap";
-import { feeFieldKeys } from "~/types/enums/fund_setting_proposal";
 
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
 
-const {
-  fundChainId,
-  fundSettings,
-  fundInitCache,
-  fundFactoryContract,
-} = storeToRefs(createFundStore);
+const { fundChainId, fundSettings, fundFactoryContract } =
+  storeToRefs(createFundStore);
 const { navigateToFundDetails } = usePageNavigation();
 
 const isFetchingNewlyCreatedFundSettings = ref(false);
 const isFinalizingFundCreation = ref(false);
 const isFundCreateFinalized = ref(false);
-
-const settlementLabel = ref("—");
-const navMethodCount = ref("—");
-
-/**
- * What is about to be locked in, read back from the initialized vault rather
- * than from the form — the form is a draft, this is what the chain holds.
- */
-const summary = computed(() => [
-  {
-    label: "Chain",
-    value: networksMap[fundChainId.value]?.chainName ?? fundChainId.value,
-  },
-  { label: "Underlying asset", value: fundSettings?.value?.baseSymbol || "—" },
-  { label: "Vault name", value: fundSettings?.value?.fundName || "—" },
-  { label: "Token symbol", value: fundSettings?.value?.fundSymbol || "—" },
-  { label: "Settlement period", value: settlementLabel.value },
-  {
-    label: "Governance",
-    value:
-      !fundSettings?.value?.governanceToken ||
-      isZeroAddress(fundSettings.value.governanceToken)
-        ? "Vault token"
-        : "Custom token",
-  },
-  { label: "Fees enabled", value: String(activeFeeCount.value) },
-  { label: "NAV methods", value: navMethodCount.value },
-]);
-
-const activeFeeCount = computed(() =>
-  feeFieldKeys.filter((key: string) => {
-    const value = (fundSettings?.value as any)?.[key];
-    return value != null && Number(value) > 0;
-  }).length,
-);
-
-const loadSummaryDetails = async () => {
-  const metadata = fundInitCache?.value?.fundMetadata;
-  if (metadata?.plannedSettlementPeriod) {
-    settlementLabel.value = await parsePlannedSettlement(
-      fundChainId.value,
-      String(metadata.plannedSettlementPeriod),
-    );
-  }
-
-  const fundAddress = fundSettings?.value?.fundAddress;
-  if (!fundAddress || isZeroAddress(fundAddress)) return;
-
-  try {
-    const methods = await getNAVData(fundChainId.value, fundAddress);
-    navMethodCount.value = String(methods.length);
-  } catch (error: any) {
-    // A summary line is not worth a toast; the step's own table already
-    // reports a NAV read that failed.
-    console.error("Failed reading NAV methods for the summary", error);
-    navMethodCount.value = "—";
-  }
-};
-
-onMounted(loadSummaryDetails);
 
 const finalizeCreateFund = async () => {
   console.warn("finalizeCreateFund");
@@ -310,43 +227,6 @@ defineExpose({
     &:active {
       color: $color-cyan;
     }
-  }
-
-  /* The 1px gap is the rule: cells sit on the line colour and paint themselves
-     back in, so the grid draws its own hairlines without any borders. */
-  &__summary {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1px;
-    width: 100%;
-    margin-top: 1.75rem;
-    border: 1px solid $color-line;
-    border-radius: $default-border-radius;
-    background: $color-line;
-    overflow: hidden;
-  }
-
-  &__cell {
-    padding: 0.875rem 1rem;
-    background: $color-surface;
-    text-align: left;
-  }
-
-  &__cell_label {
-    font-family: $font-mono;
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
-  }
-
-  &__cell_value {
-    margin-top: 0.3125rem;
-    font-family: $font-mono;
-    font-size: 13px;
-    line-height: 1.4;
-    color: $color-white;
-    word-break: break-word;
   }
 }
 </style>

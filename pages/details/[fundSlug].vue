@@ -177,6 +177,8 @@ watch(
       newPath === `${pathRoot}/nav` ||
       newPath === `${pathRoot}/permissions` ||
       newPath === `${pathRoot}/flows` ||
+      newPath === `${pathRoot}/whitelist` ||
+      newPath === `${pathRoot}/profile` ||
       newPath === `${pathRoot}/governance`
     ) {
       setBreadcrumbItems([]);
@@ -230,6 +232,18 @@ const routes: IRoute[] = [
     to: `${fundDetailsRoute.value}/flows`,
     exactMatch: true,
     title: "Flows",
+    text: "",
+  },
+  {
+    to: `${fundDetailsRoute.value}/whitelist`,
+    exactMatch: true,
+    title: "Whitelist",
+    text: "",
+  },
+  {
+    to: `${fundDetailsRoute.value}/profile`,
+    exactMatch: true,
+    title: "Vault Profile",
     text: "",
   },
   {

@@ -3,6 +3,13 @@ import { ethers } from "ethers";
 // CRT vault execution console — addresses, whitelist facts and calldata builders.
 // Everything verified live on HyperEVM mainnet (chain 999). See rethink NOTES.
 
+interface CrtError { name: string; hint: string; soft?: boolean }
+// Selectors are derived from the signature at module load, the way V1_ERROR_HINTS
+// does in composables/permissions/useRoleExecution.ts: a wrong signature then simply
+// never matches instead of mislabelling a real revert.
+const crtErrors = (rows: [string, CrtError][]): Record<string, CrtError> =>
+  Object.fromEntries(rows.map(([signature, e]) => [ethers.id(signature).slice(0, 10), e]));
+
 export const CRT = {
   CHAIN_HEX: "0x3e7",
   RPCS: ["https://rpc.hyperliquid.xyz/evm", "https://rpc.hypurrscan.io"],
@@ -29,13 +36,14 @@ export const CRT = {
     { addr: "0x6e6d2B190DB578CDeB7156B283B4587b379Ca39C", name: "", label: "Primary agent", kind: "primary", desc: "Unnamed. Already registered; re-submitting is a no-op." },
     { addr: "0x9c80C909DDCa672ccEb35C4C70a143021679C095", name: "", label: "Backup agent", kind: "backup", desc: "Unnamed. Registering it DEREGISTERS the primary (only one unnamed agent allowed). Break-glass only." },
   ],
-  ERRORS: {
-    "0x05e5a82e": { name: "FunctionNotAllowed", hint: "This function isn't on the whitelist for this role." },
-    "0x31e98246": { name: "ParameterNotAllowed", hint: "A pinned parameter (destination / receiver / spender) doesn't match the whitelist." },
-    "0xf952dd79": { name: "ParameterGreaterThanAllowed", hint: "Amount above the whitelisted cap (approvals: 500,000 USDC)." },
-    "0x0d89438e": { name: "ParameterNotOneOfAllowed", hint: "Value isn't one of the whitelisted exact options (use a fixed amount)." },
-    "0xd27b44a9": { name: "ERC-20 balance/allowance", hint: "NOT a permission failure: insufficient balance or allowance. Expected when simulating step 2 before step 1 is mined.", soft: true },
-  } as Record<string, { name: string; hint: string; soft?: boolean }>,
+  ERRORS: crtErrors([
+    ["FunctionNotAllowed()", { name: "FunctionNotAllowed", hint: "This function isn't on the whitelist for this role." }],
+    ["ParameterNotAllowed()", { name: "ParameterNotAllowed", hint: "A pinned parameter (destination / receiver / spender) doesn't match the whitelist." }],
+    ["ParameterGreaterThanAllowed()", { name: "ParameterGreaterThanAllowed", hint: "Amount above the whitelisted cap (approvals: 500,000 USDC)." }],
+    ["ParameterNotOneOfAllowed()", { name: "ParameterNotOneOfAllowed", hint: "Value isn't one of the whitelisted exact options (use a fixed amount)." }],
+    ["DelegateCallNotAllowed()", { name: "DelegateCallNotAllowed", hint: "The role does not allow delegate calls." }],
+    ["ModuleTransactionFailed()", { name: "ERC-20 balance/allowance", hint: "NOT a permission failure: insufficient balance or allowance. Expected when simulating step 2 before step 1 is mined.", soft: true }],
+  ]),
 };
 
 const A = CRT.ADDR;

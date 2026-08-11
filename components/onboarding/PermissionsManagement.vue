@@ -1,13 +1,37 @@
 <template>
   <div class="prepopulated">
-    <div class="prepopulated__title">
-      Prepopulated permissions
+    <!-- Collapsed by default. These are on for almost every vault, so the
+         step opens on one decision — "keep them all" — and the five rows are
+         there for the curator who actually wants to change something. -->
+    <div class="prepopulated__head">
+      <button
+        type="button"
+        class="prepopulated__disclosure"
+        :aria-expanded="isExpanded"
+        @click="isExpanded = !isExpanded"
+      >
+        <Icon
+          class="prepopulated__chevron"
+          :class="{ 'prepopulated__chevron--open': isExpanded }"
+          icon="material-symbols:keyboard-arrow-down-rounded"
+          width="1.125rem"
+          height="1.125rem"
+        />
+        <span class="prepopulated__title">Prepopulated permissions</span>
+        <span class="prepopulated__summary">{{ summary }}</span>
+      </button>
+
+      <div class="prepopulated__master">
+        <span class="prepopulated__master_label">Enable all</span>
+        <OnboardingToggle
+          :model-value="areAllEnabled"
+          label="Enable all prepopulated permissions"
+          @update:model-value="setAll"
+        />
+      </div>
     </div>
 
-    <!-- Two across from tablet up. These are on by default and stay on for
-         almost everyone; the section should read as a short checklist rather
-         than as five decisions stacked down the page. -->
-    <div class="prepopulated__grid">
+    <div v-if="isExpanded" class="prepopulated__rows">
       <div class="prepopulated__row">
         <p class="prepopulated__text">
           Send funds to admin contract &amp; settle flows
@@ -73,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   fundFactoryContractV2Used: boolean;
   allowManagerToSendFundsToFundContract: boolean;
   allowManagerToCollectFees: boolean;
@@ -89,6 +113,60 @@ const emit = defineEmits<{
   (e: "update:allowManagerToUpdateSettings", value: boolean): void;
   (e: "update:allowManagerToManageRoleMembers", value: boolean): void;
 }>();
+
+/** Only what this vault's Roles version actually shows a row for. */
+const shownValues = computed(() => {
+  const values = [
+    props.allowManagerToSendFundsToFundContract,
+    props.allowManagerToCollectFees,
+  ];
+
+  if (props.fundFactoryContractV2Used) {
+    values.push(
+      props.allowManagerToUpdateNav,
+      props.allowManagerToUpdateSettings,
+      props.allowManagerToManageRoleMembers,
+    );
+  }
+
+  return values;
+});
+
+const enabledCount = computed(
+  () => shownValues.value.filter(Boolean).length,
+);
+const areAllEnabled = computed(
+  () => enabledCount.value === shownValues.value.length,
+);
+
+/**
+ * The switch has no third state, so the count is what tells a curator that
+ * some are off — otherwise "all on" and "two of five on" would look alike.
+ */
+const summary = computed(() =>
+  areAllEnabled.value
+    ? "All on"
+    : `${enabledCount.value} of ${shownValues.value.length} on`,
+);
+
+// Opens itself when something is already off, so a returning curator sees
+// which one rather than an innocent-looking collapsed row.
+const isExpanded = ref(!areAllEnabled.value);
+
+const setAll = (value: boolean) => {
+  emit("update:allowManagerToSendFundsToFundContract", value);
+  emit("update:allowManagerToCollectFees", value);
+
+  if (props.fundFactoryContractV2Used) {
+    emit("update:allowManagerToUpdateNav", value);
+    emit("update:allowManagerToUpdateSettings", value);
+    emit("update:allowManagerToManageRoleMembers", value);
+  }
+
+  // Turning everything off is how someone says they want to pick; leaving it
+  // collapsed on an all-off card would just be a dead end.
+  if (!value) isExpanded.value = true;
+};
 </script>
 
 <style scoped lang="scss">
@@ -97,8 +175,49 @@ const emit = defineEmits<{
   border-radius: $default-border-radius;
   background: $color-card-background;
 
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 1rem;
+  }
+
+  &__disclosure {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+
+      .prepopulated__title {
+        color: $color-white;
+      }
+    }
+  }
+
+  &__chevron {
+    flex: none;
+    color: $color-steel-blue;
+    transition: transform $default-transition-time ease;
+
+    &--open {
+      transform: rotate(180deg);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
   &__title {
-    padding: 0.625rem 1rem;
     font-family: $font-mono;
     font-size: 10.5px;
     font-weight: 500;
@@ -107,13 +226,24 @@ const emit = defineEmits<{
     color: $color-steel-blue;
   }
 
-  &__grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+  &__summary {
+    font-size: 12px;
+    line-height: 1.4;
+    color: $color-steel-blue;
+    opacity: 0.75;
+  }
 
-    @include md {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+  &__master {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex: none;
+  }
+
+  &__master_label {
+    font-size: 13px;
+    line-height: 1.4;
+    color: $color-white;
   }
 
   &__row {
@@ -122,22 +252,8 @@ const emit = defineEmits<{
     justify-content: space-between;
     gap: 1rem;
     padding: 0.5rem 1rem;
-    /* Drawn on the top edge so the card never ends on a rule, whichever row
-       happens to be last. */
+    /* Drawn on the top edge so the card never ends on a rule. */
     border-top: 1px solid $color-line;
-
-    @include md {
-      &:nth-child(odd) {
-        border-right: 1px solid $color-line;
-      }
-
-      /* An odd number of toggles would otherwise leave the last one half-width
-         with a rule hanging off nothing. */
-      &:nth-child(odd):last-child {
-        grid-column: 1 / -1;
-        border-right: none;
-      }
-    }
   }
 
   &__text {

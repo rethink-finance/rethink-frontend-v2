@@ -79,7 +79,9 @@ describe("buildUpdateSettingsConditions", () => {
       [1, Static, EqualTo, encAddr(PINNED.baseToken)],
       [1, Static, EqualTo, encAddr(PINNED.safe)],
       [1, Static, EqualTo, encBool(false)], // isExternalGovTokenInUse
-      [1, Static, EqualTo, encBool(true)], // isWhitelistedDeposits
+      // isWhitelistedDeposits — wildcard: the manager may turn whitelist
+      // enforcement on and off
+      [1, Static, Pass, "0x"],
       // allowedDepositAddrs — wildcard (whitelist management)
       [1, ArrayT, Pass, "0x"],
       // allowedManagers — pinned to the empty array
@@ -135,16 +137,17 @@ describe("buildUpdateSettingsConditions", () => {
     }
   });
 
-  it("wildcards ONLY allowedDepositAddrs and _fundMetadata", () => {
-    // Every top-level Pass node must be one of the two allowed wildcards:
-    // node 2 (_fundMetadata) and node 14 (allowedDepositAddrs). All other
-    // Pass nodes are structural leaves under Array/Tuple nodes.
+  it("wildcards ONLY the whitelist fields and _fundMetadata", () => {
+    // Every top-level Pass node must be one of the three allowed wildcards:
+    // node 2 (_fundMetadata), node 13 (isWhitelistedDeposits) and node 14
+    // (allowedDepositAddrs). All other Pass nodes are structural leaves
+    // under Array/Tuple nodes.
     const passNodes = conditions
       .map((node, i) => [i, ...node] as const)
       .filter(([, , , operator]) => operator === Pass);
     const structuralParents = new Set([14, 15, 21]);
     for (const [i, parent] of passNodes) {
-      if (i === 2 || i === 14) continue;
+      if (i === 2 || i === 13 || i === 14) continue;
       expect(structuralParents.has(parent), `unexpected Pass at ${i}`).toBe(
         true,
       );
@@ -172,7 +175,7 @@ describe("buildUpdateSettingsConditions", () => {
           baseToken: PINNED.baseToken,
           safe: PINNED.safe,
           isExternalGovTokenInUse: PINNED.isExternalGovTokenInUse,
-          isWhitelistedDeposits: PINNED.isWhitelistedDeposits,
+          isWhitelistedDeposits: undefined, // wildcard (manager-toggleable)
           allowedDepositAddrs: undefined, // wildcard
           allowedManagers: c.eq([]),
           governanceToken: PINNED.governanceToken,

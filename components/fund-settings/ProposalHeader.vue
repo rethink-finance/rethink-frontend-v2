@@ -39,18 +39,18 @@
       <v-btn
         :type="isLastStep ? 'submit' : 'button'"
         :loading="loading"
-        :disabled="isLastStep && !accountStore.isConnected"
+        :disabled="isSubmitBlocked"
         @click="handleButtonClick"
       >
         {{ isLastStep ? "Submit Proposal" : "Next" }}
         <v-tooltip
-          v-if="isLastStep && !accountStore.isConnected"
+          v-if="isSubmitBlocked"
           :model-value="true"
           activator="parent"
           location="top"
           @update:model-value="true"
         >
-          Connect your wallet to create a proposal.
+          {{ submitBlockedReason }}
         </v-tooltip>
       </v-btn>
     </div>
@@ -79,11 +79,32 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /** Holds the final submit shut for a reason the page knows about. */
+  submitDisabled: {
+    type: Boolean,
+    default: false,
+  },
+  submitDisabledReason: {
+    type: String,
+    default: "",
+  },
 })
 
 // Data
 
 // Computeds
+// Only the final submit is gated; "Next" always works, so a blocked proposal
+// can still be filled in and reviewed.
+const isSubmitBlocked = computed(
+  () =>
+    props.isLastStep && (!accountStore.isConnected || props.submitDisabled),
+);
+
+const submitBlockedReason = computed(() =>
+  accountStore.isConnected
+    ? props.submitDisabledReason
+    : "Connect your wallet to create a proposal.",
+);
 
 // Methods
 const prevStep = () => {

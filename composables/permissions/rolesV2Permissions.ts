@@ -67,6 +67,14 @@ export const UPDATE_SETTINGS_SELECTOR = "0xf6c87ad5";
 export const ASSIGN_ROLES_SELECTOR = "0x957ed2b3";
 // transferOwnership(address) — must NEVER appear in a generated permission.
 export const TRANSFER_OWNERSHIP_SELECTOR = "0xf2fde38b";
+// The remaining selectors the prepopulated permissions grant. Named here so
+// the code that grants them and the code that revokes them cannot drift.
+// transfer(address,uint256) — on the base token
+export const TRANSFER_SELECTOR = "0xa9059cbb";
+// fundFlowsCall(bytes) — on the vault
+export const FUND_FLOWS_CALL_SELECTOR = "0xec68ac8d";
+// executeNAVUpdate(address) — on the vault
+export const EXECUTE_NAV_UPDATE_SELECTOR = "0xa61f5814";
 
 // ConditionFlat as the tuple array shape web3-eth-abi expects for
 // (uint8 parent, uint8 paramType, uint8 operator, bytes compValue).
@@ -76,9 +84,9 @@ const abiCoder = ethers.AbiCoder.defaultAbiCoder();
 
 /**
  * The values frozen into the updateSettings permission. Everything except
- * the depositor whitelist (wildcarded) and metadata (wildcarded) and
- * governor (always pinned to the Safe) and allowedManagers (always pinned
- * to the empty array).
+ * the depositor whitelist — both its enforcement flag and its addresses are
+ * wildcarded — and metadata (wildcarded) and governor (always pinned to the
+ * Safe) and allowedManagers (always pinned to the empty array).
  */
 export interface IUpdateSettingsPinnedValues {
   depositFee: bigint;
@@ -89,6 +97,10 @@ export interface IUpdateSettingsPinnedValues {
   baseToken: string;
   safe: string;
   isExternalGovTokenInUse: boolean;
+  /**
+   * NOT pinned any more (the manager may toggle whitelist enforcement) — kept
+   * here so parsing a raw Settings struct stays a full validation of it.
+   */
   isWhitelistedDeposits: boolean;
   governanceToken: string;
   fundAddress: string;
@@ -175,9 +187,11 @@ export const parseUpdateSettingsPinnedValues = (
 
 // What the permission does with each Settings struct field, in the exact
 // order the struct declares them. Only the depositor whitelist is
-// wildcarded; allowedManagers is pinned to []; governor is pinned to the
-// SAFE (the post-activation value — see the activation proposal), and every
-// other field is pinned to its current value.
+// wildcarded — its addresses AND its enforcement flag, so the manager can
+// switch deposits between permissionless and whitelist-only; allowedManagers
+// is pinned to []; governor is pinned to the SAFE (the post-activation
+// value — see the activation proposal), and every other field is pinned to
+// its current value.
 type FieldRule =
   | { kind: "pin" }
   | { kind: "wildcard" }
@@ -193,8 +207,12 @@ const SETTINGS_FIELD_RULES: Record<string, FieldRule> = {
   baseToken: { kind: "pin" },
   safe: { kind: "pin" },
   isExternalGovTokenInUse: { kind: "pin" },
-  isWhitelistedDeposits: { kind: "pin" },
-  allowedDepositAddrs: { kind: "wildcard" }, // whitelist management stays open
+  // Whitelist management stays open: the manager owns both the enforcement
+  // flag and the address list. Turning the flag off makes deposits
+  // permissionless, which is a deliberate manager power here — governance
+  // grants it by granting this permission at all.
+  isWhitelistedDeposits: { kind: "wildcard" },
+  allowedDepositAddrs: { kind: "wildcard" },
   allowedManagers: { kind: "pin-empty-array" },
   governanceToken: { kind: "pin" },
   fundAddress: { kind: "pin" },
@@ -294,9 +312,10 @@ const getUpdateSettingsFragment = (): ethers.FunctionFragment => {
 /**
  * Build the ConditionFlat[] for updateSettings, derived from the ABI
  * fragment. Resulting policy: the manager can change ONLY the depositor
- * whitelist (deltas) and the metadata JSON. Fees, hurdle, name, symbol,
- * base token, governance wiring, fee collectors and both fee periods are
- * frozen; governor must be echoed as the SAFE address.
+ * whitelist — its enforcement flag and its addresses (deltas) — and the
+ * metadata JSON. Fees, hurdle, name, symbol, base token, governance wiring,
+ * fee collectors and both fee periods are frozen; governor must be echoed as
+ * the SAFE address.
  */
 export const buildUpdateSettingsConditions = (
   pinned: IUpdateSettingsPinnedValues,
