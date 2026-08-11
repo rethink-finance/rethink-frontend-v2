@@ -294,46 +294,11 @@ $shadow-float-lg: 0 24px 64px rgba(0, 0, 0, 0.55);
   }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   TOASTS
-   ───────────────────────────────────────────────────────────── */
-
-/**
- * Toast. The floating panel again, with the level carried by a 2px rule down
- * the leading edge and by the icon — not by a filled background. A solid red
- * or green slab is the loudest thing the app can put on screen, and a toast is
- * usually reporting something routine.
- */
-.v-snackbar .v-snackbar__wrapper {
-  min-height: 0;
-  background: $color-navy-gray-light;
-  border: 1px solid $color-line-2;
-  border-left-width: 2px;
-  border-left-color: $color-line-3;
-  border-radius: $default-border-radius;
-  box-shadow: $shadow-float;
-  color: $color-white;
-
-  .v-snackbar__content {
-    padding: 0.875rem 1rem;
-    font-size: $text-sm;
-    font-weight: 500;
-    line-height: 1.5;
-  }
-  .v-snackbar__actions {
-    margin-inline-end: 0.5rem;
-  }
-}
-
-.v-snackbar.toast-success .v-snackbar__wrapper {
-  border-left-color: $color-success-light;
-}
-.v-snackbar.toast-warning .v-snackbar__wrapper {
-  border-left-color: $color-warn;
-}
-.v-snackbar.toast-danger .v-snackbar__wrapper {
-  border-left-color: $color-neg;
-}
+/* Toasts are not here: they no longer teleport out of a Vuetify overlay, so
+   the stack styles itself in components/global/ui/toast/index.vue. It keeps
+   the same floating-panel treatment defined at the top of this file — level
+   carried by a 2px rule down the leading edge and by the icon, never by a
+   filled background. */
 
 /* ─────────────────────────────────────────────────────────────
    CALLOUTS — alerts, notices, inline notes

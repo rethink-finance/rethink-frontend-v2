@@ -14,7 +14,7 @@ const customDarkTheme: ThemeDefinition = {
     "secondary-darken-1": "#8E97AD",
     error: "#E66A60",
     info: "#16C8FF",
-    success: "#38DE38",
+    success: "#3ED598",
     warning: "#FB8C00",
   },
 };

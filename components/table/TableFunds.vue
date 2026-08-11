@@ -296,7 +296,8 @@ const headers: any = computed(() => [
     key: "name",
     sortable: false,
     align: "start",
-    width: 380,
+    // No width: the name column absorbs the space the fixed data columns
+    // leave, so the table stretches to the card instead of overflowing it.
   },
   {
     title: "Current NAV",
@@ -358,9 +359,12 @@ const headers: any = computed(() => [
   {
     title: "APR",
     key: "apr",
+    // Same treatment as Cum. Return: sort on the figure the cell prints, so a
+    // staking vault sorts on its yield-derived APR rather than on a missing
+    // field, and a vault with no APR at all sinks instead of sorting as 0%.
+    value: (v: IFund) => getApr(v) ?? -Infinity,
     align: "end",
     width: 80,
-    sortable: false,
   },
   // {
   //   title: "Monthly",
@@ -441,14 +445,34 @@ const navigateFundDetails = (event: any, row: any) => {
   max-width: 100%;
   // add table max height
   :deep(.v-table__wrapper) {
-    @include customScrollbar(0);
     overflow-x: auto;
+
+    /* Hairline scrollbar rather than the shared mixin's brand-blue thumb on a
+       grey track: a styled scrollbar is always painted, so at the widths where
+       the table only just overflows that bar reads as a blue rule ruled under
+       the last row instead of as a scrollbar. */
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: $color-line-3;
+      border-radius: 16px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: $color-steel-blue;
+    }
+
     table {
       table-layout: fixed;
       background: transparent;
-      /* Columns keep their designed widths; the card scrolls
-         horizontally on narrow viewports (design-file behavior). */
-      min-width: 1180px;
+      /* Data columns keep their designed widths and the name column takes
+         whatever is left, so the card fits a normal desktop without scrolling;
+         below this width it scrolls horizontally (design-file behavior). */
+      min-width: 1130px;
     }
 
     thead th {
@@ -494,6 +518,13 @@ const navigateFundDetails = (event: any, row: any) => {
       }
       &:hover .v-data-table-header__sort-icon {
         opacity: 1 !important;
+      }
+      /* On the last column that pull would push the icon 2px past the table's
+         right edge (18px pull against 16px of cell padding), which is enough
+         overflow to keep the horizontal scrollbar on screen. Clamp it to the
+         padding; the 2px of label alignment lost is not visible. */
+      &:last-child .v-data-table-header__sort-icon {
+        margin-inline-end: -16px;
       }
     }
 

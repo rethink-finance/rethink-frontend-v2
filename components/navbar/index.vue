@@ -121,15 +121,15 @@
                       Create and manage vaults
                     </div>
                   </div>
-                  <v-switch
-                    v-model="appSettingsStore.isManageMode"
-                    class="settings_toggle__switch"
-                    color="primary"
-                    density="compact"
-                    hide-details
-                    inset
+                  <!-- The design system's switch, not v-switch: the row is a
+                       32x18 track with a cyan knob, and Vuetify's inset switch
+                       renders a bright primary-filled track that reads as a
+                       different control from every other toggle in the app. -->
+                  <OnboardingToggle
+                    :model-value="appSettingsStore.isManageMode"
+                    label="Curator Mode"
                     @click.stop
-                    @change="appSettingsStore.toggleAdvancedMode"
+                    @update:model-value="toggleCuratorMode"
                   />
                 </div>
               </div>
@@ -505,28 +505,6 @@ const onClickConnect = async () => {
     color: $color-steel-blue;
   }
 
-  &__switch {
-    flex: none;
-
-    :deep(.v-selection-control) {
-      min-height: 0;
-    }
-    :deep(.v-switch__track) {
-      opacity: 1;
-      background: $color-moonlight-light;
-    }
-    :deep(.v-switch__thumb) {
-      box-shadow: none;
-    }
-    :deep(.v-selection-control__wrapper),
-    :deep(.v-selection-control__input) {
-      width: auto;
-      height: auto;
-    }
-    :deep(.v-selection-control__input::before) {
-      display: none;
-    }
-  }
 }
 
 /* Spans the viewport under the bar rather than sitting in a page's column —

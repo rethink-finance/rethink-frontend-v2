@@ -134,14 +134,27 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
       decimals: 18,
     },
     icon: getChainIcon("HyperEVM"),
+    // Hyperliquid's own RPC refuses eth_getBlockByNumber outright — every call,
+    // "latest" included, returns -32005 "More than 3000 archived blocks queried
+    // in one day" (verified 2026-08-11). eth_call still works, so vault reads
+    // succeed and only block lookups fail, which reads like an indexer problem.
+    // It was the sole entry here, leaving switchRpcUrl nowhere to go, so every
+    // vault page on this chain died in initializeBlockTimeContext.
+    //
+    // callWithRetry swaps the provider for every call on the chain, so vet any
+    // addition on BOTH counts — one bad entry breaks whatever lands on it:
+    //  1. eth_getBlockByNumber, per above.
+    //  2. The HyperCore precompiles (0x...0801 spotBalance, 0x...080F
+    //     accountMarginSummary) that NAV positions are priced from. drpc,
+    //     hyperlend and stakely all answer "out of gas: gas exhausted during
+    //     precompiled contract execution" and quietly zero those positions.
+    // Both endpoints below pass both, full-archive, open CORS. The official one
+    // stays last: it serves the precompiles, just not the blocks. eth_getLogs is
+    // capped chain-wide (100k blocks on purroofgroup, 1k on the other two).
     rpcUrls: [
-      // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      // "https://base-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", Luka T.
-      // "https://base-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", Rok
+      "https://rpc.purroofgroup.com",
+      "https://rpc.hypurrscan.io",
       "https://rpc.hyperliquid.xyz/evm",
-      // "https://base.drpc.org",
-      // "https://base.meowrpc.com",
-      // "https://base.rpc.subquery.network/public",
     ],
     blockExplorerUrls: ["https://hyperevmscan.io"],
   },
