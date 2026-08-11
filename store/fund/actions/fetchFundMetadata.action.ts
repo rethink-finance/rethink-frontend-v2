@@ -9,6 +9,10 @@ import { ERC20 } from "assets/contracts/ERC20";
 import { formatQuorumPercentage } from "~/composables/formatters";
 import { parseClockMode } from "~/composables/fund/parseClockMode";
 import { parseBigintsToString } from "~/composables/fund/parseBigintsToString";
+import {
+  fetchGovernorGovernanceData,
+  resolveFundGovernorAddress,
+} from "~/composables/fund/resolveFundGovernor";
 import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -61,6 +65,30 @@ export const fetchFundMetaDataAction = async (
       fundSettings,
     } = fundMetaData;
 
+    fundSettings.performancePeriod = feePerformancePeriod;
+    fundSettings.managementPeriod = feeManagePeriod;
+
+    const parsedFundSettings: IFundSettings = parseBigintsToString(fundSettings);
+    console.log("parsedFundSettings: ", parsedFundSettings);
+
+    // After Roles v2 activation settings.governor is the Safe, so the reader
+    // aimed its governance staticcalls at a Safe and handed back a zeroed
+    // struct. Resolve the real governor and read governance off that instead.
+    const governorAddress = await resolveFundGovernorAddress(
+      fundChainId,
+      parsedFundSettings,
+    );
+    let governanceData = fundGovernanceData;
+    if (
+      governorAddress &&
+      governorAddress.toLowerCase() !==
+        (parsedFundSettings.governor ?? "").toLowerCase()
+    ) {
+      governanceData =
+        (await fetchGovernorGovernanceData(fundChainId, governorAddress)) ??
+        fundGovernanceData;
+    }
+
     const {
       votingDelay,
       votingPeriod,
@@ -69,14 +97,9 @@ export const fetchFundMetaDataAction = async (
       quorumNumerator,
       quorumDenominator,
       clockMode,
-    } = fundGovernanceData;
+    } = governanceData;
 
-    fundSettings.performancePeriod = feePerformancePeriod;
-    fundSettings.managementPeriod = feeManagePeriod;
-
-    const parsedFundSettings: IFundSettings = parseBigintsToString(fundSettings);
     const parsedClockMode = parseClockMode(clockMode);
-    console.log("parsedFundSettings: ", parsedFundSettings);
 
     // TODO fundGovernanceTokenSupply is wrong from reader contract, until it is fixed and redeployed there
     //   manually fetch governance token total supply here. Then remove this line.
@@ -98,12 +121,30 @@ export const fetchFundMetaDataAction = async (
         fundGovernanceTokenSupplyFixed,
       );
 
-    const quorumVotes: bigint = ((((fundGovernanceTokenSupplyFixed as bigint) *
-      quorumNumerator) as bigint) / quorumDenominator) as bigint;
+    // A zero denominator means governance could not be read at all. Dividing
+    // by it throws, and a throw here loses the entire fund — the page can only
+    // render "problem loading the vault".
+    const quorumVotes: bigint = quorumDenominator
+      ? ((fundGovernanceTokenSupplyFixed as bigint) * quorumNumerator) /
+        quorumDenominator
+      : 0n;
 
     // TOOD no need to fetch this here, it would be better to fetch it when needed for formatting.
-    const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fundChainId);
-    const averageBlockTime = blockTimeContext?.averageBlockTime || 0;
+    // Same reasoning as quorumVotes above: this throws when a chain's RPCs will
+    // not serve eth_getBlockByNumber, and an uncaught throw here costs the whole
+    // vault. averageBlockTime only formats block counts as durations and already
+    // falls back to 0, so a vault without it renders everything else fine.
+    let averageBlockTime = 0;
+    try {
+      const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fundChainId);
+      averageBlockTime = blockTimeContext?.averageBlockTime || 0;
+    } catch (error) {
+      console.warn(
+        "Failed to resolve block time context, continuing without it. chain:",
+        fundChainId,
+        error,
+      );
+    }
 
     const fundNetwork = networksMap[fundChainId];
     const lastNavUpdateTime = undefined;//= fundMetadata.updateTimes[fundMetadata.updateTimes.length-1];
@@ -119,7 +160,9 @@ export const fetchFundMetaDataAction = async (
       clockMode: parsedClockMode,
       description: "N/A",
       safeAddress: parsedFundSettings.safe || "",
-      governorAddress: parsedFundSettings.governor || "",
+      // Not parsedFundSettings.governor: that field is the Safe on vaults that
+      // have activated Roles v2. See resolveFundGovernorAddress.
+      governorAddress: governorAddress || "",
       photoUrl: defaultAvatar,
       inceptionDate: startTime
         ? formatDate(new Date(Number(startTime) * 1000))

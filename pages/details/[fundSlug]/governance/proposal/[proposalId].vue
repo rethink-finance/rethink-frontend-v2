@@ -82,8 +82,11 @@
           >
             {{ step.label }}
           </div>
-          <div class="lifecycle__date">
-            {{ step.reached ? step.date : "PENDING" }}
+          <div
+            class="lifecycle__date"
+            :class="{ 'lifecycle__date--future': !step.reached }"
+          >
+            {{ step.unscheduled ? "PENDING" : step.date }}
           </div>
         </div>
 
@@ -283,6 +286,28 @@
                 YOUR POWER · {{ yourPowerFormatted }}
               </span>
             </template>
+          </div>
+
+          <!-- Passing is not enacting: a succeeded proposal sits there until
+               somebody calls execute. These governors have no timelock to
+               queue through, so it can be done the moment voting closes, and
+               by anyone — the proposer holds no special right here. -->
+          <div v-if="canExecuteProposal" class="votes__actions">
+            <v-btn
+              class="bg-primary text-secondary votes__button"
+              :loading="isExecutingProposal"
+              :disabled="!accountStore.isConnected"
+              @click="executeProposal"
+            >
+              Execute proposal
+            </v-btn>
+            <span class="votes__power">
+              {{
+                accountStore.isConnected
+                  ? "PASSED · ANYONE CAN EXECUTE"
+                  : "CONNECT A WALLET TO EXECUTE"
+              }}
+            </span>
           </div>
         </div>
 
@@ -611,6 +636,16 @@ const stampOf = (date?: Date) =>
   date ? formatDateToLocaleString(date, false) : "—";
 
 /**
+ * Times still in the future are read off the clock the governor votes on. A
+ * timestamp clock names the moment outright; a block-number clock only names
+ * a block, whose arrival time is estimated from the recent block rate — so
+ * only the latter gets hedged.
+ */
+const approximatePrefix = computed(() =>
+  fundStore.fund?.clockMode?.mode === ClockMode.BlockNumber ? "≈ " : "",
+);
+
+/**
  * The deadline the governor is actually holding for this proposal, which is
  * not always the one the ProposalCreated event announced — see lateQuorum.
  */
@@ -698,12 +733,32 @@ const lifecycleSteps = computed(() => {
   const executed = toDate(proposal.value?.executedTimestamp);
   const votingClosed = isVotingClosed.value;
 
+  /**
+   * A stage still ahead usually has a time worth showing: the governor fixes
+   * the whole vote window when the proposal is created, so "when does voting
+   * open" is already answered and printing PENDING throws that away. It is
+   * marked approximate on a block-number clock, where the time is arithmetic
+   * over an average block rate rather than something the contract promises.
+   *
+   * Only a stage with no time to give stays unscheduled — execution waits on
+   * somebody calling it, and no clock can say when that will be.
+   */
   const step = (
     label: string,
     date: string,
     reached: boolean,
     failed = false,
-  ) => ({ label, date, reached, failed });
+  ) => {
+    const hasTime = date !== "—";
+    return {
+      label,
+      reached,
+      failed,
+      date:
+        reached || !hasTime ? date : `${approximatePrefix.value}${date}`,
+      unscheduled: !reached && !hasTime,
+    };
+  };
 
   const steps = [
     step("Created", stampOf(created), Boolean(created)),
@@ -878,7 +933,70 @@ const castVote = async (support: number) => {
   }
 };
 
-// when the user votes, refetch the proposal so the tallies come from the chain
+/* ---- Execution ---------------------------------------------------------- */
+
+/**
+ * Succeeded is the only state that is executable here. Queued exists on
+ * governors deployed behind a timelock, where execution has to wait out the
+ * delay — these are not, so a proposal never passes through it, and offering
+ * the button there would only produce a revert after a signature.
+ */
+const canExecuteProposal = computed(
+  () => proposal.value?.state === ProposalState.Succeeded,
+);
+
+const isExecutingProposal = ref(false);
+
+const executeProposal = async () => {
+  const current = proposal.value;
+  if (!current) return;
+  isExecutingProposal.value = true;
+
+  try {
+    await fundStore.fundGovernorContract
+      .send(
+        "execute",
+        {},
+        // The governor re-hashes these to find the proposal, so they must be
+        // exactly what was proposed — they come from the proposal itself,
+        // never rebuilt here.
+        current.targets,
+        current.values,
+        current.calldatas,
+        current.descriptionHash,
+      )
+      .on("transactionHash", (hash: any) => {
+        console.log("tx hash: " + hash);
+        toastStore.addToast(
+          "Proposal execution has been submitted. Please wait for it to be confirmed.",
+        );
+      })
+      .on("receipt", (receipt: any) => {
+        if (receipt.status) {
+          toastStore.successToast("Proposal executed.");
+          handleVoteSuccess();
+        } else {
+          toastStore.errorToast(
+            "The execution transaction has failed. Please contact the Rethink Finance support.",
+          );
+        }
+        isExecutingProposal.value = false;
+      })
+      .on("error", (error: any) => {
+        console.error(error);
+        isExecutingProposal.value = false;
+        toastStore.errorToast(
+          "There has been an error. Please contact the Rethink Finance support.",
+        );
+      });
+  } catch (error) {
+    console.error("Failed executing proposal", error);
+    isExecutingProposal.value = false;
+  }
+};
+
+// when the user votes or executes, refetch the proposal so the state and
+// tallies come from the chain rather than from what we hoped happened
 const handleVoteSuccess = async () => {
   await new Promise((resolve) => setTimeout(resolve, 2000));
   await governanceProposalStore.fetchGovernanceProposal(proposalId);
@@ -1141,6 +1259,13 @@ const isLoadingProposal = computed(() => {
     font-family: $font-mono;
     font-size: 11px;
     color: $color-steel-blue;
+
+    /* A projection rather than a record. The dot and the label already say
+       the stage is ahead; dimming the time keeps it from being read as
+       something that has already happened. */
+    &--future {
+      opacity: 0.65;
+    }
   }
 
   /* Fired — the deadline this proposal closed on is not the announced one. */

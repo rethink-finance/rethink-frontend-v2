@@ -1,36 +1,42 @@
 <template>
-  <FundGovernanceDelegatedPermissions
-    v-model="delegatedPermissionsEntry"
-    :fields-map="delegatedPermissionFieldsMap"
-    :chain-id="fundStore.selectedFundChain"
-    :safe-address="fundStore.fund?.safeAddress ?? ''"
-    submit-label="Create Proposal"
-    class="delegated-permission"
-    @submit="submitProposal"
-    @entry-updated="entryUpdated"
-  >
-    <template #subtitle>
-      <UiTooltipClick location="right" :hide-after="6000">
-        <Icon
-          icon="material-symbols:info-outline"
-          class="info-icon"
-          width="1.5rem"
-        />
-        <template #tooltip>
-          <div class="tooltip__content">
-            <a
-              class="tooltip__link"
-              href="https://docs.rethink.finance/rethink.finance"
-              target="_blank"
-            >
-              Learn More
-              <Icon icon="maki:arrow" color="primary" width="1rem" />
-            </a>
-          </div>
-        </template>
-      </UiTooltipClick>
-    </template>
-  </FundGovernanceDelegatedPermissions>
+  <div>
+    <FundGovernanceDelegationNotice />
+
+    <FundGovernanceDelegatedPermissions
+      v-model="delegatedPermissionsEntry"
+      :fields-map="delegatedPermissionFieldsMap"
+      :chain-id="fundStore.selectedFundChain"
+      :safe-address="fundStore.fund?.safeAddress ?? ''"
+      submit-label="Create Proposal"
+      class="delegated-permission"
+      :submit-disabled="!canCreateProposal"
+      :submit-disabled-reason="NO_DELEGATES_TITLE"
+      @submit="submitProposal"
+      @entry-updated="entryUpdated"
+    >
+      <template #subtitle>
+        <UiTooltipClick location="right" :hide-after="6000">
+          <Icon
+            icon="material-symbols:info-outline"
+            class="info-icon"
+            width="1.5rem"
+          />
+          <template #tooltip>
+            <div class="tooltip__content">
+              <a
+                class="tooltip__link"
+                href="https://docs.rethink.finance/rethink.finance"
+                target="_blank"
+              >
+                Learn More
+                <Icon icon="maki:arrow" color="primary" width="1rem" />
+              </a>
+            </div>
+          </template>
+        </UiTooltipClick>
+      </template>
+    </FundGovernanceDelegatedPermissions>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -48,6 +54,10 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
 import { fetchActivationState } from "~/composables/permissions/activationProposal";
+import {
+  NO_DELEGATES_TITLE,
+  useProposalDelegation,
+} from "~/composables/governance/useProposalDelegation";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
@@ -57,6 +67,7 @@ const router = useRouter();
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const { selectedFundSlug } = storeToRefs(useFundStore());
+const { canCreateProposal, assertCanCreateProposal } = useProposalDelegation();
 const breadcrumbItems: BreadcrumbItem[] = [
   {
     title: "Governance",
@@ -122,6 +133,10 @@ const entryUpdated = (val: any) => {
   delegatedPermissionsEntry.value = val;
 };
 const submitProposal = async () => {
+  // Guards the click as well as the button: the delegate read can still be in
+  // flight when the last step is reached.
+  if (!(await assertCanCreateProposal())) return;
+
   console.log("submit", delegatedPermissionsEntry.value);
   const transactions = delegatedPermissionsEntry.value.find(
     (step) => step.stepName === DelegatedStep.Setup,

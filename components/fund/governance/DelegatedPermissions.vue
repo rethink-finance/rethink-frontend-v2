@@ -8,6 +8,8 @@
       :submit-event="onSubmit"
       :is-submit-loading="isLoading"
       :always-show-last-step="alwaysShowLastStep"
+      :submit-disabled="submitDisabled"
+      :submit-disabled-reason="submitDisabledReason"
       class="delegated-permission-stepper"
       @fields-changed="fieldsChanged"
     >
@@ -160,6 +162,9 @@ const props = defineProps<{
   tooltipTitle?: string;
   tooltipLink?: string;
   alwaysShowLastStep?: boolean;
+  /** Passed through to the stepper's final submit — see UiStepper. */
+  submitDisabled?: boolean;
+  submitDisabledReason?: string;
 }>();
 
 // Emits
