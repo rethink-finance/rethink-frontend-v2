@@ -15,26 +15,54 @@
     </div>
 
     <div v-else-if="view === 'pie'" class="composition__pie_layout">
-      <svg viewBox="0 0 200 200" class="composition__donut">
-        <path
+      <div class="composition__donut_wrap">
+        <svg viewBox="0 0 200 200" class="composition__donut">
+          <path
+            v-for="row in rows"
+            :key="row.name"
+            :d="row.path"
+            :fill="row.dot"
+            fill-rule="evenodd"
+            class="composition__slice"
+            :class="{
+              'composition__slice--dim': hoveredName && hoveredName !== row.name,
+              'composition__slice--active': hoveredName === row.name,
+            }"
+            @mouseenter="hoveredName = row.name"
+            @mouseleave="hoveredName = null"
+          />
+        </svg>
+        <!-- The donut hole doubles as the readout: the vault total at rest,
+             the hovered slice's identity and value while pointing. -->
+        <div class="composition__center">
+          <template v-if="hoveredRow">
+            <div class="composition__center_name">
+              {{ hoveredRow.name }}
+            </div>
+            <div class="composition__center_share">{{ hoveredRow.share }}</div>
+            <div class="composition__center_amount">{{ hoveredRow.amount }}</div>
+          </template>
+          <template v-else>
+            <div class="composition__center_label">Total</div>
+            <div class="composition__center_value">{{ totalFormatted }}</div>
+          </template>
+        </div>
+      </div>
+      <div class="composition__legend">
+        <div
           v-for="row in rows"
           :key="row.name"
-          :d="row.path"
-          :fill="row.dot"
-          fill-rule="evenodd"
-        />
-      </svg>
-      <div class="composition__legend">
-        <div v-for="row in rows" :key="row.name" class="composition__legend_row">
+          class="composition__legend_row"
+          :class="{
+            'composition__legend_row--faded':
+              hoveredName && hoveredName !== row.name,
+          }"
+          @mouseenter="hoveredName = row.name"
+          @mouseleave="hoveredName = null"
+        >
           <span class="composition__dot" :style="{ background: row.dot }" />
           <span class="composition__name">{{ row.name }}</span>
-          <span class="composition__amount">{{ row.amount }}</span>
           <span class="composition__share">{{ row.share }}</span>
-        </div>
-        <div class="composition__total_row">
-          <span class="composition__total_label">Total</span>
-          <span class="composition__total_value">{{ totalFormatted }}</span>
-          <span class="composition__share composition__share--dim">100.0%</span>
         </div>
       </div>
     </div>
@@ -120,6 +148,16 @@ const VIEW_OPTIONS = [
   { key: "table", label: "Table" },
 ];
 const view = ref("pie");
+
+// One hover state shared by the slices and the legend, so pointing at either
+// highlights both. Keyed by row name; cleared when the view flips.
+const hoveredName = ref<string | null>(null);
+watch(view, () => {
+  hoveredName.value = null;
+});
+const hoveredRow = computed(
+  () => rows.value.find((row) => row.name === hoveredName.value) ?? null,
+);
 
 // The method list is what defines the vault's positions; re-simulate whenever
 // it changes (including the first time it arrives).
@@ -243,6 +281,11 @@ const totalFormatted = computed(() =>
     padding: 0.5rem 0 0.25rem;
   }
 
+  &__donut_wrap {
+    position: relative;
+    flex: none;
+  }
+
   /* No rotation: the segment paths already start at twelve o'clock. */
   &__donut {
     width: 210px;
@@ -251,11 +294,87 @@ const totalFormatted = computed(() =>
     display: block;
   }
 
+  &__slice {
+    cursor: pointer;
+    transition:
+      opacity 0.15s ease,
+      transform 0.18s ease;
+    /* Scale around the viewBox centre so the active slice pops radially
+       outward instead of drifting off its ring. */
+    transform-origin: 100px 100px;
+
+    &--dim {
+      opacity: 0.28;
+    }
+
+    &--active {
+      transform: scale(1.045);
+    }
+  }
+
+  /* Sits in the donut hole (inner radius 53/200 ≈ a 111px circle at this
+     size); pointer-events off so it never steals the slices' hover. */
+  &__center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 3.4rem;
+    gap: 0.125rem;
+    pointer-events: none;
+  }
+
+  &__center_label {
+    font-family: $font-mono;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__center_value {
+    font-family: $font-mono;
+    font-size: 14px;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__center_name {
+    max-width: 100%;
+    font-size: 12px;
+    line-height: 1.25;
+    color: $color-light-subtitle;
+
+    // Two lines at most, then ellipsis — "Other (14 positions)" fits, an
+    // essay does not.
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__center_share {
+    font-size: 19px;
+    font-weight: 700;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__center_amount {
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-steel-blue;
+    font-variant-numeric: tabular-nums;
+  }
+
   &__legend {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    min-width: 260px;
+    gap: 0.25rem;
+    min-width: 220px;
     flex: 1;
   }
 
@@ -263,6 +382,18 @@ const totalFormatted = computed(() =>
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    margin: 0 -0.5rem;
+    border-radius: $default-border-radius;
+    transition: opacity 0.15s ease, background 0.15s ease;
+
+    &:hover {
+      background: $color-hover;
+    }
+
+    &--faded {
+      opacity: 0.45;
+    }
   }
 
   &__dot {
