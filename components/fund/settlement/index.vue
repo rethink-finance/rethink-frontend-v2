@@ -146,8 +146,11 @@ export default {
         border-left: 1px solid $color-line-2;
       }
 
+      /* Same selected treatment as the shared segmented control (cyan on
+         accent-soft) — the !important matches the switch's own white. */
       &.active {
-        background-color: $color-navy-gray-light;
+        color: $color-cyan !important;
+        background-color: $color-accent-soft;
       }
     }
   }

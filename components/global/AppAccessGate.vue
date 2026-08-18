@@ -197,6 +197,7 @@ const subscribe = async () => {
     }
 
     .label {
+      font-family: $font-mono;
       font-size: $text-xs;
       letter-spacing: 0.16em;
       text-transform: uppercase;

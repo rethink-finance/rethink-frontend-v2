@@ -23,10 +23,6 @@
           </button>
         </div>
       </div>
-      <div class="brand_card__meta">
-        {{ rows.length }}
-        {{ rows.length === 1 ? "TRANSACTION" : "TRANSACTIONS" }}
-      </div>
     </div>
 
     <div v-if="isLoading" class="activity__placeholder">

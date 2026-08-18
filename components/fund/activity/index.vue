@@ -23,10 +23,6 @@
           </button>
         </div>
       </div>
-      <div class="brand_card__meta">
-        {{ filteredRows.length }}
-        {{ filteredRows.length === 1 ? "TRANSACTION" : "TRANSACTIONS" }}
-      </div>
     </div>
 
     <v-progress-linear v-if="isLoading" indeterminate class="mb-2" />

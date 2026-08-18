@@ -84,7 +84,7 @@
                 <v-expansion-panel-title static>
                   <div class="method_details_title">
                     <span>
-                      <strong class="me-1">{{ index + 1 }})</strong> METHOD DETAILS
+                      <strong class="me-1">{{ index + 1 }})</strong> Method details
                     </span>
                     <UiTextBadge
                       class="method_details_status"

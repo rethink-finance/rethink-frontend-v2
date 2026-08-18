@@ -101,6 +101,7 @@ const isMenuOpen = computed({
     letter-spacing: 0.1em;
     line-height: 1.4;
     font-weight: 500;
+    text-transform: uppercase;
     color: $color-steel-blue;
     border: 1px solid $color-line-2;
     border-radius: $default-border-radius;

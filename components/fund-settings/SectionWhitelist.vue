@@ -550,8 +550,10 @@ const handleAddNewAddressList = () => {
     &__state {
       padding: 0 0.25rem;
       margin-left: 0.5rem;
+      font-family: $font-mono;
       font-size: $text-xs;
-      font-weight: 800;
+      font-weight: 500;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
 
       @include borderGray;

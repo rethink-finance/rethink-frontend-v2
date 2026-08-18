@@ -30,7 +30,7 @@
         />
       </h2>
       <div class="proposal_detail__meta">
-        <span>PROPOSED BY</span>
+        <span class="proposal_detail__meta_label">Proposed by</span>
         <AddressLink
           class="proposal_detail__meta_link"
           :address="proposal.proposer"
@@ -1106,6 +1106,12 @@ const isLoadingProposal = computed(() => {
     font-size: 11.5px;
     letter-spacing: 0.06em;
     color: $color-steel-blue;
+  }
+
+  /* Caps come from the stylesheet, as for every other microlabel — the
+     template writes sentence case. */
+  &__meta_label {
+    text-transform: uppercase;
   }
 
   /**

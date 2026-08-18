@@ -533,7 +533,6 @@ const saveDraft = async () => {
     color: $color-steel-blue;
     font-weight: 700;
     font-size: $text-sm;
-    text-transform: uppercase;
   }
   &__row {
     display: flex;

@@ -4,9 +4,6 @@
       <div class="brand_card__eyebrow">
         Monthly returns
       </div>
-      <div v-if="rows.length" class="brand_card__meta">
-        {{ basis === "nav" ? "VAULT VALUE" : "SHARE PRICE" }} · UTC
-      </div>
     </div>
 
     <div v-if="isLoading" class="monthly__placeholder">
@@ -73,8 +70,7 @@ import { formatDate, formatNumberShort } from "~/composables/formatters";
  *
  * The figures are share price to share price — see composables/monthlyReturns
  * for why that is the basis and what is deliberately left blank. Months are
- * bucketed in UTC, which is the clock the chain keeps; naming it in the card's
- * meta line saves a reader wondering whose midnight a boundary is.
+ * bucketed in UTC, which is the clock the chain keeps.
  */
 const props = defineProps<{ fund: IFund }>();
 
@@ -122,10 +118,6 @@ const isLoading = computed(() =>
 
 const monthlyReturns = computed<MonthlyReturn[]>(() =>
   buildMonthlyReturns(navUpdates.value, dailySnapshots.value),
-);
-
-const basis = computed<MonthlyReturnBasis>(
-  () => monthlyReturns.value[0]?.basis ?? "sharePrice",
 );
 
 const emptyReason = computed(() =>
