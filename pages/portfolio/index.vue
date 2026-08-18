@@ -29,7 +29,7 @@
       <PortfolioActivity
         :flows="flows"
         :funds="allFunds"
-        :is-loading="isLoadingPositions"
+        :is-loading="isLoadingFlows"
       />
     </template>
   </div>
@@ -61,10 +61,12 @@ import {
  * The depositor's home, answering three questions in the order they matter:
  * what needs me, how am I doing, what did I do.
  *
- * Two loads rather than one. Positions come first, because a vault row is worth
- * showing the moment its balance is known; what each vault is waiting on —
- * votes and pending requests — arrives behind it and tints the rows it
- * concerns. Neither holds up the other.
+ * Loaded in the order things become known, because none of it should wait for
+ * the slowest feed. Balances land first — one reader call per vault — and the
+ * rows show at once, worth known, cost still blank. The flows arrive behind
+ * them (explorer walks are the slow feed) and fill in cost, return and the
+ * activity card. Attention items — votes and pending requests — come last and
+ * tint the rows they concern.
  */
 const accountStore = useAccountStore();
 const fundsStore = useFundsStore();
@@ -76,6 +78,9 @@ const etherscanApiKey = String(useRuntimeConfig().public.ETHERSCAN_KEY ?? "");
 const { isConnected, activeAccountAddress } = storeToRefs(accountStore);
 
 const isLoadingPositions = ref(true);
+// The activity card reads the flows, which outlive the balance scan by
+// seconds; it keeps its own flag so the rows don't wait on it.
+const isLoadingFlows = ref(true);
 // Shallow: these hold bigints and the funds store's own reactive objects, and
 // deep-wrapping them again would cost more than it buys.
 const rawPositions = shallowRef<PortfolioPosition[]>([]);
@@ -86,17 +91,25 @@ const allFunds = computed<IFund[]>(() => fundsStore.funds);
 
 /**
  * A vault's USD quote arrives with its metadata, which lands after its balance
- * does. Deriving the dollar figures here rather than at load time means they
- * fill in as that metadata catches up, instead of freezing at whatever was
- * known the moment the balance came back.
+ * does — and the store replaces its fund objects outright when it does. So
+ * each position is re-pointed at the store's current object here, and the
+ * dollar figures are derived from that: they fill in as the metadata catches
+ * up, instead of freezing at whatever the scan happened to capture.
  */
 const positions = computed<PricedPosition[]>(() =>
   rawPositions.value
-    .map((position) => ({
-      ...position,
-      valueUSD: positionValueUSD(position),
-      valueSeries: positionValueSeries(position),
-    }))
+    .map((position) => {
+      const fund =
+        fundsStore.chainFunds[position.fund.chainId]?.find(
+          (candidate) => candidate.address === position.fund.address,
+        ) ?? position.fund;
+      const live = { ...position, fund };
+      return {
+        ...live,
+        valueUSD: positionValueUSD(live),
+        valueSeries: positionValueSeries(live),
+      };
+    })
     .sort((a, b) => (b.valueUSD ?? 0) - (a.valueUSD ?? 0)),
 );
 
@@ -153,18 +166,34 @@ const voteCount = computed(() =>
 
 const load = async (account: string) => {
   isLoadingPositions.value = true;
+  isLoadingFlows.value = true;
   rawPositions.value = [];
   flows.value = [];
   attention.value = {};
 
   try {
-    const result = await loadPortfolioPositions(account, etherscanApiKey);
+    const result = await loadPortfolioPositions(
+      account,
+      etherscanApiKey,
+      // Balances stream in as vaults answer; show rows the moment the first
+      // one exists, cost and return still blank. "No positions" has to wait
+      // for the whole scan — it is only true once every vault has said so.
+      (balances, scanDone) => {
+        rawPositions.value = balances;
+        if (balances.length || scanDone) isLoadingPositions.value = false;
+      },
+      (loadedFlows) => {
+        flows.value = loadedFlows;
+        isLoadingFlows.value = false;
+      },
+    );
     rawPositions.value = result.positions;
     flows.value = result.flows;
   } catch (error) {
     console.error("Failed loading portfolio positions", error);
   } finally {
     isLoadingPositions.value = false;
+    isLoadingFlows.value = false;
   }
 
   try {

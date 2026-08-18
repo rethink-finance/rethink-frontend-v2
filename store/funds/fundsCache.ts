@@ -1,8 +1,11 @@
 import {
   getLocalStorageItem,
+  parseBigInt,
   setLocalStorageItem,
+  stringifyBigInt,
 } from "~/composables/localStorage";
 import type IFund from "~/types/fund";
+import type INAVUpdate from "~/types/nav_update";
 
 /**
  * Stale-while-revalidate cache for the Discover table.
@@ -105,4 +108,80 @@ export const writeCachedSparkline = (
   const all = read<SparklineSeries>(SPARKLINE_KEY) ?? {};
   all[sparklineKey(chainId, address)] = prices;
   write(SPARKLINE_KEY, all);
+};
+
+/**
+ * detailsHash -> fund address of the past NAV entry, per chain — what the NAV
+ * simulation needs from the all-funds method sweep. The sweep walks every
+ * vault on the chain and costs seconds; this map is a few KB of essentially
+ * append-only history, so serving last session's copy and refreshing behind
+ * it loses nothing but the wait.
+ */
+const NAV_ENTRY_MAP_KEY = "simulate.navEntryMap";
+
+type NavEntryMaps = Record<string, Record<string, string>>;
+
+export const readCachedNavEntryMap = (
+  chainId: string,
+): Record<string, string> | null =>
+  read<NavEntryMaps>(NAV_ENTRY_MAP_KEY)?.[chainId] ?? null;
+
+/**
+ * A vault's most recent NAV update, methods included. The on-chain read of the
+ * full history takes seconds on a vault that has settled many times, and the
+ * only thing the overview needs from it early is the current method list —
+ * so last session's final update is served first and the fresh read replaces
+ * it. Methods only change when an update executes, so the stale copy is
+ * almost always already right; when it is not, the simulation re-keys off the
+ * fresh methods on its own.
+ *
+ * BigInts survive through the app's tagged-string round trip.
+ */
+const LAST_NAV_UPDATE_KEY = "fund.lastNavUpdate";
+
+type LastNavUpdates = Record<string, unknown>;
+
+const lastNavUpdateKey = (chainId: string, address: string) =>
+  `${chainId}:${address.toLowerCase()}`;
+
+export const readCachedLastNavUpdate = (
+  chainId: string,
+  address: string,
+): INAVUpdate | null => {
+  const entry = read<LastNavUpdates>(LAST_NAV_UPDATE_KEY)?.[
+    lastNavUpdateKey(chainId, address)
+  ];
+  if (!entry) return null;
+  try {
+    // The storage layer has already revived tagged BigInts, so the deep copy
+    // has to tag them again on the way through.
+    return JSON.parse(JSON.stringify(entry, stringifyBigInt), parseBigInt);
+  } catch {
+    return null;
+  }
+};
+
+export const writeCachedLastNavUpdate = (
+  chainId: string,
+  address: string,
+  update: INAVUpdate,
+): void => {
+  try {
+    const all = read<LastNavUpdates>(LAST_NAV_UPDATE_KEY) ?? {};
+    all[lastNavUpdateKey(chainId, address)] = JSON.parse(
+      JSON.stringify(update, stringifyBigInt),
+    );
+    write(LAST_NAV_UPDATE_KEY, all);
+  } catch {
+    // An unserializable update just goes uncached.
+  }
+};
+
+export const writeCachedNavEntryMap = (
+  chainId: string,
+  map: Record<string, string>,
+): void => {
+  const all = read<NavEntryMaps>(NAV_ENTRY_MAP_KEY) ?? {};
+  all[chainId] = map;
+  write(NAV_ENTRY_MAP_KEY, all);
 };

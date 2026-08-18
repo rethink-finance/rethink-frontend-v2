@@ -7,6 +7,7 @@ import {
   fetchAllSubgraphUserFlows,
   type FundFlow,
 } from "~/services/subgraph";
+import { SUBGRAPH_FLOW_COVERAGE } from "~/types/enums/subgraph";
 import { fetchExplorerUserFlows } from "~/services/vaultFlows";
 import {
   fetchFundDailyNavSnapshotsAction,
@@ -326,18 +327,31 @@ export const fetchPortfolioFlows = async (
       )
       .flatMap((result) => result.value);
 
+  // The explorer walk is the expensive feed — Base's blockscout pages at
+  // multiple seconds each — so it only runs where the subgraph cannot stand
+  // alone. On a covered chain it returns the identical rows anyway, and if the
+  // subgraph errors there, the walk steps back in as that chain's fallback.
+  const explorerFor = (chainId: ChainId) =>
+    explorerChainFlows(
+      chainId,
+      account,
+      vaultsByChain[chainId] ?? [],
+      etherscanApiKey,
+    );
+
   const [explorerFlows, subgraphFlows] = await Promise.all([
     settle(
+      chainIds
+        .filter((chainId) => !SUBGRAPH_FLOW_COVERAGE.has(chainId))
+        .map(explorerFor),
+    ),
+    settle(
       chainIds.map((chainId) =>
-        explorerChainFlows(
-          chainId,
-          account,
-          vaultsByChain[chainId] ?? [],
-          etherscanApiKey,
-        ),
+        SUBGRAPH_FLOW_COVERAGE.has(chainId)
+          ? subgraphChainFlows(chainId, account).catch(() => explorerFor(chainId))
+          : subgraphChainFlows(chainId, account),
       ),
     ),
-    settle(chainIds.map((chainId) => subgraphChainFlows(chainId, account))),
   ]);
 
   // One transaction calls the vault once, so a hash and an operation name
@@ -363,25 +377,50 @@ export const fetchPortfolioFlows = async (
   );
 };
 
+/** A vault the wallet holds, with everything known before the flows arrive. */
+interface HeldVault {
+  fund: IFund;
+  shares: bigint;
+  valueRaw: bigint;
+  prices: PricePoint[];
+  lastSettlement: number;
+}
+
 /**
- * Assembles one position: balance from the chain, price history from the
- * backend, cost from the flows.
+ * The fast half of a position: balance from the chain, price history from the
+ * backend. Nothing here needs the flows, so the whole scan runs while they are
+ * still being fetched.
  */
-export const buildPosition = async (
+const scanHeldVault = async (
   fund: IFund,
   account: string,
-  flows: PortfolioFlow[],
-): Promise<PortfolioPosition | undefined> => {
+): Promise<HeldVault | undefined> => {
   const held = await fetchPosition(fund, account);
   if (!held) return undefined;
 
+  const shares = toNumber(held.shares, fund.fundToken?.decimals ?? 18);
+  const value = toNumber(held.valueRaw, fund.baseToken?.decimals ?? 18);
+
+  const series = await fetchPriceSeries(fund);
+  const prices = calibrateToPosition(series.prices, shares, value);
+
+  return { fund, ...held, prices, lastSettlement: series.lastSettlement };
+};
+
+/**
+ * The slow half: what the flows say the position cost. With no flows yet, the
+ * cost figures stay absent and the history reads as the current balance held
+ * throughout — the honest reading of "balance known, deposits not yet".
+ */
+const assemblePosition = (
+  held: HeldVault,
+  flows: PortfolioFlow[],
+): PortfolioPosition => {
+  const { fund } = held;
   const baseDecimals = fund.baseToken?.decimals ?? 18;
   const shareDecimals = fund.fundToken?.decimals ?? 18;
   const shares = toNumber(held.shares, shareDecimals);
   const value = toNumber(held.valueRaw, baseDecimals);
-
-  const series = await fetchPriceSeries(fund);
-  const prices = calibrateToPosition(series.prices, shares, value);
 
   const vaultFlows = flows.filter(
     (flow) =>
@@ -390,7 +429,7 @@ export const buildPosition = async (
   );
   const { deltas, netInvested, canMeasure } = measureFlows(
     vaultFlows,
-    prices,
+    held.prices,
     baseDecimals,
     shareDecimals,
   );
@@ -406,9 +445,9 @@ export const buildPosition = async (
     // measure a return against, so the figure is withheld rather than invented.
     netInvested: hasCost ? netInvested : undefined,
     returnPercent: hasCost ? (value / netInvested - 1) * 100 : undefined,
-    prices,
+    prices: held.prices,
     history: buildShareBalanceHistory(shares, deltas),
-    lastSettlement: series.lastSettlement,
+    lastSettlement: held.lastSettlement,
   };
 };
 
@@ -418,21 +457,37 @@ export const buildPosition = async (
  * The scan is one reader call per vault, fanned out with allSettled so a dead
  * RPC only costs its own chain. Vaults the wallet has nothing in drop out
  * before any of the expensive history work is done for them.
+ *
+ * Nothing waits for the slowest feed. `onBalances` fires with cost-less
+ * positions as each held vault answers — one hanging RPC on some other chain
+ * cannot hold back the rows the wallet actually has — and once more when the
+ * scan completes, so an empty portfolio also gets its answer. `onFlows` fires
+ * the moment the flows are in, which can be before or after the scan ends.
+ * The returned positions carry the full cost figures.
  */
 export const loadPortfolioPositions = async (
   account: string,
   // Read by the caller at setup: this runs from a watcher, outside any Nuxt
   // instance, where useRuntimeConfig cannot be called.
   etherscanApiKey = "",
+  onBalances?: (positions: PortfolioPosition[], scanDone: boolean) => void,
+  onFlows?: (flows: PortfolioFlow[]) => void,
 ): Promise<{ positions: PortfolioPosition[]; flows: PortfolioFlow[]; scanned: number }> => {
   const fundsStore = useFundsStore();
 
-  // The discover fetch hydrates chainFunds from cache instantly and revalidates
-  // behind it; reuse it rather than duplicating that logic.
+  // The discover fetch hydrates chainFunds from the localStorage cache
+  // synchronously, before it touches the network, then revalidates each chain
+  // behind that. The scan only needs addresses and token metadata, which the
+  // cache already has — so it runs against the cached list rather than waiting
+  // the several seconds the revalidation takes, and only a truly cold cache
+  // waits for the network. The page reads quotes from the store rather than
+  // from the fund references captured here, so the fresh objects still reach
+  // it when the revalidation lands.
   if (!fundsStore.funds.length) {
-    await fundsStore.fetchFunds().catch((error) => {
+    const revalidation = fundsStore.fetchFunds().catch((error) => {
       console.error("Failed fetching funds for portfolio", error);
     });
+    if (!fundsStore.funds.length) await revalidation;
   }
 
   const funds: IFund[] = fundsStore.funds;
@@ -444,30 +499,46 @@ export const loadPortfolioPositions = async (
       chainFunds.map((fund) => fund.address),
     ]),
   );
-  const flows = await fetchPortfolioFlows(
+  const flowsPromise = fetchPortfolioFlows(
     vaultsByChain,
     account,
     etherscanApiKey,
-  );
-
-  let scanned = 0;
-  const results = await Promise.allSettled(
-    funds.map(async (fund) => {
-      const position = await buildPosition(fund, account, flows);
-      scanned += 1;
-      return position;
-    }),
-  );
+  )
+    .catch((error) => {
+      console.error("Failed fetching portfolio flows", error);
+      return [] as PortfolioFlow[];
+    })
+    .then((flows) => {
+      onFlows?.(flows);
+      return flows;
+    });
 
   // Left unsorted: the order is by dollar value, which is not known until the
   // vault metadata lands — the caller sorts once it is.
-  const positions = results
-    .filter(
-      (result): result is PromiseFulfilledResult<PortfolioPosition | undefined> =>
-        result.status === "fulfilled",
-    )
-    .map((result) => result.value)
-    .filter((position): position is PortfolioPosition => Boolean(position));
+  const heldVaults: HeldVault[] = [];
+  const emitBalances = (scanDone: boolean) =>
+    onBalances?.(
+      heldVaults.map((held) => assemblePosition(held, [])),
+      scanDone,
+    );
 
-  return { positions, flows, scanned };
+  await Promise.allSettled(
+    funds.map(async (fund) => {
+      const held = await scanHeldVault(fund, account);
+      if (held) {
+        heldVaults.push(held);
+        emitBalances(false);
+      }
+    }),
+  );
+  // Fired even when nothing was held: "no positions" is an answer too, and it
+  // should not wait for the flows.
+  emitBalances(true);
+
+  const flows = await flowsPromise;
+  return {
+    positions: heldVaults.map((held) => assemblePosition(held, flows)),
+    flows,
+    scanned: funds.length,
+  };
 };

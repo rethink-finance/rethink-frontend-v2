@@ -35,9 +35,32 @@ export interface ParsedNavUpdateDto extends Omit<NavUpdateDto, "totalNAV" | "tot
   navParts: Record<string, any>;
 }
 
+/**
+ * NAV updates only change when a vault settles and snapshots once a day, but
+ * one page visit asks for them several times over — the chart, the monthly
+ * returns table and the NAV data action all fetch independently, and each
+ * backend round trip costs seconds. Answers are shared for a while instead:
+ * concurrent callers join the in-flight request, and navigating back within
+ * the window is free. Failures are not cached.
+ */
+const NAV_DATA_TTL_MS = 15 * 60 * 1000;
+const navDataCache = new Map<string, { at: number; promise: Promise<any> }>();
+
+const shareNavData = <T>(key: string, load: () => Promise<T>): Promise<T> => {
+  const hit = navDataCache.get(key);
+  if (hit && Date.now() - hit.at < NAV_DATA_TTL_MS) return hit.promise;
+
+  const promise = load();
+  navDataCache.set(key, { at: Date.now(), promise });
+  promise.catch(() => navDataCache.delete(key));
+  return promise;
+};
+
 export function fetchFundNavUpdatesAction(fundChainId: ChainId, fundAddress: string): Promise<ParsedNavUpdateDto[]> {
-  return useActionState(`fetchFundNavUpdates_${fundChainId}_${fundAddress}`, () =>
-    fetchFundNavUpdates(fundChainId, fundAddress),
+  return shareNavData(`updates-${fundChainId}-${fundAddress}`, () =>
+    useActionState(`fetchFundNavUpdates_${fundChainId}_${fundAddress}`, () =>
+      fetchFundNavUpdates(fundChainId, fundAddress),
+    ),
   );
 }
 
@@ -59,8 +82,10 @@ export interface ParsedDailyNavSnapshotDto extends Omit<DailyNavSnapshotDto, "to
 }
 
 export function fetchFundDailyNavSnapshotsAction(fundChainId: ChainId, fundAddress: string): Promise<ParsedDailyNavSnapshotDto[]> {
-  return useActionState(`fetchFundDailyNavSnapshots_${fundChainId}_${fundAddress}`, () =>
-    fetchFundDailyNavSnapshots(fundChainId, fundAddress),
+  return shareNavData(`snapshots-${fundChainId}-${fundAddress}`, () =>
+    useActionState(`fetchFundDailyNavSnapshots_${fundChainId}_${fundAddress}`, () =>
+      fetchFundDailyNavSnapshots(fundChainId, fundAddress),
+    ),
   );
 }
 
