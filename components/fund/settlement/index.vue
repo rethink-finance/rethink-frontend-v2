@@ -1,16 +1,13 @@
 <template>
   <div class="fund_settlement brand_card">
-    <div class="brand_card__head">
-      <div class="brand_card__eyebrow">
-        Manage deposits
-      </div>
-      <UiButtonSwitchItems
-        v-model="selectedActionButtonValue"
-        :items="selectItems"
-        class="fund_settlement__buttons"
-        @update:model-value="selectActionButton"
-      />
-    </div>
+    <!-- The Deposit/Redeem switch IS the card's title: full width, its labels
+         set like section eyebrows. -->
+    <UiButtonSwitchItems
+      v-model="selectedActionButtonValue"
+      :items="selectItems"
+      class="fund_settlement__buttons"
+      @update:model-value="selectActionButton"
+    />
     <div class="fund_settlement__card_boxes">
       <div v-if="selectedActionButtonValue">
         <!-- The settlement cycle is handed to the form rather than drawn after
@@ -125,6 +122,8 @@ export default {
      the middle — rather than the app's usual spaced tab group. Scoped here so
      the shared switch keeps its own look everywhere else it is used. */
   &__buttons {
+    width: 100%;
+    margin-bottom: 1.125rem;
     padding: 0;
     gap: 0;
     background-color: transparent;
@@ -135,12 +134,13 @@ export default {
     :deep(.v-btn) {
       min-width: 0;
       height: auto;
-      padding: 0.625rem 1.625rem;
+      padding: 0.625rem 1rem;
       border-radius: 0;
-      font-size: 14px;
+      font-family: $font-mono;
+      font-size: 13px;
       font-weight: 600;
-      letter-spacing: normal;
-      text-transform: none;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
 
       + .v-btn {
         border-left: 1px solid $color-line-2;
