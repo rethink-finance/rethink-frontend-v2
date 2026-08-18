@@ -54,23 +54,32 @@ export const fetchActivationState = async (
     GovernableFund.abi as any,
     fundAddress,
   );
-  const settings: Record<string, any> = await fundContract.methods
-    .getFundSettings()
-    .call();
-
-  let modifierOwner: string | null = null;
-  if (rolesModifierAddress) {
-    try {
-      const rolesContract = web3Store.getCustomContract(
-        chainId,
-        (RolesFullV2 as any).abi,
-        rolesModifierAddress,
-      );
-      modifierOwner = await rolesContract.methods.owner().call();
-    } catch (e) {
-      console.error("Failed reading roles modifier owner", e);
-    }
-  }
+  // Both reads through callWithRetry, and side by side: the owner lookup needs
+  // nothing from the settings, and a bare .call() has neither a timeout nor a
+  // second RPC to fall to — on a chain whose endpoints stall (HyperEVM meters
+  // every request against one quota) that is the difference between a page
+  // that paints and one that hangs on a single provider.
+  const [settings, modifierOwner] = await Promise.all([
+    web3Store.callWithRetry(chainId, () =>
+      fundContract.methods.getFundSettings().call(),
+    ) as Promise<Record<string, any>>,
+    (async (): Promise<string | null> => {
+      if (!rolesModifierAddress) return null;
+      try {
+        const rolesContract = web3Store.getCustomContract(
+          chainId,
+          (RolesFullV2 as any).abi,
+          rolesModifierAddress,
+        );
+        return (await web3Store.callWithRetry(chainId, () =>
+          rolesContract.methods.owner().call(),
+        )) as string;
+      } catch (e) {
+        console.error("Failed reading roles modifier owner", e);
+        return null;
+      }
+    })(),
+  ]);
 
   const governor = settings.governor as string;
   const safe = settings.safe as string;

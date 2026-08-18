@@ -13,6 +13,7 @@ import {
   fetchGovernorGovernanceData,
   resolveFundGovernorAddress,
 } from "~/composables/fund/resolveFundGovernor";
+import { fetchBackendFundMetadata } from "~/services/backend/fund";
 import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -37,11 +38,20 @@ export const fetchFundMetaDataAction = async (
       rethinkReaderContract,
     );
 
-    const fundMetaData = await web3Store.callWithRetry(
+    // Tier 1: the backend assembles the whole dependent chain below — reader
+    // struct, resolved governor, that governor's governance data, the live
+    // governance token supply, the factory flag — and serves it as one answer.
+    // Soft-fails to null, so everything after it stays exactly as it was.
+    const backendSnapshot = await fetchBackendFundMetadata(
       fundChainId,
-      () =>
-        rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
+      fundAddress,
     );
+
+    const fundMetaData =
+      backendSnapshot?.fundMetaData ??
+      (await web3Store.callWithRetry(fundChainId, () =>
+        rethinkReaderContract.methods.getFundMetaData(fundAddress).call(),
+      ));
     console.log("fundMetaData", fundMetaData);
     const {
       startTime,
@@ -74,12 +84,14 @@ export const fetchFundMetaDataAction = async (
     // After Roles v2 activation settings.governor is the Safe, so the reader
     // aimed its governance staticcalls at a Safe and handed back a zeroed
     // struct. Resolve the real governor and read governance off that instead.
-    const governorAddress = await resolveFundGovernorAddress(
-      fundChainId,
-      parsedFundSettings,
-    );
-    let governanceData = fundGovernanceData;
+    // Two more serial round trips on the RPC path; already folded in on the
+    // backend one.
+    const governorAddress =
+      backendSnapshot?.governorAddress ??
+      (await resolveFundGovernorAddress(fundChainId, parsedFundSettings));
+    let governanceData = backendSnapshot?.governanceData ?? fundGovernanceData;
     if (
+      !backendSnapshot &&
       governorAddress &&
       governorAddress.toLowerCase() !==
         (parsedFundSettings.governor ?? "").toLowerCase()
@@ -109,10 +121,12 @@ export const fetchFundMetaDataAction = async (
       parsedFundSettings?.governanceToken ?? "",
     );
     const fundGovernanceTokenSupplyFixed =
-      await web3Store.callWithRetry(
-        fundChainId,
-        () => fundGovernanceTokenContract.methods.totalSupply().call(),
-      );
+      backendSnapshot
+        ? BigInt(backendSnapshot.governanceTokenSupply || "0")
+        : await web3Store.callWithRetry(
+          fundChainId,
+          () => fundGovernanceTokenContract.methods.totalSupply().call(),
+        );
     if (fundGovernanceTokenSupply !== fundGovernanceTokenSupplyFixed)
       console.warn(
         "[MISMATCH] fundGovernanceTokenSupply: ",
@@ -264,13 +278,24 @@ export const fetchFundMetaDataAction = async (
       fund,
     );
 
-    fundStore.fetchGovernableFundFactoryVersion(fundChainId, fundAddress).then(
-      version => {
-        if (fundStore.chainFunds[fundChainId]?.[fundAddress]) {
-          fundStore.chainFunds[fundChainId][fundAddress].fundFactoryContractV2Used = version === "v2"
-        }
-      },
-    )
+    // The backend already knows which factory registered this vault, so on that
+    // path the flag is set before the fund is stored rather than by a probe
+    // that lands afterwards — the curator Vault Profile page renders off this
+    // flag, and its "needs a Roles V2 vault" branch is what a late answer shows
+    // in the meantime.
+    if (backendSnapshot) {
+      fund.fundFactoryContractV2Used = backendSnapshot.factoryVersion === "v2";
+      const stored = fundStore.chainFunds[fundChainId]?.[fundAddress];
+      if (stored) stored.fundFactoryContractV2Used = fund.fundFactoryContractV2Used;
+    } else {
+      fundStore.fetchGovernableFundFactoryVersion(fundChainId, fundAddress).then(
+        version => {
+          if (fundStore.chainFunds[fundChainId]?.[fundAddress]) {
+            fundStore.chainFunds[fundChainId][fundAddress].fundFactoryContractV2Used = version === "v2"
+          }
+        },
+      )
+    }
     return fund;
   } catch (error) {
     console.error("Error in promises: ", error, "fund: ", fundAddress);

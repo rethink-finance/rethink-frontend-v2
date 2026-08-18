@@ -91,7 +91,7 @@
 
       <div
         v-if="areProposalsUnavailable"
-        class="brand_note brand_note--warning gov_card__note"
+        class="brand_note brand_note--warning brand_note--compact gov_card__note"
       >
         <Icon
           icon="material-symbols:warning-outline"
@@ -99,8 +99,7 @@
         />
         <div class="brand_note__body">
           <div class="brand_note__text">
-            Proposals could not be refreshed for this network, so this list may
-            be incomplete or out of date.
+            Proposals could not be refreshed — this list may be out of date.
           </div>
         </div>
       </div>
@@ -144,7 +143,7 @@
 
       <div
         v-if="areDelegatesUnavailable"
-        class="brand_note brand_note--warning gov_card__note"
+        class="brand_note brand_note--warning brand_note--compact gov_card__note"
       >
         <Icon
           icon="material-symbols:warning-outline"
@@ -152,8 +151,7 @@
         />
         <div class="brand_note__body">
           <div class="brand_note__text">
-            Delegates could not be loaded for this network, so this list may be
-            incomplete — it does not mean nobody has delegated.
+            Delegates could not be loaded — this list may be incomplete.
           </div>
         </div>
       </div>

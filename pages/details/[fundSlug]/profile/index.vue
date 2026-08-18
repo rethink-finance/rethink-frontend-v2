@@ -73,7 +73,7 @@
             variant="text"
             color="secondary"
             :disabled="!isDirty || isSubmitting"
-            @click="resetFromChain"
+            @click="resetFromChain(true)"
           >
             Discard
           </v-btn>
@@ -97,6 +97,7 @@ import { useSettingsStore } from "~/store/settings/settings.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import {
   buildCuratorUpdateSettingsCalldata,
+  fetchLiveFundMetadata,
   fetchLiveFundSettingsState,
   sendRoleExecution,
   simulateRoleExecution,
@@ -127,6 +128,10 @@ const roleModAddress = ref("");
 const needsActivation = ref(false);
 // The metadata as last loaded from chain, for dirty checking and merging.
 const savedMetadata = ref<Record<string, any>>({});
+// Whether that chain read has landed. Until it does the form is showing the
+// store's copy, which is the same JSON but cannot be compared against itself —
+// everything would read as edited.
+const hasChainMetadata = ref(false);
 
 // The metadata keys curator mode may write. plannedSettlementPeriod lives in
 // the same JSON but is governance-tagged in the create flow, so it renders
@@ -208,6 +213,7 @@ const fieldByKey = (key: string): IField =>
   editableFields.find((field) => field.key === key) as IField;
 
 const isDirty = computed(() => {
+  if (!hasChainMetadata.value) return false;
   if ((photoField.value ?? "") !== (savedMetadata.value.photoUrl ?? "")) {
     return true;
   }
@@ -224,18 +230,63 @@ const parseMetadata = (raw: string): Record<string, any> => {
   }
 };
 
-const resetFromChain = async () => {
+const applyMetadata = (metadata: Record<string, any>) => {
+  photoField.value = metadata.photoUrl ?? "";
+  for (const key of EDITABLE_KEYS) {
+    fieldByKey(key).value = metadata[key] ?? "";
+  }
+  settlementField.value = String(metadata.plannedSettlementPeriod ?? "0");
+};
+
+const formSnapshot = () =>
+  JSON.stringify([
+    photoField.value ?? "",
+    ...EDITABLE_KEYS.map((key) => fieldByKey(key).value ?? ""),
+  ]);
+
+/** What the form was filled with before the user could touch it. */
+let seededSnapshot: string | null = null;
+
+/**
+ * Paints the form from the metadata the vault store already parsed, so the
+ * fields are there on the first frame instead of behind a skeleton waiting on
+ * an RPC round trip. Same JSON the chain read below returns — the store built
+ * it from this vault's own fundMetadata — it is just already in memory.
+ */
+const seedFromStore = () => {
+  applyMetadata({
+    photoUrl: fund?.photoUrl,
+    description: fund?.description,
+    strategistName: fund?.strategistName,
+    strategistUrl: fund?.strategistUrl,
+    oivChatUrl: fund?.oivChatUrl,
+    plannedSettlementPeriod: fund?.plannedSettlementPeriod,
+  });
+  seededSnapshot = formSnapshot();
+  isLoading.value = false;
+};
+
+/**
+ * The authoritative read, in one call rather than the four the full settings
+ * state costs — nothing rendered here needs the settings struct or the fee
+ * periods, and saveChanges re-reads all of it live anyway.
+ *
+ * Runs behind the seeded form and only overwrites fields the user has not
+ * touched since, so a slow RPC can never yank a half-typed description away.
+ * `force` is for Discard and for the reload after a save, where replacing what
+ * is on screen is the whole point.
+ */
+const resetFromChain = async (force = false) => {
   if (!fund?.address) return;
-  isLoading.value = true;
   try {
-    const live = await fetchLiveFundSettingsState(fund.chainId, fund.address);
-    const metadata = parseMetadata(live.fundMetadata);
+    const metadata = parseMetadata(
+      await fetchLiveFundMetadata(fund.chainId, fund.address),
+    );
     savedMetadata.value = metadata;
-    photoField.value = metadata.photoUrl ?? "";
-    for (const key of EDITABLE_KEYS) {
-      fieldByKey(key).value = metadata[key] ?? "";
+    if (force || seededSnapshot === null || formSnapshot() === seededSnapshot) {
+      applyMetadata(metadata);
     }
-    settlementField.value = String(metadata.plannedSettlementPeriod ?? "0");
+    hasChainMetadata.value = true;
   } catch (error: any) {
     console.error("Failed loading vault profile", error);
     toastStore.errorToast(
@@ -316,7 +367,7 @@ const saveChanges = async () => {
         } else {
           toastStore.errorToast("The vault profile update failed.");
         }
-        resetFromChain();
+        resetFromChain(true);
       })
       .on("error", (error: any) => {
         console.error(error);
@@ -338,6 +389,7 @@ watch(
   () => fund?.address,
   () => {
     if (!fund?.address) return;
+    seedFromStore();
     resetFromChain();
     refreshActivationState();
   },

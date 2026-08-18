@@ -334,6 +334,30 @@ export interface ILiveFundSettingsState {
   feeManagePeriod: string;
 }
 
+/**
+ * Just the metadata JSON, in one call rather than the four
+ * fetchLiveFundSettingsState makes.
+ *
+ * For rendering only. Anything building updateSettings calldata still needs the
+ * full live state — and re-reads it at submit time regardless, since a struct
+ * fetched when a form was opened is exactly the stale echo the pinning above
+ * rejects.
+ */
+export const fetchLiveFundMetadata = async (
+  chainId: ChainId,
+  fundAddress: string,
+): Promise<string> => {
+  const web3Store = useWeb3Store();
+  const fundContract = web3Store.getCustomContract(
+    chainId,
+    GovernableFund.abi as any,
+    fundAddress,
+  );
+  return (await web3Store.callWithRetry(chainId, () =>
+    fundContract.methods.fundMetadata().call(),
+  )) as string;
+};
+
 export const fetchLiveFundSettingsState = async (
   chainId: ChainId,
   fundAddress: string,

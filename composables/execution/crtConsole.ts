@@ -12,7 +12,12 @@ const crtErrors = (rows: [string, CrtError][]): Record<string, CrtError> =>
 
 export const CRT = {
   CHAIN_HEX: "0x3e7",
-  RPCS: ["https://rpc.hyperliquid.xyz/evm", "https://rpc.hypurrscan.io"],
+  // Same order networksMap.ts vets for this chain: the official endpoint last,
+  // because it answers block lookups with "More than 3000 archived blocks
+  // queried in one day" and meters everything else against the same quota.
+  // All three return an identical revert payload (error.data as a hex string),
+  // so the decoding in crtSimulate reads the same whichever one answers.
+  RPCS: ["https://rpc.purroofgroup.com", "https://rpc.hypurrscan.io", "https://rpc.hyperliquid.xyz/evm"],
   INFO_API: "https://api.hyperliquid.xyz/info",
   EXPLORER: "https://hyperevmscan.io",
   ADDR: {
@@ -100,7 +105,11 @@ async function rpc(method: string, params: any[]): Promise<any> {
     try {
       const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: rpcId++, method, params }) });
       const j = await r.json();
-      if (j.error) { const e: any = new Error(j.error.message); e.data = j.error.data; e.rpcError = true; throw e; }
+      // A revert carries a payload, and a revert IS the answer — asking a
+      // second RPC would only get the same one. Errors with no payload are the
+      // endpoint failing rather than the chain answering (quota, method not
+      // served), so those fall through to the next URL.
+      if (j.error) { const e: any = new Error(j.error.message); e.data = j.error.data; e.rpcError = e.data !== undefined; throw e; }
       return j.result;
     } catch (e: any) { if (e.rpcError) throw e; lastErr = e; }
   }

@@ -1,4 +1,5 @@
 import { Web3 } from "web3";
+import { fetchExplorerLogs } from "./explorerLogs";
 import { ERC20Votes } from "~/assets/contracts/ERC20Votes";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ChainId } from "~/types/enums/chain_id";
@@ -38,10 +39,12 @@ const topicToAddress = (topic: string): string =>
  * There is no cheap way to bound this range: the token's deployment block is
  * only reachable through archive state (the public RPCs prune it), and chunked
  * scanning is hopeless at these chain heights — Arbitrum alone is ~490M blocks,
- * so a 10k-block cap would mean ~49k requests. So we ask each configured RPC
- * for the whole range and take the first one that obliges. As of 2026-08-10
- * that is `arb1.arbitrum.io/rpc` on Arbitrum and `polygon.gateway.tenderly.co`
- * on Polygon; HyperEVM still has no configured RPC that will serve it.
+ * so a 10k-block cap would mean ~49k requests. So we ask the block explorer
+ * first, which serves the whole history unbounded, and fall back to asking each
+ * configured RPC for the full range and taking the first that obliges. As of
+ * 2026-08-10 that is `arb1.arbitrum.io/rpc` on Arbitrum and
+ * `polygon.gateway.tenderly.co` on Polygon; on HyperEVM every RPC caps the
+ * range, so the explorer is the only path that answers there.
  */
 const fetchDelegateChangedLogs = async (
   chainId: ChainId,
@@ -50,6 +53,16 @@ const fetchDelegateChangedLogs = async (
   const web3Store = useWeb3Store();
   const rpcUrls = web3Store.networkRpcUrls(chainId);
   let lastError: unknown;
+
+  try {
+    return await fetchExplorerLogs(chainId, votingContract, DELEGATE_CHANGED_TOPIC);
+  } catch (error: any) {
+    console.debug(
+      "Explorer log history unavailable, falling back to RPC:",
+      error?.message ?? error,
+    );
+    lastError = error;
+  }
 
   for (const rpcUrl of rpcUrls) {
     try {

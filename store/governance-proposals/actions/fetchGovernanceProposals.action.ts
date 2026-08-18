@@ -1,10 +1,12 @@
 import { useGovernanceProposalsStore } from "../governance_proposals.store";
 import { fetchBackendProposals } from "~/services/backend/governance";
+import { fetchOnChainProposals } from "~/services/onchain/proposals";
 import { fetchSubgraphGovernorProposals } from "~/services/subgraph";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ChainId } from "~/types/enums/chain_id";
 import { ClockMode } from "~/types/enums/clock_mode";
 import { DelegatesSource } from "~/types/enums/delegates_source";
+import { hasRethinkSubgraph } from "~/types/enums/subgraph";
 import { _mapSubgraphProposalToProposal } from "~/types/helpers/mappers";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { useBlockTimeStore } from "~/store/web3/blockTime.store";
@@ -70,16 +72,64 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
     governanceProposalStore.storeProposals(fund.chainId, fund.address, mappedProposals);
     return mappedProposals;
   }
-  setProposalsSource(fund.chainId, fund.address, DelegatesSource.Subgraph);
+  // Tier 2: the subgraph, where one is deployed. HyperEVM has none, so there
+  // it is skipped rather than tried and reported as a failure.
+  if (hasRethinkSubgraph(fund.chainId)) {
+    setProposalsSource(fund.chainId, fund.address, DelegatesSource.Subgraph);
+    try {
+      return await fetchProposalsFromSubgraph(
+        fund,
+        blockTimeContext,
+        roleModAddress,
+      );
+    } catch (error) {
+      console.warn(
+        "Proposals subgraph unavailable, falling back to on-chain logs:",
+        error,
+      );
+    }
+  }
+
+  // Tier 3: the governor's own event log. Slower than either index, but it is
+  // the only tier that can distinguish "this vault has never been proposed
+  // against" from "we could not read its history" — which is the whole reason
+  // the note above the table exists.
   try {
-    return await fetchProposalsFromSubgraph(
-      fund,
-      blockTimeContext,
-      roleModAddress,
+    const onChain = await fetchOnChainProposals(
+      fund.chainId,
+      fund.governorAddress,
+      fund?.governanceToken?.address ?? fund.address,
     );
+    setProposalsSource(fund.chainId, fund.address, DelegatesSource.OnChain);
+
+    const mappedProposals = await Promise.all(
+      onChain.proposals.map((proposal: any) =>
+        _mapSubgraphProposalToProposal(
+          proposal,
+          BigInt(
+            onChain.points[proposal.proposalId]?.totalSupply || "0",
+          ) as unknown as number,
+          blockTimeContext,
+          fund?.governanceToken?.decimals || 18,
+          BigInt(onChain.points[proposal.proposalId]?.quorumNumerator || "0"),
+          BigInt(onChain.quorumDenominator || "1"),
+          blockTimeStore.getTimestampForBlock,
+          fund?.clockMode?.mode as ClockMode,
+          roleModAddress ?? "",
+          fund?.safeAddress ?? "",
+          fund?.address ?? "",
+        ),
+      ),
+    );
+    governanceProposalStore.storeProposals(
+      fund.chainId,
+      fund.address,
+      mappedProposals,
+    );
+    return mappedProposals;
   } catch (error) {
-    // Neither backend nor subgraph could answer. Whatever localForage
-    // hydrated stays visible; the page shows a "couldn't refresh" note.
+    // No tier could answer. Whatever localForage hydrated stays visible; the
+    // page shows a "couldn't refresh" note.
     setProposalsSource(fund.chainId, fund.address, DelegatesSource.Unavailable);
     throw error;
   }
