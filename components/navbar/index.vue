@@ -420,6 +420,7 @@ const onClickConnect = async () => {
       font-size: 10px;
       letter-spacing: 0.1em;
       line-height: 1.4;
+      text-transform: uppercase;
       color: $color-steel-blue;
       border: 1px solid $color-line-2;
       border-radius: $default-border-radius;

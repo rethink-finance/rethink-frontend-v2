@@ -15,26 +15,62 @@
     </div>
 
     <div v-else-if="view === 'pie'" class="composition__pie_layout">
-      <svg viewBox="0 0 200 200" class="composition__donut">
-        <path
+      <div class="composition__donut_wrap">
+        <svg viewBox="0 0 200 200" class="composition__donut">
+          <path
+            v-for="row in rows"
+            :key="row.name"
+            :d="row.path"
+            :fill="row.dot"
+            fill-rule="evenodd"
+            class="composition__slice"
+            :class="{
+              'composition__slice--dim': hoveredName && hoveredName !== row.name,
+            }"
+            @mouseenter="hoveredName = row.name"
+            @mouseleave="hoveredName = null"
+          />
+        </svg>
+        <!-- The donut hole doubles as the readout: the vault total at rest,
+             the hovered slice's identity and value while pointing. -->
+        <div class="composition__center">
+          <template v-if="hoveredRow">
+            <div class="composition__center_name">
+              {{ hoveredRow.name }}
+            </div>
+            <div class="composition__center_share">
+              {{ hoveredRow.share }}
+            </div>
+            <div class="composition__center_amount">
+              {{ hoveredRow.amount }}
+            </div>
+          </template>
+          <template v-else>
+            <div class="composition__center_label">
+              Total
+            </div>
+            <div class="composition__center_value">
+              {{ totalFormatted }}
+            </div>
+          </template>
+        </div>
+      </div>
+      <div class="composition__legend">
+        <div
           v-for="row in rows"
           :key="row.name"
-          :d="row.path"
-          :fill="row.dot"
-          fill-rule="evenodd"
-        />
-      </svg>
-      <div class="composition__legend">
-        <div v-for="row in rows" :key="row.name" class="composition__legend_row">
+          class="composition__legend_row"
+          :class="{
+            'composition__legend_row--faded':
+              hoveredName && hoveredName !== row.name,
+          }"
+          @mouseenter="hoveredName = row.name"
+          @mouseleave="hoveredName = null"
+        >
           <span class="composition__dot" :style="{ background: row.dot }" />
           <span class="composition__name">{{ row.name }}</span>
-          <span class="composition__amount">{{ row.amount }}</span>
+          <span class="composition__legend_amount">{{ row.amount }}</span>
           <span class="composition__share">{{ row.share }}</span>
-        </div>
-        <div class="composition__total_row">
-          <span class="composition__total_label">Total</span>
-          <span class="composition__total_value">{{ totalFormatted }}</span>
-          <span class="composition__share composition__share--dim">100.0%</span>
         </div>
       </div>
     </div>
@@ -121,12 +157,29 @@ const VIEW_OPTIONS = [
 ];
 const view = ref("pie");
 
+// One hover state shared by the slices and the legend, so pointing at either
+// highlights both. Keyed by row name; cleared when the view flips.
+const hoveredName = ref<string | null>(null);
+watch(view, () => {
+  hoveredName.value = null;
+});
+const hoveredRow = computed(
+  () => rows.value.find((row) => row.name === hoveredName.value) ?? null,
+);
+
 // The method list is what defines the vault's positions; re-simulate whenever
-// it changes (including the first time it arrives).
+// it changes (including the first time it arrives). Keyed on the methods'
+// content, not the array: the on-chain NAV fetch replaces the array with an
+// identical list a few seconds after the backend one, and re-running the
+// whole simulation for that costs ~26 RPC calls and held this card's
+// placeholder up for twice as long.
 watch(
-  () => fundStore.fundNavMethods,
-  () => {
-    fundStore.simulateCurrentNAV();
+  () =>
+    fundStore.fundNavMethods
+      .map((method) => method.detailsHash ?? "")
+      .join("|"),
+  (methodsKey) => {
+    if (methodsKey) fundStore.simulateCurrentNAV();
   },
   { immediate: true },
 );
@@ -235,12 +288,21 @@ const totalFormatted = computed(() =>
     color: $color-steel-blue;
   }
 
+  /* The donut and legend read as one figure, centred so a wide card splits
+     its spare space evenly around them instead of piling it all on the right.
+     The gap grows a little with the viewport but stays a gap, not a gulf. */
   &__pie_layout {
     display: flex;
     align-items: center;
-    gap: 3rem;
+    justify-content: center;
+    gap: clamp(3rem, 6vw, 6.5rem);
     flex-wrap: wrap;
     padding: 0.5rem 0 0.25rem;
+  }
+
+  &__donut_wrap {
+    position: relative;
+    flex: none;
   }
 
   /* No rotation: the segment paths already start at twelve o'clock. */
@@ -251,18 +313,115 @@ const totalFormatted = computed(() =>
     display: block;
   }
 
+  &__slice {
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+
+    /* Hover reads as "everything else steps back": no movement (the old
+       scale pop also pushed the slice's inner edge into the hole, under the
+       readout) and a gentle dim, so the ring stays calm under the pointer. */
+    &--dim {
+      opacity: 0.55;
+    }
+  }
+
+  /* Sits in the donut hole (inner radius 53/200 ≈ a 111px circle at this
+     size); pointer-events off so it never steals the slices' hover.
+     The hole is a circle, so the readout must fit its inscribed box, not the
+     square: 3.9rem a side leaves an ~85px column, the widest that stays inside
+     the circle at the readout's tallest (three-row hover) state — which is
+     also why every row below clamps to a single line. */
+  &__center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 3.9rem;
+    gap: 0.125rem;
+    pointer-events: none;
+  }
+
+  &__center_label {
+    font-family: $font-mono;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__center_value {
+    font-family: $font-mono;
+    font-size: 14px;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // One line only — a second name line makes the stack tall enough that its
+  // corners leave the hole. The legend alongside carries the full name.
+  &__center_name {
+    max-width: 100%;
+    font-size: 10.5px;
+    line-height: 1.25;
+    color: $color-light-subtitle;
+    @include ellipsis;
+  }
+
+  &__center_share {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__center_amount {
+    max-width: 100%;
+    font-family: $font-mono;
+    font-size: 10px;
+    line-height: 1.3;
+    color: $color-steel-blue;
+    font-variant-numeric: tabular-nums;
+    @include ellipsis;
+  }
+
   &__legend {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    min-width: 260px;
+    gap: 0.25rem;
+    min-width: 220px;
     flex: 1;
+    /* Uncapped, the rows stretch across the whole card on a wide screen and
+       a name sits a metre away from its own percentage. */
+    max-width: 420px;
+  }
+
+  &__legend_amount {
+    font-family: $font-mono;
+    font-size: 12px;
+    color: $color-text-irrelevant;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
 
   &__legend_row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    margin: 0 -0.5rem;
+    border-radius: $default-border-radius;
+    transition: opacity 0.2s ease, background 0.2s ease;
+
+    &:hover {
+      background: $color-hover;
+    }
+
+    &--faded {
+      opacity: 0.65;
+    }
   }
 
   &__dot {

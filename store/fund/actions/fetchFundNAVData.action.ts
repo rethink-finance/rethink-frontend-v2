@@ -10,6 +10,7 @@ import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import type IFund from "~/types/fund";
 import { fetchFundNavUpdatesAction, type ParsedNavUpdateDto, fetchFundDailyNavSnapshotsAction, type ParsedDailyNavSnapshotDto } from "~/store/funds/actions/fetchFundNavUpdates.action";
+import { readCachedLastNavUpdate, writeCachedLastNavUpdate } from "~/store/funds/fundsCache";
 
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
@@ -25,6 +26,22 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     );
     const backendNavUpdatesPromise = fetchFundNavUpdatesAction(fund.chainId, fund.address);
     const backendDailyNavSnapshotsPromise = fetchFundDailyNavSnapshotsAction(fund.chainId, fund.address);
+
+    // The reader call above takes seconds on a vault with a long history, and
+    // the composition's simulation is waiting on the method list it carries.
+    // Serve last session's final update meanwhile — the full fresh history
+    // replaces it below, and a changed method list re-simulates on its own.
+    if (!fund.navUpdates?.length) {
+      const cachedLastUpdate = readCachedLastNavUpdate(
+        fund.chainId,
+        fund.address,
+      );
+      if (cachedLastUpdate) {
+        fund.navUpdates = [cachedLastUpdate];
+        fund.lastNAVUpdateTotalNAV =
+          cachedLastUpdate.totalNAV ?? fund.lastNAVUpdateTotalNAV;
+      }
+    }
 
     let navUpdates = await navUpdatesPromise;
     // console.log("FUND NAV DATA", navUpdates);
@@ -55,10 +72,37 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     }
     const lastNavUpdate = navUpdates[navUpdates.length - 1];
 
+    // Simulated values live on the method objects themselves, and any earlier
+    // round — one run against the cache-hydrated update above — wrote them
+    // there. Replacing the array would throw that work away and the identical
+    // method list would not re-simulate, so the values are carried across by
+    // detailsHash before the swap.
+    const previousEntries = new Map(
+      (fund.navUpdates ?? [])
+        .flatMap((update: INAVUpdate) => update.entries ?? [])
+        .filter((entry: INAVMethod) => entry.detailsHash && entry.simulatedNav != null)
+        .map((entry: INAVMethod) => [entry.detailsHash, entry]),
+    );
+    if (previousEntries.size && lastNavUpdate) {
+      for (const entry of lastNavUpdate.entries ?? []) {
+        const previous = previousEntries.get(entry.detailsHash);
+        if (!previous || entry.simulatedNav != null) continue;
+        entry.simulatedNav = previous.simulatedNav;
+        entry.simulatedNavFormatted = previous.simulatedNavFormatted;
+        entry.isSimulatedNavError = previous.isSimulatedNavError;
+        entry.pastNAVUpdateEntryFundAddress = previous.pastNAVUpdateEntryFundAddress;
+        entry.foundMatchingPastNAVUpdateEntryFundAddress =
+          previous.foundMatchingPastNAVUpdateEntryFundAddress;
+      }
+    }
+
     fund.lastNAVUpdateTotalNAV = navUpdates.length
       ? lastNavUpdate.totalNAV || 0n
       : fund.totalDepositBalance || 0n;
     fund.navUpdates = navUpdates;
+    if (lastNavUpdate) {
+      writeCachedLastNavUpdate(fund.chainId, fund.address, lastNavUpdate);
+    }
 
     backendNavUpdatesPromise
       .then((backendNavUpdates: ParsedNavUpdateDto[]) => {

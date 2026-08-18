@@ -1,4 +1,12 @@
 {
-    "extends": "./.nuxt/tsconfig.json",
-    "exclude": ["backend"]
+    // Do NOT add an "exclude" here. TypeScript REPLACES an inherited exclude
+    // rather than merging it, so any list set at this level silently drops
+    // the one .nuxt/tsconfig.json ships — which is what keeps "dist",
+    // ".output" and "node_modules" out of the program. Without it the
+    // "../**/*" include sweeps whatever a build left in dist/, and the dev
+    // checker then reports every one of those files as a missing-file error.
+    // Anything that genuinely needs excluding goes through
+    // `typescript.tsConfig.exclude` in nuxt.config.ts, which Nuxt merges into
+    // the generated list instead of replacing it.
+    "extends": "./.nuxt/tsconfig.json"
 }

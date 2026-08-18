@@ -346,9 +346,7 @@
 
         <div v-if="!staged" class="brand_card crt_panel crt_panel--empty">
           <p class="crt_panel__intro">
-            Pick an action on the left. Every call is assembled programmatically,
-            wrapped for the Roles modifier, simulated from the whitelisted sender,
-            and only then handed to the wallet. No copy-pasting hex.
+            No action staged
           </p>
         </div>
 
@@ -473,12 +471,6 @@
             on it is expected, not an error.
           </div>
         </div>
-
-        <p class="crt_footnote">
-          Every transaction goes to the Roles modifier {{ shortAddr(CRT.ADDR.roles) }}
-          as execTransactionWithRole: value 0, operation Call, shouldRevert true.
-          Nothing here can reach an arbitrary address.
-        </p>
       </aside>
     </div>
   </div>
@@ -491,6 +483,7 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useAccountStore } from "~/store/account/account.store";
 import { CRT, crtInner, crtWrap, crtValidateWrapped, crtSimulate, crtGetBalances, crtGetCore, crtAgentStatus, fmt6, shortAddr } from "~/composables/execution/crtConsole";
+import { ChainId } from "~/types/enums/chain_id";
 
 const fundStore = useFundStore();
 const toastStore = useToastStore();
@@ -571,7 +564,10 @@ const stage = (action: any) => {
 const stageBridge = () => bridgeDir.value === "toCore"
   ? stage({
     title: `EVM → Core: deposit ${bridgeAmt.value} USDC`, role: 1,
-    warns: Number(bridgeAmt.value) > 1 ? ["Only a 1 USDC deposit has succeeded live; 2/5/10+ reverted in testing. Amounts above 1 are unproven."] : [],
+    // 100 USDC went across live on 2026-08-12 (0x542aad20…), which retires the
+    // old "only 1 USDC has ever worked" warning. The earlier 2/5/10 reverts
+    // were simulations run before the approve was mined, not a size limit.
+    warns: Number(bridgeAmt.value) > 100 ? ["Live deposits are proven to 100 USDC. Larger amounts have not been tried on this route."] : [],
     steps: [
       { label: "1 · Approve CoreDepositWallet", wrapped: crtWrap(crtInner.approve(CRT.ADDR.cdw, "CoreDepositWallet", bridgeAmt.value), 1) },
       { label: "2 · depositFor(Safe)", wrapped: crtWrap(crtInner.cdwDepositFor(bridgeAmt.value), 1), expectSoftFail: true },
@@ -624,15 +620,67 @@ const stageAgent = (a: any) => stage({
 
 const copyText = (t: string) => { navigator.clipboard.writeText(t); toastStore.addToast("Calldata copied. Propose it in the payout Safe."); };
 
+/**
+ * Release the step and say why. Everything that can go wrong between the
+ * click and the receipt used to land in console.error alone, which reads as a
+ * button that does nothing — an RPC that refuses a method looks exactly like
+ * a dead click. A declined signature is not a failure, so it only clears.
+ */
+const failStep = (step: any, error: any) => {
+  console.error(error);
+  step.txStatus = null;
+  const message = error?.innerError?.message || error?.message || "";
+  const declined =
+    error?.code === 4001 ||
+    error?.innerError?.code === 4001 ||
+    /user (denied|rejected)/i.test(message);
+  if (declined) return;
+  toastStore.errorToast(explainSendFailure(message), 15000);
+};
+
+/**
+ * `rpc.hyperliquid.xyz/evm` serves no block lookups — every eth_getBlockByNumber,
+ * "latest" included, comes back "More than 3000 archived blocks queried in one
+ * day". The app never makes that call (see the send options below), but a wallet
+ * reads the latest block itself to price the transaction it is being asked to
+ * sign, and it uses whatever RPC its own HyperEVM entry points at. So this
+ * arrives with nothing on our side left to fix, and the raw text names neither
+ * the cause nor the cure.
+ */
+const explainSendFailure = (message: string) => {
+  if (!/archived blocks queried/i.test(message)) {
+    return message || "There has been an error.";
+  }
+  return (
+    "Your wallet's HyperEVM RPC can't look up blocks, which it needs in order " +
+    "to price this transaction. Edit the HyperEVM network in your wallet and " +
+    "set its RPC URL to https://rpc.purroofgroup.com (or " +
+    "https://rpc.hypurrscan.io), then try again."
+  );
+};
+
 const exec = async (step: any) => {
   if (!accountStore.connectedWalletWeb3) { toastStore.errorToast("Connect your wallet."); return; }
   try {
     step.txStatus = "pending";
+    // Every address here is a HyperEVM one. Sending from another chain would
+    // put this calldata at whatever happens to sit at the Roles address there.
+    if (accountStore.connectedWalletChainId !== ChainId.HYPEREVM) {
+      await accountStore.switchNetwork(ChainId.HYPEREVM);
+    }
     await accountStore.connectedWalletWeb3.eth
       .sendTransaction(
-        { to: step.wrapped.to, data: step.wrapped.data, from: fundStore.activeAccountAddress, maxFeePerGas: "", value: 0 },
+        { to: step.wrapped.to, data: step.wrapped.data, from: fundStore.activeAccountAddress, value: 0 },
         DEFAULT_RETURN_FORMAT,
-        { checkRevertBeforeSending: false },
+        // Let the wallet price the transaction, the way CustomContract.send
+        // does for every other execution surface in the app. Left to itself
+        // web3 fills the EIP-1559 fields, and that starts with an
+        // eth_getBlockByNumber the HyperEVM RPC answers with "More than 3000
+        // archived blocks queried in one day" — the send then dies before the
+        // wallet ever prompts. A bare maxFeePerGas did NOT suppress that: the
+        // autofill only stands down when gasPrice, or BOTH 1559 fields, are
+        // non-nullish.
+        { checkRevertBeforeSending: false, ignoreGasPricing: true },
       )
       .on("transactionHash", (hash: any) => { step.txHash = hash; toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed."); })
       .on("receipt", (receipt: any) => {
@@ -640,8 +688,10 @@ const exec = async (step: any) => {
         if (receipt.status) { toastStore.successToast("The transaction was successful."); refresh(); }
         else toastStore.errorToast("The transaction has failed.");
       })
-      .on("error", (error: any) => { console.error(error); step.txStatus = null; toastStore.errorToast("There has been an error."); });
-  } catch (error) { console.error(error); step.txStatus = null; }
+      .on("error", (error: any) => failStep(step, error));
+  } catch (error: any) {
+    failStep(step, error);
+  }
 };
 </script>
 
@@ -983,11 +1033,16 @@ const exec = async (step: any) => {
     align-content: center;
   }
 
+  /* A state label, not prose — the mono caption the rest of the app uses for
+     "nothing here yet", so the empty card reads as deliberate. */
   &__intro {
     margin: 0;
-    font-size: 13px;
-    line-height: 1.6;
-    color: $color-light-subtitle;
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+    color: $color-steel-blue;
   }
 
   &__head {
@@ -1221,12 +1276,5 @@ const exec = async (step: any) => {
   color: $color-neg;
   font-family: $font-mono;
   font-size: 12px;
-}
-
-.crt_footnote {
-  margin: 0;
-  font-size: 11.5px;
-  line-height: 1.6;
-  color: $color-steel-blue;
 }
 </style>

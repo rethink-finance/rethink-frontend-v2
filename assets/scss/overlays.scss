@@ -361,6 +361,24 @@ $shadow-float-lg: 0 24px 64px rgba(0, 0, 0, 0.55);
     }
   }
 
+  /**
+   * For a note that qualifies content already on the page rather than
+   * interrupting it — a stale list, a partial result. Same hue and hairline, a
+   * third of the presence: it must not out-weigh the table it is captioning.
+   */
+  &--compact {
+    gap: 0.5rem;
+    padding: 0.4375rem 0.625rem;
+    font-size: 12px;
+    line-height: 1.45;
+
+    .brand_note__icon {
+      width: 0.875rem;
+      height: 0.875rem;
+      margin-top: 0.125rem;
+    }
+  }
+
   &--info {
     background: $color-cyan-tint;
     border-color: $color-cyan-line;

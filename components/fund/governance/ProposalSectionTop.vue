@@ -189,7 +189,7 @@
               </ui-tooltip-click>
             </div>
 
-            <div class="di-card__voting-power meta-label meta-label--uppercase">
+            <div class="di-card__voting-power meta-label">
               Voting Power: N/A (TODO)
             </div>
 
@@ -593,10 +593,6 @@ onMounted(() => {
   font-weight: 500;
   letter-spacing: 0.03em;
   color: $color-steel-blue;
-
-  &--uppercase {
-    text-transform: uppercase;
-  }
 }
 
 .di-card {
