@@ -375,11 +375,13 @@ const stakingPerformance = computed(() =>
     min-width: 0;
   }
 
+  /* Same size as the brand_card eyebrow — these are the page's top-level
+     labels and should not read smaller than the card titles below them. */
   &__label {
     font-family: $font-mono;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.1em;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: $color-steel-blue;
 
