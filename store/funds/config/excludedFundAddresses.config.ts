@@ -431,6 +431,22 @@ const rawExcludedFundAddresses = {
       address: "0x18049f1039183901E5f02185a611142AA80cD473",
       alwaysExclude: false,
     }, // test5 — Roles v2 test vault
+    {
+      address: "0x1a473fE726f8A736B0B436ccf34834220f535d10",
+      alwaysExclude: false,
+    }, // OpenAlpha Roles V2 Premerge Smoke 20260813
+    {
+      address: "0xD5531fF57dCE7Ba034473C7e08cFa7575278AA1F",
+      alwaysExclude: false,
+    }, // OpenAlpha Roles V2 Canary 20260814
+    {
+      address: "0xB3112F2895A50108C1e4f3c6eaEB46C7EAD4aD2d",
+      alwaysExclude: false,
+    }, // OpenAlpha Roles V2 Canary B 20260814
+    {
+      address: "0x69DEC6080C23B93f3845E42aaC5d5195197430fc",
+      alwaysExclude: false,
+    }, // OpenAlpha Roles V2 Canary C 20260814
   ],
   // Fraxtal
   "0xfc": [],
