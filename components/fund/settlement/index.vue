@@ -135,9 +135,9 @@ export default {
     :deep(.v-btn) {
       min-width: 0;
       height: auto;
-      padding: 0.4375rem 1rem;
+      padding: 0.625rem 1.625rem;
       border-radius: 0;
-      font-size: 12.5px;
+      font-size: 14px;
       font-weight: 600;
       letter-spacing: normal;
       text-transform: none;
