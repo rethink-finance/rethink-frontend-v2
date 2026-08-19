@@ -1244,6 +1244,40 @@ const INIT_CREATE_FUND_GAS: Partial<Record<ChainId, number>> = {
   [ChainId.HYPEREVM]: 6_000_000,
 };
 
+/** Opts an address into HyperEVM's 30,000,000-gas big blocks. */
+const HYPEREVM_BIG_BLOCK_TOGGLE_URL = "https://hyperevm-block-toggle.vercel.app/";
+
+/**
+ * Explain a failed initCreateFund.
+ *
+ * On HyperEVM the overwhelmingly likely cause is that the sender has not opted
+ * into big blocks: the call needs ~4,650,000 gas while ordinary blocks cap at
+ * 3,000,000, so it reverts with no reason string. Nothing about that failure
+ * points at its cause — it reads as a contract bug — so name it and link the
+ * toggle. Held open until dismissed, because it asks the reader to go and do
+ * something before retrying.
+ */
+const toastInitializeFailed = (chainId: ChainId) => {
+  if (chainId === ChainId.HYPEREVM) {
+    return toastStore.errorToast(
+      "HyperEVM big blocks is not enabled. Gas limit too high.",
+      -1,
+      { url: HYPEREVM_BIG_BLOCK_TOGGLE_URL, label: "Enable big blocks" },
+    );
+  }
+  toastStore.errorToast(
+    "Fund initialization transaction has failed. Please contact the Rethink Finance community for support.",
+  );
+};
+
+/**
+ * A wallet rejection arrives on the same channel as an on-chain revert, but the
+ * reader chose it and does not need it explained. Only a revert should raise
+ * the big-blocks hint.
+ */
+const isRevertError = (error: any) =>
+  /revert/i.test(String(error?.message ?? ""));
+
 const initializeFund = async() => {
   const fundChainId = selectedChainId.value;
 
@@ -1289,11 +1323,15 @@ const initializeFund = async() => {
           // Repeat at least 10 times until the cache is there. Wait 1 sec between each try.
           repeatUntilFundInitCacheExists(20, 1000);
         } else {
-          toastStore.errorToast("Fund initialization transaction has failed. Please contact the Rethink Finance community for support.");
+          toastInitializeFailed(fundChainId);
         }
       }).on("error", (error: any) => {
         console.error("error when initializing", error);
         isInitializeLoading.value = false;
+        if (isRevertError(error)) {
+          toastInitializeFailed(fundChainId);
+          return;
+        }
         toastStore.errorToast(
           "There has been an error. Please contact the Rethink Finance community for support.",
         );
