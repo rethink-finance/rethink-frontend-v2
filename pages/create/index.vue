@@ -1223,6 +1223,27 @@ const formatInitializeData = () => {
   return output;
 }
 
+/**
+ * Explicit gas limits for initCreateFund, keyed by chain.
+ *
+ * HyperEVM mines 3,000,000-gas "small blocks" by default and only an occasional
+ * 30,000,000-gas big block. initCreateFund measures at ~4,650,000 gas, so it fits
+ * in neither the small-block limit nor the 1,000,000 that gets sent when
+ * estimation is unavailable — and on HyperEVM eth_estimateGas reverts for this
+ * call rather than returning a number, so there is nothing to estimate from.
+ *
+ * Necessary but not sufficient: the sender must also have opted into big blocks
+ * on Hyperliquid (evmUserModify, usingBigBlocks), which no frontend setting can
+ * substitute for. Without that the transaction is routed to a 3M block and
+ * reverts with no reason string, which reads as a contract failure rather than a
+ * gas ceiling.
+ *
+ * Chains absent from this map keep the normal estimation path.
+ */
+const INIT_CREATE_FUND_GAS: Partial<Record<ChainId, number>> = {
+  [ChainId.HYPEREVM]: 6_000_000,
+};
+
 const initializeFund = async() => {
   const fundChainId = selectedChainId.value;
 
@@ -1252,9 +1273,10 @@ const initializeFund = async() => {
     }
 
     const formattedData = formatInitializeData();
+    const gasLimit = INIT_CREATE_FUND_GAS[fundChainId];
 
     await fundFactoryContract
-      .send("initCreateFund", {}, ...formattedData)
+      .send("initCreateFund", gasLimit ? { gas: gasLimit } : {}, ...formattedData)
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
         toastStore.addToast(
