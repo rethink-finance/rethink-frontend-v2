@@ -1,3 +1,20 @@
+/**
+ * The shared page container — the app's single content column, defined once
+ * here so nothing has to restate it. Used by the navbar's inner row, <main>
+ * and the footer's inner row; see $page-container-width for the geometry.
+ *
+ * Only the horizontal box is set: callers keep their own vertical padding.
+ * `margin-inline`, not `margin: 0 auto`, for the same reason — a shorthand
+ * here would wipe whatever vertical margin the caller had.
+ */
+@mixin page-container {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: $page-container-width;
+  margin-inline: auto;
+  padding-inline: $page-container-gutter;
+}
+
 @mixin ellipsis {
   white-space: nowrap;
   overflow: hidden;

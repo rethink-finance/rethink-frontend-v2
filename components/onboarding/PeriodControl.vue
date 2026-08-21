@@ -14,8 +14,8 @@
         :class="{ 'period_control__input--error': !!shownError }"
         type="number"
         min="0"
-        :placeholder="field.placeholder"
-        :disabled="disabled"
+        :placeholder="isInstant ? 'No delay' : field.placeholder"
+        :disabled="disabled || isInstant"
         @blur="isTouched = true"
       >
       <OnboardingSelectMenu
@@ -45,9 +45,9 @@ import { PeriodUnits, TimeInSeconds, type IField } from "~/types/enums/input_typ
  * A duration, entered as a number plus a unit and stored as a block count —
  * which is what the governor and the vault metadata both hold.
  *
- * `blocks` is offered as a unit of its own so a value that came back from the
- * chain, or one a curator wants to set exactly, does not have to be laundered
- * through a time conversion that rounds it.
+ * `instant` is zero blocks, the one duration that needs no number beside it.
+ * `blocks` is not offered while the chain's block time reads, but it is the
+ * only way to set a value when that read fails, so it appears then.
  */
 const props = defineProps({
   field: {
@@ -77,14 +77,24 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const BLOCKS_UNIT = "blocks";
+const INSTANT_UNIT = "instant";
 
-const unitOptions = [
-  { value: BLOCKS_UNIT, label: "Blocks" },
-  { value: PeriodUnits.Seconds, label: "Seconds" },
-  { value: PeriodUnits.Minutes, label: "Minutes" },
-  { value: PeriodUnits.Hours, label: "Hours" },
-  { value: PeriodUnits.Days, label: "Days" },
-];
+/** Largest first, so a stored count is read back as the roundest unit that fits. */
+const TIME_UNITS = [
+  PeriodUnits.Months,
+  PeriodUnits.Weeks,
+  PeriodUnits.Days,
+  PeriodUnits.Hours,
+  PeriodUnits.Minutes,
+] as const;
+
+const UNIT_LABELS: Record<string, string> = {
+  [PeriodUnits.Minutes]: "Minutes",
+  [PeriodUnits.Hours]: "Hours",
+  [PeriodUnits.Days]: "Days",
+  [PeriodUnits.Weeks]: "Weeks",
+  [PeriodUnits.Months]: "Months",
+};
 
 const blockTimeStore = useBlockTimeStore();
 
@@ -96,6 +106,18 @@ const isTouched = ref(false);
 const isBlockTimeUnavailable = ref(false);
 /** The last value this control emitted, so its own echo does not re-derive it. */
 const emittedBlocks = ref<number | undefined>(undefined);
+
+const isInstant = computed(() => unit.value === INSTANT_UNIT);
+
+const unitOptions = computed(() => [
+  ...[...TIME_UNITS].reverse().map((value) => ({ value, label: UNIT_LABELS[value] })),
+  // Only worth offering where a time unit cannot be converted — otherwise it is
+  // an implementation detail of the stored value, not a duration anyone types.
+  ...(isBlockTimeUnavailable.value || unit.value === BLOCKS_UNIT
+    ? [{ value: BLOCKS_UNIT, label: "Blocks" }]
+    : []),
+  { value: INSTANT_UNIT, label: "Instant", icon: "material-symbols:bolt-rounded" },
+]);
 
 const isRequired = computed(() =>
   (props.field.rules ?? []).includes(formRules.required),
@@ -111,15 +133,28 @@ const loadBlockTime = async () => {
 };
 
 const toBlocks = (value: number, selectedUnit: string): number | undefined => {
+  if (selectedUnit === INSTANT_UNIT) return 0;
   if (isNaN(value)) return undefined;
   if (selectedUnit === BLOCKS_UNIT) return Math.floor(value);
   if (blockTime.value <= 0) return undefined;
 
   const seconds = TimeInSeconds[selectedUnit as PeriodUnits];
-  return Math.floor((value * seconds) / blockTime.value);
+  // Nearest, not floored. deriveFromModel rounds the derived amount to three
+  // decimals for display, so flooring the way back turned a stored 31130
+  // blocks into 18.159 hours into 31129 — opening a form and saving it
+  // untouched shortened the period by a block. Rounding absorbs the display
+  // rounding, and a period is quoted to the block anyway.
+  return Math.round((value * seconds) / blockTime.value);
 };
 
 const emitFromInput = async () => {
+  if (isInstant.value) {
+    isBlockTimeUnavailable.value = false;
+    emittedBlocks.value = 0;
+    emit("update:modelValue", 0);
+    return;
+  }
+
   if (amount.value === "" || amount.value == null) {
     isBlockTimeUnavailable.value = false;
     emittedBlocks.value = undefined;
@@ -138,11 +173,31 @@ const emitFromInput = async () => {
   emit("update:modelValue", blocks);
 };
 
+/**
+ * Set while the pair is being filled in from the stored value, so the watcher
+ * that emits on every amount/unit change knows this one was not a curator
+ * typing.
+ *
+ * Without it, displaying a value re-emitted it: the amount is rounded to three
+ * decimals to be readable, and converting that back is not the block count it
+ * came from. 432000 blocks at 2s reads "1.429 weeks", which converts back to
+ * 432130 — so opening a governance form and saving it untouched moved the
+ * period by two minutes. Rounding cannot fix that; not emitting can.
+ */
+const isDeriving = ref(false);
+
 /** Fills the pair from a stored block count — a loaded draft, or the cache. */
 const deriveFromModel = async () => {
   const stored = Number(props.modelValue);
   if (props.modelValue == null || props.modelValue === "" || isNaN(stored)) {
     amount.value = "";
+    return;
+  }
+
+  // Zero blocks is not a duration to pick a unit for — it is no wait at all.
+  if (stored === 0) {
+    amount.value = "";
+    unit.value = INSTANT_UNIT;
     return;
   }
 
@@ -155,21 +210,16 @@ const deriveFromModel = async () => {
 
   const totalSeconds = stored * blockTime.value;
   // Largest unit that still leaves a number at or above one, so a two-day
-  // period reads "2 days" rather than "172800 seconds".
-  const candidates = [PeriodUnits.Days, PeriodUnits.Hours, PeriodUnits.Minutes, PeriodUnits.Seconds];
-  const best = candidates.find((u) => totalSeconds / TimeInSeconds[u] >= 1);
-
-  if (!best) {
-    amount.value = String(stored);
-    unit.value = BLOCKS_UNIT;
-    return;
-  }
+  // period reads "2 days" rather than "2880 minutes". Anything under a minute
+  // stays in minutes as a fraction rather than falling back to a block count.
+  const best = TIME_UNITS.find((u) => totalSeconds / TimeInSeconds[u] >= 1) ?? PeriodUnits.Minutes;
 
   amount.value = String(parseFloat((totalSeconds / TimeInSeconds[best]).toFixed(3)));
   unit.value = best;
 };
 
 const blocksHint = computed(() => {
+  if (isInstant.value) return "No delay — takes effect immediately.";
   if (unit.value === BLOCKS_UNIT || props.modelValue == null) return "";
   const blocks = Number(props.modelValue);
   if (isNaN(blocks)) return "";
@@ -189,22 +239,43 @@ const shownError = computed(() => {
   return "";
 });
 
+// Instant carries no number, so the stale one it was switched away from must
+// not sit greyed out in the box beside it.
+watch(unit, (selected) => {
+  if (selected === INSTANT_UNIT) amount.value = "";
+});
+
 watch([amount, unit], () => {
+  if (isDeriving.value) return;
   emitFromInput();
 });
+
+/**
+ * Fills the pair without emitting. Vue flushes watchers after the tick, so the
+ * flag has to outlive the assignments that trip them.
+ */
+const deriveQuietly = async () => {
+  isDeriving.value = true;
+  try {
+    await deriveFromModel();
+    await nextTick();
+  } finally {
+    isDeriving.value = false;
+  }
+};
 
 watch(
   () => props.modelValue,
   (newValue) => {
     if (Number(newValue) === emittedBlocks.value) return;
-    deriveFromModel();
+    deriveQuietly();
   },
   { immediate: true },
 );
 
 // A different chain means a different block time, so the same stored block
 // count is a different duration and the pair has to be re-read.
-watch(() => props.chainId, () => deriveFromModel());
+watch(() => props.chainId, () => deriveQuietly());
 </script>
 
 <style scoped lang="scss">

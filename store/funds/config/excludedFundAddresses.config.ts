@@ -447,6 +447,53 @@ const rawExcludedFundAddresses = {
       address: "0x69DEC6080C23B93f3845E42aaC5d5195197430fc",
       alwaysExclude: false,
     }, // OpenAlpha Roles V2 Canary C 20260814
+
+    // Roles v2 staging and acceptance vaults, 20260821. Off the production
+    // list, still listed on stage, which is where they are used.
+    {
+      address: "0xd3D2d5f78CA6A6972cECAd65C35392CD763E5173",
+      alwaysExclude: false,
+    }, // SmartBTC Roles v2 Test 1
+    {
+      address: "0x331F3e5E56cBc843C92E20d5366dE77267545D03",
+      alwaysExclude: false,
+    }, // TEST Roles V2 SmartBTC WBTC Staging Test
+    {
+      address: "0x372A419bd384A5b714D8CFB3B474d4Aa421Ff110",
+      alwaysExclude: false,
+    }, // TEST Roles V2 SmartBTC WBTC Staging Test 2
+    {
+      address: "0x7e0b2c1d9af466f20235e787E3a01269Af63FECA",
+      alwaysExclude: false,
+    }, // TEST SmartBTC WBTC Denominated
+    {
+      address: "0x4Bfd43A29e1b00157F1738B9c2CF23Dd62FAE548",
+      alwaysExclude: false,
+    }, // TEST SmartBTC WBTC Denominated
+    {
+      address: "0xC973ABdc32d352E0A99B2A9fdbDC38eC721ABe60",
+      alwaysExclude: false,
+    }, // TEST SmartBTC WBTC Denominated
+    {
+      address: "0x5FD8Baf8aBCAe89E14bAd4722Bd9A245aAb60aDF",
+      alwaysExclude: false,
+    }, // TEST SmartBTC WBTC Denominated
+    {
+      address: "0x90C3b8eFCe3A218Cb22417a8590c881ce632955B",
+      alwaysExclude: false,
+    }, // TEST Roles v2 fast acceptance nonce-fixed
+    {
+      address: "0xc54D2AE307deDE09267e1847D259b1F7230210f9",
+      alwaysExclude: false,
+    }, // TEST Roles v2 acceptance 5-50-5
+    {
+      address: "0x7ff1E2017Ca0587355036113b524536838477D4b",
+      alwaysExclude: false,
+    }, // TEST SmartBTC WBTC Denominated
+    {
+      address: "0xFC9Dc05d0869E3C8f0Aa5ec2A2942E012Ac79FD0",
+      alwaysExclude: false,
+    }, // TEST SmartBTC WBTC Denominated
   ],
   // Fraxtal
   "0xfc": [],

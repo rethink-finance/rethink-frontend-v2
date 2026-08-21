@@ -21,22 +21,23 @@ a {
 }
 
 /**
- * Page-level content width. The layout's <v-main> already scales with the
- * viewport; this caps the very wide end so a page's content column stays the
- * same measure everywhere instead of stretching to the monitor. Apply it to
- * the root element of every top-level page.
+ * The shared page container as a class, for markup that cannot reach the
+ * `page-container` mixin's call sites — a full-bleed band, say, that needs to
+ * bring its own contents back onto the page grid. Anything inside <main> is
+ * already on that grid and should not re-apply this.
+ */
+.page-container {
+  @include page-container;
+}
+
+/**
+ * Root element of every top-level page. The content width comes from the
+ * container on <main> now, so all this does is fill it — but it stays a named
+ * class rather than Vuetify's `w-100`, which is !important and would beat any
+ * page that needs a narrower measure of its own.
  */
 .page_shell {
   width: 100%;
-
-  @media (min-width: 1800px) {
-    width: 90%;
-    max-width: 1500px;
-  }
-  @media (min-width: 2200px) {
-    width: 84%;
-    max-width: 1500px;
-  }
 }
 
 /* Components */

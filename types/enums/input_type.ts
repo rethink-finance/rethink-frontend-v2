@@ -17,6 +17,7 @@ export enum PeriodUnits {
   Hours = "hour",
   Days = "day",
   Weeks = "week",
+  Months = "month",
 }
 
 type TimeInSecondsMap = Record<PeriodUnits, number>;
@@ -28,6 +29,9 @@ export const TimeInSeconds: TimeInSecondsMap = {
   [PeriodUnits.Hours]: 3600,
   [PeriodUnits.Days]: 86400,
   [PeriodUnits.Weeks]: 604800,
+  // A month has no fixed length; 30 days is the one every duration field here
+  // is read against, so it is the one the conversion uses.
+  [PeriodUnits.Months]: 2592000,
 };
 export const periodChoices = [
   { value: PeriodUnits.Seconds, title: "Seconds" },

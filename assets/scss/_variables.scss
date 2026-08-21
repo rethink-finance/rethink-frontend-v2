@@ -1,4 +1,21 @@
-$navbar-height: 5rem;
+/**
+ * Global layout metrics.
+ *
+ * $navbar-height is the height of the bar's inner row. In px, not rem: the
+ * design calls for 64 and the app's root font-size is 15px, so 4rem would
+ * quietly land on 60.
+ *
+ * The other two are the one page container — the navbar's inner row, every
+ * page's <main> and the footer's inner row all resolve against them, so the
+ * three share a single grid instead of each inventing a width. The gutter
+ * clamps rather than stepping at breakpoints: below 1456px (1360 + 2 x 48) the
+ * column is fluid and the gutter shrinks with the viewport; above it the
+ * column is centred on its 1360px measure. Apply them through the
+ * `page-container` mixin rather than by hand.
+ */
+$navbar-height: 64px;
+$page-container-width: 1360px;
+$page-container-gutter: clamp(20px, 4vw, 48px);
 $default-transition-time: 0.28s;
 $color-white: #eceef4; // Approx 95% white
 $color-black: #333333;
@@ -165,6 +182,35 @@ $screen-lg: 960px; // Desktop (small)
 $screen-xl: 1200px; // Desktop (large)
 $screen-xxl: 1460px; // Desktop (extra large)
 $screen-xxxl: 1860px; // Desktop (XXXL)
+
+/**
+ * The vault overview's table grid.
+ *
+ * Every table stacked down a vault's details page resolves against these same
+ * four tracks — the activity list, the composition card, the fee table — so a
+ * figure in one card sits under the figure in the next instead of each card
+ * inventing an alignment of its own. Read left to right: a label, a secondary
+ * reading, a right-aligned figure, and a right-aligned tail (timestamp, share,
+ * recipient). A table with fewer columns spans the tracks it does not use
+ * rather than redistributing their width, which is what keeps the figures in
+ * column three under each other.
+ *
+ * The two right-hand tracks size to their content above a floor, so a row
+ * carrying an unusually long number widens its own column and that one table
+ * drifts off the others. That is the deliberate trade: a readable figure beats
+ * a shared edge, and a truncated balance is worse than either.
+ *
+ * The tail floor is set above what that column can actually hold rather than
+ * at the width of its shortest occupant. "11 minutes ago" plus its link icon
+ * is 123px — the widest stamp Intl.RelativeTimeFormat can produce here — so at
+ * 96px the activity list overran the floor on every vault and quietly took
+ * 13px off the label tracks, sliding its columns out from under every other
+ * card's. Above the floor the content is right-aligned to the card's own edge,
+ * so a track wider than a "100.0%" costs nothing visible.
+ */
+$details-table-columns:
+  minmax(0, 1.2fr) minmax(0, 1fr) minmax(110px, auto) minmax(124px, auto);
+$details-table-gap: 1rem;
 
 /**
 Define the needed colors as CSS variables, as they can be used in certain

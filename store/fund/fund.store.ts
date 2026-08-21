@@ -820,6 +820,27 @@ export const useFundStore = defineStore({
       this.fund.fundContractBaseTokenBalance = balanceWei;
       this.fund.fundContractBaseTokenBalanceLoading = false;
     },
+    /**
+     * The custody Safe's base asset balance, re-read on its own.
+     *
+     * It otherwise only arrives with the vault's metadata, which the settlement
+     * actions do not refetch — so moving the Safe's balance to the admin
+     * contract left the figure those actions validate against showing what was
+     * there before the transfer.
+     */
+    async fetchSafeContractBaseTokenBalance() {
+      const safeAddress = this.fund?.safeAddress;
+      if (!this.fund || !safeAddress) return;
+
+      try {
+        this.fund.safeContractBaseTokenBalance =
+          await this.web3Store.callWithRetry(this.selectedFundChain, () =>
+            this.fundBaseTokenContract.methods.balanceOf(safeAddress).call(),
+          );
+      } catch (e) {
+        console.error("Failed fetching the Safe's base token balance. -> ", e);
+      }
+    },
     fetchRoleModAddress(fundAddress: string): Promise<string> {
       return useActionState("fetchRoleModAddressAddressAction", () =>
         fetchRoleModAddressAddressAction(fundAddress),

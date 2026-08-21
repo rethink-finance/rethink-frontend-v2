@@ -42,5 +42,34 @@ export const parsePlannedSettlement = async (chainId: ChainId, plannedSettlement
   return output;
 };
 
+/**
+ * The same planned-settlement field as a duration in seconds. The flows page
+ * counts down to the next settlement, which needs the cycle as a number rather
+ * than as prose. Returns undefined for the legacy free-text values ("5
+ * business days") — those cannot anchor a countdown.
+ */
+export const parsePlannedSettlementSeconds = async (
+  chainId: ChainId,
+  plannedSettlementPeriod: string,
+): Promise<number | undefined> => {
+  const plannedSettlement = Number(plannedSettlementPeriod);
+  if (!plannedSettlement || isNaN(plannedSettlement) || plannedSettlement <= 0) {
+    return undefined;
+  }
+
+  // Same boundary as the prose parser: small values are day counts, larger
+  // ones are block counts.
+  if (plannedSettlement < 100) {
+    return plannedSettlement * 24 * 3600;
+  }
+  if (!chainId) return undefined;
+
+  const blockTimeStore = useBlockTimeStore();
+  const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(chainId);
+  const blockTime = blockTimeContext?.averageBlockTime || 0;
+  if (blockTime <= 0) return undefined;
+  return plannedSettlement * blockTime;
+};
+
 
 

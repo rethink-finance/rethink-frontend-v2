@@ -70,6 +70,15 @@ const AMOUNT_BEARING_SELECTORS = new Set(
     .map((signature) => ethers.id(signature).slice(0, 10)),
 );
 
+/**
+ * Which of the two requests a revoke cancelled — true for the deposit one.
+ * The subgraph stores this as `flag`; decoding it here keeps the explorer rows
+ * as informative, which the request-queue reconstruction depends on.
+ */
+const REVOKE_SELECTOR = ethers
+  .id("revokeDepositWithrawal(bool)")
+  .slice(0, 10);
+
 /** A vault's whole depositor history is short; this is headroom, not a budget. */
 const MAX_PAGES = 8;
 
@@ -81,6 +90,8 @@ export interface VaultFlow {
   name: string;
   /** Raw token amount, or null for operations that carry none. */
   amount: string | null;
+  /** For revokeDepositWithrawal: true = deposit request, false = redemption. */
+  flag?: boolean | null;
   /** Unix seconds. */
   timestamp: number;
   /** Who signed it. */
@@ -106,7 +117,7 @@ const abiCoder = ethers.AbiCoder.defaultAbiCoder();
  */
 const decodeFlowCall = (
   input: string,
-): { name: string; amount: string | null } | undefined => {
+): { name: string; amount: string | null; flag: boolean | null } | undefined => {
   let call = input;
 
   if (input.startsWith(FUND_FLOWS_CALL_SELECTOR)) {
@@ -132,7 +143,16 @@ const decodeFlowCall = (
     }
   }
 
-  return { name, amount };
+  let flag: boolean | null = null;
+  if (selector === REVOKE_SELECTOR) {
+    try {
+      flag = Boolean(abiCoder.decode(["bool"], `0x${call.slice(10)}`)[0]);
+    } catch {
+      flag = null;
+    }
+  }
+
+  return { name, amount, flag };
 };
 
 const cache = new Map<string, Promise<VaultFlow[]>>();
@@ -162,6 +182,7 @@ const load = async (
       id: `${transaction.hash}:${decoded.name}`,
       name: decoded.name,
       amount: decoded.amount,
+      flag: decoded.flag,
       timestamp: transaction.timestamp,
       from: transaction.from,
       txHash: transaction.hash,
@@ -240,6 +261,7 @@ export const fetchExplorerUserFlows = async (
       id: `${transaction.hash}:${decoded.name}`,
       name: decoded.name,
       amount: decoded.amount,
+      flag: decoded.flag,
       timestamp: transaction.timestamp,
       from: transaction.from,
       txHash: transaction.hash,

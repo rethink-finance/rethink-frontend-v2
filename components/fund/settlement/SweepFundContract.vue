@@ -1,56 +1,67 @@
 <template>
-  <div class="transfer">
-    <div class="transfer__content">
-      <div class="transfer__header">
-        <div class="transfer__title">
-          Transfer Base Asset to the Safe Contract
-        </div>
-        <div class="transfer__subtitle">
-          Transfer any excess base asset amount from the admin contract back to the custody contract.
-        </div>
-      </div>
+  <div class="sweep_admin">
+    <div class="sweep_admin__title">
+      Sweep admin contract
+      <UiInfoTooltip
+        :text="`Return excess ${baseToken?.symbol ?? 'base asset'} liquidity above pending redemptions back to the Safe.`"
+      />
+    </div>
 
-      <FundSettlementAlert v-if="!isConnected">
-        Connect your wallet to sweep the admin contract.
-      </FundSettlementAlert>
-      <div class="buttons_container">
-        <div>
-          <v-tooltip
-            activator="parent"
-            location="bottom"
-            :disabled="!isConnected"
-          >
-            <template #activator="{ props }">
-              <v-btn
-                v-bind="props"
-                class="bg-primary text-secondary"
-                :disabled="isSweepContractDisabled"
-                @click="sweepFundContract()"
-              >
-                <template #prepend>
-                  <v-progress-circular
-                    v-if="isSweepLoading"
-                    class="d-flex"
-                    size="20"
-                    width="3"
-                    indeterminate
-                  />
-                </template>
-                Sweep Admin Contract
-              </v-btn>
-            </template>
-            <template #default>
-              {{ sweepContractTooltipText }}
-            </template>
-          </v-tooltip>
-        </div>
+    <!-- Mirrors the transfer input's geometry, but it is a readout: the
+         sweepable excess is what the contract computes, not a choice. -->
+    <div class="sweep_admin__control sweep_admin__control--readonly">
+      <div class="sweep_admin__prefix sweep_admin__prefix--label">
+        Excess
       </div>
+      <div
+        class="sweep_admin__readout"
+        :class="{ 'sweep_admin__readout--zero': isExcessZero }"
+      >
+        {{ excessDisplay }}
+      </div>
+    </div>
+
+    <!-- Said on the page, not in a tooltip: a disabled button fires no mouse
+         events, so the hover would never reach it. -->
+    <div v-if="blockedReason" class="sweep_admin__notice">
+      {{ blockedReason }}
+    </div>
+
+    <div class="sweep_admin__foot">
+      <div class="sweep_admin__caption">
+        Pending redemptions · {{ pendingRedemptionsDisplay }}
+      </div>
+      <span class="sweep_admin__action">
+        <v-tooltip
+          activator="parent"
+          location="top"
+          :disabled="!sweepContractTooltipText"
+        >
+          {{ sweepContractTooltipText }}
+        </v-tooltip>
+        <button
+          type="button"
+          class="sweep_admin__button"
+          :disabled="isSweepContractDisabled"
+          @click="sweepFundContract()"
+        >
+          <v-progress-circular
+            v-if="isSweepLoading"
+            size="14"
+            width="2"
+            indeterminate
+          />
+          Sweep to Safe
+        </button>
+      </span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { FixedNumber } from "ethers";
 import { eth } from "web3";
+import { commify, roundToSignificantDecimals } from "~/composables/formatters";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -59,11 +70,46 @@ const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 
+/**
+ * Both figures are the page's simulated-NAV estimates — the same ones the
+ * funding gap is computed from, so the two readings can never disagree.
+ */
+const props = defineProps({
+  /** Admin balance minus pending redemptions, in base; excess is its positive part. */
+  fundingGap: {
+    type: FixedNumber,
+    default: undefined,
+  },
+  /** Pending redemptions valued in the base asset. */
+  pendingRedemptionsInBase: {
+    type: FixedNumber,
+    default: undefined,
+  },
+});
+
 // No curator gate here on purpose: fundFlowsCall(sweepTokens()) is
 // permissionless on the deployed vaults — verified by eth_call from an
 // unrelated EOA — so the only requirement is a connected wallet to pay gas.
 const { isConnected } = storeToRefs(accountStore);
 const isSweepLoading = ref(false);
+
+const baseToken = computed(() => {
+  return fundStore.fund?.baseToken;
+});
+
+const isExcessZero = computed(() => {
+  return !props.fundingGap || props.fundingGap.isNegative() || props.fundingGap.isZero();
+});
+const excessDisplay = computed(() => {
+  if (isExcessZero.value || !props.fundingGap) return "0";
+  return commify(roundToSignificantDecimals(props.fundingGap.toString()));
+});
+const pendingRedemptionsDisplay = computed(() => {
+  if (!props.pendingRedemptionsInBase) return "N/A";
+  return commify(
+    roundToSignificantDecimals(props.pendingRedemptionsInBase.toString()),
+  );
+});
 
 const isSweepContractDisabled = computed(() => {
   return (
@@ -72,6 +118,12 @@ const isSweepContractDisabled = computed(() => {
     !isConnected.value
   );
 });
+/** Why the button cannot be pressed, printed rather than hovered for. */
+const blockedReason = computed(() => {
+  if (isSweepLoading.value) return "";
+  return sweepContractTooltipText.value || "";
+});
+
 const sweepContractTooltipText = computed(() => {
   if (!isConnected.value) {
     return "Connect your wallet to sweep the admin contract.";
@@ -143,86 +195,9 @@ const handleError = (error: any) => {
 </script>
 
 <style lang="scss" scoped>
-.buttons_container {
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-  margin-top: 0.5rem;
-}
-.transfer {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  font-size: $text-sm;
-  line-height: 1;
-  height: 100%;
-  justify-content: space-between;
+@import "./flows_action";
 
-  &__content {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    flex-grow: 1;
-    justify-content: space-between;
-  }
-  &__token {
-    font-weight: 500;
-    width: 100%;
-  }
-  /* Design card head: mono uppercase eyebrow over a quiet description. */
-  &__title {
-    font-family: $font-mono;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
-    margin-bottom: 0.625rem;
-  }
-  &__subtitle {
-    font-size: 13px;
-    line-height: 1.5;
-    color: $color-steel-blue;
-  }
-  &__token_header {
-    display: flex;
-    flex-direction: row;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-    color: $color-light-subtitle;
-  }
-  &__token_data {
-    @include borderGray;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    margin-bottom: 0.5rem;
-    color: $color-white;
-  }
-  &__token_col {
-    padding: 0.75rem;
-    height: 2.5rem;
-    background: $color-navy-gray;
-
-    &:first-of-type {
-      @include borderGray("border-right", false);
-    }
-    &--dark {
-      background: $color-navy-gray-dark;
-    }
-  }
-  &__balance {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.15rem;
-  }
-}
-
-.set_token_value_button {
-  &:hover {
-    cursor: pointer;
-    text-decoration: underline;
-  }
+.sweep_admin {
+  @include flows-action-column;
 }
 </style>

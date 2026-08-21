@@ -3,6 +3,7 @@ import {
   OPERATION_DOT_NEUTRAL,
   operationDot,
   operationGroup,
+  reconstructOpenRequests,
   resolveSettledAmounts,
   resolveVaultOperation,
 } from "../vaultOperations";
@@ -167,6 +168,97 @@ describe("resolveSettledAmounts", () => {
     expect(amounts([flow("somethingNew(uint256)", 100, 42n)])).toEqual([
       ["somethingNew(uint256)", 42n],
     ]);
+  });
+});
+
+describe("reconstructOpenRequests", () => {
+  const queueFlow = (
+    name: string,
+    timestamp: number,
+    from: string,
+    amount: bigint | null = null,
+    flag: boolean | null = null,
+  ) => ({ name, timestamp, from, amount, flag, txHash: `0x${timestamp}` });
+
+  const open = (flows: ReturnType<typeof queueFlow>[]) =>
+    reconstructOpenRequests(flows).map((request) => [
+      request.depositor,
+      request.kind,
+      request.amount,
+    ]);
+
+  it("keeps a request open until a later flow closes it", () => {
+    expect(
+      open([queueFlow("requestDeposit(uint256)", 100, "0xA", 500n)]),
+    ).toEqual([["0xa", "deposit", 500n]]);
+  });
+
+  it("closes a request the depositor processed", () => {
+    expect(
+      open([
+        queueFlow("requestDeposit(uint256)", 100, "0xA", 500n),
+        queueFlow("deposit()", 200, "0xA"),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("replays in time order however the feed ordered them", () => {
+    // The subgraph returns newest first.
+    expect(
+      open([
+        queueFlow("deposit()", 200, "0xA"),
+        queueFlow("requestDeposit(uint256)", 100, "0xA", 500n),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("lets a second request overwrite the first", () => {
+    expect(
+      open([
+        queueFlow("requestDeposit(uint256)", 100, "0xA", 500n),
+        queueFlow("requestDeposit(uint256)", 200, "0xA", 900n),
+      ]),
+    ).toEqual([["0xa", "deposit", 900n]]);
+  });
+
+  it("keeps each depositor's requests apart", () => {
+    expect(
+      open([
+        queueFlow("requestDeposit(uint256)", 100, "0xA", 500n),
+        queueFlow("requestDeposit(uint256)", 110, "0xB", 900n),
+        queueFlow("deposit()", 200, "0xA"),
+      ]),
+    ).toEqual([["0xb", "deposit", 900n]]);
+  });
+
+  it("keeps the deposit and redemption sides apart", () => {
+    expect(
+      open([
+        queueFlow("requestDeposit(uint256)", 100, "0xA", 500n),
+        queueFlow("requestWithdraw(uint256)", 110, "0xA", 7n),
+        queueFlow("withdraw()", 200, "0xA"),
+      ]),
+    ).toEqual([["0xa", "deposit", 500n]]);
+  });
+
+  it("clears only the side a revoke names", () => {
+    expect(
+      open([
+        queueFlow("requestDeposit(uint256)", 100, "0xA", 500n),
+        queueFlow("requestWithdraw(uint256)", 110, "0xA", 7n),
+        queueFlow("revokeDepositWithrawal(bool)", 120, "0xA", null, true),
+      ]),
+    ).toEqual([["0xa", "redemption", 7n]]);
+  });
+
+  it("clears both sides for a revoke that names neither", () => {
+    expect(
+      open([
+        queueFlow("requestDeposit(uint256)", 100, "0xA", 500n),
+        queueFlow("requestWithdraw(uint256)", 110, "0xA", 7n),
+        queueFlow("revokeDepositWithrawal(bool)", 120, "0xA", null, null),
+      ]),
+    ).toEqual([]);
   });
 });
 

@@ -16,9 +16,13 @@
 
     <FundInfoGovernance :fund="fund" />
 
-    <FundInfoFees :fund="fund" />
-
-    <FundInfoContracts :fund="fund" />
+    <!-- Two short lists, paired: four fee rows and four addresses each left
+         two thirds of a full-width card empty, and stacked they pushed the
+         page a card longer than it needed to be. -->
+    <div class="fund_details__pair">
+      <FundInfoFees :fund="fund" />
+      <FundInfoContracts :fund="fund" />
+    </div>
   </div>
 </template>
 
@@ -39,5 +43,18 @@ const fund = useAttrs().fund as IFund;
   flex-direction: column;
   gap: 1.75rem;
   min-width: 0;
+
+  /* Side by side only once each half can still hold its own columns. Below
+     that they stack, and the pair is just two cards in the column again. */
+  &__pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+    align-items: start;
+
+    @include lg {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
 }
 </style>

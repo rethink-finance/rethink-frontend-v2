@@ -58,6 +58,10 @@
         >
           {{ isImporting ? "Reading…" : "Import CSV" }}
         </button>
+        <OnboardingInfoTip
+          label="About importing a CSV"
+          text="One address per row, extra columns ignored. Imported addresses are added to the list below, never replace it."
+        />
         <input
           ref="csvInputRef"
           class="whitelist__file"
@@ -66,10 +70,6 @@
           @change="onCsvChosen"
         >
       </div>
-      <p v-if="isEditable" class="whitelist__csv_hint">
-        Or drop a CSV here — one address per row, extra columns ignored.
-        Imported addresses are added to the list below, never replace it.
-      </p>
       <p class="whitelist__error">
         {{ addError }}
       </p>
@@ -108,7 +108,15 @@
           <span>#</span>
           <span>Address</span>
           <span>State</span>
-          <span />
+          <button
+            v-if="canRemoveAll"
+            type="button"
+            class="whitelist__remove"
+            @click="isRemoveAllDialogOpen = true"
+          >
+            Remove all
+          </button>
+          <span v-else />
         </div>
 
         <!-- The row number is the position in the whole list, not in the
@@ -141,6 +149,15 @@
         </div>
       </div>
     </div>
+
+    <UiConfirmDialog
+      v-model="isRemoveAllDialogOpen"
+      title="Remove every address?"
+      :message="removeAllMessage"
+      confirm-text="Remove all"
+      cancel-text="Cancel"
+      @confirm="removeAll"
+    />
   </section>
 </template>
 
@@ -186,6 +203,7 @@ const csvInputRef = ref<HTMLInputElement | null>(null);
 const isImporting = ref(false);
 const isDragOver = ref(false);
 const importSummary = ref("");
+const isRemoveAllDialogOpen = ref(false);
 
 const whitelist = computed({
   get: () => props?.modelValue || [],
@@ -213,6 +231,25 @@ const visibleRows = computed(() => {
   if (!query) return rows;
 
   return rows.filter((row) => row.item.address.toLowerCase().includes(query));
+});
+
+/** Addresses still standing — a row already marked removed is not one of them. */
+const activeAddresses = computed(() =>
+  whitelist.value.filter((item) => !item.deleted),
+);
+
+// Clearing a list of one is what the row's own Remove button is for.
+const canRemoveAll = computed(
+  () => props.isEditable && activeAddresses.value.length > 1,
+);
+
+const removeAllMessage = computed(() => {
+  const count = activeAddresses.value.length;
+  const stored = activeAddresses.value.filter((item) => !item.isNew).length;
+  const storedNote = stored
+    ? ` ${stored} already on-chain, so ${stored === 1 ? "it is" : "they are"} marked removed and can be restored until the settings are saved.`
+    : "";
+  return `This clears all ${count} addresses from the whitelist.${storedNote}`;
 });
 
 const stateOf = (item: IWhitelist) => {
@@ -253,6 +290,20 @@ const removeAddress = (item: IWhitelist) => {
     return;
   }
   item.deleted = !item.deleted;
+};
+
+/**
+ * The same split the single-row Remove makes, applied to the whole list: an
+ * address added in this session was never stored and just goes away, while one
+ * that exists on-chain is marked `deleted` for the settings transaction.
+ */
+const removeAll = () => {
+  addError.value = "";
+  importSummary.value = "";
+  whitelist.value = whitelist.value
+    .filter((item) => !item.isNew)
+    .map((item) => ({ ...item, deleted: true }));
+  isRemoveAllDialogOpen.value = false;
 };
 
 const browseCsv = () => {
@@ -393,19 +444,12 @@ const importCsv = async (file: File) => {
 
   &__add {
     display: flex;
+    align-items: stretch;
     gap: 0.625rem;
   }
 
   &__file {
     display: none;
-  }
-
-  &__csv_hint {
-    max-width: 62ch;
-    margin-top: 0.5rem;
-    font-size: 12px;
-    line-height: 1.5;
-    color: $color-steel-blue;
   }
 
   &__import_note {
@@ -541,7 +585,7 @@ const importCsv = async (file: File) => {
 
   &__row {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) 110px 80px;
+    grid-template-columns: 44px minmax(0, 1fr) 110px 96px;
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
@@ -578,6 +622,7 @@ const importCsv = async (file: File) => {
 
   &__remove {
     justify-self: end;
+    white-space: nowrap;
     border: none;
     background: none;
     font-family: $font-mono;

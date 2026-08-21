@@ -17,29 +17,17 @@
 </script>
 
 <style lang="scss" scoped>
+/* The page column. The navbar's inner row and the footer's inner row use the
+   same container, so a page's left edge lands under the navbar logo and its
+   right edge under the settings button. Vertical rhythm stays here — the
+   mixin only sets the horizontal box. */
 main {
+  @include page-container;
   padding-top: calc($navbar-height + 2rem);
-  width: 100%;
-  margin: auto;
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
   padding-bottom: 3rem;
 
   @include sm {
-    padding-left: 0;
-    padding-right: 0;
-    width: 90%;
     min-height: calc(100vh - ($navbar-height));
-    padding-top: calc($navbar-height + 2rem);
-  }
-  @include xl {
-    width: 90%;
-  }
-  @include xxl {
-    width: 80%;
-  }
-  @include xxxl {
-    width: 75%;
   }
 }
 </style>

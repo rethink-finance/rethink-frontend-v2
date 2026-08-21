@@ -12,6 +12,13 @@
     >
       <span class="select_menu__value">
         <slot name="trigger" :option="selectedOption">
+          <Icon
+            v-if="selectedOption?.icon"
+            class="select_menu__option_icon"
+            :icon="selectedOption.icon"
+            width="1rem"
+            height="1rem"
+          />
           {{ selectedOption?.label ?? placeholder }}
         </slot>
       </span>
@@ -35,6 +42,13 @@
         @click="pick(option)"
       >
         <slot name="option" :option="option">
+          <Icon
+            v-if="option.icon"
+            class="select_menu__option_icon"
+            :icon="option.icon"
+            width="1rem"
+            height="1rem"
+          />
           <span class="select_menu__option_label">{{ option.label }}</span>
           <span v-if="option.meta" class="select_menu__option_meta">{{ option.meta }}</span>
         </slot>
@@ -49,6 +63,8 @@ export interface ISelectMenuOption {
   label: string;
   /** Right-aligned mono detail — a chain's short code, a token's address. */
   meta?: string;
+  /** Iconify name drawn before the label, in the panel and on the trigger. */
+  icon?: string;
   [key: string]: any;
 }
 
@@ -224,6 +240,11 @@ watch(() => props.disabled, (disabled) => {
       background: $color-cyan-tint;
       color: $color-cyan;
     }
+  }
+
+  &__option_icon {
+    flex: none;
+    color: currentcolor;
   }
 
   &__option_label {

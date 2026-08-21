@@ -6,7 +6,7 @@ import {
 import { ChainId } from "~/types/enums/chain_id";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
 
-export const FeesDocs = "https://docs.rethink.finance/rethink.finance/protocol/architecture/admin-contract/fees"
+export const FeesDocs = "https://docs.rethink.finance/protocol/fees"
 
 /**
  * Chip vocabulary for the create flow. Every field declares which one it gets:
