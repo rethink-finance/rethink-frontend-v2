@@ -25,7 +25,10 @@
           </div>
           <div
             class="queue__summary"
-            :class="{ 'queue__summary--unfunded': unfundedCount > 0 }"
+            :class="{
+              'queue__summary--unfunded': unfundedCount > 0 && !isFundingUnknown,
+              'queue__summary--unknown': isFundingUnknown,
+            }"
           >
             {{ summaryText }}
           </div>
@@ -90,7 +93,18 @@
       </template>
 
       <div v-if="!isLoading && !filteredRows.length" class="queue__empty">
-        <template v-if="!rows.length">
+        <!-- Three different silences, and only one of them means the queue is
+             clear. Saying "everything settled" when no feed answered is the
+             reading a curator would act on by skipping a settlement. -->
+        <template v-if="loadFailed || !hasHistory">
+          <span class="queue__empty_warn">
+            Could not read this vault's request history.
+          </span>
+          The subgraph and the block explorer both returned nothing, so the
+          queue is unknown rather than empty. The totals above are read on
+          chain and are unaffected.
+        </template>
+        <template v-else-if="!rows.length">
           No open requests. The last cycle settled everything in the queue.
         </template>
         <template v-else>
@@ -149,6 +163,13 @@ const FILTERS: { label: string; dot?: string }[] = [
 const activeFilter = ref("All");
 const isLoading = ref(false);
 const openRequests = ref<OpenRequest[]>([]);
+/**
+ * Whether the replay had any history to run on. Both feeds report failure as
+ * an empty list, so an empty queue built from no flows says nothing about the
+ * vault — and "no open requests" is too strong a claim to make from it.
+ */
+const hasHistory = ref(false);
+const loadFailed = ref(false);
 // Read here rather than in the loader: it runs from a watcher, outside any
 // Nuxt instance.
 const etherscanApiKey = String(useRuntimeConfig().public.ETHERSCAN_KEY ?? "");
@@ -161,14 +182,25 @@ const loadOpenRequests = async () => {
   const fund = props.fund;
   if (!fund?.address || !fund?.chainId) return;
   isLoading.value = true;
+  loadFailed.value = false;
   try {
-    const requests = await fetchOpenRequests(
+    const { requests, flowCount } = await fetchOpenRequests(
       fund.chainId as ChainId,
       fund.address,
       etherscanApiKey,
     );
     // The vault can change under a slow answer.
-    if (props.fund?.address === fund.address) openRequests.value = requests;
+    if (props.fund?.address === fund.address) {
+      openRequests.value = requests;
+      hasHistory.value = flowCount > 0;
+    }
+  } catch (error) {
+    console.error("Failed to reconstruct the request queue", error);
+    if (props.fund?.address === fund.address) {
+      openRequests.value = [];
+      hasHistory.value = false;
+      loadFailed.value = true;
+    }
   } finally {
     isLoading.value = false;
   }
@@ -179,6 +211,8 @@ watch(
   () => {
     activeFilter.value = "All";
     openRequests.value = [];
+    hasHistory.value = false;
+    loadFailed.value = false;
     loadOpenRequests();
   },
   { immediate: true },
@@ -300,10 +334,23 @@ const unfundedCount = computed(
   () => rows.value.filter((row) => row.state === "unfunded").length,
 );
 
+/**
+ * A redemption with no base value could not be weighed against the admin
+ * contract's balance, so the funding walk skipped it. Reporting "0 unfunded"
+ * off the back of that is a claim the page has not checked — and it is exactly
+ * the vaults with no share price (nothing minted yet) where it would be made.
+ */
+const isFundingUnknown = computed(() =>
+  rows.value.some(
+    (row) => row.kind === "redemption" && !row.baseValueNumber,
+  ),
+);
+
 const summaryText = computed(() => {
   const count = rows.value.length;
   let summary = `${count} ${count === 1 ? "request" : "requests"}`;
-  if (unfundedCount.value) summary += ` · ${unfundedCount.value} unfunded`;
+  if (isFundingUnknown.value) summary += " · funding unknown";
+  else if (unfundedCount.value) summary += ` · ${unfundedCount.value} unfunded`;
   return summary;
 });
 
@@ -401,6 +448,11 @@ $queue-columns: 1.1fr 160px 1fr 1fr 110px 170px;
 
     &--unfunded {
       color: $color-neg;
+    }
+
+    /* Not a shortfall — a reading the page could not take. Warned, not alarmed. */
+    &--unknown {
+      color: $color-warning;
     }
   }
 
@@ -530,7 +582,14 @@ $queue-columns: 1.1fr 160px 1fr 1fr 110px 170px;
   &__empty {
     padding: 4px 24px 26px;
     font-size: 13.5px;
+    line-height: 1.5;
     color: $color-steel-blue;
+  }
+
+  /* Leads the sentence, so the state is read before its explanation. */
+  &__empty_warn {
+    display: block;
+    color: $color-warning;
   }
 }
 </style>

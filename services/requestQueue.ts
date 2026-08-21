@@ -70,6 +70,18 @@ const mergeQueueFlows = (
   return [...byTransaction.values()];
 };
 
+export interface OpenRequestsResult {
+  requests: OpenRequest[];
+  /**
+   * How many flows the replay actually saw. Zero is the one answer the caller
+   * cannot read as "this vault has nothing outstanding": both feeds report a
+   * failure as an empty list — the subgraph is simply not deployed on three
+   * chains, and the explorer swallows its own errors — so a queue reconstructed
+   * from no history at all is unknown, not empty.
+   */
+  flowCount: number;
+}
+
 /**
  * The open requests of every depositor of one vault, from whichever of the
  * two feeds answer. Each feed failing on its own is ordinary (three chains
@@ -80,7 +92,7 @@ export const fetchOpenRequests = async (
   chainId: ChainId,
   fundAddress: string,
   etherscanApiKey: string,
-): Promise<OpenRequest[]> => {
+): Promise<OpenRequestsResult> => {
   const [subgraph, explorer] = await Promise.all([
     fetchSubgraphFundFlows(chainId, { fundAddress, first: 1000, skip: 0 })
       .then((data) => data.items.map(subgraphToQueueFlow))
@@ -90,5 +102,6 @@ export const fetchOpenRequests = async (
     ),
   ]);
 
-  return reconstructOpenRequests(mergeQueueFlows(explorer, subgraph));
+  const flows = mergeQueueFlows(explorer, subgraph);
+  return { requests: reconstructOpenRequests(flows), flowCount: flows.length };
 };
