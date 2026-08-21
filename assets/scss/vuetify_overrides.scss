@@ -1,6 +1,17 @@
 /* Vuetify overrides */
 $vuetify-border-width: 1px;
 
+/**
+ * CONTAINERS — Vuetify steps a v-container's max-width at 960/1280/1920/2560
+ * (900 / 1200 / 1800 / 2400px). The design has a single fixed cap instead, so
+ * any v-container defers to the shared page container. The :not() beats those
+ * media-query rules on specificity, and `fluid` still opts out of a cap the
+ * way it always did.
+ */
+.v-container:not(.v-container--fluid) {
+  @include page-container;
+}
+
 :root {
   /* BUTTONS */
   .v-btn-group {

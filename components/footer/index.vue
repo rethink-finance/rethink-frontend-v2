@@ -62,29 +62,21 @@ const currentYear = new Date().getFullYear();
   padding: 0;
   border-top: 1px solid $color-line;
 
-  /* Mirrors the navbar / <main> container so all three line up. */
+  /* Hairline spans the viewport; the row inside it sits in the shared page
+     container, so the social icons start under the navbar logo. */
   &__inner {
-    width: 100%;
-    margin: 0 auto;
-    padding: 1.625rem 0.75rem;
+    @include page-container;
+    padding-block: 26px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
 
     @include sm {
-      width: 90%;
-      padding-inline: 0;
       flex-direction: row;
       align-items: center;
       justify-content: space-between;
       gap: 1.5rem;
-    }
-    @include xxl {
-      width: 80%;
-    }
-    @include xxxl {
-      width: 75%;
     }
   }
 

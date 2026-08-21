@@ -343,29 +343,15 @@ const onClickConnect = async () => {
 
 
 
-  /* Mirrors the <main> container in layouts/default.vue so the navbar's
-     outer edges line up with the page content at every breakpoint. */
+  /* The bar itself is full bleed — background and hairline span the viewport —
+     while this inner row sits in the shared page container, so the logo and
+     the right-hand controls land on the same edges as the page below. */
   &__toolbar {
+    @include page-container;
     letter-spacing: normal;
     gap: 2rem;
     display: flex;
     flex-direction: row;
-    width: 100%;
-    margin: 0 auto;
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-
-    @include sm {
-      width: 90%;
-      padding-left: 0;
-      padding-right: 0;
-    }
-    @include xxl {
-      width: 80%;
-    }
-    @include xxxl {
-      width: 75%;
-    }
   }
 
   &__buttons {

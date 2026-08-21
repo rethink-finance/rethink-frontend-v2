@@ -1,4 +1,21 @@
-$navbar-height: 5rem;
+/**
+ * Global layout metrics.
+ *
+ * $navbar-height is the height of the bar's inner row. In px, not rem: the
+ * design calls for 64 and the app's root font-size is 15px, so 4rem would
+ * quietly land on 60.
+ *
+ * The other two are the one page container — the navbar's inner row, every
+ * page's <main> and the footer's inner row all resolve against them, so the
+ * three share a single grid instead of each inventing a width. The gutter
+ * clamps rather than stepping at breakpoints: below 1456px (1360 + 2 x 48) the
+ * column is fluid and the gutter shrinks with the viewport; above it the
+ * column is centred on its 1360px measure. Apply them through the
+ * `page-container` mixin rather than by hand.
+ */
+$navbar-height: 64px;
+$page-container-width: 1360px;
+$page-container-gutter: clamp(20px, 4vw, 48px);
 $default-transition-time: 0.28s;
 $color-white: #eceef4; // Approx 95% white
 $color-black: #333333;
