@@ -4,6 +4,14 @@
       Contracts
     </div>
     <div class="fund_contracts__rows">
+      <div class="fund_contracts__row fund_contracts__row--head">
+        <div class="fund_contracts__th">
+          Contract
+        </div>
+        <div class="fund_contracts__th fund_contracts__th--right">
+          Address
+        </div>
+      </div>
       <div v-for="row in contractRows" :key="row.label" class="fund_contracts__row">
         <div class="fund_contracts__label">
           {{ row.label }}
@@ -59,7 +67,7 @@ const contractRows = computed(() =>
 <style lang="scss" scoped>
 .fund_contracts {
   &__title {
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
   }
 
   &__rows {
@@ -67,31 +75,46 @@ const contractRows = computed(() =>
     flex-direction: column;
   }
 
+  /* Built to the fee table's row, since the two sit side by side: the same
+     heading strip, the same 116px column for the figure on the right, the same
+     rule above each row. Paired cards that keep their own rhythms read as two
+     things that happen to be adjacent rather than one band. */
   &__row {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 116px;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+    column-gap: 1rem;
     min-width: 0;
     padding: 0.75rem 0;
-    border-bottom: 1px solid $color-line;
+    border-top: 1px solid $color-line;
 
-    &:last-child {
-      border-bottom: 0;
-      padding-bottom: 0;
+    &--head {
+      padding: 0 0 0.625rem;
+      border-top: 0;
     }
   }
 
-  &__label {
+  &__th {
     font-family: $font-mono;
     font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: $color-steel-blue;
+
+    &--right {
+      text-align: right;
+    }
+  }
+
+  &__label {
+    font-size: 13.5px;
+    color: $color-text-irrelevant;
   }
 
   &__address {
+    justify-self: end;
+    font-family: $font-mono;
     font-size: 12.5px;
     color: $color-text-irrelevant;
     transition: color $default-transition-time ease;

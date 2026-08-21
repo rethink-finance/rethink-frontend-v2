@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_DONUT,
   DONUT_COLORS,
   buildDonutSlices,
   donutColor,
@@ -84,5 +85,76 @@ describe("buildDonutSlices", () => {
     expect(donutColor(0)).toBe(DONUT_COLORS[0]);
     expect(donutColor(DONUT_COLORS.length)).toBe(DONUT_COLORS[0]);
     expect(donutColor(DONUT_COLORS.length + 2)).toBe(DONUT_COLORS[2]);
+  });
+});
+
+/** Where a slice's outer arc begins and ends — the first two coordinate pairs. */
+const outerEnds = (path: string) => {
+  const [x0, y0, , , , , , x1, y1] = coordsOf(path);
+  return { start: [x0, y0], end: [x1, y1] };
+};
+
+/** Angle of a point about the donut's centre. */
+const angleOf = ([x, y]: number[]) =>
+  Math.atan2(y - DEFAULT_DONUT.center, x - DEFAULT_DONUT.center);
+
+/**
+ * Path coordinates are written to three decimals, which at radius 87 puts the
+ * finest angle the format can express at ~1e-5 rad. Angles read back out of a
+ * path are compared to that, not to the maths.
+ */
+const ANGLE_PRECISION = 4;
+
+describe("donutSegmentPath gaps", () => {
+  const gapped = (gap: number) => ({ ...DEFAULT_DONUT, gap });
+
+  it("draws slices flush by default, so existing rings are unchanged", () => {
+    // Two halves with no gap: one slice ends exactly where the next begins.
+    const first = outerEnds(donutSegmentPath(0, 0.5));
+    const second = outerEnds(donutSegmentPath(0.5, 0.5));
+    expect(first.end).toEqual(second.start);
+  });
+
+  it("opens each seam by exactly one gap", () => {
+    const gap = 0.05;
+    const first = outerEnds(donutSegmentPath(0, 0.5, gapped(gap)));
+    const second = outerEnds(donutSegmentPath(0.5, 0.5, gapped(gap)));
+    expect(angleOf(second.start) - angleOf(first.end)).toBeCloseTo(
+      gap,
+      ANGLE_PRECISION,
+    );
+  });
+
+  it("takes the gap off the slice, not off the ring", () => {
+    // Half a gap comes off each end, so a slice loses one gap in total and the
+    // ring still closes: the gaps are between slices, not extra empty space.
+    const gap = 0.04;
+    const { start, end } = outerEnds(donutSegmentPath(0.25, 0.25, gapped(gap)));
+    expect(angleOf(end) - angleOf(start)).toBeCloseTo(
+      0.25 * Math.PI * 2 - gap,
+      ANGLE_PRECISION,
+    );
+  });
+
+  it("still gives a lone position the closed ring", () => {
+    // Nothing to be separated from, so the gap has no one to make room for.
+    const ring = donutSegmentPath(0, 1, gapped(0.05));
+    expect(ring.match(/M /g)).toHaveLength(2);
+  });
+
+  it("keeps a hairline for a slice narrower than the gap", () => {
+    // Without a floor the end angle falls behind the start and the wedge is
+    // drawn inside out — a spike straight across the ring.
+    const { start, end } = outerEnds(donutSegmentPath(0.5, 0.0001, gapped(0.05)));
+    const swept = angleOf(end) - angleOf(start);
+    expect(swept).toBeGreaterThan(0);
+    expect(swept).toBeLessThan(0.05);
+  });
+
+  it("measures the long-way-round flag on what is drawn", () => {
+    // A hair over half the circle is under it again once the gaps come off,
+    // and an arc flagged the long way round there sweeps the wrong side.
+    expect(donutSegmentPath(0, 0.5001, gapped(0.05))).toContain("0 0 1");
+    expect(donutSegmentPath(0, 0.5001)).toContain("0 1 1");
   });
 });

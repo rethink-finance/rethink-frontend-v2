@@ -290,10 +290,7 @@ export const useCuratorExecution = () => {
     }
     if (isLoading.value) return "Checking your vault permissions…";
     if (!canExecute.value) {
-      return (
-        "The connected wallet holds no role on this vault's Roles modifier. " +
-        "Ask a vault manager to assign you one."
-      );
+      return "The connected wallet holds no role on this vault's Roles modifier.";
     }
     return "";
   });

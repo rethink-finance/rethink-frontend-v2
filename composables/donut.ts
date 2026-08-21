@@ -8,15 +8,32 @@
  * position hits.
  */
 
-/** Design's slice palette, brightest first — callers sort rows to match. */
+/**
+ * Design's slice palette, in the order slices are drawn — callers sort rows by
+ * size, so a colour's index is also where it sits on the ring.
+ *
+ * Order is not brightness. #2c8bff and #1f5fff are ten degrees of hue apart at
+ * the same saturation: drawn side by side they read as one wedge rather than
+ * two holdings, which is what the second and third slice of every vault used
+ * to be. They are kept four apart in the cycle instead, so no two neighbours —
+ * including the last slice against the first — share a hue family.
+ */
 export const DONUT_COLORS = [
   "#2fd7ff",
-  "#2c8bff",
   "#1f5fff",
   "#5ae0c8",
   "#7b8dff",
+  "#2c8bff",
   "#8892a8",
 ];
+
+/**
+ * Held back for a slice that stands for everything not drawn — the muted one,
+ * so a fold of small positions never outranks a real holding by colour. It is
+ * also the palette's last entry, which is where such a slice lands today;
+ * naming it separately keeps that true if the slice count ever changes.
+ */
+export const DONUT_OTHER_COLOR = "#8892a8";
 
 /** Colour for the nth slice, cycling once the palette runs out. */
 export const donutColor = (index: number) =>
@@ -27,6 +44,11 @@ export interface DonutGeometry {
   center: number;
   radiusOuter: number;
   radiusInner: number;
+  /**
+   * Angular gap cut between neighbouring slices, in radians. Zero — the
+   * default — draws them flush, as one continuous ring.
+   */
+  gap?: number;
 }
 
 /** The 200x200 viewBox both cards draw in. */
@@ -37,6 +59,13 @@ export const DEFAULT_DONUT: DonutGeometry = {
 };
 
 const TAU = Math.PI * 2;
+
+/**
+ * A slice narrower than this is drawn at this width anyway. Dust positions are
+ * a real part of what a vault holds, and the alternative, once a gap wider
+ * than the slice is cut out of it, is a wedge drawn inside out.
+ */
+const MIN_SWEEP = 0.008;
 
 const pointOn = (geometry: DonutGeometry, radius: number, angle: number) => [
   (geometry.center + radius * Math.cos(angle)).toFixed(3),
@@ -64,10 +93,24 @@ export const donutSegmentPath = (
 ): string => {
   if (fraction >= 0.99995) return fullRingPath(geometry);
 
-  const { radiusOuter, radiusInner } = geometry;
-  const from = start * TAU - Math.PI / 2;
-  const to = (start + fraction) * TAU - Math.PI / 2;
-  const largeArc = fraction > 0.5 ? 1 : 0;
+  const { radiusOuter, radiusInner, gap = 0 } = geometry;
+
+  // Every boundary on a ring is shared with a neighbour, so each slice gives up
+  // half a gap at either end and the ring still closes.
+  let from = start * TAU - Math.PI / 2 + gap / 2;
+  let to = (start + fraction) * TAU - Math.PI / 2 - gap / 2;
+
+  // A position too small to survive the gap keeps a hairline, centred where it
+  // actually sits rather than shunted to one side of it.
+  if (to - from < MIN_SWEEP) {
+    const middle = (start + fraction / 2) * TAU - Math.PI / 2;
+    from = middle - MIN_SWEEP / 2;
+    to = middle + MIN_SWEEP / 2;
+  }
+
+  // Measured on what is drawn, not on the slice's share: a hair over half the
+  // circle is under it again once the gaps come off.
+  const largeArc = to - from > Math.PI ? 1 : 0;
 
   const [x0o, y0o] = pointOn(geometry, radiusOuter, from);
   const [x1o, y1o] = pointOn(geometry, radiusOuter, to);

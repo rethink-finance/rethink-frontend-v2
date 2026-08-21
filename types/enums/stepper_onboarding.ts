@@ -6,7 +6,7 @@ import {
 import { ChainId } from "~/types/enums/chain_id";
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
 
-export const FeesDocs = "https://docs.rethink.finance/rethink.finance/protocol/architecture/admin-contract/fees"
+export const FeesDocs = "https://docs.rethink.finance/protocol/fees"
 
 /**
  * Chip vocabulary for the create flow. Every field declares which one it gets:
@@ -113,7 +113,7 @@ export const OnboardingBaseAssets: Partial<Record<ChainId, string[]>> = {
     "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1", // DAI
   ],
   [ChainId.HYPEREVM]: [
-    "0xB88339CB7199b77E23DB6E890353E22632Ba630f", // USDC
+    "0xb88339CB7199b77E23DB6E890353E22632Ba630f", // USDC
     "0xBe6727B535545C67d5cAa73dEa54865B92CF7907", // WETH
     "0x9FDBdA0A5e284c32744D2f17Ee5c74B284993463", // WBTC
   ],

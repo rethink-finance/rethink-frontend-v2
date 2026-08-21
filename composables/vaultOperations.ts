@@ -180,3 +180,76 @@ export const resolveSettledAmounts = <T extends SettleableFlow>(
       return { ...flow, resolvedAmount };
     });
 };
+
+// ---- Replaying flows into the standing request queue ------------------------
+
+/** One depositor's outstanding request, reconstructed from the flow feeds. */
+export interface OpenRequest {
+  /** Lowercased depositor address. */
+  depositor: string;
+  kind: "deposit" | "redemption";
+  /** Raw units — base token for deposits, vault shares for redemptions. */
+  amount: bigint;
+  /** Unix seconds of the request transaction. */
+  timestamp: number;
+  txHash?: string;
+}
+
+/** The slice of a flow the replay reads, common to both feeds. */
+export interface QueueFlow extends SettleableFlow {
+  amount: bigint | null;
+  from?: string;
+  txHash?: string;
+}
+
+/**
+ * Replay a vault's flows oldest-first into the set of requests still open.
+ *
+ * The contracts only expose the two pending totals — there is no on-chain
+ * enumeration of who is waiting with what — but every request, process and
+ * revoke is a transaction to the vault, so its flow history replays into the
+ * current queue: a depositor's request stays open until a later flow of
+ * theirs closes it.
+ *
+ * The lifecycle mirrors resolveSettledAmounts above: a repeated request
+ * overwrites the previous one per depositor and side (the vault holds one), a
+ * settled operation or a revoke closes the side it names, and a revoke whose
+ * argument neither feed decoded clears both sides rather than leaving open a
+ * request the depositor cancelled.
+ */
+export const reconstructOpenRequests = (
+  flows: QueueFlow[],
+): OpenRequest[] => {
+  const deposits = new Map<string, OpenRequest>();
+  const redemptions = new Map<string, OpenRequest>();
+
+  const sorted = [...flows].sort((a, b) => a.timestamp - b.timestamp);
+  for (const flow of sorted) {
+    const depositor = flow.from?.toLowerCase();
+    const operation = resolveVaultOperation(flow.name);
+    if (!depositor || !operation) continue;
+
+    if (operation.isRevoke) {
+      // Same reading as above: true went with a cancelled deposit.
+      if (flow.flag !== false) deposits.delete(depositor);
+      if (flow.flag !== true) redemptions.delete(depositor);
+      continue;
+    }
+    if (operation.family === "other") continue;
+
+    const book = operation.family === "deposit" ? deposits : redemptions;
+    if (operation.isSettled) {
+      book.delete(depositor);
+    } else {
+      book.set(depositor, {
+        depositor,
+        kind: operation.family === "deposit" ? "deposit" : "redemption",
+        amount: flow.amount ?? 0n,
+        timestamp: flow.timestamp,
+        txHash: flow.txHash,
+      });
+    }
+  }
+
+  return [...deposits.values(), ...redemptions.values()];
+};

@@ -1,75 +1,64 @@
 <template>
-  <div class="transfer">
-    <div class="transfer__content">
-      <div class="transfer__header">
-        <div class="transfer__title">
-          Transfer Base Asset to the Vault Contract
-        </div>
-        <div class="transfer__subtitle">
-          Transfer any base asset amount from the custody to the vault contract.
-        </div>
-      </div>
-      <div class="transfer__token">
-        <div class="transfer__token_data">
-          <div class="transfer__token_col">
-            {{ baseToken?.symbol }}
-          </div>
-          <div
-            class="transfer__token_col pa-0 transfer__token_col--dark text-end"
-          >
-            <UiInputNumber
-              v-model="tokenValue"
-              :rules="tokenValueRules"
-              class="transfer__input_amount"
-            />
-          </div>
-        </div>
-        <div class="transfer__balance">
-          Balance:
-          <strong
-            class="set_token_value_button mx-1"
-            @click="setTokenValue(safeContractBaseTokenBalanceFormatted)"
-          >
-            {{ safeContractBaseTokenBalanceFormatted }} {{ baseToken?.symbol }}
-          </strong>
-        </div>
-      </div>
+  <div class="transfer_admin">
+    <div class="transfer_admin__title">
+      Transfer base asset to admin
+      <UiInfoTooltip
+        :text="`Move ${baseToken?.symbol ?? 'the base asset'} from the Safe to the admin contract to cover redemptions.`"
+      />
+    </div>
 
-      <FundSettlementAlert v-if="!canExecuteAsCurator" class="switch_alert">
-        {{ curatorDisabledReason }}
-      </FundSettlementAlert>
-      <div class="buttons_container">
-        <div>
-          <v-tooltip
-            activator="parent"
-            location="bottom"
-            :disabled="!transferTooltipText"
-          >
-            <template #activator="{ props }">
-              <v-btn
-                v-bind="props"
-                class="bg-primary text-secondary"
-                :disabled="isTransferDisabled"
-                @click="transfer()"
-              >
-                <template #prepend>
-                  <v-progress-circular
-                    v-if="isTransferLoading"
-                    class="d-flex"
-                    size="20"
-                    width="3"
-                    indeterminate
-                  />
-                </template>
-                Transfer To Admin Contract
-              </v-btn>
-            </template>
-            <template #default>
-              {{ transferTooltipText }}
-            </template>
-          </v-tooltip>
-        </div>
+    <div
+      class="transfer_admin__control"
+      :class="{ 'transfer_admin__control--invalid': visibleErrorMessage }"
+    >
+      <div class="transfer_admin__prefix">
+        {{ baseToken?.symbol }}
       </div>
+      <UiInputNumber
+        v-model="tokenValue"
+        placeholder="0.00"
+        hide-details
+        class="transfer_admin__input"
+      />
+      <button
+        type="button"
+        class="transfer_admin__max"
+        @click="setTokenValue(safeContractBaseTokenBalanceFormatted)"
+      >
+        Max
+      </button>
+    </div>
+    <div v-if="visibleErrorMessage" class="transfer_admin__error">
+      {{ visibleErrorMessage }}
+    </div>
+
+    <div class="transfer_admin__foot">
+      <div class="transfer_admin__caption">
+        Safe balance · {{ safeContractBaseTokenBalanceDisplay }}
+      </div>
+      <span class="transfer_admin__action">
+        <v-tooltip
+          activator="parent"
+          location="top"
+          :disabled="!transferTooltipText"
+        >
+          {{ transferTooltipText }}
+        </v-tooltip>
+        <button
+          type="button"
+          class="transfer_admin__button"
+          :disabled="isTransferDisabled"
+          @click="transfer()"
+        >
+          <v-progress-circular
+            v-if="isTransferLoading"
+            size="14"
+            width="2"
+            indeterminate
+          />
+          Transfer
+        </button>
+      </span>
     </div>
   </div>
 </template>
@@ -152,6 +141,12 @@ const errorMessages = computed(() => {
     .map((rule) => rule(tokenValue.value || "0"))
     .filter((rule) => rule !== true);
 });
+// An untouched field says nothing — no amount yet is the starting state, not
+// a mistake to report.
+const visibleErrorMessage = computed(() => {
+  if (!tokenValueChanged.value || !tokenValue.value) return "";
+  return (errorMessages.value[0] as string) || "";
+});
 const isTransferDisabled = computed(() => {
   return (
     errorMessages.value.length > 0 ||
@@ -175,6 +170,13 @@ const safeContractBaseTokenBalanceFormatted = computed(() => {
     safeContractBaseTokenBalance.value,
     baseToken.value?.decimals,
     false,
+  );
+});
+const safeContractBaseTokenBalanceDisplay = computed(() => {
+  if (!baseToken.value) return "--";
+  return formatTokenValue(
+    safeContractBaseTokenBalance.value,
+    baseToken.value?.decimals,
   );
 });
 
@@ -243,88 +245,9 @@ const handleError = (error: any) => {
 </script>
 
 <style lang="scss" scoped>
-.buttons_container {
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-  margin-top: 0.5rem;
-}
-.transfer {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  font-size: $text-sm;
-  line-height: 1;
-  gap: 1rem;
+@import "./flows_action";
 
-  &__content {
-    gap: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    flex-grow: 1;
-    justify-content: space-between;
-  }
-  &__token {
-    font-weight: 500;
-    width: 100%;
-  }
-  /* Design card head: mono uppercase eyebrow over a quiet description. */
-  &__title {
-    font-family: $font-mono;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
-    margin-bottom: 0.625rem;
-  }
-  &__subtitle {
-    font-size: 13px;
-    line-height: 1.5;
-    color: $color-steel-blue;
-  }
-  &__token_header {
-    display: flex;
-    flex-direction: row;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-    color: $color-light-subtitle;
-  }
-  &__token_data {
-    @include borderGray;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    margin-bottom: 0.5rem;
-    color: $color-white;
-  }
-  &__token_col {
-    padding: 0.75rem;
-    height: 2.5rem;
-    background: $color-navy-gray;
-
-    &:first-of-type {
-      @include borderGray("border-right", false);
-    }
-    &--dark {
-      background: $color-navy-gray-dark;
-    }
-  }
-  &__balance {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.15rem;
-  }
-}
-
-.set_token_value_button {
-  &:hover {
-    cursor: pointer;
-    text-decoration: underline;
-  }
-}
-.switch_alert {
-  justify-content: flex-start !important;
+.transfer_admin {
+  @include flows-action-column;
 }
 </style>

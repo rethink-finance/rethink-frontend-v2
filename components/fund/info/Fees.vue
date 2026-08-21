@@ -115,11 +115,16 @@ const feeRows = computed(() => [
     flex-direction: column;
   }
 
+  /* Half-width once it is paired with the contracts card, so it cannot carry
+     the overview's four tracks — those alone are wider than the whole card.
+     Fixed figure columns instead of content-sized ones: each row is its own
+     grid, so an auto column sizes to that row alone and "0.2%" would sit off
+     the "10%" above it. */
   &__grid {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1.4fr;
+    grid-template-columns: minmax(0, 1fr) 56px 116px;
     align-items: center;
-    gap: 1rem;
+    column-gap: 1.5rem;
     padding: 0.75rem 0;
     border-top: 1px solid $color-line;
 

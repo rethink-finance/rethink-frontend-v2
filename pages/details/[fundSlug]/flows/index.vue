@@ -1,408 +1,308 @@
 <template>
   <div class="flows">
-    <div class="main_card">
-      <UiHeader>
-        <div class="main_header__title">
-          Settlement Cycle
-          <UiTooltipClick location="right" :hide-after="6000">
-            <Icon
-              icon="material-symbols:info-outline"
-              :class="'main_header__info-icon'"
-              width="1.5rem"
-            />
-
-            <template #tooltip>
-              <a
-                class="tooltip__link"
-                href="https://docs.rethink.finance/rethink.finance"
-                target="_blank"
-              >
-                Learn More
-                <Icon icon="maki:arrow" color="primary" width="1rem" />
-              </a>
-            </template>
-          </UiTooltipClick>
+    <!-- Settlement rhythm: when it last settled, how often it should, and a
+         live countdown to when it next will. -->
+    <div class="brand_card flows__settlement">
+      <div class="flows__stat">
+        <div class="flows__stat_value">
+          <v-progress-circular
+            v-if="isLoadingFetchFundNAVUpdatesAction"
+            class="d-flex"
+            size="16"
+            width="2"
+            indeterminate
+          />
+          <template v-else>
+            {{ fundLastNAVUpdate?.date || "N/A" }}
+          </template>
         </div>
-      </UiHeader>
+        <div class="flows__stat_label">
+          Last settlement
+        </div>
+      </div>
 
-      <UiDataBar bg-transparent class="settlement_cycle data_bar">
-        <div class="data_bar__item">
-          <div class="data_bar__title">
-            <v-progress-circular
-              v-if="isLoadingFetchFundNAVUpdatesAction"
-              class="d-flex"
-              size="18"
-              width="2"
-              indeterminate
+      <div class="flows__vline" />
+
+      <div class="flows__stat">
+        <div class="flows__stat_value">
+          <v-progress-circular
+            v-if="isLoadingParsedPlannedSettlement"
+            class="d-flex"
+            size="16"
+            width="2"
+            indeterminate
+          />
+          <template v-else>
+            {{ plannedCycleLabel }}
+          </template>
+        </div>
+        <div class="flows__stat_label">
+          Planned settlement cycle
+        </div>
+      </div>
+
+      <div class="flows__vline" />
+
+      <div class="flows__stat">
+        <div class="flows__stat_value flows__stat_value--countdown">
+          {{ isOverdue ? "Due now" : countdownText ?? "N/A" }}
+        </div>
+        <div class="flows__stat_label">
+          Next settlement<template v-if="nextSettlementDate">
+            ·
+            <span class="flows__stat_label_accent">{{ nextSettlementDate }}</span>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- The page's working figure: everything below is valued at this NAV. -->
+    <div class="brand_card flows__simnav">
+      <div class="flows__simnav_main">
+        <div class="flows__simnav_value">
+          <v-progress-circular
+            v-if="isSimulatedNAVLoading"
+            class="d-flex"
+            size="18"
+            width="2"
+            indeterminate
+          />
+          <div v-else-if="fund.pendingRedemptionBalanceError" class="flows__stat_value--error">
+            N/A
+          </div>
+          <template v-else>
+            <UiInputNumber
+              v-if="isSimulatedNAVEdit"
+              v-model="customSimulatedNAVValue"
+              :rules="customSimulatedNAVValueRules"
+              class="flows__simnav_input"
+              hide-details
+              @input="customSimulatedNAVValueChanged = true"
             />
             <template v-else>
-              {{ fundLastNAVUpdate?.date || "N/A" }}
+              {{ totalCurrentSimulatedNAVFormatted }}
             </template>
-          </div>
-          <div class="data_bar__subtitle">
-            Last Settlement
-          </div>
-        </div>
-        <div class="data_bar__item">
-          <div class="data_bar__title">
-            <v-progress-circular
-              v-if="isLoadingParsedPlannedSettlement"
-              class="d-flex"
-              size="18"
-              width="2"
-              indeterminate
-            />
-
-            <template v-else>
-              {{ parsedPlannedSettlement }}
-            </template>
-          </div>
-          <div class="data_bar__subtitle">
-            Planned Settlement Cycle
-          </div>
-        </div>
-        <!-- TODO figure out Next Planned Settlement -->
-        <!--        <div class="data_bar__item">-->
-        <!--          <div class="data_bar__title">-->
-        <!--            N/A-->
-        <!--          </div>-->
-        <!--          <div class="data_bar__subtitle">-->
-        <!--            Next Planned Settlement-->
-        <!--          </div>-->
-        <!--        </div>-->
-        <div class="data_bar__item">
-          <div class="curator_status">
-            <template v-if="canExecuteAsCurator">
+            <div
+              v-if="isAnySimulatedNavError"
+              class="flows__simnav_warning"
+            >
               <Icon
-                icon="octicon:check-circle-fill-16"
+                icon="octicon:question-16"
                 width="1rem"
-                height="1rem"
-                color="var(--color-success)"
+                color="var(--color-warning)"
               />
-              <div>
-                {{
-                  isConnectedAsSafe
-                    ? "Connected as the custody Safe"
-                    : "Connected as a vault curator"
-                }}
-              </div>
-            </template>
-            <div v-else>
-              {{ curatorDisabledReason }}
+              <v-tooltip activator="parent" location="top">
+                Something went wrong while simulating NAV value. Retry
+                simulating NAV.
+              </v-tooltip>
             </div>
-          </div>
+          </template>
         </div>
-      </UiDataBar>
+        <div class="flows__simnav_label">
+          Simulated NAV
+          <button
+            type="button"
+            class="flows__simnav_toggle"
+            @click="toggleSimulatedNAVEdit()"
+          >
+            {{ isSimulatedNAVEdit ? "Reset" : "Edit" }}
+          </button>
+          <UiInfoTooltip
+            text="Off-chain simulation of the vault NAV at current prices, used to value pending flows ahead of the on-chain update."
+          />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="flows__ghost_button"
+        :disabled="isSimulatedNAVLoading"
+        @click="refreshFlowsInfo()"
+      >
+        Re-simulate
+      </button>
     </div>
 
-    <!-- Admin Contract -->
-    <div class="main_card">
-      <UiHeader>
-        <div class="main_header__title">
-          Admin Contract
-          <UiTooltipClick location="right" :hide-after="6000">
-            <Icon
-              icon="material-symbols:info-outline"
-              :class="'main_header__info-icon'"
-              width="1.5rem"
+    <!-- Everything admin-contract: what it holds, what it owes, moving base
+         asset either way, and the settle action itself. -->
+    <div class="brand_card flows__admin">
+      <div class="flows__admin_title">
+        Admin contract
+      </div>
+      <div class="flows__admin_stats">
+        <div class="flows__stat">
+          <div class="flows__stat_value">
+            <v-progress-circular
+              v-if="fund.fundContractBaseTokenBalanceLoading"
+              class="d-flex"
+              size="16"
+              width="2"
+              indeterminate
             />
-
-            <template #tooltip>
-              <a
-                class="tooltip__link"
-                href="https://docs.rethink.finance/rethink.finance"
-                target="_blank"
-              >
-                Learn More
-                <Icon icon="maki:arrow" color="primary" width="1rem" />
-              </a>
+            <div
+              v-else-if="fund.fundContractBaseTokenBalanceError"
+              class="flows__stat_value--error"
+            >
+              N/A
+            </div>
+            <template v-else>
+              {{ adminContractBalanceFormatted }}
             </template>
-          </UiTooltipClick>
+          </div>
+          <div class="flows__stat_label">
+            Admin contract balance
+          </div>
         </div>
-      </UiHeader>
 
-      <!--Simulated NAV & redemption & deposit requests-->
-      <UiDataBar>
-        <div class="column-8">
-          <div class="data_bar__item">
-            <div class="data_bar__title">
-              <v-progress-circular
-                v-if="isLoadingFetchFundNAVUpdatesAction ||
-                  isLoadingFetchSimulatedNAVMethodValueAction ||
-                  isLoadingFetchSimulateCurrentNAVAction"
-                class="d-flex"
-                size="18"
-                width="2"
-                indeterminate
-              />
-              <div
-                v-else-if="fund.pendingRedemptionBalanceError"
-                class="text-error"
-              >
-                N/A
-              </div>
-              <div
-                v-else
-                class="nav_simulated_value"
-                :class="{
-                  'nav_simulated_value--warning': isAnySimulatedNavError,
-                }"
-              >
-                <div v-if="isSimulatedNAVEdit" class="transfer__token">
-                  <div class="transfer__token_data">
-                    <div class="transfer__token_col px-4">
-                      {{ fundStore.fund?.baseToken?.symbol }}
-                    </div>
-                    <div
-                      class="transfer__token_col transfer__input pa-0 transfer__token_col--dark text-end"
-                    >
-                      <UiInputNumber
-                        v-model="customSimulatedNAVValue"
-                        :rules="customSimulatedNAVValueRules"
-                        class="transfer__input_amount"
-                        hide-details
-                        @input="customSimulatedNAVValueChanged = true"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <template v-else>
-                  {{ totalCurrentSimulatedNAVFormatted }}
-                </template>
-                <div
-                  v-if="isAnySimulatedNavError"
-                  class="ms-2 justify-center align-center d-flex"
-                >
-                  <Icon
-                    icon="octicon:question-16"
-                    width="1rem"
-                    color="var(--color-warning)"
-                  />
-                  <v-tooltip activator="parent" location="right">
-                    Something went wrong while simulating NAV value. Retry
-                    simulating NAV.
-                  </v-tooltip>
-                </div>
-              </div>
-            </div>
-            <div class="data_bar__subtitle d-flex">
-              Simulated NAV
-              <UiButtonDetails
-                v-if="!isSimulatedNAVEdit"
-                class="ms-2"
-                xs
-                @click="toggleSimulatedNAVEdit()"
-              >
-                <Icon icon="fa-solid:edit" width="1.4em" height="1.4em" />
-              </UiButtonDetails>
-              <UiButtonDetails
-                v-else
-                class="ms-2"
-                xs
-                @click="toggleSimulatedNAVEdit()"
-              >
-                <Icon
-                  icon="mdi-arrow-u-left-top"
-                  width="1.4em"
-                  height="1.4em"
-                />
-              </UiButtonDetails>
-            </div>
-          </div>
-          <div class="data_bar__item">
-            <div class="data_bar__title">
-              <v-progress-circular
-                v-if="fund.pendingRedemptionBalanceLoading"
-                class="d-flex"
-                size="18"
-                width="2"
-                indeterminate
-              />
-              <div
-                v-else-if="fund.pendingRedemptionBalanceError"
-                class="text-error"
-              >
-                N/A
-              </div>
-              <template v-else>
-                {{ pendingRedemptionBalanceFormatted }}
-                {{ fund.fundToken.symbol }}
-                <div class="pending_redemptions_estimate">
-                  ≈
-                  <v-progress-circular
-                    v-if="isLoadingFetchFundNAVUpdatesAction ||
-                      isLoadingFetchSimulatedNAVMethodValueAction ||
-                      isLoadingFetchSimulateCurrentNAVAction"
-                    class="d-flex"
-                    size="18"
-                    width="2"
-                    indeterminate
-                  />
-                  <template v-else>
-                    {{ estimatedPendingRedemptionBalanceInBaseFormatted }}
-                  </template>
-                </div>
-              </template>
-            </div>
-            <div class="data_bar__subtitle">
-              Redemption Requests
-            </div>
-          </div>
-          <div class="data_bar__item">
-            <div class="data_bar__title">
-              <v-progress-circular
-                v-if="fund.pendingDepositBalanceLoading"
-                class="d-flex"
-                size="18"
-                width="2"
-                indeterminate
-              />
-              <div
-                v-else-if="fund.pendingDepositBalanceError"
-                class="text-error"
-              >
-                N/A
-              </div>
-              <template v-else>
-                {{ pendingDepositBalanceFormatted }} {{ fund.baseToken.symbol }}
-              </template>
-            </div>
-            <div class="data_bar__subtitle">
-              Deposit Requests
-            </div>
-          </div>
-          <div class="data_bar__item">
-            <div class="data_bar__title">
-              <v-progress-circular
-                v-if="
-                  isLoadingFetchFundNAVUpdatesAction ||
-                    isLoadingFetchSimulatedNAVMethodValueAction ||
-                    isLoadingFetchSimulateCurrentNAVAction
-                "
-                class="d-flex"
-                size="18"
-                width="2"
-                indeterminate
-              />
-              <div
-                v-else-if="fund.pendingRedemptionBalanceError"
-                class="text-error"
-              >
-                N/A
-              </div>
-              <div
-                v-else
-                class="funding_gap"
-                :class="fundingGapClass"
-                @click="setTransferToFundValue(absoluteFundingGap)"
-              >
-                {{ fundingGapFormatted }}
-              </div>
-            </div>
-            <div class="data_bar__subtitle">
-              Funding Gap
-            </div>
-          </div>
-        </div>
-        <div class="column-4">
-          <div class="data_bar__item">
-            <v-btn
-              class="text-secondary"
-              variant="outlined"
-              @click="refreshFlowsInfo()"
+        <div class="flows__stat">
+          <div class="flows__stat_value">
+            <v-progress-circular
+              v-if="fund.pendingRedemptionBalanceLoading"
+              class="d-flex"
+              size="16"
+              width="2"
+              indeterminate
+            />
+            <div
+              v-else-if="fund.pendingRedemptionBalanceError"
+              class="flows__stat_value--error"
             >
-              Refresh Flows Info
-            </v-btn>
+              N/A
+            </div>
+            <template v-else>
+              {{ pendingRedemptionBalanceFormatted }}
+            </template>
+          </div>
+          <div class="flows__stat_label">
+            Redemption requests
+            <template v-if="estimatedPendingRedemptionBalanceInBaseFormatted">
+              ·
+              <span class="flows__stat_label_accent">
+                ≈ {{ estimatedPendingRedemptionBalanceInBaseFormatted }}
+              </span>
+            </template>
           </div>
         </div>
-      </UiDataBar>
 
-      <!-- Admin Contract Balance & Update NAV and Settle flows -->
-      <UiDataBar>
-        <div class="column-8">
-          <div class="data_bar__item">
-            <div class="title_balance">
+        <div class="flows__stat">
+          <div class="flows__stat_value">
+            <v-progress-circular
+              v-if="fund.pendingDepositBalanceLoading"
+              class="d-flex"
+              size="16"
+              width="2"
+              indeterminate
+            />
+            <div
+              v-else-if="fund.pendingDepositBalanceError"
+              class="flows__stat_value--error"
+            >
+              N/A
+            </div>
+            <template v-else>
+              {{ pendingDepositBalanceFormatted }}
+            </template>
+          </div>
+          <div class="flows__stat_label">
+            Deposit requests
+          </div>
+        </div>
+
+        <div class="flows__stat">
+          <div class="flows__stat_value">
+            <v-progress-circular
+              v-if="isSimulatedNAVLoading"
+              class="d-flex"
+              size="16"
+              width="2"
+              indeterminate
+            />
+            <div
+              v-else-if="fund.pendingRedemptionBalanceError"
+              class="flows__stat_value--error"
+            >
+              N/A
+            </div>
+            <button
+              v-else
+              type="button"
+              class="flows__funding_gap"
+              :class="fundingGapClass"
+              @click="setTransferToFundValue(absoluteFundingGap)"
+            >
+              {{ fundingGapFormatted }}
+              <v-tooltip activator="parent" location="top">
+                Prefill the transfer below with this amount.
+              </v-tooltip>
+            </button>
+          </div>
+          <div class="flows__stat_label">
+            Funding gap
+          </div>
+        </div>
+      </div>
+
+      <div class="flows__admin_actions">
+        <FundSettlementTransferBaseAsset v-model="transferToFundValue" />
+        <FundSettlementSweepFundContract
+          :funding-gap="fundingGap"
+          :pending-redemptions-in-base="estimatedPendingRedemptionBalanceInBase"
+        />
+      </div>
+
+      <div class="flows__admin_settle">
+        <UiInfoTooltip
+          location="start"
+          :size="14"
+          text="Admin contract balance must cover redemption requests before flows can settle."
+        />
+        <span class="flows__settle_action">
+          <v-tooltip
+            activator="parent"
+            location="top"
+            :disabled="!curatorDisabledReason"
+          >
+            {{ curatorDisabledReason }}
+          </v-tooltip>
+          <v-btn
+            :disabled="!canExecuteAsCurator || isLoadingPostUpdateNAV"
+            class="bg-primary text-secondary"
+            @click="settleFlows()"
+          >
+            <template #prepend>
               <v-progress-circular
-                v-if="fund.fundContractBaseTokenBalanceLoading"
+                v-if="isLoadingPostUpdateNAV"
                 class="d-flex"
-                size="18"
-                width="2"
+                size="20"
+                width="3"
                 indeterminate
               />
-              <div
-                v-else-if="fund.fundContractBaseTokenBalanceError"
-                class="text-error"
-              >
-                N/A
-              </div>
-              <template v-else>
-                {{
-                  formatTokenValue(
-                    fund.fundContractBaseTokenBalance,
-                    fund.baseToken.decimals,
-                    false
-                  )
-                }}
-                {{ fund.baseToken.symbol }}
-              </template>
-            </div>
-            <div class="data_bar__subtitle">
-              Admin Contract Balance
-            </div>
-          </div>
-          <div class="data_bar__item">
-            <UiNotification class="fund_contract_notification">
-              Admin Contract Balance should meet Redemption Requests before being
-              able to Settle the Flows.
-            </UiNotification>
-          </div>
-        </div>
-        <div class="column-4">
-          <div class="data_bar__item">
-            <v-tooltip
-              activator="parent"
-              location="bottom"
-              :disabled="!curatorDisabledReason"
-            >
-              <template #activator="{ props }">
-                <v-btn
-                  v-bind="props"
-                  :disabled="!canExecuteAsCurator || isLoadingPostUpdateNAV"
-                  class="bg-primary text-secondary"
-                  @click="fundStore.postUpdateNAV()"
-                >
-                  <template #prepend>
-                    <v-progress-circular
-                      v-if="isLoadingPostUpdateNAV"
-                      class="d-flex"
-                      size="20"
-                      width="3"
-                      indeterminate
-                    />
-                  </template>
-                  Update NAV and Settle Flows
-                </v-btn>
-              </template>
-              <template #default>
-                {{ curatorDisabledReason }}
-              </template>
-            </v-tooltip>
-          </div>
-        </div>
-      </UiDataBar>
+            </template>
+            Update NAV & settle flows
+          </v-btn>
+        </span>
+      </div>
     </div>
 
-    <div class="main_card main_grid">
-      <FundSettlementTransferBaseAsset v-model="transferToFundValue" />
-      <FundSettlementSweepFundContract />
-    </div>
+    <FundFlowsRequestQueue
+      :fund="fund"
+      :exchange-rate="estimatedFundToBaseTokenExchangeRate"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ethers, FixedNumber } from "ethers";
-import { formatTokenValue, roundToSignificantDecimals } from "~/composables/formatters";
-import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
+import {
+  commify,
+  formatTokenValue,
+  roundToSignificantDecimals,
+} from "~/composables/formatters";
+import {
+  parsePlannedSettlement,
+  parsePlannedSettlementSeconds,
+} from "~/composables/fund/parsePlannedSettlement";
+import { useSettlementCountdown } from "~/composables/fund/useSettlementCountdown";
 import { useCuratorExecution } from "~/composables/permissions/useCuratorExecution";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
@@ -423,13 +323,13 @@ const {
 // modifier; a wallet connected as the Safe keeps sending calls unwrapped.
 const {
   canExecute: canExecuteAsCurator,
-  isConnectedAsSafe,
   disabledReason: curatorDisabledReason,
 } = useCuratorExecution();
 
 const customSimulatedNAVValue = ref("");
 const customSimulatedNAVValueChanged = ref(false);
 const parsedPlannedSettlement = ref("");
+const plannedCycleSeconds = ref<number | undefined>(undefined);
 const isLoadingParsedPlannedSettlement = ref(false);
 
 watch(
@@ -462,6 +362,39 @@ const customSimulatedNAVValueRules = [
 ];
 const isSimulatedNAVEdit = ref(false);
 const transferToFundValue = ref("");
+
+// ---- Settlement rhythm ------------------------------------------------------
+
+const plannedCycleLabel = computed(() => {
+  const parsed = parsedPlannedSettlement.value;
+  if (!parsed || parsed === "N/A") return "N/A";
+  return `Every ${parsed}`;
+});
+
+const lastSettlementMs = computed(
+  () => fundLastNAVUpdate.value?.timestamp || undefined,
+);
+const { nextSettlementMs, countdownText, isOverdue } = useSettlementCountdown(
+  lastSettlementMs,
+  plannedCycleSeconds,
+);
+
+// "Aug 27, 09:00 UTC" — hourCycle rather than hour12 so midnight reads 00, not 24.
+const nextSettlementDateFormat = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: "UTC",
+});
+const nextSettlementDate = computed(() => {
+  if (nextSettlementMs.value === undefined) return "";
+  return `${nextSettlementDateFormat.format(new Date(nextSettlementMs.value))} UTC`;
+});
+
+// ---- Simulated NAV ----------------------------------------------------------
+
 const simulatedNavErrorCount = computed(() => {
   return fundLastNAVUpdateMethods.value.reduce(
     (errorCount: number, method: any) => {
@@ -474,25 +407,32 @@ const isAnySimulatedNavError = computed(() => {
   return simulatedNavErrorCount.value > 0;
 });
 
-const pendingDepositBalanceFormatted = computed(() => {
-  if (!fund?.pendingDepositBalance) return "0";
-  return formatTokenValue(
-    fund?.pendingDepositBalance,
-    fund.baseToken.decimals,
-    false,
-  );
-});
 const totalCurrentSimulatedNAVFormatted = computed(() => {
   if (!totalCurrentSimulatedNAV.value) return "0";
   return fundStore.getFormattedBaseTokenValue(totalCurrentSimulatedNAV.value);
 });
+
+// ---- Admin contract stats ---------------------------------------------------
+
+const adminContractBalanceFormatted = computed(() => {
+  return `${formatTokenValue(
+    fund.fundContractBaseTokenBalance,
+    fund.baseToken.decimals,
+  )} ${fund.baseToken.symbol}`;
+});
+const pendingDepositBalanceFormatted = computed(() => {
+  if (!fund?.pendingDepositBalance) return `0 ${fund.baseToken.symbol}`;
+  return `${formatTokenValue(
+    fund.pendingDepositBalance,
+    fund.baseToken.decimals,
+  )} ${fund.baseToken.symbol}`;
+});
 const pendingRedemptionBalanceFormatted = computed(() => {
-  if (!fund?.pendingRedemptionBalance) return "0";
-  return formatTokenValue(
-    fund?.pendingRedemptionBalance,
+  if (!fund?.pendingRedemptionBalance) return `0 ${fund.fundToken.symbol}`;
+  return `${formatTokenValue(
+    fund.pendingRedemptionBalance,
     fund.fundToken.decimals,
-    false,
-  );
+  )} ${fund.fundToken.symbol}`;
 });
 
 const estimatedFundToBaseTokenExchangeRate = computed(
@@ -520,8 +460,12 @@ const estimatedFundToBaseTokenExchangeRate = computed(
         fundStore.fund?.baseToken.decimals,
       );
     }
-    const totalCurrentSimulatedNAVValue =
-      FixedNumber.fromString(navValueString);
+    let totalCurrentSimulatedNAVValue;
+    try {
+      totalCurrentSimulatedNAVValue = FixedNumber.fromString(navValueString || "0");
+    } catch {
+      return undefined;
+    }
 
     return totalCurrentSimulatedNAVValue.div(fundTokenTotalSupply);
   },
@@ -543,10 +487,6 @@ const estimatedPendingRedemptionBalanceInBase = computed(() => {
       fundStore.fund?.fundToken.decimals,
     ),
   );
-  console.log(
-    "actual value",
-    pendingRedemptionBalance.mul(estimatedFundToBaseTokenExchangeRate.value),
-  );
 
   // Calculate the estimated value using the exchange rate
   return pendingRedemptionBalance.mul(
@@ -554,28 +494,13 @@ const estimatedPendingRedemptionBalanceInBase = computed(() => {
   );
 });
 const estimatedPendingRedemptionBalanceInBaseFormatted = computed(() => {
-  // Estimated Fund to Base token exchange rate based on the current NAV simulated value or user's manual input.
-  if (
-    !fundStore.fund ||
-    !estimatedPendingRedemptionBalanceInBase.value ||
-    estimatedPendingRedemptionBalanceInBase.value.isZero()
-  ) {
-    return "0 " + fundStore.fund?.baseToken.symbol;
+  if (!fundStore.fund || !estimatedPendingRedemptionBalanceInBase.value) {
+    return "";
   }
-
-  console.log(
-    "estimatedPendingRedemptionBalanceInBase",
-    estimatedPendingRedemptionBalanceInBase.value,
+  const rounded = roundToSignificantDecimals(
+    estimatedPendingRedemptionBalanceInBase.value.toString(),
   );
-
-  // Calculate the estimated value using the exchange rate
-  return (
-    roundToSignificantDecimals(
-      estimatedPendingRedemptionBalanceInBase.value.toString(),
-    ) +
-    " " +
-    fundStore.fund.baseToken.symbol
-  );
+  return `${commify(rounded)} ${fundStore.fund.baseToken.symbol}`;
 });
 
 const fundingGap = computed(() => {
@@ -584,10 +509,6 @@ const fundingGap = computed(() => {
     estimatedPendingRedemptionBalanceInBase.value === undefined
   )
     return undefined;
-  console.log(
-    "FF estimatedPendingRedemptionBalanceInBase",
-    estimatedPendingRedemptionBalanceInBase.value,
-  );
 
   // Difference between admin contract liquidity and the amount of redemption requests.
   let fundContractBaseTokenBalance = FixedNumber.fromString("0");
@@ -606,11 +527,10 @@ const fundingGap = computed(() => {
 
 const fundingGapFormatted = computed(() => {
   if (!fundStore.fund || fundingGap.value === undefined) return "N/A";
-  return (
-    roundToSignificantDecimals(fundingGap.value.toString()) +
-    " " +
-    fundStore.fund?.baseToken.symbol
-  );
+  const rounded = roundToSignificantDecimals(fundingGap.value.toString());
+  const symbol = fundStore.fund?.baseToken.symbol;
+  const sign = rounded.startsWith("-") ? "−" : "+";
+  return `${sign}${commify(rounded.replace("-", ""))} ${symbol}`;
 });
 const absoluteFundingGap = computed(() => {
   if (!fundStore.fund || fundingGap.value === undefined) return "";
@@ -620,18 +540,30 @@ const absoluteFundingGap = computed(() => {
 const fundingGapClass = computed(() => {
   if (!fundStore.fund || fundingGap.value === undefined) return "";
   if (fundingGap.value.gt(FixedNumber.fromValue(0))) {
-    return "text-success";
+    return "flows__funding_gap--positive";
   } else if (fundingGap.value.lt(FixedNumber.fromValue(0))) {
-    return "text-error";
+    return "flows__funding_gap--negative";
   }
-  return "";
+  return "flows__funding_gap--flat";
 });
+
+// ---- Actions ----------------------------------------------------------------
 
 const setTransferToFundValue = (value: any) => {
   transferToFundValue.value = value;
 };
 const toggleSimulatedNAVEdit = () => {
   isSimulatedNAVEdit.value = !isSimulatedNAVEdit.value;
+  if (!isSimulatedNAVEdit.value) {
+    // Reset means back to the fetched simulation — also let the next
+    // simulation repopulate the field again.
+    customSimulatedNAVValueChanged.value = false;
+    customSimulatedNAVValue.value = formatTokenValue(
+      totalCurrentSimulatedNAV.value,
+      fund.baseToken.decimals,
+      false,
+    );
+  }
 };
 
 const refreshFlowsInfo = () => {
@@ -643,6 +575,19 @@ const refreshFlowsInfo = () => {
 
   // Refresh the admin contract base token balance.
   fundStore.fetchFundContractBaseTokenBalance();
+};
+
+const settleFlows = async () => {
+  try {
+    await fundStore.postUpdateNAV();
+  } catch {
+    // The action already reported the failure; nothing to refresh.
+    return;
+  }
+  // A settle moves the anchor: refreshed NAV data resets the countdown a full
+  // cycle ahead, and the flow balances follow.
+  fundStore.fetchFundNAVData();
+  refreshFlowsInfo();
 };
 
 watch(
@@ -659,269 +604,300 @@ const isLoadingPostUpdateNAV = computed(() => {
 const isLoadingFetchFundNAVUpdatesAction = computed(() => {
   return actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading);
 });
-const isLoadingFetchSimulateCurrentNAVAction = computed(() => {
-  return actionStateStore.isActionState("fetchSimulateCurrentNAVAction", ActionState.Loading);
-});
-const isLoadingFetchSimulatedNAVMethodValueAction = computed(() => {
-  return actionStateStore.isActionState("fetchSimulatedNAVMethodValueAction", ActionState.Loading);
+const isSimulatedNAVLoading = computed(() => {
+  return (
+    isLoadingFetchFundNAVUpdatesAction.value ||
+    actionStateStore.isActionState("fetchSimulateCurrentNAVAction", ActionState.Loading) ||
+    actionStateStore.isActionState("fetchSimulatedNAVMethodValueAction", ActionState.Loading)
+  );
 });
 
 onMounted(async () => {
   isLoadingParsedPlannedSettlement.value = true;
-  await parsePlannedSettlement(fund.chainId, fund.plannedSettlementPeriod)
-    .then((result) => {
-      parsedPlannedSettlement.value = result;
-    })
-    .catch((error) => {
-      console.error("Error parsing planned settlement", error);
-    })
-    .finally(() => {
-      isLoadingParsedPlannedSettlement.value = false;
-    });
+  try {
+    const [prose, seconds] = await Promise.all([
+      parsePlannedSettlement(fund.chainId, fund.plannedSettlementPeriod),
+      parsePlannedSettlementSeconds(fund.chainId, fund.plannedSettlementPeriod),
+    ]);
+    parsedPlannedSettlement.value = prose;
+    plannedCycleSeconds.value = seconds;
+  } catch (error) {
+    console.error("Error parsing planned settlement", error);
+  } finally {
+    isLoadingParsedPlannedSettlement.value = false;
+  }
 });
 </script>
 
 <style scoped lang="scss">
-.fund_contract_notification {
-  margin: 0;
-  @include sm {
-    max-width: 420px;
-  }
-}
-/* Design's status pill: mono caption with a state dot. */
-.curator_status {
-  align-items: center;
-  display: flex;
-  border: 1px solid $color-line-2;
-  padding: 0.5625rem 0.8125rem;
-  flex-direction: row;
-  border-radius: $default-border-radius;
-  font-family: $font-mono;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  font-weight: 400;
-  color: $color-text-irrelevant;
-  gap: 0.6rem;
-}
-.nav_simulated_value {
-  display: flex;
-  align-items: center;
-  &--warning {
-    color: $color-warning;
-  }
-}
-.main_card:not(.main_grid) {
+.flows {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 1.375rem;
 }
-.pending_redemptions_estimate {
+
+/* ---- Shared stat treatment: mono figure over a mono uppercase caption. ---- */
+
+.flows__stat {
   display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+  min-width: 0;
+}
+
+.flows__stat_value {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
-  margin-left: 0.25rem;
-  color: $color-primary;
-}
-.funding_gap {
-  &:hover {
-    cursor: pointer;
-    text-decoration: underline;
-  }
-}
-.transfer {
-  display: flex;
-  flex-direction: column;
-  font-size: $text-sm;
-  line-height: 1;
-  gap: 1rem;
-  background: $color-card-background;
-  padding: 24px;
-  border-radius: $default-border-radius;
-
-  &__input {
-    width: 8rem;
-  }
-  &__content {
-    gap: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    flex-grow: 1;
-    justify-content: space-between;
-  }
-  &__token {
-    font-weight: 500;
-    width: 100%;
-  }
-  &__title {
-    font-size: $text-md;
-    font-weight: 500;
-    color: $color-title;
-    margin-bottom: 0.5rem;
-  }
-  &__subtitle {
-    font-size: $text-md;
-    color: $color-light-subtitle;
-  }
-  &__token_data {
-    @include borderGray;
-    display: flex;
-    flex-direction: row;
-    color: $color-white;
-    margin-bottom: 0.25rem;
-  }
-  &__token_col {
-    padding: 0.75rem;
-    height: 2.5rem;
-    background: $color-navy-gray;
-
-    &:first-of-type {
-      @include borderGray("border-right", false);
-    }
-    &--dark {
-      background: $color-navy-gray-dark;
-    }
-  }
-  &__balance {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.15rem;
-  }
-}
-
-// remove padding from UiDataBar
-.settlement_cycle.data_bar {
-  :deep(.data_bar__body) {
-    padding: 0 !important;
-  }
-}
-// main header style
-.main_header {
-  flex-wrap: wrap;
-  gap: 15px;
-  margin-bottom: 14px;
-
-  &__title {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    align-content: center;
-    gap: 20px;
-  }
-  &__info-icon {
-    cursor: pointer;
-    display: flex;
-    color: $color-text-irrelevant;
-  }
-}
-// tooltip style
-.tooltip {
-  &__link {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
-    color: $color-primary;
-  }
-}
-/**
- * Data bar — design stat treatment: mono figure over mono caption.
- *
- * 15px is the in-card stat size the governance activity card and the execution
- * console both use. These were 22px, which was the only thing on the page above
- * 13px and left the figures shouting over their own captions.
- */
-:deep(.data_bar__title) {
   font-family: $font-mono;
-  font-size: 15px !important;
-  font-weight: 500 !important;
-  line-height: 1.3;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.1;
   color: $color-white;
   font-variant-numeric: tabular-nums;
+
+  &--countdown {
+    color: $color-cyan;
+  }
+
+  &--error {
+    color: $color-error;
+  }
 }
-:deep(.data_bar__subtitle) {
+
+.flows__stat_label {
   font-family: $font-mono;
-  font-size: 11px !important;
-  font-weight: 500;
+  font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: $color-steel-blue;
 }
-// the curator pill lives inside a data_bar__item but is not a stat
-:deep(.curator_status) {
-  font-family: $font-mono;
-  font-size: 12px;
+
+/* The date inside a label keeps its own case — "Aug 27, 09:00 UTC", not
+   shouted along with the caption. */
+.flows__stat_label_accent {
+  color: $color-cyan;
+  text-transform: none;
 }
-// section headings as design eyebrows
-.main_header__title {
+
+/* ---- Settlement header: stats clustered left, split by hairlines. ---- */
+
+.flows__settlement {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  .flows__vline {
+    align-self: stretch;
+    height: 1px;
+    background: $color-line;
+  }
+
+  @include md {
+    flex-direction: row;
+    align-items: center;
+    gap: 36px;
+
+    .flows__vline {
+      width: 1px;
+      height: auto;
+    }
+  }
+}
+
+/* ---- Simulated NAV card. ---- */
+
+.flows__simnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.flows__simnav_main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+  min-width: 0;
+}
+
+.flows__simnav_value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.625rem;
+  font-family: $font-mono;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: $color-white;
+  font-variant-numeric: tabular-nums;
+}
+
+.flows__simnav_label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: $font-mono;
   font-size: 11px;
-  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: $color-steel-blue;
+}
+
+.flows__simnav_toggle {
+  font-family: $font-mono;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $color-cyan;
+  transition: color $default-transition-time ease;
+
+  &:hover {
+    color: $color-cyan-soft;
+  }
+}
+
+/* The edit state swaps the figure for a quiet mono field, same slot. */
+.flows__simnav_input {
+  width: 175px;
+  flex: none;
+
+  :deep(.v-field) {
+    background: $color-card-background;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    box-shadow: none;
+  }
+
+  :deep(.v-field__input) {
+    min-height: 0;
+    padding: 8px 10px;
+  }
+
+  :deep(input) {
+    font-family: $font-mono;
+    font-size: 15px;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.flows__simnav_warning {
+  display: flex;
+  align-items: center;
+}
+
+/* ---- Ghost hairline button (Re-simulate). ---- */
+
+.flows__ghost_button {
+  flex: none;
+  padding: 0.5625rem 0.875rem;
+  border: 1px solid $color-line-2;
+  border-radius: $default-border-radius;
+  font-size: 13px;
+  font-weight: 600;
+  color: $color-text-irrelevant;
+  white-space: nowrap;
+  transition: color $default-transition-time ease,
+    border-color $default-transition-time ease;
+
+  &:hover:not(:disabled) {
+    color: $color-white;
+    border-color: $color-line-3;
+  }
+
+  &:disabled {
+    color: $color-inactive;
+    cursor: default;
+  }
+}
+
+/* ---- Admin contract card. ---- */
+
+.flows__admin {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.flows__admin_title {
+  font-family: $font-mono;
+  font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: $color-steel-blue;
 }
 
-// data bar style
-:deep(.data_bar__body) {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.flows__admin_stats {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+
+  @include sm {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
   @include lg {
-    flex-direction: row;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 28px;
   }
 }
-/* The admin contract balance is a stat like any other in the bar above it. */
-.title_balance {
-  font-family: $font-mono;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.3;
-  color: $color-white;
-  font-variant-numeric: tabular-nums;
+
+.flows__funding_gap {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+
+  &:hover {
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  &--positive {
+    color: $color-pos;
+  }
+
+  &--negative {
+    color: $color-neg;
+  }
+
+  &--flat {
+    color: $color-steel-blue;
+  }
 }
-// make even columns
-.column-8 {
+
+.flows__admin_actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.75rem;
+  padding-top: 22px;
+  border-top: 1px solid $color-line;
+
+  @include md {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+  }
+}
+
+.flows__admin_settle {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
-
-
-  :deep(.data_bar__item) {
-    .data_bar__title,
-    .data_bar__subtitle {
-      text-align: left !important;
-      justify-content: flex-start !important;
-      margin-right: auto;;
-    }
-  }
-
-  @include lg{
-    flex-direction: row;
-    gap: 5%;
-    width: 70%;
-  }
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding-top: 20px;
+  border-top: 1px solid $color-line;
 }
-.column-4 {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
 
-  @include lg{
-    flex-direction: row;
-    justify-content: flex-end;
-    width: 30%;
-  }
+.flows__settle_action {
+  flex: none;
+}
 
-  // make buttons full width
-  & > * {
-    width: 100%;
-    & > * {
-      width: 100%;
-    }
+@media (prefers-reduced-motion: reduce) {
+  .flows__simnav_toggle,
+  .flows__ghost_button {
+    transition: none;
   }
 }
 </style>

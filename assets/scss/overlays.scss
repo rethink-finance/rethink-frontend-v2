@@ -269,6 +269,19 @@ $shadow-float-lg: 0 24px 64px rgba(0, 0, 0, 0.55);
 }
 
 /**
+ * Explainer tooltip — the sentence behind a UiInfoTooltip mark. The standard
+ * panel, narrowed to a readable measure, with body type instead of the
+ * caption weight: these hold a full sentence rather than a label.
+ */
+.v-overlay.v-tooltip .v-overlay__content.info_tooltip__panel {
+  max-width: 15.625rem;
+  background-color: $color-moonlight-dark;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: $color-text-irrelevant;
+}
+
+/**
  * Data tooltip — a label over a value, both mono, for a number the cell had to
  * round. Same panel as above; only the contents differ.
  */

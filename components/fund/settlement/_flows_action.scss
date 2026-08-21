@@ -1,0 +1,177 @@
+/**
+ * One action column of the flows page's admin card — the transfer side and
+ * the sweep side share this geometry exactly, so a change to one cannot drift
+ * from the other: a mono uppercase title, the design's amount group (prefix
+ * cell · right-aligned mono figure · optional suffix), and a footer with a
+ * mono caption left and a ghost hairline button right.
+ */
+@mixin flows-action-column {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  min-width: 0;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.4375rem;
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__control {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    overflow: hidden;
+
+    &--invalid {
+      border-color: $color-neg-line;
+    }
+
+    /* The sweep side is derived, never typed into — the flatter fill marks it
+       read-only without a disabled input. */
+    &--readonly {
+      background: rgba(255, 255, 255, 0.015);
+    }
+  }
+
+  &__prefix {
+    display: flex;
+    align-items: center;
+    min-width: 58px;
+    padding: 0.625rem 0.875rem;
+    background: $color-navy-gray-light;
+    border-right: 1px solid $color-line-2;
+    font-family: $font-mono;
+    font-size: 13px;
+    color: $color-text-irrelevant;
+
+    &--label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+
+    :deep(.v-field) {
+      background: transparent;
+      box-shadow: none;
+    }
+
+    :deep(.v-field__input) {
+      min-height: 0;
+      padding: 0.625rem 0.875rem;
+    }
+
+    :deep(input) {
+      font-family: $font-mono;
+      font-size: 14px;
+      color: $color-white;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__readout {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1;
+    min-width: 0;
+    padding: 0.625rem 0.875rem;
+    font-family: $font-mono;
+    font-size: 14px;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+
+    &--zero {
+      color: $color-steel-blue;
+    }
+  }
+
+  &__max {
+    display: flex;
+    align-items: center;
+    padding: 0 0.875rem;
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-cyan;
+    transition: color $default-transition-time ease;
+
+    &:hover {
+      color: $color-cyan-soft;
+    }
+  }
+
+  &__error {
+    font-family: $font-mono;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: $color-neg;
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: auto;
+  }
+
+  &__caption {
+    min-width: 0;
+    font-family: $font-mono;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    @include ellipsis;
+  }
+
+  &__action {
+    flex: none;
+  }
+
+  &__button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4375rem;
+    padding: 9px 16px;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    font-size: 13px;
+    font-weight: 600;
+    color: $color-text-irrelevant;
+    white-space: nowrap;
+    transition: color $default-transition-time ease,
+      border-color $default-transition-time ease;
+
+    &:hover:not(:disabled) {
+      color: $color-white;
+      border-color: $color-line-3;
+    }
+
+    &:disabled {
+      color: $color-inactive;
+      cursor: default;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__max,
+    &__button {
+      transition: none;
+    }
+  }
+}

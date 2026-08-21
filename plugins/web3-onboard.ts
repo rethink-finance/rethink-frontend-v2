@@ -103,6 +103,12 @@ export default defineNuxtPlugin(() => {
       // TODO handle auto-connect callback logics to setup store data, add watcher or something.
       autoConnectLastWallet: true,
     },
+    // The navbar already shows the connected wallet, network and disconnect,
+    // so Web3-Onboard's floating account center is redundant.
+    accountCenter: {
+      desktop: { enabled: false },
+      mobile: { enabled: false },
+    },
   })
 });
 

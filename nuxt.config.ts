@@ -199,15 +199,9 @@ export default defineNuxtConfig({
     // app.rethink.finance origin). Point BACKEND_URL at
     // http://localhost:3000/backend-api to use it. No effect on builds.
     devProxy: {
-      // Image uploads are the one call production cannot serve — it has no
-      // bucket configured and answers 503 by design (the returned URL goes
-      // on chain, so a disposable fallback is worse than a refusal). Send
-      // just that path to a local backend, if one is running, and leave
-      // every other call on production data. More specific route first.
-      "/backend-api/vault-image": {
-        target: "http://localhost:8000/vault-image",
-        changeOrigin: true,
-      },
+      // Every backend call goes to production, image uploads included:
+      // POST /vault-image now stores to the R2 bucket behind
+      // assets.rethink.finance and returns the public URL.
       "/backend-api": {
         target: "https://backend.rethink.finance",
         changeOrigin: true,

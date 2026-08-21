@@ -543,7 +543,7 @@ watch(pageCount, (count) => {
  * <table>: the columns need to hold their proportions while the address cell
  * truncates, which a grid does without any column-width juggling.
  */
-$activity-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(110px, auto) minmax(96px, auto);
+$activity-columns: $details-table-columns;
 
 /**
  * Only some rows carry a USD sub-line under the amount, which would otherwise
@@ -623,7 +623,7 @@ $activity-cell-height: calc(
   &__table {
     display: grid;
     grid-template-columns: $activity-columns;
-    column-gap: 1rem;
+    column-gap: $details-table-gap;
   }
 
   &__row {
