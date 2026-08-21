@@ -139,7 +139,12 @@ const toBlocks = (value: number, selectedUnit: string): number | undefined => {
   if (blockTime.value <= 0) return undefined;
 
   const seconds = TimeInSeconds[selectedUnit as PeriodUnits];
-  return Math.floor((value * seconds) / blockTime.value);
+  // Nearest, not floored. deriveFromModel rounds the derived amount to three
+  // decimals for display, so flooring the way back turned a stored 31130
+  // blocks into 18.159 hours into 31129 — opening a form and saving it
+  // untouched shortened the period by a block. Rounding absorbs the display
+  // rounding, and a period is quoted to the block anyway.
+  return Math.round((value * seconds) / blockTime.value);
 };
 
 const emitFromInput = async () => {
@@ -167,6 +172,19 @@ const emitFromInput = async () => {
   emittedBlocks.value = blocks;
   emit("update:modelValue", blocks);
 };
+
+/**
+ * Set while the pair is being filled in from the stored value, so the watcher
+ * that emits on every amount/unit change knows this one was not a curator
+ * typing.
+ *
+ * Without it, displaying a value re-emitted it: the amount is rounded to three
+ * decimals to be readable, and converting that back is not the block count it
+ * came from. 432000 blocks at 2s reads "1.429 weeks", which converts back to
+ * 432130 — so opening a governance form and saving it untouched moved the
+ * period by two minutes. Rounding cannot fix that; not emitting can.
+ */
+const isDeriving = ref(false);
 
 /** Fills the pair from a stored block count — a loaded draft, or the cache. */
 const deriveFromModel = async () => {
@@ -228,21 +246,36 @@ watch(unit, (selected) => {
 });
 
 watch([amount, unit], () => {
+  if (isDeriving.value) return;
   emitFromInput();
 });
+
+/**
+ * Fills the pair without emitting. Vue flushes watchers after the tick, so the
+ * flag has to outlive the assignments that trip them.
+ */
+const deriveQuietly = async () => {
+  isDeriving.value = true;
+  try {
+    await deriveFromModel();
+    await nextTick();
+  } finally {
+    isDeriving.value = false;
+  }
+};
 
 watch(
   () => props.modelValue,
   (newValue) => {
     if (Number(newValue) === emittedBlocks.value) return;
-    deriveFromModel();
+    deriveQuietly();
   },
   { immediate: true },
 );
 
 // A different chain means a different block time, so the same stored block
 // count is a different duration and the pair has to be re-read.
-watch(() => props.chainId, () => deriveFromModel());
+watch(() => props.chainId, () => deriveQuietly());
 </script>
 
 <style scoped lang="scss">
