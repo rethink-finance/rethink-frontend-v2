@@ -21,6 +21,12 @@
       </div>
     </div>
 
+    <!-- Said on the page, not in a tooltip: a disabled button fires no mouse
+         events, so the hover would never reach it. -->
+    <div v-if="blockedReason" class="sweep_admin__notice">
+      {{ blockedReason }}
+    </div>
+
     <div class="sweep_admin__foot">
       <div class="sweep_admin__caption">
         Pending redemptions · {{ pendingRedemptionsDisplay }}
@@ -112,6 +118,12 @@ const isSweepContractDisabled = computed(() => {
     !isConnected.value
   );
 });
+/** Why the button cannot be pressed, printed rather than hovered for. */
+const blockedReason = computed(() => {
+  if (isSweepLoading.value) return "";
+  return sweepContractTooltipText.value || "";
+});
+
 const sweepContractTooltipText = computed(() => {
   if (!isConnected.value) {
     return "Connect your wallet to sweep the admin contract.";

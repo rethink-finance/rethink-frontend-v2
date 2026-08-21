@@ -32,6 +32,13 @@
       {{ visibleErrorMessage }}
     </div>
 
+    <!-- Said on the page, not in a tooltip. A disabled button fires no mouse
+         events, so a hover-only explanation is unreachable in exactly the
+         state that needs explaining. -->
+    <div v-if="blockedReason" class="transfer_admin__notice">
+      {{ blockedReason }}
+    </div>
+
     <div class="transfer_admin__foot">
       <div class="transfer_admin__caption">
         Safe balance · {{ safeContractBaseTokenBalanceDisplay }}
@@ -161,6 +168,18 @@ const transferTooltipText = computed(() => {
   return "";
 });
 
+/**
+ * Why the button cannot be pressed, when the reason is not the amount.
+ *
+ * The amount's own complaints already print above the button, and a reason
+ * that only appears once the curator has typed something would leave the
+ * untouched form silently dead.
+ */
+const blockedReason = computed(() => {
+  if (isTransferLoading.value) return "";
+  return curatorDisabledReason.value || "";
+});
+
 const safeContractBaseTokenBalance = computed(() => {
   return fundStore.fund?.safeContractBaseTokenBalance || 0n;
 });
@@ -203,17 +222,20 @@ const transfer = async () => {
         console.log("receipt :", receipt);
         if (receipt.status) {
           toastStore.successToast("Transfer was successful.");
-          // Refresh balances
+          // Both ends of the transfer, not just the receiving one: the Safe's
+          // balance is what this control validates against and offers as Max,
+          // so leaving it stale re-arms the form with money that has moved.
           // TODO repeat every 1 second, 15x until the value changes, as node sync takes some time.
           fundStore.fetchFundContractBaseTokenBalance();
+          fundStore.fetchSafeContractBaseTokenBalance();
         } else {
           toastStore.errorToast(
-            "Your deposit request has failed. Please contact the Rethink Finance support.",
+            "The transfer has failed. Please contact the Rethink Finance support.",
           );
-          fundStore.fetchUserFundData(
-            fundStore.selectedFundChain,
-            fundStore.selectedFundAddress,
-          );
+          // The transfer's own two balances, rather than the depositor's data:
+          // a reverted transfer says nothing about the connected wallet.
+          fundStore.fetchFundContractBaseTokenBalance();
+          fundStore.fetchSafeContractBaseTokenBalance();
         }
         isTransferLoading.value = false;
       })

@@ -122,6 +122,15 @@
     color: $color-neg;
   }
 
+  /* Not an error the curator made — a state the vault is in. Same size as the
+     error line above it, muted rather than red. */
+  &__notice {
+    font-family: $font-mono;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: $color-steel-blue;
+  }
+
   &__foot {
     display: flex;
     align-items: center;
