@@ -3,6 +3,7 @@ import chainBase from "~/assets/icons/chain-base.png";
 import chainEth from "~/assets/icons/chain-eth.png";
 import chainHype from "~/assets/icons/chain-hype.png";
 import chainPol from "~/assets/icons/chain-pol.png";
+import tokenPaxg from "~/assets/icons/token-paxg.png";
 import tokenUsdc from "~/assets/icons/token-usdc.png";
 import tokenUsdt from "~/assets/icons/token-usdt.png";
 import tokenWbtc from "~/assets/icons/token-wbtc.png";
@@ -51,6 +52,10 @@ const CHAIN_SHORT_BY_ID: Partial<Record<ChainId, string>> = {
 
 /** Keyed by token symbol, uppercased. */
 const TOKEN_ICONS: Record<string, string> = {
+  // Not a design-system mark — Paxos's own, taken from CoinGecko so the DoC
+  // vault's gold position reads like the rest of its holdings rather than
+  // falling through to nothing.
+  PAXG: tokenPaxg,
   USDC: tokenUsdc,
   USDT: tokenUsdt,
   WBTC: tokenWbtc,

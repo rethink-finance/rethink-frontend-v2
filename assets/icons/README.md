@@ -23,6 +23,9 @@ Naming is `chain-<short>.png` and `token-<symbol>.png`.
 
 - `chain-arb`, `chain-base`, `chain-eth`, `chain-hype`, `chain-pol`
 - `token-usdc`, `token-usdt`, `token-wbtc`, `token-weth`
+- `token-paxg` — **not** a design-system mark. Paxos's own logo, taken from
+  CoinGecko for the DoC Treasury Protection vault's gold position. Replace it
+  if the design system ever ships one.
 
 All of them but Base are a disc drawn to the edge of a transparent square, so
 nothing is painted behind them — a field or border would only show through the

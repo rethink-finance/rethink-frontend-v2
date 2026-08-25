@@ -1,25 +1,26 @@
 <template>
   <div class="execution-app">
-    <UiHeader>
+    <!--
+      Only the state that permits something. Why a wallet cannot execute is
+      not news at the top of a screen most people open to read: it belongs on
+      the button it disables, at the moment that button is reached for, and
+      every execute button on this screen carries it.
+    -->
+    <UiHeader v-if="canExecuteAsCurator">
       <div class="data_bar__item">
         <div class="curator_status">
-          <template v-if="canExecuteAsCurator">
-            <Icon
-              icon="octicon:check-circle-fill-16"
-              width="1rem"
-              height="1rem"
-              color="var(--color-success)"
-            />
-            <div>
-              {{
-                isConnectedAsSafe
-                  ? "Connected as the custody Safe"
-                  : "Connected as a vault curator"
-              }}
-            </div>
-          </template>
-          <div v-else>
-            {{ curatorDisabledReason }}
+          <Icon
+            icon="octicon:check-circle-fill-16"
+            width="1rem"
+            height="1rem"
+            color="var(--color-success)"
+          />
+          <div>
+            {{
+              isConnectedAsSafe
+                ? "Connected as the custody Safe"
+                : "Connected as a vault curator"
+            }}
           </div>
         </div>
       </div>
@@ -28,12 +29,20 @@
     <!-- The design puts the execution status first on this screen, so the
          console follows it rather than sitting above the page's own header. -->
     <ExecutionCrtConsole v-if="isCrtVault" />
+    <ExecutionDocConsole v-else-if="isDocVault" />
 
-    <div class="group_title execution-app__section">
+    <!-- The raw transfer / raw-calldata / performance-fee tools. A vault with
+         a console of its own does not get them: everything they reach is
+         already offered there in terms the operator can check, and a free-text
+         calldata box beside it is an invitation to bypass that. -->
+    <div v-if="!isDocVault" class="group_title execution-app__section">
       General
     </div>
 
-    <div :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`">
+    <div
+      v-if="!isDocVault"
+      :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`"
+    >
       <UiHeader>
         <div class="main_header__title">
           Transfer
@@ -133,7 +142,10 @@
       </div>
     </div>
 
-    <div :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`">
+    <div
+      v-if="!isDocVault"
+      :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`"
+    >
       <UiHeader>
         <div class="main_header__title">
           Submit Raw Transaction
@@ -266,6 +278,15 @@ const isCrtVault = computed(
   () =>
     (fundStore.fund?.address || "").toLowerCase() === CRT_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x3e7",
+);
+// DoC Treasury Protection runs a Roles v1 whitelist of its own — 1inch swaps
+// between six assets and Aave DAI — so it gets its own console rather than
+// being driven through the raw-transaction box below.
+const DOC_VAULT_ADDRESS = "0xbe0b0c435ea1156f76d3e116fbd5606743ab179a";
+const isDocVault = computed(
+  () =>
+    (fundStore.fund?.address || "").toLowerCase() === DOC_VAULT_ADDRESS &&
+    fundStore.selectedFundChain === "0x89",
 );
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
