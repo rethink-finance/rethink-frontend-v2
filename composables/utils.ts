@@ -206,7 +206,12 @@ export const calculateCumulativeWithSharePrice = (
     if (initialSharePrice === undefined) {
       console.error("Initial share price is not provided", initialSharePrice);
 
-      const initSharePrice = 10 ** (baseTokenDecimals - fundTokenDecimals);
+      // Par. A vault mints its first shares one-for-one with the base token, so a
+      // fund with no configured initial price started at 1.00 — see
+      // calculateSharePrice in composables/exchangeRate. This used to be
+      // 10 ** (baseTokenDecimals - fundTokenDecimals), cancelling a decimal gap the
+      // share price itself no longer carries.
+      const initSharePrice = 1;
 
       // Calculate cumulative return percentage
       return ((latestSharePrice / initSharePrice) - 1);

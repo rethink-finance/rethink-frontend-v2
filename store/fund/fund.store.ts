@@ -44,7 +44,7 @@ import type IFundUserData from "~/types/fund_user_data";
 import type INAVMethod from "~/types/nav_method";
 import type INAVUpdate from "~/types/nav_update";
 import { fetchRoleModAddressAddressAction } from "~/store/fund/actions/fetchRoleModAddress.action";
-import { calculateSharePrice } from "~/composables/exchangeRate";
+import { calculateFundToBaseExchangeRate } from "~/composables/exchangeRate";
 
 interface IState {
   // chainFunds[chainId][fundAddress1] = fund1 : IFund
@@ -152,7 +152,7 @@ export const useFundStore = defineStore({
         return FixedNumber.fromString("0");
       }
       // TODO we should not take the current fund token total supply, it's a hack if backend does not work...
-      const sharePrice = calculateSharePrice(
+      const exchangeRate = calculateFundToBaseExchangeRate(
         this.fundLastNAVUpdate.totalNAV,
         resolveEffectiveTotalSupply(
           this.fund.chainId,
@@ -163,10 +163,10 @@ export const useFundStore = defineStore({
         this.fund.fundToken.decimals,
       )
 
-      console.warn("CURRENT lastNavUpdate sharePrice: ", sharePrice.toFixed(18));
+      console.warn("CURRENT lastNavUpdate exchange rate: ", exchangeRate.toFixed(18));
 
       // Perform the division
-      return FixedNumber.fromString(sharePrice.toFixed(18))
+      return FixedNumber.fromString(exchangeRate.toFixed(18))
     },
     fundToBaseTokenExchangeRateSimulatedNav(): FixedNumber {
       if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals) {
@@ -185,15 +185,15 @@ export const useFundStore = defineStore({
         return this.fundToBaseTokenExchangeRateLastNavUpdate;
       }
 
-      const sharePrice = calculateSharePrice(
+      const exchangeRate = calculateFundToBaseExchangeRate(
         this.fund.totalSimulatedNav,
         effectiveTotalSupply,
         this.fund.baseToken.decimals,
         this.fund.fundToken.decimals,
       );
 
-      console.warn("CURRENT SIMULATED sharePrice function: ", sharePrice.toFixed(18));
-      return FixedNumber.fromString(sharePrice.toFixed(18))
+      console.warn("CURRENT SIMULATED exchange rate: ", exchangeRate.toFixed(18));
+      return FixedNumber.fromString(exchangeRate.toFixed(18))
     },
     fundToBaseTokenExchangeRateDefault(): FixedNumber {
       if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals) {

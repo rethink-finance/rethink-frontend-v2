@@ -85,6 +85,7 @@ import {
   type SharePriceObservation,
 } from "~/composables/monthlyReturns";
 import { abbreviateNumber } from "~/composables/abbreviateNumber";
+import { calculateSharePrice } from "~/composables/exchangeRate";
 import { useSettingsStore } from "~/store/settings/settings.store";
 import { resolveStakingRewards } from "~/store/funds/config/stakingRewards.config";
 
@@ -918,30 +919,7 @@ const getSharePricePerNav = async () => {
             props.fund.fundToken.decimals,
           );
 
-          // Determine the highest decimals between NAV and Supply
-          const navDecimals = props.fund.baseToken.decimals;
-          const supplyDecimals = props.fund.fundToken.decimals;
-          const diffDecimals = navDecimals - supplyDecimals;
-
-          // Scale totalNav to the same decimals as totalSupply for proper division
-          const adjustedTotalNav =
-            diffDecimals < 0
-              ? totalNav * 10n ** BigInt(-diffDecimals)
-              : totalNav;
-          const adjustedTotalSupply =
-            diffDecimals > 0
-              ? totalSupply * 10n ** BigInt(diffDecimals)
-              : totalSupply;
-
-          // Perform the division
-          const scaleFactor = 10n ** 36n; // Scale up before division to avoid rounding errors
-          const sharePriceBigInt =
-            totalSupply > 0n
-              ? (adjustedTotalNav * scaleFactor) / adjustedTotalSupply
-              : 0n;
-
-          // Convert to float and format the share price correctly
-          return parseFloat(ethers.formatUnits(sharePriceBigInt, 36));
+          return calculateSharePrice(totalNav, totalSupply);
         } catch (e) {
           console.error("Error getting share price", e);
           return 0;
