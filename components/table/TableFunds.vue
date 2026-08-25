@@ -157,10 +157,7 @@
           v-else
           :class="numberColorClass(roundPercent(getCumulativeReturn(item)))"
         >
-          {{
-            formatPercent(roundPercent(getCumulativeReturn(item)), true) ??
-              "N/A"
-          }}
+          {{ formatReturn(getCumulativeReturn(item)) }}
         </div>
       </div>
     </template>
@@ -177,9 +174,7 @@
         <template v-else>
           <div :class="numberColorClass(roundPercent(getApr(item)))">
             {{
-              getApr(item) === undefined
-                ? "--"
-                : formatPercent(roundPercent(getApr(item)), true)
+              getApr(item) === undefined ? "--" : formatReturn(getApr(item))
             }}
           </div>
         </template>
@@ -245,6 +240,23 @@ defineProps({
  */
 const roundPercent = (value?: number): number =>
   parseFloat((value ?? 0).toFixed(4));
+
+/**
+ * A return, at the precision its size deserves.
+ *
+ * Under 1000% this is what it always was. Past it the two decimals are false
+ * precision on a figure that is an extrapolation anyway — a young vault's APR
+ * annualises a few weeks of return and lands in the thousands — and they are
+ * also what used to widen the APR column enough to put a scrollbar under the
+ * whole table.
+ */
+const formatReturn = (value?: number): string => {
+  const rounded = roundPercent(value);
+  const percent = rounded * 100;
+  if (Math.abs(percent) < 1000) return formatPercent(rounded, true);
+  const text = percent.toFixed(0) + "%";
+  return percent > 0 ? "+" + text : text;
+};
 
 /**
  * The vault's NAV in dollars.
@@ -359,12 +371,17 @@ const headers: any = computed(() => [
   {
     title: "APR",
     key: "apr",
+    // Wide enough for a three-digit percentage. At the old 80 the cell had
+    // 48px of content space, which "+512.34%" overflows — and being the last
+    // column, what it overflows into is the table's own scroll area, so a
+    // single high-APR vault put a scrollbar under every row. The 30px comes
+    // out of the name column, which is the one that absorbs.
+    width: 110,
     // Same treatment as Cum. Return: sort on the figure the cell prints, so a
     // staking vault sorts on its yield-derived APR rather than on a missing
     // field, and a vault with no APR at all sinks instead of sorting as 0%.
     value: (v: IFund) => getApr(v) ?? -Infinity,
     align: "end",
-    width: 80,
   },
   // {
   //   title: "Monthly",
