@@ -414,6 +414,29 @@ const constantSupplySharePricePoints = computed<ChartPoint[]>(() => {
   );
 });
 
+/**
+ * When the vault first settled, or undefined if it never has.
+ *
+ * Before a vault records a NAV update it has no settled price to issue shares
+ * at, so deposits mint at par no matter what the simulated price reads — the
+ * same rule the monthly returns table gates on. That makes every simulated
+ * price before the first settlement a number nobody could have transacted at.
+ * CarrotFunding is why this is worth filtering rather than explaining: it
+ * carried ~4.97 USDC of NAV for three days with no shares in issue at all, so
+ * the first 2.7 shares to exist inherited the lot and priced at 2.21, and the
+ * 37,095 USDC that followed minted at 1.00 and dropped it back. The chart drew
+ * a 55% collapse for a vault that had only ever taken money in. Its own
+ * contract settles the argument: the 0.1 share redeemed in that window paid out
+ * 0.0998 USDC, at par, while the chart was claiming 2.21.
+ */
+const firstSettlementTimestamp = computed<number | undefined>(() => {
+  const timestamps = (fundNavUpdates.value ?? [])
+    .map((navUpdate: INAVUpdate | ParsedNavUpdateDto) => Number(navUpdate.timestamp))
+    .filter((ts) => Number.isFinite(ts) && ts > 0);
+
+  return timestamps.length ? Math.min(...timestamps) : undefined;
+});
+
 // Share-price-only chart points
 const sharePriceChartPoints = computed<ChartPoint[]>(() => {
   // Base points from NAV updates timestamps and sharePrice items aligned by index
@@ -441,6 +464,14 @@ const sharePriceChartPoints = computed<ChartPoint[]>(() => {
     props.fund?.backendDailyNavSnapshots?.length
       ? props.fund.backendDailyNavSnapshots
         .filter((s) => s.sharePrice != null && Number(s.sharePrice) > 0)
+        // Nothing the vault could have transacted at — see
+        // firstSettlementTimestamp. A vault that has never settled keeps its
+        // snapshots, since dropping them leaves no chart to explain itself with.
+        .filter(
+          (s) =>
+            firstSettlementTimestamp.value == null ||
+            Number(s.timestamp) >= firstSettlementTimestamp.value,
+        )
         .map((s) => {
           const ts = Number(s.timestamp);
           const price = Number(s.sharePrice);
