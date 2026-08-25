@@ -206,6 +206,7 @@ const settlementField = reactive<IField>({
   placeholder: "E.g. 0",
   rules: [],
   tag: FieldTag.UpgradableGovernance,
+  allowsInstant: true,
   value: "",
 });
 

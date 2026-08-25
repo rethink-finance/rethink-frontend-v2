@@ -91,10 +91,19 @@ const isRequired = computed(() =>
 
 const charCount = computed(() => String(props.modelValue ?? "").length);
 
+/**
+ * What the field is worth: what was typed, or the default the empty box is
+ * showing greyed. Only the rules read it — the box itself stays empty, so the
+ * default reads as a suggestion to type over rather than as an entry.
+ */
+const effectiveValue = computed(() =>
+  effectiveFieldValue(props.field, props.modelValue),
+);
+
 /** The first rule the current value fails, or "" when it passes them all. */
 const ruleError = computed(() => {
   for (const rule of props.field.rules ?? []) {
-    const result = rule(props.modelValue);
+    const result = rule(effectiveValue.value);
     if (result !== true) return String(result);
   }
   return "";

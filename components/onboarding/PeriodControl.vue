@@ -14,7 +14,7 @@
         :class="{ 'period_control__input--error': !!shownError }"
         type="number"
         min="0"
-        :placeholder="isInstant ? 'No delay' : field.placeholder"
+        :placeholder="placeholder"
         :disabled="disabled || isInstant"
         @blur="isTouched = true"
       >
@@ -45,7 +45,11 @@ import { PeriodUnits, TimeInSeconds, type IField } from "~/types/enums/input_typ
  * A duration, entered as a number plus a unit and stored as a block count —
  * which is what the governor and the vault metadata both hold.
  *
- * `instant` is zero blocks, the one duration that needs no number beside it.
+ * A field carrying `defaultAmount` shows it greyed rather than typed, so an
+ * empty box is not an unfilled one: it is worth that default, and 0 means no
+ * delay at all. A field carrying `allowsInstant` gets zero as a unit to pick
+ * instead — the one duration that needs no number beside it.
+ *
  * `blocks` is not offered while the chain's block time reads, but it is the
  * only way to set a value when that read fails, so it appears then.
  */
@@ -109,6 +113,18 @@ const emittedBlocks = ref<number | undefined>(undefined);
 
 const isInstant = computed(() => unit.value === INSTANT_UNIT);
 
+/** The number an empty box stands in for, read in the selected unit. */
+const defaultAmount = computed(() => props.field.defaultAmount);
+const hasDefault = computed(() => defaultAmount.value != null);
+const isEmpty = computed(() => amount.value === "" || amount.value == null);
+
+const placeholder = computed(() => {
+  if (isInstant.value) return "No delay";
+  if (!hasDefault.value) return props.field.placeholder;
+  // Zero is not a number anyone types into a duration; it is the absence of one.
+  return defaultAmount.value === 0 ? "No delay" : String(defaultAmount.value);
+});
+
 const unitOptions = computed(() => [
   ...[...TIME_UNITS].reverse().map((value) => ({ value, label: UNIT_LABELS[value] })),
   // Only worth offering where a time unit cannot be converted — otherwise it is
@@ -116,7 +132,9 @@ const unitOptions = computed(() => [
   ...(isBlockTimeUnavailable.value || unit.value === BLOCKS_UNIT
     ? [{ value: BLOCKS_UNIT, label: "Blocks" }]
     : []),
-  { value: INSTANT_UNIT, label: "Instant", icon: "material-symbols:bolt-rounded" },
+  ...(props.field.allowsInstant || isInstant.value
+    ? [{ value: INSTANT_UNIT, label: "Instant", icon: "material-symbols:bolt-rounded" }]
+    : []),
 ]);
 
 const isRequired = computed(() =>
@@ -148,22 +166,29 @@ const toBlocks = (value: number, selectedUnit: string): number | undefined => {
 };
 
 const emitFromInput = async () => {
-  if (isInstant.value) {
-    isBlockTimeUnavailable.value = false;
-    emittedBlocks.value = 0;
-    emit("update:modelValue", 0);
-    return;
-  }
+  const typed = isEmpty.value ? undefined : Number(amount.value);
+  // Instant is the value, not a unit to read a number in.
+  const effective = isInstant.value ? 0 : typed ?? defaultAmount.value;
 
-  if (amount.value === "" || amount.value == null) {
+  // Nothing typed and nothing to stand in for it.
+  if (effective == null) {
     isBlockTimeUnavailable.value = false;
     emittedBlocks.value = undefined;
     emit("update:modelValue", undefined);
     return;
   }
 
+  // No wait at all, whatever the unit beside it says — and no block time
+  // needed to know that, so a chain that will not report one still gets there.
+  if (effective === 0) {
+    isBlockTimeUnavailable.value = false;
+    emittedBlocks.value = 0;
+    emit("update:modelValue", 0);
+    return;
+  }
+
   await loadBlockTime();
-  const blocks = toBlocks(Number(amount.value), unit.value);
+  const blocks = toBlocks(effective, unit.value);
   // A time unit is worthless without a block time to divide by, and the
   // conversion silently yielding nothing left the field looking filled in while
   // the footer insisted it was empty. Say so, and point at the way through.
@@ -194,14 +219,28 @@ const deriveFromModel = async () => {
     return;
   }
 
-  // Zero blocks is not a duration to pick a unit for — it is no wait at all.
+  // Zero blocks is not a duration to pick a unit for — it is no wait at all,
+  // which the empty box and its "No delay" placeholder already say, or which
+  // Instant says outright where the field offers it.
   if (stored === 0) {
     amount.value = "";
-    unit.value = INSTANT_UNIT;
+    if (props.field.allowsInstant) unit.value = INSTANT_UNIT;
     return;
   }
 
   await loadBlockTime();
+
+  // A stored value that is exactly what the default converts to was never
+  // typed — the box was left empty and the default filled in behind it. Show it
+  // greyed again rather than turning a suggestion into an entry.
+  if (
+    hasDefault.value &&
+    stored === toBlocks(defaultAmount.value as number, unit.value)
+  ) {
+    amount.value = "";
+    return;
+  }
+
   if (blockTime.value <= 0) {
     amount.value = String(stored);
     unit.value = BLOCKS_UNIT;
@@ -219,10 +258,11 @@ const deriveFromModel = async () => {
 };
 
 const blocksHint = computed(() => {
-  if (isInstant.value) return "No delay — takes effect immediately.";
-  if (unit.value === BLOCKS_UNIT || props.modelValue == null) return "";
+  if (props.modelValue == null) return "";
   const blocks = Number(props.modelValue);
   if (isNaN(blocks)) return "";
+  if (blocks === 0) return "No delay — takes effect immediately.";
+  if (unit.value === BLOCKS_UNIT) return "";
   return `≈ ${blocks.toLocaleString("en-US")} blocks`;
 });
 
@@ -266,16 +306,26 @@ const deriveQuietly = async () => {
 
 watch(
   () => props.modelValue,
-  (newValue) => {
+  async (newValue) => {
     if (Number(newValue) === emittedBlocks.value) return;
-    deriveQuietly();
+    await deriveQuietly();
+    // A box left empty is showing its default greyed, so the value behind it
+    // has to be that default — otherwise the field reads as unfilled to the
+    // footer while the placeholder says otherwise.
+    if (isEmpty.value && hasDefault.value && !isInstant.value) await emitFromInput();
   },
   { immediate: true },
 );
 
 // A different chain means a different block time, so the same stored block
 // count is a different duration and the pair has to be re-read.
-watch(() => props.chainId, () => deriveQuietly());
+watch(() => props.chainId, () => {
+  // An untouched box stands for a duration, not for the block count that
+  // duration came to on the chain before this one — so it is converted again
+  // rather than read back.
+  if (isEmpty.value && hasDefault.value && !isInstant.value) return emitFromInput();
+  return deriveQuietly();
+});
 </script>
 
 <style scoped lang="scss">

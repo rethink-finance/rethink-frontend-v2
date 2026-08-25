@@ -183,6 +183,9 @@ const BASICS_FIELD_OVERRIDES: Record<string, Partial<IField>> = {
   plannedSettlementPeriod: {
     label: "Planned settlement period",
     tag: FieldTag.UpgradableGovernance,
+    // A settlement frequency of zero is a real answer — settle on request —
+    // so this one field keeps the unit that says so.
+    allowsInstant: true,
     tooltip:
       "Frequency of settling deposit and redemption requests. Planned settlement period is not enforced on-chain — your job as a manager is to run the vault to these parameters. Your management role may otherwise be removed through governance.",
     cols: 12,
@@ -264,31 +267,43 @@ const GOVERNANCE_FIELD_OVERRIDES: Record<string, Partial<IField>> = {
     defaultValue: ethers.ZeroAddress,
     cols: 12,
   },
+  // Every governor setting carries a default, shown greyed in an empty box
+  // rather than typed into it: the common vault is deployed with these, and the
+  // ones that are a real choice are still a blank field to type over.
   quorum: {
     label: "Quorum (%)",
     tag: FieldTag.Fixed,
     tooltip: "Required minimum participation from total token supply.",
+    placeholder: "50",
+    defaultValue: "50",
+    usesDefaultWhenEmpty: true,
     cols: 6,
   },
   proposalThreshold: {
     label: "Proposal threshold",
     tag: FieldTag.Fixed,
     tooltip: "Minimum vault tokens required to create a proposal.",
+    placeholder: "0",
+    defaultValue: "0",
+    usesDefaultWhenEmpty: true,
     cols: 6,
   },
   votingPeriod: {
     label: "Voting period",
     tooltip: "Time available for voting.",
+    defaultAmount: 5,
     cols: 4,
   },
   votingDelay: {
     label: "Voting delay",
     tooltip: "Delay between proposal creation and voting start.",
+    defaultAmount: 0,
     cols: 4,
   },
   lateQuorum: {
     label: "Late quorum",
     tooltip: "Time a proposal still needs after it reaches quorum.",
+    defaultAmount: 0,
     cols: 4,
   },
 };

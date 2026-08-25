@@ -775,7 +775,9 @@ const currentStepValidation = computed(() => {
 
   const validateField = (field: IField) => {
     if (!field?.rules) return;
-    validateValue(field.label, field.rules, field.value);
+    // A field showing its default greyed is filled in, even though its box is
+    // empty — the footer would otherwise ask for something already decided.
+    validateValue(field.label, field.rules, effectiveFieldValue(field, field.value));
   };
 
   if (currentStepKey.value === OnboardingStep.Basics && !selectedChainId.value) {
@@ -976,7 +978,7 @@ const getFieldByStepAndFieldKey =(
     return field?.defaultValue;
   }
 
-  return fieldValue ?? field?.defaultValue;
+  return effectiveFieldValue(field, fieldValue) ?? field?.defaultValue;
 }
 
 

@@ -72,6 +72,24 @@ export interface IField {
   isCustomValueToggleOn?: boolean;
   defaultValue?: any;
   defaultValueInfo?: string;
+  /**
+   * The default is shown greyed in an empty box rather than typed into it, and
+   * an empty box is worth that default — to the validator, the review dialog
+   * and the transaction alike.
+   */
+  usesDefaultWhenEmpty?: boolean;
+  /**
+   * A period field's default, as a number read in whichever unit is selected
+   * beside it: 5 with "Days" showing is five days. Shown greyed the same way,
+   * and 0 reads as "No delay".
+   */
+  defaultAmount?: number;
+  /**
+   * Offers "Instant" among a period field's units — zero blocks, picked rather
+   * than typed. The governor's durations do without it; the settlement period,
+   * which is a frequency and not a wait, keeps it.
+   */
+  allowsInstant?: boolean;
   isFieldByUser?: boolean;
   fields?: IField[];
   title?: string;
