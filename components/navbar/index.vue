@@ -203,14 +203,6 @@ const routes = computed<IRoute[]>(() => [
     title: "Create",
     text: "",
   },
-  {
-    to: "/governance",
-    exactMatch: true,
-    title: "Governance",
-    text: "Coming soon",
-    disabled: true,
-    badge: "SOON",
-  },
 ])
 /**
  * Only the unsupported-network warning reads this now. It was a writable ref

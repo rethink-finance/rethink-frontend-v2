@@ -494,6 +494,30 @@ const rawExcludedFundAddresses = {
       address: "0xFC9Dc05d0869E3C8f0Aa5ec2A2942E012Ac79FD0",
       alwaysExclude: false,
     }, // TEST SmartBTC WBTC Denominated
+    {
+      address: "0x82cBd223ACAD5FA31EAA6Ab80867b0B153f9989E",
+      alwaysExclude: true,
+    }, // TEST Codex Full Governance Test
+    {
+      address: "0xeD48A81010033Ef3085254257dCD82BAD974bd02",
+      alwaysExclude: true,
+    }, // TEST Codex Full Governance Test 2
+    {
+      address: "0xFd46523D966763DA27d78f0566d21bFcC6145714",
+      alwaysExclude: true,
+    }, // TEST Codex Receipt-Bound Governor Test
+    {
+      address: "0x5FE8f03B372212Ab5389c008F76578a0682FfCDC",
+      alwaysExclude: true,
+    }, // TEST Codex Full Acceptance Final
+    {
+      address: "0x5C7E430fb4AFe2e321549f1A8eb264793ae1ac3c",
+      alwaysExclude: true,
+    }, // TEST Codex Full Acceptance Rebound
+    {
+      address: "0x6f52B450940EFA883EAD15346Ef1a921AC1b14D0",
+      alwaysExclude: true,
+    }, // TEST WBTC Roles v2 Pinning 2026-08-23
   ],
   // Fraxtal
   "0xfc": [],

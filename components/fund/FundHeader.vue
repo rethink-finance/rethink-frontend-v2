@@ -131,16 +131,19 @@ const props = defineProps<{
 
 const chainName = computed(() => capitalizeFirst(props.fund?.chainName || ""));
 
-// The header links to the custody contract, which is what the design labels
-// as the vault address — the same target the Basics table already exposes.
+// The Safe custody contract — the address that actually holds the vault's
+// assets, and what the design labels as the vault address. Not fund.address,
+// which is the vault admin the Contracts table lists on its own row.
+const custodyAddress = computed(() => props.fund?.safeAddress || "");
+
 const explorerUrl = computed(() =>
-  props.fund?.address && props.fund?.chainId
-    ? getExplorerUrl(props.fund.chainId, props.fund.address)
+  custodyAddress.value && props.fund?.chainId
+    ? getExplorerUrl(props.fund.chainId, custodyAddress.value)
     : "",
 );
 
 const truncatedAddress = computed(() =>
-  props.fund?.address ? truncateAddress(props.fund.address) : "",
+  custodyAddress.value ? truncateAddress(custodyAddress.value) : "",
 );
 </script>
 
