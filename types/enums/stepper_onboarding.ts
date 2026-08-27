@@ -290,19 +290,26 @@ const GOVERNANCE_FIELD_OVERRIDES: Record<string, Partial<IField>> = {
   },
   votingPeriod: {
     label: "Voting period",
+    tag: FieldTag.Fixed,
     tooltip: "Time available for voting.",
     defaultAmount: 5,
     cols: 4,
   },
   votingDelay: {
     label: "Voting delay",
+    tag: FieldTag.Fixed,
     tooltip: "Delay between proposal creation and voting start.",
     defaultAmount: 0,
     cols: 4,
   },
   lateQuorum: {
     label: "Late quorum",
-    tooltip: "Time a proposal still needs after it reaches quorum.",
+    tag: FieldTag.Fixed,
+    tooltip: "Minimum voting time left after quorum is reached.",
+    // Zero here declines an extension rather than skipping a delay, so the
+    // empty box and its footnote say so in those words.
+    zeroPlaceholder: "No extension",
+    zeroHint: "No extension: voting always ends on schedule.",
     defaultAmount: 0,
     cols: 4,
   },

@@ -118,11 +118,14 @@ const defaultAmount = computed(() => props.field.defaultAmount);
 const hasDefault = computed(() => defaultAmount.value != null);
 const isEmpty = computed(() => amount.value === "" || amount.value == null);
 
+/** What zero reads as here — "No delay" unless the field renames it. */
+const zeroPlaceholder = computed(() => props.field.zeroPlaceholder ?? "No delay");
+
 const placeholder = computed(() => {
-  if (isInstant.value) return "No delay";
+  if (isInstant.value) return zeroPlaceholder.value;
   if (!hasDefault.value) return props.field.placeholder;
   // Zero is not a number anyone types into a duration; it is the absence of one.
-  return defaultAmount.value === 0 ? "No delay" : String(defaultAmount.value);
+  return defaultAmount.value === 0 ? zeroPlaceholder.value : String(defaultAmount.value);
 });
 
 const unitOptions = computed(() => [
@@ -261,7 +264,7 @@ const blocksHint = computed(() => {
   if (props.modelValue == null) return "";
   const blocks = Number(props.modelValue);
   if (isNaN(blocks)) return "";
-  if (blocks === 0) return "No delay — takes effect immediately.";
+  if (blocks === 0) return props.field.zeroHint ?? "No delay — takes effect immediately.";
   if (unit.value === BLOCKS_UNIT) return "";
   return `≈ ${blocks.toLocaleString("en-US")} blocks`;
 });

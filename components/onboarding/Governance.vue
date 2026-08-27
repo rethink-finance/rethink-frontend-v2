@@ -4,8 +4,7 @@
       <span class="governance__label">Governance model</span>
     </div>
     <p class="governance__sub">
-      Both token options run on an OpenZeppelin Governor. The settings below
-      configure that governor.
+      Governance owns the vault and approves changes to vault settings.
     </p>
 
     <div class="governance__models">
@@ -13,21 +12,23 @@
         v-for="model in models"
         :key="model.key"
         class="governance__model"
-        :class="{
-          'governance__model--selected': selectedModel === model.key,
-          'governance__model--locked': model.locked,
-        }"
-        :role="model.locked ? undefined : 'radio'"
+        :class="{ 'governance__model--selected': selectedModel === model.key }"
+        role="radio"
         :aria-checked="selectedModel === model.key"
-        :tabindex="model.locked || isDisabled ? undefined : 0"
+        :tabindex="isDisabled ? undefined : 0"
         @click="select(model)"
         @keydown.enter.prevent="select(model)"
         @keydown.space.prevent="select(model)"
       >
         <div class="governance__model_head">
           <span class="governance__radio" :class="{ 'governance__radio--on': selectedModel === model.key }" />
-          <span class="governance__model_title">{{ model.title }}</span>
-          <span v-if="model.locked" class="governance__soon">Soon</span>
+          <span class="governance__model_title">
+            <span
+              v-for="(part, index) in model.title"
+              :key="index"
+              :class="{ governance__model_token: part.strong }"
+            >{{ part.text }}</span>
+          </span>
         </div>
         <p class="governance__model_body">
           {{ model.body }}
@@ -86,7 +87,6 @@ import { InputType, type IField } from "~/types/enums/input_type";
 enum GovernanceModel {
   VaultToken = "vault-token",
   CustomToken = "custom-token",
-  Multisig = "multisig",
 }
 
 const props = defineProps({
@@ -123,29 +123,26 @@ const selectedModel = computed(() =>
     : GovernanceModel.VaultToken,
 );
 
+/** A title is a run of text parts; a `strong` part is the token name, set off. */
 const models = computed(() => [
   {
     key: GovernanceModel.VaultToken,
-    title: `Govern by depositors via ${props.vaultSymbol || "vault"} token`,
-    body: "The vault token carries the voting power. Depositors vote through an OpenZeppelin Governor deployed with the vault.",
-    locked: false,
+    title: [
+      { text: "Govern by depositors (via " },
+      { text: props.vaultSymbol || "vault", strong: true },
+      { text: " token)" },
+    ],
+    body: "The vault token carries the voting power.",
   },
   {
     key: GovernanceModel.CustomToken,
-    title: "Govern with a custom token",
-    body: "Any existing ERC20 token carries the voting power instead of the vault token, through the same OpenZeppelin Governor.",
-    locked: false,
-  },
-  {
-    key: GovernanceModel.Multisig,
-    title: "Multisig or alternative governance contract",
-    body: "Run the vault under a multisig, or bring another governance contract.",
-    locked: true,
+    title: [{ text: "Govern by custom token" }],
+    body: "Any existing ERC20 token carries the voting power instead of the vault token.",
   },
 ]);
 
-const select = (model: { key: GovernanceModel; locked: boolean }) => {
-  if (model.locked || props.isDisabled || !governanceTokenField.value) return;
+const select = (model: { key: GovernanceModel }) => {
+  if (props.isDisabled || !governanceTokenField.value) return;
   governanceTokenField.value.isCustomValueToggleOn =
     model.key === GovernanceModel.CustomToken;
 };
@@ -196,7 +193,7 @@ const select = (model: { key: GovernanceModel; locked: boolean }) => {
     transition: border-color $default-transition-time ease,
       background-color $default-transition-time ease;
 
-    &:hover:not(&--locked) {
+    &:hover {
       border-color: $color-line-3;
     }
     &:focus-visible {
@@ -206,10 +203,6 @@ const select = (model: { key: GovernanceModel; locked: boolean }) => {
     &--selected {
       border-color: $color-cyan-line;
       background: $color-cyan-tint;
-    }
-    &--locked {
-      opacity: 0.55;
-      cursor: default;
     }
   }
 
@@ -247,15 +240,9 @@ const select = (model: { key: GovernanceModel; locked: boolean }) => {
     color: $color-white;
   }
 
-  &__soon {
-    padding: 0.125rem 0.375rem;
-    border: 1px solid $color-line-2;
-    border-radius: $default-border-radius;
-    font-family: $font-mono;
-    font-size: 9.5px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
+  /* The title is already bold, so the token name stands out by color instead. */
+  &__model_token {
+    color: $color-cyan;
   }
 
   &__model_body {

@@ -85,6 +85,13 @@ export interface IField {
    */
   defaultAmount?: number;
   /**
+   * What a zero period reads as in the box — "No delay" unless the field's
+   * zero means something else (late quorum's reads "No extension").
+   */
+  zeroPlaceholder?: string;
+  /** The footnote under a period field whose value is zero, same override. */
+  zeroHint?: string;
+  /**
    * Offers "Instant" among a period field's units — zero blocks, picked rather
    * than typed. The governor's durations do without it; the settlement period,
    * which is a frequency and not a wait, keeps it.
