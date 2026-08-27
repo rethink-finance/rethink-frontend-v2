@@ -1,5 +1,8 @@
+import { ethers } from "ethers";
+import { resolveVaultOperation } from "~/composables/vaultOperations";
+
 /**
- * What a wallet's holdings have been worth over time.
+ * What a wallet's holdings have been worth over time, and what they cost.
  *
  * The chain tells us what a wallet holds *now*; it keeps no history of that.
  * The subgraph records every deposit and redemption the wallet signed, and the
@@ -107,6 +110,126 @@ export const calibrateToPosition = (
     timestamp: point.timestamp,
     price: point.price * scale,
   }));
+};
+
+// ---- What the flows say a position cost -------------------------------------
+
+const toNumber = (value: bigint, decimals: number) =>
+  parseFloat(ethers.formatUnits(value, decimals));
+
+/** The slice of a flow the cost measurement reads, common to both feeds. */
+export interface MeasurableFlow {
+  /** Full signature, e.g. "requestDeposit(uint256)" — the operation table's key. */
+  name: string;
+  /** What actually moved — base asset for deposits, shares for redemptions. */
+  resolvedAmount: bigint | null;
+  timestamp: number;
+}
+
+export interface FlowMeasurement {
+  /** Share movements behind the settled flows, for the balance history. */
+  deltas: ShareDelta[];
+  /** Paid in less taken out, in the base asset — the cash cost. */
+  netInvested: number;
+  /** False where a redemption could not be priced, poisoning netInvested. */
+  canMeasure: boolean;
+  /**
+   * The cost the return is measured against. Zero or negative where nothing is
+   * measurable, which the caller reads as "no figure".
+   */
+  measurableCost: number;
+}
+
+/**
+ * What the wallet paid for its position, measured two ways.
+ *
+ * Only settled operations count either way. A request and the deposit it
+ * becomes are two rows for one movement of money, so counting both would book
+ * it twice. Deposits are recorded in the base asset and redemptions in shares,
+ * so each redemption leg is converted through the price in force when it
+ * settled.
+ *
+ * `netInvested` is cash: paid in less taken out, wherever in the vault's life
+ * it moved. The headline's dollar figure measures against it, because money is
+ * money however early it was paid.
+ *
+ * `measurableCost` is what the return column measures against, and it does not
+ * reach past the vault's first recorded price. Nothing before that price was
+ * transacted at a rate the series can describe — the series itself starts at
+ * the first settlement for exactly that reason — and vaults issue bootstrap
+ * shares at rates of their own: CarrotFunding minted its first depositor 2.7M
+ * units for 1 USDC, a claim on the safe's seed balance that read as a +142%
+ * "return" against cash. So whatever was already held when the series opens is
+ * booked at the opening price — the first price that ever existed — and only
+ * flows inside the series carry their cash. A position held through the series
+ * thereby measures the vault's own performance, the same figure its details
+ * page reports, and one bought entirely inside the series still measures its
+ * cash cost, so the two figures agree wherever both can see.
+ */
+export const measureFlows = (
+  flows: MeasurableFlow[],
+  prices: PricePoint[],
+  baseDecimals: number,
+  shareDecimals: number,
+  currentShares: number,
+): FlowMeasurement => {
+  const deltas: ShareDelta[] = [];
+  let netInvested = 0;
+  let canMeasure = true;
+
+  const measurableFrom = prices[0]?.timestamp;
+  let measurableCash = 0;
+  let measuredDeltas = 0;
+
+  for (const flow of [...flows].sort(byTimestamp)) {
+    const operation = resolveVaultOperation(flow.name);
+    if (!operation?.isSettled || flow.resolvedAmount == null) continue;
+
+    const price = priceAt(prices, flow.timestamp);
+    const isMeasurable =
+      measurableFrom !== undefined && flow.timestamp >= measurableFrom;
+
+    if (operation.family === "deposit") {
+      // A deposit is recorded in the base asset, so what it cost is known
+      // whether or not the vault has ever been priced. Only the shares it
+      // bought need a price, and a vault with no price history — one that has
+      // never settled — still has a cost worth reporting.
+      const base = toNumber(flow.resolvedAmount, baseDecimals);
+      netInvested += base;
+      if (isMeasurable) measurableCash += base;
+      if (price) {
+        const shares = base / price;
+        deltas.push({ timestamp: flow.timestamp, shares });
+        if (isMeasurable) measuredDeltas += shares;
+      }
+    } else if (operation.family === "withdraw") {
+      const shares = toNumber(flow.resolvedAmount, shareDecimals);
+      deltas.push({ timestamp: flow.timestamp, shares: -shares });
+      if (isMeasurable) measuredDeltas -= shares;
+      // A redemption is recorded in shares, so without a price there is no
+      // saying what left. Netting it at nothing would overstate the cost still
+      // standing, and with it the return, so no figure is given at all.
+      if (!price) canMeasure = false;
+      else {
+        netInvested -= shares * price;
+        if (isMeasurable) measurableCash -= shares * price;
+      }
+    }
+  }
+
+  // Whatever the in-series flows cannot account for was already held when the
+  // series opened — deposited during bootstrap, or transferred in — and is
+  // booked at the opening price. With no series at all, cash is the only
+  // measure there is.
+  const measurableCost =
+    measurableFrom === undefined
+      ? canMeasure
+        ? netInvested
+        : 0
+      : Math.max(0, currentShares - measuredDeltas) * prices[0].price +
+        measurableCash;
+
+  return { deltas, netInvested, canMeasure, measurableCost };
 };
 
 /**

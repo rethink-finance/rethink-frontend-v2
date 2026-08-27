@@ -137,8 +137,8 @@ const totalUSD = computed(() =>
 
 /**
  * Only positions that can be priced in dollars can be added up, and only those
- * with a measurable cost carry one — so the total and its cost are taken from
- * the same set, or the profit figure would be a subtraction between two
+ * with a knowable cash cost carry one — so the total and its cost are taken
+ * from the same set, or the profit figure would be a subtraction between two
  * different portfolios.
  */
 const netInvestedUSD = computed(() => {

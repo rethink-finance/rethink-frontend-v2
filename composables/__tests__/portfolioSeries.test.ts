@@ -4,6 +4,7 @@ import {
   buildVaultValueSeries,
   buildWeightedReturnSeries,
   calibrateToPosition,
+  measureFlows,
   priceAt,
   sharesAt,
   sumValueSeries,
@@ -415,6 +416,200 @@ describe("calibrateToPosition", () => {
     expect(calibrateToPosition([price("2025-01-01T00:00:00Z", 4)], 0, 40)).toEqual([]);
     expect(calibrateToPosition([price("2025-01-01T00:00:00Z", 4)], 10, 0)).toEqual([]);
     expect(calibrateToPosition([price("2025-01-01T00:00:00Z", 0)], 10, 40)).toEqual([]);
+  });
+});
+
+describe("measureFlows", () => {
+  // Whole-unit tokens keep the arithmetic readable; the decimals-bridging
+  // cases are covered by the CarrotFunding figures at the end.
+  const flow = (iso: string, name: string, amount: bigint | null) => ({
+    name,
+    resolvedAmount: amount,
+    timestamp: at(iso),
+  });
+
+  it("measures a position bought inside the series at its cash cost", () => {
+    const prices = [
+      price("2025-01-01T00:00:00Z", 1),
+      price("2025-06-01T00:00:00Z", 1.25),
+    ];
+    const { netInvested, measurableCost, canMeasure, deltas } = measureFlows(
+      [flow("2025-01-02T00:00:00Z", "deposit()", 100n)],
+      prices,
+      0,
+      0,
+      100,
+    );
+
+    expect(netInvested).toBe(100);
+    expect(measurableCost).toBe(100);
+    expect(canMeasure).toBe(true);
+    expect(deltas).toEqual([delta("2025-01-02T00:00:00Z", 100)]);
+  });
+
+  it("counts a request and its settlement once, not twice", () => {
+    const prices = [price("2025-01-01T00:00:00Z", 1)];
+    const { netInvested, measurableCost } = measureFlows(
+      [
+        flow("2025-01-02T00:00:00Z", "requestDeposit(uint256)", 100n),
+        flow("2025-01-03T00:00:00Z", "deposit()", 100n),
+      ],
+      prices,
+      0,
+      0,
+      100,
+    );
+
+    expect(netInvested).toBe(100);
+    expect(measurableCost).toBe(100);
+  });
+
+  it("nets a redemption out of both costs at the price it settled", () => {
+    const prices = [
+      price("2025-01-01T00:00:00Z", 1),
+      price("2025-06-01T00:00:00Z", 2),
+    ];
+    const { netInvested, measurableCost } = measureFlows(
+      [
+        flow("2025-01-02T00:00:00Z", "deposit()", 100n),
+        flow("2025-06-02T00:00:00Z", "withdraw()", 30n),
+      ],
+      prices,
+      0,
+      0,
+      70,
+    );
+
+    expect(netInvested).toBe(100 - 30 * 2);
+    expect(measurableCost).toBe(100 - 30 * 2);
+  });
+
+  it("books what predates the series at its opening price, cash notwithstanding", () => {
+    // Bought for 100 during bootstrap, sold 30 shares during bootstrap too,
+    // then 10 more inside the series. The cash figure keeps every leg — the
+    // pre-series redemption at the opening price, there being nothing earlier —
+    // while the return's cost refuses to reach past the series: 40 of the 45
+    // shares held today predate it and are booked at the opening 2.0.
+    const prices = [
+      price("2025-06-01T00:00:00Z", 2),
+      price("2025-09-01T00:00:00Z", 2.5),
+    ];
+    const { netInvested, measurableCost } = measureFlows(
+      [
+        flow("2025-01-02T00:00:00Z", "deposit()", 100n),
+        flow("2025-02-02T00:00:00Z", "withdraw()", 30n),
+        flow("2025-06-02T00:00:00Z", "deposit()", 10n),
+      ],
+      prices,
+      0,
+      0,
+      45,
+    );
+
+    expect(netInvested).toBe(100 - 30 * 2 + 10);
+    expect(measurableCost).toBe(40 * 2 + 10);
+  });
+
+  it("prices a holding the flows never explain at the series' opening", () => {
+    // Shares that arrived by transfer: no flows at all, so no cash cost —
+    // but the holding is still measurable from the first price onward.
+    const prices = [
+      price("2025-06-01T00:00:00Z", 2),
+      price("2025-09-01T00:00:00Z", 3),
+    ];
+    const { netInvested, measurableCost } = measureFlows([], prices, 0, 0, 40);
+
+    expect(netInvested).toBe(0);
+    expect(measurableCost).toBe(80);
+  });
+
+  it("falls back to cash where the vault has never been priced", () => {
+    const bought = measureFlows(
+      [flow("2025-01-02T00:00:00Z", "deposit()", 100n)],
+      [],
+      0,
+      0,
+      100,
+    );
+    expect(bought.netInvested).toBe(100);
+    expect(bought.measurableCost).toBe(100);
+    expect(bought.canMeasure).toBe(true);
+
+    // A redemption with no price cannot be netted out, poisoning both costs.
+    const redeemed = measureFlows(
+      [
+        flow("2025-01-02T00:00:00Z", "deposit()", 100n),
+        flow("2025-02-02T00:00:00Z", "withdraw()", 30n),
+      ],
+      [],
+      0,
+      0,
+      70,
+    );
+    expect(redeemed.canMeasure).toBe(false);
+    expect(redeemed.measurableCost).toBe(0);
+  });
+
+  it("goes non-positive where more was taken out than went in", () => {
+    const prices = [
+      price("2025-01-01T00:00:00Z", 1),
+      price("2025-06-01T00:00:00Z", 3),
+    ];
+    const { netInvested, measurableCost } = measureFlows(
+      [
+        flow("2025-01-02T00:00:00Z", "deposit()", 100n),
+        flow("2025-06-02T00:00:00Z", "withdraw()", 60n),
+      ],
+      prices,
+      0,
+      0,
+      40,
+    );
+
+    expect(netInvested).toBeLessThanOrEqual(0);
+    expect(measurableCost).toBeLessThanOrEqual(0);
+  });
+
+  it("keeps a bootstrap windfall out of the return's cost basis", () => {
+    // CarrotFunding, HyperEVM, August 2026. The wallet's 1 USDC deposit
+    // predates the vault's first settlement and was minted 2.7M raw units —
+    // a first-depositor claim on the safe's seed balance that no price series
+    // can cost. Against cash the position read +142%; booked at the series'
+    // opening price it reads the vault's own +13.6% since that settlement.
+    // Figures are the live ones: reader value 2.261756 USDC over 2,609,979
+    // raw units (18 declared decimals), backend share prices as stored.
+    const shares = 2.609979e-12;
+    const value = 2.261756;
+    const prices = calibrateToPosition(
+      [
+        price("2026-08-18T12:29:59Z", 1.0000931186047853),
+        price("2026-08-24T23:51:00Z", 1.1362134292271264),
+        price("2026-08-26T11:10:00Z", 1.1362706113008985),
+      ],
+      shares,
+      value,
+    );
+
+    const { netInvested, measurableCost } = measureFlows(
+      [
+        flow("2026-08-03T17:54:54Z", "requestDeposit(uint256)", 1_000_000n),
+        flow("2026-08-03T18:26:18Z", "deposit()", 1_000_000n),
+        flow("2026-08-03T18:31:24Z", "requestWithdraw(uint256)", 100_000n),
+        flow("2026-08-04T07:38:41Z", "withdraw()", 100_000n),
+        flow("2026-08-18T15:15:19Z", "deposit()", 10_000n),
+      ],
+      prices,
+      6,
+      18,
+      shares,
+    );
+
+    // Cash: 1 USDC in, ~0.076 out at the only price there is, 0.01 in.
+    expect(netInvested).toBeCloseTo(0.9337, 4);
+    // The old cost basis — the windfall against cash.
+    expect((value / netInvested - 1) * 100).toBeCloseTo(142.23, 2);
+    // The measurable one: the vault's performance since it first had a price.
+    expect((value / measurableCost - 1) * 100).toBeCloseTo(13.62, 2);
   });
 });
 

@@ -251,14 +251,11 @@ const pnlFormatted = computed(() => {
   return `${value >= 0 ? "+" : "-"}$${formatNumberShort(Math.abs(value))}`;
 });
 
-const isNegative = computed(() =>
-  metric.value === "return"
-    ? (returnPercent.value ?? 0) < 0
-    : (pnl.value ?? 0) < 0,
-);
-
-const lineColor = computed(() => (isNegative.value ? "#e66a60" : "#16c8ff"));
-const lineColorEnd = computed(() => (isNegative.value ? "#e66a60" : "#1f5fff"));
+// The line stays on the brand blue whichever way the money went: the figure
+// beside it already carries the sign in its own colour, and a chart that
+// repaints itself red turns the whole card into an alarm.
+const lineColor = "#16c8ff";
+const lineColorEnd = "#1f5fff";
 
 const summary = computed(() => {
   const plural = (count: number, one: string, many: string) =>

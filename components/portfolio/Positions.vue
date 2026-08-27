@@ -126,8 +126,8 @@ const rows = computed(() =>
       valueUSD: position.valueUSD ? `$${formatNumberShort(position.valueUSD)}` : "",
       allocation: share === undefined ? "—" : `${share.toFixed(1)}%`,
       allocationWidth: share === undefined ? "0%" : `${share.toFixed(1)}%`,
-      // A wallet that has withdrawn more than it paid in has no cost left to
-      // measure against — see netInvested in portfolioPositions.
+      // A wallet with no measurable cost — withdrawn more than went in, or a
+      // vault that was never priced — see measureFlows in portfolioSeries.
       return: percent === undefined ? "—" : `${percent.toFixed(2)}%`,
       // A figure that rounds to nothing is written unsigned and uncoloured, so
       // a rounding artefact cannot masquerade as a direction.

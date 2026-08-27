@@ -18,16 +18,12 @@ import {
   buildShareBalanceHistory,
   buildVaultValueSeries,
   calibrateToPosition,
-  priceAt,
+  measureFlows,
   type PricePoint,
   type ShareBalanceHistory,
-  type ShareDelta,
   type ValuePoint,
 } from "~/composables/portfolioSeries";
-import {
-  resolveSettledAmounts,
-  resolveVaultOperation,
-} from "~/composables/vaultOperations";
+import { resolveSettledAmounts } from "~/composables/vaultOperations";
 
 /**
  * What a wallet holds across every vault, and what it has done to get there.
@@ -65,9 +61,13 @@ export interface PortfolioPosition {
   /** What those tokens are worth in the vault's base asset, on chain. */
   valueRaw: bigint;
   value: number;
-  /** Paid in less taken out, in the base asset — the cost of the position. */
+  /** Paid in less taken out, in the base asset — the cash cost of the position. */
   netInvested?: number;
-  /** Gain on that cost, in percent. Absent where nothing was ever paid in. */
+  /**
+   * Gain in percent on the measurable cost: in-series flows at their own
+   * prices, anything held before the vault's first recorded price booked at
+   * that opening price. Absent where nothing is measurable. See measureFlows.
+   */
   returnPercent?: number;
   /** Base-asset price per share, calibrated against the position above. */
   prices: PricePoint[];
@@ -201,52 +201,6 @@ const fetchPriceSeries = async (
   );
 
   return { prices: points, lastSettlement };
-};
-
-/**
- * What the wallet paid in, and the share movements behind it.
- *
- * Only settled operations count. A request and the deposit it becomes are two
- * rows for one movement of money, so counting both would book it twice.
- * Deposits are recorded in the base asset and redemptions in shares, so each
- * leg is converted through the price in force when it settled.
- */
-const measureFlows = (
-  flows: PortfolioFlow[],
-  prices: PricePoint[],
-  baseDecimals: number,
-  shareDecimals: number,
-) => {
-  const deltas: ShareDelta[] = [];
-  let netInvested = 0;
-  let canMeasure = true;
-
-  for (const flow of [...flows].sort((a, b) => a.timestamp - b.timestamp)) {
-    const operation = resolveVaultOperation(flow.name);
-    if (!operation?.isSettled || flow.resolvedAmount == null) continue;
-
-    const price = priceAt(prices, flow.timestamp);
-
-    if (operation.family === "deposit") {
-      // A deposit is recorded in the base asset, so what it cost is known
-      // whether or not the vault has ever been priced. Only the shares it
-      // bought need a price, and a vault with no price history — one that has
-      // never settled — still has a cost worth reporting.
-      const base = toNumber(flow.resolvedAmount, baseDecimals);
-      netInvested += base;
-      if (price) deltas.push({ timestamp: flow.timestamp, shares: base / price });
-    } else if (operation.family === "withdraw") {
-      const shares = toNumber(flow.resolvedAmount, shareDecimals);
-      deltas.push({ timestamp: flow.timestamp, shares: -shares });
-      // A redemption is recorded in shares, so without a price there is no
-      // saying what left. Netting it at nothing would overstate the cost still
-      // standing, and with it the return, so no figure is given at all.
-      if (!price) canMeasure = false;
-      else netInvested -= shares * price;
-    }
-  }
-
-  return { deltas, netInvested, canMeasure };
 };
 
 /** A flow as its source gave it, before settlements borrow their amounts. */
@@ -427,11 +381,12 @@ const assemblePosition = (
       flow.chainId === fund.chainId &&
       flow.fundAddress === fund.address.toLowerCase(),
   );
-  const { deltas, netInvested, canMeasure } = measureFlows(
+  const { deltas, netInvested, canMeasure, measurableCost } = measureFlows(
     vaultFlows,
     held.prices,
     baseDecimals,
     shareDecimals,
+    shares,
   );
   const hasCost = canMeasure && netInvested > 0;
 
@@ -444,7 +399,8 @@ const assemblePosition = (
     // A wallet that has taken out more than it put in has no cost left to
     // measure a return against, so the figure is withheld rather than invented.
     netInvested: hasCost ? netInvested : undefined,
-    returnPercent: hasCost ? (value / netInvested - 1) * 100 : undefined,
+    returnPercent:
+      measurableCost > 0 ? (value / measurableCost - 1) * 100 : undefined,
     prices: held.prices,
     history: buildShareBalanceHistory(shares, deltas),
     lastSettlement: held.lastSettlement,
