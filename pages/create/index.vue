@@ -845,6 +845,14 @@ const primaryAction = computed(() => {
       }
       return nextAction.value;
     case OnboardingStep.Permissions:
+      // The delegated-permissions editor on the second sub-step carries its
+      // own Save Permissions button, with disabled states the footer cannot
+      // see. Pressing "Store permissions" there would re-run the sub-step-0
+      // finalize against a role with no edits and go nowhere, so the bar
+      // offers no primary — the ghost Next remains the way onward.
+      if (permissionsRef.value && !permissionsRef.value.isOnFirstSubStep) {
+        return undefined;
+      }
       return {
         label: "Store permissions",
         enabled: true,

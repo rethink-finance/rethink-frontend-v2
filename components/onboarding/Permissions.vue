@@ -366,19 +366,21 @@ const goToPermissionsStepTwo = async () => {
     );
     selectedStepIndex.value = 1;
   } catch (e: any) {
-    console.error("Failed updating role", e);
     if (e.message === "No role") {
       // No role edits were made; continue with no prepared transactions.
       permissionsProposalStore.rawTransactions = [];
       selectedStepIndex.value = 1;
     } else {
+      console.error("Failed updating role", e);
       updateRoleError.value = e.message;
     }
   }
 };
 
 // The step's primary action lives in the page's sticky footer, where every
-// other step's does; this is what that button calls.
+// other step's does; this is what that button calls. On the delegated editor
+// (sub-step 1) the footer hides its primary via isOnFirstSubStep — the editor
+// submits through its own Save Permissions button.
 defineExpose({
   finalizePermissions: goToPermissionsStepTwo,
   isFinalizing: loading,
