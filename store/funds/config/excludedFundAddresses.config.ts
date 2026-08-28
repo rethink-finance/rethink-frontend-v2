@@ -416,6 +416,22 @@ const rawExcludedFundAddresses = {
       alwaysExclude: true,
     }, // Test (TSTttt)
     {
+      address: "0x9295b4253cFb795f0807aE159E3a8c5eF0d74e0D",
+      alwaysExclude: true,
+    }, // Testing SmartBTC WBTC Roles V2 Vault
+    {
+      address: "0x6A1A3C3f37c737fB90Ad0811924f2A3f0D60F4b3",
+      alwaysExclude: true,
+    }, // Test 3
+    {
+      address: "0x0A89E83D36Ef22DdbD129a3683c269F3Aa4f5E4E",
+      alwaysExclude: true,
+    }, // Test 4
+    {
+      address: "0x46d94E9FBc63E076649552a0Bc168171ca423c99",
+      alwaysExclude: true,
+    }, // Test 5
+    {
       address: "0x55C439144C626F074749425c9bf340191399Afe9",
       alwaysExclude: false,
     }, // test2 — Roles v2 test vault
