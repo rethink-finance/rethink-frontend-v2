@@ -128,7 +128,12 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import type IFormError from "~/types/form_error";
 import ProcessDepositModal from "~/components/fund/settlement/ProcessDepositModal.vue";
+import { useDepositBatch } from "~/composables/fund/useDepositBatch";
 import { useDepositFlowOpen } from "~/composables/fund/useDepositFlow";
+import {
+  isWalletRpcHealthError,
+  WALLET_RPC_HEALTH_MESSAGE,
+} from "~/services/eip5792";
 
 const emit = defineEmits(["deposit-success"]);
 const toastStore = useToastStore();
@@ -153,6 +158,21 @@ const isLoadingProcessDeposit = ref(false);
 // deposit swaps this card out for that one mid-flow — see useDepositFlowOpen.
 const isDepositModalOpen = useDepositFlowOpen(
   () => fundStore.selectedFundAddress,
+);
+
+const {
+  isDepositBatchPending,
+  isBatchSupported,
+  refreshBatchSupport,
+  sendDepositBatch,
+} = useDepositBatch();
+
+// Answered before anything is clicked, so the in-card rail can collapse the
+// batched steps; re-asked when the wallet, account or chain changes.
+watch(
+  () => [accountStore.activeAccountAddress, fundStore.selectedFundChain],
+  () => refreshBatchSupport(),
+  { immediate: true },
 );
 
 watch(
@@ -238,6 +258,11 @@ const handleError = (error: any, refreshData: boolean = true) => {
   loadingApproveAllowance.value = false;
   if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Transaction was rejected.");
+  } else if (isWalletRpcHealthError(error)) {
+    // The wallet's endpoint refused the send before anything was signed;
+    // nothing on-chain changed, so no refresh — just the remedy.
+    console.error(error);
+    toastStore.errorToast(WALLET_RPC_HEALTH_MESSAGE);
   } else {
     toastStore.errorToast(
       "There has been an error. Please contact the Rethink Finance support.",
@@ -483,44 +508,91 @@ const hasProcessedDeposit = computed(() => {
   // return fundStore.fundUserData.depositRequestProcessed;
 });
 
-const stepsDeposit = computed(() => [
-  {
-    label: "1. Request Deposit",
-    done: hasRequestedDeposit.value,
-    loading: loadingRequestDeposit.value,
-    isDisabled: false,
-  },
-  {
-    label: "2. Approve Amount",
-    done: hasApprovedAmount.value,
-    loading: loadingApproveAllowance.value,
-    isDisabled: false,
-  },
-  {
-    label: "3. Delegate to Myself",
-    done: hasDelegatedToSelf.value && hasApprovedAmount.value,
-    loading: isLoadingDelegate.value,
-  },
-  {
-    label: "4. Process Deposit",
+interface IDepositStep {
+  label: string;
+  done: boolean;
+  loading?: boolean;
+  isDisabled?: boolean;
+  tooltip?: string;
+}
+
+/**
+ * Mirrors the dialog's rail, including its shape: a wallet that batches signs
+ * the first three steps as one confirmation, so they are drawn as one step.
+ */
+const stepsDeposit = computed<IDepositStep[]>(() => {
+  const processStep: IDepositStep = {
+    label: isBatchSupported.value ? "2. Process Deposit" : "4. Process Deposit",
     done: hasProcessedDeposit.value,
     isDisabled: shouldUserWaitSettlementOrCancelDeposit.value && hasDelegatedToSelf.value,
     tooltip: "Wait for the next NAV update to process the deposit.",
-  },
-]);
+  };
 
-const handleDepositClick = () =>{
-  if(!hasRequestedDeposit.value){
-    requestDeposit();
+  if (isBatchSupported.value) {
+    return [
+      {
+        label: "1. Request, Approve & Delegate",
+        done:
+          hasRequestedDeposit.value &&
+          hasApprovedAmount.value &&
+          hasDelegatedToSelf.value,
+        loading:
+          isDepositBatchPending.value ||
+          loadingRequestDeposit.value ||
+          loadingApproveAllowance.value ||
+          isLoadingDelegate.value,
+        isDisabled: false,
+      },
+      processStep,
+    ];
   }
+
+  return [
+    {
+      label: "1. Request Deposit",
+      done: hasRequestedDeposit.value,
+      loading: loadingRequestDeposit.value,
+      isDisabled: false,
+    },
+    {
+      label: "2. Approve Amount",
+      done: hasApprovedAmount.value,
+      loading: loadingApproveAllowance.value,
+      isDisabled: false,
+    },
+    {
+      label: "3. Delegate to Myself",
+      done: hasDelegatedToSelf.value && hasApprovedAmount.value,
+      loading: isLoadingDelegate.value,
+    },
+    processStep,
+  ];
+});
+
+const handleDepositClick = async () => {
+  if (hasRequestedDeposit.value) {
+    isDepositModalOpen.value = true;
+    return;
+  }
+  // Request + approve + delegate as one wallet confirmation where the wallet
+  // can execute an EIP-5792 batch; every other wallet falls back to the
+  // per-transaction flow this click always ran. The dialog opens first either
+  // way — it is where the batch's progress is rendered.
   isDepositModalOpen.value = true;
+  const outcome = await sendDepositBatch(tokensWei.value);
+  if (outcome === "unsupported") {
+    requestDeposit();
+  } else if (outcome === "success") {
+    emit("deposit-success");
+  }
 }
 
 
 const isDepositButtonDisabled = computed(() => {
   return (
     (!hasRequestedDeposit.value && errorMessages.value.length > 0) ||
-    !fundStore.isUserWalletWhitelisted
+    !fundStore.isUserWalletWhitelisted ||
+    isDepositBatchPending.value
   );
 });
 

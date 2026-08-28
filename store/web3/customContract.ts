@@ -61,9 +61,12 @@ export class CustomContract extends Contract<any> {
               promiEvent.emit("receipt", receipt);
               resolve(receipt); // Resolve the promise with the receipt
             })
-            .on("confirmation", (args) =>
-              promiEvent.emit("confirmation", args),
-            )
+            // No "confirmation" forwarding: nothing in the app listens for
+            // confirmations, and in web3 v4 merely registering the listener
+            // starts a block-poll (eth_getBlockByNumber) through the WALLET's
+            // RPC after every receipt — which drains rate-limited endpoints
+            // and, when the endpoint refuses, fires a bogus "error" event on
+            // a transaction that already succeeded.
             .on("error", (error) => {
               promiEvent.emit("error", error);
               reject(error); // Reject the promise with the error

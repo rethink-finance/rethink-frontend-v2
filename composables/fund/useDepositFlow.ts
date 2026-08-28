@@ -49,3 +49,15 @@ export const useDepositFlowOpen = (fundAddress: () => string | undefined) =>
 export const useDepositFlowProcessed = (
   fundAddress: () => string | undefined,
 ) => flagForVault("deposit-flow-processed-for", fundAddress);
+
+/**
+ * Whether the wallet is confirming the batched form of steps one to three
+ * (request + approve + delegate in a single EIP-5792 bundle — see
+ * useDepositBatch). The card starts the batch and the dialog renders its
+ * progress, so like the flags above it lives with neither of them; and it is
+ * keyed by vault because a bundle signed for one vault must not put another
+ * vault's step rail into a signing state.
+ */
+export const useDepositFlowBatchPending = (
+  fundAddress: () => string | undefined,
+) => flagForVault("deposit-flow-batch-pending-for", fundAddress);

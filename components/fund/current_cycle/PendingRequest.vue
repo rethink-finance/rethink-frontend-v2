@@ -45,6 +45,10 @@ import { encodeFundFlowsCallFunctionData } from "assets/contracts/fundFlowsCallA
 import { ethers, FixedNumber } from "ethers";
 import { ref } from "vue";
 import { roundToSignificantDecimals } from "~/composables/formatters";
+import {
+  isWalletRpcHealthError,
+  WALLET_RPC_HEALTH_MESSAGE,
+} from "~/services/eip5792";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
@@ -139,10 +143,10 @@ const cancelPendingRequest = async () => {
         isLoadingCancelRequest.value = false;
         hideCancelButton();
       }).on("error", (error: any) => {
-        console.error(error);
-        toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support.",
-        );
+        // Through handleError so the button stops spinning and the request
+        // state is re-read — the transaction may have landed before the
+        // error event fired.
+        handleError(error);
       })
   } catch (error: any) {
     handleError(error);
@@ -155,6 +159,12 @@ const handleError = (error: any, refreshData: boolean=true) => {
   isLoadingCancelRequest.value = false;
   if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Transaction was rejected.")
+  } else if (isWalletRpcHealthError(error)) {
+    console.error(error);
+    toastStore.errorToast(WALLET_RPC_HEALTH_MESSAGE);
+    if (refreshData) {
+      fundStore.fetchUserFundDepositRedemptionRequests();
+    }
   } else {
     toastStore.errorToast("There has been an error. Please contact the Rethink Finance support.");
     console.error(error);

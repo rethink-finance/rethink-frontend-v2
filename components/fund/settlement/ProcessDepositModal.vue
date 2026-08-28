@@ -26,9 +26,11 @@
       </div>
     </template>
 
-    <!-- A deposit takes four transactions, and the only question worth
-         answering here is "where am I?". So the steps carry their own state
-         rather than being a numbered list that never changes. -->
+    <!-- A deposit takes several wallet confirmations — four transactions, or
+         a batched confirmation plus processing when the wallet can batch —
+         and the only question worth answering here is "where am I?". So the
+         steps carry their own state rather than being a numbered list that
+         never changes. -->
     <div class="deposit_flow">
       <div class="deposit_flow__bar">
         <span
@@ -220,7 +222,12 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { FundTransactionType } from "~/types/enums/fund_transaction_type";
 import { formatTokenValue } from "~/composables/formatters";
+import { useDepositBatch } from "~/composables/fund/useDepositBatch";
 import { useDepositFlowProcessed } from "~/composables/fund/useDepositFlow";
+import {
+  isWalletRpcHealthError,
+  WALLET_RPC_HEALTH_MESSAGE,
+} from "~/services/eip5792";
 import type IFormError from "~/types/form_error";
 
 const props = defineProps({
@@ -262,6 +269,13 @@ const isLoadingDelegate = ref(false);
 const isLoadingProcessDeposit = ref(false);
 const isDelegateModalOpen = ref(false);
 
+const {
+  isDepositBatchPending,
+  isBatchSupported,
+  refreshBatchSupport,
+  sendDepositBatch,
+} = useDepositBatch();
+
 /**
  * Set once the deposit lands, and cleared when the dialog is opened again.
  * Nothing on chain records that a request was processed — the request is simply
@@ -277,9 +291,44 @@ const hasProcessedDeposit = useDepositFlowProcessed(
 watch(
   () => props.modelValue,
   (isOpen) => {
-    if (isOpen) hasProcessedDeposit.value = false;
+    if (isOpen) {
+      hasProcessedDeposit.value = false;
+      // Shapes the rail below: with a batching wallet the first three rows
+      // collapse into one confirmation.
+      refreshBatchSupport();
+    }
   },
 );
+
+/**
+ * Step one's completion normally arrives through the send's receipt event, and
+ * that event is not guaranteed: a wallet's receipt polling can die quietly, and
+ * the error path refetches from a node that may not have caught up with the
+ * transaction yet. Either way the store is left saying "no request" while the
+ * chain holds one, and the dialog sits on step one forever — signing again is
+ * the only way out, and that sends a second real transaction.
+ *
+ * So while the dialog is open and claiming step one is not done, the chain is
+ * re-read every few seconds (two storage slots). Whichever way the receipt was
+ * lost, the request surfaces on the next poll and the flow moves to step two.
+ * The poll stops the moment the request appears or the dialog closes.
+ */
+const requestPollTimer = ref<ReturnType<typeof setInterval>>();
+watch(
+  () => props.modelValue && shouldUserRequestDeposit.value,
+  (shouldPoll) => {
+    clearInterval(requestPollTimer.value);
+    requestPollTimer.value = undefined;
+    if (shouldPoll) {
+      requestPollTimer.value = setInterval(
+        () => fundStore.fetchUserFundDepositRedemptionRequests(),
+        5000,
+      );
+    }
+  },
+  { immediate: true },
+);
+onUnmounted(() => clearInterval(requestPollTimer.value));
 
 const hasApprovedAmount = computed(() => {
   if (!fundStore.fundUserData?.fundAllowance) return false;
@@ -344,6 +393,11 @@ const handleError = (error: any, refreshData: boolean = true) => {
   loadingApproveAllowance.value = false;
   if ([4001, 100].includes(error?.code)) {
     toastStore.addToast("Transaction was rejected.");
+  } else if (isWalletRpcHealthError(error)) {
+    // The wallet's endpoint refused the send before anything was signed;
+    // nothing on-chain changed, so no refresh — just the remedy.
+    console.error(error);
+    toastStore.errorToast(WALLET_RPC_HEALTH_MESSAGE);
   } else {
     toastStore.errorToast(
       "There has been an error. Please contact the Rethink Finance support.",
@@ -501,21 +555,49 @@ const approveAllowance = async () => {
   }
 };
 
+/**
+ * The batched form of the button below: request + approve + delegate in one
+ * EIP-5792 confirmation when the wallet can execute it, and the plain
+ * requestDeposit when it cannot. "stopped" means the batch already told the
+ * user what happened, so nothing else runs.
+ */
+const requestDepositBatchFirst = async () => {
+  if (!fund.value) {
+    toastStore.errorToast("Fund data is missing.");
+    return;
+  }
+  const tokensWei = ethers.parseUnits(
+    props.tokenValue || "0",
+    fund.value?.baseToken.decimals,
+  );
+  const outcome = await sendDepositBatch(tokensWei);
+  if (outcome === "unsupported") {
+    await requestDeposit();
+  } else if (outcome === "success") {
+    emit("deposit-success");
+  }
+};
+
 const isRequestDepositDisabled = computed(() => {
   return (
     props.visibleErrorMessages.length > 0 ||
     loadingRequestDeposit.value || loadingApproveAllowance.value ||
+    isDepositBatchPending.value ||
     !fundStore.isUserWalletWhitelisted
   );
 });
 
+const isRequestDepositLoading = computed(
+  () => loadingRequestDeposit.value || isDepositBatchPending.value,
+);
+
 const buttons = ref([
   {
     name: "Request deposit",
-    onClick: requestDeposit,
+    onClick: requestDepositBatchFirst,
     isVisible: shouldUserRequestDeposit,
     disabled: isRequestDepositDisabled,
-    loading: loadingRequestDeposit,
+    loading: isRequestDepositLoading,
     tooltipText: computed(() => {
       if (userDepositRequestExists.value) {
         return "Deposit request already exists. To change it, you first have to cancel the existing one.";
@@ -542,38 +624,86 @@ const buttons = ref([
  * the moment it lands every one of those flags goes false again. Held open past
  * that, the rail would reset to step one and read as though nothing had
  * happened — hence the completed flag standing in for all four.
+ *
+ * While an EIP-5792 batch is confirming, the first three steps really are in
+ * flight in one transaction, so each not-yet-done one spins; a step the batch
+ * skipped because it was already satisfied stays a plain check.
+ *
+ * The rail's shape follows the wallet: one that batches signs request,
+ * approval and delegation as a single confirmation, so drawing them as three
+ * steps promises three prompts that never come — they collapse into one row,
+ * and the flow honestly reads as two steps. Wallets that answer the probe
+ * with "cannot" (or not at all) keep the four-row rail that matches the four
+ * prompts they will actually see.
  */
-const stepsDeposit = computed(() => {
+interface IDepositStep {
+  label: string;
+  done: boolean;
+  loading?: boolean;
+  isDisabled?: boolean;
+  tooltip?: string;
+}
+
+const stepsDeposit = computed<IDepositStep[]>(() => {
   const complete = hasProcessedDeposit.value;
+  const batchPending = isDepositBatchPending.value;
+
+  const processStep: IDepositStep = {
+    label: "Process deposit",
+    done: complete,
+    loading: isLoadingProcessDeposit.value,
+    isDisabled:
+      !complete &&
+      shouldUserWaitSettlementOrCancelDeposit.value &&
+      hasDelegatedToSelf.value,
+    tooltip: "Wait for the next NAV update to process the deposit.",
+  };
+
+  if (isBatchSupported.value) {
+    return [
+      {
+        label: "Request, approve & delegate",
+        done:
+          complete ||
+          (userDepositRequestExists.value &&
+            hasApprovedAmount.value &&
+            hasDelegatedToSelf.value),
+        loading:
+          batchPending ||
+          loadingRequestDeposit.value ||
+          loadingApproveAllowance.value ||
+          isLoadingDelegate.value,
+        isDisabled: false,
+      },
+      processStep,
+    ];
+  }
 
   return [
     {
       label: "Request deposit",
       done: complete || userDepositRequestExists.value,
-      loading: loadingRequestDeposit.value,
+      loading:
+        loadingRequestDeposit.value ||
+        (batchPending && !userDepositRequestExists.value),
       isDisabled: false,
     },
     {
       label: "Approve amount",
       done: complete || hasApprovedAmount.value,
-      loading: loadingApproveAllowance.value,
+      loading:
+        loadingApproveAllowance.value ||
+        (batchPending && !hasApprovedAmount.value),
       isDisabled: false,
     },
     {
       label: "Delegate to myself",
       done: complete || (hasDelegatedToSelf.value && hasApprovedAmount.value),
-      loading: isLoadingDelegate.value,
+      loading:
+        isLoadingDelegate.value ||
+        (batchPending && !hasDelegatedToSelf.value),
     },
-    {
-      label: "Process deposit",
-      done: complete,
-      loading: isLoadingProcessDeposit.value,
-      isDisabled:
-        !complete &&
-        shouldUserWaitSettlementOrCancelDeposit.value &&
-        hasDelegatedToSelf.value,
-      tooltip: "Wait for the next NAV update to process the deposit.",
-    },
+    processStep,
   ];
 });
 
@@ -666,7 +796,9 @@ const processDeposit = async () => {
         isLoadingProcessDeposit.value = false;
         console.error(error);
         toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support.",
+          isWalletRpcHealthError(error)
+            ? WALLET_RPC_HEALTH_MESSAGE
+            : "There has been an error. Please contact the Rethink Finance support.",
         );
       });
   } catch (error: any) {
@@ -727,7 +859,9 @@ const delegateToMyself = async () => {
         console.error(error);
         isLoadingDelegate.value = false;
         toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support.",
+          isWalletRpcHealthError(error)
+            ? WALLET_RPC_HEALTH_MESSAGE
+            : "There has been an error. Please contact the Rethink Finance support.",
         );
       })
   } catch (error) {
