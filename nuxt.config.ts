@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 
@@ -162,6 +163,17 @@ export default defineNuxtConfig({
   },
   vite: {
     ssr: { noExternal: ["vuetify"] },
+    resolve: {
+      alias: {
+        // See shims/randomfill.mjs — the real package is mis-transformed into
+        // a chunk that throws on evaluation, and it reaches us through
+        // crypto-browserify, which zodiac-roles-sdk needs. Replacing just this
+        // module leaves the rest of the crypto polyfill alone.
+        randomfill: fileURLToPath(
+          new URL("./shims/randomfill.mjs", import.meta.url),
+        ),
+      },
+    },
     css: {
       preprocessorOptions: {
         scss: {

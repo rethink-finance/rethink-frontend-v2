@@ -124,7 +124,10 @@ const loadError = ref("");
 const currentMembers = ref<string[]>([]);
 const isLoadingMembers = ref(false);
 
-const roleLabel = computed(() => props.roleLabel || "manager");
+// "Curator" is the app's name for this role everywhere it is shown (the
+// activity feed labels its executions the same way); the on-chain key stays
+// "defaulManagerRole".
+const roleLabel = computed(() => props.roleLabel || "curator");
 const canQueue = computed(() => !!addressInput.value.trim());
 const canReadMembers = computed(
   () => !!props.chainId && !!props.rolesModAddress,
