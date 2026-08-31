@@ -1,5 +1,9 @@
 <template>
   <div class="fee">
+    <h2 class="fee__section_title">
+      Fees
+    </h2>
+
     <div
       v-for="group in groups"
       :key="group.label"
@@ -83,6 +87,14 @@ defineProps({
   display: flex;
   flex-direction: column;
   gap: 1rem;
+
+  &__section_title {
+    margin-bottom: 0.375rem;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: $color-white;
+  }
 
   &__group {
     border: 1px solid $color-line;

@@ -1,8 +1,8 @@
 <template>
   <div class="governance">
-    <div class="governance__label_row">
-      <span class="governance__label">Governance model</span>
-    </div>
+    <h2 class="governance__section_title">
+      Governance
+    </h2>
     <p class="governance__sub">
       Governance owns the vault and approves changes to vault settings.
     </p>
@@ -153,20 +153,11 @@ const select = (model: { key: GovernanceModel }) => {
   display: flex;
   flex-direction: column;
 
-  &__label_row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  &__label {
-    font-family: $font-mono;
-    font-size: 10.5px;
-    font-weight: 500;
-    line-height: 1.4;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
+  &__section_title {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: $color-white;
   }
 
   &__sub {

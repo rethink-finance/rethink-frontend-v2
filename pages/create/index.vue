@@ -90,11 +90,15 @@
             :is-disabled="isStepReadOnly"
           />
 
+          <!-- Once the step is locked, create__body--locked already dims the
+               whole card; the component's own off-dim would stack on top of it
+               and fade the whitelist far below the other locked sections. -->
           <OnboardingWhitelist
             v-else-if="currentStepKey === OnboardingStep.Whitelist"
             v-model="whitelistedAddresses"
             v-model:whitelist-enabled="isWhitelistedDeposits"
             :is-editable="!isStepReadOnly"
+            :dim-when-disabled="!isStepReadOnly"
           />
 
           <OnboardingGovernance
