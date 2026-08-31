@@ -28,10 +28,16 @@ jobs:
       # @rethink-finance/positions-registry lives in a private repo and the
       # lockfile resolves it over SSH, which a runner has no key for. Rewrite
       # it to HTTPS carrying a read-only token so npm ci can fetch it.
+      #
+      # The token is the whole userinfo, with no username in front of it. An
+      # `x-access-token:` prefix is the convention for GitHub App installation
+      # tokens and a fine-grained PAT is rejected under it — git then reports
+      # "Repository not found" rather than an auth error, because GitHub will
+      # not confirm a private repo exists to a caller it does not recognise.
       - name: Authenticate private git dependencies
         run: |
-          git config --global url."https://x-access-token:${REGISTRY_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
-          git config --global --add url."https://x-access-token:${REGISTRY_TOKEN}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://${REGISTRY_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global --add url."https://${REGISTRY_TOKEN}@github.com/".insteadOf "git@github.com:"
         env:
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
 
