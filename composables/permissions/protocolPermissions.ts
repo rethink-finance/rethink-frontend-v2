@@ -992,8 +992,9 @@ export interface IProtocolGroupView {
 /**
  * A field's enum is its whole value space; a generator narrows it by the
  * action's OTHER settings. Aave's `market` chooses the pool, and only the
- * reserves that pool lists can be granted on it — Core carries all 67 of
- * the union enum, Prime 9, EtherFi 4. That rule lives in the generator, not
+ * reserves that pool lists can be granted on it — of the 75-symbol union
+ * enum, Core carries 67, Prime 9, Horizon 11. That rule lives in the
+ * generator, not
  * in the schema, so the only honest way to read it is to ask compile(),
  * which is also the only thing this file is allowed to ask: no generator
  * rule is ever restated here (SCHEMA.md).
@@ -1757,7 +1758,7 @@ const cartesianParams = (
 /**
  * Compile one candidate selection into scopes, pruning maximised arrays
  * value-by-value when the whole does not compile. Rejections come from two
- * layers, but through one gate: schema refinements (eth: market EtherFi has
+ * layers, but through one gate: schema refinements (eth: market Horizon has
  * no native path, so maximal targets fail on "ETH") and generation-time
  * rules (a market only holds a subset of the union reserve enum) both
  * surface as compile() errors — and both gate a real user grant

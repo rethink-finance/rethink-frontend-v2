@@ -53,33 +53,15 @@ const ETH_A_ETH_AAVE = (
 const ETH_CORE_POOL = (aaveEthData.markets.Core.pool as string).toLowerCase();
 const ETH_PRIME_POOL = (aaveEthData.markets.Prime.pool as string).toLowerCase();
 /**
- * Read from the descriptor rather than the registry's `markets` table, which
- * stopped listing EtherFi when the reviewer dropped it on 2026-08-29 — Aave
- * removed the market from their own switcher. The descriptor still offers it
- * (and still compiles grants for it), so the pool the app would actually scope
- * is the one worth asserting against; reading the table crashed the whole
- * suite at collection.
+ * Aave's RWA market, offered on Ethereum since registry aa750e2. It replaces
+ * EtherFi as the third market AND as the market-without-a-native-path that
+ * several cases below lean on — but it is a different market, not a rename:
+ * EtherFi was dropped because Aave removed it from their own switcher, while
+ * Horizon is a new listing whose reserves are unrelated.
  */
-const ETH_ETHERFI_POOL = (() => {
-  const marketGroup = getRegistryProtocols(ETHEREUM)
-    .find((p) => p.protocol === "aave_v3")
-    ?.groups?.find((g: any) =>
-      (g.members ?? []).some((m: any) => m.key === "market"),
-    );
-  const option = (marketGroup?.options ?? []).find(
-    (o: any) => o.value === "EtherFi",
-  ) as any;
-
-  if (!option?.tokenAddress) {
-    throw new Error(
-      "The EtherFi market is no longer offered on Ethereum aave_v3. If that is " +
-        "deliberate, delete the EtherFi cases below rather than repointing them " +
-        "— Horizon is a different market, not a rename.",
-    );
-  }
-
-  return (option.tokenAddress as string).toLowerCase();
-})();
+const ETH_HORIZON_POOL = (
+  aaveEthData.markets.Horizon.pool as string
+).toLowerCase();
 const ETH_AAVE_TOKEN = (
   aaveEthData.delegateTargets.find((t: any) => t.symbol === "AAVE")
     .token as string
@@ -287,7 +269,7 @@ describe("getRegistryProtocols", () => {
       expect(marketOptions.map((o) => o.value)).toEqual([
         "Core",
         "Prime",
-        "EtherFi",
+        "Horizon",
       ]);
       expect(
         marketOptions
@@ -393,7 +375,9 @@ describe("field groups", () => {
       ["Stake & delegate", "stake.targets+delegate.targets"],
       ["Delegatee", "delegate.delegatee"],
     ]);
-    expect(groups[1].options).toHaveLength(67);
+    // The shared Assets control offers the whole union: 75 reserve symbols
+    // across Core/Prime/Horizon, plus native "ETH".
+    expect(groups[1].options).toHaveLength(76);
   });
 
   it("merges across differing field keys but never across differing kinds", () => {
@@ -787,8 +771,8 @@ describe("validateProtocolSelections", () => {
         assets,
       ).options.map((option) => option.value);
 
-    expect(assets.options).toHaveLength(67);
-    expect(listedUnder("Core")).toHaveLength(67);
+    expect(assets.options).toHaveLength(76);
+    expect(listedUnder("Core")).toHaveLength(68);
     expect(listedUnder("Prime")).toEqual([
       "ETH",
       "WETH",
@@ -801,9 +785,24 @@ describe("validateProtocolSelections", () => {
       "tETH",
       "ezETH",
     ]);
-    // EtherFi has no native path, so ETH goes too — the refinement that
-    // used to surface as a validation error after the choice was made.
-    expect(listedUnder("EtherFi")).toEqual(["USDC", "FRAX", "PYUSD", "weETH"]);
+    // Horizon has no native path, so ETH goes too — the refinement that
+    // used to surface as a validation error after the choice was made. Its
+    // three permissionless reserves come first (they are Core symbols, so
+    // they hold Core's position in the union) and its eight permissioned
+    // RWAs follow, listed by no other market.
+    expect(listedUnder("Horizon")).toEqual([
+      "USDC",
+      "GHO",
+      "RLUSD",
+      "USTB",
+      "USCC",
+      "USYC",
+      "JTRSY",
+      "JAAA",
+      "VBILL",
+      "ACRED",
+      "mGLOBAL",
+    ]);
   });
 
   it("keeps a market change from stranding assets the new market lacks", () => {
@@ -835,7 +834,7 @@ describe("validateProtocolSelections", () => {
         {
           action: "deposit",
           enabled: true,
-          params: { market: "EtherFi", targets: ["USDT", "DAI"] },
+          params: { market: "Horizon", targets: ["USDT", "DAI"] },
         },
       ])[0],
     );
@@ -844,7 +843,7 @@ describe("validateProtocolSelections", () => {
   });
 
   it("drops a stored asset the chosen market cannot grant", () => {
-    // ETH on EtherFi is the registry's native-path refinement: that market
+    // ETH on Horizon is the registry's native-path refinement: that market
     // has no WETH reserve. The form no longer OFFERS it there (see the
     // narrowing tests), so a selection holding it is a stale one — a draft
     // made under Core, then moved. It is pruned rather than compiled, and
@@ -855,7 +854,7 @@ describe("validateProtocolSelections", () => {
         {
           action: "deposit",
           enabled: true,
-          params: { market: "EtherFi", targets: ["ETH"] },
+          params: { market: "Horizon", targets: ["ETH"] },
         },
       ]),
     );
@@ -1029,14 +1028,14 @@ describe("authoritative revokes", () => {
     const universe = listRegistryScopeUniverse(ETHEREUM);
 
     // One variant per market value, unioned: all three pools are covered —
-    // including EtherFi, whose native-ETH rejection (superRefine) is pruned
+    // including Horizon, whose native-ETH rejection (superRefine) is pruned
     // value-by-value instead of aborting the whole market.
     expect(universe).toContainEqual({
       target: ETH_CORE_POOL,
       selector: SUPPLY_SELECTOR,
     });
     expect(universe.some((s) => s.target === ETH_PRIME_POOL)).toBe(true);
-    expect(universe.some((s) => s.target === ETH_ETHERFI_POOL)).toBe(true);
+    expect(universe.some((s) => s.target === ETH_HORIZON_POOL)).toBe(true);
 
     // Free-text delegatee: compiled with a placeholder, which pins the
     // governance-token scopes without the placeholder leaking in as a target.
@@ -1150,7 +1149,7 @@ describe("authoritative revokes", () => {
     });
     const toRevoke = listProtocolScopesToRevoke(ETHEREUM, buildResult);
     expect(toRevoke.some((s) => s.target === ETH_PRIME_POOL)).toBe(true);
-    expect(toRevoke.some((s) => s.target === ETH_ETHERFI_POOL)).toBe(true);
+    expect(toRevoke.some((s) => s.target === ETH_HORIZON_POOL)).toBe(true);
     expect(toRevoke).toContainEqual({
       target: ETH_AAVE_TOKEN,
       selector: DELEGATE_SELECTOR,
