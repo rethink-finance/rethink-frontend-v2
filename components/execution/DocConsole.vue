@@ -54,57 +54,6 @@
       </v-btn>
     </div>
 
-    <!--
-      Until the modifier is scoped for unoswap this screen can read but not
-      act, so the blocker sits at the top rather than behind a disabled button.
-    -->
-    <div v-if="permission === false" class="brand_card doc_card doc_gate">
-      <div class="doc_card__titles">
-        <div class="brand_card__eyebrow">
-          One owner transaction is needed first
-        </div>
-        <div class="doc_card__sub">
-          Role 1 can call the 1inch router, but only its aggregator entry point
-          — every <code>unoswap</code> variant answers
-          <code>FunctionNotAllowed</code>. The two calls below scope the two
-          direct-pool entry points for the same role, with the proceeds pinned
-          to the Safe exactly as the existing permission pins them. The router
-          is already a scoped target, so nothing else changes and no new role is
-          created. Send them from the modifier's owner,
-          <b>{{ shortAddr(ROLES_OWNER) }}</b>.
-        </div>
-      </div>
-      <div v-for="tx in permissionTxs" :key="tx.label" class="doc_permission">
-        <div class="doc_permission__head">
-          <span class="doc_mono">{{ tx.label }}</span>
-          <v-btn
-            variant="text"
-            size="small"
-            class="doc_text_action"
-            @click="copyText(tx.data, 'Calldata copied.')"
-          >
-            Copy calldata
-          </v-btn>
-        </div>
-        <div class="doc_card__sub">
-          to {{ tx.to }}
-        </div>
-        <div class="doc_hex">
-          {{ tx.data }}
-        </div>
-      </div>
-      <div class="doc_row doc_row--end">
-        <v-btn
-          variant="outlined"
-          size="small"
-          :loading="checkingPermission"
-          @click="checkPermission"
-        >
-          Re-check
-        </v-btn>
-      </div>
-    </div>
-
     <div class="doc_layout">
       <div class="doc_main">
         <div class="group_title doc_section">
@@ -322,7 +271,7 @@
                   class="bg-primary text-secondary"
                   size="small"
                   :loading="running"
-                  :disabled="!canExecute || permission === false"
+                  :disabled="!canExecute || steps.some((s) => !isReady(s))"
                   @click="executePlan"
                 >
                   Execute all
@@ -380,12 +329,41 @@
               </div>
             </div>
 
-            <div v-for="p in step.inner.params" :key="p.k" class="doc_param">
+            <div v-for="p in step.inner?.params ?? []" :key="p.k" class="doc_param">
               <span>{{ p.k }}</span>
               <span>{{ p.v }}<em v-if="p.pinned" class="doc_pinned"> · pinned</em></span>
             </div>
 
-            <details class="doc_details">
+            <!--
+              A swap leg carries no calldata until 1inch has written one: the
+              routing program is the pathfinder's, and role 1 may send nothing
+              else. Everything the operator needs to ask for is spelled out
+              here so the returned calldata can only be the right one.
+            -->
+            <div v-if="step.intent && !step.inner" class="doc_paste">
+              <div class="doc_card__sub">
+                Build this swap on 1inch with the receiver set to the Safe, then
+                paste its <code>swap</code> calldata here.
+              </div>
+              <div class="doc_paste__intent">
+                <div><span>sell</span><span>{{ fmtUnits(step.intent.amount, step.intent.sell.decimals) }} {{ step.intent.sell.symbol }}</span></div>
+                <div><span>buy</span><span>{{ step.intent.buy.symbol }}</span></div>
+                <div><span>receiver</span><span>{{ DOC.ADDR.safe }}</span></div>
+              </div>
+              <textarea
+                v-model="step.paste"
+                class="doc_paste__input"
+                rows="3"
+                spellcheck="false"
+                placeholder="0x07ed2379…"
+                @input="applyCalldata(step)"
+              />
+              <div v-for="problem in step.problems" :key="problem" class="doc_warn">
+                {{ problem }}
+              </div>
+            </div>
+
+            <details v-if="step.inner" class="doc_details">
               <summary>
                 Calldata · to Roles {{ shortAddr(DOC.ADDR.roles) }} ·
                 execTransactionWithRole(role {{ DOC.ROLE }})
@@ -429,7 +407,7 @@
                       class="bg-primary text-secondary"
                       size="small"
                       :loading="isBusy(step)"
-                      :disabled="!canExecute || permission === false || step.status === 'ok' || running"
+                      :disabled="!canExecute || !isReady(step) || step.status === 'ok' || running"
                       @click="runStep(step)"
                     >
                       {{ step.status === "ok" ? "Executed" : "Execute" }}
@@ -463,18 +441,19 @@ import {
   type DocTrade,
   buildRebalancePlan,
   docInner,
-  docPermissionTxs,
+  docOneInchSwap,
   docPositions,
   docReadState,
   docSafeBalance,
-  docUnoswapPermitted,
+  parseDocSwap,
+  validateDocSwap,
+  type DocSwapIntent,
   docValidateWrapped,
   docWrappedPreview,
   findBestRoute,
   MIN_TRADE_USD,
   fmtUnits,
   fmtUsd,
-  minReturnFor,
   planClips,
   shortAddr,
   tradeToInner,
@@ -499,8 +478,6 @@ const accountStore = useAccountStore();
 // which the step's transactionHash/receipt handlers need.
 const { canExecute, disabledReason } = useCuratorExecution();
 
-/** Owner of the Roles modifier — the only address that can scope a function. */
-const ROLES_OWNER = "0x9cBB432172Cf8d909204D3b550d077C34952236B";
 
 const state = ref<DocState | null>(null);
 const loadingState = ref(false);
@@ -516,10 +493,7 @@ const locked = reactive<Record<string, boolean>>({});
 /** What is in a target box while it is being typed into, before it rounds. */
 const drafts = reactive<Record<string, string | null>>({});
 const tolerance = ref("1");
-/** null while unknown — the card only appears once the probe has answered. */
-const permission = ref<boolean | null>(null);
-const checkingPermission = ref(false);
-const permissionTxs = docPermissionTxs();
+
 
 type StepStatus = "idle" | "quoting" | "simulating" | "signing" | "pending" | "ok" | "failed";
 
@@ -528,7 +502,17 @@ interface DocStep {
   trade: DocTrade;
   /** Set on a swap; the Aave legs need no quote. */
   quote: DocQuote | null;
-  inner: DocInner;
+  /**
+   * What a pasted swap has to match. Null on every leg this console can build
+   * itself — approvals and the Aave deposits and withdrawals, all of which are
+   * scoped for role 1 by name.
+   */
+  intent: DocSwapIntent | null;
+  /** The operator's paste, and what is wrong with it. */
+  paste: string;
+  problems: string[];
+  /** Null on a swap leg until its calldata arrives and validates. */
+  inner: DocInner | null;
   wrapped: string;
   status: StepStatus;
   error: string;
@@ -552,16 +536,20 @@ const stepStatusText = (step: DocStep) => {
     case "ok":
       return "done";
     default:
-      return step.quote ? step.quote.route.label : step.inner.sig;
+      if (step.intent && !step.inner) return "waiting for its 1inch calldata";
+      return step.quote ? step.quote.route.label : step.inner?.sig ?? "";
   }
 };
 
 const planButtonTitle = computed(() => {
-  if (permission.value === false) {
-    return "The Roles modifier has not been scoped for unoswap yet.";
+  if (steps.value.some((s) => s.intent && !s.inner)) {
+    return "Every swap leg needs its 1inch calldata before the plan can run.";
   }
   return disabledReason.value;
 });
+
+/** A leg is runnable once it has calldata — pasted, or built here. */
+const isReady = (step: DocStep) => !!step.inner;
 
 const positions = computed<DocPosition[]>(() =>
   state.value ? docPositions(state.value) : [],
@@ -764,26 +752,7 @@ const refresh = async () => {
   }
 };
 
-const checkPermission = async () => {
-  const account = accountStore.activeAccountAddress;
-  if (!account) {
-    permission.value = null;
-    return;
-  }
-  checkingPermission.value = true;
-  try {
-    permission.value = await docUnoswapPermitted(account);
-  } catch {
-    // An RPC that will not answer is not evidence either way; leaving this
-    // unknown keeps the buttons live and lets the pre-flight be the gate.
-    permission.value = null;
-  } finally {
-    checkingPermission.value = false;
-  }
-};
-
 onMounted(refresh);
-watch(() => accountStore.activeAccountAddress, checkPermission, { immediate: true });
 
 /* -------------------------------------------------------------------------- */
 /* Plan                                                                        */
@@ -804,19 +773,51 @@ const priceOf = (symbol: string) =>
 const makeStep = (
   label: string,
   trade: DocTrade,
-  inner: DocInner,
+  inner: DocInner | null,
   quote: DocQuote | null = null,
+  intent: DocSwapIntent | null = null,
 ): DocStep =>
   reactive({
     label,
     trade,
     quote,
+    intent,
+    paste: "",
+    problems: [] as string[],
     inner,
-    wrapped: docWrappedPreview(inner),
+    wrapped: inner ? docWrappedPreview(inner) : "",
     status: "idle" as StepStatus,
     error: "",
     txHash: null,
   }) as DocStep;
+
+/**
+ * Take the operator's paste and either turn it into this step's calldata or
+ * say exactly why it is not this step's calldata. Both the permission's rules
+ * and the leg's own numbers are checked here, so nothing that would revert in
+ * the modifier ever reaches a wallet prompt.
+ */
+const applyCalldata = (step: DocStep) => {
+  step.inner = null;
+  step.wrapped = "";
+  step.error = "";
+  const hex = step.paste.trim();
+  if (!hex || !step.intent) {
+    step.problems = [];
+    return;
+  }
+  let call;
+  try {
+    call = parseDocSwap(hex);
+  } catch (error: any) {
+    step.problems = [error?.message ?? "That calldata could not be read."];
+    return;
+  }
+  step.problems = validateDocSwap(call, step.intent);
+  if (step.problems.length) return;
+  step.inner = docOneInchSwap(call, hex, step.intent.sell, step.intent.buy);
+  step.wrapped = docWrappedPreview(step.inner);
+};
 
 const buildPlan = async () => {
   if (!state.value) return;
@@ -889,12 +890,11 @@ const buildPlan = async () => {
             : `Sell $${fmtUsd(clipUsd)} of ${sell.symbol} for ${buy.symbol}` +
               ` — ${index + 1} of ${clips.length}`;
         list.push(
-          makeStep(
-            label,
-            trade,
-            docInner.unoswap(sell, buy, quote, minReturnFor(quote, tol)),
-            quote,
-          ),
+          makeStep(label, trade, null, quote, {
+            sell,
+            buy,
+            amount: quote.amountIn,
+          }),
         );
       });
     }
@@ -911,37 +911,19 @@ const buildPlan = async () => {
 /* -------------------------------------------------------------------------- */
 
 /**
- * A quote taken while the operator reads the plan is stale by the time they
- * press the button, so a swap is re-priced against live pools immediately
- * before signing and the floor is recomputed from that. Same discipline the
- * sni-dca keeper uses: simulate the identical swap seconds before sending.
+ * The pasted program carries its own floor, written by the pathfinder that
+ * built it, so there is nothing here to re-price — a stale quote fails on
+ * `minReturn` rather than filling badly. What is worth re-checking is that the
+ * calldata still matches the leg, in case the plan was rebuilt around it.
  */
-const reprice = async (step: DocStep): Promise<boolean> => {
-  if (!step.quote) return true;
-  const sell = step.trade.sell!;
-  const buy = step.trade.buy!;
-  step.status = "quoting";
-  const fresh = await findBestRoute(
-    sell,
-    buy,
-    step.quote.amountIn,
-    priceOf(sell.symbol),
-    priceOf(buy.symbol),
-  );
-  if (!fresh) {
-    step.error = "No pool route priced this trade just now.";
+const revalidate = (step: DocStep): boolean => {
+  if (!step.intent || !step.inner) return true;
+  const problems = validateDocSwap(parseDocSwap(step.inner.data), step.intent);
+  step.problems = problems;
+  if (problems.length) {
+    step.error = problems[0];
     return false;
   }
-  const tol = Number(tolerance.value) || 1;
-  if (fresh.slippagePct < -tol) {
-    step.error =
-      `The live quote is ${fresh.slippagePct.toFixed(2)}%, past your ${tol}% ` +
-      "limit. Nothing was sent — raise the limit or rebuild the plan smaller.";
-    return false;
-  }
-  step.quote = fresh;
-  step.inner = docInner.unoswap(sell, buy, fresh, minReturnFor(fresh, tol));
-  step.wrapped = docWrappedPreview(step.inner);
   return true;
 };
 
@@ -952,7 +934,7 @@ const reprice = async (step: DocStep): Promise<boolean> => {
  * deposit is the last step: sized at plan time it would revert on chain after
  * every swap had already been paid for. So it is re-sized against what the
  * Safe actually holds immediately before signing — the same discipline
- * reprice() applies to a swap.
+ * revalidate() applies to a swap.
  */
 const resize = async (step: DocStep): Promise<boolean> => {
   if (step.trade.kind !== "aaveSupply") return true;
@@ -977,6 +959,10 @@ const resize = async (step: DocStep): Promise<boolean> => {
  */
 const preflight = async (step: DocStep): Promise<boolean> => {
   step.status = "simulating";
+  if (!step.inner) {
+    step.error = "This leg has no calldata yet.";
+    return false;
+  }
   const result = await simulateRoleExecution(
     DOC.CHAIN,
     DOC.ADDR.roles,
@@ -992,10 +978,12 @@ const preflight = async (step: DocStep): Promise<boolean> => {
 const send = (step: DocStep): Promise<boolean> =>
   new Promise((resolve) => {
     step.status = "signing";
+    // preflight() has already refused a step without calldata.
+    const inner = step.inner!;
     sendRoleExecution(
       DOC.CHAIN,
       DOC.ADDR.roles,
-      { to: step.inner.to, data: step.inner.data },
+      { to: inner.to, data: inner.data },
       DOC.ROLE,
       RolesVersion.V1,
     )
@@ -1035,7 +1023,7 @@ const runStep = async (step: DocStep): Promise<boolean> => {
     if (accountStore.connectedWalletChainId !== DOC.CHAIN) {
       await accountStore.switchNetwork(DOC.CHAIN);
     }
-    if (!(await reprice(step)) || !(await resize(step)) || !(await preflight(step))) {
+    if (!revalidate(step) || !(await resize(step)) || !(await preflight(step))) {
       step.status = "failed";
       return false;
     }
@@ -1222,24 +1210,44 @@ const copyText = (text: string, message: string) => {
   }
 }
 
-/* The blocker, marked as one: the screen can read the vault but not act on it
-   until the owner sends these. */
-.doc_gate {
-  border-color: $color-warning;
-}
-
-.doc_permission {
+/* A leg that cannot run yet, marked as one. */
+.doc_paste {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  border-top: 1px solid $color-line;
-  padding-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 0.5rem;
 
-  &__head {
+  &__intent {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-family: monospace;
+    font-size: 0.75rem;
+
+    > div {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    span:first-child {
+      opacity: 0.6;
+    }
+  }
+
+  &__input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 0.375rem;
+    background: rgba(0, 0, 0, 0.25);
+    font-family: monospace;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    word-break: break-all;
+    resize: vertical;
   }
 }
 

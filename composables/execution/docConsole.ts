@@ -112,11 +112,12 @@ const IF = {
     "function latestRoundData() view returns (uint80,int256,uint256,uint256,uint80)",
   ]),
   router: new ethers.Interface([
+    // Quote-only. `unoswap*` is not on role 1's whitelist, but eth_call from
+    // the Safe does not go through the modifier, so these still price a route.
     "function unoswapTo(uint256 to,uint256 token,uint256 amount,uint256 minReturn,uint256 dex) returns (uint256 returnAmount)",
     "function unoswapTo2(uint256 to,uint256 token,uint256 amount,uint256 minReturn,uint256 dex,uint256 dex2) returns (uint256 returnAmount)",
-  ]),
-  permissions: new ethers.Interface([
-    "function scopeFunction(uint16 role,address targetAddress,bytes4 functionSig,bool[] isParamScoped,uint8[] paramType,uint8[] paramComp,bytes[] compValue,uint8 options)",
+    // The one selector role 1 may actually send.
+    "function swap(address executor,(address srcToken,address dstToken,address srcReceiver,address dstReceiver,uint256 amount,uint256 minReturnAmount,uint256 flags) desc,bytes data) payable returns (uint256 returnAmount,uint256 spentAmount)",
   ]),
 };
 
@@ -917,99 +918,160 @@ export const minReturnFor = (quote: DocQuote, tolerancePct: number) =>
   (quote.amountOut * BigInt(Math.round((100 - tolerancePct) * 100))) / 10000n;
 
 /* -------------------------------------------------------------------------- */
-/* The permission this needs                                                  */
+/* The one selector role 1 may send                                           */
 /* -------------------------------------------------------------------------- */
 
-const FUNCTION_NOT_ALLOWED = ethers.id("FunctionNotAllowed()").slice(0, 10);
+/**
+ * `swap` is the only entry point on the router role 1 may call, and its
+ * routing program is written by 1inch's pathfinder. That program cannot be
+ * generated here, and the vault's own history is not a template library
+ * either: of the 47 swaps this Safe has executed, 40 no longer execute at all
+ * against current pool state and only 3 survive a change of size.
+ *
+ * What the permission leaves open is everything except the destination —
+ * `srcToken`, `amount`, `minReturn`, `executor` and the program itself are
+ * unconstrained; `desc.dstToken` must be one of the six assets and
+ * `desc.dstReceiver` must be the Safe. So a program built anywhere executes
+ * here, which is exactly what Zodiac Pilot exploited: it captured what the
+ * 1inch dApp would have sent from the Safe and replayed it through the
+ * modifier. These helpers do the same thing without the extension — take that
+ * calldata, prove it matches both the permission and the leg it is meant to
+ * fill, and hand it to the modifier.
+ */
 
-const UNOSWAP_VARIANTS = [
-  { name: "unoswapTo", signature: "unoswapTo(uint256,uint256,uint256,uint256,uint256)", params: 5 },
-  { name: "unoswapTo2", signature: "unoswapTo2(uint256,uint256,uint256,uint256,uint256,uint256)", params: 6 },
-];
-
-export interface DocPermissionTx {
-  label: string;
-  to: string;
-  data: string;
-  note: string;
+export interface DocSwapCalldata {
+  executor: string;
+  srcToken: string;
+  dstToken: string;
+  srcReceiver: string;
+  dstReceiver: string;
+  amount: bigint;
+  minReturn: bigint;
+  flags: bigint;
+  /** The pathfinder's routing program — opaque, and never edited here. */
+  program: string;
 }
 
-/**
- * `unoswap*` is not on role 1's whitelist — the modifier answers
- * FunctionNotAllowed for every variant, the same wall the sni-dca keeper hit
- * before its own role was scoped.
- *
- * Enabling it is small, because the router is ALREADY a scoped target for role
- * 1: it carries the existing `swap` permission. So there is no new role and no
- * scopeTarget — one `scopeFunction` per selector, sent by the modifier's owner,
- * and the existing `swap` permission is untouched.
- *
- * Each pins parameter 0 — `to`, where the bought tokens land — to the Safe,
- * which is the guarantee the `swap` scope gets from pinning `dstReceiver`.
- * Options are None, so no ETH and no delegatecall. What stays open is the
- * pools and the amounts, with `minReturn` as the bound on a bad fill.
- */
-export const docPermissionTxs = (): DocPermissionTx[] =>
-  UNOSWAP_VARIANTS.map(({ name, signature, params }) => ({
-    label: `scopeFunction(role 1, 1inch router, ${name})`,
-    to: A.roles,
-    data: IF.permissions.encodeFunctionData("scopeFunction", [
-      1,
-      A.oneInch,
-      ethers.id(signature).slice(0, 10),
-      [true, ...Array(params - 1).fill(false)],
-      Array(params).fill(0), // ParameterType.Static
-      Array(params).fill(0), // Comparison.EqualTo
-      [
-        ethers.AbiCoder.defaultAbiCoder().encode(["uint256"], [BigInt(A.safe)]),
-        ...Array(params - 1).fill("0x"),
-      ],
-      0, // ExecutionOptions.None
-    ]),
-    note: `Lets role 1 call ${name}, with the proceeds pinned to the Safe.`,
-  }));
+/** What a leg of the plan expects the pasted calldata to do. */
+export interface DocSwapIntent {
+  sell: DocToken;
+  buy: DocToken;
+  amount: bigint;
+}
 
-/**
- * Is the permission live yet? Probed against the modifier rather than assumed.
- *
- * Roles v1 checks membership before it checks the function, so this can only
- * be answered from an address that already holds role 1 — anything else gets
- * `Error("Module not authorized")` and learns nothing. That case returns null
- * rather than a guess, and a null leaves the buttons alone: the pre-flight
- * before each send is the real gate either way.
- */
-export const docUnoswapPermitted = async (
-  from: string,
-): Promise<boolean | null> => {
-  const probe = IF.router.encodeFunctionData("unoswapTo", [
-    BigInt(A.safe),
-    BigInt(DOC_TOKENS[0].address),
-    1n,
-    1n,
-    0n,
-  ]);
-  const wrapped = IF.roles.encodeFunctionData("execTransactionWithRole", [
-    A.oneInch,
-    0n,
-    probe,
-    0,
-    Number(DOC.ROLE),
-    true,
-  ]);
-  try {
-    await ethCall(A.roles, wrapped, from);
-    return true;
-  } catch (error: any) {
-    const raw = typeof error?.revertData === "string" ? error.revertData : "";
-    if (!raw) return null;
-    if (raw.startsWith(FUNCTION_NOT_ALLOWED)) return false;
-    // v1 reports non-membership as Error("Module not authorized"), which says
-    // nothing about the whitelist — it never got that far.
-    if (raw.startsWith(ERROR_STRING)) return null;
-    // Anything else got past the permission layer: the zero dex word failing
-    // inside the router is the expected shape once this is scoped.
-    return true;
+export const parseDocSwap = (hex: string): DocSwapCalldata => {
+  const data = (hex ?? "").trim();
+  if (!/^0x[0-9a-fA-F]*$/.test(data)) throw new Error("That is not hex calldata.");
+  if (!data.toLowerCase().startsWith(DOC.SWAP_SELECTOR)) {
+    throw new Error(
+      `Wrong entry point: this calldata starts ${data.slice(0, 10)}, and role 1 may only call swap (${DOC.SWAP_SELECTOR}). ` +
+        "An unoswap or a permit2 variant will be refused by the modifier.",
+    );
   }
+  let decoded;
+  try {
+    decoded = IF.router.decodeFunctionData("swap", data);
+  } catch {
+    // Almost always a paste that lost its tail: the program is the longest
+    // part of the calldata and the easiest thing to clip.
+    throw new Error(
+      "This calldata is the right entry point but does not decode — it looks truncated. Copy the whole of it, including the routing program at the end.",
+    );
+  }
+  const [executor, desc, program] = decoded;
+  return {
+    executor,
+    srcToken: desc.srcToken,
+    dstToken: desc.dstToken,
+    srcReceiver: desc.srcReceiver,
+    dstReceiver: desc.dstReceiver,
+    amount: desc.amount,
+    minReturn: desc.minReturnAmount,
+    flags: desc.flags,
+    program,
+  };
 };
 
-const ERROR_STRING = "0x08c379a0";
+/** Assets the modifier will accept as `desc.dstToken`, from its own log. */
+const PERMITTED_DST = [
+  ...DOC_TOKENS.map((t) => t.address),
+  HOP_TOKENS["USDC.e"],
+  "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", // WPOL — buyable, never sellable
+];
+
+/**
+ * Everything that would make the modifier reject this, said before the wallet
+ * opens rather than as an opaque revert after signing. The first three are the
+ * permission itself; the rest are the difference between valid calldata and
+ * the calldata for THIS leg.
+ */
+export const validateDocSwap = (
+  call: DocSwapCalldata,
+  intent: DocSwapIntent,
+): string[] => {
+  const problems: string[] = [];
+  const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
+  if (!PERMITTED_DST.some((a) => same(a, call.dstToken))) {
+    problems.push(
+      `The modifier only allows buying the six whitelisted assets, and this buys ${shortAddr(call.dstToken)}.`,
+    );
+  }
+  if (!same(call.dstReceiver, A.safe)) {
+    problems.push(
+      `Proceeds must land in the Safe. This sends them to ${shortAddr(call.dstReceiver)} — set the receiver to ${shortAddr(A.safe)} when you build the swap.`,
+    );
+  }
+  if (!same(call.srcToken, intent.sell.address)) {
+    problems.push(
+      `This leg sells ${intent.sell.symbol}, but the calldata sells ${docToken(call.srcToken)?.symbol ?? shortAddr(call.srcToken)}.`,
+    );
+  }
+  if (!same(call.dstToken, intent.buy.address)) {
+    problems.push(
+      `This leg buys ${intent.buy.symbol}, but the calldata buys ${docToken(call.dstToken)?.symbol ?? shortAddr(call.dstToken)}.`,
+    );
+  }
+  // A pathfinder quote is taken at a round number, so an exact match is too
+  // strict; a leg that is materially the wrong size is not.
+  if (intent.amount > 0n) {
+    const drift =
+      Number((call.amount * 10000n) / intent.amount) / 10000 - 1;
+    if (Math.abs(drift) > 0.02) {
+      problems.push(
+        `This leg sells ${fmtUnits(intent.amount, intent.sell.decimals)} ${intent.sell.symbol}, ` +
+          `but the calldata sells ${fmtUnits(call.amount, intent.sell.decimals)} — ${(drift * 100).toFixed(1)}% off.`,
+      );
+    }
+  }
+  if (call.minReturn === 0n) {
+    problems.push(
+      "minReturn is zero, so this would accept any fill at all. Rebuild the swap with a slippage limit.",
+    );
+  }
+  return problems;
+};
+
+/**
+ * The step this calldata becomes. The program is passed through byte for byte
+ * — it is a signed-off artefact from the router's own pathfinder, and editing
+ * any of it would only make the swap fail in the executor.
+ */
+export const docOneInchSwap = (
+  call: DocSwapCalldata,
+  hex: string,
+  src: DocToken,
+  dst: DocToken,
+): DocInner => ({
+  to: A.oneInch,
+  data: hex.trim(),
+  sig: "AggregationRouterV6.swap(executor, desc, data)",
+  params: [
+    { k: "sell", v: `${fmtUnits(call.amount, src.decimals)} ${src.symbol}` },
+    { k: "buy", v: dst.symbol },
+    { k: "dstReceiver", v: `Safe ${shortAddr(A.safe)}`, pinned: true },
+    { k: "minReturn", v: `${fmtUnits(call.minReturn, dst.decimals)} ${dst.symbol}` },
+    { k: "executor", v: shortAddr(call.executor) },
+    { k: "route", v: `1inch program, ${(call.program.length - 2) / 2} bytes` },
+  ],
+});
