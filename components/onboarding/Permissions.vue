@@ -1,10 +1,6 @@
 <template>
   <div class="permissions_wrapper">
     <template v-if="selectedStepIndex === 0">
-      <h2 class="perm_section_title">
-        Permissions
-      </h2>
-
       <!-- The two contracts every permission on this page is written against.
            They exist from the moment the vault was initialized, so they head
            the step rather than sitting in a footnote under it. -->
@@ -48,12 +44,6 @@
       :error-message="updateRoleError"
     />
     <div v-else-if="selectedStepIndex === 0 && fundFactoryContractV2Used">
-      <OnboardingRoleMembers
-        v-model="pendingRoleMembershipChanges"
-        class="mt-6"
-        :chain-id="fundChainId"
-        :roles-mod-address="roleModAddress"
-      />
       <PermissionsManagement
         v-model:allow-manager-to-send-funds-to-fund-contract="
           allowManagerToSendFundsToFundContract
@@ -64,11 +54,11 @@
         v-model:allow-manager-to-manage-role-members="
           allowManagerToManageRoleMembers
         "
-        class="mt-4"
+        class="mt-6"
         :fund-factory-contract-v2-used="fundFactoryContractV2Used"
       />
-      <OnboardingProtocolPermissions
-        v-model="protocolSelections"
+      <OnboardingRoleMembers
+        v-model="pendingRoleMembershipChanges"
         class="mt-4"
         :chain-id="fundChainId"
         :roles-mod-address="roleModAddress"
@@ -214,13 +204,6 @@ import {
 } from "~/composables/permissions/revokePermissions";
 import OnboardingRawPermissionsCode from "~/components/onboarding/RawPermissionsCode.vue";
 import type { IRawPermissionCodeEntry } from "~/composables/permissions/parseRawPermissionCode";
-import OnboardingProtocolPermissions from "~/components/onboarding/ProtocolPermissions.vue";
-import {
-  type IProtocolSelectionState,
-  buildProtocolPermissionEntries,
-  listProtocolScopesToRevoke,
-  validateProtocolSelections,
-} from "~/composables/permissions/protocolPermissions";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
@@ -247,9 +230,6 @@ const allowManagerToUpdateSettings = ref(true);
 const allowManagerToManageRoleMembers = ref(true);
 const pendingRoleMembershipChanges = ref<IAssignMemberChange[]>([]);
 const rawPermissionCodeEntries = ref<IRawPermissionCodeEntry[]>([]);
-// Protocol grants from the permissions registry (Roles V2 only). The card
-// component keeps this in step with what the registry offers on this chain.
-const protocolSelections = ref<IProtocolSelectionState[]>([]);
 const defaultMethod = formatInputToObject(
   proposalRoleModMethodStepsMap.scopeFunction,
 );
@@ -555,32 +535,6 @@ const storePermissionsV2 = async () => {
     );
   }
 
-  // Protocol grants first: invalid selections (an enabled protocol with no
-  // assets picked) block the save before anything is encoded, and the
-  // registry's typed errors abort it the same way.
-  const protocolIssues = validateProtocolSelections(
-    fundChainId.value,
-    protocolSelections.value,
-  );
-  if (protocolIssues.length) {
-    loading.value = false;
-    return toastStore.errorToast(protocolIssues[0].message);
-  }
-  let protocolBuild;
-  try {
-    protocolBuild = buildProtocolPermissionEntries({
-      chainId: fundChainId.value,
-      rolesModAddress: roleModAddress.value,
-      selections: protocolSelections.value,
-    });
-  } catch (e: any) {
-    console.error("Failed to build protocol permissions", e);
-    loading.value = false;
-    return toastStore.errorToast(
-      "Failed to build protocol permissions: " + e.message,
-    );
-  }
-
   loading.value = true;
   console.log("roleModAddress", roleModAddress.value);
 
@@ -617,16 +571,9 @@ const storePermissionsV2 = async () => {
   };
   proposalData.encodedRoleModEntries.push(
     ...buildRevokeEntriesV2(
-      [
-        ...Object.keys(prepopulatedScopes)
-          .filter((key) => !isPrepopulatedEnabled[key])
-          .map((key) => prepopulatedScopes[key]),
-        // Same authoritative rule for protocol grants: everything the
-        // registry could have granted on this chain is revoked, minus what
-        // this save grants again — an asset unticked since an earlier save
-        // is taken back off the modifier.
-        ...listProtocolScopesToRevoke(fundChainId.value, protocolBuild),
-      ],
+      Object.keys(prepopulatedScopes)
+        .filter((key) => !isPrepopulatedEnabled[key])
+        .map((key) => prepopulatedScopes[key]),
       [
         ...Object.keys(prepopulatedScopes)
           .filter((key) => isPrepopulatedEnabled[key])
@@ -634,7 +581,6 @@ const storePermissionsV2 = async () => {
         ...decodeRolesV2Targets(
           rawPermissionCodeEntries.value.map((entry) => entry.data),
         ),
-        ...protocolBuild.targetAddresses,
       ],
     ),
   );
@@ -761,18 +707,6 @@ const storePermissionsV2 = async () => {
     );
   }
 
-  // Protocol grants compiled by the permissions registry, appended before
-  // the raw pasted entries so a power user's explicit calls keep the last
-  // word on anything both touch.
-  if (protocolBuild.entries.length) {
-    console.log(
-      `protocol permissions (registry v${protocolBuild.packageVersion})`,
-      protocolBuild.selections,
-      protocolBuild.descriptions,
-    );
-    proposalData.encodedRoleModEntries.push(...protocolBuild.entries);
-  }
-
   // Add/Remove members widget (Roles V2 assignRoles)
   console.log(
     "pendingRoleMembershipChanges.value",
@@ -865,14 +799,6 @@ watch(
 .permissions_wrapper {
   display: flex;
   flex-direction: column;
-}
-
-.perm_section_title {
-  margin-bottom: 1.375rem;
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 1.3;
-  color: $color-white;
 }
 
 .perm_head {
