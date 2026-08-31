@@ -19,6 +19,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Otherwise checkout leaves an "AUTHORIZATION: basic <GITHUB_TOKEN>"
+          # header configured for all of github.com. npm ci runs inside this
+          # repo and would send it on every fetch, overriding the token in the
+          # rewritten URL below — and GITHUB_TOKEN cannot see the private
+          # registry, so the fetch comes back "Repository not found". Nothing
+          # here pushes with git, so the credential is not needed after clone.
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,8 +44,14 @@ jobs:
       # not confirm a private repo exists to a caller it does not recognise.
       - name: Authenticate private git dependencies
         run: |
+          # Belt and braces alongside persist-credentials: false above — if any
+          # step ever reintroduces the header, it silently wins over the URL.
+          git config --local --unset-all http.https://github.com/.extraheader || true
           git config --global url."https://${REGISTRY_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
           git config --global --add url."https://${REGISTRY_TOKEN}@github.com/".insteadOf "git@github.com:"
+          # Fail here rather than 90 seconds into npm ci with a misleading
+          # "Repository not found".
+          git ls-remote ssh://git@github.com/rethink-finance/permissions-registry.git >/dev/null
         env:
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
 
