@@ -25,6 +25,16 @@ jobs:
         with:
           node-version: '18'
 
+      # @rethink-finance/positions-registry lives in a private repo and the
+      # lockfile resolves it over SSH, which a runner has no key for. Rewrite
+      # it to HTTPS carrying a read-only token so npm ci can fetch it.
+      - name: Authenticate private git dependencies
+        run: |
+          git config --global url."https://x-access-token:${REGISTRY_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global --add url."https://x-access-token:${REGISTRY_TOKEN}@github.com/".insteadOf "git@github.com:"
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+
       - name: Install dependencies
         run: npm ci
 
