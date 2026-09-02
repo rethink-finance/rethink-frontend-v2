@@ -1,42 +1,43 @@
 <template>
-  <div class="add_from_library">
-    <UiHeader>
-      <div class="main_header__title">
-        Add From Library
-      </div>
-      <div>
-        <v-btn
-          class="bg-primary text-secondary"
-          :disabled="!selectedMethodHashes.length"
-          @click="addMethods"
-        >
-          Add Methods
-        </v-btn>
-      </div>
-    </UiHeader>
-
-    <UiHeader>
-      <div class="main_header__title">
-        <v-text-field
-          v-model="search"
-          label="Search"
-          prepend-inner-icon="mdi-magnify"
-          variant="outlined"
-          hide-details
-          single-line
-          class="search"
+  <div class="add_library">
+    <div class="add_library__toolbar">
+      <div class="add_library__search">
+        <Icon
+          icon="material-symbols:search"
+          width="1.125rem"
+          class="add_library__search_icon"
         />
+        <input
+          v-model="search"
+          class="add_library__search_input"
+          type="search"
+          placeholder="Search methods"
+          aria-label="Search NAV methods"
+        >
+        <button
+          v-if="search"
+          type="button"
+          class="add_library__search_clear"
+          @click="search = ''"
+        >
+          Clear
+        </button>
       </div>
-      <div class="subtitle_steel_blue mb-0">
+      <span class="add_library__count">
         {{ selectedMethodHashes.length }} selected
-      </div>
-    </UiHeader>
+      </span>
+      <v-btn
+        color="primary"
+        :disabled="!selectedMethodHashes.length"
+        @click="addMethods"
+      >
+        Add methods
+      </v-btn>
+    </div>
 
-    <div v-if="loadingAllNavMethods" class="mt-4">
-      <v-skeleton-loader type="table-row" />
-      <v-skeleton-loader type="table-row" />
-      <v-skeleton-loader type="table-row" />
-      <v-skeleton-loader type="table-row" />
+    <div v-if="loadingAllNavMethods" class="add_library__placeholder">
+      <v-progress-circular size="16" width="2" indeterminate />
+      Loading the method library…
     </div>
     <FundNavMethodsTable
       v-else
@@ -49,8 +50,10 @@
       :base-decimals="baseDecimals"
       :is-fund-non-init="isFundNonInit"
       selectable
+      :compact="compact"
       :search="search"
       show-simulated-nav
+      empty-text="No methods in the library yet."
       idx="addFromLibrary"
       @selected-changed="onSelectionChanged"
     />
@@ -98,6 +101,11 @@ const props = defineProps({
   alreadyUsedMethods: {
     type: Array as PropType<INAVMethod[]>,
     required: true,
+  },
+  /** Narrow-container layout for the table, for the picker in a modal. */
+  compact: {
+    type: Boolean,
+    default: false,
   },
 });
 const actionStateStore = useActionStateStore();
@@ -202,7 +210,101 @@ const setLibraryNavMethods = () => {
 </script>
 
 <style scoped lang="scss">
-.search {
-width: 300px;
+.add_library {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  &__search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 16rem;
+    min-width: 0;
+    padding: 0 12px;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: $color-card-background;
+
+    &:focus-within {
+      border-color: $color-accent-line;
+    }
+  }
+
+  &__search_icon {
+    flex: none;
+    color: $color-steel-blue;
+  }
+
+  /* The app's global input rule sets a height and padding on every bare
+     input, so all three are set here rather than only the one. */
+  &__search_input {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 2.375rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: $font-mono;
+    font-size: 12.5px;
+    line-height: 1.3;
+    color: $color-white;
+
+    &::placeholder {
+      color: $color-steel-blue;
+    }
+    &:focus {
+      outline: none;
+    }
+    // The native clear affordance is a light glyph on a dark field.
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+
+  &__search_clear {
+    flex: none;
+    border: none;
+    background: none;
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-white;
+    }
+  }
+
+  &__count {
+    margin-left: auto;
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__placeholder {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.5rem 0;
+    font-family: $font-mono;
+    font-size: 12px;
+    color: $color-steel-blue;
+  }
 }
 </style>

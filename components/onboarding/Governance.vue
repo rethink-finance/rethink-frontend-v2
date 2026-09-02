@@ -7,12 +7,26 @@
       Governance owns the vault and approves changes to vault settings.
     </p>
 
-    <div class="governance__models">
+    <!--
+      Two models, but not two equals: nearly every vault is governed by its
+      own depositors, so that one is the card, recommended and chosen from the
+      start, and the custom token is a quieter line under it for the few that
+      want an outside token to vote.
+    -->
+    <div
+      class="governance__models"
+      role="radiogroup"
+      aria-label="Governance model"
+    >
       <div
         v-for="model in models"
         :key="model.key"
         class="governance__model"
-        :class="{ 'governance__model--selected': selectedModel === model.key }"
+        :class="{
+          'governance__model--primary': model.primary,
+          'governance__model--alt': !model.primary,
+          'governance__model--selected': selectedModel === model.key,
+        }"
         role="radio"
         :aria-checked="selectedModel === model.key"
         :tabindex="isDisabled ? undefined : 0"
@@ -29,8 +43,14 @@
               :class="{ governance__model_token: part.strong }"
             >{{ part.text }}</span>
           </span>
+          <span v-if="model.primary" class="governance__badge">
+            Recommended
+          </span>
+          <span v-else class="governance__model_hint">
+            {{ model.body }}
+          </span>
         </div>
-        <p class="governance__model_body">
+        <p v-if="model.primary" class="governance__model_body">
           {{ model.body }}
         </p>
 
@@ -123,10 +143,14 @@ const selectedModel = computed(() =>
     : GovernanceModel.VaultToken,
 );
 
-/** A title is a run of text parts; a `strong` part is the token name, set off. */
+/**
+ * A title is a run of text parts; a `strong` part is the token name, set off.
+ * The `primary` model is the card; the other is the line under it.
+ */
 const models = computed(() => [
   {
     key: GovernanceModel.VaultToken,
+    primary: true,
     title: [
       { text: "Govern by depositors (via " },
       { text: props.vaultSymbol || "vault", strong: true },
@@ -136,8 +160,9 @@ const models = computed(() => [
   },
   {
     key: GovernanceModel.CustomToken,
+    primary: false,
     title: [{ text: "Govern by custom token" }],
-    body: "Any existing ERC20 token carries the voting power instead of the vault token.",
+    body: "Any existing ERC20 token carries the voting power instead.",
   },
 ]);
 
@@ -171,16 +196,25 @@ const select = (model: { key: GovernanceModel }) => {
   &__models {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.25rem;
     margin-top: 1.125rem;
   }
 
   &__model {
-    padding: 16px 18px;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+    }
+  }
+
+  /* The card: the model most vaults want, framed and filled like every
+     other panel in the flow, tinted while it is the one chosen. */
+  &__model--primary {
+    padding: 18px 20px;
     border: 1px solid $color-line;
     border-radius: $default-border-radius;
     background: $color-card-background;
-    cursor: pointer;
     transition: border-color $default-transition-time ease,
       background-color $default-transition-time ease;
 
@@ -188,12 +222,42 @@ const select = (model: { key: GovernanceModel }) => {
       border-color: $color-line-3;
     }
     &:focus-visible {
-      outline: none;
       border-color: $color-accent-line;
     }
-    &--selected {
+    &.governance__model--selected {
       border-color: $color-cyan-line;
       background: $color-cyan-tint;
+    }
+  }
+
+  /* The line: the alternative for the few, on the card's own left rhythm so
+     the two radios stack, and no frame of its own until it is chosen. */
+  &__model--alt {
+    padding: 12px 20px;
+    border: 1px solid transparent;
+    border-radius: $default-border-radius;
+    transition: border-color $default-transition-time ease,
+      background-color $default-transition-time ease;
+
+    .governance__model_title {
+      font-size: 13px;
+      font-weight: 600;
+      color: $color-text-irrelevant;
+      transition: color $default-transition-time ease;
+    }
+
+    &:hover .governance__model_title,
+    &:focus-visible .governance__model_title {
+      color: $color-white;
+    }
+
+    &.governance__model--selected {
+      border-color: $color-line;
+      background: $color-card-background;
+
+      .governance__model_title {
+        color: $color-white;
+      }
     }
   }
 
@@ -202,6 +266,25 @@ const select = (model: { key: GovernanceModel }) => {
     align-items: center;
     gap: 0.625rem;
     flex-wrap: wrap;
+  }
+
+  &__badge {
+    padding: 0.1875rem 0.4375rem;
+    border: 1px solid $color-cyan-line;
+    border-radius: $default-border-radius;
+    font-family: $font-mono;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-cyan;
+  }
+
+  /* The alternative's explanation, on the same line as its name. */
+  &__model_hint {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: $color-steel-blue;
   }
 
   &__radio {
@@ -225,7 +308,7 @@ const select = (model: { key: GovernanceModel }) => {
   }
 
   &__model_title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
     line-height: 1.3;
     color: $color-white;
@@ -270,7 +353,9 @@ const select = (model: { key: GovernanceModel }) => {
   }
 
   @media (prefers-reduced-motion: reduce) {
-    &__model {
+    &__model--primary,
+    &__model--alt,
+    &__model--alt .governance__model_title {
       transition: none;
     }
   }

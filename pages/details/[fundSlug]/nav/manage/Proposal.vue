@@ -1,188 +1,175 @@
 <template>
-  <div>
-    <UiHeader>
-      <div class="header">
-        <div class="main_header__title">
-          Create NAV Proposal
-        </div>
-        <div class="main_header__subtitle">
-          Last NAV update date: <strong>{{ fundLastNAVUpdateDate }}</strong>
-        </div>
-      </div>
-    </UiHeader>
+  <div class="nav_proposal">
+    <div class="nav_proposal__header">
+      <h2 class="nav_proposal__title">
+        Create NAV proposal
+      </h2>
+      <p class="nav_proposal__meta">
+        Last NAV update · {{ fundLastNAVUpdateDate }}
+      </p>
+    </div>
 
     <FundGovernanceDelegationNotice />
 
-    <div class="main_card">
-      <v-form ref="form" v-model="formIsValid">
-        <v-container fluid>
-          <!-- Proposal Title -->
-          <v-row>
-            <div class="proposal_title_field">
-              <v-label class="label_required">
-                Proposal Title
-              </v-label>
-              <div class="proposal_title_field__char_limit">
-                <UiCharLimit
-                  :char-limit="150"
-                  :char-number="proposal.title"
-                />
-              </div>
+    <v-form
+      ref="form"
+      v-model="formIsValid"
+      class="nav_proposal__card brand_card"
+    >
+      <!-- Proposal Title -->
+      <div class="nav_proposal__field">
+        <div class="nav_proposal__label_row">
+          <span class="nav_proposal__label">
+            Proposal title<span class="nav_proposal__star">*</span>
+          </span>
+          <UiCharLimit
+            class="nav_proposal__limit"
+            :char-limit="150"
+            :char-number="proposal.title"
+          />
+        </div>
+        <v-text-field
+          v-model="proposal.title"
+          placeholder="Type here"
+          required
+        />
+      </div>
+
+      <!-- Management -->
+      <div class="nav_proposal__field">
+        <span class="nav_proposal__label">
+          Management
+        </span>
+        <div class="nav_proposal__rows">
+          <div class="nav_proposal__row">
+            <div class="nav_proposal__row_text">
+              Allow manager to keep updating NAV based on these methods
+              <span class="nav_proposal__row_note">
+                All previous manager permissions related to NAV will be
+                revoked.
+              </span>
             </div>
-          </v-row>
-          <v-row class="mb-6">
-            <v-text-field
-              v-model="proposal.title"
-              placeholder="Type here"
-              required
+            <OnboardingToggle
+              v-model="proposal.allowManagerToUpdateNav"
+              label="Allow manager to keep updating NAV based on these methods"
             />
-          </v-row>
-
-          <!-- Management -->
-          <v-row>
-            <v-label class="label_required">
-              Management
-            </v-label>
-          </v-row>
-          <v-row class="mb-6">
-            <div class="management">
-              <div class="management__card">
-                <div class="management__row">
-                  <div>
-                    Allow manager to keep updating NAV based on these methods
-                  </div>
-                  <v-switch
-                    v-model="proposal.allowManagerToUpdateNav"
-                    color="primary"
-                    hide-details
-                  />
-                </div>
-                <div class="d-inline-block">
-                  <div class="management__info">
-                    <v-icon color="primary" icon="mdi-alert-circle-outline" />
-                    <div>
-                      All previous manager permissions related to NAV will be
-                      revoked.
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="management__card">
-                <div class="management__row">
-                  <div>Collect management fees upon NAV proposal execution</div>
-                  <v-switch
-                    v-model="proposal.collectManagementFees"
-                    color="primary"
-                    hide-details
-                  />
-                </div>
-              </div>
-              <div class="management__card--no-margin">
-                <div class="management__row">
-                  <div>Process withdraws after NAV update</div>
-                  <v-switch
-                    v-model="proposal.processWithdraw"
-                    color="primary"
-                    hide-details
-                  />
-                </div>
-              </div>
+          </div>
+          <div class="nav_proposal__row">
+            <div class="nav_proposal__row_text">
+              Collect management fees upon NAV proposal execution
             </div>
-          </v-row>
-
-          <!-- Proposal Description -->
-          <v-row>
-            <v-label class="label_required mb-2">
-              Proposal Description
-            </v-label>
-          </v-row>
-          <v-row class="mb-6">
-            <v-textarea
-              v-model="proposal.description"
-              :placeholder="`Type here`"
-              hide-details
-              required
+            <OnboardingToggle
+              v-model="proposal.collectManagementFees"
+              label="Collect management fees upon NAV proposal execution"
             />
-          </v-row>
+          </div>
+          <div class="nav_proposal__row">
+            <div class="nav_proposal__row_text">
+              Process withdraws after NAV update
+            </div>
+            <OnboardingToggle
+              v-model="proposal.processWithdraw"
+              label="Process withdraws after NAV update"
+            />
+          </div>
+        </div>
+      </div>
 
-          <v-row
-            class="proposal_description d-flex flex-grow-1 justify-space-between align-center mb-2"
+      <!-- Proposal Description -->
+      <div class="nav_proposal__field">
+        <span class="nav_proposal__label">
+          Proposal description<span class="nav_proposal__star">*</span>
+        </span>
+        <v-textarea
+          v-model="proposal.description"
+          placeholder="Type here"
+          hide-details
+          required
+        />
+      </div>
+
+      <!-- Proposal Methods -->
+      <div class="nav_proposal__field">
+        <span class="nav_proposal__label">
+          Proposal methods<span class="nav_proposal__star">*</span>
+        </span>
+        <div class="nav_proposal__methods">
+          <button
+            type="button"
+            class="nav_proposal__disclosure"
+            :aria-expanded="isMethodsOpen"
+            @click="isMethodsOpen = !isMethodsOpen"
           >
-            <v-label class="label_required">
-              Proposal Methods
-            </v-label>
-          </v-row>
-          <v-row class="mb-4">
-            <v-expansion-panels>
-              <v-expansion-panel eager>
-                <v-expansion-panel-title static>
-                  <div
-                    class="d-flex flex-grow-1 justify-space-between align-center me-4"
-                  >
-                    <div class="nav_methods_title">
-                      <div>•</div>
-                      <div v-if="newEntriesCount" class="text-success">
-                        {{ newEntriesCount }} New
-                      </div>
-                      <div v-if="deletedEntriesCount" class="text-error">
-                        {{ deletedEntriesCount }} Deleted
-                      </div>
-                      <div v-if="!newEntriesCount && !deletedEntriesCount">
-                        0 Changes
-                      </div>
-                    </div>
-                  </div>
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <FundNavMethodsTable
-                    v-model:methods="fundManagedNAVMethods"
-                    :fund-chain-id="fundStore.selectedFundChain"
-                    :fund-address="fundStore.fundAddress"
-                    :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
-                    :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
-                    :fee-balance="Number(fundStore.fund?.feeBalance)"
-                    :safe-address="fundStore.fund?.safeAddress"
-                    :base-symbol="fundStore.fund?.baseToken.symbol"
-                    :base-decimals="fundStore.fund?.baseToken.decimals"
-                    show-base-token-balances
-                    show-simulated-nav
-                    show-summary-row
-                    deletable
-                    idx="proposal"
-                  />
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-          </v-row>
+            <Icon
+              class="nav_proposal__chevron"
+              :class="{ 'nav_proposal__chevron--open': isMethodsOpen }"
+              icon="material-symbols:keyboard-arrow-down-rounded"
+              width="1.125rem"
+              height="1.125rem"
+            />
+            <span class="nav_proposal__counts">
+              <span
+                v-if="newEntriesCount"
+                class="nav_proposal__count nav_proposal__count--new"
+              >{{ newEntriesCount }} new</span>
+              <span
+                v-if="deletedEntriesCount"
+                class="nav_proposal__count nav_proposal__count--deleted"
+              >{{ deletedEntriesCount }} deleted</span>
+              <span
+                v-if="!newEntriesCount && !deletedEntriesCount"
+                class="nav_proposal__count"
+              >No changes</span>
+            </span>
+            <span class="nav_proposal__disclosure_hint">
+              {{ isMethodsOpen ? "Hide methods" : "Show methods" }}
+            </span>
+          </button>
+          <FundNavMethodsTable
+            v-if="isMethodsOpen"
+            v-model:methods="fundManagedNAVMethods"
+            :fund-chain-id="fundStore.selectedFundChain"
+            :fund-address="fundStore.fundAddress"
+            :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
+            :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
+            :fee-balance="Number(fundStore.fund?.feeBalance)"
+            :safe-address="fundStore.fund?.safeAddress"
+            :base-symbol="fundStore.fund?.baseToken.symbol"
+            :base-decimals="fundStore.fund?.baseToken.decimals"
+            show-base-token-balances
+            show-simulated-nav
+            show-summary-row
+            deletable
+            frameless
+            idx="proposal"
+          />
+        </div>
+      </div>
 
-          <!-- Action Buttons -->
-          <v-row>
-            <div class="action_buttons">
-              <v-btn
-                class="bg-primary text-secondary ms-6"
-                :disabled="!accountStore.isConnected || !canCreateProposal"
-                @click="submitProposal"
-              >
-                Create Proposal
-                <v-tooltip
-                  v-if="!accountStore.isConnected || !canCreateProposal"
-                  :model-value="true"
-                  activator="parent"
-                  location="top"
-                  @update:model-value="true"
-                >
-                  {{
-                    accountStore.isConnected
-                      ? NO_DELEGATES_TITLE
-                      : "Connect your wallet to create a proposal."
-                  }}
-                </v-tooltip>
-              </v-btn>
-            </div>
-          </v-row>
-        </v-container>
-      </v-form>
-    </div>
+      <!-- Action Buttons -->
+      <div class="nav_proposal__actions">
+        <v-btn
+          color="primary"
+          :disabled="!accountStore.isConnected || !canCreateProposal"
+          @click="submitProposal"
+        >
+          Create proposal
+          <v-tooltip
+            v-if="!accountStore.isConnected || !canCreateProposal"
+            :model-value="true"
+            activator="parent"
+            location="top"
+            @update:model-value="true"
+          >
+            {{
+              accountStore.isConnected
+                ? NO_DELEGATES_TITLE
+                : "Connect your wallet to create a proposal."
+            }}
+          </v-tooltip>
+        </v-btn>
+      </div>
+    </v-form>
   </div>
 </template>
 
@@ -244,6 +231,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
 const form = ref(null);
 const loading = ref(false);
 const formIsValid = ref(false);
+// The methods list opens on demand; the counts above it say whether there is
+// anything to look at.
+const isMethodsOpen = ref(false);
 
 onMounted(() => {
   emit("updateBreadcrumbs", breadcrumbItems);
@@ -468,93 +458,183 @@ const saveDraft = async () => {
 </script>
 
 <style scoped lang="scss">
-.main_header__subtitle {
-  color: $color-steel-blue;
-  font-weight: 500;
-}
-
-.header {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.62rem;
-  min-height: 40px;
-}
-.proposal_title_field {
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  margin-bottom: 0.69rem;
-
-  &__char_limit {
-    display: flex;
-    flex-direction: row;
-    color: $color-steel-blue;
-    font-size: $text-sm;
-    font-weight: 400;
-    align-items: center;
-    gap: 0.25rem;
-  }
-}
-.management {
-  width: 100%;
+.nav_proposal {
   display: flex;
   flex-direction: column;
-  @include borderGray;
-  padding: 0.5rem;
-  margin: 0.69rem 0;
+  gap: 1.375rem;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4375rem;
+  }
+
+  &__title {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: $color-white;
+  }
+
+  &__meta {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
 
   &__card {
-    width: 100%;
-    padding: 0.88rem 0.5rem;
-    border-radius: 0.25rem;
-    background: $color-badge-navy;
-    margin-bottom: 0.12rem;
-    font-size: $text-md;
-    font-weight: 400;
-
-    &--no-margin {
-      width: 100%;
-      padding: 0.88rem 0.5rem;
-      border-radius: 0.25rem;
-      background: $color-badge-navy;
-      font-size: $text-md;
-      font-weight: 400;
-    }
-  }
-  &__info {
-    @include borderGray;
     display: flex;
-    flex-direction: row;
-    gap: 0.25rem;
-    padding: 0.25rem;
-    background-color: $color-background-button;
-    color: $color-steel-blue;
-    font-weight: 700;
-    font-size: $text-sm;
+    flex-direction: column;
+    gap: 1.5rem;
   }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  &__label_row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  &__label {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__star {
+    margin-left: 0.25em;
+    color: $color-cyan;
+  }
+
+  &__limit {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: $color-steel-blue;
+  }
+
+  /* The three switches, in the same hairline rows the create flow's
+     prepopulated permissions use. */
+  &__rows {
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+    background: $color-card-background;
+  }
+
   &__row {
     display: flex;
-    flex-direction: row;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding: 0.75rem 1rem;
+
+    & + & {
+      border-top: 1px solid $color-line;
+    }
   }
-}
 
-.nav_methods_title {
-  display: flex;
-  flex-direction: row;
-  gap: 0.5rem;
-  font-weight: 500;
-  font-size: $text-sm;
-}
+  &__row_text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: $color-white;
+  }
 
-.action_buttons {
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  margin-top: 1rem;
-  justify-content: flex-end;
+  &__row_note {
+    font-size: 12px;
+    line-height: 1.5;
+    color: $color-warn;
+  }
+
+  &__methods {
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+    overflow: hidden;
+  }
+
+  &__disclosure {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: $color-card-background;
+    text-align: left;
+    cursor: pointer;
+
+    &[aria-expanded="true"] {
+      border-bottom: 1px solid $color-line;
+    }
+  }
+
+  &__chevron {
+    flex: none;
+    color: $color-steel-blue;
+    transition: transform $default-transition-time ease;
+
+    &--open {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__counts {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  &__count {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+
+    &--new {
+      color: $color-yield;
+    }
+    &--deleted {
+      color: $color-neg;
+    }
+  }
+
+  &__disclosure_hint {
+    margin-left: auto;
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    white-space: nowrap;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__chevron {
+      transition: none;
+    }
+  }
 }
 </style>

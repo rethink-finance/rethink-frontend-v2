@@ -1,169 +1,124 @@
 <template>
-  <div class="main_card">
-    <v-form ref="form" v-model="formIsValid">
-      <v-row>
-        <v-col>
-          <strong>Define Position Method</strong>
-        </v-col>
-      </v-row>
-      <v-row>
-        <v-col
-          cols="12"
-          sm="6"
-        >
-          <v-label class="label_required mb-2">
-            Position Name
-          </v-label>
-          <v-text-field
-            v-model="navMethod.positionName"
-            placeholder="E.g. WETH"
-            :rules="rules"
-            required
-          />
-        </v-col>
-        <v-col
-          cols="12"
-          sm="6"
-        >
-          <v-label class="label_required mb-2">
-            Valuation Source
-          </v-label>
-          <v-text-field
-            v-model="navMethod.valuationSource"
-            placeholder="E.g. Uniswap ETH/USDC"
-            :rules="rules"
-            required
-          />
-        </v-col>
-      </v-row>
+  <v-form ref="form" v-model="formIsValid" class="new_method">
+    <div class="new_method__section">
+      Position
+    </div>
+    <div class="new_method__grid">
+      <div class="new_method__field">
+        <span class="new_method__label">
+          Position name<span class="new_method__star">*</span>
+        </span>
+        <v-text-field
+          v-model="navMethod.positionName"
+          placeholder="E.g. WETH"
+          :rules="rules"
+          required
+        />
+      </div>
+      <div class="new_method__field">
+        <span class="new_method__label">
+          Valuation source<span class="new_method__star">*</span>
+        </span>
+        <v-text-field
+          v-model="navMethod.valuationSource"
+          placeholder="E.g. Uniswap ETH/USDC"
+          :rules="rules"
+          required
+        />
+      </div>
+    </div>
 
-      <v-row>
-        <v-col
-          cols="12"
-          sm="6"
-        >
-          <v-label class="mb-2">
-            Position Type
-          </v-label>
-          <UiButtonSwitchItems
-            v-model="navMethod.positionType"
-            :items="parsedPositionTypeItems"
-            @update:model-value="navMethod.positionType = $event"
-          />
-        </v-col>
-        <v-col
-          v-if="valuationTypes.length"
-          cols="12"
-          sm="6"
-        >
-          <v-label class="mb-2">
-            Valuation Type
-          </v-label>
-          <UiButtonSwitchItems
-            v-model="navMethod.valuationType"
-            :items="parsedValuationTypeItems"
-            @update:model-value="navMethod.valuationType = $event"
-          />
-        </v-col>
-      </v-row>
+    <div class="new_method__grid">
+      <div class="new_method__field">
+        <span class="new_method__label">Position type</span>
+        <UiSegmented
+          :model-value="navMethod.positionType"
+          :options="parsedPositionTypeItems"
+          @update:model-value="(value: string) => navMethod.positionType = value as PositionType"
+        />
+      </div>
+      <div v-if="valuationTypes.length" class="new_method__field">
+        <span class="new_method__label">Valuation type</span>
+        <UiSegmented
+          :model-value="navMethod.valuationType"
+          :options="parsedValuationTypeItems"
+          @update:model-value="(value: string) => navMethod.valuationType = value as ValuationType"
+        />
+      </div>
+    </div>
 
-      <v-row class="mt-10">
-        <v-col>
-          <strong>Method Details</strong>
-        </v-col>
-      </v-row>
-      <v-row>
-        <template v-if="navMethod.positionType === PositionType.Composable">
-          <v-col>
-            <v-expansion-panels v-model="expandedPanels">
-              <v-expansion-panel
-                v-for="(method, index) in navMethod.details[navMethod.positionType]"
-                :key="index"
-                eager
+    <div class="new_method__section new_method__section--details">
+      Method details
+    </div>
+
+    <template v-if="navMethod.positionType === PositionType.Composable">
+      <v-expansion-panels v-model="expandedPanels" class="new_method__panels">
+        <v-expansion-panel
+          v-for="(method, index) in navMethod.details[navMethod.positionType]"
+          :key="index"
+          eager
+        >
+          <v-expansion-panel-title static>
+            <div class="new_method__panel_title">
+              <span>{{ index + 1 }}) Method details</span>
+              <span
+                class="new_method__status"
+                :class="method.isValid ? 'new_method__status--valid' : 'new_method__status--invalid'"
               >
-                <v-expansion-panel-title static>
-                  <div class="method_details_title">
-                    <span>
-                      <strong class="me-1">{{ index + 1 }})</strong> Method details
-                    </span>
-                    <UiTextBadge
-                      class="method_details_status"
-                      :class="{'method_details_status--valid': method.isValid}"
-                    >
-                      <template v-if="method.isValid">
-                        Provided
-                        <Icon icon="octicon:check-circle-16" height="1.2rem" width="1.2rem" />
-                      </template>
-                      <template v-else>
-                        Incomplete
-                        <Icon icon="pajamas:error" height="1.2rem" width="1.2rem" />
-                      </template>
-                    </UiTextBadge>
+                {{ method.isValid ? "Provided" : "Incomplete" }}
+              </span>
+              <button
+                type="button"
+                class="new_method__remove"
+                aria-label="Remove method details"
+                @click.stop="deleteMethod(index)"
+              >
+                <Icon icon="material-symbols:delete-outline-rounded" width="1rem" />
+              </button>
+            </div>
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <FundNavMethodDetails
+              v-model="navMethod.details[navMethod.positionType][index]"
+              :position-type="navMethod.positionType"
+              :valuation-type="navMethod.valuationType"
+            />
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
+    </template>
 
-                    <UiButtonDetails small @click.stop="deleteMethod(index)">
-                      <v-icon
-                        icon="mdi-delete"
-                        color="error"
-                      />
-                    </UiButtonDetails>
-                  </div>
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <FundNavMethodDetails
-                    v-model="navMethod.details[navMethod.positionType][index]"
-                    :position-type="navMethod.positionType"
-                    :valuation-type="navMethod.valuationType"
-                  />
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-          </v-col>
-        </template>
+    <FundNavMethodDetails
+      v-else
+      v-model="navMethod.details[navMethod.positionType][0]"
+      :position-type="navMethod.positionType"
+      :valuation-type="navMethod.valuationType"
+    />
 
-        <template v-else>
-          <FundNavMethodDetails
-            v-model="navMethod.details[navMethod.positionType][0]"
-            :position-type="navMethod.positionType"
-            :valuation-type="navMethod.valuationType"
-          />
-        </template>
-      </v-row>
-      <!-- Add Position Details if the selected position type is composable. -->
-      <v-row v-if="navMethod.positionType === PositionType.Composable">
-        <v-col class="text-center">
-          <v-btn
-            class="text-secondary"
-            variant="outlined"
-            @click="addMethodDetails"
-          >
-            <template #append>
-              <Icon
-                icon="octicon:plus-circle-16"
-                height="1.2rem"
-                width="1.2rem"
-              />
-            </template>
-            Add Method Details
-          </v-btn>
-        </v-col>
-      </v-row>
+    <div class="new_method__actions">
+      <!-- A composable position can be valued by more than one call. -->
+      <button
+        v-if="navMethod.positionType === PositionType.Composable"
+        type="button"
+        class="new_method__ghost"
+        @click="addMethodDetails"
+      >
+        Add method details
+      </button>
+      <span v-else />
+      <v-btn
+        color="primary"
+        :disabled="!formIsValid || !areAllMethodDetailsValid"
+        @click="addMethod"
+      >
+        Add method
+      </v-btn>
+    </div>
 
-      <v-row class="mt-4">
-        <v-col class="text-end">
-          <v-btn
-            :disabled="!formIsValid || !areAllMethodDetailsValid"
-            @click="addMethod"
-          >
-            Add Method
-          </v-btn>
-        </v-col>
-      </v-row>
-    </v-form>
-
-    <div class="buttons_container">
+    <div v-if="$slots.buttons" class="new_method__slot">
       <slot name="buttons" />
     </div>
-  </div>
+  </v-form>
 </template>
 
 <script setup lang="ts">
@@ -209,7 +164,7 @@ const areAllMethodDetailsValid = computed(() =>
   !navMethod.value.details[navMethod.value.positionType].some((method: any) => !method.isValid),
 );
 
-// Switch Buttons Items
+// Segmented control options
 const parsedPositionTypeItems = creatablePositionTypes.map(positionType => {
   return {
     key: positionType.key,
@@ -235,7 +190,6 @@ const getNewMethodDetails = (positionType: PositionType, valuationType: Valuatio
   };
   const fields = PositionTypeValuationTypeFieldsMap[positionType][valuationType || "undefined"] || []
 
-  // let updated = false;
   fields.forEach((field: any) => {
     newDetails[field.key] = defaultInputTypeValue[field.type as InputType];
   });
@@ -282,8 +236,7 @@ const resetMethods = () => {
 }
 
 const deleteMethod = (index: number) => {
-  console.log("remove0 method: ", index);
-  navMethod.value.details[navMethod.value.positionType].splice([index])
+  navMethod.value.details[navMethod.value.positionType].splice(index, 1)
 }
 
 
@@ -400,63 +353,149 @@ const addMethod = () => {
 </script>
 
 <style scoped lang="scss">
-.main_header {
-  min-height: 40px;
+/**
+ * The define-method form in the create flow's field language: mono
+ * uppercase labels, a two-column rhythm, a section eyebrow between the
+ * position and its valuation details.
+ */
+.new_method {
+  display: flex;
+  flex-direction: column;
 
-  &__title {
+  &__section {
+    margin-bottom: 0.875rem;
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-white;
+
+    &--details {
+      margin-top: 1.75rem;
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem 1.25rem;
+
+    @include md {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    & + & {
+      margin-top: 1rem;
+    }
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  &__label {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__star {
+    margin-left: 0.25em;
+    color: $color-cyan;
+  }
+
+  &__panels {
+    :deep(.v-expansion-panel-title) {
+      min-height: 0;
+      padding: 0.75rem 1rem;
+    }
+    :deep(.v-expansion-panel-text__wrapper) {
+      padding: 0 1rem 1rem;
+    }
+  }
+
+  &__panel_title {
     display: flex;
     align-items: center;
-    align-content: center;
-    gap: 20px;
+    gap: 0.75rem;
+    width: 100%;
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
   }
-}
-.tooltip{
-  &__content{
-    display: flex;
-    gap: 40px;
+
+  &__status {
+    margin-left: auto;
+
+    &--valid {
+      color: $color-yield;
+    }
+    &--invalid {
+      color: $color-warn;
+    }
   }
-  &__link {
+
+  &__remove {
+    display: inline-flex;
+    padding: 0;
+    border: none;
+    background: none;
+    color: $color-steel-blue;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-neg;
+    }
+  }
+
+  &__actions {
     display: flex;
-    gap: 10px;
     align-items: center;
-    justify-content: center;
-    color: $color-primary;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
   }
-}
 
-.info-icon {
-  cursor: pointer;
-  display: flex;
-  color: $color-text-irrelevant;
-}
-.buttons_container {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  margin-top: 0.5rem;
-}
+  &__ghost {
+    padding: 9px 14px;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: transparent;
+    font-family: $font-sans;
+    font-size: 13px;
+    font-weight: 600;
+    color: $color-text-irrelevant;
+    cursor: pointer;
+    transition: color $default-transition-time ease,
+      border-color $default-transition-time ease;
 
-:deep(.v-expansion-panel-text__wrapper) {
-  padding: 0;
-}
-:deep(.v-expansion-panel-title) {
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-}
+    &:hover {
+      color: $color-white;
+      border-color: $color-line-3;
+    }
+  }
 
-.method_details_title {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  letter-spacing: 0.02625rem;
-  font-weight: 500;
-  color: $color-text-irrelevant;
-}
-.method_details_status {
-  color: $color-warning;
+  &__slot {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 0.5rem;
+  }
 
-  &--valid {
-    color: $color-success;
+  @media (prefers-reduced-motion: reduce) {
+    &__ghost {
+      transition: none;
+    }
   }
 }
 </style>

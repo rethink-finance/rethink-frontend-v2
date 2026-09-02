@@ -1,64 +1,57 @@
 <template>
-  <div>
-    <v-btn
-      class="text-secondary"
-      variant="outlined"
-      @click="isOpen = true"
-    >
-      Add raw permissions{{ modelValue.length ? ` (${modelValue.length})` : "" }}
-    </v-btn>
+  <div class="raw_perms">
+    <p class="raw_perms__hint">
+      Paste calldata for the Roles modifier — one hex entry per line, or a
+      JSON array of hex strings (encoded scopeTarget / scopeFunction /
+      allowFunction calls). Every entry is checked against the Roles V2 ABI
+      and submitted with the rest of this step's permissions.
+    </p>
 
-    <UiConfirmDialog
-      v-model="isOpen"
-      eyebrow="Roles V2"
-      title="Submit raw permissions"
-      max-width="720px"
-      confirm-text="Add to batch"
-      cancel-text="Close"
-      @confirm="addEntries"
-    >
-      <div class="raw_perms">
-        <p class="raw_perms__hint">
-          Paste calldata for the Roles modifier — one hex entry per line, or a
-          JSON array of hex strings (e.g. encoded scopeTarget / scopeFunction /
-          allowFunction calls). Entries are validated against the Roles V2 ABI
-          and submitted with the rest of this page's permissions.
-        </p>
+    <textarea
+      v-model="input"
+      class="raw_perms__code"
+      rows="6"
+      spellcheck="false"
+      :placeholder="placeholder"
+      aria-label="Raw Roles modifier calldata"
+      @keydown.meta.enter.prevent="addEntries"
+      @keydown.ctrl.enter.prevent="addEntries"
+    />
 
-        <textarea
-          v-model="input"
-          class="raw_perms__code"
-          rows="10"
-          spellcheck="false"
-          :placeholder="placeholder"
-        />
+    <div class="raw_perms__actions">
+      <p v-if="error" class="raw_perms__error">
+        {{ error }}
+      </p>
+      <button
+        type="button"
+        class="raw_perms__add"
+        :disabled="!input.trim()"
+        @click="addEntries"
+      >
+        Add to batch
+      </button>
+    </div>
 
-        <p v-if="error" class="raw_perms__error">
-          {{ error }}
-        </p>
-
-        <template v-if="modelValue.length">
-          <div class="raw_perms__queued">
-            Queued for submission
-          </div>
-          <div
-            v-for="(entry, index) in modelValue"
-            :key="entry.data.slice(0, 18) + '-' + index"
-            class="raw_perms__row"
-          >
-            <span class="raw_perms__label">{{ entry.label }}</span>
-            <span class="raw_perms__data">{{ shortData(entry.data) }}</span>
-            <button
-              type="button"
-              class="raw_perms__action"
-              @click="removeAt(index)"
-            >
-              Discard
-            </button>
-          </div>
-        </template>
+    <template v-if="modelValue.length">
+      <div class="raw_perms__queued">
+        Queued for submission
       </div>
-    </UiConfirmDialog>
+      <div
+        v-for="(entry, index) in modelValue"
+        :key="entry.data.slice(0, 18) + '-' + index"
+        class="raw_perms__row"
+      >
+        <span class="raw_perms__label">{{ entry.label }}</span>
+        <span class="raw_perms__data">{{ shortData(entry.data) }}</span>
+        <button
+          type="button"
+          class="raw_perms__action"
+          @click="removeAt(index)"
+        >
+          Discard
+        </button>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -69,11 +62,11 @@ import {
 } from "~/composables/permissions/parseRawPermissionCode";
 
 /**
- * Power-user escape hatch for the Roles V2 creation flow: a button (sitting
- * next to "View vault permissions") that opens a modal where raw, pre-encoded
- * Roles modifier calldata can be pasted wholesale. Validated entries are
- * appended to the same submitPermissions batch as the prepopulated toggles;
- * nothing is sent on-chain from here.
+ * Power-user escape hatch for the Roles V2 creation flow, living on the
+ * Protocol integrations card as one of the things that can be added: raw,
+ * pre-encoded Roles modifier calldata pasted wholesale. Validated entries
+ * are appended to the same submitPermissions batch as the prepopulated
+ * toggles and the registry's grants; nothing is sent on-chain from here.
  */
 const props = defineProps<{
   modelValue: IRawPermissionCodeEntry[];
@@ -83,7 +76,6 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: IRawPermissionCodeEntry[]): void;
 }>();
 
-const isOpen = ref(false);
 const input = ref("");
 const error = ref("");
 const placeholder =
@@ -94,22 +86,17 @@ const shortData = (data: string) =>
 
 const addEntries = () => {
   error.value = "";
-  // Nothing pasted: confirming is just closing.
-  if (!input.value.trim()) {
-    isOpen.value = false;
-    return;
-  }
+  if (!input.value.trim()) return;
   let entries: IRawPermissionCodeEntry[];
   try {
     entries = parseRawPermissionCode(input.value);
   } catch (e: any) {
-    // Keep the dialog (and the pasted text) so the entry can be fixed.
+    // Keep the pasted text so the entry can be fixed in place.
     error.value = e.message;
     return;
   }
   emit("update:modelValue", [...(props.modelValue || []), ...entries]);
   input.value = "";
-  isOpen.value = false;
 };
 
 const removeAt = (index: number) => {
@@ -126,7 +113,7 @@ const removeAt = (index: number) => {
   gap: 0.75rem;
 
   &__hint {
-    font-size: 12.5px;
+    font-size: 12px;
     line-height: 1.5;
     color: $color-steel-blue;
   }
@@ -153,10 +140,48 @@ const removeAt = (index: number) => {
     }
   }
 
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+
   &__error {
+    flex: 1;
+    min-width: 0;
     font-family: $font-mono;
     font-size: 11px;
+    line-height: 1.5;
     color: $color-neg;
+    word-break: break-word;
+  }
+
+  &__add {
+    flex: none;
+    padding: 9px 14px;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: transparent;
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-white;
+    cursor: pointer;
+    transition:
+      border-color $default-transition-time ease,
+      opacity $default-transition-time ease;
+
+    &:hover:not(:disabled) {
+      border-color: $color-line-3;
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.45;
+    }
   }
 
   &__queued {
@@ -207,6 +232,7 @@ const removeAt = (index: number) => {
   }
 
   @media (prefers-reduced-motion: reduce) {
+    &__add,
     &__action {
       transition: none;
     }

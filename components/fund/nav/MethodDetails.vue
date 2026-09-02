@@ -1,47 +1,55 @@
 <template>
-  <v-col
-    v-for="field in fields"
-    :key="field.key"
-    class="method_details"
-    cols="12"
-    :md="field.cols || getInputTypeCols(field.type)"
-  >
-    <v-label :class="{'label_required mb-2': !isFieldCheckbox(field)}">
-      {{ field.label }}
-    </v-label>
-    <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
-      <v-text-field
-        v-model="methodDetails[field.key]"
-        :placeholder="field.placeholder"
-        :type="field.type"
-        :min="field.min"
-        :rules="fieldRules(field)"
-        required
-      />
-    </template>
-    <template v-else-if="field.type === InputType.Textarea">
-      <v-textarea
-        v-model="methodDetails[field.key]"
-        :placeholder="field.placeholder"
-        :rules="fieldRules(field)"
-        hide-details
-        required
-      />
-    </template>
-    <template v-else-if="field.type === InputType.Select">
-      <v-select
-        v-model="methodDetails[field.key]"
-        :rules="fieldRules(field)"
-        :items="field.choices"
-        item-title="title"
-        item-value="value"
-        required
-      />
-    </template>
-    <template v-else-if="field.type === InputType.Checkbox">
-      <v-checkbox v-model="methodDetails[field.key]"  />
-    </template>
-  </v-col>
+  <div class="method_details">
+    <div
+      v-for="field in fields"
+      :key="field.key"
+      class="method_details__field"
+      :class="`method_details__field--${field.cols || getInputTypeCols(field.type)}`"
+    >
+      <span
+        class="method_details__label"
+        :class="{ 'method_details__label--required': !isFieldCheckbox(field) }"
+      >
+        {{ field.label }}
+      </span>
+      <template v-if="[InputType.Text, InputType.Number].includes(field.type)">
+        <v-text-field
+          v-model="methodDetails[field.key]"
+          :placeholder="field.placeholder"
+          :type="field.type"
+          :min="field.min"
+          :rules="fieldRules(field)"
+          required
+        />
+      </template>
+      <template v-else-if="field.type === InputType.Textarea">
+        <v-textarea
+          v-model="methodDetails[field.key]"
+          :placeholder="field.placeholder"
+          :rules="fieldRules(field)"
+          hide-details
+          required
+        />
+      </template>
+      <template v-else-if="field.type === InputType.Select">
+        <v-select
+          v-model="methodDetails[field.key]"
+          :rules="fieldRules(field)"
+          :items="field.choices"
+          item-title="title"
+          item-value="value"
+          required
+        />
+      </template>
+      <template v-else-if="field.type === InputType.Checkbox">
+        <v-checkbox
+          v-model="methodDetails[field.key]"
+          hide-details
+          density="compact"
+        />
+      </template>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -54,6 +62,11 @@ import {
 import { ValuationType } from "~/types/enums/valuation_type";
 const emit = defineEmits(["update:modelValue", "validate"]);
 
+/**
+ * The fields one position/valuation type pair asks for, laid on a twelve-track
+ * grid the way the create flow's forms are: a text field takes the row, a
+ * number or a checkbox takes half of it.
+ */
 const props = defineProps({
   modelValue: {
     type: Object as PropType<Record<string, any>>,
@@ -131,54 +144,48 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.buttons_container {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  margin-top: 0.5rem;
-}
-.request_deposit {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  font-size: $text-sm;
-  line-height: 1;
+.method_details {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.875rem 1.25rem;
 
-  &__token {
-    font-weight: 500;
-    width: 100%;
-  }
-  &__token_header {
-    display: flex;
-    flex-direction: row;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-    color: $color-light-subtitle
-  }
-  &__token_data {
-    @include borderGray;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    margin-bottom: 0.5rem;
-    color: $color-white;
-  }
-  &__token_col {
-    padding: 0.75rem;
-    height: 2.5rem;
-    background: $color-navy-gray;
-
-    &:first-of-type {
-      @include borderGray("border-right", false);
-    }
-    &--dark {
-      background: $color-navy-gray-dark;
-    }
-  }
-  &__balance {
+  &__field {
+    grid-column: span 12;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.375rem;
+    min-width: 0;
+
+    @include md {
+      &--3 {
+        grid-column: span 3;
+      }
+      &--4 {
+        grid-column: span 4;
+      }
+      &--6 {
+        grid-column: span 6;
+      }
+      &--12 {
+        grid-column: span 12;
+      }
+    }
+  }
+
+  &__label {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+
+    &--required::after {
+      content: "*";
+      margin-left: 0.25em;
+      color: $color-cyan;
+    }
   }
 }
 </style>
