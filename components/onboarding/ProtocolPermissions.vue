@@ -1,280 +1,445 @@
 <template>
   <div class="protocols">
     <div class="protocols__head">
-      <span class="protocols__title">Protocol permissions</span>
+      <span class="protocols__title">Protocol integrations</span>
+      <span v-if="added.length" class="protocols__summary">
+        {{ added.length }} added
+      </span>
     </div>
 
-    <p v-if="!protocols.length" class="protocols__empty">
-      No protocol templates are available on {{ chainName }} yet.
-    </p>
-
+    <!-- What has been added, in the order it was added, each one open. -->
     <div
-      v-for="protocol in protocols"
-      :key="protocol.protocol"
-      class="protocols__protocol"
+      v-for="item in added"
+      :key="item.key"
+      class="protocols__item"
     >
-      <div class="protocols__row">
-        <img
-          v-if="!failedProtocolLogos.has(protocol.protocol)"
-          class="protocols__logo"
-          :src="getProtocolLogoUrl(protocol.protocol)"
-          :alt="`${protocol.label} logo`"
-          @error="markProtocolLogoFailed(protocol.protocol)"
-        >
-        <span v-else class="protocols__logo protocols__logo--fallback">
-          {{ protocol.label.charAt(0) }}
-        </span>
-        <div class="protocols__row_text">
-          <p class="protocols__name">
-            {{ protocol.label }}
-          </p>
-          <p class="protocols__meta">
-            {{ protocolMeta(protocol) }}
-          </p>
-        </div>
-        <OnboardingToggle
-          :model-value="isProtocolEnabled(protocol.protocol)"
-          :label="`Enable ${protocol.label} permissions`"
-          @update:model-value="(v: boolean) => setProtocolEnabled(protocol.protocol, v)"
-        />
-      </div>
+      <OnboardingProtocolIntegration
+        v-if="item.kind === 'protocol'"
+        :descriptor="item.descriptor"
+        :entry="findProtocol(item.descriptor.protocol)!"
+        :chain-id="chainId"
+        :roles-mod-address="rolesModAddress"
+        @update:entry="(next) => replaceEntry(item.descriptor.protocol, next)"
+        @remove="removeProtocol(item.descriptor.protocol)"
+      />
 
-      <template v-if="isProtocolEnabled(protocol.protocol)">
-        <div class="protocols__action">
-          <div
-            v-for="group in primaryGroups(protocol)"
-            :key="group.id"
-            class="protocols__field"
-          >
-            <OnboardingProtocolField
-              :descriptor="protocol"
-              :entry="findProtocol(protocol.protocol)!"
-              :group="group"
-              :chain-id="chainId"
-              @update:entry="(next) => replaceEntry(protocol.protocol, next)"
-            />
+      <template v-else>
+        <div class="protocols__row">
+          <span class="protocols__glyph" aria-hidden="true">
+            <Icon icon="material-symbols:code-rounded" />
+          </span>
+          <div class="protocols__row_text">
+            <p class="protocols__name">
+              Raw permissions
+            </p>
+            <p class="protocols__meta">
+              {{ rawMeta }}
+            </p>
           </div>
-
-          <!--
-            An action no asset picker decides — Spark's stake takes no
-            parameters at all — keeps a switch of its own: with nothing to
-            pick for it, there is nothing else that could grant or withhold
-            it.
-          -->
-          <div
-            v-for="action in primaryActions(protocol)"
-            :key="action.action"
-            class="protocols__field"
-          >
-            <OnboardingProtocolSwitchRow
-              :label="action.label"
-              :hint="action.hint"
-              :open="isActionEnabled(protocol.protocol, action.action)"
-              :switch-label="`Allow the ${action.label.toLowerCase()} action on ${protocol.label}`"
-              @update:open="(v: boolean) => setActionEnabled(protocol.protocol, action.action, v)"
-            />
-          </div>
-
-          <!--
-            Staking and governance delegation are a different errand from
-            lending, over a handful of tokens: they wait inside one box the
-            switch opens, so the card leads with what a vault is usually
-            here for. The header carries the name and the count for
-            everything inside, so nothing granted hides behind it and
-            nothing inside has to say either again.
-          -->
-          <div v-if="hasSecondary(protocol)" class="protocols__secondary">
-            <!--
-              Nothing to disclose when the box holds one parameterless
-              action: its own switch IS the grant, and a disclosure over it
-              would be the same label and the same switch, twice.
-            -->
-            <OnboardingProtocolSwitchRow
-              v-if="soleSecondaryAction(protocol)"
-              :label="secondaryLabel(protocol)"
-              :hint="secondaryHint(protocol)"
-              :open="isActionEnabled(protocol.protocol, soleSecondaryAction(protocol)!.action)"
-              :bordered="false"
-              :switch-label="`Allow the ${secondaryLabel(protocol).toLowerCase()} action on ${protocol.label}`"
-              @update:open="(v: boolean) => setActionEnabled(protocol.protocol, soleSecondaryAction(protocol)!.action, v)"
-            />
-
-            <template v-else>
-              <OnboardingProtocolSwitchRow
-                :label="secondaryLabel(protocol)"
-                :hint="secondaryHint(protocol)"
-                :summary="secondarySummary(protocol)"
-                :muted="secondaryCount(protocol) === 0"
-                :open="isSecondaryOpen(protocol.protocol)"
-                :bordered="false"
-                :switch-label="`Show ${secondaryLabel(protocol).toLowerCase()} on ${protocol.label}`"
-                @update:open="(v: boolean) => setSecondaryOpen(protocol.protocol, v)"
-              />
-
-              <div
-                v-if="isSecondaryOpen(protocol.protocol)"
-                class="protocols__secondary_body"
-              >
-                <div
-                  v-for="group in secondaryParts(protocol).groups"
-                  :key="group.id"
-                  class="protocols__field"
-                >
-                  <OnboardingProtocolField
-                    :descriptor="protocol"
-                    :entry="findProtocol(protocol.protocol)!"
-                    :group="group"
-                    :chain-id="chainId"
-                    :hide-label="group.label === secondaryLabel(protocol)"
-                    @update:entry="(next) => replaceEntry(protocol.protocol, next)"
-                  />
-                </div>
-
-                <div
-                  v-for="action in secondaryParts(protocol).actions"
-                  :key="action.action"
-                  class="protocols__field"
-                >
-                  <OnboardingProtocolSwitchRow
-                    :label="action.label"
-                    :hint="action.hint"
-                    :open="isActionEnabled(protocol.protocol, action.action)"
-                    :switch-label="`Allow the ${action.label.toLowerCase()} action on ${protocol.label}`"
-                    @update:open="(v: boolean) => setActionEnabled(protocol.protocol, action.action, v)"
-                  />
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-
-        <p
-          v-for="issue in issuesFor(protocol.protocol)"
-          :key="issue.message"
-          class="protocols__error"
-        >
-          {{ issue.message }}
-        </p>
-
-        <!--
-          What the choices above actually submit, in the same disclosure
-          shape as the prepopulated permissions above them: the card says
-          what is granted in words, this says it in calls. Read before
-          signing, or never — but it is the only place either is visible
-          before the transaction.
-        -->
-        <div class="protocols__advanced">
           <button
             type="button"
-            class="protocols__disclosure"
-            :aria-expanded="isAdvancedOpen(protocol.protocol)"
-            @click="toggleAdvanced(protocol.protocol)"
+            class="protocols__remove"
+            aria-label="Remove raw permissions"
+            @click="removeRaw"
+          >
+            Remove
+          </button>
+        </div>
+        <div class="protocols__raw_body">
+          <OnboardingRawPermissionsCode
+            :model-value="rawEntries"
+            @update:model-value="(v) => emit('update:rawEntries', v)"
+          />
+        </div>
+      </template>
+    </div>
+
+    <!--
+      The way in. With nothing added it is the whole card — a tile that
+      says what this section is for — and once something is, it steps back
+      to a row under the last integration, where the next one will appear.
+    -->
+    <div
+      class="protocols__add_wrap"
+      :class="{ 'protocols__add_wrap--hero': !added.length }"
+    >
+      <button
+        type="button"
+        class="protocols__add"
+        :class="{ 'protocols__add--hero': !added.length }"
+        @click="libraryOpen = true"
+      >
+        <span class="protocols__plus" aria-hidden="true">
+          <Icon icon="material-symbols:add-rounded" />
+        </span>
+        <span class="protocols__add_text">
+          <span class="protocols__add_title">Add protocol</span>
+          <span v-if="!added.length && addHint" class="protocols__add_hint">
+            {{ addHint }}
+          </span>
+        </span>
+      </button>
+    </div>
+
+    <UiConfirmDialog v-model="libraryOpen" max-width="600px">
+      <!-- Just the heading: the dialog's default puts an eyebrow over it,
+           and the list below needs no introduction. -->
+      <template #title>
+        <h2 class="brand_modal__title library__title">
+          Add protocol
+        </h2>
+      </template>
+
+      <div class="library">
+        <!--
+          First, the way that covers everything: Zodiac's own app, where any
+          protocol and any action can be granted by hand. The row is the
+          link; the disclosure under it says what to do once there.
+        -->
+        <div class="zodiac">
+          <a
+            class="zodiac__row"
+            :href="ZODIAC_APP_URL"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              class="zodiac__logo"
+              src="@/assets/images/logo-zodiac.png"
+              alt="Zodiac"
+            >
+            <span class="zodiac__text">
+              <span class="zodiac__name">Configure permissions in Zodiac</span>
+              <span class="zodiac__meta">
+                Permissions and manual execution app
+              </span>
+            </span>
+            <span class="zodiac__open">
+              Open Zodiac
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M7 17L17 7" />
+                <path d="M8 7h9v9" />
+              </svg>
+            </span>
+          </a>
+
+          <button
+            type="button"
+            class="zodiac__disclosure"
+            :aria-expanded="zodiacInfoOpen"
+            @click="zodiacInfoOpen = !zodiacInfoOpen"
           >
             <Icon
-              class="protocols__chevron"
-              :class="{ 'protocols__chevron--open': isAdvancedOpen(protocol.protocol) }"
+              class="zodiac__chevron"
+              :class="{ 'zodiac__chevron--open': zodiacInfoOpen }"
               icon="material-symbols:keyboard-arrow-down-rounded"
               width="1.125rem"
               height="1.125rem"
             />
-            <span class="protocols__disclosure_title">Generated calls</span>
-            <span class="protocols__disclosure_summary">
-              {{ previewSummary(protocol.protocol) }}
-            </span>
+            <span class="zodiac__disclosure_title">How to integrate a protocol</span>
           </button>
 
-          <template v-if="isAdvancedOpen(protocol.protocol)">
-            <ul
-              v-if="previewFor(protocol.protocol).descriptions.length"
-              class="protocols__preview"
+          <div v-if="zodiacInfoOpen" class="zodiac__info">
+            <!-- Steps 2 and 3 name the Zodiac sidebar entries they happen
+                 in, drawn the way Zodiac draws them, so the words on this
+                 side match what is being looked for on that one. -->
+            <ol class="zodiac__steps">
+              <li class="zodiac__step">
+                <span class="zodiac__step_number">1</span>
+                <span class="zodiac__step_text">Create an account.</span>
+              </li>
+              <li class="zodiac__step">
+                <span class="zodiac__step_number">2</span>
+                <span class="zodiac__step_text">
+                  Open
+                  <span class="zodiac__nav">
+                    <svg
+                      class="zodiac__nav_icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect
+                        x="3"
+                        y="3"
+                        width="18"
+                        height="18"
+                        rx="3"
+                      />
+                      <path d="M8.5 8.5l7 7" />
+                      <path d="M15.5 8.5l-7 7" />
+                    </svg>
+                    Vaults
+                  </span>
+                  and import the vault under a label of your choice, using
+                  its Safe contract:
+                  <span class="zodiac__safe">
+                    <span
+                      class="zodiac__safe_address"
+                      :class="{ 'zodiac__safe_address--pending': !safeAddress }"
+                    >
+                      {{ safeAddress || "available once the vault is initialized" }}
+                    </span>
+                    <button
+                      v-if="safeAddress"
+                      type="button"
+                      class="zodiac__copy"
+                      :aria-label="safeCopied ? 'Copied' : 'Copy the Safe contract address'"
+                      @click="copySafeAddress"
+                    >
+                      {{ safeCopied ? "Copied" : "Copy" }}
+                    </button>
+                  </span>
+                </span>
+              </li>
+              <li class="zodiac__step">
+                <span class="zodiac__step_number">3</span>
+                <span class="zodiac__step_text">
+                  Go to
+                  <span class="zodiac__nav">
+                    <svg
+                      class="zodiac__nav_icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 3l7.5 3v5.2c0 4.9-3.2 8.4-7.5 9.8-4.3-1.4-7.5-4.9-7.5-9.8V6l7.5-3z" />
+                    </svg>
+                    Policies
+                  </span>
+                  and add the actions you need.
+                </span>
+              </li>
+            </ol>
+          </div>
+        </div>
+
+        <!--
+          Then the escape hatch: anything Zodiac or the library does not
+          cover can still be granted as the calldata itself.
+        -->
+        <ul class="library__list">
+          <li class="library__row">
+            <button
+              type="button"
+              class="library__item"
+              :disabled="isRawAdded"
+              @click="addRaw"
             >
-              <li
-                v-for="(description, index) in previewFor(protocol.protocol).descriptions"
-                :key="index"
-                class="protocols__preview_row"
+              <span class="protocols__glyph" aria-hidden="true">
+                <Icon icon="material-symbols:code-rounded" />
+              </span>
+              <span class="library__item_text">
+                <span class="library__item_name">Raw permissions</span>
+                <span class="library__item_meta">
+                  Paste pre-encoded Roles modifier calldata
+                </span>
+              </span>
+              <span v-if="isRawAdded" class="library__badge">Added</span>
+              <Icon
+                v-else
+                class="library__item_plus"
+                icon="material-symbols:add-rounded"
+                aria-hidden="true"
+              />
+            </button>
+          </li>
+        </ul>
+
+        <!-- And the templates the registry offers on this chain. -->
+        <div class="library__section">
+          <div class="library__section_head">
+            <span class="library__eyebrow">Library</span>
+            <span v-if="protocols.length" class="library__count">
+              {{ filteredProtocols.length }} of {{ protocols.length }}
+            </span>
+          </div>
+
+          <p v-if="!protocols.length" class="library__lead">
+            No protocol templates are available on {{ chainName }} yet.
+          </p>
+
+          <template v-else>
+            <div class="library__search">
+              <Icon
+                icon="material-symbols:search"
+                width="1.125rem"
+                class="library__search_icon"
+              />
+              <input
+                v-model="query"
+                class="library__search_input"
+                type="search"
+                placeholder="Search protocols"
+                aria-label="Search the protocol library"
               >
-                {{ description }}
+              <button
+                v-if="query"
+                type="button"
+                class="library__search_clear"
+                @click="query = ''"
+              >
+                Clear
+              </button>
+            </div>
+
+            <ul v-if="filteredProtocols.length" class="library__list">
+              <li
+                v-for="protocol in filteredProtocols"
+                :key="protocol.protocol"
+                class="library__row"
+              >
+                <button
+                  type="button"
+                  class="library__item"
+                  :disabled="isProtocolEnabled(protocol.protocol)"
+                  @click="addProtocol(protocol.protocol)"
+                >
+                  <OnboardingProtocolLogo
+                    :protocol="protocol.protocol"
+                    :label="protocol.label"
+                  />
+                  <span class="library__item_text">
+                    <span class="library__item_name">{{ protocol.label }}</span>
+                    <span class="library__item_meta">
+                      {{ protocolActions(protocol) }}
+                    </span>
+                  </span>
+                  <span
+                    v-if="isProtocolEnabled(protocol.protocol)"
+                    class="library__badge"
+                  >Added</span>
+                  <Icon
+                    v-else
+                    class="library__item_plus"
+                    icon="material-symbols:add-rounded"
+                    aria-hidden="true"
+                  />
+                </button>
               </li>
             </ul>
-            <p
-              v-else-if="previewFor(protocol.protocol).error"
-              class="protocols__error protocols__error--inset"
-            >
-              {{ previewFor(protocol.protocol).error }}
-            </p>
-            <p v-else class="protocols__preview_note">
-              {{ previewNote(protocol.protocol) }}
+            <p v-else class="library__lead">
+              No protocol matches “{{ query }}”.
             </p>
           </template>
         </div>
-      </template>
-    </div>
+      </div>
+    </UiConfirmDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { PACKAGE_VERSION } from "@rethink-finance/positions-registry";
 import {
-  type IProtocolActionDescriptor,
   type IProtocolDescriptor,
-  type IProtocolFieldGroup,
-  type IProtocolSelectionIssue,
   type IProtocolSelectionState,
-  buildProtocolPermissionEntries,
-  getActionHint,
-  getActionLabel,
-  getProtocolLogoUrl,
   getRegistryProtocols,
-  governingMembers,
   initProtocolSelections,
-  isSecondaryAction,
-  isSecondaryGroup,
   normalizeProtocolSelections,
-  validateProtocolSelections,
-  viewGroup,
 } from "~/composables/permissions/protocolPermissions";
+import type { IRawPermissionCodeEntry } from "~/composables/permissions/parseRawPermissionCode";
 import { networksMap } from "~/store/web3/networksMap";
 import type { ChainId } from "~/types/enums/chain_id";
 
 /**
- * "Protocol permissions" card for the Roles V2 creation flow: pick protocols
- * from the permissions registry, pick assets (and any other schema-backed
- * setting) per protocol, and the registry compiles the scoped Roles v2
- * grants that join this step's submitPermissions batch.
+ * "Protocol integrations" card for the Roles V2 creation flow. It starts
+ * empty, with one way in: a tile that opens the library of everything the
+ * permissions registry offers on this chain, plus raw Roles calldata for
+ * whatever it does not. Picking one adds it to the card, open, where its
+ * grants are chosen (OnboardingProtocolIntegration) and compiled by the
+ * registry into the scoped Roles v2 calls that join this step's
+ * submitPermissions batch.
  *
- * The controls are derived from the registry's schemas at render time
- * (SCHEMA.md: no control without a schema field), so a registry update that
- * adds a protocol or a field shows up here without a frontend change.
- *
- * Controls are per CHOICE, not per action: actions offering the same assets
- * share one picker (see buildFieldGroups), and what a picked asset is used
- * FOR is chosen on the asset itself — each one offering only the scopes its
- * own schema accepts, so a wrapped reserve never shows a staking switch it
- * would reject. The state underneath stays per-action, exactly as the
- * registry's schemas declare it.
+ * Selection state stays with the parent, one entry per protocol the chain
+ * offers: "added" is the entry's `enabled` flag, so the save's authoritative
+ * diff sees a removed integration as grants to take back. Only the order
+ * things were added in lives here — it is presentation, and a new
+ * integration belongs where the eye already is, above the tile that added
+ * it.
  */
 const props = defineProps<{
   modelValue: IProtocolSelectionState[];
+  /** Raw calldata entries queued for the batch, owned by the parent. */
+  rawEntries: IRawPermissionCodeEntry[];
   chainId: ChainId;
   /** For the generated-calls preview; grants still build without it. */
   rolesModAddress?: string;
+  /**
+   * The vault's Safe, for the Zodiac instructions — it is what gets
+   * imported there. Absent until the vault is initialized.
+   */
+  safeAddress?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: IProtocolSelectionState[]): void;
+  (e: "update:rawEntries", value: IRawPermissionCodeEntry[]): void;
 }>();
 
-const advancedOpen = ref<Set<string>>(new Set());
+/** The raw block's slot in the added order, beside the protocol keys. */
+const RAW_KEY = "raw-permissions";
 
-/** Protocols whose staking/delegation block is expanded. */
-const secondaryOpen = ref<Set<string>>(new Set());
+/** Zodiac's own app: permissions and manual execution for any protocol. */
+const ZODIAC_APP_URL = "https://app.zodiac.eco/";
 
-/** Protocols whose DefiLlama mark failed to load — shown as a letter disc. */
-const failedProtocolLogos = ref<Set<string>>(new Set());
+const libraryOpen = ref(false);
 
-const markProtocolLogoFailed = (protocol: string) => {
-  failedProtocolLogos.value = new Set([...failedProtocolLogos.value, protocol]);
+/** Whether the Zodiac walkthrough in the dialog is expanded. */
+const zodiacInfoOpen = ref(false);
+
+/** The library search, cleared with the dialog. */
+const query = ref("");
+
+const safeCopied = ref(false);
+let safeCopiedTimer: ReturnType<typeof setTimeout> | undefined;
+
+const copySafeAddress = () => {
+  if (!props.safeAddress) return;
+  navigator.clipboard.writeText(props.safeAddress);
+  safeCopied.value = true;
+  if (safeCopiedTimer) clearTimeout(safeCopiedTimer);
+  safeCopiedTimer = setTimeout(() => {
+    safeCopied.value = false;
+  }, 1500);
 };
+
+onBeforeUnmount(() => {
+  if (safeCopiedTimer) clearTimeout(safeCopiedTimer);
+});
+
+// The dialog reopens the way it was first seen: walkthrough folded, no
+// search left over from last time.
+watch(libraryOpen, (open) => {
+  if (open) return;
+  zodiacInfoOpen.value = false;
+  query.value = "";
+});
+
+/**
+ * Raw permissions added but still empty. Once entries exist they speak for
+ * themselves; this only keeps the block on the card before the first paste.
+ */
+const rawAdded = ref(false);
+
+/** Keys in the order they were added; pruned as things are removed. */
+const addedOrder = ref<string[]>([]);
 
 const protocols = computed<IProtocolDescriptor[]>(() =>
   getRegistryProtocols(props.chainId),
@@ -284,7 +449,24 @@ const chainName = computed(
   () => networksMap[props.chainId]?.chainName ?? "this chain",
 );
 
-const packageVersion = PACKAGE_VERSION;
+/**
+ * The library narrowed to the search: by name, by registry key, or by an
+ * action it offers — "borrow" finds every lending template.
+ */
+const filteredProtocols = computed<IProtocolDescriptor[]>(() => {
+  const needle = query.value.trim().toLowerCase();
+  if (!needle) return protocols.value;
+  return protocols.value.filter((protocol) =>
+    [
+      protocol.label,
+      protocol.protocol,
+      ...protocol.actions.map((action) => action.label),
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(needle),
+  );
+});
 
 /**
  * The selection state always mirrors the current chain's descriptors: one
@@ -317,15 +499,8 @@ watch(
 const findProtocol = (protocol: string) =>
   props.modelValue.find((entry) => entry.protocol === protocol);
 
-const findAction = (protocol: string, action: string) =>
-  findProtocol(protocol)?.actions.find((entry) => entry.action === action);
-
 const isProtocolEnabled = (protocol: string) =>
   findProtocol(protocol)?.enabled ?? false;
-
-const isActionEnabled = (protocol: string, action: string) =>
-  findAction(protocol, action)?.enabled ?? false;
-
 
 /** Immutable update helpers — the parent owns the state. */
 const patchState = (
@@ -340,362 +515,106 @@ const patchState = (
   );
 };
 
-const patchAction = (
-  protocol: string,
-  action: string,
-  patch: (
-    entry: IProtocolSelectionState["actions"][number],
-  ) => IProtocolSelectionState["actions"][number],
-) => {
-  patchState(protocol, (entry) => ({
-    ...entry,
-    actions: entry.actions.map((candidate) =>
-      candidate.action === action ? patch(candidate) : candidate,
-    ),
-  }));
+/** An integration handing back a whole new entry for its protocol. */
+const replaceEntry = (protocol: string, next: IProtocolSelectionState) => {
+  patchState(protocol, () => next);
 };
 
 const setProtocolEnabled = (protocol: string, enabled: boolean) => {
   patchState(protocol, (entry) => ({ ...entry, enabled }));
 };
 
-const setActionEnabled = (protocol: string, action: string, enabled: boolean) => {
-  patchAction(protocol, action, (entry) => ({ ...entry, enabled }));
-};
-
-/**
- * What a control holds right now. The controls themselves are rendered by
- * OnboardingProtocolField; the card only asks for counts and for whether a
- * control has anything live behind it.
- *
- * Memoized on the identity of the selection array: every write replaces the
- * array rather than mutating it, so identity is exactly the "has anything
- * changed" signal — and reading it still registers the reactive dependency.
- */
-const viewCache = new Map<
-  string,
-  { state: IProtocolSelectionState[]; view: ReturnType<typeof viewGroup> }
->();
-
-const view = (protocol: string, group: IProtocolFieldGroup) => {
-  const state = props.modelValue;
-  const key = `${protocol}.${group.id}`;
-  const cached = viewCache.get(key);
-  if (cached?.state === state) return cached.view;
-  const fresh = viewGroup(findProtocol(protocol), group);
-  viewCache.set(key, { state, view: fresh });
-  return fresh;
-};
-
-/** A control handing back a whole new entry for its protocol. */
-const replaceEntry = (protocol: string, next: IProtocolSelectionState) => {
-  patchState(protocol, () => next);
-};
-
-/**
- * Controls with something live behind them. A control whose values ARE the
- * grant always shows: the actions behind it are switched on by picking, so
- * hiding it while it is empty would leave nothing to pick with. The rest —
- * Aave's market, the delegatee address — appear once something is granted
- * through them.
- */
-const visibleGroups = (descriptor: IProtocolDescriptor) =>
-  descriptor.groups.filter(
-    (group) =>
-      governingMembers(group).length > 0 ||
-      view(descriptor.protocol, group).actions.length > 0,
-  );
-
-/**
- * Controls in render order: the protocol's main business first, its side
- * errands after. Descriptor order already puts staking and delegation last,
- * but ordering it here means the disclosure cannot end up mid-card if a
- * registry ever declares the actions the other way round.
- */
-const orderedGroups = (descriptor: IProtocolDescriptor) => {
-  const groups = visibleGroups(descriptor);
-  return [
-    ...groups.filter((group) => !isSecondaryGroup(group)),
-    ...groups.filter(isSecondaryGroup),
-  ];
-};
-
-/** The controls the card leads with. */
-const primaryGroups = (descriptor: IProtocolDescriptor) =>
-  orderedGroups(descriptor).filter((group) => !isSecondaryGroup(group));
-
-/** Parameterless actions that are part of the protocol's main business. */
-const primaryActions = (descriptor: IProtocolDescriptor) =>
-  standaloneActionsFor(descriptor).filter(
-    (action) => !isSecondaryAction(action.action),
-  );
-
-/** The side-errand controls and actions, as one block behind one switch. */
-const secondaryParts = (descriptor: IProtocolDescriptor) => ({
-  groups: orderedGroups(descriptor).filter(isSecondaryGroup),
-  actions: standaloneActionsFor(descriptor).filter((action) =>
-    isSecondaryAction(action.action),
-  ),
-});
-
-const hasSecondary = (descriptor: IProtocolDescriptor): boolean => {
-  const { groups, actions } = secondaryParts(descriptor);
-  return groups.length > 0 || actions.length > 0;
-};
-
-const secondaryLabel = (descriptor: IProtocolDescriptor): string => {
-  const { groups, actions } = secondaryParts(descriptor);
-  // The merged control already carries the family's name ("Stake &
-  // delegate"); a protocol with only the parameterless action names itself.
-  const named = groups.find((group) => group.members.length > 1);
-  if (named) return named.label;
-  const labels = [
-    ...new Set([
-      ...groups.flatMap((group) => group.members.map((m) => m.action)),
-      ...actions.map((action) => action.action),
-    ]),
-  ].map((action) => getActionLabel(action));
-  return actionList(labels).replace(/^./, (c) => c.toUpperCase());
-};
-
-const secondaryHint = (descriptor: IProtocolDescriptor): string => {
-  const { groups, actions } = secondaryParts(descriptor);
-  const inside = [
-    ...new Set([
-      ...groups.flatMap((group) => group.members.map((m) => m.action)),
-      ...actions.map((action) => action.action),
-    ]),
-  ];
-  // One action can speak for itself; two would be described by whichever
-  // happened to come first, which is how a block named "Stake & delegate"
-  // ends up explaining only staking.
-  if (inside.length === 1) return getActionHint(inside[0], descriptor.protocol);
-  return `Beyond lending: what the vault may ${actionList(inside)}.`;
-};
-
-/**
- * How much is granted inside, so a closed block still says so. Counts the
- * parameterless actions too: Spark's stake farm is granted by enabling the
- * protocol, and a box that reported nothing while holding it would hide the
- * very grant it contains.
- */
-const secondaryCount = (descriptor: IProtocolDescriptor): number => {
-  const { groups, actions } = secondaryParts(descriptor);
-  const picked = groups.reduce(
-    (count, group) =>
-      count +
-      (group.control === "multi-select"
-        ? view(descriptor.protocol, group).selected.length
-        : 0),
-    0,
-  );
-  return (
-    picked +
-    actions.filter((action) =>
-      isActionEnabled(descriptor.protocol, action.action),
-    ).length
-  );
-};
-
-/**
- * The same count as a phrase, in the words the control inside used to say
- * it — the header is now the only place either is said.
- */
-const secondarySummary = (descriptor: IProtocolDescriptor): string => {
-  const { groups, actions } = secondaryParts(descriptor);
-  const parts: string[] = [];
-  const lists = groups.filter((group) => group.control === "multi-select");
-  if (lists.length) {
-    const picked = lists.reduce(
-      (count, group) => count + view(descriptor.protocol, group).selected.length,
-      0,
-    );
-    const total = lists.reduce(
-      (count, group) => count + view(descriptor.protocol, group).options.length,
-      0,
-    );
-    parts.push(`${picked} of ${total} selected`);
-  }
-  if (actions.length) {
-    const on = actions.filter((action) =>
-      isActionEnabled(descriptor.protocol, action.action),
-    ).length;
-    parts.push(`${on} of ${actions.length} on`);
-  }
-  return parts.join(" · ");
-};
-
-/**
- * A box holding nothing but one parameterless action has nothing to
- * disclose: the header switch grants it directly rather than opening a
- * body that repeats the same label over the same switch.
- */
-const soleSecondaryAction = (
-  descriptor: IProtocolDescriptor,
-): IProtocolActionDescriptor | undefined => {
-  const { groups, actions } = secondaryParts(descriptor);
-  return groups.length === 0 && actions.length === 1 ? actions[0] : undefined;
-};
-
-const isSecondaryOpen = (protocol: string) =>
-  secondaryOpen.value.has(protocol);
-
-const setSecondaryOpen = (protocol: string, open: boolean) => {
-  const next = new Set(secondaryOpen.value);
-  if (open) next.add(protocol);
-  else next.delete(protocol);
-  secondaryOpen.value = next;
-};
-
-/**
- * Actions no picker decides for (Spark's parameterless stake): nothing
- * would grant or withhold them, so they carry their own switch.
- */
-const standaloneActionsFor = (
-  descriptor: IProtocolDescriptor,
-): IProtocolActionDescriptor[] => {
-  const governed = new Set(
-    descriptor.groups.flatMap((group) =>
-      governingMembers(group).map((member) => member.action),
-    ),
-  );
-  return descriptor.actions.filter((action) => !governed.has(action.action));
-};
-
-const actionList = (actions: string[]): string => {
-  const labels = actions.map((action) => getActionLabel(action).toLowerCase());
-  if (labels.length < 2) return labels.join("");
-  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
-};
-
-const isAdvancedOpen = (protocol: string) => advancedOpen.value.has(protocol);
-
-const toggleAdvanced = (protocol: string) => {
-  const next = new Set(advancedOpen.value);
-  if (next.has(protocol)) next.delete(protocol);
-  else next.add(protocol);
-  advancedOpen.value = next;
-};
-
-const issues = computed<IProtocolSelectionIssue[]>(() =>
-  validateProtocolSelections(props.chainId, props.modelValue, protocols.value),
+const isRawAdded = computed(
+  () => rawAdded.value || props.rawEntries.length > 0,
 );
 
-const issuesFor = (protocol: string) =>
-  issues.value.filter((issue) => issue.protocol === protocol);
+/** Everything currently on the card, in the chain's own order. */
+const liveKeys = computed<string[]>(() => [
+  ...protocols.value
+    .filter((protocol) => isProtocolEnabled(protocol.protocol))
+    .map((protocol) => protocol.protocol),
+  ...(isRawAdded.value ? [RAW_KEY] : []),
+]);
 
 /**
- * Memoized like the control views, and for the same reason: the template
- * asks each protocol's preview several times per render, and answering
- * means compiling that protocol's grants from scratch every time.
+ * Keeps the added order in step with the state: whatever left is dropped,
+ * whatever arrived goes last. Driven off the state rather than off the add
+ * handlers, so an entry enabled any other way — restored, reconciled after
+ * a chain switch — still gets a place on the card.
  */
-const previewCache = new Map<
-  string,
-  {
-    state: IProtocolSelectionState[];
-    preview: { descriptions: string[]; error: string };
-  }
->();
+watch(
+  liveKeys,
+  (keys) => {
+    const live = new Set(keys);
+    const kept = addedOrder.value.filter((key) => live.has(key));
+    const known = new Set(kept);
+    const next = [...kept, ...keys.filter((key) => !known.has(key))];
+    const changed =
+      next.length !== addedOrder.value.length ||
+      next.some((key, index) => key !== addedOrder.value[index]);
+    if (changed) addedOrder.value = next;
+  },
+  { immediate: true },
+);
 
-/**
- * Per-protocol review of what the registry will actually configure, with
- * addresses swapped for the names its data tables know. Built per protocol
- * so the list under "Aave v3" never mixes in another protocol's calls.
- */
-const previewFor = (
-  protocol: string,
-): { descriptions: string[]; error: string } => {
-  const key = `${props.chainId}.${props.rolesModAddress ?? ""}.${protocol}`;
-  const cached = previewCache.get(key);
-  if (cached?.state === props.modelValue) return cached.preview;
-  const preview = buildPreview(protocol);
-  previewCache.set(key, { state: props.modelValue, preview });
-  return preview;
-};
+type AddedItem =
+  | { key: string; kind: "protocol"; descriptor: IProtocolDescriptor }
+  | { key: string; kind: "raw" };
 
-const buildPreview = (
-  protocol: string,
-): { descriptions: string[]; error: string } => {
-  const entry = findProtocol(protocol);
-  const descriptor = protocols.value.find(
-    (candidate) => candidate.protocol === protocol,
-  );
-  if (!entry?.enabled || !descriptor || issuesFor(protocol).length) {
-    return { descriptions: [], error: "" };
-  }
-  try {
-    const build = buildProtocolPermissionEntries({
-      chainId: props.chainId,
-      // Preview never leaves the page; a placeholder keeps it rendering
-      // while the roles modifier is still unknown.
-      rolesModAddress:
-        props.rolesModAddress || "0x0000000000000000000000000000000000000001",
-      selections: [entry],
-    });
-    return {
-      descriptions: build.descriptions.map((description) =>
-        friendlyDescription(description, descriptor.addressLabels),
-      ),
-      error: "",
-    };
-  } catch (error: any) {
-    return { descriptions: [], error: error?.message ?? String(error) };
-  }
-};
-
-/** What the disclosure says with itself closed. */
-const previewSummary = (protocol: string): string => {
-  const { descriptions, error } = previewFor(protocol);
-  const registry = `registry v${packageVersion}`;
-  if (error) return `unavailable · ${registry}`;
-  if (!descriptions.length) return `nothing yet · ${registry}`;
-  return `${descriptions.length} call${
-    descriptions.length === 1 ? "" : "s"
-  } · ${registry}`;
-};
-
-/**
- * Why the list is empty, when it is. A disclosure that opens onto nothing
- * at all reads as a broken control rather than as an honest "there is
- * nothing to show yet".
- */
-const previewNote = (protocol: string): string => {
-  if (issuesFor(protocol).length) {
-    return "No calls yet — settle the problem above and they appear here.";
-  }
-  return "No calls yet — nothing on this card is granted.";
-};
-
-const friendlyDescription = (
-  description: string,
-  labels: Record<string, string>,
-): string =>
-  description.replace(/0x[0-9a-fA-F]{40}/g, (address) => {
-    const label = labels[address.toLowerCase()];
-    const short = `${address.slice(0, 6)}…${address.slice(-4)}`;
-    return label ? `${label} (${short})` : short;
-  });
-
-const protocolMeta = (descriptor: IProtocolDescriptor): string => {
-  const entry = findProtocol(descriptor.protocol);
-  if (!entry?.enabled) {
-    const actions = descriptor.actions.map((action) => action.label.toLowerCase());
-    return actions.join(" · ");
-  }
-  // Counted per control, not per action: an asset shared by deposit and
-  // borrow is written to both, but reads as the one choice it was. The side
-  // errand is left out — its own box says how many of its tokens are
-  // picked, and adding them here made this row disagree with the asset
-  // control directly beneath it.
-  const selected = primaryGroups(descriptor)
-    .filter((group) => group.control === "multi-select")
-    .reduce(
-      (count, group) => count + view(descriptor.protocol, group).selected.length,
-      0,
+const added = computed<AddedItem[]>(() =>
+  addedOrder.value.flatMap((key): AddedItem[] => {
+    if (key === RAW_KEY) return [{ key, kind: "raw" }];
+    const descriptor = protocols.value.find(
+      (candidate) => candidate.protocol === key,
     );
-  return `${selected} asset${selected === 1 ? "" : "s"} selected`;
+    return descriptor ? [{ key, kind: "protocol", descriptor }] : [];
+  }),
+);
+
+const addProtocol = (protocol: string) => {
+  setProtocolEnabled(protocol, true);
+  libraryOpen.value = false;
 };
 
+/**
+ * Off the card, and off the save: a disabled entry compiles to nothing and
+ * the authoritative diff revokes what an earlier save granted for it. Its
+ * picks stay in the entry, so adding it back after a slip restores them —
+ * visibly, since the block reopens with its counts.
+ */
+const removeProtocol = (protocol: string) => {
+  setProtocolEnabled(protocol, false);
+};
+
+const addRaw = () => {
+  rawAdded.value = true;
+  libraryOpen.value = false;
+};
+
+const removeRaw = () => {
+  rawAdded.value = false;
+  if (props.rawEntries.length) emit("update:rawEntries", []);
+};
+
+/** What a template covers, for the library row. */
+const protocolActions = (descriptor: IProtocolDescriptor): string =>
+  descriptor.actions.map((action) => action.label.toLowerCase()).join(" · ");
+
+const rawMeta = computed((): string => {
+  const count = props.rawEntries.length;
+  if (!count) return "nothing queued yet";
+  return `${count} entr${count === 1 ? "y" : "ies"} queued`;
+});
+
+/**
+ * The tile explains itself only when the library behind it has no
+ * protocols to offer — otherwise "Add protocol" is the whole story.
+ */
+const addHint = computed((): string =>
+  protocols.value.length
+    ? ""
+    : `No protocol templates cover ${chainName.value} yet — raw Roles permissions can still be added.`,
+);
 </script>
 
 <style scoped lang="scss">
@@ -712,20 +631,6 @@ const protocolMeta = (descriptor: IProtocolDescriptor): string => {
     padding: 0.625rem 1rem;
   }
 
-  &__chevron {
-    flex: none;
-    color: $color-steel-blue;
-    transition: transform $default-transition-time ease;
-
-    &--open {
-      transform: rotate(180deg);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  }
-
   &__title {
     font-family: $font-mono;
     font-size: 10.5px;
@@ -735,16 +640,15 @@ const protocolMeta = (descriptor: IProtocolDescriptor): string => {
     color: $color-steel-blue;
   }
 
-  &__empty {
-    padding: 0.75rem 1rem;
-    border-top: 1px solid $color-line;
-    font-size: 13px;
+  &__summary {
+    font-size: 12px;
+    line-height: 1.4;
     color: $color-steel-blue;
+    opacity: 0.75;
   }
 
-  &__protocol {
+  &__item {
     border-top: 1px solid $color-line;
-    padding-bottom: 0.25rem;
   }
 
   &__row {
@@ -752,24 +656,6 @@ const protocolMeta = (descriptor: IProtocolDescriptor): string => {
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-  }
-
-  &__logo {
-    flex: none;
-    width: 28px;
-    height: 28px;
-    object-fit: contain;
-    border-radius: 999px;
-
-    &--fallback {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid $color-line-2;
-      font-family: $font-mono;
-      font-size: 12px;
-      color: $color-steel-blue;
-    }
   }
 
   &__row_text {
@@ -790,53 +676,220 @@ const protocolMeta = (descriptor: IProtocolDescriptor): string => {
     color: $color-steel-blue;
   }
 
-  &__action {
-    padding: 0 1rem 0.75rem;
+  /* The raw block's mark: the same disc a protocol's logo fills, with a
+     glyph instead, since calldata has no logo. */
+  &__glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border: 1px solid $color-line-2;
+    border-radius: 999px;
+    font-size: 15px;
+    color: $color-cyan;
   }
 
-  &__field {
-    & + & {
-      margin-top: 0.75rem;
+  &__remove {
+    flex: none;
+    padding: 0.25rem 0;
+    border: none;
+    background: none;
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    cursor: pointer;
+    transition: color $default-transition-time ease;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      color: $color-neg;
     }
   }
 
-  /** The box a side errand waits inside: header, then its own controls. */
-  &__secondary {
-    border: 1px solid $color-line;
+  &__raw_body {
+    padding: 0 1rem 1rem;
+  }
+
+  &__add_wrap {
+    padding: 0.75rem 1rem 1rem;
+    border-top: 1px solid $color-line;
+
+    &--hero {
+      padding: 1rem;
+    }
+  }
+
+  /* Dashed, like every other "put something here" surface in the flow
+     (the image drop zone, the fold at the end of an asset list). */
+  &__add {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px dashed $color-line-2;
     border-radius: $default-border-radius;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color $default-transition-time ease,
+      background-color $default-transition-time ease;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      border-color: $color-cyan-line;
+      background: $color-gray-light-transparent;
+
+      .protocols__add_title {
+        color: $color-white;
+      }
+    }
+
+    &--hero {
+      flex-direction: column;
+      justify-content: center;
+      gap: 1rem;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+    }
   }
 
-  /* A change of subject, not the next field: staking sits well clear of
-     the asset list it follows. */
-  &__field + &__secondary {
-    margin-top: 1.5rem;
+  &__plus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: $color-cyan-tint;
+    font-size: 16px;
+    color: $color-cyan;
   }
 
-  /* No rule under the header — the box's own border already groups these,
-     so the gap carries the separation. */
-  &__secondary_body {
-    padding: 0.25rem 0.75rem 0.75rem;
+  &__add--hero &__plus {
+    width: 56px;
+    height: 56px;
+    font-size: 32px;
   }
 
-  &__secondary_body &__field:first-child {
-    margin-top: 0;
+  &__add_text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
   }
 
-  &__error {
-    padding: 0 1rem 0.5rem;
+  &__add--hero &__add_text {
+    align-items: center;
+  }
+
+  &__add_title {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    transition: color $default-transition-time ease;
+  }
+
+  &__add--hero &__add_title {
+    font-size: 12px;
+  }
+
+  &__add_hint {
+    max-width: 34rem;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__remove,
+    &__add,
+    &__add_title {
+      transition: none;
+    }
+  }
+}
+
+/**
+ * The Zodiac option: a framed block whose top row is the link out and
+ * whose second row folds open into the walkthrough.
+ */
+.zodiac {
+  border: 1px solid $color-line-2;
+  border-radius: $default-border-radius;
+  background: $color-card-background;
+  overflow: hidden;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.875rem;
+    color: $color-white;
+    text-decoration: none;
+    transition: background-color $default-transition-time ease;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      background: $color-gray-light-transparent;
+
+      .zodiac__open {
+        color: $color-white;
+      }
+    }
+  }
+
+  /* A wordmark, not a disc: the file is the name set wide. */
+  &__logo {
+    flex: none;
+    width: auto;
+    height: 18px;
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  &__meta {
     font-family: $font-mono;
     font-size: 11px;
-    color: $color-neg;
-
-    &--inset {
-      padding: 0 0.75rem 0.5rem;
-    }
+    line-height: 1.4;
+    color: $color-steel-blue;
   }
 
-  /* The prepopulated-permissions header, one level in: same chevron, same
-     mono title, same summary beside it. */
-  &__advanced {
-    border-top: 1px solid $color-line;
+  &__open {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex: none;
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-cyan;
+    transition: color $default-transition-time ease;
   }
 
   &__disclosure {
@@ -844,9 +897,9 @@ const protocolMeta = (descriptor: IProtocolDescriptor): string => {
     align-items: center;
     gap: 0.5rem;
     width: 100%;
-    min-width: 0;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.875rem;
     border: none;
+    border-top: 1px solid $color-line;
     background: none;
     text-align: left;
     cursor: pointer;
@@ -854,9 +907,19 @@ const protocolMeta = (descriptor: IProtocolDescriptor): string => {
     &:focus-visible {
       outline: none;
 
-      .protocols__disclosure_title {
+      .zodiac__disclosure_title {
         color: $color-white;
       }
+    }
+  }
+
+  &__chevron {
+    flex: none;
+    color: $color-steel-blue;
+    transition: transform $default-transition-time ease;
+
+    &--open {
+      transform: rotate(180deg);
     }
   }
 
@@ -869,39 +932,315 @@ const protocolMeta = (descriptor: IProtocolDescriptor): string => {
     color: $color-steel-blue;
   }
 
-  &__disclosure_summary {
-    font-size: 12px;
-    line-height: 1.4;
-    color: $color-steel-blue;
-    opacity: 0.75;
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.25rem 0.875rem 0.875rem;
   }
 
-  &__preview {
+  &__steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
     margin: 0;
-    padding: 0 1rem 0.75rem;
+    padding: 0;
     list-style: none;
   }
 
-  &__preview_note {
-    padding: 0 1rem 0.75rem;
-    font-size: 11.5px;
+  &__step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    font-size: 13px;
     line-height: 1.5;
-    color: $color-steel-blue;
+    color: $color-white;
   }
 
-  &__preview_row {
-    padding: 0.25rem 0;
+  &__step_number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 20px;
+    height: 20px;
+    margin-top: 1px;
+    border: 1px solid $color-cyan-line;
+    border-radius: 999px;
     font-family: $font-mono;
     font-size: 11px;
-    line-height: 1.5;
-    color: $color-steel-blue;
-    word-break: break-word;
+    color: $color-cyan;
+  }
 
-    & + & {
-      border-top: 1px solid $color-line;
+  &__step_text {
+    min-width: 0;
+  }
+
+  /* A Zodiac sidebar entry, quoted: its icon and its word in a small chip,
+     so the step points at something recognisable over there. */
+  &__nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    vertical-align: baseline;
+    margin: 0 0.125rem;
+    padding: 0.0625rem 0.4375rem 0.0625rem 0.3125rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: $color-gray-light-transparent;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: $color-white;
+    white-space: nowrap;
+  }
+
+  &__nav_icon {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    color: $color-secondary;
+  }
+
+  /* The address to paste into Zodiac, on its own line so it can be read
+     and copied whole. */
+  &__safe {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+  }
+
+  &__safe_address {
+    font-family: $font-mono;
+    font-size: 11.5px;
+    color: $color-cyan;
+    word-break: break-all;
+
+    &--pending {
+      color: $color-steel-blue;
     }
   }
 
+  &__copy {
+    flex: none;
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    cursor: pointer;
+    transition: color $default-transition-time ease;
 
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      color: $color-white;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__row,
+    &__open,
+    &__chevron,
+    &__copy {
+      transition: none;
+    }
+  }
+}
+
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  /* The modal's title expects an eyebrow above it; without one, the gap
+     it leaves for that would just be a title sitting low in its head. */
+  &__title {
+    margin-top: 0;
+  }
+
+  &__lead {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  &__section_head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  &__eyebrow {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__count {
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-steel-blue;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 12px;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: $color-card-background;
+
+    &:focus-within {
+      border-color: $color-accent-line;
+    }
+  }
+
+  &__search_icon {
+    flex: none;
+    color: $color-steel-blue;
+  }
+
+  /* The app's global input rule sets a height and padding on every bare
+     input, so all three are set here rather than only the one. */
+  &__search_input {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 2.25rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: $font-mono;
+    font-size: 12.5px;
+    line-height: 1.3;
+    color: $color-white;
+
+    &::placeholder {
+      color: $color-steel-blue;
+    }
+    &:focus {
+      outline: none;
+    }
+    // The native clear affordance is a light glyph on a dark field.
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+
+  &__search_clear {
+    flex: none;
+    border: none;
+    background: none;
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-white;
+    }
+  }
+
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+  }
+
+  &__row + &__row {
+    border-top: 1px solid $color-line;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 0.875rem;
+    border: none;
+    background: none;
+    text-align: left;
+    color: $color-white;
+    cursor: pointer;
+    transition: background-color $default-transition-time ease;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+      outline: none;
+      background: $color-gray-light-transparent;
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+  }
+
+  &__item_text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__item_name {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  &__item_meta {
+    font-family: $font-mono;
+    font-size: 11px;
+    line-height: 1.4;
+    color: $color-steel-blue;
+  }
+
+  &__item_plus {
+    flex: none;
+    font-size: 18px;
+    color: $color-steel-blue;
+  }
+
+  &__badge {
+    flex: none;
+    padding: 0.125rem 0.375rem;
+    border: 1px solid $color-cyan-line;
+    border-radius: $default-border-radius;
+    font-family: $font-mono;
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-cyan;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__item {
+      transition: none;
+    }
+  }
 }
 </style>

@@ -29,9 +29,18 @@
             <template #option="{ option }">
               <IconChain :chain-id="(option.value as ChainId)" :size="20" />
               <span class="create__chain_option">{{ option.label }}</span>
-              <!-- Drafts are per chain, so without this the only way to find
-                   one is to switch to every network and look. -->
-              <span v-if="option.hasDraft" class="create__chain_draft">Draft</span>
+              <!-- Drafts and initialized vaults are both per chain, so without
+                   these the only way to find either is to switch to every
+                   network and look. Initialization clears the draft, so a chain
+                   only ever earns one of the two markers. -->
+              <span
+                v-if="option.isInitialized"
+                class="create__chain_tag"
+              >Initialized</span>
+              <span
+                v-else-if="option.hasDraft"
+                class="create__chain_tag"
+              >Draft</span>
             </template>
           </OnboardingSelectMenu>
           <!-- Reports rather than acts. The draft is written on every change,
@@ -55,6 +64,9 @@
 
       <div v-if="isFundInitialized" class="create__banner">
         <span class="create__banner_badge">Initialized</span>
+        <!-- Only the legacy version is announced. The toggle that chose it is
+             gone by now, so this is the one place the answer still shows. -->
+        <span v-if="isLegacyRolesVault" class="create__banner_badge">Roles V1</span>
         <span>
           Vault has been initialized already and cannot be edited. You can add
           permissions &amp; NAV methods and finalize vault creation.
@@ -163,8 +175,7 @@
 
           <div v-if="showRolesToggle" class="create__roles">
             <OnboardingToggle
-              v-model="rolesToggleValue"
-              :disabled="isFundInitialized"
+              v-model="useLegacyRolesV1"
               label="Use legacy Roles V1"
             />
             <span class="create__roles_label">Use legacy Roles V1</span>
@@ -424,6 +435,15 @@ const fetchFundInitCache = async () => {
     if (fundInitCache?.value) {
       createFundStore.clearFundLocalStorage();
       refreshChainDrafts();
+      // This chain has just proved it holds an initialized vault, so record it
+      // rather than waiting for the next full probe — otherwise initializing
+      // during a session swaps the Draft marker for nothing until a reload.
+      if (!chainsWithInitializedVaults.value.includes(selectedChainId.value)) {
+        chainsWithInitializedVaults.value = [
+          ...chainsWithInitializedVaults.value,
+          selectedChainId.value,
+        ];
+      }
     }
   } else {
     createFundStore.clearFundInitCache();
@@ -510,10 +530,92 @@ const goToStep = (target: number) => {
  */
 const chainsWithDrafts = ref<ChainId[]>([]);
 
+/**
+ * The chain the curator last worked on, so the flow reopens where they left off
+ * rather than on whichever chain happens to sort first. Written on an explicit
+ * switch and on every draft save — typing into a chain is working on it just as
+ * much as picking it from the menu is.
+ */
+const LAST_CHAIN_STORAGE_KEY = "onboardingLastSelectedChainId";
+
+const rememberChain = (chainId: ChainId) => {
+  setLocalStorageItem(LAST_CHAIN_STORAGE_KEY, chainId);
+};
+
 const refreshChainDrafts = () => {
   chainsWithDrafts.value = getChainDrafts()
     .filter((chain) => chain.hasDrafts)
     .map((chain) => chain.chainId);
+};
+
+/**
+ * Which chains the connected wallet already has an initialized vault on. A
+ * draft is local, but this is on-chain state, so it costs one call per chain
+ * and only means anything once a wallet is connected — the marker is simply
+ * absent until then rather than wrong.
+ */
+const chainsWithInitializedVaults = ref<ChainId[]>([]);
+
+/**
+ * The same zero-address test fetchFundInitCacheAction makes, without the
+ * governor/metadata/token round trips that follow it there: this only has to
+ * answer "is there one", for a row in a dropdown.
+ *
+ * Failures are swallowed per chain. An RPC that is down should cost that chain
+ * its marker, not the whole list.
+ */
+const probeChainInitialized = async (chainId: ChainId): Promise<boolean> => {
+  const contracts = web3Store.chainContracts[chainId];
+  const deployer = accountStore.activeAccountAddress;
+  if (!deployer) return false;
+
+  // V1.5 first, then V1 — the order fetchFundInitCacheAction resolves them in.
+  // Polygon has no V1.5 factory, so that entry is null there.
+  for (const factory of [
+    contracts?.fundFactoryContractV2,
+    contracts?.fundFactoryContract,
+  ]) {
+    if (!factory) continue;
+    try {
+      const cache = await web3Store.callWithRetry(
+        chainId,
+        () => factory.methods.getFundInitializationCache(deployer).call(),
+        0,
+        [205, undefined, -32000],
+      );
+      if (cache?.fundContractAddr && !isZeroAddress(cache.fundContractAddr)) {
+        return true;
+      }
+    } catch {
+      // Try the older factory before giving up on this chain.
+    }
+  }
+  return false;
+};
+
+const refreshChainInitialized = async () => {
+  if (!accountStore.activeAccountAddress) {
+    chainsWithInitializedVaults.value = [];
+    return;
+  }
+
+  // Same opt-in as the discover fetch: without a node on :8545 this would spend
+  // its timeout on every visit for a chain almost nobody is running.
+  const probeChainIds = chainIdValues.value.filter(
+    (chainId: ChainId) =>
+      chainId !== ChainId.LOCAL_NODE ||
+      localStorage.getItem("includeLocalNode") === "true",
+  );
+
+  const results = await Promise.all(
+    probeChainIds.map(async (chainId: ChainId) => ({
+      chainId,
+      isInitialized: await probeChainInitialized(chainId),
+    })),
+  );
+  chainsWithInitializedVaults.value = results
+    .filter((result) => result.isInitialized)
+    .map((result) => result.chainId);
 };
 
 const chainOptions = computed(() =>
@@ -521,6 +623,7 @@ const chainOptions = computed(() =>
     value: network.chainId,
     label: network.chainName,
     hasDraft: chainsWithDrafts.value.includes(network.chainId),
+    isInitialized: chainsWithInitializedVaults.value.includes(network.chainId),
   })),
 );
 
@@ -578,6 +681,7 @@ const onChainSelected = (chainId: ChainId) => {
   flushDraft();
 
   selectedChainId.value = chainId;
+  rememberChain(chainId);
 };
 
 const handleClearCache = () => {
@@ -682,12 +786,14 @@ const useV2Contract = computed(
 
 /**
  * The toggle decides which factory initializes the vault, so it has to be
- * reachable on the step that initializes; the design also shows it beside the
- * permissions action, where it reports which roles version the vault ended up
- * on. Locked once initialized, in both places.
+ * reachable on the steps that lead up to initializing — and only until then.
+ * Once a vault exists the choice has already been made and cannot be unmade, so
+ * a control here would be offering a decision that is no longer available; the
+ * banner reports the outcome instead.
  */
 const showRolesToggle = computed(
   () =>
+    !isFundInitialized.value &&
     fundFactoryContractV2AddressExists.value &&
     [OnboardingStep.Governance, OnboardingStep.Permissions].includes(
       currentStepKey.value,
@@ -695,23 +801,18 @@ const showRolesToggle = computed(
 );
 
 /**
- * What the toggle shows. Before initialization it is the curator's own choice;
- * afterwards it reports the vault that exists, read off the factory it actually
- * came from — a draft preference would otherwise keep being displayed as fact
- * on a vault someone else, or an earlier session, deployed.
+ * Whether the deployed vault came out on the legacy modifier. V2 is what every
+ * new vault gets — the toggle is an opt-out, not an opt-in — so a "Roles V2"
+ * badge would sit on almost every vault carrying no information; only the
+ * exception is worth marking.
  *
- * The setter only ever runs before initialization: the control is disabled once
- * there is a vault to disagree with.
+ * Read off the factory that returned the init cache rather than from the
+ * toggle, whose value is a draft preference and would otherwise be reported as
+ * fact on a vault an earlier session, or someone else, deployed.
  */
-const rolesToggleValue = computed({
-  get: () =>
-    isFundInitialized.value
-      ? !createFundStore.fundFactoryContractV2Used
-      : useLegacyRolesV1.value,
-  set: (value: boolean) => {
-    useLegacyRolesV1.value = value;
-  },
-});
+const isLegacyRolesVault = computed(
+  () => isFundInitialized.value && !createFundStore.fundFactoryContractV2Used,
+);
 
 /**
  * Permissions and NAV methods both send transactions of their own and are then
@@ -1356,6 +1457,11 @@ const writeDraftToLocalStorage = () => {
       isWhitelistedDeposits: isWhitelistedDeposits.value,
     },
   );
+
+  // Typing into a chain counts as working on it, not just picking it from the
+  // menu — otherwise a session spent entirely on one chain would never update
+  // this and the next visit would reopen wherever the last explicit switch was.
+  rememberChain(fundChainId.value);
 };
 
 const getChainDrafts = () => {
@@ -1376,8 +1482,24 @@ const setDefaultSelectedChainId = () =>{
     const chainWithDraftConnectedWallet = chainDrafts.find((chain) => chain.hasDrafts && chain.chainId === accountStore.connectedWalletChainId);
     const chainWithDraft = chainDrafts.find((chain) => chain.hasDrafts);
 
+    // The chain last worked on, when it is still one we offer. Ahead of every
+    // heuristic below because it is a record of what the curator actually did,
+    // where the rest are guesses standing in for one. Deliberately not checked
+    // against drafts: a chain whose vault is initialized has no draft left, and
+    // it is exactly the chain most worth reopening.
+    // Explicit undefined default: getLocalStorageItem returns {} for a missing
+    // key, which is truthy and would lean on the includes() below to catch it.
+    const lastChainId = getLocalStorageItem(
+      LAST_CHAIN_STORAGE_KEY,
+      undefined,
+    ) as ChainId | undefined;
+
+    // 0. reopen where the curator left off
+    if (lastChainId && chainIdValues?.value?.includes(lastChainId)) {
+      selectedChainId.value = lastChainId;
+    }
     // 1. try to set the chain with draft and connected wallet
-    if (chainWithDraftConnectedWallet) {
+    else if (chainWithDraftConnectedWallet) {
       selectedChainId.value = chainWithDraftConnectedWallet.chainId;
     }
     // 2. try to set the chain with draft
@@ -1434,6 +1556,9 @@ watch(isFundInitialized, (initialized) => {
 watch(() => accountStore.activeAccountAddress, () => {
   stepperEntry.value = initStepperEntry();
   fetchFundInitCache();
+  // Initialized vaults are per deployer, so the markers belong to the wallet
+  // that was connected when they were read, not to the browser.
+  refreshChainInitialized();
 });
 
 watch(()=> accountStore.connectedWalletChainId, (_newVal, oldVal) =>{
@@ -1499,6 +1624,9 @@ onMounted(() => {
   // screen instead of an empty form sitting on top of one.
   stepperEntry.value = initStepperEntry();
   fetchFundInitCache();
+  // Not awaited: the dropdown is usable without the markers, and this is one
+  // call per chain against RPCs that may be slow or down.
+  refreshChainInitialized();
 });
 
 // A tab closed or reloaded mid-edit still gets the last 600ms of work.
@@ -1557,11 +1685,14 @@ onBeforeUnmount(() => flushDraft());
   }
 
   /* Reads as a marker on the row, not as an action: no border, no hit area,
-     just the one word that says there is something waiting on that chain. */
-  &__chain_draft {
+     just the one word that says there is something waiting on that chain.
+     Draft and Initialized share it — the word carries the difference, so a
+     second colour would only add noise to a menu that is already one column
+     of chain names. */
+  &__chain_tag {
     flex: none;
     font-family: $font-mono;
-    font-size: 9.5px;
+    font-size: 8.5px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: $color-cyan;

@@ -1,456 +1,453 @@
 <template>
-  <v-skeleton-loader v-if="loading" type="table" />
-  <v-data-table
-    v-else-if="groupedMethods.length"
-    v-model="selected"
-    v-model:expanded="expanded"
-    :headers="headers"
-    :items="groupedMethods"
-    :cell-props="methodProps"
-    class="main_table nav_entries"
-    :show-expand="settingsStore.isManageMode"
-    :search="search"
-    :expand-on-click="settingsStore.isManageMode"
-    item-value="detailsHash"
-    :show-select="selectable"
-    items-per-page="-1"
-    @input="onSelectionChanged"
-    @update:expanded="onExpandedUpdate"
-    @click:row="onRowClick"
+  <div
+    class="nav_table"
+    :class="{
+      'nav_table--frameless': frameless,
+      'nav_table--compact': compact,
+      'nav_table--wide': !compact && showLastNavUpdateValue && showSimulatedNav,
+    }"
   >
+    <div v-if="loading" class="nav_table__placeholder">
+      <v-progress-circular size="16" width="2" indeterminate />
+      Loading NAV methods…
+    </div>
 
-    <!-- template for header simulated  -->
-    <template #[`header.pastNavValue`]>
-      Last NAV Update
-      <div v-if="showSummaryRow && showLastNavUpdateValue" class="text-right">
-        {{ formattedTotalLastNAV }}
-      </div>
-    </template>
-    <template #[`header.simulatedNavFormatted`]>
-      <th>
-        <div class="d-flex">
-          Simulated NAV
-          <FundNavSimulateButton class="ms-1" />
-        </div>
-        <div v-if="showSummaryRow && showSimulatedNav" class="bottom">
-          <div class="text-right">
-            {{ formattedTotalSimulatedNAV }}
-            <div
-              v-if="simulatedNavErrorCount > 0"
-              class="ms-2 justify-center align-center d-flex"
+    <div v-else class="nav_table__scroll">
+      <div class="nav_table__inner" :style="{ '--nav-columns': gridColumns }">
+        <div class="nav_table__row nav_table__row--head">
+          <div v-if="selectable" class="nav_table__th" />
+          <div v-if="!compact" class="nav_table__th">
+            #
+          </div>
+          <div class="nav_table__th">
+            Method
+          </div>
+          <div class="nav_table__th">
+            Position
+          </div>
+          <div v-if="!compact" class="nav_table__th">
+            Valuation source
+          </div>
+          <div
+            v-if="showLastNavUpdateValue"
+            class="nav_table__th nav_table__th--right"
+          >
+            Last update
+          </div>
+          <div
+            v-if="showSimulatedNav"
+            class="nav_table__th nav_table__th--right"
+          >
+            <span>Simulated</span>
+            <!-- Re-runs every method's simulation. The values are read from
+                 chain state at the moment they were asked for, so a curator
+                 who just moved funds wants a way to ask again. -->
+            <button
+              v-if="showSimulateButton"
+              type="button"
+              class="nav_table__refresh"
+              :class="{ 'nav_table__refresh--busy': isNavSimulationLoading }"
+              title="Refresh simulated NAV"
+              aria-label="Refresh simulated NAV"
+              @click="fundStore.refreshSimulateNAVCounter += 1"
             >
               <Icon
-                icon="octicon:question-16"
-                width="1rem"
-                font-bold
-                color="var(--color-danger)"
+                icon="material-symbols:refresh-rounded"
+                width="0.9375rem"
+                height="0.9375rem"
               />
-              <v-tooltip activator="parent" location="bottom">
-                Total value may not include all simulated NAV method values.<br>
-                Retry simulating NAV.
+            </button>
+          </div>
+          <div v-if="showExpand" class="nav_table__th" />
+          <div v-if="deletable" class="nav_table__th" />
+        </div>
+
+        <div
+          v-for="(row, index) in visibleMethods"
+          :key="rowKey(row, index)"
+          class="nav_table__group"
+        >
+          <div
+            class="nav_table__row nav_table__row--method"
+            :class="{
+              'nav_table__row--clickable': showExpand && !row.isAlreadyUsed,
+              'nav_table__row--open': isExpanded(row),
+              'nav_table__row--deleted': row.deleted,
+              'nav_table__row--used': row.isAlreadyUsed,
+            }"
+            @click="showExpand ? toggleExpand(row) : undefined"
+          >
+            <div
+              v-if="selectable"
+              class="nav_table__cell"
+              @click.stop
+            >
+              <span v-if="row.isAlreadyUsed" class="nav_table__tag">In use</span>
+              <button
+                v-else
+                type="button"
+                role="checkbox"
+                class="nav_table__check"
+                :class="{ 'nav_table__check--on': isSelected(row) }"
+                :aria-checked="isSelected(row)"
+                :aria-label="`Select ${row.positionName || 'method'}`"
+                @click="toggleSelect(row)"
+              >
+                <Icon
+                  v-if="isSelected(row)"
+                  icon="material-symbols:check-rounded"
+                  width="0.75rem"
+                  height="0.75rem"
+                />
+              </button>
+            </div>
+
+            <div
+              v-if="!compact"
+              class="nav_table__index"
+              :class="{
+                'nav_table__index--new': row.isNew && !row.deleted,
+                'nav_table__index--deleted': row.deleted,
+              }"
+            >
+              {{ index + 1 }}
+            </div>
+
+            <div class="nav_table__name">
+              <span class="nav_table__name_text">{{ row.positionName || "N/A" }}</span>
+              <span v-if="row.deleted" class="nav_table__tag nav_table__tag--neg">Deleted</span>
+              <span v-else-if="row.isNew" class="nav_table__tag nav_table__tag--new">New</span>
+              <!-- Compact has no source column; the source rides under the name. -->
+              <span v-if="compact" class="nav_table__name_meta">
+                {{ row.valuationSource || "N/A" }}
+              </span>
+            </div>
+
+            <div
+              class="nav_table__type"
+              :class="`position_type_${row.displayPositionType || row.positionType}`"
+            >
+              {{ positionTypeName(row) }}
+            </div>
+
+            <div v-if="!compact" class="nav_table__source">
+              {{ row.valuationSource || "N/A" }}
+            </div>
+
+            <div
+              v-if="showLastNavUpdateValue"
+              class="nav_table__figure nav_table__figure--dim"
+              :class="{ 'nav_table__figure--error': row.pastNavValueError }"
+            >
+              <v-progress-circular
+                v-if="row.pastNavValueLoading"
+                size="14"
+                width="2"
+                indeterminate
+              />
+              <template v-else>
+                {{ row.pastNavValue ? fundStore.getFormattedBaseTokenValue(row.pastNavValue) : "-" }}
+              </template>
+              <span v-if="row.pastNavValueError" class="nav_table__warn">
+                <Icon icon="octicon:question-16" width="0.875rem" />
+                <v-tooltip activator="parent" location="top">
+                  Something went wrong while getting the last NAV value.
+                </v-tooltip>
+              </span>
+            </div>
+
+            <div
+              v-if="showSimulatedNav"
+              class="nav_table__figure"
+              :class="{ 'nav_table__figure--error': row.isSimulatedNavError }"
+            >
+              <v-progress-circular
+                v-if="isSimulationPending(row)"
+                size="14"
+                width="2"
+                indeterminate
+              />
+              <template v-else>
+                {{ row.simulatedNavFormatted ?? "-" }}
+              </template>
+              <span v-if="row.isSimulatedNavError" class="nav_table__warn">
+                <Icon icon="octicon:question-16" width="0.875rem" />
+                <v-tooltip activator="parent" location="top">
+                  Something went wrong while simulating NAV value. Retry simulating NAV.
+                </v-tooltip>
+              </span>
+              <v-tooltip
+                v-else-if="row.pastNAVUpdateEntryFundAddress"
+                activator="parent"
+                location="top"
+              >
+                Simulated from vault {{ row.pastNAVUpdateEntryFundAddress }}
               </v-tooltip>
             </div>
-          </div>
-        </div>
-      </th>
-    </template>
-    <template #[`item.index`]="{ index }">
-      <strong class="td_index">{{ index + 1 }}</strong>
-    </template>
 
-    <template #[`item.positionName`]="{ value }">
-      {{ value ?? 'N/A' }}
-    </template>
-
-    <template #[`item.valuationSource`]="{ value, item }">
-      <Logo v-if="item.isRethinkPosition" small />
-      <template v-else>
-        {{ value ?? 'N/A' }}
-      </template>
-    </template>
-
-    <template #[`item.positionType`]="{  item }">
-      <UiPositionTypeBadge
-        :value="item.displayPositionType || item.positionType"
-        :disabled="item.deleted || item.isAlreadyUsed"
-      />
-    </template>
-    <template #[`item.pastNavValue`]="{ value, item }">
-      <div :class="`item-simulated-nav ${item.pastNavValueError ? 'item-simulated-nav--error' : ''}`">
-        <div v-if="item.pastNavValueLoading">
-          <v-progress-circular
-            indeterminate
-            color="gray"
-            size="16"
-            width="2"
-          />
-        </div>
-        <div v-else>
-          {{ value ? fundStore.getFormattedBaseTokenValue(value) : '-' }}
-        </div>
-        <div
-          v-if="item.pastNavValueError"
-          class="ms-2 justify-center align-center d-flex"
-        >
-          <Icon icon="octicon:question-16" width="1rem" />
-          <v-tooltip activator="parent" location="right">
-            Something went wrong while getting the last NAV value.
-          </v-tooltip>
-        </div>
-      </div>
-    </template>
-
-    <template #[`item.simulatedNavFormatted`]="{ value, item }">
-      <div :class="`item-simulated-nav ${item.isSimulatedNavError ? 'item-simulated-nav--error' : ''}`">
-        <div v-if="item.isNavSimulationLoading">
-          <v-progress-circular
-            indeterminate
-            color="gray"
-            size="16"
-            width="2"
-          />
-        </div>
-        <div v-else>
-          {{ value ?? '-' }}
-        </div>
-        <div
-          v-if="item.pastNAVUpdateEntryFundAddress || item.isSimulatedNavError"
-          class="ms-2 justify-center align-center d-flex"
-        >
-          <v-tooltip activator="parent" location="right">
-            <template v-if="item.isSimulatedNavError">
-              Something went wrong while simulating NAV value. Retry simulating NAV.
-            </template>
-            <template v-else>
-              pastNAVUpdateEntryFundAddress: <br> <strong>{{ item.pastNAVUpdateEntryFundAddress }}</strong>
-            </template>
-          </v-tooltip>
-        </div>
-      </div>
-    </template>
-
-    <template #[`item.data-table-expand`]="{ item, internalItem, isExpanded, toggleExpand }">
-      <UiButtonDetails
-        v-if="item.detailsJson"
-        :text="isBaseTokenBalanceMethod(item) ? 'Raw' : 'Details'"
-        :active="isExpanded(internalItem)"
-        :disabled="item.deleted || item.isAlreadyUsed"
-        @click.stop="toggleExpand(internalItem)"
-        @click.native="isBaseTokenBalanceMethod(item) ? null : setNavEntry(item)"
-      />
-    </template>
-
-    <template #[`item.data-table-select`]="{ item, internalItem, isSelected, toggleSelect }">
-      <div v-if="item.isAlreadyUsed">
-        <UiTextBadge value="In Use" :disabled="item.isAlreadyUsed" />
-      </div>
-      <v-checkbox-btn
-        v-else
-        :model-value="isSelected(internalItem)"
-        @click.stop="toggleSelect(internalItem)"
-      />
-    </template>
-
-    <template #[`item.delete`]="{ item }">
-      <!-- Rethink Position such as fund, safe, fees cannot be deleted -->
-      <UiButtonDetails
-        v-if="!item.isRethinkPosition"
-        small
-        @click.stop="deleteMethod(item)"
-      >
-        <v-tooltip v-if="item.deleted" activator="parent" location="bottom">
-          <template #default>
-            Undo Delete
-          </template>
-          <template #activator="{ props }">
-            <v-icon
-              icon="mdi-arrow-u-left-top"
-              color="secondary"
-              v-bind="props"
-            />
-          </template>
-        </v-tooltip>
-
-        <v-tooltip v-else activator="parent" location="bottom">
-          <template #default>
-            Delete NAV Method
-          </template>
-          <template #activator="{ props }">
-            <v-icon
-              icon="mdi-delete-outline"
-              color="error"
-              v-bind="props"
-            />
-          </template>
-        </v-tooltip>
-      </UiButtonDetails>
-    </template>
-
-    <template #expanded-row="{ columns, item }">
-      <tr v-if="item.isGroupedBaseAssets" class="tr_row_expanded">
-        <td :colspan="columns.length">
-          <v-data-table
-            v-model:expanded="expandedBaseAssets"
-            :items="item.detailsJson"
-            :headers="headers"
-            :show-expand="settingsStore.isManageMode"
-            item-value="detailsHash"
-            :hide-default-footer="true"
-            @update:expanded="onExpandedBaseAssetsUpdate"
-          >
-            <template #[`header.pastNavValue`]>
-              Last NAV Update
-              <div class="text-right">
-                {{ fundStore.getFormattedBaseTokenValue(item.pastNavValue || 0n, true, false, baseSymbol, baseDecimals) }}
-              </div>
-            </template>
-            <template #[`header.simulatedNavFormatted`]>
-              Simulated NAV
-              <div class="text-right">
-                {{ item.simulatedNavFormatted }}
-              </div>
-            </template>
-
-            <template #[`item.index`]="{ index }">
-              <strong class="td_index">1.{{ index + 1 }}</strong>
-            </template>
-
-            <template #[`item.valuationSource`]="{ value, item: itemBaseAsset }">
-              <Logo v-if="(itemBaseAsset as any).isRethinkPosition" small />
-              <template v-else>
-                {{ value ?? 'N/A' }}
-              </template>
-            </template>
-            <template #[`item.pastNavValue`]="{ value }">
-              {{ fundStore.getFormattedBaseTokenValue(value) }}
-            </template>
-
-            <template #[`item.positionType`]="{ item: itemBaseAsset }">
-              <UiPositionTypeBadge
-                :value="(itemBaseAsset as any).displayPositionType || (itemBaseAsset as any).positionType"
-                :disabled="(itemBaseAsset as any).deleted || (itemBaseAsset as any).isAlreadyUsed"
-              />
-            </template>
-
-            <template #[`item.data-table-expand`]="{ item:itemBaseAsset, internalItem, isExpanded, toggleExpand }">
-              <UiButtonDetails
-                v-if="(itemBaseAsset as any).detailsJson"
-                text="Raw"
-                :active="isExpanded(internalItem)"
-                @click.stop="toggleExpand(internalItem)"
-              />
-            </template>
-
-            <template #expanded-row="{ columns:columnsBaseAsset, item:itemBaseAsset }">
-              <tr v-if="item.detailsJson" class="tr_row_expanded">
-                <td :colspan="columnsBaseAsset.length">
-                  <div class="nav_entries__json">
-                    {{ (itemBaseAsset as any).detailsJson }}
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </v-data-table>
-        </td>
-      </tr>
-
-      <tr v-else-if="item.detailsJson" class="tr_row_expanded" :class="{'tr_delete_method': item.deleted }">
-        <td :colspan="columns.length" class="pa-0">
-          <div class="nav_entries__details">
-            <div v-if="!item.isRethinkPosition" :class="['detail_hash', {'has-changed': hasChanged()}]" @click="copyText(item.detailsHash)">
-              <ui-tooltip-click>
-                Details Hash: {{ item.detailsHash }}
-                <Icon
-                  icon="clarity:copy-line"
-                  class="section-top__copy-icon"
-                  width="0.8rem"
-                />
-
-                <template #tooltip>
-                  Copied!
-                </template>
-              </ui-tooltip-click>
+            <div v-if="showExpand" class="nav_table__cell nav_table__cell--end">
+              <button
+                v-if="row.detailsJson"
+                type="button"
+                class="nav_table__action"
+                :class="{ 'nav_table__action--active': isExpanded(row) }"
+                :disabled="row.isAlreadyUsed"
+                @click.stop="toggleExpand(row)"
+              >
+                {{ isBaseTokenBalanceMethod(row) ? "Raw" : "Details" }}
+              </button>
             </div>
 
-            <!-- form goes here -->
+            <div v-if="deletable" class="nav_table__cell nav_table__cell--end">
+              <!-- Rethink positions (fund, safe, fees) cannot be deleted. -->
+              <button
+                v-if="!row.isRethinkPosition"
+                type="button"
+                class="nav_table__action"
+                :class="{ 'nav_table__action--danger': !row.deleted }"
+                @click.stop="deleteMethod(row)"
+              >
+                {{ row.deleted ? "Undo" : "Delete" }}
+              </button>
+            </div>
+          </div>
+
+          <div
+            v-if="isExpanded(row) && row.detailsJson"
+            class="nav_table__panel"
+            :class="{ 'nav_table__panel--deleted': row.deleted }"
+          >
+            <button
+              v-if="!row.isRethinkPosition"
+              type="button"
+              class="nav_table__hash"
+              :class="{ 'nav_table__hash--changed': hasChanged() }"
+              :title="copiedHash === row.detailsHash ? 'Copied' : 'Copy details hash'"
+              @click="copyHash(row.detailsHash)"
+            >
+              <span class="nav_table__hash_label">Details hash</span>
+              <span class="nav_table__hash_value">{{ row.detailsHash }}</span>
+              <Icon
+                :icon="copiedHash === row.detailsHash ? 'material-symbols:check-rounded' : 'clarity:copy-line'"
+                width="0.8rem"
+              />
+            </button>
+
             <v-form
-              v-if="!isBaseTokenBalanceMethod(item)"
+              v-if="!isBaseTokenBalanceMethod(row)"
               ref="form"
               v-model="formIsValid"
-              :disabled="!isMethodEditable(item)"
+              class="nav_edit"
+              :disabled="!isMethodEditable(row)"
             >
-              <v-row>
-                <v-col cols="12" sm="6">
-                  <v-label class="label_required mb-2">
-                    Position Name
-                  </v-label>
+              <div class="nav_edit__grid">
+                <div class="nav_edit__field">
+                  <span class="nav_edit__label">
+                    Position name<span class="nav_edit__star">*</span>
+                  </span>
                   <v-text-field
                     v-model="navEntry.positionName"
                     placeholder="E.g. WETH"
                     :rules="rules"
                     required
                   />
-                </v-col>
-                <v-col cols="12" sm="6">
-                  <v-label class="label_required mb-2">
-                    Valuation Source
-                  </v-label>
+                </div>
+                <div class="nav_edit__field">
+                  <span class="nav_edit__label">
+                    Valuation source<span class="nav_edit__star">*</span>
+                  </span>
                   <v-text-field
                     v-model="navEntry.valuationSource"
                     placeholder="E.g. Uniswap ETH/USDC"
                     :rules="rules"
                     required
                   />
-                </v-col>
-              </v-row>
+                </div>
+              </div>
 
-              <v-row>
-                <v-col cols="12" sm="6">
-                  <v-label class="mb-2">
-                    Position Type
-                  </v-label>
-                  <UiButtonSwitchItems
-                    v-model="navEntry.positionType"
-                    :items="parsedPositionTypeItems"
-                    :disabled="!isMethodEditable(item)"
-                    @update:model-value="navEntry.positionType = $event"
+              <div class="nav_edit__grid">
+                <div class="nav_edit__field">
+                  <span class="nav_edit__label">Position type</span>
+                  <UiSegmented
+                    :model-value="navEntry.positionType"
+                    :options="parsedPositionTypeItems"
+                    :class="{ 'nav_edit__segmented--locked': !isMethodEditable(row) }"
+                    @update:model-value="onPositionTypeChange"
                   />
-                </v-col>
-                <v-col v-if="valuationTypes.length" cols="12" sm="6">
-                  <v-label class="mb-2">
-                    Valuation Type
-                  </v-label>
-                  <UiButtonSwitchItems
-                    v-model="navEntry.valuationType"
-                    :items="parsedValuationTypeItems"
-                    @update:model-value="navEntry.valuationType = $event"
+                </div>
+                <div v-if="valuationTypes.length" class="nav_edit__field">
+                  <span class="nav_edit__label">Valuation type</span>
+                  <UiSegmented
+                    :model-value="navEntry.valuationType"
+                    :options="parsedValuationTypeItems"
+                    :class="{ 'nav_edit__segmented--locked': !isMethodEditable(row) }"
+                    @update:model-value="onValuationTypeChange"
                   />
-                </v-col>
-              </v-row>
+                </div>
+              </div>
 
-              <v-row class="mt-10">
-                <v-col>
-                  <strong>Method Details</strong>
-                </v-col>
-              </v-row>
+              <div class="nav_edit__section">
+                Method details
+              </div>
 
-              <v-row>
-                <template
-                  v-if="navEntry.positionType === PositionType.Composable"
-                >
-                  <v-col>
-                    <v-expansion-panels v-model="expandedPanels">
-                      <v-expansion-panel
-                        v-for="(method, index) in navEntry.details[
-                          navEntry.positionType
-                        ]"
-                        :key="index"
-                        eager
-                      >
-                        <v-expansion-panel-title static>
-                          <div class="method_details_title">
-                            <span>
-                              <strong class="me-1">{{ index + 1 }})</strong>
-                              METHOD DETAILS
-                            </span>
-                            <UiTextBadge
-                              class="method_details_status"
-                              :class="{
-                                'method_details_status--valid': method.isValid,
-                              }"
-                            >
-                              <template v-if="method.isValid">
-                                Provided
-                                <Icon
-                                  icon="octicon:check-circle-16"
-                                  height="1.2rem"
-                                  width="1.2rem"
-                                />
-                              </template>
-                              <template v-else>
-                                Incomplete
-                                <Icon
-                                  icon="pajamas:error"
-                                  height="1.2rem"
-                                  width="1.2rem"
-                                />
-                              </template>
-                            </UiTextBadge>
-
-                            <UiButtonDetails
-                              v-if="isMethodEditable(item)"
-                              small
-                              @click.stop="deleteEditMethod(index)"
-                            >
-                              <v-icon icon="mdi-delete" color="error" />
-                            </UiButtonDetails>
-                          </div>
-                        </v-expansion-panel-title>
-                        <v-expansion-panel-text>
-                          <FundNavMethodDetails
-                            v-model="
-                              navEntry.details[navEntry.positionType][index]
-                            "
-                            :position-type="navEntry.positionType"
-                            :valuation-type="navEntry.valuationType"
-                            :validate-on-mount="true"
-                          />
-                        </v-expansion-panel-text>
-                      </v-expansion-panel>
-                    </v-expansion-panels>
-                  </v-col>
-                </template>
-
-                <template v-else>
-                  <FundNavMethodDetails
-                    v-model="navEntry.details[navEntry.positionType][0]"
-                    :position-type="navEntry.positionType"
-                    :valuation-type="navEntry.valuationType"
-                  />
-                </template>
-              </v-row>
-
-              <v-row v-if="navEntry.positionType === PositionType.Composable && isMethodEditable(item)">
-                <v-col class="text-center">
-                  <v-btn
-                    class="text-secondary"
-                    variant="outlined"
-                    @click="addEditMethodDetails"
+              <template v-if="navEntry.positionType === PositionType.Composable">
+                <v-expansion-panels v-model="expandedPanels" class="nav_edit__panels">
+                  <v-expansion-panel
+                    v-for="(method, methodIndex) in navEntry.details[navEntry.positionType]"
+                    :key="methodIndex"
+                    eager
                   >
-                    <template #append>
-                      <Icon
-                        icon="octicon:plus-circle-16"
-                        height="1.2rem"
-                        width="1.2rem"
+                    <v-expansion-panel-title static>
+                      <div class="nav_edit__panel_title">
+                        <span>{{ methodIndex + 1 }}) Method details</span>
+                        <span
+                          class="nav_edit__status"
+                          :class="method.isValid ? 'nav_edit__status--valid' : 'nav_edit__status--invalid'"
+                        >
+                          {{ method.isValid ? "Provided" : "Incomplete" }}
+                        </span>
+                        <button
+                          v-if="isMethodEditable(row)"
+                          type="button"
+                          class="nav_edit__remove"
+                          aria-label="Remove method details"
+                          @click.stop="deleteEditMethod(methodIndex)"
+                        >
+                          <Icon icon="material-symbols:delete-outline-rounded" width="1rem" />
+                        </button>
+                      </div>
+                    </v-expansion-panel-title>
+                    <v-expansion-panel-text>
+                      <FundNavMethodDetails
+                        v-model="navEntry.details[navEntry.positionType][methodIndex]"
+                        :position-type="navEntry.positionType"
+                        :valuation-type="navEntry.valuationType"
+                        :validate-on-mount="true"
                       />
-                    </template>
-                    Add Method Details
-                  </v-btn>
-                </v-col>
-              </v-row>
-              <v-row v-if="isMethodEditable(item)" class="mt-4">
-                <v-col class="text-end">
-                  <v-btn :disabled="!hasChanged()" @click="editMethod">
-                    Edit Method
-                  </v-btn>
-                </v-col>
-              </v-row>
+                    </v-expansion-panel-text>
+                  </v-expansion-panel>
+                </v-expansion-panels>
+              </template>
+
+              <FundNavMethodDetails
+                v-else
+                v-model="navEntry.details[navEntry.positionType][0]"
+                :position-type="navEntry.positionType"
+                :valuation-type="navEntry.valuationType"
+              />
+
+              <div v-if="isMethodEditable(row)" class="nav_edit__actions">
+                <button
+                  v-if="navEntry.positionType === PositionType.Composable"
+                  type="button"
+                  class="nav_edit__ghost"
+                  @click="addEditMethodDetails"
+                >
+                  Add method details
+                </button>
+                <span v-else />
+                <v-btn
+                  color="primary"
+                  :disabled="!hasChanged()"
+                  @click="editMethod"
+                >
+                  Edit method
+                </v-btn>
+              </div>
             </v-form>
 
-            <div v-else class="nav_entries__json">
-              {{ item.detailsJson }}
-            </div>
+            <pre v-else class="nav_table__json">{{ row.detailsJson }}</pre>
           </div>
-        </td>
-      </tr>
-    </template>
+        </div>
 
-    <template #bottom>
-      <!-- Leave this slot empty to hide pagination controls -->
-    </template>
-  </v-data-table>
-  <div v-else class="nav_entries__no_data">
-    No NAV details available.
+        <div
+          v-if="!visibleMethods.length && (search || emptyText)"
+          class="nav_table__empty"
+        >
+          {{ search ? `No NAV method matches “${search}”.` : emptyText }}
+        </div>
+
+        <!-- Where the next method goes. A call site that adds methods in
+             place fills this with its own control; it sits under the methods
+             and above the base-asset lines, so a new row lands where the eye
+             already is. Hero-sized while it is all the body holds. -->
+        <div
+          v-if="$slots.add"
+          class="nav_table__add"
+          :class="{ 'nav_table__add--hero': !visibleMethods.length }"
+        >
+          <slot name="add" :empty="!visibleMethods.length" />
+        </div>
+
+        <!-- The base asset held outside any valuation method: idle on the admin
+             contract and the Safe, plus what has accrued as fees. Listed as
+             summary lines under the methods rather than as methods of their
+             own, which is what they are not. -->
+        <div
+          v-for="asset in baseAssetRows"
+          :key="asset.key"
+          class="nav_table__row nav_table__row--summary"
+        >
+          <div
+            class="nav_table__summary_label"
+            :style="{ gridColumn: `span ${leadingSpan}` }"
+          >
+            {{ asset.label }}
+            <AddressLink
+              v-if="asset.address"
+              class="nav_table__summary_address"
+              :address="asset.address"
+              :chain-id="fundChainId"
+              truncate
+            />
+          </div>
+          <div
+            v-if="showLastNavUpdateValue"
+            class="nav_table__figure nav_table__figure--dim"
+          >
+            {{ asset.last }}
+          </div>
+          <div
+            v-if="showSimulatedNav"
+            class="nav_table__figure nav_table__figure--dim"
+          >
+            {{ asset.simulated }}
+          </div>
+          <div v-if="showExpand" />
+          <div v-if="deletable" />
+        </div>
+
+        <div v-if="showTotalRow" class="nav_table__row nav_table__row--total">
+          <div
+            class="nav_table__total_label"
+            :style="{ gridColumn: `span ${leadingSpan}` }"
+          >
+            {{ totalLabel }}
+          </div>
+          <div
+            v-if="showLastNavUpdateValue"
+            class="nav_table__total_value nav_table__total_value--dim"
+          >
+            {{ formattedTotalLastNAV }}
+          </div>
+          <div v-if="showSimulatedNav" class="nav_table__total_value">
+            {{ formattedTotalSimulatedNAV }}
+            <span
+              v-if="simulatedNavErrorCount > 0"
+              class="nav_table__warn nav_table__warn--neg"
+            >
+              <Icon icon="octicon:question-16" width="0.875rem" />
+              <v-tooltip activator="parent" location="top">
+                Total value may not include all simulated NAV method values.<br>
+                Retry simulating NAV.
+              </v-tooltip>
+            </span>
+          </div>
+          <div v-if="showExpand" />
+          <div v-if="deletable" />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -474,7 +471,23 @@ import { ValuationType, ValuationTypesMap } from "~/types/enums/valuation_type";
 import type INAVMethod from "~/types/nav_method";
 import type INAVParts from "~/types/nav_parts";
 
+/**
+ * A method as the table lists it: flagged when the vault already holds it,
+ * and when it is one of the app's own base-asset lines rather than a method.
+ */
+type INAVMethodRow = INAVMethod & {
+  isAlreadyUsed?: boolean;
+  isRethinkPosition?: boolean;
+};
 
+/**
+ * The NAV methods table, per the design's Vault NAV screen: one grid row per
+ * method, the base-asset balances as summary lines under them, and the total
+ * as the closing row. Shared by the vault's NAV page, the manage/proposal
+ * pages, the library picker and the create flow's NAV step, which is why it
+ * carries so many switches — each of those shows a different subset of the
+ * same columns and controls.
+ */
 export default defineComponent({
   name: "FundNavMethodsTable",
   props: {
@@ -511,6 +524,40 @@ export default defineComponent({
     showSimulatedNav: {
       type: Boolean,
       default: false,
+    },
+    /**
+     * The refresh control in the Simulated column head. Off where the page
+     * offers its own, so the same action is not on screen twice.
+     */
+    showSimulateButton: {
+      type: Boolean,
+      default: true,
+    },
+    /**
+     * Drops the table's own hairline frame, for a table that sits inside a
+     * card which already draws one.
+     */
+    frameless: {
+      type: Boolean,
+      default: false,
+    },
+    /**
+     * A layout for a narrow container, such as the picker inside a modal:
+     * no index column, the valuation source under the method name instead
+     * of in a column of its own, tighter fixed tracks and no minimum width,
+     * so the table fits its frame instead of scrolling sideways in it.
+     */
+    compact: {
+      type: Boolean,
+      default: false,
+    },
+    /**
+     * What an empty table says. An empty string draws nothing, for a call
+     * site that fills the `add` slot and lets that speak instead.
+     */
+    emptyText: {
+      type: String,
+      default: "No NAV methods yet.",
     },
     deletable: {
       type: Boolean,
@@ -579,7 +626,9 @@ export default defineComponent({
       default: 0,
     },
   },
-  emits: ["update:methods", "selectedChanged"],
+  // `simulating` reports the simulation running or done, for a page that
+  // draws its own Simulate control and wants it to say which.
+  emits: ["update:methods", "selectedChanged", "simulating"],
   setup() {
     const fundStore = useFundStore();
     const toastStore = useToastStore();
@@ -599,9 +648,12 @@ export default defineComponent({
   },
   data() {
     return {
-      expanded: [] as string[],
-      selected: [],
-      expandedBaseAssets: [] as string[],
+      // The one expanded row's details hash. One at a time: the panel holds
+      // an edit form, and two open forms would share the same navEntry.
+      expanded: "" as string,
+      selected: [] as string[],
+      copiedHash: "" as string,
+      copiedTimer: undefined as ReturnType<typeof setTimeout> | undefined,
       isNavSimulationLoading: false,
       form: ref(null),
       formIsValid: ref(false),
@@ -634,71 +686,59 @@ export default defineComponent({
         detailsJson: "{}",
       }),
       rules: [formRules.required],
-      // creatablePositionTypes: PositionTypes.filter(
-      //   (positionType) => positionType.key !== PositionType.NFT,
-      // ),
       expandedPanels: ref([0]),
     };
   },
   computed: {
-    headers() {
-      // Check:
-      // https://vuetifyjs.com/en/api/v-data-table/#props-header-props
-      const headers: any[] = [
-        { title: "#", key: "index", sortable: false },
-        { title: "Position Name", key: "positionName", sortable: false },
-        { title: "Valuation Source", key: "valuationSource", sortable: false },
-        { title: "Position Type", key: "positionType", sortable: false },
-      ];
-      // Simulated NAV value.
-      if (this.showLastNavUpdateValue) {
-        headers.push(
-          {
-            title: "Last NAV Update Value",
-            key: "pastNavValue",
-            align: "end",
-            sortable: false,
-            width: "160px",
-          },
-        )
+    showExpand(): boolean {
+      return this.settingsStore.isManageMode;
+    },
+    /**
+     * The grid the header, every method row and the summary rows share, so a
+     * figure sits under its column head whichever switches are on.
+     */
+    gridColumns(): string {
+      const columns: string[] = [];
+      if (this.compact) {
+        if (this.selectable) columns.push("32px");
+        columns.push("minmax(0, 1fr)", "88px");
+        if (this.showLastNavUpdateValue) columns.push("120px");
+        if (this.showSimulatedNav) columns.push("120px");
+        if (this.showExpand) columns.push("64px");
+        if (this.deletable) columns.push("64px");
+        return columns.join(" ");
       }
-      if (this.showSimulatedNav) {
-        headers.push(
-          {
-            title: "Simulated NAV",
-            key: "simulatedNavFormatted",
-            align: "end",
-            sortable: false,
-            width: "160px",
-          },
-        )
-      }
-
-      // Expand details button
-      if (this.settingsStore.isManageMode) {
-        headers.push({ key: "data-table-expand", sortable: false, align: "center" });
-      }
-      if (this.deletable) {
-        headers.push({ key: "delete", sortable: false, align: "center", width: "40px" })
-      }
-      if (this.selectable) {
-        headers.push({ key: "data-table-select", sortable: false, align: "center", width: "40px" })
-      }
-
-      return headers;
+      if (this.selectable) columns.push("40px");
+      columns.push("44px", "minmax(0, 1.6fr)", "120px", "minmax(0, 1.7fr)");
+      if (this.showLastNavUpdateValue) columns.push("150px");
+      if (this.showSimulatedNav) columns.push("150px");
+      if (this.showExpand) columns.push("84px");
+      if (this.deletable) columns.push("72px");
+      return columns.join(" ");
+    },
+    /** How many leading tracks a summary label spans before the figures. */
+    leadingSpan(): number {
+      return (this.selectable ? 1 : 0) + (this.compact ? 2 : 4);
+    },
+    showTotalRow(): boolean {
+      return (
+        this.showSummaryRow &&
+        (this.showLastNavUpdateValue || this.showSimulatedNav)
+      );
+    },
+    totalLabel(): string {
+      return this.showLastNavUpdateValue ? "Total NAV" : "Total simulated NAV";
     },
     parsedPositionTypeItems() {
       return this.creatablePositionTypes.map((positionType) => ({
         key: positionType.key,
         label: positionType.name,
-        onClick: () => this.resetMethods(true),
       }));
     },
     parsedValuationTypeItems() {
       return this.valuationTypes.map((valuationType) => ({
         key: valuationType.key,
         label: valuationType.name,
-        onClick: () => this.resetMethods(),
       }));
     },
     valuationTypes() {
@@ -756,96 +796,65 @@ export default defineComponent({
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
     },
-    groupedMethods() {
-      const baseAssets = this.computedMethods.filter(item => item.isRethinkPosition);
-      const otherMethods = this.computedMethods.filter(item => !item.isRethinkPosition);
+    /**
+     * The methods as rows: flagged when the library already holds them, and
+     * narrowed to the search when there is one. The search reads every
+     * column a person can see, the way the old table's did.
+     */
+    visibleMethods(): INAVMethodRow[] {
+      const query = (this.search || "").trim().toLowerCase();
 
-      const simulatedNav = (BigInt(this.fundContractBaseTokenBalance) || 0n) +
-        (BigInt(this.safeContractBaseTokenBalance) || 0n) +
-        (BigInt(this.feeBalance) || 0n);
-
-      const simulatedNavFormatted = this.fundStore.getFormattedBaseTokenValue(simulatedNav, true, false, this.baseSymbol, this.baseDecimals);
-
-      if (baseAssets.length) {
-        const totalBaseAssets = {
-          positionName: "Base Assets",
-          valuationSource: "rethink.finance",
-          positionType: PositionType.Liquid,
-          pastNavValue: baseAssets.reduce(
-            (sum, item) => sum + BigInt(item.pastNavValue || 0), BigInt(0),
-          ),
-          simulatedNavFormatted,
-          detailsJson: baseAssets,
-          isGroupedBaseAssets: true,
-          isRethinkPosition: true,
-        };
-
-        return [totalBaseAssets, ...otherMethods];
-      }
-
-      return otherMethods;
-    },
-    computedMethods() {
-      const methods = [];
-
-      if (this.showBaseTokenBalances) {
-        methods.push({
-          positionName: "Admin Contract Balance",
-          valuationSource: "rethink.finance",
-          positionType: PositionType.Liquid,
-          pastNavValue: this.navParts?.baseAssetOIVBal,
-          simulatedNavFormatted: this.formattedFundContractBaseTokenBalance,
-          isRethinkPosition: true,
-          detailsHash: "-1",
-          detailsJson: {
-            "fundContractAddress": this.fundAddress ?? "",
-          },
-        } as any)
-        methods.push({
-          positionName: "Safe Balance",
-          valuationSource: "rethink.finance",
-          positionType: PositionType.Liquid,
-          pastNavValue: this.navParts?.baseAssetSafeBal,
-          simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
-          isRethinkPosition: true,
-          detailsHash: "-2",
-          detailsJson: {
-            "safeContractAddress": this.safeAddress ?? "",
-          },
-        } as any)
-        methods.push({
-          positionName: "Fees Balance",
-          valuationSource: "rethink.finance",
-          positionType: PositionType.Liquid,
-          pastNavValue: this.navParts?.feeBal,
-          simulatedNavFormatted: this.formattedFeeBalance,
-          isRethinkPosition: true,
-          detailsHash: "-3",
-        } as any)
-      }
-      else if (this.showSafeContractBalance) {
-        methods.push({
-          positionName: "Safe Balance",
-          valuationSource: "rethink.finance",
-          positionType: PositionType.Liquid,
-          pastNavValue: this.navParts?.baseAssetSafeBal,
-          simulatedNavFormatted: this.formattedSafeContractBaseTokenBalance,
-          isRethinkPosition: true,
-          detailsHash: "-2",
-          detailsJson: {
-            "safeContractAddress": this.safeAddress ?? "",
-          },
-        } as any)
-      }
-
-      return [
-        ...methods,
-        ...this.methods.map(method => ({
+      return this.methods
+        .map((method) => ({
           ...method,
           isAlreadyUsed: this.isMethodAlreadyUsed(method.detailsHash),
-        }),
-        ),
-      ];
+        }))
+        .filter((method) => {
+          if (!query) return true;
+          const haystack = [
+            method.positionName,
+            method.valuationSource,
+            this.positionTypeName(method),
+            method.valuationType,
+            method.detailsHash,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(query);
+        });
+    },
+    baseAssetRows(): {
+      key: string;
+      label: string;
+      address?: string;
+      last: string;
+      simulated: string;
+    }[] {
+      const admin = {
+        key: "admin",
+        label: "Admin contract balance",
+        address: this.fundAddress,
+        last: this.formatLastValue(this.navParts?.baseAssetOIVBal),
+        simulated: this.formattedFundContractBaseTokenBalance,
+      };
+      const safe = {
+        key: "safe",
+        label: "Safe contract balance",
+        address: this.safeAddress,
+        last: this.formatLastValue(this.navParts?.baseAssetSafeBal),
+        simulated: this.formattedSafeContractBaseTokenBalance,
+      };
+      const fees = {
+        key: "fees",
+        label: "Accrued fees",
+        last: this.formatLastValue(this.navParts?.feeBal),
+        simulated: this.formattedFeeBalance,
+      };
+
+      if (this.showBaseTokenBalances) return [admin, safe, fees];
+      if (this.showSafeContractBalance) return [safe];
+      return [];
     },
   },
   watch: {
@@ -865,27 +874,83 @@ export default defineComponent({
       },
     },
   },
+  beforeUnmount() {
+    if (this.copiedTimer) clearTimeout(this.copiedTimer);
+  },
   methods: {
+    rowKey(row: INAVMethod, index: number): string {
+      return row.detailsHash || `row-${index}`;
+    },
+    positionTypeName(method: INAVMethod): string {
+      const type = (method.displayPositionType || method.positionType) as PositionType;
+      return getPositionType(type)?.name || "N/A";
+    },
+    formatLastValue(value?: bigint): string {
+      if (!value) return "-";
+      return this.fundStore.getFormattedBaseTokenValue(
+        value,
+        true,
+        false,
+        this.baseSymbol || undefined,
+        this.baseDecimals > 0 ? this.baseDecimals : undefined,
+      );
+    },
     /**
-     * Ensures only one row is expanded at a time.
+     * A row still waiting on its first simulated value. The action writes
+     * "N/A" before it calls the chain, so that placeholder counts as pending
+     * while a simulation is in flight.
      */
-    onExpandedUpdate(newExpanded:string) {
-      // if newExpanded has a row, keep only the latest one; otherwise, clear the array
-      this.expanded = newExpanded.length ? [newExpanded[newExpanded.length - 1]] : [];
+    isSimulationPending(row: INAVMethod): boolean {
+      if (!this.isNavSimulationLoading) return false;
+      return row.simulatedNavFormatted == null || row.simulatedNavFormatted === "N/A";
     },
-    onExpandedBaseAssetsUpdate(newExpanded:string) {
-      this.expandedBaseAssets = newExpanded.length ? [newExpanded[newExpanded.length - 1]] : [];
+    isExpanded(row: INAVMethod): boolean {
+      return !!row.detailsHash && this.expanded === row.detailsHash;
     },
-    onRowClick(_: any, item: any) {
-      const internalItem = item?.item || undefined
+    /**
+     * Ensures only one row is expanded at a time. Opening a row also loads
+     * it into the edit form, the way clicking a row always has.
+     */
+    toggleExpand(row: INAVMethodRow) {
+      if (row.isAlreadyUsed || !row.detailsJson || !row.detailsHash) return;
 
-      if(!internalItem) return
-
-      this.setNavEntry(internalItem); // set navEntry for the clicked row
+      if (this.isExpanded(row)) {
+        this.expanded = "";
+        return;
+      }
+      if (!this.isBaseTokenBalanceMethod(row)) {
+        this.setNavEntry(row);
+      }
+      this.expanded = row.detailsHash;
     },
-    copyText(text: string | undefined) {
-      const data = text as string;
-      navigator.clipboard.writeText(data);
+    isSelected(row: INAVMethod): boolean {
+      return !!row.detailsHash && this.selected.includes(row.detailsHash);
+    },
+    toggleSelect(row: INAVMethodRow) {
+      if (!row.detailsHash || row.isAlreadyUsed) return;
+
+      this.selected = this.isSelected(row)
+        ? this.selected.filter((hash) => hash !== row.detailsHash)
+        : [...this.selected, row.detailsHash];
+      this.onSelectionChanged();
+    },
+    copyHash(hash: string | undefined) {
+      if (!hash) return;
+      navigator.clipboard.writeText(hash);
+
+      this.copiedHash = hash;
+      if (this.copiedTimer) clearTimeout(this.copiedTimer);
+      this.copiedTimer = setTimeout(() => {
+        this.copiedHash = "";
+      }, 1500);
+    },
+    onPositionTypeChange(positionType: string) {
+      this.navEntry.positionType = positionType as PositionType;
+      this.resetMethods(true);
+    },
+    onValuationTypeChange(valuationType: string) {
+      this.navEntry.valuationType = valuationType as ValuationType;
+      this.resetMethods();
     },
     async simulateNAV() {
       const fundChainId = this.fundChainId as ChainId;
@@ -896,13 +961,12 @@ export default defineComponent({
         return;
       }
       this.isNavSimulationLoading = true;
-      // console.log(`[${this.idx}] START SIMULATE:`, this.isNavSimulationLoading)
+      this.$emit("simulating", true);
 
       // Simulate all methods at once as many promises.
       const promises = [];
 
       for (const navEntry of this.methods) {
-        // console.log("FUND CHAIN ID:", fundChainId, "FUND ADDRESS:", fundAddress, "NAV ENTRY:", navEntry)
         promises.push(this.fundStore.fetchSimulatedNAVMethodValue(
           fundChainId,
           fundAddress,
@@ -914,16 +978,9 @@ export default defineComponent({
           this.fundFactoryContractV2Used,
         ));
       }
-      const settled = await Promise.allSettled(promises);
+      await Promise.allSettled(promises);
       this.isNavSimulationLoading = false;
-      // console.log("SIMULATE DONE:", this.isNavSimulationLoading, settled)
-    },
-    simulatedNAVIconColor(method: INAVMethod) {
-      if (!method.foundMatchingPastNAVUpdateEntryFundAddress) {
-        return "var(--color-warning)";
-      }
-
-      return "";
+      this.$emit("simulating", false);
     },
     // only allow edit if the method is not rethink position and not one of the predefined positions
     isMethodEditable(navEntry: INAVMethod) {
@@ -1028,8 +1085,6 @@ export default defineComponent({
         // Do not include the pastNAVUpdateEntryFundAddress in the details, as when we fetch entries
         // they don't include this data and details hash would be broken if we included it.
         newNavEntry.pastNAVUpdateEntryFundAddress = 0;
-        // newNavEntry.pastNAVUpdateEntryFundAddress =
-        // this.fundStore.fund?.address;
 
         // Set default fields that are required for each entry.
         // All methods details have this data.
@@ -1088,8 +1143,6 @@ export default defineComponent({
             newNavEntry.valuationType === ValuationType.DEXPair
           ) {
             method.nonAssetTokenAddress = ""
-            // method.nonAssetTokenAddress =
-            //     this.fundStore.fund?.baseToken?.address;
           }
 
           // Remove unwanted properties that we don't need when submitting the proposal.
@@ -1173,8 +1226,6 @@ export default defineComponent({
       //   2.2. ERC-721
       //   2.3. ERC-1155
 
-      // let valuationType;
-
       switch (method.positionType) {
         case PositionType.Liquid: {
           const tokenPair = method?.details?.liquid?.[0]?.tokenPair;
@@ -1203,22 +1254,6 @@ export default defineComponent({
           return undefined;
       }
     },
-    methodProps(internalItem: any) {
-      const props = {
-        class: "",
-      };
-      // Parameter internalItem comes from vuetify data table.
-      // And item is an actual INAVMethod.
-      if (internalItem.item.deleted) {
-        props.class +=  " tr_delete_method";
-      } else if (internalItem.item.isNew) {
-        props.class +=  " tr_is_new_method";
-      }
-      if (this.isMethodAlreadyUsed(internalItem.item?.detailsHash)) {
-        props.class +=  " tr_method_already_used";
-      }
-      return props;
-    },
     onSelectionChanged() {
       // Exclude already used.
       this.$emit("selectedChanged", this.selected.filter(detailsHash => !this.isMethodAlreadyUsed(detailsHash)))
@@ -1238,7 +1273,6 @@ export default defineComponent({
           valuationType || "undefined"
         ] || [];
 
-      // let updated = false;
       fields.forEach((field: any) => {
         newDetails[field.key] = defaultInputTypeValue[field.type as InputType];
       });
@@ -1250,117 +1284,626 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-.nav_entries {
-  @include borderGray;
-  border-color: $color-bg-transparent;
-  overflow: auto;
+/**
+ * Layout, per the design: a 40px mono column head, 13px rows on hairlines,
+ * base-asset summary lines under the methods and an accent-tinted total to
+ * close. `--nav-columns` is set from the script, since which tracks exist
+ * depends on the switches; `--nav-pad-x` is the row inset, 20px inside the
+ * table's own frame and 24px when a card supplies the frame instead.
+ */
+.nav_table {
+  --nav-pad-x: 20px;
+  border: 1px solid $color-line;
+  border-radius: $default-border-radius;
+  overflow: hidden;
 
-  :deep(.v-table__wrapper) {
+  &--frameless {
+    --nav-pad-x: 24px;
+    border: none;
+    border-radius: 0;
+  }
+
+  &__placeholder {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.5rem var(--nav-pad-x);
+    font-family: $font-mono;
+    font-size: 12px;
+    color: $color-steel-blue;
+  }
+
+  &__scroll {
+    overflow-x: auto;
     @include customScrollbar(0);
   }
 
-  :deep(.v-data-table__tr) {
-    height: 72px;
-  }
-  :deep(.v-data-table__td) {
-    border-color: $color-bg-transparent !important;
+  /* Six columns of figures and names need this much before they crowd;
+     below it the frame scrolls rather than wrapping a number. */
+  &__inner {
+    min-width: 860px;
   }
 
-  &__summary_row {
-    background: $color-badge-navy;
+  &--wide &__inner {
+    min-width: 960px;
   }
-  &__details {
-    padding: 1rem 5rem;
-    background-color: $color-badge-navy;
-    &:not(:last-of-type) {
-      margin-bottom: 1.5rem;
+
+  /* Compact drops two columns and tightens the rest so the frame is the
+     width it is given — its container is the narrow thing here. */
+  &--compact &__inner {
+    min-width: 0;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: var(--nav-columns);
+    align-items: center;
+    column-gap: 0.75rem;
+    padding: 13px var(--nav-pad-x);
+    border-bottom: 1px solid $color-line;
+
+    &--head {
+      height: 40px;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    &--clickable {
+      cursor: pointer;
+      transition: background-color $default-transition-time ease;
+
+      &:hover {
+        background: $color-hover;
+      }
+    }
+
+    &--open {
+      background: $color-card-background;
+    }
+
+    /* Marked for removal on the next store; the line stays readable so the
+       Undo beside it still has something to describe. */
+    &--deleted {
+      opacity: 0.5;
+    }
+
+    &--used {
+      opacity: 0.45;
+    }
+
+    &--summary {
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
+
+    &--total {
+      padding-top: 14px;
+      padding-bottom: 14px;
+      border-bottom: none;
+      background: $color-accent-soft;
     }
   }
-  &__json{
-    @include borderGray;
-    background-color: $color-card-background;
-    padding: 1.5rem;
-    color: $color-primary;
-    white-space: break-spaces;
-    word-wrap: break-word;
+
+  /* The frame closes the table; a hairline right above it would read as a
+     double rule. */
+  &__inner > &__row:last-child,
+  &__inner > &__empty:last-child,
+  &__inner > &__add:last-child,
+  &__group:last-child > &__row:last-child,
+  &__group:last-child > &__panel:last-child {
+    border-bottom: none;
   }
-  &__no_data {
-    text-align: center;
-    padding: 1.5rem;
-    background: $color-badge-navy;
-  }
-  :deep(.tr_method_already_used) {
-    color: $color-disabled;
-  }
-  :deep(.tr_is_new_method) {
-    .td_index {
-      color: $color-success;
+
+  &__th {
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    white-space: nowrap;
+
+    &--right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.375rem;
+      text-align: right;
     }
   }
-  :deep(.tr_delete_method) {
-    color: $color-disabled;
 
-    .nav_entries__json{
-      color: $color-disabled;
-    }
-    .td_index {
-      color: $color-error;
-    }
-  }
-}
-
-.detail_hash{
-  cursor: pointer;
-  margin-bottom: 30px;
-
-  &.has-changed {
-    color: $color-success;
-  }
-}
-
-.item-simulated-nav {
-  display: flex;
-  justify-content: flex-end;
-
-  &--error {
-    color: $color-error;
-  }
-}
-
-.tooltip {
-  &__content {
-    display: flex;
-    gap: 40px;
-  }
-  &__link {
-    display: flex;
-    gap: 10px;
+  &__refresh {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: $color-primary;
-  }
-}
-.info-icon {
-  cursor: pointer;
-  display: flex;
-  color: $color-text-irrelevant;
-}
-.method_details_title {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  letter-spacing: 0.02625rem;
-  font-weight: 500;
-  color: $color-text-irrelevant;
-}
-.method_details_status {
-  color: $color-warning;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: $color-steel-blue;
+    cursor: pointer;
+    transition: color $default-transition-time ease;
 
-  &--valid {
-    color: $color-success;
+    &:hover {
+      color: $color-white;
+    }
+
+    &--busy {
+      color: $color-cyan;
+      animation: nav_table_spin 1s linear infinite;
+    }
+  }
+
+  &__cell {
+    min-width: 0;
+
+    &--end {
+      justify-self: end;
+    }
+  }
+
+  &__index {
+    font-family: $font-mono;
+    font-size: 12px;
+    color: $color-steel-blue;
+    font-variant-numeric: tabular-nums;
+
+    &--new {
+      color: $color-yield;
+    }
+    &--deleted {
+      color: $color-neg;
+    }
+  }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: $color-white;
+  }
+
+  &__name_text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &__row--deleted &__name_text {
+    text-decoration: line-through;
+  }
+
+  &--compact &__name {
+    flex-wrap: wrap;
+    gap: 0.125rem 0.5rem;
+  }
+
+  /* The valuation source, on its own line under the name where compact
+     has no column for it. */
+  &__name_meta {
+    flex-basis: 100%;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: $color-steel-blue;
+    overflow-wrap: anywhere;
+  }
+
+  /* Coloured by the global .position_type_<type> classes. */
+  &__type {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+
+  &__source {
+    min-width: 0;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: $color-steel-blue;
+    overflow-wrap: anywhere;
+  }
+
+  &__figure {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    font-family: $font-mono;
+    font-size: 13px;
+    text-align: right;
+    color: $color-white;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+
+    &--dim {
+      color: $color-text-irrelevant;
+    }
+    &--error {
+      color: $color-neg;
+    }
+  }
+
+  &__warn {
+    display: inline-flex;
+    align-items: center;
+    color: $color-warn;
+    cursor: help;
+
+    &--neg {
+      color: $color-neg;
+    }
+  }
+
+  &__tag {
+    flex: none;
+    padding: 0.125rem 0.375rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    font-family: $font-mono;
+    font-size: 9.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: $color-steel-blue;
+
+    &--new {
+      border-color: $color-yield-line;
+      color: $color-yield;
+    }
+    &--neg {
+      border-color: $color-neg-line;
+      color: $color-neg;
+    }
+  }
+
+  /* Text rather than an icon, the way the design writes Delete: a word the
+     row can be scanned for. */
+  &__action {
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    color: $color-steel-blue;
+    cursor: pointer;
+    transition: color $default-transition-time ease;
+
+    &:hover {
+      color: $color-white;
+    }
+    &--danger:hover {
+      color: $color-neg;
+    }
+    &--active {
+      color: $color-cyan;
+    }
+    &:disabled {
+      cursor: default;
+      opacity: 0.5;
+    }
+  }
+
+  &__check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 1px solid $color-line-3;
+    border-radius: 3px;
+    background: transparent;
+    color: $color-cyan;
+    cursor: pointer;
+    transition: border-color $default-transition-time ease,
+      background-color $default-transition-time ease;
+
+    &:hover {
+      border-color: $color-cyan-line;
+    }
+    &--on {
+      border-color: $color-cyan;
+      background: $color-cyan-tint;
+    }
+  }
+
+  &__empty {
+    padding: 40px var(--nav-pad-x);
+    border-bottom: 1px solid $color-line;
+    text-align: center;
+    font-size: 13px;
+    color: $color-steel-blue;
+  }
+
+  /* The `add` slot's cell: a row's inset, closed by the same hairline the
+     rows use so the summary lines sit under it the way they sit under a
+     method. */
+  &__add {
+    padding: 12px var(--nav-pad-x) 16px;
+    border-bottom: 1px solid $color-line;
+
+    &--hero {
+      padding: 16px var(--nav-pad-x);
+    }
+  }
+
+  &__summary_label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  /* The address behind the balance, letterspaced back to normal so a hash
+     does not read as a heading. */
+  &__summary_address {
+    font-size: 11px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  &__total_label {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-cyan;
+  }
+
+  &__total_value {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    font-family: $font-mono;
+    font-size: 15px;
+    font-weight: 500;
+    text-align: right;
+    color: $color-white;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+
+    &--dim {
+      font-size: 13px;
+      color: $color-text-irrelevant;
+    }
+  }
+
+  /* The opened row's details, indented past the index column so the form
+     reads as belonging to the line above it. */
+  &__panel {
+    padding: 0.25rem var(--nav-pad-x) 1.25rem calc(var(--nav-pad-x) + 44px + 0.75rem);
+    border-bottom: 1px solid $color-line;
+    background: $color-card-background;
+
+    /* No index column to indent past. */
+    .nav_table--compact & {
+      padding-left: var(--nav-pad-x);
+    }
+
+    &--deleted {
+      opacity: 0.5;
+    }
+  }
+
+  &__hash {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    max-width: 100%;
+    margin: 0.5rem 0 1rem;
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: $font-mono;
+    font-size: 11px;
+    text-align: left;
+    color: $color-steel-blue;
+    cursor: pointer;
+    transition: color $default-transition-time ease;
+
+    &:hover {
+      color: $color-white;
+    }
+
+    /* The form below no longer matches the hash: what is stored will be a
+       new method under a new hash. */
+    &--changed {
+      color: $color-yield;
+    }
+  }
+
+  &__hash_label {
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  &__hash_value {
+    overflow-wrap: anywhere;
+  }
+
+  &__json {
+    margin: 0.5rem 0 0;
+    padding: 1rem 1.125rem;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+    background: $color-dark;
+    font-family: $font-mono;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: $color-cyan-soft;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 }
-.text-end{
-  margin-bottom: 20px;
+
+/**
+ * The in-row edit form. Mono uppercase labels over the app's own fields, the
+ * two-column rhythm the create flow's forms use, and a details block under a
+ * section eyebrow.
+ */
+.nav_edit {
+  &__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem 1.25rem;
+
+    @include md {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    & + & {
+      margin-top: 1rem;
+    }
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  &__label {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__star {
+    margin-left: 0.25em;
+    color: $color-cyan;
+  }
+
+  &__segmented--locked {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  &__section {
+    margin: 1.5rem 0 0.75rem;
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-white;
+  }
+
+  &__panels {
+    :deep(.v-expansion-panel-title) {
+      min-height: 0;
+      padding: 0.75rem 1rem;
+    }
+    :deep(.v-expansion-panel-text__wrapper) {
+      padding: 0 1rem 1rem;
+    }
+  }
+
+  &__panel_title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__status {
+    margin-left: auto;
+
+    &--valid {
+      color: $color-yield;
+    }
+    &--invalid {
+      color: $color-warn;
+    }
+  }
+
+  &__remove {
+    display: inline-flex;
+    padding: 0;
+    border: none;
+    background: none;
+    color: $color-steel-blue;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-neg;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1.25rem;
+  }
+
+  &__ghost {
+    padding: 9px 14px;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: transparent;
+    font-family: $font-sans;
+    font-size: 13px;
+    font-weight: 600;
+    color: $color-text-irrelevant;
+    cursor: pointer;
+    transition: color $default-transition-time ease,
+      border-color $default-transition-time ease;
+
+    &:hover {
+      color: $color-white;
+      border-color: $color-line-3;
+    }
+  }
+}
+
+@keyframes nav_table_spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav_table__row--clickable,
+  .nav_table__refresh,
+  .nav_table__action,
+  .nav_table__check,
+  .nav_table__hash,
+  .nav_edit__ghost {
+    transition: none;
+  }
+  .nav_table__refresh--busy {
+    animation: none;
+  }
 }
 </style>

@@ -2,6 +2,7 @@ import { getProtocolEntry } from "@rethink-finance/positions-registry";
 import { ethers } from "ethers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import RolesFullV2 from "../assets/contracts/zodiac/RolesFullV2.json";
+import type { ICurrentRoleScopes } from "../services/onchain/roleScopes";
 import {
   buildProtocolPermissionEntries,
   getActionHint,
@@ -16,7 +17,7 @@ import {
   normalizeActionEnablement,
   viewValueScopes,
   listProtocolScopesToRevoke,
-  listRegistryScopeUniverse,
+  listRegistryAddresses,
   validateProtocolSelections,
   viewGroup,
   type IProtocolSelectionState,
@@ -52,16 +53,6 @@ const ETH_A_ETH_AAVE = (
 ).toLowerCase();
 const ETH_CORE_POOL = (aaveEthData.markets.Core.pool as string).toLowerCase();
 const ETH_PRIME_POOL = (aaveEthData.markets.Prime.pool as string).toLowerCase();
-/**
- * Aave's RWA market, offered on Ethereum since registry aa750e2. It replaces
- * EtherFi as the third market AND as the market-without-a-native-path that
- * several cases below lean on — but it is a different market, not a rename:
- * EtherFi was dropped because Aave removed it from their own switcher, while
- * Horizon is a new listing whose reserves are unrelated.
- */
-const ETH_HORIZON_POOL = (
-  aaveEthData.markets.Horizon.pool as string
-).toLowerCase();
 const ETH_AAVE_TOKEN = (
   aaveEthData.delegateTargets.find((t: any) => t.symbol === "AAVE")
     .token as string
@@ -569,7 +560,7 @@ describe("field groups", () => {
     const issues = validateProtocolSelections(ETHEREUM, stakeOff, protocols);
     expect(issues).toHaveLength(1);
     expect(issues[0].message).toBe(
-      "Spark: select at least one asset to grant, or switch the protocol off.",
+      "Spark: select at least one asset to grant, or remove the integration.",
     );
   });
 
@@ -988,151 +979,135 @@ describe("DefiLlama logo urls", () => {
 });
 
 describe("authoritative revokes", () => {
-  it("enumerates the full registry scope universe for the chain", () => {
-    const universe = listRegistryScopeUniverse(ARBITRUM);
-    expect(universe).toContainEqual({
-      target: ARB1_POOL,
-      selector: SUPPLY_SELECTOR,
-    });
-    expect(universe).toContainEqual({
-      target: ARB1_DAI,
-      selector: APPROVE_SELECTOR,
-    });
+  const TRANSFER_SELECTOR = ethers.id("transfer(address,uint256)").slice(0, 10);
+  const emptyState = (): ICurrentRoleScopes => ({
+    scopes: [],
+    targets: [],
+    latestBlock: 0,
   });
 
-  it("revokes everything the current selection does not grant", () => {
+  it("keeps every compilable grant inside the registry address book", () => {
+    // The property the diff's boundary rests on: anything the form can
+    // grant must target an address the harvested book contains, or a later
+    // narrowing re-save could not take it back. Driven off the descriptors
+    // rather than a fixed list, so a protocol the registry adds next is
+    // checked the moment it appears.
+    const delegatee = "0x849d52316331967b6ff1198e5e32a0eb168d039d";
+    for (const chain of [ETHEREUM, ARBITRUM]) {
+      const addresses = listRegistryAddresses(chain);
+      let compilableGrants = 0;
+      for (const descriptor of getRegistryProtocols(chain)) {
+        for (const action of descriptor.actions) {
+          for (const omitOptional of [false, true]) {
+            const params: Record<string, unknown> = {};
+            for (const field of action.fields) {
+              if (field.optional && omitOptional) continue;
+              if (field.control === "multi-select") {
+                params[field.key] = (field.options ?? []).map((o) => o.value);
+              } else if (field.control === "single-select") {
+                params[field.key] = (field.options ?? [])[0]?.value;
+              } else if (field.control === "text") {
+                params[field.key] = delegatee;
+              }
+            }
+            const selections = getRegistryProtocols(chain).map((entry) => ({
+              protocol: entry.protocol,
+              enabled: entry.protocol === descriptor.protocol,
+              actions: entry.actions.map((candidate) => ({
+                action: candidate.action,
+                enabled: candidate.action === action.action,
+                params: candidate.action === action.action ? params : {},
+              })),
+            }));
+
+            let build;
+            try {
+              build = buildProtocolPermissionEntries({
+                chainId: chain,
+                rolesModAddress: ROLES_MOD,
+                selections,
+              });
+            } catch {
+              // Not grantable through the form either — the same compile()
+              // gate rejects it there, so nothing is owed a revoke path.
+              continue;
+            }
+            compilableGrants += 1;
+            const outside = build.targetAddresses.filter(
+              (target) => !addresses.has(target.toLowerCase()),
+            );
+            expect(
+              outside,
+              `${descriptor.protocol}.${action.action} (optional fields ${
+                omitOptional ? "omitted" : "maximised"
+              }) grants targets outside the registry address book`,
+            ).toEqual([]);
+          }
+        }
+      }
+      // Guards the loop itself: a descriptor shape change that compiled
+      // nothing would otherwise pass this test vacuously.
+      expect(compilableGrants).toBeGreaterThanOrEqual(4);
+    }
+  });
+
+  it("revokes nothing on a freshly initialized role", () => {
+    // The create flow's first save: the modifier has never been scoped, so
+    // the authoritative diff is empty and the batch is pure grants.
     const buildResult = buildProtocolPermissionEntries({
       chainId: ARBITRUM,
       rolesModAddress: ROLES_MOD,
       selections: selectionWith(["USDC"]),
     });
-    const toRevoke = listProtocolScopesToRevoke(ARBITRUM, buildResult);
-    // Unselected reserves are taken back off the modifier…
+    expect(
+      listProtocolScopesToRevoke(ARBITRUM, buildResult, emptyState()),
+    ).toEqual([]);
+  });
+
+  it("revokes exactly the stale grants a narrowed selection leaves behind", () => {
+    // A previous save granted USDC and DAI; this one keeps only USDC. The
+    // diff takes back DAI's scopes and its target — and nothing granted now.
+    const previous = buildProtocolPermissionEntries({
+      chainId: ARBITRUM,
+      rolesModAddress: ROLES_MOD,
+      selections: selectionWith(["USDC", "DAI"]),
+    });
+    const current: ICurrentRoleScopes = {
+      scopes: previous.grantedScopes,
+      targets: previous.targetAddresses,
+      latestBlock: 123,
+    };
+    const buildResult = buildProtocolPermissionEntries({
+      chainId: ARBITRUM,
+      rolesModAddress: ROLES_MOD,
+      selections: selectionWith(["USDC"]),
+    });
+    const toRevoke = listProtocolScopesToRevoke(ARBITRUM, buildResult, current);
+
     expect(toRevoke).toContainEqual({
       target: ARB1_DAI,
       selector: APPROVE_SELECTOR,
     });
-    // …while everything granted right now is spared.
+    // The abandoned target is marked for revokeTarget via the zero selector…
+    expect(toRevoke).toContainEqual({
+      target: ARB1_DAI,
+      selector: "0x00000000",
+    });
+    // …while targets the new selection still uses are not.
+    expect(
+      toRevoke.some(
+        (scope) => scope.target === ARB1_POOL && scope.selector === "0x00000000",
+      ),
+    ).toBe(false);
     for (const scope of buildResult.grantedScopes) {
       expect(toRevoke).not.toContainEqual(scope);
     }
   });
 
-  it("enumerates defaulted markets and free-text delegatee on Ethereum", () => {
-    // The universe fans out over scalar-enum fields (market is
-    // ZodDefault-wrapped) and fills required free-text fields with a
-    // placeholder (delegatee only ever lands in calldata conditions), so no
-    // eth action is skipped any more and a narrowing re-save under-revokes
-    // nothing. The spy must precede the first call — the universe is cached.
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const universe = listRegistryScopeUniverse(ETHEREUM);
-
-    // One variant per market value, unioned: all three pools are covered —
-    // including Horizon, whose native-ETH rejection (superRefine) is pruned
-    // value-by-value instead of aborting the whole market.
-    expect(universe).toContainEqual({
-      target: ETH_CORE_POOL,
-      selector: SUPPLY_SELECTOR,
-    });
-    expect(universe.some((s) => s.target === ETH_PRIME_POOL)).toBe(true);
-    expect(universe.some((s) => s.target === ETH_HORIZON_POOL)).toBe(true);
-
-    // Free-text delegatee: compiled with a placeholder, which pins the
-    // governance-token scopes without the placeholder leaking in as a target.
-    expect(universe).toContainEqual({
-      target: ETH_AAVE_TOKEN,
-      selector: DELEGATE_SELECTOR,
-    });
-    expect(universe.some((s) => s.target === ETH_STK_AAVE)).toBe(true);
-    expect(
-      universe.some(
-        (s) => s.target === "0x0000000000000000000000000000000000000001",
-      ),
-    ).toBe(false);
-
-    const warned = warn.mock.calls.map((call) => String(call[0]));
-    expect(
-      warned.filter((message) => message.includes("cannot enumerate")),
-    ).toEqual([]);
-  });
-
-  it("keeps every grantable eth permission revocable, protocol by protocol", () => {
-    // The property the universe exists for: anything a creator can grant on
-    // this chain must also be enumerable for revocation, or a later
-    // narrowing re-save silently leaves it on the modifier. Driven off the
-    // descriptors rather than a fixed list, so a protocol the registry adds
-    // next is checked the moment it appears.
-    //
-    // Compound v3's deposit is why this is not just "maximise every field":
-    // its optional `tokens` narrows the markets in `targets`, so the widest
-    // grant OMITS it — maximising both at once cannot compile (no asset is
-    // collateral of every comet), and enumerating only that variant left 12
-    // scopes ungrantable-back, comet supply/withdraw among them.
-    const universe = listRegistryScopeUniverse(ETHEREUM);
-    const scopeKey = (scope: { target: string; selector: string }) =>
-      `${scope.target.toLowerCase()}:${scope.selector.toLowerCase()}`;
-    const universeKeys = new Set(universe.map(scopeKey));
-    const delegatee = "0x849d52316331967b6ff1198e5e32a0eb168d039d";
-
-    let compilableGrants = 0;
-    for (const descriptor of getRegistryProtocols(ETHEREUM)) {
-      for (const action of descriptor.actions) {
-        for (const omitOptional of [false, true]) {
-          const params: Record<string, unknown> = {};
-          for (const field of action.fields) {
-            if (field.optional && omitOptional) continue;
-            if (field.control === "multi-select") {
-              params[field.key] = (field.options ?? []).map((o) => o.value);
-            } else if (field.control === "single-select") {
-              params[field.key] = (field.options ?? [])[0]?.value;
-            } else if (field.control === "text") {
-              params[field.key] = delegatee;
-            }
-          }
-          const selections = getRegistryProtocols(ETHEREUM).map((entry) => ({
-            protocol: entry.protocol,
-            enabled: entry.protocol === descriptor.protocol,
-            actions: entry.actions.map((candidate) => ({
-              action: candidate.action,
-              enabled: candidate.action === action.action,
-              params: candidate.action === action.action ? params : {},
-            })),
-          }));
-
-          let build;
-          try {
-            build = buildProtocolPermissionEntries({
-              chainId: ETHEREUM,
-              rolesModAddress: ROLES_MOD,
-              selections,
-            });
-          } catch {
-            // Not grantable through the form either — the same compile()
-            // gate rejects it there, so nothing is owed a revoke path.
-            continue;
-          }
-          compilableGrants += 1;
-          const unrevocable = build.grantedScopes.filter(
-            (scope) => !universeKeys.has(scopeKey(scope)),
-          );
-          expect(
-            unrevocable,
-            `${descriptor.protocol}.${action.action} (optional fields ${
-              omitOptional ? "omitted" : "maximised"
-            }) grants scopes the universe cannot revoke`,
-          ).toEqual([]);
-        }
-      }
-    }
-    // Guards the loop itself: a descriptor shape change that compiled
-    // nothing would otherwise pass this test vacuously.
-    expect(compilableGrants).toBeGreaterThanOrEqual(17);
-  });
-
-  it("revokes the other markets and switched-off actions on an eth re-save", () => {
-    // The under-revoke this suite used to document as a known gap: narrow a
-    // save to Core-market USDC deposits and everything else the registry
-    // could ever have granted — other markets, delegation — must be revoked.
+  it("scales with the vault's own grants, not with the catalog", () => {
+    // The regression that motivated the diff: a single-asset save used to
+    // wrap ~30x its own size in universe revokes and grew with every
+    // protocol the registry added, marching toward the block gas limit.
     const buildResult = buildProtocolPermissionEntries({
       chainId: ETHEREUM,
       rolesModAddress: ROLES_MOD,
@@ -1142,19 +1117,114 @@ describe("authoritative revokes", () => {
           enabled: true,
           params: { market: "Core", targets: ["USDC"] },
         },
-        { action: "borrow", enabled: false, params: { targets: [] } },
-        { action: "stake", enabled: false, params: { targets: [] } },
-        { action: "delegate", enabled: false, params: { targets: [] } },
       ]),
     });
-    const toRevoke = listProtocolScopesToRevoke(ETHEREUM, buildResult);
-    expect(toRevoke.some((s) => s.target === ETH_PRIME_POOL)).toBe(true);
-    expect(toRevoke.some((s) => s.target === ETH_HORIZON_POOL)).toBe(true);
-    expect(toRevoke).toContainEqual({
-      target: ETH_AAVE_TOKEN,
-      selector: DELEGATE_SELECTOR,
+    const current: ICurrentRoleScopes = {
+      scopes: buildResult.grantedScopes,
+      targets: buildResult.targetAddresses,
+      latestBlock: 1,
+    };
+    // Re-saving the same selection is a no-op diff.
+    expect(
+      listProtocolScopesToRevoke(ETHEREUM, buildResult, current),
+    ).toEqual([]);
+  });
+
+  it("leaves non-registry addresses and spared subsystem scopes alone", () => {
+    const buildResult = buildProtocolPermissionEntries({
+      chainId: ETHEREUM,
+      rolesModAddress: ROLES_MOD,
+      selections: ethSelection([
+        {
+          action: "deposit",
+          enabled: true,
+          params: { market: "Core", targets: ["USDC"] },
+        },
+      ]),
     });
-    for (const scope of buildResult.grantedScopes) {
+    const fundAddress = "0x55311ff9cb1d335f8db14211469457b707205edf";
+    const usdc = (
+      aaveEthData.reserves.find((r: any) => r.symbol === "USDC").token as string
+    ).toLowerCase();
+    const current: ICurrentRoleScopes = {
+      scopes: [
+        // A grant on the vault contract itself — not the registry's to touch.
+        { target: fundAddress, selector: "0x12345678" },
+        // The sendFunds toggle's grant: the base token is ALSO a lending
+        // reserve, so only the spared carve-out keeps the diff off it.
+        { target: usdc, selector: TRANSFER_SELECTOR },
+      ],
+      targets: [fundAddress, usdc],
+      latestBlock: 9,
+    };
+    const toRevoke = listProtocolScopesToRevoke(ETHEREUM, buildResult, current, [
+      { target: usdc, selector: TRANSFER_SELECTOR },
+    ]);
+    expect(
+      toRevoke.some((scope) => scope.target.toLowerCase() === fundAddress),
+    ).toBe(false);
+    expect(toRevoke).not.toContainEqual({
+      target: usdc,
+      selector: TRANSFER_SELECTOR,
+    });
+    // Without the carve-out the toggle's grant would be swept — the test
+    // that keeps the two subsystems from fighting over a shared address.
+    expect(
+      listProtocolScopesToRevoke(ETHEREUM, buildResult, current),
+    ).toContainEqual({ target: usdc, selector: TRANSFER_SELECTOR });
+  });
+
+  it("revokes the other markets and switched-off actions on an eth re-save", () => {
+    // A previous save granted broadly — Prime-market deposits and AAVE
+    // delegation; narrowing to Core-market USDC deposits must take all of
+    // that back off the modifier.
+    const wide = buildProtocolPermissionEntries({
+      chainId: ETHEREUM,
+      rolesModAddress: ROLES_MOD,
+      selections: ethSelection([
+        {
+          action: "deposit",
+          enabled: true,
+          params: { market: "Prime", targets: ["WETH"] },
+        },
+        {
+          action: "delegate",
+          enabled: true,
+          params: {
+            targets: ["AAVE"],
+            delegatee: "0x849d52316331967b6ff1198e5e32a0eb168d039d",
+          },
+        },
+      ]),
+    });
+    const current: ICurrentRoleScopes = {
+      scopes: wide.grantedScopes,
+      targets: wide.targetAddresses,
+      latestBlock: 7,
+    };
+    const narrow = buildProtocolPermissionEntries({
+      chainId: ETHEREUM,
+      rolesModAddress: ROLES_MOD,
+      selections: ethSelection([
+        {
+          action: "deposit",
+          enabled: true,
+          params: { market: "Core", targets: ["USDC"] },
+        },
+      ]),
+    });
+    const toRevoke = listProtocolScopesToRevoke(ETHEREUM, narrow, current);
+    expect(toRevoke.some((s) => s.target.toLowerCase() === ETH_PRIME_POOL)).toBe(
+      true,
+    );
+    expect(
+      toRevoke.some(
+        (s) =>
+          s.target.toLowerCase() === ETH_AAVE_TOKEN &&
+          s.selector === DELEGATE_SELECTOR,
+      ),
+    ).toBe(true);
+    for (const scope of narrow.grantedScopes) {
       expect(toRevoke).not.toContainEqual(scope);
     }
   });

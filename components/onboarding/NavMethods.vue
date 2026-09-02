@@ -1,36 +1,13 @@
 <template>
-  <div class="nav-methods">
-    <div class="nav_head">
-      <h2 class="nav_head__title">
-        Manage NAV methods
+  <div class="nav_methods">
+    <div class="nav_methods__head">
+      <h2 class="nav_methods__title">
+        NAV Methods
       </h2>
-      <div class="nav_head__actions">
-        <button
-          type="button"
-          class="nav_head__action"
-          @click="handleDefineNewMethodDialog(true)"
-        >
-          Define new method
-        </button>
-        <button
-          type="button"
-          class="nav_head__action"
-          @click="handleAddFromLibraryDialog(true)"
-        >
-          Add from library
-        </button>
-        <button
-          type="button"
-          class="nav_head__action"
-          @click="isAddRawDialogOpen = true"
-        >
-          Import raw
-        </button>
-      </div>
     </div>
 
-    <div class="nav_toggle_row">
-      <span class="nav_toggle_row__text">
+    <div class="nav_methods__toggle_row">
+      <span class="nav_methods__toggle_text">
         Allow manager to keep updating NAV based on approved methods
       </span>
       <OnboardingToggle
@@ -39,65 +16,160 @@
       />
     </div>
 
-    <div class="nav_table">
-      <FundNavMethodsTable
-        v-model:methods="navMethods"
-        deletable
-        show-simulated-nav
-        idx="nav/onboarding"
-        :fund-chain-id="fundChainId"
-        :loading="isFetchingNavMethods"
-        :fund-address="fundSettings?.fundAddress"
-        :safe-address="fundSettings?.safe"
-        :base-symbol="fundSettings?.baseSymbol"
-        :base-decimals="fundSettings?.baseDecimals"
-        :safe-contract-base-token-balance="safeContractBaseTokenBalance"
-        :show-safe-contract-balance="true"
-        :show-summary-row="true"
-        :is-fund-non-init="true"
-        :fund-factory-contract-v2-used="fundFactoryContractV2Used"
-      />
-    </div>
-
-    <FundNavAddRaw
-      v-model="isAddRawDialogOpen"
-      :methods="navMethods"
-      @added-methods="addRawMethods"
-    />
-
-    <UiConfirmDialog
-      :model-value="isDefineNewMethodDialogOpen"
-      title="Define new method"
-      max-width="560px"
-      @update:model-value="handleDefineNewMethodDialog"
+    <FundNavMethodsTable
+      v-model:methods="navMethods"
+      class="nav_methods__table"
+      deletable
+      show-simulated-nav
+      show-summary-row
+      show-safe-contract-balance
+      is-fund-non-init
+      empty-text=""
+      idx="nav/onboarding"
+      :fund-chain-id="fundChainId"
+      :loading="isFetchingNavMethods"
+      :fund-address="fundSettings?.fundAddress"
+      :safe-address="fundSettings?.safe"
+      :base-symbol="fundSettings?.baseSymbol"
+      :base-decimals="fundSettings?.baseDecimals"
+      :safe-contract-base-token-balance="safeContractBaseTokenBalance"
+      :fund-factory-contract-v2-used="fundFactoryContractV2Used"
     >
+      <!--
+        The way in, as on the permissions step. With nothing added it is the
+        table's whole body — a tile that says what this step is for — and
+        once something is, it steps back to a row under the last method,
+        where the next one will appear.
+      -->
+      <template #add="{ empty }">
+        <button
+          type="button"
+          class="nav_add"
+          :class="{ 'nav_add--hero': empty }"
+          @click="isAddDialogOpen = true"
+        >
+          <span class="nav_add__plus" aria-hidden="true">
+            <Icon icon="material-symbols:add-rounded" />
+          </span>
+          <span class="nav_add__title">Add NAV method</span>
+        </button>
+      </template>
+    </FundNavMethodsTable>
+
+    <!--
+      One modal, three views: the ways in, and the two forms a person can
+      write a method with. The forms open in place, with the way back in
+      the title, so the picker is never swapped for a second dialog.
+    -->
+    <UiConfirmDialog v-model="isAddDialogOpen" max-width="600px">
+      <!-- Just the heading: the dialog's default puts an eyebrow over it,
+           and the choices below need no introduction. -->
+      <template #title>
+        <div class="nav_pick__head">
+          <button
+            v-if="pickerView !== 'pick'"
+            type="button"
+            class="nav_pick__back"
+            aria-label="Back to the ways to add a method"
+            @click="pickerView = 'pick'"
+          >
+            <Icon icon="material-symbols:arrow-back" width="1.125rem" />
+          </button>
+          <h2 class="brand_modal__title nav_pick__title">
+            {{ pickerTitle }}
+          </h2>
+        </div>
+      </template>
+
+      <div v-if="pickerView === 'pick'" class="nav_pick">
+        <!-- First, the two ways to write a method by hand. -->
+        <ul class="nav_pick__list">
+          <li class="nav_pick__row">
+            <button
+              type="button"
+              class="nav_pick__item"
+              @click="openDefineNew"
+            >
+              <span class="nav_pick__glyph" aria-hidden="true">
+                <Icon icon="material-symbols:edit-square-outline-rounded" />
+              </span>
+              <span class="nav_pick__item_text">
+                <span class="nav_pick__item_name">Define new</span>
+                <span class="nav_pick__item_meta">
+                  Describe a position and how it is valued
+                </span>
+              </span>
+              <Icon
+                class="nav_pick__item_plus"
+                icon="material-symbols:add-rounded"
+                aria-hidden="true"
+              />
+            </button>
+          </li>
+          <li class="nav_pick__row">
+            <button
+              type="button"
+              class="nav_pick__item"
+              @click="openRaw"
+            >
+              <span class="nav_pick__glyph" aria-hidden="true">
+                <Icon icon="material-symbols:code-rounded" />
+              </span>
+              <span class="nav_pick__item_text">
+                <span class="nav_pick__item_name">Raw NAV methods</span>
+                <span class="nav_pick__item_meta">
+                  Paste NAV entries as exported from a vault
+                </span>
+              </span>
+              <Icon
+                class="nav_pick__item_plus"
+                icon="material-symbols:add-rounded"
+                aria-hidden="true"
+              />
+            </button>
+          </li>
+        </ul>
+
+        <!-- Then every method a vault on this chain has already stored,
+             searchable, picked in any number. -->
+        <div class="nav_pick__section">
+          <div class="nav_pick__section_head">
+            <span class="nav_pick__eyebrow">Library</span>
+            <span v-if="libraryCount" class="nav_pick__count">
+              {{ libraryCount }} {{ libraryCount === 1 ? "method" : "methods" }}
+            </span>
+          </div>
+          <FundNavAddFromLibrary
+            :chain-id="fundChainId"
+            :fund-address="fundSettings?.fundAddress || ''"
+            :safe-address="fundSettings?.safe || ''"
+            :base-symbol="fundSettings?.baseSymbol || ''"
+            :base-decimals="fundSettings?.baseDecimals || 18"
+            :already-used-methods="navMethods"
+            :is-fund-non-init="true"
+            compact
+            @methods-added="methodsAddedFromLibrary"
+          />
+        </div>
+      </div>
+
       <FundNavNewMethod
+        v-else-if="pickerView === 'define'"
         :fund-address="fundSettings?.fundAddress"
         :base-token-address="fundSettings?.baseToken"
         @new-nav-method-created="onNewNavMethodCreatedHandler"
       />
-    </UiConfirmDialog>
 
-    <UiConfirmDialog
-      :model-value="isAddFromLibraryDialogOpen"
-      title="Add from library"
-      max-width="760px"
-      @update:model-value="handleAddFromLibraryDialog"
-    >
-      <FundNavAddFromLibrary
-        :chain-id="fundChainId"
-        :fund-address="fundSettings?.fundAddress || ''"
-        :safe-address="fundSettings?.safe || ''"
-        :base-symbol="fundSettings?.baseSymbol || ''"
-        :base-decimals="fundSettings?.baseDecimals || 18"
-        :already-used-methods="navMethods"
-        :is-fund-non-init="true"
-        @methods-added="methodsAddedFromLibrary"
+      <FundNavRawMethodsForm
+        v-else
+        :methods="navMethods"
+        @added-methods="addRawMethods"
       />
     </UiConfirmDialog>
 
     <UiConfirmDialog
       v-model="isNotifyDialogOpen"
+      eyebrow="NAV methods"
       title="Store NAV methods"
       confirm-text="Send both"
       class="confirm_dialog"
@@ -135,11 +207,13 @@ import {
 } from "~/composables/nav/navProposal";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { getNAVData } from "~/store/fund/actions/fetchFundNAVData.action";
+import { useFundsStore } from "~/store/funds/funds.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type INAVMethod from "~/types/nav_method";
 
 const createFundStore = useCreateFundStore();
+const fundsStore = useFundsStore();
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 
@@ -149,12 +223,10 @@ const { fundChainId, fundInitCache, fundSettings, fundFactoryContractV2Used } = 
 const isFetchingNavMethods = ref(false);
 const isLoadingStoreNavMethods = ref(false);
 const isLoadingAllowManagerToUpdateNav = ref(false);
-const isDefineNewMethodDialogOpen = ref(false)
-const isAddFromLibraryDialogOpen = ref(false)
-const isAddRawDialogOpen = ref(false)
+const isAddDialogOpen = ref(false)
 const isNotifyDialogOpen = ref(false)
 const navMethods = ref<INAVMethod[]>([]);
-const allowManagerToUpdateNav = ref(false);
+const allowManagerToUpdateNav = ref(true);
 const safeContractBaseTokenBalance = ref(0);
 
 /**
@@ -164,6 +236,30 @@ const fundFactoryContract = computed(() => {
   const chainContracts = web3Store.chainContracts[fundChainId.value];
   return fundFactoryContractV2Used.value ? chainContracts?.fundFactoryContractV2 : chainContracts?.fundFactoryContract
 })
+
+/**
+ * How many methods the library holds on this chain — the same set the
+ * picker lists, once it has been fetched. Zero until then, and the count
+ * stays off the heading rather than promising an empty library.
+ */
+const libraryCount = computed(
+  () => fundsStore.uniqueNavMethods[fundChainId.value]?.length ?? 0,
+);
+
+/** Which view the add modal shows: the ways in, or one of the two forms. */
+type PickerView = "pick" | "define" | "raw";
+const pickerView = ref<PickerView>("pick");
+
+const pickerTitle = computed((): string => {
+  if (pickerView.value === "define") return "Define new method";
+  if (pickerView.value === "raw") return "Raw NAV methods";
+  return "Add NAV method";
+});
+
+// The modal always opens on the ways in, whatever view it closed on.
+watch(isAddDialogOpen, (open) => {
+  if (open) pickerView.value = "pick";
+});
 
 /**
  * Methods
@@ -330,18 +426,19 @@ const onNewNavMethodCreatedHandler = (navMethod: INAVMethod) => {
   // Add newly defined NAV entry to fund managed methods.
   navMethods.value.push(navMethod);
 
-  // close modal and clear form
-  handleDefineNewMethodDialog(false);
+  // The method is on the table now; the modal has done its job.
+  isAddDialogOpen.value = false;
   console.log("new", navMethods.value);
 
   toastStore.addToast("Method added successfully.")
 }
 
-const handleDefineNewMethodDialog = (value: boolean) => {
-  isDefineNewMethodDialogOpen.value = value;
+// The picker turns into the form that was chosen, in the same modal.
+const openDefineNew = () => {
+  pickerView.value = "define";
 };
-const handleAddFromLibraryDialog = (value: boolean) => {
-  isAddFromLibraryDialogOpen.value = value;
+const openRaw = () => {
+  pickerView.value = "raw";
 };
 
 const addRawMethods = (newMethods: INAVMethod[]) => {
@@ -349,6 +446,7 @@ const addRawMethods = (newMethods: INAVMethod[]) => {
     ...navMethods.value,
     ...newMethods,
   ];
+  isAddDialogOpen.value = false;
 };
 
 const methodsAddedFromLibrary = (methods: INAVMethod[]) => {
@@ -358,7 +456,7 @@ const methodsAddedFromLibrary = (methods: INAVMethod[]) => {
     navMethods.value.push(method);
   }
 
-  handleAddFromLibraryDialog(false);
+  isAddDialogOpen.value = false;
   toastStore.addToast("Methods added successfully.");
 };
 
@@ -439,12 +537,20 @@ defineExpose({
 </script>
 
 <style scoped lang="scss">
-.nav_head {
+/* The design's NAV step: the title, the manager toggle in a hairline row
+   under it, then the table in its own frame. Adding happens from inside the
+   table, the way the permissions step adds a protocol from inside its card. */
+.nav_methods {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 20px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
 
   &__title {
     font-size: 17px;
@@ -453,56 +559,249 @@ defineExpose({
     color: $color-white;
   }
 
-  &__actions {
+  /* Both panels take the flow's panel fill, so they sit like the fee rows
+     and the permissions cards rather than as bare frames. */
+  &__toggle_row {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.625rem;
-    margin-left: auto;
-  }
-
-  &__action {
-    padding: 9px 14px;
-    border: 1px solid $color-line-2;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding: 14px 20px;
+    border: 1px solid $color-line;
     border-radius: $default-border-radius;
-    background: transparent;
-    font-family: $font-mono;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: $color-white;
-    cursor: pointer;
-    transition: border-color $default-transition-time ease;
-
-    &:hover {
-      border-color: $color-line-3;
-    }
+    background: $color-card-background;
   }
-}
 
-.nav_toggle_row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding: 0.875rem 1.125rem;
-  margin-top: 1.375rem;
-  border: 1px solid $color-line;
-  border-radius: $default-border-radius;
-  background: $color-card-background;
+  &__table {
+    background: $color-card-background;
+  }
 
-  &__text {
+  &__toggle_text {
     font-size: 13.5px;
     line-height: 1.5;
-    color: $color-white;
+    color: $color-text-irrelevant;
   }
 }
 
-.nav_table {
-  margin-top: 1rem;
-  /* The table is shared with the vault's own NAV page and brings its own
-     column widths; this only gives it somewhere to scroll on a narrow screen. */
-  overflow-x: auto;
+/* The tile, drawn like the permissions card's: dashed, like every other
+   "put something here" surface in the flow, with a cyan-tinted plus and a
+   mono label. Hero-sized while it is all the table body holds. */
+.nav_add {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: 1px dashed $color-line-2;
+  border-radius: $default-border-radius;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color $default-transition-time ease,
+    background-color $default-transition-time ease;
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    border-color: $color-cyan-line;
+    background: $color-gray-light-transparent;
+
+    .nav_add__title {
+      color: $color-white;
+    }
+  }
+
+  &--hero {
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+  }
+
+  &__plus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: $color-cyan-tint;
+    font-size: 16px;
+    color: $color-cyan;
+  }
+
+  &--hero &__plus {
+    width: 56px;
+    height: 56px;
+    font-size: 32px;
+  }
+
+  &__title {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    transition: color $default-transition-time ease;
+  }
+
+  &--hero &__title {
+    font-size: 12px;
+  }
+}
+
+/* The picker: two hand-written ways in as a short list, then the library
+   under its own eyebrow. Rows are set like the permissions library's. */
+.nav_pick {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  /* The title row: the way back, when a form is open, then the heading. */
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-width: 0;
+  }
+
+  /* The modal's title expects an eyebrow above it; without one, the gap
+     it leaves for that would just be a title sitting low in its head. */
+  &__title {
+    margin-top: 0;
+  }
+
+  /* Sized like the modal's close target, so the two ends of the head row
+     match; it steps a form back to the ways in. */
+  &__back {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    margin-left: -0.5rem;
+    border: none;
+    border-radius: $default-border-radius;
+    background: none;
+    color: $color-steel-blue;
+    cursor: pointer;
+    transition: background-color $default-transition-time ease,
+      color $default-transition-time ease;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      background: $color-gray-light-transparent;
+      color: $color-white;
+    }
+  }
+
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+  }
+
+  &__row + &__row {
+    border-top: 1px solid $color-line;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 0.875rem;
+    border: none;
+    background: none;
+    text-align: left;
+    color: $color-white;
+    cursor: pointer;
+    transition: background-color $default-transition-time ease;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      background: $color-gray-light-transparent;
+    }
+  }
+
+  /* The row's mark: the disc a protocol's logo would fill, with a glyph
+     instead, since a way of writing a method has no logo. */
+  &__glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border: 1px solid $color-line-2;
+    border-radius: 999px;
+    font-size: 15px;
+    color: $color-cyan;
+  }
+
+  &__item_text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__item_name {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  &__item_meta {
+    font-family: $font-mono;
+    font-size: 11px;
+    line-height: 1.4;
+    color: $color-steel-blue;
+  }
+
+  &__item_plus {
+    flex: none;
+    font-size: 18px;
+    color: $color-steel-blue;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  &__section_head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  &__eyebrow {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__count {
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-steel-blue;
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 .nav_notify {
@@ -546,7 +845,10 @@ defineExpose({
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nav_head__action {
+  .nav_add,
+  .nav_add__title,
+  .nav_pick__item,
+  .nav_pick__back {
     transition: none;
   }
 }

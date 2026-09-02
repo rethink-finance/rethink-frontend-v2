@@ -1,13 +1,27 @@
 <template>
-  <FundNavAddFromLibrary
-    :chain-id="fundStore.selectedFundChain"
-    :fund-address="fundStore.fundAddress"
-    :safe-address="fundStore.fund?.safeAddress || ''"
-    :base-symbol="fundStore.fund?.baseToken?.symbol || ''"
-    :base-decimals="fundStore.fund?.baseToken?.decimals || 18"
-    :already-used-methods="fundStore.fundManagedNAVMethods"
-    @methods-added="methodsAddedFromLibrary"
-  />
+  <div class="nav_library">
+    <div class="nav_library__header">
+      <h2 class="nav_library__title">
+        Add from library
+      </h2>
+      <p class="nav_library__sub">
+        Every NAV method already stored by a vault on this chain. Pick the
+        ones this vault should value its positions with.
+      </p>
+    </div>
+
+    <div class="brand_card">
+      <FundNavAddFromLibrary
+        :chain-id="fundStore.selectedFundChain"
+        :fund-address="fundStore.fundAddress"
+        :safe-address="fundStore.fund?.safeAddress || ''"
+        :base-symbol="fundStore.fund?.baseToken?.symbol || ''"
+        :base-decimals="fundStore.fund?.baseToken?.decimals || 18"
+        :already-used-methods="fundStore.fundManagedNAVMethods"
+        @methods-added="methodsAddedFromLibrary"
+      />
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -67,4 +81,29 @@ const methodsAddedFromLibrary = (addedMethods: INAVMethod[]) => {
 </script>
 
 <style scoped lang="scss">
+.nav_library {
+  display: flex;
+  flex-direction: column;
+  gap: 1.375rem;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  &__title {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: $color-white;
+  }
+
+  &__sub {
+    max-width: 72ch;
+    font-size: 13px;
+    line-height: 1.55;
+    color: $color-steel-blue;
+  }
+}
 </style>

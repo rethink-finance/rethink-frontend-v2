@@ -577,9 +577,11 @@ const importCsv = async (file: File) => {
     font-variant-numeric: tabular-nums;
   }
 
+  /* Filled like the flow's other panels, not left as a bare frame. */
   &__table {
     border: 1px solid $color-line;
     border-radius: $default-border-radius;
+    background: $color-card-background;
     overflow: hidden;
   }
 

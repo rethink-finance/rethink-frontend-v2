@@ -11,6 +11,7 @@ import {
 } from "@rethink-finance/positions-registry";
 import { DEFAULT_ROLE_KEY_V2 } from "~/composables/nav/generateNAVPermission";
 import type { IPermissionScope } from "~/composables/permissions/revokePermissions";
+import type { ICurrentRoleScopes } from "~/services/onchain/roleScopes";
 import type { ChainId } from "~/types/enums/chain_id";
 
 /**
@@ -1451,8 +1452,8 @@ export const validateProtocolSelections = (
       issues.push({
         protocol: protocol.protocol,
         message: grantedByPicking
-          ? `${descriptor.label}: select at least one asset to grant, or switch the protocol off.`
-          : `${descriptor.label}: enable at least one action or switch the protocol off.`,
+          ? `${descriptor.label}: select at least one asset to grant, or remove the integration.`
+          : `${descriptor.label}: enable at least one action or remove the integration.`,
       });
       continue;
     }
@@ -1565,10 +1566,10 @@ const scopesFromTargets = (
 /**
  * The user's protocol selections, compiled by the registry into ready
  * Roles-modifier calldata for this step's submitPermissions batch. The
- * vault's role is freshly initialized on this step, so the wholesale-replace
- * pipeline is asked to clear nothing (currentTargets defaults to []); the
- * authoritative-save revocations are handled by the caller through
- * listRegistryScopeUniverse.
+ * wholesale-replace pipeline is asked to clear nothing (currentTargets
+ * defaults to []); the authoritative-save revocations are the caller's,
+ * diffed against the modifier's actual state through
+ * listProtocolScopesToRevoke.
  *
  * Throws the registry's typed errors (InvalidParamsError, IntegrityError…)
  * — callers surface the message and abort the save.
@@ -1613,353 +1614,116 @@ export const buildProtocolPermissionEntries = (options: {
   };
 };
 
-// ─── The registry scope universe (authoritative re-saves) ───────────────────
+// ─── Authoritative re-saves: diffing against the modifier's own state ───────
 
 /**
- * Stands in for a required free-text field when enumerating the universe.
- * The universe only needs (target, selector) pairs, and a schema-checked
- * text value (e.g. a delegatee address, which only ever lands in calldata
- * conditions) does not move those — so any accepted value will do. Chosen
- * to be recognisable: if a compile ever emits a placeholder AS a target
- * address, that action's scope depends on the field's value and cannot be
- * pre-enumerated (see the poison check below).
- */
-const UNIVERSE_TEXT_PLACEHOLDERS = [
-  "0x0000000000000000000000000000000000000001",
-  "1",
-  "placeholder",
-];
-
-/** Fan-out guard: a pathological schema stops enumerating, not the browser. */
-const MAX_UNIVERSE_VARIANTS_PER_ACTION = 64;
-
-/** Marks the fan-out variant where an optional field is left out entirely. */
-const OMIT_FIELD = Symbol("omit-universe-field");
-
-interface IUniverseActionPlan {
-  /** Field values shared by every variant: maximal arrays, placeholders. */
-  base: Record<string, unknown>;
-  /** Keys of maximised array-of-enum fields, prunable value-by-value. */
-  arrayKeys: string[];
-  /** Fan-out fields; the plan compiles every product of their values. */
-  dims: { key: string; values: (string | string[] | typeof OMIT_FIELD)[] }[];
-  /** Placeholder values standing in for required free-text fields. */
-  placeholders: string[];
-}
-
-/** How a field's wrapper chain treats an omitted key. */
-const fieldWrappers = (
-  schema: any,
-): { optional: boolean; hasDefault: boolean } => {
-  let optional = false;
-  let hasDefault = false;
-  let current = schema;
-  for (;;) {
-    const def = zodDef(current);
-    if (def.typeName === "ZodOptional") {
-      optional = true;
-      current = def.innerType;
-    } else if (def.typeName === "ZodDefault") {
-      hasDefault = true;
-      current = def.innerType;
-    } else if (def.typeName === "ZodEffects") {
-      current = def.schema;
-    } else {
-      return { optional, hasDefault };
-    }
-  }
-};
-
-/**
- * Turn an action's schema shape into an enumeration plan, or a reason it
- * cannot be enumerated. Field by field:
- * - array-of-enum → maximised (every value at once); an OPTIONAL one also
- *   fans out its omitted branch, which is often the widest of the two:
- *   Compound v3's `tokens` narrows the markets picked in `targets`, so
- *   leaving it out grants every asset of every selected market, while a
- *   maximised array has to name assets that satisfy all of them at once and
- *   simply fails to compile;
- * - scalar enum → a fan-out dimension, one variant per value, however the
- *   field is wrapped: a `.default()`ed or `.optional()` enum's non-default
- *   values are still reachable grants, so the universe must cover each. A
- *   plain-optional enum also grants along its omitted branch, so that
- *   variant joins the fan-out (a defaulted one parses omission into one of
- *   the values, already covered);
- * - anything else optional → the key is omitted, as an unset form control
- *   would leave it;
- * - required free-text → a placeholder the field schema accepts;
- * - any other required shape → not enumerable.
- */
-const planUniverseAction = (
-  shape: Record<string, unknown>,
-): IUniverseActionPlan | string => {
-  const plan: IUniverseActionPlan = {
-    base: {},
-    arrayKeys: [],
-    dims: [],
-    placeholders: [],
-  };
-  for (const [key, fieldSchema] of Object.entries(shape)) {
-    const { optional, hasDefault } = fieldWrappers(fieldSchema);
-    const core = unwrapSchema(fieldSchema);
-    const def = zodDef(core);
-    if (def.typeName === "ZodArray") {
-      const elementDef = zodDef(unwrapSchema(def.type));
-      if (elementDef.typeName === "ZodEnum") {
-        const maximal = [...elementDef.values];
-        // A defaulted array is never seen as absent by a generator (zod
-        // fills it in), so only a plain-optional one needs both branches.
-        if (optional && !hasDefault) {
-          plan.dims.push({ key, values: [maximal, OMIT_FIELD] });
-        } else {
-          plan.base[key] = maximal;
-        }
-        plan.arrayKeys.push(key);
-        continue;
-      }
-    }
-    if (def.typeName === "ZodEnum") {
-      const values: (string | typeof OMIT_FIELD)[] = [...def.values];
-      if (optional && !hasDefault) values.push(OMIT_FIELD);
-      plan.dims.push({ key, values });
-      continue;
-    }
-    if (optional || hasDefault) continue;
-    if (def.typeName === "ZodString") {
-      const placeholder = UNIVERSE_TEXT_PLACEHOLDERS.find(
-        (candidate) => (fieldSchema as any)?.safeParse?.(candidate)?.success,
-      );
-      if (placeholder !== undefined) {
-        plan.base[key] = placeholder;
-        plan.placeholders.push(placeholder);
-        continue;
-      }
-      return `required text field "${key}" accepts no known placeholder`;
-    }
-    return `required field "${key}" has a shape this cannot maximise`;
-  }
-  return plan;
-};
-
-/** Every combination of the fan-out dimensions' values. */
-const cartesianParams = (
-  dims: IUniverseActionPlan["dims"],
-): Record<string, unknown>[] =>
-  dims.reduce<Record<string, unknown>[]>(
-    (combos, dim) =>
-      combos.flatMap((combo) =>
-        dim.values.map((value) =>
-          value === OMIT_FIELD ? combo : { ...combo, [dim.key]: value },
-        ),
-      ),
-    [{}],
-  );
-
-/**
- * Compile one candidate selection into scopes, pruning maximised arrays
- * value-by-value when the whole does not compile. Rejections come from two
- * layers, but through one gate: schema refinements (eth: market Horizon has
- * no native path, so maximal targets fail on "ETH") and generation-time
- * rules (a market only holds a subset of the union reserve enum) both
- * surface as compile() errors — and both gate a real user grant
- * identically, so a value pruned here was never grantable in this
- * combination and its absence loses no revoke coverage (other variants,
- * e.g. the Core market's, still cover their own combinations).
+ * Every address the registry's tables mention on this chain, lowercased.
  *
- * Returns null when nothing in the variant compiles. `valueByValue` marks
- * the fallback where the pruned whole still failed and the scopes are the
- * union of the per-value probes — real compile() outputs, but permissions
- * that only appear for value combinations (none known today) would be
- * missed, so the caller flags the action incomplete.
+ * This is the boundary of what a save may revoke: the diff against the
+ * modifier's current state (see listProtocolScopesToRevoke) only takes back
+ * scopes on addresses the registry itself knows, so grants made outside the
+ * protocol card — the prepopulated toggles, raw pasted entries, curator
+ * fixes applied by hand on unrelated contracts — survive a save untouched.
+ *
+ * Harvested by walking each entry's data/alias tables for anything
+ * address-shaped rather than by compiling selections: the tables are where
+ * the generators read their target addresses from, so the walk over-collects
+ * (aTokens, debt tokens and the like that never become targets) but cannot
+ * under-collect unless a generator invents an address the entry nowhere
+ * states — and over-collecting only widens what a save may reclaim, never
+ * what it grants. The superset property (compile targets ⊆ this set) is
+ * pinned by tests protocol by protocol.
  */
-const compileUniverseVariant = (
-  compileParams: (params: Record<string, unknown>) => IPermissionScope[],
-  params: Record<string, unknown>,
-  arrayKeys: string[],
-): { scopes: IPermissionScope[]; valueByValue: boolean } | null => {
-  try {
-    return { scopes: compileParams(params), valueByValue: false };
-  } catch {
-    if (!arrayKeys.length) return null;
-  }
+const registryAddressCache = new Map<number, Set<string>>();
 
-  // Probe each array value alone (other arrays emptied, scalars kept) so a
-  // rejected value cannot mask the rest of its own or another array. An
-  // array the variant omits stays omitted — reintroducing it as `[]` would
-  // read as "narrow to nothing", which is a different (and often rejected)
-  // request than the omission being probed.
-  const emptyArrays = Object.fromEntries(
-    arrayKeys
-      .filter((key) => Array.isArray(params[key]))
-      .map((key) => [key, []]),
-  );
-  const probeScopes: IPermissionScope[] = [];
-  const pruned: Record<string, unknown> = { ...params };
-  let keptAny = false;
-  for (const key of arrayKeys) {
-    const values = params[key];
-    if (!Array.isArray(values)) continue;
-    pruned[key] = values.filter((value) => {
-      try {
-        probeScopes.push(
-          ...compileParams({ ...params, ...emptyArrays, [key]: [value] }),
-        );
-        keptAny = true;
-        return true;
-      } catch {
-        return false;
-      }
-    });
+const collectAddresses = (
+  value: unknown,
+  into: Set<string>,
+  visited: Set<object>,
+): void => {
+  if (typeof value === "string") {
+    if (isAddressLike(value)) into.add(value.toLowerCase());
+    return;
   }
-  if (!keptAny) return null;
-
-  try {
-    return { scopes: compileParams(pruned), valueByValue: false };
-  } catch {
-    return { scopes: probeScopes, valueByValue: true };
-  }
+  if (!value || typeof value !== "object" || visited.has(value)) return;
+  visited.add(value);
+  const items = Array.isArray(value) ? value : Object.values(value);
+  for (const item of items) collectAddresses(item, into, visited);
 };
 
-/**
- * Saving this step is authoritative: a permission that is off is revoked,
- * not merely left out, because an earlier save may already have granted it
- * (see revokePermissions.ts). For protocol grants that means revoking every
- * (target, selector) the registry could EVER grant on this chain — the
- * union of compiling every enumerable selection (see planUniverseAction) —
- * minus what the current selection grants; revoking something never granted
- * is a no-op on the modifier.
- *
- * Every candidate selection still goes through the registry's compile() —
- * nothing here constructs permission JSON (charter rule). Scopes that turn
- * out to hinge on a free-text value (the placeholder itself compiled into a
- * target address) are discarded, and any action whose coverage stays
- * incomplete is warned about — its stale grants would need the registry's
- * future diff-based apply to clean up.
- */
-export const listRegistryScopeUniverse = (
+export const listRegistryAddresses = (
   chainId: ChainId | string,
-): IPermissionScope[] => {
+): Set<string> => {
   const numericChainId = toRegistryChainId(chainId);
-  const cached = scopeUniverseCache.get(numericChainId);
+  const cached = registryAddressCache.get(numericChainId);
   if (cached) return cached;
 
-  const universe: IPermissionScope[] = [];
-  const seen = new Set<string>();
-
+  const addresses = new Set<string>();
+  const visited = new Set<object>();
   for (const protocol of listProtocols(numericChainId)) {
-    for (const { action, schema } of protocol.actions) {
-      const warnIncomplete = (reason: string) =>
-        console.warn(
-          `[protocolPermissions] cannot enumerate ${protocol.protocol}.${action} fully for authoritative revokes (${reason}); a narrowing re-save may leave stale grants`,
-        );
-
-      const shape = (unwrapSchema(schema) as any)?.shape ?? {};
-      const plan = planUniverseAction(shape);
-      if (typeof plan === "string") {
-        warnIncomplete(plan);
-        continue;
-      }
-      const variantCount = plan.dims.reduce(
-        (count, dim) => count * dim.values.length,
-        1,
-      );
-      if (variantCount > MAX_UNIVERSE_VARIANTS_PER_ACTION) {
-        warnIncomplete(
-          `${variantCount} enum combinations exceed the fan-out cap`,
-        );
-        continue;
-      }
-
-      const compileParams = (
-        params: Record<string, unknown>,
-      ): IPermissionScope[] =>
-        scopesFromTargets(
-          compile({
-            chainId: numericChainId,
-            selections: [
-              {
-                protocol: protocol.protocol,
-                action: action as Selection["action"],
-                params,
-              },
-            ],
-          }).targets,
-        );
-
-      const actionScopes: IPermissionScope[] = [];
-      const reasons = new Set<string>();
-      for (const combo of cartesianParams(plan.dims)) {
-        const result = compileUniverseVariant(
-          compileParams,
-          { ...plan.base, ...combo },
-          plan.arrayKeys,
-        );
-        if (!result) {
-          // Nothing in the variant compiles, so nothing was grantable under
-          // it either — unless a placeholder was in play, where a generator
-          // rejecting the placeholder value itself is indistinguishable
-          // from genuine ungrantability.
-          if (plan.placeholders.length) {
-            reasons.add("a placeholder-built selection would not compile");
-          }
-          continue;
-        }
-        if (result.valueByValue) {
-          reasons.add(
-            "combination permissions could only be derived value-by-value",
-          );
-        }
-        actionScopes.push(...result.scopes);
-      }
-
-      // Poison check: a placeholder surfacing as a TARGET means this
-      // action's scope depends on the free-text value, which future saves
-      // cannot re-derive — those scopes are dropped rather than trusted.
-      const poisonedTargets = new Set(
-        plan.placeholders
-          .filter(isAddressLike)
-          .map((value) => value.toLowerCase())
-          .filter((value) =>
-            actionScopes.some((scope) => scope.target.toLowerCase() === value),
-          ),
-      );
-      if (poisonedTargets.size) {
-        reasons.add("a free-text value determines part of its scope");
-      }
-      if (reasons.size) warnIncomplete([...reasons].join("; "));
-
-      for (const scope of actionScopes) {
-        const target = scope.target.toLowerCase();
-        if (poisonedTargets.has(target)) continue;
-        const key = `${target}:${scope.selector.toLowerCase()}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        universe.push(scope);
-      }
-    }
+    const entry = getProtocolEntry(numericChainId, protocol.protocol);
+    // Data first, plus the first-class alias table where the registry ships
+    // one — both are plain JSON; the zod schemas are deliberately not
+    // walked (their internals are not data and can self-reference).
+    collectAddresses(entry?.data, addresses, visited);
+    collectAddresses((entry as any)?.aliases, addresses, visited);
   }
-
-  scopeUniverseCache.set(numericChainId, universe);
-  return universe;
+  registryAddressCache.set(numericChainId, addresses);
+  return addresses;
 };
 
-const scopeUniverseCache = new Map<number, IPermissionScope[]>();
+const scopeKeyOf = (scope: IPermissionScope): string =>
+  `${scope.target.toLowerCase()}:${scope.selector.toLowerCase()}`;
 
-/** Scopes to revoke on save: the universe minus what is being granted now. */
+/**
+ * Scopes this save must take back, diffed against what the modifier
+ * actually grants right now (services/onchain/roleScopes.ts) instead of
+ * against every scope the registry could ever grant.
+ *
+ * Saving stays authoritative — an asset unticked since an earlier save
+ * comes back off the modifier — but the revoke set now scales with what the
+ * vault really granted (a handful of targets) rather than with the
+ * catalog, whose growth marched the old wholesale sweep toward the block
+ * gas limit. On a freshly initialized role the diff is empty and the save
+ * is pure grants.
+ *
+ * Only scopes on registry-owned addresses are considered (see
+ * listRegistryAddresses), and `sparedScopes` carves out the ones another
+ * subsystem owns in both directions — the prepopulated toggles' five
+ * scopes, whose own on/off logic grants and revokes them — since a shared
+ * address (the base token is usually also a lending reserve) would
+ * otherwise let this diff revoke what a toggle just granted. A live target
+ * with no surviving desired scope is represented with the zero selector so
+ * buildRevokeEntriesV2 emits the paired revokeTarget for it.
+ *
+ * The caller must fail the save closed when current state cannot be read
+ * fresh — a diff against a stale or missing view under-revokes silently,
+ * which is the exact bug the authoritative save exists to prevent.
+ */
 export const listProtocolScopesToRevoke = (
   chainId: ChainId | string,
   build: IProtocolPermissionsBuild,
+  current: ICurrentRoleScopes,
+  sparedScopes: IPermissionScope[] = [],
 ): IPermissionScope[] => {
-  const granted = new Set(
-    build.grantedScopes.map(
-      (scope) =>
-        `${scope.target.toLowerCase()}:${scope.selector.toLowerCase()}`,
-    ),
+  const registryAddresses = listRegistryAddresses(chainId);
+  const spared = new Set(sparedScopes.map(scopeKeyOf));
+  const granted = new Set(build.grantedScopes.map(scopeKeyOf));
+  const desiredTargets = new Set(
+    build.targetAddresses.map((target) => target.toLowerCase()),
   );
-  return listRegistryScopeUniverse(chainId).filter(
-    (scope) =>
-      !granted.has(
-        `${scope.target.toLowerCase()}:${scope.selector.toLowerCase()}`,
-      ),
-  );
+
+  const revoked: IPermissionScope[] = [];
+  for (const scope of current.scopes) {
+    if (!registryAddresses.has(scope.target.toLowerCase())) continue;
+    const key = scopeKeyOf(scope);
+    if (granted.has(key) || spared.has(key)) continue;
+    revoked.push(scope);
+  }
+  for (const target of current.targets) {
+    const lower = target.toLowerCase();
+    if (!registryAddresses.has(lower) || desiredTargets.has(lower)) continue;
+    revoked.push({ target, selector: "0x00000000" });
+  }
+  return revoked;
 };

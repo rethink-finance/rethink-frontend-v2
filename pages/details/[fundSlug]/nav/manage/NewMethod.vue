@@ -1,44 +1,28 @@
 <template>
-  <div>
-    <UiHeader>
-      <div class="main_header__title">
-        Define New Methods
+  <div class="nav_new_method">
+    <div class="nav_new_method__header">
+      <h2 class="nav_new_method__title">
+        Define new method
+      </h2>
+      <p class="nav_new_method__sub">
+        Describe one position and how it is valued. The method is added to
+        this vault's draft, to be stored with the next NAV proposal.
+        <a
+          class="nav_new_method__link"
+          href="https://docs.rethink.finance/rethink.finance"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Learn more ↗</a>
+      </p>
+    </div>
 
-        <UiTooltipClick
-          location="right"
-          :hide-after="6000"
-        >
-          <Icon
-            icon="material-symbols:info-outline"
-            class="info-icon"
-            width="1.5rem"
-          />
-
-          <template #tooltip>
-            <div class="tooltip__content">
-              <a
-                class="tooltip__link"
-                href="https://docs.rethink.finance/rethink.finance"
-                target="_blank"
-              >
-                Learn More
-                <Icon
-                  icon="maki:arrow"
-                  color="primary"
-                  width="1rem"
-                />
-              </a>
-            </div>
-          </template>
-        </UiTooltipClick>
-      </div>
-    </UiHeader>
-
-    <FundNavNewMethod
-      :fund-address="fundStore.fund?.address"
-      :base-token-address="fundStore.fund?.baseToken?.address"
-      @new-nav-method-created="onNewNavMethodCreatedHandler"
-    />
+    <div class="brand_card">
+      <FundNavNewMethod
+        :fund-address="fundStore.fund?.address"
+        :base-token-address="fundStore.fund?.baseToken?.address"
+        @new-nav-method-created="onNewNavMethodCreatedHandler"
+      />
+    </div>
   </div>
 </template>
 
@@ -91,63 +75,40 @@ const onNewNavMethodCreatedHandler = (navMethod: INAVMethod) => {
 </script>
 
 <style scoped lang="scss">
-.main_header {
-  min-height: 40px;
+.nav_new_method {
+  display: flex;
+  flex-direction: column;
+  gap: 1.375rem;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
 
   &__title {
-    display: flex;
-    align-items: center;
-    align-content: center;
-    gap: 1.25rem;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: $color-white;
   }
-}
-.tooltip{
-  &__content{
-    display: flex;
-    gap: 40px;
+
+  &__sub {
+    max-width: 72ch;
+    font-size: 13px;
+    line-height: 1.55;
+    color: $color-steel-blue;
   }
+
   &__link {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
-    color: $color-primary;
-  }
-}
+    margin-left: 0.25rem;
+    color: $color-cyan;
 
-.info-icon {
-  cursor: pointer;
-  display: flex;
-  color: $color-text-irrelevant;
-}
-.buttons_container {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  margin-top: 0.5rem;
-}
-
-:deep(.v-expansion-panel-text__wrapper) {
-  padding: 0;
-}
-:deep(.v-expansion-panel-title) {
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-}
-
-.method_details_title {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  letter-spacing: 0.02625rem;
-  font-weight: 500;
-  color: $color-text-irrelevant;
-}
-.method_details_status {
-  color: $color-warning;
-
-  &--valid {
-    color: $color-success;
+    &:visited,
+    &:hover,
+    &:active {
+      color: $color-cyan;
+    }
   }
 }
 </style>

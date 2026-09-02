@@ -1,52 +1,63 @@
 <template>
-  <div>
-    <UiHeader>
-      <div class="main_header__title">
-        Manage NAV Methods
+  <div class="nav_manage">
+    <div class="nav_manage__header">
+      <div class="nav_manage__titles">
+        <h2 class="nav_manage__title">
+          Manage NAV methods
+        </h2>
+        <p class="nav_manage__sub">
+          Changes are kept as a draft in this browser until you create a NAV
+          proposal from them.
+        </p>
       </div>
-      <div class="main_header__actions">
-        <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/newMethod`">
-          <v-btn class="text-secondary" variant="outlined">
-            Define New Method
-          </v-btn>
+
+      <div class="nav_manage__actions">
+        <nuxt-link
+          class="nav_manage__ghost"
+          :to="`/details/${selectedFundSlug}/nav/manage/newMethod`"
+        >
+          Define new method
         </nuxt-link>
         <nuxt-link
+          class="nav_manage__ghost"
           :to="`/details/${selectedFundSlug}/nav/manage/addFromLibrary`"
         >
-          <v-btn class="text-secondary" variant="outlined">
-            Add From Library
-          </v-btn>
+          Add from library
         </nuxt-link>
-        <v-btn
-          class="text-secondary"
-          variant="outlined"
+        <button
+          type="button"
+          class="nav_manage__ghost"
           @click="addRawDialog = true"
         >
-          Import Raw
-        </v-btn>
+          Import raw
+        </button>
         <nuxt-link :to="`/details/${selectedFundSlug}/nav/manage/proposal`">
-          <v-btn class="bg-primary text-secondary">
-            Create NAV Proposal
+          <v-btn color="primary">
+            Create NAV proposal
           </v-btn>
         </nuxt-link>
       </div>
-    </UiHeader>
-    <div class="main_card">
-      <UiHeader>
-        <div class="subtitle_steel_blue mb-0">
-          {{ changesNumber }} Changes
+    </div>
+
+    <div class="nav_manage__card brand_card">
+      <div class="nav_manage__card_head">
+        <div class="nav_manage__card_titles">
+          <div class="brand_card__eyebrow">
+            Draft methods
+          </div>
+          <span class="brand_card__meta">
+            {{ changesNumber }} {{ changesNumber === 1 ? "change" : "changes" }}
+          </span>
         </div>
-        <div class="btn-draft">
-          <v-btn
-            v-if="isClearDraftVisible"
-            class="text-secondary"
-            variant="outlined"
-            @click="clearDraft"
-          >
-            Clear Draft
-          </v-btn>
-        </div>
-      </UiHeader>
+        <button
+          v-if="isClearDraftVisible"
+          type="button"
+          class="nav_manage__ghost nav_manage__ghost--danger"
+          @click="clearDraft"
+        >
+          Clear draft
+        </button>
+      </div>
       <FundNavMethodsTable
         v-model:methods="fundManagedNAVMethods"
         :fund-chain-id="selectedFundChain"
@@ -61,6 +72,7 @@
         show-summary-row
         show-base-token-balances
         show-simulated-nav
+        frameless
         idx="nav/manage/index"
         :loading="isLoadingFetchFundNAVUpdatesAction"
       />
@@ -71,7 +83,6 @@
       :methods="fundManagedNAVMethods"
       @added-methods="addRawMethods"
     />
-
   </div>
 </template>
 
@@ -198,14 +209,101 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
-.main_header {
+.nav_manage {
+  display: flex;
+  flex-direction: column;
+  gap: 1.375rem;
+
+  &__header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  &__titles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: $color-white;
+  }
+
+  &__sub {
+    max-width: 62ch;
+    font-size: 13px;
+    line-height: 1.55;
+    color: $color-steel-blue;
+  }
+
   &__actions {
     display: flex;
+    align-items: center;
+    gap: 0.75rem;
     flex-wrap: wrap;
-    gap: 1rem;
   }
-}
-.btn-draft {
-  min-height: 40px;
+
+  &__ghost {
+    display: inline-flex;
+    align-items: center;
+    padding: 9px 14px;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: transparent;
+    font-family: $font-sans;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: $color-text-irrelevant;
+    cursor: pointer;
+    transition: color $default-transition-time ease,
+      border-color $default-transition-time ease;
+
+    &:hover {
+      color: $color-white;
+      border-color: $color-line-3;
+    }
+    &--danger:hover {
+      color: $color-neg;
+      border-color: $color-neg-line;
+    }
+  }
+
+  /* The rows draw their own inset, so the card keeps none — and clips, so
+     the tinted total row ends on the card's rounded corners. */
+  &__card {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  &__card_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 20px 24px 16px;
+  }
+
+  &__card_titles {
+    display: flex;
+    align-items: baseline;
+    gap: 0.875rem;
+    flex-wrap: wrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__ghost {
+      transition: none;
+    }
+  }
 }
 </style>

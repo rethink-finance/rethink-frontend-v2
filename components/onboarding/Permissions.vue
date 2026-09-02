@@ -1,35 +1,11 @@
 <template>
   <div class="permissions_wrapper">
     <template v-if="selectedStepIndex === 0">
-      <h2 class="perm_section_title">
-        Permissions
-      </h2>
-
-      <!-- The two contracts every permission on this page is written against.
-           They exist from the moment the vault was initialized, so they head
-           the step rather than sitting in a footnote under it. -->
-      <div class="perm_head">
-        <div class="perm_head__pairs">
-          <div class="perm_head__pair">
-            <span class="perm_head__label">Safe contract</span>
-            <AddressLink
-              v-if="fundSettings?.safe"
-              :address="fundSettings.safe"
-              :chain-id="fundChainId"
-            />
-            <span v-else class="perm_head__value">N/A</span>
-          </div>
-          <div class="perm_head__pair">
-            <span class="perm_head__label">Roles modifier</span>
-            <AddressLink
-              v-if="roleModAddress"
-              :address="roleModAddress"
-              :chain-id="fundChainId"
-            />
-            <span v-else class="perm_head__value">N/A</span>
-          </div>
-        </div>
-        <span class="perm_head__badge">
+      <div class="perm_title_row">
+        <h2 class="perm_section_title">
+          Permissions
+        </h2>
+        <span class="perm_badge">
           {{ fundFactoryContractV2Used ? "Roles V2" : "Roles V1" }}
         </span>
       </div>
@@ -69,9 +45,11 @@
       />
       <OnboardingProtocolPermissions
         v-model="protocolSelections"
+        v-model:raw-entries="rawPermissionCodeEntries"
         class="mt-4"
         :chain-id="fundChainId"
         :roles-mod-address="roleModAddress"
+        :safe-address="fundSettings?.safe"
       />
     </div>
 
@@ -81,20 +59,42 @@
           title="View vault permissions"
           :href="gnosisPermissionsUrl"
         />
-        <OnboardingRawPermissionsCode
-          v-if="fundFactoryContractV2Used"
-          v-model="rawPermissionCodeEntries"
-        />
+
+        <!-- The two contracts every permission on this page is written
+             against, beside the link that opens them: reference for whoever
+             needs an address, not a headline for the step. Each is shown
+             truncated with the full address as its tooltip, and copied
+             whole by the glyph beside it. -->
+        <div class="perm_foot__contracts">
+          <div
+            v-for="contract in footContracts"
+            :key="contract.key"
+            class="perm_foot__pair"
+          >
+            <span class="perm_foot__label">{{ contract.label }}</span>
+            <template v-if="contract.address">
+              <span class="perm_foot__address" :title="contract.address">
+                {{ truncateAddressEllipsis(contract.address) }}
+              </span>
+              <button
+                type="button"
+                class="perm_foot__copy"
+                :class="{ 'perm_foot__copy--done': copiedAddress === contract.address }"
+                :title="copiedAddress === contract.address ? 'Copied' : `Copy the ${contract.label} address`"
+                :aria-label="copiedAddress === contract.address ? 'Copied' : `Copy the ${contract.label} address`"
+                @click="copyAddress(contract.address)"
+              >
+                <Icon
+                  :icon="copiedAddress === contract.address ? 'material-symbols:check-rounded' : 'clarity:copy-line'"
+                  width="0.8125rem"
+                  height="0.8125rem"
+                />
+              </button>
+            </template>
+            <span v-else class="perm_foot__value">N/A</span>
+          </div>
+        </div>
       </div>
-      <p class="perm_foot__text">
-        Having trouble reading permissions?
-        <a
-          class="perm_foot__link"
-          href="https://docs.rethink.finance/rethink.finance"
-          target="_blank"
-          rel="noopener"
-        >Learn more about permissions</a>
-      </p>
     </div>
 
     <FundGovernanceDelegatedPermissions
@@ -122,14 +122,6 @@
                 :href="gnosisPermissionsUrl"
               />
             </div>
-            <p class="info_container__text">
-              Having trouble reading permissions?<br>
-              <a
-                class="info_container__link"
-                href="https://docs.rethink.finance/rethink.finance"
-                target="_blank"
-              >Learn more about permissions here</a>.
-            </p>
           </div>
           <div class="info_container mt-6">
             <p class="info_container__text">
@@ -175,6 +167,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { formatInputToObject } from "~/composables/stepper/formatInputToObject";
+import { truncateAddressEllipsis } from "~/composables/addressUtils";
 import { getGnosisPermissionsUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
 import { networksMap } from "~/store/web3/networksMap";
 import { useRoles } from "~/composables/permissions/useRoles";
@@ -195,7 +188,6 @@ import {
   rolesV2WriteFunctionAbiMap,
 } from "~/composables/nav/generateNAVPermission";
 import PermissionsManagement from "~/components/onboarding/PermissionsManagement.vue";
-import AddressLink from "~/components/common/AddressLink.vue";
 import {
   ASSIGN_ROLES_SELECTOR,
   EXECUTE_NAV_UPDATE_SELECTOR,
@@ -212,7 +204,6 @@ import {
   decodeRolesV2Targets,
   type IPermissionScope,
 } from "~/composables/permissions/revokePermissions";
-import OnboardingRawPermissionsCode from "~/components/onboarding/RawPermissionsCode.vue";
 import type { IRawPermissionCodeEntry } from "~/composables/permissions/parseRawPermissionCode";
 import OnboardingProtocolPermissions from "~/components/onboarding/ProtocolPermissions.vue";
 import {
@@ -221,6 +212,10 @@ import {
   listProtocolScopesToRevoke,
   validateProtocolSelections,
 } from "~/composables/permissions/protocolPermissions";
+import {
+  fetchCurrentRoleScopes,
+  recordPermissionsSaveBlock,
+} from "~/services/onchain/roleScopes";
 const web3Store = useWeb3Store();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
@@ -246,6 +241,8 @@ const allowManagerToUpdateNav = ref(true);
 const allowManagerToUpdateSettings = ref(true);
 const allowManagerToManageRoleMembers = ref(true);
 const pendingRoleMembershipChanges = ref<IAssignMemberChange[]>([]);
+// Raw calldata pasted on the Protocol integrations card (Roles V2 only),
+// submitted verbatim at the end of the batch.
 const rawPermissionCodeEntries = ref<IRawPermissionCodeEntry[]>([]);
 // Protocol grants from the permissions registry (Roles V2 only). The card
 // component keeps this in step with what the registry offers on this chain.
@@ -377,7 +374,20 @@ const goToPermissionsStepTwo = async () => {
 
   // If roles V2 just finalize permission and submit the transaction.
   if (fundFactoryContractV2Used.value) {
-    return storePermissionsV2();
+    // Everything the save does before .send() — the role-state read, the
+    // registry build, the encoders — used to run outside any handler, so a
+    // throw was an unhandled rejection: no toast, no transaction, and the
+    // button spinning forever.
+    try {
+      return await storePermissionsV2();
+    } catch (error: any) {
+      console.error("Failed storing permissions", error);
+      loading.value = false;
+      toastStore.errorToast(
+        error?.message ?? "Storing permissions failed before submission.",
+      );
+      return;
+    }
   }
 
   try {
@@ -584,6 +594,22 @@ const storePermissionsV2 = async () => {
   loading.value = true;
   console.log("roleModAddress", roleModAddress.value);
 
+  // Captured after the guard above so the receipt closure below keeps the
+  // narrowed type.
+  const rolesModifierAddress = roleModAddress.value;
+
+  // What the modifier grants right now, replayed from its own event log —
+  // the diff below revokes only stale grants on registry-owned addresses
+  // instead of sweeping the whole grantable universe (which grew with the
+  // catalog until a save approached the block gas limit). Throws when no
+  // source is fresh; the caller's catch surfaces it and the save is
+  // aborted — a stale read would under-revoke silently.
+  const currentRoleScopes = await fetchCurrentRoleScopes(
+    fundChainId.value,
+    rolesModifierAddress,
+    ethers.encodeBytes32String(DEFAULT_ROLE_KEY_V2),
+  );
+
   const proposalData = prepPermissionsProposalData(roleModAddress.value, []);
   console.log(
     "storePermissions data:",
@@ -621,11 +647,19 @@ const storePermissionsV2 = async () => {
         ...Object.keys(prepopulatedScopes)
           .filter((key) => !isPrepopulatedEnabled[key])
           .map((key) => prepopulatedScopes[key]),
-        // Same authoritative rule for protocol grants: everything the
-        // registry could have granted on this chain is revoked, minus what
-        // this save grants again — an asset unticked since an earlier save
-        // is taken back off the modifier.
-        ...listProtocolScopesToRevoke(fundChainId.value, protocolBuild),
+        // Same authoritative rule for protocol grants — an asset unticked
+        // since an earlier save is taken back off the modifier — but diffed
+        // against the modifier's actual state, so the revoke set scales
+        // with what the vault granted, not with the catalog. The toggles'
+        // five scopes are spared in both directions: the base token is
+        // usually also a lending reserve, and their own on/off logic above
+        // owns those grants.
+        ...listProtocolScopesToRevoke(
+          fundChainId.value,
+          protocolBuild,
+          currentRoleScopes,
+          Object.values(prepopulatedScopes),
+        ),
       ],
       [
         ...Object.keys(prepopulatedScopes)
@@ -815,6 +849,13 @@ const storePermissionsV2 = async () => {
         console.log("receipt: ", receipt);
         if (receipt.status) {
           toastStore.successToast("Permissions stored successfully.");
+          // The freshness floor for the next save's role-state read: a log
+          // source that has not indexed this block yet is stale by proof.
+          recordPermissionsSaveBlock(
+            fundChainId.value,
+            rolesModifierAddress,
+            Number(receipt.blockNumber),
+          );
         } else {
           toastStore.errorToast(
             "Storing permissions has failed. Please contact the Rethink Finance support.",
@@ -859,6 +900,37 @@ watch(
   },
   { immediate: true },
 );
+
+/**
+ * The footer's contract pairs: label, and the address once the vault has
+ * one. The Safe and the modifier exist from initialization on.
+ */
+const footContracts = computed(() => [
+  { key: "safe", label: "Safe contract", address: unref(fundSettings)?.safe || "" },
+  { key: "roles", label: "Roles modifier", address: unref(roleModAddress) || "" },
+]);
+
+/** Which footer address was just copied, for its check mark. */
+const copiedAddress = ref("");
+let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+
+const copyAddress = async (address: string) => {
+  try {
+    await navigator.clipboard.writeText(address);
+  } catch {
+    toastStore.errorToast("Could not copy the address.");
+    return;
+  }
+  copiedAddress.value = address;
+  if (copiedTimer) clearTimeout(copiedTimer);
+  copiedTimer = setTimeout(() => {
+    copiedAddress.value = "";
+  }, 1500);
+};
+
+onBeforeUnmount(() => {
+  if (copiedTimer) clearTimeout(copiedTimer);
+});
 </script>
 
 <style scoped lang="scss">
@@ -867,58 +939,32 @@ watch(
   flex-direction: column;
 }
 
+/* The title with the Roles version beside it, the way the whitelist step
+   tags its title; the blocks under it bring their own top margin. */
+.perm_title_row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .perm_section_title {
-  margin-bottom: 1.375rem;
   font-size: 17px;
   font-weight: 700;
   line-height: 1.3;
   color: $color-white;
 }
 
-.perm_head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-
-  &__pairs {
-    display: flex;
-    gap: 3rem;
-    flex-wrap: wrap;
-  }
-
-  &__pair {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-  }
-
-  &__label {
-    font-family: $font-mono;
-    font-size: 10.5px;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
-  }
-
-  &__value {
-    font-family: $font-mono;
-    font-size: 12.5px;
-    color: $color-steel-blue;
-  }
-
-  &__badge {
-    padding: 0.25rem 0.5rem;
-    border: 1px solid $color-line-2;
-    border-radius: $default-border-radius;
-    font-family: $font-mono;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
-  }
+.perm_badge {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid $color-line-2;
+  border-radius: $default-border-radius;
+  font-family: $font-mono;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: $color-steel-blue;
 }
 
 .perm_role_row {
@@ -940,27 +986,71 @@ watch(
   &__buttons {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.75rem 1.25rem;
     flex-wrap: wrap;
   }
 
-  &__text {
-    margin-left: auto;
-    font-size: 12px;
-    line-height: 1.5;
+  /* Two label-and-address pairs in one quiet mono line: the same small caps
+     as a field label, the address truncated, both a step dimmer than the
+     button they sit beside. */
+  &__contracts {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  &__pair {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+
+  &__label {
+    font-family: $font-mono;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     color: $color-steel-blue;
   }
 
-  &__link {
-    color: $color-cyan;
-    text-decoration: underline;
+  &__address {
+    font-family: $font-mono;
+    font-size: 12px;
+    color: $color-text-irrelevant;
+  }
 
-    &:visited,
+  /* The copy control: a glyph the size of the text beside it, and a check
+     mark for a moment once the address is on the clipboard. */
+  &__copy {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    border: none;
+    background: none;
+    color: $color-steel-blue;
+    cursor: pointer;
+    transition: color $default-transition-time ease;
+
     &:hover,
-    &:active {
+    &:focus-visible {
+      outline: none;
+      color: $color-white;
+    }
+
+    &--done {
       color: $color-cyan;
     }
   }
+
+  &__value {
+    font-family: $font-mono;
+    font-size: 12px;
+    color: $color-steel-blue;
+  }
+
 }
 
 .management {
@@ -981,10 +1071,6 @@ watch(
   &__text {
     font-size: $text-sm;
     color: $color-light-subtitle;
-  }
-  &__link {
-    color: $color-primary;
-    text-decoration: underline;
   }
   &__buttons {
     display: flex;

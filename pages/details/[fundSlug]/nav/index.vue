@@ -58,44 +58,35 @@
       </div>
     </div>
 
-    <div class="nav__card brand_card">
-      <div class="brand_card__head">
+    <!-- The card supplies the frame and the table runs edge to edge inside
+         it, the way the design draws it: eyebrow in the head, rows on
+         hairlines below, the total closing the card. Re-simulating lives on
+         the Simulated column head, as it does on the manage page. -->
+    <div class="nav__card brand_card nav__card--flush">
+      <div class="nav__card_head">
         <div class="brand_card__eyebrow">
           NAV methods
         </div>
-        <UiInfoBox
-          info="Learn more about NAV methods"
-          :icon="true"
-          link="https://docs.rethink.finance/rethink.finance/protocol/architecture/nav-calculator-contract"
-        />
       </div>
-      <div class="methods main_grid main_grid--full-width main_grid--no-gap">
-        <FundNavMethodsTable
-          :fund-chain-id="fundStore.selectedFundChain"
-          :fund-address="fundStore.fundAddress"
-          :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
-          :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
-          :fee-balance="Number(fundStore.fund?.feeBalance)"
-          :safe-address="fundStore.fund?.safeAddress"
-          :base-symbol="fundStore.fund?.baseToken.symbol"
-          :base-decimals="fundStore.fund?.baseToken.decimals"
-          :methods="fundComputedNavMethods"
-          :loading="isLoadingFetchFundNAVUpdatesAction"
-          :nav-parts="fundLastNAVUpdate?.navParts"
-          show-summary-row
-          show-last-nav-update-value
-          show-base-token-balances
-          show-simulated-nav
-          idx="fundSlug/nav/index"
-        />
-      </div>
-    </div>
-
-    <div class="nav__card brand_card">
-      <div class="brand_card__eyebrow nav__updates_title">
-        NAV updates
-      </div>
-      <FundNavUpdates :fund="reversedFundNavUpdates" />
+      <FundNavMethodsTable
+        :fund-chain-id="fundStore.selectedFundChain"
+        :fund-address="fundStore.fundAddress"
+        :fund-contract-base-token-balance="Number(fundStore.fund?.fundContractBaseTokenBalance)"
+        :safe-contract-base-token-balance="Number(fundStore.fund?.safeContractBaseTokenBalance)"
+        :fee-balance="Number(fundStore.fund?.feeBalance)"
+        :safe-address="fundStore.fund?.safeAddress"
+        :base-symbol="fundStore.fund?.baseToken.symbol"
+        :base-decimals="fundStore.fund?.baseToken.decimals"
+        :methods="fundComputedNavMethods"
+        :loading="isLoadingFetchFundNAVUpdatesAction"
+        :nav-parts="fundLastNAVUpdate?.navParts"
+        show-summary-row
+        show-last-nav-update-value
+        show-base-token-balances
+        show-simulated-nav
+        frameless
+        idx="fundSlug/nav/index"
+      />
     </div>
   </div>
 </template>
@@ -106,13 +97,11 @@ import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
 import { ActionState } from "~/types/enums/action_state";
-import type IFund from "~/types/fund";
 
 const fundStore = useFundStore();
 const actionStateStore = useActionStateStore();
 const appSettingsStore = useSettingsStore();
 
-const fund = useAttrs().fund as IFund;
 const {
   selectedFundSlug,
   fundLastNAVUpdate,
@@ -138,17 +127,6 @@ const fundComputedNavMethods = computed(() => {
 const fundTotalNAVFormatted = computed(() => {
   if (!fundStore.fundTotalNAV) return "N/A";
   return fundStore.getFormattedBaseTokenValue(fundStore.fundTotalNAV)
-});
-
-// return fund with reversed navUpdates array to show the latest updates first
-const reversedFundNavUpdates = computed(() => {
-  if (!fund.navUpdates) return fund;
-
-  return {
-    ...fund,
-    // Create a shallow copy of the navUpdates array and reverse it
-    navUpdates: fund.navUpdates.slice().reverse(),
-  };
 });
 
 const isLoadingPostUpdateNAV = computed(() => {
@@ -225,10 +203,28 @@ const isLoadingFetchFundNAVUpdatesAction = computed(() => {
   &__card {
     /* brand_card provides chrome; margins come from the page flex gap. */
     margin-bottom: 0;
+
+    /* The rows draw their own inset, so the card keeps none — and clips, so
+       the tinted total row ends on the card's rounded corners. */
+    &--flush {
+      padding: 0;
+      overflow: hidden;
+    }
   }
 
-  &__updates_title {
-    margin-bottom: 1rem;
+  &__card_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 20px 24px 16px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__manage_link {
+      transition: none;
+    }
   }
 }
 
