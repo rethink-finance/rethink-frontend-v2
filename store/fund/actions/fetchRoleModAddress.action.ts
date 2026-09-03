@@ -1,5 +1,6 @@
 import { useFundStore } from "../fund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { patchCachedFundOverview } from "~/store/funds/fundOverviewCache";
 
 export const fetchRoleModAddressAddressAction = async (fundAddress: string): Promise<any> => {
   const fundStore = useFundStore();
@@ -29,5 +30,11 @@ export const fetchRoleModAddressAddressAction = async (fundAddress: string): Pro
   );
   roleModAddress = safeModules[0][1];
   fundStore.fundRoleModAddress[fundAddress] = roleModAddress;
+  // Display only: the Contracts card shows this while the Safe is asked again.
+  if (roleModAddress) {
+    patchCachedFundOverview(fundStore.selectedFundChain, fundAddress, {
+      roleModAddress,
+    });
+  }
   return roleModAddress;
 };

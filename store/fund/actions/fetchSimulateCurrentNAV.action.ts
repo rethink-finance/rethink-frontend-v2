@@ -3,8 +3,10 @@ import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
 import {
   readCachedNavEntryMap,
+  writeCachedLastNavUpdate,
   writeCachedNavEntryMap,
 } from "~/store/funds/fundsCache";
+import { patchCachedFundOverview } from "~/store/funds/fundOverviewCache";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
 
@@ -113,4 +115,20 @@ export const fetchSimulateCurrentNAVAction = async (
     );
   }
   await Promise.allSettled(promises);
+
+  // The simulated values now sit on the method entries. Kept with the cached
+  // last update — or, for a vault that has never settled, with its initial
+  // methods — they let the next visit draw the Composition card at once
+  // instead of after a simulation round.
+  if (fundStore.fund?.address?.toLowerCase() !== fundAddress.toLowerCase()) {
+    return;
+  }
+  const lastNavUpdate = fundStore.fundLastNAVUpdate;
+  if (lastNavUpdate) {
+    writeCachedLastNavUpdate(fundChainId, fundAddress, lastNavUpdate);
+  } else if (fundStore.fundInitialNAVMethods.length) {
+    patchCachedFundOverview(fundChainId, fundAddress, {
+      initialNavMethods: fundStore.fundInitialNAVMethods,
+    });
+  }
 };

@@ -31,6 +31,7 @@
 import type IFund from "~/types/fund";
 import AddressLink from "~/components/common/AddressLink.vue";
 import { useFundStore } from "~/store/fund/fund.store";
+import { readCachedFundOverview } from "~/store/funds/fundOverviewCache";
 
 const props = defineProps({
   fund: {
@@ -43,13 +44,26 @@ const fundStore = useFundStore();
 
 // Not on the fund object — read from the admin contract, same as the old
 // Basics table did.
+// Last visit's answer holds the row while the Safe is asked again: the store
+// does not keep this across visits, and the row used to land a beat after
+// the rest of the card.
 const roleModAddress = ref("");
 watch(
   () => props.fund?.address,
   async () => {
-    roleModAddress.value = props.fund?.address
-      ? await fundStore.fetchRoleModAddress(props.fund.address)
-      : "";
+    const address = props.fund?.address;
+    const chainId = props.fund?.chainId;
+    roleModAddress.value =
+      address && chainId
+        ? (readCachedFundOverview(chainId, address)?.roleModAddress ?? "")
+        : "";
+    if (!address) return;
+    try {
+      const fresh = await fundStore.fetchRoleModAddress(address);
+      if (props.fund?.address === address) roleModAddress.value = fresh;
+    } catch (error) {
+      console.warn("Failed fetching the Roles modifier address", error);
+    }
   },
   { immediate: true },
 );

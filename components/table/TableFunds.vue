@@ -5,6 +5,7 @@
     :headers="headers"
     hover
     :items="items"
+    :item-value="rowKey"
     :sort-by="[{ key: 'totalSimulatedNavUSD', order: 'desc' }]"
     :loading="loading && items.length === 0"
     loading-text="Loading OIVs"
@@ -139,7 +140,7 @@
         <SparklineCell
           :chain-id="item.chainId"
           :address="item.address"
-          @performance="(item as any).thirtyDayPerformance = $event"
+          @performance="thirtyDayPerformance[rowKey(item)] = $event"
         />
       </div>
     </template>
@@ -231,6 +232,20 @@ defineProps({
     default: false,
   },
 });
+
+/**
+ * Rows are keyed by vault rather than by position. The store replaces a
+ * chain's fund objects whenever its data refreshes, and a keyed row keeps
+ * its DOM and its sparkline through that swap, and through a re-sort.
+ */
+const rowKey = (fund: IFund): string => `${fund.chainId}:${fund.address}`;
+
+/**
+ * 30D change per vault, published by each row's sparkline once it has its
+ * series. Kept beside the rows rather than on them: a figure stored on a
+ * fund object is lost when the store swaps that object for a fresh one.
+ */
+const thirtyDayPerformance = reactive<Record<string, number>>({});
 
 /**
  * Round to the precision the cell prints: two decimals of a *percentage*, so
@@ -354,7 +369,7 @@ const headers: any = computed(() => [
   {
     title: "30D",
     key: "sparkline",
-    value: (v: any) => v.thirtyDayPerformance ?? -Infinity,
+    value: (v: IFund) => thirtyDayPerformance[rowKey(v)] ?? -Infinity,
     align: "center",
     width: 130,
     sortable: true,

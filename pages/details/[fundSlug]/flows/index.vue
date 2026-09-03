@@ -157,7 +157,10 @@
         <div class="flows__stat">
           <div class="flows__stat_value">
             <v-progress-circular
-              v-if="fund.pendingRedemptionBalanceLoading"
+              v-if="
+                fund.pendingRedemptionBalanceLoading &&
+                  fund.pendingRedemptionBalance == null
+              "
               class="d-flex"
               size="16"
               width="2"
@@ -187,7 +190,10 @@
         <div class="flows__stat">
           <div class="flows__stat_value">
             <v-progress-circular
-              v-if="fund.pendingDepositBalanceLoading"
+              v-if="
+                fund.pendingDepositBalanceLoading &&
+                  fund.pendingDepositBalance == null
+              "
               class="d-flex"
               size="16"
               width="2"

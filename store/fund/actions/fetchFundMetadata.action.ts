@@ -4,7 +4,7 @@ import type IFund from "~/types/fund";
 import type IFundSettings from "~/types/fund_settings";
 import type INAVUpdate from "~/types/nav_update";
 
-import defaultAvatar from "@/assets/images/default_avatar.webp";
+import defaultAvatar from "@/assets/images/default_avatar.webp?inline";
 import { ERC20 } from "assets/contracts/ERC20";
 import { formatQuorumPercentage } from "~/composables/formatters";
 import { parseClockMode } from "~/composables/fund/parseClockMode";
@@ -15,6 +15,7 @@ import {
 } from "~/composables/fund/resolveFundGovernor";
 import { fetchBackendFundMetadata } from "~/services/backend/fund";
 import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
+import { patchCachedFundOverview } from "~/store/funds/fundOverviewCache";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { useBlockTimeStore } from "~/store/web3/blockTime.store";
@@ -273,10 +274,17 @@ export const fetchFundMetaDataAction = async (
       fund.oivChatUrl = metaData?.oivChatUrl || oivChatUrl;
     }
 
-    Object.assign(
-      fundStore.chainFunds[fundChainId][fundAddress] ??= {} as IFund,
-      fund,
-    );
+    // The NAV history and the total it carries are loaded by fetchFundNAVData,
+    // and a page served from cache already holds last visit's. Metadata must
+    // not blank them for the round trip in between.
+    const stored = (fundStore.chainFunds[fundChainId][fundAddress] ??=
+      {} as IFund);
+    const { navUpdates, lastNAVUpdateTotalNAV, ...metadata } = fund;
+    Object.assign(stored, metadata);
+    if (!stored.navUpdates?.length) {
+      stored.navUpdates = navUpdates;
+      stored.lastNAVUpdateTotalNAV = lastNAVUpdateTotalNAV;
+    }
 
     // The backend already knows which factory registered this vault, so on that
     // path the flag is set before the fund is stored rather than by a probe
@@ -285,17 +293,20 @@ export const fetchFundMetaDataAction = async (
     // in the meantime.
     if (backendSnapshot) {
       fund.fundFactoryContractV2Used = backendSnapshot.factoryVersion === "v2";
-      const stored = fundStore.chainFunds[fundChainId]?.[fundAddress];
-      if (stored) stored.fundFactoryContractV2Used = fund.fundFactoryContractV2Used;
+      stored.fundFactoryContractV2Used = fund.fundFactoryContractV2Used;
     } else {
       fundStore.fetchGovernableFundFactoryVersion(fundChainId, fundAddress).then(
         version => {
-          if (fundStore.chainFunds[fundChainId]?.[fundAddress]) {
-            fundStore.chainFunds[fundChainId][fundAddress].fundFactoryContractV2Used = version === "v2"
+          const current = fundStore.chainFunds[fundChainId]?.[fundAddress];
+          if (current) {
+            current.fundFactoryContractV2Used = version === "v2";
+            patchCachedFundOverview(fundChainId, fundAddress, { fund: current });
           }
         },
       )
     }
+    // The next visit paints from this before asking anyone.
+    patchCachedFundOverview(fundChainId, fundAddress, { fund: stored });
     return fund;
   } catch (error) {
     console.error("Error in promises: ", error, "fund: ", fundAddress);

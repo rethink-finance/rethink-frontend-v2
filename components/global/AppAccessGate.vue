@@ -4,12 +4,12 @@
       <!-- Same theme swap as the navbar Logo: the white-text mark for dark,
            the ink-text variant for light (rules in app.scss). -->
       <img
-        src="~/assets/images/logo.svg"
+        :src="logo"
         alt="rethink.finance"
         class="access_gate__logo theme_logo--dark"
       >
       <img
-        src="~/assets/images/logo_light.svg"
+        :src="logoLight"
         alt="rethink.finance"
         class="access_gate__logo theme_logo--light"
       >
@@ -47,9 +47,9 @@
       </div>
 
       <div class="access_gate__divider">
-        <span class="line"></span>
+        <span class="line" />
         <span class="label">or</span>
-        <span class="line"></span>
+        <span class="line" />
       </div>
 
       <div v-if="isSubscribed" class="access_gate__subscribed">
@@ -77,6 +77,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+// Same inlined wordmarks as the navbar — see components/global/Logo.vue.
+import logo from "~/assets/images/logo.svg?inline";
+import logoLight from "~/assets/images/logo_light.svg?inline";
 
 // Hardcoded gate password & persistence key.
 const ACCESS_PASSWORD = "rethinkCreate";

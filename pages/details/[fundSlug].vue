@@ -1,7 +1,9 @@
 <template>
   <!-- .page_shell, not .w-100: Vuetify's utility is !important and would beat
        the shared page width cap. -->
-  <div v-if="isLoadingFetchFundData" class="page_shell">
+  <!-- Skeletons only while there is nothing to show: a vault opened before is
+       served from cache at once and refreshed behind the page. -->
+  <div v-if="isLoadingFetchFundData && !fund?.address" class="page_shell">
     <!-- TODO Create better skeletons in the future. -->
     <v-skeleton-loader type="card" />
     <v-skeleton-loader type="card" />
@@ -162,7 +164,7 @@ const isLoadingFetchFundData = computed(() =>
 
 watch(
   () => accountStore.connectedWallet,
-  (wallet: any) => {
+  () => {
     fundStore.fetchUserFundData(fundChainId, fundAddress);
   },
 );
