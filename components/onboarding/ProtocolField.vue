@@ -17,7 +17,15 @@
         <p v-if="inlineWarning" class="field__warning field__warning--inline">
           {{ group.warning }}
         </p>
-        <button type="button" class="field__bulk" @click="selectAll">
+        <!-- On a searchable (huge, uncurated) list "Select all" is never a
+             deliberate grant — one click would scope a four-digit number of
+             markets — so the list keeps only Clear. -->
+        <button
+          v-if="!searchable"
+          type="button"
+          class="field__bulk"
+          @click="selectAll"
+        >
           Select all
         </button>
         <button type="button" class="field__bulk" @click="setGroup([])">
@@ -38,6 +46,22 @@
       <p v-if="narrowedNote" class="field__note field__note--lead">
         {{ narrowedNote }}
       </p>
+
+      <!--
+        Past a couple dozen options a chip wall stops being scannable — and
+        the Morpho lists run to four digits — so a long list renders a
+        search box and only a capped slice of itself. Selected chips always
+        render, so a grant can never hide behind the cap.
+      -->
+      <input
+        v-if="searchable"
+        v-model="searchQuery"
+        class="field__search"
+        type="search"
+        :placeholder="`Search ${view.options.length} ${group.noun}s`"
+        spellcheck="false"
+        :aria-label="`Search ${group.label}`"
+      >
 
       <template v-for="section in optionSections">
         <!--
@@ -124,6 +148,14 @@
           </button>
         </div>
       </template>
+
+      <p v-if="searchable && !visibleOptions.matches" class="field__note">
+        No {{ group.noun }} matches “{{ searchQuery.trim() }}”.
+      </p>
+      <p v-else-if="visibleOptions.hidden" class="field__note">
+        Showing {{ visibleOptions.options.length }} of
+        {{ visibleOptions.matches }} — search to find the rest.
+      </p>
 
       <!--
         What each scope currently covers, read back in the assets' own
@@ -316,6 +348,59 @@ const narrowedNote = computed(() => {
   return `${[...settings].join(" · ")} lists ${shown} of ${total} ${noun}.`;
 });
 
+/** Past this many options the list gets a search box and a render cap. */
+const SEARCHABLE_THRESHOLD = 24;
+
+/**
+ * The most chips an unrefined (or broadly matching) query renders. Enough
+ * to browse the head of the list; anything past it is reached by search.
+ */
+const RENDER_CAP = 60;
+
+const searchQuery = ref("");
+
+const searchable = computed(
+  () =>
+    props.group.control === "multi-select" &&
+    view.value.options.length > SEARCHABLE_THRESHOLD,
+);
+
+/**
+ * The options the chip list actually renders: every option when the list
+ * is small, otherwise the query's matches (label or value, case-insensitive)
+ * capped at RENDER_CAP — with selected options always kept, in the list's
+ * own order, so no grant is ever off-screen.
+ */
+const visibleOptions = computed(() => {
+  const { options, selected } = view.value;
+  if (!searchable.value) {
+    return { options, hidden: 0, matches: options.length };
+  }
+  const query = searchQuery.value.trim().toLowerCase();
+  const matched = query
+    ? options.filter(
+      (option) =>
+        option.label.toLowerCase().includes(query) ||
+          option.value.toLowerCase().includes(query),
+    )
+    : options;
+  const picked = new Set(selected);
+  const kept = new Set<string>();
+  for (const option of matched) {
+    if (picked.has(option.value)) kept.add(option.value);
+  }
+  for (const option of matched) {
+    if (kept.size >= RENDER_CAP) break;
+    kept.add(option.value);
+  }
+  const shown = matched.filter((option) => kept.has(option.value));
+  return {
+    options: shown,
+    hidden: matched.length - shown.length,
+    matches: matched.length,
+  };
+});
+
 const isPicked = (value: string) => view.value.selected.includes(value);
 
 const setGroup = (values: string[]) => {
@@ -380,7 +465,8 @@ const toggleValueScope = (value: string, action: string) => {
  * re-sort.
  */
 const optionSections = computed(() => {
-  const { options, selected } = view.value;
+  const { selected } = view.value;
+  const { options } = visibleOptions.value;
   const rules = DEFERRED_SECTIONS.filter(
     (rule) =>
       options.filter((option) => rule.match(option.value)).length >=
@@ -530,6 +616,29 @@ const scopeAssetList = (assets: string[]): string => {
 
     &--continued {
       margin-top: 0.375rem;
+    }
+  }
+
+  &__search {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    min-height: 2rem;
+    height: 2rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: transparent;
+    font-family: $font-mono;
+    font-size: 12px;
+    color: $color-title;
+
+    &:focus {
+      outline: none;
+      border-color: $color-cyan-line;
+    }
+
+    &::placeholder {
+      color: $color-steel-blue;
     }
   }
 
