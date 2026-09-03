@@ -6,7 +6,10 @@
       </div>
     </div>
 
-    <div v-if="isLoading" class="monthly__placeholder">
+    <div
+      v-if="isLoading && !rows.length && !hasFeeds"
+      class="monthly__placeholder"
+    >
       <v-progress-circular size="16" width="2" indeterminate />
       Reading share price history…
     </div>
@@ -86,7 +89,8 @@ const FLAT_THRESHOLD = 0.005;
  * Both feeds are already on the fund — fetchFundNAVData loads them for the page
  * — so this card reads rather than fetches. Its own loading state is that
  * action's, since an empty list mid-flight is indistinguishable from a vault
- * that has none.
+ * that has none. Rows already on screen from the cache stay up while the
+ * feeds refresh behind them.
  */
 const actionStateStore = useActionStateStore();
 
@@ -114,6 +118,18 @@ const isLoading = computed(() =>
     `fetchFundNavUpdates_${props.fund?.chainId}_${props.fund?.address}`,
     `fetchFundDailyNavSnapshots_${props.fund?.chainId}_${props.fund?.address}`,
   ].some((key) => actionStateStore.isActionState(key, ActionState.Loading)),
+);
+
+/**
+ * Whether either feed has ever landed on this fund — from this visit's fetch
+ * or from the cache. Once one has, an empty list is an answer rather than a
+ * wait, and the card says so instead of flipping back to the spinner each
+ * time a feed is asked for again.
+ */
+const hasFeeds = computed(
+  () =>
+    props.fund?.backendNavUpdates !== undefined ||
+    props.fund?.backendDailyNavSnapshots !== undefined,
 );
 
 const monthlyReturns = computed<MonthlyReturn[]>(() =>

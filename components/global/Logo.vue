@@ -6,12 +6,12 @@
          an <img> SVG can't be recolored from CSS. The mobile glyph is the
          gradient mark alone and works on both grounds. -->
     <img
-      src="@/assets/images/logo.svg"
+      :src="logo"
       class="rethink_logo theme_logo--dark"
       :class="{'rethink_logo--sm': small}"
     >
     <img
-      src="@/assets/images/logo_light.svg"
+      :src="logoLight"
       class="rethink_logo theme_logo--light"
       :class="{'rethink_logo--sm': small}"
     >
@@ -23,6 +23,14 @@
   </span>
 </template>
 <script setup lang="ts">
+// Inlined as data URIs rather than requested: the browser holds image
+// requests back while script requests are in flight, and on the dev server
+// that is hundreds of module requests — the navbar drew around an empty box
+// for seconds. The mobile mark is small enough that Vite inlines it on its
+// own; these two are 10 KB each and have to be asked for.
+import logo from "@/assets/images/logo.svg?inline";
+import logoLight from "@/assets/images/logo_light.svg?inline";
+
 defineProps({
   small: {
     type: Boolean,

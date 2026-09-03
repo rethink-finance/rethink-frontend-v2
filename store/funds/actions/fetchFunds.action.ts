@@ -1,6 +1,7 @@
 import { excludedFundAddresses } from "../config/excludedFundAddresses.config";
 import { useFundsStore } from "../funds.store";
 import { readCachedChainFunds, writeCachedChainFunds } from "../fundsCache";
+import { applyFigures, inheritFigures } from "../liveFigures";
 import { fetchFundsLatestSnapshotsAction } from "./fetchFundLatestSnapshot.action";
 import { ChainId } from "~/types/enums/chain_id";
 import { chainIds } from "~/store/web3/networksMap";
@@ -28,6 +29,21 @@ export async function fetchFundsAction(): Promise<void> {
 
   // Fetch total TVL data
   fundsStore.fetchTotalTVL();
+
+  // The figures are one backend call away, but the revalidation below only
+  // asks for them after two on-chain round trips per chain — or a timeout,
+  // on a sick RPC. So every chain restored from cache asks the backend right
+  // away and writes the answer onto the rows on screen, whichever those are
+  // by then: the cached ones, or fresh ones that inherited the cached
+  // figures. The revalidation's own request for the same addresses joins
+  // this one in flight.
+  for (const chainId of chainsFromCache) {
+    fetchFundsLatestSnapshotsAction(fundsStore.chainFunds[chainId])
+      .then((refreshed) => applyFigures(fundsStore.chainFunds[chainId], refreshed))
+      .catch((error: any) => {
+        console.error("Failed refreshing cached figures", chainId, error);
+      });
+  }
 
   // Function to process each chain asynchronously
   async function processChain(chainId?: ChainId): Promise<void> {
@@ -73,7 +89,14 @@ export async function fetchFundsAction(): Promise<void> {
       fundAddresses,
       fundsInfo,
     );
-    fundsStore.chainFunds[chainId] = funds;
+    // Fresh rows take over the figures of the rows they replace, so the table
+    // keeps its numbers and its order while the backend call below is in
+    // flight. Without this every chain's rows blank to spinners and drop to
+    // the bottom of the NAV sort for a round trip, one chain at a time.
+    fundsStore.chainFunds[chainId] = inheritFigures(
+      funds,
+      fundsStore.chainFunds[chainId],
+    );
     chainsFromCache.delete(chainId);
 
     // Fetch the latest snapshot for each fund to get current value

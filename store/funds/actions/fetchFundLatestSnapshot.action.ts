@@ -37,36 +37,67 @@ export async function fetchFundLatestSnapshot(fund: IFund): Promise<IFund> {
   return parseFundSnapshotResponse(fund, data);
 }
 
+/**
+ * One discover load asks for a chain's snapshots twice — once for the rows
+ * restored from cache, once for the rows the on-chain revalidation rebuilds —
+ * and both want the same answer. Concurrent callers with the same address set
+ * share one request. The raw response is what is shared, not the rows built
+ * from it, so each caller still maps the answer onto its own fund objects.
+ * Failures are not kept, so the next caller tries again.
+ */
+const SHARE_SNAPSHOTS_MS = 10 * 1000;
+const snapshotsInFlight = new Map<
+  string,
+  { at: number; promise: Promise<any[] | null> }
+>();
+
+const loadLatestSnapshots = (
+  chainId: ChainId,
+  fundAddresses: string[],
+): Promise<any[] | null> => {
+  const key = `${chainId}:${[...fundAddresses].sort().join(",")}`;
+  const hit = snapshotsInFlight.get(key);
+  if (hit && Date.now() - hit.at < SHARE_SNAPSHOTS_MS) return hit.promise;
+
+  const config = useRuntimeConfig();
+  const promise = fetch(`${config.public.BACKEND_URL}/nav/latest-snapshots`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      fundChainId: chainId,
+      fundAddresses,
+    }),
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        console.error(`Failed to fetch latest snapshot for chain ${chainId}:`, response.statusText);
+        return null;
+      }
+      const data = await response.json();
+      console.warn("Funds chainId ", chainId, " NAV SNAPSHOTS", data);
+      return data;
+    })
+    .catch((error) => {
+      console.error(`Error fetching latest snapshot for ChainId ${chainId}:`, error);
+      return null;
+    });
+  snapshotsInFlight.set(key, { at: Date.now(), promise });
+  promise.then((data) => {
+    if (data === null) snapshotsInFlight.delete(key);
+  });
+  return promise;
+};
+
 export async function fetchFundLatestSnapshots(chainId: ChainId, funds: IFund[]): Promise<IFund[]> {
   console.warn("FETCH LATEST SNAPSHOTS ChainId ", chainId);
-  const config = useRuntimeConfig();
-  try {
-    const fundAddresses = funds.map((fund) => fund.address);
-    const response = await fetch(
-      `${config.public.BACKEND_URL}/nav/latest-snapshots`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fundChainId: chainId,
-          fundAddresses,
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      console.error(`Failed to fetch latest snapshot for chain ${chainId}:`, response.statusText);
-      return funds;
-    }
-
-    const data = await response.json();
-    console.warn("Funds chainId ", chainId, " NAV SNAPSHOTS", data);
-    return funds.map((fund: IFund) => parseFundSnapshotResponse(fund, data.find((snapshot: any) => snapshot.fundAddress === fund.address)));
-  } catch (error) {
-    console.error(`Error fetching latest snapshot for ChainId ${chainId}:`, error);
-    return funds;
-  }
+  const data = await loadLatestSnapshots(
+    chainId,
+    funds.map((fund) => fund.address),
+  );
+  if (!data) return funds;
+  return funds.map((fund: IFund) => parseFundSnapshotResponse(fund, data.find((snapshot: any) => snapshot.fundAddress === fund.address)));
 }
 
 

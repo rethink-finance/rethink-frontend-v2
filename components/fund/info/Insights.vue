@@ -7,7 +7,10 @@
         </div>
         <div class="fund_stats__value_row">
           <v-progress-circular
-            v-if="isLoadingFetchFundLatestSnapshotActionState"
+            v-if="
+              isLoadingFetchFundLatestSnapshotActionState &&
+                fund.totalSimulatedNav == null
+            "
             class="d-flex"
             size="24"
             width="2"
@@ -43,7 +46,10 @@
           </template>
           <template v-else>
             <v-progress-circular
-              v-if="isLoadingFetchFundNAVUpdatesActionState"
+              v-if="
+                isLoadingFetchFundNAVUpdatesActionState &&
+                  !fundStore.fundLastNAVUpdate
+              "
               class="d-flex"
               size="24"
               width="2"
@@ -101,7 +107,10 @@
           </div>
           <div class="fund_stats__value_row">
             <v-progress-circular
-              v-if="isLoadingCalculateFundPerformanceMetricsActionState"
+              v-if="
+                isLoadingCalculateFundPerformanceMetricsActionState &&
+                  fund?.cumulativeReturnPercent == null
+              "
               class="d-flex"
               size="18"
               width="2"
@@ -121,7 +130,10 @@
           </div>
           <div class="fund_stats__value_row">
             <v-progress-circular
-              v-if="isLoadingCalculateFundPerformanceMetricsActionState"
+              v-if="
+                isLoadingCalculateFundPerformanceMetricsActionState &&
+                  fund?.cumulativeReturnPercent == null
+              "
               class="d-flex"
               size="18"
               width="2"
@@ -198,6 +210,8 @@ const props = defineProps({
   },
 });
 
+// A loading flag only ever hides a figure that is not there yet: a page served
+// from cache already shows last visit's, and the refresh replaces it in place.
 const isLoadingFetchFundNAVUpdatesActionState = computed(() =>
   actionStateStore.isActionState("fetchFundNAVDataAction", ActionState.Loading),
 );

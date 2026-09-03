@@ -43,7 +43,10 @@ useSeoMeta({
   ogTitle: () => parsedTitle.value,
   description: () => props.description,
   ogDescription: () => props.description,
-  ogImage: () => props.imageUrl,
+  // A vault without a photo carries the default avatar, which is inlined as
+  // a data URI — no use to a crawler. The site mark stands in for it there.
+  ogImage: () =>
+    props.imageUrl.startsWith("data:") ? "/favicon-512.png" : props.imageUrl,
 })
 </script>
 

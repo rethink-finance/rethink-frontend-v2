@@ -37,6 +37,10 @@
 <script lang="ts">
 import type IFund from "~/types/fund";
 import { parsePlannedSettlement } from "~/composables/fund/parsePlannedSettlement";
+import {
+  patchCachedFundOverview,
+  readCachedFundOverview,
+} from "~/store/funds/fundOverviewCache";
 
 export default {
   name: "Settlement",
@@ -67,6 +71,14 @@ export default {
       ],
     };
   },
+  computed: {
+    isSelectedDepositButton() {
+      return this.selectedActionButtonValue === "deposit";
+    },
+    isSelectedRedeemButton() {
+      return this.selectedActionButtonValue === "redeem";
+    },
+  },
   watch: {
     // Design footnotes the form with the planned settlement cycle, so a
     // depositor knows when the request they are about to submit will settle.
@@ -77,24 +89,27 @@ export default {
           this.plannedSettlement = "";
           return;
         }
+        const { chainId, address } = this.fund;
+        // Parsing reads the chain's block time, a round trip that used to land
+        // this line a beat after the form. Last visit's answer holds it.
+        this.plannedSettlement =
+          readCachedFundOverview(chainId, address)?.plannedSettlement ?? "";
         try {
           const parsed = await parsePlannedSettlement(
-            this.fund.chainId,
+            chainId,
             this.fund.plannedSettlementPeriod,
           );
+          if (this.fund?.address !== address) return;
           this.plannedSettlement = parsed ?? "";
+          if (parsed) {
+            patchCachedFundOverview(chainId, address, {
+              plannedSettlement: parsed,
+            });
+          }
         } catch {
-          this.plannedSettlement = "";
+          // Whatever is shown — last visit's answer or nothing — stays.
         }
       },
-    },
-  },
-  computed: {
-    isSelectedDepositButton() {
-      return this.selectedActionButtonValue === "deposit";
-    },
-    isSelectedRedeemButton() {
-      return this.selectedActionButtonValue === "redeem";
     },
   },
   methods: {

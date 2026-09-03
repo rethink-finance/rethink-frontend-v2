@@ -6,7 +6,8 @@
       </div>
     </div>
 
-    <div v-if="isSimulating || !rows.length" class="composition__placeholder">
+    <!-- Rows from last visit's simulation stay up while this one runs. -->
+    <div v-if="!rows.length" class="composition__placeholder">
       <v-progress-circular size="16" width="2" indeterminate />
       Valuing positions…
     </div>

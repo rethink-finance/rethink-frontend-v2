@@ -25,7 +25,12 @@
       </div>
     </div>
 
-    <v-progress-linear v-if="isLoading" indeterminate class="mb-2" />
+    <!-- Only a cold load shows progress; rows from the cache refresh silently. -->
+    <v-progress-linear
+      v-if="isLoading && !filteredRows.length"
+      indeterminate
+      class="mb-2"
+    />
 
     <div class="activity__table">
       <div class="activity__row activity__row--head">
@@ -182,6 +187,12 @@ import {
 } from "~/services/vaultFlows";
 import { formatTokenValue, formatNumberShort } from "~/composables/formatters";
 import { useFundStore } from "~/store/fund/fund.store";
+import { useActionStateStore } from "~/store/actionState.store";
+import { ActionState } from "~/types/enums/action_state";
+import {
+  patchCachedFundOverview,
+  readCachedFundOverview,
+} from "~/store/funds/fundOverviewCache";
 import AddressLink from "~/components/common/AddressLink.vue";
 import {
   OPERATION_DOT_DEPOSIT,
@@ -193,6 +204,7 @@ import {
 const props = defineProps<{ fund: IFund }>();
 
 const fundStore = useFundStore();
+const actionStateStore = useActionStateStore();
 
 /**
  * Everything that has happened to the vault, from the two places it is
@@ -516,10 +528,52 @@ const allRows = computed(() =>
   ),
 );
 
+/**
+ * Last visit's rows, shown until this visit's are complete. Complete means
+ * both flow feeds have answered and the full NAV history is in: a page served
+ * from cache carries only the last settlement, and rows built from that would
+ * list one settlement where there were many, then jump when the rest land.
+ */
+const cachedRows = computed<ActivityRow[]>(() => {
+  const chainId = props.fund?.chainId;
+  const address = props.fund?.address;
+  if (!chainId || !address) return [];
+  return (readCachedFundOverview(chainId, address)?.activityRows ?? []).map(
+    (row) => ({
+      ...(row as ActivityRow),
+      // Relative times age; the timestamp they came from does not.
+      when: relativeTime(row.timestamp),
+    }),
+  );
+});
+
+const isHistoryComplete = computed(() => {
+  const state = actionStateStore.getActionState("fetchFundNAVDataAction");
+  return state === ActionState.Success || state === ActionState.Error;
+});
+
+const rowsAreFresh = computed(
+  () => !isLoading.value && isHistoryComplete.value,
+);
+
+const displayRows = computed(() =>
+  rowsAreFresh.value || !cachedRows.value.length
+    ? allRows.value
+    : cachedRows.value,
+);
+
+// Fresh rows are what the next visit opens on.
+watch([allRows, rowsAreFresh], ([rows, fresh]) => {
+  if (!fresh || !rows.length || !props.fund?.address) return;
+  patchCachedFundOverview(props.fund.chainId, props.fund.address, {
+    activityRows: rows,
+  });
+});
+
 const filteredRows = computed(() => {
   const kind = FILTERS.find((f) => f.label === activeFilter.value)?.kind;
-  if (!kind) return allRows.value;
-  return allRows.value.filter((row) => row.kind === kind);
+  if (!kind) return displayRows.value;
+  return displayRows.value.filter((row) => row.kind === kind);
 });
 
 const pageCount = computed(() =>

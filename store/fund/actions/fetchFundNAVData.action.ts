@@ -11,6 +11,7 @@ import type INAVUpdate from "~/types/nav_update";
 import type IFund from "~/types/fund";
 import { fetchFundNavUpdatesAction, type ParsedNavUpdateDto, fetchFundDailyNavSnapshotsAction, type ParsedDailyNavSnapshotDto } from "~/store/funds/actions/fetchFundNavUpdates.action";
 import { readCachedLastNavUpdate, writeCachedLastNavUpdate } from "~/store/funds/fundsCache";
+import { patchCachedFundOverview } from "~/store/funds/fundOverviewCache";
 
 
 export const fetchFundNAVDataAction = async (): Promise<any> => {
@@ -52,11 +53,42 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
       ? navUpdates.filter((navUpdate: INAVUpdate) => !excludedIndexes.includes(navUpdate.index))
       : navUpdates;
 
+    // Simulated values live on the method objects themselves, and any earlier
+    // round — one run against the cache-hydrated methods — wrote them there.
+    // Replacing the arrays would throw that work away and an identical method
+    // list would not re-simulate, so the values are carried across by
+    // detailsHash before each swap. Collected at carry time: a round may
+    // still be writing onto the old objects while the fresh read is awaited.
+    const simulatedByHash = (entries: INAVMethod[]) =>
+      new Map(
+        entries
+          .filter((entry: INAVMethod) => entry.detailsHash && entry.simulatedNav != null)
+          .map((entry: INAVMethod) => [entry.detailsHash, entry]),
+      );
+    const carrySimulatedValues = (target: INAVMethod[], sources: INAVMethod[]) => {
+      const previousEntries = simulatedByHash(sources);
+      if (!previousEntries.size) return;
+      for (const entry of target) {
+        const previous = previousEntries.get(entry.detailsHash);
+        if (!previous || entry.simulatedNav != null) continue;
+        entry.simulatedNav = previous.simulatedNav;
+        entry.simulatedNavFormatted = previous.simulatedNavFormatted;
+        entry.isSimulatedNavError = previous.isSimulatedNavError;
+        entry.pastNAVUpdateEntryFundAddress = previous.pastNAVUpdateEntryFundAddress;
+        entry.foundMatchingPastNAVUpdateEntryFundAddress =
+          previous.foundMatchingPastNAVUpdateEntryFundAddress;
+      }
+    };
+    const hydratedEntries = (fund.navUpdates ?? []).flatMap(
+      (update: INAVUpdate) => update.entries ?? [],
+    );
+
     if (!navUpdates.length) {
       // No NAV updates yet, try fetching NAV methods directly.
       // This means that fund was freshly created and no NAV updates have been
       // made, but NAV methods were stored on fund create.
       // TODO ReaderContract should do this, return this if there are no updates!
+      const previousInitialNavMethods = fundStore.fundInitialNAVMethods;
       const newNavMethods = await getNAVData(
         fund.chainId,
         fund.address,
@@ -67,33 +99,23 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
         fundStore.selectedFundAddress,
         newNavMethods,
       );
+      carrySimulatedValues(fundStore.fundInitialNAVMethods, [
+        ...hydratedEntries,
+        ...previousInitialNavMethods,
+      ]);
+      // A vault that has never settled draws its Composition from these.
+      patchCachedFundOverview(fund.chainId, fund.address, {
+        initialNavMethods: fundStore.fundInitialNAVMethods,
+      });
       fundStore.fundManagedNAVMethods = fundStore.fundInitialNAVMethods;
       fundStore.refreshSimulateNAVCounter++;
     }
     const lastNavUpdate = navUpdates[navUpdates.length - 1];
-
-    // Simulated values live on the method objects themselves, and any earlier
-    // round — one run against the cache-hydrated update above — wrote them
-    // there. Replacing the array would throw that work away and the identical
-    // method list would not re-simulate, so the values are carried across by
-    // detailsHash before the swap.
-    const previousEntries = new Map(
-      (fund.navUpdates ?? [])
-        .flatMap((update: INAVUpdate) => update.entries ?? [])
-        .filter((entry: INAVMethod) => entry.detailsHash && entry.simulatedNav != null)
-        .map((entry: INAVMethod) => [entry.detailsHash, entry]),
-    );
-    if (previousEntries.size && lastNavUpdate) {
-      for (const entry of lastNavUpdate.entries ?? []) {
-        const previous = previousEntries.get(entry.detailsHash);
-        if (!previous || entry.simulatedNav != null) continue;
-        entry.simulatedNav = previous.simulatedNav;
-        entry.simulatedNavFormatted = previous.simulatedNavFormatted;
-        entry.isSimulatedNavError = previous.isSimulatedNavError;
-        entry.pastNAVUpdateEntryFundAddress = previous.pastNAVUpdateEntryFundAddress;
-        entry.foundMatchingPastNAVUpdateEntryFundAddress =
-          previous.foundMatchingPastNAVUpdateEntryFundAddress;
-      }
+    if (lastNavUpdate) {
+      carrySimulatedValues(lastNavUpdate.entries ?? [], [
+        ...hydratedEntries,
+        ...fundStore.fundInitialNAVMethods,
+      ]);
     }
 
     fund.lastNAVUpdateTotalNAV = navUpdates.length
@@ -103,6 +125,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
     if (lastNavUpdate) {
       writeCachedLastNavUpdate(fund.chainId, fund.address, lastNavUpdate);
     }
+    patchCachedFundOverview(fund.chainId, fund.address, { fund });
 
     backendNavUpdatesPromise
       .then((backendNavUpdates: ParsedNavUpdateDto[]) => {
@@ -112,6 +135,7 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
         );
         fund.lastNAVUpdateTotalSupply = lastBackendNavUpdate?.totalSupply;
         fund.backendNavUpdates = backendNavUpdates;
+        patchCachedFundOverview(fund.chainId, fund.address, { backendNavUpdates });
       })
       .catch((error: any) =>
         console.error("Failed fetching backendNavUpdatesPromise", error),
@@ -120,6 +144,9 @@ export const fetchFundNAVDataAction = async (): Promise<any> => {
       .then((backendDailyNavSnapshots: ParsedDailyNavSnapshotDto[]) => {
         // console.log("backendDailyNavSnapshots", backendDailyNavSnapshots);
         fund.backendDailyNavSnapshots = backendDailyNavSnapshots;
+        patchCachedFundOverview(fund.chainId, fund.address, {
+          backendDailyNavSnapshots,
+        });
       })
       .catch((error: any) =>
         console.error("Failed fetching backendDailyNavSnapshotsPromise", error),

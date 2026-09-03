@@ -1,4 +1,4 @@
-import defaultAvatar from "@/assets/images/default_avatar.webp";
+import defaultAvatar from "@/assets/images/default_avatar.webp?inline";
 import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";

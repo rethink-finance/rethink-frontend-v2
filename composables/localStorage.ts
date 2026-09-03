@@ -4,7 +4,9 @@ export const stringifyBigInt = (_: string, value: any) => {
 };
 
 export const parseBigInt = (_: string, value: any) => {
-  if (value != null && typeof value === "string" && /^\d+n$/.test(value)) {
+  // Negative too: a vault's fee balance is stored negated, and an unrevived
+  // "-5n" is a string that throws the moment it meets a bigint.
+  if (value != null && typeof value === "string" && /^-?\d+n$/.test(value)) {
     return BigInt(value.slice(0, -1));
   }
   return value;

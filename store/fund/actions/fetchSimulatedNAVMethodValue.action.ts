@@ -185,8 +185,9 @@ export const fetchSimulatedNAVMethodValueAction = async (
     }
 
     console.debug("simulate json: ", JSON.stringify(callData, null, 2))
-    navEntry.simulatedNavFormatted = "N/A";
-    navEntry.simulatedNav = 0n;
+    // The previous value stays on the entry until this call answers: a page
+    // served from cache draws the Composition card from it, and blanking it
+    // here emptied that card for every simulation round.
 
     // console.log("navCalculationMethod:", navCalculationMethod);
     // console.log("callData:", callData);
@@ -216,6 +217,8 @@ export const fetchSimulatedNAVMethodValueAction = async (
       navEntry.simulatedNav = simulatedVal;
       navEntry.isSimulatedNavError = false;
     } catch (error: any) {
+      navEntry.simulatedNavFormatted = "N/A";
+      navEntry.simulatedNav = 0n;
       navEntry.isSimulatedNavError = true;
       console.error(
         "simulateNAVMethodValue: Failed simulating value for entry, check if there was some difference " +
@@ -225,6 +228,9 @@ export const fetchSimulatedNAVMethodValueAction = async (
       );
     }
   } catch (error: any) {
+    navEntry.simulatedNavFormatted = "N/A";
+    navEntry.simulatedNav = 0n;
+    navEntry.isSimulatedNavError = true;
     console.error("simulateNAVMethodValue error: ", error);
   }
 };

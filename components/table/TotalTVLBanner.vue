@@ -2,8 +2,10 @@
   <div class="total_tvl_stats">
     <div class="total_tvl">
       <div class="total_tvl__value">
+        <!-- The last known figure is served from cache while the request is
+             in flight; a spinner only when there is nothing to show yet. -->
         <v-progress-circular
-          v-if="isLoadingTotalTVL"
+          v-if="isLoadingTotalTVL && !totalTVL?.totalTvlUSDFormatted"
           class="d-flex"
           size="18"
           width="2"
@@ -20,7 +22,7 @@
         Total value locked
       </div>
     </div>
-    <div class="total_tvl_stats__divider"></div>
+    <div class="total_tvl_stats__divider" />
     <div class="total_tvl">
       <div class="total_tvl__value">
         <v-progress-circular

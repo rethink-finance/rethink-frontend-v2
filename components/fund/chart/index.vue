@@ -7,6 +7,7 @@
           :value="valueShownInTypeSelector"
           :is-loading="
             areBackendNavUpdatesLoading &&
+              !chartPoints.length &&
               selectedType === ChartType.SHARE_PRICE
           "
           :type-options="ChartTypesMap"
@@ -20,8 +21,10 @@
       />
     </div>
     <div class="chart__chart_wrapper">
+      <!-- Skeleton only while there is nothing to draw: a page served from cache
+           has last visit's points, and the refresh redraws over them. -->
       <v-skeleton-loader
-        v-if="areBackendNavUpdatesLoading"
+        v-if="areBackendNavUpdatesLoading && !chartPoints.length"
         type="ossein"
         height="370px"
         width="100%"
@@ -63,10 +66,8 @@
 <script lang="ts" setup>
 import { ethers } from "ethers";
 import { ERC20 } from "~/assets/contracts/ERC20";
-import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { ActionState } from "~/types/enums/action_state";
 import {
   ChartType,
   ChartTypesMap,
@@ -92,7 +93,6 @@ import { resolveStakingRewards } from "~/store/funds/config/stakingRewards.confi
 const fundStore = useFundStore();
 const blockTimeStore = useBlockTimeStore();
 const web3Store = useWeb3Store();
-const actionStateStore = useActionStateStore();
 const appSettingsStore = useSettingsStore();
 
 const props = defineProps<{
@@ -102,8 +102,12 @@ const props = defineProps<{
 const selectedType = ref(ChartType.SHARE_PRICE);
 
 const sharePriceItemsFromChain = ref([]) as Ref<number[]>;
-const areBackendNavUpdatesLoading = ref(true);
-const navUpdatesFromBackend = ref<ParsedNavUpdateDto[]>([]);
+// Last visit's updates arrive with the fund when the page is served from
+// cache, so the chart draws on the first frame and the fetch redraws it.
+const navUpdatesFromBackend = ref<ParsedNavUpdateDto[]>(
+  props.fund?.backendNavUpdates ?? [],
+);
+const areBackendNavUpdatesLoading = ref(!navUpdatesFromBackend.value.length);
 
 // Computed
 const lastChartPoint = computed(
@@ -249,14 +253,6 @@ const sharePriceItems = computed<number[]>(() => {
   return sharePriceItemsFromChain.value;
 });
 
-// Check loading state for daily snapshots action
-const isLoadingDailySnapshots = computed(() =>
-  actionStateStore.isActionState(
-    `fetchFundDailyNavSnapshots_${props.fund.chainId}_${props.fund.address}`,
-    ActionState.Loading,
-  ),
-);
-
 // NAV-only chart points
 const navChartPoints = computed<ChartPoint[]>(() => {
   const baseTokenDecimals = props.fund?.baseToken?.decimals;
@@ -283,7 +279,6 @@ const navChartPoints = computed<ChartPoint[]>(() => {
 
   // Daily NAV snapshots fetched from the backend.
   const dailyNavSnapshots: ChartPoint[] =
-    !isLoadingDailySnapshots.value &&
     props.fund?.backendDailyNavSnapshots?.length
       ? props.fund.backendDailyNavSnapshots
         .filter((s) => s.totalSimulatedNav != null)
@@ -460,7 +455,6 @@ const sharePriceChartPoints = computed<ChartPoint[]>(() => {
 
   // Daily snapshots
   const snapshots: ChartPoint[] =
-    !isLoadingDailySnapshots.value &&
     props.fund?.backendDailyNavSnapshots?.length
       ? props.fund.backendDailyNavSnapshots
         .filter((s) => s.sharePrice != null && Number(s.sharePrice) > 0)
@@ -976,7 +970,8 @@ const getSharePricePerNav = async () => {
 };
 
 const getNavUpdates = () => {
-  areBackendNavUpdatesLoading.value = true;
+  // The skeleton only while there is nothing to draw; a redraw is silent.
+  areBackendNavUpdatesLoading.value = !navUpdatesFromBackend.value.length;
 
   fetchFundNavUpdatesAction(props.fund.chainId, props.fund.address)
     .then((navUpdates: ParsedNavUpdateDto[]) => {
@@ -1006,6 +1001,8 @@ watch(
     // TODO: Could do this and use only this, is much faster, but gets synced only every 5 minutes.
     // watch: fundStore?.fund?.address
     if (!fundStore?.fund?.address) return;
+    // A different vault starts from its own cached updates, or from none.
+    navUpdatesFromBackend.value = props.fund?.backendNavUpdates ?? [];
     getNavUpdates();
   },
   { immediate: true },
