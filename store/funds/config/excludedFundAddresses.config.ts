@@ -567,6 +567,10 @@ const rawExcludedFundAddresses = {
       address: "0xd245A74898124ae10DE4DB5ec842032042654F0d",
       alwaysExclude: false,
     }, // Boreal USD Yield
+    {
+      address: "0x7f25c0E992e71f5fDaDDd85f965845520AAfDE03",
+      alwaysExclude: true,
+    }, // TST
   ],
   // Base
   "0x2105": [
