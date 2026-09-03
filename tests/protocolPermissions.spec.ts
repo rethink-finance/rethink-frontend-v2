@@ -96,8 +96,12 @@ afterEach(() => {
 describe("getRegistryProtocols", () => {
   it("derives the Aave v3 deposit+borrow controls on Arbitrum", () => {
     const protocols = getRegistryProtocols(ARBITRUM);
-    expect(protocols).toHaveLength(1);
-    const [aave] = protocols;
+    expect(protocols.map((p) => p.protocol)).toEqual([
+      "aave_v3",
+      "morphoMarkets",
+      "morphoVaults",
+    ]);
+    const aave = protocols[0];
     expect(aave.protocol).toBe("aave_v3");
     expect(aave.label).toBe("Aave v3");
     expect(aave.actions.map((a) => a.action)).toEqual(["deposit", "borrow"]);
@@ -663,6 +667,21 @@ describe("initProtocolSelections", () => {
           { action: "borrow", enabled: false, params: { targets: [] } },
         ],
       },
+      {
+        protocol: "morphoMarkets",
+        enabled: false,
+        actions: [
+          { action: "deposit", enabled: false, params: { targets: [] } },
+          { action: "borrow", enabled: false, params: { targets: [] } },
+        ],
+      },
+      {
+        protocol: "morphoVaults",
+        enabled: false,
+        actions: [
+          { action: "deposit", enabled: false, params: { targets: [] } },
+        ],
+      },
     ]);
   });
 
@@ -866,6 +885,84 @@ describe("validateProtocolSelections", () => {
     );
     expect(issues).toHaveLength(1);
     expect(issues[0].message).toContain("expected a 0x-prefixed 20-byte address");
+  });
+});
+
+describe("Morpho id-keyed alias rows", () => {
+  const marketAliases = (getProtocolEntry(1, "morphoMarkets") as any)
+    .aliases as { name: string; id?: string }[];
+  const vaultAliases = (getProtocolEntry(1, "morphoVaults") as any)
+    .aliases as { name: string; id?: string }[];
+
+  it("labels market ids through the alias table and keeps the id as the value", () => {
+    const morpho = getRegistryProtocols(ETHEREUM).find(
+      (p) => p.protocol === "morphoMarkets",
+    )!;
+    expect(morpho.label).toBe("Morpho Blue markets");
+    expect(morpho.actions.map((a) => a.action)).toEqual(["deposit", "borrow"]);
+    for (const action of morpho.actions) {
+      // The reserved `caps` field must NOT surface as a control (SCHEMA.md).
+      expect(action.fields.map((f) => f.key)).toEqual(["targets"]);
+    }
+    const options = morpho.actions[0].fields[0].options ?? [];
+    // Contract: every enum value is an alias-table id, 1:1.
+    expect(options.length).toBe(marketAliases.length);
+    const labelById = new Map(marketAliases.map((row) => [row.id, row.name]));
+    for (const option of options) {
+      // A market id is lowercase bytes32 and is submitted verbatim…
+      expect(option.value).toMatch(/^0x[0-9a-f]{64}$/);
+      // …while what the creator reads is the row's display label.
+      expect(option.label).toBe(labelById.get(option.value));
+      // A market id names a market, not a token with a mark.
+      expect(option.tokenAddress).toBeUndefined();
+    }
+  });
+
+  it("labels vault addresses by their id row instead of shortening them", () => {
+    const morpho = getRegistryProtocols(ETHEREUM).find(
+      (p) => p.protocol === "morphoVaults",
+    )!;
+    expect(morpho.label).toBe("Morpho vaults");
+    expect(morpho.actions.map((a) => a.action)).toEqual(["deposit"]);
+    const options = morpho.actions[0].fields[0].options ?? [];
+    expect(options.length).toBe(vaultAliases.length);
+    const labelById = new Map(vaultAliases.map((row) => [row.id, row.name]));
+    for (const option of options) {
+      // A vault id is its EIP-55 address; the exact spelling is the value —
+      // matched without re-casing, and never rendered as "0x1234…abcd".
+      expect(option.value).toMatch(/^0x[0-9a-fA-F]{40}$/);
+      expect(option.label).toBe(labelById.get(option.value));
+    }
+  });
+
+  it("offers both Morpho protocols on every Morpho chain", () => {
+    for (const chain of [ETHEREUM, ARBITRUM, BASE]) {
+      const keys = getRegistryProtocols(chain).map((p) => p.protocol);
+      expect(keys).toContain("morphoMarkets");
+      expect(keys).toContain("morphoVaults");
+    }
+  });
+
+  it("compiles a vault picked by id into role calldata", () => {
+    const vaultId = vaultAliases[0].id!;
+    const { entries, targetAddresses } = buildProtocolPermissionEntries({
+      chainId: ETHEREUM,
+      rolesModAddress: ROLES_MOD,
+      selections: [
+        {
+          protocol: "morphoVaults",
+          enabled: true,
+          actions: [
+            { action: "deposit", enabled: true, params: { targets: [vaultId] } },
+          ],
+        },
+      ],
+    });
+    expect(entries.length).toBeGreaterThan(0);
+    for (const data of entries) {
+      expect(rolesInterface.parseTransaction({ data })).not.toBeNull();
+    }
+    expect(targetAddresses).toContain(vaultId.toLowerCase());
   });
 });
 

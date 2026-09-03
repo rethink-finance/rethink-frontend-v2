@@ -48,6 +48,8 @@ const PROTOCOL_LABELS: Record<string, string> = {
   aave_v3: "Aave v3",
   spark: "Spark",
   compound_v3: "Compound v3",
+  morphoMarkets: "Morpho Blue markets",
+  morphoVaults: "Morpho vaults",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -97,6 +99,18 @@ const ACTION_HINTS: Record<string, string> = {
   "compound_v3.borrow":
     "Borrow the selected asset and repay it. A Compound v3 market only " +
     "lends its own base asset, so choosing the asset chooses the market.",
+  "morphoMarkets.deposit":
+    "Supply the selected markets' loan tokens and withdraw them back to " +
+    "the vault Safe. Each Morpho Blue market is one isolated loan/collateral " +
+    "pair. Payouts are pinned to the Safe.",
+  "morphoMarkets.borrow":
+    "Post collateral to the selected markets, borrow their loan tokens, " +
+    "repay the debt and withdraw the collateral. Borrowed funds are pinned " +
+    "to pay out only to the Safe.",
+  "morphoVaults.deposit":
+    "Deposit into the selected Morpho vaults and withdraw back to the " +
+    "vault Safe. Each vault is run by its own curator with its own market " +
+    "allocation. Payouts are pinned to the Safe.",
 };
 
 /**
@@ -121,6 +135,18 @@ const ACTION_WARNINGS: Record<string, string> = {
     "vault — including Sky's PSM wrappers, which convert between the " +
     "cluster's assets (USDC↔sDAI, USDC↔sUSDS). Check the generated calls " +
     "listed under the card before granting.",
+  "morphoMarkets.deposit":
+    "This is upstream's full market list, uncurated — anyone can create a " +
+    "Morpho Blue market, and markets sharing a name differ in oracle and " +
+    "LLTV. Verify a market by its id before granting.",
+  "morphoMarkets.borrow":
+    "This is upstream's full market list, uncurated — anyone can create a " +
+    "Morpho Blue market, and markets sharing a name differ in oracle and " +
+    "LLTV. Verify a market by its id before granting.",
+  "morphoVaults.deposit":
+    "This is upstream's full vault list, uncurated — anyone can deploy a " +
+    "vault and name it anything, and many names repeat across versions. " +
+    "Verify a vault by its address before granting.",
 };
 
 /**
@@ -134,6 +160,9 @@ const FIELD_LABELS: Record<string, string> = {
   targets: "Assets",
   "compound_v3.deposit.targets": "Markets",
   "compound_v3.deposit.tokens": "Assets",
+  "morphoMarkets.deposit.targets": "Markets",
+  "morphoMarkets.borrow.targets": "Markets",
+  "morphoVaults.deposit.targets": "Vaults",
 };
 
 const getFieldLabel = (
@@ -193,6 +222,8 @@ const LLAMA_TOKEN_ICON_BASE = "https://token-icons.llamao.fi/icons/tokens";
 /** Registry protocol key → DefiLlama slug where the two differ. */
 const PROTOCOL_LLAMA_SLUGS: Record<string, string> = {
   aave_v3: "aave-v3",
+  morphoMarkets: "morpho-blue",
+  morphoVaults: "morpho",
 };
 
 export const getProtocolLogoUrl = (protocol: string): string => {
@@ -395,21 +426,34 @@ const isAddressLike = (value: string): boolean =>
  * older registry versions, from the legacy shape scan of `entry.data`.
  */
 interface IAliasRow {
-  /** Human-readable name (the enum's non-address spelling). */
+  /**
+   * Human-readable name. For name/address rows it is itself an enum value;
+   * for id-keyed rows it is a display LABEL only (never submitted).
+   */
   symbol: string;
   /** The 0x address the registry's schema enums pair that name with. */
-  address: string;
+  address?: string;
+  /**
+   * id-keyed rows only (SCHEMA.md "id-keyed rows"): the opaque enum value
+   * the row labels — a lowercase bytes32 Morpho Blue market id, or a Morpho
+   * vault's EIP-55 address. Matched against option values VERBATIM: the
+   * registry guarantees the enum lists the id exactly as the row spells it,
+   * and a re-cased id fails validation, so no case folding here.
+   */
+  id?: string;
 }
 
 /**
  * Reads the entry's first-class alias table (SCHEMA.md, "The alias
- * table"): explicit `{name, address?, kind}` rows, guaranteed by a
- * registry unit test to cover every schema enum value. Rows without an
- * address ("native"/"savings" pseudo-targets) carry no alias pairing and
- * are skipped — dedup and labelling only ever key on addresses. Returns
- * undefined when the installed registry predates the table, so the caller
- * can fall back to the shape scan; an existing-but-sparse table is
- * authoritative, not a reason to fall back.
+ * table"): explicit `{name, address?, id?, kind}` rows, guaranteed by a
+ * registry unit test to cover every schema enum value. Two shapes matter
+ * here: name/address rows (both spellings are enum values) and id-keyed
+ * rows (`id` is the enum value, `name` is a display label). Rows with
+ * neither an address nor an id ("native"/"savings" pseudo-targets) carry
+ * no alias pairing and are skipped — dedup and labelling never key on a
+ * bare name. Returns undefined when the installed registry predates the
+ * table, so the caller can fall back to the shape scan; an
+ * existing-but-sparse table is authoritative, not a reason to fall back.
  */
 const readEntryAliasTable = (entry: unknown): IAliasRow[] | undefined => {
   const aliases = (entry as { aliases?: unknown } | undefined)?.aliases;
@@ -417,10 +461,17 @@ const readEntryAliasTable = (entry: unknown): IAliasRow[] | undefined => {
   const rows: IAliasRow[] = [];
   for (const alias of aliases) {
     if (!alias || typeof alias !== "object") continue;
-    const { name, address } = alias as { name?: unknown; address?: unknown };
+    const { name, address, id } = alias as {
+      name?: unknown;
+      address?: unknown;
+      id?: unknown;
+    };
     if (typeof name !== "string" || name === "") continue;
-    if (typeof address !== "string" || !isAddressLike(address)) continue;
-    rows.push({ symbol: name, address });
+    if (typeof address === "string" && isAddressLike(address)) {
+      rows.push({ symbol: name, address });
+    } else if (typeof id === "string" && id !== "") {
+      rows.push({ symbol: name, id });
+    }
   }
   return rows;
 };
@@ -506,7 +557,16 @@ const buildEnumOptions = (
 ): IProtocolParamOption[] => {
   const addressBySymbol = new Map<string, string>();
   const symbolsByAddress = new Map<string, string[]>();
+  const labelById = new Map<string, string>();
   for (const row of aliasRows) {
+    if (row.id !== undefined) {
+      // id-keyed row: the id IS the enum value and the name is only a
+      // label. Verbatim key — the registry lists the id in the enum exactly
+      // as spelled here, and submissions must match it case-exactly.
+      if (!labelById.has(row.id)) labelById.set(row.id, row.symbol);
+      continue;
+    }
+    if (row.address === undefined) continue;
     if (!addressBySymbol.has(row.symbol)) {
       addressBySymbol.set(row.symbol, row.address);
     }
@@ -520,6 +580,15 @@ const buildEnumOptions = (
 
   const options: IProtocolParamOption[] = [];
   for (const value of values) {
+    // Checked before the address branch: a Morpho vault's id is an address,
+    // but its label must come from the id row, not read as an unnamed
+    // address chip. No tokenAddress — the id names a market or vault
+    // contract, not a token with a mark.
+    const idLabel = labelById.get(value);
+    if (idLabel !== undefined) {
+      options.push({ value, label: idLabel });
+      continue;
+    }
     if (isAddressLike(value)) {
       const aliasSymbols = symbolsByAddress.get(value.toLowerCase()) ?? [];
       if (aliasSymbols.some((symbol) => symbolValues.has(symbol))) continue;
@@ -853,7 +922,11 @@ const buildAddressLabels = (
     }
   }
   for (const row of aliasRows) {
-    labels[row.address.toLowerCase()] = row.symbol;
+    // id-keyed rows label their id the same way: market ids are already
+    // lowercase, and a vault's id is its address, so the lowercased key
+    // matches how call previews look addresses up.
+    const key = row.address ?? row.id;
+    if (key !== undefined) labels[key.toLowerCase()] = row.symbol;
   }
   return labels;
 };
