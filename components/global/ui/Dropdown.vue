@@ -97,7 +97,7 @@ export default {
   background-color: $color-navy-gray-light;
   border: 1px solid $color-line-2;
   border-radius: $default-border-radius;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-float);
   z-index: 1;
   transition:
     opacity 0.3s ease,

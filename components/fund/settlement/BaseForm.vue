@@ -253,7 +253,7 @@ const calculatedToken1Value = computed(() => {
     /* The estimated output is derived, never typed into — the flatter fill
        marks it as read-only without needing a disabled input. */
     &--readonly {
-      background: rgba(255, 255, 255, 0.015);
+      background: $color-card-background;
     }
 
     /* The box carries the invalid state, so the message underneath does not

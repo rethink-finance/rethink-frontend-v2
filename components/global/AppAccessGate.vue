@@ -1,10 +1,17 @@
 <template>
   <div v-if="!hasAccess" class="access_gate">
     <div class="access_gate__card">
+      <!-- Same theme swap as the navbar Logo: the white-text mark for dark,
+           the ink-text variant for light (rules in app.scss). -->
       <img
         src="~/assets/images/logo.svg"
         alt="rethink.finance"
-        class="access_gate__logo"
+        class="access_gate__logo theme_logo--dark"
+      >
+      <img
+        src="~/assets/images/logo_light.svg"
+        alt="rethink.finance"
+        class="access_gate__logo theme_logo--light"
       >
 
       <p class="access_gate__prompt">
@@ -129,7 +136,7 @@ const subscribe = async () => {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(12, 13, 18, 0.58);
+  background: var(--veil);
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
 
@@ -139,7 +146,7 @@ const subscribe = async () => {
     background: $color-surface;
     @include borderGray;
     padding: 2.5rem 2.25rem 2rem;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+    box-shadow: var(--shadow-float-lg);
     display: flex;
     flex-direction: column;
     gap: 1.25rem;

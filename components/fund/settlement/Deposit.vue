@@ -698,7 +698,7 @@ const delegateToMyself = async () => {
   margin: 1rem auto;
   height: 0.1px;
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.08)
+  border: 1px solid $color-gray-transparent
 }
 
 .title {

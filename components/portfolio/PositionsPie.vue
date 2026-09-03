@@ -1,11 +1,13 @@
 <template>
   <div class="positions_pie">
     <svg viewBox="0 0 200 200" class="positions_pie__donut">
+      <!-- fill via style, not the attribute: the palette is var() refs and
+           var() does not resolve in SVG presentation attributes. -->
       <path
         v-for="slice in slices"
         :key="slice.item.key"
         :d="slice.path"
-        :fill="slice.color"
+        :style="{ fill: slice.color }"
         fill-rule="evenodd"
       />
     </svg>

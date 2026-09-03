@@ -2,7 +2,10 @@ import "@mdi/font/css/materialdesignicons.css";
 import { createVuetify, type ThemeDefinition } from "vuetify";
 import { md2 } from "vuetify/blueprints";
 
-// TODO use colors from _variables.scss, convert to var(--color-primary)
+// Mirrors of assets/scss/tokens.scss for the places Vuetify injects color
+// itself (rgb(var(--v-theme-*)) usages, the app bar's color="background").
+// Literal hexes because Vuetify derives on/lighten/darken shades from them
+// at setup time, which a var() reference can't feed.
 const customDarkTheme: ThemeDefinition = {
   dark: false,
   colors: {
@@ -19,6 +22,37 @@ const customDarkTheme: ThemeDefinition = {
   },
 };
 
+const customLightTheme: ThemeDefinition = {
+  dark: false,
+  colors: {
+    background: "#F7F8FA",
+    surface: "#FFFFFF",
+    primary: "#1F5FFF",
+    "primary-darken-1": "#1747C9",
+    secondary: "#33436E",
+    "secondary-darken-1": "#26355C",
+    error: "#BE4A40",
+    info: "#087AAB",
+    success: "#0C7D56",
+    warning: "#8A6D00",
+  },
+};
+
+/**
+ * The head script in nuxt.config resolves the theme (localStorage choice,
+ * else OS preference) onto <html data-theme> before first paint; Vuetify just
+ * has to agree with it at startup. Later switches go through
+ * useSettingsStore's theme action, which flips both.
+ */
+const initialTheme = () => {
+  if (typeof document !== "undefined") {
+    return document.documentElement.dataset.theme === "light"
+      ? "customLightTheme"
+      : "customDarkTheme";
+  }
+  return "customDarkTheme";
+};
+
 export default defineNuxtPlugin((nuxtApp) => {
   const vuetify = createVuetify({
     // ... your configuration goes here
@@ -33,11 +67,18 @@ export default defineNuxtPlugin((nuxtApp) => {
       },
     },
     theme: {
-      defaultTheme: "customDarkTheme",
+      defaultTheme: initialTheme(),
       themes: {
         customDarkTheme,
+        customLightTheme,
       },
     },
   });
   nuxtApp.vueApp.use(vuetify);
+  // Exposed as $vuetify so the settings store can switch themes at runtime.
+  return {
+    provide: {
+      vuetify,
+    },
+  };
 });

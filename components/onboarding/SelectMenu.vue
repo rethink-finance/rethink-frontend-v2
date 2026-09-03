@@ -213,7 +213,7 @@ watch(() => props.disabled, (disabled) => {
     border: 1px solid $color-line-2;
     border-radius: $default-border-radius;
     background: $color-navy-gray-light;
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+    box-shadow: var(--shadow-float-lg);
   }
 
   &__option {

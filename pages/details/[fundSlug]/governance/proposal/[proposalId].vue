@@ -1229,7 +1229,7 @@ const isLoadingProposal = computed(() => {
     background: $color-moonlight-light;
 
     &--done {
-      background: $color-cyan;
+      background: $color-cyan-raw;
     }
 
     &--failed {
@@ -1336,7 +1336,7 @@ const isLoadingProposal = computed(() => {
     border-radius: 999px;
 
     &--for {
-      background: $color-cyan;
+      background: $color-cyan-raw;
     }
 
     &--against {
@@ -1409,7 +1409,7 @@ const isLoadingProposal = computed(() => {
     width: 7px;
     height: 7px;
     border-radius: 999px;
-    background: $color-cyan;
+    background: $color-cyan-raw;
   }
 
   &__voted_text {
@@ -1456,7 +1456,7 @@ const isLoadingProposal = computed(() => {
     border-radius: 999px;
 
     &--accent {
-      background: $color-cyan;
+      background: $color-cyan-raw;
     }
 
     &--blue {

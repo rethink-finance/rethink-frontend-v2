@@ -83,10 +83,14 @@ export const resolveVaultOperation = (name: string): VaultOperation | undefined 
  * own activity table has always coloured them that way and the two tables sit
  * one click apart — the same event should not change colour on the way.
  */
-export const OPERATION_DOT_DEPOSIT = "#2fd7ff";
-export const OPERATION_DOT_REDEEM = "#e66a60";
-export const OPERATION_DOT_SETTLEMENT = "#7b8dff";
-export const OPERATION_DOT_NEUTRAL = "#8892a8";
+/* var() references, not hexes: every consumer paints these through a style
+   binding, so the browser resolves them against the theme tokens
+   (tokens.scss) and the dots re-tint on a theme switch for free. Do not feed
+   them to anything that wants a literal color (chart configs, SVG attrs). */
+export const OPERATION_DOT_DEPOSIT = "var(--dot-deposit)";
+export const OPERATION_DOT_REDEEM = "var(--dot-redeem)";
+export const OPERATION_DOT_SETTLEMENT = "var(--dot-settlement)";
+export const OPERATION_DOT_NEUTRAL = "var(--dot-neutral)";
 
 /**
  * How the activity lists group an operation, as opposed to how the accounting

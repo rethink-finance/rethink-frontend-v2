@@ -700,16 +700,23 @@ defineExpose({
     }
   }
 
+  /* Two separate cards a gap apart, not one list with an inner divider —
+     the same rhythm the Add-protocol modal gives Zodiac and Raw
+     permissions, so the two pickers read as one family. */
   &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
     margin: 0;
     padding: 0;
     list-style: none;
-    border: 1px solid $color-line;
-    border-radius: $default-border-radius;
   }
 
-  &__row + &__row {
-    border-top: 1px solid $color-line;
+  &__row {
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+    /* The row's hover fill would otherwise square off the corners. */
+    overflow: hidden;
   }
 
   &__item {

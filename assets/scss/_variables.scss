@@ -17,7 +17,16 @@ $navbar-height: 64px;
 $page-container-width: 1360px;
 $page-container-gutter: clamp(20px, 4vw, 48px);
 $default-transition-time: 0.28s;
-$color-white: #eceef4; // Approx 95% white
+
+/**
+ * Every $color-* below compiles to a var(--…) reference into the theme token
+ * sheet (assets/scss/tokens.scss), where the dark and light literals live.
+ * Components keep using the SCSS names; the browser resolves the theme.
+ * Consequence: these are no longer SCSS color values — rgba($color-x, …) and
+ * darken($color-x, …) will not compile. Reach for the pre-baked -soft/-line/
+ * -tint tokens instead, or add a token.
+ */
+$color-white: var(--text); // Approx 95% white (dark theme); near-black in light
 $color-black: #333333;
 
 /* Brand fonts (same as rethink.finance homepage) */
@@ -25,44 +34,48 @@ $font-sans: "Satoshi", system-ui, -apple-system, sans-serif;
 $font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
 
 /* Brand hairline borders */
-$color-line: rgba(255, 255, 255, 0.06);
-$color-line-2: rgba(255, 255, 255, 0.11);
-$color-line-3: rgba(255, 255, 255, 0.17);
+$color-line: var(--line);
+$color-line-2: var(--line-2);
+$color-line-3: var(--line-3);
 
 /* Brand accents */
-$color-cyan: #16c8ff;
-$color-cyan-soft: #5bddff;
+/* $color-cyan darkens in light mode so cyan TEXT keeps AA contrast;
+   $color-cyan-raw stays the raw brand hue in both themes — reserve it for
+   the non-text uses: dots, toggle knobs, radio fills, chart strokes. */
+$color-cyan: var(--cyan);
+$color-cyan-raw: var(--cyan-raw);
+$color-cyan-soft: var(--cyan-soft);
 /* Tint and hairline for a confirmed / passing state, paired with the two sets
    below so an affirmative panel and a warning one carry the same weight. */
-$color-cyan-tint: rgba(22, 200, 255, 0.1);
-$color-cyan-line: rgba(22, 200, 255, 0.32);
+$color-cyan-tint: var(--cyan-tint);
+$color-cyan-line: var(--cyan-line);
 /* Halo behind a dot that is asking for something — the portfolio's
    "needs your vote" marker. The only shadow in the design system. */
-$color-cyan-glow: rgba(22, 200, 255, 0.55);
-$color-accent-soft: rgba(31, 95, 255, 0.13);
-$color-accent-line: rgba(64, 140, 255, 0.32);
-$color-blue-bright: #4e81ff;
-$color-pos: #3ed598;
-$color-neg: #e66a60;
+$color-cyan-glow: var(--cyan-glow);
+$color-accent-soft: var(--accent-soft);
+$color-accent-line: var(--accent-line);
+$color-blue-bright: var(--blue-bright);
+$color-pos: var(--pos);
+$color-neg: var(--neg);
 /* Tint and hairline for anything that has to read as a hazard — a break-glass
    action, a reverted simulation, a warning callout. Same alphas as the yield
    pair below, so a red panel and a green one carry identical weight. */
-$color-neg-soft: rgba(230, 106, 96, 0.1);
-$color-neg-line: rgba(230, 106, 96, 0.32);
+$color-neg-soft: var(--neg-soft);
+$color-neg-line: var(--neg-line);
 /* Same pair for the amber caution state, so a warning callout weighs exactly
    what an error, an affirmative and a yield one do. */
-$color-warn: #ffd33d;
-$color-warn-soft: rgba(255, 211, 61, 0.1);
-$color-warn-line: rgba(255, 211, 61, 0.32);
+$color-warn: var(--warn);
+$color-warn-soft: var(--warn-soft);
+$color-warn-line: var(--warn-line);
 /* Yield that accrues outside the vault: the chart overlay and the rewards
    callout. Kept off the cyan accent so it reads as a separate stream rather
    than as part of the vault's own performance. The chart mirrors this hex in
    JS — components/fund/chart/index.vue. */
-$color-yield: #38de8e;
-$color-yield-soft: rgba(56, 222, 142, 0.1);
-$color-yield-line: rgba(56, 222, 142, 0.32);
-$gradient-brand: linear-gradient(118deg, #2fd7ff 0%, #2c8bff 46%, #1f5fff 100%);
-$gradient-brand-soft: linear-gradient(135deg, rgba(47, 215, 255, 0.16), rgba(31, 95, 255, 0.10));
+$color-yield: var(--yield);
+$color-yield-soft: var(--yield-soft);
+$color-yield-line: var(--yield-line);
+$gradient-brand: var(--grad);
+$gradient-brand-soft: var(--grad-soft);
 
 /* Utility colors */
 /*
@@ -70,55 +83,55 @@ $gradient-brand-soft: linear-gradient(135deg, rgba(47, 215, 255, 0.16), rgba(31,
   The colors were changing in the design all the time and
   a lot of them are super similar and redundant.
  */
-$color-dark: #0c0d12;
-$color-navy-gray: #12141c;
-$color-navy-gray-light: #171a24;
-$color-navy-gray-dark: #0f1118;
-$color-table-row: #171a24;
-$color-hover: #1d212d;
-$color-badge-navy: #171a24;
-$color-border-dark: #242833;
-$color-toast: #1d212d;
-$color-moonlight-dark: #1d212d;
-$color-moonlight: rgba(31, 95, 255, 0.13);
-$color-moonlight-light: #2a2f3c;
-$color-disabled: #646465;
-$color-gray-transparent: rgba(255, 255, 255, 0.08);
-$color-gray-light-transparent: rgba(255, 255, 255, 0.04);
-$color-divider: #1a1d27;
-$color-light-border: rgba(128, 136, 152, 1);
-$color-box-shadow: rgba(31, 95, 255, 0.16);
-$color-midnight-blue: #0c0d1229;
-$color-bg-transparent: #FFFFFF05;
-$color-bg-toast: #1D212D;
+$color-dark: var(--bg);
+$color-navy-gray: var(--surface);
+$color-navy-gray-light: var(--surface-float);
+$color-navy-gray-dark: var(--bg-3);
+$color-table-row: var(--surface-2);
+$color-hover: var(--surface-3);
+$color-badge-navy: var(--surface-2);
+$color-border-dark: var(--line-solid);
+$color-toast: var(--surface-3);
+$color-moonlight-dark: var(--surface-3);
+$color-moonlight: var(--accent-soft);
+$color-moonlight-light: var(--surface-4);
+$color-disabled: var(--text-disabled);
+$color-gray-transparent: var(--fill-2);
+$color-gray-light-transparent: var(--fill-1);
+$color-divider: var(--divider);
+$color-light-border: var(--border-light);
+$color-box-shadow: var(--box-glow-blue);
+$color-midnight-blue: var(--scrim-soft);
+$color-bg-transparent: var(--panel-fill);
+$color-bg-toast: var(--surface-3);
 
 /* Vuetify colors */
 // Currently also defined in the plugins/vuetify.ts
-$color-background: $color-dark;
-$color-surface: #12141c;
-$color-primary: #1f5fff;
-$color-primary-dark: #1747c9;
-$color-primary-darker: #1c3165;
-$color-secondary: #d2dfff;
-$color-secondary-dark: #969cac;
-$color-error: #e66a60;
+$color-background: var(--bg);
+$color-surface: var(--surface);
+$color-primary: var(--primary);
+$color-primary-dark: var(--primary-dark);
+$color-primary-darker: var(--primary-faint);
+$color-secondary: var(--text-blue-soft);
+$color-secondary-dark: var(--text-faint-2);
+$color-error: var(--neg);
 $color-error-text: white;
-$color-info: #16c8ff;
-$color-success: #35bd48;
-$color-success-light: #38de8e;
+$color-info: var(--cyan);
+$color-success: var(--success);
+$color-success-light: var(--success-light);
 $color-success-text: white;
-$color-warning: #ffd33d;
-$color-warning-text: #836900;
-$color-inactive: #4e5972;
-$color-steel-blue: #808898;
-$color-card-background: rgba(255, 255, 255, 0.02);
-$color-background-button: rgba(255, 255, 255, 0.06);
+$color-warning: var(--warn);
+$color-warning-text: var(--warning-text);
+$color-inactive: var(--text-inactive);
+$color-steel-blue: var(--text-faint);
+$color-card-background: var(--panel-fill);
+$color-background-button: var(--fill-3);
 
 /* Typography */
-$color-title: $color-white;
-$color-subtitle: #808898;
-$color-light-subtitle: rgba(255, 255, 255, 0.76);
-$color-text-irrelevant: #969cac;
+$color-title: var(--text);
+$color-subtitle: var(--text-faint);
+$color-light-subtitle: var(--text-dim);
+$color-text-irrelevant: var(--text-faint-2);
 
 $text-xl: 1.5rem;
 $text-lg: 1.25rem;
@@ -133,11 +146,11 @@ $text-xs: 0.75rem;
 
 $letter-spacing-lg: 0.03rem;
 // Status Type Colors
-$color-status-type-active: #db38de;
+$color-status-type-active: var(--status-active);
 $color-status-type-executed: $color-success-light;
 $color-status-type-defeated: $color-error;
 $color-status-type-to-execute: $color-primary;
-$color-status-type-canceled: #de6a38;
+$color-status-type-canceled: var(--status-canceled);
 
 // Use these variables to generate CSS rules
 $proposal-states: (
@@ -155,10 +168,10 @@ $proposal-states: (
 }
 
 // Position Type Colors
-$color-position-type-liquid: #de6a38;
-$color-position-type-composable: #38de8e;
-$color-position-type-nft: #741fff;
-$color-position-type-illiquid: #ffd700;
+$color-position-type-liquid: var(--status-canceled);
+$color-position-type-composable: var(--success-light);
+$color-position-type-nft: var(--position-nft);
+$color-position-type-illiquid: var(--position-illiquid);
 
 // Use these variables to generate CSS rules
 $position-types: (
@@ -219,7 +232,8 @@ plugins like Apexcharts with "var(--color-something)" to prevent redefining colo
 :root {
   --font-sans: #{$font-sans};
   --font-mono: #{$font-mono};
-  --grad: #{$gradient-brand};
+  /* No --grad here: tokens.scss owns it now, and emitting
+     `--grad: var(--grad)` would be a cycle that invalidates the token. */
   --color-cyan: #{$color-cyan};
   --color-line: #{$color-line};
   --color-line-2: #{$color-line-2};

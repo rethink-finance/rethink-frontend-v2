@@ -858,6 +858,13 @@ const addHint = computed((): string =>
     height: 18px;
   }
 
+  /* The mark is a white monochrome PNG, so on the light theme it inverts to
+     ink instead of vanishing into the card. :global because data-theme sits
+     on <html>, outside this component's scope. */
+  :global([data-theme="light"] .zodiac__logo) {
+    filter: invert(1);
+  }
+
   &__text {
     display: flex;
     flex-direction: column;

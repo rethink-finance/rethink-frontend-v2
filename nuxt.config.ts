@@ -16,6 +16,18 @@ export default defineNuxtConfig({
       // Default tab title. Vault detail pages override it with
       // "<SYMBOL> - <Vault name>" via useSeoMeta (FundSEOMetadata.vue).
       title: "rethink.finance",
+      // Resolve the theme before first paint: an explicit choice from
+      // localStorage wins, otherwise the OS preference. Inline rather than a
+      // plugin because plugins run after the app shell has already painted
+      // dark, which flashes on every light-mode load.
+      script: [
+        {
+          innerHTML:
+            "try{var t=JSON.parse(localStorage.getItem('theme'));" +
+            "if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'}" +
+            "document.documentElement.dataset.theme=t}catch(e){}",
+        },
+      ],
       link: [
         // Same favicon set as the rethink.finance homepage.
         { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png" },
@@ -67,6 +79,8 @@ export default defineNuxtConfig({
     transpile: ["vuetify"],
   },
   css: [
+    // Theme tokens first: everything below resolves its colors against them.
+    "~/assets/scss/tokens.scss",
     "vuetify/styles",
     "~/assets/scss/vuetify_overrides.scss",
     "~/assets/scss/app.scss",

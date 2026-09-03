@@ -55,14 +55,14 @@ $vuetify-border-width: 1px;
       border-width: $vuetify-border-width;
       border-color: $color-line-2;
       color: $color-white !important;
-      background: rgba(255, 255, 255, 0.02);
+      background: var(--panel-fill);
       font-weight: 600;
       transition: border-color $default-transition-time ease,
         background $default-transition-time ease;
 
       &:hover {
         border-color: $color-line-3 !important;
-        background: rgba(255, 255, 255, 0.05);
+        background: var(--fill-1);
       }
     }
     &--size-default {

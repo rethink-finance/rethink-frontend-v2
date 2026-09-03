@@ -69,7 +69,7 @@
           >
             <template #activator="{ props }">
               <div class="d-flex flex-column align-end nav_cell" v-bind="props">
-                <div class="text-white">
+                <div class="nav_cell__value">
                   {{
                     formatNumberShort(
                       formatTokenValue(
@@ -573,6 +573,11 @@ const navigateFundDetails = (event: any, row: any) => {
     .nav_usd_value {
       font-family: $font-mono;
       font-size: 13.5px;
+    }
+    /* Was Vuetify's text-white utility — literal white, invisible on the
+       light theme's white card. */
+    .nav_cell__value {
+      color: $color-title;
     }
     /* Cumulative return + APR columns */
     tbody .v-data-table__td:nth-last-child(-n + 2) {

@@ -645,6 +645,15 @@ const navUpdateMarkerIndexes = computed<number[]>(() =>
 );
 
 const options = computed(() => {
+  // Apex paints these as SVG attributes, where var(--…) never resolves, so
+  // the two chrome colors that differ per theme are picked here. Reading the
+  // store's theme also makes this computed rebuild on a switch. Series
+  // strokes stay the raw brand hues in both themes by design.
+  const isLightTheme = appSettingsStore.theme === "light";
+  const markerFillColor = isLightTheme ? "#ffffff" : "#1d212d";
+  const gridLineColor = isLightTheme
+    ? "rgba(10, 14, 26, 0.07)"
+    : "rgba(255, 255, 255, 0.05)";
   return {
     chart: {
       id: "nav-area-chart",
@@ -681,7 +690,7 @@ const options = computed(() => {
         seriesIndex: 0,
         dataPointIndex,
         size: 2,
-        fillColor: "#1d212d",
+        fillColor: markerFillColor,
         strokeColor: ChartTypeStrokeColors[selectedType.value],
         shape: "circle",
       })),
@@ -690,7 +699,7 @@ const options = computed(() => {
       // Design reads the series against faint horizontal rules instead of a
       // tinted plot area — verticals stay off so the line keeps the emphasis.
       show: true,
-      borderColor: "rgba(255, 255, 255, 0.05)",
+      borderColor: gridLineColor,
       strokeDashArray: 0,
       xaxis: {
         lines: { show: false },
@@ -710,10 +719,15 @@ const options = computed(() => {
       type: hasYieldSeries.value ? ["gradient", "solid"] : "gradient",
       opacity: hasYieldSeries.value ? [1, 0] : 1,
       gradient: {
+        // Apex shades the fade-out end of the gradient itself, toward black
+        // by default — on the light theme that muddies the area into a grey
+        // wash, so light shades toward white and thins the fill (a wash
+        // blooms on white in a way it never does on the dark ground).
+        shade: isLightTheme ? "light" : "dark",
         shadeIntensity: 1,
         inverseColors: false,
-        opacityFrom: 0.25,
-        opacityTo: 0.1,
+        opacityFrom: isLightTheme ? 0.16 : 0.25,
+        opacityTo: isLightTheme ? 0.02 : 0.1,
         type: "vertical",
         stops: [20, 100],
       },
@@ -1017,6 +1031,15 @@ watch(
     height: 370px;
     min-height: 370px;
   }
+
+  /* With markers.size 0, Apex still emits one degenerate marker path
+     ("M 0, 0 … a 0,0 …") per series, and its round stroke linecap paints a
+     2px dot at the plot's top-left corner — invisible on the dark ground,
+     a stray blue speck next to the axis labels on white. A zero-geometry
+     path carries no data, so hiding the shape loses nothing. */
+  ::v-deep(.apexcharts-svg path[d^="M 0, 0"]) {
+    display: none;
+  }
   /* Apex draws its own panel around whatever the custom renderer returns;
      blanking it stops a second border showing through the one below. */
   ::v-deep(.apexcharts-tooltip.apexcharts-theme-dark) {
@@ -1039,7 +1062,7 @@ watch(
     background: $color-navy-gray-light;
     border: 1px solid $color-line-2;
     border-radius: $default-border-radius;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    box-shadow: var(--shadow-float);
     line-height: 1;
 
     .custom_tooltip__date {

@@ -17,7 +17,7 @@
 
           <v-btn
             v-if="isEditable"
-            color="#ffffff"
+            color="var(--text)"
             variant="text"
             :class="{ 'v-btn--active': isAddAddressListActive }"
             @click="toggleAddAddressList"
@@ -27,7 +27,7 @@
 
           <v-btn
             v-if="isEditable"
-            color="#ffffff"
+            color="var(--text)"
             variant="text"
             :class="{ 'v-btn--active': isAddAddressActive }"
             @click="toggleAddAddress"
@@ -60,7 +60,7 @@
               </v-btn>
 
               <v-btn
-                color="#ffffff"
+                color="var(--text)"
                 variant="outlined"
                 :disabled="!isSingleAddressValid"
                 @click="handleAddNewAddress"
@@ -110,7 +110,7 @@
             </v-btn>
 
             <v-btn
-              color="#ffffff"
+              color="var(--text)"
               variant="text"
               :loading="isImporting"
               @click="browseCsv"
@@ -119,7 +119,7 @@
             </v-btn>
 
             <v-btn
-              color="#ffffff"
+              color="var(--text)"
               variant="outlined"
               :disabled="!isBulkAddressValid"
               @click="openConfirmDialog"

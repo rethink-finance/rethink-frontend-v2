@@ -81,7 +81,7 @@ const emit = defineEmits(["update:modelValue"]);
   }
 
   &--on &__knob {
-    background: $color-cyan;
+    background: $color-cyan-raw;
     transform: translate(14px, -50%);
   }
 
