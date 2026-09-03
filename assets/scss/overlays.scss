@@ -18,8 +18,8 @@
  */
 
 /* Elevation for anything that floats. Depth comes from black, not from blue. */
-$shadow-float: 0 12px 28px rgba(0, 0, 0, 0.45);
-$shadow-float-lg: 0 24px 64px rgba(0, 0, 0, 0.55);
+$shadow-float: var(--shadow-float);
+$shadow-float-lg: var(--shadow-float-lg);
 
 /* ─────────────────────────────────────────────────────────────
    MODALS
@@ -31,8 +31,8 @@ $shadow-float-lg: 0 24px 64px rgba(0, 0, 0, 0.55);
    `.v-dialog` so the contained loading overlays — which dim one panel rather
    than the page — keep their own much lighter veil. */
 .v-dialog > .v-overlay__scrim {
-  background: #06070b;
-  opacity: 0.72;
+  background: var(--scrim);
+  opacity: var(--scrim-opacity);
 }
 
 /**
@@ -168,7 +168,7 @@ $shadow-float-lg: 0 24px 64px rgba(0, 0, 0, 0.55);
     flex-wrap: wrap;
     padding: 1.125rem 1.5rem;
     border-top: 1px solid $color-line;
-    background: rgba(255, 255, 255, 0.012);
+    background: var(--panel-fill);
   }
 
   /* Stack the actions full width — for a modal whose choices are equals

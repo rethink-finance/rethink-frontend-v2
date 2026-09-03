@@ -84,14 +84,17 @@
         </linearGradient>
       </defs>
 
+      <!-- Stroke set in CSS, not the attribute: theme tokens are CSS custom
+           properties, and var() does not resolve inside SVG presentation
+           attributes. -->
       <line
         v-for="(y, index) in chart.gridLines"
         :key="index"
+        class="perf_gridline"
         :x1="0"
         :x2="CHART_WIDTH"
         :y1="y"
         :y2="y"
-        stroke="rgba(255,255,255,0.05)"
         stroke-width="1"
       />
 
@@ -401,6 +404,10 @@ const chart = computed(() => {
     display: block;
     width: 100%;
     height: 240px;
+  }
+
+  .perf_gridline {
+    stroke: $color-line;
   }
 
   &__axis {

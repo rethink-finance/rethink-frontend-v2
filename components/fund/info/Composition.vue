@@ -14,11 +14,13 @@
     <div v-else-if="showDonut" class="composition__pie_layout">
       <div class="composition__ring">
         <svg viewBox="0 0 200 200" class="composition__donut">
+          <!-- fill via style, not the attribute: the palette is var() refs
+               and var() does not resolve in SVG presentation attributes. -->
           <path
             v-for="row in rows"
             :key="row.name"
             :d="row.path"
-            :fill="row.dot"
+            :style="{ fill: row.dot }"
             fill-rule="evenodd"
             class="composition__slice"
             :class="{

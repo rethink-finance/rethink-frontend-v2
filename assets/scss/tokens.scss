@@ -1,0 +1,228 @@
+/**
+ * Theme tokens — the one place a color is allowed to be a literal.
+ *
+ * The dark set on :root is the brand source of truth (rethink.finance
+ * homepage); the [data-theme="light"] block re-maps the same roles for
+ * daylight. Everything else in the app reaches these through the SCSS
+ * variables in _variables.scss, which compile to var(--…) references — so a
+ * component never needs to know which theme is active, and this file is the
+ * complete inventory of what flips.
+ *
+ * Loaded once from nuxt.config's css list. Deliberately NOT imported through
+ * the sass additionalData pipeline: anything emitting CSS there is duplicated
+ * into every component's compiled chunk.
+ *
+ * The light values are not naive inversions:
+ *  - Surfaces step DOWN from white (page #F7F8FA, cards #FFFFFF, insets
+ *    #EEF0F4) where dark mode steps up from black.
+ *  - Hairlines flip their alpha base from white to ink (#0A0E1A) and need
+ *    a touch more alpha to read on white.
+ *  - Accent TEXT darkens for AA: raw cyan #16C8FF is 1.5:1 on white, so
+ *    --cyan carries #087AAB (4.8:1) in light and the handful of non-text
+ *    cyan uses (dots, toggle knobs, chart strokes) read --cyan-raw instead.
+ *    Same story for --pos/--neg/--warn/--yield and the status hues — each is
+ *    the brand hue darkened until it clears 4.5:1 on white (verified).
+ *  - Elevation: surface-lightness steps don't read on white, so light mode
+ *    gains exactly one ambient card shadow (--shadow-card) and the floating
+ *    shadows trade black depth for a soft ink wash.
+ */
+
+:root {
+  /* Surfaces */
+  --bg: #0c0d12;
+  --bg-3: #101219;
+  --surface: #12141c;
+  --surface-2: #171a24;
+  --surface-float: #171a24; /* menus, modals, tooltips, toasts */
+  --surface-3: #1d212d;
+  --surface-4: #2a2f3c;
+  --line-solid: #242833;
+  --divider: #1a1d27;
+  --panel-fill: rgba(255, 255, 255, 0.02);
+  --fill-1: rgba(255, 255, 255, 0.04);
+  --fill-2: rgba(255, 255, 255, 0.08);
+  --fill-3: rgba(255, 255, 255, 0.06);
+  --scrim-soft: rgba(12, 13, 18, 0.16);
+
+  /* Hairlines */
+  --line: rgba(255, 255, 255, 0.06);
+  --line-2: rgba(255, 255, 255, 0.11);
+  --line-3: rgba(255, 255, 255, 0.17);
+  --border-light: #808898;
+
+  /* Text */
+  --text: #eceef4;
+  --text-dim: rgba(255, 255, 255, 0.76);
+  --text-faint: #808898;
+  --text-faint-2: #969cac;
+  --text-disabled: #646465;
+  --text-inactive: #4e5972;
+  --text-blue-soft: #d2dfff;
+
+  /* Brand accents */
+  --primary: #1f5fff;
+  --primary-dark: #1747c9;
+  --primary-faint: #1c3165;
+  --blue-bright: #4e81ff;
+  --accent-soft: rgba(31, 95, 255, 0.13);
+  --accent-line: rgba(64, 140, 255, 0.32);
+  --cyan: #16c8ff;
+  --cyan-raw: #16c8ff; /* never themes: dots, knobs, chart strokes, gradient */
+  --cyan-soft: #5bddff;
+  --cyan-tint: rgba(22, 200, 255, 0.1);
+  --cyan-line: rgba(22, 200, 255, 0.32);
+  --cyan-glow: rgba(22, 200, 255, 0.55);
+
+  /* Semantic hues */
+  --pos: #3ed598;
+  --neg: #e66a60;
+  --neg-soft: rgba(230, 106, 96, 0.1);
+  --neg-line: rgba(230, 106, 96, 0.32);
+  --warn: #ffd33d;
+  --warn-soft: rgba(255, 211, 61, 0.1);
+  --warn-line: rgba(255, 211, 61, 0.32);
+  --warning-text: #836900;
+  --yield: #38de8e;
+  --yield-soft: rgba(56, 222, 142, 0.1);
+  --yield-line: rgba(56, 222, 142, 0.32);
+  --success: #35bd48;
+  --success-light: #38de8e;
+
+  /* Status / position-type hues */
+  --status-active: #db38de;
+  --status-canceled: #de6a38;
+  --position-nft: #741fff;
+  --position-illiquid: #ffd700;
+
+  /* Gradient + glows */
+  --grad: linear-gradient(118deg, #2fd7ff 0%, #2c8bff 46%, #1f5fff 100%);
+  --grad-soft: linear-gradient(
+    135deg,
+    rgba(47, 215, 255, 0.16),
+    rgba(31, 95, 255, 0.1)
+  );
+  --box-glow-blue: rgba(31, 95, 255, 0.16);
+
+  /* Data marks — activity/flow dots and donut slices. Injected from JS as
+     var() strings (composables/vaultOperations.ts, composables/donut.ts), so
+     the palette themes without the components knowing. Dark is the design's
+     palette; light deepens each hue so the marks don't wash out on white. */
+  --dot-deposit: #2fd7ff;
+  --dot-redeem: #e66a60;
+  --dot-settlement: #7b8dff;
+  --dot-neutral: #8892a8;
+  --donut-1: #2fd7ff;
+  --donut-2: #1f5fff;
+  --donut-3: #5ae0c8;
+  --donut-4: #7b8dff;
+  --donut-5: #2c8bff;
+  --donut-6: #8892a8;
+
+  /* Code display (json_field, consoles) */
+  --code-string: #dcdcaa;
+
+  /* Elevation */
+  --shadow-card: none;
+  --shadow-float: 0 12px 28px rgba(0, 0, 0, 0.45);
+  --shadow-float-lg: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --scrim: #06070b;
+  --scrim-opacity: 0.72;
+  --veil: rgba(12, 13, 18, 0.58); /* full-app blur gate (AppAccessGate) */
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  /* Surfaces — step down from white */
+  --bg: #f7f8fa;
+  --bg-3: #eff1f5;
+  --surface: #ffffff;
+  --surface-2: #fafbfd;
+  --surface-float: #ffffff;
+  --surface-3: #eef0f4;
+  --surface-4: #e4e7ee;
+  --line-solid: #d8dce5;
+  --divider: #e7eaf0;
+  --panel-fill: rgba(10, 14, 26, 0.025);
+  --fill-1: rgba(10, 14, 26, 0.045);
+  --fill-2: rgba(10, 14, 26, 0.08);
+  --fill-3: rgba(10, 14, 26, 0.06);
+  --scrim-soft: rgba(247, 248, 250, 0.72);
+
+  /* Hairlines — alpha base flips from white to ink */
+  --line: rgba(10, 14, 26, 0.08);
+  --line-2: rgba(10, 14, 26, 0.14);
+  --line-3: rgba(10, 14, 26, 0.22);
+  --border-light: #a6adbe;
+
+  /* Text — near-black, not pure black */
+  --text: #12141b;
+  --text-dim: #4a5060;
+  --text-faint: #6b7284;
+  --text-faint-2: #6b7284;
+  --text-disabled: #9aa0ac;
+  --text-inactive: #8a92a6;
+  --text-blue-soft: #33436e;
+
+  /* Brand accents — blue holds, cyan text darkens for AA */
+  --primary-faint: #d9e4ff;
+  --blue-bright: #1747c9;
+  --accent-soft: rgba(31, 95, 255, 0.07);
+  --accent-line: rgba(31, 95, 255, 0.3);
+  --cyan: #087aab;
+  --cyan-soft: #076a93;
+  --cyan-tint: rgba(8, 122, 171, 0.07);
+  --cyan-line: rgba(8, 122, 171, 0.32);
+  --cyan-glow: rgba(8, 122, 171, 0.4);
+
+  /* Semantic hues — darkened until they clear AA on white */
+  --pos: #0c7d56;
+  --neg: #be4a40;
+  --neg-soft: rgba(190, 74, 64, 0.07);
+  --neg-line: rgba(190, 74, 64, 0.3);
+  --warn: #8a6d00;
+  --warn-soft: rgba(255, 211, 61, 0.16);
+  --warn-line: rgba(138, 109, 0, 0.35);
+  --yield: #0c7d56;
+  --yield-soft: rgba(12, 125, 86, 0.07);
+  --yield-line: rgba(12, 125, 86, 0.3);
+  --success: #1a7e2e;
+  --success-light: #0c7d56;
+
+  --status-active: #a924ac;
+  --status-canceled: #b54e20;
+  --position-illiquid: #8a6d00;
+
+  /* Gradient darkened one step so the phrase still reads on white;
+     the wash bleeds on white, so it drops ~40% opacity. */
+  --grad: linear-gradient(118deg, #0ba6d8 0%, #1e6fe0 46%, #1747c9 100%);
+  --grad-soft: linear-gradient(
+    135deg,
+    rgba(47, 215, 255, 0.09),
+    rgba(31, 95, 255, 0.06)
+  );
+  --box-glow-blue: rgba(31, 95, 255, 0.1);
+
+  --dot-deposit: #0a93c4;
+  --dot-redeem: #be4a40;
+  --dot-settlement: #5a68e0;
+  --dot-neutral: #6b7284;
+  --donut-1: #0fa8d6;
+  --donut-2: #1f5fff;
+  --donut-3: #1fae93;
+  --donut-4: #5a68e0;
+  --donut-5: #1d79e0;
+  --donut-6: #6b7284;
+
+  --code-string: #8a6d00;
+
+  /* Elevation — the one permitted new shadow, plus ink-wash floats */
+  --shadow-card: 0 1px 2px rgba(10, 14, 26, 0.05);
+  --shadow-float: 0 12px 28px rgba(10, 14, 26, 0.14);
+  --shadow-float-lg: 0 24px 64px rgba(10, 14, 26, 0.18);
+  --scrim: #06070b;
+  --scrim-opacity: 0.4;
+  --veil: rgba(247, 248, 250, 0.6);
+
+  color-scheme: light;
+}

@@ -54,7 +54,7 @@ const onDelegateSuccess = async () => {
   gap: 1rem;
   margin-bottom: 1.25rem;
   padding: 1rem 1.25rem;
-  border: 1px solid rgba($color-warning, 0.45);
+  border: 1px solid $color-warn-line;
   border-radius: $default-border-radius;
   background: $color-gray-light-transparent;
 

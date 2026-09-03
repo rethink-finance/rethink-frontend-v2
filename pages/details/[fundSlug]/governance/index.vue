@@ -703,7 +703,7 @@ const isFetchingDelegates = computed(() => {
     background: $color-navy-gray-light;
     /* The one shadow in the set: a menu floats over the page and has to read
        as being above it rather than punched into it. */
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-float-lg);
   }
 
   &__menu_item {

@@ -712,7 +712,7 @@ const scopeAssetList = (assets: string[]): string => {
   &__warning {
     margin-bottom: 0.75rem;
     padding: 0.5rem 0.625rem;
-    border: 1px solid rgba($color-warning, 0.35);
+    border: 1px solid $color-warn-line;
     border-radius: $default-border-radius;
     font-size: 11.5px;
     line-height: 1.5;

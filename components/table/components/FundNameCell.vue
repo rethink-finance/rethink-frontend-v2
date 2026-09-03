@@ -4,7 +4,9 @@
       <img cover :src="props.image">
     </v-avatar>
     <div class="title_wrapper">
-      <h4 class="text-white">
+      <!-- Themed title color, not Vuetify's text-white utility: that class
+           is literal white and disappears on light-mode surfaces. -->
+      <h4>
         {{ title }}
       </h4>
 
@@ -84,6 +86,7 @@ const truncatedSubtitle = computed(() => {
     font-weight: 700;
     letter-spacing: normal;
     max-width: 100%;
+    color: $color-title;
   }
 
   h5 {

@@ -126,7 +126,7 @@ onBeforeUnmount(() => {
     border: 1px solid $color-line-2;
     border-radius: $default-border-radius;
     background: $color-navy-gray-light;
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+    box-shadow: var(--shadow-float-lg);
     font-size: 12px;
     line-height: 1.5;
     text-align: left;

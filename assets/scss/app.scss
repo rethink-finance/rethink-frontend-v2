@@ -55,6 +55,9 @@ a {
   border-radius: 0.25rem;
   background: $color-surface;
   border: 1px solid $color-line;
+  /* Resolves to none in dark mode; light mode's one ambient card shadow,
+     since surface-lightness elevation doesn't read on white. */
+  box-shadow: var(--shadow-card);
 
   &__title {
     display: flex;
@@ -89,6 +92,7 @@ a {
   border: 1px solid $color-line;
   border-radius: $default-border-radius;
   background: $color-surface;
+  box-shadow: var(--shadow-card);
 
   &__head {
     display: flex;
@@ -320,10 +324,61 @@ input[type="number"]:focus:hover {
 }
 
 .json_field {
-  color: #dcdcaa;
+  color: var(--code-string);
   font-size: 0.85rem;
   white-space: pre-wrap;
   background-color: $color-badge-navy;
+}
+
+/**
+ * `bg-primary text-secondary` buttons (deposit, connect wallet, consoles):
+ * pale-blue-on-blue is the dark theme's treatment, but light maps secondary
+ * to deep navy, which sinks into the blue fill. On a primary fill, light mode
+ * reads white. !important because Vuetify's text-secondary utility is
+ * !important too.
+ */
+[data-theme="light"] .bg-primary.text-secondary {
+  color: #fff !important;
+}
+
+/**
+ * The design system's switch (components/onboarding/Toggle.vue) on the light
+ * theme. Its dark treatment — raw-cyan knob on a faint cyan-tint track —
+ * washes out on white, so light inverts the weight: the track carries the
+ * color (solid themed cyan when on, a visible grey when off) and the knob is
+ * white with a whisper of shadow. Lives here rather than in the component so
+ * the dark styling stays untouched; specificity is deliberately above the
+ * component's scoped rules.
+ */
+[data-theme="light"] .toggle[role="switch"] {
+  border-color: var(--line-3);
+  background: var(--surface-3);
+
+  .toggle__knob {
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(10, 14, 26, 0.25);
+  }
+
+  &.toggle--on {
+    border-color: var(--cyan);
+    background: var(--cyan);
+
+    .toggle__knob {
+      background: #fff;
+    }
+  }
+}
+
+/**
+ * Wordmark theme swap. The standard mark's "rethink" text is filled white in
+ * the SVG and vanishes on a white bar, so light mode renders logo_light.svg
+ * (same artwork, ink text) instead — both are always in the markup and these
+ * rules pick one. !important because the dark variant's own responsive rules
+ * set display per breakpoint and would win otherwise.
+ */
+[data-theme="light"] .theme_logo--dark,
+:root:not([data-theme="light"]) .theme_logo--light {
+  display: none !important;
 }
 
 // Permissions Global Classes

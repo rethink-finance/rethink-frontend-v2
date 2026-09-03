@@ -352,7 +352,7 @@ const stakingPerformance = computed(() =>
     text-transform: uppercase;
     padding: 0.1875rem 0.375rem;
     border-radius: 3px;
-    background: rgba(255, 255, 255, 0.06);
+    background: $color-background-button;
     color: $color-steel-blue;
   }
 }

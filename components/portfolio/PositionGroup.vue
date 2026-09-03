@@ -271,7 +271,7 @@ const requestAmount = (request: PendingRequest) => {
 
   &__fill {
     height: 100%;
-    background: $color-cyan;
+    background: $color-cyan-raw;
   }
 
   &__allocation_value {
@@ -333,7 +333,7 @@ const requestAmount = (request: PendingRequest) => {
 
     &--vote,
     &--ready {
-      background: $color-cyan;
+      background: $color-cyan-raw;
     }
 
     /* The only shadow in the design: a vote is the one thing here with

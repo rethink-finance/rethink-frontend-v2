@@ -118,7 +118,7 @@ const toastLabel = (level) => {
   border-left-width: 2px;
   border-left-color: $color-line-3;
   border-radius: $default-border-radius;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-float);
   font-size: $text-sm;
   font-weight: 500;
   line-height: 1.5;

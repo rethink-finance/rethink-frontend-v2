@@ -19,12 +19,16 @@
  * including the last slice against the first — share a hue family.
  */
 export const DONUT_COLORS = [
-  "#2fd7ff",
-  "#1f5fff",
-  "#5ae0c8",
-  "#7b8dff",
-  "#2c8bff",
-  "#8892a8",
+  // var() references into tokens.scss, so the slices deepen on the light
+  // theme without either card knowing. Consumers must paint them through a
+  // style binding (`:style="{ fill: … }"`), never an SVG fill attribute —
+  // var() does not resolve in presentation attributes.
+  "var(--donut-1)",
+  "var(--donut-2)",
+  "var(--donut-3)",
+  "var(--donut-4)",
+  "var(--donut-5)",
+  "var(--donut-6)",
 ];
 
 /**
@@ -33,7 +37,7 @@ export const DONUT_COLORS = [
  * also the palette's last entry, which is where such a slice lands today;
  * naming it separately keeps that true if the slice count ever changes.
  */
-export const DONUT_OTHER_COLOR = "#8892a8";
+export const DONUT_OTHER_COLOR = "var(--donut-6)";
 
 /** Colour for the nth slice, cycling once the palette runs out. */
 export const donutColor = (index: number) =>

@@ -1216,7 +1216,7 @@ const copyText = (text: string, message: string) => {
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem;
-  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border: 1px dashed $color-line-3;
   border-radius: 0.5rem;
 
   &__intent {
@@ -1240,9 +1240,9 @@ const copyText = (text: string, message: string) => {
   &__input {
     width: 100%;
     padding: 0.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    border: 1px solid $color-line-3;
     border-radius: 0.375rem;
-    background: rgba(0, 0, 0, 0.25);
+    background: $color-card-background;
     font-family: monospace;
     font-size: 0.7rem;
     line-height: 1.4;

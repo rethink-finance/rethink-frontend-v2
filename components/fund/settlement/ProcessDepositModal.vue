@@ -1004,7 +1004,7 @@ const delegateToMyself = async () => {
     transition: background-color $default-transition-time ease;
 
     &--done {
-      background: $color-cyan;
+      background: $color-cyan-raw;
     }
 
     &--current {

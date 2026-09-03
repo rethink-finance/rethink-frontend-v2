@@ -1,8 +1,18 @@
 <template>
   <span>
+    <!-- Two wordmark variants, same artwork at the same size: the standard
+         mark's "rethink" text is filled white and the light one's is filled
+         ink. Which renders is decided by the [data-theme] rules in app.scss —
+         an <img> SVG can't be recolored from CSS. The mobile glyph is the
+         gradient mark alone and works on both grounds. -->
     <img
       src="@/assets/images/logo.svg"
-      class="rethink_logo"
+      class="rethink_logo theme_logo--dark"
+      :class="{'rethink_logo--sm': small}"
+    >
+    <img
+      src="@/assets/images/logo_light.svg"
+      class="rethink_logo theme_logo--light"
       :class="{'rethink_logo--sm': small}"
     >
     <img
