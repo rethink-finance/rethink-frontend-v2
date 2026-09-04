@@ -28,6 +28,24 @@ export const setProposalsSource = (
   governanceProposalStore.fundProposalsSource[chainId][fundAddress] = source;
 };
 
+/**
+ * The Roles modifier address only labels decoded calldata. A vault whose Safe
+ * cannot be read (hijacked to an EOA, RPCs down) must still show its proposal
+ * history — that page is where such a hijack becomes visible — so the lookup
+ * degrades to "" instead of taking the whole proposals fetch down with it.
+ */
+export const fetchRoleModAddressOrEmpty = async (
+  fundAddress: string,
+): Promise<string> => {
+  const fundStore = useFundStore();
+  try {
+    return (await fundStore.fetchRoleModAddress(fundAddress)) ?? "";
+  } catch (error) {
+    console.warn("Roles modifier lookup failed; decoding proposals without it:", error);
+    return "";
+  }
+};
+
 export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   const governanceProposalStore = useGovernanceProposalsStore();
   const fundStore = useFundStore();
@@ -42,7 +60,7 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
   }
   const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId);
 
-  const roleModAddress = await fundStore.fetchRoleModAddress(fund.address); // TODO replace with fetchGovernableFund
+  const roleModAddress = await fetchRoleModAddressOrEmpty(fund.address);
 
   // Tier 1: the backend's precomputed on-chain index. It embeds the
   // per-proposal quorum inputs, so the whole per-timepoint RPC loop below is

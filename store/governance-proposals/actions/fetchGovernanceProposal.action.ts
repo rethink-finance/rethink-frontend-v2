@@ -1,4 +1,5 @@
 import { useGovernanceProposalsStore } from "../governance_proposals.store";
+import { fetchRoleModAddressOrEmpty } from "./fetchGovernanceProposals.action";
 
 import { fetchBackendProposals } from "~/services/backend/governance";
 import { fetchSubgraphGovernorProposal } from "~/services/subgraph";
@@ -32,7 +33,7 @@ export const fetchGovernanceProposalAction = async (
   );
   if (backendSnapshot && backendProposal) {
     const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId);
-    const roleModAddress = await fundStore.fetchRoleModAddress(fund.address);
+    const roleModAddress = await fetchRoleModAddressOrEmpty(fund.address);
     const mappedProposal = await _mapSubgraphProposalToProposal(
       backendProposal,
       BigInt(backendProposal.totalSupply || "0") as unknown as number,
@@ -58,7 +59,7 @@ export const fetchGovernanceProposalAction = async (
     });
   console.log("indexer raw fetched proposal", proposal);
   const blockTimeContext = await blockTimeStore.initializeBlockTimeContext(fund.chainId);
-  const roleModAddress = await fundStore.fetchRoleModAddress(fund.address);
+  const roleModAddress = await fetchRoleModAddressOrEmpty(fund.address);
 
   const timepoint =
     fund?.clockMode?.mode === ClockMode.BlockNumber
