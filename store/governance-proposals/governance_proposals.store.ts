@@ -7,7 +7,7 @@ import { useActionState } from "../actionState.store";
 import { useToastStore } from "../toasts/toast.store";
 import { fetchDelegatesAction } from "./actions/fetchDelegates.action";
 import { fetchGovernanceProposalAction } from "./actions/fetchGovernanceProposal.action";
-import { fetchGovernanceProposalsAction } from "./actions/fetchGovernanceProposals.action";
+import { fetchGovernanceProposalsAction, fetchRoleModAddressOrEmpty } from "./actions/fetchGovernanceProposals.action";
 
 import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import { cleanComplexWeb3Data } from "~/composables/utils";
@@ -754,7 +754,7 @@ export const useGovernanceProposalsStore = defineStore({
 
         proposal.calldatasDecoded = [];
         proposal.calldataTypes = [];
-        const roleModAddress = await this.fundStore.fetchRoleModAddress(fund.address);
+        const roleModAddress = await fetchRoleModAddressOrEmpty(fund.address);
 
         proposal.calldatas.forEach((calldata, i) => {
           const calldataDecoded = decodeProposalCallData(

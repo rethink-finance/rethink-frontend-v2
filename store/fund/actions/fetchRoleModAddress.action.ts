@@ -13,6 +13,27 @@ export const fetchRoleModAddressAddressAction = async (fundAddress: string): Pro
     return roleModAddress;
   }
 
+  // A vault whose settings.safe is not a contract (an EOA — e.g. after a
+  // governance proposal repointed the Safe, as happened to TTAI on Arbitrum
+  // in 2026-09) has no modules to page through. Asking it anyway makes every
+  // RPC return empty bytes, the ABI decode throw, and the retry helper walk
+  // the whole RPC list before failing. Settle it with one getCode instead.
+  const chainId = fundStore.selectedFundChain;
+  const safeAddress = fundStore.fund?.safeAddress;
+  if (safeAddress) {
+    const code = await web3Store.callWithRetry(
+      chainId,
+      () => web3Store.chainProviders[chainId].eth.getCode(safeAddress),
+    );
+    if (!code || code === "0x") {
+      console.warn(
+        `Safe ${safeAddress} has no code on chain ${chainId}; no Roles modifier`,
+      );
+      fundStore.fundRoleModAddress[fundAddress] = "";
+      return "";
+    }
+  }
+
   // If the role modifier address was not fetched yet, fetch it now.
   const startAddress = "0x0000000000000000000000000000000000000001";
   /*
