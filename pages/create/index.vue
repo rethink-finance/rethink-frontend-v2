@@ -136,7 +136,7 @@
           <OnboardingFinalize
             v-else-if="currentStepKey === OnboardingStep.Finalize"
             ref="finalizeRef"
-            :fund-chain-id="fundChainId"
+            @go-to-step="goToStepByKey"
           />
         </div>
       </div>
@@ -521,6 +521,17 @@ const goToNextStep = () => {
 const goToStep = (target: number) => {
   if (target > maxStepUnlocked.value) return;
   step.value = target;
+};
+
+/**
+ * The same rail move, addressed by step rather than by number — the finalize
+ * step sends people back to permissions and NAV methods to check them before
+ * launching, and it has no business knowing where those sit in the order.
+ */
+const goToStepByKey = (key: OnboardingStep) => {
+  const index = stepperEntry.value.findIndex((entry) => entry.key === key);
+  if (index < 0) return;
+  goToStep(index + 1);
 };
 
 /**

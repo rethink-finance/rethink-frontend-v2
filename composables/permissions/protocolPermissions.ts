@@ -399,9 +399,9 @@ export const governingMembers = (
  * matching on structure keeps this file working even when the frontend tree
  * carries a second zod copy.
  */
-const zodDef = (schema: any): any => schema?._def ?? {};
+export const zodDef = (schema: any): any => schema?._def ?? {};
 
-const unwrapSchema = (schema: any): any => {
+export const unwrapSchema = (schema: any): any => {
   let current = schema;
   // Optional/Default/Effects only wrap; the control derives from the core.
   for (;;) {
@@ -614,7 +614,7 @@ const buildEnumOptions = (
  * unstated market means, and reading it here is what lets the form open on
  * that answer instead of on "Market is required".
  */
-const schemaDefault = (schema: any): string | undefined => {
+export const schemaDefault = (schema: any): string | undefined => {
   let current = schema;
   for (;;) {
     const def = zodDef(current);

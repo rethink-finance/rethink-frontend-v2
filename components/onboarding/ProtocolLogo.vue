@@ -1,6 +1,12 @@
 <template>
+  <!-- Spot prices are not a protocol: their source is Chainlink, and the
+       mark says so wherever the library lists them. -->
+  <FundNavChainlinkMark
+    v-if="protocol === 'spot'"
+    :size="size"
+  />
   <img
-    v-if="!failed"
+    v-else-if="!failed"
     class="protocol_logo"
     :src="getProtocolLogoUrl(protocol)"
     :alt="`${label} logo`"

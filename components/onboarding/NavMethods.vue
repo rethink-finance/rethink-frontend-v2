@@ -130,28 +130,81 @@
           </li>
         </ul>
 
-        <!-- Then every method a vault on this chain has already stored,
-             searchable, picked in any number. -->
-        <div class="nav_pick__section">
-          <div class="nav_pick__section_head">
-            <span class="nav_pick__eyebrow">Library</span>
-            <span v-if="libraryCount" class="nav_pick__count">
-              {{ libraryCount }} {{ libraryCount === 1 ? "method" : "methods" }}
+        <!-- The registry's valuation library: one row per protocol whose
+             positions it knows how to value on this chain. -->
+        <div v-if="valuationProtocols.length" class="nav_lib">
+          <div class="nav_lib__head">
+            <span class="nav_lib__eyebrow">Library</span>
+            <span class="nav_lib__count">
+              {{ filteredValuationProtocols.length }} of {{ valuationProtocols.length }}
             </span>
           </div>
-          <FundNavAddFromLibrary
-            :chain-id="fundChainId"
-            :fund-address="fundSettings?.fundAddress || ''"
-            :safe-address="fundSettings?.safe || ''"
-            :base-symbol="fundSettings?.baseSymbol || ''"
-            :base-decimals="fundSettings?.baseDecimals || 18"
-            :already-used-methods="navMethods"
-            :is-fund-non-init="true"
-            compact
-            @methods-added="methodsAddedFromLibrary"
-          />
+          <div class="nav_lib__search">
+            <Icon
+              icon="material-symbols:search"
+              width="1.125rem"
+              class="nav_lib__search_icon"
+            />
+            <input
+              v-model="libraryQuery"
+              class="nav_lib__search_input"
+              type="search"
+              placeholder="Search protocols"
+              aria-label="Search the valuation library"
+            >
+            <button
+              v-if="libraryQuery"
+              type="button"
+              class="nav_lib__search_clear"
+              @click="libraryQuery = ''"
+            >
+              Clear
+            </button>
+          </div>
+          <ul v-if="filteredValuationProtocols.length" class="nav_lib__list">
+            <li
+              v-for="protocol in filteredValuationProtocols"
+              :key="protocol.protocol"
+              class="nav_lib__row"
+            >
+              <button
+                type="button"
+                class="nav_lib__item"
+                :disabled="!valuationContext"
+                @click="openProtocol(protocol)"
+              >
+                <OnboardingProtocolLogo
+                  :protocol="protocol.protocol"
+                  :label="protocol.label"
+                />
+                <span class="nav_lib__item_text">
+                  <span class="nav_lib__item_name">{{ protocol.label }}</span>
+                  <span class="nav_lib__item_meta">
+                    {{ valuationMethodsLine(protocol) }}
+                  </span>
+                </span>
+                <Icon
+                  class="nav_lib__item_plus"
+                  icon="material-symbols:add-rounded"
+                  aria-hidden="true"
+                />
+              </button>
+            </li>
+          </ul>
+          <p v-else class="nav_lib__lead">
+            No protocol matches “{{ libraryQuery }}”.
+          </p>
         </div>
       </div>
+
+      <FundNavValuationLibrary
+        v-else-if="pickerView === 'protocol' && selectedProtocol && valuationContext"
+        :chain-id="fundChainId"
+        :context="valuationContext"
+        :protocol="selectedProtocol"
+        :existing-methods="navMethods"
+        @added-methods="addValuationMethods"
+      />
 
       <FundNavNewMethod
         v-else-if="pickerView === 'define'"
@@ -205,15 +258,21 @@ import {
   encodeUpdateNavMethods,
   getAllowManagerToUpdateNavPermissionsData,
 } from "~/composables/nav/navProposal";
+import {
+  isValuationContextReady,
+  listValuationLibrary,
+} from "~/composables/nav/valuationRegistry";
+import type {
+  IValuationProtocolView,
+  IValuationVaultContext,
+} from "~/composables/nav/valuationRegistry";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { getNAVData } from "~/store/fund/actions/fetchFundNAVData.action";
-import { useFundsStore } from "~/store/funds/funds.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type INAVMethod from "~/types/nav_method";
 
 const createFundStore = useCreateFundStore();
-const fundsStore = useFundsStore();
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
 
@@ -237,20 +296,63 @@ const fundFactoryContract = computed(() => {
   return fundFactoryContractV2Used.value ? chainContracts?.fundFactoryContractV2 : chainContracts?.fundFactoryContract
 })
 
-/**
- * How many methods the library holds on this chain — the same set the
- * picker lists, once it has been fetched. Zero until then, and the count
- * stays off the heading rather than promising an empty library.
- */
-const libraryCount = computed(
-  () => fundsStore.uniqueNavMethods[fundChainId.value]?.length ?? 0,
-);
-
-/** Which view the add modal shows: the ways in, or one of the two forms. */
-type PickerView = "pick" | "define" | "raw";
+/** Which view the add modal shows: the ways in, a protocol, or one of the two forms. */
+type PickerView = "pick" | "protocol" | "define" | "raw";
 const pickerView = ref<PickerView>("pick");
+const selectedProtocol = ref<IValuationProtocolView | null>(null);
+
+/**
+ * What the registry's generators need to know about this vault. Null
+ * until the factory has cached the fund's addresses — the protocol rows
+ * stay listed but disabled until then.
+ */
+const valuationContext = computed((): IValuationVaultContext | null => {
+  const candidate = {
+    safe: fundSettings.value?.safe ?? "",
+    fund: fundSettings.value?.fundAddress ?? "",
+    baseToken: {
+      address: fundSettings.value?.baseToken ?? "",
+      decimals: fundSettings.value?.baseDecimals ?? 18,
+      symbol: fundSettings.value?.baseSymbol ?? "",
+    },
+  };
+  return isValuationContextReady(candidate) ? candidate : null;
+});
+
+/** The registry's valuation library for this chain (see VALUATION.md there). */
+const valuationProtocols = computed((): IValuationProtocolView[] => {
+  try {
+    return listValuationLibrary(fundChainId.value, valuationContext.value);
+  } catch (error) {
+    console.error("valuation library unavailable", error);
+    return [];
+  }
+});
+
+/** The library search, cleared with the dialog. */
+const libraryQuery = ref("");
+
+/**
+ * The library narrowed to the search: by name, by registry key, or by a
+ * method it offers — "borrowed" finds every lending protocol.
+ */
+const filteredValuationProtocols = computed((): IValuationProtocolView[] => {
+  const needle = libraryQuery.value.trim().toLowerCase();
+  if (!needle) return valuationProtocols.value;
+  return valuationProtocols.value.filter((protocol) =>
+    [protocol.label, protocol.protocol, ...protocol.methods.map((m) => m.label)]
+      .join(" ")
+      .toLowerCase()
+      .includes(needle),
+  );
+});
+
+/** What a protocol's methods cover, for the library row. */
+const valuationMethodsLine = (protocol: IValuationProtocolView): string =>
+  protocol.methods.map((m) => m.label.toLowerCase()).join(" · ");
 
 const pickerTitle = computed((): string => {
+  if (pickerView.value === "protocol") return selectedProtocol.value?.label ?? "Protocol";
   if (pickerView.value === "define") return "Define new method";
   if (pickerView.value === "raw") return "Raw NAV methods";
   return "Add NAV method";
@@ -259,6 +361,7 @@ const pickerTitle = computed((): string => {
 // The modal always opens on the ways in, whatever view it closed on.
 watch(isAddDialogOpen, (open) => {
   if (open) pickerView.value = "pick";
+  else libraryQuery.value = "";
 });
 
 /**
@@ -440,6 +543,18 @@ const openDefineNew = () => {
 const openRaw = () => {
   pickerView.value = "raw";
 };
+const openProtocol = (protocol: IValuationProtocolView) => {
+  selectedProtocol.value = protocol;
+  pickerView.value = "protocol";
+};
+
+const addValuationMethods = (methods: INAVMethod[]) => {
+  navMethods.value = [...navMethods.value, ...methods];
+  isAddDialogOpen.value = false;
+  toastStore.addToast(
+    methods.length === 1 ? "Method added successfully." : "Methods added successfully.",
+  );
+};
 
 const addRawMethods = (newMethods: INAVMethod[]) => {
   navMethods.value = [
@@ -447,17 +562,6 @@ const addRawMethods = (newMethods: INAVMethod[]) => {
     ...newMethods,
   ];
   isAddDialogOpen.value = false;
-};
-
-const methodsAddedFromLibrary = (methods: INAVMethod[]) => {
-  // // Add newly defined method to fund managed methods.
-  for (const method of methods) {
-    method.isNew = true;
-    navMethods.value.push(method);
-  }
-
-  isAddDialogOpen.value = false;
-  toastStore.addToast("Methods added successfully.");
 };
 
 onMounted(() => {
@@ -857,6 +961,172 @@ defineExpose({
   .nav_pick__item,
   .nav_pick__back {
     transition: none;
+  }
+}
+
+/* The valuation library, set exactly like the permissions modal's
+   protocol library (ProtocolPermissions.vue .library): eyebrow + "n of n",
+   a search field, one bordered list with divider rows. */
+.nav_lib {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  &__eyebrow {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__count {
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-steel-blue;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__lead {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+
+  &__search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 12px;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: $color-card-background;
+
+    &:focus-within {
+      border-color: $color-accent-line;
+    }
+  }
+
+  &__search_icon {
+    flex: none;
+    color: $color-steel-blue;
+  }
+
+  /* The app's global input rule sets a height and padding on every bare
+     input, so all three are set here rather than only the one. */
+  &__search_input {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 2.25rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: $font-mono;
+    font-size: 12.5px;
+    line-height: 1.3;
+    color: $color-white;
+
+    &::placeholder {
+      color: $color-steel-blue;
+    }
+
+    &:focus {
+      outline: none;
+    }
+
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+
+  &__search_clear {
+    flex: none;
+    border: none;
+    background: none;
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-white;
+    }
+  }
+
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+  }
+
+  &__row + &__row {
+    border-top: 1px solid $color-line;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 0.875rem;
+    border: none;
+    background: none;
+    text-align: left;
+    color: $color-white;
+    cursor: pointer;
+    transition: background-color $default-transition-time ease;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+      outline: none;
+      background: $color-gray-light-transparent;
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+  }
+
+  &__item_text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__item_name {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  &__item_meta {
+    font-family: $font-mono;
+    font-size: 11px;
+    line-height: 1.4;
+    color: $color-steel-blue;
+  }
+
+  &__item_plus {
+    flex: none;
+    font-size: 18px;
+    color: $color-steel-blue;
   }
 }
 </style>
