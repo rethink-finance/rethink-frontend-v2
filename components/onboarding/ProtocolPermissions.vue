@@ -185,8 +185,7 @@
                     </svg>
                     Vaults
                   </span>
-                  and import the vault under a label of your choice, using
-                  its Safe contract:
+                  and import the Safe contract:
                   <span class="zodiac__safe">
                     <span
                       class="zodiac__safe_address"
@@ -1009,8 +1008,8 @@ const addHint = computed((): string =>
     color: $color-secondary;
   }
 
-  /* The address to paste into Zodiac, on its own line so it can be read
-     and copied whole. */
+  /* The address to paste into Zodiac, on its own line under the short
+     sentence so it can be read and copied whole. */
   &__safe {
     display: flex;
     align-items: center;

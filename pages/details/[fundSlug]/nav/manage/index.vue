@@ -27,6 +27,13 @@
         <button
           type="button"
           class="nav_manage__ghost"
+          @click="protocolDialog = true"
+        >
+          From protocols
+        </button>
+        <button
+          type="button"
+          class="nav_manage__ghost"
           @click="addRawDialog = true"
         >
           Import raw
@@ -83,10 +90,19 @@
       :methods="fundManagedNAVMethods"
       @added-methods="addRawMethods"
     />
+    <FundNavProtocolLibraryDialog
+      v-model="protocolDialog"
+      :chain-id="selectedFundChain"
+      :context="valuationContext"
+      :existing-methods="fundManagedNAVMethods"
+      @added-methods="addProtocolMethods"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { isValuationContextReady } from "~/composables/nav/valuationRegistry";
+import type { IValuationVaultContext } from "~/composables/nav/valuationRegistry";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -109,6 +125,32 @@ const toastStore = useToastStore();
 const fundStore = useFundStore();
 const actionStateStore = useActionStateStore();
 const addRawDialog = ref(false);
+const protocolDialog = ref(false);
+
+/** What the registry's valuation generators need to know about this vault. */
+const valuationContext = computed((): IValuationVaultContext | null => {
+  const fund = fundStore.fund;
+  const candidate = {
+    safe: fund?.safeAddress ?? "",
+    fund: fund?.address ?? fundAddress.value ?? "",
+    baseToken: {
+      address: fund?.baseToken?.address ?? "",
+      decimals: fund?.baseToken?.decimals ?? 18,
+      symbol: fund?.baseToken?.symbol ?? "",
+    },
+  };
+  return isValuationContextReady(candidate) ? candidate : null;
+});
+
+const addProtocolMethods = (newMethods: INAVMethod[]) => {
+  fundManagedNAVMethods.value = [
+    ...fundManagedNAVMethods.value,
+    ...newMethods,
+  ];
+  toastStore.addToast(
+    newMethods.length === 1 ? "Method added successfully." : "Methods added successfully.",
+  );
+};
 
 
 const addRawMethods = (newMethods: INAVMethod[]) => {

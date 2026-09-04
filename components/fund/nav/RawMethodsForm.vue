@@ -28,11 +28,9 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
 import { useToastStore } from "~/store/toasts/toast.store";
-import { NAVEntryTypeStringToNAVEntryTypeMap, NAVEntryTypeStringToPositionTypeMap } from "~/types/enums/position_type";
+import { rawEntriesToNavMethods } from "~/composables/nav/rawNavEntries";
 import type INAVMethod from "~/types/nav_method";
-import type { INAVMethodDetails } from "~/types/nav_method";
 
 /**
  * Raw NAV entries, pasted as the JSON a vault exports and turned into
@@ -72,41 +70,9 @@ const formatRawMethod = () => {
     if (value === "false") return false;
     return value;
   });
-  const lastIndex = props.methods.length - 1;
-
-  return parsedMethod?.map((method: any, index: number) => {
-    const newIndex = lastIndex + index + 1;
-
-    const details = {
-      composable: method?.composableUpdates || [],
-      description: JSON.stringify(method?.description || "{}"),
-      entryType: NAVEntryTypeStringToNAVEntryTypeMap[method?.entryType].toString() || "",
-      illiquid: method?.illiquidUpdates || [],
-      isPastNAVUpdate: method?.isPastNAVUpdate || false,
-      liquid: method?.liquidUpdates || [],
-      nft: method?.nftUpdates || [],
-      pastNAVUpdateEntryIndex: method?.pastNAVUpdateEntryIndex || 0,
-      pastNAVUpdateIndex: method?.pastNAVUpdateIndex || 0,
-    } as INAVMethodDetails;
-
-    const detailsJson = formatJson(details) || "{}";
-
-    return {
-      index: newIndex,
-      isNew: true,
-      details,
-      detailsHash: ethers.keccak256(ethers.toUtf8Bytes(detailsJson)),
-      detailsJson,
-      foundMatchingPastNAVUpdateEntryFundAddress: method?.foundMatchingPastNAVUpdateEntryFundAddress || false,
-      isSimulatedNavError: method?.isSimulatedNavError || false,
-      pastNAVUpdateEntryFundAddress: method?.pastNAVUpdateEntryFundAddress || ethers.ZeroAddress,
-      positionName: method?.description?.positionName || "",
-      positionType: NAVEntryTypeStringToPositionTypeMap[method?.entryType] || "",
-      simulatedNav: method?.simulatedNav || 0n,
-      simulatedNavFormatted: method?.simulatedNavFormatted || "0 USDC",
-      valuationSource: method?.description?.valuationSource || "",
-    } as INAVMethod;
-  }) || [] as INAVMethod[];
+  // The registry library and this form share one mapping, so identical
+  // entries hash identically whichever way they came in.
+  return rawEntriesToNavMethods(parsedMethod ?? [], props.methods.length);
 };
 </script>
 
