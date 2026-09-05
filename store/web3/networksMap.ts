@@ -81,21 +81,22 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
     },
     icon: getChainIcon("eth"),
     rpcUrls: [
-      "https://eth.drpc.org",
-      // @dev: this is bad practice, use some proxy for this, here we expose our private RPC (test purposes)
-      // "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", // Luka T.
-      // "https://eth-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", // Rok
-      "https://ethereum.publicnode.com",
-      "https://cloudflare-eth.com",
-      "https://rpc.ankr.com/eth",
-      "https://eth.llamarpc.com",
-      "https://1rpc.io/eth",
+      // Probed 2026-09-05 (same pass as the backend list): each of these
+      // answers eth_chainId with a CORS allow-origin for app.rethink.finance.
+      "https://eth.drpc.org", // Max 10k-block eth_getLogs on the free plan
+      // The only one that serves UNBOUNDED eth_getLogs — what the on-chain
+      // delegates fallback and the explorer-log reads need.
       "https://mainnet.gateway.tenderly.co",
-      // CORS-blocked, do not use:
-      // "https://endpoints.omniatech.io/v1/eth/mainnet/public",
-      // "https://api.zan.top/node/v1/eth/mainnet/public",
-      // "https://rpc.lokibuilder.xyz/wallet",
-      // "https://api.stateless.solutions/ethereum/v1/demo",
+      "https://rpc.mevblocker.io", // Max 10k-block eth_getLogs
+      // Plain calls only: eth_getLogs 504s.
+      "https://rpc.flashbots.net/fast",
+      "https://rpc.flashbots.net",
+      // Dead on 2026-09-05, dropped rather than rotated onto: publicnode
+      // (historical reads need a token), cloudflare-eth ("cannot fulfill"),
+      // ankr (needs an API key), llamarpc (HTTP 521), 1rpc (discontinued).
+      // CORS-blocked: omniatech, zan, lokibuilder, stateless.
+      // "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", // Luka T. — FREE TIER
+      // "https://eth-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", // Rok
     ],
     blockExplorerUrls: ["https://etherscan.io"],
   },
