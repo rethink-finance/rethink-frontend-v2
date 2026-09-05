@@ -1352,6 +1352,18 @@ const formatInitializeData = () => {
 const initializeFund = async() => {
   const fundChainId = selectedChainId.value;
 
+  // The step's footer refuses a quorum under the floor before the review
+  // dialog opens, but this is where the governor's parameters are actually
+  // sent, so the refusal is repeated here rather than trusted to the button's
+  // off state: the quorum is fixed for the life of the vault.
+  const quorumCheck = formRules.quorumAtLeastMinimum(
+    getFieldByStepAndFieldKey(OnboardingStep.Governance, "quorum"),
+  );
+  if (quorumCheck !== true) {
+    isInitializeDialogOpen.value = false;
+    return toastStore.errorToast(`Quorum ${String(quorumCheck).replace(/^Value /, "")}`);
+  }
+
   try {
     isInitializeLoading.value = true;
     // Use V2 contract if toggle is enabled, otherwise use regular contract
