@@ -1,5 +1,11 @@
 import type { IField, IFieldGroup } from "~/types/enums/input_type";
 import { InputType, periodChoices } from "~/types/enums/input_type";
+import {
+  MAX_DEPOSIT_FEE_PERCENT,
+  MAX_MANAGEMENT_FEE_PERCENT,
+  MAX_PERFORMANCE_FEE_PERCENT,
+  MAX_WITHDRAW_FEE_PERCENT,
+} from "~/composables/formRules";
 
 const FeesDocs = "https://docs.rethink.finance/rethink.finance/protocol/architecture/admin-contract/fees"
 
@@ -218,7 +224,11 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
           type: InputType.Number,
           placeholder: "E.g. 0",
           min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
+          rules: [
+            formRules.required,
+            formRules.isNonNegativeNumber,
+            formRules.percentAtMost(MAX_DEPOSIT_FEE_PERCENT),
+          ],
           isEditable: true,
           cols: 4,
         },
@@ -245,7 +255,11 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
           type: InputType.Number,
           placeholder: "E.g. 0",
           min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
+          rules: [
+            formRules.required,
+            formRules.isNonNegativeNumber,
+            formRules.percentAtMost(MAX_WITHDRAW_FEE_PERCENT),
+          ],
           isEditable: true,
           cols: 4,
         },
@@ -272,7 +286,11 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
           type: InputType.Number,
           placeholder: "E.g. 0",
           min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
+          rules: [
+            formRules.required,
+            formRules.isNonNegativeNumber,
+            formRules.percentAtMost(MAX_MANAGEMENT_FEE_PERCENT),
+          ],
           isEditable: true,
           cols: 4,
         },
@@ -311,7 +329,11 @@ export const FundSettingsStepFieldsMap: FieldsMapType = {
           type: InputType.Number,
           placeholder: "E.g. 0",
           min: 0,
-          rules: [formRules.required, formRules.isNonNegativeNumber],
+          rules: [
+            formRules.required,
+            formRules.isNonNegativeNumber,
+            formRules.percentAtMost(MAX_PERFORMANCE_FEE_PERCENT),
+          ],
           isEditable: true,
           cols: 4,
         },

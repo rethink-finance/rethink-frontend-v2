@@ -2,6 +2,8 @@ import { defineStore } from "pinia";
 
 import { useActionState } from "../actionState.store";
 import { fetchFundInitCacheAction } from "./actions/fetchFundInitCache.action";
+import { fetchVaultLaunchChecksAction } from "./actions/fetchVaultLaunchChecks.action";
+import type { IVaultLaunchCheck } from "~/composables/vaultLaunchChecks";
 import { clearLocalStorageItem } from "~/composables/localStorage";
 import { useAccountStore } from "~/store/account/account.store";
 import { networksMap } from "~/store/web3/networksMap";
@@ -70,6 +72,18 @@ export const useCreateFundStore = defineStore({
     ): Promise<IFundInitCache | undefined> {
       return useActionState("fetchFundInitCacheAction", () =>
         fetchFundInitCacheAction(fundChainId, deployerAddress),
+      );
+    },
+    /**
+     * The contract checks the finalize step gates on: what the deployed
+     * governor and vault actually hold, against the limits the form enforces.
+     */
+    fetchVaultLaunchChecks(
+      fundChainId: ChainId,
+      fundInitCache: IFundInitCache,
+    ): Promise<IVaultLaunchCheck[]> {
+      return useActionState("fetchVaultLaunchChecksAction", () =>
+        fetchVaultLaunchChecksAction(fundChainId, fundInitCache),
       );
     },
     setSelectedStepperChainId(chainId: ChainId) {

@@ -67,7 +67,12 @@
         <!-- Only the legacy version is announced. The toggle that chose it is
              gone by now, so this is the one place the answer still shows. -->
         <span v-if="isLegacyRolesVault" class="create__banner_badge">Roles V1</span>
-        <span>
+        <span v-if="launchChecksFailed">
+          The initialized vault failed a contract check on the Finalize step,
+          so its settings are open again. Correct them and initialize the vault
+          once more.
+        </span>
+        <span v-else>
           Vault has been initialized already and cannot be edited. You can add
           permissions &amp; NAV methods and finalize vault creation.
         </span>
@@ -136,7 +141,11 @@
           <OnboardingFinalize
             v-else-if="currentStepKey === OnboardingStep.Finalize"
             ref="finalizeRef"
+            :checks="launchChecks"
+            :checks-loading="isLoadingLaunchChecks"
+            :checks-error="launchChecksError"
             @go-to-step="goToStepByKey"
+            @retry-checks="runLaunchChecks"
           />
         </div>
       </div>
@@ -278,6 +287,11 @@
 import { ethers } from "ethers";
 import debounce from "lodash.debounce";
 import { truncateAddressEllipsis } from "~/composables/addressUtils";
+import { MIN_VOTING_PERIOD_SECONDS } from "~/composables/formRules";
+import {
+  allVaultLaunchChecksPass,
+  type IVaultLaunchCheck,
+} from "~/composables/vaultLaunchChecks";
 import {
   formatApproximateDuration,
   fromBpsToPercentage,
@@ -349,6 +363,53 @@ const fundInitCache = ref<IFundInitCache | undefined>(undefined);
 const fundSettings = computed<IFundSettings>(() => fundInitCache?.value?.fundSettings || {} as IFundSettings);
 const fundMetadata = computed(() => fundInitCache?.value?.fundMetadata || {});
 const fundGovernorData = computed(() => fundInitCache?.value?.governorData || {});
+
+/**
+ * The finalize step's contract checks: what the initialized vault's governor
+ * and settings actually hold, against the limits the form enforces. Run here,
+ * beside the init cache they are read from, so the page can reopen the steps
+ * when one fails and the finalize step can show them the moment it opens.
+ */
+const launchChecks = ref<IVaultLaunchCheck[] | undefined>(undefined);
+const isLoadingLaunchChecks = ref(false);
+const launchChecksError = ref("");
+
+const runLaunchChecks = async () => {
+  const cache = fundInitCache.value;
+  if (!cache?.fundContractAddr || !selectedChainId.value) {
+    launchChecks.value = undefined;
+    launchChecksError.value = "";
+    return;
+  }
+  isLoadingLaunchChecks.value = true;
+  launchChecksError.value = "";
+  try {
+    launchChecks.value = await createFundStore.fetchVaultLaunchChecks(
+      selectedChainId.value,
+      cache,
+    );
+  } catch (error: any) {
+    console.error("Failed reading the vault's contracts for the launch checks", error);
+    launchChecks.value = undefined;
+    launchChecksError.value =
+      error?.message || "The chain did not answer; try reading again.";
+  } finally {
+    isLoadingLaunchChecks.value = false;
+  }
+};
+
+const launchChecksPassed = computed(
+  () => !!launchChecks.value && allVaultLaunchChecksPass(launchChecks.value),
+);
+
+/**
+ * A definite failure — not an undecided read. This is the one state that
+ * reopens the initialization steps: the deployed values are wrong and fixed
+ * for the life of the vault, so the only way forward is to initialize again.
+ */
+const launchChecksFailed = computed(
+  () => !!launchChecks.value?.some((check) => check.status === "fail"),
+);
 
 // Fetch Fund Cache and fill the form data with the fetched fund cache.
 const setFieldValue = (field: IField) => {
@@ -429,6 +490,9 @@ const fetchFundInitCache = async () => {
     )
     isWhitelistedDeposits.value = fundInitCache?.value?.fundSettings?.isWhitelistedDeposits || false;
 
+    // Not awaited: the steps can open while the governor and vault are read.
+    runLaunchChecks();
+
     // An initialized vault is no longer a draft: what is on screen now comes
     // from the chain, so the stored copy is stale and would only reappear as a
     // ghost of the form on the next visit.
@@ -447,6 +511,8 @@ const fetchFundInitCache = async () => {
     }
   } else {
     createFundStore.clearFundInitCache();
+    launchChecks.value = undefined;
+    launchChecksError.value = "";
   }
 }
 
@@ -767,6 +833,7 @@ const maxStepUnlocked = computed(() =>
 const isStepReadOnly = computed(
   () =>
     isFundInitialized.value &&
+    !launchChecksFailed.value &&
     [
       OnboardingStep.Basics,
       OnboardingStep.Fee,
@@ -858,7 +925,7 @@ const toggledOffFields = computed(() => {
 const currentStepValidation = computed(() => {
   const errors: string[] = [];
 
-  if (isFundInitialized.value) {
+  if (isFundInitialized.value && !launchChecksFailed.value) {
     return { isValid: true, errors };
   }
 
@@ -918,8 +985,29 @@ const currentStepValidation = computed(() => {
     }
   }
 
+  if (currentStepKey.value === OnboardingStep.Governance) {
+    const votingPeriodError = votingPeriodFloorError();
+    if (votingPeriodError) errors.push(votingPeriodError);
+  }
+
   return { isValid: errors.length === 0, errors };
 });
+
+/**
+ * The voting period is typed as a duration but stored as blocks, so the floor
+ * is checked against the chain's block time rather than as a field rule. No
+ * block time means no verdict here — the finalize step's contract check reads
+ * it again and refuses to finalize until it can decide.
+ */
+const votingPeriodFloorError = () => {
+  const blocks = Number(
+    getFieldByStepAndFieldKey(OnboardingStep.Governance, "votingPeriod"),
+  );
+  if (!Number.isFinite(blocks) || averageBlockTime.value <= 0) return "";
+  if (blocks * averageBlockTime.value >= MIN_VOTING_PERIOD_SECONDS) return "";
+  const minDays = MIN_VOTING_PERIOD_SECONDS / 86400;
+  return `Voting period must be at least ${minDays} ${minDays === 1 ? "day" : "days"}.`;
+};
 
 const isCurrentStepValid = computed(() => currentStepValidation.value?.isValid);
 
@@ -948,7 +1036,7 @@ const primaryAction = computed(() => {
 
   switch (currentStepKey.value) {
     case OnboardingStep.Governance:
-      if (!isFundInitialized.value) {
+      if (!isFundInitialized.value || launchChecksFailed.value) {
         return {
           label: "Initialize vault",
           enabled: isCurrentStepValid.value,
@@ -988,9 +1076,13 @@ const primaryAction = computed(() => {
       if (finalizeRef.value?.isDone) return undefined;
       return {
         label: "Finalize",
-        enabled: true,
+        // Off until every contract check has passed; the step explains which
+        // one has not, and the handler refuses again on its own.
+        enabled: launchChecksPassed.value,
         loading: !!finalizeRef.value?.isFinalizing,
-        run: () => finalizeRef.value?.finalize(),
+        run: () => {
+          if (launchChecksPassed.value) finalizeRef.value?.finalize();
+        },
       };
     default:
       return nextAction.value;
@@ -1362,6 +1454,11 @@ const initializeFund = async() => {
   if (quorumCheck !== true) {
     isInitializeDialogOpen.value = false;
     return toastStore.errorToast(`Quorum ${String(quorumCheck).replace(/^Value /, "")}`);
+  }
+  const votingPeriodError = votingPeriodFloorError();
+  if (votingPeriodError) {
+    isInitializeDialogOpen.value = false;
+    return toastStore.errorToast(votingPeriodError);
   }
 
   try {

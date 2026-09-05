@@ -56,6 +56,131 @@
           </p>
         </header>
 
+        <!--
+          What the deployed contracts hold, read off the chain rather than off
+          the form. The form refuses these values on the way in; this is the
+          net under it, for a build that got a conversion wrong or a form that
+          was bypassed. Nothing finalizes until every line passes.
+        -->
+        <section class="checks" aria-live="polite">
+          <header class="checks__head">
+            <div class="checks__titles">
+              <span class="preflight__eyebrow">Contract checks</span>
+              <h3 class="checks__title">
+                What the deployed contracts hold
+              </h3>
+              <p class="checks__lead">
+                Read from the vault's governor and settings on {{ chainName }},
+                not from this form. Finalizing stays off until every line passes.
+              </p>
+            </div>
+            <span
+              class="checks__summary"
+              :class="`checks__summary--${checksSummary.tone}`"
+            >
+              {{ checksSummary.label }}
+            </span>
+          </header>
+
+          <ul v-if="checks?.length" class="checks__list">
+            <li
+              v-for="check in checks"
+              :key="check.key"
+              class="checks__row"
+              :class="`checks__row--${check.status}`"
+            >
+              <span class="checks__glyph" aria-hidden="true">
+                <Icon :icon="CHECK_ICONS[check.status]" width="1rem" />
+              </span>
+              <span class="checks__label">{{ check.label }}</span>
+              <span class="checks__actual">{{ check.actual }}</span>
+              <span class="checks__requirement">{{ check.requirement }}</span>
+            </li>
+          </ul>
+
+          <p v-else-if="checksLoading" class="checks__pending">
+            <v-progress-circular size="14" width="2" indeterminate />
+            Reading the governor and the vault…
+          </p>
+
+          <div v-if="checksError && !checksLoading" class="checks__problem">
+            <p class="checks__problem_text">
+              <strong>The contracts could not be read.</strong>
+              {{ checksError }}
+            </p>
+            <button
+              type="button"
+              class="paths__link paths__link--button"
+              @click="emit('retry-checks')"
+            >
+              <Icon
+                icon="material-symbols:refresh-rounded"
+                width="0.9375rem"
+                aria-hidden="true"
+              />
+              Read again
+            </button>
+          </div>
+
+          <div v-else-if="hasFailedCheck" class="checks__problem checks__problem--fail">
+            <p class="checks__problem_text">
+              <strong>Finalizing is disabled.</strong>
+              The vault was deployed with a value outside the limits above.
+              Those values are fixed once the vault is live, so correct them on
+              their step and initialize the vault again — the steps have been
+              reopened for editing.
+            </p>
+            <div class="checks__problem_actions">
+              <button
+                v-if="failedStepKeys.includes(OnboardingStep.Governance)"
+                type="button"
+                class="paths__link paths__link--button"
+                @click="emit('go-to-step', OnboardingStep.Governance)"
+              >
+                <Icon
+                  icon="material-symbols:arrow-back-rounded"
+                  width="0.9375rem"
+                  aria-hidden="true"
+                />
+                Back to governance
+              </button>
+              <button
+                v-if="failedStepKeys.includes(OnboardingStep.Fee)"
+                type="button"
+                class="paths__link paths__link--button"
+                @click="emit('go-to-step', OnboardingStep.Fee)"
+              >
+                <Icon
+                  icon="material-symbols:arrow-back-rounded"
+                  width="0.9375rem"
+                  aria-hidden="true"
+                />
+                Back to fees
+              </button>
+            </div>
+          </div>
+
+          <div v-else-if="hasUnknownCheck && !checksLoading" class="checks__problem">
+            <p class="checks__problem_text">
+              <strong>One of the values could not be decided.</strong>
+              Finalizing stays off until it reads. Usually the chain's block
+              time did not come back; reading again tends to settle it.
+            </p>
+            <button
+              type="button"
+              class="paths__link paths__link--button"
+              @click="emit('retry-checks')"
+            >
+              <Icon
+                icon="material-symbols:refresh-rounded"
+                width="0.9375rem"
+                aria-hidden="true"
+              />
+              Read again
+            </button>
+          </div>
+        </section>
+
         <div class="preflight__notice">
           <span class="preflight__notice_glyph" aria-hidden="true">
             <Icon icon="material-symbols:experiment-outline" width="1.25rem" />
@@ -324,10 +449,37 @@ import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 import { truncateAddressEllipsis } from "~/composables/addressUtils";
 import { OnboardingStep } from "~/types/enums/stepper_onboarding";
 import type { ChainId } from "~/types/enums/chain_id";
+import {
+  allVaultLaunchChecksPass,
+  type IVaultLaunchCheck,
+  type VaultLaunchCheckKey,
+} from "~/composables/vaultLaunchChecks";
+
+const props = defineProps({
+  /**
+   * The contract checks the page ran against the initialized vault; undefined
+   * until they have been read once.
+   */
+  checks: {
+    type: Array as PropType<IVaultLaunchCheck[]>,
+    default: undefined,
+  },
+  checksLoading: {
+    type: Boolean,
+    default: false,
+  },
+  /** Why the checks could not be read at all, when they could not. */
+  checksError: {
+    type: String,
+    default: "",
+  },
+});
 
 const emit = defineEmits<{
   /** Back to an earlier step of the flow, to re-check it before launching. */
   (e: "go-to-step", step: OnboardingStep): void;
+  /** Read the contracts again, after a failed or undecided read. */
+  (e: "retry-checks"): void;
 }>();
 
 const fundStore = useFundStore();
@@ -343,6 +495,49 @@ const { navigateToFundDetails } = usePageNavigation();
 /** Zodiac's own app: permissions and manual execution for any protocol. */
 const ZODIAC_APP_URL = "https://app.zodiac.eco/";
 const DOCS_URL = "https://docs.rethink.finance/rethink.finance";
+
+const CHECK_ICONS: Record<IVaultLaunchCheck["status"], string> = {
+  pass: "material-symbols:check-rounded",
+  fail: "material-symbols:close-rounded",
+  unknown: "material-symbols:question-mark-rounded",
+};
+
+/** Which step each check's value was typed on, for the way back to it. */
+const CHECK_STEPS: Record<VaultLaunchCheckKey, OnboardingStep> = {
+  quorum: OnboardingStep.Governance,
+  votingPeriod: OnboardingStep.Governance,
+  performanceFee: OnboardingStep.Fee,
+  managementFee: OnboardingStep.Fee,
+  depositFee: OnboardingStep.Fee,
+  withdrawFee: OnboardingStep.Fee,
+};
+
+const checksPassed = computed(
+  () => !!props.checks && allVaultLaunchChecksPass(props.checks),
+);
+const hasFailedCheck = computed(
+  () => !!props.checks?.some((check) => check.status === "fail"),
+);
+const hasUnknownCheck = computed(
+  () => !!props.checks?.some((check) => check.status === "unknown"),
+);
+const failedStepKeys = computed(() =>
+  (props.checks ?? [])
+    .filter((check) => check.status === "fail")
+    .map((check) => CHECK_STEPS[check.key]),
+);
+
+const checksSummary = computed<{ label: string; tone: string }>(() => {
+  if (props.checksLoading) return { label: "Reading", tone: "pending" };
+  if (props.checksError) return { label: "Not read", tone: "unknown" };
+  if (!props.checks) return { label: "Not read", tone: "unknown" };
+  if (hasFailedCheck.value) {
+    const count = props.checks.filter((check) => check.status === "fail").length;
+    return { label: `${count} failed`, tone: "fail" };
+  }
+  if (hasUnknownCheck.value) return { label: "Undecided", tone: "unknown" };
+  return { label: "All passed", tone: "pass" };
+});
 
 const isFetchingNewlyCreatedFundSettings = ref(false);
 const isFinalizingFundCreation = ref(false);
@@ -513,6 +708,15 @@ const finalizeCreateFund = async () => {
       `Cannot create fund on chain ${fundChainId.value}.`,
     );
   }
+
+  // The footer's button is off until the checks pass, but this is where the
+  // transaction is sent, so the refusal is repeated here rather than trusted
+  // to the button's off state: what finalizes cannot be changed afterwards.
+  if (!checksPassed.value) {
+    return toastStore.errorToast(
+      "The contract checks have not all passed, so the vault cannot be finalized yet.",
+    );
+  }
   isFinalizingFundCreation.value = true;
 
   try {
@@ -598,6 +802,7 @@ defineExpose({
   finalize: finalizeCreateFund,
   isFinalizing: isFinalizingFundCreation,
   isDone: isFundCreateFinalized,
+  checksPassed,
 });
 </script>
 
@@ -790,6 +995,203 @@ defineExpose({
     color: $color-steel-blue;
   }
 
+}
+
+/* The contract checks: one line per rule, the value read beside the value
+   wanted, with the pass/fail tone on the glyph rather than on the text. */
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid $color-line;
+  border-radius: $default-border-radius;
+  background: $color-card-background;
+
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  &__titles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: $color-white;
+  }
+
+  &__lead {
+    max-width: 72ch;
+    font-size: 13px;
+    line-height: 1.55;
+    color: $color-steel-blue;
+  }
+
+  &__summary {
+    flex: none;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    font-family: $font-mono;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+
+    &--pass {
+      border-color: $color-yield-line;
+      background: $color-yield-soft;
+      color: $color-yield;
+    }
+
+    &--fail {
+      border-color: $color-error;
+      color: $color-error;
+    }
+
+    &--unknown {
+      border-color: $color-warn-line;
+      background: $color-warn-soft;
+      color: $color-warn;
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid $color-line;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    grid-template-areas:
+      "glyph label"
+      "glyph values";
+    align-items: center;
+    column-gap: 0.75rem;
+    row-gap: 0.125rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid $color-line;
+
+    @include md {
+      grid-template-columns: 24px minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 1fr);
+      grid-template-areas: "glyph label actual requirement";
+    }
+  }
+
+  &__glyph {
+    grid-area: glyph;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: $color-gray-light-transparent;
+    color: $color-steel-blue;
+
+    .checks__row--pass & {
+      color: $color-yield;
+    }
+
+    .checks__row--fail & {
+      color: $color-error;
+    }
+
+    .checks__row--unknown & {
+      color: $color-warn;
+    }
+  }
+
+  &__label {
+    grid-area: label;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: $color-white;
+  }
+
+  /* Below the breakpoint the two values share one line under the label. */
+  &__actual {
+    grid-area: values;
+    justify-self: start;
+    font-family: $font-mono;
+    font-size: 12.5px;
+    color: $color-white;
+
+    .checks__row--fail & {
+      color: $color-error;
+    }
+
+    @include md {
+      grid-area: actual;
+    }
+  }
+
+  &__requirement {
+    grid-area: values;
+    justify-self: end;
+    font-size: 12.5px;
+    color: $color-steel-blue;
+
+    @include md {
+      grid-area: requirement;
+      justify-self: start;
+    }
+  }
+
+  &__pending {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 13px;
+    color: $color-steel-blue;
+  }
+
+  &__problem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid $color-warn-line;
+    border-radius: $default-border-radius;
+    background: $color-warn-soft;
+
+    &--fail {
+      border-color: $color-error;
+      background: $color-gray-light-transparent;
+    }
+  }
+
+  &__problem_text {
+    max-width: 78ch;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: $color-steel-blue;
+
+    strong {
+      font-weight: 600;
+      color: $color-white;
+    }
+  }
+
+  &__problem_actions {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
 }
 
 /* The transfer panel: an amount, three sizes of "small", and where it goes.
