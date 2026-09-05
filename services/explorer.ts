@@ -17,6 +17,7 @@ const explorerApiLimit = pLimit(1)
 export class Explorer {
   private readonly apiUrl: string
   private readonly apiKey?: string
+  private readonly chainId?: number
   private httpClient: AxiosInstance | undefined
   private cache: LocalForage | undefined
   private provider: ethers.JsonRpcProvider
@@ -24,6 +25,7 @@ export class Explorer {
   constructor(config: ExplorerConfig, provider: JsonRpcProvider) {
     this.apiUrl = config.apiUrl
     this.apiKey = config.apiKey
+    this.chainId = config.chainId
     this.provider = provider
   }
 
@@ -212,7 +214,9 @@ export class Explorer {
   }
 
   private getHttpClientConfig(): AxiosRequestConfig {
-    const params = this.apiKey ? { apikey: this.apiKey } : {}
+    const params: Record<string, string | number> = {}
+    if (this.apiKey) params.apikey = this.apiKey
+    if (this.chainId !== undefined) params.chainid = this.chainId
     return {
       url: this.apiUrl,
       params,
