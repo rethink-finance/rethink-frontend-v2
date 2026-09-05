@@ -165,6 +165,11 @@
               </div>
             </v-menu>
 
+            <!-- Notifications are per wallet — proposals in the vaults it is
+                 invested in and its own requests turning processable — so the
+                 bell only exists while one is connected. -->
+            <NavbarNotificationBell v-if="connectedWallet" />
+
             <v-menu
               location="bottom end"
               offset="10"
