@@ -209,10 +209,7 @@
 
         <!-- Executable code -->
         <div class="brand_card">
-          <div class="brand_card__eyebrow">
-            Executable code
-          </div>
-          <pre class="proposal_detail__code">{{ executableCode }}</pre>
+          <FundGovernanceProposalActions :proposal="proposal" />
         </div>
       </div>
 
@@ -859,21 +856,6 @@ const orderedVoteSubmissions = computed(() => {
   return [...mine, ...others];
 });
 
-/* ---- Executable code ---------------------------------------------------- */
-
-const executableCode = computed(() =>
-  JSON.stringify(
-    {
-      targets: proposal.value?.targets ?? [],
-      values: proposal.value?.values ?? [],
-      signatures: proposal.value?.signatures ?? [],
-      calldatas: proposal.value?.calldatas ?? [],
-    },
-    (_key, value) => (typeof value === "bigint" ? value.toString() : value),
-    2,
-  ),
-);
-
 /* ---- Voting ------------------------------------------------------------- */
 
 const loadingVoteOption = ref<number | undefined>();
@@ -1169,19 +1151,6 @@ const isLoadingProposal = computed(() => {
     min-width: 0;
   }
 
-  &__code {
-    margin: 0;
-    padding: 1rem 1.125rem;
-    border: 1px solid $color-line;
-    border-radius: $default-border-radius;
-    background: $color-navy-gray-light;
-    font-family: $font-mono;
-    font-size: 12px;
-    line-height: 1.6;
-    color: $color-text-irrelevant;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
 }
 
 /* The steps share the width equally so the row reads as a timeline rather than

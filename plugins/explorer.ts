@@ -15,27 +15,25 @@ export default defineNuxtPlugin(() => {
   const TRY_ETHERNAL_KEY = config.public.TRY_ETHERNAL_KEY as string;
 
   if (!ETHERSCAN_KEY) throw new Error("ETHERSCAN_KEY env is not set");
-  if (!POLYGONSCAN_KEY) throw new Error("POLYGONSCAN_KEY env is not set");
-  if (!ARBISCAN_KEY) throw new Error("ARBISCAN_KEY env is not set");
-  if (!BASESCAN_KEY) throw new Error("BASESCAN_KEY env is not set");
+
+  // Etherscan retired the per-chain v1 hosts (api.arbiscan.io/api and the
+  // like answer every call with a "deprecated V1 endpoint" error). The v2
+  // API serves all of them from one host under one key, selected by
+  // `chainid`. The old per-chain keys are read but no longer required.
+  void POLYGONSCAN_KEY;
+  void ARBISCAN_KEY;
+  const ETHERSCAN_V2_API = "https://api.etherscan.io/v2/api";
+  const etherscanV2 = (chainId: ChainId): ExplorerConfig => ({
+    apiUrl: ETHERSCAN_V2_API,
+    apiKey: ETHERSCAN_KEY,
+    chainId: parseInt(chainId, 16),
+  });
 
   const explorerConfig: Record<ChainId, ExplorerConfig> = {
-    [ChainId.POLYGON]: {
-      apiUrl: "https://api.polygonscan.com/api",
-      apiKey: POLYGONSCAN_KEY,
-    },
-    [ChainId.ARBITRUM]: {
-      apiUrl: "https://api.arbiscan.io/api",
-      apiKey: ARBISCAN_KEY,
-    },
-    [ChainId.ETHEREUM]: {
-      apiUrl: "https://api.etherscan.io/api",
-      apiKey: ETHERSCAN_KEY,
-    },
-    [ChainId.BASE]: {
-      apiUrl: "https://api.basescan.org/api",
-      apiKey: BASESCAN_KEY,
-    },
+    [ChainId.POLYGON]: etherscanV2(ChainId.POLYGON),
+    [ChainId.ARBITRUM]: etherscanV2(ChainId.ARBITRUM),
+    [ChainId.ETHEREUM]: etherscanV2(ChainId.ETHEREUM),
+    [ChainId.BASE]: etherscanV2(ChainId.BASE),
     [ChainId.HYPEREVM]: {
       apiUrl: "https://api.purrsec.com/api",
       apiKey: BASESCAN_KEY
