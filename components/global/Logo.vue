@@ -45,7 +45,7 @@ defineProps({
 
 
   @include sm {
-    width: 92px;
+    width: 112px;
     display: block;
     &--sm {
       width: 68px;
@@ -55,8 +55,8 @@ defineProps({
 .rethink_logo_mobile {
   display: block;
   align-self: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.75rem;
+  height: 1.75rem;
 
   @include sm {
     display: none;

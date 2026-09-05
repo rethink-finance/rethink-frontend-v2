@@ -191,7 +191,7 @@ const BASICS_FIELD_OVERRIDES: Record<string, Partial<IField>> = {
     cols: 12,
   },
   strategistName: {
-    label: "Strategist name",
+    label: "Curator name",
     placeholder: "E.g. rethink.finance",
     tooltip: "Displayed next to the vault name.",
     tag: FieldTag.UpgradableCurator,
@@ -199,9 +199,9 @@ const BASICS_FIELD_OVERRIDES: Record<string, Partial<IField>> = {
     cols: 6,
   },
   strategistUrl: {
-    label: "Strategist link",
+    label: "Curator link",
     placeholder: "E.g. https://rethink.finance",
-    tooltip: "Strategist name becomes clickable and redirects here.",
+    tooltip: "Curator name becomes clickable and redirects here.",
     tag: FieldTag.UpgradableCurator,
     rules: [formRules.required],
     cols: 6,

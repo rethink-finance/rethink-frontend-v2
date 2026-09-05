@@ -4,13 +4,22 @@
       :show-prev-step="showPrevStep"
       :is-last-step="isLastStep"
       :loading="loading"
-      :submit-disabled="!canCreateProposal"
-      :submit-disabled-reason="NO_DELEGATES_TITLE"
+      :submit-disabled="!canCreateProposal || !!lowQuorumReason"
+      :submit-disabled-reason="lowQuorumReason || NO_DELEGATES_TITLE"
       @prev-step="prevStep"
       @handle-click="handleButtonClick"
     />
 
     <FundGovernanceDelegationNotice />
+
+    <div v-if="lowQuorumReason" class="low_quorum_notice">
+      <strong class="low_quorum_notice__title">
+        {{ LOW_QUORUM_TITLE }}
+      </strong>
+      <p class="low_quorum_notice__body">
+        {{ LOW_QUORUM_MESSAGE }}
+      </p>
+    </div>
 
     <v-form ref="form">
       <div v-for="(step, indexStep) in proposalEntry" :key="indexStep">
@@ -103,6 +112,7 @@ import { useRouter } from "vue-router";
 import type { AbiFunctionFragment } from "web3";
 import { encodeFunctionCall } from "web3-eth-abi";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { MIN_QUORUM_PERCENT } from "~/composables/formRules";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { type IField, InputType } from "~/types/enums/input_type";
@@ -147,6 +157,26 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const loading = ref(false);
 const activeStep = ref(proposalSteps[0]);
+
+const LOW_QUORUM_TITLE = `Quorum is below ${MIN_QUORUM_PERCENT}%`;
+const LOW_QUORUM_MESSAGE =
+  "A handful of votes passes a proposal on this vault, so settings " +
+  "proposals are refused here. Raise the quorum first, through a governor " +
+  "proposal calling updateQuorumNumerator.";
+
+/**
+ * The governor's quorum is not part of updateSettings — the field below is a
+ * read-only record of it — but a vault reporting a quorum under the floor has
+ * no governance to speak of, and a settings proposal is exactly what a lone
+ * depositor would push through on it. The same rule the create flow enforces
+ * holds the submit shut here, with the quorum read straight off the vault so
+ * a stale form value cannot let it through.
+ */
+const lowQuorumReason = computed(() =>
+  formRules.quorumAtLeastMinimum(fund.quorumPercentage) === true
+    ? ""
+    : LOW_QUORUM_TITLE,
+);
 const form = ref();
 const formIsValid = ref(false);
 
@@ -345,6 +375,10 @@ const submit = async () => {
   // Guards the click as well as the button: the delegate read can still be in
   // flight when the last step is reached.
   if (!(await assertCanCreateProposal())) return;
+  if (lowQuorumReason.value) {
+    toastStore.errorToast(LOW_QUORUM_MESSAGE);
+    return;
+  }
 
   // trigger form validation to show errors
   form.value?.validate();
@@ -628,6 +662,28 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
+.low_quorum_notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid $color-warn-line;
+  border-radius: $default-border-radius;
+  background: $color-gray-light-transparent;
+
+  &__title {
+    font-size: 14px;
+    color: $color-white;
+  }
+
+  &__body {
+    font-size: 13px;
+    line-height: 1.55;
+    max-width: 72ch;
+    color: $color-steel-blue;
+  }
+}
 
 .section {
   &__title {

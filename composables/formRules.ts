@@ -1,5 +1,8 @@
 import { ethers } from "ethers";
 
+/** Lowest quorum a vault may be created with or governed under, in percent. */
+export const MIN_QUORUM_PERCENT = 10;
+
 export const formRules: Record<string, any> = {
   required: (value: any) =>
     (value !== "" && value !== undefined && value !== null) ||
@@ -14,6 +17,20 @@ export const formRules: Record<string, any> = {
 
   isNonNegativeNumber: (value: any) =>
     value >= 0 || "Value must be a non-negative number.",
+
+  // A governor with a tiny quorum passes any proposal on a single vote,
+  // however small; that is how the TTAI treasury was drained through 0%. The
+  // floor is a share of total supply, so anything under it is refused. The
+  // value arrives as the bare number typed into the create flow or as the
+  // formatted "50%" a vault already reports, so the number is read off the
+  // front of either.
+  quorumAtLeastMinimum: (value: any) => {
+    const percentage = parseFloat(String(value ?? ""));
+    return (
+      (Number.isFinite(percentage) && percentage >= MIN_QUORUM_PERCENT) ||
+      `Value must be at least ${MIN_QUORUM_PERCENT}%: a lower quorum lets a handful of votes pass any proposal.`
+    );
+  },
 
   isValidUint8: (value: any) => {
     const number = Number(value);
