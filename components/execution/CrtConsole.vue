@@ -132,7 +132,7 @@
 
         <div class="group_title crt_section">
           Payout
-          <span class="crt_tag crt_tag--danger">Role 2 · payout safe 2-of-4</span>
+          <span class="crt_tag crt_tag--danger">{{ payoutTag }}</span>
         </div>
 
         <div class="brand_card crt_card crt_card--payout">
@@ -375,6 +375,24 @@
             <span>I understand: {{ staged.confirmPhrase }}</span>
           </label>
 
+          <!-- Who will sign a role-2 proposal, and where the rest of the
+               signatures happen. -->
+          <div
+            v-if="staged.role === 2"
+            class="crt_signer"
+            :class="`crt_signer--${payoutStanding}`"
+          >
+            <span>{{ proposeHint }}</span>
+            <a
+              :href="payoutSafeUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="crt_ok"
+            >
+              Open in Safe{Wallet}
+            </a>
+          </div>
+
           <div
             class="crt_steps"
             :class="{ 'crt_steps--gated': staged.confirmPhrase && !confirmed }"
@@ -454,14 +472,38 @@
                 >
                   {{ step.txStatus === "ok" ? "Executed" : "Execute" }}
                 </v-btn>
-                <v-btn
-                  v-else
-                  variant="outlined"
-                  size="small"
-                  @click="copyText(step.wrapped.data)"
-                >
-                  Copy for Safe
-                </v-btn>
+                <template v-else>
+                  <span v-if="step.txStatus === 'proposing'" class="crt_mono_dim">
+                    waiting for your signature…
+                  </span>
+                  <a
+                    v-if="step.proposal && !step.proposal.executed"
+                    :href="proposalUrl(step)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="crt_ok"
+                  >
+                    proposed · nonce {{ step.proposal.nonce }} ·
+                    {{ step.proposal.confirmations }}/{{ step.proposal.required }} signed · open in Safe{Wallet}
+                  </a>
+                  <v-btn
+                    class="bg-primary text-secondary"
+                    size="small"
+                    :disabled="payoutStanding === 'none' || ['proposing', 'proposed', 'ok'].includes(step.txStatus)"
+                    :title="proposeDisabledReason"
+                    @click="propose(step)"
+                  >
+                    {{ step.txStatus === "proposed" || step.txStatus === "ok" ? "Proposed" : "Propose in Safe" }}
+                  </v-btn>
+                  <v-btn
+                    variant="text"
+                    size="small"
+                    class="crt_text_action"
+                    @click="copyText(step.wrapped.data)"
+                  >
+                    Copy calldata
+                  </v-btn>
+                </template>
               </div>
             </div>
           </div>
@@ -482,7 +524,8 @@ import { DEFAULT_RETURN_FORMAT } from "web3";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useAccountStore } from "~/store/account/account.store";
-import { CRT, crtInner, crtWrap, crtValidateWrapped, crtSimulate, crtGetBalances, crtGetCore, crtAgentStatus, fmt6, shortAddr } from "~/composables/execution/crtConsole";
+import { CRT, crtInner, crtWrap, crtValidateWrapped, crtSimulate, crtGetBalances, crtGetCore, crtAgentStatus, crtGetPayoutSafe, fmt6, shortAddr } from "~/composables/execution/crtConsole";
+import { buildSafeTx, fetchNextSafeNonce, fetchSafeTxStatus, proposeSafeTx, safeWalletUrl, signSafeTx } from "~/composables/safe/safeTransactionService";
 import { ChainId } from "~/types/enums/chain_id";
 
 const fundStore = useFundStore();
@@ -496,6 +539,7 @@ const loadingBal = ref(false);
 const staged = ref<any>(null);
 const confirmed = ref(false);
 const agentsStatus = reactive<Record<string, any>>({});
+const payoutSafe = ref<{ owners: string[]; threshold: number; nonce: number } | null>(null);
 
 const bridgeDir = ref("toCore"); const bridgeAmt = ref("1"); const bridgeFixed = ref("1");
 const ctDir = ref("toPerp"); const ctAmt = ref("1"); const ctReps = ref("1");
@@ -534,6 +578,7 @@ const refresh = async () => {
 onMounted(() => {
   refresh();
   CRT.AGENTS.forEach(async (a) => { agentsStatus[a.addr.toLowerCase()] = await crtAgentStatus(a.addr); });
+  crtGetPayoutSafe().then((s) => (payoutSafe.value = s)).catch(() => {});
 });
 
 /**
@@ -618,7 +663,126 @@ const stageAgent = (a: any) => stage({
   steps: [{ label: "addApiWallet payload (exact-match)", wrapped: crtWrap(crtInner.addApiWallet(a.addr, a.name), 1) }],
 });
 
-const copyText = (t: string) => { navigator.clipboard.writeText(t); toastStore.addToast("Calldata copied. Propose it in the payout Safe."); };
+const copyText = (t: string) => { navigator.clipboard.writeText(t); toastStore.addToast("Calldata copied. Paste it into Transaction Builder in Safe{Wallet} if you need to."); };
+
+/**
+ * Role 2 belongs to the payout Safe, and a Safe cannot press Execute: its
+ * transaction has to be proposed, signed by enough owners and then run.
+ * Safe{Wallet} does the signing and running; the console does the proposing.
+ *
+ * Whoever is connected decides how. One of the Safe's OWNERS signs the Safe
+ * transaction here (a gasless EIP-712 signature) and the console files it
+ * with Safe's transaction service, which is what Safe{Wallet}'s queue reads
+ * — the other owners then confirm and execute there. The SAFE ITSELF may
+ * also be the connected wallet (Safe{Wallet} paired over WalletConnect, or
+ * this app opened inside it as a Safe App): its provider turns a plain send
+ * into that same proposal, with the connected owner's signature on it.
+ */
+const runtimeConfig = useRuntimeConfig();
+const proposalOrigin = JSON.stringify({ url: `https://${runtimeConfig.public.BASE_DOMAIN || "app.rethink.finance"}`, name: "Rethink" });
+const payoutSafeUrl = safeWalletUrl(ChainId.HYPEREVM, CRT.ADDR.payoutSafe);
+const proposalUrl = (step: any) => safeWalletUrl(ChainId.HYPEREVM, CRT.ADDR.payoutSafe, step.proposal?.safeTxHash);
+const account = computed(() => (fundStore.activeAccountAddress || "").toLowerCase());
+/**
+ * What the connected wallet is to the payout Safe. "unknown" means the owner
+ * list has not loaded: the button stays live and the service is left to be
+ * the judge, rather than an RPC hiccup locking a real owner out.
+ */
+const payoutStanding = computed<"safe" | "owner" | "unknown" | "none">(() => {
+  if (!account.value) return "none";
+  if (account.value === CRT.ADDR.payoutSafe.toLowerCase()) return "safe";
+  if (!payoutSafe.value) return "unknown";
+  return payoutSafe.value.owners.some((o) => o.toLowerCase() === account.value) ? "owner" : "none";
+});
+const payoutTag = computed(() => `Role 2 · payout safe ${payoutSafe.value ? `${payoutSafe.value.threshold}-of-${payoutSafe.value.owners.length}` : "2-of-4"}`);
+const proposeHint = computed(() => {
+  const quorum = payoutSafe.value ? `${payoutSafe.value.threshold} of ${payoutSafe.value.owners.length}` : "2 of 4";
+  switch (payoutStanding.value) {
+    case "safe": return "Connected as the payout Safe · proposing opens it in Safe{Wallet} for your signature";
+    case "owner": return `Signing as owner ${shortAddr(fundStore.activeAccountAddress)} · ${quorum} owners must sign before it runs`;
+    case "unknown": return "Owner list not loaded · the Safe service will refuse a proposal from a non-owner";
+    default: return "Connect an owner of the payout Safe to propose from here, or pair Safe{Wallet} over WalletConnect";
+  }
+});
+const proposeDisabledReason = computed(() =>
+  payoutStanding.value === "none"
+    ? (account.value ? "The connected wallet is not an owner of the payout Safe" : "Connect an owner of the payout Safe")
+    : "",
+);
+
+const proposalTimers = new Set<ReturnType<typeof setTimeout>>();
+const stopWatchingProposals = () => { proposalTimers.forEach((t) => clearTimeout(t)); proposalTimers.clear(); };
+onBeforeUnmount(stopWatchingProposals);
+watch(staged, (next) => { if (!next) stopWatchingProposals(); });
+
+/** Keep a filed proposal's signature count current until it has run. */
+const watchProposal = (step: any) => {
+  const tick = async () => {
+    try {
+      const status = await fetchSafeTxStatus(ChainId.HYPEREVM, step.proposal.safeTxHash);
+      step.proposal = { ...step.proposal, nonce: status.nonce, confirmations: status.confirmations, required: status.confirmationsRequired, executed: status.isExecuted };
+      if (status.isExecuted) {
+        step.txStatus = status.isSuccessful === false ? "fail" : "ok";
+        step.txHash = status.transactionHash;
+        refresh();
+        return;
+      }
+    } catch (error) {
+      console.warn("Could not read the proposal's status", error);
+    }
+    const timer = setTimeout(() => { proposalTimers.delete(timer); tick(); }, 15000);
+    proposalTimers.add(timer);
+  };
+  tick();
+};
+
+const propose = async (step: any) => {
+  const provider = accountStore.connectedWallet?.provider;
+  const signer = fundStore.activeAccountAddress;
+  if (!provider || !signer) { toastStore.errorToast("Connect your wallet."); return; }
+  if (payoutStanding.value === "none") return;
+  step.txStatus = "proposing";
+  try {
+    if (payoutStanding.value === "safe") {
+      // A Safe lives on one chain, and Safe{Wallet} cannot switch on request.
+      if (accountStore.connectedWalletChainId !== ChainId.HYPEREVM) {
+        throw new Error("Open the payout Safe on HyperEVM in Safe{Wallet}, then connect again.");
+      }
+      const hash = String(await provider.request({
+        method: "eth_sendTransaction",
+        params: [{ from: CRT.ADDR.payoutSafe, to: step.wrapped.to, data: step.wrapped.data, value: "0x0" }],
+      }));
+      // Safe{Wallet} answers with the Safe transaction hash while signatures
+      // are still outstanding, and with the on-chain hash once it has run.
+      let status = null;
+      try { status = await fetchSafeTxStatus(ChainId.HYPEREVM, hash); } catch { /* an on-chain hash, then */ }
+      if (!status) {
+        step.txStatus = "ok"; step.txHash = hash;
+        toastStore.successToast("The transaction was executed.");
+        refresh();
+        return;
+      }
+      step.proposal = { safeTxHash: hash, nonce: status.nonce, confirmations: status.confirmations, required: status.confirmationsRequired, executed: status.isExecuted };
+    } else {
+      // Wallets check the typed data's chainId against their active chain.
+      if (accountStore.connectedWalletChainId !== ChainId.HYPEREVM) {
+        await accountStore.switchNetwork(ChainId.HYPEREVM);
+      }
+      const safe = await crtGetPayoutSafe();
+      payoutSafe.value = safe;
+      const nonce = await fetchNextSafeNonce(ChainId.HYPEREVM, CRT.ADDR.payoutSafe, safe.nonce);
+      const tx = buildSafeTx({ to: step.wrapped.to, data: step.wrapped.data }, nonce);
+      const signature = await signSafeTx(provider, signer, ChainId.HYPEREVM, CRT.ADDR.payoutSafe, tx);
+      const safeTxHash = await proposeSafeTx(ChainId.HYPEREVM, CRT.ADDR.payoutSafe, tx, signer, signature, proposalOrigin);
+      step.proposal = { safeTxHash, nonce, confirmations: 1, required: safe.threshold, executed: false };
+    }
+    step.txStatus = "proposed";
+    toastStore.successToast("Proposed to the payout Safe. The other owners can now sign and execute it in Safe{Wallet}.");
+    watchProposal(step);
+  } catch (error: any) {
+    failStep(step, error);
+  }
+};
 
 /**
  * Release the step and say why. Everything that can go wrong between the
@@ -1276,5 +1440,26 @@ const exec = async (step: any) => {
   color: $color-neg;
   font-family: $font-mono;
   font-size: 12px;
+}
+
+/* Who signs a role-2 proposal, sitting between the confirmation and the steps. */
+.crt_signer {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-top: 0.875rem;
+  font-family: $font-mono;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: $color-steel-blue;
+
+  &--none {
+    color: $color-light-subtitle;
+  }
+
+  a {
+    white-space: nowrap;
+  }
 }
 </style>
