@@ -147,6 +147,79 @@ export interface MonitoringOverview {
   };
 }
 
+export type MonitoringHealthStatus = "ok" | "degraded" | "down";
+
+export interface MonitoringHealthCheck {
+  name: string;
+  status: MonitoringHealthStatus;
+  detail: string;
+}
+
+export interface MonitoringChainHealth {
+  chainId: ChainId;
+  status: MonitoringHealthStatus;
+  detail: string;
+  vaults: number;
+  contracts: number;
+  latestBlock?: number;
+  oldestCursorBlock?: number;
+  lagBlocks?: number;
+  lagSeconds?: number;
+  lastScanAt?: string;
+  scanAgeSeconds?: number;
+  lastError?: string;
+}
+
+/**
+ * The monitor's verdict on itself: whether the indexer is ticking, how far
+ * each chain's scan trails the head, whether alerts get through and whether
+ * the threat rules still grade the reference attacks. "ok" means the page
+ * is current; anything else means what it shows may be stale.
+ */
+export interface MonitoringHealth {
+  status: MonitoringHealthStatus;
+  generatedAt: string;
+  uptimeSeconds: number;
+  checks: MonitoringHealthCheck[];
+  chains: MonitoringChainHealth[];
+  indexer: {
+    running: boolean;
+    runs: number;
+    lastRunFinishedAt?: string;
+    lastRunAgeSeconds?: number;
+    lastError?: string;
+  };
+  overview: { builtAt?: string; ageSeconds?: number; vaults: number };
+  alerts: { enabled: boolean; delivered: number; pendingRetries: number; lastError?: string };
+  rules: { ok: boolean; checked: number; failures: string[] };
+}
+
+/**
+ * Null when the backend predates the endpoint (404); throws when it cannot be
+ * reached at all. A 503 is a verdict, not a failure — the body still parses.
+ */
+export const fetchMonitoringHealth = async (): Promise<MonitoringHealth | null> => {
+  const config = useRuntimeConfig();
+  const response = await fetch(`${config.public.BACKEND_URL}/governance/monitoring/health`);
+  if (response.status === 404) return null;
+  const body = await response.json().catch(() => null);
+  if (!body || typeof body.status !== "string") {
+    throw new Error(`Monitoring health request failed: ${response.status} ${response.statusText}`);
+  }
+  return body as MonitoringHealth;
+};
+
+/** "<1m", "4m", "1h 05m", "2d 3h" — index lag and scan age on the page. */
+export const formatLag = (seconds?: number): string => {
+  if (seconds === undefined || seconds === null) return "?";
+  if (seconds < 60) return "<1m";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours}h ${String(minutes % 60).padStart(2, "0")}m`;
+  return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+};
+
 /** Throws on any failure: the page has nothing to fall back to and says so. */
 export const fetchMonitoringOverview = async (): Promise<MonitoringOverview> => {
   const config = useRuntimeConfig();
