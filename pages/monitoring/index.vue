@@ -12,7 +12,17 @@
       </div>
       <div class="monitoring__status">
         <span v-if="overview" class="monitoring__status_line">
-          index built {{ builtAgo }}
+          overview built {{ builtAgo }}
+          <template v-if="health">
+            · index
+            <span
+              v-for="chain in indexedChains"
+              :key="chain.chainId"
+              class="monitoring__lag"
+              :class="`monitoring__lag--${chain.status}`"
+              :title="`${chainName(chain.chainId)}: ${chain.detail}`"
+            >{{ chainName(chain.chainId) }} {{ formatLag(chain.lagSeconds ?? chain.scanAgeSeconds) }}</span>
+          </template>
           <span v-if="staleChains.length" class="monitoring__status_warn" :title="staleChains.map((c) => `${chainName(c.chainId)}: ${c.error}`).join('\n')">
             · {{ staleChains.length }} chain{{ staleChains.length === 1 ? "" : "s" }} unreadable
           </span>
@@ -44,6 +54,34 @@
     </div>
 
     <template v-else>
+      <div
+        v-if="health && health.status !== 'ok'"
+        class="brand_card monitoring__health"
+        :class="`monitoring__health--${health.status}`"
+        role="alert"
+      >
+        <div class="monitoring__health_head">
+          <span class="monitoring__health_badge">{{ health.status }}</span>
+          <div class="monitoring__health_title">
+            <template v-if="health.status === 'down'">
+              The monitor is not watching right now. Nothing below can be trusted to be current.
+            </template>
+            <template v-else>
+              The monitor is degraded. Part of what this page shows may be stale.
+            </template>
+          </div>
+        </div>
+        <ul class="monitoring__health_list">
+          <li v-for="check in failingChecks" :key="check.name">
+            <span class="monitoring__health_check">{{ check.name }}</span>
+            {{ check.detail }}
+          </li>
+        </ul>
+      </div>
+      <div v-else-if="healthError" class="monitoring__health_note">
+        The monitor's self-check could not be read ({{ healthError }}). Treat the page as unverified.
+      </div>
+
       <div class="monitoring__tiles">
         <div class="brand_card monitoring__tile">
           <div class="monitoring__tile_label">
@@ -217,10 +255,13 @@
 import { networksMap } from "~/store/web3/networksMap";
 import type { SegmentedOption } from "~/components/global/ui/Segmented.vue";
 import {
+  fetchMonitoringHealth,
   fetchMonitoringOverview,
+  formatLag,
   isFlaggedLevel,
   SEVERITY_RANK,
   type MonitoredProposal,
+  type MonitoringHealth,
   type MonitoringOverview,
 } from "~/services/backend/monitoring";
 
@@ -232,6 +273,8 @@ import {
 useHead({ title: "Monitoring" });
 
 const overview = ref<MonitoringOverview | null>(null);
+const health = ref<MonitoringHealth | null>(null);
+const healthError = ref("");
 const isLoading = ref(false);
 const error = ref("");
 const now = ref(Date.now());
@@ -242,17 +285,33 @@ const search = ref("");
 const showExecutable = ref(false);
 const showRecent = ref(false);
 
+/**
+ * The overview and the monitor's self-check load together. The self-check
+ * is what tells a reader whether "index built just now" means anything: a
+ * fresh overview built from a stale index looks exactly like a healthy one.
+ */
 const load = async () => {
   isLoading.value = true;
-  try {
-    overview.value = await fetchMonitoringOverview();
+  const [overviewResult, healthResult] = await Promise.allSettled([
+    fetchMonitoringOverview(),
+    fetchMonitoringHealth(),
+  ]);
+  if (overviewResult.status === "fulfilled") {
+    overview.value = overviewResult.value;
     error.value = "";
-  } catch (e: any) {
-    error.value = e?.message ?? String(e);
-    console.error("Monitoring overview failed", e);
-  } finally {
-    isLoading.value = false;
+  } else {
+    error.value = overviewResult.reason?.message ?? String(overviewResult.reason);
+    console.error("Monitoring overview failed", overviewResult.reason);
   }
+  if (healthResult.status === "fulfilled") {
+    health.value = healthResult.value;
+    healthError.value = healthResult.value ? "" : "self-check endpoint not available on this backend";
+  } else {
+    health.value = null;
+    healthError.value = healthResult.reason?.message ?? String(healthResult.reason);
+    console.error("Monitoring health failed", healthResult.reason);
+  }
+  isLoading.value = false;
 };
 
 let refreshTimer: ReturnType<typeof setInterval> | undefined;
@@ -278,6 +337,8 @@ const builtAgo = computed(() => {
 });
 
 const staleChains = computed(() => overview.value?.chains.filter((c) => c.error) ?? []);
+const indexedChains = computed(() => health.value?.chains.filter((c) => c.vaults > 0) ?? []);
+const failingChecks = computed(() => health.value?.checks.filter((c) => c.status !== "ok") ?? []);
 
 const chainOptions = computed<SegmentedOption[]>(() => [
   { key: "all", label: "All chains" },
@@ -384,6 +445,93 @@ const proposalKey = (proposal: MonitoredProposal) =>
   }
 
   &__status_warn {
+    color: $color-warn;
+  }
+
+  &__lag {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.4375rem;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    color: var(--text-faint-2);
+    font-variant-numeric: tabular-nums;
+
+    &--degraded {
+      border-color: var(--warn-line);
+      background: var(--warn-soft);
+      color: var(--warn);
+    }
+
+    &--down {
+      border-color: var(--neg-line);
+      background: var(--neg-soft);
+      color: var(--neg);
+    }
+  }
+
+  &__health {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--warn-line);
+    background: var(--warn-soft);
+
+    &--down {
+      border-color: var(--neg-line);
+      background: var(--neg-soft);
+    }
+  }
+
+  &__health_head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__health_badge {
+    padding: 0.1875rem 0.5rem;
+    border-radius: 999px;
+    background: var(--warn);
+    color: var(--bg);
+    font-family: $font-mono;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+
+    .monitoring__health--down & {
+      background: var(--neg);
+    }
+  }
+
+  &__health_title {
+    font-weight: 600;
+    color: $color-white;
+  }
+
+  &__health_list {
+    margin: 0;
+    padding-left: 1.125rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: $text-sm;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+
+  &__health_check {
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-white;
+  }
+
+  &__health_note {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.04em;
     color: $color-warn;
   }
 
