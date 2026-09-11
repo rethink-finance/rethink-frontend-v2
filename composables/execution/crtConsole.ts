@@ -60,6 +60,7 @@ const IF = {
   pool: new ethers.Interface(["function supply(address asset,uint256 amount,address onBehalfOf,uint16 referralCode)", "function withdraw(address asset,uint256 amount,address to) returns (uint256)"]),
   cdw: new ethers.Interface(["function depositFor(address receiver,uint256 amount,uint32 dex)"]),
   writer: new ethers.Interface(["function sendRawAction(bytes payload)"]),
+  safe: new ethers.Interface(["function getOwners() view returns (address[])", "function getThreshold() view returns (uint256)", "function nonce() view returns (uint256)"]),
 };
 
 export const usdc6 = (v: string | number) => ethers.parseUnits(String(v).trim(), 6);
@@ -144,6 +145,25 @@ export async function crtGetBalances() {
   let felixSymbol = "shares";
   try { felixSymbol = dec(["string"], await ethCall(A.felix, IF.erc20.encodeFunctionData("symbol", [])))[0] as string; } catch { /* keep fallback */ }
   return { safeUsdc, fundUsdc, felixAssets: felixExact, felixShares, felixSymbol, hlend, payoutUsdc };
+}
+
+/**
+ * The payout Safe as the chain has it: who may sign, how many of them must,
+ * and its nonce. The console reads these to tell an owner from a bystander
+ * before offering to propose, and to place a proposal after whatever the
+ * chain has already executed (the Safe service's copy of the nonce lags).
+ */
+export async function crtGetPayoutSafe() {
+  const [ownersHex, thresholdHex, nonceHex] = await Promise.all([
+    ethCall(A.payoutSafe, IF.safe.encodeFunctionData("getOwners", [])),
+    ethCall(A.payoutSafe, IF.safe.encodeFunctionData("getThreshold", [])),
+    ethCall(A.payoutSafe, IF.safe.encodeFunctionData("nonce", [])),
+  ]);
+  return {
+    owners: [...(IF.safe.decodeFunctionResult("getOwners", ownersHex)[0] as string[])],
+    threshold: Number(IF.safe.decodeFunctionResult("getThreshold", thresholdHex)[0]),
+    nonce: Number(IF.safe.decodeFunctionResult("nonce", nonceHex)[0]),
+  };
 }
 
 async function info(body: any) {
