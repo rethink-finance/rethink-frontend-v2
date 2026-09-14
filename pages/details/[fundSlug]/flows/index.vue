@@ -266,9 +266,9 @@
           <v-tooltip
             activator="parent"
             location="top"
-            :disabled="!curatorDisabledReason"
+            :disabled="!(curatorDisabledReason || executionHint)"
           >
-            {{ curatorDisabledReason }}
+            {{ curatorDisabledReason || executionHint }}
           </v-tooltip>
           <v-btn
             :disabled="!canExecuteAsCurator || isLoadingPostUpdateNAV"
@@ -330,6 +330,7 @@ const {
 const {
   canExecute: canExecuteAsCurator,
   disabledReason: curatorDisabledReason,
+  executionHint,
 } = useCuratorExecution();
 
 const customSimulatedNAVValue = ref("");

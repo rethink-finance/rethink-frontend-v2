@@ -11,7 +11,7 @@ const fundIface = new ethers.Interface(GovernableFund.abi as any);
  * executeNAVUpdate is Safe authority, so the calldata is wrapped in the
  * vault's Roles modifier — a curator signs from their own wallet and the
  * modifier forwards the call as the Safe. A wallet connected as the Safe
- * itself still sends it unwrapped.
+ * itself (a Zodiac Pilot session) sends it unwrapped, for Pilot to record.
  */
 export const postUpdateNAVAction = async (): Promise<any> => {
   const fundStore = useFundStore();
@@ -27,7 +27,9 @@ export const postUpdateNAVAction = async (): Promise<any> => {
       return;
     }
 
-    const transaction = await sendCuratorTransaction({
+    // Not awaited: the emitter comes back synchronously, and awaiting a
+    // PromiEvent yields the receipt — with no .on() to register on.
+    const transaction = sendCuratorTransaction({
       to: fundStore.fundAddress,
       data: fundIface.encodeFunctionData("executeNAVUpdate", [
         navExecutorAddress,
@@ -58,7 +60,9 @@ export const postUpdateNAVAction = async (): Promise<any> => {
         fundStore.toastStore.errorToast(
           "There has been an error. Please contact the Rethink Finance support.",
         );
-        throw error;
+        // The awaited PromiEvent rejects with the same error; the catch
+        // below rethrows it, so a throw from inside this listener would
+        // only break the emitter mid-dispatch.
       });
   } catch (error: any) {
     console.error("Error updating NAV: ", error);

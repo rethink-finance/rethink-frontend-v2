@@ -156,12 +156,12 @@ import {
   fetchActivationState,
   type IActivationState,
 } from "~/composables/permissions/activationProposal";
+import { buildAssignRolesCalldata } from "~/composables/permissions/useRoleExecution";
 import {
-  buildAssignRolesCalldata,
-  sendRoleExecution,
-  simulateRoleExecution,
-} from "~/composables/permissions/useRoleExecution";
-import { clearCuratorRoleCache } from "~/composables/permissions/useCuratorExecution";
+  clearCuratorRoleCache,
+  sendCuratorTransaction,
+  simulateCuratorTransaction,
+} from "~/composables/permissions/useCuratorExecution";
 import type { IAssignMemberChange } from "~/composables/nav/generateNAVPermission";
 import {
   NO_DELEGATES_TITLE,
@@ -292,7 +292,9 @@ const createActivationProposal = async () => {
 
 // Role membership (Roles V2): the shared component lists current members
 // off the modifier's AssignRoles history and queues the changes; executing
-// them goes through the manager role's own assignRoles permission.
+// them goes through the manager role's own assignRoles permission — or, on a
+// session connected as the Safe (Zodiac Pilot), straight from the Safe that
+// owns the modifier.
 const roleMembersRef = ref<{ reload: () => Promise<void> } | null>(null);
 const pendingMemberChanges = ref<IAssignMemberChange[]>([]);
 const isExecutingMemberChanges = ref(false);
@@ -304,16 +306,13 @@ const executeMemberChanges = async () => {
     // One execTransactionWithRole per change, sequentially — each is its own
     // wallet signature, and a failure stops the queue so nothing is skipped
     // silently.
+    const route = { chainId: fund.chainId, rolesModAddress: roleModAddress.value };
     for (const change of [...pendingMemberChanges.value]) {
       const call = {
         to: roleModAddress.value,
         data: buildAssignRolesCalldata(change.address, change.action === "ADD"),
       };
-      const simulation = await simulateRoleExecution(
-        fund.chainId,
-        roleModAddress.value,
-        call,
-      );
+      const simulation = await simulateCuratorTransaction(call, route);
       if (!simulation.ok) {
         toastStore.errorToast(
           simulation.innerRevert
@@ -324,14 +323,11 @@ const executeMemberChanges = async () => {
         );
         return;
       }
-      await sendRoleExecution(fund.chainId, roleModAddress.value, call).on(
-        "transactionHash",
-        () => {
-          toastStore.addToast(
-            `Membership change for ${change.address} submitted.`,
-          );
-        },
-      );
+      await sendCuratorTransaction(call, route).on("transactionHash", () => {
+        toastStore.addToast(
+          `Membership change for ${change.address} submitted.`,
+        );
+      });
       // Drop the executed change so a mid-queue failure keeps the rest.
       pendingMemberChanges.value = pendingMemberChanges.value.filter(
         (item) => item !== change,

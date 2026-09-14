@@ -79,11 +79,13 @@ import { useToastStore } from "~/store/toasts/toast.store";
 const toastStore = useToastStore();
 const fundStore = useFundStore();
 
-// The transfer moves the custody Safe's base asset, so a curator sends it
-// wrapped in the vault's Roles modifier rather than from a Pilot session.
+// The transfer moves the custody Safe's base asset: a curator sends it
+// wrapped in the vault's Roles modifier, a Pilot session (connected as the
+// Safe) sends it unwrapped for Pilot to record.
 const {
   canExecute: canExecuteAsCurator,
   disabledReason: curatorDisabledReason,
+  executionHint,
   sendAsCurator,
 } = useCuratorExecution();
 
@@ -165,7 +167,8 @@ const transferTooltipText = computed(() => {
   if (curatorDisabledReason.value) return curatorDisabledReason.value;
   if (errorMessages.value.length && tokenValueChanged.value)
     return errorMessages.value[0];
-  return "";
+  // Enabled: say how the press goes out (from the Safe, or via the modifier).
+  return executionHint.value;
 });
 
 /**
@@ -203,7 +206,9 @@ const transfer = async () => {
   isTransferLoading.value = true;
 
   try {
-    const transaction = await sendAsCurator({
+    // Not awaited: the emitter comes back synchronously, and awaiting a
+    // PromiEvent yields the receipt — with no .on() to register on.
+    const transaction = sendAsCurator({
       to: fundStore.fund?.baseToken?.address ?? "",
       data: erc20Iface.encodeFunctionData("transfer", [
         fundStore.fundAddress,

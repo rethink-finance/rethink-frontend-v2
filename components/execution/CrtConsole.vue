@@ -406,13 +406,20 @@
                 <span>{{ p.k }}</span>
                 <span>{{ p.v }}<em v-if="p.pinned" class="crt_pinned"> · pinned</em></span>
               </div>
-              <div class="crt_mono_dim">
+              <!-- A Pilot session (connected as the vault Safe) sends the
+                   inner call and lets Pilot apply the Roles route on submit;
+                   everyone else signs the wrap. Show whichever it will be. -->
+              <div v-if="sendsUnwrapped" class="crt_mono_dim">
+                from the Safe to {{ shortAddr(step.wrapped.inner.to) }} ·
+                unwrapped, for Pilot to route
+              </div>
+              <div v-else class="crt_mono_dim">
                 to Roles {{ shortAddr(CRT.ADDR.roles) }} ·
                 execTransactionWithRole(role {{ staged.role }})
                 {{ crtValidateWrapped(step.wrapped.data) ? "· 0x6928e74b ✓" : "· BAD PREFIX" }}
               </div>
               <div class="crt_hex">
-                {{ step.wrapped.data }}
+                {{ sentCalldata(step) }}
               </div>
               <div
                 v-if="step.sim"
@@ -466,8 +473,8 @@
                   v-if="staged.role === 1"
                   class="bg-primary text-secondary"
                   size="small"
-                  :disabled="!isManager || step.txStatus === 'pending' || step.txStatus === 'ok'"
-                  :title="isManager ? '' : 'Connect the manager EOA'"
+                  :disabled="!canExecuteRole1 || step.txStatus === 'pending' || step.txStatus === 'ok'"
+                  :title="canExecuteRole1 ? '' : 'Connect the manager EOA, or the vault Safe through Zodiac Pilot'"
                   @click="exec(step)"
                 >
                   {{ step.txStatus === "ok" ? "Executed" : "Execute" }}
@@ -499,7 +506,7 @@
                     variant="text"
                     size="small"
                     class="crt_text_action"
-                    @click="copyText(step.wrapped.data)"
+                    @click="copyText(sentCalldata(step))"
                   >
                     Copy calldata
                   </v-btn>
@@ -524,6 +531,7 @@ import { DEFAULT_RETURN_FORMAT } from "web3";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useAccountStore } from "~/store/account/account.store";
+import { sendAsSafe } from "~/composables/permissions/useCuratorExecution";
 import { CRT, crtInner, crtWrap, crtValidateWrapped, crtSimulate, crtGetBalances, crtGetCore, crtAgentStatus, crtGetPayoutSafe, fmt6, shortAddr } from "~/composables/execution/crtConsole";
 import { buildSafeTx, fetchNextSafeNonce, fetchSafeTxStatus, proposeSafeTx, safeWalletUrl, signSafeTx } from "~/composables/safe/safeTransactionService";
 import { ChainId } from "~/types/enums/chain_id";
@@ -549,6 +557,20 @@ const hlSup = ref(""); const hlWd = ref(""); const backupArm = ref("");
 const fixedItems = CRT.AMOUNTS.map((v) => ({ title: v.toLocaleString("en-US") + " USDC", value: String(v) }));
 const validAmt = (v: string, cap?: number) => { const x = Number(v); return v !== "" && isFinite(x) && x > 0 && (cap == null || x <= cap); };
 const isManager = computed(() => (fundStore.activeAccountAddress || "").toLowerCase() === CRT.ADDR.manager.toLowerCase());
+/**
+ * A Zodiac Pilot session is connected as the vault's Safe. Pilot records what
+ * the Safe sends and applies the Roles route itself on submit, so role-1
+ * steps are open to it too — and it gets the inner call, unwrapped, the way
+ * this app worked before curators could sign from their own wallet. The
+ * pre-flight still runs from the manager's address: it is the whitelist that
+ * is being checked, and Pilot will hold the batch to that same whitelist.
+ */
+const isVaultSafe = computed(() => (fundStore.activeAccountAddress || "").toLowerCase() === CRT.ADDR.safe.toLowerCase());
+const canExecuteRole1 = computed(() => isManager.value || isVaultSafe.value);
+/** Role-1 steps go out unwrapped on a Pilot session; role-2 proposals are always the wrap. */
+const sendsUnwrapped = computed(() => staged.value?.role === 1 && isVaultSafe.value);
+/** The bytes that will actually be signed for this step, in this session. */
+const sentCalldata = (step: any) => (sendsUnwrapped.value ? step.wrapped.inner.data : step.wrapped.data);
 const n2 = (x: number) => x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const statItems = computed(() => [
@@ -832,8 +854,12 @@ const exec = async (step: any) => {
     if (accountStore.connectedWalletChainId !== ChainId.HYPEREVM) {
       await accountStore.switchNetwork(ChainId.HYPEREVM);
     }
-    await accountStore.connectedWalletWeb3.eth
-      .sendTransaction(
+    const transaction = sendsUnwrapped.value
+      // A Pilot session gets the inner call: Pilot records what the Safe
+      // sends and applies the Roles route on submit. Handing it the wrap
+      // would have the Safe call its own modifier, which fails NoMembership.
+      ? sendAsSafe(ChainId.HYPEREVM, { to: step.wrapped.inner.to, data: step.wrapped.inner.data })
+      : accountStore.connectedWalletWeb3.eth.sendTransaction(
         { to: step.wrapped.to, data: step.wrapped.data, from: fundStore.activeAccountAddress, value: 0 },
         DEFAULT_RETURN_FORMAT,
         // Let the wallet price the transaction, the way CustomContract.send
@@ -845,7 +871,8 @@ const exec = async (step: any) => {
         // autofill only stands down when gasPrice, or BOTH 1559 fields, are
         // non-nullish.
         { checkRevertBeforeSending: false, ignoreGasPricing: true },
-      )
+      );
+    await transaction
       .on("transactionHash", (hash: any) => { step.txHash = hash; toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed."); })
       .on("receipt", (receipt: any) => {
         step.txStatus = receipt.status ? "ok" : "fail";

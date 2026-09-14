@@ -22,6 +22,11 @@
                 : "Connected as a vault curator"
             }}
           </div>
+          <!-- What a press does in this mode, for managers used to Pilot
+               elsewhere: the pill names the session, the tooltip the route. -->
+          <v-tooltip activator="parent" location="bottom">
+            {{ executionHint }}
+          </v-tooltip>
         </div>
       </div>
     </UiHeader>
@@ -264,10 +269,12 @@ const toastStore = useToastStore();
 
 // Every action on this page acts with the Safe's authority. A curator signs
 // from their own wallet and the calldata is forwarded by the vault's Roles
-// modifier; a wallet connected as the Safe still sends it unwrapped.
+// modifier; a wallet connected as the Safe (a Zodiac Pilot session) sends
+// it unwrapped, for Pilot to record.
 const {
   canExecute: canExecuteAsCurator,
   isConnectedAsSafe,
+  executionHint,
   disabledReason: curatorDisabledReason,
   sendAsCurator,
 } = useCuratorExecution();
@@ -397,8 +404,10 @@ const handleTransfer = async () => {
 
   try {
     // The tokens belong to the Safe, so the transfer calldata is what goes
-    // through the modifier — not a send from the connected wallet.
-    const transaction = await sendAsCurator({
+    // through the modifier — not a send from the connected wallet. Not
+    // awaited: the emitter comes back synchronously, and awaiting a
+    // PromiEvent yields the receipt, with no .on() left to register on.
+    const transaction = sendAsCurator({
       to: transferEntry.inputTokenAddress,
       data: erc20Iface.encodeFunctionData("transfer", [
         transferEntry.to,
@@ -468,7 +477,7 @@ const submitRawTXN = async () => {
     // The raw transaction is executed with the Safe's authority: the value
     // is sent by the Safe, and the modifier is what has to allow it (a
     // manager role scoped with ExecutionOptions.None will refuse any value).
-    const transaction = await sendAsCurator({
+    const transaction = sendAsCurator({
       to: submitRawTXNEntry.contractAddress,
       data: submitRawTXNEntry.txData,
       value,
