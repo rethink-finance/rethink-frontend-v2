@@ -1,37 +1,54 @@
 import { ethers } from "ethers";
-import { DEFAULT_RETURN_FORMAT } from "web3";
+import {
+  DEFAULT_RETURN_FORMAT,
+  Web3PromiEvent,
+  type TransactionReceipt,
+} from "web3";
 import {
   RolesVersion,
   defaultRoleFor,
   detectRolesVersion,
   fetchMemberRoles,
   sendRoleExecution,
+  simulateDirectCall,
   simulateRoleExecution,
   type IRoleCall,
+  type IRoleSimulationResult,
 } from "~/composables/permissions/useRoleExecution";
+import {
+  EXECUTION_MODE_HINTS,
+  resolveExecutionMode,
+  type CuratorExecutionMode,
+} from "~/composables/permissions/safeSession";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import type { ChainId } from "~/types/enums/chain_id";
 
 /**
- * Curator execution for the vault's Safe-authority surfaces (NAV update,
- * base-asset transfers, sweeps, raw transactions).
+ * Curator execution for the vault's Safe-authority surfaces: NAV updates,
+ * settlement, base-asset transfers, raw transactions, the execution consoles
+ * and the curator pages (whitelist, profile, role members).
  *
- * These used to require the Zodiac Pilot extension, which only ever did two
- * things: record the calldata a page would have sent, and replay it through
- * the Roles modifier. The frontend already knows the calldata, so it can do
- * the wrapping itself — a wallet that holds ANY role on the vault's
- * modifier is a curator, and its transactions go out as
- * execTransactionWithRole against that modifier.
+ * Two kinds of session press these buttons, told apart by a single test —
+ * is the connected account the vault's custody Safe?
  *
- * A wallet connected AS the Safe (Pilot, or a Safe connected directly) is
- * still supported and keeps sending the call unwrapped: from the Safe's own
- * address there is no modifier to route through, and routing would fail
- * membership anyway.
+ * - Connected AS the Safe. That is what a Zodiac Pilot session looks like
+ *   from inside the app (Pilot's provider reports the Safe as the account),
+ *   and what Safe{Wallet} paired over WalletConnect looks like too. The call
+ *   is sent unwrapped, from the Safe, exactly as this app did before curators
+ *   could execute on their own: Pilot records it and replays the batch
+ *   through the Roles modifier on submit. Wrapping it here would fail — the
+ *   Safe holds no role on its own modifier — and would be pointless anyway,
+ *   since the Safe already has the authority the wrapping exists to borrow.
  *
- * The plain functions below carry the logic so store actions can use them;
+ * - Any other wallet is a curator only if it holds a role on the vault's
+ *   modifier. Its call goes out as execTransactionWithRole against that
+ *   modifier, under whichever of its roles a dry-run lets through.
+ *
+ * The plain functions carry the logic so store actions can use them;
  * useCuratorExecution() is the reactive wrapper components gate their
- * buttons on.
+ * buttons on. They are split because the composable's watch must never run
+ * inside a store action.
  */
 
 export interface ICuratorRoleState {
@@ -45,6 +62,19 @@ export interface ICuratorRoleState {
    * the gate — better than locking a real curator out over an RPC hiccup.
    */
   unknown: boolean;
+}
+
+/**
+ * A route a surface already knows. The execution consoles and the curator
+ * pages address one specific modifier and role, so they hand it over rather
+ * than have it resolved from the wallet's membership.
+ */
+export interface ICuratorRoute {
+  chainId: ChainId;
+  rolesModAddress: string;
+  /** Defaults to the manager role of the modifier's generation. */
+  role?: string;
+  version?: RolesVersion;
 }
 
 const stateCache = new Map<string, ICuratorRoleState>();
@@ -187,60 +217,172 @@ const resolveExecutableRole = async (
   throw new Error(firstReason || "The Roles modifier denied this call.");
 };
 
+/** Is the connected account the selected vault's custody Safe? */
+export const isConnectedAsSafe = (): boolean =>
+  useFundStore().isConnectedWalletTheSafe;
+
+type SendThunk = () => Web3PromiEvent<any, any>;
+type CuratorPromiEvent = Web3PromiEvent<TransactionReceipt, any>;
+
 /**
- * Send `call` with the connected wallet, wrapping it in the vault's Roles
- * modifier unless the wallet is the Safe itself. Returns the web3 PromiEvent
- * either way, so callers keep their usual
- * .on("transactionHash" / "receipt" / "error") flow.
+ * A PromiEvent for a transaction that is only known after some async work:
+ * which route to take, a network switch, a pre-flight.
+ *
+ * The emitter is handed back synchronously on purpose. A PromiEvent is a
+ * thenable, so returning it from an `async` function would have that
+ * function's promise adopt it — the caller's `await` would then yield the
+ * mined receipt instead of the emitter, and every .on("transactionHash")
+ * registered afterwards would sit on an object that has no .on at all. So
+ * `prepare` resolves to a thunk that performs the send, and the send's
+ * events are forwarded to the emitter once it exists, the way
+ * CustomContract.send does it.
+ *
+ * Work that fails before a wallet prompt (no wallet, no membership, a denied
+ * pre-flight, a refused network switch) rejects the promise without an
+ * "error" event: that channel is for a transaction that went out.
  */
-export const sendCuratorTransaction = async (call: IRoleCall): Promise<any> => {
-  const fundStore = useFundStore();
-  const accountStore = useAccountStore();
+const deferredSend = (prepare: () => Promise<SendThunk>): CuratorPromiEvent => {
+  const promiEvent: CuratorPromiEvent = new Web3PromiEvent((resolve, reject) => {
+    prepare()
+      .then((send) =>
+        // Returned into the chain so the inner promise's rejection is
+        // handled by the catch below rather than surfacing as unhandled.
+        send()
+          .on("transactionHash", (hash: any) =>
+            promiEvent.emit("transactionHash", hash),
+          )
+          .on("receipt", (receipt: any) => {
+            promiEvent.emit("receipt", receipt);
+            resolve(receipt);
+          })
+          .on("error", (error: any) => {
+            // Reject first: a listener that throws must not leave the
+            // promise pending.
+            reject(error);
+            promiEvent.emit("error", error);
+          }),
+      )
+      .catch(reject);
+  });
+  return promiEvent;
+};
 
-  const account = accountStore.activeAccountAddress;
-  if (!accountStore.isConnected || !account) {
-    throw new Error("Connect your wallet first.");
-  }
-
-  const safeAddress = fundStore.fund?.safeAddress;
-  if (safeAddress && safeAddress.toLowerCase() === account.toLowerCase()) {
+/**
+ * Send `call` unwrapped, from the connected account — the Safe itself, on a
+ * session isConnectedAsSafe() has vouched for.
+ *
+ * This mirrors what CustomContract.send did for these buttons before the
+ * Roles route existed, because that is the path a Pilot session expects: the
+ * wallet is moved to the vault's chain first (a Safe lives on one chain, so a
+ * mismatch is reported instead of being sent to the wrong network), and the
+ * wallet prices the transaction itself. Left to web3, the EIP-1559 autofill
+ * opens with eth_getBlockByNumber, which the HyperEVM RPC refuses, and the
+ * send would die before the wallet ever prompted.
+ */
+export const sendAsSafe = (chainId: ChainId, call: IRoleCall): CuratorPromiEvent =>
+  deferredSend(async () => {
+    const accountStore = useAccountStore();
+    const account = accountStore.activeAccountAddress;
+    if (!account) throw new Error("Connect your wallet first.");
+    if (accountStore.connectedWalletChainId !== chainId) {
+      await accountStore.switchNetwork(chainId);
+    }
     const web3 = accountStore.connectedWalletWeb3;
     if (!web3) throw new Error("No wallet provider detected.");
-    return web3.eth.sendTransaction(
-      {
-        from: account,
-        to: call.to,
-        data: call.data,
-        value: call.value ?? "0",
-      },
-      DEFAULT_RETURN_FORMAT,
-      { checkRevertBeforeSending: false },
-    );
-  }
+    return () =>
+      web3.eth.sendTransaction(
+        {
+          from: account,
+          to: call.to,
+          data: call.data,
+          value: call.value ?? "0",
+        },
+        DEFAULT_RETURN_FORMAT,
+        { checkRevertBeforeSending: false, ignoreGasPricing: true },
+      );
+  });
 
-  const chainId = (fundStore.fund?.chainId ??
-    fundStore.selectedFundChain) as ChainId;
-  const state = await resolveCuratorRoleState(
-    chainId,
-    fundStore.fundAddress,
-    account,
-    fundStore.fund?.fundFactoryContractV2Used
-      ? RolesVersion.V2
-      : RolesVersion.V1,
-  );
-  if (!state?.rolesModAddress) {
-    throw new Error("This vault has no Roles modifier to execute through.");
+/**
+ * Dry-run `call` the way it is about to go out: unwrapped from the Safe on a
+ * Safe session, wrapped under `route`'s role otherwise. Surfaces that
+ * pre-flight before opening the wallet use this, so a Pilot session is not
+ * measured against a membership it does not have.
+ */
+export const simulateCuratorTransaction = async (
+  call: IRoleCall,
+  route: ICuratorRoute,
+): Promise<IRoleSimulationResult> => {
+  if (isConnectedAsSafe()) {
+    const account = useAccountStore().activeAccountAddress;
+    if (!account) return { ok: false, reason: "Connect your wallet first." };
+    return await simulateDirectCall(route.chainId, account, call);
   }
-
-  const role = await resolveExecutableRole(chainId, state, call);
-  return sendRoleExecution(
-    chainId,
-    state.rolesModAddress,
+  const version = route.version ?? RolesVersion.V2;
+  return await simulateRoleExecution(
+    route.chainId,
+    route.rolesModAddress,
     call,
-    role,
-    state.version,
+    route.role ?? defaultRoleFor(version),
+    version,
   );
 };
+
+/**
+ * Send `call` with the connected wallet: unwrapped when the wallet is the
+ * Safe, otherwise wrapped in the vault's Roles modifier — under `route` when
+ * the caller knows it, else under whichever role the wallet's membership
+ * turns up. Returns a PromiEvent synchronously, so callers register their
+ * .on("transactionHash" / "receipt" / "error") handlers on it directly and
+ * await it for the receipt — never `await` the call itself (see
+ * deferredSend).
+ */
+export const sendCuratorTransaction = (
+  call: IRoleCall,
+  route?: ICuratorRoute,
+): CuratorPromiEvent =>
+  deferredSend(async () => {
+    const fundStore = useFundStore();
+    const accountStore = useAccountStore();
+
+    const account = accountStore.activeAccountAddress;
+    if (!accountStore.isConnected || !account) {
+      throw new Error("Connect your wallet first.");
+    }
+
+    const chainId =
+      route?.chainId ??
+      ((fundStore.fund?.chainId ?? fundStore.selectedFundChain) as ChainId);
+
+    if (isConnectedAsSafe()) return () => sendAsSafe(chainId, call);
+
+    if (route) {
+      const version = route.version ?? RolesVersion.V2;
+      return () =>
+        sendRoleExecution(
+          chainId,
+          route.rolesModAddress,
+          call,
+          route.role ?? defaultRoleFor(version),
+          version,
+        );
+    }
+
+    const state = await resolveCuratorRoleState(
+      chainId,
+      fundStore.fundAddress,
+      account,
+      fundStore.fund?.fundFactoryContractV2Used
+        ? RolesVersion.V2
+        : RolesVersion.V1,
+    );
+    if (!state?.rolesModAddress) {
+      throw new Error("This vault has no Roles modifier to execute through.");
+    }
+
+    const role = await resolveExecutableRole(chainId, state, call);
+    return () =>
+      sendRoleExecution(chainId, state.rolesModAddress, call, role, state.version);
+  });
 
 /**
  * Reactive gate for the execution buttons: resolves the connected wallet's
@@ -265,12 +407,12 @@ export const useCuratorExecution = () => {
     () => !!fundStore.fund?.fundFactoryContractV2Used,
   );
 
-  /** Legacy path: the connected wallet IS the custody Safe (Zodiac Pilot). */
-  const isConnectedAsSafe = computed(() => {
-    const safeAddress = fundStore.fund?.safeAddress;
-    if (!safeAddress || !account.value) return false;
-    return safeAddress.toLowerCase() === account.value.toLowerCase();
-  });
+  /**
+   * The connected wallet IS the custody Safe — a Zodiac Pilot session, or
+   * Safe{Wallet} paired directly. Sends go out unwrapped, from the Safe, and
+   * membership is never asked about.
+   */
+  const isConnectedAsSafe = computed(() => fundStore.isConnectedWalletTheSafe);
 
   const isCurator = computed(
     () =>
@@ -278,10 +420,23 @@ export const useCuratorExecution = () => {
       (roleState.value.roles.length > 0 || roleState.value.unknown),
   );
 
+  /** How a press would go out, for the surface to say so. */
+  const executionMode = computed<CuratorExecutionMode>(() =>
+    resolveExecutionMode(
+      accountStore.isConnected,
+      isConnectedAsSafe.value,
+      isCurator.value,
+    ),
+  );
+
   /** May the connected wallet press the vault's execution buttons at all? */
-  const canExecute = computed(
-    () =>
-      accountStore.isConnected && (isConnectedAsSafe.value || isCurator.value),
+  const canExecute = computed(() => executionMode.value !== "none");
+
+  /** One line on what pressing does, for the enabled button's tooltip. */
+  const executionHint = computed(() =>
+    executionMode.value === "none"
+      ? ""
+      : EXECUTION_MODE_HINTS[executionMode.value],
   );
 
   const disabledReason = computed(() => {
@@ -327,6 +482,8 @@ export const useCuratorExecution = () => {
     isLoading,
     isCurator,
     isConnectedAsSafe,
+    executionMode,
+    executionHint,
     canExecute,
     disabledReason,
     roleState,

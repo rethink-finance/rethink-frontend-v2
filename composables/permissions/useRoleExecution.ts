@@ -131,10 +131,14 @@ const ethCallFrom = async (
   from: string,
   to: string,
   data: string,
+  value?: string,
 ): Promise<{ reverted: boolean; returnData: string }> => {
   const web3Store = useWeb3Store();
   const rpcUrls = web3Store.networkRpcUrls(chainId);
   let lastError: unknown;
+  // A zero value is simply left out, the way a wallet would send it.
+  const callValue =
+    value && BigInt(value) > 0n ? ethers.toQuantity(BigInt(value)) : undefined;
 
   for (const rpcUrl of rpcUrls) {
     try {
@@ -145,7 +149,10 @@ const ethCallFrom = async (
           jsonrpc: "2.0",
           id: 1,
           method: "eth_call",
-          params: [{ from, to, data }, "latest"],
+          params: [
+            { from, to, data, ...(callValue ? { value: callValue } : {}) },
+            "latest",
+          ],
         }),
       });
       const json = await response.json();
@@ -249,6 +256,30 @@ export const simulateRoleExecution = async (
   );
   if (!reverted) return { ok: true };
   return describeRevert(returnData, version);
+};
+
+/**
+ * Dry-run `call` exactly as it would be sent from `from`, with no modifier in
+ * between — the pre-flight for a session connected as the Safe itself (see
+ * useCuratorExecution). A revert here is the target's own answer, which is
+ * what an inner revert means on the wrapped path, so it is reported the same
+ * way: callers keep phrasing it as the target refusing, not as a permission
+ * denial, because on this path there is no permission to deny.
+ */
+export const simulateDirectCall = async (
+  chainId: ChainId,
+  from: string,
+  call: IRoleCall,
+): Promise<IRoleSimulationResult> => {
+  const { reverted, returnData } = await ethCallFrom(
+    chainId,
+    from,
+    call.to,
+    call.data,
+    call.value,
+  );
+  if (!reverted) return { ok: true };
+  return { ok: false, innerRevert: true, reason: describeRevert(returnData).reason };
 };
 
 /**

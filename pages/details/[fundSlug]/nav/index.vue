@@ -28,7 +28,7 @@
           <v-tooltip
             activator="parent"
             location="bottom"
-            :disabled="!curatorDisabledReason"
+            :disabled="!(curatorDisabledReason || executionHint)"
           >
             <template #activator="{ props }">
               <v-btn
@@ -51,7 +51,7 @@
             </template>
 
             <template #default>
-              {{ curatorDisabledReason }}
+              {{ curatorDisabledReason || executionHint }}
             </template>
           </v-tooltip>
         </div>
@@ -113,6 +113,7 @@ const {
 const {
   canExecute: canExecuteAsCurator,
   disabledReason: curatorDisabledReason,
+  executionHint,
 } = useCuratorExecution();
 
 const fundLastNAVUpdateDate = computed(() => {

@@ -99,9 +99,11 @@ import {
   buildCuratorUpdateSettingsCalldata,
   fetchLiveFundMetadata,
   fetchLiveFundSettingsState,
-  sendRoleExecution,
-  simulateRoleExecution,
 } from "~/composables/permissions/useRoleExecution";
+import {
+  sendCuratorTransaction,
+  simulateCuratorTransaction,
+} from "~/composables/permissions/useCuratorExecution";
 import { fetchActivationState } from "~/composables/permissions/activationProposal";
 import { uploadVaultImage } from "~/composables/vaultImage";
 import { FieldTag } from "~/types/enums/stepper_onboarding";
@@ -339,11 +341,10 @@ const saveChanges = async () => {
       }),
     };
 
-    const simulation = await simulateRoleExecution(
-      fund.chainId,
-      roleModAddress.value,
-      call,
-    );
+    // Through the manager role from a curator's wallet; straight from the
+    // Safe on a session connected as it (Zodiac Pilot).
+    const route = { chainId: fund.chainId, rolesModAddress: roleModAddress.value };
+    const simulation = await simulateCuratorTransaction(call, route);
     if (!simulation.ok) {
       toastStore.errorToast(
         simulation.innerRevert
@@ -356,7 +357,7 @@ const saveChanges = async () => {
       return;
     }
 
-    await sendRoleExecution(fund.chainId, roleModAddress.value, call)
+    await sendCuratorTransaction(call, route)
       .on("transactionHash", () => {
         toastStore.addToast(
           "Vault profile update submitted. Please wait for confirmation.",

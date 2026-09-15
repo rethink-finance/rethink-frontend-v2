@@ -28,6 +28,7 @@ import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import { NAVCalculator } from "~/assets/contracts/NAVCalculator";
 import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
+import { isSafeSession } from "~/composables/permissions/safeSession";
 import type { Explorer } from "~/services/explorer";
 import { useAccountStore } from "~/store/account/account.store";
 import { fetchFundSettingsAction } from "~/store/fund/actions/fetchFundSettings.action";
@@ -129,15 +130,13 @@ export const useFundStore = defineStore({
       return labels;
     },
     isConnectedWalletTheSafe(): boolean {
-      // The connected wallet IS the custody (safe) address — either a Safe
-      // connected directly or a Zodiac-Pilot-style session impersonating it.
-      // Curators no longer need this: they execute through the Roles
-      // modifier instead (see composables/permissions/useCuratorExecution).
-      if (!this.fund?.safeAddress || !this.activeAccountAddress) return false;
-      return (
-        this.activeAccountAddress.toLowerCase() ===
-        this.fund.safeAddress.toLowerCase()
-      );
+      // The connected wallet IS the custody (safe) address — a Zodiac Pilot
+      // session, or a Safe paired directly. Such a session sends the vault's
+      // Safe-authority calls unwrapped, from the Safe, the way the app did
+      // before curators could execute from their own wallet; any other
+      // wallet has to hold a role and go through the Roles modifier (see
+      // composables/permissions/useCuratorExecution).
+      return isSafeSession(this.fund?.safeAddress, this.activeAccountAddress);
     },
     fundToBaseTokenExchangeRateLastNavUpdate(): FixedNumber {
       if (!this.fund?.baseToken?.decimals || !this.fund?.fundToken?.decimals)

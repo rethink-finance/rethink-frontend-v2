@@ -365,18 +365,27 @@
 
             <details v-if="step.inner" class="doc_details">
               <summary>
-                Calldata · to Roles {{ shortAddr(DOC.ADDR.roles) }} ·
-                execTransactionWithRole(role {{ DOC.ROLE }})
-                {{ docValidateWrapped(step.wrapped) ? "· 0x6928e74b ✓" : "· BAD PREFIX" }}
+                <!-- A Pilot session sends the inner call from the Safe and
+                     lets Pilot apply the Roles route; everyone else sends
+                     the wrap. Show whichever will actually be signed. -->
+                <template v-if="isConnectedAsSafe">
+                  Calldata · from the Safe to {{ shortAddr(step.inner?.to) }} ·
+                  unwrapped, for Pilot to route
+                </template>
+                <template v-else>
+                  Calldata · to Roles {{ shortAddr(DOC.ADDR.roles) }} ·
+                  execTransactionWithRole(role {{ DOC.ROLE }})
+                  {{ docValidateWrapped(step.wrapped) ? "· 0x6928e74b ✓" : "· BAD PREFIX" }}
+                </template>
               </summary>
               <div class="doc_hex">
-                {{ step.wrapped }}
+                {{ sentCalldata(step) }}
               </div>
               <v-btn
                 variant="text"
                 size="small"
                 class="doc_text_action"
-                @click="copyText(step.wrapped, 'Calldata copied.')"
+                @click="copyText(sentCalldata(step), 'Calldata copied.')"
               >
                 Copy calldata
               </v-btn>
@@ -450,7 +459,6 @@ import {
   type DocSwapIntent,
   docValidateWrapped,
   docWrappedPreview,
-  findBestRoute,
   MIN_TRADE_USD,
   fmtUnits,
   fmtUsd,
@@ -458,25 +466,32 @@ import {
   shortAddr,
   tradeToInner,
 } from "~/composables/execution/docConsole";
-import { useCuratorExecution } from "~/composables/permissions/useCuratorExecution";
 import {
-  RolesVersion,
-  sendRoleExecution,
-  simulateRoleExecution,
-} from "~/composables/permissions/useRoleExecution";
+  sendCuratorTransaction,
+  simulateCuratorTransaction,
+  useCuratorExecution,
+  type ICuratorRoute,
+} from "~/composables/permissions/useCuratorExecution";
+import { RolesVersion } from "~/composables/permissions/useRoleExecution";
 import { useAccountStore } from "~/store/account/account.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
 
-// Every action here acts with the Safe's authority: the curator signs from
-// their own wallet and the vault's Roles modifier forwards the call. Only the
-// gate comes from the shared layer — the send goes straight to
-// sendRoleExecution, because the role and generation here are established
-// facts (v1, role 1) and because that returns the PromiEvent synchronously,
-// which the step's transactionHash/receipt handlers need.
-const { canExecute, disabledReason } = useCuratorExecution();
+// Every action here acts with the Safe's authority. A curator signs from
+// their own wallet and the vault's Roles modifier forwards the call; a
+// session connected as the Safe itself (Zodiac Pilot) gets the inner call
+// unwrapped, for Pilot to record and route. The route is handed to the
+// shared layer rather than resolved from membership, because the modifier
+// and role here are established facts: v1, role 1.
+const { canExecute, disabledReason, isConnectedAsSafe } = useCuratorExecution();
+const DOC_ROUTE: ICuratorRoute = {
+  chainId: DOC.CHAIN,
+  rolesModAddress: DOC.ADDR.roles,
+  role: DOC.ROLE,
+  version: RolesVersion.V1,
+};
 
 
 const state = ref<DocState | null>(null);
@@ -550,6 +565,10 @@ const planButtonTitle = computed(() => {
 
 /** A leg is runnable once it has calldata — pasted, or built here. */
 const isReady = (step: DocStep) => !!step.inner;
+
+/** The bytes the wallet will be asked to sign for this leg, in this session. */
+const sentCalldata = (step: DocStep) =>
+  isConnectedAsSafe.value ? (step.inner?.data ?? "") : step.wrapped;
 
 const positions = computed<DocPosition[]>(() =>
   state.value ? docPositions(state.value) : [],
@@ -963,15 +982,28 @@ const preflight = async (step: DocStep): Promise<boolean> => {
     step.error = "This leg has no calldata yet.";
     return false;
   }
-  const result = await simulateRoleExecution(
-    DOC.CHAIN,
-    DOC.ADDR.roles,
+  const result = await simulateCuratorTransaction(
     { to: step.inner.to, data: step.inner.data },
-    DOC.ROLE,
-    RolesVersion.V1,
+    DOC_ROUTE,
   );
   if (result.ok || result.innerRevert) return true;
   step.error = result.reason || "The Roles modifier denied this call.";
+  return false;
+};
+
+/**
+ * A send that did not go out, or came back rejected. A declined signature
+ * is the operator's decision, not an error to show.
+ */
+const sendFailed = (step: DocStep, error: any): false => {
+  console.error(error);
+  const message = error?.innerError?.message || error?.message || "";
+  const declined =
+    error?.code === 4001 ||
+    error?.innerError?.code === 4001 ||
+    /user (denied|rejected)/i.test(message);
+  step.status = "failed";
+  step.error = declined ? "" : message || "There has been an error.";
   return false;
 };
 
@@ -980,13 +1012,7 @@ const send = (step: DocStep): Promise<boolean> =>
     step.status = "signing";
     // preflight() has already refused a step without calldata.
     const inner = step.inner!;
-    sendRoleExecution(
-      DOC.CHAIN,
-      DOC.ADDR.roles,
-      { to: inner.to, data: inner.data },
-      DOC.ROLE,
-      RolesVersion.V1,
-    )
+    sendCuratorTransaction({ to: inner.to, data: inner.data }, DOC_ROUTE)
       .on("transactionHash", (hash: any) => {
         step.txHash = hash;
         step.status = "pending";
@@ -996,17 +1022,10 @@ const send = (step: DocStep): Promise<boolean> =>
         if (!receipt.status) step.error = "The transaction reverted on chain.";
         resolve(!!receipt.status);
       })
-      .on("error", (error: any) => {
-        console.error(error);
-        const message = error?.innerError?.message || error?.message || "";
-        const declined =
-          error?.code === 4001 ||
-          error?.innerError?.code === 4001 ||
-          /user (denied|rejected)/i.test(message);
-        step.status = "failed";
-        step.error = declined ? "" : message || "There has been an error.";
-        resolve(false);
-      });
+      // One handler for both a send that never went out (a refused network
+      // switch, no provider) and one that was rejected or reverted: the
+      // PromiEvent rejects in every case.
+      .catch((error: any) => resolve(sendFailed(step, error)));
   });
 
 /** Re-price, dry-run, sign, wait — the whole of one step behind one press. */
