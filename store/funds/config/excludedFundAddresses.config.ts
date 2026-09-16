@@ -534,6 +534,14 @@ const rawExcludedFundAddresses = {
       address: "0x6f52B450940EFA883EAD15346Ef1a921AC1b14D0",
       alwaysExclude: true,
     }, // TEST WBTC Roles v2 Pinning 2026-08-23
+    {
+      address: "0x55f4949AF6356BBb71aeCC23eb36aBA4171Ffdaa",
+      alwaysExclude: true,
+    }, // Elliot Wave Detection Trading Algo (TTAI)
+    {
+      address: "0xD2Ec6D99DFfE5A4CE71BbC39704E018B2D729A03",
+      alwaysExclude: true,
+    }, // Zodiac Dev (ZDEV)
   ],
   // Fraxtal
   "0xfc": [],
