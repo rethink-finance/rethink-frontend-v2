@@ -8,6 +8,7 @@ import {
   RolesVersion,
   defaultRoleFor,
   detectRolesVersion,
+  estimateRoleExecutionGas,
   fetchMemberRoles,
   sendRoleExecution,
   simulateDirectCall,
@@ -20,9 +21,11 @@ import {
   resolveExecutionMode,
   type CuratorExecutionMode,
 } from "~/composables/permissions/safeSession";
+import type { IGasPlan } from "~/composables/permissions/gasLimit";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
-import type { ChainId } from "~/types/enums/chain_id";
+import { useToastStore } from "~/store/toasts/toast.store";
+import { ChainId } from "~/types/enums/chain_id";
 
 /**
  * Curator execution for the vault's Safe-authority surfaces: NAV updates,
@@ -76,6 +79,10 @@ export interface ICuratorRoute {
   role?: string;
   version?: RolesVersion;
 }
+
+/** Performs the send; see deferredSend for why it is a thunk. */
+type SendThunk = () => Web3PromiEvent<any, any>;
+type CuratorPromiEvent = Web3PromiEvent<TransactionReceipt, any>;
 
 const stateCache = new Map<string, ICuratorRoleState>();
 // The settlement page mounts three consumers at once (page + transfer card +
@@ -210,6 +217,7 @@ const resolveExecutableRole = async (
         "Roles permission accepted the call but it reverted in simulation:",
         simulation.reason,
       );
+      await warnOfInnerRevert(chainId, call);
       return role;
     }
     if (!firstReason) firstReason = simulation.reason ?? "";
@@ -217,12 +225,80 @@ const resolveExecutableRole = async (
   throw new Error(firstReason || "The Roles modifier denied this call.");
 };
 
+/**
+ * Say why the wrapped call failed in simulation, in the target's own words.
+ *
+ * The modifier reports every inner failure as the same ModuleTransactionFailed,
+ * so the reason has to be fetched separately: the same call, made directly
+ * from the Safe, reverts with whatever the target actually said. The send
+ * still goes ahead — see resolveExecutableRole — but a curator about to sign
+ * something that simulates as failing should know it, and know why, before
+ * the wallet opens rather than after the gas is spent.
+ */
+const warnOfInnerRevert = async (chainId: ChainId, call: IRoleCall) => {
+  const safeAddress = useFundStore().fund?.safeAddress;
+  let reason = "";
+  if (safeAddress) {
+    try {
+      reason = (await simulateDirectCall(chainId, safeAddress, call)).reason ?? "";
+    } catch (error) {
+      console.warn("Could not read the inner revert reason", error);
+    }
+  }
+  useToastStore().warningToast(
+    "In simulation this call reverts when the Safe makes it" +
+      (reason ? `. ${reason}` : ".") +
+      " It will fail on chain unless a transaction still pending changes that.",
+    15000,
+  );
+};
+
+/**
+ * A call that needs more than a standard block holds. On HyperEVM that is a
+ * fact about the sender, not the transaction: big blocks (30M instead of 3M)
+ * are an opt-in per address, and without it the transaction is never mined.
+ */
+const warnIfOversized = (chainId: ChainId, plan: IGasPlan | undefined) => {
+  if (!plan?.exceedsBlockLimit) return;
+  const needed = plan.gas.toLocaleString("en-US");
+  useToastStore().warningToast(
+    chainId === ChainId.HYPEREVM
+      ? `This transaction needs about ${needed} gas, more than a standard ` +
+          "HyperEVM block holds. It will only be mined if big blocks are " +
+          "enabled for your wallet address."
+      : `This transaction needs about ${needed} gas, more than a block on ` +
+          "this network holds. It is unlikely to be mined.",
+    20000,
+  );
+};
+
+/**
+ * The wrapped send, with the gas limit the app worked out for it. Wallets
+ * size these calls badly (see gasLimit.ts), so the limit is stated instead
+ * of left to them; when it cannot be estimated the wallet chooses, as before.
+ */
+const wrappedSend = async (
+  chainId: ChainId,
+  rolesModAddress: string,
+  call: IRoleCall,
+  role: string,
+  version: RolesVersion,
+): Promise<SendThunk> => {
+  const plan = await estimateRoleExecutionGas(
+    chainId,
+    rolesModAddress,
+    call,
+    role,
+    version,
+  );
+  warnIfOversized(chainId, plan);
+  return () =>
+    sendRoleExecution(chainId, rolesModAddress, call, role, version, plan?.gas);
+};
+
 /** Is the connected account the selected vault's custody Safe? */
 export const isConnectedAsSafe = (): boolean =>
   useFundStore().isConnectedWalletTheSafe;
-
-type SendThunk = () => Web3PromiEvent<any, any>;
-type CuratorPromiEvent = Web3PromiEvent<TransactionReceipt, any>;
 
 /**
  * A PromiEvent for a transaction that is only known after some async work:
@@ -357,14 +433,13 @@ export const sendCuratorTransaction = (
 
     if (route) {
       const version = route.version ?? RolesVersion.V2;
-      return () =>
-        sendRoleExecution(
-          chainId,
-          route.rolesModAddress,
-          call,
-          route.role ?? defaultRoleFor(version),
-          version,
-        );
+      return wrappedSend(
+        chainId,
+        route.rolesModAddress,
+        call,
+        route.role ?? defaultRoleFor(version),
+        version,
+      );
     }
 
     const state = await resolveCuratorRoleState(
@@ -380,8 +455,7 @@ export const sendCuratorTransaction = (
     }
 
     const role = await resolveExecutableRole(chainId, state, call);
-    return () =>
-      sendRoleExecution(chainId, state.rolesModAddress, call, role, state.version);
+    return wrappedSend(chainId, state.rolesModAddress, call, role, state.version);
   });
 
 /**
