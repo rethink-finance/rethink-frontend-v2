@@ -17,9 +17,16 @@ describe("planGasLimit", () => {
 
   it("works without a known block limit", () => {
     expect(planGasLimit(600_000)).toEqual({
-      gas: 750_000,
+      gas: 900_000,
       exceedsBlockLimit: false,
     });
+  });
+
+  it("leaves room for the swing seen between two Arbitrum NAV updates", () => {
+    // QCL: estimated around 5.96M gas used, and 6.32M four minutes later.
+    const plan = planGasLimit(6_500_000, 2 ** 50);
+    expect(plan.gas).toBeGreaterThan(6_500_000 * 1.4);
+    expect(plan.exceedsBlockLimit).toBe(false);
   });
 
   it("takes what the block allows when only the headroom does not fit", () => {
@@ -41,7 +48,7 @@ describe("planGasLimit", () => {
 
   it("never exceeds a per-transaction cap the call itself fits under", () => {
     const cap = TX_GAS_CAPS["0x1"];
-    // 15M needed on Ethereum: buffered would be 18.75M, above the 2^24 cap.
+    // 15M needed on Ethereum: buffered would be 22.5M, above the 2^24 cap.
     expect(planGasLimit(15_000_000, 60_000_000, cap)).toEqual({
       gas: cap,
       exceedsBlockLimit: false,

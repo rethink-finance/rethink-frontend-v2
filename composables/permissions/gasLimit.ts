@@ -18,9 +18,18 @@
  * Headroom over the estimate. eth_estimateGas already accounts for the 63/64
  * rule — it searches for the limit that makes the whole call succeed — so
  * this only has to cover state moving between the estimate and the block: a
- * flow request arriving before a settlement, a position count changing.
+ * flow request arriving before a settlement, a position opening or closing.
+ *
+ * That movement is large. The same Arbitrum vault's NAV update used 2.6M gas
+ * one day and 6.3M the next, and 6% more on a second run four minutes after
+ * the first — while the manager's wallet had taken to sending limits about 2%
+ * over what the call needed, which MetaMask's Smart Transactions then drops
+ * as "cancelled" rather than mine a revert. 1.5x is the long-standing wallet
+ * default; unused gas is refunded, so the only cost is the balance the wallet
+ * asks the sender to hold, and it also covers the overhead of a wallet that
+ * wraps the call (MetaMask's delegation wrapper on smart accounts).
  */
-export const GAS_BUFFER = 1.25;
+export const GAS_BUFFER = 1.5;
 
 /**
  * The share of a block a single transaction may ask for. A limit at the full
