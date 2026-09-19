@@ -6,6 +6,11 @@ import {
   DEFAULT_ROLE_KEY,
   DEFAULT_ROLE_KEY_V2,
 } from "~/composables/nav/generateNAVPermission";
+import {
+  TX_GAS_CAPS,
+  planGasLimit,
+  type IGasPlan,
+} from "~/composables/permissions/gasLimit";
 import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
@@ -122,10 +127,58 @@ const encodeExecWithRole = (
   ]);
 
 /**
- * Raw eth_call against the chain's configured RPCs, from a spoofed sender.
- * Mirrors the fallback pattern in services/onchain/delegates.ts: try each
- * RPC until one answers, and treat an RPC-level revert as the answer.
+ * Is this JSON-RPC error the chain answering — the call reverted — or the
+ * endpoint failing (a rate limit, a spent quota, a method it does not serve)?
+ * Only the first is an answer. The second has to fall through to the next
+ * RPC: read as a revert it arrives with no payload, the pre-flight reports
+ * "the call reverted (no revert data)", and a curator whose transaction is
+ * fine is refused over an exhausted API key.
+ *
+ * Returns the revert payload ("" for a bare revert), or undefined when the
+ * error is the endpoint's.
  */
+const revertPayload = (error: any): string | undefined => {
+  const data =
+    typeof error?.data === "string" ? error.data : error?.data?.data;
+  if (typeof data === "string") return data;
+  if (error?.code === 3 || /revert/i.test(error?.message ?? "")) return "";
+  return undefined;
+};
+
+/**
+ * One JSON-RPC request over the chain's configured RPCs. Mirrors the fallback
+ * pattern in services/onchain/delegates.ts: try each RPC until one answers,
+ * and treat an execution revert as the answer.
+ */
+const rpcRequest = async (
+  chainId: ChainId,
+  method: string,
+  params: unknown[],
+): Promise<{ result?: any; revertData?: string }> => {
+  const web3Store = useWeb3Store();
+  const rpcUrls = web3Store.networkRpcUrls(chainId);
+  let lastError: unknown;
+
+  for (const rpcUrl of rpcUrls) {
+    try {
+      const response = await fetch(rpcUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      });
+      const json = await response.json();
+      if (!json.error) return { result: json.result };
+      const revertData = revertPayload(json.error);
+      if (revertData !== undefined) return { revertData };
+      lastError = new Error(json.error.message ?? `${method} failed`);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError ?? new Error(`No RPC available for chain ${chainId}`);
+};
+
+/** Raw eth_call from a spoofed sender. */
 const ethCallFrom = async (
   chainId: ChainId,
   from: string,
@@ -133,44 +186,15 @@ const ethCallFrom = async (
   data: string,
   value?: string,
 ): Promise<{ reverted: boolean; returnData: string }> => {
-  const web3Store = useWeb3Store();
-  const rpcUrls = web3Store.networkRpcUrls(chainId);
-  let lastError: unknown;
   // A zero value is simply left out, the way a wallet would send it.
   const callValue =
     value && BigInt(value) > 0n ? ethers.toQuantity(BigInt(value)) : undefined;
-
-  for (const rpcUrl of rpcUrls) {
-    try {
-      const response = await fetch(rpcUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "eth_call",
-          params: [
-            { from, to, data, ...(callValue ? { value: callValue } : {}) },
-            "latest",
-          ],
-        }),
-      });
-      const json = await response.json();
-      if (json.error) {
-        // Execution revert: the revert payload travels in error.data (some
-        // RPCs nest it one level deeper).
-        const revertData =
-          typeof json.error.data === "string"
-            ? json.error.data
-            : json.error.data?.data ?? "";
-        return { reverted: true, returnData: revertData };
-      }
-      return { reverted: false, returnData: json.result ?? "0x" };
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError ?? new Error(`No RPC available for chain ${chainId}`);
+  const { result, revertData } = await rpcRequest(chainId, "eth_call", [
+    { from, to, data, ...(callValue ? { value: callValue } : {}) },
+    "latest",
+  ]);
+  if (revertData !== undefined) return { reverted: true, returnData: revertData };
+  return { reverted: false, returnData: result ?? "0x" };
 };
 
 const describeRevert = (
@@ -283,9 +307,76 @@ export const simulateDirectCall = async (
 };
 
 /**
+ * The gas limit of an ordinary block. HyperEVM interleaves 30M "big" blocks,
+ * about one in forty, with its 3M standard ones, and only a sender who has
+ * opted in is ever routed to a big one — so the smaller of the last two
+ * blocks is the limit that applies. Two big blocks are never adjacent.
+ */
+const standardBlockGasLimit = async (
+  chainId: ChainId,
+): Promise<number | undefined> => {
+  try {
+    const latest = (
+      await rpcRequest(chainId, "eth_getBlockByNumber", ["latest", false])
+    ).result;
+    if (!latest?.gasLimit) return undefined;
+    const limits = [Number(BigInt(latest.gasLimit))];
+    const previous = (
+      await rpcRequest(chainId, "eth_getBlockByNumber", [
+        ethers.toQuantity(BigInt(latest.number) - 1n),
+        false,
+      ])
+    ).result;
+    if (previous?.gasLimit) limits.push(Number(BigInt(previous.gasLimit)));
+    return Math.min(...limits);
+  } catch (error) {
+    console.warn("Could not read the block gas limit", error);
+    return undefined;
+  }
+};
+
+/**
+ * What the wrapped call needs, asked of the app's own RPCs rather than left
+ * to the wallet (see gasLimit.ts for why). Undefined when it cannot be
+ * estimated — an inner revert the pre-flight let through on purpose, or no
+ * RPC answering — and the wallet is then left to choose, as it always was.
+ */
+export const estimateRoleExecutionGas = async (
+  chainId: ChainId,
+  rolesModAddress: string,
+  call: IRoleCall,
+  roleKey: string = DEFAULT_ROLE_KEY_V2,
+  version: RolesVersion = RolesVersion.V2,
+): Promise<IGasPlan | undefined> => {
+  const from = useAccountStore().activeAccountAddress;
+  if (!from) return undefined;
+  try {
+    const { result, revertData } = await rpcRequest(chainId, "eth_estimateGas", [
+      {
+        from,
+        to: rolesModAddress,
+        data: encodeExecWithRole(call, roleKey, version),
+        value: "0x0",
+      },
+    ]);
+    if (revertData !== undefined || !result) return undefined;
+    return planGasLimit(
+      Number(BigInt(result)),
+      await standardBlockGasLimit(chainId),
+      TX_GAS_CAPS[chainId],
+    );
+  } catch (error) {
+    console.warn("Could not estimate gas for the role execution", error);
+    return undefined;
+  }
+};
+
+/**
  * Send the wrapped call with the connected wallet. Callers are expected to
  * have simulated first; this returns the CustomContract PromiEvent so pages
- * keep their usual .on("transactionHash"/"receipt"/"error") flow.
+ * keep their usual .on("transactionHash"/"receipt"/"error") flow. `gas` is
+ * the explicit limit from estimateRoleExecutionGas; without it the wallet
+ * picks its own.
  */
 export const sendRoleExecution = (
   chainId: ChainId,
@@ -293,6 +384,7 @@ export const sendRoleExecution = (
   call: IRoleCall,
   roleKey: string = DEFAULT_ROLE_KEY_V2,
   version: RolesVersion = RolesVersion.V2,
+  gas?: number,
 ) => {
   const web3Store = useWeb3Store();
   const abi =
@@ -302,7 +394,7 @@ export const sendRoleExecution = (
   const rolesContract = web3Store.getCustomContract(chainId, abi, rolesModAddress);
   return rolesContract.send(
     "execTransactionWithRole",
-    {},
+    gas ? { gas: String(gas) } : {},
     call.to,
     call.value ?? "0",
     call.data,
