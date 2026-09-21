@@ -41,10 +41,73 @@ export const BLOCK_SHARE = 0.95;
  * Per-transaction ceilings that sit below the block limit. Ethereum caps a
  * single transaction at 2^24 gas since Fusaka (EIP-7825); a limit above it
  * is not merely unmineable, it is invalid and the wallet cannot broadcast it.
+ *
+ * Base enforces the same cap, read off the chain rather than a changelog:
+ * across 103,000 Base transactions on 2026-09-21 the largest limit was
+ * exactly 2^24, fourteen sat on it and none above, and its estimator refuses
+ * a call that needs more however high a limit it is offered. That is what
+ * stranded the INDEFI vault — its NAV update had been mined at 17.8M gas
+ * until April and could not be mined at all afterwards.
+ *
  * Keyed by hex chain id to stay import-free.
  */
 export const TX_GAS_CAPS: Record<string, number> = {
   "0x1": 16_777_216,
+  "0x2105": 16_777_216,
+};
+
+/** "17.8M" — a gas figure for reading, not for arithmetic. */
+export const formatGas = (gas: number): string =>
+  gas >= 1_000_000
+    ? `${(gas / 1_000_000).toFixed(1)}M`
+    : Math.round(gas).toLocaleString("en-US");
+
+/**
+ * The call needs more gas than the chain lets one transaction carry. No
+ * wallet, gas setting or frontend can mine it; only a lighter call can. It is
+ * thrown before the wallet opens, because what the wallet shows instead is
+ * worse than nothing: its own estimate fails, it falls back to a share of the
+ * block (140M on Base) and quotes a fee for a transaction it cannot send.
+ */
+export class TransactionGasCapError extends Error {
+  readonly cap: number;
+  /** Measured by dry runs; undefined when even the search ceiling failed. */
+  readonly required?: number;
+
+  constructor(cap: number, required: number | undefined, chainName: string) {
+    super(
+      `This transaction needs ${
+        required ? `about ${formatGas(required)}` : `more than ${formatGas(cap)}`
+      } gas, and ${chainName} allows at most ${formatGas(cap)} in a single ` +
+        "transaction. It cannot be mined as it is, from any wallet.",
+    );
+    this.name = "TransactionGasCapError";
+    this.cap = cap;
+    this.required = required;
+  }
+}
+
+/**
+ * Narrow down what a call needs, given a probe that says whether it succeeds
+ * at a limit. The caller has established that it fails at `cap` and succeeds
+ * with no limit at all; this looks between the cap and four times it, which
+ * is as far as a figure is worth having. A few probes are enough — the answer
+ * is for a sentence, and each probe is a full dry run of a heavy call.
+ */
+export const bracketRequiredGas = async (
+  cap: number,
+  succeedsAt: (gas: number) => Promise<boolean>,
+  probes = 5,
+): Promise<number | undefined> => {
+  let low = cap;
+  let high = cap * 4;
+  if (!(await succeedsAt(high))) return undefined;
+  for (let i = 0; i < probes; i++) {
+    const middle = Math.floor((low + high) / 2);
+    if (await succeedsAt(middle)) high = middle;
+    else low = middle;
+  }
+  return high;
 };
 
 export interface IGasPlan {
