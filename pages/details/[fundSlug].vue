@@ -100,8 +100,8 @@
 import { useAccountStore } from "~/store/account/account.store";
 import { useActionStateStore } from "~/store/actionState.store";
 import { useFundStore } from "~/store/fund/fund.store";
+import { parseFundSlug } from "~/composables/routing/fundSlug";
 import { ActionState } from "~/types/enums/action_state";
-import { ChainId } from "~/types/enums/chain_id";
 import type IFund from "~/types/fund";
 import type IRoute from "~/types/route";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
@@ -121,13 +121,11 @@ const {
   userRedemptionRequestExists,
 } = storeToRefs(fundStore);
 const { isConnected } = storeToRefs(accountStore);
-// fund address is always in the third position of the route
-// e.g. /details/0xa4b1-TFD3-0x1234 -> 0x1234
-const parts = route.path.split("/")[2]?.split("-") ?? [];
-
-const fundChainId: ChainId = (parts[0] as ChainId);
-const fundSymbol: string = parts[1] ?? "";
-const fundAddress: string = parts[2] ?? "";
+// The route is /details/<chainId>-<symbol>-<address>. A symbol can itself
+// contain hyphens (OAUBTC-T, SMART10-HL), so the slug is read from both ends
+// rather than split into three; see parseFundSlug.
+const fundSlug = route.path.split("/")[2] ?? "";
+const { chainId: fundChainId, address: fundAddress } = parseFundSlug(fundSlug);
 
 onMounted(() => {
   fetchFund();
@@ -188,9 +186,7 @@ watch(
   },
 );
 
-const fundDetailsRoute = computed(
-  () => `/details/${fundChainId}-${fundSymbol}-${fundAddress}`,
-);
+const fundDetailsRoute = computed(() => `/details/${fundSlug}`);
 
 const isOverviewRoute = computed(() => route.path === fundDetailsRoute.value);
 

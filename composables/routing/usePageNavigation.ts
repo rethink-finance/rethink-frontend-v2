@@ -1,4 +1,5 @@
 import { type ChainId } from "~/types/enums/chain_id";
+import { buildFundSlug } from "~/composables/routing/fundSlug";
 
 export const usePageNavigation = () => {
   const router = useRouter();
@@ -9,7 +10,7 @@ export const usePageNavigation = () => {
     fundTokenSymbol: string,
     fundAddress: string,
   ): string => {
-    return `/details/${chainId}-${fundTokenSymbol}-${fundAddress}`;
+    return `/details/${buildFundSlug(chainId, fundTokenSymbol, fundAddress)}`;
   };
 
   const navigateToFundDetails = (
