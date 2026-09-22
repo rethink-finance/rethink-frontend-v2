@@ -182,6 +182,9 @@
             </div>
           </div>
           <span class="monitoring__toggle_meta">
+            <span v-if="flaggedExecutableCount" class="monitoring__toggle_flag">
+              {{ flaggedExecutableCount }} flagged
+            </span>
             {{ filteredExecutable.length }}
             <Icon
               icon="octicon:chevron-down-16"
@@ -205,7 +208,7 @@
       </section>
 
       <section class="brand_card monitoring__section">
-        <button type="button" class="monitoring__toggle" @click="showRecent = !showRecent">
+        <button type="button" class="monitoring__toggle" @click="toggleRecent">
           <div>
             <span class="brand_card__eyebrow">Closed in the last 30 days</span>
             <div class="monitoring__section_caption">
@@ -213,6 +216,9 @@
             </div>
           </div>
           <span class="monitoring__toggle_meta">
+            <span v-if="flaggedRecentCount" class="monitoring__toggle_flag">
+              {{ flaggedRecentCount }} flagged
+            </span>
             {{ filteredRecent.length }}
             <Icon
               icon="octicon:chevron-down-16"
@@ -231,6 +237,7 @@
             :key="proposalKey(proposal)"
             :proposal="proposal"
             :vault="vaultOf(proposal)"
+            :default-open="isFlaggedLevel(proposal.level)"
           />
         </div>
       </section>
@@ -284,6 +291,13 @@ const levelFilter = ref("all");
 const search = ref("");
 const showExecutable = ref(false);
 const showRecent = ref(false);
+// Once the reader has toggled the closed section, the auto-expand below
+// must not fight them.
+let recentToggledByReader = false;
+const toggleRecent = () => {
+  recentToggledByReader = true;
+  showRecent.value = !showRecent.value;
+};
 
 /**
  * The overview and the monitor's self-check load together. The self-check
@@ -381,6 +395,26 @@ const filterProposals = (list: MonitoredProposal[] = []) =>
 const filteredLive = computed(() => filterProposals(overview.value?.live));
 const filteredExecutable = computed(() => filterProposals(overview.value?.executable));
 const filteredRecent = computed(() => filterProposals(overview.value?.recent));
+const flaggedExecutableCount = computed(
+  () => filteredExecutable.value.filter((p) => isFlaggedLevel(p.level)).length,
+);
+const flaggedRecentCount = computed(
+  () => filteredRecent.value.filter((p) => isFlaggedLevel(p.level)).length,
+);
+
+/**
+ * A canary governor votes in ~20 s, so its proposals are created, passed and
+ * executed between two monitor ticks and never appear under "Live" — yet the
+ * alert for them fires all the same. Open the closed section when the overview
+ * arrives holding a flagged entry, so a reader coming from that alert finds it
+ * without knowing to expand anything.
+ */
+watch(overview, (loaded) => {
+  if (recentToggledByReader || showRecent.value) return;
+  if ((loaded?.recent ?? []).some((p) => isFlaggedLevel(p.level))) {
+    showRecent.value = true;
+  }
+});
 
 const filteredVaults = computed(() =>
   (overview.value?.vaults ?? []).filter(
@@ -687,6 +721,14 @@ const proposalKey = (proposal: MonitoredProposal) =>
     svg {
       transition: transform 0.2s ease;
     }
+  }
+
+  &__toggle_flag {
+    padding: 0.1rem 0.45rem;
+    border: 1px solid $color-neg-line;
+    border-radius: $default-border-radius;
+    color: $color-neg;
+    white-space: nowrap;
   }
 
   &__chevron--open {
