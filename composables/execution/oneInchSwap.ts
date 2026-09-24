@@ -1,5 +1,4 @@
 import { ethers } from "ethers";
-import type { OneInchProtocolLeg } from "~/services/backend/swap";
 
 /**
  * The 1inch AggregationRouterV6 `swap()` entry point, as a vault's Roles
@@ -169,6 +168,14 @@ export const validateOneInchSwap = (
   }
   return problems;
 };
+
+/** One split of one hop of a 1inch pathfinder route, as the swap API reports it. */
+export interface OneInchProtocolLeg {
+  name: string;
+  part: number;
+  fromTokenAddress?: string;
+  toTokenAddress?: string;
+}
 
 /** "BASE_AERODROME_V3" → "Aerodrome V3"; "UNISWAP_V3" → "Uniswap V3". */
 export const prettyProtocolName = (name: string) => {

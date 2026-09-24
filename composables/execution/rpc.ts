@@ -9,17 +9,22 @@ export interface EthCallError extends Error {
 }
 
 /**
- * Raw eth_call over the chain's configured RPCs, same fallback rule the rest
- * of the app uses: try each until one answers, and treat a revert payload as
- * the answer rather than as a dead endpoint.
+ * Account state to lay over the chain for one call (geth's eth_call third
+ * argument): `{ [address]: { code, balance, nonce, state, stateDiff } }`.
+ * Used to quote through a contract before it is deployed, and by tests.
  */
-export const ethCallOn = async (
+export type StateOverrides = Record<string, Record<string, unknown>>;
+
+/**
+ * One JSON-RPC request over the chain's configured RPCs, same fallback rule
+ * the rest of the app uses: try each until one answers, and treat a revert
+ * payload as the answer rather than as a dead endpoint.
+ */
+export const rpcRequestOn = async (
   chainId: ChainId,
-  to: string,
-  data: string,
-  /** Spoofed sender — a Safe, when the question is what the Safe would get. */
-  from?: string,
-): Promise<string> => {
+  method: string,
+  params: unknown[],
+): Promise<any> => {
   const web3Store = useWeb3Store();
   const rpcUrls = web3Store.networkRpcUrls(chainId);
   let lastError: any;
@@ -28,12 +33,7 @@ export const ethCallOn = async (
       const response = await fetch(rpcUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "eth_call",
-          params: [{ to, data, ...(from ? { from } : {}) }, "latest"],
-        }),
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
       });
       const json = await response.json();
       if (json.error) {
@@ -45,7 +45,7 @@ export const ethCallOn = async (
         error.answered = error.revertData !== undefined;
         throw error;
       }
-      if (typeof json.result !== "string") {
+      if (json.result === undefined) {
         throw new TypeError("The RPC returned no result.");
       }
       return json.result;
@@ -55,4 +55,24 @@ export const ethCallOn = async (
     }
   }
   throw lastError ?? new Error(`No RPC answered for chain ${chainId}.`);
+};
+
+/**
+ * Raw eth_call, optionally from a spoofed sender (a Safe, when the question
+ * is what the Safe would get) and over state overrides.
+ */
+export const ethCallOn = async (
+  chainId: ChainId,
+  to: string,
+  data: string,
+  from?: string,
+  overrides?: StateOverrides,
+): Promise<string> => {
+  const result = await rpcRequestOn(chainId, "eth_call", [
+    { to, data, ...(from ? { from } : {}) },
+    "latest",
+    ...(overrides ? [overrides] : []),
+  ]);
+  if (typeof result !== "string") throw new TypeError("The RPC returned no result.");
+  return result;
 };

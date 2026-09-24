@@ -114,9 +114,9 @@
             </div>
           </div>
 
-          <div class="ndfi_source" :class="'ndfi_source--' + backendStatus">
+          <div class="ndfi_source" :class="'ndfi_source--' + executorState">
             <span class="ndfi_dot" />
-            <span>{{ backendStatusText }}</span>
+            <span>{{ executorStatusText }}</span>
           </div>
 
           <div v-for="problem in formProblems" :key="problem" class="ndfi_warn">
@@ -131,7 +131,7 @@
               :disabled="!canBuild"
               @click="buildRoute"
             >
-              {{ backendStatus === "ready" ? "Get route" : "Prepare swap" }}
+              {{ executorState === "deployed" ? "Find route" : "Prepare swap" }}
             </v-btn>
           </div>
         </div>
@@ -141,24 +141,27 @@
             How this executes
           </div>
           <div class="ndfi_card__sub">
-            The route comes from 1inch's pathfinder in compatibility mode, so the
-            router is always called through <code>swap()</code> — the one entry
-            point role 1 may use. Its 1inch web app no longer offers that switch,
-            which is why a plain single-pool route (<code>unoswap</code>) kept
-            being refused by the modifier.
+            No aggregator API. The console asks the Uniswap V3 and Aerodrome
+            Slipstream factories which pools trade the pair, prices every
+            candidate by simulating the exact swap from the Safe, and builds the
+            best one as a 1inch <code>swap()</code> — the one router entry point
+            role 1 may use — whose executor is Rethink's own
+            ({{ shortAddress(SWAP_EXECUTOR.address) }}): a stateless contract
+            that runs the named pool route and hands the output back to the
+            router.
           </div>
           <div class="ndfi_card__sub">
-            Every swap is checked against the whitelist before your wallet opens:
-            the bought token must be WETH, USDC or AERO, the proceeds must land in
-            the Safe, and the router's own <code>minReturn</code> floor is what
-            protects the fill. The program inside the calldata is 1inch's and is
-            passed through untouched.
+            The router still enforces the floor (<code>minReturn</code>, your
+            slippage against the live quote) and delivers to the Safe; the
+            whitelist still pins the receiver and the bought token. Every swap
+            is checked against both before your wallet opens, and a quote older
+            than a minute is rebuilt before signing.
           </div>
           <div class="ndfi_card__sub">
             Signed from your manager wallet, the call goes through the Roles
             modifier ({{ shortAddress(INDEFI.ADDR.roles) }}, role 1). Connected as
             the Safe itself, it goes out unwrapped — no Zodiac Pilot needed either
-            way.
+            way. Calldata built elsewhere can still be pasted.
           </div>
         </div>
       </div>
@@ -237,17 +240,26 @@
               <span>{{ p.v }}<em v-if="p.pinned" class="ndfi_pinned"> · pinned</em></span>
             </div>
 
+            <!-- The routes that lost, so the choice can be checked. -->
+            <div v-if="step.quote?.alternatives.length" class="ndfi_alts">
+              <div class="ndfi_label">
+                Also quoted
+              </div>
+              <div v-for="alt in step.quote.alternatives" :key="alt" class="ndfi_alts__row">
+                {{ alt }}
+              </div>
+            </div>
+
             <!--
-              A swap leg carries no calldata until 1inch has written one: the
-              routing program is the pathfinder's, and role 1 may send nothing
-              else. When the backend cannot build it, the operator can bring
-              their own — everything it has to match is spelled out here.
+              A swap leg carries no calldata until a route has been built for
+              it. When the executor is not on this chain, or no pool can price
+              the trade, the operator can bring calldata built elsewhere —
+              everything it has to match is spelled out here.
             -->
             <div v-if="step.intent && !step.inner" class="ndfi_paste">
               <div class="ndfi_card__sub">
-                Build this swap with the 1inch API in compatibility mode (receiver
-                = the Safe, partial fills off) and paste its <code>swap</code>
-                calldata here.
+                Paste <code>swap</code> calldata for this leg (receiver = the
+                Safe, partial fills off).
               </div>
               <div class="ndfi_paste__intent">
                 <div><span>sell</span><span>{{ fmtUnits(step.intent.amount, step.intent.sell.decimals, 6) }} {{ step.intent.sell.symbol }}</span></div>
@@ -369,7 +381,17 @@ import {
   type IndefiToken,
 } from "~/composables/execution/indefiConsole";
 import {
-  describeOneInchRoute,
+  BASE_VENUES,
+  SWAP_EXECUTOR,
+  buildExecutorSwap,
+  discoverRoutes,
+  minReturnFor,
+  quoteRoutes,
+  readExecutorState,
+  swapDeadline,
+  type ExecutorState,
+} from "~/composables/execution/onchainSwap";
+import {
   parseOneInchSwap,
   shortAddress,
   swapImpactPct,
@@ -383,12 +405,6 @@ import {
   type ICuratorRoute,
 } from "~/composables/permissions/useCuratorExecution";
 import { RolesVersion } from "~/composables/permissions/useRoleExecution";
-import {
-  OneInchBackendError,
-  buildOneInchSwap,
-  fetchOneInchStatus,
-  type OneInchSwapBuild,
-} from "~/services/backend/swap";
 import { useAccountStore } from "~/store/account/account.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 
@@ -418,18 +434,19 @@ const loadingState = ref(false);
 const building = ref(false);
 const running = ref(false);
 
-type BackendStatus = "checking" | "ready" | "unconfigured" | "unreachable";
-const backendStatus = ref<BackendStatus>("checking");
-const backendStatusText = computed(() => {
-  switch (backendStatus.value) {
-    case "ready":
-      return "Route source: 1inch pathfinder, compatibility mode, via the Rethink backend";
-    case "unconfigured":
-      return "The backend has no 1inch API key yet — swaps can still be executed from pasted swap() calldata";
+const executorState = ref<ExecutorState | "checking">("checking");
+const executorStatusText = computed(() => {
+  switch (executorState.value) {
+    case "deployed":
+      return `Route source: on-chain quotes through the Rethink swap executor ${shortAddress(SWAP_EXECUTOR.address)} — Uniswap V3 and Aerodrome Slipstream pools, no aggregator API`;
+    case "missing":
+      return `The Rethink swap executor is not deployed on Base yet (${shortAddress(SWAP_EXECUTOR.address)}) — swaps can still be executed from pasted swap() calldata`;
+    case "foreign":
+      return `The code at ${shortAddress(SWAP_EXECUTOR.address)} is not the audited swap executor — routing is off; pasted swap() calldata only`;
     case "unreachable":
-      return "The backend did not answer — swaps can still be executed from pasted swap() calldata";
+      return "No Base RPC answered — swaps can still be executed from pasted swap() calldata";
     default:
-      return "Checking the route source…";
+      return "Checking the swap executor…";
   }
 });
 
@@ -490,7 +507,7 @@ const canBuild = computed(
     !!slippagePct.value &&
     !formProblems.value.length &&
     !!state.value &&
-    backendStatus.value !== "checking",
+    executorState.value !== "checking",
 );
 
 const setMax = () => {
@@ -505,13 +522,15 @@ const setMax = () => {
 type StepStatus = "idle" | "quoting" | "simulating" | "signing" | "pending" | "ok" | "failed";
 
 interface IndefiQuote {
-  /** Built through the backend, or read off pasted calldata. */
+  /** Built here from on-chain quotes, or read off pasted calldata. */
   kind: "built" | "pasted";
   /** Expected output when built; the calldata's own floor when pasted. */
   amountOut: bigint;
   /** Against Chainlink marks; negative means value given up. */
   impactPct: number;
   route: string;
+  /** The candidates that priced worse, for the record. */
+  alternatives: string[];
   at: number;
 }
 
@@ -563,7 +582,7 @@ const isReady = (step: IndefiStep) => !!step.inner;
 const stepStatusText = (step: IndefiStep) => {
   switch (step.status) {
     case "quoting":
-      return "rebuilding the route against live pools…";
+      return "re-pricing against live pools…";
     case "simulating":
       return "checking the vault's permissions…";
     case "signing":
@@ -573,7 +592,7 @@ const stepStatusText = (step: IndefiStep) => {
     case "ok":
       return "done";
     default:
-      if (step.intent && !step.inner) return "waiting for its 1inch calldata";
+      if (step.intent && !step.inner) return "waiting for its calldata";
       return step.quote?.route || step.inner?.sig || "";
   }
 };
@@ -611,60 +630,75 @@ const quoteAgeText = (quote: IndefiQuote) => {
 /* Building the route                                                          */
 /* -------------------------------------------------------------------------- */
 
-const checkBackend = async () => {
-  backendStatus.value = "checking";
-  try {
-    const status = await fetchOneInchStatus();
-    backendStatus.value = status.configured ? "ready" : "unconfigured";
-  } catch (error) {
-    console.error("1inch status read failed", error);
-    backendStatus.value = "unreachable";
-  }
+const checkExecutor = async () => {
+  executorState.value = "checking";
+  executorState.value = await readExecutorState(INDEFI.CHAIN);
 };
 
 /**
- * One trip through the backend and back: the pathfinder's calldata, parsed,
- * held against the whitelist and the leg it is meant to fill, and priced
- * against the oracle marks. Throws with the reason when any of that fails.
+ * The best route the chain can offer right now: every pool the factories
+ * know for the pair (and one hop through another vault asset), each priced
+ * by simulating the identical swap from the Safe, the winner built as the
+ * router call and held against the whitelist and the leg before it is shown.
+ * Throws with the reason when any of that fails.
  */
 const fetchBuilt = async (
   intent: OneInchSwapIntent,
-): Promise<{ build: OneInchSwapBuild; inner: IndefiInner; quote: IndefiQuote }> => {
-  const build = await buildOneInchSwap({
-    chainId: INDEFI.CHAIN,
-    src: intent.sell.address,
-    dst: intent.buy.address,
-    amount: intent.amount,
-    from: INDEFI.ADDR.safe,
-    receiver: INDEFI.ADDR.safe,
-    slippage: slippagePct.value ?? 1,
+): Promise<{ inner: IndefiInner; quote: IndefiQuote }> => {
+  const routes = await discoverRoutes(
+    INDEFI.CHAIN,
+    BASE_VENUES,
+    intent.sell,
+    intent.buy,
+    INDEFI_TOKENS,
+  );
+  if (!routes.length) {
+    throw new Error(
+      `No Uniswap V3 or Aerodrome Slipstream pool trades ${intent.sell.symbol} for ${intent.buy.symbol}.`,
+    );
+  }
+  const quotes = await quoteRoutes(INDEFI.CHAIN, INDEFI.ADDR.safe, routes, intent.amount);
+  if (!quotes.length) {
+    throw new Error(
+      `None of ${routes.length} candidate routes could fill ${fmtUnits(intent.amount, intent.sell.decimals, 6)} ${intent.sell.symbol} — the pools may be too thin for this size, or the Safe holds less than that.`,
+    );
+  }
+  const best = quotes[0];
+  const minReturn = minReturnFor(best.amountOut, slippagePct.value ?? 1);
+  const { data } = buildExecutorSwap({
+    safe: INDEFI.ADDR.safe,
+    route: best.route,
+    amountIn: intent.amount,
+    minReturn,
+    deadline: swapDeadline(),
   });
-  const call = parseOneInchSwap(build.tx.data);
+  const call = parseOneInchSwap(data);
   const problems = validateOneInchSwap(call, INDEFI_SWAP_RULES, intent, 0);
-  if (BigInt(build.tx.value || "0") !== 0n) {
-    problems.push("1inch built a swap that sends ETH along, which the modifier allows no value for.");
+  if (call.executor.toLowerCase() !== SWAP_EXECUTOR.address.toLowerCase()) {
+    problems.push("The built swap does not name the Rethink executor.");
   }
   if (problems.length) {
-    throw new Error(`1inch built calldata the vault cannot send: ${problems.join(" ")}`);
+    throw new Error(`The built calldata cannot be sent: ${problems.join(" ")}`);
   }
-  const route = describeOneInchRoute(build.protocols);
-  const amountOut = BigInt(build.dstAmount);
   const quote: IndefiQuote = {
     kind: "built",
-    amountOut,
+    amountOut: best.amountOut,
     impactPct: swapImpactPct(
       intent.amount,
       intent.sell,
       priceOf(intent.sell as IndefiToken),
-      amountOut,
+      best.amountOut,
       intent.buy,
       priceOf(intent.buy as IndefiToken),
     ),
-    route,
+    route: best.route.label,
+    alternatives: quotes
+      .slice(1, 4)
+      .map((q) => `${q.route.label}: ${fmtUnits(q.amountOut, intent.buy.decimals, 6)} ${intent.buy.symbol}`),
     at: Date.now(),
   };
-  const inner = indefiInner.swap(call, build.tx.data, intent.sell, intent.buy, route);
-  return { build, inner, quote };
+  const inner = indefiInner.swap(call, data, intent.sell, intent.buy, best.route.label);
+  return { inner, quote };
 };
 
 const buildRoute = async () => {
@@ -688,15 +722,12 @@ const buildRoute = async () => {
     }
 
     const label = `Swap ${fmtUnits(amount.value, sell.decimals, 6)} ${sell.symbol} for ${buy.symbol}`;
-    if (backendStatus.value === "ready") {
+    if (executorState.value === "deployed") {
       try {
         const { inner, quote } = await fetchBuilt(intent);
         list.push(makeStep("swap", label, inner, intent, quote));
       } catch (error: any) {
         console.error(error);
-        if (error instanceof OneInchBackendError && error.unconfigured) {
-          backendStatus.value = "unconfigured";
-        }
         issues.value.push(error?.message || "The route could not be built.");
         list.push(makeStep("swap", label, null, intent));
       }
@@ -747,12 +778,13 @@ const applyCalldata = (step: IndefiStep) => {
       step.intent.buy,
       priceOf(step.intent.buy as IndefiToken),
     ),
-    route: `1inch program, ${(call.program.length - 2) / 2} bytes`,
+    route: `program of ${(call.program.length - 2) / 2} bytes, executor ${shortAddress(call.executor)}`,
+    alternatives: [],
     at: Date.now(),
   };
 };
 
-/** A fresh program and floor for a built swap, in place. */
+/** A fresh route and floor for a built swap, in place. */
 const requote = async (step: IndefiStep): Promise<boolean> => {
   if (!step.intent || step.quote?.kind !== "built") return true;
   step.status = "quoting";
@@ -778,8 +810,8 @@ const requote = async (step: IndefiStep): Promise<boolean> => {
 
 /**
  * The size is re-checked against what the Safe holds immediately before
- * signing: a pasted program carries its own floor, but nothing stops the
- * balance from having moved since the plan was built.
+ * signing: nothing stops the balance from having moved since the plan was
+ * built.
  */
 const recheckBalance = async (step: IndefiStep): Promise<boolean> => {
   if (!step.intent) return true;
@@ -928,7 +960,7 @@ const copyText = (text: string, message: string) => {
 
 onMounted(() => {
   refresh();
-  checkBackend();
+  checkExecutor();
 });
 </script>
 
@@ -1432,6 +1464,19 @@ onMounted(() => {
     line-height: 1.4;
     word-break: break-all;
     resize: vertical;
+  }
+}
+
+.ndfi_alts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  &__row {
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-steel-blue;
+    word-break: break-word;
   }
 }
 
