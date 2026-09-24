@@ -158,9 +158,6 @@
             <span>Receiver</span><span>Safe {{ shortAddress(INDEFI.ADDR.safe) }}</span>
           </div>
           <div class="ndfi_kv">
-            <span>Executor</span><span>Rethink {{ shortAddress(SWAP_EXECUTOR.address) }}</span>
-          </div>
-          <div class="ndfi_kv">
             <span>Sent as</span>
             <span>{{ isConnectedAsSafe ? "the Safe, unwrapped" : `Roles ${shortAddress(INDEFI.ADDR.roles)} · role ${INDEFI.ROLE}` }}</span>
           </div>
@@ -175,7 +172,7 @@
             type="button"
             @click="copyText(quote.inner.data, 'Calldata copied.')"
           >
-            Copy swap() calldata
+            Copy calldata
           </button>
         </div>
       </details>
@@ -183,6 +180,23 @@
       <!-- Notices -->
       <div v-if="notice" class="ndfi_notice" :class="{ 'ndfi_notice--bad': noticeBad }">
         {{ notice }}
+        <div v-if="grantState === 'missing' && accountStore.isConnected" class="ndfi_notice__actions">
+          <button
+            class="ndfi_link"
+            type="button"
+            :disabled="proposing"
+            @click="proposeWhitelist"
+          >
+            {{ proposing ? "Submitting the proposal…" : "Submit the whitelist proposal" }}
+          </button>
+          <a
+            v-if="proposalTx"
+            :href="INDEFI.EXPLORER + '/tx/' + proposalTx"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ndfi_link"
+          >proposal submitted · view</a>
+        </div>
       </div>
 
       <!-- Action -->
@@ -227,7 +241,6 @@
 import { ethers } from "ethers";
 import {
   INDEFI,
-  INDEFI_SWAP_RULES,
   INDEFI_TOKENS,
   fmtUnits,
   fmtUsd,
@@ -238,25 +251,21 @@ import {
   type IndefiInner,
   type IndefiState,
   type IndefiToken,
-} from "~/composables/execution/indefiConsole";
+
+  INDEFI_POOLS,
+  INDEFI_UNOSWAP_RULES,
+  readIndefiUnoswapGrant,
+  type UnoswapGrantState } from "~/composables/execution/indefiConsole";
 import {
-  BASE_VENUES,
-  SWAP_EXECUTOR,
-  buildExecutorSwap,
-  discoverRoutes,
+  buildUnoswap,
   minReturnFor,
+  parseUnoswap,
   quoteRoutes,
-  readExecutorState,
-  swapDeadline,
-  type ExecutorState,
-  type OnchainRoute,
+  routesBetween,
+  validateUnoswap,
+  type UnoswapRoute,
 } from "~/composables/execution/onchainSwap";
-import {
-  parseOneInchSwap,
-  shortAddress,
-  swapImpactPct,
-  validateOneInchSwap,
-} from "~/composables/execution/oneInchSwap";
+import { shortAddress, swapImpactPct } from "~/composables/execution/oneInchSwap";
 import {
   sendCuratorTransaction,
   simulateCuratorTransaction,
@@ -264,18 +273,24 @@ import {
   type ICuratorRoute,
 } from "~/composables/permissions/useCuratorExecution";
 import { RolesVersion } from "~/composables/permissions/useRoleExecution";
+import {
+  buildIndefiUnoswapProposal,
+  describeIndefiUnoswapProposal,
+} from "~/composables/execution/indefiProposal";
 import { useAccountStore } from "~/store/account/account.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
+const fundStore = useFundStore();
 
 // Every action here acts with the Safe's authority. A curator signs from
 // their own wallet and the vault's Roles modifier forwards the call; a
 // session connected as the Safe itself gets the inner call unwrapped. The
 // route is handed to the shared layer rather than resolved from membership,
 // because the modifier and role here are established facts: v1, role 1.
-const { canExecute, disabledReason, isConnectedAsSafe } = useCuratorExecution();
+const { canExecute, disabledReason, isConnectedAsSafe, isLoading: resolvingRole } = useCuratorExecution();
 const INDEFI_ROUTE: ICuratorRoute = {
   chainId: INDEFI.CHAIN,
   rolesModAddress: INDEFI.ADDR.roles,
@@ -290,11 +305,11 @@ const QUOTE_TTL_MS = 30_000;
 const QUOTE_DEBOUNCE_MS = 450;
 
 /* -------------------------------------------------------------------------- */
-/* Holdings and the executor                                                   */
+/* Holdings and the whitelist                                                  */
 /* -------------------------------------------------------------------------- */
 
 const state = ref<IndefiState | null>(null);
-const executorState = ref<ExecutorState | "checking">("checking");
+const grantState = ref<UnoswapGrantState | "checking">("checking");
 
 const holdingOf = (token: IndefiToken) =>
   state.value?.holdings.find((h) => h.token.symbol === token.symbol);
@@ -313,7 +328,6 @@ const refreshState = async () => {
     toastStore.errorToast(error?.message || "Could not read the Safe's holdings.");
   }
 };
-
 /* -------------------------------------------------------------------------- */
 /* The pair                                                                    */
 /* -------------------------------------------------------------------------- */
@@ -395,7 +409,7 @@ interface Quote {
   amountIn: bigint;
   amountOut: bigint;
   minReturn: bigint;
-  route: OnchainRoute;
+  route: UnoswapRoute;
   /** The candidates that priced worse, for the record. */
   alternatives: string[];
   /** Against Chainlink marks; negative means value given up. */
@@ -410,14 +424,12 @@ const quoting = ref(false);
 const quoteError = ref("");
 let quoteSeq = 0;
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-/** Pools do not move between sessions; their discovery is done once per pair. */
-const routesCache = new Map<string, OnchainRoute[]>();
 
 /**
- * The best route the chain can offer right now: every pool the factories
- * know for the pair (and one hop through another vault asset), each priced
- * by simulating the identical swap from the Safe, the winner built as the
- * router call and held against the whitelist before it is shown.
+ * The best route the whitelist allows right now: every listed pool that
+ * trades the pair (and one hop through another listed pair), each priced by
+ * simulating the identical call from the Safe, the winner built as the router
+ * call and held against the whitelist's own rules before it is shown.
  */
 const fetchQuote = async (
   sell: IndefiToken,
@@ -425,35 +437,26 @@ const fetchQuote = async (
   amountIn: bigint,
   tolerance: number,
 ): Promise<Quote> => {
-  const key = `${sell.symbol}-${buy.symbol}`;
-  let routes = routesCache.get(key);
-  if (!routes) {
-    routes = await discoverRoutes(INDEFI.CHAIN, BASE_VENUES, sell, buy, INDEFI_TOKENS);
-    if (routes.length) routesCache.set(key, routes);
-  }
+  const routes = routesBetween(INDEFI_POOLS, sell, buy);
   if (!routes.length) {
-    throw new Error(`No Uniswap V3 or Aerodrome Slipstream pool trades ${sell.symbol} for ${buy.symbol}.`);
+    throw new Error(`No listed pool trades ${sell.symbol} for ${buy.symbol}.`);
   }
   const quotes = await quoteRoutes(INDEFI.CHAIN, INDEFI.ADDR.safe, routes, amountIn);
   if (!quotes.length) {
     throw new Error(
-      `No pool can fill ${fmtUnits(amountIn, sell.decimals, 6)} ${sell.symbol} — try a smaller amount.`,
+      `No listed pool can fill ${fmtUnits(amountIn, sell.decimals, 6)} ${sell.symbol} — try a smaller amount.`,
     );
   }
   const best = quotes[0];
   const minReturn = minReturnFor(best.amountOut, tolerance);
-  const { data } = buildExecutorSwap({
+  const { data } = buildUnoswap({
     safe: INDEFI.ADDR.safe,
     route: best.route,
     amountIn,
     minReturn,
-    deadline: swapDeadline(),
   });
-  const call = parseOneInchSwap(data);
-  const problems = validateOneInchSwap(call, INDEFI_SWAP_RULES, { sell, buy, amount: amountIn }, 0);
-  if (call.executor.toLowerCase() !== SWAP_EXECUTOR.address.toLowerCase()) {
-    problems.push("The built swap does not name the Rethink executor.");
-  }
+  const call = parseUnoswap(data);
+  const problems = validateUnoswap(call, INDEFI_UNOSWAP_RULES, { sell, buy, amount: amountIn });
   if (problems.length) throw new Error(problems.join(" "));
   return {
     amountIn,
@@ -464,7 +467,7 @@ const fetchQuote = async (
       .slice(1, 4)
       .map((q) => `${q.route.label}: ${fmtUnits(q.amountOut, buy.decimals, 6)} ${buy.symbol}`),
     impactPct: swapImpactPct(amountIn, sell, priceOf(sell), best.amountOut, buy, priceOf(buy)),
-    inner: indefiInner.swap(call, data, sell, buy, best.route.label),
+    inner: indefiInner.unoswap(call, data, best.route, sell, buy),
     at: Date.now(),
   };
 };
@@ -476,8 +479,7 @@ const refreshQuote = async () => {
   if (
     !amount.value ||
     insufficient.value ||
-    !slippagePct.value ||
-    executorState.value !== "deployed"
+    !slippagePct.value
   ) {
     quote.value = null;
     quoting.value = false;
@@ -504,7 +506,7 @@ const scheduleQuote = () => {
   debounceTimer = setTimeout(refreshQuote, QUOTE_DEBOUNCE_MS);
 };
 
-watch([amount, sellSymbol, buySymbol, slippagePct, executorState], scheduleQuote);
+watch([amount, sellSymbol, buySymbol, slippagePct], scheduleQuote);
 
 // Idle quotes go stale with the pools; refresh them the way a DEX front end does.
 const now = ref(Date.now());
@@ -551,26 +553,27 @@ const needsApproval = computed(
 
 const notice = computed(() => {
   if (error.value) return error.value;
-  if (executorState.value === "missing") {
-    return `The Rethink swap executor is not deployed on Base yet (${shortAddress(SWAP_EXECUTOR.address)}); swaps cannot be built until it is.`;
+  if (grantState.value === "missing") {
+    return "The whitelist proposal that lets role 1 call unoswapTo has not executed yet. Prices below are live; swapping opens once it has.";
   }
-  if (executorState.value === "foreign") {
-    return `The code at ${shortAddress(SWAP_EXECUTOR.address)} is not the audited swap executor.`;
+  if (grantState.value === "different") {
+    return "The modifier allows unoswapTo, but with different rules than this console builds for. It needs the whitelist proposal as written.";
   }
-  if (executorState.value === "unreachable") return "No Base RPC answered.";
+  if (grantState.value === "unreachable") return "The modifier's permissions could not be read from any source.";
   if (quoteError.value) return quoteError.value;
   return "";
 });
-const noticeBad = computed(() => !!error.value || executorState.value === "foreign");
+const noticeBad = computed(() => !!error.value || grantState.value === "different");
 
 const busy = computed(() => phase.value !== "idle");
 
 /** The one button, saying what it will do or why it cannot. */
 const cta = computed<{ text: string; disabled: boolean; loading?: boolean; hint?: string; action?: () => void }>(() => {
   if (!accountStore.isConnected) return { text: "Connect wallet", disabled: true, hint: disabledReason.value };
+  if (resolvingRole.value) return { text: "Checking your role…", disabled: true, loading: true };
   if (!canExecute.value) return { text: "Not a curator of this vault", disabled: true, hint: disabledReason.value };
-  if (executorState.value === "checking") return { text: "Checking the executor…", disabled: true, loading: true };
-  if (executorState.value !== "deployed") return { text: "Swap executor not deployed", disabled: true };
+  if (grantState.value === "checking") return { text: "Checking the whitelist…", disabled: true, loading: true };
+  if (grantState.value !== "granted") return { text: "Waiting for the whitelist proposal", disabled: true };
   if (!amount.value) return { text: "Enter an amount", disabled: true };
   if (insufficient.value) return { text: `Insufficient ${sellToken.value.symbol} balance`, disabled: true };
   if (!slippagePct.value) return { text: "Set a slippage between 0 and 50%", disabled: true };
@@ -705,6 +708,56 @@ const swap = async () => {
   }
 };
 
+/* -------------------------------------------------------------------------- */
+/* The whitelist proposal                                                      */
+/* -------------------------------------------------------------------------- */
+
+const proposing = ref(false);
+const proposalTx = ref("");
+
+/**
+ * Submits the governance proposal that scopes unoswapTo for role 1 (see
+ * indefiProposal.ts) from the connected wallet. INDEFI's governor has a zero
+ * proposal threshold, so any wallet may propose; the vote is the vault's.
+ */
+const proposeWhitelist = async () => {
+  if (proposing.value) return;
+  error.value = "";
+  try {
+    await ensureChain();
+    const governor = fundStore.fundGovernorContract;
+    if (!governor) throw new Error("The vault's governor is not loaded yet.");
+    const calls = buildIndefiUnoswapProposal();
+    const description = JSON.stringify({
+      title: "Let the manager swap through fixed Uniswap V3 pools; retire 1inch swap()",
+      description: describeIndefiUnoswapProposal(),
+    });
+    proposing.value = true;
+    await new Promise<void>((resolve, reject) => {
+      governor
+        .send(
+          "propose",
+          {},
+          calls.map((c) => c.target),
+          calls.map((c) => c.value.toString()),
+          calls.map((c) => c.data),
+          description,
+        )
+        .on("transactionHash", (hash: any) => {
+          proposalTx.value = hash;
+          toastStore.addToast("The proposal has been submitted. Please wait for it to be confirmed.");
+        })
+        .on("receipt", (receipt: any) => (receipt.status ? resolve() : reject(new Error("The proposal transaction reverted."))))
+        .on("error", (err: any) => reject(err));
+    });
+    toastStore.successToast("Proposal created — it is now up for a vote under Governance.");
+  } catch (err: any) {
+    failed(err);
+  } finally {
+    proposing.value = false;
+  }
+};
+
 const copyText = (text: string, message: string) => {
   navigator.clipboard
     ?.writeText(text)
@@ -715,7 +768,7 @@ const copyText = (text: string, message: string) => {
 onMounted(async () => {
   await Promise.all([
     refreshState(),
-    readExecutorState(INDEFI.CHAIN).then((s) => (executorState.value = s)),
+    readIndefiUnoswapGrant().then((s) => (grantState.value = s)),
   ]);
 });
 </script>
@@ -1085,6 +1138,12 @@ onMounted(async () => {
   font-size: 12.5px;
   line-height: 1.5;
   color: $color-steel-blue;
+
+  &__actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.4rem;
+  }
 
   &--bad {
     border-color: $color-neg-line;

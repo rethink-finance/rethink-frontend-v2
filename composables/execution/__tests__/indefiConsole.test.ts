@@ -1,8 +1,9 @@
 import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
-import { parseOneInchSwap } from "../oneInchSwap";
+import { buildUnoswap, parseUnoswap, routesBetween } from "../onchainSwap";
 import {
   INDEFI,
+  INDEFI_POOLS,
   INDEFI_SWAP_RULES,
   INDEFI_TOKENS,
   indefiInner,
@@ -42,36 +43,48 @@ describe("inner calls", () => {
     expect(inner.params.find((p) => p.k === "spender")?.pinned).toBe(true);
   });
 
-  it("passes a swap's calldata through untouched and reads it out", () => {
-    const hex = fixture.wethToUsdc.calldata;
-    const call = parseOneInchSwap(hex);
-    const inner = indefiInner.swap(call, hex, token("WETH"), token("USDC"), "Uniswap V3");
+  it("reads a built unoswap route out for the operator", () => {
+    const usdc = token("USDC");
+    const weth = token("WETH");
+    const route = routesBetween(INDEFI_POOLS, usdc, weth).find((r) => r.hops.length === 1)!;
+    const amountIn = ethers.parseUnits("1000", 6);
+    const { data } = buildUnoswap({ safe: INDEFI.ADDR.safe, route, amountIn, minReturn: ethers.parseUnits("0.37", 18) });
+    const inner = indefiInner.unoswap(parseUnoswap(data), data, route, usdc, weth);
     expect(inner.to).toBe(INDEFI.ADDR.oneInch);
-    expect(inner.data).toBe(hex);
+    expect(inner.data).toBe(data);
+    expect(inner.sig).toMatch(/unoswapTo\(/);
     const byKey = Object.fromEntries(inner.params.map((p) => [p.k, p.v]));
-    expect(byKey.sell).toBe("1.458602 WETH");
-    expect(byKey.buy).toBe("USDC");
-    expect(byKey.minReturn).toBe("3,969.275285 USDC");
-    expect(byKey.route).toBe("Uniswap V3");
-    expect(inner.params.find((p) => p.k === "dstReceiver")?.pinned).toBe(true);
+    expect(byKey.sell).toBe("1,000 USDC");
+    expect(byKey.minReturn).toBe("0.37 WETH");
+    expect(byKey.route).toBe(route.label);
+    expect(inner.params.find((p) => p.k === "to")?.pinned).toBe(true);
   });
 });
 
 describe("Roles v1 wrap", () => {
-  it("wraps for role 1 of the INDEFI modifier, exactly as the vault's own history shows", () => {
-    const hex = fixture.wethToUsdc.calldata;
-    const inner = indefiInner.swap(parseOneInchSwap(hex), hex, token("WETH"), token("USDC"));
+  it("wraps for role 1 of the INDEFI modifier", () => {
+    const usdc = token("USDC");
+    const weth = token("WETH");
+    const route = routesBetween(INDEFI_POOLS, usdc, weth)[0];
+    const { data } = buildUnoswap({ safe: INDEFI.ADDR.safe, route, amountIn: 1_000_000n, minReturn: 1n });
+    const inner = indefiInner.unoswap(parseUnoswap(data), data, route, usdc, weth);
     const wrapped = indefiWrappedPreview(inner);
     expect(indefiValidateWrapped(wrapped)).toBe(true);
     const decoded = ROLES_V1.decodeFunctionData("execTransactionWithRole", wrapped);
     expect(decoded.to).toBe(INDEFI.ADDR.oneInch);
     expect(decoded.value).toBe(0n);
-    expect(decoded.data).toBe(hex);
+    expect(decoded.data).toBe(data);
     expect(decoded.operation).toBe(0n);
     expect(decoded.role).toBe(1n);
     expect(decoded.shouldRevert).toBe(true);
-    // The manager's real transaction of 2026-09-21 wrapped the same way.
-    expect(wrapped).toBe(fixture.wethToUsdc.wrapped);
+  });
+
+  it("the manager's real September swap() was wrapped the same way", () => {
+    // Same modifier, same role: the wrap of the vault's own history decodes to role 1.
+    const decoded = ROLES_V1.decodeFunctionData("execTransactionWithRole", fixture.wethToUsdc.wrapped);
+    expect(decoded.role).toBe(1n);
+    expect(decoded.to).toBe(INDEFI.ADDR.oneInch);
+    expect(decoded.data).toBe(fixture.wethToUsdc.calldata);
   });
 
   it("flags anything that is not a v1 wrap", () => {

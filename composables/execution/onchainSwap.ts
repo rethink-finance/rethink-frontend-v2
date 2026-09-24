@@ -1,333 +1,238 @@
 import { ethers } from "ethers";
-import {
-  ONE_INCH_ROUTER_V6,
-  oneInchRouterInterface,
-  type SwapAsset,
-} from "./oneInchSwap";
-import { ethCallOn, rpcRequestOn, type StateOverrides } from "./rpc";
+import { ONE_INCH_ROUTER_V6, shortAddress, type SwapAsset } from "./oneInchSwap";
+import { ethCallOn, type StateOverrides } from "./rpc";
 import type { ChainId } from "~/types/enums/chain_id";
 
 /**
- * Swaps built on chain, with no aggregator API.
+ * Swaps built on chain, with no aggregator API and no contract of ours.
  *
- * A vault's Roles whitelist scopes the 1inch router for `swap(executor, desc,
- * data)` and leaves the executor free. 1inch's own executors run a
- * proprietary routing program that only the 1inch API can write; the Rethink
- * swap executor (contracts/swap-executor) runs a route this module writes
- * instead: one exact-input trade on a named DEX router — Uniswap V3 or
- * Aerodrome Slipstream — whose output the 1inch router then measures against
- * `minReturnAmount` and delivers to the Safe. The whole trade is readable in
- * the calldata, and the router's floor is what protects the fill.
+ * The 1inch router's `unoswapTo` family takes the pool to trade through as a
+ * plain number — the "dex word": a protocol tag in the top bits, a direction
+ * flag, and the pool address in the low 160 — and sends the output straight
+ * to `to`. So a route is written here from a fixed list of pools, priced by
+ * simulating the identical call from the Safe (the router's own arithmetic
+ * against live pool state, not an estimate) and sent through the vault's
+ * Roles modifier like any other curator call.
  *
- * Routes are found by asking the DEX factories for pools and priced by
- * simulating the identical `swap()` from the Safe, so every quote is the
- * router's own arithmetic against live pool state rather than an estimate.
+ * The same list of pools is what the modifier is scoped to: `to` pinned to
+ * the Safe, the sold token one-of the vault's assets, `dex` (and `dex2`)
+ * one-of exactly these words. A compromised manager key therefore cannot
+ * route the vault's money through a pool of its own, cannot send the
+ * proceeds anywhere but the Safe, and cannot reach any other entry point.
+ * What the whitelist cannot bound is the price accepted (`minReturn`), which
+ * no Roles v1 condition can relate to the amount — the console fills it from
+ * a live quote and the operator's tolerance.
  */
 
-/**
- * The executor, pinned by CREATE2 through the deterministic deployment proxy
- * so it has the same address on every chain it is deployed to. The app
- * routes only when the code at the address hashes to the audited build.
- */
-export const SWAP_EXECUTOR = {
-  address: "0x2f732eF6E684f7f850281d5525933A0a1a931dC5",
-  runtimeHash: "0x1e35d8cf9ecc741d2baf2e111973407b2895ffd452ae978050427ab2fcdd5261",
-  deployer: "0x4e59b44847b379578588920cA78FbF26c0B4956C",
-  salt: "0x51a2d9df4f83e065beabcdfe74e21f5d5c0fe924c3b1a39fb6730df70647c1f2",
-};
+/** ProtocolLib in AggregationRouterV6: protocol 1 = Uniswap V3 forks. */
+export const UNISWAP_V3_PROTOCOL_FLAG = 1n << 253n;
+/** Set when the sold token is the pool's token0 (tokens sort by address). */
+export const ZERO_FOR_ONE_FLAG = 1n << 247n;
+/** Other flag bits the router understands; none of them belongs in a listed word. */
+export const WETH_UNWRAP_FLAG = 1n << 252n;
 
-export type ExecutorState = "deployed" | "missing" | "foreign" | "unreachable";
+export const unoswapInterface = new ethers.Interface([
+  "function unoswapTo(uint256 to,uint256 token,uint256 amount,uint256 minReturn,uint256 dex) returns (uint256 returnAmount)",
+  "function unoswapTo2(uint256 to,uint256 token,uint256 amount,uint256 minReturn,uint256 dex,uint256 dex2) returns (uint256 returnAmount)",
+]);
+export const UNOSWAP_TO_SELECTOR = unoswapInterface.getFunction("unoswapTo")!.selector;
+export const UNOSWAP_TO2_SELECTOR = unoswapInterface.getFunction("unoswapTo2")!.selector;
 
-/** Whether the audited executor sits at its address on this chain. */
-export const readExecutorState = async (chainId: ChainId): Promise<ExecutorState> => {
-  try {
-    const code = await rpcRequestOn(chainId, "eth_getCode", [SWAP_EXECUTOR.address, "latest"]);
-    if (typeof code !== "string" || code === "0x") return "missing";
-    return ethers.keccak256(code) === SWAP_EXECUTOR.runtimeHash ? "deployed" : "foreign";
-  } catch {
-    return "unreachable";
-  }
-};
-
-export interface DexVenue {
-  key: string;
-  name: string;
-  factory: string;
-  /** The periphery router the executor calls `exactInput` on. */
-  router: string;
-  /** Uniswap V3 pools are keyed by fee (uint24); Slipstream pools by tick spacing (int24). */
-  tierKind: "fee" | "tickSpacing";
-  tiers: number[];
-  /** The original SwapRouter layout carries a deadline; SwapRouter02 does not. */
-  deadline: boolean;
-}
-
-/** Base. Factories and routers verified against each other on chain. */
-export const BASE_VENUES: DexVenue[] = [
-  {
-    key: "uniswap-v3",
-    name: "Uniswap V3",
-    factory: "0x33128a8fC17869897dcE68Ed026d694621f6FDfD",
-    router: "0x2626664c2603336E57B271c5C0b26F421741e481",
-    tierKind: "fee",
-    tiers: [100, 500, 3000, 10000],
-    deadline: false,
-  },
-  {
-    key: "aerodrome-cl",
-    name: "Aerodrome Slipstream",
-    factory: "0x5e7BB104d84c7CB9B682AaC2F3d509f5F406809A",
-    router: "0xBE6D8f0d05cC4be24d5167a3eF062215bE6D18a5",
-    tierKind: "tickSpacing",
-    tiers: [1, 50, 100, 200, 2000],
-    deadline: true,
-  },
-];
-
-export interface RouteHop {
-  tokenIn: SwapAsset;
-  tokenOut: SwapAsset;
-  tier: number;
-  pool: string;
-}
-
-export interface OnchainRoute {
-  venue: DexVenue;
-  hops: RouteHop[];
-  /** Human reading, e.g. "Aerodrome Slipstream · USDC → WETH (ts 100)". */
+/** A pool the vault may trade through, as the whitelist and the console both know it. */
+export interface AllowedPool {
+  address: string;
+  tokens: [SwapAsset, SwapAsset];
+  /** Human reading, e.g. "Uniswap V3 USDC/WETH 0.05%". */
   label: string;
 }
 
-const IF = {
-  factory: new ethers.Interface([
-    "function getPool(address,address,uint24) view returns (address)",
-    "function getPool(address,address,int24) view returns (address)",
-  ]),
-  uniswapRouter02: new ethers.Interface([
-    "function exactInput((bytes path,address recipient,uint256 amountIn,uint256 amountOutMinimum) params) payable returns (uint256 amountOut)",
-  ]),
-  slipstreamRouter: new ethers.Interface([
-    "function exactInput((bytes path,address recipient,uint256 deadline,uint256 amountIn,uint256 amountOutMinimum) params) payable returns (uint256 amountOut)",
-  ]),
-};
-
-export const tierLabel = (venue: DexVenue, tier: number) =>
-  venue.tierKind === "fee" ? `${(tier / 10000).toFixed(2)}%` : `ts ${tier}`;
-
-export const routeLabel = (venue: DexVenue, hops: RouteHop[]) =>
-  `${venue.name} · ` +
-  hops.reduce(
-    (text, hop) => `${text} → ${hop.tokenOut.symbol} (${tierLabel(venue, hop.tier)})`,
-    hops[0]?.tokenIn.symbol ?? "",
-  );
-
-const poolOf = async (
-  chainId: ChainId,
-  venue: DexVenue,
-  a: SwapAsset,
-  b: SwapAsset,
-  tier: number,
-): Promise<string | null> => {
-  const fn =
-    venue.tierKind === "fee"
-      ? "getPool(address,address,uint24)"
-      : "getPool(address,address,int24)";
-  try {
-    const hex = await ethCallOn(
-      chainId,
-      venue.factory,
-      IF.factory.encodeFunctionData(fn, [a.address, b.address, tier]),
-    );
-    const [pool] = IF.factory.decodeFunctionResult(fn, hex);
-    return pool === ethers.ZeroAddress ? null : (pool as string);
-  } catch {
-    return null;
-  }
-};
-
-const poolsBetween = async (
-  chainId: ChainId,
-  venue: DexVenue,
-  a: SwapAsset,
-  b: SwapAsset,
-): Promise<RouteHop[]> => {
-  const hops = await Promise.all(
-    venue.tiers.map(async (tier) => {
-      const pool = await poolOf(chainId, venue, a, b, tier);
-      return pool ? { tokenIn: a, tokenOut: b, tier, pool } : null;
-    }),
-  );
-  return hops.filter((h): h is RouteHop => !!h);
-};
-
-/**
- * Every path from `src` to `dst` worth quoting: each venue's direct pools,
- * then two hops through an intermediate on the same venue (one `exactInput`
- * path). Two hops is the ceiling; on these assets a third never wins.
- */
-export const discoverRoutes = async (
-  chainId: ChainId,
-  venues: DexVenue[],
-  src: SwapAsset,
-  dst: SwapAsset,
-  hopTokens: SwapAsset[] = [],
-): Promise<OnchainRoute[]> => {
-  const mids = hopTokens.filter(
-    (t) =>
-      t.address.toLowerCase() !== src.address.toLowerCase() &&
-      t.address.toLowerCase() !== dst.address.toLowerCase(),
-  );
-  const perVenue = await Promise.all(
-    venues.map(async (venue) => {
-      const routes: OnchainRoute[] = [];
-      const direct = await poolsBetween(chainId, venue, src, dst);
-      for (const hop of direct) routes.push({ venue, hops: [hop], label: routeLabel(venue, [hop]) });
-      for (const mid of mids) {
-        const [first, second] = await Promise.all([
-          poolsBetween(chainId, venue, src, mid),
-          poolsBetween(chainId, venue, mid, dst),
-        ]);
-        for (const a of first) {
-          for (const b of second) {
-            routes.push({ venue, hops: [a, b], label: routeLabel(venue, [a, b]) });
-          }
-        }
-      }
-      return routes;
-    }),
-  );
-  return perVenue.flat();
-};
-
-/** The packed `exactInput` path: token, tier, token, tier, token… */
-export const encodePath = (venue: DexVenue, hops: RouteHop[]): string => {
-  const types: string[] = ["address"];
-  const values: unknown[] = [hops[0].tokenIn.address];
-  for (const hop of hops) {
-    types.push(venue.tierKind === "fee" ? "uint24" : "int24", "address");
-    values.push(hop.tier, hop.tokenOut.address);
-  }
-  return ethers.solidityPacked(types, values);
-};
-
-/** The router call the executor makes; its recipient is always the 1inch router. */
-export const encodeVenueSwap = (
-  venue: DexVenue,
-  path: string,
-  amountIn: bigint,
-  amountOutMinimum: bigint,
-  deadline: number,
-): string =>
-  venue.deadline
-    ? IF.slipstreamRouter.encodeFunctionData("exactInput", [
-      { path, recipient: ONE_INCH_ROUTER_V6, deadline, amountIn, amountOutMinimum },
-    ])
-    : IF.uniswapRouter02.encodeFunctionData("exactInput", [
-      { path, recipient: ONE_INCH_ROUTER_V6, amountIn, amountOutMinimum },
-    ]);
-
-/**
- * What the executor reads from `swap()`'s data:
- * abi.encode(tokenIn, tokenOut, target, calldata). `tokenOut` is what the
- * executor measures on the 1inch router to report the output.
- */
-export const encodeExecutorData = (
-  tokenIn: string,
-  tokenOut: string,
-  target: string,
-  targetCalldata: string,
-) =>
-  ethers.AbiCoder.defaultAbiCoder().encode(
-    ["address", "address", "address", "bytes"],
-    [tokenIn, tokenOut, target, targetCalldata],
-  );
-
-export const decodeExecutorData = (data: string) => {
-  const [tokenIn, tokenOut, target, targetCalldata] =
-    ethers.AbiCoder.defaultAbiCoder().decode(["address", "address", "address", "bytes"], data);
-  return {
-    tokenIn: tokenIn as string,
-    tokenOut: tokenOut as string,
-    target: target as string,
-    targetCalldata: targetCalldata as string,
-  };
-};
-
-export interface ExecutorSwapParams {
-  safe: string;
-  route: OnchainRoute;
-  amountIn: bigint;
-  /** Both the 1inch router's floor and the DEX router's `amountOutMinimum`. */
-  minReturn: bigint;
-  /** Unix seconds; only Slipstream's router reads it. */
-  deadline: number;
+export interface UnoswapHop {
+  pool: AllowedPool;
+  sell: SwapAsset;
+  buy: SwapAsset;
+  /** The dex word for this pool in this direction. */
+  word: bigint;
 }
 
-export const routeEnds = (route: OnchainRoute) => ({
-  src: route.hops[0].tokenIn,
-  dst: route.hops[route.hops.length - 1].tokenOut,
-});
+export interface UnoswapRoute {
+  hops: UnoswapHop[];
+  /** e.g. "USDC → WETH · Uniswap V3 USDC/WETH 0.05%". */
+  label: string;
+}
+
+const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
 /**
- * The router call: `swap(executor, desc, data)` with the sold token sent to
- * the executor, the proceeds pinned to the Safe, no flags, and the route in
- * `data` for the executor to run.
+ * The word `unoswapTo` reads a pool from. Uniswap V3 orders a pool's tokens
+ * by address, so the direction follows from comparing the two and nothing
+ * has to be read on chain.
  */
-export const buildExecutorSwap = ({
-  safe,
-  route,
-  amountIn,
-  minReturn,
-  deadline,
-}: ExecutorSwapParams): { to: string; data: string } => {
-  const { src, dst } = routeEnds(route);
-  const path = encodePath(route.venue, route.hops);
-  const targetCalldata = encodeVenueSwap(route.venue, path, amountIn, minReturn, deadline);
-  const data = encodeExecutorData(src.address, dst.address, route.venue.router, targetCalldata);
+export const dexWord = (pool: string, sellToken: string, buyToken: string): bigint =>
+  UNISWAP_V3_PROTOCOL_FLAG |
+  (sellToken.toLowerCase() < buyToken.toLowerCase() ? ZERO_FOR_ONE_FLAG : 0n) |
+  BigInt(pool);
+
+/** A uint256 as the 32-byte value a Roles compValue holds. */
+export const wordHex = (value: bigint | string) =>
+  ethers.zeroPadValue(ethers.toBeHex(BigInt(value)), 32);
+
+/** Both directions of every listed pool: the exact set the modifier allows. */
+export const allowedDexWords = (pools: AllowedPool[]): bigint[] =>
+  pools.flatMap((pool) => [
+    dexWord(pool.address, pool.tokens[0].address, pool.tokens[1].address),
+    dexWord(pool.address, pool.tokens[1].address, pool.tokens[0].address),
+  ]);
+
+const hopThrough = (pool: AllowedPool, sell: SwapAsset): UnoswapHop | null => {
+  const [a, b] = pool.tokens;
+  const buy = same(a.address, sell.address) ? b : same(b.address, sell.address) ? a : null;
+  if (!buy) return null;
+  return { pool, sell, buy, word: dexWord(pool.address, sell.address, buy.address) };
+};
+
+const routeLabel = (hops: UnoswapHop[]) =>
+  `${hops[0].sell.symbol}${hops.map((h) => ` → ${h.buy.symbol}`).join("")} · ${hops.map((h) => h.pool.label).join(" → ")}`;
+
+/**
+ * Every path from `src` to `dst` inside the list: the direct pools, then two
+ * hops through any token both legs have a listed pool for. Two is the
+ * ceiling, because `unoswapTo2` is the widest entry point whitelisted.
+ */
+export const routesBetween = (pools: AllowedPool[], src: SwapAsset, dst: SwapAsset): UnoswapRoute[] => {
+  const routes: UnoswapRoute[] = [];
+  const firstLegs = pools.map((p) => hopThrough(p, src)).filter((h): h is UnoswapHop => !!h);
+  for (const hop of firstLegs) {
+    if (same(hop.buy.address, dst.address)) routes.push({ hops: [hop], label: routeLabel([hop]) });
+  }
+  for (const first of firstLegs) {
+    if (same(first.buy.address, dst.address) || same(first.buy.address, src.address)) continue;
+    for (const pool of pools) {
+      if (pool.address.toLowerCase() === first.pool.address.toLowerCase()) continue;
+      const second = hopThrough(pool, first.buy);
+      if (second && same(second.buy.address, dst.address)) {
+        routes.push({ hops: [first, second], label: routeLabel([first, second]) });
+      }
+    }
+  }
+  return routes;
+};
+
+export const routeEnds = (route: UnoswapRoute) => ({
+  src: route.hops[0].sell,
+  dst: route.hops[route.hops.length - 1].buy,
+});
+
+export interface UnoswapParams {
+  safe: string;
+  route: UnoswapRoute;
+  amountIn: bigint;
+  minReturn: bigint;
+}
+
+/** The router call: proceeds to the Safe, the route as one or two dex words. */
+export const buildUnoswap = ({ safe, route, amountIn, minReturn }: UnoswapParams): { to: string; data: string } => {
+  const { src } = routeEnds(route);
+  const head = [BigInt(safe), BigInt(src.address), amountIn, minReturn];
+  const words = route.hops.map((h) => h.word);
+  const data =
+    words.length === 1
+      ? unoswapInterface.encodeFunctionData("unoswapTo", [...head, words[0]])
+      : unoswapInterface.encodeFunctionData("unoswapTo2", [...head, words[0], words[1]]);
+  return { to: ONE_INCH_ROUTER_V6, data };
+};
+
+export interface UnoswapCalldata {
+  selector: string;
+  to: string;
+  token: string;
+  amount: bigint;
+  minReturn: bigint;
+  dex: bigint[];
+}
+
+/** Read an unoswapTo / unoswapTo2 call back, the way the modifier sees it. */
+export const parseUnoswap = (hex: string): UnoswapCalldata => {
+  const data = (hex ?? "").trim();
+  if (!/^0x[0-9a-fA-F]*$/.test(data)) throw new Error("That is not hex calldata.");
+  const selector = data.slice(0, 10).toLowerCase();
+  const name =
+    selector === UNOSWAP_TO_SELECTOR ? "unoswapTo" : selector === UNOSWAP_TO2_SELECTOR ? "unoswapTo2" : null;
+  if (!name) throw new Error(`Not an unoswapTo call: selector ${selector}.`);
+  const args = unoswapInterface.decodeFunctionData(name, data);
+  const asAddress = (v: bigint) => ethers.getAddress(ethers.zeroPadValue(ethers.toBeHex(v), 20));
   return {
-    to: ONE_INCH_ROUTER_V6,
-    data: oneInchRouterInterface.encodeFunctionData("swap", [
-      SWAP_EXECUTOR.address,
-      {
-        srcToken: src.address,
-        dstToken: dst.address,
-        srcReceiver: SWAP_EXECUTOR.address,
-        dstReceiver: safe,
-        amount: amountIn,
-        minReturnAmount: minReturn,
-        flags: 0n,
-      },
-      data,
-    ]),
+    selector,
+    to: asAddress(args[0]),
+    token: asAddress(args[1]),
+    amount: args[2],
+    minReturn: args[3],
+    dex: name === "unoswapTo" ? [args[4]] : [args[4], args[5]],
   };
 };
 
-/** Twenty minutes: long enough for a wallet prompt, short enough to go stale. */
-export const swapDeadline = (now = Date.now()) => Math.floor(now / 1000) + 20 * 60;
+/** What the modifier pins, in the same terms the proposal scopes them. */
+export interface UnoswapRules {
+  safe: string;
+  /** Tokens that may be sold (`token` one-of). */
+  sellable: SwapAsset[];
+  /** Pool words that may be traded through (`dex` / `dex2` one-of). */
+  dexWords: bigint[];
+}
+
+/**
+ * Everything the modifier would refuse, said before the wallet opens, plus
+ * whether the call is the trade the operator asked for.
+ */
+export const validateUnoswap = (
+  call: UnoswapCalldata,
+  rules: UnoswapRules,
+  intent: { sell: SwapAsset; buy: SwapAsset; amount: bigint },
+): string[] => {
+  const problems: string[] = [];
+  if (!same(call.to, rules.safe)) {
+    problems.push(`Proceeds must land in the Safe, not ${shortAddress(call.to)}.`);
+  }
+  if (!rules.sellable.some((t) => same(t.address, call.token))) {
+    problems.push(`The whitelist does not allow selling ${shortAddress(call.token)}.`);
+  }
+  for (const word of call.dex) {
+    if (!rules.dexWords.includes(word)) {
+      problems.push(`Pool ${shortAddress(ethers.zeroPadValue(ethers.toBeHex(word & ((1n << 160n) - 1n)), 20))} is not on the whitelist in this direction.`);
+    }
+  }
+  if (!same(call.token, intent.sell.address)) {
+    problems.push(`This sells ${shortAddress(call.token)}, not ${intent.sell.symbol}.`);
+  }
+  if (call.amount !== intent.amount) {
+    problems.push("The amount in the calldata is not the amount entered.");
+  }
+  if (call.minReturn === 0n) {
+    problems.push("minReturn is zero, so this would accept any fill at all.");
+  }
+  return problems;
+};
 
 /**
  * What a route would return right now, asked of the chain: the identical
- * `swap()` is eth_call'd from the Safe with a floor of 1, so the answer is
- * the router's own arithmetic against live pool state. A revert — no
- * liquidity, a path the pools cannot fill — comes back as null.
+ * call is eth_call'd from the Safe with a floor of 1, so the answer is the
+ * router's own arithmetic against live pool state. eth_call from the Safe
+ * does not go through the modifier, so this prices routes before the
+ * whitelist allows them too. A revert comes back as null.
  */
-export const quoteExecutorSwap = async (
+export const quoteUnoswap = async (
   chainId: ChainId,
   safe: string,
-  route: OnchainRoute,
+  route: UnoswapRoute,
   amountIn: bigint,
   overrides?: StateOverrides,
 ): Promise<bigint | null> => {
-  const { to, data } = buildExecutorSwap({
-    safe,
-    route,
-    amountIn,
-    minReturn: 1n,
-    deadline: swapDeadline(),
-  });
+  const { to, data } = buildUnoswap({ safe, route, amountIn, minReturn: 1n });
   try {
     const hex = await ethCallOn(chainId, to, data, safe, overrides);
-    const [returnAmount] = oneInchRouterInterface.decodeFunctionResult("swap", hex);
+    const [returnAmount] = unoswapInterface.decodeFunctionResult(
+      route.hops.length === 1 ? "unoswapTo" : "unoswapTo2",
+      hex,
+    );
     return (returnAmount as bigint) > 0n ? (returnAmount as bigint) : null;
   } catch {
     return null;
@@ -335,7 +240,7 @@ export const quoteExecutorSwap = async (
 };
 
 export interface RouteQuote {
-  route: OnchainRoute;
+  route: UnoswapRoute;
   amountIn: bigint;
   amountOut: bigint;
 }
@@ -344,13 +249,13 @@ export interface RouteQuote {
 export const quoteRoutes = async (
   chainId: ChainId,
   safe: string,
-  routes: OnchainRoute[],
+  routes: UnoswapRoute[],
   amountIn: bigint,
   overrides?: StateOverrides,
 ): Promise<RouteQuote[]> => {
   const quotes = await Promise.all(
     routes.map(async (route) => {
-      const amountOut = await quoteExecutorSwap(chainId, safe, route, amountIn, overrides);
+      const amountOut = await quoteUnoswap(chainId, safe, route, amountIn, overrides);
       return amountOut ? { route, amountIn, amountOut } : null;
     }),
   );

@@ -1,139 +1,121 @@
 import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
 import {
-  BASE_VENUES,
-  SWAP_EXECUTOR,
-  buildExecutorSwap,
-  decodeExecutorData,
-  encodeExecutorData,
-  encodePath,
-  encodeVenueSwap,
+  UNISWAP_V3_PROTOCOL_FLAG,
+  UNOSWAP_TO2_SELECTOR,
+  UNOSWAP_TO_SELECTOR,
+  WETH_UNWRAP_FLAG,
+  ZERO_FOR_ONE_FLAG,
+  allowedDexWords,
+  buildUnoswap,
+  dexWord,
   minReturnFor,
-  routeEnds,
-  routeLabel,
-  swapDeadline,
-  type OnchainRoute,
+  parseUnoswap,
+  routesBetween,
+  validateUnoswap,
+  wordHex,
 } from "../onchainSwap";
-import { ONE_INCH_ROUTER_V6, parseOneInchSwap, validateOneInchSwap } from "../oneInchSwap";
-import { INDEFI, INDEFI_SWAP_RULES, INDEFI_TOKENS } from "../indefiConsole";
+import { ONE_INCH_ROUTER_V6 } from "../oneInchSwap";
+import { INDEFI, INDEFI_POOLS, INDEFI_TOKENS, INDEFI_UNOSWAP_RULES } from "../indefiConsole";
 
 const token = (symbol: string) => INDEFI_TOKENS.find((t) => t.symbol === symbol)!;
-const uniswap = BASE_VENUES.find((v) => v.key === "uniswap-v3")!;
-const aerodrome = BASE_VENUES.find((v) => v.key === "aerodrome-cl")!;
+const USDC = token("USDC");
+const WETH = token("WETH");
+const AERO = token("AERO");
+const POOL_5BP = "0xd0b53D9277642d899DF5C87A3966A349A798F224";
 
-const uniRoute: OnchainRoute = {
-  venue: uniswap,
-  hops: [{ tokenIn: token("USDC"), tokenOut: token("WETH"), tier: 500, pool: "0xd0b53D9277642d899DF5C87A3966A349A798F224" }],
-  label: "",
-};
-const aeroRoute: OnchainRoute = {
-  venue: aerodrome,
-  hops: [{ tokenIn: token("USDC"), tokenOut: token("WETH"), tier: 100, pool: "0xb2cc224c1c9feE385f8ad6a55b4d94E92359DC59" }],
-  label: "",
-};
-
-describe("path encoding", () => {
-  it("packs token, tier, token the way exactInput reads it", () => {
-    const usdc = token("USDC").address.slice(2).toLowerCase();
-    const weth = token("WETH").address.slice(2).toLowerCase();
-    // Uniswap: uint24 fee 500 = 0x0001f4
-    expect(encodePath(uniswap, uniRoute.hops)).toBe(`0x${usdc}0001f4${weth}`);
-    // Slipstream: int24 tick spacing 100 = 0x000064
-    expect(encodePath(aerodrome, aeroRoute.hops)).toBe(`0x${usdc}000064${weth}`);
+describe("dex words", () => {
+  it("tags Uniswap V3, sets the direction from the address order, keeps the pool", () => {
+    // WETH (0x42…) sorts before USDC (0x83…), so WETH is token0: selling USDC is one-for-zero.
+    const usdcToWeth = dexWord(POOL_5BP, USDC.address, WETH.address);
+    const wethToUsdc = dexWord(POOL_5BP, WETH.address, USDC.address);
+    expect(usdcToWeth & UNISWAP_V3_PROTOCOL_FLAG).toBe(UNISWAP_V3_PROTOCOL_FLAG);
+    expect(usdcToWeth & ZERO_FOR_ONE_FLAG).toBe(0n);
+    expect(wethToUsdc & ZERO_FOR_ONE_FLAG).toBe(ZERO_FOR_ONE_FLAG);
+    expect(usdcToWeth & ((1n << 160n) - 1n)).toBe(BigInt(POOL_5BP));
+    expect(usdcToWeth & WETH_UNWRAP_FLAG).toBe(0n);
+    // The very word the fork rehearsal used for this pool and direction.
+    expect(wordHex(usdcToWeth)).toBe("0x2" + "0".repeat(23) + POOL_5BP.slice(2).toLowerCase());
+    // bit 253 → the leading 2; bit 247 → the 8 two digits later.
+    expect(wordHex(wethToUsdc)).toBe("0x208" + "0".repeat(21) + POOL_5BP.slice(2).toLowerCase());
   });
 
-  it("chains two hops into one path", () => {
-    const aero = token("AERO").address.slice(2).toLowerCase();
-    const hops = [
-      uniRoute.hops[0],
-      { tokenIn: token("WETH"), tokenOut: token("AERO"), tier: 3000, pool: "0x0000000000000000000000000000000000000001" },
-    ];
-    expect(encodePath(uniswap, hops)).toMatch(new RegExp(`0001f4.{40}000bb8${aero}$`));
-    expect(routeLabel(uniswap, hops)).toBe("Uniswap V3 · USDC → WETH (0.05%) → AERO (0.30%)");
-    expect(routeLabel(aerodrome, aeroRoute.hops)).toBe("Aerodrome Slipstream · USDC → WETH (ts 100)");
+  it("lists both directions of every pool, and nothing else", () => {
+    const words = allowedDexWords(INDEFI_POOLS);
+    expect(words).toHaveLength(INDEFI_POOLS.length * 2);
+    expect(new Set(words).size).toBe(words.length);
+    expect(INDEFI_UNOSWAP_RULES.dexWords).toEqual(words);
   });
 });
 
-describe("venue calls", () => {
-  const path = encodePath(uniswap, uniRoute.hops);
-
-  it("targets the DEX router's exactInput with the 1inch router as recipient", () => {
-    const uni = new ethers.Interface([
-      "function exactInput((bytes path,address recipient,uint256 amountIn,uint256 amountOutMinimum) params)",
-    ]);
-    const [params] = uni.decodeFunctionData("exactInput", encodeVenueSwap(uniswap, path, 1000n, 7n, 123));
-    expect(params.path).toBe(path);
-    expect(params.recipient).toBe(ONE_INCH_ROUTER_V6);
-    expect(params.amountIn).toBe(1000n);
-    expect(params.amountOutMinimum).toBe(7n);
-
-    const slip = new ethers.Interface([
-      "function exactInput((bytes path,address recipient,uint256 deadline,uint256 amountIn,uint256 amountOutMinimum) params)",
-    ]);
-    const [p2] = slip.decodeFunctionData("exactInput", encodeVenueSwap(aerodrome, path, 1000n, 7n, 123));
-    expect(p2.deadline).toBe(123n);
-    expect(p2.recipient).toBe(ONE_INCH_ROUTER_V6);
+describe("routes", () => {
+  it("finds the direct pools and two-hop paths inside the list", () => {
+    const direct = routesBetween(INDEFI_POOLS, USDC, WETH);
+    expect(direct.filter((r) => r.hops.length === 1)).toHaveLength(3);
+    // USDC → AERO → WETH through the two AERO pools is a legal two-hop.
+    expect(direct.some((r) => r.hops.length === 2 && r.hops[0].buy.symbol === "AERO")).toBe(true);
+    const aero = routesBetween(INDEFI_POOLS, USDC, AERO);
+    expect(aero.filter((r) => r.hops.length === 1)).toHaveLength(1);
+    expect(aero[0].label).toBe("USDC → AERO · Uniswap V3 AERO/USDC 0.05%");
   });
 
-  it("round-trips the executor's route blob", () => {
-    const blob = encodeExecutorData(token("USDC").address, token("WETH").address, uniswap.router, "0xdeadbeef");
-    expect(decodeExecutorData(blob)).toEqual({
-      tokenIn: token("USDC").address,
-      tokenOut: token("WETH").address,
-      target: uniswap.router,
-      targetCalldata: "0xdeadbeef",
-    });
+  it("never routes through a pool that does not carry the pair", () => {
+    const fake = { symbol: "X", address: "0x000000000000000000000000000000000000000f", decimals: 18 };
+    expect(routesBetween(INDEFI_POOLS, fake, WETH)).toEqual([]);
   });
 });
 
-describe("buildExecutorSwap", () => {
+describe("buildUnoswap / parseUnoswap / validateUnoswap", () => {
+  const route = routesBetween(INDEFI_POOLS, USDC, WETH).find(
+    (r) => r.hops.length === 1 && r.hops[0].pool.address === POOL_5BP,
+  )!;
   const amountIn = ethers.parseUnits("1000", 6);
   const minReturn = ethers.parseUnits("0.37", 18);
-  const { to, data } = buildExecutorSwap({
-    safe: INDEFI.ADDR.safe,
-    route: uniRoute,
-    amountIn,
-    minReturn,
-    deadline: swapDeadline(1_800_000_000_000),
-  });
+  const { to, data } = buildUnoswap({ safe: INDEFI.ADDR.safe, route, amountIn, minReturn });
 
-  it("is a swap() on the v6 router that the INDEFI whitelist accepts", () => {
+  it("is an unoswapTo on the v6 router with the proceeds pinned to the Safe", () => {
     expect(to).toBe(ONE_INCH_ROUTER_V6);
-    const call = parseOneInchSwap(data);
-    expect(call.executor).toBe(SWAP_EXECUTOR.address);
-    expect(call.srcReceiver).toBe(SWAP_EXECUTOR.address);
-    expect(call.dstReceiver).toBe(INDEFI.ADDR.safe);
-    expect(call.srcToken).toBe(token("USDC").address);
-    expect(call.dstToken).toBe(token("WETH").address);
+    const call = parseUnoswap(data);
+    expect(call.selector).toBe(UNOSWAP_TO_SELECTOR);
+    expect(call.to).toBe(INDEFI.ADDR.safe);
+    expect(call.token).toBe(USDC.address);
     expect(call.amount).toBe(amountIn);
     expect(call.minReturn).toBe(minReturn);
-    expect(call.flags).toBe(0n);
-    expect(
-      validateOneInchSwap(call, INDEFI_SWAP_RULES, { sell: token("USDC"), buy: token("WETH"), amount: amountIn }, 0),
-    ).toEqual([]);
+    expect(call.dex).toEqual([dexWord(POOL_5BP, USDC.address, WETH.address)]);
+    expect(validateUnoswap(call, INDEFI_UNOSWAP_RULES, { sell: USDC, buy: WETH, amount: amountIn })).toEqual([]);
   });
 
-  it("carries the route for the executor in the program bytes", () => {
-    const call = parseOneInchSwap(data);
-    const route = decodeExecutorData(call.program);
-    expect(route.tokenIn).toBe(token("USDC").address);
-    expect(route.tokenOut).toBe(token("WETH").address);
-    expect(route.target).toBe(uniswap.router);
-    expect(route.targetCalldata.startsWith("0xb858183f")).toBe(true); // exactInput((bytes,address,uint256,uint256))
-    expect(routeEnds(uniRoute)).toEqual({ src: token("USDC"), dst: token("WETH") });
+  it("uses unoswapTo2 for a two-hop path", () => {
+    const twoHop = routesBetween(INDEFI_POOLS, USDC, WETH).find((r) => r.hops.length === 2)!;
+    const built = buildUnoswap({ safe: INDEFI.ADDR.safe, route: twoHop, amountIn, minReturn: 1n });
+    const call = parseUnoswap(built.data);
+    expect(call.selector).toBe(UNOSWAP_TO2_SELECTOR);
+    expect(call.dex).toHaveLength(2);
+    expect(validateUnoswap(call, INDEFI_UNOSWAP_RULES, { sell: USDC, buy: WETH, amount: amountIn })).toEqual([]);
+  });
+
+  it("refuses everything the whitelist refuses", () => {
+    const call = parseUnoswap(data);
+    const intent = { sell: USDC, buy: WETH, amount: amountIn };
+    expect(validateUnoswap({ ...call, to: "0x000000000000000000000000000000000000dEaD" }, INDEFI_UNOSWAP_RULES, intent)[0]).toMatch(/Safe/);
+    expect(validateUnoswap({ ...call, token: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf" }, INDEFI_UNOSWAP_RULES, intent)[0]).toMatch(/selling/);
+    // An Aerodrome pool, and a listed pool with the unwrap flag: both off the list.
+    const aeroPool = dexWord("0xb2cc224c1c9feE385f8ad6a55b4d94E92359DC59", USDC.address, WETH.address);
+    expect(validateUnoswap({ ...call, dex: [aeroPool] }, INDEFI_UNOSWAP_RULES, intent)[0]).toMatch(/not on the whitelist/);
+    expect(validateUnoswap({ ...call, dex: [call.dex[0] | WETH_UNWRAP_FLAG] }, INDEFI_UNOSWAP_RULES, intent)[0]).toMatch(/not on the whitelist/);
+    expect(validateUnoswap({ ...call, minReturn: 0n }, INDEFI_UNOSWAP_RULES, intent)[0]).toMatch(/minReturn is zero/);
+    expect(validateUnoswap({ ...call, amount: amountIn + 1n }, INDEFI_UNOSWAP_RULES, intent)[0]).toMatch(/amount/);
+  });
+
+  it("rejects calldata that is not unoswapTo", () => {
+    expect(() => parseUnoswap("0x07ed2379" + "00".repeat(64))).toThrow(/Not an unoswapTo call/);
+    expect(() => parseUnoswap("nope")).toThrow(/not hex/);
   });
 });
 
 describe("numbers", () => {
-  it("applies the tolerance to the floor and dates the deadline", () => {
+  it("applies the tolerance to the floor", () => {
     expect(minReturnFor(1_000_000n, 1)).toBe(990_000n);
     expect(minReturnFor(1_000_000n, 0.5)).toBe(995_000n);
-    expect(swapDeadline(1_800_000_000_000)).toBe(1_800_000_000 + 1200);
-  });
-
-  it("pins the executor by its audited build", () => {
-    expect(ethers.isAddress(SWAP_EXECUTOR.address)).toBe(true);
-    expect(SWAP_EXECUTOR.salt).toBe(ethers.keccak256(ethers.toUtf8Bytes("rethink.finance/RethinkSwapExecutor/v1")));
-    expect(SWAP_EXECUTOR.runtimeHash).toMatch(/^0x[0-9a-f]{64}$/);
   });
 });
