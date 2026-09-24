@@ -734,7 +734,7 @@ onMounted(async () => {
   gap: 0.5rem;
   padding: 1rem 1rem 0.875rem;
   border: 1px solid $color-line-2;
-  border-radius: 1rem;
+  border-radius: $default-border-radius;
   background: $color-card-background;
   transition: border-color $default-transition-time ease;
 
@@ -837,7 +837,7 @@ onMounted(async () => {
   color: $color-cyan;
   background: $color-cyan-tint;
   border: 1px solid $color-cyan-line;
-  border-radius: 999px;
+  border-radius: $default-border-radius;
   padding: 0.1rem 0.45rem;
   cursor: pointer;
 }
@@ -854,7 +854,7 @@ onMounted(async () => {
   gap: 0.45rem;
   padding: 0.35rem 0.6rem 0.35rem 0.4rem;
   border: 1px solid $color-line-2;
-  border-radius: 999px;
+  border-radius: $default-border-radius;
   background: $color-dark;
   color: $color-white;
   font-size: 15px;
@@ -880,7 +880,7 @@ onMounted(async () => {
   min-width: 220px;
   padding: 0.35rem;
   border: 1px solid $color-line-2;
-  border-radius: 0.75rem;
+  border-radius: $default-border-radius;
   background: $color-dark;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 
@@ -892,7 +892,7 @@ onMounted(async () => {
     width: 100%;
     padding: 0.5rem 0.6rem;
     border: 0;
-    border-radius: 0.5rem;
+    border-radius: $default-border-radius;
     background: transparent;
     color: $color-white;
     text-align: left;
@@ -933,7 +933,7 @@ onMounted(async () => {
   height: 36px;
   margin-top: -18px;
   border: 4px solid $color-dark;
-  border-radius: 12px;
+  border-radius: $default-border-radius;
   background: $color-card-background;
   color: $color-white;
   cursor: pointer;
@@ -948,7 +948,7 @@ onMounted(async () => {
 /* Price and route, folded away until wanted. */
 .ndfi_summary {
   border: 1px solid $color-line;
-  border-radius: 0.75rem;
+  border-radius: $default-border-radius;
   padding: 0.6rem 0.85rem;
 
   summary {
@@ -1033,7 +1033,7 @@ onMounted(async () => {
   height: 24px;
   padding: 0 0.35rem;
   border: 1px solid $color-line-2;
-  border-radius: 6px;
+  border-radius: $default-border-radius;
   background: $color-card-background;
   color: $color-white;
   font-family: $font-mono;
@@ -1065,7 +1065,7 @@ onMounted(async () => {
 
 .ndfi_notice {
   border: 1px solid $color-line-2;
-  border-radius: 0.75rem;
+  border-radius: $default-border-radius;
   padding: 0.6rem 0.85rem;
   font-size: 12.5px;
   line-height: 1.5;
@@ -1078,11 +1078,10 @@ onMounted(async () => {
   }
 }
 
-/* The one button. Taller and rounder than the app's small actions, as the
-   thing the whole card leads to. */
+/* The one button. Taller than the app's small actions, as the thing the
+   whole card leads to; its corners are the app's own. */
 .ndfi_cta.v-btn {
   height: 52px;
-  border-radius: 1rem;
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 0;
