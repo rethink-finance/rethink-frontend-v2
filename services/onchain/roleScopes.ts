@@ -229,7 +229,7 @@ const readPermissionsSaveFloor = (
   rolesModAddress: string,
 ): number => Number(readFloorMap()[floorKey(chainId, rolesModAddress)] ?? 0);
 
-const toRoleScopeLog = (log: any): IRoleScopeLog => ({
+export const toRoleScopeLog = (log: any): IRoleScopeLog => ({
   // Blockscout pads unused topic slots with null and the RPC omits them;
   // either way a null would stringify to "null" and break parseLog.
   topics: (log.topics ?? [])
@@ -250,7 +250,7 @@ const MAX_BLOCKSCOUT_PAGES = 20;
  * 500ing on 2026-09-01), so this is one tier among several rather than the
  * answer; a failure here simply moves on to the next source.
  */
-const fetchBlockscoutRoleLogs = async (
+export const fetchBlockscoutRoleLogs = async (
   chainId: ChainId,
   address: string,
 ): Promise<IRoleScopeLog[]> => {
