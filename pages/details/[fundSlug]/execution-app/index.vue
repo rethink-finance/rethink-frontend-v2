@@ -35,6 +35,7 @@
          console follows it rather than sitting above the page's own header. -->
     <ExecutionCrtConsole v-if="isCrtVault" />
     <ExecutionDocConsole v-else-if="isDocVault" />
+    <ExecutionIndefiConsole v-else-if="isIndefiVault" />
 
     <!-- The raw transfer / raw-calldata / performance-fee tools. A vault with
          a console of its own does not get them: everything they reach is
@@ -294,6 +295,17 @@ const isDocVault = computed(
   () =>
     (fundStore.fund?.address || "").toLowerCase() === DOC_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x89",
+);
+// INDEFI (Base) trades on 1inch under a Roles v1 whitelist that accepts only
+// the router's generic swap() — which the 1inch web app can no longer be made
+// to produce. Its console builds the route through the backend's 1inch relay.
+// The general tools below stay: the vault's Aerodrome positions are still
+// managed by raw calldata.
+const INDEFI_VAULT_ADDRESS = "0x533f164d91e3f8169a7043f7094f44af87fb7ca4";
+const isIndefiVault = computed(
+  () =>
+    (fundStore.fund?.address || "").toLowerCase() === INDEFI_VAULT_ADDRESS &&
+    fundStore.selectedFundChain === "0x2105",
 );
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
