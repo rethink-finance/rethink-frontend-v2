@@ -41,12 +41,12 @@
          a console of its own does not get them: everything they reach is
          already offered there in terms the operator can check, and a free-text
          calldata box beside it is an invitation to bypass that. -->
-    <div v-if="!isDocVault" class="group_title execution-app__section">
+    <div v-if="showGeneralTools" class="group_title execution-app__section">
       General
     </div>
 
     <div
-      v-if="!isDocVault"
+      v-if="showGeneralTools"
       :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`"
     >
       <UiHeader>
@@ -149,7 +149,7 @@
     </div>
 
     <div
-      v-if="!isDocVault"
+      v-if="showGeneralTools"
       :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`"
     >
       <UiHeader>
@@ -298,15 +298,14 @@ const isDocVault = computed(
 );
 // INDEFI (Base) trades on 1inch under a Roles v1 whitelist that accepts only
 // the router's generic swap() — which the 1inch web app can no longer be made
-// to produce. Its console builds the route through the backend's 1inch relay.
-// The general tools below stay: the vault's Aerodrome positions are still
-// managed by raw calldata.
+// to produce. Its console builds the route on chain and sends it itself.
 const INDEFI_VAULT_ADDRESS = "0x533f164d91e3f8169a7043f7094f44af87fb7ca4";
 const isIndefiVault = computed(
   () =>
     (fundStore.fund?.address || "").toLowerCase() === INDEFI_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x2105",
 );
+const showGeneralTools = computed(() => !isDocVault.value && !isIndefiVault.value);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({
