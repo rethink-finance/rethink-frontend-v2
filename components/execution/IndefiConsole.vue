@@ -21,7 +21,12 @@
             <button class="ndfi_token" type="button" @click="togglePicker('sell')">
               <ExecutionTokenMark :symbol="sellToken.symbol" />
               <span>{{ sellToken.symbol }}</span>
-              <span class="ndfi_token__chevron">▾</span>
+              <Icon
+                icon="material-symbols:keyboard-arrow-down-rounded"
+                class="ndfi_token__chevron"
+                width="1.4rem"
+                height="1.4rem"
+              />
             </button>
             <div v-if="picker === 'sell'" class="ndfi_menu">
               <button
@@ -83,7 +88,12 @@
             <button class="ndfi_token" type="button" @click="togglePicker('buy')">
               <ExecutionTokenMark :symbol="buyToken.symbol" />
               <span>{{ buyToken.symbol }}</span>
-              <span class="ndfi_token__chevron">▾</span>
+              <Icon
+                icon="material-symbols:keyboard-arrow-down-rounded"
+                class="ndfi_token__chevron"
+                width="1.4rem"
+                height="1.4rem"
+              />
             </button>
             <div v-if="picker === 'buy'" class="ndfi_menu">
               <button
@@ -867,8 +877,12 @@ onMounted(async () => {
   }
 
   &__chevron {
-    font-size: 11px;
     color: $color-steel-blue;
+    margin-right: -0.2rem;
+  }
+
+  &:hover &__chevron {
+    color: $color-white;
   }
 }
 
@@ -932,15 +946,16 @@ onMounted(async () => {
   width: 36px;
   height: 36px;
   margin-top: -18px;
-  border: 4px solid $color-dark;
+  border: 3px solid $color-surface;
   border-radius: $default-border-radius;
-  background: $color-card-background;
+  background: $color-hover;
   color: $color-white;
   cursor: pointer;
   transition: color $default-transition-time ease, transform $default-transition-time ease;
 
   &:hover {
     color: $color-cyan;
+    background: $color-moonlight-light;
     transform: rotate(180deg);
   }
 }
