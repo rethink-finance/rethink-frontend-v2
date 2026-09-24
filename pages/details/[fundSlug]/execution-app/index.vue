@@ -10,17 +10,13 @@
       <div class="data_bar__item">
         <div class="curator_status">
           <Icon
-            icon="octicon:check-circle-fill-16"
+            :icon="executionMode === 'unverified' ? 'octicon:alert-16' : 'octicon:check-circle-fill-16'"
             width="1rem"
             height="1rem"
-            color="var(--color-success)"
+            :color="executionMode === 'unverified' ? 'var(--color-warning)' : 'var(--color-success)'"
           />
           <div>
-            {{
-              isConnectedAsSafe
-                ? "Connected as the custody Safe"
-                : "Connected as a vault curator"
-            }}
+            {{ executionLabel }}
           </div>
           <!-- What a press does in this mode, for managers used to Pilot
                elsewhere: the pill names the session, the tooltip the route. -->
@@ -274,7 +270,8 @@ const toastStore = useToastStore();
 // it unwrapped, for Pilot to record.
 const {
   canExecute: canExecuteAsCurator,
-  isConnectedAsSafe,
+  executionMode,
+  executionLabel,
   executionHint,
   disabledReason: curatorDisabledReason,
   sendAsCurator,

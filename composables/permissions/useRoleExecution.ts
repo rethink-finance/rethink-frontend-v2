@@ -12,6 +12,8 @@ import {
   type IGasPlan,
 } from "~/composables/permissions/gasLimit";
 import { useAccountStore } from "~/store/account/account.store";
+import { fetchExplorerLogs } from "~/services/onchain/explorerLogs";
+import { fetchBlockscoutRoleLogs } from "~/services/onchain/roleScopes";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
 
@@ -580,23 +582,47 @@ const ASSIGN_ROLES_TOPIC =
 const ASSIGN_ROLES_TOPIC_V1 = rolesIfaceV1.getEvent("AssignRoles")!.topicHash;
 
 /**
- * The modifier's full AssignRoles history. The event is unindexed, so this
- * is a single unbounded eth_getLogs on the modifier — tiny log volume, same
- * RPC caveats as services/onchain/delegates.ts.
+ * The modifier's full AssignRoles history, from the first source that can
+ * serve it whole: the block explorer (topic-filtered, unbounded), then
+ * Blockscout (no key, and it covers Base, whose public RPCs all cap the
+ * eth_getLogs range), then each configured RPC.
+ *
+ * An RPC that answers [] is not believed on its own: a range-capped node says
+ * [] for history it cannot see, and taking that at face value once told a
+ * vault's real manager he held no role while telling strangers the read had
+ * failed. "No assignments" is only the answer once every source that answered
+ * agrees; when nothing answers at all this throws, and the caller treats the
+ * membership as unknown rather than as absent.
  */
 const fetchAssignRolesLogs = async (
   chainId: ChainId,
   rolesModAddress: string,
   version: RolesVersion,
-): Promise<any[]> => {
+): Promise<{ topics: string[]; data: string }[]> => {
   const web3Store = useWeb3Store();
-  const rpcUrls = web3Store.networkRpcUrls(chainId);
-  const topic =
-    version === RolesVersion.V1 ? ASSIGN_ROLES_TOPIC_V1 : ASSIGN_ROLES_TOPIC;
-  let lastError: unknown;
+  const topic = (
+    version === RolesVersion.V1 ? ASSIGN_ROLES_TOPIC_V1 : ASSIGN_ROLES_TOPIC
+  ).toLowerCase();
+  const modifier = rolesModAddress.toLowerCase();
 
-  for (const rpcUrl of rpcUrls) {
-    try {
+  // Every source hands back a slightly different shape; keep only what
+  // parseLog needs, and only this modifier's AssignRoles.
+  const onlyAssignRoles = (logs: any[]) =>
+    logs
+      .filter(
+        (log) =>
+          String(log?.topics?.[0] ?? "").toLowerCase() === topic &&
+          (!log?.address || String(log.address).toLowerCase() === modifier),
+      )
+      .map((log) => ({
+        topics: (log.topics ?? []).filter(Boolean).map(String),
+        data: String(log.data ?? "0x"),
+      }));
+
+  const sources: (() => Promise<any[]>)[] = [
+    () => fetchExplorerLogs(chainId, rolesModAddress, topic),
+    () => fetchBlockscoutRoleLogs(chainId, rolesModAddress),
+    ...web3Store.networkRpcUrls(chainId).map((rpcUrl: string) => async () => {
       const response = await fetch(rpcUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -617,11 +643,32 @@ const fetchAssignRolesLogs = async (
       const json = await response.json();
       if (json.error) throw new Error(json.error.message);
       return json.result ?? [];
+    }),
+  ];
+
+  let answeredEmpty = false;
+  let lastError: unknown;
+  for (const source of sources) {
+    let logs: { topics: string[]; data: string }[];
+    try {
+      logs = onlyAssignRoles(await source());
     } catch (error) {
       lastError = error;
+      continue;
     }
+    if (!logs.length) {
+      answeredEmpty = true;
+      continue;
+    }
+    return logs;
   }
-  throw lastError ?? new Error(`No RPC available for chain ${chainId}`);
+  if (answeredEmpty) return [];
+  throw (
+    lastError ??
+    new Error(
+      `No source could read the AssignRoles history of ${rolesModAddress} on chain ${chainId}`,
+    )
+  );
 };
 
 /**
