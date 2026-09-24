@@ -8,10 +8,13 @@ import {
 } from "~/composables/nav/generateNAVPermission";
 import {
   TX_GAS_CAPS,
+  TransactionGasCapError,
+  bracketRequiredGas,
   planGasLimit,
   type IGasPlan,
 } from "~/composables/permissions/gasLimit";
 import { useAccountStore } from "~/store/account/account.store";
+import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
 
@@ -336,10 +339,49 @@ const standardBlockGasLimit = async (
 };
 
 /**
+ * The estimate failed. Find out whether that is because the call needs more
+ * gas than the chain lets one transaction carry, and say so if it is.
+ *
+ * On a chain with a per-transaction cap the estimator searches no higher
+ * than the cap, so a call that needs more comes back as a plain revert —
+ * indistinguishable, by itself, from a call that fails for a real reason.
+ * Two dry runs tell them apart: it passes with no limit and fails at the cap.
+ * Anything else (it fails regardless, or it fits) is not a cap problem and is
+ * left for the caller to treat as before.
+ */
+const throwIfOverTxGasCap = async (
+  chainId: ChainId,
+  transaction: { from: string; to: string; data: string },
+) => {
+  const cap = TX_GAS_CAPS[chainId];
+  if (!cap) return;
+
+  const succeedsAt = async (gas?: number) => {
+    const { revertData } = await rpcRequest(chainId, "eth_call", [
+      { ...transaction, ...(gas ? { gas: ethers.toQuantity(gas) } : {}) },
+      "latest",
+    ]);
+    return revertData === undefined;
+  };
+
+  if (!(await succeedsAt())) return;
+  if (await succeedsAt(cap)) return;
+
+  throw new TransactionGasCapError(
+    cap,
+    await bracketRequiredGas(cap, succeedsAt),
+    networksMap[chainId]?.chainName ?? "this network",
+  );
+};
+
+/**
  * What the wrapped call needs, asked of the app's own RPCs rather than left
  * to the wallet (see gasLimit.ts for why). Undefined when it cannot be
  * estimated — an inner revert the pre-flight let through on purpose, or no
  * RPC answering — and the wallet is then left to choose, as it always was.
+ *
+ * Throws TransactionGasCapError when the call cannot fit in one transaction
+ * on this chain: that is not something to hand to a wallet at all.
  */
 export const estimateRoleExecutionGas = async (
   chainId: ChainId,
@@ -351,21 +393,25 @@ export const estimateRoleExecutionGas = async (
   const from = useAccountStore().activeAccountAddress;
   if (!from) return undefined;
   try {
+    const transaction = {
+      from,
+      to: rolesModAddress,
+      data: encodeExecWithRole(call, roleKey, version),
+    };
     const { result, revertData } = await rpcRequest(chainId, "eth_estimateGas", [
-      {
-        from,
-        to: rolesModAddress,
-        data: encodeExecWithRole(call, roleKey, version),
-        value: "0x0",
-      },
+      { ...transaction, value: "0x0" },
     ]);
-    if (revertData !== undefined || !result) return undefined;
+    if (revertData !== undefined || !result) {
+      await throwIfOverTxGasCap(chainId, transaction);
+      return undefined;
+    }
     return planGasLimit(
       Number(BigInt(result)),
       await standardBlockGasLimit(chainId),
       TX_GAS_CAPS[chainId],
     );
   } catch (error) {
+    if (error instanceof TransactionGasCapError) throw error;
     console.warn("Could not estimate gas for the role execution", error);
     return undefined;
   }
