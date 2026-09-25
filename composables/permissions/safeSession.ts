@@ -25,22 +25,41 @@ export const isSafeSession = (
   return safeAddress.toLowerCase() === account.toLowerCase();
 };
 
-/** How an execution button would act if pressed right now. */
-export type CuratorExecutionMode = "safe" | "curator" | "none";
+/**
+ * How an execution button would act if pressed right now. "unverified" is
+ * a wallet whose role could not be read from the modifier: the buttons stay
+ * enabled, because the pre-flight simulation is the real gate, but nothing
+ * may call that wallet a curator.
+ */
+export type CuratorExecutionMode = "safe" | "curator" | "unverified" | "none";
 
 /**
  * A Safe session takes the unwrapped path before anything else is asked:
  * membership is never even read for it, so a Safe that somehow also held a
- * role would still send as itself. Everyone else needs a role.
+ * role would still send as itself. Everyone else needs a role — confirmed
+ * from the modifier's own log, or, when no source could serve that log,
+ * left to the dry-run to decide.
  */
 export const resolveExecutionMode = (
   isConnected: boolean,
   isSafe: boolean,
   isCurator: boolean,
+  membershipUnknown = false,
 ): CuratorExecutionMode => {
   if (!isConnected) return "none";
   if (isSafe) return "safe";
-  return isCurator ? "curator" : "none";
+  if (isCurator) return "curator";
+  return membershipUnknown ? "unverified" : "none";
+};
+
+/** What the status pill says for each mode. */
+export const EXECUTION_MODE_LABELS: Record<
+  Exclude<CuratorExecutionMode, "none">,
+  string
+> = {
+  safe: "Connected as the custody Safe",
+  curator: "Connected as a vault curator",
+  unverified: "Curator role not verified",
 };
 
 /**
@@ -57,4 +76,8 @@ export const EXECUTION_MODE_HINTS: Record<
   curator:
     "Connected as a vault curator: your wallet signs, and the vault's Roles " +
     "modifier forwards the call as the Safe.",
+  unverified:
+    "The vault's Roles modifier could not be read from any source, so this " +
+    "wallet's role is unknown. Every transaction is still dry-run against " +
+    "the modifier before your wallet opens; one it refuses will not be sent.",
 };

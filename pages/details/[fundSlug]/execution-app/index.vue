@@ -10,17 +10,13 @@
       <div class="data_bar__item">
         <div class="curator_status">
           <Icon
-            icon="octicon:check-circle-fill-16"
+            :icon="executionMode === 'unverified' ? 'octicon:alert-16' : 'octicon:check-circle-fill-16'"
             width="1rem"
             height="1rem"
-            color="var(--color-success)"
+            :color="executionMode === 'unverified' ? 'var(--color-warning)' : 'var(--color-success)'"
           />
           <div>
-            {{
-              isConnectedAsSafe
-                ? "Connected as the custody Safe"
-                : "Connected as a vault curator"
-            }}
+            {{ executionLabel }}
           </div>
           <!-- What a press does in this mode, for managers used to Pilot
                elsewhere: the pill names the session, the tooltip the route. -->
@@ -35,17 +31,18 @@
          console follows it rather than sitting above the page's own header. -->
     <ExecutionCrtConsole v-if="isCrtVault" />
     <ExecutionDocConsole v-else-if="isDocVault" />
+    <ExecutionIndefiConsole v-else-if="isIndefiVault" />
 
     <!-- The raw transfer / raw-calldata / performance-fee tools. A vault with
          a console of its own does not get them: everything they reach is
          already offered there in terms the operator can check, and a free-text
          calldata box beside it is an invitation to bypass that. -->
-    <div v-if="!isDocVault" class="group_title execution-app__section">
+    <div v-if="showGeneralTools" class="group_title execution-app__section">
       General
     </div>
 
     <div
-      v-if="!isDocVault"
+      v-if="showGeneralTools"
       :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`"
     >
       <UiHeader>
@@ -148,7 +145,7 @@
     </div>
 
     <div
-      v-if="!isDocVault"
+      v-if="showGeneralTools"
       :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`"
     >
       <UiHeader>
@@ -273,7 +270,8 @@ const toastStore = useToastStore();
 // it unwrapped, for Pilot to record.
 const {
   canExecute: canExecuteAsCurator,
-  isConnectedAsSafe,
+  executionMode,
+  executionLabel,
   executionHint,
   disabledReason: curatorDisabledReason,
   sendAsCurator,
@@ -295,6 +293,16 @@ const isDocVault = computed(
     (fundStore.fund?.address || "").toLowerCase() === DOC_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x89",
 );
+// INDEFI (Base) trades on 1inch under a Roles v1 whitelist that accepts only
+// the router's generic swap() — which the 1inch web app can no longer be made
+// to produce. Its console builds the route on chain and sends it itself.
+const INDEFI_VAULT_ADDRESS = "0x533f164d91e3f8169a7043f7094f44af87fb7ca4";
+const isIndefiVault = computed(
+  () =>
+    (fundStore.fund?.address || "").toLowerCase() === INDEFI_VAULT_ADDRESS &&
+    fundStore.selectedFundChain === "0x2105",
+);
+const showGeneralTools = computed(() => !isDocVault.value && !isIndefiVault.value);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({

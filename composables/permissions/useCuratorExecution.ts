@@ -20,6 +20,7 @@ import {
   EXECUTION_MODE_HINTS,
   resolveExecutionMode,
   type CuratorExecutionMode,
+  EXECUTION_MODE_LABELS,
 } from "~/composables/permissions/safeSession";
 import type { IGasPlan } from "~/composables/permissions/gasLimit";
 import { useAccountStore } from "~/store/account/account.store";
@@ -488,11 +489,16 @@ export const useCuratorExecution = () => {
    */
   const isConnectedAsSafe = computed(() => fundStore.isConnectedWalletTheSafe);
 
+  /** A role confirmed from the modifier's own log — not assumed. */
   const isCurator = computed(
     () =>
       !!roleState.value &&
-      (roleState.value.roles.length > 0 || roleState.value.unknown),
+      !roleState.value.unknown &&
+      roleState.value.roles.length > 0,
   );
+
+  /** No source could serve the membership log; the dry-run decides. */
+  const isUnverified = computed(() => !!roleState.value?.unknown);
 
   /** How a press would go out, for the surface to say so. */
   const executionMode = computed<CuratorExecutionMode>(() =>
@@ -500,7 +506,15 @@ export const useCuratorExecution = () => {
       accountStore.isConnected,
       isConnectedAsSafe.value,
       isCurator.value,
+      isUnverified.value,
     ),
+  );
+
+  /** The status pill's text; empty when nothing can execute. */
+  const executionLabel = computed(() =>
+    executionMode.value === "none"
+      ? ""
+      : EXECUTION_MODE_LABELS[executionMode.value],
   );
 
   /** May the connected wallet press the vault's execution buttons at all? */
@@ -555,8 +569,10 @@ export const useCuratorExecution = () => {
   return {
     isLoading,
     isCurator,
+    isUnverified,
     isConnectedAsSafe,
     executionMode,
+    executionLabel,
     executionHint,
     canExecute,
     disabledReason,
