@@ -22,9 +22,20 @@
     </div>
 
     <div class="action__body">
+      <p
+        v-if="action.type === ProposalCalldataType.NAV_UPDATE && isExecutorCopy && action.executorCopyOf !== undefined"
+        class="action__plain"
+      >
+        The NAV executor keeps the copy of the vault's methods that the manager's
+        Update NAV replays. This call stores the same
+        {{ navMethodCount }} {{ navMethodCount === 1 ? "method" : "methods" }} as call
+        {{ action.executorCopyOf + 1 }}, so the manager keeps updating with the list
+        this proposal sets.
+      </p>
       <FundGovernanceProposalActionNav
-        v-if="action.type === ProposalCalldataType.NAV_UPDATE"
+        v-else-if="action.type === ProposalCalldataType.NAV_UPDATE"
         :decoded="action.decoded"
+        :executor-copy="isExecutorCopy"
       />
       <FundGovernanceProposalActionSettings
         v-else-if="action.type === ProposalCalldataType.FUND_SETTINGS"
@@ -43,6 +54,9 @@
         v-else-if="isFlowsCall"
         :decoded="action.decoded"
       />
+      <p v-else-if="feeCollection" class="action__plain">
+        {{ feeCollection.explanation }}
+      </p>
       <div v-else class="unknown">
         <template v-if="action.functionName">
           <p v-if="explanation" class="unknown__explanation">
@@ -131,8 +145,44 @@ const kindLabel = computed(() => {
       return "Safe execution";
     default:
       if (isFlowsCall.value) return "Vault flows";
+      if (feeCollection.value) return "Fees";
       return props.action.functionName ? "Contract call" : "Unknown call";
   }
+});
+
+/** storeNAVData: the NAV executor's copy of the methods, not the vault's own list. */
+const isExecutorCopy = computed(() => props.action.functionName === "storeNAVData");
+const navMethodCount = computed(
+  (): number => props.action.decoded?.navUpdateData?.length ?? 0,
+);
+
+const FEE_TYPES: Record<string, string> = {
+  "0": "deposit",
+  "1": "redemption",
+  "2": "management",
+  "3": "performance",
+};
+
+/**
+ * collectFees(feeType) on the vault, said in one line: which fee and that it
+ * only pays out what has accrued. The argument list underneath would add
+ * nothing a reader needs.
+ */
+const feeCollection = computed(() => {
+  if (
+    props.action.functionName !== "collectFees" ||
+    props.action.contractName !== "GovernableFund"
+  ) {
+    return undefined;
+  }
+  const raw = String(params.value[0]?.value ?? "");
+  const kind = FEE_TYPES[raw];
+  return {
+    headline: kind ? `Collect ${kind} fees` : `Collect fees (type ${raw || "?"})`,
+    explanation: kind
+      ? `Pays the ${kind} fees the vault has accrued, if any, to its fee recipient.`
+      : "Pays the accrued fees of this type, if any, to the vault's fee recipient.",
+  };
 });
 
 /**
@@ -153,8 +203,6 @@ const EXPLANATIONS: Record<string, string> = {
   removeOwner: "Removes a Safe owner and sets how many signatures the Safe requires.",
   changeThreshold: "Changes how many owner signatures the Safe requires.",
   executeNAVUpdate: "Executes the vault's stored NAV methods and records a new NAV.",
-  collectFees:
-    "Pays the accrued fees of the given type out to their recipient. Fee types: 0 deposit, 1 redemption, 2 management, 3 performance.",
 };
 
 const explanation = computed(() =>
@@ -190,8 +238,14 @@ const headline = computed(() => {
   switch (props.action.type) {
     case ProposalCalldataType.NAV_UPDATE: {
       const count = decoded?.navUpdateData?.length ?? 0;
-      return count
-        ? `Set the vault's NAV methods (${count} ${count === 1 ? "method" : "methods"})`
+      const methods = count ? `${count} ${count === 1 ? "method" : "methods"}` : "";
+      if (isExecutorCopy.value) {
+        return props.action.executorCopyOf !== undefined
+          ? "Store the same NAV methods on the NAV executor"
+          : `Store NAV methods on the NAV executor${methods ? ` (${methods})` : ""}`;
+      }
+      return methods
+        ? `Set the vault's NAV methods (${methods})`
         : "Set the vault's NAV methods";
     }
     case ProposalCalldataType.FUND_SETTINGS:
@@ -210,6 +264,7 @@ const headline = computed(() => {
     }
     default:
       if (isFlowsCall.value) return flowsHeadline.value;
+      if (feeCollection.value) return feeCollection.value.headline;
       return props.action.functionName
         ? `Call ${props.action.functionName} on the target contract`
         : "Unrecognised contract call";
@@ -412,6 +467,14 @@ const flag = computed((): string | undefined => {
     font-size: 12.5px;
     line-height: 1.5;
     color: $color-steel-blue;
+  }
+
+  // A call that is fully said in one sentence: no table, no argument list.
+  &__plain {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: $color-text-irrelevant;
   }
 }
 

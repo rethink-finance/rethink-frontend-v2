@@ -1,15 +1,27 @@
 <template>
   <div class="nav_action">
     <p class="nav_action__intro">
-      <template v-if="methods.length">
+      <template v-if="methods.length && executorCopy">
+        {{ methods.length === 1 ? "This is the method" : `These are the ${methods.length} methods` }}
+        the manager's Update NAV would replay after this proposal executes: the
+        NAV executor keeps this copy, separate from the vault's own list.
+        The simulated column prices them against the vault's holdings right now.
+      </template>
+      <template v-else-if="methods.length">
         These {{ methods.length === 1 ? "is the method" : `are the ${methods.length} methods` }}
         the vault would value its positions with after this proposal executes.
         The simulated column prices them against the vault's holdings right now.
       </template>
+      <template v-else-if="executorCopy">
+        This call would leave the manager's Update NAV with no methods to replay.
+      </template>
       <template v-else>
         This call would leave the vault with no NAV methods.
       </template>
-      <template v-if="processesWithdrawals">
+      <template v-if="processesWithdrawals && executorCopy">
+        Pending redemptions are processed by those updates.
+      </template>
+      <template v-else-if="processesWithdrawals">
         Pending redemptions are processed as part of the same update.
       </template>
     </p>
@@ -46,6 +58,8 @@ import type INAVMethod from "~/types/nav_method";
  */
 const props = defineProps<{
   decoded?: Record<string, any>;
+  /** The call is storeNAVData: the NAV executor's copy, not the vault's list. */
+  executorCopy?: boolean;
 }>();
 
 const fundStore = useFundStore();
