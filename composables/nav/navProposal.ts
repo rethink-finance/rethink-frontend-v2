@@ -1,16 +1,32 @@
+import { toRaw } from "vue";
 import { type AbiFunctionFragment } from "web3";
 import { decodeFunctionCall, encodeFunctionCall } from "web3-eth-abi";
 import { NAVExecutor } from "assets/contracts/NAVExecutor";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
 import {
+  prepNAVMethodComposable,
+  prepNAVMethodIlliquid,
+  prepNAVMethodLiquid,
+  prepNAVMethodNFT,
+  prepRoleModEntryInput,
+} from "~/composables/parseNavMethodDetails";
+import { useContractAddresses } from "~/composables/useContractAddresses";
+import {
   encodedCollectFlowFeesAbiJSON,
   encodedCollectManagerFeesAbiJSON,
   encodedCollectPerformanceFeesAbiJSON,
 } from "~/composables/nav/encodedCollectFees";
-import { generateNAVPermission, getMethodsPastNAVUpdateIndex } from "~/composables/nav/generateNAVPermission";
+import {
+  DEFAULT_ROLE_KEY,
+  DEFAULT_ROLE_KEY_V2,
+  generateNAVPermission,
+  generateNAVPermissionRolesV2,
+  getMethodsPastNAVUpdateIndex,
+} from "~/composables/nav/generateNAVPermission";
 import type { ChainId } from "~/types/enums/chain_id";
 import { roleModFunctions } from "~/types/enums/delegated_permission";
 import { PositionType } from "~/types/enums/position_type";
+import { RolesVersion } from "~/types/enums/roles_version";
 import type INAVMethod from "~/types/nav_method";
 import type IProposalData from "~/types/proposal/proposalData";
 
@@ -111,17 +127,47 @@ export const decodeUpdateNavMethods = (
 )
 
 
+/** storeNAVData(fund, updateNavCalldata) — the NAV executor's copy. */
+export const encodeStoreNAVData = (
+  fundAddress: string,
+  encodedNavUpdateEntries: string,
+): string =>
+  encodeFunctionCall(storeNAVDataABI as AbiFunctionFragment, [
+    fundAddress,
+    encodedNavUpdateEntries,
+  ]);
+
+/**
+ * The NAV-methods proposal: updateNav on the vault, then — when the chain's
+ * NAV executor is given — storeNAVData on it with the SAME calldata, then the
+ * fee collections.
+ *
+ * The executor copy belongs in this proposal, not in the optional
+ * permissions one: the manager's Update NAV button (executeNAVUpdate) never
+ * reads the vault's method list, it replays whatever the executor stores, and
+ * storeNAVData is governor-only. A proposal that changes the vault's methods
+ * without refreshing that copy leaves the manager replaying the OLD list —
+ * on INDEFI that was 26 methods at 17.5M gas, above Base's transaction cap,
+ * while the vault itself already held two.
+ */
 export const getNavMethodsProposalData = (
   encodedNavUpdateEntries: any,
   fundAddress: string,
   collectFlowFees: boolean = false,
   collectManagementFees: boolean = false,
   collectPerformanceFees: boolean = false,
+  navExecutorAddress?: string,
 ): IProposalData => {
   // Propose NAV update for fund (target: fund addr, payloadL bytes)
   const targets = [fundAddress];
   const gasValues = [0];
   const calldatas = [encodedNavUpdateEntries];
+
+  if (navExecutorAddress) {
+    targets.push(navExecutorAddress);
+    gasValues.push(0);
+    calldatas.push(encodeStoreNAVData(fundAddress, encodedNavUpdateEntries));
+  }
 
   // Conditionally include collect Flow fees.
   console.log("NAV collectFlowFees: ", collectFlowFees);
@@ -158,40 +204,43 @@ export const getNavMethodsProposalData = (
 /**
  * Permissions proposal to:
  * allow manager to keep updating NAV based on approved methods.
+ * Kept for callers that want the executor copy bundled with the permission
+ * calls; the NAV manage page now ships the copy in the methods proposal
+ * itself (see getNavMethodsProposalData) and only adds the permissions.
  * @param encodedNavUpdateEntries
  * @param fundAddress
  * @param fundChainId
  * @param roleModAddress
+ * @param version which modifier generation `roleModAddress` is (probe it —
+ *                see resolveRolesModifierProfile); defaults to V1, which is
+ *                what this used to assume unconditionally
+ * @param role the manager's role on that modifier
  */
 export const getAllowManagerToUpdateNavProposalData = (
   encodedNavUpdateEntries: any,
   fundAddress: string,
   fundChainId: ChainId,
   roleModAddress: string,
+  version: RolesVersion = RolesVersion.V1,
+  role?: string,
 ): IProposalData => {
   const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
   const navExecutorAddress = getNAVExecutorBeaconProxyAddress(fundChainId);
 
-  const encodedDataStoreNAVDataNavUpdateEntries =
-    encodeFunctionCall(
-      storeNAVDataABI as AbiFunctionFragment,
-      [fundAddress, encodedNavUpdateEntries],
-    );
-
-  const permissionsData =
-    getAllowManagerToUpdateNavPermissionsData(
-      fundAddress,
-      fundChainId,
-      roleModAddress,
-    );
-  console.warn("encodedNavUpdateEntries", fundAddress, encodedNavUpdateEntries);
-
-  console.warn("encodedDataStoreNAVDataNavUpdateEntries", encodedDataStoreNAVDataNavUpdateEntries);
+  const permissionsData = buildManagerNavPermissionCalls(
+    fundAddress,
+    navExecutorAddress,
+    roleModAddress,
+    version,
+    role,
+  );
 
   return {
     targets: [navExecutorAddress].concat(permissionsData.targets),
     gasValues: [0].concat(permissionsData.gasValues),
-    calldatas: [encodedDataStoreNAVDataNavUpdateEntries].concat(permissionsData.calldatas),
+    calldatas: [encodeStoreNAVData(fundAddress, encodedNavUpdateEntries)].concat(
+      permissionsData.calldatas,
+    ),
   };
 }
 
@@ -199,15 +248,60 @@ export const getAllowManagerToUpdateNavPermissionsData = (
   fundAddress: string,
   fundChainId: ChainId,
   roleModAddress: string,
+  version: RolesVersion = RolesVersion.V1,
+  role?: string,
 ): IProposalData => {
   const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
   const navExecutorAddress = getNAVExecutorBeaconProxyAddress(fundChainId);
+  return buildManagerNavPermissionCalls(
+    fundAddress,
+    navExecutorAddress,
+    roleModAddress,
+    version,
+    role,
+  );
+}
+
+/**
+ * The two modifier calls that let `role` run executeNAVUpdate(navExecutor)
+ * on the vault, encoded for the modifier generation actually deployed:
+ *
+ * - V1: scopeFunction(uint16 role, fund, 0xa61f5814, [scoped], [Static],
+ *       [EqualTo], [navExecutor], options) + scopeTarget(uint16 role, fund)
+ * - V2: scopeFunction(bytes32 roleKey, fund, 0xa61f5814, conditions
+ *       [Calldata/Matches, Static/EqualTo navExecutor], None) +
+ *       scopeTarget(bytes32 roleKey, fund)
+ *
+ * Pure: no store access, so it can be unit-tested and the page can show
+ * what it is about to propose. `role` is the id as the modifier reports it
+ * (a decimal string on V1; a bytes32 hex or the "defaulManagerRole" label on
+ * V2) and defaults to the role Rethink vaults are created with.
+ */
+export const buildManagerNavPermissionCalls = (
+  fundAddress: string,
+  navExecutorAddress: string,
+  roleModAddress: string,
+  version: RolesVersion,
+  role?: string,
+): IProposalData => {
+  if (version === RolesVersion.V2) {
+    const calldatas = generateNAVPermissionRolesV2(
+      fundAddress,
+      navExecutorAddress,
+      role ?? DEFAULT_ROLE_KEY_V2,
+    );
+    return {
+      targets: calldatas.map(() => roleModAddress),
+      gasValues: calldatas.map(() => 0),
+      calldatas,
+    };
+  }
 
   const navPermissionEntries = generateNAVPermission(
     fundAddress,
     navExecutorAddress,
+    role ?? DEFAULT_ROLE_KEY,
   );
-
   const [encodedRoleModEntries, roleModTargets, roleModGasValues] =
     encodeRoleModEntries(navPermissionEntries, roleModAddress);
 
@@ -216,7 +310,7 @@ export const getAllowManagerToUpdateNavPermissionsData = (
     gasValues: roleModGasValues,
     calldatas: encodedRoleModEntries,
   };
-}
+};
 
 const encodeRoleModEntries = (
   proposalEntries: any[],

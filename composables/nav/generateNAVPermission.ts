@@ -6,6 +6,15 @@ import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 export const DEFAULT_ROLE_KEY = "1";
 export const DEFAULT_ROLE_KEY_V2 = "defaulManagerRole"; // typo is intentional
 
+/**
+ * A Roles V2 role key as the modifier wants it: bytes32. Accepts either the
+ * human label the create flow uses ("defaulManagerRole") or an id that was
+ * read back off chain, which arrives already encoded — re-encoding the hex
+ * as a string would silently produce a different, unassigned role.
+ */
+export const toRoleKeyBytes32 = (roleKey: string): string =>
+  ethers.isHexString(roleKey, 32) ? roleKey : ethers.encodeBytes32String(roleKey);
+
 // Build a minimal ABI map for Roles V2 write functions we need
 export const rolesV2WriteFunctionAbiMap: Record<string, any> = {
   scopeFunction: (RolesFullV2 as any).abi.find(
@@ -17,21 +26,28 @@ export const rolesV2WriteFunctionAbiMap: Record<string, any> = {
 };
 
 /**
- * Generate NAV permissions to allow manager to keep
- * updating NAV based on these methods
+ * Generate NAV permissions (Roles V1 descriptors) to allow the manager to
+ * keep updating NAV based on these methods: scopeFunction(role, fund,
+ * executeNAVUpdate, navExecutor pinned) and scopeTarget(role, fund).
  * @param fundAddress
  * @param navExecutorAddress
+ * @param role the V1 role id (uint16, as a decimal string) the manager holds
+ *             on this modifier — read it off the modifier (see
+ *             resolveRolesModifierProfile); "1" is only what Rethink vaults
+ *             are created with.
  */
 export const generateNAVPermission = (
   fundAddress: string,
   navExecutorAddress: string,
+  role: string = DEFAULT_ROLE_KEY,
 ) => {
+  const roleId = String(role);
   // Default NAV entry permission
   const navEntryPermission: Record<string, any> = {
     value: [
       {
         isArray: false,
-        data: "1",
+        data: roleId,
         internalType: "uint16",
         name: "role",
       },
@@ -86,8 +102,7 @@ export const generateNAVPermission = (
       {
         idx: 0,
         isArray: false,
-        // TODO: ASSUMES ROLE ID OF 1, BUT COULD BE ANY OTHER ID, NEED A WAY TO POPULATE IT SMARTLY
-        data: "1",
+        data: roleId,
         internalType: "uint16",
         name: "role",
       },
@@ -134,8 +149,8 @@ export const defaultScopedTargetPermissionRolesV2 = (
   compValue: string, // address (Static) or full bytes blob (Dynamic)
   paramType: number = 1, // default ParameterType.Static = 1; use 2 for Dynamic
 ): string => {
-  // Encode roleKey from a string to bytes32
-  const encodedRoleKey = ethers.encodeBytes32String(roleKey);
+  // Encode roleKey to bytes32 (labels are encoded, on-chain ids pass through)
+  const encodedRoleKey = toRoleKeyBytes32(roleKey);
 
   // Encode compValue depending on paramType
   // - Static (1): treat compValue as address and left-pad to 32 bytes
@@ -221,7 +236,7 @@ export const getScopeTargetV2 = (
   roleKey: string = DEFAULT_ROLE_KEY_V2,
   target: string,
 )=> {
-  const encodedRoleKey = ethers.encodeBytes32String(roleKey);
+  const encodedRoleKey = toRoleKeyBytes32(roleKey);
 
   return encodeFunctionCall(rolesV2WriteFunctionAbiMap.scopeTarget, [
     encodedRoleKey,
@@ -238,7 +253,7 @@ export const getAssignMembersRoleV2 = (
   const assignRolesAbi: any = (RolesFullV2 as any).abi.find(
     (f: any) => f?.type === "function" && f?.name === "assignRoles",
   );
-  const roleKeyBytes = ethers.encodeBytes32String(roleKey);
+  const roleKeyBytes = toRoleKeyBytes32(roleKey);
   const encodedRoleModEntries: string[] = [];
 
   for (const member of members) {

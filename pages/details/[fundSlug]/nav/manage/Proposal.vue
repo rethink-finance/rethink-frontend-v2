@@ -45,13 +45,51 @@
             <div class="nav_proposal__row_text">
               Allow manager to keep updating NAV based on these methods
               <span class="nav_proposal__row_note">
-                All previous manager permissions related to NAV will be
-                revoked.
+                Adds a second proposal that scopes executeNAVUpdate for the
+                manager's role on the vault's Roles modifier. The NAV
+                executor's copy of these methods is refreshed by the first
+                proposal either way.
+              </span>
+              <span
+                v-if="rolesProfile"
+                class="nav_proposal__row_note nav_proposal__modifier"
+                :class="{ 'nav_proposal__modifier--warn': permissionsBlockedReason }"
+              >
+                {{ rolesProfile.label }}
+                <template v-if="rolesProfile.address && rolesProfile.owner">
+                  · owned by
+                  {{ rolesProfile.governorOwned ? "the governor" : "the Safe" }}
+                </template>
+                <template v-if="routeThroughSafe">
+                  · proposal actions run as the Safe
+                </template>
+                <template v-if="rolesProfile.address && !rolesProfile.roleAssumed">
+                  · manager role {{ shortRole(rolesProfile.role) }}
+                </template>
+                <template v-if="permissionsBlockedReason">
+                  — {{ permissionsBlockedReason }}
+                </template>
+                <template v-else-if="rolesProfile.membershipUnknown">
+                  — the manager's membership could not be read on this
+                  network; the permission targets the default role
+                  {{ shortRole(rolesProfile.role) }}.
+                </template>
+                <template v-else-if="rolesProfile.roleAssumed && rolesProfile.address">
+                  — no manager membership found on it; the permission would
+                  target the default role {{ shortRole(rolesProfile.role) }}.
+                </template>
+              </span>
+              <span
+                v-else-if="isResolvingRoles"
+                class="nav_proposal__row_note"
+              >
+                Reading the vault's Roles modifier…
               </span>
             </div>
             <OnboardingToggle
               v-model="proposal.allowManagerToUpdateNav"
               label="Allow manager to keep updating NAV based on these methods"
+              :disabled="!!permissionsBlockedReason"
             />
           </div>
           <div class="nav_proposal__row">
@@ -146,11 +184,29 @@
         </div>
       </div>
 
+      <!-- Pre-flight -->
+      <div
+        v-if="lastPreflight"
+        class="nav_proposal__preflight"
+        :class="{ 'nav_proposal__preflight--bad': !lastPreflight.ok || lastPreflight.overTxGasCap }"
+      >
+        <template v-if="lastPreflight.ok && !lastPreflight.overTxGasCap">
+          Simulated from the governor: {{ lastPreflight.calls.length }}
+          action{{ lastPreflight.calls.length === 1 ? "" : "s" }} execute<template v-if="lastPreflight.totalGas">,
+            about {{ formatGas(lastPreflight.totalGas) }} gas<template v-if="lastPreflight.txGasCap">
+              of the {{ formatGas(lastPreflight.txGasCap) }} this chain allows per transaction</template></template>.
+        </template>
+        <template v-else>
+          {{ lastPreflight.problems.join(" ") }}
+        </template>
+      </div>
+
       <!-- Action Buttons -->
       <div class="nav_proposal__actions">
         <v-btn
           color="primary"
-          :disabled="!accountStore.isConnected || !canCreateProposal"
+          :disabled="!accountStore.isConnected || !canCreateProposal || isPreflighting"
+          :loading="isPreflighting || loading"
           @click="submitProposal"
         >
           Create proposal
@@ -177,23 +233,73 @@
 import { useRouter } from "vue-router";
 import {
   encodeUpdateNavMethods,
-  getAllowManagerToUpdateNavProposalData,
+  getAllowManagerToUpdateNavPermissionsData,
   getNavMethodsProposalData,
 } from "~/composables/nav/navProposal";
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import type BreadcrumbItem from "~/types/ui/breadcrumb";
+import type IProposalData from "~/types/proposal/proposalData";
 import {
   NO_DELEGATES_TITLE,
   useProposalDelegation,
 } from "~/composables/governance/useProposalDelegation";
+import {
+  formatGas,
+  toProposalCalls,
+  useProposalPreflight,
+} from "~/composables/governance/useProposalPreflight";
+import { wrapProposalThroughSafe } from "~/composables/governance/safeExecution";
+import { useRolesModifierProfile } from "~/composables/permissions/rolesModifierProfile";
+import { useContractAddresses } from "~/composables/useContractAddresses";
 const router = useRouter();
 const fundStore = useFundStore();
 const accountStore = useAccountStore();
 const toastStore = useToastStore();
 const { canCreateProposal, assertCanCreateProposal } = useProposalDelegation();
+const { runPreflight, isPreflighting, lastPreflight } = useProposalPreflight();
+const {
+  profile: rolesProfile,
+  isResolving: isResolvingRoles,
+  ensureProfile,
+} = useRolesModifierProfile();
+const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
 const emit = defineEmits(["updateBreadcrumbs"]);
+
+/**
+ * Why the "allow manager" permissions proposal cannot be made for this
+ * vault, or "" when it can. A governance proposal writes to the modifier
+ * directly while the governor owns it; after the Roles V2 activation the
+ * Safe owns it, and the proposal's actions are then executed AS the Safe
+ * (Safe.execTransaction with the governor's pre-validated signature), which
+ * works as long as the governor still controls the Safe.
+ */
+const permissionsBlockedReason = computed(() => {
+  const p = rolesProfile.value;
+  if (!p) return "";
+  if (!p.address) return "the Safe has no Roles modifier, so there is no manager permission to grant.";
+  if (p.owner && !p.governorOwned && !p.safeOwnedAndControlled) {
+    return p.safeControlledByGovernor === false
+      ? "it is owned by the Safe and the governor no longer controls the Safe, so a proposal cannot change its permissions."
+      : "its owner is neither the governor nor a Safe the governor controls, so a proposal cannot change its permissions.";
+  }
+  return "";
+});
+
+/**
+ * Actions the vault or the executor would refuse from the governor have to
+ * be executed as the Safe (settings.governor is the Safe after activation).
+ */
+const routeThroughSafe = computed(() => {
+  const p = rolesProfile.value;
+  return !!p && p.governorIsSafe && p.safeControlledByGovernor === true;
+});
+
+const shortRole = (role: string) =>
+  role.startsWith("0x") && role.length > 12
+    ? `${role.slice(0, 8)}…`
+    : role;
 
 const {
   selectedFundAddress,
@@ -263,9 +369,13 @@ const fundLastNAVUpdateDate = computed(() => {
 /**
  * Creating a new proposal flow:
  * 1) submitProposal()
- *    encodes NAV update entries (encodedNavUpdateEntries)
- * 2) generateNAVPermission to allow manager to keep updating NAV
- *    based on these methods
+ *    encodes NAV update entries (encodedNavUpdateEntries) and proposes
+ *    updateNav + storeNAVData (the NAV executor's copy the manager's Update
+ *    NAV replays) + the fee collections
+ * 2) optionally a second proposal that scopes executeNAVUpdate for the
+ *    manager's role, encoded for the modifier generation actually deployed
+ *
+ * Both are simulated from the governor before the wallet opens.
  *
  *   function propose(
  *     address[] memory targets,
@@ -284,13 +394,98 @@ const submitProposal = async () => {
     fundStore.fund?.baseToken.decimals,
     proposal.value.processWithdraw,
   );
-  const navMethodsProposal = getNavMethodsProposalData(
+  const navExecutorAddress = getNAVExecutorBeaconProxyAddress(
+    fundStore.selectedFundChain,
+  );
+  if (!navExecutorAddress) {
+    toastStore.errorToast(
+      "The NAV executor address is not known for this network, so the manager's Update NAV could not be kept in sync. Please contact the Rethink Finance support.",
+    );
+    return;
+  }
+  let navMethodsProposal = getNavMethodsProposalData(
     encodedNavUpdateEntries,
     fundStore.fundAddress,
     true,
     proposal.value.collectManagementFees,
     true,
+    navExecutorAddress,
   );
+
+  // Who the vault takes orders from — probed, not assumed.
+  const profile = await ensureProfile();
+  const governorAddress = fundStore.fund?.governorAddress ?? "";
+  if (profile?.governorIsSafe) {
+    if (!routeThroughSafe.value) {
+      toastStore.errorToast(
+        "This vault's settings name the Safe as governor, but the governor no longer controls the Safe, so a proposal cannot update the NAV methods.",
+        10000,
+      );
+      return;
+    }
+    // updateNav and storeNAVData check msg.sender == settings.governor (the
+    // Safe); every action becomes Safe.execTransaction on the governor's
+    // behalf. The fee collections have no such check but ride along.
+    navMethodsProposal = wrapProposalThroughSafe(
+      navMethodsProposal,
+      profile.safe,
+      governorAddress,
+    );
+  }
+
+  let permissionsProposal: IProposalData | null = null;
+  if (proposal.value.allowManagerToUpdateNav) {
+    if (!profile?.address || !profile.version) {
+      toastStore.errorToast(
+        "The vault's Roles modifier could not be resolved, so the manager permission cannot be proposed. Turn the option off to propose the methods alone.",
+        10000,
+      );
+      return;
+    }
+    if (permissionsBlockedReason.value) {
+      toastStore.errorToast(
+        `The manager permission cannot be proposed: ${permissionsBlockedReason.value}`,
+        10000,
+      );
+      return;
+    }
+    permissionsProposal = getAllowManagerToUpdateNavPermissionsData(
+      fundStore.fundAddress,
+      fundStore.selectedFundChain,
+      profile.address,
+      profile.version,
+      profile.role,
+    );
+    if (!profile.governorOwned) {
+      // The Safe owns the modifier: the scope calls are made by the Safe.
+      permissionsProposal = wrapProposalThroughSafe(
+        permissionsProposal,
+        profile.safe,
+        governorAddress,
+      );
+    }
+  }
+
+  const rolesModifier = profile?.address
+    ? { address: profile.address, version: profile.version }
+    : undefined;
+  if (
+    !(await runPreflight(
+      toProposalCalls(navMethodsProposal.targets, navMethodsProposal.calldatas),
+      rolesModifier,
+    ))
+  ) {
+    return;
+  }
+  if (
+    permissionsProposal &&
+    !(await runPreflight(
+      toProposalCalls(permissionsProposal.targets, permissionsProposal.calldatas),
+      rolesModifier,
+    ))
+  ) {
+    return;
+  }
 
   /**
    * Submit Proposal 1
@@ -344,22 +539,17 @@ const submitProposal = async () => {
   } catch (error: any) {
     loading.value = false;
     toastStore.errorToast(error.message);
+    // The methods proposal did not go out; a permissions proposal on its own
+    // would grant a permission for methods governance never approved.
+    return;
   }
 
   /**
    * Submit Proposal 2
    * Allow manager to keep updating NAV based on approved methods
    */
+  if (!permissionsProposal) return;
   loading.value = true;
-  if (!proposal.value.allowManagerToUpdateNav) return;
-  const roleModAddress = await fundStore.fetchRoleModAddress(fundStore.fundAddress);
-
-  const allowManagerToUpdateNavProposal = getAllowManagerToUpdateNavProposalData(
-    encodedNavUpdateEntries,
-    fundStore.fundAddress,
-    fundStore.selectedFundChain,
-    roleModAddress,
-  );
   // Permissions for non gov NAV updates
   try {
     await fundStore.fundGovernorContract
@@ -367,12 +557,15 @@ const submitProposal = async () => {
         "propose",
         {},
         ...[
-          allowManagerToUpdateNavProposal.targets,
-          allowManagerToUpdateNavProposal.gasValues,
-          allowManagerToUpdateNavProposal.calldatas,
+          permissionsProposal.targets,
+          permissionsProposal.gasValues,
+          permissionsProposal.calldatas,
           JSON.stringify({
             title: "Allow Manager to Keep Updating - " + proposal.value.title,
-            description: "Allow Manager to keep updating NAV based on the methods in the " + proposal.value.title + ".\n All previous manager permissions related to NAV will be revoked.",
+            description:
+              "Allow the manager to keep updating NAV based on the methods in " +
+              proposal.value.title +
+              ": scopes executeNAVUpdate on the vault, pinned to the NAV executor, for the manager's role on the vault's Roles modifier.",
           }),
         ],
       )
@@ -629,6 +822,33 @@ const saveDraft = async () => {
   &__actions {
     display: flex;
     justify-content: flex-end;
+  }
+
+  // The Roles modifier line under the "allow manager" switch: informational
+  // by default, in the warning colour when the permission cannot be proposed.
+  &__modifier {
+    display: block;
+    margin-top: 4px;
+    color: $color-steel-blue;
+
+    &--warn {
+      color: $color-warn;
+    }
+  }
+
+  // What the governor-side simulation said about the proposal.
+  &__preflight {
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 10px 12px;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+    color: $color-steel-blue;
+
+    &--bad {
+      color: $color-neg;
+      border-color: $color-neg;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

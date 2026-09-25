@@ -167,6 +167,11 @@ import {
   NO_DELEGATES_TITLE,
   useProposalDelegation,
 } from "~/composables/governance/useProposalDelegation";
+import {
+  toProposalCalls,
+  useProposalPreflight,
+} from "~/composables/governance/useProposalPreflight";
+import { RolesVersion } from "~/types/enums/roles_version";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -179,6 +184,7 @@ const actionStateStore = useActionStateStore();
 const { selectedFundSlug } = storeToRefs(useFundStore());
 const fund = useAttrs().fund as IFund;
 const { canCreateProposal, assertCanCreateProposal } = useProposalDelegation();
+const { runPreflight } = useProposalPreflight();
 
 const {
   roles,
@@ -238,6 +244,16 @@ const createActivationProposal = async () => {
     if (!actions.targets.length) {
       toastStore.addToast("Nothing left to activate.");
       await refreshActivationState();
+      return;
+    }
+    if (
+      !(await runPreflight(
+        toProposalCalls(actions.targets, actions.calldatas),
+        roleModAddress.value
+          ? { address: roleModAddress.value, version: RolesVersion.V2 }
+          : undefined,
+      ))
+    ) {
       return;
     }
     await fundStore.fundGovernorContract
