@@ -32,6 +32,7 @@ import { ProposalCalldataType } from "~/types/enums/proposal_calldata_type";
 import type IGovernanceProposal from "~/types/governance_proposal";
 import type { IProposalAction } from "~/types/proposal/proposalAction";
 import { useProposalAddressLabels } from "~/composables/proposal/useProposalAddressLabels";
+import { findNavCopySource } from "~/composables/proposal/navExecutorCopy";
 
 /**
  * What a proposal will do, call by call, in words — with the raw
@@ -73,6 +74,10 @@ const actions = computed((): IProposalAction[] => {
       type === ProposalCalldataType.FUND_SETTINGS &&
       types[index + 1] === ProposalCalldataType.FUND_SETTINGS &&
       proposal.targets?.[index + 1]?.toLowerCase() === proposal.targets?.[index]?.toLowerCase();
+    // A NAV-methods proposal stores the list it sets on the NAV executor as
+    // well (the copy the manager's Update NAV replays). When the bytes match,
+    // the second call is described as such rather than as a second table.
+    const copyOf = findNavCopySource(calldatas, index);
     return {
       index,
       target: proposal.targets?.[index] ?? "",
@@ -83,6 +88,7 @@ const actions = computed((): IProposalAction[] => {
       contractName: decoded?.contractName,
       decoded: decoded?.calldataDecoded,
       note: isWhitelistReset ? WHITELIST_RESET_NOTE : undefined,
+      executorCopyOf: copyOf >= 0 ? copyOf : undefined,
     };
   });
 });
