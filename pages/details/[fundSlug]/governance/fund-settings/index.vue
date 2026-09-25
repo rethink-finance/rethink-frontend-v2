@@ -131,12 +131,17 @@ import {
   NO_DELEGATES_TITLE,
   useProposalDelegation,
 } from "~/composables/governance/useProposalDelegation";
+import {
+  toProposalCalls,
+  useProposalPreflight,
+} from "~/composables/governance/useProposalPreflight";
 
 const emit = defineEmits(["updateBreadcrumbs"]);
 const fundStore = useFundStore();
 const toastStore = useToastStore();
 const router = useRouter();
 const { canCreateProposal, assertCanCreateProposal } = useProposalDelegation();
+const { runPreflight } = useProposalPreflight();
 
 const fund = useAttrs().fund as IFund;
 const { selectedFundSlug } = storeToRefs(fundStore);
@@ -431,6 +436,13 @@ const submit = async () => {
           description: getFieldValueByFieldKey("proposalDescription"),
         }),
       ];
+
+      // Both updateSettings calls run as the governor on execution; make sure
+      // they do before a week of voting finds out otherwise.
+      if (!(await runPreflight(toProposalCalls(targetAddresses, calldatas)))) {
+        loading.value = false;
+        return;
+      }
 
       await fundStore.fundGovernorContract
         .send("propose", {}, ...proposalData)

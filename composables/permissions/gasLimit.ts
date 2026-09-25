@@ -41,10 +41,13 @@ export const BLOCK_SHARE = 0.95;
  * Per-transaction ceilings that sit below the block limit. Ethereum caps a
  * single transaction at 2^24 gas since Fusaka (EIP-7825); a limit above it
  * is not merely unmineable, it is invalid and the wallet cannot broadcast it.
- * Keyed by hex chain id to stay import-free.
+ * Base adopted the same cap on 2026-05-28 (found by bisecting eth_estimateGas
+ * at historical blocks: the INDEFI NAV update, 17.8M gas, has been unmineable
+ * there since). Keyed by hex chain id to stay import-free.
  */
 export const TX_GAS_CAPS: Record<string, number> = {
   "0x1": 16_777_216,
+  "0x2105": 16_777_216,
 };
 
 export interface IGasPlan {
