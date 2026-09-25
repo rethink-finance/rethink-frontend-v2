@@ -15,6 +15,8 @@ import {
   planGasLimit,
   type IGasPlan,
 } from "~/composables/permissions/gasLimit";
+import { fetchExplorerLogs } from "~/services/onchain/explorerLogs";
+import { fetchBlockscoutRoleLogs } from "~/services/onchain/roleScopes";
 import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
@@ -790,49 +792,107 @@ const ASSIGN_ROLES_TOPIC =
   "0x9f8368fa4ddcbd561efd7ad2a2174235bf5b840a73fb18f20db9705c11462498";
 const ASSIGN_ROLES_TOPIC_V1 = rolesIfaceV1.getEvent("AssignRoles")!.topicHash;
 
+/** The raw log fields the membership replay needs, however the log was fetched. */
+interface IAssignRolesLog {
+  topics: readonly string[];
+  data: string;
+  blockNumber: number;
+  logIndex: number;
+}
+
+/** Block numbers and log indexes arrive as hex strings from an RPC, as numbers from the explorers. */
+const toLogNumber = (value: unknown): number => {
+  const text = String(value ?? "");
+  if (!text) return 0;
+  return text.startsWith("0x") ? parseInt(text, 16) : Number(text);
+};
+
+const toAssignRolesLog = (log: any): IAssignRolesLog => ({
+  topics: log?.topics ?? [],
+  data: log?.data ?? "0x",
+  blockNumber: toLogNumber(log?.blockNumber),
+  logIndex: toLogNumber(log?.logIndex),
+});
+
+/** One RPC's answer to an unbounded, topic-filtered eth_getLogs on the modifier. */
+const fetchRpcAssignRolesLogs = async (
+  rpcUrl: string,
+  rolesModAddress: string,
+  topic: string,
+): Promise<any[]> => {
+  const response = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "eth_getLogs",
+      params: [
+        {
+          address: rolesModAddress,
+          topics: [topic],
+          fromBlock: "0x0",
+          toBlock: "latest",
+        },
+      ],
+    }),
+  });
+  const json = await response.json();
+  if (json.error) throw new Error(json.error.message);
+  return json.result ?? [];
+};
+
 /**
- * The modifier's full AssignRoles history. The event is unindexed, so this
- * is a single unbounded eth_getLogs on the modifier — tiny log volume, same
- * RPC caveats as services/onchain/delegates.ts.
+ * The modifier's full AssignRoles history, oldest first, from the first
+ * source with data: the block explorer (unbounded history, topic-filtered),
+ * then Blockscout (no key, and the only tier that serves Base, whose RPCs
+ * all cap the eth_getLogs range), then each configured RPC. The same tiering
+ * as services/onchain/rolesV1.ts, which the permissions page reads with.
+ *
+ * A tier that answers empty is remembered but not trusted over a later tier
+ * with data (an explorer can lag or know nothing of a fresh modifier); when
+ * every tier fails the error propagates, so a failed read never turns into
+ * "no membership".
  */
 const fetchAssignRolesLogs = async (
   chainId: ChainId,
   rolesModAddress: string,
   version: RolesVersion,
-): Promise<any[]> => {
+): Promise<IAssignRolesLog[]> => {
   const web3Store = useWeb3Store();
-  const rpcUrls = web3Store.networkRpcUrls(chainId);
-  const topic =
-    version === RolesVersion.V1 ? ASSIGN_ROLES_TOPIC_V1 : ASSIGN_ROLES_TOPIC;
-  let lastError: unknown;
+  const topic = (
+    version === RolesVersion.V1 ? ASSIGN_ROLES_TOPIC_V1 : ASSIGN_ROLES_TOPIC
+  ).toLowerCase();
+  const sources: (() => Promise<any[]>)[] = [
+    () => fetchExplorerLogs(chainId, rolesModAddress, topic),
+    () => fetchBlockscoutRoleLogs(chainId, rolesModAddress),
+    ...web3Store
+      .networkRpcUrls(chainId)
+      .map(
+        (rpcUrl: string) => () =>
+          fetchRpcAssignRolesLogs(rpcUrl, rolesModAddress, topic),
+      ),
+  ];
 
-  for (const rpcUrl of rpcUrls) {
+  let answered = false;
+  let lastError: unknown;
+  for (const source of sources) {
     try {
-      const response = await fetch(rpcUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "eth_getLogs",
-          params: [
-            {
-              address: rolesModAddress,
-              topics: [topic],
-              fromBlock: "0x0",
-              toBlock: "latest",
-            },
-          ],
-        }),
-      });
-      const json = await response.json();
-      if (json.error) throw new Error(json.error.message);
-      return json.result ?? [];
+      const logs = (await source())
+        .map(toAssignRolesLog)
+        .filter((log) => String(log.topics[0] ?? "").toLowerCase() === topic);
+      answered = true;
+      if (logs.length) {
+        return logs.sort(
+          (a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex,
+        );
+      }
     } catch (error) {
       lastError = error;
     }
   }
-  throw lastError ?? new Error(`No RPC available for chain ${chainId}`);
+  if (answered) return [];
+  throw lastError ?? new Error(`No log source available for chain ${chainId}`);
 };
 
 /**
