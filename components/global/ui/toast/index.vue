@@ -27,6 +27,16 @@
             {{ toastLabel(toast.level) }}
           </div>
           {{ toast.message }}
+
+          <a
+            v-if="toast.link"
+            :href="toast.link.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="toast__link"
+          >
+            {{ toast.link.label }}
+          </a>
         </div>
 
         <button
@@ -136,6 +146,22 @@ const toastLabel = (level) => {
     min-width: 0;
     /* Long messages wrap and the panel grows; nothing is cut off. */
     overflow-wrap: anywhere;
+  }
+
+  /* Underlined rather than coloured, for the same reason the message is white:
+     the level is already carried by the icon and the rule. */
+  &__link {
+    display: inline-block;
+    margin-top: 0.375rem;
+    color: $color-white;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    transition: opacity $default-transition-time ease;
+
+    &:hover {
+      opacity: 0.75;
+    }
   }
 
   &__eyebrow {
