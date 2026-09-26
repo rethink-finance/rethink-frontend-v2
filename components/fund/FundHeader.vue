@@ -86,30 +86,6 @@
         </div>
       </div>
     </div>
-
-    <!-- The way back out of a section. Overview is no longer a tab in the
-         curator row, so this is the only route to it — which is why it sits in
-         the header itself rather than among the section links. -->
-    <NuxtLink
-      v-if="sectionTitle && overviewRoute"
-      :to="overviewRoute"
-      class="fund_header__overview"
-    >
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M19 12H5" />
-        <path d="M12 19l-7-7 7-7" />
-      </svg>
-      Back to overview
-    </NuxtLink>
   </div>
 </template>
 
@@ -126,7 +102,6 @@ const props = defineProps<{
   breadcrumbItems: BreadcrumbItem[];
   /** The section being viewed, empty on the overview itself. */
   sectionTitle?: string;
-  overviewRoute?: string;
 }>();
 
 const chainName = computed(() => capitalizeFirst(props.fund?.chainName || ""));
@@ -228,30 +203,6 @@ const truncatedAddress = computed(() =>
     text-transform: uppercase;
     color: $color-cyan;
     vertical-align: middle;
-  }
-
-  &__overview {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex: none;
-    padding: 0.5rem 0.875rem;
-    font-family: $font-mono;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
-    border: 1px solid $color-line-2;
-    border-radius: $default-border-radius;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: color $default-transition-time ease,
-      border-color $default-transition-time ease;
-
-    &:hover {
-      color: $color-white;
-      border-color: $color-line-3;
-    }
   }
 
   &__meta {

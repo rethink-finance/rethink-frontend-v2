@@ -16,7 +16,7 @@
 
     <div v-else class="actions__list">
       <FundGovernanceProposalAction
-        v-for="action in actions"
+        v-for="action in displayedActions"
         :key="action.index"
         :action="action"
       />
@@ -33,6 +33,13 @@ import type IGovernanceProposal from "~/types/governance_proposal";
 import type { IProposalAction } from "~/types/proposal/proposalAction";
 import { useProposalAddressLabels } from "~/composables/proposal/useProposalAddressLabels";
 import { findNavCopySource } from "~/composables/proposal/navExecutorCopy";
+import { useRolesModifierProfile } from "~/composables/permissions/rolesModifierProfile";
+import {
+  describePermission,
+  findExtraSignature,
+  formatRoleKey,
+} from "~/composables/proposal/describeProposalActions";
+import { resolveKnownFunction } from "~/composables/proposal/decodeProposalCallData";
 
 /**
  * What a proposal will do, call by call, in words — with the raw
@@ -56,6 +63,19 @@ const view = ref<"readable" | "raw">("readable");
 // once no matter how many calls mention it.
 const addressLabels = useProposalAddressLabels();
 provide("proposalAddressLabels", addressLabels);
+
+// Roles as people know them: the one the vault's managers hold is "the
+// manager"; the rest keep their number (v1) or key (v2).
+const { profile: rolesProfile } = useRolesModifierProfile();
+const managerRoleLabels = computed(
+  () => new Set((rolesProfile.value?.managerRoles ?? []).map((role) => formatRoleKey(role))),
+);
+const roleName = (role?: string): string => {
+  if (!role) return "A role";
+  if (managerRoleLabels.value.has(role)) return "The manager";
+  return role.startsWith("#") ? `Role ${role.slice(1)}` : `The “${role}” role`;
+};
+provide("proposalRoleName", roleName);
 
 const WHITELIST_RESET_NOTE =
   "Technical step: re-submits the vault's current settings so the deposit whitelist can be replaced by the next call. Nothing changes here.";
@@ -92,6 +112,42 @@ const actions = computed((): IProposalAction[] => {
     };
   });
 });
+
+/**
+ * A scopeTarget grants nothing by itself: it opens a contract to a role for
+ * the functions allowed one by one. Pair each with the calls in this proposal
+ * that do the allowing, so its card can point at them.
+ */
+const withScopedFunctions = (list: IProposalAction[]): IProposalAction[] => {
+  const described = list.map((action) =>
+    action.type === ProposalCalldataType.PERMISSIONS
+      ? describePermission(action.functionName, action.decoded)
+      : undefined,
+  );
+  return list.map((action, index) => {
+    const own = described[index];
+    if (own?.action !== "scope-target" || !own.target) return action;
+    const scopedFunctions = described
+      .map((other, otherIndex) => ({ other, otherIndex }))
+      .filter(({ other, otherIndex }) =>
+        otherIndex !== index &&
+        other &&
+        ["scope-function", "allow-function"].includes(other.action) &&
+        other.role === own.role &&
+        other.target?.toLowerCase() === own.target?.toLowerCase(),
+      )
+      .map(({ other, otherIndex }) => ({
+        index: otherIndex,
+        name:
+          resolveKnownFunction(other!.selector ?? "")?.function.name ??
+          findExtraSignature(other!.selector)?.name ??
+          `function ${other!.selector}`,
+      }));
+    return { ...action, scopedFunctions };
+  });
+};
+
+const displayedActions = computed(() => withScopedFunctions(actions.value));
 
 const lede = computed(() => {
   const count = actions.value.length;

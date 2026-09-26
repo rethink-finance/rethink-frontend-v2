@@ -3,7 +3,9 @@ import type IFund from "~/types/fund";
 import type { ChainId } from "~/types/enums/chain_id";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { useBlockTimeStore } from "~/store/web3/blockTime.store";
+import { fetchBackendProposals } from "~/services/backend/governance";
 import { fetchSubgraphGovernorProposals } from "~/services/subgraph";
+import { hasRethinkSubgraph } from "~/types/enums/subgraph";
 import {
   FundTransactionType,
   FundTransactionTypeStorageSlotIdxMap,
@@ -33,6 +35,8 @@ export interface PendingRequest {
 
 export interface OpenVote {
   proposalId: string;
+  /** Block the proposal was created in; the app's proposal links carry it. */
+  createdBlockNumber?: string;
   title: string;
   /** Ms, or undefined where the deadline is a block we could not date. */
   endsAt?: number;
@@ -161,6 +165,62 @@ const resolveDeadline = async (
   }
 };
 
+/** A proposal as both the backend index and the subgraph describe it. */
+interface GovernorProposal {
+  proposalId: string;
+  description: string;
+  voteEnd: string;
+  createdBlockNumber?: string;
+  isClosed: boolean;
+  voters: string[];
+}
+
+const blockNumberOf = (value: unknown): string | undefined =>
+  value == null ? undefined : String(value);
+
+/**
+ * The vault's proposals, from the backend's on-chain index where it has them —
+ * it covers every chain — and from the subgraph otherwise. The subgraph alone
+ * missed most vaults: Arbitrum's and Polygon's deployments stopped indexing and
+ * HyperEVM has none, so those wallets were never told about a vote.
+ */
+const fetchGovernorProposals = async (fund: IFund): Promise<GovernorProposal[]> => {
+  const snapshot = await fetchBackendProposals(fund.chainId, fund.address);
+  if (snapshot?.proposals) {
+    return snapshot.proposals.map((proposal: any) => ({
+      proposalId: String(proposal.proposalId),
+      description: String(proposal.description ?? ""),
+      voteEnd: String(proposal.voteEnd ?? "0"),
+      createdBlockNumber: blockNumberOf(proposal.proposalCreated?.[0]?.transaction?.blockNumber),
+      isClosed: Boolean(
+        proposal.proposalCanceled?.length ||
+          proposal.proposalExecuted?.length ||
+          proposal.proposalQueued?.length,
+      ),
+      voters: (proposal.receipts ?? []).map((receipt: any) =>
+        String(receipt.voter?.id ?? "").toLowerCase(),
+      ),
+    }));
+  }
+  // The subgraph is keyed by governor, which the portfolio's vault list (the
+  // Discover one) does not carry; the backend index needs only the vault.
+  if (!fund.governorAddress || !hasRethinkSubgraph(fund.chainId)) return [];
+
+  const proposals = await fetchSubgraphGovernorProposals(fund.chainId, {
+    governorAddress: fund.governorAddress.toLowerCase(),
+  });
+  return proposals.map((proposal) => ({
+    proposalId: String(proposal.proposalId),
+    description: proposal.description,
+    voteEnd: String(proposal.voteEnd),
+    createdBlockNumber: blockNumberOf(proposal.proposalCreated?.[0]?.transaction?.blockNumber),
+    isClosed: Boolean(proposal.canceled || proposal.executed || proposal.queued),
+    voters: (proposal.receipts ?? []).map((receipt) =>
+      String(receipt.voter?.id ?? "").toLowerCase(),
+    ),
+  }));
+};
+
 /**
  * Proposals still open that this wallet has not voted on.
  *
@@ -175,23 +235,15 @@ export const fetchOpenVotes = async (
   fund: IFund,
   account: string,
 ): Promise<OpenVote[]> => {
-  if (!fund.governorAddress) return [];
-
-  const proposals = await fetchSubgraphGovernorProposals(fund.chainId, {
-    governorAddress: fund.governorAddress.toLowerCase(),
-  });
-
   const wallet = account.toLowerCase();
-  const open = proposals.filter((proposal) => {
-    if (proposal.canceled || proposal.executed || proposal.queued) return false;
-    return !proposal.receipts?.some(
-      (receipt) => receipt.voter?.id?.toLowerCase() === wallet,
-    );
-  });
+  const open = (await fetchGovernorProposals(fund)).filter(
+    (proposal) => !proposal.isClosed && !proposal.voters.includes(wallet),
+  );
 
   const dated = await Promise.all(
     open.map(async (proposal) => ({
-      proposalId: String(proposal.proposalId),
+      proposalId: proposal.proposalId,
+      createdBlockNumber: proposal.createdBlockNumber,
       title: parseProposalTitle(proposal.description),
       endsAt: await resolveDeadline(fund.chainId, Number(proposal.voteEnd)),
     })),
@@ -221,8 +273,8 @@ export const loadPositionAttention = async (
       const [requests, votes] = await Promise.all([
         fetchPendingRequests(position.fund, account, position.lastSettlement),
         fetchOpenVotes(position.fund, account).catch((error) => {
-          // Two of six chains have no subgraph deployment yet, so this failing
-          // is ordinary rather than exceptional.
+          // A vault the backend has not indexed on a chain without a working
+          // subgraph has no proposal source; that is ordinary, not exceptional.
           console.warn("Open votes unavailable", position.fund.chainId, error);
           return [] as OpenVote[];
         }),
