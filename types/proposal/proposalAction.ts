@@ -23,4 +23,10 @@ export interface IProposalAction {
    * instead of rendering the method table twice.
    */
   executorCopyOf?: number;
+  /**
+   * For a Roles scopeTarget call: the functions later calls in the same
+   * proposal allow on that target for that role, so the card can say where
+   * the actual limits are ("depositV3Now, limits in call 4").
+   */
+  scopedFunctions?: { index: number; name: string }[];
 }

@@ -81,6 +81,8 @@ describe("permission summary", () => {
       }),
     );
     expect(summary?.headline).toBe("Role 2 can bridge USDC with Across to Arbitrum One");
+    // outputAmount (5) and exclusiveRelayer (7) are left free in this rule.
+    expect(summary?.caution).toMatch(/relayer/);
     expect(summary?.lines).toEqual([
       ["Sent from ", { address: SAFE }],
       ["Received by ", { address: PAYOUT }, " on Arbitrum One"],

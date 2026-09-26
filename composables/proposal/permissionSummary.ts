@@ -41,6 +41,8 @@ export interface SummaryContext {
   inputs?: ethers.ParamType[];
   /** The scoped function's name, where known. */
   functionName?: string;
+  /** For a scopeTarget: the functions later calls allow there (1-based calls). */
+  scopedFunctions?: { index: number; name: string }[];
 }
 
 /* ---- Well-known contracts ------------------------------------------------ */
@@ -416,9 +418,21 @@ const functionSummary = (
       lines.push(["No instructions attached to the transfer"]);
     }
     const inputName = input?.kind === "equals" ? valueName(input.values[0], ctx) : "tokens";
+    // A pinned recipient only protects the funds if the role cannot also
+    // choose how much arrives and who fills: Across repays the relayer the
+    // full input, so a low outputAmount with the role's own exclusiveRelayer
+    // sends the difference to an address nobody pinned.
+    const outputFree = !pins.has(5);
+    const relayerFree = !pins.has(7);
+    const caution = outputFree
+      ? relayerFree
+        ? "The amount that arrives and the relayer are not limited: with a low output amount and its own relayer, the role can take most of the bridged USDC to an address of its choice, whatever the recipient."
+        : "The amount that arrives is not limited: a low output amount leaves most of the bridged USDC to whichever relayer fills it."
+      : undefined;
     return {
       headline: `${who} can bridge ${inputName} with Across${destination ? ` to ${destination}` : ""}`,
       lines,
+      caution,
     };
   }
 
@@ -477,7 +491,9 @@ export const summarizePermission = (
   switch (description.action) {
     case "scope-function": {
       const summary = functionSummary(description, ctx);
-      return summary ? { ...summary, caution } : undefined;
+      return summary
+        ? { ...summary, caution: [summary.caution, caution].filter(Boolean).join(" ") || undefined }
+        : undefined;
     }
     case "scope-parameter": {
       // Rewrites one argument's limit on a permission that already exists:
@@ -510,11 +526,17 @@ export const summarizePermission = (
         lines: [["No limits on which function or arguments"]],
         caution,
       };
-    case "scope-target":
+    case "scope-target": {
+      // Opens the contract without allowing anything on it; the limits live
+      // on the function calls that follow, so say which ones.
+      const allowed = ctx.scopedFunctions ?? [];
       return {
         headline: `${who} gets access to ${targetName}, limited to functions allowed individually`,
-        lines: [],
+        lines: allowed.length
+          ? allowed.map((fn) => [`Only ${fn.name} is allowed on it; its limits are set in call ${fn.index + 1}`])
+          : [["No function on it is allowed by this proposal; this call alone lets nothing through"]],
       };
+    }
     case "revoke-target":
       return { headline: `${who} can no longer use ${targetName}`, lines: [] };
     case "revoke-function":

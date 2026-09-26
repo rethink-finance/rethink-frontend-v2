@@ -343,6 +343,7 @@ const summary = computed(() =>
     label: (address) => labels?.labelFor(address),
     inputs: fragmentInputs.value,
     functionName: functionName.value,
+    scopedFunctions: props.action.scopedFunctions,
   }),
 );
 
