@@ -33,6 +33,8 @@ import type IGovernanceProposal from "~/types/governance_proposal";
 import type { IProposalAction } from "~/types/proposal/proposalAction";
 import { useProposalAddressLabels } from "~/composables/proposal/useProposalAddressLabels";
 import { findNavCopySource } from "~/composables/proposal/navExecutorCopy";
+import { useRolesModifierProfile } from "~/composables/permissions/rolesModifierProfile";
+import { formatRoleKey } from "~/composables/proposal/describeProposalActions";
 
 /**
  * What a proposal will do, call by call, in words — with the raw
@@ -56,6 +58,19 @@ const view = ref<"readable" | "raw">("readable");
 // once no matter how many calls mention it.
 const addressLabels = useProposalAddressLabels();
 provide("proposalAddressLabels", addressLabels);
+
+// Roles as people know them: the one the vault's managers hold is "the
+// manager"; the rest keep their number (v1) or key (v2).
+const { profile: rolesProfile } = useRolesModifierProfile();
+const managerRoleLabels = computed(
+  () => new Set((rolesProfile.value?.managerRoles ?? []).map((role) => formatRoleKey(role))),
+);
+const roleName = (role?: string): string => {
+  if (!role) return "A role";
+  if (managerRoleLabels.value.has(role)) return "The manager";
+  return role.startsWith("#") ? `Role ${role.slice(1)}` : `The “${role}” role`;
+};
+provide("proposalRoleName", roleName);
 
 const WHITELIST_RESET_NOTE =
   "Technical step: re-submits the vault's current settings so the deposit whitelist can be replaced by the next call. Nothing changes here.";

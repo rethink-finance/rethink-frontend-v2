@@ -1,166 +1,199 @@
 <template>
   <div class="perm" :class="`perm--${description.tone}`">
-    <p class="perm__sentence">
-      <!-- Target-level -->
-      <template v-if="description.action === 'allow-target'">
-        Role <strong>{{ description.role }}</strong> may call
-        <strong>any function</strong> on
-        <FundGovernanceProposalAddressChip :address="description.target ?? ''" />.
-      </template>
-      <template v-else-if="description.action === 'scope-target'">
-        Role <strong>{{ description.role }}</strong> gets restricted access to
-        <FundGovernanceProposalAddressChip :address="description.target ?? ''" />:
-        only functions allowed one by one may be called.
-      </template>
-      <template v-else-if="description.action === 'revoke-target'">
-        Role <strong>{{ description.role }}</strong> loses all access to
-        <FundGovernanceProposalAddressChip :address="description.target ?? ''" />.
-      </template>
+    <template v-if="summary">
+      <ul v-if="summary.lines.length" class="perm__plain">
+        <li v-for="(line, i) in summary.lines" :key="i" class="perm__plain_line">
+          <template v-for="(part, j) in line" :key="j">
+            <FundGovernanceProposalAddressChip
+              v-if="typeof part !== 'string'"
+              :address="part.address"
+            />
+            <template v-else>
+              {{ part }}
+            </template>
+          </template>
+        </li>
+      </ul>
+      <p v-if="summary.caution" class="perm__warning">
+        {{ summary.caution }}
+      </p>
+    </template>
 
-      <!-- Function-level -->
-      <template v-else-if="description.action === 'allow-function'">
-        Role <strong>{{ description.role }}</strong> may call
-        <code class="perm__fn">{{ functionLabel }}</code> on
-        <FundGovernanceProposalAddressChip :address="description.target ?? ''" />
-        with any arguments.
-      </template>
-      <template v-else-if="description.action === 'scope-function'">
-        Role <strong>{{ description.role }}</strong> may call
-        <code class="perm__fn">{{ functionLabel }}</code> on
-        <FundGovernanceProposalAddressChip :address="description.target ?? ''" />
-        <template v-if="conditionLines.length || description.v1Params?.length">
-          only when:
+    <component
+      :is="summary ? 'details' : 'div'"
+      class="perm__exact"
+      :class="{ 'perm__exact--folded': summary }"
+    >
+      <summary v-if="summary" class="perm__exact_toggle">
+        Exact rule
+      </summary>
+      <p class="perm__sentence">
+        <!-- Target-level -->
+        <template v-if="description.action === 'allow-target'">
+          Role <strong>{{ description.role }}</strong> may call
+          <strong>any function</strong> on
+          <FundGovernanceProposalAddressChip :address="description.target ?? ''" />.
         </template>
-        <template v-else>
+        <template v-else-if="description.action === 'scope-target'">
+          Role <strong>{{ description.role }}</strong> gets restricted access to
+          <FundGovernanceProposalAddressChip :address="description.target ?? ''" />:
+          only functions allowed one by one may be called.
+        </template>
+        <template v-else-if="description.action === 'revoke-target'">
+          Role <strong>{{ description.role }}</strong> loses all access to
+          <FundGovernanceProposalAddressChip :address="description.target ?? ''" />.
+        </template>
+
+        <!-- Function-level -->
+        <template v-else-if="description.action === 'allow-function'">
+          Role <strong>{{ description.role }}</strong> may call
+          <code class="perm__fn">{{ functionLabel }}</code> on
+          <FundGovernanceProposalAddressChip :address="description.target ?? ''" />
           with any arguments.
         </template>
-      </template>
-      <template v-else-if="description.action === 'revoke-function'">
-        Role <strong>{{ description.role }}</strong> may no longer call
-        <code class="perm__fn">{{ functionLabel }}</code> on
-        <FundGovernanceProposalAddressChip :address="description.target ?? ''" />.
-      </template>
-      <template v-else-if="description.action === 'scope-parameter' || description.action === 'unscope-parameter'">
-        For role <strong>{{ description.role }}</strong> calling
-        <code class="perm__fn">{{ functionLabel }}</code> on
-        <FundGovernanceProposalAddressChip :address="description.target ?? ''" />:
-      </template>
-      <template v-else-if="description.action === 'set-execution-options'">
-        When role <strong>{{ description.role }}</strong> calls
-        <code class="perm__fn">{{ functionLabel }}</code> on
-        <FundGovernanceProposalAddressChip :address="description.target ?? ''" />,
-        it {{ description.executionOption }}.
-      </template>
-
-      <!-- Membership -->
-      <template v-else-if="description.action === 'assign-roles'">
-        Role membership of
-        <FundGovernanceProposalAddressChip :address="description.module ?? ''" />
-        changes:
-      </template>
-      <template v-else-if="description.action === 'set-default-role'">
-        <FundGovernanceProposalAddressChip :address="description.module ?? ''" />
-        will act as role <strong>{{ description.role }}</strong> by default.
-      </template>
-
-      <!-- Allowances and modules -->
-      <template v-else-if="description.action === 'set-allowance'">
-        Allowance <strong>{{ description.allowance?.key }}</strong> is set:
-      </template>
-      <template v-else-if="description.action === 'enable-module'">
-        <FundGovernanceProposalAddressChip :address="description.module ?? ''" />
-        becomes a module of the Roles modifier and can execute through it.
-      </template>
-      <template v-else-if="description.action === 'disable-module'">
-        <FundGovernanceProposalAddressChip :address="description.module ?? ''" />
-        is removed as a module of the Roles modifier.
-      </template>
-
-      <!-- Ownership -->
-      <template v-else-if="description.action === 'transfer-ownership'">
-        Ownership of the Roles modifier moves to
-        <FundGovernanceProposalAddressChip :address="description.newOwner ?? ''" />.
-      </template>
-      <template v-else-if="description.action === 'renounce-ownership'">
-        Ownership of the Roles modifier is renounced.
-      </template>
-
-      <!-- Anything else on the modifier -->
-      <template v-else>
-        Calls <code class="perm__fn">{{ action.functionName ?? selectorShort }}</code>
-        on the Roles modifier with these arguments:
-      </template>
-    </p>
-
-    <!-- Details -->
-    <ul v-if="description.memberships?.length" class="perm__memberships">
-      <li
-        v-for="membership in description.memberships"
-        :key="membership.role"
-        :class="membership.added ? 'perm__member--added' : 'perm__member--removed'"
-      >
-        {{ membership.added ? "Added to" : "Removed from" }} role
-        <strong>{{ membership.role }}</strong>
-      </li>
-    </ul>
-
-    <ul v-if="conditionLines.length" class="perm__conditions">
-      <li
-        v-for="(line, i) in conditionLines"
-        :key="i"
-        class="perm__condition"
-        :class="{ 'perm__condition--muted': line.muted }"
-        :style="{ paddingLeft: `${line.depth * 1.125}rem` }"
-      >
-        <span class="perm__condition_label">{{ line.label }}</span>
-        <span class="perm__condition_text">
-          {{ textBeforeAddress(line.text) }}
-          <FundGovernanceProposalAddressChip
-            v-if="addressIn(line.text)"
-            :address="addressIn(line.text) ?? ''"
-          />
-        </span>
-      </li>
-    </ul>
-
-    <ul v-if="description.v1Params?.length" class="perm__conditions">
-      <li v-for="param in description.v1Params" :key="param.index" class="perm__condition">
-        <span class="perm__condition_label">{{ paramName(param.index) }}</span>
-        <span class="perm__condition_text">
-          {{ param.comparison }}
-          <template v-for="(value, i) in param.values" :key="i">
-            <template v-if="i > 0">, </template>
-            <FundGovernanceProposalAddressChip
-              v-if="addressIn(formatCompValue(value))"
-              :address="addressIn(formatCompValue(value)) ?? ''"
-            />
-            <template v-else>{{ formatCompValue(value) }}</template>
+        <template v-else-if="description.action === 'scope-function'">
+          Role <strong>{{ description.role }}</strong> may call
+          <code class="perm__fn">{{ functionLabel }}</code> on
+          <FundGovernanceProposalAddressChip :address="description.target ?? ''" />
+          <template v-if="conditionLines.length || description.v1Params?.length">
+            only when:
           </template>
-        </span>
-      </li>
-    </ul>
+          <template v-else>
+            with any arguments.
+          </template>
+        </template>
+        <template v-else-if="description.action === 'revoke-function'">
+          Role <strong>{{ description.role }}</strong> may no longer call
+          <code class="perm__fn">{{ functionLabel }}</code> on
+          <FundGovernanceProposalAddressChip :address="description.target ?? ''" />.
+        </template>
+        <template v-else-if="description.action === 'scope-parameter' || description.action === 'unscope-parameter'">
+          For role <strong>{{ description.role }}</strong> calling
+          <code class="perm__fn">{{ functionLabel }}</code> on
+          <FundGovernanceProposalAddressChip :address="description.target ?? ''" />:
+        </template>
+        <template v-else-if="description.action === 'set-execution-options'">
+          When role <strong>{{ description.role }}</strong> calls
+          <code class="perm__fn">{{ functionLabel }}</code> on
+          <FundGovernanceProposalAddressChip :address="description.target ?? ''" />,
+          it {{ description.executionOption }}.
+        </template>
 
-    <dl v-if="description.allowance" class="perm__params">
-      <dt>Balance</dt>
-      <dd>{{ description.allowance.balance }}</dd>
-      <dt>Refill</dt>
-      <dd>{{ description.allowance.refill }} every {{ description.allowance.period }} seconds</dd>
-      <dt>Max refill</dt>
-      <dd>{{ description.allowance.maxRefill }}</dd>
-      <dt>Starts at</dt>
-      <dd>{{ description.allowance.timestamp }}</dd>
-    </dl>
+        <!-- Membership -->
+        <template v-else-if="description.action === 'assign-roles'">
+          Role membership of
+          <FundGovernanceProposalAddressChip :address="description.module ?? ''" />
+          changes:
+        </template>
+        <template v-else-if="description.action === 'set-default-role'">
+          <FundGovernanceProposalAddressChip :address="description.module ?? ''" />
+          will act as role <strong>{{ description.role }}</strong> by default.
+        </template>
 
-    <dl v-if="description.action === 'other' || description.action === 'rewire'" class="perm__params">
-      <template v-for="param in rawParams" :key="param.name">
-        <dt>{{ param.name }}</dt>
-        <dd><FundGovernanceProposalParamValue :value="param.value" :type="param.type" /></dd>
-      </template>
-    </dl>
+        <!-- Allowances and modules -->
+        <template v-else-if="description.action === 'set-allowance'">
+          Allowance <strong>{{ description.allowance?.key }}</strong> is set:
+        </template>
+        <template v-else-if="description.action === 'enable-module'">
+          <FundGovernanceProposalAddressChip :address="description.module ?? ''" />
+          becomes a module of the Roles modifier and can execute through it.
+        </template>
+        <template v-else-if="description.action === 'disable-module'">
+          <FundGovernanceProposalAddressChip :address="description.module ?? ''" />
+          is removed as a module of the Roles modifier.
+        </template>
 
-    <p v-if="description.executionOption && showsExecutionOption" class="perm__execution">
-      Execution: {{ description.executionOption }}.
-    </p>
+        <!-- Ownership -->
+        <template v-else-if="description.action === 'transfer-ownership'">
+          Ownership of the Roles modifier moves to
+          <FundGovernanceProposalAddressChip :address="description.newOwner ?? ''" />.
+        </template>
+        <template v-else-if="description.action === 'renounce-ownership'">
+          Ownership of the Roles modifier is renounced.
+        </template>
+
+        <!-- Anything else on the modifier -->
+        <template v-else>
+          Calls <code class="perm__fn">{{ action.functionName ?? selectorShort }}</code>
+          on the Roles modifier with these arguments:
+        </template>
+      </p>
+
+      <!-- Details -->
+      <ul v-if="description.memberships?.length" class="perm__memberships">
+        <li
+          v-for="membership in description.memberships"
+          :key="membership.role"
+          :class="membership.added ? 'perm__member--added' : 'perm__member--removed'"
+        >
+          {{ membership.added ? "Added to" : "Removed from" }} role
+          <strong>{{ membership.role }}</strong>
+        </li>
+      </ul>
+
+      <ul v-if="conditionLines.length" class="perm__conditions">
+        <li
+          v-for="(line, i) in conditionLines"
+          :key="i"
+          class="perm__condition"
+          :class="{ 'perm__condition--muted': line.muted }"
+          :style="{ paddingLeft: `${line.depth * 1.125}rem` }"
+        >
+          <span class="perm__condition_label">{{ line.label }}</span>
+          <span class="perm__condition_text">
+            {{ textBeforeAddress(line.text) }}
+            <FundGovernanceProposalAddressChip
+              v-if="addressIn(line.text)"
+              :address="addressIn(line.text) ?? ''"
+            />
+          </span>
+        </li>
+      </ul>
+
+      <ul v-if="description.v1Params?.length" class="perm__conditions">
+        <li v-for="param in description.v1Params" :key="param.index" class="perm__condition">
+          <span class="perm__condition_label">{{ paramName(param.index) }}</span>
+          <span class="perm__condition_text">
+            {{ param.comparison }}
+            <template v-for="(value, i) in param.values" :key="i">
+              <template v-if="i > 0">, </template>
+              <FundGovernanceProposalAddressChip
+                v-if="addressIn(formatCompValue(value))"
+                :address="addressIn(formatCompValue(value)) ?? ''"
+              />
+              <template v-else>{{ formatCompValue(value) }}</template>
+            </template>
+          </span>
+        </li>
+      </ul>
+
+      <dl v-if="description.allowance" class="perm__params">
+        <dt>Balance</dt>
+        <dd>{{ description.allowance.balance }}</dd>
+        <dt>Refill</dt>
+        <dd>{{ description.allowance.refill }} every {{ description.allowance.period }} seconds</dd>
+        <dt>Max refill</dt>
+        <dd>{{ description.allowance.maxRefill }}</dd>
+        <dt>Starts at</dt>
+        <dd>{{ description.allowance.timestamp }}</dd>
+      </dl>
+
+      <dl v-if="description.action === 'other' || description.action === 'rewire'" class="perm__params">
+        <template v-for="param in rawParams" :key="param.name">
+          <dt>{{ param.name }}</dt>
+          <dd><FundGovernanceProposalParamValue :value="param.value" :type="param.type" /></dd>
+        </template>
+      </dl>
+
+      <p v-if="description.executionOption && showsExecutionOption" class="perm__execution">
+        Execution: {{ description.executionOption }}.
+      </p>
+
+      <p class="perm__via">
+        Recorded on
+        <FundGovernanceProposalAddressChip :address="action.target" />.
+      </p>
+    </component>
 
     <p v-if="description.warning" class="perm__warning">
       {{ description.warning }}
@@ -178,6 +211,7 @@ import {
   decodeCallWithKnownAbis,
   describeConditionTree,
   describePermission,
+  findExtraSignature,
   findFragmentInputs,
   formatCompValue,
   formatFunctionLabel,
@@ -185,6 +219,7 @@ import {
 } from "~/composables/proposal/describeProposalActions";
 import { lookupSelectorFragment } from "~/composables/proposal/lookupSelector";
 import type { ProposalAddressLabels } from "~/composables/proposal/useProposalAddressLabels";
+import { summarizePermission } from "~/composables/proposal/permissionSummary";
 
 /**
  * One Roles modifier call as a sentence: who gets (or loses) what on which
@@ -200,8 +235,17 @@ const props = defineProps<{
   action: IProposalAction;
 }>();
 
+const emit = defineEmits<{
+  /** The plain-language headline, for the card title; undefined when there is none. */
+  (e: "headline", headline: string | undefined): void;
+}>();
+
 const fundStore = useFundStore();
 const labels = inject<ProposalAddressLabels | undefined>("proposalAddressLabels", undefined);
+const roleName = inject<(role?: string) => string>(
+  "proposalRoleName",
+(role?: string) => (role?.startsWith("#") ? `Role ${role.slice(1)}` : `Role ${role ?? "?"}`),
+);
 
 const description = computed(() =>
   describePermission(props.action.functionName, props.action.decoded),
@@ -223,6 +267,9 @@ const lookedUpFragment = ref<ethers.FunctionFragment | undefined>();
 
 const explorerFragment = computed((): ethers.FunctionFragment | undefined => {
   const selector = description.value.selector;
+  // Signatures we ship by name (Across, HyperCore) beat any lookup.
+  const shipped = findExtraSignature(selector);
+  if (shipped) return shipped;
   if (!selector || !explorerAbi.value) return undefined;
   try {
     return new ethers.Interface(JSON.parse(explorerAbi.value)).getFunction(selector) ?? undefined;
@@ -237,7 +284,7 @@ watch(
     explorerAbi.value = undefined;
     lookedUpFragment.value = undefined;
     labels?.resolve([target, description.value.module, description.value.newOwner]);
-    if (!target || !selector || resolveKnownFunction(selector)) return;
+    if (!target || !selector || resolveKnownFunction(selector) || findExtraSignature(selector)) return;
     try {
       const sourceCode = await fundStore.fetchAddressSourceCode(
         fundStore.selectedFundChain,
@@ -281,6 +328,30 @@ const functionLabel = computed(() => {
   return `function ${selector}`;
 });
 
+/** The scoped function's bare name, where any source could name it. */
+const functionName = computed((): string | undefined => {
+  const selector = description.value.selector;
+  if (!selector) return undefined;
+  const known = resolveKnownFunction(selector);
+  if (known) return known.function.name;
+  return (explorerFragment.value ?? lookedUpFragment.value)?.name;
+});
+
+const summary = computed(() =>
+  summarizePermission(description.value, {
+    roleName,
+    label: (address) => labels?.labelFor(address),
+    inputs: fragmentInputs.value,
+    functionName: functionName.value,
+  }),
+);
+
+watch(
+  () => summary.value?.headline,
+  (headline) => emit("headline", headline),
+  { immediate: true },
+);
+
 const paramName = (index: number): string => v1ParamLabel(fragmentInputs.value, index);
 
 const conditionLines = computed(() =>
@@ -317,6 +388,65 @@ const textBeforeAddress = (text: string): string =>
 
   &--restrict {
     border-left-color: $color-accent-line;
+  }
+
+  &__plain {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  &__plain_line {
+    position: relative;
+    padding-left: 1rem;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: $color-white;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0.125rem;
+      top: 0.65em;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: $color-steel-blue;
+    }
+  }
+
+  &__exact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    &--folded {
+      display: block;
+
+      > * + * {
+        margin-top: 0.75rem;
+      }
+    }
+  }
+
+  &__exact_toggle {
+    cursor: pointer;
+    width: fit-content;
+    font-size: 12px;
+    color: $color-steel-blue;
+
+    &:hover {
+      color: $color-white;
+    }
+  }
+
+  &__via {
+    margin: 0;
+    font-size: 12px;
+    color: $color-text-irrelevant;
   }
 
   &__sentence {

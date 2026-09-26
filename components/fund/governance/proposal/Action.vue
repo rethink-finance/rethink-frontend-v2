@@ -10,7 +10,7 @@
         <h3 class="action__headline">
           {{ headline }}
         </h3>
-        <div class="action__target">
+        <div v-if="!permissionHeadline" class="action__target">
           <span class="action__target_label">Target</span>
           <FundGovernanceProposalAddressChip :address="action.target" />
           <template v-if="valueEth">
@@ -45,6 +45,7 @@
       <FundGovernanceProposalActionPermission
         v-else-if="action.type === ProposalCalldataType.PERMISSIONS"
         :action="action"
+        @headline="permissionHeadline = $event"
       />
       <FundGovernanceProposalActionExecution
         v-else-if="action.type === ProposalCalldataType.DIRECT_EXECUTION"
@@ -233,6 +234,9 @@ const execution = computed(() =>
 const sameAddress = (a?: string, b?: string) =>
   !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
+// The permission body's plain sentence, once it can name the function.
+const permissionHeadline = ref<string | undefined>();
+
 const headline = computed(() => {
   const decoded = props.action.decoded;
   switch (props.action.type) {
@@ -251,7 +255,7 @@ const headline = computed(() => {
     case ProposalCalldataType.FUND_SETTINGS:
       return "Update the vault's settings";
     case ProposalCalldataType.PERMISSIONS:
-      return permissionHeadline(permission.value?.action);
+      return permissionHeadline.value ?? genericPermissionHeadline(permission.value?.action);
     case ProposalCalldataType.DIRECT_EXECUTION: {
       const count = execution.value?.calls.length ?? 0;
       const safe = sameAddress(props.action.target, fundStore.fund?.safeAddress)
@@ -285,7 +289,7 @@ const flowsHeadline = computed(() => {
   }
 });
 
-const permissionHeadline = (action?: string): string => {
+const genericPermissionHeadline = (action?: string): string => {
   switch (action) {
     case "allow-target":
     case "allow-function":
