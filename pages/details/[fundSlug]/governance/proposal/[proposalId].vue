@@ -380,6 +380,7 @@ import {
   VoteTypeNumberMapping,
 } from "~/types/enums/governance_proposal";
 import type IGovernanceProposal from "~/types/governance_proposal";
+import { parseProposalSlug } from "~/composables/governance/proposalSlug";
 
 /**
  * The shell swaps the vault's identity block for a breadcrumb trail as soon as
@@ -399,9 +400,9 @@ const blockTimeStore = useBlockTimeStore();
 const actionStateStore = useActionStateStore();
 
 const route = useRoute();
-const proposalSlug = route.params.proposalId as string;
-// The slug is "<createdBlockNumber>-<proposalId>"; only the id is read here.
-const [, proposalId] = proposalSlug.split("-") as [string, string];
+// "<createdBlockNumber>-<proposalId>" from the app, the bare id from
+// notification links; only the id is read here.
+const proposalId = parseProposalSlug(route.params.proposalId as string);
 
 const { selectedFundSlug } = storeToRefs(fundStore);
 const governanceRoute = computed(
