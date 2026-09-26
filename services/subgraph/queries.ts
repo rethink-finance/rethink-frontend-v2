@@ -265,7 +265,9 @@ export const FETCH_USER_FLOWS = gql`
     fundFlows(
       first: $first
       skip: $skip
-      where: { txFrom: $userAddress }
+      # txFrom alone misses a Safe: its owner signs the transaction, and the
+      # Safe is only the caller of the vault.
+      where: { or: [{ txFrom: $userAddress }, { caller: $userAddress }] }
       orderBy: timestamp
       orderDirection: desc
     ) {

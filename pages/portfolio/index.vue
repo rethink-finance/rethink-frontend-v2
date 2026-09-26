@@ -30,6 +30,8 @@
         :flows="flows"
         :funds="allFunds"
         :is-loading="isLoadingFlows"
+        :failed-chains="failedFlowChains"
+        @retry="retryFlows"
       />
     </template>
   </div>
@@ -39,6 +41,7 @@
 import { useAccountStore } from "~/store/account/account.store";
 import { useFundsStore } from "~/store/funds/funds.store";
 import type IFund from "~/types/fund";
+import type { ChainId } from "~/types/enums/chain_id";
 import {
   loadPortfolioPositions,
   positionValueSeries,
@@ -85,6 +88,7 @@ const isLoadingFlows = ref(true);
 // deep-wrapping them again would cost more than it buys.
 const rawPositions = shallowRef<PortfolioPosition[]>([]);
 const flows = shallowRef<PortfolioFlow[]>([]);
+const failedFlowChains = ref<ChainId[]>([]);
 const attention = ref<Record<string, PositionAttention>>({});
 
 const allFunds = computed<IFund[]>(() => fundsStore.funds);
@@ -169,6 +173,7 @@ const load = async (account: string) => {
   isLoadingFlows.value = true;
   rawPositions.value = [];
   flows.value = [];
+  failedFlowChains.value = [];
   attention.value = {};
 
   try {
@@ -182,13 +187,15 @@ const load = async (account: string) => {
         rawPositions.value = balances;
         if (balances.length || scanDone) isLoadingPositions.value = false;
       },
-      (loadedFlows) => {
+      (loadedFlows, failedChains) => {
         flows.value = loadedFlows;
+        failedFlowChains.value = failedChains;
         isLoadingFlows.value = false;
       },
     );
     rawPositions.value = result.positions;
     flows.value = result.flows;
+    failedFlowChains.value = result.failedChains;
   } catch (error) {
     console.error("Failed loading portfolio positions", error);
   } finally {
@@ -201,6 +208,10 @@ const load = async (account: string) => {
   } catch (error) {
     console.error("Failed loading portfolio attention items", error);
   }
+};
+
+const retryFlows = () => {
+  if (activeAccountAddress.value) load(activeAccountAddress.value);
 };
 
 watch(
