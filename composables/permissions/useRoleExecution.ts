@@ -144,6 +144,12 @@ export interface IRoleCall {
   to: string;
   data: string;
   value?: string;
+  /**
+   * 1 = delegatecall. Only for a target the role is scoped to delegatecall
+   * into (today: the CoW order signer on the Scientific Vote Vault). Left
+   * out, the call is a plain call, which is what every other permission is.
+   */
+  operation?: 0 | 1;
 }
 
 const encodeExecWithRole = (
@@ -155,7 +161,7 @@ const encodeExecWithRole = (
     call.to,
     call.value ?? "0",
     call.data,
-    0, // Operation.Call — the manager permissions never allow delegatecall
+    call.operation ?? 0, // Operation.Call unless the caller asked for a delegatecall
     roleArg(version, role),
     true, // shouldRevert: surface inner failures instead of returning false
   ]);
@@ -628,7 +634,7 @@ export const sendRoleExecution = (
     call.to,
     call.value ?? "0",
     call.data,
-    0,
+    call.operation ?? 0,
     roleArg(version, roleKey),
     true,
   );

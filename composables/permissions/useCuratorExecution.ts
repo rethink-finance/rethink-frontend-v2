@@ -376,6 +376,9 @@ const wrappedSend = async (
     sendRoleExecution(chainId, rolesModAddress, call, role, version, plan?.gas);
 };
 
+const DELEGATECALL_NEEDS_EXECUTOR =
+  "This action is a delegatecall through the Roles modifier. Send it from an executor wallet, not from a session connected as the Safe.";
+
 /** Is the connected account the selected vault's custody Safe? */
 export const isConnectedAsSafe = (): boolean =>
   useFundStore().isConnectedWalletTheSafe;
@@ -469,6 +472,7 @@ export const simulateCuratorTransaction = async (
   route: ICuratorRoute,
 ): Promise<IRoleSimulationResult> => {
   if (isConnectedAsSafe()) {
+    if (call.operation === 1) return { ok: false, reason: DELEGATECALL_NEEDS_EXECUTOR };
     const account = useAccountStore().activeAccountAddress;
     if (!account) return { ok: false, reason: "Connect your wallet first." };
     return await simulateDirectCall(route.chainId, account, call);
@@ -502,7 +506,12 @@ export const sendCuratorTransaction = (
       route?.chainId ??
       ((fundStore.fund?.chainId ?? fundStore.selectedFundChain) as ChainId);
 
-    if (isConnectedAsSafe()) return () => sendAsSafe(chainId, call);
+    if (isConnectedAsSafe()) {
+      // An unwrapped transaction from the Safe is always a plain call; there
+      // is no way to say "delegatecall" in it.
+      if (call.operation === 1) throw new Error(DELEGATECALL_NEEDS_EXECUTOR);
+      return () => sendAsSafe(chainId, call);
+    }
 
     if (route) {
       const version = route.version ?? RolesVersion.V2;
