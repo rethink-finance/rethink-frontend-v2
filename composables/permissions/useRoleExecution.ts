@@ -17,6 +17,7 @@ import {
 } from "~/composables/permissions/gasLimit";
 import { fetchExplorerLogs } from "~/services/onchain/explorerLogs";
 import { fetchBlockscoutRoleLogs } from "~/services/onchain/roleScopes";
+import type { ILiveFundSettingsState } from "~/composables/permissions/roleCalldata";
 import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
@@ -25,6 +26,13 @@ import { RolesVersion } from "~/types/enums/roles_version";
 // Re-exported so the many existing importers keep working; the enum itself
 // lives in types/ so encoders can share it without importing the stores.
 export { RolesVersion };
+// The calldata builders live in a store-free module so the acceptance tests
+// can run the exact bytes the pages send against the deployed contracts.
+export {
+  buildAssignRolesCalldata,
+  buildCuratorUpdateSettingsCalldata,
+  type ILiveFundSettingsState,
+} from "~/composables/permissions/roleCalldata";
 
 /**
  * Curator-mode execution through the vault's Roles modifier.
@@ -69,6 +77,12 @@ const roleArg = (version: RolesVersion, role: string): string | number => {
 const CONDITION_VIOLATION_SELECTOR = "0xd0a9bf58"; // ConditionViolation(uint8,bytes32)
 const MODULE_TRANSACTION_FAILED_SELECTOR = "0xd27b44a9"; // ModuleTransactionFailed()
 const NO_MEMBERSHIP_SELECTOR = "0xfd8e9f28"; // NoMembership()
+// What the modifier answers a wallet it has never been told about: holding a
+// role is what enables an address on it, so a wallet that was never assigned
+// one is refused before any role is even looked at. (Verified on a fork: a
+// wallet whose role was removed gets NoMembership, one that never had a role
+// gets this.)
+const NOT_AUTHORIZED_SELECTOR = ethers.id("NotAuthorized(address)").slice(0, 10);
 const ERROR_STRING_SELECTOR = "0x08c379a0"; // Error(string)
 // OpenZeppelin 5 Ownable — what a Roles V2 modifier answers a sender that is
 // not its owner (V1 still uses the "Ownable: caller is not the owner" string).
@@ -87,8 +101,8 @@ const PANIC_HINTS: Record<number, string> = {
 // Do NOT extend this table from an SDK enum — orderings differ.
 const CONDITION_STATUS_HINTS: Record<number, string> = {
   1: "Delegate calls are not allowed by this permission.",
-  2: "This target address is not allowed for the manager role.",
-  3: "This function is not allowed on this target for the manager role.",
+  2: "This target address is not allowed for your role.",
+  3: "This function is not allowed on this target for your role.",
   4: "Sending value is not allowed by this permission.",
   7: "A parameter does not match the value pinned by the permission.",
 };
@@ -121,6 +135,8 @@ export interface IRoleSimulationResult {
   ok: boolean;
   /** Permission layer passed but the wrapped call itself reverted. */
   innerRevert?: boolean;
+  /** Denied because the sender does not hold the role it was tried under. */
+  noMembership?: boolean;
   reason?: string;
 }
 
@@ -266,11 +282,12 @@ const describeRevert = (
         `The Roles modifier denied this call (status ${status}).`,
     };
   }
-  if (selector === NO_MEMBERSHIP_SELECTOR) {
+  if (selector === NO_MEMBERSHIP_SELECTOR || selector === NOT_AUTHORIZED_SELECTOR) {
     return {
       ok: false,
+      noMembership: true,
       reason:
-        "The connected wallet does not hold the manager role on this vault.",
+        "The connected wallet does not hold the role this action needs on this vault.",
     };
   }
   if (selector === OWNABLE_UNAUTHORIZED_SELECTOR) {
@@ -663,13 +680,6 @@ export const detectRolesVersion = async (
  * Roles permission pins these values EXACTLY: an echo built from a stale
  * cache doesn't fail loudly, it fails as an opaque permission denial.
  */
-export interface ILiveFundSettingsState {
-  settings: Record<string, any>;
-  fundMetadata: string;
-  feePerformancePeriod: string;
-  feeManagePeriod: string;
-}
-
 /**
  * Just the metadata JSON, in one call rather than the four
  * fetchLiveFundSettingsState makes.
@@ -730,59 +740,6 @@ export const fetchLiveFundSettingsState = async (
     feePerformancePeriod: String(feePerformancePeriod),
     feeManagePeriod: String(feeManagePeriod),
   };
-};
-
-/**
- * updateSettings calldata for the curator-editable surfaces the Roles
- * permission leaves open: the depositor whitelist — its enforcement flag and
- * its addresses (XOR-toggle deltas) — and the metadata JSON. Everything else
- * echoes the live struct verbatim, with two deliberate exceptions the
- * permission demands:
- *
- * - governor is sent as the SAFE address (the permission pins it there; the
- *   fund's own governor check only passes once activation has run).
- * - allowedManagers is always [] (pinned empty — and, being an XOR delta,
- *   anything else would toggle live entries).
- *
- * Omitting isWhitelistedDeposits echoes the live flag, so a caller that only
- * edits addresses never races a concurrent flip.
- */
-export const buildCuratorUpdateSettingsCalldata = (
-  live: ILiveFundSettingsState,
-  changes: {
-    whitelistDeltas?: string[];
-    isWhitelistedDeposits?: boolean;
-    fundMetadata?: string;
-  },
-): string => {
-  const settings = live.settings;
-  const echoedSettings = {
-    depositFee: settings.depositFee,
-    withdrawFee: settings.withdrawFee,
-    performanceFee: settings.performanceFee,
-    managementFee: settings.managementFee,
-    performaceHurdleRateBps: settings.performaceHurdleRateBps,
-    baseToken: settings.baseToken,
-    safe: settings.safe,
-    isExternalGovTokenInUse: settings.isExternalGovTokenInUse,
-    isWhitelistedDeposits:
-      changes.isWhitelistedDeposits ?? settings.isWhitelistedDeposits,
-    // XOR-toggle deltas: ONLY the addresses whose state should flip.
-    allowedDepositAddrs: changes.whitelistDeltas ?? [],
-    allowedManagers: [] as string[],
-    governanceToken: settings.governanceToken,
-    fundAddress: settings.fundAddress,
-    governor: settings.safe,
-    fundName: settings.fundName,
-    fundSymbol: settings.fundSymbol,
-    feeCollectors: settings.feeCollectors,
-  };
-  return fundIface.encodeFunctionData("updateSettings", [
-    Object.values(echoedSettings),
-    changes.fundMetadata ?? live.fundMetadata,
-    live.feePerformancePeriod,
-    live.feeManagePeriod,
-  ]);
 };
 
 // keccak256 topic of AssignRoles — the role array type differs per
@@ -854,7 +811,7 @@ const fetchRpcAssignRolesLogs = async (
  * every tier fails the error propagates, so a failed read never turns into
  * "no membership".
  */
-const fetchAssignRolesLogs = async (
+const readAssignRolesLogs = async (
   chainId: ChainId,
   rolesModAddress: string,
   version: RolesVersion,
@@ -893,6 +850,27 @@ const fetchAssignRolesLogs = async (
   }
   if (answered) return [];
   throw lastError ?? new Error(`No log source available for chain ${chainId}`);
+};
+
+// Several readers ask for the same history at once — the Permissions step
+// lists the members of two roles side by side — and each read is a full log
+// scan. Share the one in flight; nothing is kept once it settles, so a
+// refresh still goes back to the chain.
+const assignRolesLogsInFlight = new Map<string, Promise<IAssignRolesLog[]>>();
+
+const fetchAssignRolesLogs = (
+  chainId: ChainId,
+  rolesModAddress: string,
+  version: RolesVersion,
+): Promise<IAssignRolesLog[]> => {
+  const key = `${chainId}:${rolesModAddress.toLowerCase()}:${version}`;
+  const pending = assignRolesLogsInFlight.get(key);
+  if (pending) return pending;
+  const request = readAssignRolesLogs(chainId, rolesModAddress, version).finally(
+    () => assignRolesLogsInFlight.delete(key),
+  );
+  assignRolesLogsInFlight.set(key, request);
+  return request;
 };
 
 /**
@@ -969,15 +947,3 @@ export const fetchMemberRoles = async (
     .filter(([, isMember]) => isMember)
     .map(([roleId]) => roleId);
 };
-
-/** assignRoles calldata for one membership change, targeting the modifier. */
-export const buildAssignRolesCalldata = (
-  memberAddress: string,
-  isMember: boolean,
-  roleKey: string = DEFAULT_ROLE_KEY_V2,
-): string =>
-  rolesIface.encodeFunctionData("assignRoles", [
-    memberAddress,
-    [ethers.encodeBytes32String(roleKey)],
-    [isMember],
-  ]);

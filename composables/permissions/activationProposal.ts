@@ -121,6 +121,15 @@ export const buildActivationProposalActions = async (
   // a modifier owned by an unexpected third address before proposing a
   // transferOwnership that could never execute.
   executingGovernorAddress?: string,
+  options: {
+    /**
+     * Whether to move settings authority to the Safe. That changes the
+     * vault's default configuration, so it is only proposed for a vault that
+     * actually granted a role a vault-settings permission; role-member
+     * permissions need the modifier's ownership alone. Defaults to true.
+     */
+    settingsAuthority?: boolean;
+  } = {},
 ): Promise<{ actions: IProposalActions; state: IActivationState }> => {
   const web3Store = useWeb3Store();
   const state = await fetchActivationState(
@@ -133,7 +142,7 @@ export const buildActivationProposalActions = async (
   const gasValues: number[] = [];
   const calldatas: string[] = [];
 
-  if (state.needsGovernorMigration) {
+  if (state.needsGovernorMigration && options.settingsAuthority !== false) {
     const fundContract = web3Store.getCustomContract(
       chainId,
       GovernableFund.abi as any,

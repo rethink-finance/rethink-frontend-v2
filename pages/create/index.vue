@@ -1384,7 +1384,7 @@ const initializeFund = async() => {
     } catch (error: any) {
       console.error("Failed uploading the vault image", error);
       return toastStore.errorToast(
-        `Could not upload the vault image — ${error?.message || "the image service did not respond"}. ` +
+        `Could not upload the vault image: ${error?.message || "the image service did not respond"}. ` +
         "Try again, or paste a hosted image URL on the Basics step.",
       );
     }

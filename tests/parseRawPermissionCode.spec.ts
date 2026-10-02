@@ -2,7 +2,6 @@ import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
 import RolesFullV2 from "../assets/contracts/zodiac/RolesFullV2.json";
 import { getScopeTargetV2 } from "../composables/nav/generateNAVPermission";
-import { generateManageRoleMembersPermissionRolesV2 } from "../composables/permissions/rolesV2Permissions";
 import { parseRawPermissionCode } from "../composables/permissions/parseRawPermissionCode";
 
 const rolesInterface = new ethers.Interface((RolesFullV2 as any).abi);
@@ -10,7 +9,12 @@ const TARGET = "0x111f164d91e3F8169a7043f7094f44af87Fb7CA4";
 
 describe("parseRawPermissionCode", () => {
   const scopeTarget = getScopeTargetV2("defaulManagerRole", TARGET);
-  const [, allowFunction] = generateManageRoleMembersPermissionRolesV2(TARGET);
+  const allowFunction = rolesInterface.encodeFunctionData("allowFunction", [
+    ethers.encodeBytes32String("defaulManagerRole"),
+    TARGET.toLowerCase(),
+    "0x957ed2b3",
+    0,
+  ]);
 
   it("accepts newline-separated hex entries and labels them", () => {
     const entries = parseRawPermissionCode(

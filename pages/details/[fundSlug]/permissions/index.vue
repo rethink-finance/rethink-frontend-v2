@@ -22,26 +22,31 @@
       </div>
       <p class="v2_hint">
         Permission changes (targets, functions, pinned parameters) go through
-        governance. Role membership below executes directly through the
-        manager role.
+        governance. Role membership below executes directly, through the
+        connected wallet's own role.
       </p>
 
       <div v-if="needsActivation" class="activation_card mt-6">
-        <strong>Manager permissions pending activation</strong>
-        <p v-if="activationState?.needsGovernorMigration">
-          The "update vault settings" permission stays inert until
-          governance hands settings authority to the Safe (one-time
-          <code>governor&nbsp;→&nbsp;Safe</code> settings change).
+        <strong>Role permissions pending activation</strong>
+        <p v-if="proposesSettingsAuthority">
+          The vault-settings permissions (whitelist, metadata, fee
+          destinations) stay inert until governance changes the vault's
+          default configuration and hands settings authority to the Safe
+          (one-time <code>governor&nbsp;→&nbsp;Safe</code> settings change).
         </p>
         <p v-if="activationState?.needsOwnershipTransfer">
-          The "manage role members" permission stays inert until governance
+          The role-member permissions stay inert until governance
           transfers the Roles modifier's ownership to the Safe.
         </p>
-        <p class="activation_card__hint">
+        <p v-if="proposesSettingsAuthority" class="activation_card__hint">
           One proposal covers everything still pending. The whitelist is
           untouched: the proposal echoes current settings with empty
           depositor/manager arrays (those arrays are toggle deltas, not
           absolute lists).
+        </p>
+        <p v-else class="activation_card__hint">
+          The proposal leaves the vault's configuration as it is: no role
+          on this vault was granted a vault-settings permission.
         </p>
         <v-btn
           color="primary"
@@ -65,11 +70,27 @@
       </div>
 
       <!-- Membership: reads straight off the modifier, writes through the
-           manager role's own assignRoles permission. -->
+           connected wallet's own assignRoles permission. The admin card only
+           shows on a vault that has the admin role — one created before the
+           two-role split has nothing to hold it for. -->
       <div class="members mt-6">
+        <OnboardingRoleMembers
+          v-if="hasAdminRole"
+          ref="adminMembersRef"
+          v-model="pendingAdminMemberChanges"
+          class="mb-4"
+          :role-label="`role ${VAULT_ROLES.admin.number} · admin`"
+          :role-key="ADMIN_ROLE_KEY_V2"
+          recommend-multisig
+          :chain-id="fund.chainId"
+          :roles-mod-address="roleModAddress"
+          empty-text="Nobody holds the admin role. Its permissions stay with governance until someone does."
+          leaves-empty-text="These changes leave the vault with no admin. Only governance could assign one afterwards."
+        />
         <OnboardingRoleMembers
           ref="roleMembersRef"
           v-model="pendingMemberChanges"
+          :role-label="hasAdminRole ? `role ${VAULT_ROLES.executor.number} · executor` : undefined"
           :chain-id="fund.chainId"
           :roles-mod-address="roleModAddress"
         />
@@ -77,7 +98,7 @@
         <div class="members__actions">
           <v-btn
             color="primary"
-            :disabled="!pendingMemberChanges.length"
+            :disabled="!queuedMemberChanges.length"
             :loading="isExecutingMemberChanges"
             @click="executeMemberChanges"
           >
@@ -156,13 +177,27 @@ import {
   fetchActivationState,
   type IActivationState,
 } from "~/composables/permissions/activationProposal";
-import { buildAssignRolesCalldata } from "~/composables/permissions/useRoleExecution";
+import {
+  buildAssignRolesCalldata,
+  fetchRoleMembers,
+} from "~/composables/permissions/useRoleExecution";
 import {
   clearCuratorRoleCache,
   sendCuratorTransaction,
   simulateCuratorTransaction,
 } from "~/composables/permissions/useCuratorExecution";
-import type { IAssignMemberChange } from "~/composables/nav/generateNAVPermission";
+import {
+  ADMIN_ROLE_KEY_V2,
+  EXECUTOR_ROLE_KEY_V2,
+  toRoleKeyBytes32,
+  type IAssignMemberChange,
+} from "~/composables/nav/generateNAVPermission";
+import { VAULT_ROLES } from "~/composables/permissions/vaultRoles";
+import { UPDATE_SETTINGS_SELECTOR } from "~/composables/permissions/rolesV2Permissions";
+import {
+  fetchRoleScopeLogs,
+  reduceRoleScopeLogs,
+} from "~/services/onchain/roleScopes";
 import {
   NO_DELEGATES_TITLE,
   useProposalDelegation,
@@ -205,13 +240,30 @@ const gnosisRolesUrl = computed(() => {
   return `https://roles.gnosisguild.org/${fund.chainShort}:${roleModAddress.value}`;
 });
 
-// One-time governance activation of the manager's update-settings /
-// role-members permissions (Roles V2 vaults only).
+// One-time governance activation of the roles' vault-settings /
+// role-member permissions (Roles V2 vaults only).
 const activationState = ref<IActivationState | null>(null);
 const isCreatingActivationProposal = ref(false);
+// Whether any role was granted a vault-settings permission (updateSettings
+// on the vault). null while unknown, which is treated as "yes": the read can
+// fail, and a vault whose settings permission is live must not be left
+// without the proposal that makes it work.
+const settingsPermissionGranted = ref<boolean | null>(null);
+
+/**
+ * Moving settings authority to the Safe changes the vault's default
+ * configuration, so it is proposed only where a role actually holds a
+ * permission that needs it. Role-member permissions need the modifier's
+ * ownership alone.
+ */
+const proposesSettingsAuthority = computed(
+  () =>
+    !!activationState.value?.needsGovernorMigration &&
+    settingsPermissionGranted.value !== false,
+);
 const needsActivation = computed(
   () =>
-    activationState.value?.needsGovernorMigration ||
+    proposesSettingsAuthority.value ||
     activationState.value?.needsOwnershipTransfer,
 );
 
@@ -240,6 +292,7 @@ const createActivationProposal = async () => {
       fund.address,
       roleModAddress.value || null,
       fund.governorAddress,
+      { settingsAuthority: proposesSettingsAuthority.value },
     );
     if (!actions.targets.length) {
       toastStore.addToast("Nothing left to activate.");
@@ -263,15 +316,26 @@ const createActivationProposal = async () => {
         actions.targets,
         actions.gasValues,
         actions.calldatas,
-        JSON.stringify({
-          title: "Activate manager vault-settings & role-member permissions",
-          description:
-            "One-time activation: hand settings authority to the Safe " +
-            "(governor = safe, whitelist arrays left empty on purpose — " +
-            "they are toggle deltas) and/or transfer Roles modifier " +
-            "ownership to the Safe, so the manager's granted Roles V2 " +
-            "permissions become executable.",
-        }),
+        JSON.stringify(
+          proposesSettingsAuthority.value
+            ? {
+              title: "Activate vault-settings & role-member permissions",
+              description:
+                "One-time activation: hand settings authority to the Safe " +
+                "(governor = safe, whitelist arrays left empty on purpose, " +
+                "they are toggle deltas) and/or transfer Roles modifier " +
+                "ownership to the Safe, so the granted Roles V2 " +
+                "permissions become executable.",
+            }
+            : {
+              title: "Activate role-member permissions",
+              description:
+                "One-time activation: transfer the Roles modifier's " +
+                "ownership to the Safe, so the granted role-member " +
+                "permissions become executable. The vault's settings and " +
+                "their authority are not changed.",
+            },
+        ),
       )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);
@@ -308,31 +372,107 @@ const createActivationProposal = async () => {
 
 // Role membership (Roles V2): the shared component lists current members
 // off the modifier's AssignRoles history and queues the changes; executing
-// them goes through the manager role's own assignRoles permission — or, on a
-// session connected as the Safe (Zodiac Pilot), straight from the Safe that
-// owns the modifier.
+// them goes through the connected wallet's own assignRoles permission (the
+// admin role's, or the executor role's on a vault created before the admin
+// role existed) — or, on a session connected as the Safe (Zodiac Pilot),
+// straight from the Safe that owns the modifier.
 const roleMembersRef = ref<{ reload: () => Promise<void> } | null>(null);
+const adminMembersRef = ref<{ reload: () => Promise<void> } | null>(null);
 const pendingMemberChanges = ref<IAssignMemberChange[]>([]);
+const pendingAdminMemberChanges = ref<IAssignMemberChange[]>([]);
 const isExecutingMemberChanges = ref(false);
 
+/**
+ * Does this vault have the admin role at all? Vaults created before the
+ * two-role split carry everything on the executor role, and offering an
+ * "admin" list there would hand out a role that permits nothing. The role
+ * exists when the modifier stores a scope for it, or when someone holds it.
+ */
+const hasAdminRole = ref(false);
+const refreshHasAdminRole = async () => {
+  hasAdminRole.value = false;
+  settingsPermissionGranted.value = null;
+  if (!fund?.fundFactoryContractV2Used || !roleModAddress.value) return;
+  const modifier = roleModAddress.value;
+  try {
+    // One read of the modifier's log answers both questions: whether the
+    // admin role is in use, and whether either role may change the vault's
+    // settings (the admin, or the executor on a vault created before the
+    // split).
+    const logs = await fetchRoleScopeLogs(fund.chainId, modifier);
+    const admin = reduceRoleScopeLogs(logs, toRoleKeyBytes32(ADMIN_ROLE_KEY_V2));
+    const executor = reduceRoleScopeLogs(logs, toRoleKeyBytes32(EXECUTOR_ROLE_KEY_V2));
+    settingsPermissionGranted.value = [...admin.scopes, ...executor.scopes].some(
+      (scope) =>
+        scope.target.toLowerCase() === fund.address.toLowerCase() &&
+        scope.selector.toLowerCase() === UPDATE_SETTINGS_SELECTOR,
+    );
+    if (admin.scopes.length || admin.targets.length) {
+      hasAdminRole.value = true;
+      return;
+    }
+  } catch (error) {
+    console.warn("Could not read the roles' scopes", error);
+  }
+  try {
+    const members = await fetchRoleMembers(fund.chainId, modifier, ADMIN_ROLE_KEY_V2);
+    hasAdminRole.value = members.length > 0;
+  } catch (error) {
+    console.warn("Could not read the admin role's members", error);
+  }
+};
+
+/**
+ * Every queued change with the role it applies to, in the order it has to be
+ * sent: additions first, then executor removals, and removals of the admin
+ * role last. A transfer of the admin role — add the new admin, remove the
+ * old — must assign before it removes, and an admin who is stepping down
+ * needs its role for every other change in the queue.
+ */
+const queuedMemberChanges = computed(() => {
+  const rank = (action: IAssignMemberChange["action"], roleKey: string) => {
+    if (action === "ADD") return 0;
+    return roleKey === ADMIN_ROLE_KEY_V2 ? 2 : 1;
+  };
+  return [
+    ...pendingAdminMemberChanges.value.map((change) => ({
+      change,
+      roleKey: ADMIN_ROLE_KEY_V2,
+      list: pendingAdminMemberChanges,
+    })),
+    ...pendingMemberChanges.value.map((change) => ({
+      change,
+      roleKey: EXECUTOR_ROLE_KEY_V2,
+      list: pendingMemberChanges,
+    })),
+  ].sort(
+    (a, b) =>
+      rank(a.change.action, a.roleKey) - rank(b.change.action, b.roleKey),
+  );
+});
+
 const executeMemberChanges = async () => {
-  if (!roleModAddress.value || !pendingMemberChanges.value.length) return;
+  if (!roleModAddress.value || !queuedMemberChanges.value.length) return;
   isExecutingMemberChanges.value = true;
   try {
     // One execTransactionWithRole per change, sequentially — each is its own
     // wallet signature, and a failure stops the queue so nothing is skipped
     // silently.
     const route = { chainId: fund.chainId, rolesModAddress: roleModAddress.value };
-    for (const change of [...pendingMemberChanges.value]) {
+    for (const { change, roleKey, list } of [...queuedMemberChanges.value]) {
       const call = {
         to: roleModAddress.value,
-        data: buildAssignRolesCalldata(change.address, change.action === "ADD"),
+        data: buildAssignRolesCalldata(
+          change.address,
+          change.action === "ADD",
+          roleKey,
+        ),
       };
       const simulation = await simulateCuratorTransaction(call, route);
       if (!simulation.ok) {
         toastStore.errorToast(
           simulation.innerRevert
-            ? "The modifier rejected this change — role-member management " +
+            ? "The modifier rejected this change. Role-member management " +
               "is likely still pending governance activation (see above)."
             : simulation.reason || "The Roles modifier denied this call.",
           10000,
@@ -345,9 +485,7 @@ const executeMemberChanges = async () => {
         );
       });
       // Drop the executed change so a mid-queue failure keeps the rest.
-      pendingMemberChanges.value = pendingMemberChanges.value.filter(
-        (item) => item !== change,
-      );
+      list.value = list.value.filter((item) => item !== change);
     }
     toastStore.successToast("Role membership updated.");
   } catch (error: any) {
@@ -359,6 +497,7 @@ const executeMemberChanges = async () => {
   } finally {
     isExecutingMemberChanges.value = false;
     roleMembersRef.value?.reload();
+    adminMembersRef.value?.reload();
     // Membership drives the execution buttons on the NAV / settlement /
     // execution pages, so drop what they cached about it.
     clearCuratorRoleCache();
@@ -383,7 +522,7 @@ const fetchRolesAndPermissions = async () => {
     console.error(error);
     toastStore.errorToast("Failed loading permissions. Please refresh page.");
   }
-  await refreshActivationState();
+  await Promise.all([refreshActivationState(), refreshHasAdminRole()]);
 };
 
 const navigateToCreatePermissions = async () => {
