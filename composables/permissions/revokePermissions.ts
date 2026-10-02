@@ -5,6 +5,7 @@ import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 import {
   DEFAULT_ROLE_KEY,
   DEFAULT_ROLE_KEY_V2,
+  toRoleKeyBytes32,
 } from "~/composables/nav/generateNAVPermission";
 
 /**
@@ -89,6 +90,27 @@ export const decodeRolesV2Targets = (encodedCalls: string[]): string[] => {
   return targets;
 };
 
+const scopeKey = ({ target, selector }: IPermissionScope) =>
+  `${target.toLowerCase()}:${selector.toLowerCase()}`;
+
+/**
+ * The targets that still carry a function grant once `revoked` is taken away
+ * from `current` — the ones a save must not clear, whatever else it revokes
+ * on them. Compared case-insensitively: stored scopes and freshly built ones
+ * do not agree on address casing.
+ */
+export const targetsStillInUse = (
+  current: IPermissionScope[],
+  revoked: IPermissionScope[],
+): string[] => {
+  const gone = new Set(revoked.map(scopeKey));
+  return [
+    ...new Set(
+      current.filter((scope) => !gone.has(scopeKey(scope))).map((scope) => scope.target),
+    ),
+  ];
+};
+
 const dedupeScopes = (scopes: IPermissionScope[]): IPermissionScope[] => {
   const seen = new Set<string>();
   return scopes.filter(({ target, selector }) => {
@@ -97,6 +119,21 @@ const dedupeScopes = (scopes: IPermissionScope[]): IPermissionScope[] => {
     seen.add(key);
     return true;
   });
+};
+
+/**
+ * Roles V2 revocations of functions only, leaving every target's clearance
+ * in place — for a save that shares its targets with grants it knows nothing
+ * about, where clearing a target would take those with it.
+ */
+export const buildRevokeFunctionEntriesV2 = (
+  revoked: IPermissionScope[],
+  roleKey: string = DEFAULT_ROLE_KEY_V2,
+): string[] => {
+  const roleKeyBytes = toRoleKeyBytes32(roleKey);
+  return dedupeScopes(revoked).map(({ target, selector }) =>
+    encodeFunctionCall(revokeFunctionAbiV2, [roleKeyBytes, target, selector]),
+  );
 };
 
 /**
@@ -119,7 +156,7 @@ export const buildRevokeEntriesV2 = (
   const scopes = dedupeScopes(revoked);
   if (!scopes.length) return [];
 
-  const roleKeyBytes = ethers.encodeBytes32String(roleKey);
+  const roleKeyBytes = toRoleKeyBytes32(roleKey);
   const entries = scopes.map(({ target, selector }) =>
     encodeFunctionCall(revokeFunctionAbiV2, [roleKeyBytes, target, selector]),
   );

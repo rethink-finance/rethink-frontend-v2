@@ -264,7 +264,7 @@ const blocksHint = computed(() => {
   if (props.modelValue == null) return "";
   const blocks = Number(props.modelValue);
   if (isNaN(blocks)) return "";
-  if (blocks === 0) return props.field.zeroHint ?? "No delay — takes effect immediately.";
+  if (blocks === 0) return props.field.zeroHint ?? "No delay. Takes effect immediately.";
   if (unit.value === BLOCKS_UNIT) return "";
   return `≈ ${blocks.toLocaleString("en-US")} blocks`;
 });

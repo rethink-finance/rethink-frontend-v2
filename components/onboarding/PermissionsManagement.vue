@@ -1,8 +1,10 @@
 <template>
   <div class="prepopulated">
-    <!-- Collapsed by default. These are on for almost every vault, so the
-         step opens on one decision — "keep them all" — and the five rows are
-         there for the curator who actually wants to change something. -->
+    <!-- Roles V1 only — a Roles V2 vault sets its permissions per role, on
+         the role cards. Collapsed by default: these are on for almost every
+         vault, so the step opens on one decision — "keep them all" — and the
+         rows are there for the curator who actually wants to change
+         something. (V1 grants "Update NAV" from the NAV methods step.) -->
     <div class="prepopulated__head">
       <button
         type="button"
@@ -53,84 +55,25 @@
           @update:model-value="(v: boolean) => emit('update:allowManagerToCollectFees', v)"
         />
       </div>
-
-      <!-- Roles V1 grants this from the NAV methods step instead, as part of
-           the second transaction there; a toggle here would do nothing. -->
-      <div v-if="fundFactoryContractV2Used" class="prepopulated__row">
-        <p class="prepopulated__text">
-          Update NAV
-        </p>
-        <OnboardingToggle
-          :model-value="allowManagerToUpdateNav"
-          label="Update NAV"
-          @update:model-value="(v: boolean) => emit('update:allowManagerToUpdateNav', v)"
-        />
-      </div>
-
-      <!-- Both toggles below only exist on Roles V2: V1 cannot scope inside
-           the Settings tuple, and its modifier has no separate membership
-           admin. Both also need a one-time governance activation, offered
-           from the vault's Permissions page once it is finalized. -->
-      <div v-if="fundFactoryContractV2Used" class="prepopulated__row">
-        <p class="prepopulated__text">
-          Update vault metadata &amp; whitelist
-        </p>
-        <OnboardingToggle
-          :model-value="allowManagerToUpdateSettings"
-          label="Update vault metadata & whitelist"
-          @update:model-value="(v: boolean) => emit('update:allowManagerToUpdateSettings', v)"
-        />
-      </div>
-
-      <div v-if="fundFactoryContractV2Used" class="prepopulated__row">
-        <p class="prepopulated__text">
-          Manage role members
-        </p>
-        <OnboardingToggle
-          :model-value="allowManagerToManageRoleMembers"
-          label="Manage role members"
-          @update:model-value="(v: boolean) => emit('update:allowManagerToManageRoleMembers', v)"
-        />
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 const props = defineProps<{
-  fundFactoryContractV2Used: boolean;
   allowManagerToSendFundsToFundContract: boolean;
   allowManagerToCollectFees: boolean;
-  allowManagerToUpdateNav: boolean;
-  allowManagerToUpdateSettings: boolean;
-  allowManagerToManageRoleMembers: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: "update:allowManagerToSendFundsToFundContract", value: boolean): void;
   (e: "update:allowManagerToCollectFees", value: boolean): void;
-  (e: "update:allowManagerToUpdateNav", value: boolean): void;
-  (e: "update:allowManagerToUpdateSettings", value: boolean): void;
-  (e: "update:allowManagerToManageRoleMembers", value: boolean): void;
 }>();
 
-/** Only what this vault's Roles version actually shows a row for. */
-const shownValues = computed(() => {
-  const values = [
-    props.allowManagerToSendFundsToFundContract,
-    props.allowManagerToCollectFees,
-  ];
-
-  if (props.fundFactoryContractV2Used) {
-    values.push(
-      props.allowManagerToUpdateNav,
-      props.allowManagerToUpdateSettings,
-      props.allowManagerToManageRoleMembers,
-    );
-  }
-
-  return values;
-});
+const shownValues = computed(() => [
+  props.allowManagerToSendFundsToFundContract,
+  props.allowManagerToCollectFees,
+]);
 
 const enabledCount = computed(
   () => shownValues.value.filter(Boolean).length,
@@ -141,7 +84,7 @@ const areAllEnabled = computed(
 
 /**
  * The switch has no third state, so the count is what tells a curator that
- * some are off — otherwise "all on" and "two of five on" would look alike.
+ * some are off — otherwise "all on" and "one of two on" would look alike.
  */
 const summary = computed(() =>
   areAllEnabled.value
@@ -156,12 +99,6 @@ const isExpanded = ref(!areAllEnabled.value);
 const setAll = (value: boolean) => {
   emit("update:allowManagerToSendFundsToFundContract", value);
   emit("update:allowManagerToCollectFees", value);
-
-  if (props.fundFactoryContractV2Used) {
-    emit("update:allowManagerToUpdateNav", value);
-    emit("update:allowManagerToUpdateSettings", value);
-    emit("update:allowManagerToManageRoleMembers", value);
-  }
 
   // Turning everything off is how someone says they want to pick; leaving it
   // collapsed on an all-off card would just be a dead end.
