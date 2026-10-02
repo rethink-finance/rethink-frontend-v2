@@ -254,10 +254,12 @@
 
 <script setup lang="ts">
 import { ERC20 } from "~/assets/contracts/ERC20";
+import { managerCanExecuteNavUpdate } from "~/composables/nav/managerNavPermission";
 import {
   encodeUpdateNavMethods,
   getAllowManagerToUpdateNavPermissionsData,
 } from "~/composables/nav/navProposal";
+import { detectRolesVersion } from "~/composables/permissions/useRoleExecution";
 import {
   isValuationContextReady,
   listValuationLibrary,
@@ -270,6 +272,7 @@ import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { getNAVData } from "~/store/fund/actions/fetchFundNAVData.action";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
+import { RolesVersion } from "~/types/enums/roles_version";
 import type INAVMethod from "~/types/nav_method";
 
 const createFundStore = useCreateFundStore();
@@ -368,12 +371,49 @@ watch(isAddDialogOpen, (open) => {
  * Methods
  */
 const handleClickStoreNavMethods = () => {
-  if (allowManagerToUpdateNav.value) {
-    isNotifyDialogOpen.value = true;
-  }
-
   storeNavMethods();
 }
+
+/**
+ * The second transaction, when one is needed: the calls that let the manager
+ * keep updating NAV, encoded for the modifier generation this vault has. A
+ * Roles V2 modifier does not have the V1 calls, so the factory's
+ * submitPermissions reverts on them.
+ *
+ * Null when the manager's role already holds the permission: the Permissions
+ * step's "Update NAV" switch grants the same thing. An empty list while the
+ * vault's addresses are not known, which the send itself reports.
+ */
+const resolveNavPermissionCalldatas = async (): Promise<string[] | null> => {
+  const fundAddress = fundSettings?.value?.fundAddress;
+  const rolesModifier = fundInitCache?.value?.rolesModifier;
+  if (!fundAddress || !rolesModifier) return [];
+
+  const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
+  // Probed on the modifier itself; the factory the vault was created with
+  // only says which generation to expect when no RPC answers the probe.
+  const rolesVersion = await detectRolesVersion(
+    fundChainId.value,
+    rolesModifier,
+    fundFactoryContractV2Used.value ? RolesVersion.V2 : RolesVersion.V1,
+  );
+  const alreadyAllowed = await managerCanExecuteNavUpdate(
+    fundChainId.value,
+    rolesModifier,
+    fundAddress,
+    getNAVExecutorBeaconProxyAddress(fundChainId.value),
+    rolesVersion,
+  );
+  if (alreadyAllowed) return null;
+
+  return getAllowManagerToUpdateNavPermissionsData(
+    fundAddress,
+    fundChainId.value,
+    rolesModifier,
+    rolesVersion,
+  ).calldatas;
+};
+
 const storeNavMethods = async () => {
   if (navMethods.value.length === 0) {
     return toastStore.warningToast("No methods to store.");
@@ -382,6 +422,27 @@ const storeNavMethods = async () => {
   // storeNAV(address navExecutorAddr, bytes calldata data) external {
   // TPrepare NAV methods data.
   isLoadingStoreNavMethods.value = true;
+
+  // Decided before the first transaction, so the dialog only announces a
+  // second one when there will be one. Storing the methods does not change
+  // what the manager's role is allowed to do.
+  let navPermissionCalldatas: string[] | null = null;
+  if (allowManagerToUpdateNav.value) {
+    try {
+      navPermissionCalldatas = await resolveNavPermissionCalldatas();
+    } catch (error: any) {
+      console.error("Failed preparing the manager's NAV permission ", error);
+      isLoadingStoreNavMethods.value = false;
+      return toastStore.errorToast("Failed preparing the manager's NAV permission, " + error.message);
+    }
+    if (navPermissionCalldatas) {
+      isNotifyDialogOpen.value = true;
+    } else {
+      toastStore.addToast(
+        "The manager can already update NAV, so only one transaction is needed.",
+      );
+    }
+  }
 
   let encodedNavUpdateEntries;
   try {
@@ -392,6 +453,7 @@ const storeNavMethods = async () => {
   } catch (error: any) {
     console.error("Failed encoding NAV methods (encodeUpdateNavMethods): ", error);
     isLoadingStoreNavMethods.value = false;
+    isNotifyDialogOpen.value = false;
     return toastStore.errorToast("Failed encoding NAV methods, " + error.message);
   }
 
@@ -404,9 +466,9 @@ const storeNavMethods = async () => {
     return toastStore.errorToast("Failed storing NAV methods, " + error.message);
   }
 
-  if (allowManagerToUpdateNav.value) {
+  if (navPermissionCalldatas) {
     // Submit permission to allow manager to keep updating NAV.
-    await sendAllowManagerToUpdateNavTransaction();
+    await sendAllowManagerToUpdateNavTransaction(navPermissionCalldatas);
   }
 };
 
@@ -470,7 +532,9 @@ const sendStoreNavMethodsTransaction = async (
 }
 
 
-const sendAllowManagerToUpdateNavTransaction = async () => {
+const sendAllowManagerToUpdateNavTransaction = async (
+  navPermissionCalldatas: string[],
+) => {
   if (!fundSettings?.value?.fundAddress) {
     return toastStore.errorToast("Fund address is missing.");
   }
@@ -479,21 +543,13 @@ const sendAllowManagerToUpdateNavTransaction = async () => {
   }
   isLoadingAllowManagerToUpdateNav.value = true;
 
-  const allowManagerToUpdateNavPermission =
-    getAllowManagerToUpdateNavPermissionsData(
-      fundSettings?.value?.fundAddress,
-      fundChainId.value,
-      fundInitCache?.value?.rolesModifier,
-    );
-
   try {
-    // TODO: the permissions also need to change for Roles v1 vs Roles v2
-    console.log("submitPermissions allowManagerToUpdateNavPermission", allowManagerToUpdateNavPermission);
+    console.log("submitPermissions allowManagerToUpdateNavPermission", navPermissionCalldatas);
     await fundFactoryContract.value
       .send(
         "submitPermissions",
         {},
-        allowManagerToUpdateNavPermission.calldatas,
+        navPermissionCalldatas,
       )
       .on("transactionHash", (hash: any) => {
         console.log("tx hash: " + hash);

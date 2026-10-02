@@ -416,11 +416,18 @@ const submitProposal = async () => {
   // flight when the form is filled in.
   if (!(await assertCanCreateProposal())) return;
 
-  const encodedNavUpdateEntries = encodeUpdateNavMethods(
-    fundManagedNAVMethods.value,
-    fundStore.fund?.baseToken.decimals,
-    proposal.value.processWithdraw,
-  );
+  let encodedNavUpdateEntries: string;
+  try {
+    encodedNavUpdateEntries = encodeUpdateNavMethods(
+      fundManagedNAVMethods.value,
+      fundStore.fund?.baseToken.decimals,
+      proposal.value.processWithdraw,
+    );
+  } catch (error: any) {
+    console.error("Failed encoding NAV methods (encodeUpdateNavMethods): ", error);
+    toastStore.errorToast("Failed encoding NAV methods, " + error.message, 10000);
+    return;
+  }
   const navExecutorAddress = getNAVExecutorBeaconProxyAddress(
     fundStore.selectedFundChain,
   );
