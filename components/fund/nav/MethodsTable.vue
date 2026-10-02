@@ -453,6 +453,7 @@
 
 <script lang="ts">
 import { ethers } from "ethers";
+import AddressLink from "~/components/common/AddressLink.vue";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -490,6 +491,9 @@ type INAVMethodRow = INAVMethod & {
  */
 export default defineComponent({
   name: "FundNavMethodsTable",
+  // Lives in components/common, so its auto-import name is CommonAddressLink;
+  // the template uses the short one.
+  components: { AddressLink },
   props: {
     methods: {
       type: Array as () => INAVMethod[],

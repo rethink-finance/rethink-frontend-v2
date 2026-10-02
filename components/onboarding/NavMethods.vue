@@ -10,7 +10,14 @@
       <span class="nav_methods__toggle_text">
         Allow manager to keep updating NAV based on approved methods
       </span>
+      <!-- Already granted (the Permissions step's "Update NAV" switch does
+           the same): nothing left to decide here, so no switch. -->
+      <span v-if="isNavPermissionHeld" class="nav_methods__toggle_state">
+        <Icon icon="material-symbols:check" width="0.875rem" height="0.875rem" />
+        Already allowed
+      </span>
       <OnboardingToggle
+        v-else
         v-model="allowManagerToUpdateNav"
         label="Allow the manager to keep updating NAV"
       />
@@ -220,46 +227,68 @@
       />
     </UiConfirmDialog>
 
+    <!--
+      Storing can take two transactions. The dialog does not ask for them:
+      the footer's button already did. It shows where they are, one row
+      each, and the wallet opens for the second once the first is in.
+    -->
     <UiConfirmDialog
-      v-model="isNotifyDialogOpen"
-      eyebrow="NAV methods"
-      title="Store NAV methods"
-      confirm-text="Send both"
-      class="confirm_dialog"
-      max-width="640px"
-      @confirm="isNotifyDialogOpen = false"
-      @cancel="isNotifyDialogOpen = false"
+      :model-value="isStoreDialogOpen"
+      max-width="480px"
+      :persistent="isStoring"
+      @update:model-value="closeStoreDialog"
     >
-      <p class="nav_notify__lead">
-        This action requires sending two transactions:
-      </p>
+      <template #title>
+        <div class="nav_store__eyebrow">
+          NAV methods
+          <span class="nav_store__step">
+            Step {{ storeStepNumber }} of {{ storeSteps.length }}
+          </span>
+        </div>
+        <h2 class="brand_modal__title nav_store__title">
+          Store NAV methods
+        </h2>
+      </template>
 
-      <ol class="nav_notify__list">
-        <li class="nav_notify__item">
-          <span class="nav_notify__number">1</span>
-          Store the NAV methods.
-        </li>
-        <li class="nav_notify__item">
-          <span class="nav_notify__number">2</span>
-          Allow the manager to keep updating NAV based on approved methods.
-        </li>
-      </ol>
+      <OnboardingTransactionSteps :steps="storeSteps" />
 
-      <p class="nav_notify__lead">
-        Please ensure you approve both to complete the process.
-      </p>
+      <div class="nav_store__foot">
+        <template v-if="isStoreDone">
+          <div class="nav_store__done">
+            <Icon
+              icon="material-symbols:check"
+              class="nav_store__done_icon"
+              height="1rem"
+              width="1rem"
+            />
+            <span>{{ storeDoneText }}</span>
+          </div>
+          <v-btn class="nav_store__button bg-primary text-secondary" @click="closeStoreDialog(false)">
+            Close
+          </v-btn>
+        </template>
+        <template v-else-if="storeError">
+          <p class="nav_store__error">
+            {{ storeError }}
+          </p>
+          <v-btn class="nav_store__button bg-primary text-secondary" @click="runStoreFlow">
+            Try again
+          </v-btn>
+        </template>
+        <p v-else class="nav_store__note">
+          {{ storeNote }}
+        </p>
+      </div>
     </UiConfirmDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ERC20 } from "~/assets/contracts/ERC20";
-import { managerCanExecuteNavUpdate } from "~/composables/nav/managerNavPermission";
 import {
   encodeUpdateNavMethods,
   getAllowManagerToUpdateNavPermissionsData,
 } from "~/composables/nav/navProposal";
-import { detectRolesVersion } from "~/composables/permissions/useRoleExecution";
 import {
   isValuationContextReady,
   listValuationLibrary,
@@ -272,21 +301,23 @@ import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { getNAVData } from "~/store/fund/actions/fetchFundNAVData.action";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { RolesVersion } from "~/types/enums/roles_version";
 import type INAVMethod from "~/types/nav_method";
+import { managerCanExecuteNavUpdate } from "~/composables/nav/managerNavPermission";
+import { detectRolesVersion } from "~/composables/permissions/useRoleExecution";
+import { useAccountStore } from "~/store/account/account.store";
+import { RolesVersion } from "~/types/enums/roles_version";
+import type { ITransactionStep } from "~/components/onboarding/TransactionSteps.vue";
 
 const createFundStore = useCreateFundStore();
 const toastStore = useToastStore();
 const web3Store = useWeb3Store();
+const accountStore = useAccountStore();
 
 const { fundChainId, fundInitCache, fundSettings, fundFactoryContractV2Used } = storeToRefs(createFundStore);
 
 // Data
 const isFetchingNavMethods = ref(false);
-const isLoadingStoreNavMethods = ref(false);
-const isLoadingAllowManagerToUpdateNav = ref(false);
 const isAddDialogOpen = ref(false)
-const isNotifyDialogOpen = ref(false)
 const navMethods = ref<INAVMethod[]>([]);
 const allowManagerToUpdateNav = ref(true);
 const safeContractBaseTokenBalance = ref(0);
@@ -370,24 +401,33 @@ watch(isAddDialogOpen, (open) => {
 /**
  * Methods
  */
-const handleClickStoreNavMethods = () => {
-  storeNavMethods();
-}
+
+/* ---- Storing --------------------------------------------------------------- */
+
+// The transactions a save takes, as the dialog's rail shows them: storing the
+// methods, and, with the switch above on, letting the manager keep updating
+// NAV. Each is sent on its own; the second only once the first is in.
+const storeSteps = ref<ITransactionStep[]>([]);
+const isStoreDialogOpen = ref(false);
+const isStoring = ref(false);
+// The moment between the click and the rail: the permission check below.
+const isPreparingStore = ref(false);
+const storeError = ref("");
+
+/* ---- Is the second transaction needed at all? ------------------------------ */
 
 /**
- * The second transaction, when one is needed: the calls that let the manager
- * keep updating NAV, encoded for the modifier generation this vault has. A
- * Roles V2 modifier does not have the V1 calls, so the factory's
- * submitPermissions reverts on them.
- *
- * Null when the manager's role already holds the permission: the Permissions
- * step's "Update NAV" switch grants the same thing. An empty list while the
- * vault's addresses are not known, which the send itself reports.
+ * The manager's NAV permission names the vault and the chain's NAV executor,
+ * nothing about the methods stored here, so it can be granted before any NAV
+ * exists, and the Permissions step's "Update NAV" switch usually has. Whether
+ * the role holds it is asked of the modifier itself (a dry-run from the
+ * connected wallet); "not proven" answers false and the grant is sent, which
+ * costs a transaction but never leaves the manager unable to update NAV.
  */
-const resolveNavPermissionCalldatas = async (): Promise<string[] | null> => {
+const resolveNavPermission = async (): Promise<{ held: boolean; calldatas: string[] }> => {
   const fundAddress = fundSettings?.value?.fundAddress;
   const rolesModifier = fundInitCache?.value?.rolesModifier;
-  if (!fundAddress || !rolesModifier) return [];
+  if (!fundAddress || !rolesModifier) return { held: false, calldatas: [] };
 
   const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
   // Probed on the modifier itself; the factory the vault was created with
@@ -397,189 +437,210 @@ const resolveNavPermissionCalldatas = async (): Promise<string[] | null> => {
     rolesModifier,
     fundFactoryContractV2Used.value ? RolesVersion.V2 : RolesVersion.V1,
   );
-  const alreadyAllowed = await managerCanExecuteNavUpdate(
+  const held = await managerCanExecuteNavUpdate(
     fundChainId.value,
     rolesModifier,
     fundAddress,
     getNAVExecutorBeaconProxyAddress(fundChainId.value),
     rolesVersion,
   );
-  if (alreadyAllowed) return null;
-
-  return getAllowManagerToUpdateNavPermissionsData(
-    fundAddress,
-    fundChainId.value,
-    rolesModifier,
-    rolesVersion,
-  ).calldatas;
+  return {
+    held,
+    // Encoded for the modifier generation this vault has: a Roles V2
+    // modifier does not have the V1 calls.
+    calldatas: held
+      ? []
+      : getAllowManagerToUpdateNavPermissionsData(
+        fundAddress,
+        fundChainId.value,
+        rolesModifier,
+        rolesVersion,
+      ).calldatas,
+  };
 };
 
-const storeNavMethods = async () => {
+// Asked when the step opens (and when the wallet changes), so the switch is
+// only offered while there is something for it to decide.
+const isNavPermissionHeld = ref(false);
+// The grant's calls, as resolved when the rail opened.
+let navPermissionCalldatas: string[] = [];
+watch(
+  () => [
+    fundSettings?.value?.fundAddress,
+    fundInitCache?.value?.rolesModifier,
+    accountStore.activeAccountAddress,
+  ],
+  async () => {
+    try {
+      isNavPermissionHeld.value = (await resolveNavPermission()).held;
+    } catch (error) {
+      console.warn("Could not check the manager's NAV permission", error);
+      isNavPermissionHeld.value = false;
+    }
+  },
+  { immediate: true },
+);
+
+const isStoreDone = computed(
+  () => storeSteps.value.length > 0 && storeSteps.value.every((step) => step.state === "done"),
+);
+/** The step the flow is on: the first one that is not done, or the last. */
+const storeStepNumber = computed(() => {
+  const index = storeSteps.value.findIndex((step) => step.state !== "done");
+  return index === -1 ? storeSteps.value.length : index + 1;
+});
+const storeNote = computed(() => {
+  const live = storeSteps.value[storeStepNumber.value - 1];
+  if (live?.state === "confirming") return "Sent. Waiting for it to be confirmed.";
+  if (storeSteps.value.length > 1) return "Confirm each transaction in your wallet as it opens.";
+  return isNavPermissionHeld.value
+    ? "Confirm the transaction in your wallet. The manager can already update NAV, so one transaction is all it takes."
+    : "Confirm the transaction in your wallet.";
+});
+const storeDoneText = computed(() => {
+  if (storeSteps.value.length > 1) return "NAV methods stored, and the manager can keep updating NAV.";
+  return isNavPermissionHeld.value
+    ? "NAV methods stored. The manager can already update NAV."
+    : "NAV methods stored.";
+});
+
+const closeStoreDialog = (open: boolean) => {
+  // The wallet may still be asking: the rail stays up until it has an answer.
+  if (open || isStoring.value) return;
+  isStoreDialogOpen.value = false;
+};
+
+const setStepState = (index: number, state: ITransactionStep["state"]) => {
+  storeSteps.value = storeSteps.value.map((step, i) =>
+    i === index ? { ...step, state } : step,
+  );
+};
+
+/** What went wrong, in a line a person can act on. */
+const describeSendError = (error: any): string => {
+  const message = String(error?.message ?? error ?? "");
+  if (error?.code === 4001 || /user (rejected|denied)/i.test(message)) {
+    return "The transaction was rejected in the wallet.";
+  }
+  return message || "The transaction failed.";
+};
+
+/**
+ * Send one factory transaction and wait for it to be mined. Resolves on a
+ * successful receipt; rejects when the wallet refuses, the send fails or the
+ * transaction reverts.
+ */
+const sendAndConfirm = (method: string, args: any[], onSubmitted: () => void) =>
+  new Promise<void>((resolve, reject) => {
+    try {
+      fundFactoryContract.value
+        .send(method, {}, ...args)
+        .on("transactionHash", (hash: any) => {
+          console.log("tx hash: " + hash);
+          onSubmitted();
+        })
+        .on("receipt", (receipt: any) => {
+          console.log("receipt: ", receipt);
+          if (receipt.status) resolve();
+          else reject(new Error("The transaction reverted."));
+        })
+        .on("error", (error: any) => reject(error))
+        // The same failure also rejects the promise side of the event.
+        .catch((error: any) => reject(error));
+    } catch (error) {
+      reject(error);
+    }
+  });
+
+/**
+ * The footer's button: check there is something to store, find out whether
+ * the permission still has to be granted, then open the rail with the
+ * transactions that will actually be sent.
+ */
+const handleClickStoreNavMethods = async () => {
+  if (isStoring.value || isPreparingStore.value) return;
   if (navMethods.value.length === 0) {
     return toastStore.warningToast("No methods to store.");
   }
+  if (!fundSettings?.value?.fundAddress) {
+    return toastStore.errorToast("Fund address is missing.");
+  }
 
-  // storeNAV(address navExecutorAddr, bytes calldata data) external {
-  // TPrepare NAV methods data.
-  isLoadingStoreNavMethods.value = true;
-
-  // Decided before the first transaction, so the dialog only announces a
-  // second one when there will be one. Storing the methods does not change
-  // what the manager's role is allowed to do.
-  let navPermissionCalldatas: string[] | null = null;
+  let grantsPermission = false;
   if (allowManagerToUpdateNav.value) {
+    if (!fundInitCache?.value?.rolesModifier) {
+      return toastStore.errorToast("Roles modifier address is missing.");
+    }
+    // Decided before the first transaction, so the rail only shows a second
+    // one when there will be one. Storing the methods does not change what
+    // the manager's role is allowed to do.
+    isPreparingStore.value = true;
     try {
-      navPermissionCalldatas = await resolveNavPermissionCalldatas();
+      const permission = await resolveNavPermission();
+      isNavPermissionHeld.value = permission.held;
+      navPermissionCalldatas = permission.calldatas;
+      grantsPermission = !permission.held;
     } catch (error: any) {
       console.error("Failed preparing the manager's NAV permission ", error);
-      isLoadingStoreNavMethods.value = false;
-      return toastStore.errorToast("Failed preparing the manager's NAV permission, " + error.message);
-    }
-    if (navPermissionCalldatas) {
-      isNotifyDialogOpen.value = true;
-    } else {
-      toastStore.addToast(
-        "The manager can already update NAV, so only one transaction is needed.",
+      return toastStore.errorToast(
+        "Failed preparing the manager's NAV permission, " + error.message,
       );
+    } finally {
+      isPreparingStore.value = false;
     }
   }
 
-  let encodedNavUpdateEntries;
-  try {
-    encodedNavUpdateEntries = encodeUpdateNavMethods(
-      navMethods.value,
-      fundSettings?.value?.baseDecimals,
-    );
-  } catch (error: any) {
-    console.error("Failed encoding NAV methods (encodeUpdateNavMethods): ", error);
-    isLoadingStoreNavMethods.value = false;
-    isNotifyDialogOpen.value = false;
-    return toastStore.errorToast("Failed encoding NAV methods, " + error.message);
-  }
-
-  try {
-    // TODO if this trx fails, there is no need to send the next one.
-    await sendStoreNavMethodsTransaction(encodedNavUpdateEntries);
-  } catch (error: any) {
-    console.error("Failed storing NAV methods ", error);
-    isLoadingStoreNavMethods.value = false;
-    return toastStore.errorToast("Failed storing NAV methods, " + error.message);
-  }
-
-  if (navPermissionCalldatas) {
-    // Submit permission to allow manager to keep updating NAV.
-    await sendAllowManagerToUpdateNavTransaction(navPermissionCalldatas);
-  }
+  storeSteps.value = [
+    { label: "Store the NAV methods", state: "waiting" },
+    ...(grantsPermission
+      ? [{ label: "Allow the manager to keep updating NAV", state: "waiting" as const }]
+      : []),
+  ];
+  isStoreDialogOpen.value = true;
+  runStoreFlow();
 };
 
-const sendStoreNavMethodsTransaction = async (
-  encodedNavUpdateEntries: string,
-) => {
-  if (!fundSettings?.value?.fundAddress) {
-    return toastStore.errorToast("Fund address is missing.");
-  }
-  const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
-  const navExecutorAddress = getNAVExecutorBeaconProxyAddress(fundChainId.value);
+/**
+ * Runs the steps in order, from the first that is not done, so "Try again"
+ * after a failed second transaction does not store the methods twice.
+ */
+const runStoreFlow = async () => {
+  if (isStoring.value) return;
+  isStoring.value = true;
+  storeError.value = "";
 
-  try {
-    console.log("STORE NAV DATA",
-      JSON.stringify(
-        [
-          navExecutorAddress,
-          encodedNavUpdateEntries,
-        ],
-        null,
-        2,
-      ),
-    );
-    await fundFactoryContract.value
-      .send(
+  const transactions: (() => [string, any[]])[] = [
+    () => {
+      const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
+      // storeNAV(address navExecutorAddr, bytes calldata data)
+      return [
         "storeNAV",
-        {},
-        ...[
-          navExecutorAddress,
-          encodedNavUpdateEntries,
+        [
+          getNAVExecutorBeaconProxyAddress(fundChainId.value),
+          encodeUpdateNavMethods(navMethods.value, fundSettings?.value?.baseDecimals),
         ],
-      )
-      .on("transactionHash", (hash: any) => {
-        console.log("tx hash: " + hash);
-        toastStore.addToast(
-          "Store NAV methods transaction has been submitted. Please wait for it to be confirmed.",
-        );
-      })
-      .on("receipt", (receipt: any) => {
-        console.log("receipt: ", receipt);
-        if (receipt.status) {
-          toastStore.successToast("NAV methods stored successfully.");
-        } else {
-          toastStore.errorToast(
-            "Storing NAV methods has failed. Please contact the Rethink Finance support.",
-          );
-        }
-        isLoadingStoreNavMethods.value = false;
-      })
-      .on("error", (error: any) => {
-        console.error(error);
-        isLoadingStoreNavMethods.value = false;
-        toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support.",
-        );
-      });
-  } catch (error: any) {
-    isLoadingStoreNavMethods.value = false;
-    toastStore.errorToast(error.message);
-  }
-}
+      ];
+    },
+    () => ["submitPermissions", [navPermissionCalldatas]],
+  ];
 
-
-const sendAllowManagerToUpdateNavTransaction = async (
-  navPermissionCalldatas: string[],
-) => {
-  if (!fundSettings?.value?.fundAddress) {
-    return toastStore.errorToast("Fund address is missing.");
+  for (let index = 0; index < storeSteps.value.length; index++) {
+    if (storeSteps.value[index].state === "done") continue;
+    setStepState(index, "wallet");
+    try {
+      const [method, args] = transactions[index]();
+      console.log(method, JSON.stringify(args, null, 2));
+      await sendAndConfirm(method, args, () => setStepState(index, "confirming"));
+      setStepState(index, "done");
+    } catch (error: any) {
+      console.error(`Failed: ${storeSteps.value[index].label}`, error);
+      setStepState(index, "failed");
+      storeError.value = describeSendError(error);
+      break;
+    }
   }
-  if (!fundInitCache?.value?.rolesModifier) {
-    return toastStore.errorToast("Roles modifier address is missing.");
-  }
-  isLoadingAllowManagerToUpdateNav.value = true;
-
-  try {
-    console.log("submitPermissions allowManagerToUpdateNavPermission", navPermissionCalldatas);
-    await fundFactoryContract.value
-      .send(
-        "submitPermissions",
-        {},
-        navPermissionCalldatas,
-      )
-      .on("transactionHash", (hash: any) => {
-        console.log("tx hash: " + hash);
-        toastStore.addToast(
-          "Submit NAV permissions transaction has been submitted. Please wait for it to be confirmed.",
-        );
-      })
-      .on("receipt", (receipt: any) => {
-        console.log("receipt: ", receipt);
-        if (receipt.status) {
-          toastStore.successToast("NAV permissions submitted successfully.");
-        } else {
-          toastStore.errorToast(
-            "Submitting NAV permissions has failed. Please contact the Rethink Finance support.",
-          );
-        }
-        isLoadingAllowManagerToUpdateNav.value = false;
-      })
-      .on("error", (error: any) => {
-        console.error(error);
-        isLoadingAllowManagerToUpdateNav.value = false;
-        toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance support.",
-        );
-      });
-  } catch (error: any) {
-    isLoadingAllowManagerToUpdateNav.value = false;
-    toastStore.errorToast(error.message);
-  }
-}
+  isStoring.value = false;
+};
 
 const onNewNavMethodCreatedHandler = (navMethod: INAVMethod) => {
   // Add newly defined NAV entry to fund managed methods.
@@ -692,7 +753,7 @@ const fetchNavMethods = async () => {
 // step's, so the page drives it from there.
 defineExpose({
   storeNavMethods: handleClickStoreNavMethods,
-  isStoring: isLoadingStoreNavMethods,
+  isStoring: computed(() => isStoring.value || isPreparingStore.value),
 });
 </script>
 
@@ -734,6 +795,21 @@ defineExpose({
 
   &__table {
     background: $color-card-background;
+  }
+
+  /* In the switch's place once there is nothing left for it to decide. */
+  &__toggle_state {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex: none;
+    font-family: $font-mono;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-cyan;
+    white-space: nowrap;
   }
 
   &__toggle_text {
@@ -971,42 +1047,78 @@ defineExpose({
   }
 }
 
-.nav_notify {
-  &__lead {
-    font-size: 13.5px;
-    line-height: 1.55;
-    color: $color-white;
-  }
-
-  &__list {
+/* The store dialog: the eyebrow carries the position in the flow, the way the
+   deposit dialog's does; the rail under it is OnboardingTransactionSteps. */
+.nav_store {
+  &__eyebrow {
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 0.5rem;
-    margin: 0.75rem 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  &__item {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    font-size: 13.5px;
-    line-height: 1.4;
-    color: $color-white;
-  }
-
-  &__number {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-    width: 20px;
-    height: 20px;
-    border: 1px solid $color-cyan-line;
-    border-radius: 999px;
     font-family: $font-mono;
     font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__step {
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: $color-text-irrelevant;
+  }
+
+  &__title {
+    margin-top: 0.375rem;
+  }
+
+  &__foot {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    margin-top: 1.75rem;
+  }
+
+  &__note {
+    font-size: $text-sm;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+
+  &__error {
+    font-size: $text-sm;
+    line-height: 1.5;
+    color: $color-neg;
+    word-break: break-word;
+  }
+
+  &__button {
+    width: 100%;
+    min-height: 2.75rem;
+    font-weight: 600;
+  }
+
+  /* The outcome, in the accent the finished steps above it are using. */
+  &__done {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid $color-accent-line;
+    border-radius: $default-border-radius;
+    background: $color-accent-soft;
+    font-size: $text-sm;
+    line-height: 1.5;
+    color: $color-light-subtitle;
+  }
+
+  &__done_icon {
+    flex: none;
+    margin-top: 0.125rem;
     color: $color-cyan;
   }
 }

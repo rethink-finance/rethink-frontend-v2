@@ -1,11 +1,12 @@
 import { ethers } from "ethers";
 import { encodeFunctionCall } from "web3-eth-abi";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
-import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 import {
   DEFAULT_ROLE_KEY_V2,
+  defaultScopedTargetPermissionRolesV2,
   getScopeTargetV2,
   rolesV2WriteFunctionAbiMap,
+  toRoleKeyBytes32,
 } from "~/composables/nav/generateNAVPermission";
 
 /**
@@ -83,10 +84,9 @@ export type IRolesV2ConditionFlat = [number, number, number, string];
 const abiCoder = ethers.AbiCoder.defaultAbiCoder();
 
 /**
- * The values frozen into the updateSettings permission. Everything except
- * the depositor whitelist — both its enforcement flag and its addresses are
- * wildcarded — and metadata (wildcarded) and governor (always pinned to the
- * Safe) and allowedManagers (always pinned to the empty array).
+ * The values the updateSettings permission can freeze. Which of them it
+ * actually does is decided by IUpdateSettingsOpenFields; governor is always
+ * pinned to the Safe and allowedManagers to the empty array.
  */
 export interface IUpdateSettingsPinnedValues {
   depositFee: bigint;
@@ -97,10 +97,7 @@ export interface IUpdateSettingsPinnedValues {
   baseToken: string;
   safe: string;
   isExternalGovTokenInUse: boolean;
-  /**
-   * NOT pinned any more (the manager may toggle whitelist enforcement) — kept
-   * here so parsing a raw Settings struct stays a full validation of it.
-   */
+  /** Pinned only while the whitelist is closed to the role's holder. */
   isWhitelistedDeposits: boolean;
   governanceToken: string;
   fundAddress: string;
@@ -109,7 +106,35 @@ export interface IUpdateSettingsPinnedValues {
   feeCollectors: [string, string, string, string];
   feePerformancePeriod: bigint;
   feeManagePeriod: bigint;
+  /**
+   * The raw metadata JSON string, exactly as stored. Only needed when the
+   * permission keeps metadata closed (see IUpdateSettingsOpenFields).
+   */
+  fundMetadata?: string;
 }
+
+/**
+ * Which parts of updateSettings the permission leaves open to its holder.
+ * Everything not opened here is pinned to its current value.
+ */
+export interface IUpdateSettingsOpenFields {
+  /** The metadata JSON: photo, description, strategist, links. */
+  metadata: boolean;
+  /** The depositor whitelist: its enforcement flag and its addresses. */
+  whitelist: boolean;
+  /**
+   * The four fee collector addresses — where fees are paid, never how much:
+   * the fee rates and both fee periods stay pinned regardless.
+   */
+  feeDestinations: boolean;
+}
+
+/** The policy vaults were created with before the admin role existed. */
+export const DEFAULT_UPDATE_SETTINGS_OPEN_FIELDS: IUpdateSettingsOpenFields = {
+  metadata: true,
+  whitelist: true,
+  feeDestinations: false,
+};
 
 const toBigInt = (v: any, field: string): bigint => {
   if (typeof v === "bigint") return v;
@@ -144,6 +169,7 @@ export const parseUpdateSettingsPinnedValues = (
   rawSettings: Record<string, any>,
   feePerformancePeriod: any,
   feeManagePeriod: any,
+  fundMetadata?: string,
 ): IUpdateSettingsPinnedValues => {
   const feeCollectors = rawSettings.feeCollectors;
   if (!Array.isArray(feeCollectors) || feeCollectors.length !== 4) {
@@ -182,23 +208,29 @@ export const parseUpdateSettingsPinnedValues = (
     ],
     feePerformancePeriod: toBigInt(feePerformancePeriod, "feePerformancePeriod"),
     feeManagePeriod: toBigInt(feeManagePeriod, "feeManagePeriod"),
+    ...(fundMetadata === undefined ? {} : { fundMetadata }),
   };
 };
 
 // What the permission does with each Settings struct field, in the exact
-// order the struct declares them. Only the depositor whitelist is
-// wildcarded — its addresses AND its enforcement flag, so the manager can
-// switch deposits between permissionless and whitelist-only; allowedManagers
-// is pinned to []; governor is pinned to the SAFE (the post-activation
-// value — see the activation proposal), and every other field is pinned to
-// its current value.
+// order the struct declares them. Three groups can be opened to the role's
+// holder — the depositor whitelist (its addresses AND its enforcement flag,
+// so deposits can be switched between permissionless and whitelist-only),
+// the fee collector addresses, and (outside the struct) the metadata JSON.
+// allowedManagers is always pinned to []; governor is always pinned to the
+// SAFE (the post-activation value — see the activation proposal), and every
+// other field is pinned to its current value. The fee rates are never
+// opened: a holder who may move the fee destinations still cannot change a
+// fee.
 type FieldRule =
   | { kind: "pin" }
   | { kind: "wildcard" }
   | { kind: "pin-empty-array" }
   | { kind: "pin-to-safe" };
 
-const SETTINGS_FIELD_RULES: Record<string, FieldRule> = {
+const settingsFieldRules = (
+  open: IUpdateSettingsOpenFields,
+): Record<string, FieldRule> => ({
   depositFee: { kind: "pin" },
   withdrawFee: { kind: "pin" },
   performanceFee: { kind: "pin" },
@@ -207,20 +239,23 @@ const SETTINGS_FIELD_RULES: Record<string, FieldRule> = {
   baseToken: { kind: "pin" },
   safe: { kind: "pin" },
   isExternalGovTokenInUse: { kind: "pin" },
-  // Whitelist management stays open: the manager owns both the enforcement
-  // flag and the address list. Turning the flag off makes deposits
-  // permissionless, which is a deliberate manager power here — governance
-  // grants it by granting this permission at all.
-  isWhitelistedDeposits: { kind: "wildcard" },
-  allowedDepositAddrs: { kind: "wildcard" },
+  // Whitelist management covers both the enforcement flag and the address
+  // list. Turning the flag off makes deposits permissionless, which is a
+  // deliberate power of whoever holds this permission. Closed, the flag is
+  // pinned and the address list must be sent empty — it is an XOR-toggle
+  // delta, so an empty list changes nothing.
+  isWhitelistedDeposits: open.whitelist ? { kind: "wildcard" } : { kind: "pin" },
+  allowedDepositAddrs: open.whitelist
+    ? { kind: "wildcard" }
+    : { kind: "pin-empty-array" },
   allowedManagers: { kind: "pin-empty-array" },
   governanceToken: { kind: "pin" },
   fundAddress: { kind: "pin" },
   governor: { kind: "pin-to-safe" },
   fundName: { kind: "pin" },
   fundSymbol: { kind: "pin" },
-  feeCollectors: { kind: "pin" },
-};
+  feeCollectors: open.feeDestinations ? { kind: "wildcard" } : { kind: "pin" },
+});
 
 // A tree node prior to BFS flattening.
 interface IConditionNode {
@@ -298,6 +333,21 @@ const pinNode = (
   compValue: abiCoder.encode([param], [value]),
 });
 
+const metadataNode = (
+  param: ethers.ParamType,
+  pinned: IUpdateSettingsPinnedValues,
+  open: IUpdateSettingsOpenFields,
+): IConditionNode => {
+  const node = typeToPassNode(param);
+  if (open.metadata) return node;
+  if (pinned.fundMetadata === undefined) {
+    throw new Error(
+      "Cannot keep vault metadata closed without the stored metadata to pin it to.",
+    );
+  }
+  return pinNode(node, param, pinned.fundMetadata);
+};
+
 const getUpdateSettingsFragment = (): ethers.FunctionFragment => {
   const iface = new ethers.Interface(GovernableFund.abi as any);
   const fragment = iface.getFunction("updateSettings");
@@ -311,14 +361,15 @@ const getUpdateSettingsFragment = (): ethers.FunctionFragment => {
 
 /**
  * Build the ConditionFlat[] for updateSettings, derived from the ABI
- * fragment. Resulting policy: the manager can change ONLY the depositor
- * whitelist — its enforcement flag and its addresses (deltas) — and the
- * metadata JSON. Fees, hurdle, name, symbol, base token, governance wiring,
- * fee collectors and both fee periods are frozen; governor must be echoed as
- * the SAFE address.
+ * fragment. Resulting policy: the holder can change ONLY what `open` names
+ * — the depositor whitelist (enforcement flag and address deltas), the
+ * metadata JSON, the fee collector addresses. Fee rates, hurdle, name,
+ * symbol, base token, governance wiring and both fee periods are always
+ * frozen; governor must be echoed as the SAFE address.
  */
 export const buildUpdateSettingsConditions = (
   pinned: IUpdateSettingsPinnedValues,
+  open: IUpdateSettingsOpenFields = DEFAULT_UPDATE_SETTINGS_OPEN_FIELDS,
 ): IRolesV2ConditionFlat[] => {
   const fragment = getUpdateSettingsFragment();
   const [settingsParam, metadataParam, perfPeriodParam, managePeriodParam] =
@@ -326,8 +377,9 @@ export const buildUpdateSettingsConditions = (
 
   // Guard against silent ABI drift: the rules table must cover the struct
   // exactly, in order.
+  const rules = settingsFieldRules(open);
   const componentNames = (settingsParam.components ?? []).map((c) => c.name);
-  const ruleNames = Object.keys(SETTINGS_FIELD_RULES);
+  const ruleNames = Object.keys(rules);
   if (JSON.stringify(componentNames) !== JSON.stringify(ruleNames)) {
     throw new Error(
       `updateSettings Settings struct fields changed: ${componentNames.join(",")}`,
@@ -336,7 +388,7 @@ export const buildUpdateSettingsConditions = (
 
   const settingsChildren = (settingsParam.components ?? []).map((component) => {
     const node = typeToPassNode(component);
-    const rule = SETTINGS_FIELD_RULES[component.name];
+    const rule = rules[component.name];
     switch (rule.kind) {
       case "wildcard":
         return node;
@@ -366,9 +418,10 @@ export const buildUpdateSettingsConditions = (
         compValue: "0x",
         children: settingsChildren,
       },
-      // _fundMetadata: wildcard (photo, description, strategist, links,
-      // settlement period, min liquid asset share, custom fields).
-      typeToPassNode(metadataParam),
+      // _fundMetadata (photo, description, strategist, links, settlement
+      // period, min liquid asset share, custom fields): open, or pinned to
+      // the stored string so every call has to echo it unchanged.
+      metadataNode(metadataParam, pinned, open),
       pinNode(
         typeToPassNode(perfPeriodParam),
         perfPeriodParam,
@@ -412,20 +465,21 @@ const flattenConditionTree = (
 };
 
 /**
- * "Allow manager to update vault settings": scopeTarget on the fund +
- * scopeFunction for updateSettings with the pinned condition tree.
- * ExecutionOptions.None — no ETH send, no delegatecall.
+ * "Update vault settings": scopeTarget on the fund + scopeFunction for
+ * updateSettings with the pinned condition tree, opened only where `open`
+ * says. ExecutionOptions.None — no ETH send, no delegatecall.
  */
 export const generateUpdateSettingsPermissionRolesV2 = (
   fundAddress: string,
   pinned: IUpdateSettingsPinnedValues,
   roleKey: string = DEFAULT_ROLE_KEY_V2,
+  open: IUpdateSettingsOpenFields = DEFAULT_UPDATE_SETTINGS_OPEN_FIELDS,
 ): string[] => {
-  const conditions = buildUpdateSettingsConditions(pinned);
+  const conditions = buildUpdateSettingsConditions(pinned, open);
   const encodedScopeFunction = encodeFunctionCall(
     rolesV2WriteFunctionAbiMap.scopeFunction,
     [
-      ethers.encodeBytes32String(roleKey),
+      toRoleKeyBytes32(roleKey),
       fundAddress,
       UPDATE_SETTINGS_SELECTOR,
       conditions as any,
@@ -435,39 +489,158 @@ export const generateUpdateSettingsPermissionRolesV2 = (
   return [getScopeTargetV2(roleKey, fundAddress), encodedScopeFunction];
 };
 
-const allowFunctionAbi = (RolesFullV2 as any).abi.find(
-  (f: any) => f?.type === "function" && f?.name === "allowFunction",
-);
+// assignRoles(address module, bytes32[] roleKeys, bool[] memberOf)
+const ASSIGN_ROLES_PARAMS = [
+  ethers.ParamType.from("address module"),
+  ethers.ParamType.from("bytes32[] roleKeys"),
+  ethers.ParamType.from("bool[] memberOf"),
+];
+
+export interface IAssignRolesScope {
+  /**
+   * The roles whose membership the holder may change (labels or bytes32).
+   * Each call must name exactly ONE of them: `roleKeys` is pinned to a
+   * single-element array per allowed role, so a call can never smuggle a
+   * second, unlisted role in beside an allowed one.
+   */
+  roleKeys: string[];
+  /**
+   * Pin the direction: `false` allows removals only, `true` additions only.
+   * Left out, the holder may both add and remove.
+   */
+  memberOf?: boolean;
+}
 
 /**
- * "Allow manager to manage role members": on the Roles modifier itself,
- * allow ONLY assignRoles(address,bytes32[],bool[]). Membership admin and
- * permission admin are separate selectors on Roles v2, so this delegates
- * membership without permission editing: the scope/allow/revoke functions,
- * enableModule, disableModule, setDefaultRole and transferOwnership stay
- * denied because they are never scoped for the role.
+ * The ConditionFlat[] for assignRoles under `scope`.
  *
- * INVARIANT: assignRoles params are deliberately wildcarded, which lets the
- * manager assign members to ANY role key on this modifier. Today the only
- * role is defaulManagerRole, so the most a manager can delegate is their
- * own power. IF governance ever creates a MORE-privileged role on this same
- * modifier, this permission must first be tightened (v2 supports
- * ArrayEvery + Nor/EqualTo conditions on the roleKeys array to exclude or
- * pin specific keys) BEFORE that role exists, or membership admin becomes
- * privilege escalation.
+ * The member address is deliberately left open, and it cannot be otherwise:
+ * a Roles v2 condition sees the calldata, never the caller, so "only your
+ * own address" is not expressible. A removals-only scope therefore lets a
+ * holder remove ANY member of the listed roles — itself included, which is
+ * what a self-revoke needs — but never add one.
  */
-export const generateManageRoleMembersPermissionRolesV2 = (
+export const buildAssignRolesConditions = (
+  scope: IAssignRolesScope,
+): IRolesV2ConditionFlat[] => {
+  if (!scope.roleKeys.length) {
+    throw new Error("An assignRoles permission needs at least one role.");
+  }
+  const [moduleParam, roleKeysParam, memberOfParam] = ASSIGN_ROLES_PARAMS;
+
+  const roleKeyNodes = scope.roleKeys.map((roleKey) =>
+    pinNode(typeToPassNode(roleKeysParam), roleKeysParam, [
+      toRoleKeyBytes32(roleKey),
+    ]),
+  );
+  const roleKeysNode: IConditionNode =
+    roleKeyNodes.length === 1
+      ? roleKeyNodes[0]
+      : {
+        paramType: RolesV2ParameterType.None,
+        operator: RolesV2Operator.Or,
+        compValue: "0x",
+        children: roleKeyNodes,
+      };
+
+  const memberOfNode =
+    scope.memberOf === undefined
+      ? typeToPassNode(memberOfParam)
+      : pinNode(typeToPassNode(memberOfParam), memberOfParam, [scope.memberOf]);
+
+  return flattenConditionTree({
+    paramType: RolesV2ParameterType.Calldata,
+    operator: RolesV2Operator.Matches,
+    compValue: "0x",
+    children: [typeToPassNode(moduleParam), roleKeysNode, memberOfNode],
+  });
+};
+
+/**
+ * Membership admin on the Roles modifier itself, for the roles `scope`
+ * names and nothing else: scopeTarget on the modifier + scopeFunction for
+ * assignRoles(address,bytes32[],bool[]). Membership admin and permission
+ * admin are separate selectors on Roles v2, so the scope/allow/revoke
+ * functions, enableModule, disableModule, setDefaultRole and
+ * transferOwnership stay denied because they are never scoped for the role.
+ *
+ * The role keys are always pinned. A wildcarded assignRoles would let its
+ * holder assign members to ANY role key on the modifier — including a more
+ * privileged one — which is why this never emits allowFunction.
+ */
+export const generateAssignRolesPermissionRolesV2 = (
   rolesModifierAddress: string,
-  roleKey: string = DEFAULT_ROLE_KEY_V2,
+  holderRoleKey: string,
+  scope: IAssignRolesScope,
 ): string[] => {
-  const encodedAllowFunction = encodeFunctionCall(allowFunctionAbi, [
-    ethers.encodeBytes32String(roleKey),
-    rolesModifierAddress,
-    ASSIGN_ROLES_SELECTOR,
-    RolesV2ExecutionOptions.None,
-  ]);
+  const encodedScopeFunction = encodeFunctionCall(
+    rolesV2WriteFunctionAbiMap.scopeFunction,
+    [
+      toRoleKeyBytes32(holderRoleKey),
+      rolesModifierAddress,
+      ASSIGN_ROLES_SELECTOR,
+      buildAssignRolesConditions(scope) as any,
+      RolesV2ExecutionOptions.None,
+    ],
+  );
   return [
-    getScopeTargetV2(roleKey, rolesModifierAddress),
-    encodedAllowFunction,
+    getScopeTargetV2(holderRoleKey, rolesModifierAddress),
+    encodedScopeFunction,
   ];
 };
+
+// mintPoolPerformanceFeeHWM(address) — the call fundFlowsCall wraps to
+// collect fees.
+const MINT_PERFORMANCE_FEE_SELECTOR = "0xa52eb8be";
+
+/**
+ * "Collect fee": fundFlowsCall(bytes) on the vault, with the payload pinned
+ * to mintPoolPerformanceFeeHWM(<the chain's performance fee contract>).
+ */
+export const generateCollectFeesPermissionRolesV2 = (
+  fundAddress: string,
+  poolPerformanceFeeAddress: string,
+  roleKey: string = DEFAULT_ROLE_KEY_V2,
+): string[] => {
+  const innerBytes =
+    MINT_PERFORMANCE_FEE_SELECTOR +
+    abiCoder.encode(["address"], [poolPerformanceFeeAddress]).slice(2);
+  const conditions: IRolesV2ConditionFlat[] = [
+    [0, RolesV2ParameterType.Calldata, RolesV2Operator.Matches, "0x"],
+    [
+      0,
+      RolesV2ParameterType.Dynamic,
+      RolesV2Operator.EqualTo,
+      abiCoder.encode(["bytes"], [innerBytes]),
+    ],
+  ];
+  const encodedScopeFunction = encodeFunctionCall(
+    rolesV2WriteFunctionAbiMap.scopeFunction,
+    [
+      toRoleKeyBytes32(roleKey),
+      fundAddress,
+      FUND_FLOWS_CALL_SELECTOR,
+      conditions as any,
+      RolesV2ExecutionOptions.None,
+    ],
+  );
+  return [encodedScopeFunction, getScopeTargetV2(roleKey, fundAddress)];
+};
+
+/**
+ * "Send funds to admin contract & settle flows": transfer(address,uint256)
+ * on the base token, recipient pinned to the vault.
+ */
+export const generateSendFundsPermissionRolesV2 = (
+  baseTokenAddress: string,
+  fundAddress: string,
+  roleKey: string = DEFAULT_ROLE_KEY_V2,
+): string[] => [
+  getScopeTargetV2(roleKey, baseTokenAddress),
+  defaultScopedTargetPermissionRolesV2(
+    roleKey,
+    baseTokenAddress,
+    TRANSFER_SELECTOR,
+    fundAddress,
+  ),
+];

@@ -29,6 +29,7 @@ export enum OnboardingStep {
     Whitelist = "whitelist",
     Management = "management",
     Governance = "governance",
+    // The vault's roles: who holds each one and what it may do.
     Permissions = "permissions",
     NavMethods = "navMethods",
     Finalize = "finalize",
@@ -187,7 +188,7 @@ const BASICS_FIELD_OVERRIDES: Record<string, Partial<IField>> = {
     // so this one field keeps the unit that says so.
     allowsInstant: true,
     tooltip:
-      "Frequency of settling deposit and redemption requests. Planned settlement period is not enforced on-chain — your job as a manager is to run the vault to these parameters. Your management role may otherwise be removed through governance.",
+      "Frequency of settling deposit and redemption requests. Planned settlement period is not enforced on-chain. Your job as a manager is to run the vault to these parameters. Your management role may otherwise be removed through governance.",
     cols: 12,
   },
   strategistName: {

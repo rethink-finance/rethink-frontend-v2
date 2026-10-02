@@ -85,17 +85,22 @@ const titleFor = (index: number) => {
   &__track {
     display: flex;
     align-items: center;
+    /* Each cell is as wide as its own label and the leftover width is shared
+       out BETWEEN them, so the gaps are equal whatever the labels' lengths.
+       Equal-width cells put a long gap after "Fees" and none after "NAV
+       Methods". */
+    justify-content: space-between;
     gap: 0.5rem;
-    /* Seven cells only fit side by side above this; below it the rail scrolls
-       rather than stacking, so the sequence stays readable as a sequence. */
-    min-width: 900px;
+    /* Below the width the cells need side by side, the rail scrolls rather
+       than stacking, so the sequence stays readable as a sequence. */
+    min-width: max-content;
   }
 
   &__cell {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex: 1;
+    flex: none;
     padding: 0.375rem 0.5rem;
     border: none;
     border-radius: $default-border-radius;

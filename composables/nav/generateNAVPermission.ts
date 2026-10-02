@@ -5,6 +5,17 @@ import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 
 export const DEFAULT_ROLE_KEY = "1";
 export const DEFAULT_ROLE_KEY_V2 = "defaulManagerRole"; // typo is intentional
+/**
+ * The two roles a Roles V2 vault is created with.
+ *
+ * The executor — "role 2" in the create flow — keeps the factory's own key:
+ * GovernableFundFactoryV1_5.initCreateFund assigns the creating wallet to
+ * bytes32("defaulManagerRole"), and every execution surface (NAV, flows,
+ * fees, protocols) runs under it. The admin — "role 1" — is a second key on
+ * the same modifier that exists only because the Permissions step scopes it.
+ */
+export const EXECUTOR_ROLE_KEY_V2 = DEFAULT_ROLE_KEY_V2;
+export const ADMIN_ROLE_KEY_V2 = "adminRole";
 
 /**
  * A Roles V2 role key as the modifier wants it: bytes32. Accepts either the
