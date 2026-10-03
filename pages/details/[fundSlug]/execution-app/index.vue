@@ -306,7 +306,7 @@ const isSciEthVault = computed(
     (fundStore.fund?.address || "").toLowerCase() === SCIETH_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x1",
 );
-const hasGuidedConsole = computed(() => isDocVault.value || isSciEthVault.value);
+const hasGuidedConsole = computed(() => isCrtVault.value || isDocVault.value || isSciEthVault.value);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({
