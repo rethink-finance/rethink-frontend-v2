@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import type IToast from "~/types/ui/toast";
+import type { IToastLink } from "~/types/ui/toast";
 
 /**
  * The stack never grows past this. Anything that can fire one toast can fire
@@ -37,7 +38,7 @@ export const useToastStore = defineStore({
      * @param duration Milliseconds on screen. Pass -1 to keep it until the
      *   reader dismisses it — for anything they have to act on.
      */
-    addToast(message: string, level?: string, duration: number = 5000): void {
+    addToast(message: string, level?: string, duration: number = 5000, link?: IToastLink): void {
       // The same message arriving again is the same news, so it moves to the
       // bottom of the stack with a fresh timer rather than being repeated.
       const existingToast = this.toasts.find(
@@ -50,7 +51,7 @@ export const useToastStore = defineStore({
       // A monotonic counter, not Date.now(): two toasts raised in the same
       // millisecond would share an id, and dismissing either would take both.
       const id = ++nextId;
-      this.toasts.push({ id, message, level, duration });
+      this.toasts.push({ id, message, level, duration, link });
 
       while (this.toasts.length > MAX_VISIBLE) {
         this.closeToast(this.toasts[0].id);
@@ -72,11 +73,11 @@ export const useToastStore = defineStore({
     warningToast(message: string, duration?: number) {
       this.addToast(message, "warning", duration);
     },
-    errorToast(message: string, duration?: number) {
+    errorToast(message: string, duration?: number, link?: IToastLink) {
       if (!duration) {
         duration = 6000;
       }
-      this.addToast(message, "error", duration);
+      this.addToast(message, "error", duration, link);
     },
     closeToast(id: number): void {
       clearTimer(id);
