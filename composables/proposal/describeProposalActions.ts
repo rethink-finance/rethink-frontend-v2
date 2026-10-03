@@ -49,7 +49,25 @@ export const EXTRA_SIGNATURES = [
   "function delegate(address delegatee)",
   "function upgradeTo(address newImplementation)",
   "function upgradeToAndCall(address newImplementation, bytes data)",
+  // Targets vault permissions scope on HyperEVM: HyperCore's CoreWriter and
+  // the Across SpokePool. Named here so permissions on them read by argument.
+  "function sendRawAction(bytes data)",
+  "function depositV3Now(address depositor, address recipient, address inputToken, address outputToken, uint256 inputAmount, uint256 outputAmount, uint256 destinationChainId, address exclusiveRelayer, uint32 fillDeadlineOffset, uint32 exclusivityDeadline, bytes message)",
 ];
+
+const extraSignatureInterface = new ethers.Interface(EXTRA_SIGNATURES);
+
+/** A function from EXTRA_SIGNATURES by selector, with its parameter names. */
+export const findExtraSignature = (
+  selector: string | undefined,
+): ethers.FunctionFragment | undefined => {
+  if (!selector) return undefined;
+  try {
+    return extraSignatureInterface.getFunction(selector.slice(0, 10)) ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 /* ---- Generic call decoding --------------------------------------------- */
 

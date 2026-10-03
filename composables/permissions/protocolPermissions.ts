@@ -1,4 +1,3 @@
-import { ethers } from "ethers";
 import {
   PACKAGE_VERSION,
   compile,
@@ -9,9 +8,12 @@ import {
   type ProtocolDescriptor,
   type Selection,
 } from "@rethink-finance/positions-registry";
-import { DEFAULT_ROLE_KEY_V2 } from "~/composables/nav/generateNAVPermission";
+import {
+  DEFAULT_ROLE_KEY_V2,
+  toRoleKeyBytes32,
+} from "~/composables/nav/generateNAVPermission";
 import type { IPermissionScope } from "~/composables/permissions/revokePermissions";
-import type { ICurrentRoleScopes } from "~/services/onchain/roleScopes";
+import type { ICurrentRoleScopes } from "~/composables/permissions/roleScopeLogs";
 import type { ChainId } from "~/types/enums/chain_id";
 
 /**
@@ -82,14 +84,14 @@ const ACTION_HINTS: Record<string, string> = {
     "the vault Safe. Payouts are pinned to the Safe.",
   delegate:
     "Delegate the governance voting power of the selected tokens to the " +
-    "delegatee address. Only voting power moves — never the tokens.",
+    "delegatee address. Only voting power moves, never the tokens.",
 
   "spark.deposit":
     "Supply and withdraw SparkLend reserves, and move funds through the Sky " +
     "savings vaults. The DSR_ and SKY_ targets are not tokens: each one " +
     "stands for a savings cluster. Payouts are pinned to the vault Safe.",
   "spark.stake":
-    "Sky's “stake USDS, earn SKY” farm. There is nothing to choose here — " +
+    "Sky's “stake USDS, earn SKY” farm. There is nothing to choose here: " +
     "enabling this grants staking, reward claiming and unstaking on that " +
     "one farm, paid out to the vault Safe.",
   "compound_v3.deposit":
@@ -128,23 +130,23 @@ const ACTION_HINTS: Record<string, string> = {
 const ACTION_WARNINGS: Record<string, string> = {
   delegate:
     "Governance-sensitive: the permission pins delegation to exactly the " +
-    "delegatee address entered here, but that address is your own choice — " +
+    "delegatee address entered here, but that address is your own choice and " +
     "the registry cannot vet it. Verify it before granting.",
   "spark.deposit":
     "Each DSR_ and SKY_ target grants a cluster of contracts, not a single " +
-    "vault — including Sky's PSM wrappers, which convert between the " +
+    "vault, including Sky's PSM wrappers, which convert between the " +
     "cluster's assets (USDC↔sDAI, USDC↔sUSDS). Check the generated calls " +
     "listed under the card before granting.",
   "morphoMarkets.deposit":
-    "This is upstream's full market list, uncurated — anyone can create a " +
+    "This is upstream's full market list, uncurated. Anyone can create a " +
     "Morpho Blue market, and markets sharing a name differ in oracle and " +
     "LLTV. Verify a market by its id before granting.",
   "morphoMarkets.borrow":
-    "This is upstream's full market list, uncurated — anyone can create a " +
+    "This is upstream's full market list, uncurated. Anyone can create a " +
     "Morpho Blue market, and markets sharing a name differ in oracle and " +
     "LLTV. Verify a market by its id before granting.",
   "morphoVaults.deposit":
-    "This is upstream's full vault list, uncurated — anyone can deploy a " +
+    "This is upstream's full vault list, uncurated. Anyone can deploy a " +
     "vault and name it anything, and many names repeat across versions. " +
     "Verify a vault by its address before granting.",
 };
@@ -296,7 +298,7 @@ export interface IProtocolParamField {
  * optional field may default the other way.
  */
 export const OPTIONAL_FIELD_NOTE =
-  "Optional — selecting nothing omits this setting entirely and lets the " +
+  "Optional. Selecting nothing omits this setting entirely and lets the " +
   "registry apply the action's own default, which may be broader than a " +
   "narrowed selection. The generated calls listed under the card say what " +
   "it actually grants.";
@@ -1651,6 +1653,11 @@ export const buildProtocolPermissionEntries = (options: {
   chainId: ChainId | string;
   rolesModAddress: string;
   selections: IProtocolSelectionState[];
+  /**
+   * The role the grants go to, as its label or bytes32 key. The executor
+   * (role 2) unless said otherwise.
+   */
+  roleKey?: string;
 }): IProtocolPermissionsBuild => {
   // Same normalization the validation ran: an action switched on beside an
   // emptied governing list compiles to a schema error, and the two paths
@@ -1673,7 +1680,7 @@ export const buildProtocolPermissionEntries = (options: {
     rolesMod: options.rolesModAddress.toLowerCase(),
     // Same role, same bytes, as every other entry in the batch. encodeKey
     // passes an already-encoded bytes32 through untouched.
-    roleKey: ethers.encodeBytes32String(DEFAULT_ROLE_KEY_V2),
+    roleKey: toRoleKeyBytes32(options.roleKey ?? DEFAULT_ROLE_KEY_V2),
     targets,
   });
 
@@ -1707,7 +1714,7 @@ export const buildProtocolPermissionEntries = (options: {
  * what it grants. The superset property (compile targets ⊆ this set) is
  * pinned by tests protocol by protocol.
  */
-const registryAddressCache = new Map<number, Set<string>>();
+const registryAddressCache = new Map<string, Set<string>>();
 
 const collectAddresses = (
   value: unknown,
@@ -1726,14 +1733,18 @@ const collectAddresses = (
 
 export const listRegistryAddresses = (
   chainId: ChainId | string,
+  /** Only these protocols' addresses; every protocol when left out. */
+  protocols?: string[],
 ): Set<string> => {
   const numericChainId = toRegistryChainId(chainId);
-  const cached = registryAddressCache.get(numericChainId);
+  const cacheKey = `${numericChainId}:${protocols ? [...protocols].sort().join(",") : "*"}`;
+  const cached = registryAddressCache.get(cacheKey);
   if (cached) return cached;
 
   const addresses = new Set<string>();
   const visited = new Set<object>();
   for (const protocol of listProtocols(numericChainId)) {
+    if (protocols && !protocols.includes(protocol.protocol)) continue;
     const entry = getProtocolEntry(numericChainId, protocol.protocol);
     // Data first, plus the first-class alias table where the registry ships
     // one — both are plain JSON; the zod schemas are deliberately not
@@ -1741,7 +1752,7 @@ export const listRegistryAddresses = (
     collectAddresses(entry?.data, addresses, visited);
     collectAddresses((entry as any)?.aliases, addresses, visited);
   }
-  registryAddressCache.set(numericChainId, addresses);
+  registryAddressCache.set(cacheKey, addresses);
   return addresses;
 };
 
@@ -1778,8 +1789,17 @@ export const listProtocolScopesToRevoke = (
   build: IProtocolPermissionsBuild,
   current: ICurrentRoleScopes,
   sparedScopes: IPermissionScope[] = [],
+  /**
+   * The protocols this save speaks for. A save only takes back grants on
+   * the addresses of protocols it was actually asked about — the ones on the
+   * card now or removed from it since the page opened — so permissions a
+   * previous visit saved for some other protocol are left alone rather than
+   * silently revoked because the card started out empty. Left out, the diff
+   * covers every protocol the registry knows.
+   */
+  protocols?: string[],
 ): IPermissionScope[] => {
-  const registryAddresses = listRegistryAddresses(chainId);
+  const registryAddresses = listRegistryAddresses(chainId, protocols);
   const spared = new Set(sparedScopes.map(scopeKeyOf));
   const granted = new Set(build.grantedScopes.map(scopeKeyOf));
   const desiredTargets = new Set(

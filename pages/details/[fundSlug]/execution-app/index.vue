@@ -4,9 +4,10 @@
       Only the state that permits something. Why a wallet cannot execute is
       not news at the top of a screen most people open to read: it belongs on
       the button it disables, at the moment that button is reached for, and
-      every execute button on this screen carries it.
+      every execute button on this screen carries it. The Scientific Vote
+      console names the executor itself, so it does not get the pill twice.
     -->
-    <UiHeader v-if="canExecuteAsCurator">
+    <UiHeader v-if="canExecuteAsCurator && !isSciEthVault">
       <div class="data_bar__item">
         <div class="curator_status">
           <Icon
@@ -35,17 +36,18 @@
          console follows it rather than sitting above the page's own header. -->
     <ExecutionCrtConsole v-if="isCrtVault" />
     <ExecutionDocConsole v-else-if="isDocVault" />
+    <ExecutionSciEthConsole v-else-if="isSciEthVault" />
 
     <!-- The raw transfer / raw-calldata / performance-fee tools. A vault with
          a console of its own does not get them: everything they reach is
          already offered there in terms the operator can check, and a free-text
          calldata box beside it is an invitation to bypass that. -->
-    <div v-if="!isDocVault" class="group_title execution-app__section">
+    <div v-if="!hasGuidedConsole" class="group_title execution-app__section">
       General
     </div>
 
     <div
-      v-if="!isDocVault"
+      v-if="!hasGuidedConsole"
       :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`"
     >
       <UiHeader>
@@ -148,7 +150,7 @@
     </div>
 
     <div
-      v-if="!isDocVault"
+      v-if="!hasGuidedConsole"
       :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`"
     >
       <UiHeader>
@@ -295,6 +297,16 @@ const isDocVault = computed(
     (fundStore.fund?.address || "").toLowerCase() === DOC_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x89",
 );
+// The Scientific Vote Vault keeps every share at exactly one ETH, and its
+// console works out what may move; the raw tools beside it would let an
+// operator act without that arithmetic, so it does not get them either.
+const SCIETH_VAULT_ADDRESS = "0x2741408077cd7c7d3943d0142bafae28c97eaa35";
+const isSciEthVault = computed(
+  () =>
+    (fundStore.fund?.address || "").toLowerCase() === SCIETH_VAULT_ADDRESS &&
+    fundStore.selectedFundChain === "0x1",
+);
+const hasGuidedConsole = computed(() => isDocVault.value || isSciEthVault.value);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({

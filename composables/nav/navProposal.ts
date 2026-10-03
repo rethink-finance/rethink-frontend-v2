@@ -1,4 +1,5 @@
 import { toRaw } from "vue";
+import { ethers } from "ethers";
 import { type AbiFunctionFragment } from "web3";
 import { decodeFunctionCall, encodeFunctionCall } from "web3-eth-abi";
 import { NAVExecutor } from "assets/contracts/NAVExecutor";
@@ -39,7 +40,43 @@ const storeNAVDataABI = NAVExecutor.abi.find(
 );
 
 /**
- * Use updateNav ABI to encode NAV methods array <INAVMethod>.
+ * The address updateNav takes beside one entry.
+ *
+ * The vault reads pastNAVUpdateEntryFundAddress[i] for EVERY entry i
+ * (GovernableFundNav.processNav hands it to the calculator whatever
+ * isPastNAVUpdate says), so the two arrays must be the same length: one
+ * address short and the read is out of bounds, updateNav reverts "failed
+ * processNav" and the manager's executeNAVUpdate "fail permissioned nav
+ * update" from then on.
+ *
+ * The calculators only USE the address when isPastNAVUpdate is true, to load
+ * the entry from the vault that defined it. So an entry without one (an
+ * edited row, a row whose simulation never ran) takes the zero address when
+ * it stands on its own, and cannot be encoded at all when it points at a
+ * past update: there is no vault to read it from (the zero address the raw
+ * form fills in included).
+ */
+const navEntryFundAddress = (
+  navEntry: INAVMethod,
+  isPastNAVUpdate: boolean,
+): string => {
+  const candidate = navEntry.pastNAVUpdateEntryFundAddress;
+  const address =
+    typeof candidate === "string" && ethers.isAddress(candidate)
+      ? candidate
+      : ethers.ZeroAddress;
+  if (isPastNAVUpdate && address === ethers.ZeroAddress) {
+    throw new Error(
+      `NAV method "${navEntry.positionName || "unnamed"}" reuses an entry of a past NAV update, ` +
+      "but the vault it was defined on is not known. Remove the method and add it again.",
+    );
+  }
+  return address;
+};
+
+/**
+ * Use updateNav ABI to encode NAV methods array <INAVMethod>. Emits exactly
+ * one address per encoded entry (see navEntryFundAddress).
  * @param navMethods<INAVMethod>: a list of NAV methods.
  * @param baseDecimals<number>: base token decimals
  * @param processWithdraw<boolean>: set to true to process withdraws after NAV update
@@ -50,7 +87,7 @@ export const encodeUpdateNavMethods = (
   processWithdraw: boolean = false,
 ): string => {
   const navUpdateEntries = [];
-  const pastNavUpdateEntryAddresses: any[] = [];
+  const pastNavUpdateEntryAddresses: string[] = [];
 
   for (const navEntry of navMethods as INAVMethod[]) {
     // Skip deleted entries in the new proposal.
@@ -58,9 +95,9 @@ export const encodeUpdateNavMethods = (
 
     const navEntryDetails = JSON.parse(JSON.stringify(navEntry.details));
 
-    if (navEntry.pastNAVUpdateEntryFundAddress) {
-      pastNavUpdateEntryAddresses.push(navEntry.pastNAVUpdateEntryFundAddress);
-    }
+    pastNavUpdateEntryAddresses.push(
+      navEntryFundAddress(navEntry, !!navEntryDetails.isPastNAVUpdate),
+    );
 
     let pastNAVUpdateIndex = 0;
 

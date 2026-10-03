@@ -94,11 +94,33 @@
           </div>
           <div class="nav_proposal__row">
             <div class="nav_proposal__row_text">
-              Collect management fees upon NAV proposal execution
+              Collect deposit fees when the proposal executes
+              <span class="nav_proposal__row_note">
+                Each fee collection is one extra call in the same proposal and
+                pays out only what the vault has accrued, if anything.
+              </span>
+            </div>
+            <OnboardingToggle
+              v-model="proposal.collectDepositFees"
+              label="Collect deposit fees when the proposal executes"
+            />
+          </div>
+          <div class="nav_proposal__row">
+            <div class="nav_proposal__row_text">
+              Collect management fees when the proposal executes
             </div>
             <OnboardingToggle
               v-model="proposal.collectManagementFees"
-              label="Collect management fees upon NAV proposal execution"
+              label="Collect management fees when the proposal executes"
+            />
+          </div>
+          <div class="nav_proposal__row">
+            <div class="nav_proposal__row_text">
+              Collect performance fees when the proposal executes
+            </div>
+            <OnboardingToggle
+              v-model="proposal.collectPerformanceFees"
+              label="Collect performance fees when the proposal executes"
             />
           </div>
           <div class="nav_proposal__row">
@@ -309,10 +331,15 @@ const {
   fundLastNAVUpdateMethods,
 } = storeToRefs(fundStore);
 
+// Deposit and performance collections default to on and management to off:
+// the calls every NAV proposal used to carry unconditionally, now each one a
+// choice.
 const proposal = ref({
   title: "",
   allowManagerToUpdateNav: false,
+  collectDepositFees: true,
   collectManagementFees: false,
+  collectPerformanceFees: true,
   processWithdraw: false,
   description: "",
 });
@@ -389,11 +416,18 @@ const submitProposal = async () => {
   // flight when the form is filled in.
   if (!(await assertCanCreateProposal())) return;
 
-  const encodedNavUpdateEntries = encodeUpdateNavMethods(
-    fundManagedNAVMethods.value,
-    fundStore.fund?.baseToken.decimals,
-    proposal.value.processWithdraw,
-  );
+  let encodedNavUpdateEntries: string;
+  try {
+    encodedNavUpdateEntries = encodeUpdateNavMethods(
+      fundManagedNAVMethods.value,
+      fundStore.fund?.baseToken.decimals,
+      proposal.value.processWithdraw,
+    );
+  } catch (error: any) {
+    console.error("Failed encoding NAV methods (encodeUpdateNavMethods): ", error);
+    toastStore.errorToast("Failed encoding NAV methods, " + error.message, 10000);
+    return;
+  }
   const navExecutorAddress = getNAVExecutorBeaconProxyAddress(
     fundStore.selectedFundChain,
   );
@@ -406,9 +440,9 @@ const submitProposal = async () => {
   let navMethodsProposal = getNavMethodsProposalData(
     encodedNavUpdateEntries,
     fundStore.fundAddress,
-    true,
+    proposal.value.collectDepositFees,
     proposal.value.collectManagementFees,
-    true,
+    proposal.value.collectPerformanceFees,
     navExecutorAddress,
   );
 

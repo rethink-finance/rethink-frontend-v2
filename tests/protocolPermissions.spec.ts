@@ -1326,3 +1326,58 @@ describe("authoritative revokes", () => {
     }
   });
 });
+
+describe("listProtocolScopesToRevoke — only for the protocols a save speaks for", () => {
+  const saved = buildProtocolPermissionEntries({
+    chainId: ARBITRUM,
+    rolesModAddress: ROLES_MOD,
+    selections: selectionWith(["USDC", "DAI"]),
+  });
+  const current: ICurrentRoleScopes = {
+    scopes: saved.grantedScopes,
+    targets: saved.targetAddresses,
+    latestBlock: 123,
+  };
+  const nothingSelected = buildProtocolPermissionEntries({
+    chainId: ARBITRUM,
+    rolesModAddress: ROLES_MOD,
+    selections: [],
+  });
+
+  it("takes nothing back when the card was never asked about any protocol", () => {
+    // A visit that opens the step and stores something unrelated must not
+    // wipe what an earlier visit saved.
+    expect(
+      listProtocolScopesToRevoke(ARBITRUM, nothingSelected, current, [], []),
+    ).toEqual([]);
+  });
+
+  it("takes a protocol's stale grants back once the card is asked about it", () => {
+    const toRevoke = listProtocolScopesToRevoke(
+      ARBITRUM,
+      nothingSelected,
+      current,
+      [],
+      ["aave_v3"],
+    );
+    for (const scope of saved.grantedScopes) {
+      expect(toRevoke).toContainEqual(scope);
+    }
+    // The same as the unrestricted diff, for a vault that only has Aave.
+    expect(toRevoke).toEqual(
+      listProtocolScopesToRevoke(ARBITRUM, nothingSelected, current),
+    );
+  });
+
+  it("leaves another protocol's own contracts alone", () => {
+    const toRevoke = listProtocolScopesToRevoke(
+      ARBITRUM,
+      nothingSelected,
+      current,
+      [],
+      ["morphoVaults"],
+    );
+    // The Aave pool belongs to no Morpho table.
+    expect(toRevoke.some((scope) => scope.target.toLowerCase() === ARB1_POOL)).toBe(false);
+  });
+});

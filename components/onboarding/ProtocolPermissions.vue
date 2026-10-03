@@ -48,6 +48,12 @@
         <div class="protocols__raw_body">
           <OnboardingRawPermissionsCode
             :model-value="rawEntries"
+            :chain-id="chainId"
+            :vault-address="vaultAddress"
+            :safe-address="safeAddress"
+            :roles-mod-address="rolesModAddress"
+            :base-token="baseToken"
+            :context-role="contextRole"
             @update:model-value="(v) => emit('update:rawEntries', v)"
           />
         </div>
@@ -73,7 +79,7 @@
           <Icon icon="material-symbols:add-rounded" />
         </span>
         <span class="protocols__add_text">
-          <span class="protocols__add_title">Add protocol</span>
+          <span class="protocols__add_title">Add position</span>
           <span v-if="!added.length && addHint" class="protocols__add_hint">
             {{ addHint }}
           </span>
@@ -86,7 +92,7 @@
            and the list below needs no introduction. -->
       <template #title>
         <h2 class="brand_modal__title library__title">
-          Add protocol
+          Add position
         </h2>
       </template>
 
@@ -385,6 +391,11 @@ const props = defineProps<{
    * imported there. Absent until the vault is initialized.
    */
   safeAddress?: string;
+  /** The vault and its base token, named where raw permissions mention them. */
+  vaultAddress?: string;
+  baseToken?: string;
+  /** The role the grants go to, as raw calls print it. */
+  contextRole?: string;
 }>();
 
 const emit = defineEmits<{
@@ -607,12 +618,12 @@ const rawMeta = computed((): string => {
 
 /**
  * The tile explains itself only when the library behind it has no
- * protocols to offer — otherwise "Add protocol" is the whole story.
+ * protocols to offer — otherwise "Add position" is the whole story.
  */
 const addHint = computed((): string =>
   protocols.value.length
     ? ""
-    : `No protocol templates cover ${chainName.value} yet — raw Roles permissions can still be added.`,
+    : `No protocol templates cover ${chainName.value} yet. Raw Roles permissions can still be added.`,
 );
 </script>
 

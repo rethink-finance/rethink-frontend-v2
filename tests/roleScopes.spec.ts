@@ -5,6 +5,10 @@ import {
   reduceRoleScopeLogs,
   type IRoleScopeLog,
 } from "../services/onchain/roleScopes";
+import {
+  listLiveRoleKeys,
+  storedRolePermissionCalls,
+} from "../composables/permissions/roleScopeLogs";
 
 const rolesInterface = new ethers.Interface((RolesFullV2 as any).abi);
 
@@ -117,5 +121,134 @@ describe("reduceRoleScopeLogs", () => {
     expect(state.targets).toEqual([]);
     // Not a permission event, so it proves nothing about scope freshness.
     expect(state.latestBlock).toBe(0);
+  });
+});
+
+describe("storedRolePermissionCalls", () => {
+  const abi = ethers.AbiCoder.defaultAbiCoder();
+  const CONDITIONS = [
+    [0, 5, 5, "0x"],
+    [0, 1, 16, abi.encode(["address"], [T1])],
+  ];
+  const decode = (calls: string[]) =>
+    calls.map((data) => {
+      const tx = rolesInterface.parseTransaction({ data })!;
+      return [tx.name, ...tx.args.slice(0, 3).map(String)];
+    });
+
+  it("writes what the role is granted back out as the calls that grant it", () => {
+    const calls = storedRolePermissionCalls(
+      [
+        log(1, 0, "ScopeTarget", [ROLE_KEY, T1]),
+        log(1, 1, "ScopeFunction", [ROLE_KEY, T1, S1, CONDITIONS, 0]),
+        log(1, 2, "AllowFunction", [ROLE_KEY, T1, S2, 1]),
+        log(2, 0, "ScopeTarget", [ROLE_KEY, T2]),
+        log(2, 1, "ScopeTarget", [OTHER_ROLE_KEY, T2]),
+        log(2, 2, "AllowFunction", [OTHER_ROLE_KEY, T2, S1, 0]),
+      ],
+      ROLE_KEY,
+    );
+    expect(decode(calls)).toEqual([
+      ["scopeTarget", ROLE_KEY, T1],
+      ["scopeFunction", ROLE_KEY, T1, S1],
+      ["allowFunction", ROLE_KEY, T1, S2],
+      ["scopeTarget", ROLE_KEY, T2],
+    ]);
+    // The stored conditions and options come back exactly.
+    const scoped = rolesInterface.parseTransaction({ data: calls[1] })!;
+    expect(scoped.args[3].map((c: any) => [Number(c[0]), Number(c[1]), Number(c[2]), c[3]])).toEqual(CONDITIONS);
+    expect(Number(scoped.args[4])).toBe(0);
+    const allowed = rolesInterface.parseTransaction({ data: calls[2] })!;
+    expect(Number(allowed.args[3])).toBe(1);
+  });
+
+  it("lists only what is in effect", () => {
+    const calls = storedRolePermissionCalls(
+      [
+        // Revoked function, then a contract closed with a function still stored.
+        log(1, 0, "ScopeTarget", [ROLE_KEY, T1]),
+        log(1, 1, "AllowFunction", [ROLE_KEY, T1, S1, 0]),
+        log(1, 2, "AllowFunction", [ROLE_KEY, T1, S2, 0]),
+        log(2, 0, "RevokeFunction", [ROLE_KEY, T1, S2]),
+        log(3, 0, "ScopeTarget", [ROLE_KEY, T2]),
+        log(3, 1, "AllowFunction", [ROLE_KEY, T2, S1, 0]),
+        log(4, 0, "RevokeTarget", [ROLE_KEY, T2]),
+      ],
+      ROLE_KEY,
+    );
+    expect(decode(calls)).toEqual([
+      ["scopeTarget", ROLE_KEY, T1],
+      ["allowFunction", ROLE_KEY, T1, S1],
+    ]);
+  });
+
+  it("shows a wholesale-allowed contract as that, without its function grants", () => {
+    const calls = storedRolePermissionCalls(
+      [
+        log(1, 0, "ScopeTarget", [ROLE_KEY, T1]),
+        log(1, 1, "AllowFunction", [ROLE_KEY, T1, S1, 0]),
+        log(2, 0, "AllowTarget", [ROLE_KEY, T1, 3]),
+      ],
+      ROLE_KEY,
+    );
+    expect(decode(calls)).toEqual([["allowTarget", ROLE_KEY, T1, "3"]]);
+    // …and a later scopeTarget narrows it again, bringing the function back.
+    const narrowed = storedRolePermissionCalls(
+      [
+        log(1, 0, "ScopeTarget", [ROLE_KEY, T1]),
+        log(1, 1, "AllowFunction", [ROLE_KEY, T1, S1, 0]),
+        log(2, 0, "AllowTarget", [ROLE_KEY, T1, 3]),
+        log(3, 0, "ScopeTarget", [ROLE_KEY, T1]),
+      ],
+      ROLE_KEY,
+    );
+    expect(decode(narrowed)).toEqual([
+      ["scopeTarget", ROLE_KEY, T1],
+      ["allowFunction", ROLE_KEY, T1, S1],
+    ]);
+  });
+
+  it("is empty for a role nothing was ever granted to", () => {
+    expect(storedRolePermissionCalls([log(1, 0, "ScopeTarget", [OTHER_ROLE_KEY, T1])], ROLE_KEY)).toEqual([]);
+  });
+});
+
+describe("listLiveRoleKeys", () => {
+  const MEMBER = "0x1111111111111111111111111111111111111111";
+  const lower = (key: string) => key.toLowerCase();
+
+  it("lists a role once someone holds it or it is granted something", () => {
+    expect(
+      listLiveRoleKeys([
+        log(10, 0, "AssignRoles", [MEMBER, [ROLE_KEY], [true]]),
+        log(11, 0, "ScopeTarget", [OTHER_ROLE_KEY, T1]),
+      ]),
+    ).toEqual([lower(ROLE_KEY), lower(OTHER_ROLE_KEY)]);
+  });
+
+  it("drops a role whose members and grants are all gone", () => {
+    expect(
+      listLiveRoleKeys([
+        log(10, 0, "AssignRoles", [MEMBER, [ROLE_KEY, OTHER_ROLE_KEY], [true, true]]),
+        log(11, 0, "ScopeTarget", [OTHER_ROLE_KEY, T1]),
+        log(12, 0, "AssignRoles", [MEMBER, [ROLE_KEY, OTHER_ROLE_KEY], [false, false]]),
+      ]),
+    ).toEqual([lower(OTHER_ROLE_KEY)]);
+    expect(
+      listLiveRoleKeys([
+        log(10, 0, "ScopeTarget", [ROLE_KEY, T1]),
+        log(11, 0, "RevokeTarget", [ROLE_KEY, T1]),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("replays out of order, and is empty for a modifier nothing happened on", () => {
+    expect(listLiveRoleKeys([])).toEqual([]);
+    expect(
+      listLiveRoleKeys([
+        log(12, 0, "AssignRoles", [MEMBER, [ROLE_KEY], [false]]),
+        log(10, 0, "AssignRoles", [MEMBER, [ROLE_KEY], [true]]),
+      ]),
+    ).toEqual([]);
   });
 });

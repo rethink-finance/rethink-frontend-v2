@@ -79,7 +79,7 @@
       <button
         type="button"
         class="position_group__action position_group__action--primary"
-        @click.stop="emit('vote', vote.proposalId)"
+        @click.stop="emit('vote', vote)"
       >
         Vote
       </button>
@@ -122,7 +122,11 @@
 
 <script setup lang="ts">
 import { formatDate, formatTokenValue } from "~/composables/formatters";
-import type { PendingRequest, PositionAttention } from "~/composables/portfolioAttention";
+import type {
+  OpenVote,
+  PendingRequest,
+  PositionAttention,
+} from "~/composables/portfolioAttention";
 import type IPortfolioPositionRow from "~/types/portfolio_position_row";
 
 /**
@@ -141,7 +145,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "open"): void;
-  (e: "vote", proposalId: string): void;
+  (e: "vote", vote: OpenVote): void;
 }>();
 
 const needsAttention = computed(
