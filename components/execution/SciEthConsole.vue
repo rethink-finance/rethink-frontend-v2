@@ -710,7 +710,7 @@
       </div>
 
       <!-- Transfer yield -->
-      <div v-else-if="actionTab === 'yield'" class="sci_pane">
+      <div v-else class="sci_pane">
         <div class="sci_pane__head">
           <div class="sci_card__sub">
             Sends the yield, and only the yield, to the multisig as plain ETH. Claims and withdrawals already end with this; use it for yield that built up some other way.
@@ -766,100 +766,6 @@
         </div>
       </div>
 
-      <!-- Vault contract -->
-      <div v-else class="sci_pane">
-        <div class="sci_pane__head">
-          <div class="sci_card__sub">
-            Housekeeping on the vault itself. Staking, Lido deposits, claims and withdrawals update the NAV inside their own transaction, so these are rarely needed.
-          </div>
-          <a
-            class="sci_link"
-            :href="`${SCI.EXPLORER}/address/${SCI.ADDR.fund}`"
-            target="_blank"
-            rel="noopener"
-          >{{ shortAddr(SCI.ADDR.fund) }}</a>
-        </div>
-
-        <div class="sci_action">
-          <div class="sci_action__info">
-            <div class="sci_action__title">
-              Update NAV
-            </div>
-            <div class="sci_card__sub">
-              {{ navText }}
-            </div>
-            <div v-if="pendingDepositText" class="sci_card__sub">
-              {{ pendingDepositText }}
-            </div>
-          </div>
-          <div class="sci_action__controls">
-            <div class="sci_form sci_form--end">
-              <v-btn
-                color="primary"
-                size="small"
-                :loading="isBusy('nav')"
-                :disabled="!!navProblem || !accountStore.isConnected || anyBusy"
-                @click="run('nav', 'Update NAV', sciCalls.updateNav())"
-              >
-                Update NAV
-              </v-btn>
-            </div>
-            <div v-if="navProblem" class="sci_card__sub sci_action__hint">
-              {{ navProblem }}
-            </div>
-            <div v-if="statusLine('nav')" class="sci_status" :class="`sci_status--${status.nav.phase}`">
-              {{ statusLine("nav") }}
-            </div>
-          </div>
-        </div>
-
-        <div class="sci_action">
-          <div class="sci_action__info">
-            <div class="sci_action__title">
-              Fund redemptions
-            </div>
-            <div class="sci_card__sub">
-              Redemptions are paid in WETH from the vault contract. {{ redemptionText }}
-            </div>
-          </div>
-          <div class="sci_action__controls">
-            <div class="sci_form">
-              <span class="sci_field">
-                <input
-                  v-model="amounts.fund"
-                  class="sci_field__input"
-                  inputmode="decimal"
-                  placeholder="0.0"
-                >
-                <span class="sci_field__unit">WETH</span>
-              </span>
-              <button
-                v-if="acc && acc.redemptionShortfall > DUST"
-                class="sci_chip sci_chip--accent"
-                @click="amounts.fund = exactEth(acc.redemptionShortfall)"
-              >
-                Needed {{ fmtEth(acc.redemptionShortfall, 4) }}
-              </button>
-              <v-btn
-                color="primary"
-                size="small"
-                :loading="isBusy('fund')"
-                :disabled="!!fundProblem || !accountStore.isConnected || anyBusy"
-                @click="runPlan('fund', `Send ${amounts.fund} WETH to the vault contract`, fundPlan)"
-              >
-                Send to vault
-              </v-btn>
-            </div>
-            <div v-if="amounts.fund && fundProblem" class="sci_problem">
-              {{ fundProblem }}
-            </div>
-            <div v-if="statusLine('fund')" class="sci_status" :class="`sci_status--${status.fund.phase}`">
-              {{ statusLine("fund") }}
-            </div>
-          </div>
-          <ExecutionSciPlanPreview class="sci_action__plan" :plan="fundPlan" />
-        </div>
-      </div>
     </div>
 
     <!-- ------------------------------------------------------------------ -->
@@ -1119,15 +1025,14 @@ const yieldRows = computed(() => {
 
 /* ----------------------------------------------------------------- inputs */
 
-const amounts = reactive({ quota: "", stake: "", fund: "", lido: "", sell: "" });
+const amounts = reactive({ quota: "", stake: "", lido: "", sell: "" });
 const lidoMode = ref<"deposit" | "sell">("deposit");
 
-type ActionTab = "staking" | "lido" | "yield" | "vault";
+type ActionTab = "staking" | "lido" | "yield";
 const ACTION_TABS: { key: ActionTab; label: string }[] = [
   { key: "staking", label: "Validator staking" },
   { key: "lido", label: "Lido" },
   { key: "yield", label: "Transfer Yield to Multisig" },
-  { key: "vault", label: "Vault contract" },
 ];
 const actionTab = ref<ActionTab>("staking");
 
@@ -1202,14 +1107,6 @@ const lidoPlan = computed<SciPlan | null>(() => {
   return s && wei !== null && !lidoProblem.value ? sciPlans.lidoDeposit(s, wei) : null;
 });
 
-const fundProblem = computed(() =>
-  state.value ? amountProblem(amounts.fund, state.value.safeWeth, "WETH") : "Reading the vault.",
-);
-const fundPlan = computed<SciPlan | null>(() => {
-  const s = state.value;
-  const wei = parseEth(amounts.fund);
-  return s && wei !== null && !fundProblem.value ? sciPlans.fundRedemptions(s, wei) : null;
-});
 
 const lidoProblem = computed(() => {
   const s = state.value;
@@ -1257,48 +1154,6 @@ const sellSuggestedNote = computed(() => {
   return forRedemptions
     ? `Suggested: ${fmtEth(a.stethToSell)} stETH, the WETH that requested redemptions are short of.`
     : `Suggested: ${fmtEth(a.stethToSell)} stETH, the yield that has built up in stETH.`;
-});
-
-const navProblem = computed(() => {
-  const s = state.value;
-  if (!s) return "Reading the vault.";
-  if (!s.vault.finalized) return "Available once the vault is finalized.";
-  if (!s.staking.exists) return "Create the staking vault first: the NAV reads it.";
-  if (acc.value?.settle.navHeld) {
-    return `Held: the positions read ${fmtEth(acc.value.principalUncounted)} ETH less than depositors are owed, which is what a validator exit on its way back looks like. An update now would write that dip into the share price.`;
-  }
-  return "";
-});
-
-const navText = computed(() => {
-  const s = state.value;
-  const a = acc.value;
-  if (!s || !a) return "";
-  if (!s.vault.finalized) return "Deposits and redemptions settle at the value stored by the last update.";
-  const when = s.vault.lastNavUpdate
-    ? `Last updated ${new Date(s.vault.lastNavUpdate * 1000).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.`
-    : "Never updated.";
-  return a.navStale
-    ? `${when} The stored value is out of date. Staking, Lido deposits, claims and withdrawals update it inside their own transaction; this button is for everything else.`
-    : `${when} The stored value matches the positions.`;
-});
-
-const pendingDepositText = computed(() => {
-  const s = state.value;
-  if (!s || !s.vault.finalized) return "";
-  return s.vault.pendingDeposits > 0n
-    ? `${fmtEth(s.vault.pendingDeposits)} WETH of deposit requests are waiting. Their owners settle them themselves, at the NAV of that moment.`
-    : "No deposit requests are waiting.";
-});
-
-const redemptionText = computed(() => {
-  const s = state.value;
-  const a = acc.value;
-  if (!s || !a) return "";
-  if (s.vault.pendingWithdrawShares === 0n) return "None are waiting.";
-  return a.redemptionShortfall > DUST
-    ? `${fmtEth(s.vault.pendingWithdrawShares)} shares are waiting and it is ${fmtEth(a.redemptionShortfall)} WETH short.`
-    : `${fmtEth(s.vault.pendingWithdrawShares)} shares are waiting and it holds enough.`;
 });
 
 /* -------------------------------------------------------------- execution */
@@ -1752,7 +1607,6 @@ const tabAttention = computed<Record<ActionTab, boolean>>(() => {
     staking: ["createStakingVault", "stake", "claimRewards", "withdrawPrincipal"].some((key) => keys.has(key as SciStepKey)),
     lido: sale.value !== null && sale.value.status !== "cancelled" && sale.value.status !== "expired",
     yield: keys.has("settle"),
-    vault: keys.has("fundRedemptions"),
   };
 });
 
