@@ -136,18 +136,43 @@
         </div>
 
         <div class="brand_card crt_card crt_card--payout">
-          <div class="crt_stat">
-            <div class="crt_label">
-              Destination · pinned
+          <div class="crt_payout__head">
+            <div class="crt_stat">
+              <div class="crt_label">
+                Destination · pinned
+              </div>
+              <div class="crt_stat__value">
+                {{ shortAddr(CRT.ADDR.payout) }}
+              </div>
+              <div class="crt_card__sub">
+                Payout wallet. Every other address reverts
+              </div>
             </div>
-            <div class="crt_stat__value">
-              {{ shortAddr(CRT.ADDR.payoutEOA) }}
-            </div>
-            <div class="crt_card__sub">
-              Payout EOA. Every other address reverts
+            <div class="crt_payout__balances">
+              <div class="crt_stat crt_stat--right">
+                <div class="crt_label">
+                  Payout · HyperEVM
+                </div>
+                <div class="crt_stat__value">
+                  {{ payoutBal ? fmt6(payoutBal.hyperEvm) + " USDC" : "—" }}
+                </div>
+              </div>
+              <div class="crt_stat crt_stat--right">
+                <div class="crt_label">
+                  Payout · Arbitrum
+                </div>
+                <div class="crt_stat__value">
+                  {{ payoutBal ? fmt6(payoutBal.arbitrum) + " USDC" : "—" }}
+                </div>
+              </div>
             </div>
           </div>
           <div class="crt_row">
+            <UiSegmented
+              v-model="payoutChain"
+              :options="payoutChains"
+              class="crt_payout__toggle"
+            />
             <v-text-field
               v-model="payoutAmt"
               placeholder="Amount"
@@ -157,11 +182,17 @@
             />
             <v-btn
               variant="outlined"
-              :disabled="!validAmt(payoutAmt)"
+              :disabled="!validAmt(payoutAmt) || quoting"
+              :loading="quoting"
               @click="stagePayout"
             >
               Review
             </v-btn>
+          </div>
+          <div class="crt_card__sub">
+            {{ payoutChain === "arbitrum"
+              ? "Across bridge to Arbitrum · approve + depositV3Now in one Safe transaction · recipient and chain pinned"
+              : "USDC.transfer on HyperEVM · one Safe transaction" }}
           </div>
         </div>
 
@@ -302,6 +333,36 @@
         </div>
 
         <div class="brand_card crt_card">
+          <div class="crt_slots">
+            <div class="crt_label">
+              Live on HyperCore
+            </div>
+            <div v-if="!agents" class="crt_card__sub">
+              {{ agentsError ? "Could not read the Safe's agents from HyperCore" : "checking…" }}
+            </div>
+            <template v-else>
+              <div v-for="slot in liveSlots" :key="slot.key" class="crt_slot">
+                <span class="crt_dot crt_dot--on" />
+                <span class="crt_slot__kind">{{ slot.kind }}</span>
+                <span class="crt_mono">{{ shortAddr(slot.address) }}</span>
+                <span class="crt_mono_dim">{{ slot.who }}</span>
+                <span class="crt_mono_dim crt_slot__until">{{ slot.until }}</span>
+                <v-btn
+                  v-if="slot.removable"
+                  variant="text"
+                  size="small"
+                  class="crt_text_action"
+                  @click="stageRemove(slot.named)"
+                >
+                  Remove
+                </v-btn>
+              </div>
+              <div v-if="!liveSlots.length" class="crt_card__sub">
+                No agent registered
+              </div>
+            </template>
+          </div>
+
           <div v-for="a in CRT.AGENTS" :key="a.addr" class="crt_agent">
             <div class="crt_agent__body">
               <div class="crt_agent__name">
@@ -317,21 +378,23 @@
               {{ agentState(a.addr).text }}
             </div>
             <div class="crt_agent__actions">
-              <template v-if="a.kind === 'backup'">
-                <input
-                  v-model="backupArm"
-                  placeholder="type DEREGISTER"
-                  class="crt_arm_input"
-                >
-                <v-btn
-                  variant="outlined"
-                  size="small"
-                  :disabled="backupArm.trim().toUpperCase() !== 'DEREGISTER'"
-                  @click="stageAgent(a)"
-                >
-                  Register
-                </v-btn>
-              </template>
+              <v-btn
+                variant="outlined"
+                size="small"
+                :disabled="!longValidUntil"
+                :title="longValidUntil ? `Valid until ${crtFormatDate(longValidUntil)}` : 'No whitelisted expiry date fits within 180 days'"
+                @click="stageAgent(a, true)"
+              >
+                Register · 180 days
+              </v-btn>
+              <v-btn
+                variant="text"
+                size="small"
+                class="crt_text_action"
+                @click="stageAgent(a, false)"
+              >
+                14 days
+              </v-btn>
             </div>
           </div>
         </div>
@@ -370,6 +433,25 @@
             {{ wtext }}
           </div>
 
+          <div v-if="staged.quote" class="crt_quote">
+            <div class="crt_quote__row">
+              <span>Across fee now</span>
+              <span>{{ fmt6(staged.quote.fee, 4) }} USDC</span>
+            </div>
+            <div class="crt_quote__row">
+              <span>Reserved for the relayer</span>
+              <span>{{ fmt6(staged.quote.reserve, 4) }} USDC (2× the quote, min 0.25)</span>
+            </div>
+            <div class="crt_quote__row">
+              <span>Payout wallet receives on Arbitrum</span>
+              <b>≥ {{ fmt6(staged.quote.outputAmount, 2) }} USDC</b>
+            </div>
+            <div class="crt_mono_dim">
+              Fills in about {{ staged.quote.estimatedFillTimeSec || "a few" }} s once the Safe executes ·
+              the quote time is stamped at execution, so the proposal does not expire in the queue
+            </div>
+          </div>
+
           <label v-if="staged.confirmPhrase" class="crt_confirm">
             <input v-model="confirmed" type="checkbox">
             <span>I understand: {{ staged.confirmPhrase }}</span>
@@ -401,6 +483,9 @@
               <div class="crt_step__head">
                 <b>{{ step.label }}</b>
                 <span class="crt_mono_dim">{{ step.wrapped.inner.sig }}</span>
+              </div>
+              <div v-for="(call, ci) in step.wrapped.batch || []" :key="ci" class="crt_mono_dim">
+                {{ ci + 1 }} · {{ call.sig.split("(")[0] }} → {{ shortAddr(call.to) }}
               </div>
               <div v-for="p in step.wrapped.inner.params" :key="p.k" class="crt_param">
                 <span>{{ p.k }}</span>
@@ -532,7 +617,8 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useAccountStore } from "~/store/account/account.store";
 import { sendAsSafe } from "~/composables/permissions/useCuratorExecution";
-import { CRT, crtInner, crtWrap, crtValidateWrapped, crtSimulate, crtGetBalances, crtGetCore, crtAgentStatus, crtGetPayoutSafe, fmt6, shortAddr } from "~/composables/execution/crtConsole";
+import UiSegmented from "~/components/global/ui/Segmented.vue";
+import { CRT, crtInner, crtWrap, crtWrapBatch, crtValidateWrapped, crtSimulate, crtGetBalances, crtGetPayoutBalances, crtAcrossQuote, crtGetCore, crtGetAgents, crtAgentStatus, crtGetPayoutSafe, crtPickValidUntil, crtFormatDate, fmt6, shortAddr, usdc6, type CrtAgentSlot } from "~/composables/execution/crtConsole";
 import { buildSafeTx, fetchNextSafeNonce, fetchSafeTxStatus, proposeSafeTx, safeWalletUrl, signSafeTx } from "~/composables/safe/safeTransactionService";
 import { ChainId } from "~/types/enums/chain_id";
 
@@ -552,7 +638,12 @@ const payoutSafe = ref<{ owners: string[]; threshold: number; nonce: number } | 
 const bridgeDir = ref("toCore"); const bridgeAmt = ref("1"); const bridgeFixed = ref("1");
 const ctDir = ref("toPerp"); const ctAmt = ref("1"); const ctReps = ref("1");
 const payoutAmt = ref(""); const felixDep = ref(""); const felixWd = ref("");
-const hlSup = ref(""); const hlWd = ref(""); const backupArm = ref("");
+/** Where a payout lands: the wallet's HyperEVM balance, or its Arbitrum one via Across. */
+const payoutChain = ref<"hyperevm" | "arbitrum">("hyperevm");
+const payoutChains = [{ key: "hyperevm", label: "HyperEVM" }, { key: "arbitrum", label: "Arbitrum" }];
+const quoting = ref(false);
+const payoutBal = ref<{ hyperEvm: bigint; arbitrum: bigint } | null>(null);
+const hlSup = ref(""); const hlWd = ref("");
 
 const fixedItems = CRT.AMOUNTS.map((v) => ({ title: v.toLocaleString("en-US") + " USDC", value: String(v) }));
 const validAmt = (v: string, cap?: number) => { const x = Number(v); return v !== "" && isFinite(x) && x > 0 && (cap == null || x <= cap); };
@@ -578,7 +669,6 @@ const statItems = computed(() => [
   { label: "Fund contract", value: bal.value ? fmt6(bal.value.fundUsdc) : "—" },
   { label: "Core spot", value: core.value ? n2(core.value.spotUsdc) : "—" },
   { label: "Core perp", value: core.value ? n2(core.value.perpValue) : "—" },
-  { label: "Payout", value: bal.value ? fmt6(bal.value.payoutUsdc) : "—" },
   { label: "Felix", value: bal.value ? fmt6(bal.value.felixAssets) : "—" },
   { label: "HyperLend", value: bal.value ? fmt6(bal.value.hlend) : "—" },
 ]);
@@ -594,12 +684,33 @@ const refresh = async () => {
   await Promise.all([
     crtGetBalances().then((b) => (bal.value = b)).catch(() => {}),
     crtGetCore().then((c) => (core.value = c)).catch(() => {}),
+    crtGetPayoutBalances().then((b) => (payoutBal.value = b)).catch(() => {}),
+    loadAgents(),
   ]);
   loadingBal.value = false;
 };
+
+/** The Safe's live HyperCore agents, both slots, with their expiry. */
+const agents = ref<{ unnamed: CrtAgentSlot | null; named: CrtAgentSlot[] } | null>(null);
+const agentsError = ref(false);
+const loadAgents = async () => {
+  agentsError.value = false;
+  CRT.AGENTS.forEach(async (a) => { agentsStatus[a.addr.toLowerCase()] = await crtAgentStatus(a.addr); });
+  try { agents.value = await crtGetAgents(); } catch { agentsError.value = true; }
+};
+/** The whitelisted expiry a 180-day registration would get right now. */
+const longValidUntil = ref<number | null>(crtPickValidUntil());
+const agentWho = (address: string) => CRT.AGENTS.find((a) => a.addr.toLowerCase() === address.toLowerCase())?.label.toLowerCase() ?? "not in this console";
+const untilText = (ms: number | null) => (ms ? `until ${crtFormatDate(ms)}` : "");
+const liveSlots = computed(() => {
+  if (!agents.value) return [];
+  const rows = [];
+  if (agents.value.unnamed) rows.push({ key: "unnamed", kind: "Unnamed", named: false, removable: true, address: agents.value.unnamed.address, who: agentWho(agents.value.unnamed.address), until: untilText(agents.value.unnamed.validUntil) });
+  for (const n of agents.value.named) rows.push({ key: "named-" + n.name, kind: `Named \u201C${n.name}\u201D`, named: true, removable: n.name === CRT.AGENT_NAME, address: n.address, who: agentWho(n.address), until: untilText(n.validUntil) });
+  return rows;
+});
 onMounted(() => {
   refresh();
-  CRT.AGENTS.forEach(async (a) => { agentsStatus[a.addr.toLowerCase()] = await crtAgentStatus(a.addr); });
   crtGetPayoutSafe().then((s) => (payoutSafe.value = s)).catch(() => {});
 });
 
@@ -609,7 +720,11 @@ onMounted(() => {
  * baked into the string.
  */
 const agentState = (addr: string): { tone: string; text: string } => {
-  const s = agentsStatus[addr.toLowerCase()];
+  const key = addr.toLowerCase();
+  const named = agents.value?.named.find((n) => n.address.toLowerCase() === key);
+  if (named) return { tone: "on", text: `live · ${untilText(named.validUntil) || "named"}` };
+  if (agents.value?.unnamed?.address.toLowerCase() === key) return { tone: "on", text: `live · ${untilText(agents.value.unnamed.validUntil) || "unnamed"}` };
+  const s = agentsStatus[key];
   if (!s) return { tone: "idle", text: "checking…" };
   if (s.error) return { tone: "idle", text: "unknown" };
   if (s.live && s.ours) return { tone: "on", text: "live · agent of Safe" };
@@ -619,7 +734,15 @@ const agentState = (addr: string): { tone: string; text: string } => {
 
 const simulateStep = async (step: any) => {
   step.sim = "pending";
-  step.sim = await crtSimulate(step.wrapped, staged.value.role === 1 ? CRT.ADDR.manager : CRT.ADDR.payoutSafe);
+  const sim = await crtSimulate(step.wrapped, staged.value.role === 1 ? CRT.ADDR.manager : CRT.ADDR.payoutSafe);
+  // Role 2's payout routes have been whitelisted since the governance proposal
+  // of 2026-09-26 executed; the agents proposal (180-day dates, backup agent,
+  // removal) has not, so those exact payloads are the whitelist refusing.
+  if (staged.value?.route === "agents" && !sim.ok && sim.name === "ParameterNotOneOfAllowed") {
+    step.sim = { ...sim, hint: "This exact registration is not on role 1's whitelist yet. Today only the unnamed 14-day registration of the trading agent passes; the 180-day dates, the backup agent and removal arrive with the agents proposal." };
+  } else {
+    step.sim = sim;
+  }
 };
 const stage = (action: any) => {
   confirmed.value = false;
@@ -650,11 +773,42 @@ const stageClassTransfer = () => {
     steps: Array.from({ length: nReps }, (_, i) => ({ label: (nReps > 1 ? `${i + 1} · ` : "") + `usdClassTransfer ${v.toLocaleString("en-US")} USDC ${toPerp ? "→ perp" : "→ spot"}`, wrapped: crtWrap(crtInner.usdClassTransfer(v, toPerp), 1) })),
   });
 };
-const stagePayout = () => stage({
-  title: `Payout ${payoutAmt.value} USDC`, role: 2,
-  confirmPhrase: `${Number(payoutAmt.value).toLocaleString("en-US", { maximumFractionDigits: 6 })} USDC leaves the Safe to the payout EOA. Nothing on-chain bounds this amount.`,
-  steps: [{ label: "USDC.transfer(payout EOA)", wrapped: crtWrap(crtInner.payout(payoutAmt.value), 2) }],
-});
+const stagePayout = async () => {
+  const amt = payoutAmt.value;
+  const shown = Number(amt).toLocaleString("en-US", { maximumFractionDigits: 6 });
+  if (payoutChain.value === "hyperevm") {
+    stage({
+      title: `Payout ${amt} USDC on HyperEVM`, role: 2, route: "hyperevm",
+      confirmPhrase: `${shown} USDC leaves the Safe to the payout wallet on HyperEVM. Nothing on-chain bounds this amount.`,
+      steps: [{ label: "USDC.transfer(payout wallet)", wrapped: crtWrap(crtInner.payout(amt), 2) }],
+    });
+    return;
+  }
+  // Arbitrum: approve the SpokePool and deposit in ONE Safe transaction. The
+  // quote fixes the minimum the wallet receives; depositV3Now stamps its own
+  // time when the Safe executes, so the signers are not racing a clock.
+  quoting.value = true;
+  try {
+    const input = usdc6(amt);
+    const quote = await crtAcrossQuote(input);
+    const warns: string[] = [];
+    if (quote.minDeposit && input < quote.minDeposit) warns.push(`Below Across's minimum of ${fmt6(quote.minDeposit)} USDC for this route; the deposit would not be filled.`);
+    if (quote.maxDeposit && input > quote.maxDeposit) warns.push(`Above Across's current maximum of ${fmt6(quote.maxDeposit)} USDC for this route.`);
+    if (quote.outputAmount === 0n) warns.push("The amount does not cover the relayer reserve.");
+    stage({
+      title: `Payout ${amt} USDC to Arbitrum`, role: 2, route: "arbitrum", warns, quote,
+      confirmPhrase: `${shown} USDC leaves the Safe into the Across bridge; the payout wallet receives at least ${fmt6(quote.outputAmount)} USDC on Arbitrum. Nothing on-chain bounds this amount.`,
+      steps: [{
+        label: "approve + Across depositV3Now (one Safe transaction)",
+        wrapped: crtWrapBatch([crtInner.approve(CRT.ADDR.spokePool, "Across SpokePool", amt), crtInner.acrossDeposit(amt, quote.outputAmount)], 2),
+      }],
+    });
+  } catch (error: any) {
+    toastStore.errorToast("Across could not quote this payout: " + (error?.message || error), 10000);
+  } finally {
+    quoting.value = false;
+  }
+};
 const stageFelixDeposit = () => stage({
   title: `Felix: deposit ${felixDep.value} USDC`, role: 1,
   steps: [
@@ -679,10 +833,33 @@ const stageHlWithdraw = (max: boolean) => {
   if (!max && !validAmt(hlWd.value)) return;
   stage({ title: max ? "HyperLend: withdraw all" : `HyperLend: withdraw ${hlWd.value} USDC`, role: 1, steps: [{ label: max ? "Withdraw full position + interest" : "Withdraw", wrapped: crtWrap(crtInner.poolWithdraw(max ? "max" : hlWd.value), 1) }] });
 };
-const stageAgent = (a: any) => stage({
-  title: `Register ${a.label.toLowerCase()}`, role: 1,
-  warns: ["BREAK-GLASS: this deregisters the primary agent. Deregistered addresses can never be reused."],
-  steps: [{ label: "addApiWallet payload (exact-match)", wrapped: crtWrap(crtInner.addApiWallet(a.addr, a.name), 1) }],
+const stageAgent = (a: any, long: boolean) => {
+  const validUntil = long ? crtPickValidUntil() : null;
+  if (long && !validUntil) {
+    toastStore.errorToast("No whitelisted expiry date fits within 180 days. A proposal has to add later dates.", 10000);
+    return;
+  }
+  const backup = a.kind === "backup";
+  stage({
+    title: `Register ${a.label.toLowerCase()} ${validUntil ? "until " + crtFormatDate(validUntil) : "for 14 days"}`,
+    role: 1, route: "agents",
+    warns: [
+      validUntil
+        ? `Named \u201C${CRT.AGENT_NAME}\u201D registration: it replaces whichever agent holds that name.`
+        : "Unnamed registration: it replaces whichever unnamed agent HyperCore holds for the Safe. Renew it before it lapses.",
+      ...(backup ? ["Switch the bot to the backup key: the agent this replaces stops working."] : []),
+    ],
+    confirmPhrase: backup ? "the backup becomes the Safe's agent and the agent it replaces stops working immediately." : undefined,
+    steps: [{ label: "addApiWallet payload (exact-match)", wrapped: crtWrap(crtInner.registerAgent(a.addr, validUntil), 1) }],
+  });
+};
+/** Empties one HyperCore agent slot the way Hyperliquid's own app does: the zero address takes it. */
+const stageRemove = (named: boolean) => stage({
+  title: named ? `Remove the named \u201C${CRT.AGENT_NAME}\u201D agent` : "Remove the unnamed agent",
+  role: 1, route: "agents",
+  warns: ["The agent in this slot stops signing trades as soon as HyperCore processes this."],
+  confirmPhrase: "the agent in this slot stops working immediately.",
+  steps: [{ label: "addApiWallet(zero address) payload", wrapped: crtWrap(crtInner.removeAgent(named), 1) }],
 });
 
 const copyText = (t: string) => { navigator.clipboard.writeText(t); toastStore.addToast("Calldata copied. Paste it into Transaction Builder in Safe{Wallet} if you need to."); };
@@ -876,7 +1053,12 @@ const exec = async (step: any) => {
       .on("transactionHash", (hash: any) => { step.txHash = hash; toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed."); })
       .on("receipt", (receipt: any) => {
         step.txStatus = receipt.status ? "ok" : "fail";
-        if (receipt.status) { toastStore.successToast("The transaction was successful."); refresh(); }
+        if (receipt.status) {
+          toastStore.successToast("The transaction was successful.");
+          refresh();
+          // HyperCore applies a CoreWriter action a moment after the EVM block.
+          if (staged.value?.route === "agents") setTimeout(loadAgents, 5000);
+        }
         else toastStore.errorToast("The transaction has failed.");
       })
       .on("error", (error: any) => failStep(step, error));
@@ -952,7 +1134,7 @@ const exec = async (step: any) => {
     color: $color-text-irrelevant;
   }
 
-  /* Seven balances plus the total only fit on one line on a wide desktop;
+  /* Six balances plus the total only fit on one line on a wide desktop;
      below that the divider would be left hanging at the end of the row. */
   &__divider {
     display: none;
@@ -960,7 +1142,7 @@ const exec = async (step: any) => {
     align-self: stretch;
     background: $color-line;
 
-    /* 1360px is where the total and all seven balances measurably share a
+    /* 1360px is where the total and all six balances measurably share a
        line with room to spare; .crt_layout below is keyed off the viewport
        the same way. */
     @media (min-width: 1360px) {
@@ -1175,6 +1357,33 @@ const exec = async (step: any) => {
     display: flex;
     gap: 0.5rem;
     align-items: center;
+  }
+}
+
+/* The Safe's live agents on HyperCore, one line per slot. */
+.crt_slots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.875rem;
+  margin-bottom: 0.875rem;
+  border-bottom: 1px solid $color-line;
+}
+
+.crt_slot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 13px;
+
+  &__kind {
+    font-weight: 600;
+    color: $color-white;
+  }
+
+  &__until {
+    margin-left: auto;
   }
 }
 
@@ -1428,29 +1637,6 @@ const exec = async (step: any) => {
   }
 }
 
-/* Break-glass field: red text on the design's inset input, not a bare box. */
-.crt_arm_input {
-  width: 150px;
-  min-height: 0;
-  height: auto;
-  background: $color-card-background;
-  border: 1px solid $color-line-2;
-  border-radius: $default-border-radius;
-  color: $color-neg;
-  font-family: $font-mono;
-  font-size: 11.5px;
-  padding: 0.5rem 0.625rem;
-  outline: none;
-  transition: border-color $default-transition-time ease;
-
-  &::placeholder {
-    color: $color-steel-blue;
-  }
-
-  &:focus {
-    border-color: $color-line-3;
-  }
-}
 
 .crt_ok {
   color: $color-cyan;
@@ -1487,6 +1673,43 @@ const exec = async (step: any) => {
 
   a {
     white-space: nowrap;
+  }
+}
+.crt_payout {
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem 2rem;
+    flex-wrap: wrap;
+  }
+
+  &__balances {
+    display: flex;
+    gap: 1.75rem;
+  }
+
+  &__toggle {
+    flex: 0 0 auto;
+  }
+}
+
+/* The Across quote, read before the step list: what is charged, what is kept back, what arrives. */
+.crt_quote {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid $color-line;
+  border-radius: $default-border-radius;
+  font-family: $font-mono;
+  font-size: 13px;
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-variant-numeric: tabular-nums;
   }
 }
 </style>
