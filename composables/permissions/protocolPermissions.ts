@@ -52,6 +52,8 @@ const PROTOCOL_LABELS: Record<string, string> = {
   compound_v3: "Compound v3",
   morphoMarkets: "Morpho Blue markets",
   morphoVaults: "Morpho vaults",
+  lido: "Lido",
+  cowswap: "CoW Swap",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -94,6 +96,18 @@ const ACTION_HINTS: Record<string, string> = {
     "Sky's “stake USDS, earn SKY” farm. There is nothing to choose here: " +
     "enabling this grants staking, reward claiming and unstaking on that " +
     "one farm, paid out to the vault Safe.",
+  swap:
+    "Sign swap orders that sell the chosen tokens for the chosen tokens, " +
+    "paid to the vault Safe.",
+  "lido.deposit":
+    "Stake ETH for stETH, wrap it to wstETH and back, and queue stETH or " +
+    "wstETH for withdrawal and claim the ETH. There is nothing to choose " +
+    "here. Withdrawal requests and claims are pinned to the vault Safe.",
+  "cowswap.swap":
+    "Sign CoW Protocol orders that sell the chosen tokens for the chosen " +
+    "tokens, paid to the vault Safe, and cancel them. Orders are placed " +
+    "through CoW's order book and filled by solvers. Selling ETH wraps it " +
+    "first; ETH itself cannot be bought, only WETH.",
   "compound_v3.deposit":
     "Supply and withdraw assets on the selected Compound v3 markets, and " +
     "claim COMP rewards. Each market is its own contract with its own base " +
@@ -128,6 +142,14 @@ const ACTION_HINTS: Record<string, string> = {
  * — so one chip grants more than the one vault it names.
  */
 const ACTION_WARNINGS: Record<string, string> = {
+  "cowswap.swap":
+    "The role signs orders on chain, so it decides the price: a stolen " +
+    "executor key could sign a sale far below market and let a solver " +
+    "take the difference. Keep the sell list to what the vault should " +
+    "ever part with.",
+  "lido.deposit":
+    "wstETH and queued withdrawals are not valued by the spot NAV method; " +
+    "a vault that wraps or queues needs its own NAV method for them.",
   delegate:
     "Governance-sensitive: the permission pins delegation to exactly the " +
     "delegatee address entered here, but that address is your own choice and " +
@@ -165,6 +187,8 @@ const FIELD_LABELS: Record<string, string> = {
   "morphoMarkets.deposit.targets": "Markets",
   "morphoMarkets.borrow.targets": "Markets",
   "morphoVaults.deposit.targets": "Vaults",
+  "cowswap.swap.sell": "Sell",
+  "cowswap.swap.buy": "Buy",
 };
 
 const getFieldLabel = (

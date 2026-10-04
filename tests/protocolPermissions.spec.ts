@@ -100,6 +100,7 @@ describe("getRegistryProtocols", () => {
       "aave_v3",
       "morphoMarkets",
       "morphoVaults",
+      "cowswap",
     ]);
     const aave = protocols[0];
     expect(aave.protocol).toBe("aave_v3");
@@ -680,6 +681,20 @@ describe("initProtocolSelections", () => {
         enabled: false,
         actions: [
           { action: "deposit", enabled: false, params: { targets: [] } },
+        ],
+      },
+      // Lido has nothing to pick: its one action starts on, like Spark's farm.
+      {
+        protocol: "lido",
+        enabled: false,
+        actions: [{ action: "deposit", enabled: true, params: {} }],
+      },
+      // CoW Swap is gated on two required lists, so it starts off.
+      {
+        protocol: "cowswap",
+        enabled: false,
+        actions: [
+          { action: "swap", enabled: false, params: { sell: [], buy: [] } },
         ],
       },
     ]);
