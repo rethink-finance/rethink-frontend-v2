@@ -143,11 +143,6 @@ const ACTION_HINTS: Record<string, string> = {
  * — so one chip grants more than the one vault it names.
  */
 const ACTION_WARNINGS: Record<string, string> = {
-  "cowswap.swap":
-    "The role signs orders on chain, so it decides the price: a stolen " +
-    "executor key could sign a sale far below market and let a solver " +
-    "take the difference. Keep the sell list to what the vault should " +
-    "ever part with.",
   "lido.deposit":
     "wstETH and queued withdrawals are not valued by the spot NAV method; " +
     "a vault that wraps or queues needs its own NAV method for them.",
