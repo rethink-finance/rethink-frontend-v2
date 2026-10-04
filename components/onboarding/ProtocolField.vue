@@ -104,21 +104,21 @@
               scope its own schema would reject.
             -->
             <span
-              v-if="isPicked(option.value) && view.actions.length > 1"
+              v-if="isPicked(option.value) && view.scopes.length > 1"
               class="field__scopes"
             >
               <button
                 v-for="scope in valueScopes(option.value)"
-                :key="scope.action"
+                :key="scope.scope"
                 type="button"
                 class="field__scope"
                 :class="{ 'field__scope--on': scope.granted }"
                 :aria-pressed="scope.granted"
-                :aria-label="`${getActionLabel(scope.action)} ${option.label}`"
+                :aria-label="`${scope.label} ${option.label}`"
                 :title="getActionHint(scope.action, descriptor.protocol)"
-                @click="toggleValueScope(option.value, scope.action)"
+                @click="toggleValueScope(option.value, scope.scope)"
               >
-                {{ getActionLabel(scope.action) }}
+                {{ scope.label }}
               </button>
             </span>
           </div>
@@ -164,7 +164,7 @@
         narrowing belongs on the asset, where one click does one thing.
       -->
       <div
-        v-if="view.actions.length > 1 && view.selected.length"
+        v-if="view.scopes.length > 1 && view.selected.length"
         class="field__scope_list"
       >
         <p class="field__label field__scope_list_title">
@@ -172,19 +172,22 @@
         </p>
         <div
           v-for="scope in groupScopes"
-          :key="scope.action"
+          :key="scope.scope"
           class="field__scope_row"
         >
           <p class="field__scope_row_head">
             <span class="field__scope_name">
-              {{ getActionLabel(scope.action) }}
+              {{ scope.label }}
             </span>
             <span
               class="field__scope_assets"
               :class="{ 'field__scope_assets--none': !scope.assets.length }"
             >{{ scopeAssetList(scope.assets) }}</span>
           </p>
-          <p class="field__hint">
+          <!-- A scope named after its field (Sell / Buy) shares the control's
+               hint above; repeating the action's hint under each would say
+               the same thing twice. -->
+          <p v-if="scope.scope === scope.action" class="field__hint">
             {{ getActionHint(scope.action, descriptor.protocol) }}
           </p>
           <p v-if="scope.optional" class="field__hint">
@@ -245,7 +248,6 @@ import {
   applyGroupSelection,
   applyValueScopes,
   getActionHint,
-  getActionLabel,
   viewGroup,
   viewValueScopes,
 } from "~/composables/permissions/protocolPermissions";
@@ -414,7 +416,7 @@ const setGroup = (values: string[]) => {
 const valueScopes = (value: string) =>
   viewValueScopes(props.entry, props.group, value);
 
-const setValueScopes = (value: string, actions: string[]) => {
+const setValueScopes = (value: string, scopes: string[]) => {
   emit(
     "update:entry",
     applyValueScopes(
@@ -422,7 +424,7 @@ const setValueScopes = (value: string, actions: string[]) => {
       props.entry,
       props.group,
       value,
-      actions,
+      scopes,
     ),
   );
 };
@@ -443,18 +445,18 @@ const toggleValue = (value: string) => {
   }
   setValueScopes(
     value,
-    isPicked(value) ? [] : valueScopes(value).map((scope) => scope.action),
+    isPicked(value) ? [] : valueScopes(value).map((scope) => scope.scope),
   );
 };
 
-const toggleValueScope = (value: string, action: string) => {
+const toggleValueScope = (value: string, scopeId: string) => {
   setValueScopes(
     value,
     valueScopes(value)
       .filter((scope) =>
-        scope.action === action ? !scope.granted : scope.granted,
+        scope.scope === scopeId ? !scope.granted : scope.granted,
       )
-      .map((scope) => scope.action),
+      .map((scope) => scope.scope),
   );
 };
 
@@ -531,17 +533,14 @@ const selectAll = () => {
  */
 const groupScopes = computed(() => {
   if (props.group.control !== "multi-select") return [];
-  const { options, selected, actions } = view.value;
+  const { options, selected, scopes } = view.value;
   const picked = options.filter((option) => selected.includes(option.value));
-  return actions.map((action) => ({
-    action,
-    optional: props.group.members.some(
-      (member) => member.action === action && member.optional,
-    ),
+  return scopes.map((scope) => ({
+    ...scope,
     assets: picked
       .filter((option) =>
         valueScopes(option.value).some(
-          (scope) => scope.action === action && scope.granted,
+          (held) => held.scope === scope.scope && held.granted,
         ),
       )
       .map((option) => option.label),
