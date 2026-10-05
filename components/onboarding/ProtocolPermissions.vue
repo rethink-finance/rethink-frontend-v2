@@ -79,7 +79,7 @@
           <Icon icon="material-symbols:add-rounded" />
         </span>
         <span class="protocols__add_text">
-          <span class="protocols__add_title">Add position</span>
+          <span class="protocols__add_title">Add permission</span>
           <span v-if="!added.length && addHint" class="protocols__add_hint">
             {{ addHint }}
           </span>
@@ -92,7 +92,7 @@
            and the list below needs no introduction. -->
       <template #title>
         <h2 class="brand_modal__title library__title">
-          Add position
+          Add permission
         </h2>
       </template>
 
@@ -618,7 +618,7 @@ const rawMeta = computed((): string => {
 
 /**
  * The tile explains itself only when the library behind it has no
- * protocols to offer — otherwise "Add position" is the whole story.
+ * protocols to offer — otherwise "Add permission" is the whole story.
  */
 const addHint = computed((): string =>
   protocols.value.length

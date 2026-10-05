@@ -114,40 +114,35 @@ describe("VAULT_ROLES", () => {
     expect(VAULT_ROLES.executor.roleKey).toBe("defaulManagerRole");
   });
 
-  it("opens with role management on and vault settings off", () => {
+  it("opens with every switch on", () => {
     const defaults = defaultVaultRolePermissions();
     expect(defaults.adminEnabled).toBe(true);
     expect(defaults.admin).toEqual({
       manageExecutorMembers: true,
       transferAdminRole: true,
-      manageWhitelist: false,
-      updateMetadata: false,
-      changeFeeDestinations: false,
+      manageWhitelist: true,
+      updateMetadata: true,
+      changeFeeDestinations: true,
     });
     expect(Object.values(defaults.executor).every(Boolean)).toBe(true);
   });
 
-  it("starts whitelist management on only for a vault created with a whitelist", () => {
-    expect(defaultVaultRolePermissions({ whitelistInUse: true }).admin.manageWhitelist).toBe(true);
-    expect(defaultVaultRolePermissions({ whitelistInUse: true }).admin.updateMetadata).toBe(false);
-    expect(defaultVaultRolePermissions({ whitelistInUse: false }).admin.manageWhitelist).toBe(false);
-  });
-
-  it("groups the admin's permissions into role management and vault settings", () => {
-    const [roleManagement, vaultSettings] = VAULT_ROLES.admin.groups;
-    expect(roleManagement.defaultOn).toBe(true);
-    expect(roleManagement.permissions.map((option) => option.key)).toEqual([
+  it("lists every admin permission under its prepopulated permissions", () => {
+    expect(VAULT_ROLES.admin.groups).toHaveLength(1);
+    const [prepopulated] = VAULT_ROLES.admin.groups;
+    expect(prepopulated.title).toBe("Prepopulated permissions");
+    expect(prepopulated.defaultOn).toBe(true);
+    expect(prepopulated.permissions.map((option) => option.key)).toEqual([
       "manageExecutorMembers",
       "transferAdminRole",
-    ]);
-    expect(vaultSettings.defaultOn).toBe(false);
-    expect(vaultSettings.permissions.map((option) => option.key)).toEqual([
       "manageWhitelist",
       "updateMetadata",
       "changeFeeDestinations",
     ]);
-    // The reason they are off is said where they are switched on.
-    expect(vaultSettings.note).toMatch(/governance proposal/);
+    // What the settings switches wait on is said on each of them.
+    for (const option of prepopulated.permissions.slice(2)) {
+      expect(option.hint, option.key).toMatch(/settings authority/);
+    }
     // Each group's starting state is what the defaults actually are.
     const defaults = defaultVaultRolePermissions();
     for (const role of [VAULT_ROLES.admin, VAULT_ROLES.executor]) {
@@ -159,17 +154,18 @@ describe("VAULT_ROLES", () => {
     }
   });
 
-  it("grants nothing on the vault's settings by default", () => {
+  it("grants the admin its settings and membership permissions by default", () => {
     const { grants, revokes } = buildPrepopulatedPermissionsBatch(
       CONTEXT,
       defaultVaultRolePermissions(),
     );
-    expect(functionsOf(decode(grants), ADMIN_KEY)).toEqual([
-      key(MODIFIER, ASSIGN_ROLES_SELECTOR),
-    ]);
-    expect(functionsOf(decode(revokes), ADMIN_KEY, "revokeFunction")).toEqual([
-      key(FUND, UPDATE_SETTINGS_SELECTOR),
-    ]);
+    expect(functionsOf(decode(grants), ADMIN_KEY)).toEqual(
+      [
+        key(FUND, UPDATE_SETTINGS_SELECTOR),
+        key(MODIFIER, ASSIGN_ROLES_SELECTOR),
+      ].sort(),
+    );
+    expect(functionsOf(decode(revokes), ADMIN_KEY, "revokeFunction")).toEqual([]);
   });
 
   it("offers a switch for every permission the defaults know, and no other", () => {
