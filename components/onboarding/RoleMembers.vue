@@ -173,7 +173,7 @@ const currentMembers = ref<string[]>([]);
 const isLoadingMembers = ref(false);
 
 // "Executor" is the name of role 2 wherever its members are listed; the
-// on-chain key stays "defaulManagerRole".
+// on-chain key stays "defaulManagerRole" (or "defaultManagerRole").
 const roleLabel = computed(() => props.roleLabel || "executor");
 const canQueue = computed(() => !!addressInput.value.trim());
 const canReadMembers = computed(

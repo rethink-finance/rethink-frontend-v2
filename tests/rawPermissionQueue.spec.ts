@@ -80,6 +80,7 @@ describe("raw permission queue", () => {
 
   it("names the two vault roles and leaves any other key as it is", () => {
     expect(queuedRoleName("defaulManagerRole")).toBe("Executor");
+    expect(queuedRoleName("defaultManagerRole")).toBe("Executor");
     expect(queuedRoleName("adminRole")).toBe("Admin");
     expect(queuedRoleName("treasury")).toBe("treasury");
   });

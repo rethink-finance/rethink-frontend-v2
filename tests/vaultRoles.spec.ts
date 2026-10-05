@@ -2,6 +2,10 @@ import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
 import RolesFullV2 from "../assets/contracts/zodiac/RolesFullV2.json";
 import {
+  isExecutorRoleKey,
+  resolveExecutorRoleKey,
+} from "../composables/nav/generateNAVPermission";
+import {
   ASSIGN_ROLES_SELECTOR,
   EXECUTE_NAV_UPDATE_SELECTOR,
   FUND_FLOWS_CALL_SELECTOR,
@@ -13,6 +17,7 @@ import {
   buildPrepopulatedPermissionsBatch,
   customRoleNameError,
   defaultVaultRolePermissions,
+  executorRoleDefinition,
   fullVaultRolePermissions,
   prepopulatedScopeLabels,
   resolveCustomRoles,
@@ -408,5 +413,48 @@ describe("custom roles", () => {
       { target: FUND, selector: UPDATE_SETTINGS_SELECTOR },
     ]);
     expect(prepopulatedScopeLabels("Trader", CONTEXT)).toEqual([]);
+  });
+});
+
+describe("the executor's key spellings", () => {
+  const CORRECTED = "defaultManagerRole";
+  const CORRECTED_KEY = ethers.encodeBytes32String(CORRECTED);
+
+  it("resolves the spelling the vault holds, and the original one until then", () => {
+    expect(resolveExecutorRoleKey([ADMIN_KEY, CORRECTED_KEY])).toBe(CORRECTED);
+    expect(resolveExecutorRoleKey([EXECUTOR_KEY, ADMIN_KEY])).toBe("defaulManagerRole");
+    expect(resolveExecutorRoleKey([])).toBe("defaulManagerRole");
+    expect(isExecutorRoleKey(CORRECTED)).toBe(true);
+    expect(isExecutorRoleKey(CORRECTED_KEY)).toBe(true);
+    expect(isExecutorRoleKey("Trader")).toBe(false);
+    expect(isExecutorRoleKey("x".repeat(40))).toBe(false);
+  });
+
+  it("never lists either spelling as a custom role, nor lets one be added", () => {
+    expect(resolveCustomRoles([CORRECTED_KEY, EXECUTOR_KEY, ADMIN_KEY], [])).toEqual([]);
+    expect(customRoleNameError(CORRECTED, [])).not.toBe("");
+  });
+
+  it("shows the vault's spelling as the executor's card", () => {
+    const card = executorRoleDefinition(CORRECTED);
+    expect(card.roleKey).toBe(CORRECTED);
+    expect(card.name).toBe("Executor");
+    expect(card.number).toBe(2);
+    expect(executorRoleDefinition("defaulManagerRole")).toBe(VAULT_ROLES.executor);
+    expect(prepopulatedScopeLabels(CORRECTED, CONTEXT).map(({ label }) => label)).toEqual(
+      VAULT_ROLES.executor.permissions.map((option) => option.label),
+    );
+  });
+
+  it("writes the executor's switches to the vault's spelling", () => {
+    const { revokes, grants } = buildPrepopulatedPermissionsBatch(
+      { ...CONTEXT, executorRoleKey: CORRECTED },
+      fullVaultRolePermissions(),
+    );
+    const calls = decode([...revokes, ...grants]);
+    expect(new Set(calls.map((call) => call.role))).toEqual(
+      new Set([ADMIN_KEY, CORRECTED_KEY]),
+    );
+    expect(functionsOf(decode(grants), CORRECTED_KEY)).toHaveLength(4);
   });
 });

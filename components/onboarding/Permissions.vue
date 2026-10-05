@@ -151,9 +151,9 @@ import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import {
   ADMIN_ROLE_KEY_V2,
-  EXECUTOR_ROLE_KEY_V2,
   getAssignMembersRoleV2,
   type IAssignMemberChange,
+  resolveExecutorRoleKey,
   toRoleKeyBytes32,
 } from "~/composables/nav/generateNAVPermission";
 import {
@@ -173,6 +173,7 @@ import {
 import { describeQueuedCalls } from "~/composables/permissions/rawPermissionQueue";
 import {
   type IRoleScopeLog,
+  listLiveRoleKeys,
   reduceRoleScopeLogs,
   storedRolePermissionCalls,
 } from "~/composables/permissions/roleScopeLogs";
@@ -184,6 +185,7 @@ import {
   buildPrepopulatedPermissionsBatch,
   customRoleDefinition,
   defaultVaultRolePermissions,
+  executorRoleDefinition,
   prepopulatedScopeLabels,
 } from "~/composables/permissions/vaultRoles";
 import { useContractAddresses } from "~/composables/useContractAddresses";
@@ -209,7 +211,6 @@ const { fundChainId, fundInitCache, fundSettings, fundFactoryContractV2Used } =
   storeToRefs(createFundStore);
 
 const rolesInterface = new ethers.Interface((RolesFullV2 as any).abi);
-const EXECUTOR_KEY = toRoleKeyBytes32(EXECUTOR_ROLE_KEY_V2).toLowerCase();
 const ADMIN_KEY = toRoleKeyBytes32(ADMIN_ROLE_KEY_V2).toLowerCase();
 
 const ADMIN_OFF_TEXT =
@@ -283,27 +284,35 @@ const { customRoles, addCustomRole, removeCustomRole } = useVaultCustomRoles(
   savedLogs,
 );
 
-const builtInRole = (id: "admin" | "executor", key: string): IStepRole => ({
+const builtInRole = (definition: IVaultRoleDefinition, key: string): IStepRole => ({
   key,
-  roleKey: VAULT_ROLES[id].roleKey,
-  label: VAULT_ROLES[id].roleKey,
-  name: VAULT_ROLES[id].name,
-  number: VAULT_ROLES[id].number,
-  definition: VAULT_ROLES[id],
+  roleKey: definition.roleKey,
+  label: definition.roleKey,
+  name: definition.name,
+  number: definition.number,
+  definition,
 });
 const adminRole: IStepRole = {
-  ...builtInRole("admin", ADMIN_KEY),
+  ...builtInRole(VAULT_ROLES.admin, ADMIN_KEY),
   emptyText:
     "No admin yet. Add the address that should hold this role. A multisig is recommended. Until then its permissions stay with governance.",
   leavesEmptyText:
     "These changes leave the vault with no admin. Its permissions would stay with governance.",
 };
-const executorRole = builtInRole("executor", EXECUTOR_KEY);
+// The executor is whichever spelling of its key the factory gave this vault
+// ("defaulManagerRole" or "defaultManagerRole"), read off the modifier's log.
+const executorRoleKey = computed(() =>
+  resolveExecutorRoleKey(savedLogs.value ? listLiveRoleKeys(savedLogs.value) : []),
+);
+const executorKey = computed(() => toRoleKeyBytes32(executorRoleKey.value).toLowerCase());
+const executorRole = computed(() =>
+  builtInRole(executorRoleDefinition(executorRoleKey.value), executorKey.value),
+);
 
 /** Admin, executor, then the custom roles: stored, or only named so far. */
 const stepRoles = computed<IStepRole[]>(() => [
   adminRole,
-  executorRole,
+  executorRole.value,
   ...customRoles.value.map((role) => ({
     key: role.keyBytes,
     roleKey: role.roleKey,
@@ -319,7 +328,7 @@ const stepRoles = computed<IStepRole[]>(() => [
 
 const selectedKey = ref(ADMIN_KEY);
 const selectedRole = computed(
-  () => stepRoles.value.find((role) => role.key === selectedKey.value) ?? executorRole,
+  () => stepRoles.value.find((role) => role.key === selectedKey.value) ?? executorRole.value,
 );
 const isAdminSelected = computed(() => selectedRole.value.key === ADMIN_KEY);
 
@@ -353,7 +362,7 @@ const dropSelectedRole = () => {
   pendingMembers.value = without(pendingMembers.value);
   drafts.value = without(drafts.value);
   removeCustomRole(role);
-  selectRole(EXECUTOR_KEY);
+  selectRole(executorKey.value);
 };
 
 // The switches of the two built-in roles. Whatever changes settings or
@@ -381,14 +390,14 @@ watch(
 /** The selected role's switches; a custom role has none. */
 const selectedSwitches = computed<Record<string, boolean>>(() => {
   if (selectedRole.value.key === ADMIN_KEY) return { ...rolePermissions.value.admin };
-  if (selectedRole.value.key === EXECUTOR_KEY) return { ...rolePermissions.value.executor };
+  if (selectedRole.value.key === executorKey.value) return { ...rolePermissions.value.executor };
   return {};
 });
 const setSwitches = (value: Record<string, boolean>) => {
   if (selectedRole.value.key === ADMIN_KEY) {
     isAdminPermissionsTouched.value = true;
     rolePermissions.value.admin = value as typeof rolePermissions.value.admin;
-  } else if (selectedRole.value.key === EXECUTOR_KEY) {
+  } else if (selectedRole.value.key === executorKey.value) {
     rolePermissions.value.executor = value as typeof rolePermissions.value.executor;
   }
 };
@@ -682,6 +691,7 @@ const storePermissions = async () => {
         rolesModifier: rolesModifierAddress,
         navExecutor: navExecutorAddress.value,
         poolPerformanceFee: poolPerformanceFeeAddress.value,
+        executorRoleKey: executorRoleKey.value,
         // Pinned to the values the factory will store: the raw init-cache
         // settings struct, metadata string and the two fee periods, never
         // derived frontend state. (The init-cache rewrite in

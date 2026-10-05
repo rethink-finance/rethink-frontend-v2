@@ -6,7 +6,7 @@ import {
 } from "web3";
 import {
   ADMIN_ROLE_KEY_V2,
-  EXECUTOR_ROLE_KEY_V2,
+  EXECUTOR_ROLE_KEY_ALIASES_V2,
 } from "~/composables/nav/generateNAVPermission";
 import {
   RolesVersion,
@@ -93,14 +93,15 @@ export interface ICuratorRoute {
  * prepopulated permissions over two roles (see vaultRoles.ts): settings and
  * membership belong to the admin, everything else to the executor — and on a
  * vault created before that split, to the executor alone. The surface does
- * not have to know which: both are tried.
+ * not have to know which: both are tried, the executor under each spelling
+ * its key has been created with.
  */
 const routeRoles = (route: ICuratorRoute): string[] => {
   if (route.role) return [route.role];
   const version = route.version ?? RolesVersion.V2;
   return version === RolesVersion.V1
     ? [defaultRoleFor(version)]
-    : [EXECUTOR_ROLE_KEY_V2, ADMIN_ROLE_KEY_V2];
+    : [...EXECUTOR_ROLE_KEY_ALIASES_V2, ADMIN_ROLE_KEY_V2];
 };
 
 /**

@@ -2,7 +2,7 @@ import { ethers } from "ethers";
 import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 import {
   ADMIN_ROLE_KEY_V2,
-  EXECUTOR_ROLE_KEY_V2,
+  isExecutorRoleKey,
 } from "~/composables/nav/generateNAVPermission";
 import type { IRawPermissionCodeEntry } from "~/composables/permissions/parseRawPermissionCode";
 import {
@@ -140,7 +140,7 @@ export const groupQueuedCalls = (calls: IQueuedCall[]): IQueueGroup[] => {
 
 /** A role as the create flow names it; any other key is shown as it is. */
 export const queuedRoleName = (role?: string): string => {
-  if (role === EXECUTOR_ROLE_KEY_V2) return "Executor";
+  if (isExecutorRoleKey(role)) return "Executor";
   if (role === ADMIN_ROLE_KEY_V2) return "Admin";
   return role ?? "?";
 };
