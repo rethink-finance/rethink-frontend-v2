@@ -3,6 +3,8 @@ import { useOnboard } from "@web3-onboard/vue";
 import { useAccountStore } from "~/store/account/account.store";
 
 const accountStore = useAccountStore();
+// Nothing of the app is mounted until the closed-beta gate is passed.
+const { hasAccess } = useAppAccess();
 
 onMounted(() => {
   accountStore.web3Onboard = useOnboard();
@@ -46,7 +48,8 @@ useHead(() => {
 </script>
 
 <template>
-  <NuxtLayout>
+  <AppAccessGate v-if="!hasAccess" />
+  <NuxtLayout v-else>
     <ClientOnly>
       <UiToast />
     </ClientOnly>

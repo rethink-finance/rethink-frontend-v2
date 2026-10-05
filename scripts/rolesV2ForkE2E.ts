@@ -896,7 +896,7 @@ const metadataOnlyAdmin = async () => {
 };
 
 const defaultSwitches = async () => {
-  console.log("\nVault 5: the step's default switches (admin: role management only), ownership-only activation");
+  console.log("\nVault 5: the step's default switches (every switch on), ownership-only activation");
   const v = await createVault({
     label: "defaults",
     deployer: addr(0xdeb10005),
@@ -909,8 +909,8 @@ const defaultSwitches = async () => {
   const asAdmin = (to: string, data: string) => execAsRole(v.modifier, ADMIN, ADMIN_KEY, to, data);
   await expectOutcome("before activation: add an executor passes the permission but the modifier refuses it", "inner-revert",
     asAdmin(v.modifier, buildAssignRolesCalldata(NEW_EXECUTOR, true, EXECUTOR_ROLE_KEY_V2)));
-  // No vault-settings permission was granted, so the activation proposal
-  // does not touch the vault's configuration.
+  // Ownership only: the vault's configuration keeps settings authority with
+  // the governor, so the admin's settings permissions stay inert.
   await activate(v, { settingsAuthority: false });
   await expectOutcome("admin: add an executor", "ok",
     asAdmin(v.modifier, buildAssignRolesCalldata(NEW_EXECUTOR, true, EXECUTOR_ROLE_KEY_V2)));
@@ -921,21 +921,21 @@ const defaultSwitches = async () => {
     asAdmin(v.modifier, buildAssignRolesCalldata(NEW_ADMIN, true, ADMIN_ROLE_KEY_V2)));
   await expectOutcome("executor: revoke its own role", "ok",
     execAsRole(v.modifier, EXECUTOR, EXECUTOR_KEY, v.modifier, buildAssignRolesCalldata(EXECUTOR, false, EXECUTOR_ROLE_KEY_V2)));
-  await expectOutcome("admin denied: edit metadata (not granted by default)", "denied",
+  await expectOutcome("ownership-only activation: edit metadata passes the permission but the vault refuses it", "inner-revert",
     asAdmin(v.vault, await settingsCall(v, { fundMetadata: "{}" })));
-  await expectOutcome("admin denied: add a depositor (not granted by default)", "denied",
+  await expectOutcome("ownership-only activation: add a depositor passes the permission but the vault refuses it", "inner-revert",
     asAdmin(v.vault, await settingsCall(v, { whitelistDeltas: [NEW_DEPOSITOR] })));
-  await expectOutcome("admin denied: move the fee destinations (not granted by default)", "denied",
+  await expectOutcome("ownership-only activation: move the fee destinations passes the permission but the vault refuses it", "inner-revert",
     asAdmin(v.vault, await settingsCall(v, { feeCollectors: NEW_COLLECTORS })));
 };
 
 const defaultSwitchesWithWhitelist = async () => {
-  console.log("\nVault 6: default switches on a vault created with a whitelist (whitelist management on)");
+  console.log("\nVault 6: default switches on a vault created with a whitelist, full activation");
   const v = await createVault({
     label: "defaults-whitelisted",
     deployer: addr(0xdeb10006),
     whitelist: [DEPOSITOR],
-    permissions: defaultVaultRolePermissions({ whitelistInUse: true }),
+    permissions: defaultVaultRolePermissions(),
     admins: [ADMIN],
     executors: [EXECUTOR],
     integrations: [],
@@ -945,14 +945,14 @@ const defaultSwitchesWithWhitelist = async () => {
   await activate(v, { settingsAuthority: false });
   await expectOutcome("ownership-only activation: whitelist change passes the permission but the vault refuses it", "inner-revert",
     asAdmin(v.vault, await settingsCall(v, { whitelistDeltas: [NEW_DEPOSITOR] })));
-  // …the configuration change the group's note asks for is what enables it.
+  // …the configuration change the switches' hints ask for is what enables it.
   await activate(v);
   await expectOutcome("after the configuration change: add a depositor", "ok",
     asAdmin(v.vault, await settingsCall(v, { whitelistDeltas: [NEW_DEPOSITOR] })));
   check(await isWhitelisted(v.vault, NEW_DEPOSITOR), "the new depositor is whitelisted");
-  await expectOutcome("admin denied: edit metadata (off by default)", "denied",
-    asAdmin(v.vault, await settingsCall(v, { fundMetadata: "{}" })));
-  await expectOutcome("admin denied: move the fee destinations (off by default)", "denied",
+  await expectOutcome("after the configuration change: edit metadata", "ok",
+    asAdmin(v.vault, await settingsCall(v, { fundMetadata: "{\"description\":\"defaults\"}" })));
+  await expectOutcome("after the configuration change: move the fee destinations", "ok",
     asAdmin(v.vault, await settingsCall(v, { feeCollectors: NEW_COLLECTORS })));
 };
 

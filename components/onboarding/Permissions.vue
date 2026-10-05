@@ -69,11 +69,14 @@
         :recommend-multisig="isAdminSelected"
         :removable="selectedRole.removable"
         :disabled-text="ADMIN_OFF_TEXT"
+        :custom-toggle="isAdminSelected"
+        :custom-enabled="adminCustomEnabled"
         :empty-text="selectedRole.emptyText"
         :leaves-empty-text="selectedRole.leavesEmptyText"
         @update:members="setMembers"
         @update:permissions="setSwitches"
         @update:enabled="(value: boolean) => (rolePermissions.adminEnabled = value)"
+        @update:custom-enabled="setAdminCustom"
         @remove="dropSelectedRole"
       />
 
@@ -370,23 +373,6 @@ const dropSelectedRole = () => {
 // from the vault's Permissions page after finalizing.
 const rolePermissions = ref(defaultVaultRolePermissions());
 
-// Whitelist management is the one vault-settings permission that starts on,
-// and only on a vault created with a whitelist: there, nobody could maintain
-// the list otherwise. The answer comes from the vault's stored settings, so
-// it is applied when they are read, unless the switches were already
-// touched, which is a decision this must not overwrite.
-const isAdminPermissionsTouched = ref(false);
-watch(
-  () => fundInitCache?.value?.fundSettings?.isWhitelistedDeposits,
-  (whitelistInUse) => {
-    if (isAdminPermissionsTouched.value) return;
-    rolePermissions.value.admin = defaultVaultRolePermissions({
-      whitelistInUse: whitelistInUse === true,
-    }).admin;
-  },
-  { immediate: true },
-);
-
 /** The selected role's switches; a custom role has none. */
 const selectedSwitches = computed<Record<string, boolean>>(() => {
   if (selectedRole.value.key === ADMIN_KEY) return { ...rolePermissions.value.admin };
@@ -395,7 +381,6 @@ const selectedSwitches = computed<Record<string, boolean>>(() => {
 });
 const setSwitches = (value: Record<string, boolean>) => {
   if (selectedRole.value.key === ADMIN_KEY) {
-    isAdminPermissionsTouched.value = true;
     rolePermissions.value.admin = value as typeof rolePermissions.value.admin;
   } else if (selectedRole.value.key === executorKey.value) {
     rolePermissions.value.executor = value as typeof rolePermissions.value.executor;
@@ -439,15 +424,21 @@ const hasChanges = (draft?: IRoleDraft) =>
 
 /**
  * The admin runs the vault around the strategy and holds no power over its
- * funds, so its page stops at the switches. The protocol card only shows
- * there when something is already stored for it, so it can be seen and
- * removed.
+ * funds, so its page stops at the switches unless "Custom permissions" is
+ * switched on. It starts off, and on by itself only for a vault that
+ * already stores custom permissions for the admin, so they can be seen and
+ * removed. Off, the admin's protocol selections are left out of the save.
  */
+const adminCustomEnabled = ref(false);
+const isAdminCustomTouched = ref(false);
+const setAdminCustom = (value: boolean) => {
+  isAdminCustomTouched.value = true;
+  adminCustomEnabled.value = value;
+};
 const showsProtocols = computed(
   () =>
     !isAdminSelected.value ||
-    (rolePermissions.value.adminEnabled &&
-      (savedEntries.value.length > 0 || hasChanges(drafts.value[ADMIN_KEY]))),
+    (rolePermissions.value.adminEnabled && adminCustomEnabled.value),
 );
 
 /* ---- The selected role's stored permissions ------------------------------- */
@@ -513,6 +504,16 @@ const storedSplit = computed(() => {
 
 /** What the role stores beyond its switches. */
 const savedEntries = computed(() => storedSplit.value.saved);
+
+// Custom permissions the vault already stores for the admin switch the
+// section on, unless it was already switched by hand.
+watch(
+  () => isAdminSelected.value && savedEntries.value.length > 0,
+  (adminHasSaved) => {
+    if (adminHasSaved && !isAdminCustomTouched.value) adminCustomEnabled.value = true;
+  },
+  { immediate: true },
+);
 const savedCalls = computed(() => describeQueuedCalls(savedEntries.value));
 
 /** What storing the card as it stands would take back, by scope key. */
@@ -717,7 +718,8 @@ const storePermissions = async () => {
     .filter(
       (role) =>
         hasChanges(drafts.value[role.key]) &&
-        (role.key !== ADMIN_KEY || rolePermissions.value.adminEnabled),
+        (role.key !== ADMIN_KEY ||
+          (rolePermissions.value.adminEnabled && adminCustomEnabled.value)),
     )
     .map((role) => {
       const draft = drafts.value[role.key];

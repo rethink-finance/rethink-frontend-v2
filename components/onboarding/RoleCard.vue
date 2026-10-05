@@ -111,6 +111,24 @@
           </div>
         </template>
       </div>
+
+      <!-- Permissions beyond the vault's own contracts. The step shows its
+           protocol card under this one while this is on. -->
+      <div v-if="customToggle" class="role_card__section">
+        <div class="role_card__disclosure role_card__disclosure--static">
+          <span class="role_card__eyebrow">Custom permissions</span>
+          <span class="role_card__summary">
+            {{ customEnabled ? "Protocol and raw permissions below" : "Off" }}
+          </span>
+        </div>
+        <div class="role_card__master">
+          <OnboardingToggle
+            :model-value="customEnabled"
+            label="Custom permissions"
+            @update:model-value="(value: boolean) => emit('update:customEnabled', value)"
+          />
+        </div>
+      </div>
     </template>
   </section>
 </template>
@@ -151,6 +169,10 @@ const props = withDefaults(defineProps<{
   removable?: boolean;
   /** Leave out the role's number: the tab that opened the card carries it. */
   hideNumber?: boolean;
+  /** Offer a switch for permissions beyond the prepopulated ones. */
+  customToggle?: boolean;
+  /** Whether that switch is on. */
+  customEnabled?: boolean;
 }>(), {
   permissions: () => ({}),
   chainId: undefined,
@@ -165,6 +187,7 @@ const emit = defineEmits<{
   (e: "update:members", value: IAssignMemberChange[]): void;
   (e: "update:permissions", value: Record<string, boolean>): void;
   (e: "update:enabled", value: boolean): void;
+  (e: "update:customEnabled", value: boolean): void;
   (e: "remove"): void;
 }>();
 
@@ -349,6 +372,16 @@ const setGroup = (group: IRolePermissionGroup, value: boolean) => {
     }
     &:focus-visible {
       outline: none;
+    }
+
+    /* A row with nothing to fold: its title lines up with the groups'. */
+    &--static {
+      padding-left: calc(1.125rem + 0.5rem);
+      cursor: default;
+
+      &:hover .role_card__eyebrow {
+        color: $color-steel-blue;
+      }
     }
   }
 

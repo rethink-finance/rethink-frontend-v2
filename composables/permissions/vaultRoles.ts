@@ -86,27 +86,12 @@ export const fullVaultRolePermissions = (): IVaultRolePermissions => ({
 });
 
 /**
- * What the step opens with.
- *
- * The executor's permissions and the admin's role management start on: they
- * are what a vault normally needs to run, and whoever does not want one
- * turns it off rather than discovering later that nobody can settle a flow.
- *
- * The admin's vault-settings permissions start OFF. They only work once
- * governance has changed the vault's default configuration (settings
- * authority moved to the Safe), so granting them is a decision, not a
- * default — except whitelist management on a vault that was created with a
- * whitelist, which would otherwise have nobody able to maintain it.
+ * What the step opens with: every switch on. They are what a vault normally
+ * needs to run, and whoever does not want one turns it off rather than
+ * discovering later that nobody can settle a flow or maintain the whitelist.
  */
-export const defaultVaultRolePermissions = (
-  options: { whitelistInUse?: boolean } = {},
-): IVaultRolePermissions => {
-  const permissions = fullVaultRolePermissions();
-  permissions.admin.updateMetadata = false;
-  permissions.admin.changeFeeDestinations = false;
-  permissions.admin.manageWhitelist = !!options.whitelistInUse;
-  return permissions;
-};
+export const defaultVaultRolePermissions = (): IVaultRolePermissions =>
+  fullVaultRolePermissions();
 
 export interface IRolePermissionOption {
   key: string;
@@ -147,6 +132,10 @@ export interface IVaultRoleDefinition {
 // (see activationProposal.ts).
 const ROLE_ACTIVATION_NOTE =
   " Takes effect after the one-time governance activation offered on the vault's Permissions page.";
+// The vault only takes settings changes from the Safe once governance has
+// moved settings authority from the governor to it.
+const SETTINGS_AUTHORITY_NOTE =
+  " Takes effect once a governance proposal moves settings authority from the governor to the vault's Safe.";
 
 const withFlatPermissions = (
   role: Omit<IVaultRoleDefinition, "permissions">,
@@ -164,7 +153,7 @@ export const VAULT_ROLES: Record<VaultRoleId, IVaultRoleDefinition> = {
     tagline: "Vault profile, whitelist, executor rotation and fee destinations",
     groups: [
       {
-        id: "roleManagement",
+        id: "prepopulated",
         title: "Prepopulated permissions",
         defaultOn: true,
         permissions: [
@@ -182,32 +171,26 @@ export const VAULT_ROLES: Record<VaultRoleId, IVaultRoleDefinition> = {
               "Hand the admin role to another address: assign it to the new admin, then remove the old one." +
               ROLE_ACTIVATION_NOTE,
           },
-        ],
-      },
-      {
-        id: "vaultSettings",
-        title: "Vault settings permissions",
-        defaultOn: false,
-        note:
-          "Off by default. These only work after a governance proposal changes the vault's default configuration, moving settings authority from the governor to the vault's Safe.",
-        permissions: [
           {
             key: "manageWhitelist",
             label: "Manage whitelist",
             hint:
-              "Add or remove depositor addresses, and switch deposits between whitelist-only and open to anyone. On by default when the vault is created with a whitelist.",
+              "Add or remove depositor addresses, and switch deposits between whitelist-only and open to anyone." +
+              SETTINGS_AUTHORITY_NOTE,
           },
           {
             key: "updateMetadata",
             label: "Update vault metadata",
             hint:
-              "Edit the vault's photo, description, strategist details and links.",
+              "Edit the vault's photo, description, strategist details and links." +
+              SETTINGS_AUTHORITY_NOTE,
           },
           {
             key: "changeFeeDestinations",
             label: "Change fee destination addresses",
             hint:
-              "Change where each fee is paid. The fee rates and periods stay locked. Only governance can change those.",
+              "Change where each fee is paid. The fee rates and periods stay locked. Only governance can change those." +
+              SETTINGS_AUTHORITY_NOTE,
           },
         ],
       },
